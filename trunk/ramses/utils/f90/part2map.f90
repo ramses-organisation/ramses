@@ -10,6 +10,11 @@ program part2map
   integer::nx=0,ny=0,ix,iy,ixp1,iyp1,idim,jdim,ncpu_read,n_frw
   real(KIND=8)::mtot,ddx,ddy,dex,dey,time,time_tot,time_simu,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mmax=1d10
+  real(KIND=8)::xcenter,ycenter,zcenter
+  real(KIND=8)::x_coord,y_coord,z_coord
+  real(KIND=8)::jxin=0,jyin=0,jzin=0,jx,jy,jz
+  real(KIND=8)::kxin,kyin,kzin,kx,ky,kz
+  real(KIND=8)::lxin,lyin,lzin,lx,ly,lz
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,npart_actual
   real(KIND=8)::xxmin,xxmax,yymin,yymax,dx,dy,deltax,boxlen
   real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d
@@ -29,11 +34,13 @@ program part2map
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax
-  real(kind=8)::xx,yy
+  real(kind=8)::xx,yy,zz
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
   logical::cosmo=.true.
+  logical::rotation=.false.
+  logical::sideon=.false.
 
   call read_params
 
@@ -132,6 +139,38 @@ program part2map
      write(*,*)'Age simu=',time_simu*unit_t/(365.*24.*3600.*1d9)
   endif
   !-----------------------
+  ! Rotation parameters
+  !-----------------------
+  if(abs(jxin)+abs(jyin)+abs(jzin)>0)then
+     rotation=.true.
+     write(*,*)'Performing rotation'
+     write(*,*)jxin,jyin,jzin
+  endif
+  
+  kxin=0.
+  kyin=-jzin
+  kzin=jyin
+  
+  lxin=jyin*kzin-jzin*kyin
+  lyin=jzin*kxin-jxin*kzin
+  lzin=jxin*kyin-jyin*kxin
+  
+  jx=jxin/sqrt(jxin**2+jyin**2+jzin**2)
+  jy=jyin/sqrt(jxin**2+jyin**2+jzin**2)
+  jz=jzin/sqrt(jxin**2+jyin**2+jzin**2)
+  
+  kx=kxin/sqrt(kxin**2+kyin**2+kzin**2)
+  ky=kyin/sqrt(kxin**2+kyin**2+kzin**2)
+  kz=kzin/sqrt(kxin**2+kyin**2+kzin**2)
+  
+  lx=lxin/sqrt(lxin**2+lyin**2+lzin**2)
+  ly=lyin/sqrt(lxin**2+lyin**2+lzin**2)
+  lz=lzin/sqrt(lxin**2+lyin**2+lzin**2)
+
+  xcenter=0.5*(xmin+xmax)
+  ycenter=0.5*(ymin+ymax)
+  zcenter=0.5*(zmin+zmax)
+  !-----------------------
   ! Map parameters
   !-----------------------
   if(nx==0)then
@@ -144,6 +183,12 @@ program part2map
   write(*,*)'Working map =',nx,ny
   allocate(map(0:nx,0:ny))
   map=0.0d0
+  if(rotation)then
+     proj='z'
+     if(sideon)then
+        proj='y'
+     endif
+  endif
   if (proj=='x')then
      idim=2
      jdim=3
@@ -163,6 +208,9 @@ program part2map
   dx=(xxmax-xxmin)/dble(nx)
   dy=(yymax-yymin)/dble(ny)
 
+  !-----------------------
+  ! Get cpu list
+  !-----------------------
   if(TRIM(ordering).eq.'hilbert')then
 
      dmax=max(xmax-xmin,ymax-ymin,zmax-zmin)
@@ -339,7 +387,7 @@ program part2map
         end do
      else
         do i=1,npart2
-           weight=1.
+           weight=1d0
            ok_part=(x(i,1)>=xmin.and.x(i,1)<=xmax.and. &
                 &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
                 &   x(i,3)>=zmin.and.x(i,3)<=zmax.and. &
@@ -372,8 +420,23 @@ program part2map
            
            if(ok_part)then
               npart_actual=npart_actual+1
-              ddx=(x(i,idim)-xxmin)/dx
-              ddy=(x(i,jdim)-yymin)/dy
+              if(rotation)then
+                 xx=x(i,1)-xcenter
+                 yy=x(i,2)-ycenter
+                 zz=x(i,3)-zcenter
+                 z_coord=xx*jx+yy*jy+zz*jz+zcenter
+                 y_coord=xx*kx+yy*ky+zz*kz+ycenter
+                 x_coord=xx*lx+yy*ly+zz*lz+xcenter
+                 ddx=(x_coord-xmin)/dx
+                 ddy=(y_coord-ymin)/dy
+                 if(sideon)then
+                    ddx=(x_coord-xmin)/dx
+                    ddy=(z_coord-zmin)/dy
+                 endif
+              else
+                 ddx=(x(i,idim)-xxmin)/dx
+                 ddy=(x(i,jdim)-yymin)/dy
+              endif
               ix=ddx
               iy=ddy
               ddx=ddx-ix
@@ -394,7 +457,7 @@ program part2map
                  if(iyp1<0)iyp1=iyp1+ny
                  if(iyp1>=ny)iyp1=iyp1-ny
               endif
-              if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny)then
+              if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.ddx>0.and.ddy>0)then
                  map(ix  ,iy  )=map(ix  ,iy  )+m(i)*dex*dey*weight
                  map(ix  ,iyp1)=map(ix  ,iyp1)+m(i)*dex*ddy*weight
                  map(ixp1,iy  )=map(ixp1,iy  )+m(i)*ddx*dey*weight
@@ -409,6 +472,7 @@ program part2map
   end do
   write(*,*)'Total mass=',mtot
   if(.not. star)write(*,*)'npart tot=',npart_actual
+  write(*,*)MINVAL(map),MAXVAL(map)
   
   ! Output file
   nomfich=TRIM(outfich)
@@ -510,6 +574,12 @@ contains
             outfich = trim(arg)
          case ('-dir')
             proj = trim(arg) 
+         case('-jx')
+            read (arg,*) jxin            
+         case('-jy')
+            read (arg,*) jyin            
+         case('-jz')
+            read (arg,*) jzin            
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -530,6 +600,8 @@ contains
             read (arg,*) ny
          case ('-per')
             read (arg,*) periodic
+         case ('-sid')
+            read (arg,*) sideon
          case ('-str')
             read (arg,*) star
          case ('-age')
