@@ -69,12 +69,12 @@ program icdegrade
      write(*,*) 'Start cells are {i,j,k}=',xstart,ystart,zstart
      
      ! Loop over planes
-     kk=1+max(-zstart,0)
-     do k=max(zstart,0)+1,max(zstart,0)+min(hnp3,np3)
-        jj=1+max(-ystart,0)
-        do j=max(ystart,0)+1,max(ystart,0)+min(hnp2,np2)
-           ii=1+max(-xstart,0)
-           do i=max(xstart,0)+1,max(xstart,0)+min(hnp1,np1)
+     kk=1
+     do k=zstart+1,zstart+np3
+        jj=1
+        do j=ystart+1,ystart+np2
+           ii=1
+           do i=xstart+1,xstart+np1
               f2(i,j,k)=f(ii,jj,kk)
               ii=ii+1
            enddo
@@ -131,12 +131,12 @@ program icdegrade
      write(*,*) 'Start cells are {i,j,k}=',xstart,ystart,zstart
      
      ! Loop over planes
-     kk=1+max(-zstart,0)
-     do k=max(zstart,0)+1,max(zstart,0)+min(hnp3,np3)
-        jj=1+max(-ystart,0)
-        do j=max(ystart,0)+1,max(ystart,0)+min(hnp2,np2)
-           ii=1+max(-xstart,0)
-           do i=max(xstart,0)+1,max(xstart,0)+min(hnp1,np1)
+     kk=1
+     do k=zstart+1,zstart+np3
+        jj=1
+        do j=ystart+1,ystart+np2
+           ii=1
+           do i=xstart+1,xstart+np1
               f2(i,j,k)=f(ii,jj,kk)
               ii=ii+1
            enddo

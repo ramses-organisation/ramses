@@ -32,6 +32,7 @@ program icrefine
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering,format_grille
+  character(LEN=80)::GMGM
   character(LEN=128)::nomfich,repository,filetype='bin',grafic
   logical::ok,ok_part,periodic=.false.,star=.false.,okerode=.false.
   logical::gid=.false.,fid=.false.
@@ -73,6 +74,7 @@ program icrefine
   read(10,*)
   read(10,*)
   read(10,*)
+  write(*,*)ncpu,ndim,levelmin,levelmax
 
   read(10,*)
   read(10,'("time        =",E23.15)')t
@@ -88,8 +90,8 @@ program icrefine
 
   read(10,*)
   read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
+  write(*,'(" ordering type=",A20)'),TRIM(ordering)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
      allocate(bound_key(0:ncpu))
@@ -270,302 +272,60 @@ program icrefine
 
 40 format(3e16.8)
 50 format(2I16)
-  if(gid) then  !Outputs IDs of selected particles
-     ipart=0
-     mass=0.0
-     write(*,*) 'Getting IDs...'
-     open(18,file='partID.dat',form='formatted')
-     maxid=0
-     do i=1,npart !To get maximum identity of the particle        
-        if(nstar.eq.0) then  !Only DM particles
-           btime=0
-        else
-           btime=bt(i)
-        endif
-        if(btime.eq.0) then
-           ok_part=(x(i)>=xmin.and.x(i)<=xmax.and. &
-                &   y(i)>=ymin.and.y(i)<=ymax.and. &
-                &   z(i)>=zmin.and.z(i)<=zmax)
-           if(rad>0) then
-              r=(x(i)-xc)**2+(y(i)-yc)**2+(z(i)-zc)**2
-              ok_part=(sqrt(r)<=rad)
-           endif
-           if(ok_part) then
-              maxid=max(maxid,id(i))
-              ipart=ipart+1
-              mass=mass+m(i)
-           endif
-        endif
-     enddo
-     write(*,*) 'We have',ipart,' particles in selected region'
-     write(*,*) 'Total mass =', mass
-     
-30   format(i16)
-     write(18,50) ipart,maxid
-     do i=1,npart  !Start finding the IDs
-        if(nstar.eq.0) then  !Only DM particles
-           btime=0
-        else
-           btime=bt(i)
-        endif
-        if(btime.eq.0) then
-           ok_part=(x(i)>=xmin.and.x(i)<=xmax.and. &
-                &   y(i)>=ymin.and.y(i)<=ymax.and. &
-                &   z(i)>=zmin.and.z(i)<=zmax)
-           if(rad>0) then
-              r=(x(i)-xc)**2+(y(i)-yc)**2+(z(i)-zc)**2
-              ok_part=sqrt(r)<=rad
-           endif
-           if(ok_part) then
-              write(18,30) id(i)   !Write IDs
-           endif
-        endif
-     enddo
-  endif
-   
-  if(fid) then  !Reads IDs from file and outputs GRAFIC files
-     grafic =TRIM(grafic)//'/ic_deltab'
-     open(10,file=grafic,form='unformatted')
-     read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     close(10)
-     write(*,*)'Input array size is:',np1,np2,np3
-     write(*,*)'Current box size is',np1*dx,' Mpc'
-     allocate(imark(1:np1,1:np2,1:np3))
-
-     x1or=x1o/(unit_l/aexp/3.08568025e24)
-     x2or=x2o/(unit_l/aexp/3.08568025e24)
-     x3or=x3o/(unit_l/aexp/3.08568025e24)
-     dxor=dx/(unit_l/aexp/3.08568025e24)
-
-     write(*,*)'Total box size ',(unit_l/aexp/3.08568025e24)
-     
-     omegak=1.0-omegam-omegav
-     
-     vfact=aexp*fpeebl(aexp) & ! Same scale factor as in grafic1
-          & *sqrt(omegam/aexp+omegav*aexp*aexp+omegak) 
-
-     write(*,*) 'vfact =', vfact
-
-     write(*,*) 'Extracting particles from ID file...'
-     open(19,file='partID.dat',form='formatted',status='old')
-     read(19,*) ipart,maxid
-     write(*,*) 'Number of particles in selected region =',ipart
-     allocate(idpart(1:npart)) 
-     idpart(1:npart)=0
-     imark(1:np1,1:np2,1:np3)=0
-     do i=1,ipart  
-        read(19,*) idd
-        idpart(idd)=1     
-     enddo
-     do i=1,npart
-        if(nstar.eq.0) then  !Only DM particles
-           btime=0
-        else
-           btime=bt(i)
-        endif
-        if(btime.eq.0) then
-           idd=id(i)
-           if(idpart(idd).eq.1) then  
-              ix=int((x(i)-x1or)/dxor) !Lay down perturbed mark
-              iy=int((y(i)-x2or)/dxor)
-              iz=int((z(i)-x3or)/dxor)
-               if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                 imark(ix,iy,iz)=1.0
-              endif
-!              write(*,*) z(i), vz(i)/vfact/dxor
-              x(i)=x(i)-vx(i)/vfact   !Trace back the Zeldovich approx.
-              y(i)=y(i)-vy(i)/vfact 
-              z(i)=z(i)-vz(i)/vfact
-              ix=int((x(i)-x1or)/dxor)
-              iy=int((y(i)-x2or)/dxor)
-              iz=int((z(i)-x3or)/dxor)
-              if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                 imark(ix,iy,iz)=1.0
-              endif
-           endif
-        endif
-     enddo
-     write(*,*) 'Outputting Grafics file ic_ref_ini'
-     open(33,file='ic_ref_ini',form='unformatted')
-     write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     do k=1,np3
-        write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
-     enddo
-     close(33)
-
-
-
-     if(smt>0) then !Dilation
-        write(*,*) rsm,smt
-        do ismooth=1,rsm !Number of smoothing loops
-           write(*,*) 'Smoothing ',ismooth
-           do i=1,np1
-              do j=1,np2
-                 do k=1,np3
-                    if(imark(i,j,k)==1.0) then
-                       do ix=i-smt,i+smt 
-                          do iy=j-smt,j+smt
-                             do iz=k-smt,k+smt
-                                if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
-                                   r=r**0.5
-                                   if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
-                                      imark(ix,iy,iz)=2.0
-                                   endif
-                                endif
-                             enddo
-                          enddo
-                       enddo
-                    endif
-                 enddo
-              enddo
-           enddo
-           do i=1,np1 
-              do j=1,np2
-                 do k=1,np3
-                    if(imark(i,j,k)>0) then
-                       imark(i,j,k)=1.0
-                    endif
-                 enddo
-              enddo
-           end do
-        enddo
-     endif
-
-     write(*,*) 'Outputting Grafics file ic_ref_dil'
-     open(33,file='ic_ref_dil',form='unformatted')
-     write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     do k=1,np3
-        write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
-     enddo
-     close(33)
-     if(smt>0) then !Erosion
-        write(*,*) rsm,smt
-        do ismooth=1,rsm !Number of smoothing loops
-           write(*,*) 'Erosion ',ismooth
-           do i=1,np1
-              do j=1,np2
-                 do k=1,np3
-                    if(imark(i,j,k)==1.0) then
-                       okerode=.false.
-                       do ix=i-smt,i+smt  
-                          do iy=j-smt,j+smt
-                             do iz=k-smt,k+smt
-                                if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
-                                   r=r**0.5
-                                   if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
-                                      okerode=.true.
-                                   endif
-                                endif
-                             enddo
-                          enddo
-                       enddo
-                       if(okerode)imark(i,j,k)=-1
-                    endif
-                 enddo
-              enddo
-           enddo
-           do i=1,np1 
-              do j=1,np2
-                 do k=1,np3
-                    if(imark(i,j,k)<=0) then
-                       imark(i,j,k)=0.0
-                    endif
-                 enddo
-              enddo
-           end do
-        enddo
-     endif
-     if(smt>0) then !Erosion
-        write(*,*) rsm,smt
-        write(*,*) 'Final erosion to remove isolated particles'
-        smt=1
-        do i=1,np1
-           do j=1,np2
-              do k=1,np3
-                 if(imark(i,j,k)==1.0) then
-                    okerode=.false.
-                    do ix=i-smt,i+smt  
-                       do iy=j-smt,j+smt
-                          do iz=k-smt,k+smt
-                             if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
-                                r=r**0.5
-                                if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
-                                   okerode=.true.
-                                endif
-                             endif
-                          enddo
-                       enddo
-                    enddo
-                    if(okerode)imark(i,j,k)=-1
-                 endif
-              enddo
-           enddo
-        enddo
-        do i=1,np1 
-           do j=1,np2
-              do k=1,np3
-                 if(imark(i,j,k)<=0) then
-                    imark(i,j,k)=0.0
-                 endif
-              enddo
-           enddo
-        end do
-        write(*,*) 'Final dilatation to restore initial region'
-        do i=1,np1
-           do j=1,np2
-              do k=1,np3
-                 if(imark(i,j,k)==1.0) then
-                    do ix=i-smt,i+smt 
-                       do iy=j-smt,j+smt
-                          do iz=k-smt,k+smt
-                             if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
-                                r=r**0.5
-                                if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
-                                   imark(ix,iy,iz)=2.0
-                                endif
-                             endif
-                          enddo
-                       enddo
-                    enddo
-                 endif
-              enddo
-           enddo
-        enddo
-        do i=1,np1 
-           do j=1,np2
-              do k=1,np3
-                 if(imark(i,j,k)>0) then
-                    imark(i,j,k)=1.0
-                 endif
-              enddo
-           enddo
-        end do        
-     endif
-
-
-     write(*,*) 'Outputting Grafics file ic_refmap'
-     if(metal>0.)then
-        open(33,file='ic_pvar_00001',form='unformatted')
-        write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-        do k=1,np3
-           write(33) ((real(metal,kind=4)*imark(i,j,k),i=1,np1),j=1,np2)
-        enddo
-        close(33)
+  !Outputs IDs of selected particles
+  ipart=0
+  mass=0.0
+  write(*,*) 'Getting IDs...'
+  open(18,file='partID.dat',form='formatted')
+  maxid=0
+  do i=1,npart !To get maximum identity of the particle        
+     if(nstar.eq.0) then  !Only DM particles
+        btime=0
      else
-        open(33,file='ic_refmap',form='unformatted')
-        write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-        do k=1,np3
-           write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
-        enddo
-        close(33)
+        btime=bt(i)
      endif
-  endif
-  contains
-
+     if(btime.eq.0) then
+        ok_part=(x(i)>=xmin.and.x(i)<=xmax.and. &
+             &   y(i)>=ymin.and.y(i)<=ymax.and. &
+             &   z(i)>=zmin.and.z(i)<=zmax)
+        if(rad>0) then
+           r=(x(i)-xc)**2+(y(i)-yc)**2+(z(i)-zc)**2
+           ok_part=(sqrt(r)<=rad)
+        endif
+        if(ok_part) then
+           maxid=max(maxid,id(i))
+           ipart=ipart+1
+           mass=mass+m(i)
+        endif
+     endif
+  enddo
+  write(*,*) 'We have',ipart,' particles in selected region'
+  write(*,*) 'Total mass =', mass
+  
+30 format(i16)
+  write(18,50) ipart,npart,maxid
+  do i=1,npart  !Start finding the IDs
+     if(nstar.eq.0) then  !Only DM particles
+        btime=0
+     else
+        btime=bt(i)
+     endif
+     if(btime.eq.0) then
+        ok_part=(x(i)>=xmin.and.x(i)<=xmax.and. &
+             &   y(i)>=ymin.and.y(i)<=ymax.and. &
+             &   z(i)>=zmin.and.z(i)<=zmax)
+        if(rad>0) then
+           r=(x(i)-xc)**2+(y(i)-yc)**2+(z(i)-zc)**2
+           ok_part=sqrt(r)<=rad
+        endif
+        if(ok_part) then
+           write(18,30) id(i)   !Write IDs
+        endif
+     endif
+  enddo
+  
+contains
+  
   subroutine read_params
 
       implicit none
@@ -578,18 +338,13 @@ program icrefine
       
       n = iargc()
       if (n < 4) then
-         print *, 'usage: icrefine  -inp  input_dir'
+         print *, 'usage: geticref  -inp  input_dir'
          print *, '                 [-dir axis] '
-         print *, '                 [-xmi xmin] '
-         print *, '                 [-xma xmax] '
-         print *, '                 [-ymi ymin] '
-         print *, '                 [-yma ymax] '
-         print *, '                 [-zmi zmin] '
-         print *, '                 [-zma zmax] '
-         print *, '                 [-per flag] '
-         print *, '                 [-fil filetype] '
-         print *, 'ex: part2map -inp output_00001 -out map.dat'// &
-              &   ' -dir z -xmi 0.1 -xma 0.7'
+         print *, '                 [-xc xc] '
+         print *, '                 [-yc yc] '
+         print *, '                 [-zc zc] '
+         print *, '                 [-rad rad] '
+         print *, 'ex: geticref -inp output_00001 -xc 0.5 -yc 0.5 -zc 0.5 -rad 0.1'
          stop
       end if
 
