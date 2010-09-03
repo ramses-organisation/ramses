@@ -403,6 +403,21 @@ contains
   end do
   ! End loop over cpu
   
+  deallocate(cpu_cell,icell,jcell,kcell)
+  deallocate(ind_sort_cell)
+  deallocate(order_cell,dcpu)
+
+  deallocate(sontop)
+  deallocate(ngridfile)
+  deallocate(ngridlevel)
+  if(nboundary>0)deallocate(ngridbound)
+
+  deallocate(cpu_list)
+  if(TRIM(ordering).eq.'hilbert')then
+     deallocate(bound_key)
+     deallocate(cpu_read)
+  endif
+
 end subroutine getcell
 
 end module io_ramses
