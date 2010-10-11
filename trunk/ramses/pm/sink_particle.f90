@@ -2784,6 +2784,7 @@ subroutine agn_feedback
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar,temp_blast
+  real(dp)::T2_AGN,T2_min,T2_max,delta_mass_max
   integer::nx_loc
   integer,dimension(:),allocatable::ind_part,ind_grid
   logical,dimension(:),allocatable::ok_free
@@ -2802,6 +2803,15 @@ subroutine agn_feedback
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
+  ! AGN specific energy
+  T2_AGN=0.15*1d12 ! in Kelvin
+
+  ! Minimum specific energy
+  T2_min=1d7  ! in Kelvin
+
+  ! Maximum specific energy
+  T2_max=1d9 ! in Kelvin
+
   ! Compute the grid discretization effects
   call average_AGN
 
@@ -2811,13 +2821,13 @@ subroutine agn_feedback
      ! Compute estimated average temperature in the blast
      temp_blast=0.0
      if(vol_gas_agn(isink)>0.0)then
-        temp_blast=0.15*1d12*delta_mass(isink)/mass_gas_agn(isink)
+        temp_blast=T2_AGN*delta_mass(isink)/mass_gas_agn(isink)
      else
         if(ind_blast_agn(isink)>0)then
-           temp_blast=0.15*1d12*delta_mass(isink)/mass_blast_agn(isink)
+           temp_blast=T2_AGN*delta_mass(isink)/mass_blast_agn(isink)
         endif
      endif
-     if(temp_blast>1d7)then
+     if(temp_blast>T2_min)then
         ok_blast_agn(isink)=.true.
      endif
   end do
@@ -2837,7 +2847,27 @@ subroutine agn_feedback
                 & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                 & ,delta_mass(isink)*scale_d*scale_l**3/2d33
         endif
-        delta_mass(isink)=0.0
+        ! Compute estimated average temperature in the blast
+        temp_blast=0.0
+        if(vol_gas_agn(isink)>0.0)then
+           temp_blast=T2_AGN*delta_mass(isink)/mass_gas_agn(isink)
+        else
+           if(ind_blast_agn(isink)>0)then
+              temp_blast=T2_AGN*delta_mass(isink)/mass_blast_agn(isink)
+           endif
+        endif
+        if(temp_blast<T2_max)then
+           delta_mass(isink)=0.0
+        else
+           if(vol_gas_agn(isink)>0.0)then
+              delta_mass_max=T2_max/T2_AGN*mass_gas_agn(isink)
+           else
+              if(ind_blast_agn(isink)>0)then
+                 delta_mass_max=T2_max/T2_AGN*mass_blast_agn(isink)
+              endif
+           endif
+           delta_mass(isink)=delta_mass(isink)-delta_mass_max
+        endif
      endif
   end do
 
@@ -3023,7 +3053,7 @@ subroutine AGN_blast
   integer ::imetal=9
 #endif
   real(dp)::x,y,z,dx,dxx,dyy,dzz,drr,d,u,v,w,ek,u_r,ESN
-  real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,T2_AGN
+  real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,T2_AGN,T2_max
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -3052,12 +3082,18 @@ subroutine AGN_blast
   T2_AGN=0.15*1d12 ! in Kelvin
   T2_AGN=T2_AGN/scale_T2 ! in code units
 
+  ! Maximum specific energy
+  T2_max=1d9 ! in Kelvin
+  T2_max=T2_max/scale_T2 ! in code units
+
   do isink=1,nsink
      if(ok_blast_agn(isink))then
         if(vol_gas_agn(isink)>0d0)then
-           p_agn(isink)=delta_mass(isink)*T2_AGN/vol_gas_agn(isink)
+           p_agn(isink)=MAX(delta_mass(isink)*T2_AGN/vol_gas_agn(isink), &
+                &         mass_gas_agn(isink)*T2_max/vol_gas_agn(isink)  )
         else
-           p_agn(isink)=delta_mass(isink)*T2_AGN
+           p_agn(isink)=MAX(delta_mass(isink)*T2_AGN, &
+                &       mass_blast_agn(isink)*T2_max  )
         endif
      endif
   end do
