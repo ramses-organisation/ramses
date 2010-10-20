@@ -2866,7 +2866,7 @@ subroutine agn_feedback
                  delta_mass_max=T2_max/T2_AGN*mass_blast_agn(isink)
               endif
            endif
-           delta_mass(isink)=delta_mass(isink)-delta_mass_max
+           delta_mass(isink)=max(delta_mass(isink)-delta_mass_max,0.0)
         endif
      endif
   end do
@@ -3089,10 +3089,10 @@ subroutine AGN_blast
   do isink=1,nsink
      if(ok_blast_agn(isink))then
         if(vol_gas_agn(isink)>0d0)then
-           p_agn(isink)=MAX(delta_mass(isink)*T2_AGN/vol_gas_agn(isink), &
+           p_agn(isink)=MIN(delta_mass(isink)*T2_AGN/vol_gas_agn(isink), &
                 &         mass_gas_agn(isink)*T2_max/vol_gas_agn(isink)  )
         else
-           p_agn(isink)=MAX(delta_mass(isink)*T2_AGN, &
+           p_agn(isink)=MIN(delta_mass(isink)*T2_AGN, &
                 &       mass_blast_agn(isink)*T2_max  )
         endif
      endif
