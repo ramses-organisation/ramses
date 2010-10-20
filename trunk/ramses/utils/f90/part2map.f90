@@ -183,12 +183,14 @@ program part2map
   write(*,*)'Working map =',nx,ny
   allocate(map(0:nx,0:ny))
   map=0.0d0
+
   if(rotation)then
      proj='z'
      if(sideon)then
         proj='y'
      endif
   endif
+
   if (proj=='x')then
      idim=2
      jdim=3
