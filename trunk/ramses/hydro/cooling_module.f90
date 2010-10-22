@@ -596,43 +596,54 @@ subroutine solve_cooling(nH,T2,zsolar,dt,deltaT2,ncell)
      n_active=0
      do i=1,n
         facT=log10(tau(ind(i)))
-        i_T2=MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
-        yy=facT-table%T2(i_T2)
-        yy2=yy*yy
-        yy3=yy2*yy
-        
-        fa=table%cool(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-        fb=table%cool(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        fprimea=table%cool_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-        fprimeb=table%cool_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        alpha=fprimea
-        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-        cool=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-        cool_prime=cool/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
 
-        fa=table%heat(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-        fb=table%heat(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        fprimea=table%heat_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
-        fprimeb=table%heat_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        alpha=fprimea
-        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-        heat=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-        heat_prime=heat/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
+        if(facT.le.log10(T2_max_fix))then
 
-        fa=table%metal(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-        fb=table%metal(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        fprimea=table%metal_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-        fprimeb=table%metal_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-        alpha=fprimea
-        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-        metal=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-        metal_prime=metal/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
+           i_T2=MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
+           yy=facT-table%T2(i_T2)
+           yy2=yy*yy
+           yy3=yy2*yy
+           
+           fa=table%cool(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+           fb=table%cool(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           fprimea=table%cool_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+           fprimeb=table%cool_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           alpha=fprimea
+           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+           cool=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+           cool_prime=cool/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
+           
+           fa=table%heat(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+           fb=table%heat(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           fprimea=table%heat_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
+           fprimeb=table%heat_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           alpha=fprimea
+           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+           heat=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+           heat_prime=heat/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
+           
+           fa=table%metal(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+           fb=table%metal(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           fprimea=table%metal_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+           fprimeb=table%metal_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+           alpha=fprimea
+           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+           metal=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+           metal_prime=metal/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
+           
+           lambda=cool+zzz(ind(i))*metal-heat
+           lambda_prime=cool_prime+zzz(ind(i))*metal_prime-heat_prime
+           
+        else
+           
+           lambda=1.42*1d-27*sqrt(tau(ind(i)))*1.1
+           lambda_prime=lambda/2./tau(ind(i))
+           
+        endif
 
-        lambda=cool+zzz(ind(i))*metal-heat
-        lambda_prime=cool_prime+zzz(ind(i))*metal_prime-heat_prime
         wcool=MAX(abs(lambda)/tau(ind(i))*varmax,wmax(ind(i)),-lambda_prime*varmax)
 
         tau_old(ind(i))=tau(ind(i))

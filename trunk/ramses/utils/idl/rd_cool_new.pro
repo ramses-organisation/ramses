@@ -37,7 +37,6 @@ T   =dblarr(n2)
 Teq =dblarr(n1)
 readu,1,n
 readu,1,T
-readu,1,Teq
 readu,1,cool
 readu,1,heat
 readu,1,cool_com
@@ -51,6 +50,6 @@ readu,1,metal_prime
 readu,1,mu
 close,1
 
-cooling={n1:n1,n2:n2,n:n,t:t,teq:teq,cool:cool,heat:heat,metal:metal,cool_prime:cool_prime,heat_prime:heat_prime,metal_prime:metal_prime,mu:mu}
+cooling={n1:n1,n2:n2,n:n,t:t,teq:teq,cool:cool,heat:heat,metal:metal,cool_com:cool_com,heat_com:heat_com,cool_prime:cool_prime,heat_prime:heat_prime,cool_com_prime:cool_com_prime,heat_com_prime:heat_com_prime,metal_prime:metal_prime,mu:mu}
 
 end
