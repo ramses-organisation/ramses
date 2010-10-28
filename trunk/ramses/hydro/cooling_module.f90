@@ -536,7 +536,7 @@ subroutine solve_cooling(nH,T2,zsolar,dt,deltaT2,ncell)
   real(kind=8)::facT,dlog_nH,dlog_T2,coeff,T2eq,precoeff,h,h2,h3
   real(kind=8)::metal,cool,heat,w1T,w2T,w11,w12,w21,w22,err,yy,yy2,yy3
   real(kind=8)::metal_prime,cool_prime,heat_prime,wcool
-  real(kind=8)::lambda,lambda_prime
+  real(kind=8)::lambda,lambda_prime,logT2max
   real(kind=8)::fa,fb,fprimea,fprimeb,alpha,beta,gamma
   real(kind=8),dimension(1:ncell)::rgt,lft,tau,tau_old
   real(kind=8),dimension(1:ncell)::time,time_old,facH,zzz,tau_ini
@@ -547,6 +547,7 @@ subroutine solve_cooling(nH,T2,zsolar,dt,deltaT2,ncell)
   logical::tau_negative
   
   ! Initializations
+  logT2max=log10(T2_max_fix)
   dlog_nH=dble(table%n1-1)/(table%nH(table%n1)-table%nH(1))
   dlog_T2=dble(table%n2-1)/(table%T2(table%n2)-table%T2(1))
   h=1d0/dlog_T2
@@ -597,7 +598,7 @@ subroutine solve_cooling(nH,T2,zsolar,dt,deltaT2,ncell)
      do i=1,n
         facT=log10(tau(ind(i)))
 
-        if(facT.le.log10(T2_max_fix))then
+        if(facT.le.logT2max)then
 
            i_T2=MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
            yy=facT-table%T2(i_T2)
