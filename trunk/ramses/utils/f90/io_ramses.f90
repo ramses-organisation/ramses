@@ -1,4 +1,5 @@
 module io_ramses
+  use random
 
 contains 
 
@@ -403,28 +404,2036 @@ contains
   end do
   ! End loop over cpu
   
-  deallocate(cpu_cell,icell,jcell,kcell)
-  deallocate(ind_sort_cell)
-  deallocate(order_cell,dcpu)
+end subroutine getcell
 
-  deallocate(sontop)
-  deallocate(ngridfile)
-  deallocate(ngridlevel)
-  if(nboundary>0)deallocate(ngridbound)
+!======================================================================
+!======================================================================
+!======================================================================
 
-  deallocate(cpu_list)
-  if(TRIM(ordering).eq.'hilbert')then
-     deallocate(bound_key)
-     deallocate(cpu_read)
+subroutine gaspart(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
+     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,partmass,averdens,xp,varp,&
+     denspartcount)
+
+  implicit none
+
+  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
+  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
+  integer::indexcell,l,npartlocal,partcount,respart,denspartcount,ilowd,nmin,nmax,pc,respc
+  integer::ncpu_read,icpu,ngridactual
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc
+  real(kind=8)::volume,facdens,xx
+  real(KIND=8)::partmass,averdens,rnpartlocal,massleft
+  integer,dimension(1:ncpu)::cpu_list
+
+  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
+  character(LEN=128)::repository,nomfich
+  character(LEN=80)::ordering
+  character(LEN=5)::ncharcpu,nchar
+  real(kind=8),dimension(:),allocatable::xdp
+  real(KIND=8),dimension(:,:),allocatable::x,xg
+  real(KIND=8),dimension(:,:,:),allocatable::var
+  integer,dimension(:)  ,allocatable::idp,sontop
+  integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
+  real(KIND=8),dimension(:,:),allocatable::xgrid
+  real(KIND=8),dimension(:,:),allocatable::vargrid
+  integer,dimension(:),allocatable::levgrid
+  real(KIND=8),dimension(:,:),allocatable::xp
+  real(KIND=8),dimension(:,:),allocatable::varp
+
+  integer ,dimension(1:1,1:IRandNumSize)::allseed
+  integer ,dimension(1:IRandNumSize)::localseed
+  integer::iseed=0,poisson
+
+  ! Initialize random number generator
+  call rans(1,iseed,allseed)
+  localseed=allseed(1,1:IRandNumSize)
+
+  partmass=0.d0
+  averdens=0.d0
+  volume=0.d0
+  indexcell=0
+
+  ngridactual=0
+  do k=1,ncpu
+     call title(k,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     ngridactual=ngridactual+ngrid_current
+     close(10)
+  end do
+
+  !write(*,*)ngridactual
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     do i=1,13
+        read(10)
+     end do
+     twotondim=2**ndim
+     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+     allocate(ngridlevel(1:ncpu,1:nlevelmax))
+     if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+
+     ! Open HYDRO file and skip header
+     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)nvarh
+     read(11)
+     read(11)
+     read(11)
+     read(11)gamma
+
+     if(k==1)then
+        ngmax=5*ngridactual
+        allocate(xgrid(1:ngmax,1:ndim))
+        allocate(vargrid(1:ngmax,1:nvarh))
+        allocate(levgrid(1:ngmax))
+        xgrid=-1.d30
+        vargrid=-1.d30
+        levgrid=0
+     end if
+
+     ! Read grid numbers
+     read(10)ngridlevel
+     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
+     read(10)
+     if(nboundary>0)then
+        do i=1,2
+           read(10)
+        end do
+        read(10)ngridbound
+        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
+     endif
+     read(10)
+! ROM: comment the single follwing line for old stuff
+     read(10)
+     if(TRIM(ordering).eq.'bisection')then
+        do i=1,5
+           read(10)
+        end do
+     else
+        read(10)
+     endif
+     read(10)
+     read(10)
+     read(10)
+
+     ! Compute total number of grids
+     ngridtot=0
+     do j=1,ncpu
+        do ilevel=1,nlevelmax
+           ngridtot=ngridtot+ngridfile(j,ilevel)
+        end do
+     end do
+
+     ! Allocate grid-based arrays
+
+        allocate(xg (1:ngridtot,1:ndim))
+        allocate(son(1:ngridtot,1:twotondim))
+        allocate(var(1:ngridtot,1:twotondim,1:nvarh))
+
+     ! Loop over levels
+     istart=0
+     do ilevel=1,lmax
+        ! Loop over domains
+        do j=1,nboundary+ncpu
+           ! Read AMR data
+           if(ngridfile(j,ilevel)>0)then
+              allocate(xdp(1:ngridfile(j,ilevel)))
+              allocate(idp(1:ngridfile(j,ilevel)))
+              read(10) ! Skip grid index
+              read(10) ! Skip next index
+              read(10) ! Skip prev index
+              ! Read grid center
+              do ind=1,ndim
+                 read(10)xdp
+                 do i=1,ngridfile(j,ilevel)
+                    xg(istart+i,ind)=xdp(i)
+                 end do
+              end do
+              read(10) ! Skip father index
+              do ind=1,2*ndim
+                 read(10) ! Skip nbor index
+              end do
+              ! Read son index
+              do ind=1,twotondim
+                 read(10)idp
+                 do i=1,ngridfile(j,ilevel)
+                    son(istart+i,ind)=idp(i)
+                 end do
+              end do
+              deallocate(idp)
+              ! Skip cpu map
+              do ind=1,twotondim
+                 read(10)
+              end do
+              ! Skip refinement map
+              do ind=1,twotondim
+                 read(10)
+              end do
+           endif
+           ! Read HYDRO data
+           read(11)
+           read(11)
+           if(ngridfile(j,ilevel)>0)then
+              ! Read hydro variables
+              do ind=1,twotondim
+                 do ivar=1,nvarh
+                    read(11)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       var(istart+i,ind,ivar)=xdp(i)
+                       dx=0.5d0**ilevel
+                       iz=(ind-1)/4
+                       iy=(ind-1-4*iz)/2
+                       ix=(ind-1-2*iy-4*iz)
+                       xc=xg(istart+i,1)+(dble(ix)-0.5D0)*dx
+                       yc=xg(istart+i,2)+(dble(iy)-0.5D0)*dx
+                       zc=xg(istart+i,3)+(dble(iz)-0.5D0)*dx 
+                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(son(istart+i,ind)==0&
+                            .or.ilevel==lmax).and.(xmin<=xc.and.xc<=xmax).and.&
+                            (ymin<=yc.and.yc<=ymax).and.(zmin<=zc.and.zc<=zmax))then
+                          volume=volume+dx*dx*dx
+                          partmass=partmass+var(istart+i,ind,1)*dx*dx*dx
+                          indexcell=indexcell+1
+                          if(indexcell.ge.ngmax)write(*,*)indexcell,ngmax
+                          do l=1,ndim
+                             if(l==1)xgrid(indexcell,l)=xc
+                             if(l==2)xgrid(indexcell,l)=yc
+                             if(l==3)xgrid(indexcell,l)=zc
+                          end do
+                          do l=1,nvarh
+                             vargrid(indexcell,l)=var(istart+i,ind,l)
+                          end do
+                          levgrid(indexcell)=ilevel
+                       end if
+                    end do
+                 end do
+              end do
+              istart=istart+ngridfile(j,ilevel)
+           end if
+        end do
+     enddo
+     ! End loop over levels
+
+     close(10)
+     close(11)
+
+     deallocate(xg,son,var,ngridfile,ngridlevel)
+     if(nboundary>0)deallocate(ngridbound)
+  end do
+
+  write(*,*)'AMR grid read'
+
+  averdens=partmass/volume
+  partmass=partmass/dble(ndummypart)
+
+  allocate(xp(1:(nmax-nmin+1),1:ndim))
+  allocate(varp(1:(nmax-nmin+1),1:nvarh))
+
+  partcount=0
+  denspartcount=0
+  massleft=0.d0
+  ilowd=0
+  pc=0
+  do i=1,indexcell
+     dx=0.5d0**levgrid(i)
+     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
+     if(rnpartlocal>=1) then
+        npartlocal=int(rnpartlocal)
+        massleft=massleft+(vargrid(i,1)*dx*dx*dx-dble(npartlocal)*partmass)
+        j=1
+        do while (j<=npartlocal)
+           j=j+1
+           partcount=partcount+1
+           if(nmin<=partcount.and.partcount<=nmax)then
+              pc=pc+1
+              do l=1,ndim
+                 call ranf(localseed,xx)
+                 xc=xx*dx+xgrid(i,l)-dx/2
+                 xp(pc,l)=xc
+              end do
+              do l=1,nvarh
+                 varp(pc,l)=vargrid(i,l)
+              end do
+              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+           endif
+        end do
+     endif
+     if(rnpartlocal<1) then
+        ilowd=ilowd+1
+        massleft=massleft+vargrid(i,1)*dx*dx*dx
+     endif
+  end do
+
+  if(partcount==ndummypart.or.pc==nmax-nmin+1) goto 123
+
+  respart=ndummypart-partcount
+  respc=nmax-nmin+1-pc
+
+  do i=1,indexcell
+     dx=0.5d0**levgrid(i)
+     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
+     if(rnpartlocal<1) then
+        call poissdev(localseed,rnpartlocal,poisson)
+        poisson=poisson+nint(massleft/dble(ilowd)/partmass)
+        j=1
+        do while (j<=poisson.and.partcount<ndummypart)
+           j=j+1
+           partcount=partcount+1
+           if(nmin<=partcount.and.partcount<=nmax)then
+              pc=pc+1
+              do l=1,ndim
+                 call ranf(localseed,xx)
+                 xp(pc,l)=xx*dx+xgrid(i,l)-dx/2
+              end do
+              do k=1,nvarh
+                 varp(pc,k)=vargrid(i,k)
+              end do
+              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+           endif
+        end do
+     endif
+  end do
+
+ if(partcount<ndummypart.or.pc<nmax-nmin+1)then
+     respart=ndummypart-partcount
+     respc=nmax-nmin+1-pc
+     do i=1,respart
+        call ranf(localseed,xx)
+        j=nint(xx*dble(indexcell-1))+1
+        partcount=partcount+1
+        if(nmin<=partcount.and.partcount<=nmax)then  
+           pc=pc+1
+           do l=1,ndim
+              call ranf(localseed,xx)
+              xp(pc,l)=xx*dx+xgrid(j,l)-dx/2
+           end do
+           do k=1,nvarh
+              varp(pc,k)=vargrid(j,k)
+           end do
+           if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+        end if
+     end do
   endif
 
-end subroutine getcell
+123 continue  
+
+  return
+
+end subroutine gaspart
+
+!=======================================================================
+!=======================================================================
+!=======================================================================
+
+subroutine gaspart2(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
+     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
+     denspartcount)
+
+  implicit none
+
+  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
+  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
+  integer::indexcell,l,npartlocal,partcount,respart,denspartcount,ilowd,nmin,nmax,pc,respc
+  integer::ncpu_read,icpu,ngridactual
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc
+  real(kind=8)::volume,facdens,xx,mdm
+  real(KIND=8)::partmass,averdens,rnpartlocal,massleft
+  integer,dimension(1:ncpu)::cpu_list
+
+  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
+  character(LEN=128)::repository,nomfich
+  character(LEN=80)::ordering
+  character(LEN=5)::ncharcpu,nchar
+  real(kind=8),dimension(:),allocatable::xdp
+  real(KIND=8),dimension(:,:),allocatable::x,xg
+  real(KIND=8),dimension(:,:,:),allocatable::var
+  integer,dimension(:)  ,allocatable::idp,sontop
+  integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
+  real(KIND=8),dimension(:,:),allocatable::xgrid
+  real(KIND=8),dimension(:,:),allocatable::vargrid
+  integer,dimension(:),allocatable::levgrid
+  real(KIND=8),dimension(:,:),allocatable::xp
+  real(KIND=8),dimension(:,:),allocatable::varp
+
+  integer ,dimension(1:1,1:IRandNumSize)::allseed
+  integer ,dimension(1:IRandNumSize)::localseed
+  integer::iseed=0,poisson
+
+  ! Initialize random number generator
+  call rans(1,iseed,allseed)
+  localseed=allseed(1,1:IRandNumSize)
+
+  partmass=0.d0
+  averdens=0.d0
+  volume=0.d0
+  indexcell=0
+
+  ngridactual=0
+  do k=1,ncpu
+     call title(k,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     ngridactual=ngridactual+ngrid_current
+     close(10)
+  end do
+
+  !write(*,*)ngridactual
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     do i=1,13
+        read(10)
+     end do
+     twotondim=2**ndim
+     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+
+     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+     allocate(ngridlevel(1:ncpu,1:nlevelmax))
+     if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+
+     ! Open HYDRO file and skip header
+     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)nvarh
+     read(11)
+     read(11)
+     read(11)
+     read(11)gamma
+
+     if(k==1)then
+        ngmax=5*ngridactual
+        allocate(xgrid(1:ngmax,1:ndim))
+        allocate(vargrid(1:ngmax,1:nvarh))
+        allocate(levgrid(1:ngmax))
+        xgrid=-1.d30
+        vargrid=-1.d30
+        levgrid=0
+     end if
+
+     ! Read grid numbers
+     read(10)ngridlevel
+     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
+     read(10)
+     if(nboundary>0)then
+        do i=1,2
+           read(10)
+        end do
+        read(10)ngridbound
+        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
+     endif
+     read(10)
+! ROM: comment the single follwing line for old stuff
+     read(10)
+     if(TRIM(ordering).eq.'bisection')then
+        do i=1,5
+           read(10)
+        end do
+     else
+        read(10)
+     endif
+     read(10)
+     read(10)
+     read(10)
+
+     ! Compute total number of grids
+     ngridtot=0
+     do j=1,ncpu
+        do ilevel=1,nlevelmax
+           ngridtot=ngridtot+ngridfile(j,ilevel)
+        end do
+     end do
+
+     ! Allocate grid-based arrays
+
+        allocate(xg (1:ngridtot,1:ndim))
+        allocate(son(1:ngridtot,1:twotondim))
+        allocate(var(1:ngridtot,1:twotondim,1:nvarh))
+
+     ! Loop over levels
+     istart=0
+     do ilevel=1,lmax
+        ! Loop over domains
+        do j=1,nboundary+ncpu
+           ! Read AMR data
+           if(ngridfile(j,ilevel)>0)then
+              allocate(xdp(1:ngridfile(j,ilevel)))
+              allocate(idp(1:ngridfile(j,ilevel)))
+              read(10) ! Skip grid index
+              read(10) ! Skip next index
+              read(10) ! Skip prev index
+              ! Read grid center
+              do ind=1,ndim
+                 read(10)xdp
+                 do i=1,ngridfile(j,ilevel)
+                    xg(istart+i,ind)=xdp(i)
+                 end do
+              end do
+              read(10) ! Skip father index
+              do ind=1,2*ndim
+                 read(10) ! Skip nbor index
+              end do
+              ! Read son index
+              do ind=1,twotondim
+                 read(10)idp
+                 do i=1,ngridfile(j,ilevel)
+                    son(istart+i,ind)=idp(i)
+                 end do
+              end do
+              deallocate(idp)
+              ! Skip cpu map
+              do ind=1,twotondim
+                 read(10)
+              end do
+              ! Skip refinement map
+              do ind=1,twotondim
+                 read(10)
+              end do
+           endif
+           ! Read HYDRO data
+           read(11)
+           read(11)
+           if(ngridfile(j,ilevel)>0)then
+              ! Read hydro variables
+              do ind=1,twotondim
+                 do ivar=1,nvarh
+                    read(11)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       var(istart+i,ind,ivar)=xdp(i)
+                       dx=0.5d0**ilevel
+                       iz=(ind-1)/4
+                       iy=(ind-1-4*iz)/2
+                       ix=(ind-1-2*iy-4*iz)
+                       xc=xg(istart+i,1)+(dble(ix)-0.5D0)*dx
+                       yc=xg(istart+i,2)+(dble(iy)-0.5D0)*dx
+                       zc=xg(istart+i,3)+(dble(iz)-0.5D0)*dx 
+                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(son(istart+i,ind)==0&
+                            .or.ilevel==lmax).and.(xmin<=xc.and.xc<=xmax).and.&
+                            (ymin<=yc.and.yc<=ymax).and.(zmin<=zc.and.zc<=zmax))then
+                          volume=volume+dx*dx*dx
+                          partmass=partmass+var(istart+i,ind,1)*dx*dx*dx
+                          indexcell=indexcell+1
+                          if(indexcell.ge.ngmax)write(*,*)indexcell,ngmax
+                          do l=1,ndim
+                             if(l==1)xgrid(indexcell,l)=xc
+                             if(l==2)xgrid(indexcell,l)=yc
+                             if(l==3)xgrid(indexcell,l)=zc
+                          end do
+                          do l=1,nvarh
+                             vargrid(indexcell,l)=var(istart+i,ind,l)
+                          end do
+                          levgrid(indexcell)=ilevel
+                       end if
+                    end do
+                 end do
+              end do
+              istart=istart+ngridfile(j,ilevel)
+           end if
+        end do
+     enddo
+     ! End loop over levels
+
+     close(10)
+     close(11)
+
+     deallocate(xg,son,var,ngridfile,ngridlevel)
+     if(nboundary>0)deallocate(ngridbound)
+  end do
+
+  write(*,*)'AMR grid read'
+
+  write(*,*)'Total gas mass = ',partmass
+  
+  ndummypart=int(partmass/mdm)+1
+  averdens=partmass/volume
+  partmass=partmass/dble(ndummypart)
+
+  nmin=1
+  nmax=ndummypart
+
+  write(*,*)'Number of gas dummy particles = ',ndummypart
+  write(*,*)'Gas particle mass = ',partmass
+  
+
+  allocate(xp(1:(nmax-nmin+1),1:ndim))
+  allocate(varp(1:(nmax-nmin+1),1:nvarh))
+
+  partcount=0
+  denspartcount=0
+  massleft=0.d0
+  ilowd=0
+  pc=0
+  do i=1,indexcell
+     dx=0.5d0**levgrid(i)
+     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
+     if(rnpartlocal>=1) then
+        npartlocal=int(rnpartlocal)
+        massleft=massleft+(vargrid(i,1)*dx*dx*dx-dble(npartlocal)*partmass)
+        j=1
+        do while (j<=npartlocal)
+           j=j+1
+           partcount=partcount+1
+           if(nmin<=partcount.and.partcount<=nmax)then
+              pc=pc+1
+              do l=1,ndim
+                 call ranf(localseed,xx)
+                 xc=xx*dx+xgrid(i,l)-dx/2
+                 xp(pc,l)=xc
+              end do
+              do l=1,nvarh
+                 varp(pc,l)=vargrid(i,l)
+              end do
+              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+           endif
+        end do
+     endif
+     if(rnpartlocal<1) then
+        ilowd=ilowd+1
+        massleft=massleft+vargrid(i,1)*dx*dx*dx
+     endif
+  end do
+  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
+
+  if(partcount==ndummypart.or.pc==nmax-nmin+1) goto 123
+
+  respart=ndummypart-partcount
+  respc=nmax-nmin+1-pc
+
+  do i=1,indexcell
+     dx=0.5d0**levgrid(i)
+     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
+     if(rnpartlocal<1) then
+        call poissdev(localseed,rnpartlocal,poisson)
+        poisson=poisson+nint(massleft/dble(ilowd)/partmass)
+        j=1
+        do while (j<=poisson.and.partcount<ndummypart)
+           j=j+1
+           partcount=partcount+1
+           if(nmin<=partcount.and.partcount<=nmax)then
+              pc=pc+1
+              do l=1,ndim
+                 call ranf(localseed,xx)
+                 xp(pc,l)=xx*dx+xgrid(i,l)-dx/2
+              end do
+              do k=1,nvarh
+                 varp(pc,k)=vargrid(i,k)
+              end do
+              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+           endif
+        end do
+     endif
+  end do
+
+  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
+
+ if(partcount<ndummypart.or.pc<nmax-nmin+1)then
+     respart=ndummypart-partcount
+     respc=nmax-nmin+1-pc
+     do i=1,respart
+        call ranf(localseed,xx)
+        j=nint(xx*dble(indexcell-1))+1
+        partcount=partcount+1
+        if(nmin<=partcount.and.partcount<=nmax)then  
+           pc=pc+1
+           do l=1,ndim
+              call ranf(localseed,xx)
+              xp(pc,l)=xx*dx+xgrid(j,l)-dx/2
+           end do
+           do k=1,nvarh
+              varp(pc,k)=vargrid(j,k)
+           end do
+           if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+        end if
+     end do
+  endif
+
+  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
+  write(*,*)'indexcell', indexcell
+
+123 continue  
+
+  return
+
+end subroutine gaspart2
+
+!=======================================================================
+!=======================================================================
+!=======================================================================
+
+subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
+     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
+     denspartcount)
+
+  implicit none
+
+  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
+  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
+  integer::l,npartlocal,partcount,respart,denspartcount,nmin,nmax,pc,respc,indexcelltmp
+  integer::ncpu_read,icpu,ngridactual,resss,ii,jj,kk,icell,ilowdtot,ncpufull,indexcelltot
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx
+  real(kind=8),dimension(1:3)::xc
+  real(kind=8)::volume,facdens,xx,mdm
+  real(KIND=8)::partmass,averdens,rnpartlocal,massleft,masslefttot,distro
+  integer,dimension(1:ncpu)::cpu_list
+
+  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
+  character(LEN=128)::repository,nomfich
+  character(LEN=80)::ordering
+  character(LEN=5)::ncharcpu,nchar
+  real(kind=8),dimension(:),allocatable::xdp,mleft,partm
+  real(KIND=8),dimension(:,:),allocatable::xxdp
+  real(KIND=8),dimension(:,:,:),allocatable::vvdp
+  integer,dimension(:),allocatable::idp,ilowd,nfake,locind,indexcell,levmaxlev,rindex,flagcell
+  integer,dimension(:,:),allocatable::ngridfile,ngridlevel,ngridbound
+  integer,dimension(:,:),allocatable::sdp
+  real(KIND=8),dimension(:,:),allocatable::xp
+  real(KIND=8),dimension(:,:),allocatable::varp
+
+  integer ,dimension(1:1,1:IRandNumSize)::allseed
+  integer ,dimension(1:IRandNumSize)::localseed
+  integer::iseed=0,poisson
+
+
+  real(kind=8)::gxmin,gxmax,gymin,gymax,gzmin,gzmax
+
+  ! Initialize random number generator
+  call rans(1,iseed,allseed)
+  localseed=allseed(1,1:IRandNumSize)
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!! Compute gas particle mass 
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  partmass=0.d0
+  averdens=0.d0
+  volume=0.d0
+  indexcelltot=0
+  ndummypart=0
+
+  ngridactual=0
+  do k=1,ncpu
+     call title(k,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     ngridactual=ngridactual+ngrid_current
+     close(10)
+  end do
+
+  !write(*,*)ngridactual
+
+  allocate(indexcell(1:ncpu_read))
+  allocate(locind(1:ncpu_read))
+  allocate(nfake(1:ncpu_read))
+  allocate(partm(1:ncpu_read))
+  allocate(levmaxlev(1:ncpu_read))
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+
+     nfake(k)=0
+     partm(k)=0.d0
+     indexcell(k)=0
+     levmaxlev(k)=-100
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     do i=1,13
+        read(10)
+     end do
+     twotondim=2**ndim
+     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+
+     ! Open HYDRO file and skip header
+     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)nvarh
+     read(11)
+     read(11)
+     read(11)
+     read(11)gamma
+
+     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+     allocate(ngridlevel(1:ncpu,1:nlevelmax))
+     if(nboundary>0) allocate(ngridbound(1:nboundary,1:nlevelmax))
+
+     ! Read grid numbers
+     read(10)ngridlevel
+     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel(1:ncpu,1:nlevelmax)
+     read(10)
+     if(nboundary>0)then
+        do i=1,2
+           read(10)
+        end do
+        read(10)ngridbound
+        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound(1:nboundary,1:nlevelmax)
+     endif
+     read(10)
+! ROM: comment the single follwing line for old stuff
+     read(10)
+     if(TRIM(ordering).eq.'bisection')then
+        do i=1,5
+           read(10)
+        end do
+     else
+        read(10)
+     endif
+     read(10)
+     read(10)
+     read(10)
+
+     ! Compute total number of grids
+     ngridtot=0
+     do j=1,ncpu
+        do ilevel=1,nlevelmax
+           ngridtot=ngridtot+ngridfile(j,ilevel)
+        end do
+     end do
+
+     ! Loop over levels
+     istart=0
+     do ilevel=1,lmax
+        ! Loop over domains
+        do j=1,nboundary+ncpu
+           ! Read AMR data
+           if(ngridfile(j,ilevel)>0)then
+              if(j==icpu.and.ilevel>levmaxlev(k))levmaxlev(k)=ilevel
+              allocate(xdp(1:ngridfile(j,ilevel)))
+              allocate(xxdp(1:ngridfile(j,ilevel),1:ndim))
+              allocate(vvdp(1:ngridfile(j,ilevel),1:twotondim,1:nvarh))
+              allocate(sdp(1:ngridfile(j,ilevel),1:twotondim))
+              allocate(idp(1:ngridfile(j,ilevel)))
+              read(10) ! Skip grid index
+              read(10) ! Skip next index
+              read(10) ! Skip prev index
+              ! Read grid center
+              do ind=1,ndim
+                 read(10)xdp
+                 do i=1,ngridfile(j,ilevel)
+                    xxdp(i,ind)=xdp(i)
+                 end do 
+              end do
+              read(10) ! Skip father index
+              do ind=1,2*ndim
+                 read(10) ! Skip nbor index
+              end do
+              ! Read son index
+              do ind=1,twotondim
+                 read(10)idp
+                 do i=1,ngridfile(j,ilevel)
+                    sdp(i,ind)=idp(i)
+                 end do
+              end do
+              ! Skip cpu map
+              do ind=1,twotondim
+                 read(10)
+              end do
+              ! Skip refinement map
+              do ind=1,twotondim
+                 read(10)
+              end do
+           end if
+           ! Read HYDRO data
+           read(11)
+           read(11)
+           if(ngridfile(j,ilevel)>0)then
+              ! Read hydro variables
+              do ind=1,twotondim
+                 do ivar=1,nvarh
+                    read(11)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       vvdp(i,ind,ivar)=xdp(i)
+                       dx=0.5d0**ilevel
+                       iz=(ind-1)/4
+                       iy=(ind-1-4*iz)/2
+                       ix=(ind-1-2*iy-4*iz)
+                       xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                       xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                       xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                       if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
+                            .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                            (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                          volume=volume+dx*dx*dx
+                          partmass=partmass+vvdp(i,ind,1)*dx*dx*dx
+                          partm(k)=partm(k)+vvdp(i,ind,1)*dx*dx*dx
+                          indexcell(k)=indexcell(k)+1
+                          indexcelltot=indexcelltot+1
+                       end if
+                    end do
+                 end do
+              end do
+              istart=istart+ngridfile(j,ilevel)
+              deallocate(xdp)
+              deallocate(xxdp)
+              deallocate(vvdp)
+              deallocate(sdp)
+              deallocate(idp)
+           end if
+        end do
+     enddo
+     ! End loop over levels
+     
+     close(10)
+     close(11)
+     
+     nfake(k)=nint(partm(k)/mdm)
+     !ndummypart=ndummypart+nfake(k)
+
+     deallocate(ngridfile,ngridlevel)
+     if(nboundary>0)deallocate(ngridbound)
+  end do
+
+  write(*,*)'AMR grid read'
+
+  write(*,*)'Total gas mass = ', partmass
+
+  ndummypart=int(partmass/mdm)+1
+
+  averdens=partmass/volume
+  partmass=partmass/dble(ndummypart)
+
+  nmin=1
+  nmax=ndummypart
+
+  write(*,*)'Number of gas dummy particles = ',ndummypart
+  write(*,*)'Gas particle mass = ', partmass
+  
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!! Distribute gas particles
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  allocate(xp(1:(nmax-nmin+1),1:ndim))
+  allocate(varp(1:(nmax-nmin+1),1:nvarh))
+  allocate(mleft(1:ncpu_read))
+  allocate(ilowd(1:ncpu_read))
+
+  pc=0
+  partcount=0
+  denspartcount=0
+  masslefttot=0.d0
+  ilowdtot=0
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+
+     ! Open AMR file and skip header
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=10,file=nomfich,status='old',form='unformatted')
+     read(10)
+     read(10)ndim
+     read(10)nx,ny,nz
+     read(10)nlevelmax
+     read(10)ngridmax
+     read(10)nboundary
+     read(10)ngrid_current
+     read(10)boxlen
+     do i=1,13
+        read(10)
+     end do
+     twotondim=2**ndim
+     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+     allocate(ngridlevel(1:ncpu,1:nlevelmax))
+     if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+
+     ! Open HYDRO file and skip headernpartlocal=int(rnpartlocal)
+     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)nvarh
+     read(11)
+     read(11)
+     read(11)
+     read(11)gamma
+
+     ! Read grid numbers
+     read(10)ngridlevel
+     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel(1:ncpu,1:nlevelmax)
+     read(10)
+     if(nboundary>0)then
+        do i=1,2
+           read(10)
+        end do
+        read(10)ngridbound
+        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound(1:nboundary,1:nlevelmax)
+     endif
+     read(10)
+! ROM: comment the single follwing line for old stuff
+     read(10)
+     if(TRIM(ordering).eq.'bisection')then
+        do i=1,5
+           read(10)
+        end do
+     else
+        read(10)
+     endif
+     read(10)
+     read(10)
+     read(10)
+
+     massleft=0.d0
+     ilowd(k)=0
+     mleft(k)=0.d0
+     locind(k)=0
+
+     ! Loop over levels
+     istart=0
+     do ilevel=1,lmax
+        ! Loop over domains
+        do j=1,nboundary+ncpu
+           ! Read AMR data
+           if(ngridfile(j,ilevel)>0)then
+              allocate(xdp(1:ngridfile(j,ilevel)))
+              allocate(xxdp(1:ngridfile(j,ilevel),1:ndim))
+              allocate(vvdp(1:ngridfile(j,ilevel),1:twotondim,1:nvarh))
+              allocate(sdp(1:ngridfile(j,ilevel),1:twotondim))
+              allocate(idp(1:ngridfile(j,ilevel)))
+              read(10) ! Skip grid index
+              read(10) ! Skip next index
+              read(10) ! Skip prev index
+              ! Read grid center
+              do ind=1,ndim
+                 read(10)xdp
+                 do i=1,ngridfile(j,ilevel)
+                    xxdp(i,ind)=xdp(i)
+                 end do 
+              end do
+              read(10) ! Skip father index
+              do ind=1,2*ndim
+                 read(10) ! Skip nbor index
+              end do
+              ! Read son index
+              do ind=1,twotondim
+                 read(10)idp
+                 do i=1,ngridfile(j,ilevel)
+                    sdp(i,ind)=idp(i)
+                 end do
+              end do
+              ! Skip cpu map
+              do ind=1,twotondim
+                 read(10)
+              end do
+              ! Skip refinement map
+              do ind=1,twotondim
+                 read(10)
+              end do
+           end if
+           ! Read HYDRO data
+           read(11)
+           read(11)
+           if(ngridfile(j,ilevel)>0)then
+              ! Read hydro variables
+              do ind=1,twotondim
+                 do ivar=1,nvarh
+                    read(11)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       vvdp(i,ind,ivar)=xdp(i)
+                       dx=0.5d0**ilevel
+                       iz=(ind-1)/4
+                       iy=(ind-1-4*iz)/2
+                       ix=(ind-1-2*iy-4*iz)
+                       xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                       xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                       xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                            .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                            (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                          rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
+                          if(rnpartlocal>=1) then
+                             npartlocal=int(rnpartlocal)
+                             massleft=massleft+(vvdp(i,ind,1)*dx*dx*dx-dble(npartlocal)*partmass)
+                             jj=1
+                             do while (jj<=npartlocal)!.and.locind(k)<nfake(k))
+                                jj=jj+1
+                                locind(k)=locind(k)+1
+                                partcount=partcount+1
+                                if(nmin<=partcount.and.partcount<=nmax)then
+                                   pc=pc+1
+                                   do l=1,ndim
+                                      call ranf(localseed,xx)
+                                      xp(pc,l)=xx*dx+xc(l)-dx/2
+                                   end do
+                                   do l=1,nvarh
+                                      varp(pc,l)=vvdp(i,ind,l)
+                                   end do
+                                   if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                endif
+                             end do
+                          endif
+                          if(rnpartlocal<1) then
+                             ilowd(k)=ilowd(k)+1
+                             massleft=massleft+vvdp(i,ind,1)*dx*dx*dx
+                             ilowdtot=ilowdtot+1
+                             masslefttot=masslefttot+vvdp(i,ind,1)*dx*dx*dx
+                          endif
+                       end if
+                    end do
+                 end do
+              end do
+              istart=istart+ngridfile(j,ilevel)
+              deallocate(xdp)
+              deallocate(xxdp)
+              deallocate(vvdp)
+              deallocate(sdp)
+              deallocate(idp)
+           end if
+        end do
+     enddo
+     
+     mleft(k)=massleft
+
+     close(10)
+     close(11)
+
+     deallocate(ngridfile,ngridlevel)
+     if(nboundary>0)deallocate(ngridbound)
+  end do
+
+
+  write(*,*)'gaspart3 I done', denspartcount, pc, partcount, ndummypart
+
+  if(partcount>ndummypart.or.pc>nmax-nmin+1)WRITE(*,*)'SBI'
+
+  ncpufull=0
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+
+     if(partcount<ndummypart.and.pc<nmax-nmin+1)then!.and.locind(k)<nfake(k)) then
+        
+        ! Open AMR file and skip header
+        ipos=INDEX(repository,'output_')
+        nchar=repository(ipos+7:ipos+13)
+        nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+        open(unit=10,file=nomfich,status='old',form='unformatted')
+        read(10)
+        read(10)ndim
+        read(10)nx,ny,nz
+        read(10)nlevelmax
+        read(10)ngridmax
+        read(10)nboundary
+        read(10)ngrid_current
+        read(10)boxlen
+        do i=1,13
+           read(10)
+        end do
+        twotondim=2**ndim
+        xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+        allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+        allocate(ngridlevel(1:ncpu,1:nlevelmax))
+        if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+        
+        ! Open HYDRO file and skip header
+        nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+        open(unit=11,file=nomfich,status='old',form='unformatted')
+        read(11)
+        read(11)nvarh
+        read(11)
+        read(11)
+        read(11)
+        read(11)gamma
+        
+        ! Read grid numbers
+        read(10)ngridlevel
+        ngridfile(1:ncpu,1:nlevelmax)=ngridlevel(1:ncpu,1:nlevelmax)
+        read(10)
+        if(nboundary>0)then
+           do i=1,2
+              read(10)
+           end do
+           read(10)ngridbound
+           ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound(1:nboundary,1:nlevelmax)
+        endif
+        read(10)
+        ! ROM: comment the single follwing line for old stuff
+        read(10)
+        if(TRIM(ordering).eq.'bisection')then
+           do i=1,5
+              read(10)
+           end do
+        else
+           read(10)
+        endif
+        read(10)
+        read(10)
+        read(10)
+        
+        ! Loop over levels
+        istart=0
+        do ilevel=1,lmax
+           ! Loop over domains
+           do j=1,nboundary+ncpu
+              if(ngridfile(j,ilevel)>0)then
+                 allocate(xdp(1:ngridfile(j,ilevel)))
+                 allocate(xxdp(1:ngridfile(j,ilevel),1:ndim))
+                 allocate(vvdp(1:ngridfile(j,ilevel),1:twotondim,1:nvarh))
+                 allocate(sdp(1:ngridfile(j,ilevel),1:twotondim))
+                 allocate(idp(1:ngridfile(j,ilevel)))
+                 read(10) ! Skip grid index
+                 read(10) ! Skip next index
+                 read(10) ! Skip prev index
+                 ! Read grid center
+                 do ind=1,ndim
+                    read(10)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       xxdp(i,ind)=xdp(i)
+                    end do
+                 end do
+                 read(10) ! Skip father index
+                 do ind=1,2*ndim
+                    read(10) ! Skip nbor index
+                 end do
+                 ! Read son index
+                 do ind=1,twotondim
+                    read(10)idp
+                    do i=1,ngridfile(j,ilevel)
+                       sdp(i,ind)=idp(i)
+                    end do
+                 end do
+                 ! Skip cpu map
+                 do ind=1,twotondim
+                    read(10)
+                 end do
+                 ! Skip refinement map
+                 do ind=1,twotondim
+                    read(10)
+                 end do
+              end if
+              ! Read HYDRO data
+              read(11)
+              read(11)
+              if(ngridfile(j,ilevel)>0)then
+                 respart=ndummypart-partcount
+                 respc=nmax-nmin+1-pc
+                 do ind=1,twotondim
+                    do ivar=1,nvarh
+                       read(11)xdp
+                       do i=1,ngridfile(j,ilevel)
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=(ind-1)/4
+                          iy=(ind-1-4*iz)/2
+                          ix=(ind-1-2*iy-4*iz)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                               .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
+                             if(rnpartlocal<1) then
+                                call poissdev(localseed,rnpartlocal,poisson)
+                                poisson=poisson+nint(masslefttot/dble(ilowdtot)/partmass)!nint(mleft(k)/dble(ilowd(k))/partmass)
+                                jj=1
+                                do while (jj<=poisson.and.partcount<ndummypart)!.and.locind(k)<nfake(k))
+                                   jj=jj+1
+                                   locind(k)=locind(k)+1
+                                   partcount=partcount+1
+                                   if(nmin<=partcount.and.partcount<=nmax)then
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do kk=1,nvarh
+                                         varp(pc,kk)=vvdp(i,ind,kk)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   endif
+                                end do
+                             endif
+                          end if
+                       end do
+                    end do
+                 end do
+                 istart=istart+ngridfile(j,ilevel)
+                 deallocate(xdp)
+                 deallocate(xxdp)
+                 deallocate(vvdp)
+                 deallocate(sdp)
+                 deallocate(idp)
+              end if
+           end do
+        enddo
+
+        ! End loop over levels  
+        close(10)
+        close(11)
+     
+     deallocate(ngridfile,ngridlevel)
+     if(nboundary>0)deallocate(ngridbound)
+
+  end if
+
+  if(indexcell(k)>0)ncpufull=ncpufull+1
+
+  end do
+
+  write(*,*)'gaspart3 II done', denspartcount, pc, partcount, ndummypart
+
+  if(partcount<ndummypart.or.pc<nmax-nmin+1)then
+
+     respart=int((ndummypart-partcount))+1
+
+     allocate(rindex(1:respart))
+     allocate(flagcell(1:indexcelltot))
+
+     flagcell(1:indexcelltot)=0
+
+     do i=1,respart
+        call ranf(localseed,xx)
+        rindex(i)=int(xx*dble(indexcelltot-1))+1
+        flagcell(rindex(i))=flagcell(rindex(i))+1
+     end do
+
+     indexcelltmp=0
+     icell=0
+
+     do k=1,ncpu_read
+
+        icpu=cpu_list(k)
+        call title(icpu,ncharcpu)
+        
+        ! Open AMR file and skip header
+        ipos=INDEX(repository,'output_')
+        nchar=repository(ipos+7:ipos+13)
+        nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+        open(unit=10,file=nomfich,status='old',form='unformatted')
+        read(10)
+        read(10)ndim
+        read(10)nx,ny,nz
+        read(10)nlevelmax
+        read(10)ngridmax
+        read(10)nboundary
+        read(10)ngrid_current
+        read(10)boxlen
+        do i=1,13
+           read(10)
+        end do
+        twotondim=2**ndim
+        xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
+        allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
+        allocate(ngridlevel(1:ncpu,1:nlevelmax))
+        if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+        
+        ! Open HYDRO file and skip header
+        nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+        open(unit=11,file=nomfich,status='old',form='unformatted')
+        read(11)
+        read(11)nvarh 
+        read(11)
+        read(11)
+        read(11)
+        read(11)gamma
+        
+        ! Read grid numbers
+        read(10)ngridlevel
+        ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
+        read(10)
+        if(nboundary>0)then
+           do i=1,2
+              read(10)
+           end do
+           read(10)ngridbound
+           ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
+        endif
+        read(10)
+        ! ROM: comment the single follwing line for old stuff
+        read(10)
+        if(TRIM(ordering).eq.'bisection')then
+           do i=1,5
+              read(10)
+           end do
+        else
+           read(10)
+        endif
+        read(10)
+        read(10)
+        read(10)
+        
+        ! Compute total number of grids
+        ngridtot=0
+        do j=1,ncpu
+           do ilevel=1,nlevelmax
+              ngridtot=ngridtot+ngridfile(j,ilevel)
+           end do
+        end do
+        
+        ! Loop over levels
+        istart=0
+        !icell=0
+        do ilevel=1,lmax
+           ! Loop over domains
+           do j=1,nboundary+ncpu
+              ! Read AMR data
+              if(ngridfile(j,ilevel)>0)then
+                 allocate(xdp(1:ngridfile(j,ilevel)))
+                 allocate(xxdp(1:ngridfile(j,ilevel),1:ndim))
+                 allocate(vvdp(1:ngridfile(j,ilevel),1:twotondim,1:nvarh))
+                 allocate(sdp(1:ngridfile(j,ilevel),1:twotondim))
+                 allocate(idp(1:ngridfile(j,ilevel)))
+                 read(10) ! Skip grid index
+                 read(10) ! Skip next index
+                 read(10) ! Skip prev index
+                 ! Read grid center
+                 do ind=1,ndim
+                    read(10)xdp
+                    do i=1,ngridfile(j,ilevel)
+                       xxdp(i,ind)=xdp(i)
+                    end do
+                 end do
+                 read(10) ! Skip father index
+                 do ind=1,2*ndim
+                    read(10) ! Skip nbor index
+                 end do
+                    ! Read son index
+                 do ind=1,twotondim
+                    read(10)idp
+                    do i=1,ngridfile(j,ilevel)
+                       sdp(i,ind)=idp(i)
+                    end do
+                 end do
+                 ! Skip cpu map
+                 do ind=1,twotondim
+                    read(10)
+                 end do
+                 ! Skip refinement map
+                 do ind=1,twotondim
+                    read(10)
+                 end do
+              end if
+              ! Read HYDRO data
+              read(11)
+              read(11)       
+              if(ngridfile(j,ilevel)>0)then
+                    ! Read hydro variables
+                 do ind=1,twotondim
+                    do ivar=1,nvarh
+                       read(11)xdp
+                       do i=1,ngridfile(j,ilevel)
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=(ind-1)/4
+                          iy=(ind-1-4*iz)/2
+                          ix=(ind-1-2*iy-4*iz)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(ilevel==lmax.or.sdp(i,ind)==0)&
+                               &.and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             icell=icell+1
+                             if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
+                                do ii=1,flagcell(icell)
+                                   locind(k)=locind(k)+1
+                                   partcount=partcount+1
+                                   pc=pc+1
+                                   do l=1,ndim
+                                      call ranf(localseed,xx)
+                                      xp(pc,l)=xx*dx+xc(l)-dx/2
+                                   end do
+                                   do kk=1,nvarh
+                                      varp(pc,kk)=vvdp(i,ind,kk)
+                                   end do
+                                   if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                end do
+                             end if
+                          end if
+                       end do
+                    end do
+                 end do
+                 !if(j==icpu.and.ilevel==levmaxlev(k).and.respart>0)then
+                 !  do i=1,respart
+                 !     xc(1)=-100
+                 !     xc(2)=-100
+                 !     xc(3)=-100
+                 !     do while((xmin>xc(1).or.xc(1)>xmax).or.(ymin>xc(2).or.xc(2)>ymax).or.(zmin>xc(3).or.xc(3)>zmax))
+                 !        call ranf(localseed,xx)
+                 !        ind=int(twotondim*xx)+1
+                 !        call ranf(localseed,xx)
+                 !        ii=int(xx*dble(ngridfile(j,ilevel)))+1
+                 !        dx=0.5d0**ilevel
+                 !        iz=(ind-1)/4
+                 !        iy=(ind-1-4*iz)/2
+                 !        ix=(ind-1-2*iy-4*iz)
+                 !        xc(1)=xxdp(ii,1)+(dble(ix)-0.5D0)*dx
+                 !        xc(2)=xxdp(ii,2)+(dble(iy)-0.5D0)*dx
+                 !        xc(3)=xxdp(ii,3)+(dble(iz)-0.5D0)*dx 
+                 !        resss=sdp(ii,ind)
+                 !     end do
+                 !     partcount=partcount+1
+                 !     locind(k)=locind(k)+1
+                 !     if(nmin<=partcount.and.partcount<=nmax)then  
+                 !        pc=pc+1
+                 !        do l=1,ndim
+                 !           call ranf(localseed,xx)
+                 !           xp(pc,l)=xx*dx+xc(l)-dx/2
+                 !        end do
+                 !        do kk=1,nvarh
+                 !           varp(pc,kk)=vvdp(ii,ind,kk)
+                 !        end do
+                 !        if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                 !     end if
+                 !  end do
+                 !end if
+                 indexcelltmp=indexcelltmp+indexcell(k)
+                 istart=istart+ngridfile(j,ilevel)
+                 deallocate(xdp)
+                 deallocate(xxdp)
+                 deallocate(vvdp)
+                 deallocate(sdp)
+                 deallocate(idp)
+              end if
+           end do
+        enddo
+        ! End loop over levels
+        
+        close(10)
+        close(11)
+        
+        deallocate(ngridfile,ngridlevel)
+        if(nboundary>0)deallocate(ngridbound)
+     end do
+     deallocate(rindex)
+     deallocate(flagcell)
+  endif
+  
+  write(*,*)'gaspart3 III done', denspartcount, pc, partcount, ndummypart
+  write(*,*)'indexcell', indexcelltot
+  
+!     gxmin=1000
+!     gxmax=-1000
+!     gymin=1000
+!     gymax=-1000 
+!     gzmin=1000
+!     gzmax=-1000
+
+!     do i=1,denspartcount
+!        gxmin=min(gxmin,xp(i,1))
+!        gxmax=max(gxmax,xp(i,1))
+!        gymin=min(gymin,xp(i,2))
+!        gymax=max(gymax,xp(i,2))
+!        gzmin=min(gzmin,xp(i,3))
+!        gzmax=max(gzmax,xp(i,3))
+!     end do
+
+!     write(*,*)gxmin,gxmax,gymin,gymax,gzmin,gzmax
+
+  return
+  
+end subroutine gaspart3
+
+!=======================================================================
+!=======================================================================
+!=======================================================================
+
+subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
+     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
+     nstar_actual,xout,vout,mout,idout,ageout,metout)
+
+  implicit none
+
+  integer::ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,ix,iy,iz
+  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot
+  integer::l,nmin,nmax,ncpu_read,icpu
+  integer,dimension(1:ncpu)::cpu_list
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc,xx
+
+  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
+  character(LEN=128)::repository,nomfich
+  character(LEN=80)::ordering
+  character(LEN=5)::ncharcpu,nchar
+  real(kind=8),dimension(:),allocatable::xdp
+  integer,dimension(:)  ,allocatable::idp
+
+  integer::npart_tot,nsink_tot,nstar_tot,npart,nsink,ipa
+  integer::npart_actual,ndm_actual,nstar_actual,npartnow
+  integer,dimension(:),allocatable::levpart,idpart
+  real(KIND=8),dimension(:,:),allocatable::xpart,vpart
+  real(KIND=8),dimension(:),allocatable::mpart,age,met
+  integer,dimension(:),allocatable::idout
+  real(KIND=8),dimension(:,:),allocatable::xout,vout
+  real(KIND=8),dimension(:),allocatable::mout,ageout,metout
+
+  character(LEN=5)::nn
+  logical::metal,star,sink
+
+  integer ,dimension(1:1,1:IRandNumSize)::allseed
+  integer ,dimension(1:IRandNumSize)::localseed
+  integer::iseed=0,poisson
+
+  npart_tot=0
+  nsink_tot=0
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     ! Read number of particles from the Part file
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     call title(icpu,ncharcpu)
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)
+     read(11)npart
+     read(11)
+     read(11)nstar_tot
+     read(11)
+     read(11)
+     read(11)nsink
+     close(11)
+     nsink_tot=nsink_tot+nsink
+     npart_tot=npart_tot+npart
+  enddo
+
+!-----------------------------------------------
+!  Initializing Part quantities
+!-----------------------------------------------
+
+  allocate(xpart(1:npart_tot,1:ndim))
+  allocate(vpart(1:npart_tot,1:ndim))
+  allocate(mpart(1:npart_tot))
+  allocate(idpart(1:npart_tot))
+  allocate(levpart(1:npart_tot))
+  if(nstar_tot>0) then
+     allocate(age(1:npart_tot))
+     if(metal)then
+        allocate(met(1:npart_tot))
+     end if
+  end if
+
+!-----------------------------------------------
+!-----------------------------------------------
+
+!----------------------------------------------------------
+! Read up variable from the AMR grid and from the Part file
+!----------------------------------------------------------
+
+  npartnow=0
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     ! Open Part file and skip header
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=12,file=nomfich,status='old',form='unformatted')
+     read(12)
+     read(12)
+     read(12)npart
+     read(12)
+     read(12)
+     read(12)
+     read(12)
+     read(12)
+     ! Read Part position
+     allocate(xdp(1:npart))
+     allocate(idp(1:npart))
+     do i=1,ndim
+        read(12)xdp
+        xpart(npartnow+1:npartnow+npart,i)=xdp(1:npart)
+     end do
+     ! Read Part velocity
+     do i=1,ndim
+     read(12)xdp
+     vpart(npartnow+1:npartnow+npart,i)=xdp(1:npart)
+      end do
+     ! Read Part mass, id and level
+     read(12)xdp
+     mpart(npartnow+1:npartnow+npart)=xdp(1:npart)
+     read(12)idp
+     idpart(npartnow+1:npartnow+npart)=idp(1:npart)
+     read(12)idp
+     levpart(npartnow+1:npartnow+npart)=idp(1:npart)
+     if(sink.or.star)then
+        read(12)xdp
+        age(npartnow+1:npartnow+npart)=xdp(1:npart)
+        if(metal)then
+           read(12)xdp
+           met(npartnow+1:npartnow+npart)=xdp(1:npart)
+        end if
+     end if
+     close(12)
+     npartnow=npartnow+npart
+     deallocate(xdp)
+     deallocate(idp)
+
+  end do
+  ! End loop over cpu
+
+!-----------------------------------------------------------------------
+!  Counting Particles an writing output arrays
+!-----------------------------------------------------------------------
+
+  npart_actual=0
+  nstar_actual=0
+  ndm_actual=0
+  do i=1,npart_tot
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
+          .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax)&
+          .and.(idpart(i)>0))npart_actual=npart_actual+1
+
+     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1)&
+          .and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3)&
+          .and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))nstar_actual=nstar_actual+1
+  enddo
+
+  allocate(xout(1:npart_actual,1:ndim))
+  allocate(vout(1:npart_actual,1:ndim))
+  allocate(mout(1:npart_actual))
+  allocate(idout(1:npart_actual))
+  allocate(ageout(1:npart_actual))
+  allocate(metout(1:npart_actual))
+  ageout=0.d0
+  metout=0.d0
+  
+  ipa=0
+  do i=1,npart_tot
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
+          .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax)&
+          .and.(idpart(i)>0))then
+        ipa=ipa+1
+        do j=1,ndim
+           xout(ipa,j)=xpart(i,j)
+           vout(ipa,j)=vpart(i,j)
+        end do
+        mout(ipa)=mpart(i)
+        idout(ipa)=idpart(i)
+        if(nstar_actual>0) then
+           ageout(ipa)=age(i)
+           if(metal)then
+              metout(ipa)=met(i)
+           end if
+        end if
+     end if
+  end do
+
+  deallocate(xpart,vpart,mpart,idpart,levpart)
+  if(nstar_tot>0)then
+     deallocate(age)
+     if(metal)deallocate(met)
+  end if
+
+  return
+
+end subroutine readpart
+
+!=======================================================================
+!=======================================================================
+!=======================================================================
+
+
+subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
+     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
+     nstar_actual,xout,vout,mout,idout,ageout,metout)
+
+  implicit none
+
+  integer::ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,ix,iy,iz
+  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot
+  integer::l,nmin,nmax,ncpu_read,icpu
+  integer,dimension(1:ncpu)::cpu_list
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc,xx
+
+  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
+  character(LEN=128)::repository,nomfich
+  character(LEN=80)::ordering
+  character(LEN=5)::ncharcpu,nchar
+  real(kind=8),dimension(:),allocatable::xdp
+  integer,dimension(:)  ,allocatable::idp
+
+  integer::npart_tot,nsink_tot,nstar_tot,npart,nsink,ipa
+  integer::npart_actual,ndm_actual,nstar_actual,npartnow
+  integer,dimension(:),allocatable::levpart,idpart
+  real(KIND=8),dimension(:,:),allocatable::xpart,vpart
+  real(KIND=8),dimension(:),allocatable::mpart,age,met
+  integer,dimension(:),allocatable::idout
+  real(KIND=8),dimension(:,:),allocatable::xout,vout
+  real(KIND=8),dimension(:),allocatable::mout,ageout,metout
+
+  character(LEN=5)::nn
+  logical::metal,star,sink
+
+  integer ,dimension(1:1,1:IRandNumSize)::allseed
+  integer ,dimension(1:IRandNumSize)::localseed
+  integer::iseed=0,poisson
+
+  npart_tot=0
+  nsink_tot=0
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     ! Read number of particles from the Part file
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     call title(icpu,ncharcpu)
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=11,file=nomfich,status='old',form='unformatted')
+     read(11)
+     read(11)
+     read(11)npart
+     read(11)
+     read(11)nstar_tot
+     read(11)
+     read(11)
+     read(11)nsink
+     close(11)
+     nsink_tot=nsink_tot+nsink
+     npart_tot=npart_tot+npart
+  enddo
+
+!-----------------------------------------------
+!  Initializing Part quantities
+!-----------------------------------------------
+
+  allocate(xpart(1:npart_tot,1:ndim))
+  allocate(vpart(1:npart_tot,1:ndim))
+  allocate(mpart(1:npart_tot))
+  allocate(idpart(1:npart_tot))
+  allocate(levpart(1:npart_tot))
+  if(nstar_tot>0) then
+     allocate(age(1:npart_tot))
+     if(metal)then
+        allocate(met(1:npart_tot))
+     end if
+  end if
+
+!-----------------------------------------------
+!-----------------------------------------------
+
+!----------------------------------------------------------
+! Read up variable from the AMR grid and from the Part file
+!----------------------------------------------------------
+
+  npartnow=0
+
+  do k=1,ncpu_read
+     icpu=cpu_list(k)
+     call title(icpu,ncharcpu)
+     ipos=INDEX(repository,'output_')
+     nchar=repository(ipos+7:ipos+13)
+     ! Open Part file and skip header
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=12,file=nomfich,status='old',form='unformatted')
+     read(12)
+     read(12)
+     read(12)npart
+     read(12)
+     read(12)
+     read(12)
+     read(12)
+     read(12)
+     ! Read Part position
+     allocate(xdp(1:npart))
+     allocate(idp(1:npart))
+     do i=1,ndim
+        read(12)xdp
+        xpart(npartnow+1:npartnow+npart,i)=xdp(1:npart)
+     end do
+     ! Read Part velocity
+     do i=1,ndim
+     read(12)xdp
+     vpart(npartnow+1:npartnow+npart,i)=xdp(1:npart)
+      end do
+     ! Read Part mass, id and level
+     read(12)xdp
+     mpart(npartnow+1:npartnow+npart)=xdp(1:npart)
+     read(12)idp
+     idpart(npartnow+1:npartnow+npart)=idp(1:npart)
+     read(12)idp
+     levpart(npartnow+1:npartnow+npart)=idp(1:npart)
+     if(sink.or.star)then
+        read(12)xdp
+        age(npartnow+1:npartnow+npart)=xdp(1:npart)
+        if(metal)then
+           read(12)xdp
+           met(npartnow+1:npartnow+npart)=xdp(1:npart)
+        end if
+     end if
+     close(12)
+     npartnow=npartnow+npart
+     deallocate(xdp)
+     deallocate(idp)
+
+  end do
+  ! End loop over cpu
+
+!-----------------------------------------------------------------------
+!  Counting Particles an writing output arrays
+!-----------------------------------------------------------------------
+
+  npart_actual=0
+  nstar_actual=0
+  ndm_actual=0
+  do i=1,npart_tot
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
+          & .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax) &
+          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))npart_actual=npart_actual+1
+
+     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1)&
+          & .and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3)&
+          & .and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+
+     if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
+          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
+          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))nstar_actual=nstar_actual+1
+  enddo
+
+  allocate(xout(1:npart_actual,1:ndim))
+  allocate(vout(1:npart_actual,1:ndim))
+  allocate(mout(1:npart_actual))
+  allocate(idout(1:npart_actual))
+  allocate(ageout(1:npart_actual))
+  allocate(metout(1:npart_actual))
+  ageout=0.d0
+  metout=0.d0
+  
+  ipa=0
+  do i=1,npart_tot
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
+          & .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))then
+        ipa=ipa+1
+        do j=1,ndim
+           xout(ipa,j)=xpart(i,j)
+           vout(ipa,j)=vpart(i,j)
+        end do
+        mout(ipa)=mpart(i)
+        idout(ipa)=idpart(i)
+        if(nstar_actual>0) then
+           ageout(ipa)=age(i)
+           if(metal)then
+              metout(ipa)=met(i)
+           end if
+        end if
+     end if
+  end do
+
+  deallocate(xpart,vpart,mpart,idpart,levpart)
+  if(nstar_tot>0)then
+     deallocate(age)
+     if(metal)deallocate(met)
+  end if
+
+  return
+
+end subroutine readpart2
+
+!=======================================================================
+!=======================================================================
+!=======================================================================
 
 end module io_ramses
 
 !=======================================================================
+!=======================================================================
+!=======================================================================
 subroutine title(n,nchar)
-  !=======================================================================
+!=======================================================================
   implicit none
   integer::n
   character*5::nchar
@@ -641,4 +2650,3 @@ CONTAINS
   END SUBROUTINE interchange_sort
   
 END SUBROUTINE quick_sort
-
