@@ -2,11 +2,12 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
+NVECTOR = 64
 NDIM = 3
 NPRE = 8
 NVAR = 5
 SOLVER = hydro
-PATCH = ../patch/hydro/halo
+PATCH = 
 EXEC = ramses
 #############################################################################
 # Fortran compiler options and directives
@@ -36,7 +37,7 @@ EXEC = ramses
 #
 # --- No MPI, gfortran -------------------------------
 F90 = gfortran -O3
-FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
