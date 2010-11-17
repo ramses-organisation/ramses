@@ -406,720 +406,13 @@ contains
   
 end subroutine getcell
 
-!======================================================================
-!======================================================================
-!======================================================================
-
-subroutine gaspart(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,partmass,averdens,xp,varp,&
-     denspartcount)
-
-  implicit none
-
-  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
-  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
-  integer::indexcell,l,npartlocal,partcount,respart,denspartcount,ilowd,nmin,nmax,pc,respc
-  integer::ncpu_read,icpu,ngridactual
-  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc
-  real(kind=8)::volume,facdens,xx
-  real(KIND=8)::partmass,averdens,rnpartlocal,massleft
-  integer,dimension(1:ncpu)::cpu_list
-
-  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
-  character(LEN=128)::repository,nomfich
-  character(LEN=80)::ordering
-  character(LEN=5)::ncharcpu,nchar
-  real(kind=8),dimension(:),allocatable::xdp
-  real(KIND=8),dimension(:,:),allocatable::x,xg
-  real(KIND=8),dimension(:,:,:),allocatable::var
-  integer,dimension(:)  ,allocatable::idp,sontop
-  integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
-  real(KIND=8),dimension(:,:),allocatable::xgrid
-  real(KIND=8),dimension(:,:),allocatable::vargrid
-  integer,dimension(:),allocatable::levgrid
-  real(KIND=8),dimension(:,:),allocatable::xp
-  real(KIND=8),dimension(:,:),allocatable::varp
-
-  integer ,dimension(1:1,1:IRandNumSize)::allseed
-  integer ,dimension(1:IRandNumSize)::localseed
-  integer::iseed=0,poisson
-
-  ! Initialize random number generator
-  call rans(1,iseed,allseed)
-  localseed=allseed(1,1:IRandNumSize)
-
-  partmass=0.d0
-  averdens=0.d0
-  volume=0.d0
-  indexcell=0
-
-  ngridactual=0
-  do k=1,ncpu
-     call title(k,ncharcpu)
-
-     ! Open AMR file and skip header
-     ipos=INDEX(repository,'output_')
-     nchar=repository(ipos+7:ipos+13)
-     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=10,file=nomfich,status='old',form='unformatted')
-     read(10)
-     read(10)ndim
-     read(10)nx,ny,nz
-     read(10)nlevelmax
-     read(10)ngridmax
-     read(10)nboundary
-     read(10)ngrid_current
-     read(10)boxlen
-     ngridactual=ngridactual+ngrid_current
-     close(10)
-  end do
-
-  !write(*,*)ngridactual
-
-  do k=1,ncpu_read
-     icpu=cpu_list(k)
-     call title(icpu,ncharcpu)
-
-     ! Open AMR file and skip header
-     ipos=INDEX(repository,'output_')
-     nchar=repository(ipos+7:ipos+13)
-     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=10,file=nomfich,status='old',form='unformatted')
-     read(10)
-     read(10)ndim
-     read(10)nx,ny,nz
-     read(10)nlevelmax
-     read(10)ngridmax
-     read(10)nboundary
-     read(10)ngrid_current
-     read(10)boxlen
-     do i=1,13
-        read(10)
-     end do
-     twotondim=2**ndim
-     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
-     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
-     allocate(ngridlevel(1:ncpu,1:nlevelmax))
-     if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
-
-     ! Open HYDRO file and skip header
-     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=11,file=nomfich,status='old',form='unformatted')
-     read(11)
-     read(11)nvarh
-     read(11)
-     read(11)
-     read(11)
-     read(11)gamma
-
-     if(k==1)then
-        ngmax=5*ngridactual
-        allocate(xgrid(1:ngmax,1:ndim))
-        allocate(vargrid(1:ngmax,1:nvarh))
-        allocate(levgrid(1:ngmax))
-        xgrid=-1.d30
-        vargrid=-1.d30
-        levgrid=0
-     end if
-
-     ! Read grid numbers
-     read(10)ngridlevel
-     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
-     read(10)
-     if(nboundary>0)then
-        do i=1,2
-           read(10)
-        end do
-        read(10)ngridbound
-        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
-     endif
-     read(10)
-! ROM: comment the single follwing line for old stuff
-     read(10)
-     if(TRIM(ordering).eq.'bisection')then
-        do i=1,5
-           read(10)
-        end do
-     else
-        read(10)
-     endif
-     read(10)
-     read(10)
-     read(10)
-
-     ! Compute total number of grids
-     ngridtot=0
-     do j=1,ncpu
-        do ilevel=1,nlevelmax
-           ngridtot=ngridtot+ngridfile(j,ilevel)
-        end do
-     end do
-
-     ! Allocate grid-based arrays
-
-        allocate(xg (1:ngridtot,1:ndim))
-        allocate(son(1:ngridtot,1:twotondim))
-        allocate(var(1:ngridtot,1:twotondim,1:nvarh))
-
-     ! Loop over levels
-     istart=0
-     do ilevel=1,lmax
-        ! Loop over domains
-        do j=1,nboundary+ncpu
-           ! Read AMR data
-           if(ngridfile(j,ilevel)>0)then
-              allocate(xdp(1:ngridfile(j,ilevel)))
-              allocate(idp(1:ngridfile(j,ilevel)))
-              read(10) ! Skip grid index
-              read(10) ! Skip next index
-              read(10) ! Skip prev index
-              ! Read grid center
-              do ind=1,ndim
-                 read(10)xdp
-                 do i=1,ngridfile(j,ilevel)
-                    xg(istart+i,ind)=xdp(i)
-                 end do
-              end do
-              read(10) ! Skip father index
-              do ind=1,2*ndim
-                 read(10) ! Skip nbor index
-              end do
-              ! Read son index
-              do ind=1,twotondim
-                 read(10)idp
-                 do i=1,ngridfile(j,ilevel)
-                    son(istart+i,ind)=idp(i)
-                 end do
-              end do
-              deallocate(idp)
-              ! Skip cpu map
-              do ind=1,twotondim
-                 read(10)
-              end do
-              ! Skip refinement map
-              do ind=1,twotondim
-                 read(10)
-              end do
-           endif
-           ! Read HYDRO data
-           read(11)
-           read(11)
-           if(ngridfile(j,ilevel)>0)then
-              ! Read hydro variables
-              do ind=1,twotondim
-                 do ivar=1,nvarh
-                    read(11)xdp
-                    do i=1,ngridfile(j,ilevel)
-                       var(istart+i,ind,ivar)=xdp(i)
-                       dx=0.5d0**ilevel
-                       iz=(ind-1)/4
-                       iy=(ind-1-4*iz)/2
-                       ix=(ind-1-2*iy-4*iz)
-                       xc=xg(istart+i,1)+(dble(ix)-0.5D0)*dx
-                       yc=xg(istart+i,2)+(dble(iy)-0.5D0)*dx
-                       zc=xg(istart+i,3)+(dble(iz)-0.5D0)*dx 
-                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(son(istart+i,ind)==0&
-                            .or.ilevel==lmax).and.(xmin<=xc.and.xc<=xmax).and.&
-                            (ymin<=yc.and.yc<=ymax).and.(zmin<=zc.and.zc<=zmax))then
-                          volume=volume+dx*dx*dx
-                          partmass=partmass+var(istart+i,ind,1)*dx*dx*dx
-                          indexcell=indexcell+1
-                          if(indexcell.ge.ngmax)write(*,*)indexcell,ngmax
-                          do l=1,ndim
-                             if(l==1)xgrid(indexcell,l)=xc
-                             if(l==2)xgrid(indexcell,l)=yc
-                             if(l==3)xgrid(indexcell,l)=zc
-                          end do
-                          do l=1,nvarh
-                             vargrid(indexcell,l)=var(istart+i,ind,l)
-                          end do
-                          levgrid(indexcell)=ilevel
-                       end if
-                    end do
-                 end do
-              end do
-              istart=istart+ngridfile(j,ilevel)
-           end if
-        end do
-     enddo
-     ! End loop over levels
-
-     close(10)
-     close(11)
-
-     deallocate(xg,son,var,ngridfile,ngridlevel)
-     if(nboundary>0)deallocate(ngridbound)
-  end do
-
-  write(*,*)'AMR grid read'
-
-  averdens=partmass/volume
-  partmass=partmass/dble(ndummypart)
-
-  allocate(xp(1:(nmax-nmin+1),1:ndim))
-  allocate(varp(1:(nmax-nmin+1),1:nvarh))
-
-  partcount=0
-  denspartcount=0
-  massleft=0.d0
-  ilowd=0
-  pc=0
-  do i=1,indexcell
-     dx=0.5d0**levgrid(i)
-     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
-     if(rnpartlocal>=1) then
-        npartlocal=int(rnpartlocal)
-        massleft=massleft+(vargrid(i,1)*dx*dx*dx-dble(npartlocal)*partmass)
-        j=1
-        do while (j<=npartlocal)
-           j=j+1
-           partcount=partcount+1
-           if(nmin<=partcount.and.partcount<=nmax)then
-              pc=pc+1
-              do l=1,ndim
-                 call ranf(localseed,xx)
-                 xc=xx*dx+xgrid(i,l)-dx/2
-                 xp(pc,l)=xc
-              end do
-              do l=1,nvarh
-                 varp(pc,l)=vargrid(i,l)
-              end do
-              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-           endif
-        end do
-     endif
-     if(rnpartlocal<1) then
-        ilowd=ilowd+1
-        massleft=massleft+vargrid(i,1)*dx*dx*dx
-     endif
-  end do
-
-  if(partcount==ndummypart.or.pc==nmax-nmin+1) goto 123
-
-  respart=ndummypart-partcount
-  respc=nmax-nmin+1-pc
-
-  do i=1,indexcell
-     dx=0.5d0**levgrid(i)
-     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
-     if(rnpartlocal<1) then
-        call poissdev(localseed,rnpartlocal,poisson)
-        poisson=poisson+nint(massleft/dble(ilowd)/partmass)
-        j=1
-        do while (j<=poisson.and.partcount<ndummypart)
-           j=j+1
-           partcount=partcount+1
-           if(nmin<=partcount.and.partcount<=nmax)then
-              pc=pc+1
-              do l=1,ndim
-                 call ranf(localseed,xx)
-                 xp(pc,l)=xx*dx+xgrid(i,l)-dx/2
-              end do
-              do k=1,nvarh
-                 varp(pc,k)=vargrid(i,k)
-              end do
-              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-           endif
-        end do
-     endif
-  end do
-
- if(partcount<ndummypart.or.pc<nmax-nmin+1)then
-     respart=ndummypart-partcount
-     respc=nmax-nmin+1-pc
-     do i=1,respart
-        call ranf(localseed,xx)
-        j=nint(xx*dble(indexcell-1))+1
-        partcount=partcount+1
-        if(nmin<=partcount.and.partcount<=nmax)then  
-           pc=pc+1
-           do l=1,ndim
-              call ranf(localseed,xx)
-              xp(pc,l)=xx*dx+xgrid(j,l)-dx/2
-           end do
-           do k=1,nvarh
-              varp(pc,k)=vargrid(j,k)
-           end do
-           if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-        end if
-     end do
-  endif
-
-123 continue  
-
-  return
-
-end subroutine gaspart
-
-!=======================================================================
-!=======================================================================
-!=======================================================================
-
-subroutine gaspart2(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
-     denspartcount)
-
-  implicit none
-
-  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
-  integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
-  integer::indexcell,l,npartlocal,partcount,respart,denspartcount,ilowd,nmin,nmax,pc,respc
-  integer::ncpu_read,icpu,ngridactual
-  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc
-  real(kind=8)::volume,facdens,xx,mdm
-  real(KIND=8)::partmass,averdens,rnpartlocal,massleft
-  integer,dimension(1:ncpu)::cpu_list
-
-  real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
-  character(LEN=128)::repository,nomfich
-  character(LEN=80)::ordering
-  character(LEN=5)::ncharcpu,nchar
-  real(kind=8),dimension(:),allocatable::xdp
-  real(KIND=8),dimension(:,:),allocatable::x,xg
-  real(KIND=8),dimension(:,:,:),allocatable::var
-  integer,dimension(:)  ,allocatable::idp,sontop
-  integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
-  real(KIND=8),dimension(:,:),allocatable::xgrid
-  real(KIND=8),dimension(:,:),allocatable::vargrid
-  integer,dimension(:),allocatable::levgrid
-  real(KIND=8),dimension(:,:),allocatable::xp
-  real(KIND=8),dimension(:,:),allocatable::varp
-
-  integer ,dimension(1:1,1:IRandNumSize)::allseed
-  integer ,dimension(1:IRandNumSize)::localseed
-  integer::iseed=0,poisson
-
-  ! Initialize random number generator
-  call rans(1,iseed,allseed)
-  localseed=allseed(1,1:IRandNumSize)
-
-  partmass=0.d0
-  averdens=0.d0
-  volume=0.d0
-  indexcell=0
-
-  ngridactual=0
-  do k=1,ncpu
-     call title(k,ncharcpu)
-
-     ! Open AMR file and skip header
-     ipos=INDEX(repository,'output_')
-     nchar=repository(ipos+7:ipos+13)
-     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=10,file=nomfich,status='old',form='unformatted')
-     read(10)
-     read(10)ndim
-     read(10)nx,ny,nz
-     read(10)nlevelmax
-     read(10)ngridmax
-     read(10)nboundary
-     read(10)ngrid_current
-     read(10)boxlen
-     ngridactual=ngridactual+ngrid_current
-     close(10)
-  end do
-
-  !write(*,*)ngridactual
-
-  do k=1,ncpu_read
-     icpu=cpu_list(k)
-     call title(icpu,ncharcpu)
-
-     ! Open AMR file and skip header
-     ipos=INDEX(repository,'output_')
-     nchar=repository(ipos+7:ipos+13)
-     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=10,file=nomfich,status='old',form='unformatted')
-     read(10)
-     read(10)ndim
-     read(10)nx,ny,nz
-     read(10)nlevelmax
-     read(10)ngridmax
-     read(10)nboundary
-     read(10)ngrid_current
-     read(10)boxlen
-     do i=1,13
-        read(10)
-     end do
-     twotondim=2**ndim
-     xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
-
-     allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
-     allocate(ngridlevel(1:ncpu,1:nlevelmax))
-     if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
-
-     ! Open HYDRO file and skip header
-     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=11,file=nomfich,status='old',form='unformatted')
-     read(11)
-     read(11)nvarh
-     read(11)
-     read(11)
-     read(11)
-     read(11)gamma
-
-     if(k==1)then
-        ngmax=5*ngridactual
-        allocate(xgrid(1:ngmax,1:ndim))
-        allocate(vargrid(1:ngmax,1:nvarh))
-        allocate(levgrid(1:ngmax))
-        xgrid=-1.d30
-        vargrid=-1.d30
-        levgrid=0
-     end if
-
-     ! Read grid numbers
-     read(10)ngridlevel
-     ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
-     read(10)
-     if(nboundary>0)then
-        do i=1,2
-           read(10)
-        end do
-        read(10)ngridbound
-        ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
-     endif
-     read(10)
-! ROM: comment the single follwing line for old stuff
-     read(10)
-     if(TRIM(ordering).eq.'bisection')then
-        do i=1,5
-           read(10)
-        end do
-     else
-        read(10)
-     endif
-     read(10)
-     read(10)
-     read(10)
-
-     ! Compute total number of grids
-     ngridtot=0
-     do j=1,ncpu
-        do ilevel=1,nlevelmax
-           ngridtot=ngridtot+ngridfile(j,ilevel)
-        end do
-     end do
-
-     ! Allocate grid-based arrays
-
-        allocate(xg (1:ngridtot,1:ndim))
-        allocate(son(1:ngridtot,1:twotondim))
-        allocate(var(1:ngridtot,1:twotondim,1:nvarh))
-
-     ! Loop over levels
-     istart=0
-     do ilevel=1,lmax
-        ! Loop over domains
-        do j=1,nboundary+ncpu
-           ! Read AMR data
-           if(ngridfile(j,ilevel)>0)then
-              allocate(xdp(1:ngridfile(j,ilevel)))
-              allocate(idp(1:ngridfile(j,ilevel)))
-              read(10) ! Skip grid index
-              read(10) ! Skip next index
-              read(10) ! Skip prev index
-              ! Read grid center
-              do ind=1,ndim
-                 read(10)xdp
-                 do i=1,ngridfile(j,ilevel)
-                    xg(istart+i,ind)=xdp(i)
-                 end do
-              end do
-              read(10) ! Skip father index
-              do ind=1,2*ndim
-                 read(10) ! Skip nbor index
-              end do
-              ! Read son index
-              do ind=1,twotondim
-                 read(10)idp
-                 do i=1,ngridfile(j,ilevel)
-                    son(istart+i,ind)=idp(i)
-                 end do
-              end do
-              deallocate(idp)
-              ! Skip cpu map
-              do ind=1,twotondim
-                 read(10)
-              end do
-              ! Skip refinement map
-              do ind=1,twotondim
-                 read(10)
-              end do
-           endif
-           ! Read HYDRO data
-           read(11)
-           read(11)
-           if(ngridfile(j,ilevel)>0)then
-              ! Read hydro variables
-              do ind=1,twotondim
-                 do ivar=1,nvarh
-                    read(11)xdp
-                    do i=1,ngridfile(j,ilevel)
-                       var(istart+i,ind,ivar)=xdp(i)
-                       dx=0.5d0**ilevel
-                       iz=(ind-1)/4
-                       iy=(ind-1-4*iz)/2
-                       ix=(ind-1-2*iy-4*iz)
-                       xc=xg(istart+i,1)+(dble(ix)-0.5D0)*dx
-                       yc=xg(istart+i,2)+(dble(iy)-0.5D0)*dx
-                       zc=xg(istart+i,3)+(dble(iz)-0.5D0)*dx 
-                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(son(istart+i,ind)==0&
-                            .or.ilevel==lmax).and.(xmin<=xc.and.xc<=xmax).and.&
-                            (ymin<=yc.and.yc<=ymax).and.(zmin<=zc.and.zc<=zmax))then
-                          volume=volume+dx*dx*dx
-                          partmass=partmass+var(istart+i,ind,1)*dx*dx*dx
-                          indexcell=indexcell+1
-                          if(indexcell.ge.ngmax)write(*,*)indexcell,ngmax
-                          do l=1,ndim
-                             if(l==1)xgrid(indexcell,l)=xc
-                             if(l==2)xgrid(indexcell,l)=yc
-                             if(l==3)xgrid(indexcell,l)=zc
-                          end do
-                          do l=1,nvarh
-                             vargrid(indexcell,l)=var(istart+i,ind,l)
-                          end do
-                          levgrid(indexcell)=ilevel
-                       end if
-                    end do
-                 end do
-              end do
-              istart=istart+ngridfile(j,ilevel)
-           end if
-        end do
-     enddo
-     ! End loop over levels
-
-     close(10)
-     close(11)
-
-     deallocate(xg,son,var,ngridfile,ngridlevel)
-     if(nboundary>0)deallocate(ngridbound)
-  end do
-
-  write(*,*)'AMR grid read'
-
-  write(*,*)'Total gas mass = ',partmass
-  
-  ndummypart=int(partmass/mdm)+1
-  averdens=partmass/volume
-  partmass=partmass/dble(ndummypart)
-
-  nmin=1
-  nmax=ndummypart
-
-  write(*,*)'Number of gas dummy particles = ',ndummypart
-  write(*,*)'Gas particle mass = ',partmass
-  
-
-  allocate(xp(1:(nmax-nmin+1),1:ndim))
-  allocate(varp(1:(nmax-nmin+1),1:nvarh))
-
-  partcount=0
-  denspartcount=0
-  massleft=0.d0
-  ilowd=0
-  pc=0
-  do i=1,indexcell
-     dx=0.5d0**levgrid(i)
-     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
-     if(rnpartlocal>=1) then
-        npartlocal=int(rnpartlocal)
-        massleft=massleft+(vargrid(i,1)*dx*dx*dx-dble(npartlocal)*partmass)
-        j=1
-        do while (j<=npartlocal)
-           j=j+1
-           partcount=partcount+1
-           if(nmin<=partcount.and.partcount<=nmax)then
-              pc=pc+1
-              do l=1,ndim
-                 call ranf(localseed,xx)
-                 xc=xx*dx+xgrid(i,l)-dx/2
-                 xp(pc,l)=xc
-              end do
-              do l=1,nvarh
-                 varp(pc,l)=vargrid(i,l)
-              end do
-              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-           endif
-        end do
-     endif
-     if(rnpartlocal<1) then
-        ilowd=ilowd+1
-        massleft=massleft+vargrid(i,1)*dx*dx*dx
-     endif
-  end do
-  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
-
-  if(partcount==ndummypart.or.pc==nmax-nmin+1) goto 123
-
-  respart=ndummypart-partcount
-  respc=nmax-nmin+1-pc
-
-  do i=1,indexcell
-     dx=0.5d0**levgrid(i)
-     rnpartlocal=(vargrid(i,1)*dx*dx*dx)/partmass
-     if(rnpartlocal<1) then
-        call poissdev(localseed,rnpartlocal,poisson)
-        poisson=poisson+nint(massleft/dble(ilowd)/partmass)
-        j=1
-        do while (j<=poisson.and.partcount<ndummypart)
-           j=j+1
-           partcount=partcount+1
-           if(nmin<=partcount.and.partcount<=nmax)then
-              pc=pc+1
-              do l=1,ndim
-                 call ranf(localseed,xx)
-                 xp(pc,l)=xx*dx+xgrid(i,l)-dx/2
-              end do
-              do k=1,nvarh
-                 varp(pc,k)=vargrid(i,k)
-              end do
-              if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-           endif
-        end do
-     endif
-  end do
-
-  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
-
- if(partcount<ndummypart.or.pc<nmax-nmin+1)then
-     respart=ndummypart-partcount
-     respc=nmax-nmin+1-pc
-     do i=1,respart
-        call ranf(localseed,xx)
-        j=nint(xx*dble(indexcell-1))+1
-        partcount=partcount+1
-        if(nmin<=partcount.and.partcount<=nmax)then  
-           pc=pc+1
-           do l=1,ndim
-              call ranf(localseed,xx)
-              xp(pc,l)=xx*dx+xgrid(j,l)-dx/2
-           end do
-           do k=1,nvarh
-              varp(pc,k)=vargrid(j,k)
-           end do
-           if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-        end if
-     end do
-  endif
-
-  write(*,*)'gaspart2 done', denspartcount, pc, partcount, ndummypart
-  write(*,*)'indexcell', indexcell
-
-123 continue  
-
-  return
-
-end subroutine gaspart2
-
 !=======================================================================
 !=======================================================================
 !=======================================================================
 
 subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
-     denspartcount)
+     & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
+     & denspartcount)
 
   implicit none
 
@@ -1127,7 +420,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
   integer::l,npartlocal,partcount,respart,denspartcount,nmin,nmax,pc,respc,indexcelltmp
   integer::ncpu_read,icpu,ngridactual,resss,ii,jj,kk,icell,ilowdtot,ncpufull,indexcelltot
-  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx
+  real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,dl
   real(kind=8),dimension(1:3)::xc
   real(kind=8)::volume,facdens,xx,mdm
   real(KIND=8)::partmass,averdens,rnpartlocal,massleft,masslefttot,distro
@@ -1323,23 +616,69 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                  do ivar=1,nvarh
                     read(11)xdp
                     do i=1,ngridfile(j,ilevel)
-                       vvdp(i,ind,ivar)=xdp(i)
-                       dx=0.5d0**ilevel
-                       iz=(ind-1)/4
-                       iy=(ind-1-4*iz)/2
-                       ix=(ind-1-2*iy-4*iz)
-                       xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                       xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                       xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
-                       if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
-                            .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                            (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
-                          volume=volume+dx*dx*dx
-                          partmass=partmass+vvdp(i,ind,1)*dx*dx*dx
-                          partm(k)=partm(k)+vvdp(i,ind,1)*dx*dx*dx
-                          indexcell(k)=indexcell(k)+1
-                          indexcelltot=indexcelltot+1
-                       end if
+
+                       dl=0.5d0**dble(lmax)
+
+                       if(ndim==3)then 
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=(ind-1)/4
+                          iy=(ind-1-4*iz)/2
+                          ix=(ind-1-2*iy-4*iz)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             volume=volume+dx*dx*dx
+                             partmass=partmass+vvdp(i,ind,1)*dx*dx*dx
+                             partm(k)=partm(k)+vvdp(i,ind,1)*dx*dx*dx
+                             indexcell(k)=indexcell(k)+1
+                             indexcelltot=indexcelltot+1
+                          end if
+                       endif
+
+                       if(ndim==2)then 
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=0
+                          iy=(ind-1)/2
+                          ix=(ind-1-2*iy)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=(zmin+zmax)/2 
+                          if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             volume=volume+dx*dx*dl
+                             partmass=partmass+vvdp(i,ind,1)*dx*dx*dl
+                             partm(k)=partm(k)+vvdp(i,ind,1)*dx*dx*dl
+                             indexcell(k)=indexcell(k)+1
+                             indexcelltot=indexcelltot+1
+                          end if
+                       endif
+
+                       if(ndim==1)then 
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=0
+                          iy=0
+                          ix=ind-1
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=(ymin+ymax)/2 
+                          xc(3)=(zmin+zmax)/2 
+                          if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             volume=volume+dx*dl*dl
+                             partmass=partmass+vvdp(i,ind,1)*dx*dl*dl
+                             partm(k)=partm(k)+vvdp(i,ind,1)*dx*dl*dl
+                             indexcell(k)=indexcell(k)+1
+                             indexcelltot=indexcelltot+1
+                          end if
+                       endif
+
                     end do
                  end do
               end do
@@ -1358,7 +697,6 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
      close(11)
      
      nfake(k)=nint(partm(k)/mdm)
-     !ndummypart=ndummypart+nfake(k)
 
      deallocate(ngridfile,ngridlevel)
      if(nboundary>0)deallocate(ngridbound)
@@ -1512,46 +850,138 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                  do ivar=1,nvarh
                     read(11)xdp
                     do i=1,ngridfile(j,ilevel)
-                       vvdp(i,ind,ivar)=xdp(i)
-                       dx=0.5d0**ilevel
-                       iz=(ind-1)/4
-                       iy=(ind-1-4*iz)/2
-                       ix=(ind-1-2*iy-4*iz)
-                       xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                       xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                       xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
-                       if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
-                            .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                            (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
-                          rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
-                          if(rnpartlocal>=1) then
-                             npartlocal=int(rnpartlocal)
-                             massleft=massleft+(vvdp(i,ind,1)*dx*dx*dx-dble(npartlocal)*partmass)
-                             jj=1
-                             do while (jj<=npartlocal)!.and.locind(k)<nfake(k))
-                                jj=jj+1
-                                locind(k)=locind(k)+1
-                                partcount=partcount+1
-                                if(nmin<=partcount.and.partcount<=nmax)then
-                                   pc=pc+1
-                                   do l=1,ndim
-                                      call ranf(localseed,xx)
-                                      xp(pc,l)=xx*dx+xc(l)-dx/2
-                                   end do
-                                   do l=1,nvarh
-                                      varp(pc,l)=vvdp(i,ind,l)
-                                   end do
-                                   if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-                                endif
-                             end do
-                          endif
-                          if(rnpartlocal<1) then
-                             ilowd(k)=ilowd(k)+1
-                             massleft=massleft+vvdp(i,ind,1)*dx*dx*dx
-                             ilowdtot=ilowdtot+1
-                             masslefttot=masslefttot+vvdp(i,ind,1)*dx*dx*dx
-                          endif
+
+                       dl=0.5d0**dble(lmax)
+
+                       if(ndim==3)then
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=(ind-1)/4
+                          iy=(ind-1-4*iz)/2
+                          ix=(ind-1-2*iy-4*iz)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
+                             if(rnpartlocal>=1) then
+                                npartlocal=int(rnpartlocal)
+                                massleft=massleft+(vvdp(i,ind,1)*dx*dx*dx-dble(npartlocal)*partmass)
+                                jj=1
+                                do while (jj<=npartlocal)
+                                   jj=jj+1
+                                   locind(k)=locind(k)+1
+                                   partcount=partcount+1
+                                   if(nmin<=partcount.and.partcount<=nmax)then
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do l=1,nvarh
+                                         varp(pc,l)=vvdp(i,ind,l)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   endif
+                                end do
+                             endif
+                             if(rnpartlocal<1) then
+                                ilowd(k)=ilowd(k)+1
+                                massleft=massleft+vvdp(i,ind,1)*dx*dx*dx
+                                ilowdtot=ilowdtot+1
+                                masslefttot=masslefttot+vvdp(i,ind,1)*dx*dx*dx
+                             endif
+                          end if
                        end if
+                       
+                       if(ndim==2)then
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=0
+                          iy=(ind-1)/2
+                          ix=(ind-1-2*iy)
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(3)=(zmin+zmax)/2
+                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             rnpartlocal=(vvdp(i,ind,1)*dx*dx*dl)/partmass
+                             if(rnpartlocal>=1) then
+                                npartlocal=int(rnpartlocal)
+                                massleft=massleft+(vvdp(i,ind,1)*dx*dx*dl-dble(npartlocal)*partmass)
+                                jj=1
+                                do while (jj<=npartlocal)
+                                   jj=jj+1
+                                   locind(k)=locind(k)+1
+                                   partcount=partcount+1
+                                   if(nmin<=partcount.and.partcount<=nmax)then
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do l=1,nvarh
+                                         varp(pc,l)=vvdp(i,ind,l)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   endif
+                                end do
+                             endif
+                             if(rnpartlocal<1) then
+                                ilowd(k)=ilowd(k)+1
+                                massleft=massleft+vvdp(i,ind,1)*dx*dx*dl
+                                ilowdtot=ilowdtot+1
+                                masslefttot=masslefttot+vvdp(i,ind,1)*dx*dx*dl
+                             endif
+                          end if
+                       end if
+
+                       if(ndim==1)then
+                          vvdp(i,ind,ivar)=xdp(i)
+                          dx=0.5d0**ilevel
+                          iz=0
+                          iy=0
+                          ix=ind-1
+                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(2)=(ymin+ymax)/2
+                          xc(3)=(zmin+zmax)/2 
+                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                               & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             rnpartlocal=(vvdp(i,ind,1)*dx*dl*dl)/partmass
+                             if(rnpartlocal>=1) then
+                                npartlocal=int(rnpartlocal)
+                                massleft=massleft+(vvdp(i,ind,1)*dx*dl*dl-dble(npartlocal)*partmass)
+                                jj=1
+                                do while (jj<=npartlocal)
+                                   jj=jj+1
+                                   locind(k)=locind(k)+1
+                                   partcount=partcount+1
+                                   if(nmin<=partcount.and.partcount<=nmax)then
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do l=1,nvarh
+                                         varp(pc,l)=vvdp(i,ind,l)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   endif
+                                end do
+                             endif
+                             if(rnpartlocal<1) then
+                                ilowd(k)=ilowd(k)+1
+                                massleft=massleft+vvdp(i,ind,1)*dx*dl*dl
+                                ilowdtot=ilowdtot+1
+                                masslefttot=masslefttot+vvdp(i,ind,1)*dx*dl*dl
+                             endif
+                          end if
+                       end if
+
                     end do
                  end do
               end do
@@ -1575,9 +1005,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   end do
 
 
-  write(*,*)'gaspart3 I done', denspartcount, pc, partcount, ndummypart
+  write(*,*)'gaspart3 I done'
 
-  if(partcount>ndummypart.or.pc>nmax-nmin+1)WRITE(*,*)'SBI'
+  if(partcount>ndummypart.or.pc>nmax-nmin+1)WRITE(*,*)'ERROR! TOO MANY PARTICLES!'
 
   ncpufull=0
 
@@ -1585,7 +1015,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
      icpu=cpu_list(k)
      call title(icpu,ncharcpu)
 
-     if(partcount<ndummypart.and.pc<nmax-nmin+1)then!.and.locind(k)<nfake(k)) then
+     if(partcount<ndummypart.and.pc<nmax-nmin+1)then
         
         ! Open AMR file and skip header
         ipos=INDEX(repository,'output_')
@@ -1695,40 +1125,120 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                     do ivar=1,nvarh
                        read(11)xdp
                        do i=1,ngridfile(j,ilevel)
-                          vvdp(i,ind,ivar)=xdp(i)
-                          dx=0.5d0**ilevel
-                          iz=(ind-1)/4
-                          iy=(ind-1-4*iz)/2
-                          ix=(ind-1-2*iy-4*iz)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
-                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
-                               .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                               (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
-                             rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
-                             if(rnpartlocal<1) then
-                                call poissdev(localseed,rnpartlocal,poisson)
-                                poisson=poisson+nint(masslefttot/dble(ilowdtot)/partmass)!nint(mleft(k)/dble(ilowd(k))/partmass)
-                                jj=1
-                                do while (jj<=poisson.and.partcount<ndummypart)!.and.locind(k)<nfake(k))
-                                   jj=jj+1
-                                   locind(k)=locind(k)+1
-                                   partcount=partcount+1
-                                   if(nmin<=partcount.and.partcount<=nmax)then
-                                      pc=pc+1
-                                      do l=1,ndim
-                                         call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
-                                      end do
-                                      do kk=1,nvarh
-                                         varp(pc,kk)=vvdp(i,ind,kk)
-                                      end do
-                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-                                   endif
-                                end do
-                             endif
+
+                          dl=0.5d0**dble(lmax)
+
+                          if(ndim==3)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=(ind-1)/4
+                             iy=(ind-1-4*iz)/2
+                             ix=(ind-1-2*iy-4*iz)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                rnpartlocal=(vvdp(i,ind,1)*dx*dx*dx)/partmass
+                                if(rnpartlocal<1) then
+                                   call poissdev(localseed,rnpartlocal,poisson)
+                                   poisson=poisson+nint(masslefttot/dble(ilowdtot)/partmass)
+                                   jj=1
+                                   do while (jj<=poisson.and.partcount<ndummypart)
+                                      jj=jj+1
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      if(nmin<=partcount.and.partcount<=nmax)then
+                                         pc=pc+1
+                                         do l=1,ndim
+                                            call ranf(localseed,xx)
+                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         end do
+                                         do kk=1,nvarh
+                                            varp(pc,kk)=vvdp(i,ind,kk)
+                                         end do
+                                         if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                      endif
+                                   end do
+                                endif
+                             end if
                           end if
+                   
+                          if(ndim==2)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=0
+                             iy=(ind-1)/2
+                             ix=(ind-1-2*iy)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(3)=(zmin+zmax)/2
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                rnpartlocal=(vvdp(i,ind,1)*dx*dx*dl)/partmass
+                                if(rnpartlocal<1) then
+                                   call poissdev(localseed,rnpartlocal,poisson)
+                                   poisson=poisson+nint(masslefttot/dble(ilowdtot)/partmass)
+                                   jj=1
+                                   do while (jj<=poisson.and.partcount<ndummypart)
+                                      jj=jj+1
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      if(nmin<=partcount.and.partcount<=nmax)then
+                                         pc=pc+1
+                                         do l=1,ndim
+                                            call ranf(localseed,xx)
+                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         end do
+                                         do kk=1,nvarh
+                                            varp(pc,kk)=vvdp(i,ind,kk)
+                                         end do
+                                         if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                      endif
+                                   end do
+                                endif
+                             end if
+                          end if       
+                     
+                          if(ndim==1)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=0
+                             iy=0
+                             ix=(ind-1)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=(ymin+ymax)/2
+                             xc(3)=(zmin+zmax)/2
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
+                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                rnpartlocal=(vvdp(i,ind,1)*dx*dl*dl)/partmass
+                                if(rnpartlocal<1) then
+                                   call poissdev(localseed,rnpartlocal,poisson)
+                                   poisson=poisson+nint(masslefttot/dble(ilowdtot)/partmass)
+                                   jj=1
+                                   do while (jj<=poisson.and.partcount<ndummypart)
+                                      jj=jj+1
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      if(nmin<=partcount.and.partcount<=nmax)then
+                                         pc=pc+1
+                                         do l=1,ndim
+                                            call ranf(localseed,xx)
+                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         end do
+                                         do kk=1,nvarh
+                                            varp(pc,kk)=vvdp(i,ind,kk)
+                                         end do
+                                         if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                      endif
+                                   end do
+                                endif
+                             end if
+                          end if     
+
                        end do
                     end do
                  end do
@@ -1755,7 +1265,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
 
   end do
 
-  write(*,*)'gaspart3 II done', denspartcount, pc, partcount, ndummypart
+  write(*,*)'gaspart3 II done'
 
   if(partcount<ndummypart.or.pc<nmax-nmin+1)then
 
@@ -1897,71 +1407,105 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                     do ivar=1,nvarh
                        read(11)xdp
                        do i=1,ngridfile(j,ilevel)
-                          vvdp(i,ind,ivar)=xdp(i)
-                          dx=0.5d0**ilevel
-                          iz=(ind-1)/4
-                          iy=(ind-1-4*iz)/2
-                          ix=(ind-1-2*iy-4*iz)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
-                          if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(ilevel==lmax.or.sdp(i,ind)==0)&
-                               &.and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                               & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
-                             icell=icell+1
-                             if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
-                                do ii=1,flagcell(icell)
-                                   locind(k)=locind(k)+1
-                                   partcount=partcount+1
-                                   pc=pc+1
-                                   do l=1,ndim
-                                      call ranf(localseed,xx)
-                                      xp(pc,l)=xx*dx+xc(l)-dx/2
+
+                          dl=0.5d0**dble(lmax)
+
+                          if(ndim==3)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=(ind-1)/4
+                             iy=(ind-1-4*iz)/2
+                             ix=(ind-1-2*iy-4*iz)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin)&
+                                  &.and.(ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                icell=icell+1
+                                if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
+                                   do ii=1,flagcell(icell)
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do kk=1,nvarh
+                                         varp(pc,kk)=vvdp(i,ind,kk)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
                                    end do
-                                   do kk=1,nvarh
-                                      varp(pc,kk)=vvdp(i,ind,kk)
-                                   end do
-                                   if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-                                end do
+                                end if
                              end if
                           end if
+                          
+                          if(ndim==2)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=0
+                             iy=(ind-1)/2
+                             ix=(ind-1-2*iy)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(3)=(zmin+zmax)/2
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.&
+                                  & (ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                icell=icell+1
+                                if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
+                                   do ii=1,flagcell(icell)
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do kk=1,nvarh
+                                         varp(pc,kk)=vvdp(i,ind,kk)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   end do
+                                end if
+                             end if
+                          end if
+
+                          if(ndim==1)then
+                             vvdp(i,ind,ivar)=xdp(i)
+                             dx=0.5d0**ilevel
+                             iz=0
+                             iy=0
+                             ix=(ind-1)
+                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(2)=(ymin+ymax)/2
+                             xc(3)=(zmin+zmax)/2
+                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.&
+                                  & (ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                icell=icell+1
+                                if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
+                                   do ii=1,flagcell(icell)
+                                      locind(k)=locind(k)+1
+                                      partcount=partcount+1
+                                      pc=pc+1
+                                      do l=1,ndim
+                                         call ranf(localseed,xx)
+                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                      end do
+                                      do kk=1,nvarh
+                                         varp(pc,kk)=vvdp(i,ind,kk)
+                                      end do
+                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                   end do
+                                end if
+                             end if
+                          end if
+                          
                        end do
                     end do
                  end do
-                 !if(j==icpu.and.ilevel==levmaxlev(k).and.respart>0)then
-                 !  do i=1,respart
-                 !     xc(1)=-100
-                 !     xc(2)=-100
-                 !     xc(3)=-100
-                 !     do while((xmin>xc(1).or.xc(1)>xmax).or.(ymin>xc(2).or.xc(2)>ymax).or.(zmin>xc(3).or.xc(3)>zmax))
-                 !        call ranf(localseed,xx)
-                 !        ind=int(twotondim*xx)+1
-                 !        call ranf(localseed,xx)
-                 !        ii=int(xx*dble(ngridfile(j,ilevel)))+1
-                 !        dx=0.5d0**ilevel
-                 !        iz=(ind-1)/4
-                 !        iy=(ind-1-4*iz)/2
-                 !        ix=(ind-1-2*iy-4*iz)
-                 !        xc(1)=xxdp(ii,1)+(dble(ix)-0.5D0)*dx
-                 !        xc(2)=xxdp(ii,2)+(dble(iy)-0.5D0)*dx
-                 !        xc(3)=xxdp(ii,3)+(dble(iz)-0.5D0)*dx 
-                 !        resss=sdp(ii,ind)
-                 !     end do
-                 !     partcount=partcount+1
-                 !     locind(k)=locind(k)+1
-                 !     if(nmin<=partcount.and.partcount<=nmax)then  
-                 !        pc=pc+1
-                 !        do l=1,ndim
-                 !           call ranf(localseed,xx)
-                 !           xp(pc,l)=xx*dx+xc(l)-dx/2
-                 !        end do
-                 !        do kk=1,nvarh
-                 !           varp(pc,kk)=vvdp(ii,ind,kk)
-                 !        end do
-                 !        if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
-                 !     end if
-                 !  end do
-                 !end if
                  indexcelltmp=indexcelltmp+indexcell(k)
                  istart=istart+ngridfile(j,ilevel)
                  deallocate(xdp)
@@ -1984,26 +1528,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
      deallocate(flagcell)
   endif
   
-  write(*,*)'gaspart3 III done', denspartcount, pc, partcount, ndummypart
-  write(*,*)'indexcell', indexcelltot
-  
-!     gxmin=1000
-!     gxmax=-1000
-!     gymin=1000
-!     gymax=-1000 
-!     gzmin=1000
-!     gzmax=-1000
-
-!     do i=1,denspartcount
-!        gxmin=min(gxmin,xp(i,1))
-!        gxmax=max(gxmax,xp(i,1))
-!        gymin=min(gymin,xp(i,2))
-!        gymax=max(gymax,xp(i,2))
-!        gzmin=min(gzmin,xp(i,3))
-!        gzmax=max(gzmax,xp(i,3))
-!     end do
-
-!     write(*,*)gxmin,gxmax,gymin,gymax,gzmin,gzmax
+  write(*,*)'gaspart3 III done'
+  !write(*,*)'indexcell', indexcelltot
 
   return
   
@@ -2014,8 +1540,8 @@ end subroutine gaspart3
 !=======================================================================
 
 subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
-     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
-     nstar_actual,xout,vout,mout,idout,ageout,metout)
+     & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
+     & nstar_actual,xout,vout,mout,idout,ageout,metout)
 
   implicit none
 
@@ -2031,6 +1557,7 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   character(LEN=5)::ncharcpu,nchar
   real(kind=8),dimension(:),allocatable::xdp
   integer,dimension(:)  ,allocatable::idp
+  real(kind=8),dimension(1:3)::xcc
 
   integer::npart_tot,nsink_tot,nstar_tot,npart,nsink,ipa
   integer::npart_actual,ndm_actual,nstar_actual,npartnow
@@ -2155,25 +1682,40 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   nstar_actual=0
   ndm_actual=0
   do i=1,npart_tot
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
-          .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax)&
-          .and.(idpart(i)>0))npart_actual=npart_actual+1
+     if(ndim==3)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=xpart(i,3)
+     end if
+     if(ndim==2)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if(ndim==1)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=(ymin+ymax)/2  
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
+          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax)&
+          & .and.(idpart(i)>0))npart_actual=npart_actual+1 !NOTE: only particles with ID>0. TO SELECT ALSO SINK PARTICLES USE READPART2
 
-     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1)&
-          .and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3)&
-          .and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1)&
+          & .and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3)&
+          & .and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))nstar_actual=nstar_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))nstar_actual=nstar_actual+1
   enddo
 
   allocate(xout(1:npart_actual,1:ndim))
@@ -2187,9 +1729,24 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   
   ipa=0
   do i=1,npart_tot
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
-          .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax)&
-          .and.(idpart(i)>0))then
+     if(ndim==3)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=xpart(i,3)
+     end if
+     if(ndim==2)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if(ndim==1)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=(ymin+ymax)/2  
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
+          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax)&
+          & .and.(idpart(i)>0))then
         ipa=ipa+1
         do j=1,ndim
            xout(ipa,j)=xpart(i,j)
@@ -2222,8 +1779,10 @@ end subroutine readpart
 
 
 subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
-     lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
-     nstar_actual,xout,vout,mout,idout,ageout,metout)
+     & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
+     & nstar_actual,xout,vout,mout,idout,ageout,metout)
+
+!DAVIDE MARTIZZI 2010
 
   implicit none
 
@@ -2239,6 +1798,7 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   character(LEN=5)::ncharcpu,nchar
   real(kind=8),dimension(:),allocatable::xdp
   integer,dimension(:)  ,allocatable::idp
+  real(kind=8),dimension(1:3)::xcc
 
   integer::npart_tot,nsink_tot,nstar_tot,npart,nsink,ipa
   integer::npart_actual,ndm_actual,nstar_actual,npartnow
@@ -2363,25 +1923,39 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   nstar_actual=0
   ndm_actual=0
   do i=1,npart_tot
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
-          & .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax) &
-          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))npart_actual=npart_actual+1
-
-     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1)&
-          & .and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3)&
-          & .and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+     if(ndim==3)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=xpart(i,3)
+     end if
+     if(ndim==2)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if(ndim==1)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=(ymin+ymax)/2  
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
+          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax))npart_actual=npart_actual+1 
+     !NOTE: SELECT ALSO SINK PARTICLES!!!
+     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1)&
+          & .and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3)&
+          & .and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))ndm_actual=ndm_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
      if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xpart(i,1).and.xpart(i,1)<=xmax).and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax)&
-          & .and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))nstar_actual=nstar_actual+1
+          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
+          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))nstar_actual=nstar_actual+1
   enddo
 
   allocate(xout(1:npart_actual,1:ndim))
@@ -2395,8 +1969,23 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   
   ipa=0
   do i=1,npart_tot
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xpart(i,1).and.xpart(i,1)<=xmax)&
-          & .and.(ymin<=xpart(i,2).and.xpart(i,2)<=ymax).and.(zmin<=xpart(i,3).and.xpart(i,3)<=zmax))then
+     if(ndim==3)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=xpart(i,3)
+     end if
+     if(ndim==2)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=xpart(i,2)
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if(ndim==1)then
+        xcc(1)=xpart(i,1)
+        xcc(2)=(ymin+ymax)/2  
+        xcc(3)=(zmin+zmax)/2       
+     end if
+     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
+          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax))then
         ipa=ipa+1
         do j=1,ndim
            xout(ipa,j)=xpart(i,j)

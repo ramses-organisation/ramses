@@ -4,8 +4,8 @@ program ramses2tipsy
 
   implicit none
 
-  integer::ndim,n,i,j,k,twotondim,ncoarse,indcell
-  integer::ivar,nvar,ncpu,lmax=20,levelmin
+  integer::ndim,n,i,j,k,iii,twotondim,ncoarse,indcell
+  integer::ivar,nvar,ncpu,lmax=100,levelmin
   integer::nx,ny,nz
   integer::nlevelmax,ilevel1,ngrid1
   integer::nlevelmaxs,nlevel,iout
@@ -44,7 +44,7 @@ program ramses2tipsy
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
 
-  integer::ndummypart,nmin,nmax,nold,nnold,ndummyold
+  integer::ndummypart,nmin=0,nmax=0,nold,nnold,ndummyold
   real(KIND=8),dimension(:,:),allocatable::xp
   real(KIND=8),dimension(:,:),allocatable::varp
   integer::partcount,respart,denspartcount
@@ -57,13 +57,12 @@ program ramses2tipsy
   real(KIND=8),dimension(:,:),allocatable::xpart,vpart
   real(KIND=8),dimension(:),allocatable::mpart,age,met
   character(LEN=5)::nn
-  logical::hydrok=.false.,partok=.false.,metal=.false.,metgas=.false.,cosmo=.false.
-  logical::metgas=.false.,star=.false.,sink=.false.,mhd=.false.
+  logical::hydrok=.false.,partok=.false.,metal=.false.,metgas=.false.
+  logical::cosmo=.false.,star=.false.,sink=.false.,mhd=.false.
   
   integer::n_frw
-  real::time,time_tot,time_simu,time_uni
+  real(KIND=8)::time,time_tot,time_simu,time_uni
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
-
 
   integer ,dimension(1:1,1:IRandNumSize)::allseed
   integer ,dimension(1:IRandNumSize)::localseed
@@ -320,7 +319,7 @@ program ramses2tipsy
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
           & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
-     
+
      ! Find neighboring expansion factors
      i=1
      do while(aexp_frw(i)>aexp.and.i<n_frw)
@@ -330,10 +329,10 @@ program ramses2tipsy
      time_simu=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
           & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
      write(*,*)'Age simu=',(time_tot+time_simu)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
-     time_uni=(time_tot+time_simu)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
+     time_uni=(time_tot+time_simu)! ADD THIS TO CONVERT TO GYR: /(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
   else
      time_simu=t
-     time_uni=t*unit_t
+     time_uni=t!*scale_t
   endif
 
   npart_actual=0
@@ -342,23 +341,23 @@ program ramses2tipsy
 
   if(partok) then
      call readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
-          lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,&
-          ndm_actual,nstar_actual,xpart,vpart,mpart,idpart,age,met)
+          & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,&
+          & ndm_actual,nstar_actual,xpart,vpart,mpart,idpart,age,met)
      !NOTE: READPART SELECTS ONLY PARTICLES WITH ID>0.
 
      do i=1,npart_actual
         if((age(i).ne.0.0d0))then
            if(cosmo)then
-              iii=1 ! Compute star formation time in years
+              iii=1 ! Compute star formation time 
               do while(tau_frw(iii)>age(i).and.iii<n_frw)
                  iii=iii+1
               end do
               time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
                    & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
-              time=(time_tot+time)/(h0*1d5/3.08d24)/(365.*24.*3600.)
+              time=(time_tot+time)!ADD THIS TO CONVERT TO YR: /(h0*1d5/3.08d24)/(365.*24.*3600.)
               age(i)=time ! Replace age with formation time
            else
-              age(i)=age(i)*unit_t/(365.*24.*3600.)
+              age(i)=age(i)!ADD THIS TO CONVERT TO YR: *scale_t/(365.*24.*3600.)
            end if
         end if
      end do
@@ -369,13 +368,13 @@ program ramses2tipsy
      end do
      mdm=mdm*omega_b/(omega_m-omega_b)
   else
-     mdm=1/2**(3*lmax)
+     mdm=1d0/(2d0**(3d0*dble(lmax)))
   end if
 
   if(hydrok)then
      call gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-          levelsel,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,&
-          partmass,averdens,xp,varp,denspartcount)
+          & levelsel,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,&
+          & partmass,averdens,xp,varp,denspartcount)
      nmin=1
      nmax=denspartcount
   end if
@@ -547,9 +546,9 @@ program ramses2tipsy
      endif
   endif
 
-  !DUMMY GRAVITATIONAL SOFTENING
+  !DUMMY GRAVITATIONAL SOFTENING FOR DARK AND STARS
   if(partok)then
-     dummy=boxlen/2**lmax !QUAAA: CHIEDERE A ROMAIN!!!
+     dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
      do i=1,ndm_actual
         write(66,*)dummy 
      end do
@@ -560,47 +559,62 @@ program ramses2tipsy
      end if
   end if
 
-  !DENSITY, TEMPERATURE, DUMMY SPH SMOOTHING LENGTH & GAS METALLICITY 
+  !GAS DENSITY, TEMPERATURE, DUMMY SPH SMOOTHING LENGTH & GAS METALLICITY. 
   if(hydrok)then
      do i=1,nmax-nmin+1
         if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,1)
      end do
      do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1)
-        if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1.d0)/varp(i,1)
-        ! QUAAA!!! INSERIRE MHD
-        ! NOTA : LA PRESSIONE VA MOLTIPLICATA PER m_h/k_b PER OTTENERE LA TEMPERATURA T/mu
+        if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+        if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+        if(varp(i,1)>=facdens*averdens.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,3)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+        if(varp(i,1)>=facdens*averdens.and.(mhd))write(66,*)varp(i,11)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+     end do
+     dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
+     do i=1,nmax-nmin+1
+        write(66,*)dummy 
      end do
      do i=1,nmax-nmin+1
-        write(66,*)dummy
-     end do
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,6) !QUAAAAA
+        if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,6)
+        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,6)
+        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,5)
+        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,4)
+        if(varp(i,1)>=facdens*averdens.and.metgas.and.(mhd))write(66,*)varp(i,12)
      end do
   end if
-
      
-     if(star.and.nstar_actual>0)then
-        if(metal)then
-           do i=1,npart_actual
-              if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)met(i)
-           end do
-        else
-           do i=1,nstar_actual
-              write(66,*)dummy
-           end do
-        end if
+  if(star.and.nstar_actual>0)then
+     if(metal)then
         do i=1,npart_actual
-           if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)age(i)
+           if(age(i)/=0.d0)write(66,*)met(i)
+        end do
+     else
+        dummy=0.d0
+        do i=1,nstar_actual
+           write(66,*)dummy
         end do
      end if
-     
-     close(66)
+     do i=1,npart_actual
+        if(age(i)/=0.d0)write(66,*)age(i)
+     end do
+  end if
+  
+  dummy=1.d0
+  do i=1,npart_actual+denspartcount
+     write(66,*)dummy
+  end do
 
+  close(66)
 
+  if(hydrok)deallocate(xp,varp)
 
-  deallocate(xp)
-  deallocate(varp)
+  if(partok)then
+     deallocate(xpart,vpart,mpart,idpart)
+     if(star.and.nstar_actual>0)then
+        deallocate(age)
+        if(metal)deallocate(met)
+     end if
+  end if
 
 contains
 
@@ -616,7 +630,7 @@ contains
     
     n = iargc()
     if (n < 4) then
-       print *, 'usage: output2tipsy -inp  input_dir'
+       print *, 'usage: ramses2tipsy -inp  input_dir'
        print *, '                 -out  output_file'
        print *, '                 [-xmi xmin] '
        print *, '                 [-xma xmax] '
@@ -624,15 +638,10 @@ contains
        print *, '                 [-yma ymax] '
        print *, '                 [-zmi zmin] '
        print *, '                 [-zma zmax] '
-       print *, '                 [-lma lmax] '
-       print *, '                 [-nmi nmin] '
-       print *, '                 [-nma nmax] '
-       print *, '                 [-met metals in stars] '
-       print *, '                 [-fde facdens] '
-       print *, '                 [-dlm delm] '
-       print *, '                 [-typ output type] '
+       print *, '                 [-cos cosmo?] '
+       print *, '                 [-mhd mhd?] '
        print *, 'ex: ramses2tipsy -inp output_00001 -out cube.dat'// &
-            &   ' -typ "gas" -xmi 0.1 -xma 0.7 -lma 12'
+            &   ' -xmi 0.1 -xma 0.7'
        print *, ' '
 
        stop
@@ -662,26 +671,10 @@ contains
           read (arg,*) zmin
        case ('-zma')
           read (arg,*) zmax
-       case ('-lma')
-          read (arg,*) lmax
-       case ('-nmi')
-          read (arg,*) nmin
-       case ('-nma')
-          read (arg,*) nmax
-       case ('-str') 
-          read (arg,*) star
-       case ('-snk') 
-          read (arg,*) sink
-       case ('-met') 
-          read (arg,*) metal
-       case ('-dum')
-          read (arg,*) ndummy
-       case ('-fde')
-          read (arg,*) facdens
-       case ('-dlm')
-          read (arg,*) delm
-       case ('-typ')
-          read (arg,*) typ
+       case ('-cos') 
+          read (arg,*) cosmo
+       case ('-mhd') 
+          read (arg,*) mhd
        case default
           print '("unknown option ",a2," ignored")', opt
        end select
@@ -691,7 +684,7 @@ contains
     
   end subroutine read_params
 
-end program output2tipsy_v2
+end program ramses2tipsy
 
 !================================================================
 !================================================================
@@ -789,7 +782,6 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
         axp_out(nout)=axp_tau
         hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
      end if
-
   end do
   t_out(ntable)=t
   tau_out(ntable)=tau
