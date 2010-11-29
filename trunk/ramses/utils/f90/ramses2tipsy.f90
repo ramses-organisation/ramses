@@ -1,4 +1,5 @@
 program ramses2tipsy
+
   use random 
   use io_ramses
 
@@ -28,8 +29,8 @@ program ramses2tipsy
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom,ii,jj,kk
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight
-  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mdm
+  real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight,msph=0.d0
+  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mdm=0.d0,mres=0.d0
 
   integer::ilevel,ncpu_read,three
   real(kind=8)deltax
@@ -45,20 +46,15 @@ program ramses2tipsy
   integer,dimension(:),allocatable::cpu_list
 
   integer::ndummypart,nmin=0,nmax=0,nold,nnold,ndummyold
-  real(KIND=8),dimension(:,:),allocatable::xp
-  real(KIND=8),dimension(:,:),allocatable::varp
   integer::partcount,respart,denspartcount
   real(KIND=8)::dummy,partmass,volume,facdens=0.d0,averdens
   integer::delm=0,levelsel
 
   integer::npart,nstar_tot,nsink,npart_tot,nsink_tot
   integer::npart_actual,ndm_actual,nstar_actual,npartnow
-  integer,dimension(:),allocatable::idpart
-  real(KIND=8),dimension(:,:),allocatable::xpart,vpart
-  real(KIND=8),dimension(:),allocatable::mpart,age,met
   character(LEN=5)::nn
   logical::hydrok=.false.,partok=.false.,metal=.false.,metgas=.false.
-  logical::cosmo=.false.,star=.false.,sink=.false.,mhd=.false.
+  logical::cosmo=.false.,star=.false.,sink=.false.,mhd=.false.,gas=.true.
   
   integer::n_frw
   real(KIND=8)::time,time_tot,time_simu,time_uni
@@ -106,6 +102,17 @@ program ramses2tipsy
   read(10)nboundary
   read(10)ngrid_current
   read(10)boxlen
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)
+  read(10)msph
   close(10)
   twotondim=2**ndim
 
@@ -342,39 +349,53 @@ program ramses2tipsy
   if(partok) then
      call readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
           & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,&
-          & ndm_actual,nstar_actual,xpart,vpart,mpart,idpart,age,met)
+          & ndm_actual,nstar_actual)
      !NOTE: READPART SELECTS ONLY PARTICLES WITH ID>0.
 
+     write(*,*)'Number of DM particles in the selected box: ', npart_actual-nstar_actual
+     write(*,*)'Number of star particles in the selected box: ', nstar_actual
+
      do i=1,npart_actual
-        if((age(i).ne.0.0d0))then
+        if((ageout(i).ne.0.0d0))then
            if(cosmo)then
               iii=1 ! Compute star formation time 
-              do while(tau_frw(iii)>age(i).and.iii<n_frw)
+              do while(tau_frw(iii)>ageout(i).and.iii<n_frw)
                  iii=iii+1
               end do
-              time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                   & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+              time=t_frw(iii)*(ageout(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                   & t_frw(iii-1)*(ageout(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
               time=(time_tot+time)!ADD THIS TO CONVERT TO YR: /(h0*1d5/3.08d24)/(365.*24.*3600.)
-              age(i)=time ! Replace age with formation time
+              ageout(i)=time ! Replace age with formation time
            else
-              age(i)=age(i)!ADD THIS TO CONVERT TO YR: *scale_t/(365.*24.*3600.)
+              ageout(i)=ageout(i)!ADD THIS TO CONVERT TO YR: *scale_t/(365.*24.*3600.)
            end if
         end if
      end do
      
-     mdm=1d30
-     do i=1,npart_actual
-        if(age(i)==0.d0)mdm=min(mdm,mpart(i))
-     end do
-     mdm=mdm*omega_b/(omega_m-omega_b)
+!     mdm=1d30
+!     do i=1,npart_actual
+!        if(ageout(i)==0.d0)mdm=min(mdm,mout(i))
+!     end do
+     mdm=msph ! IN THE OLD VERSION: mdm*omega_b/(omega_m-omega_b)
+     if(mres.ne.0.d0)mdm=max(mdm,mres)
+     if(mdm.eq.0)then
+        write(*,*)'Use option -mre, please! STOP!'
+        stop
+     end if
   else
-     mdm=1d0/(2d0**(3d0*dble(lmax)))
+     mdm=msph ! IN THE OLD VERSION: 1d0/(2d0**(3d0*dble(lmax)))
+     if(mres.ne.0.d0)mdm=max(mdm,mres)
+     if(mdm.eq.0)then
+        write(*,*)'Use option -mre, please! STOP!'
+        stop
+     end if
   end if
 
-  if(hydrok)then
-     call gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-          & levelsel,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,&
-          & partmass,averdens,xp,varp,denspartcount)
+  if(hydrok.and.gas)then
+     call gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,&
+          & ndummypart,facdens,levelsel,lmax,xmin,xmax,ymin,&
+          & ymax,zmin,zmax,mdm,partmass,averdens,&
+          & denspartcount)
      nmin=1
      nmax=denspartcount
   end if
@@ -382,238 +403,411 @@ program ramses2tipsy
   !-------------------------------------------------------------
   !  Writing output tipsy file 
   !-------------------------------------------------------------
-  
-  open(66,file=outfich,status='unknown',form='formatted')
-  open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
 
-  three=3
-
-  !HEADER
-  write(66,*)npart_actual+denspartcount,denspartcount,nstar_actual
-  write(66,*)three
-  write(66,*)time_uni
-  
-  write(55,*)npart_actual+denspartcount,denspartcount,nstar_actual
-  write(55,*)three
-  write(55,*)time_uni
-
-  !MASSES AND IDS
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        write(66,*)partmass
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if(.not.star)write(66,*)mpart(i)
-        if((star.or.sink).and.age(i)==0.d0)write(66,*)mpart(i)
-        if(.not.star)write(55,*)idpart(i)
-        if((star.or.sink).and.age(i)==0.d0)write(55,*)idpart(i)
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0)write(66,*)mpart(i)
-           if(age(i)/=0.d0)write(55,*)idpart(i)
-        enddo
-     endif
-  end if
-
-  !X COORDINATE
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if(.not.star)write(66,*)xpart(i,1)
-        if((star.or.sink).and.age(i)==0.d0)write(66,*)xpart(i,1)
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0)write(66,*)xpart(i,1)
-        enddo
-     endif
-  endif
-
-  !Y COORDINATE
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)
-        if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)(ymin+ymax)/2
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if((.not.star).and.ndim>=2)write(66,*)xpart(i,2)
-        if((star.or.sink).and.age(i)==0.d0.and.ndim>=2)write(66,*)xpart(i,2)
-        if((.not.star).and.ndim<2)write(66,*)(ymin+ymax)/2
-        if((star.or.sink).and.age(i)==0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0.and.ndim>=2)write(66,*)xpart(i,2)
-           if(age(i)/=0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
-        enddo
-     endif
-  end if
-  
-  !Z COORDINATE
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)
-        if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)(zmin+zmax)/2
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if((.not.star).and.ndim>=3)write(66,*)xpart(i,3)
-        if((star.or.sink).and.age(i)==0.d0.and.ndim>=3)write(66,*)xpart(i,3)
-        if((.not.star).and.ndim<3)write(66,*)(zmin+zmax)/2
-        if((star.or.sink).and.age(i)==0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0.and.ndim>=3)write(66,*)xpart(i,3)
-           if(age(i)/=0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
-        enddo
-     endif
-  end if
-  
-  !VELOCITY 
-
-  dummy=0.d0
-
-  !V_X
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,2)
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if(.not.star)write(66,*)vpart(i,1)
-        if((star.or.sink).and.age(i)==0.d0)write(66,*)vpart(i,1)
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0)write(66,*)vpart(i,1)
-        enddo
-     endif
-  end if
-  
-  !V_Y
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)varp(i,3)
-        if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)dummy
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if((.not.star).and.ndim>=2)write(66,*)vpart(i,2)
-        if((star.or.sink).and.age(i)==0.d0.and.ndim>=2)write(66,*)vpart(i,2)
-        if((.not.star).and.ndim<2)write(66,*)dummy
-        if((star.or.sink).and.age(i)==0.d0.and.ndim<2)write(66,*)dummy
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0.and.ndim>=2)write(66,*)vpart(i,2)
-           if(age(i)/=0.d0.and.ndim<2)write(66,*)dummy
-        enddo
-     endif
-  endif
-
-  !V_Z
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)varp(i,4)
-        if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)dummy
-     end do
-  end if
-  if(partok)then
-     do i=1,npart_actual
-        if((.not.star).and.ndim>=3)write(66,*)vpart(i,3)
-        if((star.or.sink).and.age(i)==0.d0.and.ndim>=3)write(66,*)vpart(i,3)
-        if((.not.star).and.ndim<3)write(66,*)dummy
-        if((star.or.sink).and.age(i)==0.d0.and.ndim<3)write(66,*)dummy
-     enddo
-     if(star.and.nstar_actual>0)then
-        do i=1,npart_actual
-           if(age(i)/=0.d0.and.ndim>=3)write(66,*)vpart(i,3)
-           if(age(i)/=0.d0.and.ndim<3)write(66,*)dummy
-        enddo
-     endif
-  endif
-
-  !DUMMY GRAVITATIONAL SOFTENING FOR DARK AND STARS
-  if(partok)then
-     dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
-     do i=1,ndm_actual
-        write(66,*)dummy 
-     end do
-     if(star.and.nstar_actual>0)then
-        do i=1,nstar_actual
-           write(66,*)dummy
-        end do
-     end if
-  end if
-
-  !GAS DENSITY, TEMPERATURE, DUMMY SPH SMOOTHING LENGTH & GAS METALLICITY. 
-  if(hydrok)then
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,1)
-     end do
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-        if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-        if(varp(i,1)>=facdens*averdens.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,3)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-        if(varp(i,1)>=facdens*averdens.and.(mhd))write(66,*)varp(i,11)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-     end do
-     dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
-     do i=1,nmax-nmin+1
-        write(66,*)dummy 
-     end do
-     do i=1,nmax-nmin+1
-        if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,6)
-        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,6)
-        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,5)
-        if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,4)
-        if(varp(i,1)>=facdens*averdens.and.metgas.and.(mhd))write(66,*)varp(i,12)
-     end do
-  end if
+  if(gas)then
      
-  if(star.and.nstar_actual>0)then
-     if(metal)then
+     open(66,file=outfich,status='unknown',form='formatted')
+     open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
+     
+     three=3
+     
+     !HEADER
+     write(66,*)npart_actual+denspartcount,denspartcount,nstar_actual
+     write(66,*)three
+     write(66,*)time_uni
+     
+     write(55,*)npart_actual+denspartcount,denspartcount,nstar_actual
+     write(55,*)three
+     write(55,*)time_uni
+     
+     !MASSES AND IDS
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           write(66,*)partmass
+        end do
+     end if
+     if(partok)then
         do i=1,npart_actual
-           if(age(i)/=0.d0)write(66,*)met(i)
-        end do
-     else
-        dummy=0.d0
-        do i=1,nstar_actual
-           write(66,*)dummy
+           if(.not.star)write(66,*)mout(i)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)mout(i)
+           if(.not.star)write(55,*)idout(i)
+           if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)mout(i)
+              if(ageout(i)/=0.d0)write(55,*)idout(i)
+           enddo
+        endif
+     end if
+     
+     !X COORDINATE
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)
         end do
      end if
-     do i=1,npart_actual
-        if(age(i)/=0.d0)write(66,*)age(i)
-     end do
-  end if
-  
-  dummy=1.d0
-  do i=1,npart_actual+denspartcount
-     write(66,*)dummy
-  end do
+     if(partok)then
+        do i=1,npart_actual
+           if(.not.star)write(66,*)xout(i,1)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)xout(i,1)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)xout(i,1)
+           enddo
+        endif
+     endif
+     
+     !Y COORDINATE
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)
+           if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)(ymin+ymax)/2
+        end do
+     end if
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=2)write(66,*)xout(i,2)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=2)write(66,*)xout(i,2)
+           if((.not.star).and.ndim<2)write(66,*)(ymin+ymax)/2
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=2)write(66,*)xout(i,2)
+              if(ageout(i)/=0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
+           enddo
+        endif
+     end if
+     
+     !Z COORDINATE
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)
+           if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)(zmin+zmax)/2
+        end do
+     end if
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=3)write(66,*)xout(i,3)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=3)write(66,*)xout(i,3)
+           if((.not.star).and.ndim<3)write(66,*)(zmin+zmax)/2
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=3)write(66,*)xout(i,3)
+              if(ageout(i)/=0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
+           enddo
+        endif
+     end if
+     
+     !VELOCITY 
+     
+     dummy=0.d0
+     
+     !V_X
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,2)
+        end do
+     end if
+     if(partok)then
+        do i=1,npart_actual
+           if(.not.star)write(66,*)vout(i,1)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)vout(i,1)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)vout(i,1)
+           enddo
+        endif
+     end if
+     
+     !V_Y
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)varp(i,3)
+           if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)dummy
+        end do
+     end if
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=2)write(66,*)vout(i,2)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=2)write(66,*)vout(i,2)
+           if((.not.star).and.ndim<2)write(66,*)dummy
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<2)write(66,*)dummy
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=2)write(66,*)vout(i,2)
+              if(ageout(i)/=0.d0.and.ndim<2)write(66,*)dummy
+           enddo
+        endif
+     endif
+     
+     !V_Z
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)varp(i,4)
+           if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)dummy
+        end do
+     end if
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=3)write(66,*)vout(i,3)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=3)write(66,*)vout(i,3)
+           if((.not.star).and.ndim<3)write(66,*)dummy
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<3)write(66,*)dummy
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=3)write(66,*)vout(i,3)
+              if(ageout(i)/=0.d0.and.ndim<3)write(66,*)dummy
+           enddo
+        endif
+     endif
+     
+     !DUMMY GRAVITATIONAL SOFTENING FOR DARK AND STARS
+     if(partok)then
+        dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
+        do i=1,ndm_actual
+           write(66,*)dummy 
+        end do
+        if(star.and.nstar_actual>0)then
+           do i=1,nstar_actual
+              write(66,*)dummy
+           end do
+        end if
+     end if
 
-  close(66)
-
-  if(hydrok)deallocate(xp,varp)
-
-  if(partok)then
-     deallocate(xpart,vpart,mpart,idpart)
+     !GAS DENSITY, TEMPERATURE, DUMMY SPH SMOOTHING LENGTH & GAS METALLICITY. 
+     if(hydrok)then
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,1)
+        end do
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,3)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.(mhd))write(66,*)varp(i,11)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+        end do
+        dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
+        do i=1,nmax-nmin+1
+           write(66,*)dummy 
+        end do
+        do i=1,nmax-nmin+1
+           if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,6)
+           if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,5)
+           if(varp(i,1)>=facdens*averdens.and.metgas.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,4)
+           if(varp(i,1)>=facdens*averdens.and.metgas.and.(mhd))write(66,*)varp(i,12)
+        end do
+     end if
+     
      if(star.and.nstar_actual>0)then
-        deallocate(age)
-        if(metal)deallocate(met)
+        if(metal)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)metout(i)
+           end do
+        else
+           dummy=0.d0
+           do i=1,nstar_actual
+              write(66,*)dummy
+           end do
+        end if
+        do i=1,npart_actual
+           if(ageout(i)/=0.d0)write(66,*)ageout(i)
+        end do
      end if
+     
+     dummy=1.d0
+     do i=1,npart_actual+denspartcount
+        write(66,*)dummy
+     end do
+     
+     close(66)
+
+     if(hydrok)deallocate(xp,varp)
+     
+     if(partok)then
+        deallocate(xout,vout,mout,idout)
+        if(star.and.nstar_actual>0)then
+           deallocate(ageout)
+           if(metal)deallocate(metout)
+        end if
+     end if
+
+  else
+
+     open(66,file=outfich,status='unknown',form='formatted')
+     open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
+     
+     three=3
+     
+     !HEADER
+     write(66,*)npart_actual,0,nstar_actual
+     write(66,*)three
+     write(66,*)time_uni
+     
+     write(55,*)npart_actual,0,nstar_actual
+     write(55,*)three
+     write(55,*)time_uni
+     
+     !MASSES AND IDS
+     if(partok)then
+        do i=1,npart_actual
+           if(.not.star)write(66,*)mout(i)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)mout(i)
+           if(.not.star)write(55,*)idout(i)
+           if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)mout(i)
+              if(ageout(i)/=0.d0)write(55,*)idout(i)
+           enddo
+        endif
+     end if
+     
+     !X COORDINATE
+     if(partok)then
+        do i=1,npart_actual
+           if(.not.star)write(66,*)xout(i,1)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)xout(i,1)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)xout(i,1)
+           enddo
+        endif
+     endif
+     
+     !Y COORDINATE
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=2)write(66,*)xout(i,2)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=2)write(66,*)xout(i,2)
+           if((.not.star).and.ndim<2)write(66,*)(ymin+ymax)/2
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=2)write(66,*)xout(i,2)
+              if(ageout(i)/=0.d0.and.ndim<2)write(66,*)(ymin+ymax)/2
+           enddo
+        endif
+     end if
+     
+     !Z COORDINATE
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=3)write(66,*)xout(i,3)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=3)write(66,*)xout(i,3)
+           if((.not.star).and.ndim<3)write(66,*)(zmin+zmax)/2
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=3)write(66,*)xout(i,3)
+              if(ageout(i)/=0.d0.and.ndim<3)write(66,*)(zmin+zmax)/2
+           enddo
+        endif
+     end if
+     
+     !VELOCITY 
+     
+     dummy=0.d0
+     
+     !V_X
+     if(partok)then
+        do i=1,npart_actual
+           if(.not.star)write(66,*)vout(i,1)
+           if((star.or.sink).and.ageout(i)==0.d0)write(66,*)vout(i,1)
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)vout(i,1)
+           enddo
+        endif
+     end if
+     
+     !V_Y
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=2)write(66,*)vout(i,2)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=2)write(66,*)vout(i,2)
+           if((.not.star).and.ndim<2)write(66,*)dummy
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<2)write(66,*)dummy
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=2)write(66,*)vout(i,2)
+              if(ageout(i)/=0.d0.and.ndim<2)write(66,*)dummy
+           enddo
+        endif
+     endif
+     
+     !V_Z
+     if(partok)then
+        do i=1,npart_actual
+           if((.not.star).and.ndim>=3)write(66,*)vout(i,3)
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim>=3)write(66,*)vout(i,3)
+           if((.not.star).and.ndim<3)write(66,*)dummy
+           if((star.or.sink).and.ageout(i)==0.d0.and.ndim<3)write(66,*)dummy
+        enddo
+        if(star.and.nstar_actual>0)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0.and.ndim>=3)write(66,*)vout(i,3)
+              if(ageout(i)/=0.d0.and.ndim<3)write(66,*)dummy
+           enddo
+        endif
+     endif
+     
+     !DUMMY GRAVITATIONAL SOFTENING FOR DARK AND STARS
+     if(partok)then
+        dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
+        do i=1,ndm_actual
+           write(66,*)dummy 
+        end do
+        if(star.and.nstar_actual>0)then
+           do i=1,nstar_actual
+              write(66,*)dummy
+           end do
+        end if
+     end if
+     
+     if(star.and.nstar_actual>0)then
+        if(metal)then
+           do i=1,npart_actual
+              if(ageout(i)/=0.d0)write(66,*)metout(i)
+           end do
+        else
+           dummy=0.d0
+           do i=1,nstar_actual
+              write(66,*)dummy
+           end do
+        end if
+        do i=1,npart_actual
+           if(ageout(i)/=0.d0)write(66,*)ageout(i)
+        end do
+     end if
+     
+     dummy=1.d0
+     do i=1,npart_actual
+        write(66,*)dummy
+     end do
+     
+     close(66)
+
+     if(partok)then
+        deallocate(xout,vout,mout,idout)
+        if(star.and.nstar_actual>0)then
+           deallocate(ageout)
+           if(metal)deallocate(metout)
+        end if
+     end if
+
   end if
 
 contains
@@ -640,6 +834,8 @@ contains
        print *, '                 [-zma zmax] '
        print *, '                 [-cos cosmo?] '
        print *, '                 [-mhd mhd?] '
+       print *, '                 [-gas gas in tipsy map?] '
+       print *, '                 [-mre gas particle mass] '
        print *, 'ex: ramses2tipsy -inp output_00001 -out cube.dat'// &
             &   ' -xmi 0.1 -xma 0.7'
        print *, ' '
@@ -675,6 +871,10 @@ contains
           read (arg,*) cosmo
        case ('-mhd') 
           read (arg,*) mhd
+       case ('-gas') 
+          read (arg,*) gas
+       case ('-mre') 
+          read (arg,*) mres
        case default
           print '("unknown option ",a2," ignored")', opt
        end select

@@ -1,6 +1,13 @@
 module io_ramses
   use random
 
+  integer,dimension(:),allocatable::idout
+  real(KIND=8),dimension(:,:),allocatable::xout,vout
+  real(KIND=8),dimension(:),allocatable::mout,ageout,metout
+
+  real(KIND=8),dimension(:,:),allocatable::xp
+  real(KIND=8),dimension(:,:),allocatable::varp
+
 contains 
 
   subroutine getcell(xcell,ycell,zcell,varcell,levcell,ncell,nvarin,repository, &
@@ -411,12 +418,12 @@ end subroutine getcell
 !=======================================================================
 
 subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-     & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,xp,varp,&
+     & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,&
      & denspartcount)
 
   implicit none
 
-  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz
+  integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz,nmm
   integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
   integer::l,npartlocal,partcount,respart,denspartcount,nmin,nmax,pc,respc,indexcelltmp
   integer::ncpu_read,icpu,ngridactual,resss,ii,jj,kk,icell,ilowdtot,ncpufull,indexcelltot
@@ -436,8 +443,6 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   integer,dimension(:),allocatable::idp,ilowd,nfake,locind,indexcell,levmaxlev,rindex,flagcell
   integer,dimension(:,:),allocatable::ngridfile,ngridlevel,ngridbound
   integer,dimension(:,:),allocatable::sdp
-  real(KIND=8),dimension(:,:),allocatable::xp
-  real(KIND=8),dimension(:,:),allocatable::varp
 
   integer ,dimension(1:1,1:IRandNumSize)::allseed
   integer ,dimension(1:IRandNumSize)::localseed
@@ -722,8 +727,10 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   !!! Distribute gas particles
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  allocate(xp(1:(nmax-nmin+1),1:ndim))
-  allocate(varp(1:(nmax-nmin+1),1:nvarh))
+  nmm=nmax-nmin+1
+
+  allocate(xp(1:nmm,1:ndim))
+  allocate(varp(1:nmm,1:nvarh))
   allocate(mleft(1:ncpu_read))
   allocate(ilowd(1:ncpu_read))
 
@@ -1419,9 +1426,16 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
                              xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
                              xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
-                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin)&
-                                  &.and.(ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             if(j==icpu.and.ivar==nvarh &
+                                  & .and.(ilevel>=lmin) &
+                                  & .and.(ilevel==lmax &
+                                  & .or.sdp(i,ind)==0) &
+                                  & .and.(xmin<=xc(1) & 
+                                  & .and.xc(1)<=xmax) &
+                                  & .and.(ymin<=xc(2) &
+                                  & .and.xc(2)<=ymax) &
+                                  & .and.(zmin<=xc(3) &
+                                  & .and.xc(3)<=zmax))then
                                 icell=icell+1
                                 if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
                                    do ii=1,flagcell(icell)
@@ -1450,9 +1464,15 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
                              xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
                              xc(3)=(zmin+zmax)/2
-                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.&
-                                  & (ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                             if(j==icpu.and.ivar==nvarh.and. &
+                                  & (ilevel>=lmin).and.(ilevel==lmax &
+                                  & .or.sdp(i,ind)==0).and. &
+                                  & (xmin<=xc(1).and. &
+                                  & xc(1)<=xmax).and. &
+                                  & (ymin<=xc(2).and. &
+                                  & xc(2)<=ymax).and. &
+                                  & (zmin<=xc(3).and. &
+                                  & xc(3)<=zmax))then
                                 icell=icell+1
                                 if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
                                    do ii=1,flagcell(icell)
@@ -1482,10 +1502,13 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              xc(2)=(ymin+ymax)/2
                              xc(3)=(zmin+zmax)/2
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.&
-                                  & (ilevel==lmax.or.sdp(i,ind)==0).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
-                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
+                                  & (ilevel==lmax.or.sdp(i,ind)==0).and.&
+                                  & (xmin<=xc(1).and.xc(1)<=xmax).and.&
+                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.&
+                                  & (zmin<=xc(3).and.xc(3)<=zmax))then
                                 icell=icell+1
-                                if(flagcell(icell).ge.1.and.nmin<=partcount.and.partcount<nmax)then
+                                if(flagcell(icell).ge.1.and.nmin<=partcount.and.&
+                                     & partcount<nmax)then
                                    do ii=1,flagcell(icell)
                                       locind(k)=locind(k)+1
                                       partcount=partcount+1
@@ -1497,7 +1520,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       do kk=1,nvarh
                                          varp(pc,kk)=vvdp(i,ind,kk)
                                       end do
-                                      if(varp(pc,1)>facdens*averdens)denspartcount=denspartcount+1
+                                      if(varp(pc,1)>facdens*averdens) &
+                                           & denspartcount=denspartcount+1
                                    end do
                                 end if
                              end if
@@ -1541,7 +1565,7 @@ end subroutine gaspart3
 
 subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
-     & nstar_actual,xout,vout,mout,idout,ageout,metout)
+     & nstar_actual)
 
   implicit none
 
@@ -1564,9 +1588,6 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   integer,dimension(:),allocatable::levpart,idpart
   real(KIND=8),dimension(:,:),allocatable::xpart,vpart
   real(KIND=8),dimension(:),allocatable::mpart,age,met
-  integer,dimension(:),allocatable::idout
-  real(KIND=8),dimension(:,:),allocatable::xout,vout
-  real(KIND=8),dimension(:),allocatable::mout,ageout,metout
 
   character(LEN=5)::nn
   logical::metal,star,sink
@@ -1780,7 +1801,7 @@ end subroutine readpart
 
 subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,ndm_actual,&
-     & nstar_actual,xout,vout,mout,idout,ageout,metout)
+     & nstar_actual)
 
 !DAVIDE MARTIZZI 2010
 
@@ -1805,9 +1826,6 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   integer,dimension(:),allocatable::levpart,idpart
   real(KIND=8),dimension(:,:),allocatable::xpart,vpart
   real(KIND=8),dimension(:),allocatable::mpart,age,met
-  integer,dimension(:),allocatable::idout
-  real(KIND=8),dimension(:,:),allocatable::xout,vout
-  real(KIND=8),dimension(:),allocatable::mout,ageout,metout
 
   character(LEN=5)::nn
   logical::metal,star,sink
