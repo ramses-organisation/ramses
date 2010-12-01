@@ -56,7 +56,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,t_yso,t_off
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,T2min,Zsolar
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+  real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -153,12 +154,22 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i)=nH(i)*scale_nH
      end do
 
+     ! Compute radiation boost factor
+     if(self_shielding)then
+        do i=1,nleaf
+           boost(i)=exp(-nH(i)/0.01)
+        end do
+     else
+        do i=1,nleaf
+           boost(i)=1.0
+        end do
+     endif
+
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
      do i=1,nleaf
         T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
-        if(cooling)T2min(i)=T2min(i)+T2_min_fix
      end do
      !==========================================
      ! You can put your own polytrope EOS here
@@ -169,10 +180,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute net cooling at constant nH
      if(cooling)then
+        ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
-           T2(i)=MAX(T2(i),T2min(i))
+           T2(i)=max(T2(i)-T2min(i),T2_min_fix)
         end do
-        call solve_cooling(nH,T2,Zsolar,dtcool,delta_T2,nleaf)
+        call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
 
      ! Compute rho

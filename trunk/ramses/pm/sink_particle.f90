@@ -23,7 +23,7 @@ subroutine create_sink
 
   if(verbose)write(*,*)' Entering create_sink'
 
-  ! Conversion factor from user units to cgs units                              
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3
 
