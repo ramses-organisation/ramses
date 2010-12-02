@@ -148,13 +148,9 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
   if(poisson)then
  
-     ! Synchronize hydro for gravity (first pass)
+     ! Remove gravity source term with half time step and old force
      if(hydro)then
-        if(nordlund_fix)then
-           call synchro_hydro_fine(ilevel,-1.0*dtnew(ilevel))
-        else
-           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
-        endif
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
      endif
 
      ! Compute gravitational potential
@@ -181,12 +177,8 @@ recursive subroutine amr_step(ilevel,icount)
 
      if(hydro)then
 
-        ! Synchronize hydro for gravity (second pass)
-        if(nordlund_fix)then
-           call synchro_hydro_fine(ilevel,+1.0*dtnew(ilevel))
-        else
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
-        endif
+        ! Add gravity source term with half time step and new force
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
         ! Density threshold and/or Bondi accretion onto sink particle
         if(sink)then
@@ -268,10 +260,12 @@ recursive subroutine amr_step(ilevel,icount)
      endif
 
      ! Set uold equal to unew
+     ! Add gravity source term with half time step and old force
      call set_uold(ilevel)
 
-     ! Gravity source term
-     if(poisson)call synchro_hydro_fine(ilevel,dtnew(ilevel))
+     ! Add gravity source term with half time step and old force 
+     ! in order to complete the time step
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator
      call upload_fine(ilevel)
