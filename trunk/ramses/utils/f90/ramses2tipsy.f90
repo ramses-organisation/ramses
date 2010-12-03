@@ -116,6 +116,8 @@ program ramses2tipsy
   close(10)
   twotondim=2**ndim
 
+  msph=msph/boxlen**3
+
   if(hydrok)then
      ! Read nvarh from the Hydro file
      nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
@@ -371,11 +373,7 @@ program ramses2tipsy
            end if
         end if
      end do
-     
-!     mdm=1d30
-!     do i=1,npart_actual
-!        if(ageout(i)==0.d0)mdm=min(mdm,mout(i))
-!     end do
+
      mdm=msph ! IN THE OLD VERSION: mdm*omega_b/(omega_m-omega_b)
      if(mres.ne.0.d0)mdm=max(mdm,mres)
      if(mdm.eq.0)then
@@ -444,7 +442,7 @@ program ramses2tipsy
      !X COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)
+           if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)*boxlen
         end do
      end if
      if(partok)then
@@ -462,7 +460,7 @@ program ramses2tipsy
      !Y COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)
+           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)*boxlen
            if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)(ymin+ymax)/2
         end do
      end if
@@ -484,7 +482,7 @@ program ramses2tipsy
      !Z COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)
+           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)*boxlen
            if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)(zmin+zmax)/2
         end do
      end if

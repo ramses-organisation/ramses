@@ -420,7 +420,6 @@ end subroutine getcell
 subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
      & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,partmass,averdens,&
      & denspartcount)
-
   implicit none
 
   integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz,nmm
@@ -710,6 +709,12 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   write(*,*)'AMR grid read'
 
   write(*,*)'Total gas mass = ', partmass
+
+  if(partmass/mdm > 1d9)then
+     write(*,*)'Too many gas particle'
+     write(*,*)'Stop'
+     stop
+  endif
 
   ndummypart=int(partmass/mdm)+1
 
@@ -1718,25 +1723,48 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
         xcc(2)=(ymin+ymax)/2  
         xcc(3)=(zmin+zmax)/2       
      end if
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
-          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax)&
-          & .and.(idpart(i)>0))npart_actual=npart_actual+1 !NOTE: only particles with ID>0. TO SELECT ALSO SINK PARTICLES USE READPART2
+!     if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax&
+     if(         xmin<=xcc(1).and.xcc(1)<=xmax&
+          & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax&
+          & .and.idpart(i)>0)then
+        npart_actual=npart_actual+1 !NOTE: only particles with ID>0. TO SELECT ALSO SINK PARTICLES USE READPART2
+     endif
+     
+     if((.not.star).and.(.not.sink))then
+        if(         xmin<=xcc(1).and.xcc(1)<=xmax&
+             & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+             & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
+           ndm_actual=ndm_actual+1
+        endif
+     end if
+     
+     if((.not.star).and.(sink))then
+        if(idpart(i)>0&
+             & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
+             & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+             & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
+           ndm_actual=ndm_actual+1
+        endif
+     end if
 
-     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1)&
-          & .and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3)&
-          & .and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
+     if(star.or.sink)then
+        if(age(i)==0.d0.and.idpart(i)>0&
+          & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
+          & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
+           ndm_actual=ndm_actual+1
+        endif
+     end if
 
-     if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
-
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
-
-     if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))nstar_actual=nstar_actual+1
+     if(star.or.sink)then
+        if(age(i)/=0.d0.and.idpart(i)>0&
+          & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
+          & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
+           nstar_actual=nstar_actual+1
+        endif
+     end if
   enddo
 
   allocate(xout(1:npart_actual,1:ndim))
@@ -1765,9 +1793,10 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
         xcc(2)=(ymin+ymax)/2  
         xcc(3)=(zmin+zmax)/2       
      end if
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
-          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax)&
-          & .and.(idpart(i)>0))then
+     if(idpart(i)>0&
+          & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
+          & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
         ipa=ipa+1
         do j=1,ndim
            xout(ipa,j)=xpart(i,j)
@@ -1783,15 +1812,15 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
         end if
      end if
   end do
-
+  
   deallocate(xpart,vpart,mpart,idpart,levpart)
   if(nstar_tot>0)then
      deallocate(age)
      if(metal)deallocate(met)
   end if
-
+  
   return
-
+  
 end subroutine readpart
 
 !=======================================================================
@@ -1956,24 +1985,34 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
         xcc(2)=(ymin+ymax)/2  
         xcc(3)=(zmin+zmax)/2       
      end if
-     if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
-          & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax))npart_actual=npart_actual+1 
-     !NOTE: SELECT ALSO SINK PARTICLES!!!
-     if((.not.star).and.(.not.sink).and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1)&
-          & .and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3)&
-          & .and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
 
-     if((.not.star).and.(sink).and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
+     if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax &
+          & .and.ymin<=xcc(2).and.xcc(2)<=ymax.and.zmin<=xcc(3).and.xcc(3)<=zmax)&
+          npart_actual=npart_actual+1 !NOTE: SELECT ALSO SINK PARTICLES!!!
 
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))ndm_actual=ndm_actual+1
+     if((.not.star).and.(.not.sink))then
+        if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1)&
+          & .and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax.and.zmin<=xcc(3)&
+          & .and.xcc(3)<=zmax)ndm_actual=ndm_actual+1
+     end if
 
-     if((star.or.sink).and.age(i)/=0.d0.and.idpart(i)>0.and.(lmin<=levpart(i).and.levpart(i)<=lmax).and.&
-          & (xmin<=xcc(1).and.xcc(1)<=xmax).and.(ymin<=xcc(2).and.xcc(2)<=ymax)&
-          & .and.(zmin<=xcc(3).and.xcc(3)<=zmax))nstar_actual=nstar_actual+1
+     if((.not.star).and.(sink))then
+        if(idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
+          & xmin<=xcc(1).and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)ndm_actual=ndm_actual+1
+     end if
+
+     if(star.or.sink)then
+        if(age(i)==0.d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
+          & xmin<=xcc(1).and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)ndm_actual=ndm_actual+1
+     end if
+
+     if(star.or.sink)then
+        if(age(i)/=0.d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
+          & xmin<=xcc(1).and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax&
+          & .and.zmin<=xcc(3).and.xcc(3)<=zmax)nstar_actual=nstar_actual+1
+     end if
   enddo
 
   allocate(xout(1:npart_actual,1:ndim))
