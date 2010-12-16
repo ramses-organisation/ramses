@@ -131,7 +131,9 @@ contains
   allocate(sontop(1:nx*ny*nz))
   allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
   allocate(ngridlevel(1:ncpu,1:nlevelmax))
-  if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
+  if(nboundary>0)then
+     allocate(ngridbound(1:nboundary,1:nlevelmax))
+  endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
   inquire(file=nomfich, exist=ok) ! verify input file
@@ -485,8 +487,6 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
      close(10)
   end do
 
-  !write(*,*)ngridactual
-
   allocate(indexcell(1:ncpu_read))
   allocate(locind(1:ncpu_read))
   allocate(nfake(1:ncpu_read))
@@ -533,7 +533,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
 
      allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
      allocate(ngridlevel(1:ncpu,1:nlevelmax))
-     if(nboundary>0) allocate(ngridbound(1:nboundary,1:nlevelmax))
+     if(nboundary>0)then
+        allocate(ngridbound(1:nboundary,1:nlevelmax))
+     endif
 
      ! Read grid numbers
      read(10)ngridlevel
@@ -629,9 +631,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=(ind-1)/4
                           iy=(ind-1-4*iz)/2
                           ix=(ind-1-2*iy-4*iz)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                          xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
+                          xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3))
                           if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -649,8 +651,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=0
                           iy=(ind-1)/2
                           ix=(ind-1-2*iy)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                          xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
                           xc(3)=(zmin+zmax)/2 
                           if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
@@ -669,7 +671,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=0
                           iy=0
                           ix=ind-1
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                           xc(2)=(ymin+ymax)/2 
                           xc(3)=(zmin+zmax)/2 
                           if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
@@ -726,6 +728,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
 
   write(*,*)'Number of gas dummy particles = ',ndummypart
   write(*,*)'Gas particle mass = ', partmass
+  write(*,*)'Target gas particle mass = ', mdm
   
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -871,9 +874,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=(ind-1)/4
                           iy=(ind-1-4*iz)/2
                           ix=(ind-1-2*iy-4*iz)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                          xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                          xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
+                          xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3))
                           if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -890,7 +893,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do l=1,nvarh
                                          varp(pc,l)=vvdp(i,ind,l)
@@ -914,8 +917,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=0
                           iy=(ind-1)/2
                           ix=(ind-1-2*iy)
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                          xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                          xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
                           xc(3)=(zmin+zmax)/2
                           if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
@@ -933,7 +936,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do l=1,nvarh
                                          varp(pc,l)=vvdp(i,ind,l)
@@ -957,7 +960,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           iz=0
                           iy=0
                           ix=ind-1
-                          xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                          xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                           xc(2)=(ymin+ymax)/2
                           xc(3)=(zmin+zmax)/2 
                           if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
@@ -976,7 +979,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do l=1,nvarh
                                          varp(pc,l)=vvdp(i,ind,l)
@@ -1146,9 +1149,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=(ind-1)/4
                              iy=(ind-1-4*iz)/2
                              ix=(ind-1-2*iy-4*iz)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                             xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                             xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
+                             xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3)) 
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                   & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                   & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -1165,7 +1168,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                          pc=pc+1
                                          do l=1,ndim
                                             call ranf(localseed,xx)
-                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                            xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                          end do
                                          do kk=1,nvarh
                                             varp(pc,kk)=vvdp(i,ind,kk)
@@ -1183,8 +1186,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=0
                              iy=(ind-1)/2
                              ix=(ind-1-2*iy)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                             xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
                              xc(3)=(zmin+zmax)/2
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                   & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
@@ -1202,7 +1205,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                          pc=pc+1
                                          do l=1,ndim
                                             call ranf(localseed,xx)
-                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                            xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                          end do
                                          do kk=1,nvarh
                                             varp(pc,kk)=vvdp(i,ind,kk)
@@ -1220,7 +1223,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=0
                              iy=0
                              ix=(ind-1)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                              xc(2)=(ymin+ymax)/2
                              xc(3)=(zmin+zmax)/2
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
@@ -1239,7 +1242,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                          pc=pc+1
                                          do l=1,ndim
                                             call ranf(localseed,xx)
-                                            xp(pc,l)=xx*dx+xc(l)-dx/2
+                                            xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                          end do
                                          do kk=1,nvarh
                                             varp(pc,kk)=vvdp(i,ind,kk)
@@ -1428,9 +1431,9 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=(ind-1)/4
                              iy=(ind-1-4*iz)/2
                              ix=(ind-1-2*iy-4*iz)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
-                             xc(3)=xxdp(i,3)+(dble(iz)-0.5D0)*dx 
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                             xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
+                             xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3))
                              if(j==icpu.and.ivar==nvarh &
                                   & .and.(ilevel>=lmin) &
                                   & .and.(ilevel==lmax &
@@ -1449,7 +1452,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do kk=1,nvarh
                                          varp(pc,kk)=vvdp(i,ind,kk)
@@ -1466,8 +1469,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=0
                              iy=(ind-1)/2
                              ix=(ind-1-2*iy)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
-                             xc(2)=xxdp(i,2)+(dble(iy)-0.5D0)*dx
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
+                             xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
                              xc(3)=(zmin+zmax)/2
                              if(j==icpu.and.ivar==nvarh.and. &
                                   & (ilevel>=lmin).and.(ilevel==lmax &
@@ -1486,7 +1489,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do kk=1,nvarh
                                          varp(pc,kk)=vvdp(i,ind,kk)
@@ -1503,7 +1506,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              iz=0
                              iy=0
                              ix=(ind-1)
-                             xc(1)=xxdp(i,1)+(dble(ix)-0.5D0)*dx
+                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                              xc(2)=(ymin+ymax)/2
                              xc(3)=(zmin+zmax)/2
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.&
@@ -1520,7 +1523,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                       pc=pc+1
                                       do l=1,ndim
                                          call ranf(localseed,xx)
-                                         xp(pc,l)=xx*dx+xc(l)-dx/2
+                                         xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                       end do
                                       do kk=1,nvarh
                                          varp(pc,kk)=vvdp(i,ind,kk)

@@ -6,7 +6,7 @@ program ramses2tipsy
   implicit none
 
   integer::ndim,n,i,j,k,iii,twotondim,ncoarse,indcell
-  integer::ivar,nvar,ncpu,lmax=100,levelmin
+  integer::ivar,nvar,ncpu,lmax=100,levelmin,iskip
   integer::nx,ny,nz
   integer::nlevelmax,ilevel1,ngrid1
   integer::nlevelmaxs,nlevel,iout
@@ -30,7 +30,7 @@ program ramses2tipsy
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight,msph=0.d0
-  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mdm=0.d0,mres=0.d0
+  real(KIND=8)::xmin=0,xmax=-1,ymin=0,ymax=-1,zmin=0,zmax=-1,mdm=0.d0,mres=0.d0
 
   integer::ilevel,ncpu_read,three
   real(kind=8)deltax
@@ -40,7 +40,7 @@ program ramses2tipsy
   character(LEN=128)::nomfich
   character(LEN=128)::repository,outfich,filetype='bin'
   character(LEN=13)::string
-  logical::ok,ok_part,ok_cell,do_max
+  logical::ok,ok_part,ok_cell,do_max,do_id=.false.
   real(kind=8),dimension(:),allocatable::bound_key,xdp
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
@@ -66,7 +66,6 @@ program ramses2tipsy
 
 
   call read_params
-
 
   !-----------------------------------------------
   ! Reading files in RAMSES format
@@ -116,7 +115,13 @@ program ramses2tipsy
   close(10)
   twotondim=2**ndim
 
+  ! Rescaling mass_sph
   msph=msph/boxlen**3
+
+  ! Default values for box size
+  if(xmax<0)xmax=boxlen
+  if(ymax<0)ymax=boxlen
+  if(zmax<0)zmax=boxlen
 
   if(hydrok)then
      ! Read nvarh from the Hydro file
@@ -399,13 +404,18 @@ program ramses2tipsy
   end if
 
   !-------------------------------------------------------------
-  !  Writing output tipsy file 
+  !  Writing output tipsy file in ascii format
   !-------------------------------------------------------------
+  if(filetype .EQ. 'ascii')then
+
+  write(*,*)'Outputing data in tipsy ASCII format' 
 
   if(gas)then
      
      open(66,file=outfich,status='unknown',form='formatted')
-     open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
+     if(do_id)then
+        open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
+     endif
      
      three=3
      
@@ -414,9 +424,11 @@ program ramses2tipsy
      write(66,*)three
      write(66,*)time_uni
      
-     write(55,*)npart_actual+denspartcount,denspartcount,nstar_actual
-     write(55,*)three
-     write(55,*)time_uni
+     if(do_id)then
+        write(55,*)npart_actual+denspartcount,denspartcount,nstar_actual
+        write(55,*)three
+        write(55,*)time_uni
+     endif
      
      !MASSES AND IDS
      if(hydrok)then
@@ -428,21 +440,29 @@ program ramses2tipsy
         do i=1,npart_actual
            if(.not.star)write(66,*)mout(i)
            if((star.or.sink).and.ageout(i)==0.d0)write(66,*)mout(i)
-           if(.not.star)write(55,*)idout(i)
-           if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
         enddo
+        if(do_id)then
+           do i=1,npart_actual
+              if(.not.star)write(55,*)idout(i)
+              if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
+           enddo
+        endif
         if(star.and.nstar_actual>0)then
            do i=1,npart_actual
               if(ageout(i)/=0.d0)write(66,*)mout(i)
-              if(ageout(i)/=0.d0)write(55,*)idout(i)
            enddo
+           if(do_id)then
+              do i=1,npart_actual
+                 if(ageout(i)/=0.d0)write(55,*)idout(i)
+              enddo
+           endif
         endif
      end if
      
      !X COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)*boxlen
+           if(varp(i,1)>=facdens*averdens)write(66,*)xp(i,1)
         end do
      end if
      if(partok)then
@@ -460,7 +480,7 @@ program ramses2tipsy
      !Y COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)*boxlen
+           if(varp(i,1)>=facdens*averdens.and.ndim>=2)write(66,*)xp(i,2)
            if(varp(i,1)>=facdens*averdens.and.ndim<2)write(66,*)(ymin+ymax)/2
         end do
      end if
@@ -482,7 +502,7 @@ program ramses2tipsy
      !Z COORDINATE
      if(hydrok)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)*boxlen
+           if(varp(i,1)>=facdens*averdens.and.ndim>=3)write(66,*)xp(i,3)
            if(varp(i,1)>=facdens*averdens.and.ndim<3)write(66,*)(zmin+zmax)/2
         end do
      end if
@@ -639,8 +659,10 @@ program ramses2tipsy
   else
 
      open(66,file=outfich,status='unknown',form='formatted')
-     open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
-     
+     if(do_id)then
+        open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
+     endif
+
      three=3
      
      !HEADER
@@ -648,23 +670,33 @@ program ramses2tipsy
      write(66,*)three
      write(66,*)time_uni
      
-     write(55,*)npart_actual,0,nstar_actual
-     write(55,*)three
-     write(55,*)time_uni
+     if(do_id)then
+        write(55,*)npart_actual,0,nstar_actual
+        write(55,*)three
+        write(55,*)time_uni
+     endif
      
      !MASSES AND IDS
      if(partok)then
         do i=1,npart_actual
            if(.not.star)write(66,*)mout(i)
            if((star.or.sink).and.ageout(i)==0.d0)write(66,*)mout(i)
-           if(.not.star)write(55,*)idout(i)
-           if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
         enddo
+        if(do_id)then
+           do i=1,npart_actual
+              if(.not.star)write(55,*)idout(i)
+              if((star.or.sink).and.ageout(i)==0.d0)write(55,*)idout(i)
+           enddo
+        endif
         if(star.and.nstar_actual>0)then
            do i=1,npart_actual
               if(ageout(i)/=0.d0)write(66,*)mout(i)
-              if(ageout(i)/=0.d0)write(55,*)idout(i)
            enddo
+           if(do_id)then
+              do i=1,npart_actual
+                 if(ageout(i)/=0.d0)write(55,*)idout(i)
+              enddo
+           endif
         endif
      end if
      
@@ -798,14 +830,117 @@ program ramses2tipsy
      
      close(66)
 
-     if(partok)then
-        deallocate(xout,vout,mout,idout)
-        if(star.and.nstar_actual>0)then
-           deallocate(ageout)
-           if(metal)deallocate(metout)
-        end if
-     end if
+  end if
 
+  !-------------------------------------------------------------
+  !  Writing output tipsy file in binary format
+  !-------------------------------------------------------------
+  else
+
+     write(*,*)'Outputing data in tipsy BINARY format' 
+     
+     open(66,file=outfich,status='unknown',form='unformatted',access='direct',recl=1)
+     
+     three=3
+     
+     !HEADER
+     write(66,rec=1)real(time_uni)
+     write(66,rec=2)real(time_uni)
+     write(66,rec=3)npart_actual+denspartcount
+     write(66,rec=4)three
+     write(66,rec=5)denspartcount
+     write(66,rec=6)ndm_actual
+     write(66,rec=7)nstar_actual
+     
+     !GAS PARTICLES
+     if(hydrok)then
+        do i=1,denspartcount
+           iskip=8+(i-1)*12
+           write(66,rec=iskip+1)real(partmass)
+           write(66,rec=iskip+2)real(xp(i,1))
+           write(66,rec=iskip+3)real(xp(i,2))
+           write(66,rec=iskip+4)real(xp(i,3))
+           write(66,rec=iskip+5)real(varp(i,2))
+           write(66,rec=iskip+6)real(varp(i,3))
+           write(66,rec=iskip+7)real(varp(i,4))
+           write(66,rec=iskip+8)real(varp(i,1))
+           write(66,rec=iskip+9)real(varp(i,5))
+           write(66,rec=iskip+10)real(boxlen/2**lmax)
+           if(metal)then
+              write(66,rec=iskip+11)real(varp(i,6))
+           else
+              write(66,rec=iskip+11)real(0.*boxlen)
+           endif
+           write(66,rec=iskip+12)real(0.*boxlen)
+        end do
+     endif
+
+     !DM PARTICLES
+     if(partok)then
+        if(ndm_actual>0)then
+           j=1
+           do i=1,npart_actual
+              iskip=8+denspartcount*12+(j-1)*9
+              if(ageout(i)==0)then
+                 write(66,rec=iskip+1)real(mout(i))
+                 write(66,rec=iskip+2)real(xout(i,1))
+                 write(66,rec=iskip+3)real(xout(i,2))
+                 write(66,rec=iskip+4)real(xout(i,3))
+                 write(66,rec=iskip+5)real(vout(i,1))
+                 write(66,rec=iskip+6)real(vout(i,2))
+                 write(66,rec=iskip+7)real(vout(i,3))
+                 write(66,rec=iskip+10)real(boxlen/2**lmax)
+                 write(66,rec=iskip+11)real(0.*boxlen)
+                 j=j+1
+              endif
+           end do
+        endif
+     endif
+
+     !STAR PARTICLES
+     if(partok)then
+        if(nstar_actual>0)then
+           j=1
+           do i=1,npart_actual
+              iskip=8+denspartcount*12+ndm_actual*9+(j-1)*11
+              if(ageout(i)/=0)then
+                 write(66,rec=iskip+1)real(mout(i))
+                 write(66,rec=iskip+2)real(xout(i,1))
+                 write(66,rec=iskip+3)real(xout(i,2))
+                 write(66,rec=iskip+4)real(xout(i,3))
+                 write(66,rec=iskip+5)real(vout(i,1))
+                 write(66,rec=iskip+6)real(vout(i,2))
+                 write(66,rec=iskip+7)real(vout(i,3))
+                 if(metal)then
+                    write(66,rec=iskip+11)real(metout(i))
+                 else
+                    write(66,rec=iskip+11)real(0.*boxlen)
+                 endif
+                 write(66,rec=iskip+11)real(ageout(i))
+                 write(66,rec=iskip+10)real(boxlen/2**lmax)
+                 write(66,rec=iskip+11)real(0.*boxlen)
+                 j=j+1
+              endif
+           end do
+        endif
+     endif
+
+     close(66)
+
+     open(66,file=outfich,status='unknown',form='unformatted',access='direct',recl=2)
+     write(66,rec=1)time_uni
+     close(66)
+
+  endif
+
+  if(hydrok)deallocate(xp,varp)
+  
+  if(partok)then
+     deallocate(xout,vout,mout,idout)
+     if(star.and.nstar_actual>0)then
+        deallocate(ageout)
+        if(metal)deallocate(metout)
+     end if
   end if
 
 contains
@@ -830,10 +965,12 @@ contains
        print *, '                 [-yma ymax] '
        print *, '                 [-zmi zmin] '
        print *, '                 [-zma zmax] '
-       print *, '                 [-cos cosmo?] '
-       print *, '                 [-mhd mhd?] '
-       print *, '                 [-gas gas in tipsy map?] '
        print *, '                 [-mre gas particle mass] '
+       print *, '                 [-fil filetype=bin or ascii] '
+       print *, '                 [-cos cosmo run?] '
+       print *, '                 [-pid store particle id?] '
+       print *, '                 [-mhd mhd?] '
+       print *, '                 [-gas store gas?] '
        print *, 'ex: ramses2tipsy -inp output_00001 -out cube.dat'// &
             &   ' -xmi 0.1 -xma 0.7'
        print *, ' '
@@ -869,6 +1006,10 @@ contains
           read (arg,*) cosmo
        case ('-mhd') 
           read (arg,*) mhd
+       case ('-fil') 
+          filetype = trim(arg)
+       case ('-pid') 
+          read (arg,*) do_id
        case ('-gas') 
           read (arg,*) gas
        case ('-mre') 
