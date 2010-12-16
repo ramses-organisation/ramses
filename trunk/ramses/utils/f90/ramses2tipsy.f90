@@ -851,6 +851,8 @@ program ramses2tipsy
      write(66,rec=5)denspartcount
      write(66,rec=6)ndm_actual
      write(66,rec=7)nstar_actual
+
+     write(*,*)'Header done'
      
      !GAS PARTICLES
      if(hydrok)then
@@ -873,6 +875,9 @@ program ramses2tipsy
            endif
            write(66,rec=iskip+12)real(0.*boxlen)
         end do
+
+        write(*,*)'Gas particles done'
+
      endif
 
      !DM PARTICLES
@@ -894,6 +899,9 @@ program ramses2tipsy
                  j=j+1
               endif
            end do
+
+           write(*,*)'Dark matter particles done'
+
         endif
      endif
 
@@ -922,6 +930,9 @@ program ramses2tipsy
                  j=j+1
               endif
            end do
+
+           write(*,*)'New star particles done'
+
         endif
      endif
 
@@ -932,6 +943,8 @@ program ramses2tipsy
      close(66)
 
   endif
+
+  write(*,*)'File dump completed'
 
   if(hydrok)deallocate(xp,varp)
   
