@@ -864,7 +864,7 @@ program ramses2tipsy
            write(66,rec=iskip+6)real(varp(i,3))
            write(66,rec=iskip+7)real(varp(i,4))
            write(66,rec=iskip+8)real(varp(i,1))
-           write(66,rec=iskip+9)real(varp(i,5))
+           write(66,rec=iskip+9)real(varp(i,5)/varp(i,1)/(gamma-1.0))
            write(66,rec=iskip+10)real(boxlen/2**lmax)
            if(metal)then
               write(66,rec=iskip+11)real(varp(i,6))
