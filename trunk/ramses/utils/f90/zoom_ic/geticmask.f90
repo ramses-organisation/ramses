@@ -595,14 +595,13 @@ program icmask
         write(33) ((real(metal,kind=4)*imark(i,j,k),i=1,np1),j=1,np2)
      enddo
      close(33)
-  else
-     open(33,file='ic_refmap',form='unformatted')
-     write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     do k=1,np3
-        write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
-     enddo
-     close(33)
   endif
+  open(33,file='ic_refmap',form='unformatted')
+  write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
+  do k=1,np3
+     write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
+  enddo
+  close(33)
 
 contains
 
