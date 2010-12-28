@@ -12,7 +12,7 @@ program icmask
   real(KIND=8)::metal=-1
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,r,xc=0.5,yc=0.5,zc=0.5,rad=-1
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,ipart
-  real(KIND=8)::xxmin,xxmax,yymin,yymax,dy,deltax,fakeage
+  real(KIND=8)::xxmin,xxmax,yymin,yymax,dy,deltax,fakeage,maxdisp
   real(KIND=4),dimension(:,:),allocatable::toto
   real(KIND=8),dimension(:,:),allocatable::map
   real(KIND=8),dimension(:)  ,allocatable::x
@@ -309,20 +309,21 @@ program icmask
   write(*,*)'Current box size is',np1*dx,' Mpc'
   allocate(imark(1:np1,1:np2,1:np3))
   
-  x1or=x1o/(unit_l/aexp/3.08568025e24)
-  x2or=x2o/(unit_l/aexp/3.08568025e24)
-  x3or=x3o/(unit_l/aexp/3.08568025e24)
-  dxor=dx/(unit_l/aexp/3.08568025e24)
+  x1or=x1o/(unit_l/aexp/3.08e24)
+  x2or=x2o/(unit_l/aexp/3.08e24)
+  x3or=x3o/(unit_l/aexp/3.08e24)
+  dxor=dx/(unit_l/aexp/3.08e24)
   
-  write(*,*)'Total box size ',(unit_l/aexp/3.08568025e24)
+  write(*,*)'Total box size ',(unit_l/aexp/3.08e24)
   
   omegak=1.0-omegam-omegav
   
   vfact=aexp*fpeebl(aexp) & ! Same scale factor as in grafic1
        & *sqrt(omegam/aexp+omegav*aexp*aexp+omegak) 
   
-  write(*,*) 'vfact =', vfact
+  write(*,*) 'vfact =', vfact,aexp
 
+  maxdisp=0.
   do i=1,npart
      if(nstar.eq.0) then  !Only DM particles
         btime=0
@@ -340,6 +341,7 @@ program icmask
         x(i)=x(i)-vx(i)/vfact   !Trace back the Zeldovich approx.
         y(i)=y(i)-vy(i)/vfact 
         z(i)=z(i)-vz(i)/vfact
+        maxdisp=max(maxdisp,abs(vx(i)/vfact),abs(vy(i)/vfact),abs(vz(i)/vfact))
         if(x(i)<0.)x(i)=1.0+x(i)
         if(y(i)<0.)y(i)=1.0+y(i)
         if(z(i)<0.)z(i)=1.0+z(i)
@@ -354,6 +356,7 @@ program icmask
         endif
      endif
   enddo
+  write(*,*) 'Max. displacement ',maxdisp/dxor,' cells'
   write(*,*) 'Outputting Grafics file ic_ref_ini'
   open(33,file='ic_ref_ini',form='unformatted')
   write(33) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
@@ -374,16 +377,16 @@ program icmask
                  if(imark(i,j,k)==1.0) then
                     do ix=i-smt,i+smt 
                        ix1=ix
-                       if(ix1.LE.0)ix1=ix1+np1
-                       if(ix1.GT.np1)ix1=np1-ix1
+                       if(ix1.LT.1)ix1=ix1+np1
+                       if(ix1.GT.np1)ix1=ix1-np1
                        do iy=j-smt,j+smt
                           iy1=iy
-                          if(iy1.LE.0)iy1=iy1+np2
-                          if(iy1.GT.np2)iy1=np2-iy1
+                          if(iy1.LT.1)iy1=iy1+np2
+                          if(iy1.GT.np2)iy1=iy1-np2
                           do iz=k-smt,k+smt
                              iz1=iz
-                             if(iz1.LE.0)iz1=iz1+np3
-                             if(iz1.GT.np3)iz1=np3-iz1
+                             if(iz1.LT.1)iz1=iz1+np3
+                             if(iz1.GT.np3)iz1=iz1-np3
                              if(periodic)then
                                 r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
                                 r=r**0.5
@@ -437,15 +440,15 @@ program icmask
                     do ix=i-smt,i+smt  
                        ix1=ix
                        if(ix1.LE.0)ix1=ix1+np1
-                       if(ix1.GT.np1)ix1=np1-ix1
+                       if(ix1.GT.np1)ix1=ix1-np1
                        do iy=j-smt,j+smt
                           iy1=iy
                           if(iy1.LE.0)iy1=iy1+np2
-                          if(iy1.GT.np2)iy1=np2-iy1
+                          if(iy1.GT.np2)iy1=iy1-np2
                           do iz=k-smt,k+smt
                              iz1=iz
                              if(iz1.LE.0)iz1=iz1+np3
-                             if(iz1.GT.np3)iz1=np3-iz1
+                             if(iz1.GT.np3)iz1=iz1-np3
                              if(periodic)then
                                 r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
                                 r=r**0.5
@@ -492,15 +495,15 @@ program icmask
                  do ix=i-smt,i+smt  
                     ix1=ix
                     if(ix1.LE.0)ix1=ix1+np1
-                    if(ix1.GT.np1)ix1=np1-ix1
+                    if(ix1.GT.np1)ix1=ix1-np1
                     do iy=j-smt,j+smt
                        iy1=iy
                        if(iy1.LE.0)iy1=iy1+np2
-                       if(iy1.GT.np2)iy1=np2-iy1
+                       if(iy1.GT.np2)iy1=iy1-np2
                        do iz=k-smt,k+smt
                           iz1=iz
                           if(iz1.LE.0)iz1=iz1+np3
-                          if(iz1.GT.np3)iz1=np3-iz1
+                          if(iz1.GT.np3)iz1=iz1-np3
                           if(periodic)then
                              r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
                              r=r**0.5
@@ -541,15 +544,15 @@ program icmask
                  do ix=i-smt,i+smt 
                     ix1=ix
                     if(ix1.LE.0)ix1=ix1+np1
-                    if(ix1.GT.np1)ix1=np1-ix1
+                    if(ix1.GT.np1)ix1=ix1-np1
                     do iy=j-smt,j+smt
                        iy1=iy
                        if(iy1.LE.0)iy1=iy1+np2
-                       if(iy1.GT.np2)iy1=np2-iy1
+                       if(iy1.GT.np2)iy1=iy1-np2
                        do iz=k-smt,k+smt
                           iz1=iz
                           if(iz1.LE.0)iz1=iz1+np3
-                          if(iz1.GT.np3)iz1=np3-iz1
+                          if(iz1.GT.np3)iz1=iz1-np3
                           if(periodic)then
                              r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
                              r=r**0.5
