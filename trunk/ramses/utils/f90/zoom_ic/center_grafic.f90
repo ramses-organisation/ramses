@@ -37,7 +37,7 @@ program center_grafic
   real,dimension(:,:),allocatable::f1,f2
   character*80::input,output
   character*80,dimension(18)::filename
-  logical::ok
+  logical::ok,found
 
   narg = iargc()
   IF(narg .NE. 2)THEN
@@ -80,9 +80,20 @@ program center_grafic
   filename(18)=TRIM(output)//'/ic_pvar_00001'
 
   ! GET INPUT FILE PARAMETERS
-  open(11,file=filename(1),form='unformatted')
-  read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-  close(11)
+  found=.false.
+  i_file=0
+  do while(.not.found)
+     i_file=i_file+1
+
+     INQUIRE(file=filename(i_file),exist=ok)
+     if(ok)then
+        print*,'CENT GRAF opening file:',filename(i_file)
+        open(11,file=filename(i_file),form='unformatted')
+        read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
+        close(11)
+        found=.true.
+     endif
+  enddo
   write(*,*)'Input array size is          :',np1,np2,np3
   write(*,*)'Old center coordinates are   :',np1/2,np2/2,np3/2
   write(*,*)'Enter new center coordinates : (i,j,k)'
