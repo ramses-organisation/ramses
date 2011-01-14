@@ -6,7 +6,7 @@ program center_whitenoise
   !          - un fichier white noise
   ! Il genere en output les fichiers suivants:
   !          - un fichier white noise
-  !            
+  !             
   ! M. Gonzalez
   ! Saclay, le 31/08/01.
   !---------------------------------------------------------------------
