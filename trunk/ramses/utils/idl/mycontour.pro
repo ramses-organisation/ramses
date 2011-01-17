@@ -68,7 +68,7 @@ pro mycontour,image,x,y,lbox=lbox,title=title,clt=clt $
               ,unit=unit,log=log, verbose=verbose, table=table $
               ,noerase=noerase,ncontour=ncontour $
               ,minval=minval, maxval=maxval $
-              ,xtitle=xtitle, ytitle=ytitle, isotropic=isotropic, rev=rev
+              ,xtitle=xtitle, ytitle=ytitle, isotropic=isotropic, reverse=reverse
 
 IF N_PARAMS() NE 1 AND N_PARAMS() NE 3 THEN BEGIN
     PRINT, 'Wrong number of arguments'
@@ -147,7 +147,8 @@ tvlct,0,0,0,0
 cmax=n_colors-20.
 
 clr=(findgen(ncol)+1.)/float(ncol)*cmax+15
-if keyword_set(rev) then begin
+if keyword_set(reverse) then begin
+   print,'Don''t forget to .r reverse'
    clr2=reverse(clr)
 endif else begin
    clr2=clr
