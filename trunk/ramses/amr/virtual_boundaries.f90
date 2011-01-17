@@ -546,7 +546,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #ifndef WITHOUTMPI
   if(ilevel.LE.switchlevel)then
 
- ! Gather emission array                                                                      
+ ! Gather emission array
   do icpu=1,ncpu
      if (reception(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -561,26 +561,26 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      end if
   end do
 
-  ! Receive all messages                                                                       
+  ! Receive all messages
   countrecv=0
   do icpu=1,myid-1
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0) then
         countrecv=countrecv+1
-        ! request to send                                                                      
+        ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
 
-  ! Send all messages                                                                          
+  ! Send all messages
   countsend=0
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
         countsend=countsend+1
-        ! wait for request to send                                                             
+        ! wait for request to send
         call MPI_RECV(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD, &
              & MPI_STATUS_IGNORE, info)
         call MPI_SEND(reception(icpu,ilevel)%u,ncache*twotondim, &
@@ -588,20 +588,20 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      end if
   end do
   
-  ! Receive all messages                                                                       
+  ! Receive all messages
   countrecv=0
   do icpu=myid+1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0) then
         countrecv=countrecv+1
-        ! request to send                                                                      
+        ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
   
-  ! Scatter reception array                                                                    
+  ! Scatter reception array
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
