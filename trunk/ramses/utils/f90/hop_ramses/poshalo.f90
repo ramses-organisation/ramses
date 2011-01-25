@@ -5,9 +5,9 @@ program poshalo
   integer,dimension(:),allocatable::group_id,n_group
   real(kind=8),dimension(:),allocatable::xref_group,yref_group,zref_group
   logical,dimension(:),allocatable::flag_group
-  real(KIND=8)::mtot
+  real(KIND=8)::mtot,mcut=1000000,contamine
   real(KIND=8)::period=1,xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rvir
-  real(kind=8),dimension(:),allocatable::m_group,x_group,y_group,z_group,u_group,v_group,w_group
+  real(kind=8),dimension(:),allocatable::m_group,x_group,y_group,z_group,u_group,v_group,w_group,mpure_group
   real(KIND=8),dimension(:,:),allocatable::x,v
   real(KIND=8),dimension(:),allocatable::m,age
   integer,dimension(:),allocatable::id
@@ -25,7 +25,7 @@ program poshalo
   Write(*,*)'npart=',npart
   Write(*,*)'ngroup=',ngroup
   allocate(group_id(1:npart))
-  allocate(n_group(1:ngroup),m_group(1:ngroup))
+  allocate(n_group(1:ngroup),m_group(1:ngroup),mpure_group(1:ngroup))
   allocate(flag_group(1:ngroup))
   allocate(xref_group(1:ngroup),yref_group(1:ngroup),zref_group(1:ngroup))
   allocate(x_group(1:ngroup),y_group(1:ngroup),z_group(1:ngroup))
@@ -39,6 +39,7 @@ program poshalo
   v_group=0.0
   w_group=0.0
   m_group=0.0
+  mpure_group=0.0
   n_group=0.0
   flag_group=.true.  ! True if group reference particle is UNSET
   xref_group=0.0
@@ -143,6 +144,7 @@ program poshalo
            end if
            n_group(id_group)=n_group(id_group)+1
            m_group(id_group)=m_group(id_group)+m(i)
+           if(m(i)<=mcut)mpure_group(id_group)=mpure_group(id_group)+m(i)
            x_group(id_group)=x_group(id_group)+m(i)*shift1d(x(i,1),xref_group(id_group),period)
            y_group(id_group)=y_group(id_group)+m(i)*shift1d(x(i,2),yref_group(id_group),period)
            z_group(id_group)=z_group(id_group)+m(i)*shift1d(x(i,3),zref_group(id_group),period)
@@ -156,6 +158,8 @@ program poshalo
   end do
 
   open(18,file=TRIM(directory)//'.pos')
+  write(*,*)'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
+  write(18,*)'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
   do i=1,ngroup
      x_group(i)=shift1d(x_group(i)/m_group(i),0.5d0,period) ! Ensure group center is within bounds
      y_group(i)=shift1d(y_group(i)/m_group(i),0.5d0,period)
@@ -167,11 +171,12 @@ program poshalo
           & .and.y_group(i).gt.ymin.and.y_group(i).lt.ymax &
           & .and.z_group(i).gt.zmin.and.z_group(i).lt.zmax)then
         rvir=(m_group(i)/200./(4./3.*3.1415926))**(1./3.)
-        if(i<=10)write(*,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)')&
-             & i,' ',n_group(i),' ',m_group(i),' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
+        contamine=(m_group(i)-mpure_group(i))/m_group(i)
+        if(i<=10)write(*,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)')&
+             & i,' ',n_group(i),' ',m_group(i),' ',contamine,' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
              & u_group(i),' ',v_group(i),' ',w_group(i)
-                write(18,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)') &
-             & i,' ',n_group(i),' ',m_group(i),' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
+                write(18,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)') &
+             & i,' ',n_group(i),' ',m_group(i),' ',contamine,' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
              & u_group(i),' ',v_group(i),' ',w_group(i)
      endif
   end do
@@ -229,6 +234,8 @@ contains
             read (arg,*) ymax
          case ('-zmi')
             read (arg,*) zmin
+         case ('-cut')
+            read (arg,*) mcut
          case ('-zma')
             read (arg,*) zmax
          case ('-per')
