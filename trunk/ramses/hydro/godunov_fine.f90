@@ -122,30 +122,33 @@ subroutine set_uold(ilevel)
 
   ! Add gravity source term at time t with half time step
   if(poisson)then
-     do i=1,active(ilevel)%ngrid
-        d=unew(active(ilevel)%igrid(i)+iskip,1)
-        u=0.0; v=0.0; w=0.0
-        if(ndim>0)u=unew(active(ilevel)%igrid(i)+iskip,2)/d
-        if(ndim>1)v=unew(active(ilevel)%igrid(i)+iskip,3)/d
-        if(ndim>2)w=unew(active(ilevel)%igrid(i)+iskip,4)/d
-        e_kin=0.5*d*(u**2+v**2+w**2)
-        e_prim=unew(active(ilevel)%igrid(i)+iskip,ndim+2)-e_kin
-        d_old=uold(active(ilevel)%igrid(i)+iskip,1)
-        fact=d_old/d*0.5*dtnew(ilevel)
-        if(ndim>0)then
-           u=u+f(active(ilevel)%igrid(i)+iskip,1)*fact
-           unew(active(ilevel)%igrid(i)+iskip,2)=d*u
-        endif
-        if(ndim>1)then
-           v=v+f(active(ilevel)%igrid(i)+iskip,2)*fact
-           unew(active(ilevel)%igrid(i)+iskip,3)=d*v
-        end if
-        if(ndim>2)then
-           w=w+f(active(ilevel)%igrid(i)+iskip,3)*fact
-           unew(active(ilevel)%igrid(i)+iskip,4)=d*w
-        endif
-        e_kin=0.5*d*(u**2+v**2+w**2)
-        unew(active(ilevel)%igrid(i)+iskip,ndim+2)=e_prim+e_kin
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,active(ilevel)%ngrid
+           d=unew(active(ilevel)%igrid(i)+iskip,1)
+           u=0.0; v=0.0; w=0.0
+           if(ndim>0)u=unew(active(ilevel)%igrid(i)+iskip,2)/d
+           if(ndim>1)v=unew(active(ilevel)%igrid(i)+iskip,3)/d
+           if(ndim>2)w=unew(active(ilevel)%igrid(i)+iskip,4)/d
+           e_kin=0.5*d*(u**2+v**2+w**2)
+           e_prim=unew(active(ilevel)%igrid(i)+iskip,ndim+2)-e_kin
+           d_old=uold(active(ilevel)%igrid(i)+iskip,1)
+           fact=d_old/d*0.5*dtnew(ilevel)
+           if(ndim>0)then
+              u=u+f(active(ilevel)%igrid(i)+iskip,1)*fact
+              unew(active(ilevel)%igrid(i)+iskip,2)=d*u
+           endif
+           if(ndim>1)then
+              v=v+f(active(ilevel)%igrid(i)+iskip,2)*fact
+              unew(active(ilevel)%igrid(i)+iskip,3)=d*v
+           end if
+           if(ndim>2)then
+              w=w+f(active(ilevel)%igrid(i)+iskip,3)*fact
+              unew(active(ilevel)%igrid(i)+iskip,4)=d*w
+           endif
+           e_kin=0.5*d*(u**2+v**2+w**2)
+           unew(active(ilevel)%igrid(i)+iskip,ndim+2)=e_prim+e_kin
+        end do
      end do
   end if
 

@@ -455,7 +455,7 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   xval=sqrt(omega0)/(h*omegab)
   ne_to_find=1.2d-5*xval ! From the book of Peebles p. 173
   astart=aexp_ref
-  aend=MIN(0.05,0.5/(1d0+zreioniz))
+  aend=MIN(0.05d0,0.5d0/(1d0+zreioniz))
   dasura=0.05
   err_J0min=1.
   J0min_left=1d-20
