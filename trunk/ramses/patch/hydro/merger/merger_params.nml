@@ -17,7 +17,7 @@ tout=50.0
 
 &INIT_PARAMS
 filetype='ascii'
-initfile(1)='/Users/romain'
+initfile(1)='/Users/romain/ic'
 /
 
 &AMR_PARAMS
@@ -51,6 +51,10 @@ eps_star=0.005D0
 T2_star=1.0d4
 /
 
+&EOS_PARAMS
+eos_type='pseudo_cooling'
+/
+
 &HYDRO_PARAMS
 gamma=1.6666
 courant_factor=0.5
@@ -62,7 +66,7 @@ riemann='hllc'
 
 
 &REFINE_PARAMS
-mass_sph=10*5e-6
+mass_sph=5e-6
 m_refine=10*8.
 interpol_type=0
 interpol_var=1
@@ -71,10 +75,11 @@ interpol_var=1
 
 &MERGER_PARAMS
 rad_profile='exponential'
-gal_center1= 0., 0., 0.
-gal_center2= 0., 0., 0.
-Mgas_disk1=7.2
-Mgas_disk2=0
+z_profile='gaussian'
+gal_center1= 26.4D0, 26.4D0,0.0D0
+gal_center2=-26.4D0,-26.4D0,0.0D0
+Mgas_disk1=7.2D0
+Mgas_disk2=7.2D0
 typ_radius1=4.4D0
 typ_radius2=4.4D0
 cut_radius1=22.0D0
@@ -84,14 +89,13 @@ typ_height2=4.4D2
 cut_height1=2.2D3
 cut_height2=2.2D3
 IG_density_factor=1.0D-6
-Vcirc_dat_file1='/home/vpdebattista/ramses/test/vcirc'
-Vcirc_dat_file2='/home/vpdebattista/ramses/test/vcirc'
-gal_axis1= 0.0D0 , 0.0D0 ,  0.0D0
-gal_axis2= 0.0D0 , 0.0D0 ,  0.0D0
-Vgal1= 0.0D0, 0.0D0, 0.0D0
-Vgal2= 0.0D0, 0.0D0, 0.0D0
+Vcirc_dat_file1='/home/vpdebattista/ramses/test/vcirc1.dat'
+Vcirc_dat_file2='/home/vpdebattista/ramses/test/vcirc2.dat'
+ic_part_file_gal1='ic_part1'
+ic_part_file_gal2='ic_part2'
+gal_axis1=0.0D0,-0.8660254D0,0.5D0
+gal_axis2=0.5D0, 0.75D0     ,0.4330127D0
+Vgal1=-95.0D0,-47.5D0,0.0D0
+Vgal2= 95.0D0, 47.5D0,0.0D0
 /
 
-&EOS_PARAMS
-eos_type='pseudo_cooling'
-/
