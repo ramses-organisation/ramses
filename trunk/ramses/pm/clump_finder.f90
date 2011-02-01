@@ -18,6 +18,7 @@ subroutine clump_finder
 
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
 
+#if NDIM==3
 
   if(verbose)write(*,*)' Entering clump_finder'
 
@@ -104,6 +105,8 @@ subroutine clump_finder
      call merge_tree_fine(ilevel)
   end do
   call remove_test_particle(levelmin)
+
+#endif
 
 end subroutine clump_finder
 !################################################################
@@ -1068,6 +1071,7 @@ subroutine create_peak_array(npeaks_per_cpu_tot,npeaks_tot)
   real(dp),dimension(1:nlevelmax)::volume
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
+#if NDIM==3
 
   do ilevel=1,nlevelmax
      ! Mesh spacing in that level
@@ -1297,6 +1301,7 @@ info)
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
 
+#endif
 
 end subroutine create_peak_array
 
@@ -1410,6 +1415,7 @@ subroutine get_cell_center(ind_cell,cell_pos,ilevel)
   real(dp),dimension(1:3)::skip_loc
   logical::leafe
 
+#if NDIM==3
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !gets the position of the cell_center and the level of the leave-cell as !
@@ -1457,6 +1463,8 @@ subroutine get_cell_center(ind_cell,cell_pos,ilevel)
      ilevel=ilevel+1
      
   end do
+
+#endif
 end subroutine get_cell_center
 
 

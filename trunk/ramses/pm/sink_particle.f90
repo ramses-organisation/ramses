@@ -2866,7 +2866,7 @@ subroutine agn_feedback
                  delta_mass_max=T2_max/T2_AGN*mass_blast_agn(isink)
               endif
            endif
-           delta_mass(isink)=max(delta_mass(isink)-delta_mass_max,0.0)
+           delta_mass(isink)=max(delta_mass(isink)-delta_mass_max,0.0_dp)
         endif
      endif
   end do
