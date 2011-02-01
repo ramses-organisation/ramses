@@ -93,7 +93,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,T2min,Zsolar
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+  real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
 
   real(kind=8)::dx,dx_loc,scale,alpha_dx2
   real(kind=8),dimension(1:3)::skip_loc
@@ -181,6 +182,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i)=nH(i)*scale_nH
      end do
 
+     ! Compute radiation boost factor
+     if(self_shielding)then
+        do i=1,nleaf
+           boost(i)=exp(-nH(i)/0.01)
+        end do
+     else
+        do i=1,nleaf
+           boost(i)=1.0
+        end do
+     endif
+
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
@@ -232,7 +244,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            T2(i)=MAX(T2(i),T2min(i))
         end do
-        call solve_cooling(nH,T2,Zsolar,dtcool,delta_T2,nleaf)
+        call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
 
      ! Compute rho
