@@ -124,7 +124,7 @@ zrnew=[kmin*dxmax,kmax*dxmax]
 
 print,nimx,nimy,nimz,format='("Computing array of size=",i3,"x",i3,"x",i3)'
 
-save=FLTARR(nimx,nimy,nimz,/NOZERO)
+save=DBLARR(nimx,nimy,nimz)
 
 ;======================
 ; Project AMR levels
@@ -153,7 +153,7 @@ for icpu=0,ncpu-1 do begin
                 y=(y(ind)-dx-jmin)/dx
                 z=(z(ind)-dx-kmin)/dx
                 
-                subcube=fltarr(nimx_loc,nimy_loc,nimz_loc,/NOZERO)
+                subcube=dblarr(nimx_loc,nimy_loc,nimz_loc)
                 
                 ind_x=fix(x)
                 ind_y=fix(y)
