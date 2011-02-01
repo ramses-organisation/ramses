@@ -18,6 +18,7 @@ subroutine init_part
   integer::buf_count,indglob,npart_new
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
   real(dp)::scale,dx_loc
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::ncode,bit_length,temp
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -39,7 +40,7 @@ subroutine init_part
   
   real(dp),dimension(1:3, 1:3)::Rot_gal, Prot, Qrot, Irot
   real(dp),dimension(1:3)::rot_axis
-  real(dp)::cangle, sangle, Odistmax
+  real(dp)::cangle, sangle
 
   integer::ibuf,tag=101,tagf=102,tagu=102
   integer::countsend,countrecv
@@ -659,6 +660,11 @@ subroutine init_part
 
      case ('ascii')
 
+
+        ! Conversion factor from user units to cgs units
+        call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+        scale_m=scale_d*scale_l**3
+
         ! Local particle count
         ipart=0
 
@@ -720,26 +726,28 @@ subroutine init_part
 
         end if
 
-        Odistmax = maxval(abs(gal_center1))
+        ! File units are supposed to be in kpc, km/s and 10^9 Msol
         do while (.not.eof)
            xx=0.0
            if(myid==1)then
               jpart=0
               do i=1,nvector
                  read(10,*,end=100)xx1,xx2,xx3,vv1,vv2,vv3,mm1
+                 xx1=xx1*3.085677581282D21/scale_l
+                 xx2=xx2*3.085677581282D21/scale_l
+                 xx3=xx3*3.085677581282D21/scale_l
+                 vv1=vv1*1D5/scale_v
+                 vv2=vv2*1D5/scale_v
+                 vv3=vv3*1D5/scale_v
+                 mm1=mm1*1D9*1.9891D33/scale_m
+
                  jpart=jpart+1
                  indglob=indglob+1
 
                  xx(i,:) = matmul(Rot_gal, (/ xx1, xx2, xx3 /))
-!                 xx(i,1)=xx1+boxlen/2.0
-!                 xx(i,2)=xx2+boxlen/2.0
-!                 xx(i,3)=xx3+boxlen/2.0
                  vv(i,:) = matmul(Rot_gal, (/ vv1, vv2, vv3 /)) + Vgal1
-!                 vv(i,1)=vv1
-!                 vv(i,2)=vv2
-!                 vv(i,3)=vv3
-                 mm(i  )=mm1
-                 ii(i  )=indglob
+                 mm(i  ) = mm1
+                 ii(i  ) = indglob
               end do
 100           continue
               if(jpart<nvector)eof=.true.
@@ -827,26 +835,27 @@ subroutine init_part
 
         end if
        
-        Odistmax = maxval(abs(gal_center2))
         do while (.not.eof)
            xx=0.0
            if(myid==1)then
               jpart=0
               do i=1,nvector
                  read(10,*,end=103)xx1,xx2,xx3,vv1,vv2,vv3,mm1
+                 xx1=xx1*3.085677581282D21/scale_l
+                 xx2=xx2*3.085677581282D21/scale_l
+                 xx3=xx3*3.085677581282D21/scale_l
+                 vv1=vv1*1D5/scale_v
+                 vv2=vv2*1D5/scale_v
+                 vv3=vv3*1D5/scale_v
+                 mm1=mm1*1D9*1.9891D33/scale_m
+
                  jpart=jpart+1
                  indglob=indglob+1
 
                  xx(i,:) = matmul(Rot_gal, (/ xx1, xx2, xx3 /))
-!                 xx(i,1)=xx1+boxlen/2.0
-!                 xx(i,2)=xx2+boxlen/2.0
-!                 xx(i,3)=xx3+boxlen/2.0
                  vv(i,:) = matmul(Rot_gal, (/ vv1, vv2, vv3 /)) + Vgal2
-!                 vv(i,1)=vv1
-!                 vv(i,2)=vv2
-!                 vv(i,3)=vv3
-                 mm(i  )=mm1
-                 ii(i  )=indglob
+                 mm(i  ) = mm1
+                 ii(i  ) = indglob
               end do
 103           continue
               if(jpart<nvector)eof=.true.
