@@ -78,6 +78,7 @@ rm -rf amr2cube
 rm -rf amr2gmsh
 rm -rf part2map
 rm -rf part2cube
+rm -rf ramses2tipsy
 rm -rf sunset
 rm -rf vrot
 rm -rf header
