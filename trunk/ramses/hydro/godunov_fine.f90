@@ -111,7 +111,8 @@ subroutine set_uold(ilevel)
   ! hydro step.
   !--------------------------------------------------------------------------
   integer::i,ivar,ind,iskip,nx_loc
-  real(dp)::scale,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,dx,fact,d_old
+  real(dp)::scale,d,u,v,w
+  real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx,fact,d_old
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
