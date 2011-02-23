@@ -105,6 +105,7 @@ end subroutine set_unew
 subroutine set_uold(ilevel)
   use amr_commons
   use hydro_commons
+  use poisson_commons
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
