@@ -135,7 +135,7 @@ program poshalo
         end if
         npart=npart+1
         id_group=group_id(npart)
-        if(id_group>0)then
+        if(id_group>0.and.id_group.LE.ngroup)then
            if(flag_group(id_group)) then
               flag_group(id_group)=.false.
               xref_group(id_group)=x(i,1)
