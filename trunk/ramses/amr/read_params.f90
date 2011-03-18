@@ -107,17 +107,19 @@ subroutine read_params
   !-------------------------------------------------
   if(tend>0)then
      if(delta_tout==0)delta_tout=tend
-     noutput=int(tend/delta_tout)
+     noutput=MIN(int(tend/delta_tout),MAXOUT)
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
-     noutput=int(aend/delta_aout)
+     noutput=MIN(int(aend/delta_aout),MAXOUT)
      do i=1,noutput
         aout(i)=dble(i)*delta_aout
      end do
   endif
+  noutput=MIN(noutput,MAXOUT)
+
   !--------------------------------------------------
   ! Check for errors in the namelist so far
   !--------------------------------------------------
