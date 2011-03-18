@@ -817,12 +817,12 @@ subroutine merge_sink(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -947,12 +947,12 @@ subroutine create_cloud(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -1112,12 +1112,12 @@ subroutine kill_cloud(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -1264,10 +1264,6 @@ subroutine bondi_hoyle(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
                  isink=-idp(ipart)
@@ -1276,6 +1272,10 @@ subroutine bondi_hoyle(ilevel)
                     r2=r2+(xp(ipart,idim)-xsink(isink,idim))**2
                  end do
                  if(r2==0.0)then
+                    if(ig==0)then
+                       ig=1
+                       ind_grid(ig)=igrid
+                    end if
                     ip=ip+1
                     ind_part(ip)=ipart
                     ind_grid_part(ip)=ig
@@ -1357,12 +1357,12 @@ subroutine bondi_hoyle(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -1971,12 +1971,12 @@ subroutine grow_bondi(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -2456,12 +2456,12 @@ subroutine grow_jeans(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only sink particles
               if(idp(ipart).lt.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   

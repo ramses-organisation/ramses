@@ -58,12 +58,12 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only star particles
               if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -193,7 +193,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(error)then
      write(*,*)'problem in sn2'
      write(*,*)ilevel,ng,np
-     stop
   end if
 
   ! NGP at level ilevel
