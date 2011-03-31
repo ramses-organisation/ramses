@@ -12,8 +12,8 @@ subroutine upload_fine(ilevel)
   ! for the hydro variables.
   !----------------------------------------------------------------------
   integer::i,ncache,igrid,ngrid,ind,iskip,nsplit,icell
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_split
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_split
+  logical,dimension(1:nvector)::ok
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -83,8 +83,8 @@ subroutine upl(ind_cell,ncell)
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
   integer ::ivar,i,idim,ind_son,iskip_son
-  integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
-  real(dp),dimension(1:nvector),save::getx,ekin
+  integer ,dimension(1:nvector)::igrid_son,ind_cell_son
+  real(dp),dimension(1:nvector)::getx,ekin
 
   ! Get child oct index
   do i=1,ncell
@@ -191,9 +191,9 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   integer::i,j,ivar,idim,ind,ix,iy,iz
 
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,0:twondim),save::a
-  real(dp),dimension(1:nvector,1:ndim),save::w
-  real(dp),dimension(1:nvector),save::ekin
+  real(dp),dimension(1:nvector,0:twondim)::a
+  real(dp),dimension(1:nvector,1:ndim)::w
+  real(dp),dimension(1:nvector)::ekin
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -327,9 +327,9 @@ subroutine compute_limiter_central(a,w,nn)
   integer::i,j,idim,ind,ix,iy,iz
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp)::xxc
-  real(dp),dimension(1:nvector,1:twotondim),save::ac
-  real(dp),dimension(1:nvector),save::corner,kernel,diff_corner,diff_kernel
-  real(dp),dimension(1:nvector),save::max_limiter,min_limiter,limiter
+  real(dp),dimension(1:nvector,1:twotondim)::ac
+  real(dp),dimension(1:nvector)::corner,kernel,diff_corner,diff_kernel
+  real(dp),dimension(1:nvector)::max_limiter,min_limiter,limiter
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim

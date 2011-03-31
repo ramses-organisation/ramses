@@ -37,19 +37,19 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp 
 
   ! Primitive variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::qin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       )::cin
 
   ! Slopes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
 
   ! Left and right state arrays
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
   
   ! Intermediate fluxes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::fx
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   )::tx
 
   ! Local scalar variables
   integer::i,j,k,l,ivar
@@ -554,7 +554,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   ! local variables
   integer ::i, j, k, n, l, idim, xdim
   real(dp)::entho
-  real(dp),dimension(1:nvector,1:nvar),save::qleft,qright,qgdnv,fgdnv
+  real(dp),dimension(1:nvector,1:nvar)::qleft,qright,qgdnv,fgdnv
 
   entho=one/(gamma-one)
   xdim=ln-1

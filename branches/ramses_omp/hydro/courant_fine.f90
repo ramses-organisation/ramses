@@ -13,14 +13,14 @@ subroutine courant_fine(ilevel)
   !----------------------------------------------------------------------
   integer::i,ivar,idim,ind,ncache,igrid,iskip
   integer::info,nleaf,ngrid,nx_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
+  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_leaf
 
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,dt_all
   real(kind=8),dimension(3)::comm_buffin,comm_buffout
-  real(dp),dimension(1:nvector,1:nvar),save::uu
-  real(dp),dimension(1:nvector,1:ndim),save::gg
+  real(dp),dimension(1:nvector,1:nvar)::uu
+  real(dp),dimension(1:nvector,1:ndim)::gg
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -38,6 +38,11 @@ subroutine courant_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active,son,uold,f) &
+!$OMP FIRSTPRIVATE(ilevel,poisson,ngridmax,vol,dx,ncache,ncoarse) &
+!$OMP PRIVATE(i,ngrid,igrid,ind_grid,ind,ind_cell,iskip,nleaf,ind_leaf,uu,ivar, &
+!$OMP         gg,idim,dt_lev) &
+!$OMP REDUCTION(+: mass_loc, ekin_loc, eint_loc) REDUCTION (min:dt_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid

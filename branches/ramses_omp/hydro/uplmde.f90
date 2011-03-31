@@ -758,7 +758,7 @@ subroutine consup(uin,flux,div,dt,ngrid)
 
   integer:: i, j, k, l, n
   real(dp)::factor
-  real(dp),dimension(1:nvector),save:: div1
+  real(dp),dimension(1:nvector):: div1
 
   factor=half**(ndim-1)
 

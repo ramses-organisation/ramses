@@ -14,18 +14,21 @@ subroutine godunov_fine(ilevel)
   ! On exit, unew has been updated. 
   !--------------------------------------------------------------------------
   integer::i,ivar,igrid,ncache,ngrid
-  integer,dimension(1:nvector),save::ind_grid
+  integer,dimension(1:nvector)::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(i,ngrid,igrid,ind_grid) &
+!$OMP SHARED(active) FIRSTPRIVATE(ilevel,ncache) SCHEDULE(DYNAMIC)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
+
      call godfine1(ind_grid,ngrid,ilevel)
   end do
 
@@ -103,7 +106,6 @@ end subroutine set_unew
 subroutine set_uold(ilevel)
   use amr_commons
   use hydro_commons
-  use poisson_commons
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
@@ -111,8 +113,7 @@ subroutine set_uold(ilevel)
   ! hydro step.
   !--------------------------------------------------------------------------
   integer::i,ivar,ind,iskip,nx_loc
-  real(dp)::scale,d,u,v,w
-  real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx,fact,d_old
+  real(dp)::scale,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,dx,fact
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -120,38 +121,6 @@ subroutine set_uold(ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
-
-  ! Add gravity source term at time t with half time step
-  if(poisson)then
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,active(ilevel)%ngrid
-           d=unew(active(ilevel)%igrid(i)+iskip,1)
-           u=0.0; v=0.0; w=0.0
-           if(ndim>0)u=unew(active(ilevel)%igrid(i)+iskip,2)/d
-           if(ndim>1)v=unew(active(ilevel)%igrid(i)+iskip,3)/d
-           if(ndim>2)w=unew(active(ilevel)%igrid(i)+iskip,4)/d
-           e_kin=0.5*d*(u**2+v**2+w**2)
-           e_prim=unew(active(ilevel)%igrid(i)+iskip,ndim+2)-e_kin
-           d_old=uold(active(ilevel)%igrid(i)+iskip,1)
-           fact=d_old/d*0.5*dtnew(ilevel)
-           if(ndim>0)then
-              u=u+f(active(ilevel)%igrid(i)+iskip,1)*fact
-              unew(active(ilevel)%igrid(i)+iskip,2)=d*u
-           endif
-           if(ndim>1)then
-              v=v+f(active(ilevel)%igrid(i)+iskip,2)*fact
-              unew(active(ilevel)%igrid(i)+iskip,3)=d*v
-           end if
-           if(ndim>2)then
-              w=w+f(active(ilevel)%igrid(i)+iskip,3)*fact
-              unew(active(ilevel)%igrid(i)+iskip,4)=d*w
-           endif
-           e_kin=0.5*d*(u**2+v**2+w**2)
-           unew(active(ilevel)%igrid(i)+iskip,ndim+2)=e_prim+e_kin
-        end do
-     end do
-  end if
 
   ! Set uold to unew for myid cells
   do ind=1,twotondim
@@ -206,21 +175,21 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! and stored in array unew(:), both at the current level and at the 
   ! coarser level if necessary.
   !-------------------------------------------------------------------
-  integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim       ),save::nbors_father_grids
-  integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0d0
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0d0
+  integer ,dimension(1:nvector,1:threetondim     )::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim       )::nbors_father_grids
+  integer ,dimension(1:nvector,0:twondim         )::ibuffer_father
+  real(dp),dimension(1:nvector,0:twondim  ,1:nvar)::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:nvar)::u2
+  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)::g1=0.0d0
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::g2=0.0d0
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
-  logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uloc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gloc=0.0d0
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim)::tmp
+  logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::ok
 
-  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
+  integer,dimension(1:nvector)::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
 
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
