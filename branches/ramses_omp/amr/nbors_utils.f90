@@ -17,10 +17,10 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
-  integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok
-  integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
-  integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
+  integer,dimension(1:nvector)::ix,iy,iz,iix,iiy,iiz
+  integer,dimension(1:nvector)::pos,ind_grid_father,ind_grid_ok
+  integer,dimension(1:nvector,1:threetondim)::nbors_father_ok
+  integer,dimension(1:nvector,1:twotondim)::nbors_grids_ok
   logical::oups
 
   nxny=nx*ny
@@ -79,6 +79,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
                  do i=1,ncell
                     iix(i)=ix(i)+i1-1
                     if(iix(i) < 0   )iix(i)=nx-1
+
                     if(iix(i) > nx-1)iix(i)=0
                  end do
               end if
@@ -218,8 +219,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:8)::jjj=(/3,3,4,4,3,3,4,4/)
   integer,dimension(1:8)::kkk=(/5,5,5,5,6,6,6,6/)
   integer,dimension(1:27,1:8,1:3)::lll,mmm
-  integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
-  integer,dimension(1:nvector,1:twotondim),save::nbors_grids
+  integer,dimension(1:nvector)::ind_grid1,ind_grid2,ind_grid3
+  integer,dimension(1:nvector,1:twotondim)::nbors_grids
   
   call getindices3cube(lll,mmm)
 
@@ -405,10 +406,10 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
   !-----------------------------------------------------------------
   integer::nxny,i,idim,j,iok,ind
   integer,dimension(1:3)::ibound,iskip1,iskip2
-  integer,dimension(1:nvector,1:3),save::ix
-  integer,dimension(1:nvector),save::ind_grid_father,pos
-  integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
-  integer,dimension(1:nvector,1:twondim),save::icelln_ok
+  integer,dimension(1:nvector,1:3)::ix
+  integer,dimension(1:nvector)::ind_grid_father,pos
+  integer,dimension(1:nvector,0:twondim)::igridn,igridn_ok
+  integer,dimension(1:nvector,1:twondim)::icelln_ok
 
   nxny=nx*ny
 
