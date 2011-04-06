@@ -1054,7 +1054,7 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
   ! on metal cooling (calibrated using CLOUDY). 
   if(madau.or.weinbergint.or.courty)then
      if(ZZ.le.0.0.or.ZZ.ge.z_courty(50))then
-        f_courty=1d0
+        ux=0.0
      else
         iZ=1+int(ZZ/z_courty(50)*49.)
         iZ=min(iZ,49)
