@@ -415,13 +415,13 @@ program part2cylprof
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
   open(unit=10,file=TRIM(nomfich)//".dark",form='formatted')
-  write(10,'(A90)')" r(kpc)      S_d(H/cc)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)"
+  write(10,'(A94)')" r(kpc)      S_d(M/pc2)  u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)"
   do i=1,nrad
      write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=1,7)
   end do
   close(10)
   open(unit=10,file=TRIM(nomfich)//".star",form='formatted')
-  write(10,'(A90)')" r(kpc)      S_*(H/cc)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)"
+  write(10,'(A94)')" r(kpc)      S_*(M/pc2)  u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)"
   do i=1,nrad
      write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=8,14)
   end do

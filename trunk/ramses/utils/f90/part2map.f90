@@ -100,7 +100,7 @@ program part2map
 
   ! Read a density file from hop
   if(do_density)then
-     open(unit=1,file=filedens,form='unformatted',status='old',access='direct',recl=1)
+     open(unit=1,file=filedens,form='unformatted',status='old',access='direct',recl=4)
      read(1,rec=1)npart
      write(*,*)npart
      allocate(density(npart))
