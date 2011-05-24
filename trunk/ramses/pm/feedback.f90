@@ -665,9 +665,11 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   call MPI_ALLREDUCE(vol_gas,vol_gas_all,nSN  ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(dq     ,dq_all     ,nSN*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(u2Blast,u2Blast_all,nSN*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(ekBlast,ekBlast_all,nSN  ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   vol_gas=vol_gas_all
   dq     =dq_all
   u2Blast=u2Blast_all
+  ekBlast=ekBlast_all
 #endif
   do iSN=1,nSN
      if(vol_gas(iSN)>0d0)then
