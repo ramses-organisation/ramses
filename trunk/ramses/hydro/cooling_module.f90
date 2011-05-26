@@ -512,7 +512,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   precoeff=2d0*X/(3d0*kB)
   do i=1,ncell
      zzz(i)=zsolar(i)
-     facH(i)=log10(nH(i)/boost(i))
+     facH(i)=MIN(MAX(log10(nH(i)/boost(i)),table%nH(1)),table%nH(table%n1))
      i_nH(i)=MIN(MAX(int((facH(i)-table%nH(1))*dlog_nH)+1,1),table%n1-1)
      w1H(i)=(table%nH(i_nH(i)+1)-facH(i))*dlog_nH
      w2H(i)=(facH(i)-table%nH(i_nH(i)  ))*dlog_nH
