@@ -182,8 +182,11 @@ recursive subroutine amr_step(ilevel,icount)
 
         ! Density threshold and/or Bondi accretion onto sink particle
         if(sink)then
-!           call grow_jeans(ilevel)
-           if(bondi)call grow_bondi(ilevel)
+           if(bondi)then
+              call grow_bondi(ilevel)
+           else
+              call grow_jeans(ilevel)
+           endif
         endif
 
         ! Update boundaries

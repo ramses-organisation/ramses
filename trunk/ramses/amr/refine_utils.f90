@@ -32,6 +32,7 @@ subroutine refine_coarse
   integer::ind,info,ibound
   logical::boundary_region
   logical::ok_free,ok_all
+  integer,dimension(1:nvector),save::ind_cell_tmp
   
   if(verbose)write(*,*)'  Entering refine_coarse'
   
@@ -103,7 +104,8 @@ subroutine refine_coarse
      ind=1+i+j*nx+k*nxny
      if(flag1(ind)==0.and.son(ind)>0)then
         nkill=nkill+1
-        call kill_grid(ind,1,1,ibound,boundary_region)
+        ind_cell_tmp(1)=ind
+        call kill_grid(ind_cell_tmp,1,1,ibound,boundary_region)
      end if
   end do
   end do
@@ -116,7 +118,8 @@ subroutine refine_coarse
         ind=1+i+j*nx+k*nxny
         if(flag1(ind)==0.and.son(ind)>0)then
            nkill=nkill+1
-           call kill_grid(ind,1,1,ibound,boundary_region)
+           ind_cell_tmp(1)=ind
+           call kill_grid(ind_cell_tmp,1,1,ibound,boundary_region)
         end if
      end do
      end do

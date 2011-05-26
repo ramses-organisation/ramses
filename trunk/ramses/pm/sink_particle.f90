@@ -77,7 +77,7 @@ subroutine create_sink
 
   call compute_accretion_rate(levelmin)
 
-  call agn_feedback
+  if(agn_feedback)call agn_feedback
      
 end subroutine create_sink
 !################################################################
@@ -117,7 +117,7 @@ subroutine make_sink(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::d,x,y,z,u,v,w,e,temp,zg,factG
   real(dp)::dxx,dyy,dzz,drr
-  real(dp)::rsink_max,rsink_max2,msink_max
+  real(dp)::msink_max2,rsink_max2
   real(dp)::velc,uc,vc,wc,l_jeans,d_jeans,d_thres,d_sink
   real(dp)::birth_epoch,xx,yy,zz,rr
   real(dp),dimension(1:3)::skip_loc
@@ -141,16 +141,13 @@ subroutine make_sink(ilevel)
   scale_m=scale_d*scale_l**3
 
   ! Minimum radius to create a new sink from any other
-  rsink_max=10.0 ! in kpc
-  rsink_max=rsink_max*3.08d21/scale_l
-  rsink_max2=rsink_max**2
+  rsink_max2=(rsink_max*3.08d21/scale_l)**2
 
   ! Maximum value for the initial sink mass
-  msink_max=1d5 ! in Msol
-  msink_max=msink_max*2d33/scale_m
+  msink_max2=msink_max*2d33/scale_m
   
   ! Gravitational constant
-  factG=1
+  factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Density threshold for sink particle creation
@@ -237,8 +234,6 @@ subroutine make_sink(ilevel)
            uold(ind_cell(i),3)=v
            uold(ind_cell(i),4)=w
            uold(ind_cell(i),5)=e
-           ! No AGN formation site by default
-           flag2(ind_cell(i))=1
         end do
         do ivar=imetal,nvar
            do i=1,ngrid
@@ -250,10 +245,10 @@ subroutine make_sink(ilevel)
      end do
   end do
 
-  !------------------------------
-  ! Determine AGN formation sites
-  !------------------------------
-  call quenching(ilevel)
+  !-------------------------------
+  ! Determine SMBH formation sites
+  !-------------------------------
+  if(smbh)call quenching(ilevel)
 
   !----------------------------
   ! Compute number of new sinks
@@ -296,7 +291,7 @@ subroutine make_sink(ilevel)
            if(d < d_thres)ok(i)=.false.
 
            ! Quenching criterion
-           if(flag2(ind_cell(i))==1)ok(i)=.false.
+           if(smbh.and.flag2(ind_cell(i))==1)ok(i)=.false.
            
            ! Geometrical criterion
            if(ivar_refine>0)then
@@ -352,7 +347,7 @@ subroutine make_sink(ilevel)
   !---------------------------------
   ! Check for free particle memory
   !--------------------------------
-  ok_free=(numbp_free-ntot*ncloud)>=0
+  ok_free=(numbp_free-ntot)>=0
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(numbp_free,numbp_free_tot,1,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD,info)
 #endif
@@ -361,7 +356,7 @@ subroutine make_sink(ilevel)
 #endif
   if(.not. ok_free)then
      write(*,*)'No more free memory for particles'
-     write(*,*)ncloud,ntot
+     write(*,*)'New sink particles',ntot
      write(*,*)'Increase npartmax'
 #ifndef WITHOUTMPI
     call MPI_ABORT(MPI_COMM_WORLD,1,info)
@@ -392,7 +387,7 @@ subroutine make_sink(ilevel)
   nindsink=nindsink+ntot_all
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Level = ",I6," New sink = ",I6," Tot =",I8)')&
+        write(*,'(" Level = ",I6," New sink before merging= ",I6," Tot =",I8)')&
              & ilevel,ntot_all,nsink
      endif
   end if
@@ -462,7 +457,7 @@ subroutine make_sink(ilevel)
            endif
 
            ! Mass of the new sink
-           msink_new(index_sink)=min((d-d_thres/4.0)*dx_loc**3,msink_max)
+           msink_new(index_sink)=min((d-d_thres/4.0)*dx_loc**3,msink_max2)
            delta_mass_new(index_sink)=0d0
 
            ! Global index of the new sink
@@ -684,12 +679,12 @@ subroutine merge_sink(ilevel)
   end do
   new_sink=igrp
 
-!  if(myid==1)then
-!     write(*,*)'Found ',new_sink,' groups'
+  if(myid==1)then
+     write(*,*)'Number of sinks after merging',new_sink
 !     do isink=1,nsink
 !        write(*,'(3(I3,1x),3(1PE10.3))')isink,psink(isink),gsink(isink),xsink(isink,1:ndim)
 !     end do
-!  endif
+  endif
   
   !----------------------------------------------------
   ! Compute group centre of mass and average velocty
@@ -1210,7 +1205,7 @@ subroutine bondi_hoyle(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Gravitational constant
-  factG=1
+  factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Mesh spacing in that level
@@ -2314,7 +2309,7 @@ subroutine compute_accretion_rate(ilevel)
   real(dp),dimension(1:3)::velocity
 
   ! Gravitational constant
-  factG=1
+  factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Conversion factor from user units to cgs units
@@ -2329,6 +2324,8 @@ subroutine compute_accretion_rate(ilevel)
   vel_max=10. ! in km/sec
   vel_max=vel_max*1d5/scale_v
   
+  if(smbh)then
+
   ! Compute sink particle accretion rate
   do isink=1,nsink
      density=0d0
@@ -2392,6 +2389,26 @@ subroutine compute_accretion_rate(ilevel)
   do isink=1,nsink
      dMBHoverdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
   end do
+
+  else
+
+     if(myid==1.and.ilevel==levelmin.and.nsink>0)then
+        do i=1,nsink
+           xmsink(i)=msink(i)
+        end do
+        call quick_sort(xmsink(1),idsink_sort(1),nsink)
+        write(*,*)'Number of sink = ',nsink
+        write(*,'(" ============================================================================================")')
+        write(*,'(" Id     Mass(Msol)          x              y              z")')
+        write(*,'(" ============================================================================================")')
+        do i=nsink,max(nsink-10,1),-1
+           isink=idsink_sort(i)
+           write(*,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim)
+        end do
+        write(*,'(" ============================================================================================")')
+     endif
+     
+  endif
 
 end subroutine compute_accretion_rate
 !################################################################

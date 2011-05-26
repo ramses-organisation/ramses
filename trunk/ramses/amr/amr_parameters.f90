@@ -118,6 +118,8 @@ module amr_parameters
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
+  real(dp)::rsink_max=10      ! Sink isolation criterion in kpc
+  real(dp)::msink_max=1d5     ! Maximum seed mass in solar masses
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
@@ -127,6 +129,8 @@ module amr_parameters
   logical ::bondi=.true.      ! Activate Bondi accretion onto sink particle 
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
+  logical ::smbh=.false.
+  logical ::agn_feedback=.false.
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
