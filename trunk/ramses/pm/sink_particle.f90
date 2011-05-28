@@ -300,7 +300,7 @@ subroutine make_sink(ilevel)
            endif
 
            ! Proximity criterion
-           if(ok(i))then
+           if(ok(i).and.rsink_max>0d0)then
               x=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
               y=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
               z=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
