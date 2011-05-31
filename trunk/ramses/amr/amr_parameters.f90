@@ -130,7 +130,7 @@ module amr_parameters
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
-  logical ::agn_feedback=.false.
+  logical ::agn=.false.
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors

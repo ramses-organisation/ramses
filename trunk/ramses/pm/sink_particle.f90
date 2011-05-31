@@ -77,7 +77,7 @@ subroutine create_sink
 
   call compute_accretion_rate(levelmin)
 
-  if(agn_feedback)call agn_feedback
+  if(agn)call agn_feedback
      
 end subroutine create_sink
 !################################################################

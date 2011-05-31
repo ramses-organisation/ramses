@@ -40,7 +40,7 @@ subroutine read_hydro_params(nml_ok)
        & ,t_star,n_star,T2_star,g_star,del_star,eps_star &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w &
        & ,J21,a_spec,z_ave,z_reion,eta_mag,n_sink,bondi,delayed_cooling &
-       & ,self_shielding,smbh,agn_feedback,rsink_max,msink_max
+       & ,self_shielding,smbh,agn,rsink_max,msink_max
 
   ! Read namelist file
   rewind(1)
