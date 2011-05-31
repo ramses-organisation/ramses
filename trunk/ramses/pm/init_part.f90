@@ -80,6 +80,7 @@ subroutine init_part
      allocate(tsink(1:nsinkmax))
      allocate(idsink(1:nsinkmax))
      idsink=0 ! Important: need to set idsink to zero
+     nindsink=MAXVAL(idsink) ! Reset max index
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
      allocate(delta_mass(1:nsinkmax))
