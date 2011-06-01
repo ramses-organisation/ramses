@@ -43,6 +43,10 @@ subroutine dump_all
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
         end if
+        if(sink)then
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
+           call output_sink(filename)
+        endif
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
      call backup_amr(filename)

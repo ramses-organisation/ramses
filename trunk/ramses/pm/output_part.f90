@@ -151,5 +151,49 @@ subroutine backup_part(filename)
 
 end subroutine backup_part
 
+subroutine output_sink(filename)
+  use amr_commons
+  use pm_commons
+  implicit none
+  character(LEN=80)::filename
+
+  integer::i,idim,ipart,isink
+  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom
+  real(dp)::scale
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+  character(LEN=80)::fileloc
+  character(LEN=5)::nchar
+
+  if(verbose)write(*,*)'Entering output_amr'
+
+  ilun=myid+10
+
+  ! Conversion factor from user units to cgs units                                                                   
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**3d0
+
+  if(verbose)write(*,*)'Entering output_sink'
+  
+  ilun=2*ncpu+myid+10
+
+  fileloc=TRIM(filename)
+  open(unit=ilun,file=TRIM(fileloc),form='formatted')
+  !======================
+  ! Write sink properties
+  !======================
+  write(ilun,*)'Number of sink = ',nsink
+  write(ilun,'(" ============================================================================================")')
+  write(ilun,'(" Id     Mass(Msol)          x              y              z")')
+  write(ilun,'(" ============================================================================================")')
+  do isink=1,nsink
+     write(ilun,*)idsink(isink)
+     write(ilun,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim)
+  end do
+  write(ilun,'(" ============================================================================================")')
+
+  close(ilun)
+
+end subroutine output_sink
+
 
 

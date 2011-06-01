@@ -699,8 +699,16 @@ subroutine merge_sink(ilevel)
      endif
      msink_new(igrp)=msink_new(igrp)+msink(isink)
      delta_mass_new(igrp)=delta_mass_new(igrp)+delta_mass(isink)
-     tsink_new(igrp)=min(tsink_new(igrp),tsink(isink))
-     idsink_new(igrp)=min(idsink_new(igrp),idsink(isink))
+     if(tsink_new(igrp)==0d0)then
+        tsink_new(igrp)=tsink(isink)
+     else
+        tsink_new(igrp)=min(tsink_new(igrp),tsink(isink))
+     endif
+     if(idsink_new(igrp)==0)then
+        idsink_new(igrp)=idsink(isink)
+     else
+        idsink_new(igrp)=min(idsink_new(igrp),idsink(isink))
+     endif
 
      xx=xsink(isink,1)-xsink(int(oksink_new(igrp)),1)
      if(xx>scale*xbound(1)/2.0)then
