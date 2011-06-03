@@ -20,7 +20,7 @@ subroutine read_params
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/run_params/cosmo,pic,sink,lightcone,poisson,hydro,verbose,debug &
+  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
@@ -152,11 +152,17 @@ subroutine read_params
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
+  if(clumpfind.and.(.not.pic))then
+     pic=.true.
+  endif
   if(pic.and.(.not.poisson))then
      poisson=.true.
   endif
 
   call read_hydro_params(nml_ok)
+
+  if (clumpfind)call read_clumpfind_params
+
 
   close(1)
 

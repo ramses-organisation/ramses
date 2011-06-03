@@ -99,6 +99,11 @@ recursive subroutine amr_step(ilevel,icount)
            call defrag
         endif
         call dump_all
+        if(clumpfind)then
+           if(verbose)print*,"enter clumpfinder"
+           call clump_finder
+           if(verbose)print*,"escaped clumpfinder"
+        endif
      endif
  
     ! Dump lightcone
