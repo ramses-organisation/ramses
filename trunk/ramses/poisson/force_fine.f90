@@ -110,8 +110,8 @@ subroutine force_fine(ilevel)
   ! Compute gradient of potential
   !------------------------------
   else
-
-     call make_boundary_phi_isolated(ilevel)
+     ! Update physical boundaries
+     call make_boundary_phi(ilevel)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
