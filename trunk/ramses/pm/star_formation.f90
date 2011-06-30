@@ -273,7 +273,7 @@ subroutine star_formation(ilevel)
   nstar_tot=nstar_tot+ntot_all
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Level=",I6," New star=",I6," Tot=",I10," Mass=",1PE9.3," Lost=",0PF4.1,"%")')&
+        write(*,'(" Level=",I6," New star=",I6," Tot=",I10," Mass=",1PE10.3," Lost=",0PF4.1,"%")')&
              & ilevel,ntot_all,nstar_tot,mtot_all,mlost_all/mtot_all*100.
      endif
   end if
