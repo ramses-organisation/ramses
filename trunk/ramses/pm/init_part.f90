@@ -298,9 +298,9 @@ subroutine init_part
                           write(*,*)'npartmax should be greater than',ipart
                           call clean_stop
                        endif
-                       xp(ipart,1)=xg(ind_grid(i),1)+xc(ind,1)
-                       xp(ipart,2)=xg(ind_grid(i),2)+xc(ind,2)
-                       xp(ipart,3)=xg(ind_grid(i),3)+xc(ind,3)
+                       if(ndim>0)xp(ipart,1)=xg(ind_grid(i),1)+xc(ind,1)
+                       if(ndim>1)xp(ipart,2)=xg(ind_grid(i),2)+xc(ind,2)
+                       if(ndim>2)xp(ipart,3)=xg(ind_grid(i),3)+xc(ind,3)
                        mp(ipart)=0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
                     end if
                  end do
@@ -469,12 +469,18 @@ subroutine init_part
         
         ! Periodic box
         do ipart=1,npart
+#if NDIM>0
            if(xp(ipart,1)<  0.0d0  )xp(ipart,1)=xp(ipart,1)+dble(nx)
-           if(xp(ipart,2)<  0.0d0  )xp(ipart,2)=xp(ipart,2)+dble(ny)
-           if(xp(ipart,3)<  0.0d0  )xp(ipart,3)=xp(ipart,3)+dble(nz)
            if(xp(ipart,1)>=dble(nx))xp(ipart,1)=xp(ipart,1)-dble(nx)
+#endif
+#if NDIM>1
+           if(xp(ipart,2)<  0.0d0  )xp(ipart,2)=xp(ipart,2)+dble(ny)
            if(xp(ipart,2)>=dble(ny))xp(ipart,2)=xp(ipart,2)-dble(ny)
+#endif
+#if NDIM>2
+           if(xp(ipart,3)<  0.0d0  )xp(ipart,3)=xp(ipart,3)+dble(nz)
            if(xp(ipart,3)>=dble(nz))xp(ipart,3)=xp(ipart,3)-dble(nz)
+#endif
         end do
         
 #ifndef WITHOUTMPI        
