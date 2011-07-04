@@ -239,7 +239,7 @@ subroutine init_flow_fine(ilevel)
            if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
            if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
            if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==5)init_array=(1.0+init_array)*T2_start/scale_T2
+           if(ivar==ndim+2)init_array=(1.0+init_array)*T2_start/scale_T2
         endif
 
         ! Loop over cells
@@ -297,7 +297,7 @@ subroutine init_flow_fine(ilevel)
               end do
               ! Compute pressure from temperature and density
               do i=1,ngrid
-                 uold(ind_cell(i),5)=uold(ind_cell(i),1)*uold(ind_cell(i),5)
+                 uold(ind_cell(i),ndim+2)=uold(ind_cell(i),1)*uold(ind_cell(i),ndim+2)
               end do
            end do
            ! End loop over cells
@@ -314,6 +314,8 @@ subroutine init_flow_fine(ilevel)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
+        vy=0.0
+        vz=0.0
         ! Loop over cells
         do ind=1,twotondim
            ! Gather cell indices
@@ -325,16 +327,20 @@ subroutine init_flow_fine(ilevel)
            do i=1,ngrid
               rr=uold(ind_cell(i),1)
               vx=uold(ind_cell(i),2)
+#if NDIM>1
               vy=uold(ind_cell(i),3)
+#endif
+#if NDIM>2
               vz=uold(ind_cell(i),4)
-              pp=uold(ind_cell(i),5)
+#endif
+              pp=uold(ind_cell(i),ndim+2)
               ek=0.5d0*(vx**2+vy**2+vz**2)
               ei=pp/(gamma-1.0)
               vv(i)=ei+rr*ek
            end do
            ! Scatter to corresponding conservative variable
            do i=1,ngrid
-              uold(ind_cell(i),5)=vv(i)
+              uold(ind_cell(i),ndim+2)=vv(i)
            end do
            ! Compute momentum density
            do ivar=1,ndim
