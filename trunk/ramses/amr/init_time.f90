@@ -221,7 +221,7 @@ subroutine init_cosmo
         aexp=MIN(aexp,astart(ilevel))
         nlevelmax_part=nlevelmax_part+1
         ! Compute SPH equivalent mass (initial gas mass resolution)
-        mass_sph=omega_b/omega_m*0.5d0**(3*ilevel)
+        mass_sph=omega_b/omega_m*0.5d0**(ndim*ilevel)
 
      endif
   end do
