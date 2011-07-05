@@ -2,124 +2,6 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine make_boundary_phi_isolated(ilevel)
-  use amr_commons
-  use poisson_commons
-  implicit none
-  integer::ilevel
-  ! -------------------------------------------------------------------
-  ! This routine set up boundary conditions for isolated BC.
-  ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:nvector)::ind_grid,ind_grid_ref
-  integer,dimension(1:nvector)::ind_cell,ind_cell_ref
-
-  real(dp)::switch,dx,dx_loc,scale
-  real(dp),dimension(1:3)::gs,skip_loc
-  real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector)::pp
-
-  if(.not. simple_boundary)return
-  if(verbose)write(*,111)ilevel
-
-  ! Mesh size at level ilevel
-  dx=0.5D0**ilevel
-
-  ! Rescaling factors
-  nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-  scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-
-  ! Set position of cell centers relative to grid center
-  do ind=1,twotondim
-     iz=(ind-1)/4
-     iy=(ind-1-4*iz)/2
-     ix=(ind-1-2*iy-4*iz)
-     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
-     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
-     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
-  end do
-  
-  ! Loop over boundaries
-  do ibound=1,nboundary
-
-     ! Compute direction of reference neighbors
-     boundary_dir=boundary_type(ibound)-10*(boundary_type(ibound)/10)
-     if(boundary_dir==1)inbor=2
-     if(boundary_dir==2)inbor=1
-     if(boundary_dir==3)inbor=4
-     if(boundary_dir==4)inbor=3
-     if(boundary_dir==5)inbor=6
-     if(boundary_dir==6)inbor=5
-
-     ! Compute index of reference cells
-     ! Free boundary
-     ind_ref(1:8)=(/1,1,3,3,5,5,7,7/)
-     ind_ref(1:8)=(/2,2,4,4,6,6,8,8/)
-     ind_ref(1:8)=(/1,2,1,2,5,6,5,6/)
-     ind_ref(1:8)=(/3,4,3,4,7,8,7,8/)
-     ind_ref(1:8)=(/1,2,3,4,1,2,3,4/)
-     ind_ref(1:8)=(/5,6,7,8,5,6,7,8/)
-     
-     ! Loop over grids by vector sweeps
-     ncache=boundary(ibound,ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
-        end do
-        
-        ! Gather neighboring reference grid
-        do i=1,ngrid
-           ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
-        end do
-
-        ! Loop over cells
-        do ind=1,twotondim
-           iskip=ncoarse+(ind-1)*ngridmax
-           do i=1,ngrid
-              ind_cell(i)=iskip+ind_grid(i)
-           end do
-              
-           ! Gather neighboring reference cell
-           iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
-           do i=1,ngrid
-              ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
-           end do
-
-           ! Gather reference hydro variables
-           do i=1,ngrid
-              pp(i)=phi(ind_cell_ref(i))
-           end do
-           ! Scatter to boundary region
-           do i=1,ngrid
-              phi(ind_cell(i))=pp(i)
-           end do
-                         
-        end do
-        ! End loop over cells
-
-     end do
-     ! End loop over grids
-
-  end do
-  ! End loop over boundaries
-
-111 format('   Entering make_boundary_force for level ',I2)
-
-end subroutine make_boundary_phi_isolated
-!################################################################
-!################################################################
-!################################################################
-!################################################################
 subroutine make_boundary_force(ilevel)
   use amr_commons
   use poisson_commons
@@ -165,8 +47,9 @@ subroutine make_boundary_force(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
+!$OMP PARALLEL DEFAULT(NONE) SHARED(boundary_type,boundary,son,nbor,f,xg,xc) PRIVATE(ibound,boundary_dir,igrid,ngrid,i,ind,ind_grid,ind_grid_ref,ind_cell_ref,iskip,ind_cell,iskip_ref,ivar,ff,switch,xx,inbor,ind_ref,gs) FIRSTPRIVATE(nboundary,ncache,ilevel,ngridmax,ncoarse,scale,skip_loc,dx_loc)
   do ibound=1,nboundary
 
      ! Compute direction of reference neighbors
@@ -209,6 +92,7 @@ subroutine make_boundary_force(ilevel)
      
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$OMP DO
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -282,10 +166,14 @@ subroutine make_boundary_force(ilevel)
         ! End loop over cells
 
      end do
+!$OMP END DO
+! can't use a NOWAIT here because there are cases in which some information from
+! a previous ibound iteration is used to fill a subsequent set of boundary cells
+! in the next ibound iteration
      ! End loop over grids
-
   end do
-  ! End loop over boundaries
+ !$OMP END PARALLEL
+ ! End loop over boundaries
 
 111 format('   Entering make_boundary_force for level ',I2)
 
@@ -343,10 +231,12 @@ subroutine make_boundary_phi(ilevel)
   end do
   
   ! Loop over boundaries
+!$OMP PARALLEL DEFAULT(NONE) SHARED(boundary,phi,xg,xc) PRIVATE(ibound,ncache,igrid,ngrid,i,ind,ind_grid,iskip,ind_cell,xx,rr,pp) FIRSTPRIVATE(nboundary,ilevel,ngridmax,ncoarse,skip_loc,scale,multipole)
   do ibound=1,nboundary
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$OMP DO
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -391,10 +281,14 @@ subroutine make_boundary_phi(ilevel)
         ! End loop over cells
 
      end do
-     ! End loop over grids
-
+!$OMP END DO
+! can't use a NOWAIT here because there are cases in which some information from
+! a previous ibound iteration is used to fill a subsequent set of boundary cells
+! in the next ibound iteration
+    ! End loop over grids
   end do
-  ! End loop over boundaries
+!$OMP END PARALLEL
+   ! End loop over boundaries
 
 111 format('   Entering make_boundary_phi for level ',I2)
 
@@ -420,11 +314,13 @@ subroutine make_boundary_mask(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Loop over boundaries
+!$OMP PARALLEL DEFAULT(NONE) SHARED(boundary,f) PRIVATE(ibound,ncache,igrid,ngrid,i,ind,ind_grid,iskip,ind_cell) FIRSTPRIVATE(nboundary,ilevel,ngridmax,ncoarse)
   do ibound=1,nboundary
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
-     do igrid=1,ncache,nvector
+!$OMP DO
+    do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
@@ -446,11 +342,15 @@ subroutine make_boundary_mask(ilevel)
         ! End loop over cells
 
      end do
-     ! End loop over grids
-
+!$OMP END DO
+! can't use a NOWAIT here because there are cases in which some information from
+! a previous ibound iteration is used to fill a subsequent set of boundary cells
+! in the next ibound iteration
+    ! End loop over grids
   end do
   ! End loop over boundaries
-
+!$OMP END PARALLEL
+ 
 111 format('   Entering make_boundary_mask for level ',I2)
 
 end subroutine make_boundary_mask

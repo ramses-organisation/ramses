@@ -22,7 +22,7 @@ subroutine force_fine(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
 
-  integer ,dimension(1:nvector)::ind_grid,ind_cell,ind_cell_father
+  integer ,dimension(1:nvector)::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim)::xx,ff
  
   if(numbtot(1,ilevel)==0)return
@@ -111,7 +111,7 @@ subroutine force_fine(ilevel)
   !------------------------------
   else
 
-     call make_boundary_phi_isolated(ilevel)
+     call make_boundary_phi(ilevel)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
@@ -257,6 +257,8 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel)
 
   ! Interpolate potential from upper level
   do idim=1,ndim
+!     call interpol_phi(ind_left ,phi_left ,idim,ndim,ngrid,ilevel)
+!     call interpol_phi(ind_right,phi_right,idim,ndim,ngrid,ilevel)
      call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel)
      call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel)
   end do

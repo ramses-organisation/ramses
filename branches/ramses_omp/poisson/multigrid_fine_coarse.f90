@@ -44,11 +44,13 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
    allmasked=.true.
 
    ! Loop over coarse cells of the myid active comm
+!$OMP PARALLEL DEFAULT(NONE) REDUCTION(.and.:allmasked) SHARED(active_mg,son,f,cpu_map,lookup_mg) PRIVATE(ind_c_cell,iskip_c_amr,iskip_c_mg,igrid_c_mg,igrid_c_amr,icell_c_amr,icell_c_mg,ngpmask,igrid_f_amr,ind_f_cell,iskip_f_mg,icell_f_mg,cpu_amr,igrid_f_mg) FIRSTPRIVATE(ncoarse,ngridmax,myid,ifinelevel,icoarselevel,dtwotondim)
    do ind_c_cell=1,twotondim
       iskip_c_amr=ncoarse+(ind_c_cell-1)*ngridmax
       iskip_c_mg =(ind_c_cell-1)*active_mg(myid,icoarselevel)%ngrid
 
       ! Loop over coarse grids of myid
+!$OMP DO
       do igrid_c_mg=1,active_mg(myid,icoarselevel)%ngrid
          igrid_c_amr=active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
          icell_c_amr=iskip_c_amr+igrid_c_amr
@@ -82,7 +84,9 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
          active_mg(myid,icoarselevel)%u(icell_c_mg,4)=ngpmask
          allmasked=allmasked .and. (ngpmask<=0.0)
       end do
+!$OMP END DO NOWAIT
    end do
+!$OMP END PARALLEL
 
 end subroutine restrict_mask_coarse
 
@@ -174,11 +178,13 @@ subroutine cmp_residual_mg_coarse(ilevel)
    ngrid=active_mg(myid,ilevel)%ngrid
 
    ! Loop over cells myid
+!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind,iskip_mg,iskip_amr,igrid_mg,igrid_amr,icell_mg,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,igrid_nbor_mg,icell_nbor_mg,phi_c) FIRSTPRIVATE(ngrid,ilevel,myid,iii,jjj,oneoverdx2,dtwondim,ngridmax,ncoarse)
    do ind=1,twotondim
       iskip_mg  = (ind-1)*ngrid
       iskip_amr = ncoarse+(ind-1)*ngridmax
 
       ! Loop over active grids myid
+!$OMP DO SCHEDULE(DYNAMIC)
       do igrid_mg=1,ngrid
          igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
          icell_mg = igrid_mg + iskip_mg
@@ -256,7 +262,9 @@ subroutine cmp_residual_mg_coarse(ilevel)
          active_mg(myid,ilevel)%u(icell_mg,3) = &
           -oneoverdx2*( nb_sum - dtwondim*phi_c )+active_mg(myid,ilevel)%u(icell_mg,2)
       end do
+!$OMP END DO
    end do
+!$OMP END PARALLEL
 
 end subroutine cmp_residual_mg_coarse
 
@@ -370,6 +378,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
    ngrid=active_mg(myid,ilevel)%ngrid
 
    ! Loop over cells, with red/black ordering
+!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind0,ind,iskip_mg,igrid_mg,igrid_amr,icell_mg,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,igrid_nbor_mg,icell_nbor_mg,weight) FIRSTPRIVATE(ired,iblack,ngrid,ilevel,myid,iii,jjj,dx2,dtwondim,safe,redstep)
    do ind0=1,twotondim/2      ! Only half of the cells for a red or black sweep
       if(redstep) then
          ind = ired  (ndim,ind0)
@@ -380,6 +389,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
       iskip_mg  = (ind-1)*ngrid
 
       ! Loop over active grids
+!$OMP DO SCHEDULE(DYNAMIC)
       do igrid_mg=1,ngrid
          igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
          icell_mg  = iskip_mg  + igrid_mg
@@ -464,7 +474,9 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
                      / (dtwondim - weight)
          end if
       end do
+!$OMP END DO
    end do
+!$OMP END PARALLEL
 end subroutine gauss_seidel_mg_coarse
 
 ! ------------------------------------------------------------------------
@@ -564,10 +576,12 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
    icoarselevel=ifinelevel-1
 
    ! Loop over fine cells of the myid active comm
+!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(ind_f_cell,iskip_f_mg,igrid_f_mg,icell_f_mg,igrid_f_amr,icell_c_amr,ind_c_cell,igrid_c_amr,cpu_amr,igrid_c_mg,iskip_c_mg,icell_c_mg,res) FIRSTPRIVATE(myid,ifinelevel,icoarselevel,ngridmax,ncoarse,dtwotondim)
    do ind_f_cell=1,twotondim
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
       ! Loop over fine grids of myid
+!$OMP DO
       do igrid_f_mg=1,active_mg(myid,ifinelevel)%ngrid
          icell_f_mg=iskip_f_mg+igrid_f_mg
          ! Is fine cell masked?
@@ -593,8 +607,10 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,2)=&
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,2)+res
       end do
+!$OMP END DO
+! WILL THIS WORK? IT'S A REDUCTION SUM ON ACTIVE_MG !!! MAYBE USE SMALL BUFFER ARRAY ?
    end do
-
+!$OMP END PARALLEL
 end subroutine restrict_residual_coarse_reverse
 
 ! ------------------------------------------------------------------------
@@ -615,10 +631,10 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
    real(dp), dimension(1:8)     :: bbb
    integer,  dimension(1:8,1:8) :: ccc
 
-   integer,  dimension(1:nvector), save                :: igrid_f_amr, icell_amr, cpu_amr
-   integer,  dimension(1:nvector,1:threetondim), save  :: nbors_father_cells
-   integer,  dimension(1:nvector,1:twotondim), save    :: nbors_father_grids
-   real(dp), dimension(1:nvector), save                :: corr
+   integer,  dimension(1:nvector)                :: igrid_f_amr, icell_amr, cpu_amr
+   integer,  dimension(1:nvector,1:threetondim)  :: nbors_father_cells
+   integer,  dimension(1:nvector,1:twotondim)    :: nbors_father_grids
+   real(dp), dimension(1:nvector)                :: corr
 
    ! Local constants
    a = 1.0D0/4.0D0**ndim
@@ -640,6 +656,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active_mg(myid,ifinelevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(DYNAMIC) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(istart,nbatch,i,igrid_f_amr,icell_amr,cpu_amr,nbors_father_cells,nbors_father_grids,ind_f,iskip_f_amr,iskip_f_mg,corr,ind_average,ind_father,coeff,icell_f_mg,icell_c_amr,ind_c,igrid_c_amr,igrid_c_mg,cpu_c_amr,icell_c_mg) FIRSTPRIVATE(ngrid_f,ifinelevel,bbb,ccc,icoarselevel,ncoarse,ngridmax,myid)
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids
@@ -674,6 +691,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
             coeff      = bbb(ind_average)
             do i=1,nbatch
                icell_f_mg  = iskip_f_mg + istart+i-1
+
                if(active_mg(cpu_amr(i),ifinelevel)%u(icell_f_mg,4)<=0.0) then
                   corr(i)=0.0d0        ! Fine cell is masked : no correction
                   cycle
@@ -700,6 +718,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
       ! End loop over cells
 
    end do
+!$OMP END PARALLEL DO
    ! End loop over grids
 end subroutine interpolate_and_correct_coarse
 
@@ -734,8 +753,10 @@ subroutine set_scan_flag_coarse(ilevel)
    if(ngrid==0) return
 
    ! Loop over cells and set coarse SCAN flag
-   do ind=1,twotondim
+ !$OMP PARALLEL DEFAULT(none) SHARED(active_mg,son,nbor,cpu_map,lookup_mg) PRIVATE(ind,iskip_mg,igrid_mg,igrid_amr,icell_mg,scan_flag,idim,igshift,inbor,igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr,icell_nbor_mg) FIRSTPRIVATE(myid,ilevel,ngrid,iii,jjj)
+  do ind=1,twotondim
       iskip_mg  = (ind-1)*ngrid
+!$OMP DO SCHEDULE(DYNAMIC) 
       do igrid_mg=1,ngrid
          igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
          icell_mg  = iskip_mg  + igrid_mg
@@ -777,5 +798,7 @@ subroutine set_scan_flag_coarse(ilevel)
          end if
          active_mg(myid,ilevel)%f(icell_mg,1)=scan_flag
       end do
+!$OMP END DO NOWAIT
    end do
+!$OMP END PARALLEL 
 end subroutine set_scan_flag_coarse
