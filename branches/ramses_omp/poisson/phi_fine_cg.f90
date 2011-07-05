@@ -218,12 +218,12 @@ subroutine cmp_residual_cg(ilevel)
   real(dp)::dx2,fourpi,scale,oneoversix,fact
   integer,dimension(1:3,1:2,1:8)::iii,jjj
 
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
-  integer ,dimension(1:nvector,0:twondim),save::igridn
-  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
-  real(dp),dimension(1:nvector,1:ndim),save::phig,phid
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::phi_left,phi_right
-  real(dp),dimension(1:nvector),save::residu
+  integer ,dimension(1:nvector)::ind_grid,ind_cell
+  integer ,dimension(1:nvector,0:twondim)::igridn
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  real(dp),dimension(1:nvector,1:ndim)::phig,phid
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::phi_left,phi_right
+  real(dp),dimension(1:nvector)::residu
 
   ! Set constants
   dx2=(0.5D0**ilevel)**2
@@ -350,10 +350,10 @@ subroutine cmp_Ap_cg(ilevel)
   real(dp)::oneoversix
   integer,dimension(1:3,1:2,1:8)::iii,jjj
 
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim),save::igridn
-  real(dp),dimension(1:nvector,1:ndim),save::phig,phid
-  real(dp),dimension(1:nvector),save::residu
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim)::igridn
+  real(dp),dimension(1:nvector,1:ndim)::phig,phid
+  real(dp),dimension(1:nvector)::residu
 
   ! Set constants
   oneoversix=1.0D0/dble(twondim)
@@ -452,8 +452,8 @@ subroutine make_initial_phi(ilevel)
   !
   !
   integer::igrid,ncache,i,ngrid,ind,iskip,idim,ibound
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
-  real(dp),dimension(1:nvector,1:twotondim),save::phi_int
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,ind_cell_father
+  real(dp),dimension(1:nvector,1:twotondim)::phi_int
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -528,14 +528,14 @@ subroutine make_multipole_phi(ilevel)
   integer::ibound,boundary_dir,idim,inbor
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 
   real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps,r2
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector),save::rr,pp
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
+  real(dp),dimension(1:nvector)::rr,pp
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:ndim)::ff
 
 
   ! Mesh size at level ilevel

@@ -9,9 +9,9 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel)
   !
   integer::i,idim,ind,ix,iy,iz
   real(dp)::dx
-  real(dp),dimension(1:twotondim,1:3),save::xc
-  real(dp),dimension(1:nvector),save::a
-  real(dp),dimension(1:nvector,1:ndim),save::w
+  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:nvector)::a
+  real(dp),dimension(1:nvector,1:ndim)::w
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

@@ -22,8 +22,8 @@ subroutine force_fine(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
 
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
-  real(dp),dimension(1:nvector,1:ndim),save::xx,ff
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,ind_cell_father
+  real(dp),dimension(1:nvector,1:ndim)::xx,ff
  
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -209,11 +209,11 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel)
   real(dp)::dx,a,b,scale,dx_loc
   integer,dimension(1:3,1:4,1:8)::ggg,hhh
 
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
-  integer ,dimension(1:nvector,0:twondim),save::igridn
-  real(dp),dimension(1:nvector),save::phi1,phi2,phi3,phi4
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::phi_left,phi_right
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  integer ,dimension(1:nvector,0:twondim)::igridn
+  real(dp),dimension(1:nvector)::phi1,phi2,phi3,phi4
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::phi_left,phi_right
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

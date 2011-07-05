@@ -14,14 +14,14 @@ subroutine make_boundary_phi_isolated(ilevel)
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
-  integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
+  integer,dimension(1:nvector)::ind_grid,ind_grid_ref
+  integer,dimension(1:nvector)::ind_cell,ind_cell_ref
 
   real(dp)::switch,dx,dx_loc,scale
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector),save::pp
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector)::pp
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -132,14 +132,14 @@ subroutine make_boundary_force(ilevel)
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
-  integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
+  integer,dimension(1:nvector)::ind_grid,ind_grid_ref
+  integer,dimension(1:nvector)::ind_cell,ind_cell_ref
 
   real(dp)::switch,dx,dx_loc,scale
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:ndim)::ff
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -306,14 +306,14 @@ subroutine make_boundary_phi(ilevel)
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 
   real(dp)::dx,dx_loc,scale,fourpi,boxlen2
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector),save::rr,pp
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
+  real(dp),dimension(1:nvector)::rr,pp
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:ndim)::ff
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -414,7 +414,7 @@ subroutine make_boundary_mask(ilevel)
   integer::ibound,boundary_dir,idim,inbor
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
