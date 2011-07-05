@@ -264,7 +264,7 @@ subroutine compute_clump_properties()
 #ifdef WITHOUTMPI
   center_of_mass_tot=center_of_mass
 #endif
-#ifdef WITHOUTMPI
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(second_moments,second_moments_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI
@@ -319,7 +319,8 @@ subroutine compute_clump_properties_round2()
   ! variables to be used with get_cell_indices (vector-sweeps)
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
   integer,dimension(1:nvector)::ind_part,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
+  real(dp),dimension(1:nvector,1:ndim)::pos
+  real(dp),dimension(1:nvector,1:3)::init_pos
 
   ! variables related to the size of a cell on a given level
   real(dp)::dx,dx_loc,scale,vol_loc
@@ -650,7 +651,8 @@ subroutine saddlepoint_search()
   ! variables to be used with get_cell_indices (vector-sweeps)
   integer,dimension(1:nvector),save::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev,clump_nr
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
+  real(dp),dimension(1:nvector,1:ndim)::pos
+  real(dp),dimension(1:nvector,1:3)::init_pos
   ! saddle point array for 1 cpu
   real(kind=8),dimension(1:npeaks_tot,1:npeaks_tot)::saddle_dens
   saddle_dens=0.
@@ -1194,7 +1196,8 @@ subroutine write_peak_map
   integer::jj,i,kk 
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
   integer,dimension(1:nvector)::ind_part,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
+  real(dp),dimension(1:nvector,1:ndim)::pos
+  real(dp),dimension(1:nvector,1:3)::init_pos
   character(LEN=5)::myidstring,nchar
 
 
@@ -1230,7 +1233,7 @@ subroutine write_peak_map
                  call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
                  do jj=1,nvector
                     if (int(mp(ind_part(jj)))>0)then
-                       write(20,'(F10.8,A,F10.8,A,F10.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
+                       write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
                             ,init_pos(jj,3),',',int(mp(ind_part(jj)))
                        end if
                  end do
@@ -1247,7 +1250,7 @@ subroutine write_peak_map
         call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
         do jj=1,ip
            if (int(mp(ind_part(jj)))>0)then
-              write(20,'(F10.8,A,F10.8,A,F10.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
+              write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
                    ,init_pos(jj,3),',',int(mp(ind_part(jj)))
            end if
         end do

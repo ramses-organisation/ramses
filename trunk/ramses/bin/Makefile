@@ -7,7 +7,7 @@ NDIM = 3
 NPRE = 8
 NVAR = 5
 SOLVER = hydro
-PATCH = ../patch/eos_50
+PATCH = ../patch/EOS
 EXEC = ramses
 #############################################################################
 # Fortran compiler options and directives
@@ -16,12 +16,13 @@ EXEC = ramses
 #FFLAGS = -O0 -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVAR=$(NVAR)
 # --- No MPI, gfortran ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=-DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+
 #F90 = gfortran
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -ffree-line-length-none
 
 # --- No MPI, pgf90 ----------------------------------
-#F90 = pgf90
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+F90 = pgf90
+FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
 
 # --- No MPI, xlf ------------------------------------
 #F90 = xlf
@@ -40,8 +41,8 @@ EXEC = ramses
 #FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
-F90 = mpif90
-FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=$(NVECTOR)
+#F90 = mpif90 -frecord-marker=4 -O3
+#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=$(NVECTOR)
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3

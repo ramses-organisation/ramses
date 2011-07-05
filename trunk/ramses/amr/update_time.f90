@@ -198,23 +198,28 @@ end subroutine writemem
 subroutine getmem(outmem)
   real::outmem
   character(len=300) :: dir, dir2,  cmd, file
+  integer::read_status
   file='/proc/self/stat'
   open(unit=1,file=file,form='formatted')
-  read(1,'(A300)')dir
+  read(1,'(A300)',IOSTAT=read_status)dir
   close(1)
-  ind=300
-  j=0
-  do while (j<23)
+  if (read_status < 0)then
+     outmem=dble(0.)
+     if (myid==1)write(*,*)'Problem in checking free memory'
+  else
+     ind=300
+     j=0
+     do while (j<23)
+        ind=index(dir,' ')
+        dir2=dir(ind+1:300)
+        j=j+1
+        dir=dir2
+     end do
      ind=index(dir,' ')
-     dir2=dir(ind+1:300)
-     j=j+1
-     dir=dir2
-  end do
-  ind=index(dir,' ')
-  dir2=dir(1:ind)
-  read(dir2,'(I12)')nmem
-
-  outmem=dble(nmem)
+     dir2=dir(1:ind)
+     read(dir2,'(I12)')nmem
+     outmem=dble(nmem)
+  end if
 
 end subroutine getmem
 

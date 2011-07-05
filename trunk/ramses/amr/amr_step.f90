@@ -100,9 +100,13 @@ recursive subroutine amr_step(ilevel,icount)
         endif
         call dump_all
         if(clumpfind)then
-           if(verbose)print*,"enter clumpfinder"
-           call clump_finder
-           if(verbose)print*,"escaped clumpfinder"
+           if(ndim<3)then 
+              print*,"sorry, clumpfinder works currently in 3D only!"
+           else
+              if(verbose)print*,"enter clumpfinder"
+              call clump_finder
+              if(verbose)print*,"escaped clumpfinder"
+           endif
         endif
      endif
  

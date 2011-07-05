@@ -879,7 +879,9 @@ subroutine assign_part_to_peak()
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(nparts,nparts_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
-
+#ifdef WITHOUTMPI
+  nparts_tot=nparts
+#endif
 
 
   if(verbose)write(*,*)'parts on myid ',myid,' = ',nparts,nparts_tot
