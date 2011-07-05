@@ -11,7 +11,7 @@ subroutine cooling_fine(ilevel)
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
   integer::ncache,i,igrid,ngrid,info,isink
-  integer,dimension(1:nvector),save::ind_grid
+  integer,dimension(1:nvector)::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -54,9 +54,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer::i,ind,iskip,idim,nleaf,neul=5
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM
-  integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,emag
-  real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
+  integer,dimension(1:nvector)::ind_cell,ind_leaf
+  real(kind=8),dimension(1:nvector)::nH,T2,delta_T2,ekk,emag
+  real(kind=8),dimension(1:nvector)::T2min,Zsolar,boost
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
