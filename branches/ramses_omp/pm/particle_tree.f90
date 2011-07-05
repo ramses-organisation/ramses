@@ -19,9 +19,9 @@ subroutine init_tree
   integer::npart1,info,icpu,nx_loc
   logical::error
   real(dp),dimension(1:3)::xbound
-  integer,dimension(1:nvector),save::ix,iy,iz
-  integer,dimension(1:nvector),save::ind_grid,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
+  integer,dimension(1:nvector)::ix,iy,iz
+  integer,dimension(1:nvector)::ind_grid,ind_part
+  logical,dimension(1:nvector)::ok=.true.
   real(dp),dimension(1:3)::skip_loc
   real(dp)::scale
 
@@ -170,7 +170,7 @@ subroutine make_tree_fine(ilevel)
   real(dp),dimension(1:3)::skip_loc
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,icpu
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -259,14 +259,14 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,xxx,scale
   real(dp),dimension(1:3)::xbound
   ! Grid-based arrays
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_father
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_father
   ! Particle-based arrays
-  integer,dimension(1:nvector),save::ind_son,igrid_son
-  integer,dimension(1:nvector),save::list1,list2
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::ind_son,igrid_son
+  integer,dimension(1:nvector)::list1,list2
+  logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -374,7 +374,7 @@ subroutine kill_tree_fine(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::i,ig,ip,npart1,icpu
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
@@ -456,11 +456,11 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::i,j,idim,nx_loc
   real(dp)::dx,xxx,scale
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
+  real(dp),dimension(1:nvector,1:ndim)::x0
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1,list2
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::igrid_son,ind_son
+  integer,dimension(1:nvector)::list1,list2
+  logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -538,8 +538,8 @@ subroutine merge_tree_fine(ilevel)
   !---------------------------------------------------------------
   integer::igrid,iskip,icpu
   integer::i,ind,ncache,ngrid
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_grid_son
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_grid_son
+  logical,dimension(1:nvector)::ok
 
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
@@ -628,7 +628,7 @@ subroutine virtual_tree_fine(ilevel)
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
-  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
+  integer,dimension(1:nvector)::ind_part,ind_list,ind_com
   logical::ok_free,ok_all
 
   if(numbtot(1,ilevel)==0)return
@@ -839,7 +839,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   integer,dimension(1:nvector)::ind_part,ind_com,ind_list
   
   integer::i,idim
-  logical,dimension(1:nvector),save::ok=.true.
+  logical,dimension(1:nvector)::ok=.true.
 
   ! Gather particle level and identity
   do i=1,np
@@ -889,8 +889,8 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   integer,dimension(1:nvector)::ind_com
   
   integer::i,idim,igrid
-  integer,dimension(1:nvector),save::ind_list,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
+  integer,dimension(1:nvector)::ind_list,ind_part
+  logical,dimension(1:nvector)::ok=.true.
 
   ! Compute parent grid index
   do i=1,np

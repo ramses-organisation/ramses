@@ -161,10 +161,10 @@ subroutine create_test_particle(ilevel)
   real(dp)::mdebris,vdebris,zdebris,rdebris
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
-  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::list_debris,ind_debris
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,nstar
+  integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector)::list_debris,ind_debris
+  logical ,dimension(1:nvector)::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   
   if(numbtot(1,ilevel)==0) return
@@ -375,9 +375,9 @@ subroutine remove_test_particle(ilevel)
   integer::i,ig,ip,npart1
   real(dp)::dx
 
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim),save::x0
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim)::x0
     
   ! Loop over cpus
   do icpu=1,ncpu
@@ -442,7 +442,7 @@ subroutine rm_test(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::j,isink,ii,jj,kk,ind,idim,nx_loc
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,r2,r2_eps
   ! Particle-based arrays
-  logical,dimension(1:nvector),save::ok
+  logical,dimension(1:nvector)::ok
 
   do j=1,np
      ok(j)=.true.
@@ -475,7 +475,7 @@ subroutine move_test(nmove,ilevel)
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -547,19 +547,19 @@ subroutine movet(ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   ! Grid-based arrays
-  integer ,dimension(1:nvector),save::father_cell
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  integer ,dimension(1:nvector)::father_cell
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,xtest,xmax,dd,dg
-  real(dp),dimension(1:nvector),save::density_max,rr
-  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  integer ,dimension(1:nvector),save::cell_index,cell_levl,ind_max
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xpart
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:ndim)::x,ff,new_xp,xtest,xmax,dd,dg
+  real(dp),dimension(1:nvector)::density_max,rr
+  integer ,dimension(1:nvector,1:ndim)::ig,id,igg,igd,icg,icd
+  integer ,dimension(1:nvector)::cell_index,cell_levl,ind_max
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xpart
+  integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ! Meshspacing in that level
@@ -860,8 +860,8 @@ subroutine assign_part_to_peak(npeaks_per_cpu_tot,npeaks_tot)
   integer::npeaks,npeaks_tot,jj,peak_nr,icpu
   integer*8,dimension(1)::n_cls
 
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
+  integer,dimension(1:nvector)::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim)::pos
 
   integer,dimension(1:ncpu)::npeaks_per_cpu,npeaks_per_cpu_tot
@@ -1042,8 +1042,8 @@ subroutine create_peak_array(npeaks_per_cpu_tot,npeaks_tot)
   integer::nparts,nparts_tot,npeaks,npeaks_tot,jj,kk,peak_map_pos,i,peak_nr
   integer*8,dimension(1)::n_cls
 
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
+  integer,dimension(1:nvector)::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim)::pos
   real(dp),dimension(1:ndim)::position
 
@@ -1319,7 +1319,7 @@ subroutine get_cell_indices(init_cell_index,init_cell_lev,cell_index,cell_lev,in
   use pm_commons
   implicit none
   real(dp),dimension(1:nvector,1:ndim)::init_pos
-  real(dp),dimension(1:nvector,1:ndim),save::xtest
+  real(dp),dimension(1:nvector,1:ndim)::xtest
   integer::ilevel,j,np
   integer,dimension(1:nvector)::ind_part,init_cell_index,cell_index,cell_lev,init_cell_lev
 

@@ -220,9 +220,9 @@ subroutine rho_from_current_level(ilevel)
   integer::i,ig,ip,npart1
   real(dp)::dx
 
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim),save::x0
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim)::x0
     
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -312,17 +312,17 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   integer::j,ind,idim,nx_loc
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
-  real(dp),dimension(1:nvector),save::vol2
-  real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
-  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::mmm
+  real(dp),dimension(1:nvector)::ttt=0d0
+  real(dp),dimension(1:nvector)::vol2
+  real(dp),dimension(1:nvector,1:ndim)::x,dd,dg
+  integer ,dimension(1:nvector,1:ndim)::ig,id,igg,igd,icg,icd
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -620,9 +620,9 @@ subroutine multipole_fine(ilevel)
   !-------------------------------------------------------------------
   integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,info,ibound,nx_loc
   integer ::idim,nleaf,nsplit,ix,iy,iz,iskip_son,ind_son,ind_grid_son,ind_cell_son
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf,ind_split
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector),save::dd
+  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_leaf,ind_split
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector)::dd
   real(kind=8)::vol,dx,dx_loc,scale,vol_loc,mm
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -782,7 +782,7 @@ subroutine cic_from_multipole(ilevel)
   !-------------------------------------------------------------------
   integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
   integer ::idim,nleaf,ix,iy,iz,igrid
-  integer,dimension(1:nvector),save::ind_grid
+  integer,dimension(1:nvector)::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -842,18 +842,18 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
-  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::new_rho
+  integer ,dimension(1:nvector)::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  real(dp),dimension(1:nvector)::new_rho
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,ttt
-  real(dp),dimension(1:nvector),save::vol2
-  real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
-  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::mmm,ttt
+  real(dp),dimension(1:nvector)::vol2
+  real(dp),dimension(1:nvector,1:ndim)::x,dd,dg
+  integer ,dimension(1:nvector,1:ndim)::ig,id,igg,igd,icg,icd
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error

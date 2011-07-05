@@ -124,10 +124,10 @@ subroutine make_sink(ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
-  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::ind_part_cloud,ind_grid_cloud
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector)::ind_grid,ind_cell
+  integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector)::ind_part_cloud,ind_grid_cloud
+  logical ,dimension(1:nvector)::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
   
   if(numbtot(1,ilevel)==0) return
@@ -604,7 +604,7 @@ subroutine merge_sink(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc
   integer::igrp,icomp,gndx,ifirst,ilast,indx
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   integer,dimension(:),allocatable::psink,gsink
   real(dp),dimension(1:3)::xbound,skip_loc
 
@@ -867,7 +867,7 @@ subroutine kill_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::j,isink,ii,jj,kk,ind,idim,isink_new
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
+  logical ,dimension(1:nvector)::ok
 
   do j=1,np
      isink=-idp(ind_part(j))
@@ -907,7 +907,7 @@ subroutine create_cloud(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -997,8 +997,8 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::j,isink,ii,jj,kk,ind,idim,nx_loc,ncloud
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
   ! Particle-based arrays
-  integer ,dimension(1:nvector),save::ind_cloud
-  logical ,dimension(1:nvector),save::ok_true=.true.
+  integer ,dimension(1:nvector)::ind_cloud
+  logical ,dimension(1:nvector)::ok_true=.true.
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**ilevel
@@ -1072,7 +1072,7 @@ subroutine kill_cloud(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1161,7 +1161,7 @@ subroutine rm_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::j,isink,ii,jj,kk,ind,idim,nx_loc
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,r2,r2_eps
   ! Particle-based arrays
-  logical,dimension(1:nvector),save::ok
+  logical,dimension(1:nvector)::ok
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**ilevel
@@ -1203,7 +1203,7 @@ subroutine bondi_hoyle(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::r2,dx_loc,dx_min,scale,factG
 
   if(numbtot(1,ilevel)==0)return
@@ -1430,18 +1430,18 @@ subroutine bondi_velocity(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   logical::error
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
-  logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::meff
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  integer,dimension(1:nvector)::igrid_son,ind_son
+  integer,dimension(1:nvector)::list1
+  logical,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::meff
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer ,dimension(1:nvector,1:ndim)::id,igd,icd
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 #ifdef SOLVERhydro
   integer ::imetal=6
@@ -1604,17 +1604,17 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::d,u,v=0d0,w=0d0,e,bx1,bx2,by1,by2,bz1,bz2
   real(dp)::dx,length,scale,weight,r2
   ! Grid-based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::dgas,ugas,vgas,wgas,egas
-  real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
-  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::dgas,ugas,vgas,wgas,egas
+  real(dp),dimension(1:nvector,1:ndim)::x,dd,dg
+  integer ,dimension(1:nvector,1:ndim)::ig,id,igg,igd,icg,icd
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -1917,7 +1917,7 @@ subroutine grow_bondi(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info,iskip,ind
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale
   real(dp),dimension(1:3)::velocity
 
@@ -2083,18 +2083,18 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc,weight,acc_mass,temp
   logical::error
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
-  logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::meff
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  integer,dimension(1:nvector)::igrid_son,ind_son
+  integer,dimension(1:nvector)::list1
+  logical,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::meff
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer ,dimension(1:nvector,1:ndim)::id,igd,icd
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 #ifdef SOLVERhydro
   integer ::imetal=ndim+3
@@ -2414,7 +2414,7 @@ subroutine grow_jeans(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::r2,density,volume
 
   if(numbtot(1,ilevel)==0)return
@@ -2526,17 +2526,17 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc,temp,d_jeans,acc_mass,d_sink,d_thres
   logical::error
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
-  logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  integer,dimension(1:nvector)::igrid_son,ind_son
+  integer,dimension(1:nvector)::list1
+  logical,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer ,dimension(1:nvector,1:ndim)::id,igd,icd
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 #ifdef SOLVERhydro
   integer ::imetal=ndim+3
@@ -2897,7 +2897,7 @@ subroutine average_AGN
   !------------------------------------------------------------------------
   integer::ilevel,ncache,nSN,j,isink,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 #ifdef SOLVERhydro
   integer ::imetal=6
 #endif
@@ -2909,7 +2909,7 @@ subroutine average_AGN
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  logical ,dimension(1:nvector),save::ok
+  logical ,dimension(1:nvector)::ok
 
   if(nsink==0)return
   if(verbose)write(*,*)'Entering average_AGN'
@@ -3045,7 +3045,7 @@ subroutine AGN_blast
   !------------------------------------------------------------------------
   integer::ilevel,j,isink,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 #ifdef SOLVERhydro
   integer ::imetal=6
 #endif
@@ -3057,7 +3057,7 @@ subroutine AGN_blast
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  logical ,dimension(1:nvector),save::ok
+  logical ,dimension(1:nvector)::ok
 
   if(nsink==0)return
   if(verbose)write(*,*)'Entering AGN_blast'
@@ -3222,7 +3222,7 @@ subroutine quenching(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part,ind_cell,iskip,ind
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc
   real(dp),dimension(1:3)::skip_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

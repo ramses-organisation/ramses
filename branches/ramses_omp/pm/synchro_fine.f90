@@ -14,7 +14,7 @@ subroutine synchro_fine(ilevel)
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
   integer::ig,ip,npart1,isink,info
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -101,17 +101,17 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,length,scale,r2
   ! Grid-based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::dteff
-  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
-  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector)::dteff
+  real(dp),dimension(1:nvector,1:ndim)::x,ff,new_vp,dd,dg
+  integer ,dimension(1:nvector,1:ndim)::ig,id,igg,igd,icg,icd
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level

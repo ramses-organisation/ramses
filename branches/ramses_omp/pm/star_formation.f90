@@ -50,10 +50,10 @@ subroutine star_formation(ilevel)
   real(dp)::mdebris,vdebris,zdebris,rdebris
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
-  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::list_debris,ind_debris
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,nstar
+  integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector)::list_debris,ind_debris
+  logical ,dimension(1:nvector)::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   
   if(numbtot(1,ilevel)==0) return
