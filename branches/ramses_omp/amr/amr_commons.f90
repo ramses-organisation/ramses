@@ -26,6 +26,9 @@ module amr_commons
   ! MPI variables
   integer::ncpu,ndomain,myid,overload=1
 
+  ! OpenMP variables
+  integer:: nthreads
+
   ! Friedman model variables
   integer::n_frw
   real(dp),allocatable,dimension(:)::aexp_frw,hexp_frw,tau_frw,t_frw

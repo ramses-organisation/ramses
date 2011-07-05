@@ -2,10 +2,12 @@ subroutine read_params
   use amr_commons
   use pm_parameters
   use poisson_parameters
-  implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  use mpi
 #endif
+!$ use omp_lib
+
+  implicit none
   !--------------------------------------------------
   ! Local variables
   !--------------------------------------------------
@@ -44,6 +46,11 @@ subroutine read_params
   ncpu=1
   myid=1
 #endif
+
+! OpenMP initialization
+  nthreads=1
+!$ nthreads=omp_get_max_threads()
+ 
   !--------------------------------------------------
   ! Advertise RAMSES
   !--------------------------------------------------
@@ -59,7 +66,7 @@ subroutine read_params
   write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP)           '
   write(*,*)'                     (c) CEA 1999-2007                         '
   write(*,*)' '
-  write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
+  write(*,'(" Working with ",I4," mpi tasks and ",I4," openmp threads for ndim = ",I1)')ncpu,nthreads,ndim
   write(*,*)' '
 
   ! Read namelist filename from command line argument
@@ -107,19 +114,17 @@ subroutine read_params
   !-------------------------------------------------
   if(tend>0)then
      if(delta_tout==0)delta_tout=tend
-     noutput=MIN(int(tend/delta_tout),MAXOUT)
+     noutput=int(tend/delta_tout)
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
-     noutput=MIN(int(aend/delta_aout),MAXOUT)
+     noutput=int(aend/delta_aout)
      do i=1,noutput
         aout(i)=dble(i)*delta_aout
      end do
   endif
-  noutput=MIN(noutput,MAXOUT)
-
   !--------------------------------------------------
   ! Check for errors in the namelist so far
   !--------------------------------------------------
