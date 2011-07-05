@@ -221,10 +221,10 @@ subroutine ensure_ref_rules(ilevel)
   ! Used in case of adaptive time steps only.
   !-----------------------------------------------------------------
   integer::i,ind,iskip,igrid,ngrid,ncache
-  integer,dimension(1:nvector),save::ind_cell,ind_grid
-  integer,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::ind_cell,ind_grid
+  integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  logical,dimension(1:nvector)::ok
 
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -288,18 +288,18 @@ subroutine userflag_fine(ilevel)
   integer::i,j,ncache,nok,ix,iy,iz,iskip
   integer::igrid,ind,idim,ngrid,ivar
   integer::nx_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim),save::igridn
-  integer,dimension(1:nvector,1:twondim),save::indn
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim)::igridn
+  integer,dimension(1:nvector,1:twondim)::indn
 
-  logical,dimension(1:nvector),save::ok
+  logical,dimension(1:nvector)::ok
 
   real(dp)::dx,dx_loc,scale
   real(dp)::d0,dx_min,vol_min,mstar,msnk,nISM,nCOM
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:ndim)::xx
   
   logical::prevent_refine
 
@@ -574,8 +574,8 @@ subroutine smooth_fine(ilevel)
   integer::i,ncache,iskip,ngrid
   integer::igrid,ind
   integer,dimension(1:3)::n_nbor
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim),save::igridn
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim)::igridn
   
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -659,8 +659,8 @@ subroutine count_nbors(igridn,ind,n_nbor,nn)
   ! then cell is marked with flag2=1
   !----------------------------------------------------
   integer::i,in,iskip
-  integer,dimension(1:nvector),save::ind_cell,i_nbor
-  integer,dimension(1:nvector,1:twondim),save::indn
+  integer,dimension(1:nvector)::ind_cell,i_nbor
+  integer,dimension(1:nvector,1:twondim)::indn
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn
@@ -698,8 +698,8 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   ! then cell is marked with flag1=1
   !----------------------------------------------------
   integer::i,in,iskip
-  integer,dimension(1:nvector),save::ind_cell,i_nbor
-  integer,dimension(1:nvector,1:twondim),save::indn
+  integer,dimension(1:nvector)::ind_cell,i_nbor
+  integer,dimension(1:nvector,1:twondim)::indn
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn
@@ -753,15 +753,15 @@ subroutine init_refmap_fine(ilevel)
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,info,nvar_in
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector)::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector)       ,save::vv
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:nvar),save::uu
+  real(dp),dimension(1:nvector)       ::vv
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:nvar)::uu
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane

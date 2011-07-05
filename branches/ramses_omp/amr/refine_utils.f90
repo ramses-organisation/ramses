@@ -164,8 +164,8 @@ subroutine make_grid_coarse(ind_cell,ibound,boundary_region)
 
   real(dp)::dx_loc,scale
   real(dp),dimension(1:3)::xc,skip_loc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  integer ,dimension(1:nvector),save::cc
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  integer ,dimension(1:nvector)::cc
 
   ! Local constants
   nxny=nx*ny
@@ -336,9 +336,9 @@ subroutine refine_fine(ilevel)
   integer::ind,iskip,info,icpu,ibound
   integer::ncreate_tmp,nkill_tmp
   logical::boundary_region
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector),save::ind_grid_tmp,ind_cell_tmp
-  logical,dimension(1:nvector),save::ok
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid_tmp,ind_cell_tmp
+  logical,dimension(1:nvector)::ok
   logical::ok_free,ok_all
 
   if(ilevel==nlevelmax)return
@@ -558,26 +558,26 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   !--------------------------------------------------------------
   integer ::idim,igrid,iskip,icpu
   integer ::i,j,ix,iy,iz,ivar,nx_loc
-  integer ,dimension(1:nvector)          ,save::ind_grid_son
-  integer ,dimension(1:nvector,0:twondim),save::ind_fathers
-  integer ,dimension(1:nvector,0:twondim),save::igridn
-  integer ,dimension(1:nvector,1:twondim),save::indn
+  integer ,dimension(1:nvector)          ::ind_grid_son
+  integer ,dimension(1:nvector,0:twondim)::ind_fathers
+  integer ,dimension(1:nvector,0:twondim)::igridn
+  integer ,dimension(1:nvector,1:twondim)::indn
 
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::xc,skip_loc
 #ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
-  integer ,dimension(1:nvector,0:twondim),save::ind1
+  real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3)::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:nvar+3)::u2
+  integer ,dimension(1:nvector,0:twondim)::ind1
 #else
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
+  real(dp),dimension(1:nvector,0:twondim  ,1:nvar)::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:nvar)::u2
 #endif
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0
+  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)::g1=0.0
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::g2=0.0
 
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  integer ,dimension(1:nvector),save::cc
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  integer ,dimension(1:nvector)::cc
 
   logical::error
 
@@ -807,7 +807,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   !----------------------------------------------------
   integer::igrid,iskip,icpu
   integer::i,j,idim,ind,ivar
-  integer,dimension(1:nvector),save::ind_grid_son,ind_cell_son
+  integer,dimension(1:nvector)::ind_grid_son,ind_cell_son
   
   ! Gather son grids
   do i=1,nn

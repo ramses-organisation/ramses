@@ -47,13 +47,13 @@ subroutine authorize_fine(ilevel)
   integer::ismooth,ibound,ngrid,i,ncache,iskip,igrid,ind,icpu
   integer::ix,iy,iz,idim,nx_loc,isub
   integer,dimension(1:3)::n_nbor
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim),save::igridn
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim)::igridn
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(qdp),dimension(1:nvector),save::order_min,order_max
+  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(qdp),dimension(1:nvector)::order_min,order_max
   logical::test
   real(dp),dimension(1:ndim)::xmin,xmax
 
@@ -871,7 +871,7 @@ subroutine build_comm(ilevel)
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::countsend,countrecv
 #endif
-  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
 
   if(verbose)write(*,111)ilevel
   nxny=nx*ny
