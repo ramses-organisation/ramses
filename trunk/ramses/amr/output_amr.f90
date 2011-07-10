@@ -36,9 +36,9 @@ subroutine dump_all
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
+     call output_header(filename)
      if(myid==1)then
-        filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
-        call output_header(filename)
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
         if(cooling)then
@@ -337,31 +337,35 @@ subroutine output_header(filename)
 
   if(verbose)write(*,*)'Entering output_header'
 
-  ilun=myid+10
-
   ! Compute total number of particles
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI
   npart_tot=npart
 #endif
 
-  ! Open file
-  fileloc=TRIM(filename)
-  open(unit=ilun,file=fileloc,form='formatted')
-  
-  ! Write header information
-  write(ilun,*)'Total number of particles'
-  write(ilun,*)npart_tot
-  write(ilun,*)'Total number of dark matter particles'
-  write(ilun,*)npart_tot-nstar_tot
-  write(ilun,*)'Total number of star particles'
-  write(ilun,*)nstar_tot
-  write(ilun,*)'Total number of sink particles'
-  write(ilun,*)nsink
+  if(myid==1)then
 
-  close(ilun)
+     ilun=myid+10
+
+     ! Open file
+     fileloc=TRIM(filename)
+     open(unit=ilun,file=fileloc,form='formatted')
+     
+     ! Write header information
+     write(ilun,*)'Total number of particles'
+     write(ilun,*)npart_tot
+     write(ilun,*)'Total number of dark matter particles'
+     write(ilun,*)npart_tot-nstar_tot
+     write(ilun,*)'Total number of star particles'
+     write(ilun,*)nstar_tot
+     write(ilun,*)'Total number of sink particles'
+     write(ilun,*)nsink
+     
+     close(ilun)
+
+  endif
 
 end subroutine output_header
 
