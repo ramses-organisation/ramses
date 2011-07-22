@@ -159,6 +159,11 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   end do
 #endif
 
+  if(difmag>0.0)then
+    call cmpdivu(qin,divu,dx,dy,dz,ngrid)
+    call consup(uin,flux,divu,dt,ngrid)
+  endif
+
 end subroutine unsplit
 !###########################################################
 !###########################################################
