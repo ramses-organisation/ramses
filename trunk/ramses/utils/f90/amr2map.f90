@@ -447,7 +447,11 @@ program amr2map
               case (0)
                  map = ilevel
               case (1) ! Density
-                 map = var(:,ind,1)**2
+                 if(do_max)then
+                    map = var(:,ind,1)
+                 else
+                    map = var(:,ind,1)**2
+                 endif
               case (2) ! Mass weighted x-velocity
                  map = var(:,ind,2)*var(:,ind,1)
               case (3) ! Mass weighted y-velocity
@@ -455,12 +459,26 @@ program amr2map
               case (4) ! Mass weighted z-velocity
                  map = var(:,ind,4)*var(:,ind,1)
               case (5) ! Pressure
-                 map = var(:,ind,5)
+                 if(do_max)then
+                    map = var(:,ind,5)/var(:,ind,1)                    
+                 else
+                    map = var(:,ind,5)
+                 endif
               case (6) ! Passive scalar
-                 map = var(:,ind,6)*var(:,ind,1)
+                 if(do_max)then
+                    map = var(:,ind,6)
+                 else
+                    map = var(:,ind,6)*var(:,ind,1)
+                 endif
                  metmax=max(metmax,maxval(var(:,ind,6)))
               case (7)
-                 map = 0.5*(var(:,ind,1)**2+var(:,ind,2)**2+var(:,ind,3)**2)
+!                 map = 0.5*(var(:,ind,1)**2+var(:,ind,2)**2+var(:,ind,3)**2)
+                 if(do_max)then
+                    map = var(:,ind,7)
+                 else
+                    map = var(:,ind,7)*var(:,ind,1)
+                 endif
+                 metmax=max(metmax,maxval(var(:,ind,7)))
               end select
 
               ! Store data map
@@ -505,7 +523,7 @@ program amr2map
   end do
   ! End loop over cpu
 
-  if(type==6)then
+  if(type==6.or.type==7)then
      write(*,*)metmax
   endif
 
