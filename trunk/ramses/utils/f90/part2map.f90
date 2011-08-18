@@ -100,15 +100,17 @@ program part2map
 
   ! Read a density file from hop
   if(do_density)then
-     open(unit=1,file=filedens,form='unformatted',status='old',access='direct',recl=4)
+     open(unit=1,file=filedens,form='unformatted',status='old',access='direct',recl=1)
      read(1,rec=1)npart
      write(*,*)npart
      allocate(density(npart))
      do j=1,npart
         read(1,rec=j+1)density(j)
-        if(mod(j,10000).eq.0)write(*,*)j,density(j)
+!        if(mod(j,10000).eq.0)write(*,*)j,density(j)
      end do
      close(1)
+     write(*,*)'Min Max density'
+     write(*,*)minval(density),maxval(density)
   endif
 
   !-----------------------

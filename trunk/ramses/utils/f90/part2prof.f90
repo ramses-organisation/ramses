@@ -428,9 +428,9 @@ program part2prof
   do irad=1,nrad
      write(10,999)r(irad)*unit_l/3.08d21,prof(irad,idcdm),prof(irad,imcumcdm),prof(irad,imcumcdm)**2*r(irad)*unit_l/6.67e-8*1d10/2d33 &
           & ,prof(irad,iucumcdm),prof(irad,ivcumcdm),prof(irad,iwcumcdm),sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2) &
-          & ,prof(irad,ilxcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2) &
-          & ,prof(irad,ilycumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2) &
-          & ,prof(irad,ilzcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2)
+          & ,prof(irad,ilxcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30) &
+          & ,prof(irad,ilycumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30) &
+          & ,prof(irad,ilzcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30)
   end do
   close(10)
   open(unit=10,file=TRIM(nomfich)//".star",form='formatted')
