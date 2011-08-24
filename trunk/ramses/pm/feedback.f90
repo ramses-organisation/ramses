@@ -187,7 +187,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   error=.false.
   do idim=1,ndim
      do j=1,np
-        if(x(j,idim)<=0.0D0.or.x(j,idim)>=6.0D0)error=.true.
+        if(x(j,idim)<=2.0D0.or.x(j,idim)>=4.0D0)error=.true.
      end do
   end do
   if(error)then
@@ -299,6 +299,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         uold(indp(j),3)=uold(indp(j),3)+mloss(j)*vp(ind_part(j),2)
         uold(indp(j),4)=uold(indp(j),4)+mloss(j)*vp(ind_part(j),3)
         uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+        
      endif
   end do
   if(metal)then

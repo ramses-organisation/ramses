@@ -457,7 +457,7 @@ subroutine make_sink(ilevel)
            endif
 
            ! Mass of the new sink
-           msink_new(index_sink)=min((d-d_thres/4.0)*dx_loc**3,msink_max2)
+           msink_new(index_sink)=min((d-d_thres/4.0)*vol_loc,msink_max2)
            delta_mass_new(index_sink)=0d0
 
            ! Global index of the new sink
@@ -491,7 +491,7 @@ subroutine make_sink(ilevel)
            vsink_new(index_sink,2)=v
            vsink_new(index_sink,3)=w
            
-           uold(ind_cell_new(i),1)=uold(ind_cell_new(i),1)-msink_new(index_sink)
+           uold(ind_cell_new(i),1)=uold(ind_cell_new(i),1)-msink_new(index_sink)/vol_loc
            
         end do
         ! End loop over new sink particle cells
