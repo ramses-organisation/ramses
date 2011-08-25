@@ -38,6 +38,8 @@ subroutine compute_clump_properties()
   max_dens=0.; min_dens=1.d99
   clump_mass=0.; clump_vol=0.; clump_momentum=0.; center_of_mass=0.
 
+#if NDIM==3
+
   !------------------------------------------
   ! compute volume of a cell in a given level
   !------------------------------------------
@@ -286,6 +288,7 @@ subroutine compute_clump_properties()
      end if
   end do
 
+#endif
 
 end subroutine compute_clump_properties
 
@@ -333,6 +336,7 @@ subroutine compute_clump_properties_round2()
 
   e_kin_int=0.; clump_size=0.; e_bind=0.
 
+#if NDIM==3
 
   !------------------------------------------
   ! compute volume of a cell in a given level
@@ -520,7 +524,7 @@ subroutine compute_clump_properties_round2()
 #endif
 
 
-
+#endif
 
 end subroutine compute_clump_properties_round2
 
@@ -550,6 +554,8 @@ subroutine write_clump_properties(to_file,output_threshold)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   character(LEN=5)::nchar
+
+#if NDIM==3
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -623,6 +629,8 @@ subroutine write_clump_properties(to_file,output_threshold)
         close(21)
      end if
   end if
+
+#endif
 
 end subroutine write_clump_properties
 
@@ -1200,6 +1208,7 @@ subroutine write_peak_map
   real(dp),dimension(1:nvector,1:3)::init_pos
   character(LEN=5)::myidstring,nchar
 
+#if NDIM==3
 
   call title(ifout-1,nchar)
   call title(myid,myidstring)
@@ -1259,6 +1268,8 @@ subroutine write_peak_map
   !end loop over all particles
 
   close(20)
+
+#endif
 
 end subroutine write_peak_map
 
