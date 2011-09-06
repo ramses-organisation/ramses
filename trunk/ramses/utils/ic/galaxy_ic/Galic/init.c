@@ -19,10 +19,8 @@ init_units()
 
   UnitMass_in_g= 1.0e9 * SOLAR_MASS;                                      /* 1.0e9 M_sun    */
   UnitLength_in_cm= CM_PER_MPC / 1000;                                    /* 1 kpc          */
-/*   UnitTime_in_s= sqrt(pow(UnitLength_in_cm,3)/(GRAVITY * UnitMass_in_g)); */ // ~= 14.922 Myr
-  UnitTime_in_s= SEC_PER_MEGAYEAR; // Myr
-/*   UnitVelocity_in_cm_per_s= UnitLength_in_cm / UnitTime_in_s;            */ // ~= 65.6 km/sec
-  UnitVelocity_in_cm_per_s= 1.0e5; // km/s
+  UnitTime_in_s= sqrt(pow(UnitLength_in_cm,3)/(GRAVITY * UnitMass_in_g)); /* ~= 14.922 Myr  */
+  UnitVelocity_in_cm_per_s= UnitLength_in_cm / UnitTime_in_s;             /* ~= 65.6 km/sec */
 
   //UnitMass_in_g= 2.3262e5 * SOLAR_MASS;    /* ... */
   //UnitLength_in_cm= CM_PER_MPC/1000;   /* 1 kpc */

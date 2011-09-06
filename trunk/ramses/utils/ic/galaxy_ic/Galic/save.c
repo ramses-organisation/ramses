@@ -94,9 +94,9 @@ void save_particles(char *fdir)
       fprintf(fd_ic_part," %g",xp_halo[i]);
       fprintf(fd_ic_part," %g",yp_halo[i]);
       fprintf(fd_ic_part," %g",zp_halo[i]);
-      fprintf(fd_ic_part," %g",vxp_halo[i]);
-      fprintf(fd_ic_part," %g",vyp_halo[i]);
-      fprintf(fd_ic_part," %g",vzp_halo[i]);
+      fprintf(fd_ic_part," %g",vxp_halo[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vyp_halo[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vzp_halo[i] * UnitVelocity_in_cm_per_s / 1.0E5);
       fprintf(fd_ic_part," %g\n",mp_halo[i]);
 	  mtot +=mp_halo[i];
 	}
@@ -112,9 +112,9 @@ void save_particles(char *fdir)
       fprintf(fd_ic_part," %g",xp_bulge[i]);
       fprintf(fd_ic_part," %g",yp_bulge[i]);
       fprintf(fd_ic_part," %g",zp_bulge[i]);
-      fprintf(fd_ic_part," %g",vxp_bulge[i]);
-      fprintf(fd_ic_part," %g",vyp_bulge[i]);
-      fprintf(fd_ic_part," %g",vzp_bulge[i]);
+      fprintf(fd_ic_part," %g",vxp_bulge[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vyp_bulge[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vzp_bulge[i] * UnitVelocity_in_cm_per_s / 1.0E5);
       fprintf(fd_ic_part," %g\n",mp_bulge[i]);
 	  mtot +=mp_bulge[i];
     }
@@ -131,9 +131,9 @@ void save_particles(char *fdir)
       fprintf(fd_ic_part," %g",xp_disk[i]);
       fprintf(fd_ic_part," %g",yp_disk[i]);
       fprintf(fd_ic_part," %g",zp_disk[i]);
-      fprintf(fd_ic_part," %g",vxp_disk[i]);
-      fprintf(fd_ic_part," %g",vyp_disk[i]);
-      fprintf(fd_ic_part," %g",vzp_disk[i]);
+      fprintf(fd_ic_part," %g",vxp_disk[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vyp_disk[i] * UnitVelocity_in_cm_per_s / 1.0E5);
+      fprintf(fd_ic_part," %g",vzp_disk[i] * UnitVelocity_in_cm_per_s / 1.0E5);
       fprintf(fd_ic_part," %g\n",mp_disk[i]);
 	  mtot +=mp_disk[i];
     }      
@@ -142,24 +142,23 @@ void save_particles(char *fdir)
    
   
   /* Gas particles */
-/*   printf("Number of particles in the gas %d (not written)\n",N_GAS); */
   printf("Number of particles in the gas %d\n",N_GAS);
-  fprintf(fd_info," -Ngaz           = 0\n");//%d\n", N_GAS);
+  fprintf(fd_info," -Ngaz           = %d\n", N_GAS);
   mtot = 0.0;
   for(i=1;i<=N_GAS;i++)
     {
 /*       fprintf(fd_ic_part," %g",xp_gas[i]); */
 /*       fprintf(fd_ic_part," %g",yp_gas[i]); */
 /*       fprintf(fd_ic_part," %g",zp_gas[i]); */
-/*       fprintf(fd_ic_part," %g",vxp_gas[i]); */
-/*       fprintf(fd_ic_part," %g",vyp_gas[i]); */
-/*       fprintf(fd_ic_part," %g",vzp_gas[i]); */
+/*       fprintf(fd_ic_part," %g",vxp_gas[i] * UnitVelocity_in_cm_per_s / 1.0E5); */
+/*       fprintf(fd_ic_part," %g",vyp_gas[i] * UnitVelocity_in_cm_per_s / 1.0E5); */
+/*       fprintf(fd_ic_part," %g",vzp_gas[i] * UnitVelocity_in_cm_per_s / 1.0E5); */
 /*       fprintf(fd_ic_part," %g\n",mp_gas[i]); */
 	  mtot += mp_gas[i];
     }
-  fprintf(fd_info," -Mass_gaz       = 0.0\n");//%f\n", mtot);
+  fprintf(fd_info," -Mass_gaz       = %f\n", mtot);
   printf("Total mass of gaseous disk :  %f\n",mtot);
-/*   mtot_sum += mtot; */
+  mtot_sum += mtot;
 
  
   /* New formed stars */
