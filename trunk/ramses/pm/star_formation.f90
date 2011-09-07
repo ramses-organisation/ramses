@@ -40,6 +40,7 @@ subroutine star_formation(ilevel)
   logical ::ok_free,ok_all
   real(dp)::d,x,y,z,u,v,w,e,zg,vdisp,dgas
   real(dp)::mstar,dstar,tstar,nISM,nCOM
+  real(dp)::T2,nH,T_poly
   real(dp)::velc,uc,vc,wc,mass_load
   real(dp)::vxgauss,vygauss,vzgauss,birth_epoch
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
@@ -90,7 +91,11 @@ subroutine star_formation(ilevel)
   d00  = n_star/scale_nH
 
   ! Initial star particle mass
-  mstar=n_star/(scale_nH*aexp**3)*vol_min
+  if(m_star < 0d0)then
+     mstar=n_star/(scale_nH*aexp**3)*vol_min
+  else
+     mstar=m_star*mass_sph
+  endif
   dstar=mstar/vol_loc
 
   ! Birth epoch
@@ -185,6 +190,14 @@ subroutine star_formation(ilevel)
         do i=1,ngrid
            d=uold(ind_cell(i),1)
            if(d<=d0)ok(i)=.false. 
+        end do
+        ! Temperature criterion
+        do i=1,ngrid
+           T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
+           nH=uold(ind_cell(i),1)*scale_nH
+           T_poly=T2_star*(nH/nISM)**(g_star-1.0)
+           T2=T2-T_poly
+           if(T2>2e4)ok(i)=.false. 
         end do
         ! Geometrical criterion
         if(ivar_refine>0)then
@@ -390,15 +403,6 @@ subroutine star_formation(ilevel)
               uold(ind_cell(i),1)=max(d-n*dstar*(1.0+f_w),0.5*d)
            endif
         end do
-
-        ! For delayed cooling, reset time variable
-        if(delayed_cooling)then
-           do i=1,ngrid
-              if(flag2(ind_cell(i))>0)then
-                 uold(ind_cell(i),imetal+1)=-1d0/birth_epoch
-              endif
-           end do
-        endif
 
      end do
      ! End loop over cells

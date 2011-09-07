@@ -2,11 +2,11 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine thermal_feedback(ilevel)
+subroutine thermal_feedback(ilevel,icount)
   use pm_commons
   use amr_commons
   implicit none
-  integer::ilevel
+  integer::ilevel,icount
   !------------------------------------------------------------------------
   ! This routine computes the thermal energy, the kinetic energy and 
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
@@ -21,6 +21,7 @@ subroutine thermal_feedback(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  if(icount==2)return
 
   ! Gather star particles only.
 
@@ -97,6 +98,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use random
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -107,6 +109,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! uold.
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc
+  real(kind=8)::RandNum
+  real(dp)::SN_BOOST
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
   real(dp)::dx,dx_loc,scale,vol_loc,birth_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -131,6 +135,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #ifdef SOLVERmhd
   integer ::imetal=9
 #endif
+
+  SN_BOOST=1d0
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -242,16 +248,22 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end if
   end do
 
-  ! Compute individual time steps                                               
-  do j=1,np
-     if(ok(j))then
-        if(levelp(ind_part(j))>=ilevel)then
-           dteff(j)=dtnew(levelp(ind_part(j)))
-        else
+  ! Compute individual time steps
+  ! WARNING: the time step is always the coarser level time step
+  ! since we do not have feedback for icount=2
+  if(ilevel==levelmin)then
+     do j=1,np
+        if(ok(j))then
            dteff(j)=dtold(levelp(ind_part(j)))
         end if
-     endif
-  end do
+     end do
+  else
+     do j=1,np
+        if(ok(j))then
+           dteff(j)=dtold(levelp(ind_part(j))-1)
+        end if
+     end do
+  endif
 
   ! Reset ejected mass, metallicity, thermal energy
   do j=1,np
@@ -281,6 +293,19 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               endif
               ! Reduce star particle mass
               mp(ind_part(j))=mp(ind_part(j))-mejecta
+              ! Boost SNII energy and depopulate accordingly
+              if(SN_BOOST>1d0)then
+                 call ranf(localseed,RandNum)
+                 if(RandNum<1d0/SN_BOOST)then
+                    mloss(j)=SN_BOOST*mloss(j)
+                    mzloss(j)=SN_BOOST*mzloss(j)
+                    ethermal(j)=SN_BOOST*ethermal(j)
+                 else
+                    mloss(j)=0d0
+                    mzloss(j)=0d0
+                    ethermal(j)=0d0
+                 endif
+              endif
            endif
         end if
      end do
@@ -302,10 +327,21 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         
      endif
   end do
+
+  ! Add metals
   if(metal)then
      do j=1,np
         if(ok(j))then
            uold(indp(j),imetal)=uold(indp(j),imetal)+mzloss(j)
+        endif
+     end do
+  endif
+
+  ! Add delayed cooling switch variable
+  if(delayed_cooling)then
+     do j=1,np
+        if(ok(j))then
+           uold(indp(j),imetal+1)=uold(indp(j),imetal+1)+mloss(j)
         endif
      end do
   endif
