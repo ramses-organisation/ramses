@@ -386,10 +386,10 @@ subroutine condinit(x,u,dx,nn)
                 q(i,1)= q(i,1) * exp(-0.5D0 * (abs_z / HH)**2)
         end select
         q(i,1) = max(weight * q(i,1), dmin)
-        ! P = rho * a² = rho * Cs²
+        ! P=rho*cs^2
         q(i,ndim+2)=a2*q(i,1)
         ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
-        !  -> Vrot = sqrt(Vcirc**2 - 3*Cs² + r/rho * grad(rho) * Cs²)
+        !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
             case ('exponential')
                 Vrot = sqrt(max(Vcirc**2 - 3.0D0*a2 - r/rgal * a2,0.0D0))

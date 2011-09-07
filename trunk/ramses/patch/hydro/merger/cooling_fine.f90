@@ -10,11 +10,14 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info
+  integer::ncache,i,igrid,ngrid,info,isink
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+
+  ! Compute sink accretion rates
+  if(sink)call compute_accretion_rate(0)
 
   ! Operator splitting step for cooling source term
   ! by vector sweeps
@@ -37,7 +40,6 @@ subroutine cooling_fine(ilevel)
 end subroutine cooling_fine
 !###########################################################
 !###########################################################
-
 subroutine read_eos_params(eos_type, nH_H_cc_threshold)
   use amr_commons
   implicit none
@@ -73,7 +75,6 @@ subroutine read_eos_params(eos_type, nH_H_cc_threshold)
   end select
 
 end subroutine read_eos_params
-
 !###########################################################
 !###########################################################
 subroutine coolfine1(ind_grid,ngrid,ilevel)
@@ -89,15 +90,25 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(kind=8)::dtcool,nISM,nCOM
+  real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
-
+  real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,alpha_dx2
-  real(kind=8),dimension(1:3)::skip_loc
+
+  ! Mesh maximum resolution
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_min=0.5D0**nlevelmax
+  dx_loc=dx_min*scale
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -111,18 +122,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   ! Typical ISM density in H/cc
   nISM = n_star; nCOM=0d0
   if(cosmo)then
-     nCOM = del_star*omega_b*rhoc/aexp**3*X/mH
+     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
   endif
   nISM = MAX(nCOM,nISM)
-
-  ! Mesh maximum resolution
-  skip_loc(1)=dble(icoarse_min)
-  skip_loc(2)=dble(jcoarse_min)
-  skip_loc(3)=dble(kcoarse_min)
-  scale=boxlen/dble(icoarse_max-icoarse_min+1)*scale_l
-  dx=0.5D0**(nlevelmax)
-  dx_loc=dx*scale
-
 
   ! Loop over cells
   do ind=1,twotondim
@@ -196,53 +198,53 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     !do i=1,nleaf
-     !   T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
-     !   if(cooling)T2min(i)=T2min(i)+T2_min_fix
-     !end do
+     do i=1,nleaf
+        T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+     end do
      !==========================================
      ! You can put your own polytrope EOS here
      !==========================================
-     do i=1,nleaf
-        if(nH(i) .LT. 1.0D-3) then ! Low-density gamma=5/3 polytropic EOS
-            T2min(i) = 4.0D6*(nH(i) / 1.0D-3)**(gamma - 1.0D0)
-        else
-            select case (eos_type)
-                case ('isothermal') ! Isothermal EOS
+     if(isothermal)then
+        do i=1,nleaf
+           if(nH(i) .LT. 1.0D-3) then ! Low-density gamma=5/3 polytropic EOS
+              T2min(i) = 4.0D6*(nH(i) / 1.0D-3)**(gamma - 1.0D0)
+           else
+              select case (eos_type)
+              case ('isothermal') ! Isothermal EOS
+                 T2min(i) = T2_star
+              case ('pseudo_cooling') ! Pseudo-coolong EOS
+                 if(nH(i) .LT. 10.0D0**(-0.5D0)) then ! Isothermal T2_star EOS
                     T2min(i) = T2_star
-                case ('pseudo_cooling') ! Pseudo-coolong EOS
-                    if(nH(i) .LT. 10.0D0**(-0.5D0)) then ! Isothermal T2_star EOS
-                        T2min(i) = T2_star
-                    else ! Cooling EOS
-                        T2min(i) = T2_star * (nH(i)/10.0D0**(-0.5D0))**(-1.0D0/2.0D0)
-                    end if
-                case ('gamma_support') ! Adiabatic gas
-                    if(nH(i) .LT. nH_H_cc_threshold) then ! Isothermal T2_star EOS
-                        T2min(i) = T2_star
-                    else ! (Gamma-1) polytropic EOS
-                        T2min(i) = T2_star * (nH(i)/nH_H_cc_threshold)**(g_star-1.0D0)
-                    end if
-                case default ! Isothermal EOS
+                 else ! Cooling EOS
+                    T2min(i) = T2_star * (nH(i)/10.0D0**(-0.5D0))**(-1.0D0/2.0D0)
+                 end if
+              case ('gamma_support') ! Adiabatic gas
+                 if(nH(i) .LT. nH_H_cc_threshold) then ! Isothermal T2_star EOS
                     T2min(i) = T2_star
-            end select
-        end if
-        ! high-density gamma=2 polytropic EOS (Jeans criterion)
-        ! Spherical collapse
-        !   alpha_dx2 = 16.0D0 * (32.0D0/3.0D0) * (mH/kB) / (scale_t**2 * scale_d * dacos(-1.0D0) * g_star) * dx_loc**2
-        ! Infinite 1D sinusoidal perturbartion collapse
-        alpha_dx2 = 16 * (mH/kB) / (scale_t**2 * scale_d * dacos(-1.0D0) * gamma) * dx_loc**2
-        T2min(i) = max(T2min(i), alpha_dx2 * (nH(i)*mH))
-        if(cooling)T2min(i)=T2min(i)+T2_min_fix
-     end do
-
+                 else ! (Gamma-1) polytropic EOS
+                    T2min(i) = T2_star * (nH(i)/nH_H_cc_threshold)**(g_star-1.0D0)
+                 end if
+              case default ! Isothermal EOS
+                 T2min(i) = T2_star
+              end select
+           end if
+           ! high-density gamma=2 polytropic EOS (Jeans criterion)
+           ! Spherical collapse
+           !   alpha_dx2 = 16.0D0 * (32.0D0/3.0D0) * (mH/kB) / (scale_t**2 * scale_d * dacos(-1.0D0) * g_star) * dx_loc**2
+           ! Infinite 1D sinusoidal perturbartion collapse
+           alpha_dx2 = 16 * (mH/kB) / (scale_t**2 * scale_d * dacos(-1.0D0) * gamma) * (dx_loc*scale_l)**2
+           T2min(i) = max(T2min(i), alpha_dx2 * (nH(i)*mH))
+        end do
+     endif
 
      ! Compute cooling time step in second
      dtcool = dtnew(ilevel)*scale_t
 
      ! Compute net cooling at constant nH
      if(cooling)then
+        ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
-           T2(i)=MAX(T2(i),T2min(i))
+           T2(i)=max(T2(i)-T2min(i),T2_min_fix)
         end do
         call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
@@ -257,6 +259,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
         end do
+        ! Turn off cooling in blast wave regions
+        if(delayed_cooling)then
+           do i=1,nleaf
+              cooling_switch=uold(ind_leaf(i),ndim+4)/uold(ind_leaf(i),1)
+              if(cooling_switch>1d-3)then
+                 delta_T2(i)=0
+              endif
+           end do
+        endif
      endif
 
      ! Compute minimal total energy from polytrope
@@ -280,6 +291,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      else
         do i=1,nleaf
            uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))
+        end do
+     endif
+
+     ! Update delayed cooling switch
+     if(delayed_cooling)then
+        t_blast=20d0*1d6*(365.*24.*3600.)
+        damp_factor=exp(-dtcool/t_blast)
+        do i=1,nleaf
+           uold(ind_leaf(i),ndim+4)=uold(ind_leaf(i),ndim+4)*damp_factor
         end do
      endif
 
