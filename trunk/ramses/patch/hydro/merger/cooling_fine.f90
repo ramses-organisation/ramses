@@ -97,7 +97,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
-  real(kind=8)::dx,dx_loc,scale,alpha_dx2
+  real(kind=8)::dx,dx_loc,scale,dx_min,alpha_dx2
 
   ! Mesh maximum resolution
   dx=0.5D0**ilevel 
