@@ -177,7 +177,7 @@ recursive subroutine amr_step(ilevel,icount)
      call force_fine(ilevel)
 
      ! Thermal feedback from stars
-     if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
+     if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel,icount)
 
      ! Synchronize remaining particles for gravity
      if(pic)then
