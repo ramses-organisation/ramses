@@ -12,14 +12,15 @@ program histo_main
   integer::nlevelmaxs,nlevel,iout
   integer::ind,ipos,ngrida,ngridh,ilevela,ilevelh
   integer::ngridmax,nstep_coarse,icpu,ncpu_read
-  integer::nhx,nhy,ihx,ihy,ivar1,ivar2
+  integer::nhx=0,nhy=0,ihx,ihy,ivar1,ivar2
   real::gamma,smallr,smallc,gammah
   real::boxlen,boxlen2
   real::t,aexp,hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
   real::omega_m2,omega_l2,omega_k2,omega_b2
-
+  real::tpoly=0d0, npoly=1.0
+  
   integer::nx_sample=0,ny_sample=0,nz_sample=0
   integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
@@ -95,8 +96,8 @@ program histo_main
   tymin=log10(tmin)
   tymax=log10(tmax)
 
-  write(*,*)dymin,dymax
-  write(*,*)tymin,tymax
+  write(*,*)nhx,dymin,dymax
+  write(*,*)nhy,tymin,tymax
 
   allocate(histo(nhx,nhy))
   histo=0.0d0
@@ -433,7 +434,8 @@ program histo_main
                       & x(i,3)>zzmin.and.x(i,3)<zzmax
                  if(ok_cell)then
                     xx=log10(rho(i)/1.66d-24*0.76)
-                    yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24)
+                    yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24 &
+                         & -tpoly*(rho(i)/1.66d-24*0.76/npoly))
                     dxx=(xx-dymin)/(dymax-dymin)*dble(nhx)
                     dyy=(yy-tymin)/(tymax-tymin)*dble(nhy)
                     ihx=int(dxx)
@@ -540,6 +542,10 @@ contains
           read (arg,*) zmax
        case ('-lma')
           read (arg,*) lmax
+       case ('-tpo')
+          read (arg,*) tpoly
+       case ('-npo')
+          read (arg,*) npoly
        case default
           print '("unknown option ",a2," ignored")', opt
 
