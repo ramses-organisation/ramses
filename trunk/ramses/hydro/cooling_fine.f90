@@ -53,7 +53,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   !-------------------------------------------------------------------
   integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(kind=8)::dtcool,nISM,nCOM,t_yso,t_off
+  real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
@@ -197,12 +197,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
         end do
+        ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
-           t_off=50.*1d6*(365.*24.*3600.)/scale_t
            do i=1,nleaf
-              t_yso=(1d0/(uold(ind_leaf(i),ndim+4) &
-                   & /max(uold(ind_leaf(i),1),smallr)+1d-15)+t)
-              if(t_yso<t_off)delta_T2(i)=0
+              cooling_switch=uold(ind_leaf(i),ndim+4)/uold(ind_leaf(i),1)
+              if(cooling_switch>1d-3)then
+                 delta_T2(i)=0
+              endif
            end do
         endif
      endif
@@ -228,6 +229,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      else
         do i=1,nleaf
            uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))
+        end do
+     endif
+
+     ! Update delayed cooling switch
+     if(delayed_cooling)then
+        t_blast=20d0*1d6*(365.*24.*3600.)
+        damp_factor=exp(-dtcool/t_blast)
+        do i=1,nleaf
+           uold(ind_leaf(i),ndim+4)=uold(ind_leaf(i),ndim+4)*damp_factor
         end do
      endif
 

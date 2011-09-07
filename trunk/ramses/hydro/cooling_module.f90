@@ -575,7 +575,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
            ! Heating
            fa=table%heat(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
            fb=table%heat(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%heat_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
+           fprimea=table%heat_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
            fprimeb=table%heat_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
            alpha=fprimea
            beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
@@ -597,7 +597,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
            ! Compton heating
            fa=table%heat_com(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat_com(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
            fb=table%heat_com(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_com(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%heat_com_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_com_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
+           fprimea=table%heat_com_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat_com_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
            fprimeb=table%heat_com_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_com_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
            alpha=fprimea
            beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
