@@ -110,7 +110,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc
   real(kind=8)::RandNum
-  real(dp)::SN_BOOST
+  real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
   real(dp)::dx,dx_loc,scale,vol_loc,birth_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -136,8 +136,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ::imetal=9
 #endif
 
-  SN_BOOST=1d0
-
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -151,6 +149,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
+  dx_min=(0.5D0**nlevelmax)*scale
+  vol_min=dx_min**ndim
+
+  ! Minimum star particle mass
+  if(m_star < 0d0)then
+     mstar=n_star/(scale_nH*aexp**3)*vol_min
+  else
+     mstar=m_star*mass_sph
+  endif
+
+  ! Compute stochastic boost to account for target GMC mass
+  SN_BOOST=MAX(mass_gmc/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
   t0=10.*1d6*(365.*24.*3600.)/scale_t
