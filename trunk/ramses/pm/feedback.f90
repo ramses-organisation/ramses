@@ -160,7 +160,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Compute stochastic boost to account for target GMC mass
-  SN_BOOST=MAX(mass_gmc/(scale_d*scale_l**3)/mstar,1d0)
+  SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
   t0=10.*1d6*(365.*24.*3600.)/scale_t
