@@ -61,6 +61,8 @@ subroutine init_time
         J21=0.0
      endif
      if(cosmo)then
+        ! Reonization redshift has to be later than starting redshift
+        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
         call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
