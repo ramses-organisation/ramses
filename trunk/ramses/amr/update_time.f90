@@ -223,6 +223,49 @@ subroutine getmem(outmem)
 
 end subroutine getmem
 
+subroutine cmpmem(outmem)
+  use amr_commons
+  use hydro_commons
+  implicit none
+
+  real::outmem,outmem_int,outmem_dp,outmem_qdp
+  outmem_int=0.0
+  outmem_dp=0.0
+  outmem_qdp=0.0
+
+  outmem_dp =outmem_dp +ngridmax*ndim      ! xg
+  outmem_int=outmem_int+ngridmax*twondim   ! nbor
+  outmem_int=outmem_int+ngridmax           ! father
+  outmem_int=outmem_int+ngridmax           ! next
+  outmem_int=outmem_int+ngridmax           ! prev
+  outmem_int=outmem_int+ngridmax*twotondim ! son 
+  outmem_int=outmem_int+ngridmax*twotondim ! flag1
+  outmem_int=outmem_int+ngridmax*twotondim ! flag2
+  outmem_int=outmem_int+ngridmax*twotondim ! cpu_map1
+  outmem_int=outmem_int+ngridmax*twotondim ! cpu_map2
+  outmem_qdp=outmem_qdp+ngridmax*twotondim ! hilbert_key
+
+  ! Add communicator variable here
+
+  if(hydro)then
+     
+  outmem_dp =outmem_dp +ngridmax*twotondim*nvar ! uold
+  outmem_dp =outmem_dp +ngridmax*twotondim*nvar ! unew
+
+  if(pressure_fix)then
+
+  outmem_dp =outmem_dp +ngridmax*twotondim ! uold
+  outmem_dp =outmem_dp +ngridmax*twotondim ! uold
+
+  endif
+
+  endif
+
+  write(*,*)'Estimated memory=',(outmem_dp*8.+outmem_int*4.+outmem_qdp*8.)/1024./1024.
+
+
+end subroutine cmpmem
+
 
 
 
