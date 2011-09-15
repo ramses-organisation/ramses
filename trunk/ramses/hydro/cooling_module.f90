@@ -106,9 +106,9 @@ module cooling_module
   ! Sauvegarde des termes de cooling/heating dans les
   logical, parameter :: if_cooling_functions=.true. 
   ! variables en dessous
-  real(kind=8) ::cb1s,cb2s,cb3s,ci1s,ci2s,ci3s,cr1s,cr2s,cr3s,cds
-  real(kind=8) ::ce1s,ce3s,ch1s,ch2s,ch3s,cocs,cohs
-  real(kind=8) ::cool_out, heat_out
+  real(kind=8)::cb1s,cb2s,cb3s,ci1s,ci2s,ci3s,cr1s,cr2s,cr3s,cds
+  real(kind=8)::ce1s,ce3s,ch1s,ch2s,ch3s,cocs,cohs
+  real(kind=8)::cool_out, heat_out
 
   ! Les heating et photoionization rates de Dave et al. 
   ! pour le J0 derniere version de HM (weinberg ou weinbergint si
@@ -173,7 +173,7 @@ module cooling_module
                         -26.4168,  0.0479454,  1.70948, &
                         -1.26395,  0.378922,  -0.0570957, &
                          0.00428897, -0.000127909 /),(/Nordercourty+1,6/) )
-  real,dimension(6)    :: coef_fit= (/ 20., 20., 20., 20., 20., 20. /) 
+  real(kind=8),dimension(6)    :: coef_fit= (/ 20., 20., 20., 20., 20., 20. /) 
   integer,dimension(6) :: beta_fit= (/  6,   6,   8,   6,   6,  8  /)
 
 contains 
@@ -243,7 +243,7 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   real(kind=8) :: J0in_in,zreioniz_in,J0min_in,alpha_in,normfacJ0_in,astart_sim,T2_sim
   real(kind=8) :: J0min_ref_calc,h,omegab,omega0,omegaL
   integer :: Nmodel,correct_cooling,realistic_ne
-  real(kind=8) :: astart,aend,dasura,T2end,mu,ne
+  real(kind=8) :: astart,aend,dasura,T2end,mu,ne,minus1
   if (Nmodel /= -1) then
      teyssier=.false.
      theuns=.false.
@@ -269,10 +269,10 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
         STOP
      endif
   endif
-  if (J0in_in >= 0.d0) J0in=J0in_in
-  if (zreioniz_in >= 0.d0) zreioniz=zreioniz_in
-  if (alpha_in > 0.d0) alpha=alpha_in
-  if (normfacJ0_in > 0.d0) normfacJ0=normfacJ0_in
+  if (J0in_in >= 0.0) J0in=J0in_in
+  if (zreioniz_in >= 0.0) zreioniz=zreioniz_in
+  if (alpha_in > 0.0) alpha=alpha_in
+  if (normfacJ0_in > 0.0) normfacJ0=normfacJ0_in
   if (correct_cooling == 0) then
      dumfac_ion=1.d0
      dumfac_rec=1.d0
@@ -311,7 +311,8 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   ! Calcul de la temperature initiale
   aend=astart_sim
   dasura=0.02d0
-  call evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL,-1.0d0,T2end,mu,ne,.false.)
+  minus1=-1.0
+  call evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL,minus1,T2end,mu,ne,.false.)
   if (verbose_cooling) write(*,*) 'Starting temperature in K :',T2end*mu
   T2_sim=T2end 
 end subroutine set_model
@@ -388,8 +389,7 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
   real(kind=8) ::diff
   integer::niter
   real(kind=8) :: n_spec(1:6)
-
-  if (J0min_in > 0.d0) then
+  if (J0min_in > 0.0) then
      if (high_z_realistic_ne) then
         J0min_ref = J0min_in
         aexp_ref = astart
@@ -455,7 +455,7 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   xval=sqrt(omega0)/(h*omegab)
   ne_to_find=1.2d-5*xval ! From the book of Peebles p. 173
   astart=aexp_ref
-  aend=MIN(0.05d0,0.5d0/(1d0+zreioniz))
+  aend=MIN(0.05d0,0.5d0/(1d0+zreioniz)) ! Always end before reionization
   dasura=0.05
   err_J0min=1.
   J0min_left=1d-20
@@ -542,8 +542,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
      
      iter=iter+1
      if (iter > 500) then
-        write(*,*) 'Too many iterations in solve_cooling'
-        write(*,*)iter,n
+        write(*,*) 'Too many iterations in solve_cooling',iter,n
         do i=1,n
            write(*,*)i,tau(ind(i)),T2(ind(i)),nH(ind(i)),i_nH(ind(i))
         end do
@@ -1483,7 +1482,6 @@ function taux_rad_theuns(ispec,J0)
   implicit none
   integer :: ispec
   real(kind=8) :: J0,taux_rad_theuns
-
   if (ispec==HI  ) taux_rad_theuns=1.26D10*J0/(3.D0+alpha)
   if (ispec==HEI ) taux_rad_theuns=1.48D10*J0*0.553D0**alpha &
                      & *(1.66D0/(alpha+2.05D0)-0.66D0/(alpha+3.05D0))
