@@ -54,6 +54,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
+  real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
@@ -80,6 +81,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
   endif
   nISM = MAX(nCOM,nISM)
+
+  ! Polytropic constant for Jeans length related polytropic EOS
+  if(jeans_ncells>0)then
+     polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
+          & (twopi)*6.67e-8*scale_d*(scale_t/scale_l)**2
+  endif
 
   ! Loop over cells
   do ind=1,twotondim
@@ -153,9 +160,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     do i=1,nleaf
-        T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
-     end do
+     if(jeans_ncells>0)then
+        do i=1,nleaf
+           T2min(i) = nH(i)*polytropic_constant*scale_T2
+        end do
+     else
+        do i=1,nleaf
+           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+        end do
+     endif
      !==========================================
      ! You can put your own polytrope EOS here
      !==========================================
@@ -167,7 +180,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(cooling)then
         ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
-           T2(i)=max(T2(i)-T2min(i),T2_min_fix)
+           T2(i) = max(T2(i)-T2min(i),T2_min_fix)
         end do
         call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif

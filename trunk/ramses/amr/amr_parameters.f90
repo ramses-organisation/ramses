@@ -103,8 +103,9 @@ module amr_parameters
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
   real(dp)::eps_star=0.0D0    ! Star formation efficiency (0.02 at n_star=0.1 gives t_star=8 Gyr)
-  real(dp)::T2_star=0.0D0     ! Typical ISM temperature
+  real(dp)::T2_star=0.0D0     ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6D0     ! Typical ISM polytropic index
+  real(dp)::jeans_ncells=-1   ! Jeans polytropic EOS
   real(dp)::del_star=2.D2     ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0.0D0     ! Supernova mass fraction
   real(dp)::yield  =0.0D0     ! Supernova yield
