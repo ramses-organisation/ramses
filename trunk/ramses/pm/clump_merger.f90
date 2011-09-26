@@ -566,8 +566,8 @@ subroutine write_clump_properties(to_file,output_threshold)
   if(myid==1) then 
      rel_mass=0.
      n_rel=0
-     write(*,*)'Cl_N  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'&
-' size_z [AU] |v|_CM [u.u.] rho- [g/cc] rho+ [g/cc] rho_av [g/cc] M_cl [M_sol] V_cl [AU^3] relevance E_bind/E_kin'
+     write(*,*)'Cl_N  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'//&
+          & ' size_z [AU] |v|_CM [u.u.] rho- [g/cc] rho+ [g/cc] rho_av [g/cc] M_cl [M_sol] V_cl [AU^3] relevance E_bind/E_kin'
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > output_threshold)then
@@ -598,8 +598,8 @@ subroutine write_clump_properties(to_file,output_threshold)
         call title(ifout-1,nchar)
         open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_info.txt'),form='formatted')
         open(unit=21,file=TRIM('output_'//TRIM(nchar)//'/clump_masses.txt'),form='formatted')
-        write(20,*),' Cl_N peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU] size_z [AU]'& 
-'|v|_CM [u.u.] rho- [g/cc] rho+ [g/cc] rho_av [g/cc] M_cl [M_sol] V_cl [AU^3] relevance E_bind/E_kin'
+        write(20,*),' Cl_N peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU] size_z [AU]'//& 
+             & '|v|_CM [u.u.] rho- [g/cc] rho+ [g/cc] rho_av [g/cc] M_cl [M_sol] V_cl [AU^3] relevance E_bind/E_kin'
         do j=npeaks_tot,1,-1
            jj=sort_index(j)
            if (relevance_tot(jj) > output_threshold)then

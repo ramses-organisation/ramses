@@ -31,12 +31,6 @@ subroutine star_formation(ilevel)
   integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot
   integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc
   integer ::ntot,ntot_all,info,nstar_corrected,ideb,ndeb
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   logical ::ok_free,ok_all
   real(dp)::d,x,y,z,u,v,w,e,zg,vdisp,dgas
   real(dp)::mstar,dstar,tstar,nISM,nCOM

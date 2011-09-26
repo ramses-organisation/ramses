@@ -1,4 +1,4 @@
-subroutine read_hydro_params(nml_ok)
+7subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
   implicit none
@@ -243,6 +243,17 @@ subroutine read_hydro_params(nml_ok)
   do i=1,levelmin-1
      jeans_refine(i)=-1.0
   end do
+
+  !-----------------------------------
+  ! Sort out passive variable indices
+  !-----------------------------------
+  imetal=9
+  idelay=imetal
+  if(metal)idelay=imetal+1
+  ixion=idelay
+  if(delayed_cooling)ixion=idelay+1
+  ichem=ixion
+  if(aton)ichem=ixion+1
 
 end subroutine read_hydro_params
 

@@ -198,7 +198,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
            do i=1,nleaf
-              cooling_switch=uold(ind_leaf(i),ndim+4)/uold(ind_leaf(i),1)
+              cooling_switch=uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
               if(cooling_switch>1d-3)then
                  delta_T2(i)=0
               endif
@@ -235,7 +235,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         t_blast=20d0*1d6*(365.*24.*3600.)
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+4)=uold(ind_leaf(i),ndim+4)*damp_factor
+           uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor
         end do
      endif
 

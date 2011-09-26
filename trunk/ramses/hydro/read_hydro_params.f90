@@ -234,5 +234,16 @@ subroutine read_hydro_params(nml_ok)
      jeans_refine(i)=-1.0
   end do
 
+  !-----------------------------------
+  ! Sort out passive variable indices
+  !-----------------------------------
+  imetal=ndim+3
+  idelay=imetal
+  if(metal)idelay=imetal+1
+  ixion=idelay
+  if(delayed_cooling)ixion=idelay+1
+  ichem=ixion
+  if(aton)ichem=ixion+1
+
 end subroutine read_hydro_params
 

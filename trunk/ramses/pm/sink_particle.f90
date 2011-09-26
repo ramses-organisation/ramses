@@ -108,12 +108,6 @@ subroutine make_sink(ilevel)
   integer ::ii,jj,kk,ind_cloud,ncloud
   integer ::ntot,ntot_all,info
   logical ::ok_free
-#ifdef SOLVERhydro
-  integer ::imetal=ndim+3
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::d,x,y,z,u,v,w,e,temp,zg,factG
   real(dp)::dxx,dyy,dzz,drr
@@ -1446,12 +1440,6 @@ subroutine bondi_velocity(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -2099,12 +2087,6 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=ndim+3
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -2563,14 +2545,8 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=ndim+3
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
-  ! Conversion factor from user units to cgs units                              
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Gravitational constant
@@ -2801,12 +2777,6 @@ subroutine agn_feedback
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
   integer::nSN,nSN_loc,nSN_tot,info,isink,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar,temp_blast
   real(dp)::T2_AGN,T2_min,T2_max,delta_mass_max
@@ -2923,12 +2893,6 @@ subroutine average_AGN
   integer::ilevel,ncache,nSN,j,isink,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,drr,d,u,v,w,ek,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -3071,12 +3035,6 @@ subroutine AGN_blast
   integer::ilevel,j,isink,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,dx,dxx,dyy,dzz,drr,d,u,v,w,ek,u_r,ESN
   real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,T2_AGN,T2_max
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -3235,12 +3193,6 @@ subroutine quenching(ilevel)
   ! dispersion threshold.
   ! On exit, flag2 array is set to 0 for AGN sites and to 1 otherwise.
   !------------------------------------------------------------------------
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::str_d,tot_m,ave_u,ave_v,ave_w,sig_u,sig_v,sig_w

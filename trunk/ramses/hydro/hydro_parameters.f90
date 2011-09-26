@@ -61,4 +61,10 @@ module hydro_parameters
   integer ::interpol_var=0
   integer ::interpol_type=1
 
+  ! Passive variables index
+  integer::imetal=6
+  integer::idelay=6
+  integer::ixion=6
+  integer::ichem=6
+
 end module hydro_parameters

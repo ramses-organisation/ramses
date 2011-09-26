@@ -129,12 +129,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -351,7 +345,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(delayed_cooling)then
      do j=1,np
         if(ok(j))then
-           uold(indp(j),imetal+1)=uold(indp(j),imetal+1)+mloss(j)
+           uold(indp(j),idelay)=uold(indp(j),idelay)+mloss(j)
         endif
      end do
   endif
@@ -386,12 +380,6 @@ subroutine kinetic_feedback
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
   integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar
   integer::nx_loc
@@ -585,12 +573,6 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   integer::ilevel,ncache,nSN,j,iSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,dr_SN,d,u,v,w,ek,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -754,12 +736,6 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN
   real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
