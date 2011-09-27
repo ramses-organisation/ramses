@@ -20,6 +20,9 @@ subroutine adaptive_loop
   call init_time                     ! Initialize time variables
   if(hydro)call init_hydro           ! Initialize hydro variables
   if(poisson)call init_poisson       ! Initialize poisson variables
+#ifdef ATON
+  if(aton)call init_radiation        ! Initialize radiation variables
+#endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
   if(cooling)call set_table(dble(aexp))  ! Initialize cooling look up table
   if(pic)call init_part              ! Initialize particle variables

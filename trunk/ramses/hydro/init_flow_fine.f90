@@ -42,7 +42,7 @@ subroutine init_flow_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale
+  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale,xval
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector)       ,save::vv
@@ -226,7 +226,10 @@ subroutine init_flow_fine(ilevel)
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
            init_array=0d0
            ! Default value for metals
-           if(cosmo.and.ivar==6.and.metal)init_array=z_ave*0.02
+           if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02 ! from solar units
+           ! Default value for ionization fraction
+           xval=sqrt(omega_m)/(h0/100.*omega_b) ! From the book of Peebles p. 173
+           if(cosmo.and.ivar==ixion.and.aton)init_array=1.2d-5*xval
         endif
 
         if(ncache>0)then
@@ -234,7 +237,7 @@ subroutine init_flow_fine(ilevel)
         ! For cosmo runs, rescale initial conditions to code units
         if(cosmo)then
            ! Compute approximate average temperature in K
-           if(.not. cooling)T2_start = 1.356d-2/aexp**2
+           if(.not. cooling)T2_start=1.356d-2/aexp**2
            if(ivar==1)init_array=(1.0+dfact(ilevel)*init_array)*omega_b/omega_m
            if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
            if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)

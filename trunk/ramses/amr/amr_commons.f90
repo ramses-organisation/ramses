@@ -106,6 +106,9 @@ module amr_commons
      real(kind=8),dimension(:,:),pointer::u
      integer     ,dimension(:,:),pointer::fp
      real(kind=8),dimension(:,:),pointer::up
+#ifdef ATON
+     real(kind=8),dimension(:,:),pointer::u_radiation
+#endif
   end type communicator
 
   ! Active grid, emission and reception communicators

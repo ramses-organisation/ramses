@@ -451,7 +451,7 @@ subroutine make_sink(ilevel)
            endif
 
            ! Mass of the new sink
-           msink_new(index_sink)=min((d-d_thres/4.0)*vol_loc,msink_max2)
+           msink_new(index_sink)=min((d-d_thres)*vol_loc,msink_max2)
            delta_mass_new(index_sink)=0d0
 
            ! Global index of the new sink
@@ -2550,7 +2550,7 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Gravitational constant
-  factG=1
+  factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Mesh spacing in that level
@@ -2723,12 +2723,12 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
         if(d>d_thres)then
            isink=-idp(ind_part(j))
-           acc_mass=(d-d_thres/4.0)*vol_loc
+           acc_mass=(d-d_thres)*vol_loc
            msink_new(isink  )=msink_new(isink  )+acc_mass
            vsink_new(isink,1)=vsink_new(isink,1)+acc_mass*u
            vsink_new(isink,2)=vsink_new(isink,2)+acc_mass*v
            vsink_new(isink,3)=vsink_new(isink,3)+acc_mass*w
-           d=d_thres/4.0
+           d=d_thres
 
            ! Convert back to conservative variable
 #ifdef SOLVERmhd

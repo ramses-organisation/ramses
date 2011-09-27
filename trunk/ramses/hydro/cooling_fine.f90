@@ -10,7 +10,7 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info,isink
+  integer::ncache,i,igrid,ngrid,info
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -45,6 +45,9 @@ end subroutine cooling_fine
 subroutine coolfine1(ind_grid,ngrid,ilevel)
   use amr_commons
   use hydro_commons
+#ifdef ATON
+  use radiation_commons, ONLY: Erad
+#endif
   use cooling_module
   implicit none
   integer::ilevel,ngrid
@@ -112,7 +115,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute metallicity in solar units
      if(metal)then
         do i=1,nleaf
-           Zsolar(i)=uold(ind_leaf(i),ndim+3)/nH(i)/0.02
+           Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/0.02
         end do
      else
         do i=1,nleaf
@@ -151,6 +154,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            boost(i)=exp(-nH(i)/0.01)
         end do
+#ifdef ATON
+     else if (aton) then
+        do i=1,nleaf
+           boost(i)=MAX(Erad(ind_leaf(i))/J0simple(aexp), &
+                &                   J0min/J0simple(aexp) )
+        end do
+#endif
      else
         do i=1,nleaf
            boost(i)=1.0

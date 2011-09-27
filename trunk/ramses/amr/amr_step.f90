@@ -319,6 +319,15 @@ recursive subroutine amr_step(ilevel,icount)
   !----------------------------
   if(pic)call merge_tree_fine(ilevel)
 
+  !---------------
+  ! Radiation step
+  !---------------
+#ifdef ATON
+  if(aton.and.ilevel==levelmin)then
+     call rad_step(dtnew(ilevel))
+  endif
+#endif
+
   !-------------------------------
   ! Update coarser level time-step
   !-------------------------------

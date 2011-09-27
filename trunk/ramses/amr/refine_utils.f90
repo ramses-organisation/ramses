@@ -545,6 +545,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   use amr_commons
   use hydro_commons
   use poisson_commons, ONLY:f
+#ifdef ATON
+  use radiation_commons, ONLY:Erad
+#endif
   implicit none
   integer::nn,ind,ilevel,ibound
   logical::boundary_region
@@ -787,6 +790,13 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
               end do
            end do
         end if
+#ifdef ATON
+        if(aton)
+           do i=1,nn
+              Erad(iskip+ind_grid_son(i))=Erad(ind_fathers(i,0))
+           end do
+        endif
+#endif
      end do
   end if
 

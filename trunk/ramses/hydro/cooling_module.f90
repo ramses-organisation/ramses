@@ -684,6 +684,7 @@ function J0simple(aexp)
   else
      J0simple=1.d0/(3.*aexp)**3
   endif
+  if(aton)J0simple=1.0
   J0simple=max(J0simple*J0in,J0min)
   return
 end function J0simple

@@ -64,6 +64,14 @@ subroutine dump_all
         filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
         call backup_poisson(filename)
      end if
+#ifdef ATON
+     if(aton)then
+        filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
+        call backup_radiation(filename)
+        filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
+        call store_radiation(filename)
+     end if
+#endif
   end if
 
 end subroutine dump_all

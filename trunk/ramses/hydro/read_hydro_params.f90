@@ -60,6 +60,9 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   read(1,NML=physics_params,END=105)
 105 continue
+#ifdef ATON
+  if(aton)call read_radiation_params(1)
+#endif
 
   !--------------------------------------------------
   ! Check for star formation
