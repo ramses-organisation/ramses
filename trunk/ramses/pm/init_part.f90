@@ -130,6 +130,7 @@ subroutine init_part
      allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+     allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
   endif
 
   !--------------------

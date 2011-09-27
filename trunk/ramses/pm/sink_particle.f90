@@ -17,7 +17,7 @@ subroutine create_sink
   ! This routine is called only once per coarse step by routine amr_step.
   ! Romain Teyssier, October 7th, 2007
   !----------------------------------------------------------------------------
-  ! local constants
+  ! local constants                                                                
   integer::ilevel,ivar,info,icpu,igrid,npartbound,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
@@ -33,19 +33,32 @@ subroutine create_sink
      call virtual_tree_fine(ilevel)
   end do
 
-  ! Create new sink particles
-  ! and gather particle from the grid
-  call make_sink(nlevelmax)
-  do ilevel=nlevelmax-1,1,-1
-     if(ilevel>=levelmin)call make_sink(ilevel)
-     call merge_tree_fine(ilevel)
-  end do
+  if (clumpfind .eqv. .false.)then
+     ! Create new sink particles
+     ! and gather particle from the grid
 
-  ! Remove particle clouds around old sinks 
+     call make_sink(nlevelmax)
+     do ilevel=nlevelmax-1,1,-1
+        if(ilevel>=levelmin)call make_sink(ilevel)
+        call merge_tree_fine(ilevel)
+     end do
+  end if
+
+  ! Remove particle clouds around old sinks
   call kill_cloud(1)
 
-  ! Merge sink using FOF
-  call merge_sink(1)
+  if (clumpfind)then
+     call remove_parts_brute_force
+
+     ! DO NOT USE FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK
+     call clump_finder(.false.)
+     call make_sink_from_clump(nlevelmax)
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+     call create_part_from_sink
+  else
+  ! Merge sink using FOF                                                           
+     call merge_sink(1)
+  end if
 
   ! Create new particle clouds
   call create_cloud(1)
@@ -80,6 +93,173 @@ subroutine create_sink
   if(agn)call agn_feedback
      
 end subroutine create_sink
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine create_part_from_sink
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use cooling_module, ONLY: XH=>X, rhoc, mH 
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  !----------------------------------------------------------------------
+  ! Description: This subroutine create true RAMSES particles from the list
+  ! of sink particles global arrays and store them at level 1.
+  !----------------------------------------------------------------------
+  ! local constants
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot,icloud
+  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,isink,inew,nx_loc
+  integer ::ii,jj,kk,ind_cloud,ncloud,indp
+  integer ::ntot,ntot_all,info
+  logical ::ok_free
+
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+  real(dp)::d,x,y,z,u,v,w,e,temp,zg,factG
+  real(dp)::dxx,dyy,dzz,drr
+  real(dp)::rsink_max2
+  real(dp)::velc,uc,vc,wc,l_jeans,d_jeans,d_thres,d_sink
+  real(dp)::birth_epoch,xx,yy,zz,rr
+  real(dp),dimension(1:3)::skip_loc
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2
+
+  real(dp),dimension(1:nvector,1:ndim),save::xs
+
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,cc
+  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector),save::ind_part_cloud,ind_grid_cloud
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
+ 
+ 
+  if(numbtot(1,1)==0) return
+  if(.not. hydro)return
+  if(ndim.ne.3)return
+
+  if(verbose)write(*,*)' Entering create_part_from_sink'
+
+#if NDIM==3
+
+  ntot=0
+  ! Loop over sinks (why not use vector sweep here?)
+  do isink=1,nsink
+     xs(1,1:ndim)=xsink(isink,1:ndim)
+     call cmp_cpumap(xs,cc,1)
+     if(cc(1).eq.myid)ntot=ntot+1
+  end do
+
+  !---------------------------------
+  ! Check for free particle memory
+  !--------------------------------
+  ok_free=(numbp_free-ntot)>=0
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(numbp_free,numbp_free_tot,1,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  numbp_free_tot=numbp_free
+#endif
+   if(.not. ok_free)then
+      write(*,*)'No more free memory for particles'
+      write(*,*)'New sink particles',ntot
+      write(*,*)'Increase npartmax'
+#ifndef WITHOUTMPI
+      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#endif
+#ifdef WITHOUTMPI
+      stop
+#endif
+   end if
+   
+  !---------------------------------
+  ! Compute global sink statistics
+  !---------------------------------
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(ntot,ntot_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  ntot_all=ntot
+#endif
+#ifndef WITHOUTMPI
+  ntot_sink_cpu=0; ntot_sink_all=0
+  ntot_sink_cpu(myid)=ntot
+  call MPI_ALLREDUCE(ntot_sink_cpu,ntot_sink_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  ntot_sink_cpu(1)=ntot_sink_all(1)
+  do icpu=2,ncpu
+     ntot_sink_cpu(icpu)=ntot_sink_cpu(icpu-1)+ntot_sink_all(icpu)
+  end do
+#endif
+  if(myid==1)then
+     if(ntot_all.gt.0)then
+        write(*,'(" Particle to be created= ",I6," Tot =",I8)')&
+             & ntot_all,nsink
+     endif
+  end if
+
+  ! Starting identity number
+  if(myid==1)then
+     index_sink=nsink-ntot_all
+  else
+     index_sink=nsink-ntot_all+ntot_sink_cpu(myid-1)
+  end if
+
+  ! Level 1 linked list
+  do icpu=1,ncpu
+     if(numbl(icpu,1)>0)then
+        ind_grid(1)=headl(icpu,1)
+     endif
+  end do
+
+  !sort the sink according to mass
+  if(nsink>0)then
+     do i=1,nsink
+        xmsink(i)=msink(i)
+     end do
+     call quick_sort(xmsink(1),idsink_sort(1),nsink)
+  endif
+
+  ! Loop over sinks
+  do i=nsink,1,-1
+     isink=idsink_sort(i)
+     xs(1,1:ndim)=xsink(isink,1:ndim)
+     call cmp_cpumap(xs,cc,1)
+
+     ! Create new particles
+     if(cc(1).eq.myid)then
+           index_sink=index_sink+1
+           ! Update linked list
+           call remove_free(ind_part,1)
+           call add_list(ind_part,ind_grid,ok_true,1)
+           indp=ind_part(1)
+           tp(indp)=tsink(isink)     ! Birth epoch
+           mp(indp)=msink(isink)     ! Mass
+           if (new_born_all(isink)==1)then
+              levelp(indp)=-1
+           else
+              levelp(indp)=nlevelmax    ! Level WARNING THIS SHOULD BE FIXED USING lsink
+           endif
+           idp(indp)=-index_sink     ! Identity
+           xp(indp,1)=xsink(isink,1) ! Position
+           xp(indp,2)=xsink(isink,2)
+           xp(indp,3)=xsink(isink,3)
+           vp(indp,1)=vsink(isink,1) ! Velocity
+           vp(indp,2)=vsink(isink,2)
+           vp(indp,3)=vsink(isink,3)
+        endif
+
+  end do
+
+#endif
+
+end subroutine create_part_from_sink
 !################################################################
 !################################################################
 !################################################################
@@ -3290,6 +3470,411 @@ subroutine quenching(ilevel)
 111 format('   Entering quenching for level ',I2)
 
 end subroutine quenching
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine make_sink_from_clump(ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use cooling_module, ONLY: XH=>X, rhoc, mH 
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  !----------------------------------------------------------------------
+  ! Description: This subroutine create sink particle in cells where some
+  ! density threshold is crossed. It also removes from the gas the
+  ! corresponding particle mass. On exit, all fluid variables in the cell
+  ! are modified. This is done only in leaf cells.
+  ! Romain Teyssier, October 7th, 2007
+  !----------------------------------------------------------------------
+  ! local constants
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot,icloud
+  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,isink,inew,nx_loc
+  integer ::ii,jj,kk,ind_cloud,ncloud,n_cls
+  integer ::ntot,ntot_all,info
+  logical ::ok_free
+
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+  real(dp)::d,x,y,z,u,v,w,e,temp,zg,factG
+  real(dp)::dxx,dyy,dzz,drr
+  real(dp)::msink_max2,rsink_max2
+  real(dp)::rmax,rmax2
+  real(dp)::velc,uc,vc,wc,l_jeans,d_jeans,d_thres,d_sink
+  real(dp)::birth_epoch,xx,yy,zz,rr
+  real(dp),dimension(1:3)::skip_loc
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2
+
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector),save::ind_part_cloud,ind_grid_cloud
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
+  
+  if(.not. hydro)return
+  if(ndim.ne.3)return
+
+  if(verbose)write(*,*)'entering make_sink_from_clump for level ',ilevel
+
+  ! Conversion factor from user units to cgs units                              
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**3
+
+  ! Minimum radius to create a new sink from any other
+  rsink_max=10.0 ! in kpc
+  rsink_max2=(rsink_max*3.08d21/scale_l)**2
+
+  ! Maximum value for the initial sink mass
+  msink_max=1d5 ! in Msol
+  msink_max2=msink_max*2d33/scale_m
+  
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
+  ! Density threshold for sink particle creation
+  d_sink=n_sink/scale_nH
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  dx_min=(0.5D0**nlevelmax)*scale
+  vol_min=dx_min**ndim
+
+  rmax=dble(ir_cloud)*dx_min/aexp ! Linking length in physical units
+  rmax2=rmax*rmax
+
+  ! Birth epoch
+  birth_epoch=t
+
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim  
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+
+  xx=0.0; yy=0.0;zz=0.0
+  ncloud=0
+  do kk=-2*ir_cloud,2*ir_cloud
+     zz=dble(kk)*0.5
+     do jj=-2*ir_cloud,2*ir_cloud
+        yy=dble(jj)*0.5
+        do ii=-2*ir_cloud,2*ir_cloud
+           xx=dble(ii)*0.5
+           rr=sqrt(xx*xx+yy*yy+zz*zz)
+           if(rr<=dble(ir_cloud))ncloud=ncloud+1
+        end do
+     end do
+  end do
+  ncloud_sink=ncloud
+
+  ! Set new sink variables to zero
+  msink_new=0d0; tsink_new=0d0; delta_mass_new=0d0; xsink_new=0d0; vsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born=0;
+
+#if NDIM==3
+
+  !------------------------------------------------
+  ! Convert hydro variables to primitive variables
+  !------------------------------------------------
+  if(numbtot(1,ilevel)>0)then
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+        do ind=1,twotondim  
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+           do i=1,ngrid
+              d=uold(ind_cell(i),1)
+              u=uold(ind_cell(i),2)/d
+              v=uold(ind_cell(i),3)/d
+              w=uold(ind_cell(i),4)/d
+              e=uold(ind_cell(i),5)/d
+#ifdef SOLVERmhd
+              bx1=uold(ind_cell(i),6)
+              by1=uold(ind_cell(i),7)
+              bz1=uold(ind_cell(i),8)
+              bx2=uold(ind_cell(i),nvar+1)
+              by2=uold(ind_cell(i),nvar+2)
+              bz2=uold(ind_cell(i),nvar+3)
+              e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+#endif
+              e=e-0.5d0*(u**2+v**2+w**2)
+              uold(ind_cell(i),1)=d
+              uold(ind_cell(i),2)=u
+              uold(ind_cell(i),3)=v
+              uold(ind_cell(i),4)=w
+              uold(ind_cell(i),5)=e
+              !           ! No AGN formation site by default
+              !           flag2(ind_cell(i))=1
+           end do
+           do ivar=imetal,nvar
+              do i=1,ngrid
+                 d=uold(ind_cell(i),1)
+                 w=uold(ind_cell(i),ivar)/d
+                 uold(ind_cell(i),ivar)=w
+              end do
+           enddo
+        end do
+     end do
+  end if
+
+  !----------------------------
+  ! Compute number of new sinks
+  !----------------------------
+  ntot=0
+  n_cls=size(flag2,1)
+  do jj=0,n_cls-1
+     ntot=ntot+flag2(jj)
+  end do
+
+  !---------------------------------
+  ! Check for free particle memory
+  !--------------------------------
+  ok_free=(numbp_free-ntot)>=0
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(numbp_free,numbp_free_tot,1,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  numbp_free_tot=numbp_free
+#endif
+   if(.not. ok_free)then
+      write(*,*)'No more free memory for particles'
+      write(*,*)'New sink particles',ntot
+      write(*,*)'Increase npartmax'
+#ifndef WITHOUTMPI
+      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#endif
+#ifdef WITHOUTMPI
+      stop
+#endif
+   end if
+   
+  !---------------------------------
+  ! Compute global sink statistics
+  !---------------------------------
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(ntot,ntot_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  ntot_all=ntot
+#endif
+#ifndef WITHOUTMPI
+  ntot_sink_cpu=0; ntot_sink_all=0
+  ntot_sink_cpu(myid)=ntot
+  call MPI_ALLREDUCE(ntot_sink_cpu,ntot_sink_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  ntot_sink_cpu(1)=ntot_sink_all(1)
+  do icpu=2,ncpu
+     ntot_sink_cpu(icpu)=ntot_sink_cpu(icpu-1)+ntot_sink_all(icpu)
+  end do
+#endif
+  nsink=nsink+ntot_all  
+  nindsink=nindsink+ntot_all
+  if(myid==1)then
+     if(ntot_all.gt.0)then
+        write(*,'(" Level = ",I6," New sinks prduced from clumps= ",I6," Total sinks =",I8)')&
+             & ilevel,ntot_all,nsink
+     endif
+  end if
+
+  !------------------------------
+  ! Create new sink particles
+  !------------------------------
+  ! Starting identity number
+  if(myid==1)then
+     index_sink=nsink-ntot_all
+     index_sink_tot=nindsink-ntot_all
+  else
+     index_sink=nsink-ntot_all+ntot_sink_cpu(myid-1)
+     index_sink_tot=nindsink-ntot_all+ntot_sink_cpu(myid-1)
+  end if
+
+  ! Loop over grids
+  if(numbtot(1,ilevel)>0)then
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+
+        ! Loop over cells
+        do ind=1,twotondim
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+
+           ! Gather cells with a new sink
+           nnew=0
+           do i=1,ngrid
+              if (flag2(ind_cell(i))>0)then
+                 nnew=nnew+1
+                 ind_grid_new(nnew)=ind_grid(i)
+                 ind_cell_new(nnew)=ind_cell(i)
+              end if
+           end do
+
+           ! Create new sink particles
+           do i=1,nnew
+              index_sink=index_sink+1
+              index_sink_tot=index_sink_tot+1
+
+              ! Get gas variables
+              d=uold(ind_cell_new(i),1)
+              u=uold(ind_cell_new(i),2)
+              v=uold(ind_cell_new(i),3)
+              w=uold(ind_cell_new(i),4)
+              e=uold(ind_cell_new(i),5)
+
+              ! Get gas cell position
+              x=(xg(ind_grid_new(i),1)+xc(ind,1)-skip_loc(1))*scale
+              y=(xg(ind_grid_new(i),2)+xc(ind,2)-skip_loc(2))*scale
+              z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
+
+              ! User defined density threshold
+              d_thres=d_sink
+
+              ! Jeans length related density threshold
+              if(d_thres<0.0)then
+                 temp=max(e*(gamma-1.0),smallc**2)
+                 d_jeans=temp*3.1415926/(4.0*dx_loc)**2/factG
+                 d_thres=d_jeans
+              endif
+
+              ! Mass of the new sink
+              msink_new(index_sink)=min((d-d_thres)*vol_loc,msink_max2)
+              delta_mass_new(index_sink)=0d0
+
+              ! Global index of the new sink
+              oksink_new(index_sink)=1d0
+              idsink_new(index_sink)=index_sink_tot
+
+              ! Store properties of the new sink
+              tsink_new(index_sink)=birth_epoch
+              xsink_new(index_sink,1)=x
+              xsink_new(index_sink,2)=y
+              xsink_new(index_sink,3)=z
+              vsink_new(index_sink,1)=u
+              vsink_new(index_sink,2)=v
+              vsink_new(index_sink,3)=w
+
+              new_born(index_sink)=1
+
+              uold(ind_cell_new(i),1)=uold(ind_cell_new(i),1)-msink_new(index_sink)/vol_loc
+
+           end do
+           ! End loop over new sink particle cells
+
+        end do
+        ! End loop over cells
+     end do
+     ! End loop over grids
+
+     !---------------------------------------------------------
+     ! Convert hydro variables back to conservative variables
+     !---------------------------------------------------------
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+        do ind=1,twotondim  
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+           do i=1,ngrid
+              d=uold(ind_cell(i),1)
+              u=uold(ind_cell(i),2)
+              v=uold(ind_cell(i),3)
+              w=uold(ind_cell(i),4)
+              e=uold(ind_cell(i),5)
+#ifdef SOLVERmhd
+              bx1=uold(ind_cell(i),6)
+              by1=uold(ind_cell(i),7)
+              bz1=uold(ind_cell(i),8)
+              bx2=uold(ind_cell(i),nvar+1)
+              by2=uold(ind_cell(i),nvar+2)
+              bz2=uold(ind_cell(i),nvar+3)
+              e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+#endif
+              e=e+0.5d0*(u**2+v**2+w**2)
+              uold(ind_cell(i),1)=d
+              uold(ind_cell(i),2)=d*u
+              uold(ind_cell(i),3)=d*v
+              uold(ind_cell(i),4)=d*w
+              uold(ind_cell(i),5)=d*e
+           end do
+           do ivar=imetal,nvar
+              do i=1,ngrid
+                 d=uold(ind_cell(i),1)
+                 w=uold(ind_cell(i),ivar)
+                 uold(ind_cell(i),ivar)=d*w
+              end do
+           end do
+        end do
+     end do
+  end if
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(oksink_new,oksink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(idsink_new,idsink_all,nsinkmax,MPI_INTEGER         ,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(msink_new ,msink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(tsink_new ,tsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(xsink_new ,xsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(vsink_new ,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(new_born,new_born_all,nsinkmax,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  oksink_all=oksink_new
+  idsink_all=idsink_new
+  msink_all=msink_new
+  tsink_all=tsink_new
+  xsink_all=xsink_new
+  vsink_all=vsink_new
+  delta_mass_all=delta_mass_new
+  new_born_all=new_born
+#endif
+  do isink=1,nsink
+     if(oksink_all(isink)==1)then
+        idsink(isink)=idsink_all(isink)
+        msink(isink)=msink_all(isink)
+        tsink(isink)=tsink_all(isink)
+        xsink(isink,1:ndim)=xsink_all(isink,1:ndim)
+        vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
+        delta_mass(isink)=delta_mass_all(isink)
+     endif
+  end do
+
+#endif
+
+
+
+end subroutine make_sink_from_clump
 !################################################################
 !################################################################
 !################################################################

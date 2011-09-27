@@ -21,8 +21,8 @@ EXEC = ramses
 #FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -ffree-line-length-none
 
 # --- No MPI, pgf90 ----------------------------------
-F90 = pgf90
-FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#F90 = pgf90
+#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
 
 # --- No MPI, xlf ------------------------------------
 #F90 = xlf
@@ -37,16 +37,16 @@ FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTM
 #FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
 #
 # --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3
+#F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
 #FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3
+#F90 = mpif90 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
 #FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=$(NVECTOR)
 
 # --- MPI, pgf90 syntax ------------------------------
-#F90 = mpif90 -O3
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER)
+F90 = mpif90 -O3
+FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER)
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90

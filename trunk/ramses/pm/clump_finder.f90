@@ -1,4 +1,4 @@
-subroutine clump_finder
+subroutine clump_finder(create_output)
   use amr_commons
   use pm_commons
   use hydro_commons
@@ -7,6 +7,8 @@ subroutine clump_finder
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
+
+  logical::create_output
   !----------------------------------------------------------------------------
   ! Description of clump_finder:
   ! The clumpfinder assigns a test particle to each cell having a density above 
@@ -25,9 +27,21 @@ subroutine clump_finder
   character(LEN=80)::filename
   integer::jgrid
 
+
+
+  !new variables for clump/sink comb
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  integer::j,jj,blocked
+  real(dp),dimension(1:nvector,1:3)::pos
+  integer,dimension(1:nvector)::cell_index,cell_levl,cc
+
+
   if(verbose)write(*,*)' Entering clump_finder'
 
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
+  call remove_parts_brute_force
+  
   !-------------------------------------------------------------------------------
   ! Create test particle
   !-------------------------------------------------------------------------------
@@ -45,10 +59,8 @@ subroutine clump_finder
   nmove=nstar_tot
   istep=0
   do while(nmove>0)
+     if(myid==1 .and. verbose)write(*,*)"istep=",istep,"nmove=",nmove
 
-     if(myid==1)then
-        write(*,*)"istep=",istep,"nmove=",nmove
-     endif
 
      ! Move particle across oct and processor boundaries
      do ilevel=levelmin,nlevelmax
@@ -68,11 +80,14 @@ subroutine clump_finder
      call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nmove=nmove_all
 #endif
-     call title(istep,nchar)
-     filename='clump/part_'//TRIM(nchar)//'.out'
-     call backup_part(filename)
+     !uncomment these lines if you want to follow the move of the test particles 
+     !call title(istep,nchar)
+     !filename='clump/part_'//TRIM(nchar)//'.out'
+     !call backup_part(filename)
 
   end do
+
+
 
   call assign_part_to_peak()
 
@@ -98,7 +113,7 @@ subroutine clump_finder
   ! Compute peak-batch mass etc. and output these properties before merging 
   !-------------------------------------------------------------------------------
   call compute_clump_properties() 
-  call write_clump_properties(.false.,1.d-1)
+  if (sink .eqv. .false. .or. mod(nstep_coarse,ncontrol)==0)call write_clump_properties(.false.)
 
 
   !-------------------------------------------------------------------------------
@@ -114,10 +129,76 @@ subroutine clump_finder
   ! together with the peak the cell belongs to
   !-------------------------------------------------------------------------------
   if (npeaks_tot > 0)then
+     call clump_phi
      call compute_clump_properties_round2()
-     call write_clump_properties(.true.,1.0d-1)
-     call write_peak_map
+     if (sink .eqv. .false. .or. mod(nstep_coarse,ncontrol)==0)call write_clump_properties(.false.)
+     if(create_output)then
+        call write_peak_map
+        call write_clump_properties(.true.)
+     end if
   end if
+
+  
+
+
+  !------------------------------------------------------------------------------
+  ! if the clumpfinder is used to produce sinks, flag all the cells which contain
+  ! a relevant density peak whose peak patch doesn't yet contain a sink.
+  !------------------------------------------------------------------------------
+  if(sink)then
+
+     allocate(occupied(1:npeaks_tot),occupied_all(1:npeaks_tot))
+     occupied=0; occupied_all=0;
+
+     !loop over sinks and mark all clumps containing a sink
+     pos=0.0
+     blocked=0
+     if(myid==1 .and. verbose)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
+     do j=1,nsink
+        pos(1,1:3)=xsink(j,1:3)
+        call cmp_cpumap(pos,cc,1)
+        if (cc(1) .eq. myid)then
+           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           if (flag2(cell_index(1))>0)then 
+              occupied(flag2(cell_index(1)))=1
+              blocked=blocked+1
+              if(verbose)write(*,*)'CPU # ',myid,'blocked clump # ',flag2(cell_index(1)),' for sink production because of sink # ',j
+           end if
+        end if
+     end do
+
+     
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(occupied,occupied_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+     occupied_all=occupied
+#endif
+
+     pos=0.0
+     flag2=0.
+     call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
+     do j=npeaks_tot,1,-1
+        jj=sort_index(j)
+        if (relevance_tot(jj) > 1.0d-1 .and. occupied_all(jj)==0 .and. minmatch_tot(jj)==1)then           
+           if (e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)) > 1.)then
+              if (clump_mass_tot(jj)-clump_vol_tot(jj)*scale_nH*n_sink  > mass_threshold)then
+                 pos(1,1:3)=peak_pos_tot(jj,1:3)
+                 call cmp_cpumap(pos,cc,1)
+                 if (cc(1) .eq. myid)then
+                    call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+                    flag2(cell_index(1))=1.
+                 end if
+              end if
+           end if
+        end if
+     end do
+     deallocate(occupied,occupied_all)
+  endif
+
+
+
+
 
   call remove_parts_brute_force
   call deallocate_all
@@ -143,7 +224,7 @@ subroutine remove_parts_brute_force
   ! removes all particles using brute force - soft attempt did not work...
   !----------------------------------------------------------------------
 
-  integer::ipart,ilevel,icpu,igrid,jgrid
+  integer::ipart,ilevel,icpu,igrid,jgrid,info
 
 
   npart=0
@@ -158,6 +239,8 @@ subroutine remove_parts_brute_force
         end do
      end do
   end do
+  
+
   !----------------------------------
   ! Reinitialize free memory linked list
   !----------------------------------
@@ -176,6 +259,7 @@ subroutine remove_parts_brute_force
   end if
   nextp(tailp_free)=0
   numbp_free_tot=numbp_free
+
   !----------------------------------
   ! Reinitialize particle variables
   !----------------------------------
@@ -188,6 +272,8 @@ subroutine remove_parts_brute_force
      tp=0.0
      if(metal)zp=0.0
   endif
+
+
 end subroutine remove_parts_brute_force
 
 !################################################################
@@ -340,7 +426,7 @@ subroutine create_test_particle(ilevel)
   end do
   nstar_tot=nstar_tot+ntot_all
   if(myid==1)then
-     if(ntot_all.gt.0)then
+     if(ntot_all.gt.0.and.verbose)then
         write(*,'(" Level=",I6," New test particle=",I6," Tot=",I10)')&
              & ilevel,ntot_all,nstar_tot
      endif
@@ -544,7 +630,7 @@ subroutine movet(ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel)
   end do
   call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
   do j=1,np
-     density_max(j)=uold(cell_index(j),1)
+     density_max(j)=uold(cell_index(j),1)*1.0001
      ind_max(j)=cell_index(j)
      xmax(j,1:ndim)=xp(ind_part(j),1:ndim)
   end do
@@ -913,7 +999,7 @@ subroutine assign_part_to_peak()
 #ifdef WITHOUTMPI     
   npeaks_tot=npeaks
 #endif
-  if (myid==1)write(*,*)'total number of density peaks found = ',npeaks_tot
+  if (verbose .and. myid==1)write(*,*)'total number of density peaks found = ',npeaks_tot
 
 
   !----------------------------------------------------------------------------

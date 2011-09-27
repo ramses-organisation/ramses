@@ -99,12 +99,12 @@ recursive subroutine amr_step(ilevel,icount)
            call defrag
         endif
         call dump_all
-        if(clumpfind)then
-           if(ndim<3)then 
+        if(clumpfind)then 
+           if(ndim<3)then
               print*,"sorry, clumpfinder works currently in 3D only!"
            else
               if(verbose)print*,"enter clumpfinder"
-              call clump_finder
+              call clump_finder(.true.)
               if(verbose)print*,"escaped clumpfinder"
            endif
         endif
@@ -272,11 +272,10 @@ recursive subroutine amr_step(ilevel,icount)
      endif
 
      ! Set uold equal to unew
-     ! Add gravity source term with half time step and old force
      call set_uold(ilevel)
 
-     ! Add gravity source term with half time step and old force 
-     ! in order to complete the time step
+     ! Add gravity source term with half time step and old force
+     ! in order to complete the time step 
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator

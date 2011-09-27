@@ -364,7 +364,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      else if(levelp(ind_part(j))>0)then
         dteff(j)=dtold(levelp(ind_part(j)))
      else
-        dteff(j)=0d0
+        dteff(j)=0d0 ! timestep must be zero for newly produced sink
      end if
   end do
 

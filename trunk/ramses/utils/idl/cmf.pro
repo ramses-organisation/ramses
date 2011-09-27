@@ -8,13 +8,13 @@
 ; cmf,nbins
 ; 
 ; with nbins the desired number of bins
-; 
+;
 ; clump textfiles (clump_masses.txt from clumpfinder output) can be selected from a window
 ; multiple files can be selected at the same time
 ;-
 pro cmf,bins
 
-IF N_PARAMS() NE 1 THEN BEGIN
+IF N_PARAMS() LT 1 THEN BEGIN
     DOC_LIBRARY,'cmf'
     RETURN
 ENDIF
@@ -49,7 +49,8 @@ while ((round LE 5) and (answer EQ 1)) do begin
 ;construct and plot histogram
     m_log=alog10(m_tot)
     ma=max(m_log)+0.001
-    mi=min(m_log)-0.001
+    mi=-4.-0.001
+;mi=min(m_log)-0.001
     h=histogram(m_log,nbins=bins,max=ma,min=mi)
     h=alog10(h)
     x=(0.5+indgen(bins))*(ma-mi)/(1.*(bins-1.)) + mi
