@@ -488,7 +488,7 @@ subroutine get_rad_quantities_from_cell(cell_index,dx,density,xion,temperature,r
   end if
 
   ! Ionization fraction x.
-  xion = uold(cell_index,6)/uold(cell_index,1)
+  xion = uold(cell_index,ixion)/uold(cell_index,1)
 
   ! Temperature.
   ! cudaton needs units in Kelvin
@@ -534,7 +534,7 @@ recursive subroutine update_rad_quantities_in_cell(cell_index,photon_density,xio
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Ionization fraction x.
-  uold(cell_index,6) = xion * uold(cell_index,1)
+  uold(cell_index,ixion) = xion * uold(cell_index,1)
 
   ! Photon density.
   Erad(cell_index) = photon_density / N0
