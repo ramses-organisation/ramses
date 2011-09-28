@@ -182,7 +182,7 @@ subroutine clump_finder(create_output)
         jj=sort_index(j)
         if (relevance_tot(jj) > 1.0d-1 .and. occupied_all(jj)==0 .and. minmatch_tot(jj)==1)then           
            if (e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)) > 1.)then
-              if (clump_mass_tot(jj)-clump_vol_tot(jj)*scale_nH*n_sink  > mass_threshold)then
+              if (clump_mass_tot(jj)-clump_vol_tot(jj)*n_sink/scale_nH  > mass_threshold)then
                  pos(1,1:3)=peak_pos_tot(jj,1:3)
                  call cmp_cpumap(pos,cc,1)
                  if (cc(1) .eq. myid)then
