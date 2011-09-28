@@ -1,0 +1,85 @@
+RAMSES/ATON
+===========
+
+Coupled hydro and radiation using the GPU for cosmological simulations.
+
+
+Compilation
+-----------
+
+The grid size is decided at compliation time.
+The default is set to 32^3.
+If you need something else, first edit aton/internal/gpu.h.
+
+Then compile:
+
+$ cd aton
+$ make
+$ cd ../
+
+This will produce a library called aton/libaton.a.
+
+$ cd ramses/bin
+$ make
+$ cd ../..
+
+This will produce a binary called ramses/bin/ramses3d.
+
+Finally, we need to compile the amr2cell program for testing:
+
+$ cd ramses/utils/f90
+$ make amr2cell
+$ cd ../../../
+
+This will produce a binary called ramses/utils/f90/amr2cell
+
+You may need to edit the two Makefiles to work on your system.
+In particular, aton/Makefile contains the CUDA library and include paths.
+
+
+Testing
+-------
+
+For a simple test to check that the code has compiled correctly, run
+$ sims/testing/run_and_analyze.sh
+
+It runs the code on a 32^3 grid with 1 node.
+This will take about half an hour to run so check that messages are being written
+to the log and go make a cup of tea.
+
+When it finishes, it will have produced a file called test/profile.txt.
+You should compare this to sims/testing/expected_profile.txt using a
+plotting program like gnuplot.
+
+
+Larger test
+-----------
+
+For a larger test, we can run Iliev Test 5 on a 256^3 grid with 16 nodes.
+
+1. Modify the defines in aton/internal/gpu.h:
+
+#define NCELLX 128
+#define NCELLY 128
+#define NCELLZ 64
+
+2. Recompile:
+
+$ cd aton
+$ make clean
+$ make
+$ cd ../ramses/bin
+$ make
+$ cd ../../
+
+Launch the simulation:
+
+$ mkdir test5
+$ cd test5
+$ mpirun -n 16 ../ramses/bin/ramses3d ../sims/iliev_tests/5/test5_aton.nml > log
+
+It will probably take several hours to run.
+If it works, it will produce 7 outputs.
+Follow the analysis commands in sims/testing/run_and_analyze.sh to produce profile.txt.
+This can be compared to Fig. 11-15 of arXiv:0905.2920v1.
+It is a more accurate version of sims/testing/expected_profile.txt.
