@@ -115,6 +115,7 @@ subroutine process_particle(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use hydro_parameters, ONLY: imetal
   use observe_commons
   use radiation_commons
   implicit none
@@ -149,12 +150,6 @@ subroutine process_particle(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

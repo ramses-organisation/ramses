@@ -1,6 +1,7 @@
 subroutine backup_radiation(filename)
   use amr_commons
   use hydro_commons
+  use radiation_commons, ONLY: Erad
   implicit none
   character(LEN=80)::filename
 

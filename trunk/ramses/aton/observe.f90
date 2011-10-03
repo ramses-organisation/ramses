@@ -1,8 +1,28 @@
+module observe_commons
+  use amr_parameters
+
+  integer,parameter::observe_num_quantity=8
+  real(dp),dimension(1:observe_num_quantity)::observe_quantity
+
+  integer,parameter::observe_hist1d_num_bins=200
+  real(dp),dimension(0:observe_hist1d_num_bins-1)::observe_density_hist1d
+  real(dp)::density_logmin=-8,density_logmax=1
+  
+  integer::observe_ilun_quantity=8000
+  integer::observe_ilun_density_hist1d=8001
+  
+  ! Star radiation statistics
+  real(kind=8)::observe_total_star_source=0d0
+  integer::observe_num_stars=0
+
+end module observe_commons
+
 subroutine observe_level(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
   use observe_commons
+  use radiation_commons, ONLY: Erad
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -72,14 +92,14 @@ subroutine observe_level(ilevel)
 
         do i=1,nleaf
            density = uu(i,1)*scale_d*0.76/mH
-           xion = uu(i,ndim+3)/uu(i,1)
+           xion = uu(i,ixion)/uu(i,1)
            xion_mass = xion * density
            temperature = uu(i,ndim+2)
            do ivar=1,ndim
               temperature = temperature - 0.5*uu(i,ivar+1)**2/uu(i,1)
            end do
            temperature = temperature*(gamma-1.0)/uu(i,1)*scale_T2/(1 + xion)
-           if (radiation) then
+           if (aton) then
               rad_intensity = Erad(ind_leaf(i))
            else
               rad_intensity = -1

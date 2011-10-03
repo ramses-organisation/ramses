@@ -791,7 +791,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
         end if
 #ifdef ATON
-        if(aton)
+        if(aton)then
            do i=1,nn
               Erad(iskip+ind_grid_son(i))=Erad(ind_fathers(i,0))
            end do

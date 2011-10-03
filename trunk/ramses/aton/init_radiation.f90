@@ -1,6 +1,7 @@
 subroutine init_radiation
   use amr_commons
   use hydro_commons
+  use radiation_commons, ONLY: Erad,Srad
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

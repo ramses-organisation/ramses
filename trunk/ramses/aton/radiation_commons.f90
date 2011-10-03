@@ -15,6 +15,9 @@ module radiation_commons
   ! Number of boundary cells on each side of each dimension.
   integer::boundary_size=0
 
+  ! Radiation feedback activated
+  logical::radiation_feedback=.true.
+
   ! Factor used by cooling in CUDATON.
   real(kind=8)::fudgecool=0.1
 

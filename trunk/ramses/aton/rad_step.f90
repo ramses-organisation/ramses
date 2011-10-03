@@ -387,7 +387,7 @@ subroutine start_mpi(dx)
         xx_dp(1,1)=reception(icpu,1)%u_radiation(i,1)
         xx_dp(1,2)=reception(icpu,1)%u_radiation(i,2)
         xx_dp(1,3)=reception(icpu,1)%u_radiation(i,3)
-        call get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
+        call aton_get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
         call get_rad_quantities_from_cell( &
              & ind_tree(1), &
              & dx, &
@@ -543,7 +543,7 @@ recursive subroutine update_rad_quantities_in_cell(cell_index,photon_density,xio
   ! We only use the temperature from ATON if ramses cooling is switched
   ! off.
   ! TODO(tstranex): Make this more readable.
-  if(radiation_cooling)then
+  if(.not.cooling)then
      ekk=0.0
      do idim=1,ndim
         ekk=ekk+0.5*uold(cell_index,idim+1)**2/uold(cell_index,1)
@@ -624,7 +624,7 @@ subroutine fill_cpu_field_from_hydro(dx)
         xx_dp(1,1) = my_xmin + (dble(i)-0.5)/dble(2**levelmin)
         xx_dp(1,2) = my_ymin + (dble(j)-0.5)/dble(2**levelmin)
         xx_dp(1,3) = my_zmin + (dble(k)-0.5)/dble(2**levelmin)
-        call get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
+        call aton_get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
         call get_rad_quantities_from_cell( &
              & ind_tree(1), &
              & dx, &
@@ -747,7 +747,7 @@ subroutine fill_hydro_from_cpu_field(dx)
         xx_dp(1,1)=reception(icpu,1)%u_radiation(i,1)
         xx_dp(1,2)=reception(icpu,1)%u_radiation(i,2)
         xx_dp(1,3)=reception(icpu,1)%u_radiation(i,3)
-        call get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
+        call aton_get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
 
         call update_rad_quantities_in_cell( &
              & ind_tree(1), &
@@ -769,7 +769,7 @@ subroutine fill_hydro_from_cpu_field(dx)
      xx_dp(1,1) = my_xmin + (dble(i)-0.5)/dble(2**levelmin)
      xx_dp(1,2) = my_ymin + (dble(j)-0.5)/dble(2**levelmin)
      xx_dp(1,3) = my_zmin + (dble(k)-0.5)/dble(2**levelmin)
-     call get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
+     call aton_get_cell_index(ind_tree,lev_tree,xx_dp,levelmin,1)
 
      photon_density_dp = cpu_e(idx)
      xion_dp = cpu_x(idx)
@@ -792,7 +792,7 @@ end subroutine
 
 ! Copied from Romain's radiation.f90
 ! Returns the index of the smallest AMR cell containing the given point.
-subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
+subroutine aton_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
   use amr_commons
   implicit none
   integer::np,ilevel
@@ -832,7 +832,7 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
      cell_index(i)=ind_cell
      cell_levl(i)=ilevel
   end do
-end subroutine get_cell_index
+end subroutine aton_get_cell_index
 
 subroutine output_radiation_stats(ilun)
   use data_common

@@ -75,7 +75,7 @@ subroutine read_radiation_params(file_desc)
   integer::file_desc
 
   namelist/radiation_params/&
-       & allow_gpu_overload,radiation_feedback,radiation_cooling,&
+       & allow_gpu_overload,radiation_feedback,&
        & rad_max_time_step, &
        & rad_light_speed_factor, &
        & rad_num_sources,rad_source_x,rad_source_y, &
