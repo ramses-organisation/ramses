@@ -1,6 +1,6 @@
 
 &RUN_PARAMS
-radiation=.true.
+aton=.true.
 cosmo=.true.
 pic=.true.
 poisson=.true.

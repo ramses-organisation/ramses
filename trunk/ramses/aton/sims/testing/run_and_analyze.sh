@@ -1,14 +1,20 @@
 #!/bin/bash
 
+RAMSES=`dirname $0`/../../..
+echo "Running from ramses directory ${RAMSES}"
+
 mkdir test
 cd test
+echo "Storing results in" `pwd`
+
 
 # This takes several minutes.
-mpirun -n 1 ../ramses/bin/ramses3d ../sims/testing/stromgren.nml > log
+cp $RAMSES/aton/sims/testing/stromgren.nml .
+mpirun -n 1 $RAMSES/bin/ramses3d stromgren.nml > log
 
 # Get some interesting data.
-../ramses/utils/f90/amr2cell -inp output_00007/ -out output_00007/cells.txt
-python ../ramses/utils/py/test5spherical.py < output_00007/cells.txt > profile.txt
+$RAMSES/utils/f90/amr2cell -inp output_00007/ -out output_00007/cells.txt
+python $RAMSES/aton/utils/test5spherical.py < output_00007/cells.txt > profile.txt
 
 cd ..
 
