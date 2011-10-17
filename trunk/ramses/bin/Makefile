@@ -9,20 +9,23 @@ NVAR = 5
 SOLVER = hydro
 PATCH = ../patch/EOS
 EXEC = ramses
+ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 #############################################################################
 # Fortran compiler options and directives
 
+DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+
 #F90 = mpif90 -g -traceback
-#FFLAGS = -O0 -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVAR=$(NVAR)
+#FFLAGS = -O0 -cpp $(DEFINES) -DNVAR=$(NVAR)
 # --- No MPI, gfortran ----------------------------------
-#F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=-DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
 
 #F90 = gfortran
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -ffree-line-length-none
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -ffree-line-length-none
 
 # --- No MPI, pgf90 ----------------------------------
 #F90 = pgf90
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#FFLAGS = -Mpreprocess $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, xlf ------------------------------------
 #F90 = xlf
@@ -30,31 +33,31 @@ EXEC = ramses
 
 # --- No MPI, f90 ------------------------------------
 #F90 = f90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, ifort ----------------------------------
 #F90 = ifort
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
+#FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 #
 # --- No MPI, gfortran -------------------------------
 #F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
 #F90 = mpif90 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=$(NVECTOR)
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
 
 # --- MPI, pgf90 syntax ------------------------------
 F90 = mpif90 -O3
-FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER)
+FFLAGS = -Mpreprocess $(DEFINES)
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
+#FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
-#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
+#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM
 
 #############################################################################
 MOD = mod
@@ -62,10 +65,14 @@ MOD = mod
 # MPI librairies
 LIBMPI = 
 #LIBMPI = -lfmpi -lmpi -lelan
+
+# --- CUDA libraries, for Titane ---
+LIBCUDA = -L/opt/cuda/lib  -lm -lcuda -lcudart
+
 LIBS = $(LIBMPI)
 #############################################################################
 # Sources directories are searched in this exact order
-VPATH = $(PATCH):../$(SOLVER):../hydro:../pm:../poisson:../amr
+VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 #############################################################################
 # All objects
 MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o clfind_commons.o
@@ -77,10 +84,15 @@ POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o multigrid_
 # Hydro objects
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_fine.o godunov_fine.o uplmde.o umuscl.o interpol_hydro.o godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o read_hydro_params.o synchro_hydro_fine.o 
 # All objects
-AMRLIB = $(MODOBJ) $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
+AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
+# ATON objects
+ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
+ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o rad_backup.o ../aton/atonlib/libaton.a
 #############################################################################
-ramses:	$(AMRLIB) ramses.o
-	$(F90) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
+ramses:	$(MODOBJ) $(AMRLIB) ramses.o
+	$(F90) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
+ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
+	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
 #############################################################################
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
