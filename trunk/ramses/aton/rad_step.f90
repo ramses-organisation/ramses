@@ -233,12 +233,14 @@ subroutine aton_gpu_loop(num_steps,dx,deltat)
 
 end subroutine aton_gpu_loop
 
-function get_max_radiation_time_step()
-  use amr_commons
+! Return the maximum total time step (sum of all substeps) for ATON in
+! user units.
+! -1 is returned if there is no maximum.
+function aton_time_step()
   use radiation_commons
   implicit none
-  real(dp)::get_max_radiation_time_step
-  get_max_radiation_time_step = rad_max_time_step
+  real(dp)::aton_time_step
+  aton_time_step = rad_max_time_step
 end function
 
 subroutine start_mpi(dx)

@@ -13,6 +13,7 @@ subroutine newdt_fine(ilevel)
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp 
+  ! 4- maximum step time for ATON
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -20,6 +21,7 @@ subroutine newdt_fine(ilevel)
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
+  real(dp)::aton_time_step,dt_aton
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -39,6 +41,16 @@ subroutine newdt_fine(ilevel)
   if(cosmo)then
      dtnew(ilevel)=MIN(dtnew(ilevel),0.1/hexp)
   end if
+
+#ifdef ATON
+  ! Maximum time step for ATON
+  if(aton)then
+     dt_aton = aton_time_step()
+     if(dt_aton>0d0)then
+        dtnew(ilevel)=MIN(dtnew(ilevel),dt_aton)
+     end if
+  end if
+#endif
 
   if(pic) then
 

@@ -34,9 +34,12 @@ module radiation_commons
   ! 'cpu' is experimental.
   character(len=10)::rad_aton_version='gpu'
 
-  ! Maximum time step. FIXME(tstranex): Calculate this automatically.
-  ! 0 means there is no maximum.
-  real(kind=8)::rad_max_time_step=0
+  ! Maximum time step in user units.
+  ! -1 means there is no maximum.
+  ! This only needs to be set for some test cases where the hydro time
+  ! step is too large.
+  ! TODO(tstranex): Calculate this automatically.
+  real(kind=8)::rad_max_time_step=-1
 
   real(kind=8)::rad_light_speed_factor=1.0
 
