@@ -121,7 +121,12 @@ module amr_commons
   CHARACTER(LEN=20)::type_hydro  ='hydro'
   CHARACTER(LEN=20)::type_accel  ='accel'
   CHARACTER(LEN=20)::type_flag   ='flag'
-  
+
+  ! Units specified by the user in the UNITS_PARAMS namelist for non-cosmo runs.
+  ! These values shouldn't be used directly. Instead call units() in amr/units.f90.
+  real(dp)::units_density=1.0  ! [g/cm^3]
+  real(dp)::units_time=1.0     ! [seconds]
+  real(dp)::units_length=1.0   ! [cm]
 
 end module amr_commons
 
