@@ -2,14 +2,9 @@ module observe_commons
   use amr_parameters
 
   integer,parameter::observe_num_quantity=8
-  real(dp),dimension(1:observe_num_quantity)::observe_quantity
+  real(dp),dimension(1:observe_num_quantity)::observe_quantity=0d0
 
-  integer,parameter::observe_hist1d_num_bins=200
-  real(dp),dimension(0:observe_hist1d_num_bins-1)::observe_density_hist1d
-  real(dp)::density_logmin=-8,density_logmax=1
-  
   integer::observe_ilun_quantity=8000
-  integer::observe_ilun_density_hist1d=8001
   
   ! Star radiation statistics
   real(kind=8)::observe_total_star_source=0d0
@@ -38,8 +33,6 @@ subroutine observe_level(ilevel)
 
   real(dp),dimension(1:observe_num_quantity)::local_quantity,total_quantity
   real(dp)::density,xion,xion_mass,temperature,rad_intensity
-  real(dp),dimension(0:observe_hist1d_num_bins-1)::local_density_hist1d
-  real(dp),dimension(0:observe_hist1d_num_bins-1)::total_density_hist1d
   integer::density_bin
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
@@ -56,8 +49,6 @@ subroutine observe_level(ilevel)
 
   local_quantity = 0d0
   total_quantity = 0d0
-  local_density_hist1d = 0d0
-  total_density_hist1d = 0d0
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -105,12 +96,6 @@ subroutine observe_level(ilevel)
               rad_intensity = -1
            end if
 
-           density_bin = int((log10(density) - density_logmin) * &
-                & observe_hist1d_num_bins / (density_logmax - density_logmin))
-           density_bin = max(min(density_bin, observe_hist1d_num_bins-1), 0)
-           local_density_hist1d(density_bin) = &
-                & local_density_hist1d(density_bin) + 1d0
-
            local_quantity(1) = local_quantity(1) + 1d0
            local_quantity(2) = local_quantity(2) + density
            local_quantity(3) = local_quantity(3) + xion
@@ -124,7 +109,6 @@ subroutine observe_level(ilevel)
   ! End loop over grids
 
   local_quantity = local_quantity*cell_fraction
-  local_density_hist1d = local_density_hist1d*cell_fraction
 
   local_quantity(7) = local_quantity(7) + observe_total_star_source
   local_quantity(8) = local_quantity(8) + observe_num_stars
@@ -132,21 +116,9 @@ subroutine observe_level(ilevel)
   ! Compute global quantities
   call MPI_ALLREDUCE(local_quantity,total_quantity,observe_num_quantity, &
        & MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(local_density_hist1d,total_density_hist1d, &
-       & observe_hist1d_num_bins, &
-       & MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 
-  observe_quantity = observe_quantity + total_quantity
-  observe_density_hist1d = observe_density_hist1d + total_density_hist1d
+  observe_quantity = total_quantity
 end subroutine observe_level
-
-subroutine observe_reset()
-  use hydro_commons
-  use observe_commons
-  implicit none
-  observe_quantity = 0d0
-  observe_density_hist1d = 0d0
-end subroutine observe_reset
 
 subroutine observe_init()
   use hydro_commons
@@ -163,14 +135,10 @@ subroutine observe_init()
   end if
 
   open(unit=observe_ilun_quantity,position=mode, &
-       & file='observe_quantity.txt',form='formatted')
+       & file='averages.txt',form='formatted')
   write(observe_ilun_quantity,*) '# aexp <one> <nH> <x> <x*nH> <T> <J> <S> <num_stars>'  
-  open(unit=observe_ilun_density_hist1d,position=mode, &
-       & file='observe_density_hist1d.txt',form='formatted')
-  write(observe_ilun_density_hist1d,*) '# aexp bin <nH[bin]>'
 end subroutine observe_init
 
-! TODO: this is unused
 subroutine observe_stop()
   use hydro_commons
   use amr_commons
@@ -178,7 +146,6 @@ subroutine observe_stop()
   implicit none
   if (myid.ne.1) return
   close(unit=observe_ilun_quantity)
-  close(unit=observe_ilun_density_hist1d)
 end subroutine observe_stop
 
 subroutine observe_output()
@@ -202,14 +169,5 @@ subroutine observe_output()
        & observe_quantity(7), &
        & observe_quantity(8)
 
-  do bin=0,observe_hist1d_num_bins-1
-     bin_value = density_logmin + &
-          & bin*(density_logmax - density_logmin)/observe_hist1d_num_bins
-     write(observe_ilun_density_hist1d,*) aexp, bin_value, &
-          observe_density_hist1d(bin)
-  end do
-  write(observe_ilun_density_hist1d,*)
-
   flush(unit=observe_ilun_quantity)
-  flush(unit=observe_ilun_density_hist1d)
 end subroutine observe_output

@@ -39,6 +39,8 @@ subroutine rad_init
      call restore_radiation()
   end if
 
+  call observe_init()
+
 end subroutine rad_init
 
 subroutine rad_cpu_malloc()
@@ -67,6 +69,7 @@ end subroutine rad_cpu_malloc
 subroutine clean_radiation
   implicit none
   call clean_rad_boundary()
+  call observe_stop()
 end subroutine clean_radiation
 
 subroutine read_radiation_params(file_desc)

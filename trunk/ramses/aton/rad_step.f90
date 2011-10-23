@@ -105,6 +105,8 @@ subroutine rad_step(time_step_user)
   call end_mpi()
   call timer_stop(mpi_timer)
 
+  call observe_level(levelmin)
+
   call timer_stop(total_timer)
 
   call timer_start(ramses_timer)
