@@ -125,6 +125,7 @@ namespace aton {
 bool validate(State state, double c_light) {
   int label = 0;
   aton_validate_(&label, &c_light, state.E, state.nH, state.T, state.xHII, state.F);
+  return true;  // FIXME
 }
 
 }

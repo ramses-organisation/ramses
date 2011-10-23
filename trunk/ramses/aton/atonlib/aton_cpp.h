@@ -60,6 +60,7 @@ namespace aton {
   
   // Returns false if the state is inconsistent or invalid.
   // Also prints an error.
+  // FIXME: Currently this always returns true.
   bool validate(State state, double c_light);
 }
 

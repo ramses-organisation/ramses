@@ -25,7 +25,7 @@ scale_T2 = mH/kB * scale_v**2
 scale_pressure = scale_d * scale_v**2
 
 for line in sys.stdin:
-    x, y, z, dx, icpu, ilevel, v1, v2, v3, v4, v5, v6, v7, v8 = map(float, line.split())
+    x, y, z, dx, icpu, ilevel, v1, v2, v3, v4, v5, v6 = map(float, line.split())
 
     # The vi is related to uold(i) as follows:
     #   v1 = uold(1)
@@ -34,13 +34,11 @@ for line in sys.stdin:
     #   v4 = uold(4) / uold(1)
     #   v5 = (gamma-1) * (uold(5) - ekk)
     #   v6 = uold(6) / uold(1)
-    #   v7 = Erad
-    #   v8 = 1-v6
     # See hydro/output_hydro.f90.
 
     rho = v1 * scale_d / mH
     xion = v6
-    xneutral = v8
+    xneutral = 1.0 - v6
     p = v5 * scale_pressure
     T2 = v5/v1 * scale_T2
     temperature = T2 / (1 + xion)
