@@ -72,8 +72,7 @@ subroutine rad_step(time_step_user)
   num_steps=max(num_steps, 1)
   
   if (myid.eq.1) then
-     write(*,*) "ncpu=",ncpu
-     write(*,*) "myid=",myid
+     write(*,*) 'Starting ATON radiation step:'
      write(*,*) '  time step = ', time_step_s, ' (seconds)'
      write(*,*) '  dx = ', dx, ' (metres)'
      write(*,*) '  hubblet = ', hubblet, ' (1/seconds)'
@@ -105,7 +104,9 @@ subroutine rad_step(time_step_user)
   call end_mpi()
   call timer_stop(mpi_timer)
 
+  ! Observations
   call observe_level(levelmin)
+  call observe_output()
 
   call timer_stop(total_timer)
 

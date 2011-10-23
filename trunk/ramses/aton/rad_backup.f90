@@ -59,9 +59,6 @@ subroutine backup_radiation(filename)
   end do
   close(ilun)
 
-  ! Output observations
-  call observe_output()
-
 end subroutine backup_radiation
 
 subroutine store_radiation(filename)
