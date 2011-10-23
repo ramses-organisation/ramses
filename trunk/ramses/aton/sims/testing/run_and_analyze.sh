@@ -11,7 +11,7 @@ echo "Storing results in" `pwd`
 # This takes several minutes.
 cp $RAMSES/aton/sims/testing/stromgren.nml .
 cp $RAMSES/aton/sims/testing/expected_profile.txt .
-mpirun -n 1 $RAMSES/bin/ramses3d stromgren.nml > log
+mpirun -n 1 $RAMSES/bin/ramses3d stromgren.nml | tee log
 
 # Get some interesting data.
 $RAMSES/utils/f90/amr2cell -inp output_00007/ -out output_00007/cells.txt
