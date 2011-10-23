@@ -22,7 +22,7 @@ rad_source_rate=5.0d+48  ! photons / s
 /
 
 &PHYSICS_PARAMS
-cooling=.true.
+cooling=.false.
 metal=.false.
 J21=0.1
 units_density=1.66e-27  ! mH * 10^-3 grams/cm^3
