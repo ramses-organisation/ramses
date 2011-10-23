@@ -1,13 +1,13 @@
 // GPU definitions.
 
 // Unfortunately the grid size is fixed at compile time.
-// You can set the dimensions here.
-// For example, if you want a 256^3 simulation on 16 nodes, then set NCELLX=128, NCELLY=128, NCELLZ=64.
+// It is defined by the NCELLX, NCELLY and NCELLZ macros.
+// These are always passed on the compiler command line
+// so that they can be configured in the Makefile.
 
-#define NCELLX 32
-#define NCELLY 32
-#define NCELLZ 32
-
+// Number of boundary cells.
+// This must be at least 1.
+// Larger values (e.g. 4) can improve performance due to memory alignment.
 #define NBOUND 1  // This must match nbnd in coupling.f90
 #define NBOUND2 (2*NBOUND)
 
