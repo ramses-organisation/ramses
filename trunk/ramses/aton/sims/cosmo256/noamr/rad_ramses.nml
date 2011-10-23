@@ -1,3 +1,5 @@
+! 256^3 cosmo simulation with ATON radiation.
+! Uses equilibrium cooling.
 
 &RUN_PARAMS
 aton=.true.

@@ -1,3 +1,5 @@
+! 256^3 cosmo simulation with ATON radiation.
+! Uses non-equilibrium cooling.
 
 &RUN_PARAMS
 aton=.true.
@@ -42,21 +44,21 @@ riemann='hllc'
 /
 
 &OUTPUT_PARAMS
-foutput=15
+foutput=20
 noutput=6
 aout=0.125,0.142857,0.166667,0.2,0.25,0.333333334
 /
 
 &INIT_PARAMS
 filetype='grafic'
-initfile(1)='/scratch/cont003/teyssier/wmap5/boxlen12p5_n1024'
+initfile(1)='/scratch/cont003/teyssier/tstranex/ics/boxlen12p5_n256'
 /
 
 &AMR_PARAMS
-levelmin=10
-levelmax=10
-ngridmax=1250000
-npartmax=20000000
+levelmin=8
+levelmax=8
+ngridmax=500000
+npartmax=5000000
 nexpand=1
 /
 
