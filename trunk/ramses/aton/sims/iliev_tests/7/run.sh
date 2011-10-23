@@ -10,6 +10,4 @@
 
 set -x
 
-cd $SCRATCHDIR/tstranex/test7/aton
-
-mpirun $BRIDGE_MSUB_PWD/ramses3d_otsa $BRIDGE_MSUB_PWD/test7_aton.nml
+mpirun $BRIDGE_MSUB_PWD/ramses3d $BRIDGE_MSUB_PWD/test7_aton.nml > log_$DATE.log

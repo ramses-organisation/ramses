@@ -10,8 +10,6 @@
 
 set -x
 
-cd $SCRATCHDIR/tstranex/test5/aton
-
 export DATE=`date +%F_%Hh%M`
 
-mpirun $BRIDGE_MSUB_PWD/ramses3d $BRIDGE_MSUB_PWD/test5_aton.nml > test5_aton_log_$DATE.log
+mpirun $BRIDGE_MSUB_PWD/ramses3d $BRIDGE_MSUB_PWD/test5_aton.nml > log_$DATE.log

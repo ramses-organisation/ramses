@@ -2,7 +2,7 @@
 ! I. Illiev et al., "Cosmological Radiative Transfer Comparison Project II:
 ! The Radiation-Hydrodynamic Tests", 2008, arXiv:0905.2920v1.
 
-! Uses non-equilibrium cooling.
+! Uses equilibrium cooling.
 
 &RUN_PARAMS
 hydro=.true.
@@ -22,7 +22,7 @@ rad_density=33.356
 /
 
 &PHYSICS_PARAMS
-cooling=.false.
+cooling=.true.
 metal=.false.
 J21=0.1
 units_density=3.32e-28  ! mH * 2 * 10^-4 grams/cm^3
