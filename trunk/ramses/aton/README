@@ -24,6 +24,7 @@ This will produce a file called aton/atonlib/libaton.a.
 ATON_FLAGS = -DATON
 NVAR = 6
 LIBCUDA = flags for your CUDA libraries
+You may need to add -lmpi_cxx to LIBMPI.
 Then build the "ramses_aton" target:
 
 $ cd bin
@@ -41,11 +42,11 @@ There is a small 32^3 test case to check that the program built correctly.
 
 1. First compile the amr2cell utility:
 
-$ cd ramses/utils/f90
+$ cd utils/f90
 $ vim Makefile  # edit the options
 $ make amr2cell
 
-This will produce a binary called ramses/utils/f90/amr2cell
+This will produce a binary called utils/f90/amr2cell
 
 
 2. Then run the test:
@@ -76,7 +77,7 @@ $ cd aton/atonlib
 $ vim Makefile  # set the grid size
 $ make clean
 $ make
-$ cd ../bin
+$ cd ../../bin
 $ make ramses_aton
 $ cd ..
 
@@ -93,3 +94,12 @@ It will produce 7 output directories and a file called "averages.txt".
 Follow the analysis commands in aton/sims/testing/run_and_analyze.sh
 to produce profile.txt. It can be compared to Fig. 11-15 of arXiv:0905.2920v1.
 It's a more accurate version of aton/sims/testing/expected_profile.txt.
+
+
+Cosmological simulation
+-----------------------
+
+Running a 256^3 cosmo simulation is similar to Iliev Test 5 from the
+previous section.
+Use this namelist: aton/sims/cosmo256/noamr/rad_aton.nml
+You need to generate initial conditions from grafic first.
