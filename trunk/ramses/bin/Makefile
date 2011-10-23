@@ -13,10 +13,10 @@ ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 #############################################################################
 # Fortran compiler options and directives
 
-DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 
 #F90 = mpif90 -g -traceback
-#FFLAGS = -O0 -cpp $(DEFINES) -DNVAR=$(NVAR)
+#FFLAGS = -O0 -cpp $(DEFINES)
 # --- No MPI, gfortran ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
 
@@ -29,7 +29,7 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 
 # --- No MPI, xlf ------------------------------------
 #F90 = xlf
-#FFLAGS = -WF,-DNDIM=$(NDIM),-DNPRE=$(NPRE),-DSOLVER$(SOLVER),-DWITHOUTMPI -qfree=f90 -qsuffix=f=f90 -qsuffix=cpp=f90
+#FFLAGS = -WF,-DNDIM=$(NDIM),-DNPRE=$(NPRE),-DNVAR=$(NVAR),-DSOLVER$(SOLVER),-DWITHOUTMPI -qfree=f90 -qsuffix=f=f90 -qsuffix=cpp=f90
 
 # --- No MPI, f90 ------------------------------------
 #F90 = f90
