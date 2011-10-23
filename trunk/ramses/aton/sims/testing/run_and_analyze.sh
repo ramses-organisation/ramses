@@ -10,6 +10,7 @@ echo "Storing results in" `pwd`
 
 # This takes several minutes.
 cp $RAMSES/aton/sims/testing/stromgren.nml .
+cp $RAMSES/aton/sims/testing/expected_profile.txt .
 mpirun -n 1 $RAMSES/bin/ramses3d stromgren.nml > log
 
 # Get some interesting data.
@@ -25,5 +26,5 @@ echo "Now use gnuplot to compare test/profile.txt to sims/testing/expected_profi
 echo "The columns are r, density, xneutral, pressure, temperature, mach, xion"
 echo "e.g. to compare the temperature in gnuplot:"
 echo "set log y"
-echo "plot 'test/profile.txt' using 1:5, 'sims/testing/expected_profile.txt' using 1:5"
+echo "plot 'test/profile.txt' using 1:5, 'test/expected_profile.txt' using 1:5"
 

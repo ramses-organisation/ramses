@@ -4,7 +4,7 @@
 
 &RUN_PARAMS
 hydro=.true.
-radiation=.true.
+aton=.true.
 ncontrol=1
 nrestart=0
 nremap=0
@@ -13,7 +13,6 @@ nstepmax=100000
 /
 
 &RADIATION_PARAMS
-radiation_cooling=.true.
 rad_max_time_step=0.001
 rad_flux_at_x_min_boundary=.true.
 rad_flux_x=1.0e10  ! photons / s / m^2
@@ -24,10 +23,6 @@ rad_density=33.356
 cooling=.true.
 metal=.false.
 J21=0.1
-/
-
-! Converts user units into cgs units.
-&UNITS_PARAMS
 units_density=3.32e-28  ! mH * 2 * 10^-4 grams/cm^3
 units_time=3.156e14     ! 10 Myr
 units_length=2.037e22   ! 6.6 kpc

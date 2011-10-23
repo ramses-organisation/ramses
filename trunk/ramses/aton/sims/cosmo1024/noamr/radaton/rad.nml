@@ -1,6 +1,6 @@
 
 &RUN_PARAMS
-radiation=.true.
+aton=.true.
 cosmo=.true.
 pic=.true.
 poisson=.true.
@@ -15,10 +15,6 @@ cost_weighting=.false.
 &RADIATION_PARAMS
 rad_escape_fraction=0.05
 rad_boundary_condition=1 ! periodic
-radiation_cooling=.true.
-/
-
-&UNITS_PARAMS
 /
 
 &PHYSICS_PARAMS

@@ -4,7 +4,7 @@
 
 &RUN_PARAMS
 hydro=.true.
-radiation=.true.
+aton=.true.
 ncontrol=1
 nrestart=0
 nremap=0
@@ -13,8 +13,7 @@ nstepmax=1000
 /
 
 &RADIATION_PARAMS
-radiation_cooling=.true.
-allow_gpu_overload=true
+allow_gpu_overload=false
 rad_max_time_step=0.01
 rad_light_speed_factor=0.1
 rad_num_sources=1
@@ -28,9 +27,6 @@ rad_source_rate=5.0d+48  ! photons / s
 cooling=.true.
 metal=.false.
 J21=0.1
-/
-
-&UNITS_PARAMS
 units_density=1.66e-27  ! mH * 10^-3 grams/cm^3
 units_time=3.156e15     ! 100 Myr
 units_length=9.258e22   ! 30 kpc
