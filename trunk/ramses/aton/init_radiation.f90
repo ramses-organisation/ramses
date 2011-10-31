@@ -1,6 +1,7 @@
 subroutine init_radiation
   use amr_commons
   use hydro_commons
+  use cooling_module, ONLY: force_j0_one
   use radiation_commons, ONLY: Erad,Srad
   implicit none
 #ifndef WITHOUTMPI
