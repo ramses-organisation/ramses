@@ -92,6 +92,7 @@ module cooling_module
   ! Si teyssier ou theuns :
   real(kind=8) :: J0in=1.d-22  ! J0 default 
   real(kind=8) :: J0min=1.d-29 ! Valeur minimale du J0 
+  logical :: force_j0_one=.false. ! Force constant UV bkg
   ! (saturation a grand redshift)
   real(kind=8) :: aexp_ref=0.0001        
   real(kind=8) :: J0min_ref=2.77168510365299962D-25 ! J0min_ref precalcule pour
@@ -684,7 +685,7 @@ function J0simple(aexp)
   else
      J0simple=1.d0/(3.*aexp)**3
   endif
-  if(aton)J0simple=1.0
+  if(force_j0_one)J0simple=1.0
   J0simple=max(J0simple*J0in,J0min)
   return
 end function J0simple

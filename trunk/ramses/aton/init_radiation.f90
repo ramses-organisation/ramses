@@ -26,6 +26,9 @@ subroutine init_radiation
   allocate(Srad(1:ncell))
   Erad=0.0  ! Photon density = 0 initially.
   Srad=0.0  ! No initial sources.
+  
+  ! Force constant UV bkg
+  force_j0_one=.true.
 
   !-----------------------------
   ! For a restart, read rad file
