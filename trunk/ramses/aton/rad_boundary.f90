@@ -81,8 +81,12 @@ subroutine impose_flux_at_x_min_boundary()
   integer::i,j
   integer::bound_index
   integer::lattice_size,stride
+  logical::periodic
 
-  if (calc_cpuid(my_i-1, my_j, my_k).ne.0) then
+  ! Periodic boundary conditions:
+  periodic = (rad_boundary_condition.eq.1)
+
+  if (calc_cpuid(my_i-1, my_j, my_k, periodic).ne.0) then
      ! This is an internal boundary.
      return
   end if
