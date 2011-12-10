@@ -5,7 +5,7 @@
 #MSUB -T 36000                # Limite de temps elapsed du job ici 600s      
 #MSUB -o stdout_test5aton          # Sortie standard
 #MSUB -e stderr_test5aton          # Sortie d'erreur       
-#MSUB -p gen2191      # Allocation
+#MSUB -p gen6667      # Allocation
 #MSUB -q gpu                # sélection de la queue GPU (groupe genci ou challenge uniquement)
 
 set -x
