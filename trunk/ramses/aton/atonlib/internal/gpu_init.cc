@@ -1,6 +1,8 @@
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <cuda_runtime_api.h>
 
 #define HOSTNAME_BUFFER_SIZE 50

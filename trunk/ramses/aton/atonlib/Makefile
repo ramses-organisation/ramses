@@ -35,6 +35,10 @@ PUBLIC_INCLUDES=$(shell pwd)
 NVCC= nvcc -arch=sm_13 #--device-emulation -g
 CC = mpic++ -O2
 F90 = mpif90
+# For todi.cscs.ch, load module PrgEnv-gnu and set:
+# CC = cc -O2
+# F90 = ftn
+
 
 EXECUTABLE = 
 

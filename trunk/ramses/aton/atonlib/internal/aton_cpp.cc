@@ -19,7 +19,7 @@ void State::Init(double E, double nH, double T, double xHII,
 
 int init_cuda_device(bool allow_gpu_overload) {
   int overload = allow_gpu_overload;
-  aton_init_gpu_(&overload);
+  return aton_init_gpu_(&overload);
 }
 
 void gpu_allocate() {
