@@ -10,6 +10,7 @@
 // This file uses only 'physical' quantities, never comoving quantities.
 
 #include <algorithm>
+#include <cstring>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
