@@ -14,12 +14,15 @@ subroutine rad_init
   num_cpu_y = 2**levelmin / grid_size_y
   num_cpu_z = 2**levelmin / grid_size_z
 
-  if (aton_init_gpu(allow_gpu_overload).eq.0) then
-     write(*,*) "aton_init_gpu error"
-     call clean_stop
+  if (rad_aton_version.eq.'gpu') then
+    if (aton_init_gpu(allow_gpu_overload).eq.0) then
+      write(*,*) "aton_init_gpu error"
+      call clean_stop
+    end if
+    call aton_gpu_malloc(rad_num_sources)
   end if
+
   call rad_cpu_malloc()
-  call aton_gpu_malloc(rad_num_sources)
 
   cpu_e=1e-7
   cpu_f=0.0
@@ -103,6 +106,9 @@ subroutine read_radiation_params(file_desc)
      stop
   end if
   write(*,*) "Using ATON version: ", rad_aton_version
+  if (rad_aton_version.eq.'cpu') then
+    write(*,*) "Warning: CPU version of ATON is experimental."
+  end if
 
   c_light = 2.99792458e8 * rad_light_speed_factor
 

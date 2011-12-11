@@ -122,55 +122,42 @@ subroutine aton_cpu_loop(num_steps,dx,deltat)
   real(kind=8)::deltat
   real(kind=8)::dx
 
-  write(*,*)'Warning! ATON CPU mode is experimental. Rather use the GPU version.'
-
-  call aton_validate(myid, c_light, cpu_e, cpu_d, cpu_t, cpu_x, cpu_f)
+  !call aton_validate(myid, c_light, cpu_e, cpu_d, cpu_t, cpu_x, cpu_f)
 
   i=0
   do while(i.lt.num_steps)
      if(mod(i,1).eq.0) then
-        write(*,*)'.'
+        !write(*,*)'.'
      end if
-
-     write(*,*)'*',myid,'1'
 
      call timer_start(boundary_memory_timer)
      call cpu_pack_boundary_values(cpu_e, cpu_f, boundary_send)
      call timer_stop(boundary_memory_timer)
      call timer_inc_count(boundary_memory_timer, -1)
 
-     write(*,*)'*',myid,'2'
-
      call timer_start(boundary_timer)
      call cpu_mpi_boundary()
      call timer_stop(boundary_timer)
      call timer_inc_count(boundary_timer, -1)
-
-     write(*,*)'*',myid,'3'
 
      call timer_start(boundary_memory_timer)
      call cpu_unpack_boundary_values(boundary_recv, cpu_e, cpu_f)
      call timer_stop(boundary_memory_timer)
      call timer_inc_count(boundary_memory_timer, -1)
 
-     write(*,*)'*',myid,'4'
-
      call timer_start(aton_timer)
      call aton_cpu_rad( &
           & myid, &
           & c_light,dx,deltat,rad_num_sources,fudgecool,aexp,0d0, &
-          & cpu_e, cpu_d, cpu_t, cpu_x, cpu_photon_source, cpu_f)
+          & cpu_e, cpu_d, cpu_t, cpu_x, cpu_photon_source, cpu_f, &
+          & cpu_spos, cpu_s)
      call timer_stop(aton_timer)
      call timer_inc_count(aton_timer, -1)
-
-     write(*,*)'*',myid,'5'
 
      i=i+1
   end do
 
-  call aton_validate(myid, c_light, cpu_e, cpu_d, cpu_t, cpu_x, cpu_f)
-
-  write(*,*)'aton_cpu_loop done'
+  !call aton_validate(myid, c_light, cpu_e, cpu_d, cpu_t, cpu_x, cpu_f)
 
 end subroutine aton_cpu_loop
 
@@ -277,6 +264,8 @@ subroutine start_mpi(dx)
         write(*,*)'Cartesian partition incorrect'
         write(*,*)' ncpu=',ncpu
         write(*,*)' cpu dimensions:',num_cpu_x,num_cpu_y,num_cpu_z
+        write(*,*)'You need to either change the number of MPI nodes or'
+        write(*,*)'change NCELLX, NCELLY, NCELLZ in ATON.'
      endif
      call clean_stop
   endif

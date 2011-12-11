@@ -1,5 +1,8 @@
 // CUDA implementation of ATON
 //
+// If you make a change to this file, remember to make the same change to
+// cpu_numerical.cc.
+//
 // Dominique Aubert <dominique.aubert@unistra.fr>
 // Timothy Stranex <timothy@stranex.com>
 //

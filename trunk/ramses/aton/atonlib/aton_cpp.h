@@ -30,6 +30,12 @@ namespace aton {
     // 3-vector quantities:
     double* F; // Photon flux [photons / m^2 / s]
 
+    // Point sources
+    // TODO: These should be deleted. Rather use the photon_source field. 
+    int point_source_count;
+    const int* point_source_pos;
+    const double* point_source;
+
     // Set the arrays to these constant values.
     void Init(double E, double nH, double T, double xHII, double photon_source);
   };

@@ -11,7 +11,8 @@ nstepmax=1000
 /
 
 &RADIATION_PARAMS
-allow_gpu_overload=true
+allow_gpu_overload=false
+rad_aton_version='gpu'
 rad_max_time_step=0.01
 rad_light_speed_factor=0.1
 rad_num_sources=1
