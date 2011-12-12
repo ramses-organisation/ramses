@@ -555,9 +555,9 @@ void cpu_rad_transport(State state, double c_light, double dx, double dt) {
   double* E_new = (double*) malloc(NCELL4*sizeof(double));
   double* F_new = (double*) malloc(NCELL4*sizeof(double)*3);
 
-  for (int i = 0; i < NCELLX; i++) {
+  for (int k = 0; k < NCELLZ; k++) {
     for (int j = 0; j < NCELLY; j++) {
-      for (int k = 0; k < NCELLZ; k++) {
+      for (int i = 0; i < NCELLX; i++) {
         StepRadN(i, j, k, state.E, state.F, c_light, dx, dt, E_new);
         StepRadF(i, j, k, state.E, state.F, c_light, dx, dt, F_new);
       }
@@ -579,9 +579,9 @@ void cpu_rad_transport(State state, double c_light, double dx, double dt) {
 // source_count: number of point sources
 //
 void cpu_rad_add_sources(State state, double dx, double dt) {
-  for (int i = 0; i < NCELLX; i++) {
+  for (int k = 0; k < NCELLZ; k++) {
     for (int j = 0; j < NCELLY; j++) {
-      for (int k = 0; k < NCELLZ; k++) {
+      for (int i = 0; i < NCELLX; i++) {
         int cell = CellIndex(i, j, k);
         AddSourceField(state.photon_source[cell], dt, &state.E[cell]);
       }
@@ -598,9 +598,9 @@ void cpu_rad_add_sources(State state, double dx, double dt) {
 //
 void cpu_rad_cooling(State state, double c_light, double dx, double dt,
 		 double aexp, double hubblet, double fudgecool) {
-  for (int i = 0; i < NCELLX; i++) {
+  for (int k = 0; k < NCELLZ; k++) {
     for (int j = 0; j < NCELLY; j++) {
-      for (int k = 0; k < NCELLZ; k++) {
+      for (int i = 0; i < NCELLX; i++) {
         int cell = CellIndex(i, j, k);
         StepCooling(
 	  state.nH[cell],
