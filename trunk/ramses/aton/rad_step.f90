@@ -108,8 +108,9 @@ subroutine rad_step(time_step_user)
   call observe_level(levelmin)
   call observe_output()
 
+  ! Timings
   call timer_stop(total_timer)
-
+  !call rad_output_timing()
   call timer_start(ramses_timer)
 
 end subroutine rad_step
@@ -828,91 +829,21 @@ subroutine aton_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
   end do
 end subroutine aton_get_cell_index
 
-subroutine output_radiation_stats(ilun)
-  use data_common
-  use radiation_commons
-  use cooling_module
-  implicit none
-
-  integer::ilun
-  integer::i,j,k
-  integer::idx
-  integer::n
-  integer::aton_cell_index
-
-  real(dp)::avg_xion_dp=0, avg_temperature_dp=0, avg_photon_density_dp=0
-  real(dp)::avg_mass_density_dp=0, avg_ion_mass_density_dp=0
-  real(dp)::avg_photon_source_dp=0
-
-  avg_xion_dp=0
-  avg_temperature_dp=0
-  avg_photon_density_dp=0
-  avg_mass_density_dp=0
-  avg_ion_mass_density_dp=0
-  avg_photon_source_dp=0
-
-  do i=1,grid_size_x
-  do j=1,grid_size_y
-  do k=1,grid_size_z
-     idx = aton_cell_index(i-1, j-1, k-1)
-
-     avg_xion_dp = avg_xion_dp + cpu_x(idx)
-     avg_temperature_dp = avg_temperature_dp + cpu_t(idx)
-     avg_photon_density_dp = avg_photon_density_dp + cpu_e(idx)
-
-     avg_mass_density_dp = avg_mass_density_dp + cpu_d(idx)
-     avg_ion_mass_density_dp = avg_ion_mass_density_dp + cpu_d(idx) * cpu_x(idx)
-
-     avg_photon_source_dp = avg_photon_source_dp + cpu_photon_source(idx)
-  end do
-  end do
-  end do
-
-  n = grid_size_x * grid_size_y * grid_size_z
-  avg_xion_dp = avg_xion_dp / n
-  avg_temperature_dp = avg_temperature_dp / n
-  avg_photon_density_dp = avg_photon_density_dp / n
-  avg_mass_density_dp = avg_mass_density_dp / n
-  avg_ion_mass_density_dp = avg_ion_mass_density_dp / n
-  avg_photon_source_dp = avg_photon_source_dp / n
-
-  write(ilun,*) 'avg_xion', avg_xion_dp, '[1]'
-  write(ilun,*) 'avg_temperature', avg_temperature_dp, '[K]'
-  write(ilun,*) 'avg_photon_density', avg_photon_density_dp, '[1/m^3]'
-  write(ilun,*) 'avg_mass_density', avg_mass_density_dp, '[1/m^3]'
-  write(ilun,*) 'avg_ion_mass_density', avg_ion_mass_density_dp, '[1/m^3]'
-  write(ilun,*) 'avg_photon_source', avg_photon_source_dp, '[1/m^3/s]'
-
-  write(ilun,*) 'J0min', J0min
-  write(ilun,*) 'J0simple(aexp)', J0simple(aexp)
-
-end subroutine output_radiation_stats
-
-subroutine output_radiation(filename)
+subroutine rad_output_timing()
   use radiation_commons
   implicit none
-  character(LEN=80)::filename
-  integer::ilun
-  character(LEN=5)::nchar
-  character(LEN=80)::fileloc
 
-  ilun=ncpu+myid+10
-  call title(myid,nchar)
-  fileloc=TRIM(filename)//TRIM(nchar)
-
-  open(unit=ilun,file=fileloc)
-  write(ilun,*) '# Timers'
-  call timer_output(ilun, total_timer, "total_timer")
-  call timer_output(ilun, full_memory_timer, "full_memory_timer")
-  call timer_output(ilun, boundary_memory_timer, "boundary_memory_timer")
-  call timer_output(ilun, boundary_timer, "boundary_timer")
-  call timer_output(ilun, aton_timer, "aton_timer")
-  call timer_output(ilun, mpi_timer, "mpi_timer")
-  call timer_output(ilun, ramses_timer, "ramses_timer")
-  write(ilun,*)
-  write(ilun,*) '# Statistics'
-  call output_radiation_stats(ilun)
-  close(ilun)
+  ! TODO: Use MPI to max the timers over all tasks.
+  if (myid.eq.1) then
+    write(*,*) 'Radiation timers:'
+    write(*,*) ' rad_total_timer', total_timer%sum, total_timer%count
+    write(*,*) ' rad_full_memory_timer', full_memory_timer%sum, full_memory_timer%count
+    write(*,*) ' rad_boundary_memory_timer', boundary_memory_timer%sum, boundary_memory_timer%count
+    write(*,*) ' rad_boundary_timer', boundary_timer%sum, boundary_timer%count
+    write(*,*) ' rad_aton_timer', aton_timer%sum, aton_timer%count
+    write(*,*) ' rad_mpi_timer', mpi_timer%sum, mpi_timer%count
+    write(*,*) ' rad_ramses_timer', ramses_timer%sum, ramses_timer%count
+  end if
 
   call timer_init(total_timer)
   call timer_init(ramses_timer)
@@ -922,6 +853,4 @@ subroutine output_radiation(filename)
   call timer_init(aton_timer)
   call timer_init(mpi_timer)
 
-  call timer_start(ramses_timer)
-
-end subroutine output_radiation
+end subroutine rad_output_timing

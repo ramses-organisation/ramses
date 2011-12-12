@@ -68,15 +68,3 @@ subroutine timer_inc_count(timer, delta)
   if (timer%start.le.0.0) return
   timer%count = timer%count + delta
 end subroutine
-
-! TODO(tstranex): Inline this function and then delete it.
-subroutine timer_output(ilun,timer,label)
-  use timing
-  implicit none
-  include 'mpif.h'
-  type(timer_state)::timer
-  character(len=*)::label
-  integer::ilun
-
-  write(ilun,*) label, timer%sum, timer%count
-end subroutine
