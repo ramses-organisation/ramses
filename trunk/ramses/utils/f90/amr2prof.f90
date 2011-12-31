@@ -144,7 +144,7 @@ program amr2prof
   dv=4./3.*3.1415926*(rmax*boxlen)**3./dble(ncell)
 
   do ilevel=1,lmax
-     dx=0.5**ilevel
+     dx=boxlen*0.5**ilevel
      if(dx**3<dv)exit
   end do
   write(*,*)'Using max level=',ilevel
