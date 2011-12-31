@@ -445,7 +445,7 @@ program amr2cell
   close(20)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(outfich)
 
-999 format(4(1pe12.5,1x),2(i6,1x),10(e16.6e5,1x))
+999 format(4(1pe12.5,1x),2(i6,1x),10(e12.5,1x))
   
 contains
   
