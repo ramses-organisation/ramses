@@ -209,7 +209,8 @@ module hints
     logical::flag,match
     integer::i,j,infos,nkeys,sz
     integer::fid,mode
-    character(len=1024)::key,value
+    character(len=MPI_MAX_INFO_VAL)::value
+    character(len=MPI_MAX_INFO_KEY)::key
 
     mode = MPI_MODE_RDWR+MPI_MODE_CREATE+MPI_MODE_DELETE_ON_CLOSE
     call MPI_File_open(comm,"test_hint_get_list123456",mode,MPI_INFO_NULL,fid,ierr)
