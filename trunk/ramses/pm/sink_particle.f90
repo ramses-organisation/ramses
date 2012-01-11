@@ -87,6 +87,12 @@ subroutine create_sink
      if(bondi)call bondi_hoyle(ilevel)
      call merge_tree_fine(ilevel)
   end do
+ 
+  !attempt to let sinks accrete before they are moved the first time
+  !in order to get the right velocity
+!  do ilevel=nlevelmax,levelmin,-1
+!     call grow_jeans(ilevel)
+!  end do
 
   call compute_accretion_rate(levelmin)
 
@@ -112,7 +118,7 @@ subroutine create_part_from_sink
 #endif
   !----------------------------------------------------------------------
   ! Description: This subroutine create true RAMSES particles from the list
-  ! of sink particles global arrays and store them at level 1.
+  ! of sink particles and stores them at level 1.
   !----------------------------------------------------------------------
   ! local constants
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -246,7 +252,7 @@ subroutine create_part_from_sink
            else
               levelp(indp)=nlevelmax    ! Level WARNING THIS SHOULD BE FIXED USING lsink
            endif
-           idp(indp)=-index_sink     ! Identity
+           idp(indp)=-isink     ! Identity
            xp(indp,1)=xsink(isink,1) ! Position
            xp(indp,2)=xsink(isink,2)
            xp(indp,3)=xsink(isink,3)
@@ -2474,7 +2480,7 @@ subroutine compute_accretion_rate(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info,iskip,ind
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::factG,d_star,boost,vel_max
+  real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period
   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale
   real(dp),dimension(1:3)::velocity
 
@@ -2496,72 +2502,46 @@ subroutine compute_accretion_rate(ilevel)
   
   if(smbh)then
 
-  ! Compute sink particle accretion rate
-  do isink=1,nsink
-     density=0d0
-     volume=0d0
-     velocity=0d0
-     ethermal=0d0
-     ! Loop over level: sink cloud can overlap several levels
-     do i=levelmin,nlevelmax
-        density=density+weighted_density(isink,i)
-        ethermal=ethermal+weighted_ethermal(isink,i)
-        velocity(1)=velocity(1)+weighted_momentum(isink,i,1)
-        velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
-        velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
-        volume=volume+weighted_volume(isink,i)
+     ! Compute sink particle accretion rate
+     do isink=1,nsink
+        density=0d0
+        volume=0d0
+        velocity=0d0
+        ethermal=0d0
+        ! Loop over level: sink cloud can overlap several levels
+        do i=levelmin,nlevelmax
+           density=density+weighted_density(isink,i)
+           ethermal=ethermal+weighted_ethermal(isink,i)
+           velocity(1)=velocity(1)+weighted_momentum(isink,i,1)
+           velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
+           velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
+           volume=volume+weighted_volume(isink,i)
+        end do
+        density=density/volume
+        velocity(1:3)=velocity(1:3)/density/volume
+        ethermal=ethermal/density/volume
+        total_volume(isink)=volume
+        c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
+        v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
+        r2=(factG*msink(isink)/(c2+v2))**2
+        
+        ! Compute Bondi-Hoyle accretion rate in code units
+        boost=1.0
+        if(star)boost=max((density/d_star)**2,1.0_dp)
+        !     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
+        dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
+        
+        ! Compute Eddington accretion rate in code units
+        dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
+        
+        ! Compute BH radius of influence in kpc
+        rBH(isink)=250.*(msink(isink)*scale_m/(5d9*2d33))**(0.5)
+        
+        ! Compute BH radius of influence in code units
+        epsBH(isink)=max(4.*dx_min,rBH(isink)*3.08d21/scale_l)
+        
      end do
-     density=density/volume
-     velocity(1:3)=velocity(1:3)/density/volume
-     ethermal=ethermal/density/volume
-     total_volume(isink)=volume
-     c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
-     v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
-     r2=(factG*msink(isink)/(c2+v2))**2
-
-     ! Compute Bondi-Hoyle accretion rate in code units
-     boost=1.0
-     if(star)boost=max((density/d_star)**2,1.0_dp)
-!     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
-     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
-
-     ! Compute Eddington accretion rate in code units
-     dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-
-     ! Compute BH radius of influence in kpc
-     rBH(isink)=250.*(msink(isink)*scale_m/(5d9*2d33))**(0.5)
-
-     ! Compute BH radius of influence in code units
-     epsBH(isink)=max(4.*dx_min,rBH(isink)*3.08d21/scale_l)
-
-  end do
-
-  if(myid==1.and.ilevel==levelmin.and.nsink>0)then
-     do i=1,nsink
-        xmsink(i)=msink(i)
-     end do
-     call quick_sort(xmsink(1),idsink_sort(1),nsink)
-     write(*,*)'Number of sink = ',nsink
-     write(*,'(" ============================================================================================")')
-     write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)              x              y              z")')
-     write(*,'(" ============================================================================================")')
-     do i=nsink,max(nsink-10,1),-1
-        isink=idsink_sort(i)
-        write(*,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33 &
-             & ,dMBHoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
-             & ,dMEDoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
-             & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33
-     end do
-     write(*,'(" ============================================================================================")')
-  endif
-
-  ! Take the minimum accretion rate
-  do isink=1,nsink
-     dMBHoverdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
-  end do
-
-  else
-
+     
      if(myid==1.and.ilevel==levelmin.and.nsink>0)then
         do i=1,nsink
            xmsink(i)=msink(i)
@@ -2569,15 +2549,43 @@ subroutine compute_accretion_rate(ilevel)
         call quick_sort(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
         write(*,'(" ============================================================================================")')
-        write(*,'(" Id     Mass(Msol)          x              y              z")')
+        write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)              x              y              z")')
         write(*,'(" ============================================================================================")')
         do i=nsink,max(nsink-10,1),-1
            isink=idsink_sort(i)
-           write(*,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim)
+           write(*,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33 &
+                & ,dMBHoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
+                & ,dMEDoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
+                & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33
         end do
         write(*,'(" ============================================================================================")')
      endif
      
+     ! Take the minimum accretion rate
+     do isink=1,nsink
+        dMBHoverdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
+     end do
+     
+  else
+     
+     if(myid==1.and.ilevel==levelmin.and.nsink>0)then
+        do i=1,nsink
+           xmsink(i)=msink(i)
+        end do
+
+        call quick_sort(xmsink(1),idsink_sort(1),nsink)
+        write(*,*)'Number of sink = ',nsink
+        write(*,'(" ========================================================================================================================== ")")')
+        write(*,'(" Id     Mass(Msol)     x           y           z         vx       vy       vz    new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
+        write(*,'(" ========================================================================================================================== ")")')
+        do i=nsink,max(nsink-10,1),-1
+           isink=idsink_sort(i)
+           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
+           rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
+           write(*,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3)))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+        end do
+        write(*,'(" ========================================================================================================================== ")")')
+     endif
   endif
 
 end subroutine compute_accretion_rate
@@ -2608,7 +2616,7 @@ subroutine grow_jeans(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Reset new sink variables
-  msink_new=0d0; vsink_new=0d0
+  msink_new=0d0; vsink_new=0d0; lsink_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -2675,9 +2683,11 @@ subroutine grow_jeans(ilevel)
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(msink_new,msink_all,nsinkmax     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
      msink_all=msink_new
      vsink_all=vsink_new
+     lsink_all=lsink_new
 #endif
   endif
   do isink=1,nsink
@@ -2686,7 +2696,9 @@ subroutine grow_jeans(ilevel)
      vsink(isink,3)=vsink(isink,3)*msink(isink)+vsink_all(isink,3)
      msink(isink)=msink(isink)+msink_all(isink)
      vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
+     lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
   end do
+  
 
 111 format('   Entering grow_jeans for level ',I2)
 
@@ -2706,7 +2718,7 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine bondi_hoyle.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,isink,ivar
+  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,factG
   real(dp)::xxx,mmm,r2,v2,c2,d,u,v=0d0,w=0d0,e,bx1,bx2,by1,by2,bz1,bz2
   real(dp),dimension(1:nvar)::z
@@ -2724,7 +2736,8 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
-  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:3)::skip_loc,xx
+  real(dp),dimension(1:twotondim,1:3)::xc
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -2743,6 +2756,16 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
+
+  ! Cells center position relative to grid center position               
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
 
   ! Density threshold for sink particle formation
   d_sink=n_sink/scale_nH
@@ -2870,6 +2893,12 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
      if(ok(j))then
 
+        !get cell center positions
+        xx(1)=(xg(ind_grid_part(j),1)+xc(icell(j),1)-skip_loc(1))*scale
+        xx(2)=(xg(ind_grid_part(j),2)+xc(icell(j),2)-skip_loc(2))*scale
+        xx(3)=(xg(ind_grid_part(j),3)+xc(icell(j),3)-skip_loc(3))*scale
+
+
         ! Convert to primitive variables
         d=uold(indp(j),1)
         u=uold(indp(j),2)/d
@@ -2908,6 +2937,9 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            vsink_new(isink,1)=vsink_new(isink,1)+acc_mass*u
            vsink_new(isink,2)=vsink_new(isink,2)+acc_mass*v
            vsink_new(isink,3)=vsink_new(isink,3)+acc_mass*w
+           lsink_new(isink,1)=((xx(2)-xsink(isink,2))*(w-vsink(isink,3))-(xx(3)-xsink(isink,3))*(v-vsink(isink,2)))*acc_mass
+           lsink_new(isink,2)=((xx(3)-xsink(isink,3))*(u-vsink(isink,1))-(xx(1)-xsink(isink,1))*(w-vsink(isink,3)))*acc_mass
+           lsink_new(isink,3)=((xx(1)-xsink(isink,1))*(v-vsink(isink,2))-(xx(2)-xsink(isink,2))*(u-vsink(isink,1)))*acc_mass
            d=d_thres
 
            ! Convert back to conservative variable
@@ -3487,12 +3519,6 @@ subroutine make_sink_from_clump(ilevel)
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
-  ! Description: This subroutine create sink particle in cells where some
-  ! density threshold is crossed. It also removes from the gas the
-  ! corresponding particle mass. On exit, all fluid variables in the cell
-  ! are modified. This is done only in leaf cells.
-  ! Romain Teyssier, October 7th, 2007
-  !----------------------------------------------------------------------
   ! local constants
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot,icloud
@@ -3749,10 +3775,11 @@ subroutine make_sink_from_clump(ilevel)
               w=uold(ind_cell_new(i),4)
               e=uold(ind_cell_new(i),5)
 
-              ! Get gas cell position
+              ! Get density maximum position
               x=(xg(ind_grid_new(i),1)+xc(ind,1)-skip_loc(1))*scale
               y=(xg(ind_grid_new(i),2)+xc(ind,2)-skip_loc(2))*scale
               z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
+              call true_max(x,y,z,ilevel)
 
               ! User defined density threshold
               d_thres=d_sink
@@ -3879,3 +3906,119 @@ end subroutine make_sink_from_clump
 !################################################################
 !################################################################
 !################################################################
+subroutine true_max(x,y,z,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  real(dp)::x,y,z
+  integer::ilevel
+  !----------------------------------------------------------------------------
+  ! Description: This subroutine takes the cell of maximum density and computes
+  ! the maximum by expanding the density around the cell center to second order.
+  !----------------------------------------------------------------------------
+  ! local constants                                                                
+  integer::k,j,i,nx_loc
+  real(dp)::det,dx,dx_loc,scale
+  real(dp),dimension(-1:1,-1:1,-1:1)::cube3
+  real(dp),dimension(1:nvector,1:ndim)::xtest
+  real(dp),dimension(1:ndim)::gradient,displacement
+  integer,dimension(1:nvector)::cell_index,cell_lev
+  real(dp),dimension(1:ndim,1:ndim)::hess,minor,check_inv
+  real(dp),dimension(1:3)::skip_loc
+
+
+
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+
+
+
+
+  do i=-1,1
+     do j=-1,1
+        do k=-1,1
+
+           xtest(1,1)=x+i*dx_loc
+#if NDIM>1
+           xtest(1,2)=y+j*dx_loc
+#endif
+#if NDIM>2
+           xtest(1,3)=z+k*dx_loc
+#endif
+           call get_cell_index(cell_index,cell_lev,xtest,ilevel,1)
+           cube3(i,j,k)=uold(cell_index(1),1)
+
+        end do
+     end do
+  end do
+
+
+! compute gradient
+  gradient(1)=0.5*(cube3(1,0,0)-cube3(-1,0,0))/dx_loc
+  gradient(2)=0.5*(cube3(0,1,0)-cube3(0,-1,0))/dx_loc
+  gradient(3)=0.5*(cube3(0,0,1)-cube3(0,0,-1))/dx_loc
+
+
+! compute hessian
+  hess(1,1)=(cube3(1,0,0)+cube3(1,0,0)-2*cube3(0,0,0))/dx_loc**2.
+  hess(2,2)=(cube3(0,1,0)+cube3(0,1,0)-2*cube3(0,0,0))/dx_loc**2.
+  hess(3,3)=(cube3(0,0,1)+cube3(0,0,1)-2*cube3(0,0,0))/dx_loc**2.
+
+  hess(1,2)=0.25*(cube3(1,1,0)+cube3(-1,-1,0)-cube3(1,-1,0)-cube3(-1,1,0))/dx_loc**2.
+  hess(2,1)=hess(1,2)
+  hess(1,3)=0.25*(cube3(1,0,1)+cube3(-1,0,-1)-cube3(1,0,-1)-cube3(-1,0,1))/dx_loc**2.
+  hess(3,1)=hess(1,3)
+  hess(2,3)=0.25*(cube3(0,1,1)+cube3(0,-1,-1)-cube3(0,1,-1)-cube3(0,-1,1))/dx_loc**2.
+  hess(3,2)=hess(2,3)
+
+  !determinant
+  det=hess(1,1)*hess(2,2)*hess(3,3)+hess(1,2)*hess(2,3)*hess(3,1)+hess(2,1)*hess(3,2)*hess(1,3) &
+       -hess(1,1)*hess(2,3)*hess(3,2)-hess(1,2)*hess(2,1)*hess(3,3)-hess(1,3)*hess(2,2)*hess(3,1)
+
+  !matrix of minors
+  minor(1,1)=hess(2,2)*hess(3,3)-hess(2,3)*hess(3,2)
+  minor(2,2)=hess(1,1)*hess(3,3)-hess(1,3)*hess(3,1)
+  minor(3,3)=hess(1,1)*hess(2,2)-hess(1,2)*hess(2,1)
+
+  minor(1,2)=-1.*(hess(2,1)*hess(3,3)-hess(2,3)*hess(3,1))
+  minor(2,1)=minor(1,2)
+  minor(1,3)=hess(2,1)*hess(3,2)-hess(2,2)*hess(3,1)
+  minor(3,1)=minor(1,3)
+  minor(2,3)=-1.*(hess(1,1)*hess(3,2)-hess(1,2)*hess(3,1))
+  minor(3,2)=minor(2,3)
+
+  !displacement of the true max from the cell center
+  displacement=0.
+  check_inv=0.
+  do i=1,3
+     do j=1,3
+        displacement(i)=displacement(i)-minor(i,j)/det*gradient(j)
+        do k=1,3
+           check_inv(i,j)=check_inv(i,j)+hess(i,k)*minor(k,j)/det
+        end do
+     end do
+  end do
+
+  if ((displacement(1)**2+displacement(2)**2+displacement(3)**2)**0.5/dx_loc > 1.)then
+     write(*,*)'displacement to true maximum is too big and therefore shortened to dx.'
+     displacement(1)=dx_loc*displacement(1)/(displacement(1)**2+displacement(2)**2+displacement(3)**2)**0.5
+     displacement(2)=dx_loc*displacement(2)/(displacement(1)**2+displacement(2)**2+displacement(3)**2)**0.5
+     displacement(3)=dx_loc*displacement(3)/(displacement(1)**2+displacement(2)**2+displacement(3)**2)**0.5
+  end if
+
+  x=x+displacement(1)
+  y=y+displacement(2)
+  z=z+displacement(3)
+
+end subroutine true_max

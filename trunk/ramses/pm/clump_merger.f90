@@ -344,14 +344,14 @@ subroutine compute_clump_properties_round2()
   integer::nx_loc
 
   !peak-batch related arrays before sharing information with other cpus
-  real(dp),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal
+  real(dp),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,e_kin_int4,e_bind4,e_thermal4
   real(dp),dimension(1:npeaks_tot,1:3)::clump_size
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
 
-  e_kin_int=0.; clump_size=0.; e_bind=0.; e_thermal=0.
+  e_kin_int=0.; clump_size=0.; e_bind=0.; e_thermal=0.; e_bind4=0.; e_thermal4=0.; e_kin_int4=0.
 
 
   !------------------------------------------
@@ -459,8 +459,11 @@ subroutine compute_clump_properties_round2()
                        !potential energy of the clump (crude approach)
                        !e_bind(peak_nr)=e_bind(peak_nr)+M*d*vol/(rr+0.5*vol**0.3333333333)*0.4              
                        
-                       !potential energy using the acutal phi
-                       e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol
+                       !potential energy using the acutal phi W= 0.5*int phi*rho
+                       e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol*0.5
+                       !add gravitational self energy of every cell
+                       e_bind(peak_nr)=e_bind(peak_nr)+0.9*d**2.*vol**(5./3.)
+                       
                        
                        !size relative to center of mass 
                        do i=1,ndim
@@ -470,6 +473,20 @@ subroutine compute_clump_properties_round2()
                        
                        !thermal energy
                        e_thermal(peak_nr)=e_thermal(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+
+                       !repeat same for smaller region if cell is close enough
+                       if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. &
+                            16.*volume(nlevelmax)**(2./3.))then
+                          do i=1,3
+                             e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+ &
+                                  (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
+                          end do
+                          
+                          e_bind4(peak_nr)=e_bind4(peak_nr)+phi_rel*d*vol*0.5
+                          e_bind4(peak_nr)=e_bind4(peak_nr)+0.9*d**2.*vol**(5./3.)
+                          e_thermal4(peak_nr)=e_thermal4(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+                       end if
+
                        
                        !now change the purpose of flag2 and make it a lookup table for the
                        !clump a certain cell belongs to
@@ -519,8 +536,10 @@ subroutine compute_clump_properties_round2()
               !potential energy of the clump (crude approach)
               !e_bind(peak_nr)=e_bind(peak_nr)+M*d*vol/(rr+0.5*vol**0.3333333333)*0.4              
 
-              !potential energy using the acutal phi
-              e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol
+              !potential energy using the acutal phi W= 0.5*int phi*rho
+              e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol*0.5
+              !add gravitational self energy of every cell
+              e_bind(peak_nr)=e_bind(peak_nr)+0.9*d**2.*vol**(5./3.)
 
               !size relative to center of mass 
               do i=1,ndim
@@ -530,6 +549,21 @@ subroutine compute_clump_properties_round2()
 
               !thermal energy
               e_thermal(peak_nr)=e_thermal(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+
+
+              !repeat same for smaller region if cell is close enough
+              if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. &
+                   16.*volume(nlevelmax)**(2./3.))then
+                 do i=1,3
+                    e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+ &
+                         (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
+                 end do
+                 
+                 e_bind4(peak_nr)=e_bind4(peak_nr)+phi_rel*d*vol*0.5
+                 e_bind4(peak_nr)=e_bind4(peak_nr)+0.9*d**2.*vol**(5./3.)
+                 e_thermal4(peak_nr)=e_thermal4(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+              end if
+
 
               !now change the purpose of flag2 and make it a lookup table for the
               !clump a certain cell belongs to
@@ -593,15 +627,19 @@ subroutine compute_clump_properties_round2()
 !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(e_kin_int,e_kin_int_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_kin_int4,e_kin_int_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   e_kin_int_tot=e_kin_int
+  e_kin_int_tot4=e_kin_int4
 #endif
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(e_bind,e_bind_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_bind4,e_bind_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   e_bind_tot=e_bind
+  e_bind_tot4=e_bind4
 #endif
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(clump_size,clump_size_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -611,9 +649,11 @@ subroutine compute_clump_properties_round2()
 #endif
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(e_thermal,e_thermal_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_thermal4,e_thermal_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   e_thermal_tot=e_thermal
+  e_thermal_tot4=e_thermal4
 #endif
 
 
@@ -666,11 +706,11 @@ subroutine write_clump_properties(to_file)
         open(unit=21,file=TRIM('output_'//TRIM(nchar)//'/clump_masses.txt'),form='formatted')
      end if
      write(ilun,*),'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'//&
-          ' size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. Ep/(Ek+Et) m_match'
+          ' size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. V/(U+Q) V4/(U4+Q4) m_match'
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > 0)then          
-           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(XE11.2E2),X,F13.5,XE11.2E2,X,F7.2,4X,F6.3,4X,I1)'),jj&
+           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(XE11.2E2),X,F13.5,XE11.2E2,X,F7.2,1X,F6.3,3X,F6.3,4X,I1)'),jj&
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
                 ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l/1.496d13&
@@ -684,6 +724,7 @@ subroutine write_clump_properties(to_file)
                 ,clump_vol_tot(jj)*(scale_l/1.496d13)**3&
                 ,relevance_tot(jj)&
                 ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj))&
+                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj))&
                 ,minmatch_tot(jj)
            
            rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*scale_l**3/1.98892d33
@@ -1362,8 +1403,11 @@ subroutine allocate_peak_batch_arrays
   allocate(saddle_dens_tot(1:npeaks_tot,1:npeaks_tot))
   allocate(clump_momentum_tot(1:npeaks_tot,1:ndim))
   allocate(e_kin_int_tot(npeaks_tot))
+  allocate(e_kin_int_tot4(npeaks_tot))!all the "4" variables are for the 4cell ball properties...
   allocate(e_bind_tot(npeaks_tot))
+  allocate(e_bind_tot4(npeaks_tot))
   allocate(e_thermal_tot(npeaks_tot))
+  allocate(e_thermal_tot4(npeaks_tot)) 
   allocate(phi_min_tot(npeaks_tot))
   allocate(minmatch_tot(npeaks_tot))
 
@@ -1381,9 +1425,9 @@ subroutine allocate_peak_batch_arrays
   second_moments=0.; second_moments_tot=0.
   saddle_dens_tot=0.
   clump_momentum_tot=0.
-  e_kin_int_tot=0.
-  e_bind_tot=0.
-  e_thermal_tot=0.
+  e_kin_int_tot=0.; e_kin_int_tot4=0.
+  e_bind_tot=0.; e_bind_tot4=0.
+  e_thermal_tot=0.; e_thermal_tot4=0.
   phi_min_tot=0.
   minmatch_tot=1
 
@@ -1413,9 +1457,9 @@ subroutine deallocate_all
   deallocate(relevance_tot)
   deallocate(sort_index)
   deallocate(clump_momentum_tot)
-  deallocate(e_kin_int_tot)
-  deallocate(e_bind_tot)
-  deallocate(e_thermal_tot)
+  deallocate(e_kin_int_tot,e_kin_int_tot4)
+  deallocate(e_bind_tot,e_bind_tot4)
+  deallocate(e_thermal_tot,e_thermal_tot4)
   deallocate(phi_min_tot)
   deallocate(minmatch_tot)
 

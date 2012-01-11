@@ -17,6 +17,7 @@ module pm_commons
   real(kind=8),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new,total_volume
   real(kind=8),allocatable,dimension(:,:)::wmom,wmom_new
   real(kind=8),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
+  real(kind=8),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
   real(kind=8),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(kind=8),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
   real(kind=8),allocatable,dimension(:,:,:)::weighted_momentum

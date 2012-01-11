@@ -83,6 +83,8 @@ subroutine init_part
      nindsink=MAXVAL(idsink) ! Reset max index
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
+     allocate(lsink(1:nsinkmax,1:3))
+     lsink=0d0
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
      allocate(total_volume(1:nsinkmax))
@@ -103,6 +105,8 @@ subroutine init_part
      allocate(idsink_old(1:nsinkmax))
      allocate(vsink_new(1:nsinkmax,1:ndim))
      allocate(vsink_all(1:nsinkmax,1:ndim))
+     allocate(lsink_new(1:nsinkmax,1:3))
+     allocate(lsink_all(1:nsinkmax,1:3))
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
      allocate(dMBHoverdt(1:nsinkmax))
@@ -211,6 +215,12 @@ subroutine init_part
               read(ilun)xdp ! Read sink velocity
               vsink(1:nsink,idim)=xdp
            end do
+           if (sink_angular_momentum)then
+              do idim=1,3
+                 read(ilun)xdp ! Read sink angular momentum
+                 lsink(1:nsink,idim)=xdp
+              end do
+           endif
            read(ilun)xdp ! Read sink accumulated rest mass energy
            delta_mass(1:nsink)=xdp
            deallocate(xdp)
@@ -762,6 +772,7 @@ subroutine init_part
               msink(i)=msink_all(i)
               xsink(i,1:ndim)=xsink_all(i,1:ndim)
               vsink(i,1:ndim)=vsink_all(i,1:ndim)
+              lsink(i,1:3)=0.
            end do
         endif
         
