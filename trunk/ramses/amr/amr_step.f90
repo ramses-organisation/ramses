@@ -99,6 +99,7 @@ recursive subroutine amr_step(ilevel,icount)
            call defrag
         endif
         call dump_all
+        if(gas_analytics)call gas_ana
         if(clumpfind)then 
            if(ndim<3)then
               print*,"sorry, clumpfinder works currently in 3D only!"

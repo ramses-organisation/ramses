@@ -21,8 +21,8 @@ subroutine read_params
   ! Namelist definitions
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,verbose,debug &
-       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton
+       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton,sink_angular_momentum
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -158,11 +158,14 @@ subroutine read_params
   if(pic.and.(.not.poisson))then
      poisson=.true.
   endif
+  if (.not. sink)then
+     sink_angular_momentum=.false.
+  endif
 
   call read_hydro_params(nml_ok)
 
   if (clumpfind)call read_clumpfind_params
-
+  if (gas_analytics)call read_gas_analytics_params
 
   close(1)
 

@@ -48,6 +48,8 @@ subroutine dump_all
         if(sink)then
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
            call output_sink(filename)
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
+           call output_sink_csv(filename)
         endif
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'

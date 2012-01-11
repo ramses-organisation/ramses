@@ -46,11 +46,14 @@ module amr_parameters
   logical::cosmo   =.false.   ! Cosmology activated
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
+  ! Sink angular momentum is tracked (and must be read from input at restart)
+  logical::sink_angular_momentum =.false. 
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
+  logical::gas_analytics=.false.  ! Turn on a routine that outputs some gas-related data at every output
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
 
   ! Mesh parameters
