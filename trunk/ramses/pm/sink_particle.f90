@@ -21,6 +21,7 @@ subroutine create_sink
   integer::ilevel,ivar,info,icpu,igrid,npartbound,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
+
   if(verbose)write(*,*)' Entering create_sink'
 
   ! Conversion factor from user units to cgs units
@@ -310,6 +311,8 @@ subroutine make_sink(ilevel)
   logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
   
+
+
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
   if(ndim.ne.3)return
@@ -782,6 +785,7 @@ subroutine merge_sink(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   integer,dimension(:),allocatable::psink,gsink
   real(dp),dimension(1:3)::xbound,skip_loc
+
 
   if(numbtot(1,ilevel)==0)return
   if(nsink==0)return
@@ -3254,6 +3258,7 @@ subroutine AGN_blast
   real(dp),dimension(1:twotondim,1:3)::xc
   logical ,dimension(1:nvector),save::ok
 
+
   if(nsink==0)return
   if(verbose)write(*,*)'Entering AGN_blast'
 
@@ -3930,7 +3935,7 @@ subroutine true_max(x,y,z,ilevel)
   real(dp),dimension(1:ndim,1:ndim)::hess,minor,check_inv
   real(dp),dimension(1:3)::skip_loc
 
-
+#if NDIM==3
 
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -4020,5 +4025,5 @@ subroutine true_max(x,y,z,ilevel)
   x=x+displacement(1)
   y=y+displacement(2)
   z=z+displacement(3)
-
+#endif
 end subroutine true_max
