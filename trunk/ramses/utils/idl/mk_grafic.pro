@@ -1,4 +1,4 @@
-pro mk_grafic,vect,boxlen=boxlen,dir=dir
+pro mk_grafic,vect,boxlen=boxlen,dir=dir,offset=offset
 
 if not keyword_set(dir) then dir='test'
 
@@ -15,15 +15,16 @@ endif
 nvar=(size(vect))(1)
 
 if not keyword_set(boxlen) then boxlen=1.0
+if not keyword_set(offset) then offset=0.
 n1=long((size(vect))(2))
 n2=long((size(vect))(3))
 n3=long((size(vect))(4))
 print,'boxlen=',boxlen
 dxini=float(boxlen)/float(n1)
 print,'dxini',dxini
-xoff1=0.0
-xoff2=0.0
-xoff3=0.0
+xoff1=offset
+xoff2=offset
+xoff3=offset
 astart=1.0
 omega_m=0.0
 omega_l=0.0

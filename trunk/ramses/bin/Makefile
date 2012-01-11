@@ -21,7 +21,8 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
 
 #F90 = gfortran
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -ffree-line-length-none
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -ffree-line-length-none -fbacktrace
+
 
 # --- No MPI, pgf90 ----------------------------------
 #F90 = pgf90
@@ -40,16 +41,18 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 #
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
-FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
+#F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
+F90 = mpif90 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
+FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
+
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
 #FFLAGS = -Mpreprocess $(DEFINES)
+
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90
@@ -82,7 +85,7 @@ PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o newdt_fi
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o output_poisson.o
 # Hydro objects
-HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_fine.o godunov_fine.o uplmde.o umuscl.o interpol_hydro.o godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o read_hydro_params.o synchro_hydro_fine.o 
+HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_fine.o godunov_fine.o uplmde.o umuscl.o interpol_hydro.o godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o read_hydro_params.o synchro_hydro_fine.o gas_analytics.o
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 # ATON objects
