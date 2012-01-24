@@ -427,25 +427,29 @@ program part2prof
 
   iter=0
   
-  do while(rmax.gt.1d-3)
+  do while(rmax.gt.1/2d0**19.)
 
-     xcen=0.
-     ycen=0.
-     zcen=0.
      mcen=0.
-
      do i=1,npart_actual
         mcen=mcen+mp(i)
-        xcen=xcen+mp(i)*xp(i)
-        ycen=ycen+mp(i)*yp(i)
-        zcen=zcen+mp(i)*zp(i)
      end do
-     xcen=xcen/mcen
-     ycen=ycen/mcen
-     zcen=zcen/mcen
+
+     if(mcen>0.0)then
+        xcen=0.
+        ycen=0.
+        zcen=0.
+        do i=1,npart_actual
+           xcen=xcen+mp(i)*xp(i)
+           ycen=ycen+mp(i)*yp(i)
+           zcen=zcen+mp(i)*zp(i)
+        end do
+        xcen=xcen/mcen
+        ycen=ycen/mcen
+        zcen=zcen/mcen
+     endif
 
      write(*,888)iter,rmax,mcen,xcen,ycen,zcen
-888  format(I4,5(1X,1PE10.3))
+888  format(I4,5(1X,1PE14.7))
 
      ipart=0
      rmax=0.97*rmax
@@ -499,6 +503,7 @@ contains
          print *, '                 [-wce wcen] '
          print *, '                 [-rma rmax] '
          print *, '                 [-nra nrad] '
+         print *, '                 [-str flag] '
          print *, '                 [-per flag] '
          print *, 'ex: part2prof -inp output_00001 -out map.dat'// &
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
@@ -535,6 +540,8 @@ contains
             read (arg,*) rmax
          case ('-per')
             read (arg,*) periodic
+         case ('-str')
+            read (arg,*) star
          case default
             print '("unknown option ",a2," ignored")', opt
          end select
