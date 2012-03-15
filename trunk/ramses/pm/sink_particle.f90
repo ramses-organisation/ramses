@@ -18,7 +18,7 @@ subroutine create_sink
   ! Romain Teyssier, October 7th, 2007
   !----------------------------------------------------------------------------
   ! local constants                                                                
-  integer::ilevel,ivar,info,icpu,igrid,npartbound,isink
+  integer::ilevel,ivar,info,icpu,igrid,npartbound,isink,ii,jj
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
 
@@ -37,10 +37,14 @@ subroutine create_sink
   if (clumpfind .eqv. .false.)then
      ! Create new sink particles
      ! and gather particle from the grid
-
      call make_sink(nlevelmax)
      do ilevel=nlevelmax-1,1,-1
         if(ilevel>=levelmin)call make_sink(ilevel)
+        call merge_tree_fine(ilevel)
+     end do
+  else
+     ! Only gather particle from the grid
+     do ilevel=nlevelmax-1,1,-1
         call merge_tree_fine(ilevel)
      end do
   end if
@@ -95,8 +99,9 @@ subroutine create_sink
 !     call grow_jeans(ilevel)
 !  end do
 
-  call compute_accretion_rate(levelmin)
 
+  call compute_accretion_rate(levelmin)
+  
   if(agn)call agn_feedback
      
 end subroutine create_sink
@@ -2579,16 +2584,17 @@ subroutine compute_accretion_rate(ilevel)
 
         call quick_sort(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,'(" ========================================================================================================================== ")")')
+        write(*,'(" ========================================================================================================================== ")')
         write(*,'(" Id     Mass(Msol)     x           y           z         vx       vy       vz    new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
-        write(*,'(" ========================================================================================================================== ")")')
+        write(*,'(" ========================================================================================================================== ")')
         do i=nsink,max(nsink-10,1),-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
            rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-           write(*,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3)))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+           write(*,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33, &
+                xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
         end do
-        write(*,'(" ========================================================================================================================== ")")')
+        write(*,'(" ========================================================================================================================== ")')
      endif
   endif
 

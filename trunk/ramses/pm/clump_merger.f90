@@ -86,7 +86,7 @@ subroutine compute_clump_properties()
 
   
   !set flag2 to zero for the reuse as clump number a cell belongs to
-  flag2=0. 
+  flag2=0 
 
      
 
@@ -392,7 +392,7 @@ subroutine compute_clump_properties_round2()
 
   
   !set flag2 to zero for the reuse as clump number a cell belongs to
-  flag2=0. 
+  flag2=0
 
      
 
@@ -690,6 +690,7 @@ subroutine write_clump_properties(to_file)
   !sort clumps by peak density in ascending order
   call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
 
+
   if(to_file)then
      ilun=20
   else 
@@ -726,7 +727,7 @@ subroutine write_clump_properties(to_file)
                 ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj))&
                 ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj))&
                 ,minmatch_tot(jj)
-           
+
            rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*scale_l**3/1.98892d33
            n_rel=n_rel+1
         end if
@@ -905,6 +906,7 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
 
   real(dp),dimension(1:nvector,1:ndim)::x,xtest,pos
   integer ,dimension(1:nvector,1:ndim),save::ig,id
+  integer ,dimension(1:nvector)::cc
 
 
   real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xpart
@@ -1069,6 +1071,7 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
            if(son(ind_cell(j))==0 .and. cell_levl(j)==(ilevel-1) .and. flag2(ind_cell(j))/=0 )then
               if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
                  saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
+                 !print*,'found clump parts in lower levels!!!'
               end if
            endif
         end do
@@ -1083,7 +1086,6 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   do k1=k1min,k1max
      do j1=j1min,j1max
         do i1=i1min,i1max
-
            do j=1,np
               xtest(j,1)=pos(j,1)+(i1-1)*dx_loc
 #if NDIM>1
@@ -1093,11 +1095,13 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
               xtest(j,3)=pos(j,3)+(k1-1)*dx_loc
 #endif     
            end do
-
+           
            call get_cell_index(ind_cell,cell_levl,xtest,ilevel,np)
+           call cmp_cpumap(xtest,cc,np) 
            do j=1,np
               if(son(ind_cell(j))==0 .and. flag2(ind_cell(j))/=0)then
-                 if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
+              !if (cc(j)/=myid)print*,nstep_coarse,xtest(j,1:3),uold(ind_cell(j),1),'false'
+                 if((clump_nr(j) /= flag2(ind_cell(j))).and.(uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j)))))then   
                     saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
                  end if
               end if

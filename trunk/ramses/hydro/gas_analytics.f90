@@ -132,11 +132,10 @@ subroutine gas_ana
   maxi_dens_tot=maxi_dens
 #endif
 
-  l_max=log10(maxi_dens_tot*1.00000001)
-  l_min=log10(mini_dens_tot*0.99999999)
+  l_max=log10(maxi_dens_tot*1.001)
+  l_min=log10(mini_dens_tot*0.999)
   width=l_max-l_min
 
-  
   allocate(hist(1:nbins))
   allocate(hist_tot(1:nbins))
   hist=0.
@@ -221,7 +220,7 @@ subroutine gas_ana
                        v_rms=v_rms+(vx**2+vy**2+vz**2)*vol_loc*d 
                        m=m+vol_loc*d
                        ! log(rho) PDF
-                       hist_ind=1+int((log10(uold(ind_cell(i),1))-l_min)/width*nbins)
+                       hist_ind=1+int((log10(d)-l_min)/width*nbins)
                        hist(hist_ind)=hist(hist_ind)+vol_loc
                     endif
                  endif
@@ -288,7 +287,6 @@ subroutine read_gas_analytics_params()
   ! Namelist definitions                              
   !-------------------------------------------------- 
   namelist/gas_analytics_params/nbins,ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
-
   ! Read namelist file                                                                         
   rewind(1)
   read(1,NML=gas_analytics_params,END=101)
@@ -298,5 +296,4 @@ subroutine read_gas_analytics_params()
   ana_xma=1.; ana_yma=1.; ana_zma=1.
   nbins=1000
 102 rewind(1)
-
 end subroutine read_gas_analytics_params

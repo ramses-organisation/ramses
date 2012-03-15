@@ -22,7 +22,7 @@ subroutine clump_finder(create_output)
   !----------------------------------------------------------------------------
   ! local constants
 
-  integer::ipart,istep,ilevel,info,icpu,igrid,nmove,nmove_all
+  integer::ipart,istep,ilevel,info,icpu,igrid,nmove,nmove_all,count
   character(LEN=5)::nchar
   character(LEN=80)::filename
   integer::jgrid
@@ -31,7 +31,7 @@ subroutine clump_finder(create_output)
 
   !new variables for clump/sink comb
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  integer::j,jj,blocked
+  integer::j,jj,blocked,i
   real(dp),dimension(1:nvector,1:3)::pos
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
 
@@ -113,14 +113,26 @@ subroutine clump_finder(create_output)
   ! Compute peak-batch mass etc. and output these properties before merging 
   !-------------------------------------------------------------------------------
   call compute_clump_properties() 
-  if (sink .eqv. .false. .or. mod(nstep_coarse,ncontrol)==0)call write_clump_properties(.false.)
+  if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))call write_clump_properties(.false.)
 
 
   !-------------------------------------------------------------------------------
   ! find the saddlepoint densities and merge irrelevant clumps
   !-------------------------------------------------------------------------------
   if (npeaks_tot > 0)then
+     !I don't exactlly know what I'm doing here - attempt to fix a bug
+     ! WHICH WORKS :-)
+     do ilevel=nlevelmax,levelmin,-1
+        call make_virtual_fine_int(flag2(1),ilevel)
+     end do
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      call saddlepoint_search() 
+     
+
+     !do i=1,npeaks_tot
+     !   if (myid==1)write(*,'(50(F4.3,X))'),saddle_dens_tot(i,1:npeaks_tot)
+     !end do
+
      call merge_clumps() 
   end if
 
@@ -131,7 +143,7 @@ subroutine clump_finder(create_output)
   if (npeaks_tot > 0)then
      call clump_phi
      call compute_clump_properties_round2()
-     if (sink .eqv. .false. .or. mod(nstep_coarse,ncontrol)==0)call write_clump_properties(.false.)
+     if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))call write_clump_properties(.false.)
      if(create_output)then
         call write_peak_map
         call write_clump_properties(.true.)
@@ -174,9 +186,9 @@ subroutine clump_finder(create_output)
 #ifdef WITHOUTMPI
      occupied_all=occupied
 #endif
-
+     count=0
      pos=0.0
-     flag2=0.
+     flag2=0
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
@@ -187,7 +199,8 @@ subroutine clump_finder(create_output)
                  call cmp_cpumap(pos,cc,1)
                  if (cc(1) .eq. myid)then
                     call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                    flag2(cell_index(1))=1.
+                    flag2(cell_index(1))=1
+                    count=count+1
                  end if
               end if
            end if
@@ -195,7 +208,6 @@ subroutine clump_finder(create_output)
      end do
      deallocate(occupied,occupied_all)
   endif
-
 
 
 

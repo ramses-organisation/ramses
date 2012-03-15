@@ -96,14 +96,14 @@ subroutine backup_part(filename)
      write(ilun)xdp
      ! Write metallicity
      if(metal)then
-     ipart=0
-     do i=1,npartmax
-        if(levelp(i)>0)then
-           ipart=ipart+1
-           xdp(ipart)=zp(i)
-        end if
-     end do
-     write(ilun)xdp
+        ipart=0
+        do i=1,npartmax
+           if(levelp(i)>0)then
+              ipart=ipart+1
+              xdp(ipart)=zp(i)
+           end if
+        end do
+        write(ilun)xdp
      end if
      deallocate(xdp)
   end if
@@ -112,46 +112,46 @@ subroutine backup_part(filename)
   !======================
   if(sink)then
      if(nsink>0)then
-     allocate(xdp(1:nsink))
-     do i=1,nsink
-        xdp(i)=msink(i)
-     end do
-     write(ilun)xdp ! Write sink mass
-     do i=1,nsink
-        xdp(i)=tsink(i)
-     end do
-     write(ilun)xdp ! Write sink birth epoch
-     do idim=1,ndim
+        allocate(xdp(1:nsink))
         do i=1,nsink
-           xdp(i)=xsink(i,idim)
+           xdp(i)=msink(i)
         end do
-        write(ilun)xdp ! Write sink position
-     enddo
-     do idim=1,ndim
+        write(ilun)xdp ! Write sink mass
         do i=1,nsink
-           xdp(i)=vsink(i,idim)
+           xdp(i)=tsink(i)
         end do
-        write(ilun)xdp ! Write sink velocity
-     enddo
-     if (sink_angular_momentum)then 
+        write(ilun)xdp ! Write sink birth epoch
         do idim=1,ndim
            do i=1,nsink
-              xdp(i)=lsink(i,idim)
+              xdp(i)=xsink(i,idim)
            end do
-        write(ilun)xdp ! Write sink angular momentum
-     enddo
-     endif
-     do i=1,nsink
-        xdp(i)=delta_mass(i)
-     end do
-     write(ilun)xdp ! Write sink accumulated rest mass energy
-     deallocate(xdp)
-     allocate(ii(1:nsink))
-     do i=1,nsink
-        ii(i)=idsink(i)
-     end do
-     write(ilun)ii ! Write sink index
-     deallocate(ii)
+           write(ilun)xdp ! Write sink position
+        enddo
+        do idim=1,ndim
+           do i=1,nsink
+              xdp(i)=vsink(i,idim)
+           end do
+           write(ilun)xdp ! Write sink velocity
+        enddo
+        if (sink_angular_momentum)then 
+           do idim=1,ndim
+              do i=1,nsink
+                 xdp(i)=lsink(i,idim)
+              end do
+              write(ilun)xdp ! Write sink angular momentum
+           enddo
+        endif
+        do i=1,nsink
+           xdp(i)=delta_mass(i)
+        end do
+        write(ilun)xdp ! Write sink accumulated rest mass energy
+        deallocate(xdp)
+        allocate(ii(1:nsink))
+        do i=1,nsink
+           ii(i)=idsink(i)
+        end do
+        write(ilun)ii ! Write sink index
+        deallocate(ii)
      endif
   endif
 
@@ -193,16 +193,17 @@ subroutine output_sink(filename)
   ! Write sink properties
   !======================
   write(ilun,*)'Number of sink = ',nsink
-  write(ilun,'(" ========================================================================================================================== ")")')
+  write(ilun,'(" ========================================================================================================================== ")')
   write(ilun,'(" Id     Mass(Msol)     x           y           z         vx       vy       vz    new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
-  write(ilun,'(" ========================================================================================================================== ")")')
+  write(ilun,'(" ========================================================================================================================== ")')
 
   do isink=1,nsink
      l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
      rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-     write(ilun,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3)))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+     write(ilun,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim), &
+          vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
   end do
-  write(ilun,'(" ========================================================================================================================== ")")')
+  write(ilun,'(" ========================================================================================================================== ")')
 
   close(ilun)
 
