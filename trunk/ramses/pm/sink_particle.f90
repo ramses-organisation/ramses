@@ -18,7 +18,7 @@ subroutine create_sink
   ! Romain Teyssier, October 7th, 2007
   !----------------------------------------------------------------------------
   ! local constants                                                                
-  integer::ilevel,ivar,info,icpu,igrid,npartbound,isink,ii,jj
+  integer::ilevel,ivar,info,icpu,igrid,npartbound,isink,ii,jj,ilev,totparts
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
 
@@ -59,6 +59,7 @@ subroutine create_sink
      call clump_finder(.false.)
      call make_sink_from_clump(nlevelmax)
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+     call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      call create_part_from_sink
   else
   ! Merge sink using FOF                                                           
@@ -67,7 +68,8 @@ subroutine create_sink
 
   ! Create new particle clouds
   call create_cloud(1)
-
+  call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  
   ! Scatter particle to the grid
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
@@ -254,7 +256,8 @@ subroutine create_part_from_sink
            tp(indp)=tsink(isink)     ! Birth epoch
            mp(indp)=msink(isink)     ! Mass
            if (new_born_all(isink)==1)then
-              levelp(indp)=-1
+              !levelp(indp)=-1
+              levelp(indp)=nlevelmax
            else
               levelp(indp)=nlevelmax    ! Level WARNING THIS SHOULD BE FIXED USING lsink
            endif

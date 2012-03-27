@@ -7,7 +7,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,icount
+  integer::ilevel,icount,ilev
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -89,7 +89,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Particle leakage
   !-----------------
   if(pic)call make_tree_fine(ilevel)
-
+  
   !------------------------
   ! Output results to files
   !------------------------
@@ -100,27 +100,33 @@ recursive subroutine amr_step(ilevel,icount)
         endif
         call dump_all
         if(gas_analytics)call gas_ana
-        if(clumpfind)then 
-           if(ndim<3)then
-              print*,"sorry, clumpfinder works currently in 3D only!"
-           else
-              if(verbose)print*,"enter clumpfinder"
-              call clump_finder(.true.)
-              if(verbose)print*,"escaped clumpfinder"
-           endif
+        if(clumpfind .and. ndim==3)then
+
+           call remove_parts_brute_force  
+           call clump_finder(.true.)
+           call create_part_from_sink
+           call create_cloud(1)
+                      
+           
+           ! Scatter particle to the grid                                                               
+           do ilev=1,nlevelmax
+              call make_tree_fine(ilev)
+              call kill_tree_fine(ilev)
+              call virtual_tree_fine(ilev)
+           end do
+           do ilev=nlevelmax,levelmin,-1
+              call merge_tree_fine(ilev)
+           end do
+           call make_tree_fine(levelmin)
         endif
+        
+        ! Dump lightcone
+        if(lightcone) call output_cone()
+        
+        !! Dump movie frame
+        !if(movie)call output_frame()
+    
      endif
- 
-    ! Dump lightcone
-     if(lightcone) then
-        call output_cone()
-     end if
-
-!     ! Dump movie frame
-!     if(movie) then
-!        call output_frame()
-!     end if
-
   endif
 
   !-----------------------------------------------------------
@@ -135,7 +141,7 @@ recursive subroutine amr_step(ilevel,icount)
      !-----------------------------------------------------
      ! Create sink particles and associated cloud particles
      !-----------------------------------------------------
-     if(sink)call create_sink
+     !if(sink)call create_sink
   endif
 
   !--------------------
@@ -223,6 +229,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Set unew equal to uold
   if(hydro)call set_unew(ilevel)
 
+
   !---------------------------
   ! Recursive call to amr_step
   !---------------------------
@@ -243,6 +250,8 @@ recursive subroutine amr_step(ilevel,icount)
   else
      call update_time(ilevel)
   end if
+
+
 
   !---------------
   ! Move particles
@@ -314,6 +323,9 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------------
   call flag_fine(ilevel,icount)
 
+
+
+
   !----------------------------
   ! Merge finer level particles
   !----------------------------
@@ -327,6 +339,16 @@ recursive subroutine amr_step(ilevel,icount)
      call rad_step(dtnew(ilevel))
   endif
 #endif
+
+
+
+  if(ilevel==levelmin)then
+     ! do ilev=1,nlevelmax
+     !    call count_parts(ilev)
+     ! end do
+     ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++gosink'
+     if(sink)call create_sink
+  end if
 
   !-------------------------------
   ! Update coarser level time-step

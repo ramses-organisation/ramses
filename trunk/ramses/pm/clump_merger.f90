@@ -1518,7 +1518,7 @@ subroutine clump_phi
         if(cc(1) == myid) then
            call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
            phim=phi(cell_index(1))
-           
+
            !Check for neighbors
 
            !one cell offset
@@ -1529,6 +1529,8 @@ subroutine clump_phi
                     xtest(1,2)=pos(1,2)+j1*dx_loc
                     xtest(1,3)=pos(1,3)+k1*dx_loc
                     call get_cell_index(ind_cell,lev_cell,xtest,nlevelmax,1)
+                    call cmp_cpumap(xtest,cc,1)
+
                     if(phi(ind_cell(1)) < 1.0000000001*phim)then
                        !print*,"offset min by 1c",myid,jj,k1,j1,i1,phim,phi(ind_cell(1))
                        phim=phi(ind_cell(1))
@@ -1538,7 +1540,7 @@ subroutine clump_phi
            end do
 
 
-           !two cells offset
+           ! !two cells offset
            do k1=-2,2
               do j1=-2,2
                  do i1=-2,2

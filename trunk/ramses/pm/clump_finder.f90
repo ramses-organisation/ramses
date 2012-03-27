@@ -3,6 +3,7 @@ subroutine clump_finder(create_output)
   use pm_commons
   use hydro_commons
   use clfind_commons
+  use poisson_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -124,6 +125,7 @@ subroutine clump_finder(create_output)
      ! WHICH WORKS :-)
      do ilevel=nlevelmax,levelmin,-1
         call make_virtual_fine_int(flag2(1),ilevel)
+        call make_virtual_fine_dp(phi(1),ilevel)
      end do
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      call saddlepoint_search() 
@@ -194,15 +196,15 @@ subroutine clump_finder(create_output)
         jj=sort_index(j)
         if (relevance_tot(jj) > 1.0d-1 .and. occupied_all(jj)==0 .and. minmatch_tot(jj)==1)then           
            if (e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)) > 1.)then
-              if (clump_mass_tot(jj)-clump_vol_tot(jj)*n_sink/scale_nH  > mass_threshold)then
-                 pos(1,1:3)=peak_pos_tot(jj,1:3)
-                 call cmp_cpumap(pos,cc,1)
-                 if (cc(1) .eq. myid)then
-                    call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                    flag2(cell_index(1))=1
-                    count=count+1
-                 end if
+           !   if (clump_mass_tot(jj)-clump_vol_tot(jj)*n_sink/scale_nH  > mass_threshold)then
+              pos(1,1:3)=peak_pos_tot(jj,1:3)
+              call cmp_cpumap(pos,cc,1)
+              if (cc(1) .eq. myid)then
+                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+                 flag2(cell_index(1))=1
+                 count=count+1
               end if
+              !  end if
            end if
         end if
      end do
@@ -1275,3 +1277,42 @@ subroutine read_clumpfind_params()
   !...and to user units
   mass_threshold=dummy/(scale_l**3. * scale_d)
 end subroutine read_clumpfind_params
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine count_parts(ilevel)
+  use amr_commons
+  use pm_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  !----------------------------------------------------------------------
+  ! count all particles on ilevel
+  !----------------------------------------------------------------------
+  integer::igrid,jgrid,next_part,ig,ip,npart1,info,parts,totparts
+  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  parts=0
+  totparts=0
+
+  if(numbl(myid,ilevel)==0)then
+     parts=0
+  else
+     ! Loop over grids
+     igrid=headl(myid,ilevel)
+     do jgrid=1,numbl(myid,ilevel)
+        parts=parts+numbp(igrid)
+        igrid=next(igrid)   ! Go to next grid
+     end do
+     ! End loop over grids
+  end if
+  call MPI_ALLREDUCE(parts,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  if (myid==1)print*,'found ',totparts,' particles on level ', ilevel
+end subroutine count_parts
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+
