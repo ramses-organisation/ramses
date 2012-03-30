@@ -591,6 +591,7 @@ subroutine merge_tree_fine(ilevel)
                  tailp(ind_grid(i))=tailp(ind_grid_son(i))
                  numbp(ind_grid(i))=numbp(ind_grid_son(i))
               end if
+
            end if
            end if
            end do

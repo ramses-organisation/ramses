@@ -99,27 +99,12 @@ recursive subroutine amr_step(ilevel,icount)
            call defrag
         endif
         call dump_all
-        if(gas_analytics)call gas_ana
-        if(clumpfind .and. ndim==3)then
-
-           call remove_parts_brute_force  
-           call clump_finder(.true.)
-           call create_part_from_sink
-           call create_cloud(1)
-                      
-           
-           ! Scatter particle to the grid                                                               
-           do ilev=1,nlevelmax
-              call make_tree_fine(ilev)
-              call kill_tree_fine(ilev)
-              call virtual_tree_fine(ilev)
-           end do
-           do ilev=nlevelmax,levelmin,-1
-              call merge_tree_fine(ilev)
-           end do
-           call make_tree_fine(levelmin)
-        endif
         
+        if(gas_analytics) call gas_ana
+        
+        ! Run the clumpfinder       
+        if(clumpfind .and. ndim==3) call clump_finder(.true.)
+                   
         ! Dump lightcone
         if(lightcone) call output_cone()
         
@@ -141,7 +126,7 @@ recursive subroutine amr_step(ilevel,icount)
      !-----------------------------------------------------
      ! Create sink particles and associated cloud particles
      !-----------------------------------------------------
-     !if(sink)call create_sink
+     !if(sink)call create_sink !(moved to the end of amr_step!)
   endif
 
   !--------------------
@@ -324,8 +309,6 @@ recursive subroutine amr_step(ilevel,icount)
   call flag_fine(ilevel,icount)
 
 
-
-
   !----------------------------
   ! Merge finer level particles
   !----------------------------
@@ -341,15 +324,17 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 
 
-
-  if(ilevel==levelmin)then
-     ! do ilev=1,nlevelmax
-     !    call count_parts(ilev)
-     ! end do
-     ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++gosink'
-     if(sink)call create_sink
+  !---------------
+  ! Sink production
+  !---------------
+  if(sink .and.(ilevel==levelmin))then
+     call create_sink
+     do ilev=1,nlevelmax
+        call count_parts(ilev)
+     end do
+     if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++donesink'
   end if
-
+  
   !-------------------------------
   ! Update coarser level time-step
   !-------------------------------

@@ -23,7 +23,7 @@ subroutine clump_finder(create_output)
   !----------------------------------------------------------------------------
   ! local constants
 
-  integer::ipart,istep,ilevel,info,icpu,igrid,nmove,nmove_all,count
+  integer::ipart,istep,ilevel,info,icpu,igrid,nmove,nmove_all
   character(LEN=5)::nchar
   character(LEN=80)::filename
   integer::jgrid
@@ -121,8 +121,7 @@ subroutine clump_finder(create_output)
   ! find the saddlepoint densities and merge irrelevant clumps
   !-------------------------------------------------------------------------------
   if (npeaks_tot > 0)then
-     !I don't exactlly know what I'm doing here - attempt to fix a bug
-     ! WHICH WORKS :-)
+     !communicate across boundaries
      do ilevel=nlevelmax,levelmin,-1
         call make_virtual_fine_int(flag2(1),ilevel)
         call make_virtual_fine_dp(phi(1),ilevel)
@@ -188,7 +187,6 @@ subroutine clump_finder(create_output)
 #ifdef WITHOUTMPI
      occupied_all=occupied
 #endif
-     count=0
      pos=0.0
      flag2=0
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
@@ -202,7 +200,6 @@ subroutine clump_finder(create_output)
               if (cc(1) .eq. myid)then
                  call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
                  flag2(cell_index(1))=1
-                 count=count+1
               end if
               !  end if
            end if
@@ -216,6 +213,23 @@ subroutine clump_finder(create_output)
 
   call remove_parts_brute_force
   call deallocate_all
+  
+  !if the sink algorithm is not called next
+  ! recreate particles and scatter them
+  if (create_output)then
+     call create_part_from_sink
+     call create_cloud(1)
+     do ilevel=1,nlevelmax
+        call make_tree_fine(ilevel)
+        call virtual_tree_fine(ilevel)
+        call kill_tree_fine(ilevel)
+        call virtual_tree_fine(ilevel)
+     end do
+     do ilevel=nlevelmax,levelmin,-1
+        call merge_tree_fine(ilevel)
+     end do
+     call make_tree_fine(levelmin)
+  end if
 
 end subroutine clump_finder
 
@@ -1292,24 +1306,48 @@ subroutine count_parts(ilevel)
   !----------------------------------------------------------------------
   ! count all particles on ilevel
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,next_part,ig,ip,npart1,info,parts,totparts
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer::igrid,jgrid,next_part,ig,ip,npart1,info,parts,totparts,icpu,cpuparts
+  integer::ind_grid,ind_part,ind_grid_part,ncache
   parts=0
   totparts=0
 
-  if(numbl(myid,ilevel)==0)then
-     parts=0
-  else
-     ! Loop over grids
-     igrid=headl(myid,ilevel)
-     do jgrid=1,numbl(myid,ilevel)
-        parts=parts+numbp(igrid)
-        igrid=next(igrid)   ! Go to next grid
-     end do
-     ! End loop over grids
-  end if
+  ! if(numbl(myid,ilevel)>0)then
+  !    ! Loop over grids
+  !    igrid=headl(myid,ilevel)
+  !    do jgrid=1,numbl(myid,ilevel)
+  !       parts=parts+numbp(igrid)
+  !       igrid=next(igrid)   ! Go to next grid
+  !    end do
+  !    ! End loop over grids
+  ! end if
+
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache
+     ind_grid=active(ilevel)%igrid(igrid)
+     parts=parts+numbp(ind_grid)
+  end do
+
   call MPI_ALLREDUCE(parts,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   if (myid==1)print*,'found ',totparts,' particles on level ', ilevel
+
+  ! parts=0
+  ! do icpu=1,ncpu
+  !    cpuparts=0
+  !    if(numbl(icpu,ilevel)>0)then
+  !       ! Loop over grids
+  !       igrid=headl(icpu,ilevel)
+  !       do jgrid=1,numbl(icpu,ilevel)
+  !          cpuparts=cpuparts+numbp(igrid)
+  !          igrid=next(igrid)   ! Go to next grid
+  !       end do
+  !    ! End loop over grids
+  !    end if
+  !    if (cpuparts>0 .and. (myid/=icpu))print*,'judihee'
+  !    parts=parts+cpuparts
+  ! end do
+  ! call MPI_ALLREDUCE(parts,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  ! if (myid==1)print*,'found ',totparts,' particles on level ', ilevel
+     
 end subroutine count_parts
 !#########################################################################
 !#########################################################################

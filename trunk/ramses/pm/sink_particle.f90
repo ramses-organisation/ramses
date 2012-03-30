@@ -28,13 +28,17 @@ subroutine create_sink
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3
 
-  ! Remove particles to finer levels
-  do ilevel=levelmin,nlevelmax
-     call kill_tree_fine(ilevel)
-     call virtual_tree_fine(ilevel)
-  end do
 
+  !sink algorithm without clumpfinder
   if (clumpfind .eqv. .false.)then
+     
+     ! Remove particles to finer levels
+     do ilevel=levelmin,nlevelmax
+        call make_tree_fine(ilevel)
+        call kill_tree_fine(ilevel)
+        call virtual_tree_fine(ilevel)
+     end do
+
      ! Create new sink particles
      ! and gather particle from the grid
      call make_sink(nlevelmax)
@@ -42,37 +46,39 @@ subroutine create_sink
         if(ilevel>=levelmin)call make_sink(ilevel)
         call merge_tree_fine(ilevel)
      end do
-  else
-     ! Only gather particle from the grid
-     do ilevel=nlevelmax-1,1,-1
-        call merge_tree_fine(ilevel)
-     end do
-  end if
-
-  ! Remove particle clouds around old sinks
-  call kill_cloud(1)
-
-  if (clumpfind)then
-     call remove_parts_brute_force
-
-     ! DO NOT USE FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK
-     call clump_finder(.false.)
-     call make_sink_from_clump(nlevelmax)
-     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-     call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-     call create_part_from_sink
-  else
-  ! Merge sink using FOF                                                           
+     
+     ! Remove particle clouds around old sinks
+     call kill_cloud(1)
+     
+     ! Merge sink using FOF 
      call merge_sink(1)
+    end if
+
+
+
+  !sink algorithm with clumpfinder
+  if (clumpfind)then
+     call remove_parts_brute_force     
+     ! DO NOT USE FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     call clump_finder(.false.)                                  !!!!
+     call make_sink_from_clump(nlevelmax)                        !!!!
+     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+     call create_part_from_sink
   end if
 
   ! Create new particle clouds
   call create_cloud(1)
-  call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+
+! #ifndef WITHOUTMPI
+!   call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+!   if(myid==1)print*,totparts
+! #endif
   
   ! Scatter particle to the grid
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
+     call virtual_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      call virtual_tree_fine(ilevel)
   end do
@@ -94,7 +100,7 @@ subroutine create_sink
      if(bondi)call bondi_hoyle(ilevel)
      call merge_tree_fine(ilevel)
   end do
- 
+
   !attempt to let sinks accrete before they are moved the first time
   !in order to get the right velocity
 !  do ilevel=nlevelmax,levelmin,-1
