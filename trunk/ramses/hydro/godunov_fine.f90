@@ -283,22 +283,24 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      
      ! If not, interpolate variables from parent cells
-     call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
-     do j=0,twondim
-        do ivar=1,nvar
-           do i=1,nbuffer
-              u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-           end do
-        end do
-        if(poisson)then
-           do idim=1,ndim
+     if(nbuffer>0)then
+        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
+        do j=0,twondim
+           do ivar=1,nvar
               do i=1,nbuffer
-                 g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
               end do
            end do
-        end if
-     end do
-     call interpol_hydro(u1,g1,u2,g2,nbuffer)
+           if(poisson)then
+              do idim=1,ndim
+                 do i=1,nbuffer
+                    g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 end do
+              end do
+           end if
+        end do
+        call interpol_hydro(u1,g1,u2,g2,nbuffer)
+     endif
 
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
