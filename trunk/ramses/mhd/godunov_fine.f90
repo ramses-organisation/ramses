@@ -295,25 +295,20 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      
      ! If not, interpolate variables from parent cells
-     call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
-     do j=0,twondim
-        do ivar=1,nvar+3
-           do i=1,nbuffer
-              u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-           end do
-        end do
-        do i=1,nbuffer
-           ind1(i,j)=son(ibuffer_father(i,j))
-        end do
-        if(poisson)then
-           do idim=1,ndim
+     if(nbuffer>0)then
+        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
+        do j=0,twondim
+           do ivar=1,nvar+3
               do i=1,nbuffer
-                 g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
               end do
            end do
-        end if
-     end do
-     call interpol_hydro(u1,g1,ind1,u2,g2,nbuffer)
+           do i=1,nbuffer
+              ind1(i,j)=son(ibuffer_father(i,j))
+           end do
+        end do
+        call interpol_hydro(u1,ind1,u2,nbuffer)
+     endif
 
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
@@ -348,7 +343,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
                  gloc(ind_exist(i),i3,j3,k3,idim)=f(ind_cell(i),idim)
               end do
               do i=1,nbuffer
-                 gloc(ind_nexist(i),i3,j3,k3,idim)=g2(i,ind_son,idim)
+                 gloc(ind_nexist(i),i3,j3,k3,idim)=f(ibuffer_father(i,0),idim)
               end do
            end do
         end if
