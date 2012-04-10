@@ -7,7 +7,7 @@ NDIM = 3
 NPRE = 8
 NVAR = 5
 SOLVER = hydro
-PATCH = ../mypatch/EOS_100/normal/
+PATCH =
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 #############################################################################
@@ -45,8 +45,8 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_
 #FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
-F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
-FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
+#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
 
 
 # --- MPI, pgf90 syntax ------------------------------
