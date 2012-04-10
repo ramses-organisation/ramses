@@ -33,7 +33,7 @@ subroutine clump_finder(create_output)
   !new variables for clump/sink comb
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   integer::j,jj,blocked,i
-  real(dp),dimension(1:nvector,1:3)::pos
+  real(kind=8),dimension(1:nvector,1:3)::pos
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
 
 
@@ -212,6 +212,7 @@ subroutine clump_finder(create_output)
 
 
   call remove_parts_brute_force
+  nstar_tot=0
   call deallocate_all
   
   !if the sink algorithm is not called next
@@ -931,7 +932,7 @@ subroutine assign_part_to_peak()
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
   integer,dimension(1:nvector)::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
-  real(dp),allocatable,dimension(:,:)::peak_pos
+  real(kind=8),allocatable,dimension(:,:)::peak_pos
   integer,dimension(1:ncpu)::npeaks_per_cpu,npeaks_per_cpu_tot
 
 
@@ -1273,7 +1274,7 @@ subroutine read_clumpfind_params()
   !--------------------------------------------------                           
   ! Namelist definitions                                                        
   !--------------------------------------------------                           
-  real(dp)::dummy,scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold
 
   ! Read namelist file 
@@ -1287,9 +1288,8 @@ subroutine read_clumpfind_params()
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
   !convert mass_threshold from solar masses to grams
-  dummy=mass_threshold*1.98892d33 
   !...and to user units
-  mass_threshold=dummy/(scale_l**3. * scale_d)
+  mass_threshold=mass_threshold*1.98892d33 /(scale_l**3. * scale_d)
 end subroutine read_clumpfind_params
 !#########################################################################
 !#########################################################################
@@ -1327,7 +1327,12 @@ subroutine count_parts(ilevel)
      parts=parts+numbp(ind_grid)
   end do
 
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(parts,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  totparts=parts  
+#endif
   if (myid==1)print*,'found ',totparts,' particles on level ', ilevel
 
   ! parts=0

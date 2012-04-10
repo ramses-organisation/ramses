@@ -84,7 +84,8 @@ subroutine init_part
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
      allocate(lsink(1:nsinkmax,1:3))
-     lsink=0d0
+     lsink=0.d0
+     allocate(level_sink(1:nsinkmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
      allocate(total_volume(1:nsinkmax))
@@ -109,6 +110,8 @@ subroutine init_part
      allocate(lsink_all(1:nsinkmax,1:3))
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
+     allocate(level_sink_all(1:nsinkmax))
+     allocate(level_sink_new(1:nsinkmax))
      allocate(dMBHoverdt(1:nsinkmax))
      allocate(dMEDoverdt(1:nsinkmax))
      allocate(rBH(1:nsinkmax))
@@ -227,13 +230,17 @@ subroutine init_part
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index
            idsink(1:nsink)=isp
+           read(ilun)isp ! Read sink level
+           level_sink(1:nsink)=isp
            nindsink=MAXVAL(idsink) ! Reset max index
            deallocate(isp)
+           read(ilun)ncloud_sink
         end if
      endif
      close(ilun)
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
+
 
   else     
 

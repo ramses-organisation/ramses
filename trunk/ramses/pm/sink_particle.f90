@@ -52,17 +52,16 @@ subroutine create_sink
      
      ! Merge sink using FOF 
      call merge_sink(1)
-    end if
-
-
+  end if
 
   !sink algorithm with clumpfinder
   if (clumpfind)then
-     call remove_parts_brute_force     
      ! DO NOT USE FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      call clump_finder(.false.)                                  !!!!
-     call make_sink_from_clump(nlevelmax)                        !!!!
+     do ilevel=levelmin,nlevelmax                                !!!!
+        call make_sink_from_clump(ilevel)                        !!!!
+     end do                                                      !!!!
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
      call create_part_from_sink
   end if
@@ -170,7 +169,7 @@ subroutine create_part_from_sink
 #if NDIM==3
 
   ntot=0
-  ! Loop over sinks (why not use vector sweep here?)
+  ! Loop over sinks
   do isink=1,nsink
      xs(1,1:ndim)=xsink(isink,1:ndim)
      call cmp_cpumap(xs,cc,1)
@@ -219,7 +218,7 @@ subroutine create_part_from_sink
 #endif
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Particle to be created= ",I6," Tot =",I8)')&
+        write(*,'(" skinks to be created= ",I6," Tot =",I8)')&
              & ntot_all,nsink
      endif
   end if
@@ -261,12 +260,13 @@ subroutine create_part_from_sink
            indp=ind_part(1)
            tp(indp)=tsink(isink)     ! Birth epoch
            mp(indp)=msink(isink)     ! Mass
-           if (new_born_all(isink)==1)then
-              !levelp(indp)=-1
-              levelp(indp)=nlevelmax
-           else
-              levelp(indp)=nlevelmax    ! Level WARNING THIS SHOULD BE FIXED USING lsink
-           endif
+           ! if (new_born_all(isink)==1)then
+           !    !levelp(indp)=-1
+           !    levelp(indp)=nlevelmax
+           ! else
+           !    levelp(indp)=nlevelmax    ! Level WARNING THIS SHOULD BE FIXED USING lsink
+           ! endif
+           levelp(indp)=level_sink(isink)
            idp(indp)=-isink     ! Identity
            xp(indp,1)=xsink(isink,1) ! Position
            xp(indp,2)=xsink(isink,2)
@@ -1242,6 +1242,7 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  vp(ind_cloud(j),2)=vsink(isink,2)
                  xp(ind_cloud(j),3)=xp(ind_part(j),3)+zz
                  vp(ind_cloud(j),3)=vsink(isink,3)
+                 levelp(ind_cloud(j))=level_sink(isink)
               end do
            end if
         end do
@@ -2593,17 +2594,18 @@ subroutine compute_accretion_rate(ilevel)
 
         call quick_sort(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,'(" ========================================================================================================================== ")')
-        write(*,'(" Id     Mass(Msol)     x           y           z         vx       vy       vz    new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
-        write(*,'(" ========================================================================================================================== ")')
+        write(*,'(" =============================================================================================================================== ")')
+        write(*,'(" Id     Mass(Msol)     x           y           z           vx        vy        vz     new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
+        write(*,'(" =============================================================================================================================== ")')
         do i=nsink,max(nsink-10,1),-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
            rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-           write(*,'(I6,2X,F8.4,3(2X,F10.8),3(2X,F7.3),3X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33, &
-                xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+           write(*,'(I6,2X,F12.8,3(2X,F10.8),3(2X,F7.5),4X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33, &
+                xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),&
+                rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
         end do
-        write(*,'(" ========================================================================================================================== ")')
+        write(*,'(" =============================================================================================================================== ")')
      endif
   endif
 
@@ -2956,9 +2958,12 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            vsink_new(isink,1)=vsink_new(isink,1)+acc_mass*u
            vsink_new(isink,2)=vsink_new(isink,2)+acc_mass*v
            vsink_new(isink,3)=vsink_new(isink,3)+acc_mass*w
-           lsink_new(isink,1)=((xx(2)-xsink(isink,2))*(w-vsink(isink,3))-(xx(3)-xsink(isink,3))*(v-vsink(isink,2)))*acc_mass
-           lsink_new(isink,2)=((xx(3)-xsink(isink,3))*(u-vsink(isink,1))-(xx(1)-xsink(isink,1))*(w-vsink(isink,3)))*acc_mass
-           lsink_new(isink,3)=((xx(1)-xsink(isink,1))*(v-vsink(isink,2))-(xx(2)-xsink(isink,2))*(u-vsink(isink,1)))*acc_mass
+           lsink_new(isink,1)=((xx(2)-xsink(isink,2))*(w-vsink(isink,3)/msink(isink))&
+                -(xx(3)-xsink(isink,3))*(v-vsink(isink,2)/msink(isink)))*acc_mass
+           lsink_new(isink,2)=((xx(3)-xsink(isink,3))*(u-vsink(isink,1)/msink(isink))&
+                -(xx(1)-xsink(isink,1))*(w-vsink(isink,3)/msink(isink)))*acc_mass
+           lsink_new(isink,3)=((xx(1)-xsink(isink,1))*(v-vsink(isink,2)/msink(isink))&
+                -(xx(2)-xsink(isink,2))*(u-vsink(isink,1)/msink(isink)))*acc_mass
            d=d_thres
 
            ! Convert back to conservative variable
@@ -3532,6 +3537,7 @@ subroutine make_sink_from_clump(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use poisson_commons
   use cooling_module, ONLY: XH=>X, rhoc, mH 
   implicit none
 #ifndef WITHOUTMPI
@@ -3633,13 +3639,16 @@ subroutine make_sink_from_clump(ilevel)
   ncloud_sink=ncloud
 
   ! Set new sink variables to zero
-  msink_new=0d0; tsink_new=0d0; delta_mass_new=0d0; xsink_new=0d0; vsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born=0;
+  msink_new=0d0; tsink_new=0d0; delta_mass_new=0d0; xsink_new=0d0; vsink_new=0d0
+  oksink_new=0d0; idsink_new=0; new_born=0; level_sink_new=0
 
 #if NDIM==3
 
   !------------------------------------------------
   ! Convert hydro variables to primitive variables
+  ! and count number of new sinks
   !------------------------------------------------
+  ntot=0
   if(numbtot(1,ilevel)>0)then
      ncache=active(ilevel)%ngrid
      do igrid=1,ncache,nvector
@@ -3675,6 +3684,7 @@ subroutine make_sink_from_clump(ilevel)
               uold(ind_cell(i),5)=e
               !           ! No AGN formation site by default
               !           flag2(ind_cell(i))=1
+              ntot=ntot+flag2(ind_cell(i))
            end do
            do ivar=imetal,nvar
               do i=1,ngrid
@@ -3686,15 +3696,6 @@ subroutine make_sink_from_clump(ilevel)
         end do
      end do
   end if
-
-  !----------------------------
-  ! Compute number of new sinks
-  !----------------------------
-  ntot=0
-  n_cls=size(flag2,1)
-  do jj=0,n_cls-1
-     ntot=ntot+flag2(jj)
-  end do
 
   !---------------------------------
   ! Check for free particle memory
@@ -3790,15 +3791,15 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Get gas variables
               d=uold(ind_cell_new(i),1)
-              u=uold(ind_cell_new(i),2)
-              v=uold(ind_cell_new(i),3)
-              w=uold(ind_cell_new(i),4)
+              u=uold(ind_cell_new(i),2)-0.5*dtnew(ilevel)*f(ind_cell_new(i),2)
+              v=uold(ind_cell_new(i),3)-0.5*dtnew(ilevel)*f(ind_cell_new(i),3)
+              w=uold(ind_cell_new(i),4)-0.5*dtnew(ilevel)*f(ind_cell_new(i),4)
               e=uold(ind_cell_new(i),5)
 
               ! Get density maximum position
               x=(xg(ind_grid_new(i),1)+xc(ind,1)-skip_loc(1))*scale
               y=(xg(ind_grid_new(i),2)+xc(ind,2)-skip_loc(2))*scale
-              z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
+              z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale              
               call true_max(x,y,z,ilevel)
 
               ! User defined density threshold
@@ -3829,6 +3830,8 @@ subroutine make_sink_from_clump(ilevel)
               vsink_new(index_sink,3)=w
 
               new_born(index_sink)=1
+              
+              level_sink_new(index_sink)=ilevel
 
               uold(ind_cell_new(i),1)=uold(ind_cell_new(i),1)-msink_new(index_sink)/vol_loc
 
@@ -3896,6 +3899,7 @@ subroutine make_sink_from_clump(ilevel)
   call MPI_ALLREDUCE(vsink_new ,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(new_born,new_born_all,nsinkmax,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(level_sink_new,level_sink_all,nsinkmax,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #else
   oksink_all=oksink_new
   idsink_all=idsink_new
@@ -3905,6 +3909,7 @@ subroutine make_sink_from_clump(ilevel)
   vsink_all=vsink_new
   delta_mass_all=delta_mass_new
   new_born_all=new_born
+  level_sink_all=level_sink_new
 #endif
   do isink=1,nsink
      if(oksink_all(isink)==1)then
@@ -3914,6 +3919,7 @@ subroutine make_sink_from_clump(ilevel)
         xsink(isink,1:ndim)=xsink_all(isink,1:ndim)
         vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
         delta_mass(isink)=delta_mass_all(isink)
+        level_sink(isink)=level_sink_all(isink)
      endif
   end do
 

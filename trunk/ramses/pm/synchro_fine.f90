@@ -21,7 +21,7 @@ subroutine synchro_fine(ilevel)
   
   ! Set new sink variables to old ones
   if(sink)then
-     vsink_new=0d0; oksink_new=0d0
+     vsink_new=0.d0; oksink_new=0.d0; level_sink_new=0
   endif
 
   ! Synchronize velocity using CIC
@@ -61,16 +61,19 @@ subroutine synchro_fine(ilevel)
   if(sink)then
      if(nsink>0)then
 #ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(oksink_new,oksink_all,nsinkmax     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-        call MPI_ALLREDUCE(vsink_new ,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+        call MPI_ALLREDUCE(oksink_new,oksink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+        call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+        call MPI_ALLREDUCE(level_sink_new,level_sink_all,nsinkmax,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #else
         oksink_all=oksink_new
         vsink_all=vsink_new
+        level_sink_all=level_sink
 #endif
      endif
      do isink=1,nsink
         if(oksink_all(isink)==1d0)then
            vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
+           level_sink(isink)=level_sink_all(isink)
         endif
 !!$        if(myid==1)then
 !!$           write(*,*)msink(isink)
@@ -391,7 +394,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Update sink particle velocity using closest cloud particle
+  ! Update sink particle velocity and level using closest cloud particle
   if(sink)then
      do j=1,np
         isink=-idp(ind_part(j))
@@ -405,6 +408,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
            if(r2==0.0)then
               vsink_new(isink,1:ndim)=vp(ind_part(j),1:ndim)
+              level_sink_new(isink)=levelp(ind_part(j))
               oksink_new(isink)=1.0
            end if
         endif

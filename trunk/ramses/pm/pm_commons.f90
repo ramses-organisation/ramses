@@ -22,6 +22,7 @@ module pm_commons
   real(kind=8),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
   real(kind=8),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
+  integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
   logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
   integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
   integer::ncloud_sink

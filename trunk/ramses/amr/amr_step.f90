@@ -98,19 +98,18 @@ recursive subroutine amr_step(ilevel,icount)
         if(.not.ok_defrag)then
            call defrag
         endif
+
         call dump_all
-        
+       
         if(gas_analytics) call gas_ana
-        
         ! Run the clumpfinder       
-        if(clumpfind .and. ndim==3) call clump_finder(.true.)
-                   
+!        if(clumpfind .and. ndim==3) call clump_finder(.true.)
+        
         ! Dump lightcone
         if(lightcone) call output_cone()
         
         !! Dump movie frame
         !if(movie)call output_frame()
-    
      endif
   endif
 
@@ -181,15 +180,15 @@ recursive subroutine amr_step(ilevel,icount)
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
-        ! Density threshold and/or Bondi accretion onto sink particle
-        if(sink)then
+        !Density threshold and/or Bondi accretion onto sink particle
+        if(sink)then                         
            if(bondi)then
               call grow_bondi(ilevel)
            else
               call grow_jeans(ilevel)
            endif
         endif
-
+        
         ! Update boundaries
 #ifdef SOLVERmhd
         do ivar=1,nvar+3
@@ -200,7 +199,6 @@ recursive subroutine amr_step(ilevel,icount)
         end do
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end if
-
   end if
 
   !----------------------
@@ -329,12 +327,12 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
   if(sink .and.(ilevel==levelmin))then
      call create_sink
-     do ilev=1,nlevelmax
-        call count_parts(ilev)
-     end do
-     if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++donesink'
+     ! do ilev=1,nlevelmax
+     !    call count_parts(ilev)
+     ! end do
+     ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++donesink' 
   end if
-  
+
   !-------------------------------
   ! Update coarser level time-step
   !-------------------------------

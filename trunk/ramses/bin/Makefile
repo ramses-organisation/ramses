@@ -2,12 +2,12 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NVECTOR = 16
-NDIM = 1
+NVECTOR = 64
+NDIM = 3
 NPRE = 8
-NVAR = 4
+NVAR = 5
 SOLVER = hydro
-PATCH = 
+PATCH = ../mypatch/EOS_100/normal/
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 #############################################################################
@@ -41,11 +41,11 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 #
 # --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
+#F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g 
 #FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
-F90 = mpif90 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
+F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
 FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
 
 

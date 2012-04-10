@@ -17,19 +17,19 @@ subroutine gas_ana
   !----------------------------------------------------------------------
   ! local constants
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp),dimension(1:twotondim,1:3)::xc
+  real(kind=8),dimension(1:twotondim,1:3)::xc
   ! other variables
   integer ::ncache,ngrid
   integer ::igrid,ix,iy,iz,ind,i,iskip,nx_loc
   integer ::info
-  real(dp),dimension(1:3)::skip_loc
-  real(dp)::d,xx,yy,zz,vx,vy,vz,dx,dx_loc,scale,vol_loc,dx_min,vol_min
-  real(dp)::mini_dens,mini_dens_tot,maxi_dens,maxi_dens_tot,l_max,l_min,width
+  real(kind=8),dimension(1:3)::skip_loc
+  real(kind=8)::d,xx,yy,zz,vx,vy,vz,dx,dx_loc,scale,vol_loc,dx_min,vol_min,v_sound
+  real(kind=8)::mini_dens,mini_dens_tot,maxi_dens,maxi_dens_tot,l_max,l_min,width
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer::ilevel,hist_ind
   character(LEN=5)::nchar
-  real(dp),allocatable,dimension(:)::hist,hist_tot
-  real(dp)::m,m_tot,v_rms,v_rms_tot,v_sound
+  real(kind=8),allocatable,dimension(:)::hist,hist_tot
+  real(kind=8)::m,m_tot,v_rms,v_rms_tot
 
   if(.not. hydro)return
 
@@ -37,14 +37,15 @@ subroutine gas_ana
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
+
+  maxi_dens=0.d0
   mini_dens=1.d99
-  maxi_dens=-1.d99
 
-  xx=.5; yy=.5; zz=.5
-  vx=0.; vy=0.; vz=0.
+  xx=5.d-1; yy=5.d-1; zz=5.d-1
+  vx=0.d0; vy=0.d0; vz=0.d0
 
-  m=0.; m_tot=0.
-  v_rms=0.; v_rms_tot=0.
+  m=0.d0; m_tot=0.d0
+  v_rms=0.d0; v_rms_tot=0.d0
         
   do ilevel=levelmin,nlevelmax
      if (numbtot(1,ilevel)/=0)then 
@@ -132,14 +133,15 @@ subroutine gas_ana
   maxi_dens_tot=maxi_dens
 #endif
 
+
   l_max=log10(maxi_dens_tot*1.001)
   l_min=log10(mini_dens_tot*0.999)
   width=l_max-l_min
 
   allocate(hist(1:nbins))
   allocate(hist_tot(1:nbins))
-  hist=0.
-  hist_tot=0.
+  hist=0.d0
+  hist_tot=0.d0
 
 
   do ilevel=levelmin,nlevelmax
@@ -194,8 +196,7 @@ subroutine gas_ana
 #endif          
                  if (son(ind_cell(i))==0)then
                     if(ana_xmi<xx .and. xx<ana_xma .and. ana_ymi<yy .and. yy<ana_yma .and. ana_zmi<zz .and. zz<ana_zma)then
-                       d=uold(ind_cell(i),1)
-
+                       d=dble(uold(ind_cell(i),1))
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                        ! DETERMINE THE LOCAL SOUND SPEED HERE
                        ! THIS DEPENDS ON YOUR THERMODINAMICAL ASSUMPTIONS
@@ -206,18 +207,18 @@ subroutine gas_ana
                        ! v_sound=(T2_star/scale_T2*gamma*(d*scale_nH/n_star)**(gamma-1))**0.5
 
                        ! isothermal
-                       v_sound=(T2_star/scale_T2)**0.5
+                       v_sound=dble((T2_star/scale_T2))**0.5d0
                        
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-                       vx=uold(ind_cell(i),2)/d/v_sound
+                       vx=dble(uold(ind_cell(i),2))/(v_sound)
 #if NDIM>1
-                       vy=uold(ind_cell(i),3)/d/v_sound
+                       vy=dble(uold(ind_cell(i),3))/(v_sound)
 #endif
 #if NDIM>2
-                       vz=uold(ind_cell(i),4)/d/v_sound
+                       vz=dble(uold(ind_cell(i),4))/(v_sound)
 #endif
-                       v_rms=v_rms+(vx**2+vy**2+vz**2)*vol_loc*d 
+                       v_rms=v_rms+(vx**2.d0+vy**2.d0+vz**2.d0)*vol_loc/d 
                        m=m+vol_loc*d
                        ! log(rho) PDF
                        hist_ind=1+int((log10(d)-l_min)/width*nbins)
@@ -254,8 +255,7 @@ subroutine gas_ana
 #ifdef WITHOUTMPI
   v_rms_tot=v_rms
 #endif
-v_rms_tot=(v_rms_tot/m_tot)**0.5
-
+v_rms_tot=(v_rms_tot/m_tot)**5.d-1
   !---------------------------------
   ! write textfile
   !---------------------------------
@@ -292,8 +292,8 @@ subroutine read_gas_analytics_params()
   read(1,NML=gas_analytics_params,END=101)
   goto 102
 101 if(myid==1)write(*,*)' You did not setup &GAS_ANALYTICS_PARAMS in parameter file. Defaults will be used...'
-  ana_xmi=0.; ana_ymi=0.; ana_zmi=0.
-  ana_xma=1.; ana_yma=1.; ana_zma=1.
+  ana_xmi=0.d0; ana_ymi=0.d0; ana_zmi=0.d0
+  ana_xma=1.d0; ana_yma=1.d0; ana_zma=1.d0
   nbins=1000
 102 rewind(1)
 end subroutine read_gas_analytics_params

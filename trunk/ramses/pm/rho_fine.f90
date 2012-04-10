@@ -196,6 +196,14 @@ subroutine rho_fine(ilevel,icount)
      call make_virtual_fine_int(cpu_map2(1),ilevel)
   end if
 
+!!$  do ind=1,twotondim
+!!$     iskip=ncoarse+(ind-1)*ngridmax
+!!$     do i=1,active(ilevel)%ngrid
+!!$        print*,rho(active(ilevel)%igrid(i)+iskip),rho_tot
+!!$     end do
+!!$  end do
+  
+
 111 format('   Entering rho_fine for level ',I2)
   
 end subroutine rho_fine

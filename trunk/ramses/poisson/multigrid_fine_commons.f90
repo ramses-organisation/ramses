@@ -182,6 +182,7 @@ subroutine multigrid_fine(ilevel)
       if(iter==1) then
          call cmp_residual_norm2_fine(ilevel,i_res_norm2)
 #ifndef WITHOUTMPI
+
          call MPI_ALLREDUCE(i_res_norm2,i_res_norm2_tot,1, &
                  & MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
          i_res_norm2=i_res_norm2_tot
