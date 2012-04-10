@@ -94,7 +94,12 @@ subroutine init_poisson
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
-                 ! Loop over conservative variables
+                 ! Read potential
+                 read(ilun)xx
+                 do i=1,ncache
+                    phi(ind_grid(i)+iskip,ivar)=xx(i)
+                 end do
+                 ! Read force
                  do ivar=1,ndim
                     read(ilun)xx
                     do i=1,ncache
