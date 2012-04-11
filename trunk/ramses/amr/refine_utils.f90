@@ -544,7 +544,7 @@ end subroutine refine_fine
 subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region)
   use amr_commons
   use hydro_commons
-  use poisson_commons, ONLY:f
+  use poisson_commons, ONLY:f, phi
 #ifdef ATON
   use radiation_commons, ONLY:Erad
 #endif
