@@ -97,7 +97,7 @@ subroutine init_poisson
                  ! Read potential
                  read(ilun)xx
                  do i=1,ncache
-                    phi(ind_grid(i)+iskip,ivar)=xx(i)
+                    phi(ind_grid(i)+iskip)=xx(i)
                  end do
                  ! Read force
                  do ivar=1,ndim
