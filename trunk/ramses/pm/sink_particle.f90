@@ -2588,24 +2588,28 @@ subroutine compute_accretion_rate(ilevel)
   else
      
      if(myid==1.and.ilevel==levelmin.and.nsink>0)then
+        acc_rate(1:nlevelmax)=acc_rate(1:nlevelmax)/dtold(ilevel)
         do i=1,nsink
            xmsink(i)=msink(i)
         end do
 
         call quick_sort(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,'(" =============================================================================================================================== ")')
-        write(*,'(" Id     Mass(Msol)     x           y           z           vx        vy        vz     new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
-        write(*,'(" =============================================================================================================================== ")')
+        write(*,'(" ========================================================================================================================================= ")')
+        write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l|  acc_rate[Msol/y]  ")')
+        write(*,'(" ========================================================================================================================================= ")')
         do i=nsink,max(nsink-10,1),-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
            rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-           write(*,'(I6,2X,F12.8,3(2X,F10.8),3(2X,F7.5),4X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33, &
-                xsink(isink,1:ndim),vsink(isink,1:ndim),new_born_all(isink),&
-                rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+           write(*,'(I5,2X,F9.5,3(2X,F10.8),3(2X,F7.4),2X,F13.5,3(2X,F6.3),3X,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
+                xsink(isink,1:ndim),vsink(isink,1:ndim),&
+                rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
+                acc_rate(i)*scale_m/2.d33/(scale_t)*365.*24.*3600.
         end do
-        write(*,'(" =============================================================================================================================== ")')
+        write(*,'(" ========================================================================================================================================= ")')
+        
+        acc_rate=0.
      endif
   endif
 
@@ -2718,6 +2722,7 @@ subroutine grow_jeans(ilevel)
      msink(isink)=msink(isink)+msink_all(isink)
      vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
      lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
+     acc_rate(isink)=acc_rate(isink)+msink_all(isink)
   end do
   
 

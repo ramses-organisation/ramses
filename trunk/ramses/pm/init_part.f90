@@ -83,6 +83,8 @@ subroutine init_part
      nindsink=MAXVAL(idsink) ! Reset max index
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
+     allocate(acc_rate(1:nsinkmax))
+     acc_rate=0.
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
      allocate(level_sink(1:nsinkmax))
