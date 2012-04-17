@@ -432,23 +432,25 @@ subroutine compute_clump_properties_round2()
                     peak_nr=int(mp(ind_part(jj)))
                     d=dble(uold(ind_cell(jj),1))
                     de=uold(ind_cell(jj),ndim+2)
-                    do i=1,ndim
-                       vd(i)=uold(ind_cell(jj),i+1)
-                       xcell(i)=init_pos(jj,i)
-                       xpeak(i)=peak_pos_tot(peak_nr,i)
-                    end do
-                    M=clump_mass_tot(peak_nr)
-                    vol=volume(cell_lev(jj))                  
-                    phi_rel=(phi(ind_cell(jj))-phi_min_tot(peak_nr))*scale
-
-                    
-                    !Radius and kinetic energy
-                    ekk=0.
-                    do i=1,3 
-                       ekk=ekk+0.5*vd(i)**2/d                          
-                    end do
                                         
                     if (peak_nr /=0 ) then
+
+                       do i=1,ndim
+                          vd(i)=uold(ind_cell(jj),i+1)
+                          xcell(i)=init_pos(jj,i)
+                          xpeak(i)=peak_pos_tot(peak_nr,i)
+                       end do
+                       M=clump_mass_tot(peak_nr)
+                       vol=volume(cell_lev(jj))                  
+                       phi_rel=(phi(ind_cell(jj))-phi_min_tot(peak_nr))*scale
+                       
+                       
+                       !Radius and kinetic energy
+                       ekk=0.
+                       do i=1,3 
+                          ekk=ekk+0.5*vd(i)**2/d                          
+                       end do
+
                        
                        !internal kinetic energy
                        do i=1,3

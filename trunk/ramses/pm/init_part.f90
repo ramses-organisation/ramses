@@ -243,7 +243,6 @@ subroutine init_part
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
-
   else     
 
      filetype_loc=filetype

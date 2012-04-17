@@ -3654,6 +3654,7 @@ subroutine make_sink_from_clump(ilevel)
   ! and count number of new sinks
   !------------------------------------------------
   ntot=0
+  ntot_sink_cpu=0
   if(numbtot(1,ilevel)>0)then
      ncache=active(ilevel)%ngrid
      do igrid=1,ncache,nvector
@@ -3746,11 +3747,10 @@ subroutine make_sink_from_clump(ilevel)
   nindsink=nindsink+ntot_all
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Level = ",I6," New sinks prduced from clumps= ",I6," Total sinks =",I8)')&
+        write(*,'(" Level = ",I6," New sinks produced from clumps= ",I6," Total sinks =",I8)')&
              & ilevel,ntot_all,nsink
      endif
   end if
-
   !------------------------------
   ! Create new sink particles
   !------------------------------
@@ -3762,7 +3762,7 @@ subroutine make_sink_from_clump(ilevel)
      index_sink=nsink-ntot_all+ntot_sink_cpu(myid-1)
      index_sink_tot=nindsink-ntot_all+ntot_sink_cpu(myid-1)
   end if
-
+  
   ! Loop over grids
   if(numbtot(1,ilevel)>0)then
      ncache=active(ilevel)%ngrid
@@ -3796,9 +3796,9 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Get gas variables
               d=uold(ind_cell_new(i),1)
-              u=uold(ind_cell_new(i),2)-0.5*dtnew(ilevel)*f(ind_cell_new(i),2)
-              v=uold(ind_cell_new(i),3)-0.5*dtnew(ilevel)*f(ind_cell_new(i),3)
-              w=uold(ind_cell_new(i),4)-0.5*dtnew(ilevel)*f(ind_cell_new(i),4)
+              u=uold(ind_cell_new(i),2)-0.5*dtnew(ilevel)*f(ind_cell_new(i),1)
+              v=uold(ind_cell_new(i),3)-0.5*dtnew(ilevel)*f(ind_cell_new(i),2)
+              w=uold(ind_cell_new(i),4)-0.5*dtnew(ilevel)*f(ind_cell_new(i),3)
               e=uold(ind_cell_new(i),5)
 
               ! Get density maximum position

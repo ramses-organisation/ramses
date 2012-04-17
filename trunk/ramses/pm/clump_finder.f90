@@ -144,7 +144,8 @@ subroutine clump_finder(create_output)
   if (npeaks_tot > 0)then
      call clump_phi
      call compute_clump_properties_round2()
-     if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))call write_clump_properties(.false.)
+!     if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))
+     call write_clump_properties(.false.)
      if(create_output)then
         call write_peak_map
         call write_clump_properties(.true.)
