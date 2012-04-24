@@ -114,7 +114,7 @@ subroutine clump_finder(create_output)
   ! Compute peak-batch mass etc. and output these properties before merging 
   !-------------------------------------------------------------------------------
   call compute_clump_properties() 
-  if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))call write_clump_properties(.false.)
+  if (verbose)call write_clump_properties(.false.)
 
 
   !-------------------------------------------------------------------------------

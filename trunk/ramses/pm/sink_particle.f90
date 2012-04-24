@@ -2586,31 +2586,29 @@ subroutine compute_accretion_rate(ilevel)
      end do
      
   else
-     
-     if(myid==1.and.ilevel==levelmin.and.nsink>0)then
-        acc_rate(1:nlevelmax)=acc_rate(1:nlevelmax)/dtold(ilevel)
-        do i=1,nsink
-           xmsink(i)=msink(i)
-        end do
-
-        call quick_sort(xmsink(1),idsink_sort(1),nsink)
-        write(*,*)'Number of sink = ',nsink
-        write(*,'(" ========================================================================================================================================= ")')
-        write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l|  acc_rate[Msol/y]  ")')
-        write(*,'(" ========================================================================================================================================= ")')
-        do i=nsink,max(nsink-10,1),-1
-           isink=idsink_sort(i)
-           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
-           rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-           write(*,'(I5,2X,F9.5,3(2X,F10.8),3(2X,F7.4),2X,F13.5,3(2X,F6.3),3X,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
-                xsink(isink,1:ndim),vsink(isink,1:ndim),&
-                rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
-                acc_rate(i)*scale_m/2.d33/(scale_t)*365.*24.*3600.
-        end do
-        write(*,'(" ========================================================================================================================================= ")')
-        
-        acc_rate=0.
-     endif
+     if (ilevel==levelmin)then         
+        if(myid==1.and.nsink>0)then
+           do i=1,nsink
+              xmsink(i)=msink(i)
+           end do
+           
+           call quick_sort(xmsink(1),idsink_sort(1),nsink)
+           write(*,*)'Number of sink = ',nsink
+           write(*,'(" ========================================================================================================================================= ")')
+           write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l|  acc_rate[Msol/y]  ")')
+           write(*,'(" ========================================================================================================================================= ")')
+           do i=nsink,1,-1
+              isink=idsink_sort(i)
+              l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d-99
+              rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
+              write(*,'(I5,2X,F9.5,3(2X,F10.8),3(2X,F7.4),2X,F13.5,3(2X,F6.3),3X,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
+                   xsink(isink,1:ndim),vsink(isink,1:ndim),&
+                   rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
+                   acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.
+           end do
+           write(*,'(" ========================================================================================================================================= ")')
+        endif
+     end if
   endif
 
 end subroutine compute_accretion_rate
@@ -2633,13 +2631,17 @@ subroutine grow_jeans(ilevel)
   ! On exit, sink mass and velocity are modified.
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   real(dp)::r2,density,volume
 
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  if (ilevel==levelmin)acc_rate=0.
+  
   if(numbtot(1,ilevel)==0)return
+  
   if(verbose)write(*,111)ilevel
-
   ! Reset new sink variables
   msink_new=0d0; vsink_new=0d0; lsink_new=0d0
 
@@ -2725,6 +2727,14 @@ subroutine grow_jeans(ilevel)
      acc_rate(isink)=acc_rate(isink)+msink_all(isink)
   end do
   
+  !since grow jeans is called before the recursion in amr_step,
+  !ilevel==levelmax means that all accretion is done for this coarse step
+
+  if (ilevel==nlevelmax)then
+     do i=1,nsink
+        acc_rate(i)=acc_rate(i)/dtnew(levelmin)
+     end do
+  end if
 
 111 format('   Entering grow_jeans for level ',I2)
 
