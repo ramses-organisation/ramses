@@ -34,8 +34,8 @@ program histo_main
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::dymin,dymax,tymin,tymax
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
-  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz,dxx,dyy
-  real(KIND=8),dimension(:,:),allocatable::x,xg,histo
+  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz,dxx,dyy,dd,dt
+  real(KIND=8),dimension(:,:),allocatable::x,xg,histo,im
   real(KIND=8)::dmin=0.0,dmax=0.0,tmin=0.0,tmax=0.0
   real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,mmm
   real(KIND=8),dimension(:,:,:),allocatable::var
@@ -468,15 +468,32 @@ program histo_main
   write(*,*)'Total mass=',total_mass
 
   ! Output file
-  nomfich=TRIM(outfich)
-  write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
-  open(unit=10,file=nomfich,form='unformatted')
-  write(10)nhx,nhy
-  write(10)real(histo/total_mass)
-  write(10)dymin,dymax
-  write(10)tymin,tymax
-  close(10)
+  if (filetype=='bin')then 
+     nomfich=TRIM(outfich)
+     write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
+     open(unit=10,file=nomfich,form='unformatted')
+     write(10)nhx,nhy
+     write(10)real(histo/total_mass)
+     write(10)dymin,dymax
+     write(10)tymin,tymax
+     close(10)
+  end if
 
+  if (filetype=='ascii')then 
+     nomfich=TRIM(outfich)
+     write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
+     open(unit=10,file=nomfich,form='formatted')
+     dd=(dymax-dymin)/nhx
+     dt=(tymax-tymin)/nhy
+     do i=1,nhx
+        do j=1,nhy
+           write(10,*)dymin+i*dd,tymin+j*dt,histo(i,j)/total_mass
+        end do
+        write(10,*) " "
+     end do
+     close(10)
+  end if
+  
   
 contains
  
@@ -546,6 +563,8 @@ contains
           read (arg,*) tpoly
        case ('-npo')
           read (arg,*) npoly
+       case ('-typ')
+          read (arg,*) filetype
        case default
           print '("unknown option ",a2," ignored")', opt
 
