@@ -563,7 +563,7 @@ contains
           read (arg,*) tpoly
        case ('-npo')
           read (arg,*) npoly
-       case ('-typ')
+       case ('-fil')
           read (arg,*) filetype
        case default
           print '("unknown option ",a2," ignored")', opt
