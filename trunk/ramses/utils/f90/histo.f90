@@ -517,6 +517,7 @@ contains
        print *, '            [-tma T_max  ] '
        print *, '            [-nx  nx_rho ] '
        print *, '            [-ny  ny_T   ] '
+       print *, '            [-fil ascii or bin  ] '
        print *, 'ex: histo -inp output_00001 -out map.dat'
        stop
     end if

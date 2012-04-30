@@ -228,6 +228,8 @@ subroutine init_part
            endif
            read(ilun)xdp ! Read sink accumulated rest mass energy
            delta_mass(1:nsink)=xdp
+           read(ilun)xdp ! Read sink accretion rate
+           acc_rate(1:nsink)=xdp
            deallocate(xdp)
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index

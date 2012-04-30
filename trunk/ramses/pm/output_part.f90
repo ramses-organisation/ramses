@@ -145,6 +145,10 @@ subroutine backup_part(filename)
            xdp(i)=delta_mass(i)
         end do
         write(ilun)xdp ! Write sink accumulated rest mass energy
+        do i=1,nsink
+           xdp(i)=acc_rate(i)
+        end do
+        write(ilun)xdp ! Write sink accretion rate
         deallocate(xdp)
         allocate(ii(1:nsink))
         do i=1,nsink

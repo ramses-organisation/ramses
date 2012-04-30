@@ -2586,7 +2586,8 @@ subroutine compute_accretion_rate(ilevel)
      end do
      
   else
-     if (ilevel==levelmin)then         
+     if (ilevel==levelmin)then    
+        acc_rate(1:nsinkmax)=acc_rate(1:nsinkmax)/dtnew(levelmin)
         if(myid==1.and.nsink>0)then
            do i=1,nsink
               xmsink(i)=msink(i)
@@ -2608,6 +2609,7 @@ subroutine compute_accretion_rate(ilevel)
            end do
            write(*,'(" ========================================================================================================================================= ")')
         endif
+        acc_rate=0.
      end if
   endif
 
@@ -2727,15 +2729,6 @@ subroutine grow_jeans(ilevel)
      acc_rate(isink)=acc_rate(isink)+msink_all(isink)
   end do
   
-  !since grow jeans is called before the recursion in amr_step,
-  !ilevel==levelmax means that all accretion is done for this coarse step
-
-  if (ilevel==nlevelmax)then
-     do i=1,nsink
-        acc_rate(i)=acc_rate(i)/dtnew(levelmin)
-     end do
-  end if
-
 111 format('   Entering grow_jeans for level ',I2)
 
 end subroutine grow_jeans
