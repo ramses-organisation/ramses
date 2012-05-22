@@ -113,7 +113,7 @@ int plot_circular_speeds(FILE *fd)
       vcb=sqrt(R*comp_Dphi_R_bulge(R,0));
       vc2=sqrt(vcd*vcd+vch*vch+vcb*vcb);
 
-	  R = R * UnitLength_in_cm * 1.0E6 / CM_PER_MPC;
+	  R = R * UnitLength_in_cm * 1.0E3 / CM_PER_MPC;
 	  vc2 = vc2 * UnitVelocity_in_cm_per_s / 1.0E5;
 	  
 	  fprintf(fd,"%f ",R);
