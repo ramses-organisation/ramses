@@ -398,11 +398,13 @@ subroutine condinit(x,u,dx,nn)
         end select
         Vrot = weight * Vrot
         q(i,ndim-1:ndim+1) = Vrot * vect_prod(axe_rot,xx_rad)/r + vgal
+        if(metal)q(i,6)=z_ave
     else ! Cell out of the gaseous disk : density = peanut and velocity = V_gal
         q(i,1)=dmin
         q(i,ndim+2)=a2*q(i,1)
         ! V = Vgal
         q(i,ndim-1:ndim+1)= vgal
+        if(metal)q(i,6)=0.0
      endif
   enddo
 
@@ -543,8 +545,8 @@ subroutine read_vcirc_files
 	read(123,*) Vcirc_dat1(i,:)
   end do
   close(123)
-  ! Unit conversion pc -> code unit and km/s -> code unit
-  Vcirc_dat1(:,1) = Vcirc_dat1(:,1) * 3.085677581282D18 / scale_l
+  ! Unit conversion kpc -> code unit and km/s -> code unit
+  Vcirc_dat1(:,1) = Vcirc_dat1(:,1) * 3.085677581282D21 / scale_l
   Vcirc_dat1(:,2) = Vcirc_dat1(:,2) * 1.0D5 / scale_v
 
   ! Galaxy #2
@@ -563,8 +565,8 @@ subroutine read_vcirc_files
 	read(123,*) Vcirc_dat2(i,:)
   end do
   close(123)
-  ! Unit conversion pc -> code unit and km/s -> code unit
-  Vcirc_dat2(:,1) = Vcirc_dat2(:,1) * 3.085677581282D18 / scale_l
+  ! Unit conversion kpc -> code unit and km/s -> code unit
+  Vcirc_dat2(:,1) = Vcirc_dat2(:,1) * 3.085677581282D21 / scale_l
   Vcirc_dat2(:,2) = Vcirc_dat2(:,2) * 1.0D5 / scale_v
 
 
