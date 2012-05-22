@@ -10,19 +10,16 @@ SOLVER = hydro
 PATCH =
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 #############################################################################
 # Fortran compiler options and directives
 
-DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+# --- No MPI, gfortran -------------------------------
+F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g 
+FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
-#F90 = mpif90 -g -traceback
-#FFLAGS = -O0 -cpp $(DEFINES)
-# --- No MPI, gfortran ----------------------------------
+# --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
-
-#F90 = gfortran
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -ffree-line-length-none -fbacktrace
-
 
 # --- No MPI, pgf90 ----------------------------------
 #F90 = pgf90
@@ -39,20 +36,14 @@ DEFINES = -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_
 # --- No MPI, ifort ----------------------------------
 #F90 = ifort
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
-#
-# --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g 
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI -DNVECTOR=$(NVECTOR)
 
 # --- MPI, gfortran syntax ------------------------------
 #F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DNVECTOR=$(NVECTOR)
-
+#FFLAGS = -x f95-cpp-input $(DEFINES)
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
 #FFLAGS = -Mpreprocess $(DEFINES)
-
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90
