@@ -48,6 +48,8 @@ subroutine init_time
              & aexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
         hexp=hexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
              & hexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
+        texp=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
+             & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
      end if
   end if
 
