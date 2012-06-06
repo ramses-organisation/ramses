@@ -112,7 +112,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
-  real(dp)::dx,dx_loc,scale,vol_loc,birth_time
+  real(dp)::dx,dx_loc,scale,vol_loc,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
   ! Grid based arrays
@@ -157,7 +157,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
-  t0=10.*1d6*(365.*24.*3600.)/scale_t
+  if(use_proper_time)then
+     t0=10.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+     t0=10.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   ! Type II supernova specific energy from cgs to code units
   ESN=1d51/(10.*2d33)/scale_v**2
@@ -268,6 +274,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end if
      end do
   endif
+  if(use_proper_time)then
+     do j=1,np
+        if(ok(j))then
+           dteff(j)=dteff(j)*aexp**2
+        end if
+     end do
+  endif
 
   ! Reset ejected mass, metallicity, thermal energy
   do j=1,np
@@ -284,7 +297,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         if(ok(j))then
            birth_time=tp(ind_part(j))
            ! Make sure that we don't count feedback twice
-           if(birth_time.lt.(t-t0).and.birth_time.ge.(t-t0-dteff(j)))then
+           if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
               ! Stellar mass loss
               mejecta=eta_sn*mp(ind_part(j))
               mloss(j)=mloss(j)+mejecta/vol_loc
