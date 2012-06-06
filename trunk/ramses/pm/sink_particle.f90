@@ -363,8 +363,12 @@ subroutine make_sink(ilevel)
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
-  ! Birth epoch
-  birth_epoch=t
+  ! Birth epoch as proper time
+  if(use_proper_time)then
+     birth_epoch=texp
+  else
+     birth_epoch=t
+  endif
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim  
@@ -3618,8 +3622,12 @@ subroutine make_sink_from_clump(ilevel)
   rmax=dble(ir_cloud)*dx_min/aexp ! Linking length in physical units
   rmax2=rmax*rmax
 
-  ! Birth epoch
-  birth_epoch=t
+  ! Birth epoch as proper time
+  if(use_proper_time)then
+     birth_epoch=texp
+  else
+     birth_epoch=t
+  endif
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim  

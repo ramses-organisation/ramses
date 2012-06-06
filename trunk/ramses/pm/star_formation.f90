@@ -92,8 +92,12 @@ subroutine star_formation(ilevel)
   endif
   dstar=mstar/vol_loc
 
-  ! Birth epoch
-  birth_epoch=t
+  ! Birth epoch as proper time
+  if(use_proper_time)then
+     birth_epoch=texp
+  else
+     birth=t
+  endif
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim  
