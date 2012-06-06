@@ -271,6 +271,71 @@ subroutine cmpmem(outmem)
 
 
 end subroutine cmpmem
+!------------------------------------------------------------------------
+SUBROUTINE getProperTime(tau,tproper)
+! Calculate proper time tproper corresponding to conformal time tau (both
+! in code units).
+! Added by joki on nov 18 2009
+!------------------------------------------------------------------------
+  use amr_commons
+  implicit none
+  real(dp)::tau, tproper
+  integer::i
+  if(.not. cosmo .or. tau .eq. 0.d0) then ! this might happen quite often
+     tproper = tau
+     return
+  endif
+  i = 1
+  do while( tau_frw(i) > tau .and. i < n_frw )
+     i = i+1
+  end do
+  tproper = t_frw(i  )*(tau-tau_frw(i-1))/(tau_frw(i  )-tau_frw(i-1))+ &
+          & t_frw(i-1)*(tau-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
+END SUBROUTINE getProperTime
+!------------------------------------------------------------------------
+SUBROUTINE getAgeGyr(t_birth_proper, age)
+! Calculate proper time passed, in Gyrs, since proper time t_birth_proper 
+! (given in code units) until the current time.
+! Added by joki on nov 18 2009
+!------------------------------------------------------------------------
+  use amr_commons
+  use pm_commons
+  implicit none
+  real(dp):: t_birth_proper, age
+  real(dp), parameter:: yr = 3.15569d+07
+  real(dp),save:: scale_t_Gyr
+  logical::scale_init=.false.
+  real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
+  if( .not. scale_init) then 
+     ! The timescale has not been initialized
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     scale_t_Gyr = (scale_t/aexp**2)/yr/1.e9
+     scale_init=.true.
+  endif
+  age = (texp - t_birth_proper) * scale_t_Gyr
+END SUBROUTINE getAgeGyr
+!------------------------------------------------------------------------
+SUBROUTINE getAgeSec(t_birth_proper, age)
+! Calculate proper time passed, in sec, since proper time t_birth_proper 
+! (given in code units) until the current time.
+! Added by joki on nov 18 2009
+!------------------------------------------------------------------------
+  use amr_commons
+  use pm_commons
+  implicit none
+  real(dp):: t_birth_proper, age
+  real(dp),save:: scale_t_sec
+  logical::scale_init=.false.
+  real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
+  if( .not. scale_init) then 
+     ! The timescale has not been initialized
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     scale_t_sec = (scale_t/aexp**2)
+     scale_init=.true.
+  endif
+  age = (texp - t_birth_proper) * scale_t_sec
+END SUBROUTINE getAgeSec
+!------------------------------------------------------------------------
 
 
 
