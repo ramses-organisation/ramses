@@ -143,6 +143,12 @@ subroutine update_time(ilevel)
           & aexp_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
      hexp = hexp_frw(i  )*(t-tau_frw(i-1))/(tau_frw(i  )-tau_frw(i-1))+ &
           & hexp_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
+     texp =    t_frw(i  )*(t-tau_frw(i-1))/(tau_frw(i  )-tau_frw(i-1))+ &
+          &    t_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
+  else
+     aexp = 1.0
+     hexp = 0.0
+     texp = t
   end if
 
 777 format(' Main step=',i6,' mcons=',1pe9.2,' econs=',1pe9.2, &
