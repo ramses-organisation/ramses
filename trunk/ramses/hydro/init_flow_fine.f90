@@ -357,6 +357,7 @@ subroutine init_flow_fine(ilevel)
                  uold(ind_cell(i),ivar+1)=vv(i)
               end do
            end do
+#if NVAR > NDIM + 2
            ! Compute passive variable density
            do ivar=ndim+3,nvar
               do i=1,ngrid
@@ -364,6 +365,7 @@ subroutine init_flow_fine(ilevel)
                  uold(ind_cell(i),ivar)=rr*uold(ind_cell(i),ivar)
               end do
            enddo
+#endif
         end do
         ! End loop over cells
         
@@ -444,9 +446,11 @@ subroutine region_condinit(x,q,dx,nn)
   q(1:nn,4)=0.0d0
 #endif
   q(1:nn,ndim+2)=smallr*smallc**2/gamma
+#if NVAR > NDIM + 2
   do ivar=ndim+3,nvar
      q(1:nn,ivar)=0.0d0
   end do
+#endif
 
   ! Loop over initial conditions regions
   do k=1,nregion
@@ -483,6 +487,11 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,4)=w_region(k)
 #endif
               q(i,ndim+2)=p_region(k)
+#if NVAR>NDIM+2
+              do ivar=ndim+3,nvar
+                 q(i,ivar)=var_region(k,ivar-ndim-2)
+              end do
+#endif
            end if
         end do
      end if
@@ -513,6 +522,11 @@ subroutine region_condinit(x,q,dx,nn)
            q(i,4)=q(i,4)+w_region(k)*r
 #endif
            q(i,ndim+2)=q(i,ndim+2)+p_region(k)*r/vol
+#if NVAR>NDIM+2
+           do ivar=ndim+3,nvar
+              q(i,ivar)=var_region(k,ivar-ndim-2)
+           end do
+#endif
         end do
      end if
   end do

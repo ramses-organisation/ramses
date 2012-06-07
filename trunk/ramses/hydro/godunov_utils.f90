@@ -143,6 +143,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      um(k,ndim+2) = (gamma-one)*(um(k,ndim+2)-ekinm(k))
      ud(k,ndim+2) = (gamma-one)*(ud(k,ndim+2)-ekind(k))
   end do  
+#if NVAR > NDIM + 2
   ! Passive scalars
   do idim = ndim+3,nvar
      do k = 1,nn
@@ -151,6 +152,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
         ud(k,idim) = ud(k,idim)/ud(k,1)
      end do
   end do
+#endif
 
   ! Compute errors
   if(err_grad_d >= 0.)then

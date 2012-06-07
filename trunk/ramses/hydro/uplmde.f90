@@ -101,6 +101,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   do n = ndim+3, nvar
      do k = klo, khi
         do j = jlo, jhi
@@ -126,6 +127,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine tracex
 !###########################################################
@@ -306,6 +308,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! Passive scalars
   do n = ndim+3, nvar
      do k = klo, khi
@@ -349,6 +352,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine tracexy
 #endif
@@ -612,6 +616,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! Passive scalars
   do n = ndim+3, nvar
      do k = klo, khi
@@ -670,6 +675,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine tracexyz
 #endif
