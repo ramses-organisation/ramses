@@ -28,14 +28,11 @@ subroutine clump_finder(create_output)
   character(LEN=80)::filename
   integer::jgrid
 
-
-
   !new variables for clump/sink comb
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   integer::j,jj,blocked,i
   real(kind=8),dimension(1:nvector,1:3)::pos
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
-
 
   if(verbose)write(*,*)' Entering clump_finder'
 
@@ -62,7 +59,6 @@ subroutine clump_finder(create_output)
   do while(nmove>0)
      if(myid==1 .and. verbose)write(*,*)"istep=",istep,"nmove=",nmove
 
-
      ! Move particle across oct and processor boundaries
      do ilevel=levelmin,nlevelmax
         call make_tree_fine(ilevel)
@@ -88,10 +84,7 @@ subroutine clump_finder(create_output)
 
   end do
 
-
-
   call assign_part_to_peak()
-
 
   !-------------------------------------------------------------------------------
   ! Re-assign xp to the old position stored in vp (argument is the level in which
@@ -106,16 +99,13 @@ subroutine clump_finder(create_output)
      call kill_tree_fine(ilevel)
   end do
 
-
   call allocate_peak_batch_arrays()
-
 
   !-------------------------------------------------------------------------------
   ! Compute peak-batch mass etc. and output these properties before merging 
   !-------------------------------------------------------------------------------
   call compute_clump_properties() 
   if (verbose)call write_clump_properties(.false.)
-
 
   !-------------------------------------------------------------------------------
   ! find the saddlepoint densities and merge irrelevant clumps
@@ -129,7 +119,6 @@ subroutine clump_finder(create_output)
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
      call saddlepoint_search() 
      
-
      !do i=1,npeaks_tot
      !   if (myid==1)write(*,'(50(F4.3,X))'),saddle_dens_tot(i,1:npeaks_tot)
      !end do
@@ -151,9 +140,6 @@ subroutine clump_finder(create_output)
         call write_clump_properties(.true.)
      end if
   end if
-
-  
-
 
   !------------------------------------------------------------------------------
   ! if the clumpfinder is used to produce sinks, flag all the cells which contain
@@ -180,7 +166,6 @@ subroutine clump_finder(create_output)
            end if
         end if
      end do
-
      
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(occupied,occupied_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
@@ -209,9 +194,6 @@ subroutine clump_finder(create_output)
      deallocate(occupied,occupied_all)
   endif
 
-
-
-
   call remove_parts_brute_force
   nstar_tot=0
   call deallocate_all
@@ -235,7 +217,6 @@ subroutine clump_finder(create_output)
 
 end subroutine clump_finder
 
-
 !################################################################
 !################################################################
 !################################################################
@@ -255,7 +236,6 @@ subroutine remove_parts_brute_force
   !----------------------------------------------------------------------
 
   integer::ipart,ilevel,icpu,igrid,jgrid,info
-
 
   npart=0
   do icpu=1,ncpu
@@ -302,7 +282,6 @@ subroutine remove_parts_brute_force
      tp=0.0
      if(metal)zp=0.0
   endif
-
 
 end subroutine remove_parts_brute_force
 

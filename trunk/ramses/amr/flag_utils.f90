@@ -436,6 +436,11 @@ subroutine userflag_fine(ilevel)
   ! Do the same for hydro solver
   if(hydro)call hydro_flag(ilevel)
 
+#ifdef RT
+  ! Do the same for RT solver
+  if(rt)call rt_hydro_flag(ilevel)
+#endif
+
   ! Update boundaries
   call make_virtual_fine_int(flag1(1),ilevel)
   if(simple_boundary)call make_boundary_flag(ilevel)

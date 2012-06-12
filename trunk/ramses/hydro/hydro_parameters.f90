@@ -28,7 +28,9 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::u_bound=0.0d0
   real(dp),dimension(1:MAXBOUND)::v_bound=0.0d0
   real(dp),dimension(1:MAXBOUND)::w_bound=0.0d0
-
+#if NVAR > NDIM+2
+  real(dp),dimension(1:MAXBOUND,1:NVAR-NDIM-2)::var_bound=0.0
+#endif
   ! Refinement parameters for hydro
   real(dp)::err_grad_d=-1.0  ! Density gradient
   real(dp)::err_grad_u=-1.0  ! Velocity gradient
@@ -37,6 +39,9 @@ module hydro_parameters
   real(dp)::floor_u=1.d-10   ! Velocity floor
   real(dp)::floor_p=1.d-10   ! Pressure floor
   real(dp)::mass_sph=0.0D0   ! mass_sph
+#if NVAR > NDIM+2
+  real(dp),dimension(1:NVAR-NDIM-2)::err_grad_var=-1.0
+#endif
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1.0
 
   ! Initial conditions hydro variables
@@ -45,7 +50,9 @@ module hydro_parameters
   real(dp),dimension(1:MAXREGION)::v_region=0.
   real(dp),dimension(1:MAXREGION)::w_region=0.
   real(dp),dimension(1:MAXREGION)::p_region=0.
-
+#if NVAR > NDIM+2
+  real(dp),dimension(1:MAXREGION,1:NVAR-NDIM-2)::var_region=0.0
+#endif
   ! Hydro solver parameters
   integer ::niter_riemann=10
   integer ::slope_type=1

@@ -545,6 +545,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   use amr_commons
   use hydro_commons
   use poisson_commons, ONLY:f, phi
+#ifdef RT
+  use rt_commons
+#endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
 #endif
@@ -739,7 +742,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            ind_fathers(i,j)=nbor(ind_grid_son(i),j)
         end do
      end do
-     ! Hydro variables
+     !============================
+     ! Interpolate hydro variables
+     !============================
      if(hydro)then
         do j=0,twondim
            ! Gather hydro variables
@@ -769,11 +774,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #else
         call interpol_hydro(u1,u2,nn)
 #endif
-     end if
-     ! Scatter to children cells
-     do j=1,twotondim
-        iskip=ncoarse+(j-1)*ngridmax
-        if(hydro)then
+        ! Scatter to children cells
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
 #ifdef SOLVERmhd
            do ivar=1,nvar+3
 #else
@@ -787,8 +790,41 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #else
            end do
 #endif
-        endif
-        if(poisson)then
+        enddo
+     end if
+#ifdef RT
+     !============================
+     ! Interpolate RT variables
+     !============================
+     if(rt)then
+        do j=0,twondim
+           ! Gather hydro variables
+           do ivar=1,nrtvar
+              do i=1,nn
+                 u1(i,j,ivar)=rtuold(ind_fathers(i,j),ivar)
+              end do
+           end do
+        end do
+        ! Interpolate
+        call rt_interpol_hydro(u1,u2,nn)
+        ! Scatter to children cells
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
+           do ivar=1,nrtvar
+              do i=1,nn
+                 rtuold(iskip+ind_grid_son(i),ivar)=u2(i,j,ivar)
+              end do
+           end do
+        enddo
+     end if
+#endif
+     !==============================
+     ! Interpolate gravity variables
+     !==============================
+     if(poisson)then
+        ! Scatter to children cells
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
            do idim=1,ndim
               do i=1,nn
                  f(iskip+ind_grid_son(i),idim)=f(ind_fathers(i,0),idim)
@@ -797,16 +833,22 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            do i=1,nn
               phi(iskip+ind_grid_son(i))=phi(ind_fathers(i,0))
            end do
-        end if
+        end do
+     end if
+     !===========================
+     ! Interpolate ATON variables
+     !===========================
 #ifdef ATON
-        if(aton)then
+     if(aton)then
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
            do i=1,nn
               Erad(iskip+ind_grid_son(i))=Erad(ind_fathers(i,0))
            end do
-        endif
+        enddo
+     end if
 #endif
-     end do
-  end if
+  endif
 
 end subroutine make_grid_fine
 !###############################################################
@@ -818,6 +860,12 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use pm_commons
   use hydro_commons
   use poisson_commons
+#ifdef RT
+  use rt_commons
+#endif
+#ifdef ATON
+  use radiation_commons, ONLY:Erad
+#endif
   implicit none
   integer::nn,ilevel,ibound
   logical::boundary_region
@@ -947,8 +995,30 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
               uold(ind_cell_son(i),ivar)=0.0D0
               unew(ind_cell_son(i),ivar)=0.0D0
            end do
+#ifdef SOLVERmhd
+        end do
+#else
+        end do
+#endif
+     end if
+#ifdef RT
+     ! RT variables
+     if(rt)then
+        do ivar=1,nrtvar
+           do i=1,nn
+              rtuold(ind_cell_son(i),ivar)=0.0D0
+              rtunew(ind_cell_son(i),ivar)=0.0D0
+           end do
         end do
      end if
+#endif
+#ifdef ATON
+     if(aton)then
+        do i=1,nn
+           Erad(ind_cell_son(i))=0.0D0
+        end do
+     end if
+#endif
   end do
 
   ! Put son grids at the tail of the free memory linked list

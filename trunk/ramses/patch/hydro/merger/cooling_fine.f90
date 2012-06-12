@@ -10,14 +10,11 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info,isink
+  integer::ncache,i,igrid,ngrid,info
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-
-  ! Compute sink accretion rates
-  if(sink)call compute_accretion_rate(0)
 
   ! Operator splitting step for cooling source term
   ! by vector sweeps

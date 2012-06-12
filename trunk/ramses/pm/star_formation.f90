@@ -96,7 +96,7 @@ subroutine star_formation(ilevel)
   if(use_proper_time)then
      birth_epoch=texp
   else
-     birth=t
+     birth_epoch=t
   endif
 
   ! Cells center position relative to grid center position
