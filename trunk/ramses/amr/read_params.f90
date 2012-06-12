@@ -163,6 +163,9 @@ subroutine read_params
   endif
 
   call read_hydro_params(nml_ok)
+#ifdef RT
+  call rt_read_hydro_params(nml_ok)
+#endif
 
   if (clumpfind)call read_clumpfind_params
   if (gas_analytics)call read_gas_analytics_params

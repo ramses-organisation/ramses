@@ -45,14 +45,27 @@ recursive subroutine amr_step(ilevel,icount)
                  do ivar=1,nvar
 #endif
                     call make_virtual_fine_dp(uold(1,ivar),i)
+#ifdef SOLVERmhd
                  end do
+#else
+                 end do
+#endif
                  if(simple_boundary)call make_boundary_hydro(i)
-                 if(poisson)then
-                    do idim=1,ndim
-                       call make_virtual_fine_dp(f(1,idim),i)
-                    end do
-                    if(simple_boundary)call make_boundary_force(i)
-                 end if
+              end if
+#ifdef RT
+              if(rt)then
+                 do ivar=1,nrtvar
+                    call make_virtual_fine_dp(rtuold(1,ivar),i)
+                 end do
+                 if(simple_boundary)call rt_make_boundary_hydro(i)
+              end if
+#endif
+              if(poisson)then
+                 call make_virtual_fine_dp(phi(1),i)
+                 do idim=1,ndim
+                    call make_virtual_fine_dp(f(1,idim),i)
+                 end do
+                 if(simple_boundary)call make_boundary_force(i)
               end if
            end if
 
@@ -196,7 +209,11 @@ recursive subroutine amr_step(ilevel,icount)
         do ivar=1,nvar
 #endif
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
+#ifdef SOLVERmhd
         end do
+#else
+        end do
+#endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end if
   end if
@@ -212,6 +229,10 @@ recursive subroutine amr_step(ilevel,icount)
   ! Set unew equal to uold
   if(hydro)call set_unew(ilevel)
 
+#ifdef RT
+  ! Set rtunew equal to rtuold
+  if(rt)call rt_set_unew(ilevel)
+#endif
 
   !---------------------------
   ! Recursive call to amr_step
@@ -258,7 +279,11 @@ recursive subroutine amr_step(ilevel,icount)
      do ivar=1,nvar
 #endif
         call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+#ifdef SOLVERmhd
      end do
+#else
+     end do
+#endif
      if(pressure_fix)then
         call make_virtual_reverse_dp(enew(1),ilevel)
         call make_virtual_reverse_dp(divu(1),ilevel)
@@ -274,32 +299,77 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
      call upload_fine(ilevel)
 
-     ! Cooling source term in leaf cells only
-     if(cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
 
+#ifdef RT
+  !---------------
+  ! Radiation step
+  !---------------
+  if(rt)then
+
+     ! Hyperbolic solver
+     call rt_godunov_fine(ilevel)
+
+     ! Reverse update boundaries
+     do ivar=1,nrtvar
+        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
+     end do
+
+     ! Set uold equal to unew
+     call rt_set_uold(ilevel)
+
+     ! Restriction operator
+     call rt_upload_fine(ilevel)
+  endif
+#endif
+  
+  !-------------------------------
+  ! Source term in leaf cells only
+  !-------------------------------
+  if(rt.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+
+  if(hydro)then
      ! Star formation in leaf cells only
      if(star)call star_formation(ilevel)
 
      ! Compute Bondi-Hoyle accretion parameters
      if(sink.and.bondi)call bondi_hoyle(ilevel)
+  end if
 
-     ! Update boundaries 
+  !---------------------------------------
+  ! Update physical and virtual boundaries
+  !---------------------------------------
+  if(hydro)then
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
 #else
      do ivar=1,nvar
 #endif
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
-     end do
-     if(simple_boundary)call make_boundary_hydro(ilevel)
-
-     ! Magnetic diffusion step
 #ifdef SOLVERmhd
+     end do
+#else
+     end do
+#endif
+     if(simple_boundary)call make_boundary_hydro(ilevel)
+  endif
+#ifdef RT
+  if(rt)then
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+  end if
+#endif
+
+#ifdef SOLVERmhd
+  ! Magnetic diffusion step
+ if(hydro)then
      if(eta_mag>0d0.and.ilevel==levelmin)then
         call diffusion
      endif
-#endif
   end if
+#endif
 
   !-----------------------
   ! Compute refinement map
