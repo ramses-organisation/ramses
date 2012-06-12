@@ -59,8 +59,6 @@ subroutine init_time
      Nmodel=-1
      if(.not. haardt_madau)then
         Nmodel=2
-     else
-        J21=0.0
      endif
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
