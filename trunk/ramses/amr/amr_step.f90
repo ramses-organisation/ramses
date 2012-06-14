@@ -310,6 +310,9 @@ recursive subroutine amr_step(ilevel,icount)
      ! Hyperbolic solver
      call rt_godunov_fine(ilevel)
 
+     ! Add stellar radiation sources
+     if(star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
      ! Reverse update boundaries
      do ivar=1,nrtvar
         call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
