@@ -797,10 +797,5 @@ subroutine init_part
 
   end if
 
-  !set parameters for clumpfinder in case they are not set in the namelist file
-  mass_threshold=0.
-  density_threshold=0.
-  relevance_threshold=2.
-
 end subroutine init_part
 
