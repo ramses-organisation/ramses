@@ -398,7 +398,7 @@ subroutine condinit(x,u,dx,nn)
         end select
         Vrot = weight * Vrot
         q(i,ndim-1:ndim+1) = Vrot * vect_prod(axe_rot,xx_rad)/r + vgal
-        if(metal)q(i,6)=z_ave
+        if(metal)q(i,6)=z_ave*0.02 ! z_ave is in solar units
     else ! Cell out of the gaseous disk : density = peanut and velocity = V_gal
         q(i,1)=dmin
         q(i,ndim+2)=a2*q(i,1)
