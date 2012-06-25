@@ -142,9 +142,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      ug(k,ndim+2) = (gamma-one)*(ug(k,ndim+2)-eking(k))
      um(k,ndim+2) = (gamma-one)*(um(k,ndim+2)-ekinm(k))
      ud(k,ndim+2) = (gamma-one)*(ud(k,ndim+2)-ekind(k))
-  end do  
-#if NVAR > NDIM + 2
+  end do
   ! Passive scalars
+#if NVAR > NDIM + 2
   do idim = ndim+3,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
@@ -383,6 +383,7 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
+#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -392,6 +393,7 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
+#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -407,11 +409,13 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
+#endif
 
 end subroutine riemann_approx
 !###########################################################
@@ -535,6 +539,7 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
+#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -544,6 +549,7 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
+#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -559,11 +565,13 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
+#endif
 
 end subroutine riemann_acoustic
 !###########################################################
@@ -633,12 +641,14 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute left and right fluxes  
   do i = 1, ngrid 
@@ -653,12 +663,14 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute Lax-Friedrich fluxes
   do n = 1, nvar
@@ -786,6 +798,7 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,1) = ro*uo
      fgdnv(i,2) = ro*uo*uo+Ptoto
      fgdnv(i,3) = (etoto+Ptoto)*uo
+#if NVAR > 3
      do ivar = 4,nvar
         if(fgdnv(i,1)>0)then
            fgdnv(i,ivar) = fgdnv(i,1)*qleft (i,ivar)
@@ -793,7 +806,7 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
            fgdnv(i,ivar) = fgdnv(i,1)*qright(i,ivar)
         endif
      end do
-
+#endif
      ! Compute the Godunov velocity
      qgdnv(i,2) = uo
 
@@ -860,12 +873,14 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute left and right fluxes
   do i = 1, ngrid
@@ -877,12 +892,14 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute HLL fluxes
   do n = 1, nvar

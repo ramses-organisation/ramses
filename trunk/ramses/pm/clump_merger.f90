@@ -1319,7 +1319,7 @@ subroutine write_peak_map
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
   character(LEN=5)::myidstring,nchar
 
-
+#if NDIM>2
   call title(ifout-1,nchar)
   call title(myid,myidstring)
   open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
@@ -1378,6 +1378,7 @@ subroutine write_peak_map
   !end loop over all particles
 
   close(20)
+#endif
 
 end subroutine write_peak_map
 

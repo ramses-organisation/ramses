@@ -30,10 +30,20 @@ subroutine cooling_fine(ilevel)
      call coolfine1(ind_grid,ngrid,ilevel)
   end do
 
-  if(cooling.and.ilevel==levelmin.and.cosmo)then
+  if((cooling.or.rt).and.ilevel==levelmin.and.cosmo)then
      if(myid==1)write(*,*)'Computing new cooling table'
      call set_table(dble(aexp))
-  end if
+#ifdef RT
+     if(rt)then
+        call set_UVrates(a_exp)
+        call update_rt_c
+     endif
+#endif
+  endif
+
+#ifdef RT
+     if(rt.and.star.and.ilevel==levelmin)call update_SED_Pacprops
+#endif
 
 111 format('   Entering cooling_fine for level',i2)
 
@@ -48,18 +58,27 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef ATON
   use radiation_commons, ONLY: Erad
 #endif
+#ifdef RT
+  use rt_parameters
+  use rt_cooling_module
+#endif
   use cooling_module
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
-  real(dp)::polytropic_constant
+  real(dp)::polytropic_constant,Fpnew,Npnew
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+#ifdef RT
+  real(dp),dimension(1:nvector,n_U),save::U
+  real(dp),dimension(1:nvector,nPacs),save::Fp, Fp_precool
+  real(dp),dimension(1:nvector,nPacs),save::dNpdt=0., dFpdt=0.
+#endif
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -77,6 +96,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+#endif
 
   ! Typical ISM density in H/cc
   nISM = n_star; nCOM=0d0
@@ -106,6 +128,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            ind_leaf(nleaf)=ind_cell(i)
         end if
      end do
+     if(nleaf.eq.0)cycle
 
      ! Compute rho
      do i=1,nleaf
@@ -183,17 +206,70 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! You can put your own polytrope EOS here
      !==========================================
 
-     ! Compute cooling time step in second
-     dtcool = dtnew(ilevel)*scale_t
-
-     ! Compute net cooling at constant nH
-     if(cooling)then
-        ! Compute "thermal" temperature by substracting polytrope
+     if(cooling.or.rt)then
+        ! Compute thermal temperature by substracting polytrope
         do i=1,nleaf
            T2(i) = max(T2(i)-T2min(i),T2_min_fix)
         end do
+     endif
+
+     ! Compute cooling time step in second
+     dtcool = dtnew(ilevel)*scale_t
+
+#ifdef RT
+     if(rt)then
+
+        ! Get gas thermal temperature
+        do i=1,nleaf
+           U(i,1) = T2(i)
+        end do
+
+        ! Get the ionization fractions                                                                      
+        do ivar=0,nIons-1
+           do i=1,nleaf
+              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/nH(i)
+           end do
+        end do
+
+        ! Get photon densities and flux magnitudes                                                          
+        do ivar=1,nPacs
+           do i=1,nleaf
+              U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iPac(ivar))
+              U(i,iFpU(ivar)) = scale_Fp * sqrt(sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
+           enddo
+           if(rt_smooth) then                              ! Smooth RT update                               
+              do i=1,nleaf   ! Calc addition per sec to Np, Fp for current dt                               
+                 Npnew = scale_Np *rtunew(ind_leaf(i),iPac(ivar))
+                 Fpnew = scale_Fp * sqrt(sum((rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
+                 dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
+                 dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude                               
+                 ! Update flux vector to get the right direction                                            
+                 uold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = unew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
+                 Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling                               
+              enddo
+           else
+              do i=1,nleaf
+                 Fp_precool(i,ivar)=U(i,iFpU(ivar)) ! For update after solve_cooling                               
+              end do
+           endif
+        end do
+
+     endif
+#endif
+
+     ! Compute net cooling at constant nH
+     if(cooling.and. .not. rt)then
         call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
+
+#ifdef RT     
+     if(rt)then
+        call rt_solve_cooling(U, dNpdt, dFpdt, nH, Zsolar, dtcool, aexp, nleaf)
+     endif
+     do i=1,nleaf
+        delta_T2(i) = U(i,1) - T2(i)
+     end do
+#endif
 
      ! Compute rho
      do i=1,nleaf
@@ -201,16 +277,16 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
 
      ! Compute net energy sink
-     if(cooling)then
+     if(cooling.or.rt)then
         do i=1,nleaf
            delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
         end do
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
            do i=1,nleaf
-              cooling_switch=uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
-              if(cooling_switch>1d-3)then
-                 delta_T2(i)=0
+              cooling_switch = uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
+              if(cooling_switch > 1d-3)then
+                 delta_T2(i) = MAX(delta_T2(i),real(0,kind=dp))
               endif
            end do
         endif
@@ -248,6 +324,25 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor
         end do
      endif
+
+#ifdef RT
+     ! Update ionization fraction
+     do ivar=0,nIons-1
+        do i=1,nleaf
+           uold(ind_leaf(i),iIons+ivar) = U(i,2+ivar)*nH(i)
+        end do
+     end do
+     ! Update photon densities and flux magnitudes
+     do ivar=1,nPacs
+        do i=1,nleaf
+           rtuold(ind_leaf(i),iPac(ivar)) = U(i,iNpU(ivar)) /scale_Np
+           if(Fp_precool(i,ivar) .gt. 0.d0)then
+              rtuold(ind_cell(i),iPac(ivar)+1:iPac(ivar)+ndim) = U(i,iFpU(ivar))/Fp_precool(i,ivar) &
+                   & *rtuold(ind_cell(i),iPac(ivar)+1:iPac(ivar)+ndim)
+           endif
+        enddo
+     end do
+#endif
 
   end do
   ! End loop over cells
