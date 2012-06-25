@@ -4,8 +4,10 @@ module clfind_commons
 
 
   integer::nparts,nparts_tot,npeaks,npeaks_tot
-  real(kind=8)::tot_mass,relevance_threshold,density_threshold,mass_threshold
-  
+  real(kind=8)::tot_mass
+  real(kind=8)::relevance_threshold=1.5
+  real(kind=8)::density_threshold=0.
+  real(kind=8)::mass_threshold=0.
 
   !Big array for saddlepoint values
   real(kind=8),allocatable,dimension(:,:)::saddle_dens_tot

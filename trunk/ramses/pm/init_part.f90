@@ -1,6 +1,7 @@
 subroutine init_part
   use amr_commons
   use pm_commons
+  use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

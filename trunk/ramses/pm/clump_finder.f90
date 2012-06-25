@@ -1211,7 +1211,6 @@ subroutine move_back_to_origin(ilevel)
   ! Loop over all particles in order to move them back to there original 
   ! position which is stored in the velocity variables of the particles.
   !----------------------------------------------------------------------------
-
   integer::igrid,jgrid,ipart,jpart,next_part,ilevel,npart1,icpu,nparts
 
   nparts=0
@@ -1240,7 +1239,10 @@ subroutine move_back_to_origin(ilevel)
 
   if (verbose)write(*,*),'number of particles moved on ',myid,' = ',nparts
 end subroutine move_back_to_origin
-
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
   use amr_commons
@@ -1250,7 +1252,7 @@ subroutine read_clumpfind_params()
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
+  
   !--------------------------------------------------                           
   ! Namelist definitions                                                        
   !--------------------------------------------------                           
@@ -1266,7 +1268,6 @@ subroutine read_clumpfind_params()
 102 rewind(1)
   
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  
   !convert mass_threshold from solar masses to grams
   !...and to user units
   mass_threshold=mass_threshold*1.98892d33 /(scale_l**3. * scale_d)

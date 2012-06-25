@@ -144,10 +144,12 @@ subroutine init_tree
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
   end do
-  do ilevel=1,nlevelmax
-     call count_parts(ilevel)
-  end do
-  if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++doneinit'
+
+  !show particle tree at startup
+  ! do ilevel=1,nlevelmax
+  !    call count_parts(ilevel)
+  ! end do
+  ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++doneinit'
   
 
 end subroutine init_tree
