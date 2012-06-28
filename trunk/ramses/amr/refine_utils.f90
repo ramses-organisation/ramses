@@ -546,7 +546,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   use hydro_commons
   use poisson_commons, ONLY:f, phi
 #ifdef RT
-  use rt_commons
+  use rt_hydro_commons
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -861,7 +861,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use hydro_commons
   use poisson_commons
 #ifdef RT
-  use rt_commons
+  use rt_hydro_commons
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad

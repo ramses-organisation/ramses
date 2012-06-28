@@ -4,6 +4,9 @@ subroutine adaptive_loop
   use pm_commons
   use poisson_commons
   use cooling_module
+#ifdef RT
+  use rt_hydro_commons
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

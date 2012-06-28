@@ -3,6 +3,10 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+#ifdef RT
+  use rt_hydro_commons
+  use SED_module
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

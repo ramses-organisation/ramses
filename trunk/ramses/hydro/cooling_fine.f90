@@ -2,6 +2,10 @@ subroutine cooling_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+#ifdef RT
+  use rt_cooling_module, only: update_UVrates
+  use SED_module, only: update_SED_Pacprops
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -14,10 +18,8 @@ subroutine cooling_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
+  if(rt_freeflow) return
   if(verbose)write(*,111)ilevel
-
-  ! Compute sink accretion rates
-  if(sink)call compute_accretion_rate(0)
 
   ! Operator splitting step for cooling source term
   ! by vector sweeps
@@ -35,7 +37,7 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #ifdef RT
      if(rt)then
-        call set_UVrates(a_exp)
+        call update_UVrates(aexp)
         call update_rt_c
      endif
 #endif
@@ -55,14 +57,15 @@ end subroutine cooling_fine
 subroutine coolfine1(ind_grid,ngrid,ilevel)
   use amr_commons
   use hydro_commons
+  use cooling_module
 #ifdef ATON
   use radiation_commons, ONLY: Erad
 #endif
 #ifdef RT
-  use rt_parameters
-  use rt_cooling_module
+  use rt_parameters, only: nPacs, iPac
+  use rt_hydro_commons
+  use rt_cooling_module, only: n_U,iNpU,iFpU,rt_solve_cooling
 #endif
-  use cooling_module
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
@@ -75,6 +78,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
 #ifdef RT
+  real(dp)::scale_Np,scale_Fp
+  logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp),dimension(1:nvector,n_U),save::U
   real(dp),dimension(1:nvector,nPacs),save::Fp, Fp_precool
   real(dp),dimension(1:nvector,nPacs),save::dNpdt=0., dFpdt=0.
@@ -254,6 +259,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            endif
         end do
 
+        if(cooling .and. delayed_cooling) then
+           cooling_on(1:nleaf)=.true.
+           do i=1,nleaf
+              if(uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1) .gt. 1d-3)cooling_on(i)=.false.
+           end do
+        endif
+        if(isothermal) cooling_on(1:nleaf)=.false.
+
      endif
 #endif
 
@@ -264,7 +277,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
 #ifdef RT     
      if(rt)then
-        call rt_solve_cooling(U, dNpdt, dFpdt, nH, Zsolar, dtcool, aexp, nleaf)
+        call rt_solve_cooling(U, dNpdt, dFpdt, nH, cooling_on, Zsolar, dtcool, aexp, nleaf)
      endif
      do i=1,nleaf
         delta_T2(i) = U(i,1) - T2(i)
