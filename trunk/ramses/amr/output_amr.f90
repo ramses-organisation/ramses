@@ -58,6 +58,12 @@ subroutine dump_all
         filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
         call backup_hydro(filename)
      end if
+#ifdef RT
+     if(rt)then
+        filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
+        call rt_backup_hydro(filename)
+     end if
+#endif
      if(pic)then
         filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
         call backup_part(filename)

@@ -20,7 +20,7 @@ subroutine read_params
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,verbose,debug &
+  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,sink_angular_momentum
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &

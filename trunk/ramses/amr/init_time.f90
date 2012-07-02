@@ -3,6 +3,9 @@ subroutine init_time
   use hydro_commons
   use pm_commons
   use cooling_module
+#ifdef RT
+  use rt_cooling_module
+#endif
   implicit none
   integer::i,Nmodel
   real(kind=8)::T2_sim  
@@ -78,6 +81,34 @@ subroutine init_time
              & dble(1.0),T2_sim)
      endif
   end if
+
+#ifdef RT
+  ! Initialize radiative transfer model
+  if(rt)then
+     if(myid==1)write(*,*)'Computing radiative transfer model'
+     Nmodel=-1
+     if(.not. haardt_madau)then
+        Nmodel=2
+     endif
+     if(cosmo)then
+        ! Reonization redshift has to be later than starting redshift
+        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
+             & -1,2, &
+             & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
+             & dble(aexp_ini),T2_sim)
+        T2_start=T2_sim
+        if(nrestart==0)then
+           if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
+        end if
+     else
+        call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
+             & -1,2, &
+             & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
+             & dble(1.0),T2_sim)
+     endif
+  end if
+#endif
 
 end subroutine init_time
 
