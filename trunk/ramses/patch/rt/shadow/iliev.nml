@@ -64,11 +64,10 @@ exp_refine=10.
 &RT_PARAMS
 !X=1d0
 !Y=0d0
-rt_freeflow=.true.
 rt_flux_scheme='hll'
 hll_evals_file='/Users/romain/ramses/trunk/ramses/rt/hll_evals.list'
 rt_courant_factor=0.8		! Courant number for RT timesteps
-rt_c_fraction=1.0	        ! Fraction of actual lightspeed set to RT lightspeed
+rt_c_fraction=0.01	        ! Fraction of actual lightspeed set to RT lightspeed
 rt_otsa=.true.				  
 rt_nregion=2
 rt_region_type(1)='square'

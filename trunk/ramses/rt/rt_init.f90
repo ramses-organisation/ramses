@@ -126,7 +126,7 @@ SUBROUTINE read_rt_params(nml_ok)
   logical::nml_ok
 !------------------------------------------------------------------------
   namelist/rt_params/rt, rt_pp, rt_coupling_method, rt_star, rt_esc_frac&
-       & ,rt_flux_scheme, rt_smooth, rt_is_outflow_bound                &
+       & ,rt_flux_scheme, rt_smooth, rt_is_outflow_bound, rt_cooling    &
        & ,rt_max_subcycles, rt_courant_factor, rt_c_fraction, rt_otsa   &
        & ,sedprops_update, hll_evals_file, sed_dir, uv_file             &
        & ,rt_UVsrc_nHmax, nUVpacs, rt_freeflow                          &
@@ -366,13 +366,12 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
   real(dp),dimension(1:nvector,1:ndim)::x
   integer::i,k,pac_ind
   real(dp)::vol,r,xn,yn,zn,en
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, & 
-            scale_np, scale_pf
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
 !------------------------------------------------------------------------
   ! Initialize everything to zero
   !  uu=0.0d0
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  call rt_units(scale_np, scale_pf)
+  call rt_units(scale_np, scale_fp)
   dx_cgs=dx*scale_l
   dt_cgs=dt*scale_t
   ! Loop over RT regions

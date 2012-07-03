@@ -321,7 +321,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      endif
   endif
   !(ii) UPDATE TEMPERATURE ***********************************************
-  if(c_switch) then 
+  if(c_switch .and. rt_cooling) then 
      Hrate=0.                                              !  Heating rate
      if(rt) then
         do i=1,nPacs                                       !  Photoheating

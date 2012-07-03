@@ -31,6 +31,8 @@ subroutine rt_init_hydro
   allocate(rtunew(1:ncell,1:nrtvar))
   rtuold=0.0d0 ; rtunew=0.0d0
 
+  if(verbose)write(*,*)'Allocate done for nrtvar'
+
   call rt_init
 
   !--------------------------------

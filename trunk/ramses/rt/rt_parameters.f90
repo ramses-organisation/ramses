@@ -48,6 +48,7 @@ module rt_parameters
   logical::rt_coupling_pp=.false.      ! RT p-processing after each coarse hydro timestep!
   logical::rt_coupling_adc=.false.     ! RT timestep = hydro timestep                    !
   logical::rt_coupling_dtrt=.false.    ! Hydro timestep = RT timestep                    !
+  logical::rt_cooling=.true.           ! Activate cooling inside radiation step          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
   logical::rt_transp_ISM=.false.       ! Make polytropic cells transparent to RT         !
   real(dp)::rt_esc_frac=1.d0           ! Escape fraction of light from stellar particles !
