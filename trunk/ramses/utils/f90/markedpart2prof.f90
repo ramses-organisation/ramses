@@ -5,14 +5,15 @@ program part2prof
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
-  integer::ncpu,ndim,npart,ngrid,n,i,j,k,icpu,ipos,nstar,ipart,iter
+  integer::ncpu,ndim,npart,ngrid,n,i,j,k,icpu,ipos,nstar,nmark,nmark_inrad
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel,iii
   integer::nx=0,ny=0,ix,iy,ixp1,iyp1,idim,jdim,ncpu_read,n_frw
   integer::nprof=28,irad,ivar,nrad=100
+  integer::marked
   integer(kind=8)::nread
   real(KIND=8)::mtot,ddx,ddy,dex,dey,time,time_tot,time_simu,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rmax=0.5
-  real(KIND=8)::mcen,xcen=0.5,ycen=0.5,zcen=0.5
+  real(KIND=8)::xcen=0.5,ycen=0.5,zcen=0.5
   real(KIND=8)::ucen=0.0,vcen=0.0,wcen=0.0
   real(KIND=8)::xx,yy,zz,uu,vv,ww
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,npart_actual
@@ -27,12 +28,11 @@ program part2prof
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
   real(KIND=8),dimension(:,:),allocatable::x,v,prof
   real(KIND=8),dimension(:),allocatable::m,age,r
-  real(KIND=8),dimension(:),allocatable::mp,xp,yp,zp
   integer,dimension(:),allocatable::id
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering,format_grille
-  character(LEN=128)::nomfich,repository,outfich,filedens,filetype='bin'
+  character(LEN=128)::nomfich,repository,outfich,filedens,filetype='bin',markfile
   logical::ok,ok_part,periodic=.false.
   integer::impi,ndom,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
@@ -41,7 +41,7 @@ program part2prof
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
-  logical::cosmo=.true.,star=.false.
+  logical::cosmo=.true.
   integer::idcdm=1,iucdm=2,ivcdm=3,iwcdm=4,ilxcdm=5,ilycdm=6,ilzcdm=7
   integer::imcumcdm=8,iucumcdm=9,ivcumcdm=10,iwcumcdm=11,ilxcumcdm=12,ilycumcdm=13,ilzcumcdm=14
   integer::idstar=15,iustar=16,ivstar=17,iwstar=18,ilxstar=19,ilystar=20,ilzstar=21
@@ -105,7 +105,6 @@ program part2prof
      end do
   endif
   close(10)
-
   if(cosmo)then
      !-----------------------
      ! Cosmological model
@@ -152,82 +151,13 @@ program part2prof
   allocate(prof(1:nrad,1:nprof))
   prof=0.0d0
 
-  if(TRIM(ordering).eq.'hilbert')then
-
-     dmax=max(xmax-xmin,ymax-ymin,zmax-zmin)
-     do ilevel=1,levelmax
-        deltax=0.5d0**ilevel
-        if(deltax.lt.dmax)exit
-     end do
-     lmin=ilevel
-     bit_length=lmin-1
-     maxdom=2**bit_length
-     imin=0; imax=0; jmin=0; jmax=0; kmin=0; kmax=0
-     if(bit_length>0)then
-        imin=int(xmin*dble(maxdom))
-        imax=imin+1
-        jmin=int(ymin*dble(maxdom))
-        jmax=jmin+1
-        kmin=int(zmin*dble(maxdom))
-        kmax=kmin+1
-     endif
-     
-     dkey=(dble(2**(levelmax+1)/dble(maxdom)))**ndim
-     ndom=1
-     if(bit_length>0)ndom=8
-     idom(1)=imin; idom(2)=imax
-     idom(3)=imin; idom(4)=imax
-     idom(5)=imin; idom(6)=imax
-     idom(7)=imin; idom(8)=imax
-     jdom(1)=jmin; jdom(2)=jmin
-     jdom(3)=jmax; jdom(4)=jmax
-     jdom(5)=jmin; jdom(6)=jmin
-     jdom(7)=jmax; jdom(8)=jmax
-     kdom(1)=kmin; kdom(2)=kmin
-     kdom(3)=kmin; kdom(4)=kmin
-     kdom(5)=kmax; kdom(6)=kmax
-     kdom(7)=kmax; kdom(8)=kmax
-     
-     do i=1,ndom
-        if(bit_length>0)then
-           call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
-        else
-           order_min=0.0d0
-        endif
-        bounding_min(i)=(order_min)*dkey
-        bounding_max(i)=(order_min+1.0D0)*dkey
-     end do
-     cpu_min=0; cpu_max=0
-     do impi=1,ncpu
-        do i=1,ndom
-           if (   bound_key(impi-1).le.bounding_min(i).and.&
-                & bound_key(impi  ).gt.bounding_min(i))then
-              cpu_min(i)=impi
-           endif
-           if (   bound_key(impi-1).lt.bounding_max(i).and.&
-                & bound_key(impi  ).ge.bounding_max(i))then
-              cpu_max(i)=impi
-           endif
-        end do
-     end do
-     
-     ncpu_read=0
-     do i=1,ndom
-        do j=cpu_min(i),cpu_max(i)
-           if(.not. cpu_read(j))then
-              ncpu_read=ncpu_read+1
-              cpu_list(ncpu_read)=j
-              cpu_read(j)=.true.
-           endif
-        enddo
-     enddo
-  else
-     ncpu_read=ncpu
-     do j=1,ncpu
-        cpu_list(j)=j
-     end do
-  end  if
-
+  !corbett, removed reference to hilbert ordering, ask Romain, so this code is slightly reduntant but left in
+  ncpu_read=ncpu
+  do j=1,ncpu
+     cpu_list(j)=j
+  end do
+  !end mod
+  write(*,*) 'ncpu,ncpu_read',ncpu,ncpu_read
   npart=0
   do k=1,ncpu_read
      icpu=cpu_list(k)
@@ -243,15 +173,15 @@ program part2prof
      npart=npart+npart2
   end do
   write(*,*)'Found ',npart,' particles.'
-  if(star)then
-     write(*,*)'Keep only stars'
-  else
-     write(*,*)'Keep only dark matter'
-  endif
+
   !-----------------------------------------------
-  ! Compute number of selected particles
+  ! Compute projected mass using CIC smoothing
   !----------------------------------------------
-  ipart=0
+  npart_actual=0
+  mtot=0.0d0
+  nmark=0
+  nmark_inrad=0
+  open(20,file=markfile,access='DIRECT',form='unformatted',recl=1)  !corbett: read in markfile here
   do k=1,ncpu_read
      icpu=cpu_list(k)
      call title(icpu,ncharcpu)
@@ -285,17 +215,22 @@ program part2prof
      end do
      ! Read mass
      read(1)m
-     if(nstar>0)then
-        read(1)id ! Read identity
+     !if(nstar>0)then !corbett removed
+     read(1)id ! Read identity
+     if(nstar>0)then !corbett ,pved
         read(1)   ! Skip level
         read(1)age
      endif
      close(1)
-
+     
      do i=1,npart2
+        read(20,REC=id(i)+1) marked !corbett here's where I seek to the marked ID
+        if(marked<1) cycle !corbett: if it's not marked, then continue to next particle, skipping the rest here
+        nmark=nmark+1 !corbett
         rad2=(x(i,1)-xcen)**2+(x(i,2)-ycen)**2+(x(i,3)-zcen)**2
         ok_part=(rad2<rmax**2)
         if(ok_part)then
+           nmark_inrad=nmark_inrad+1
            irad=int(dble(nrad)*sqrt(rad2)/rmax)+1
            xx=x(i,1)-xcen
            yy=x(i,2)-ycen
@@ -303,182 +238,153 @@ program part2prof
            uu=v(i,1)-ucen/(unit_v/1d5)
            vv=v(i,2)-vcen/(unit_v/1d5)
            ww=v(i,3)-wcen/(unit_v/1d5)
-           if(star)then
-              if(age(i).ne.0.0d0.and.id(i)>0)then
-                 if(cosmo)then
-                    iii=1
-                    do while(tau_frw(iii)>age(i).and.iii<n_frw)
-                       iii=iii+1
-                    end do
-                    ! Interpolate time
-                    time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                         & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
-                    time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
-                 else
-                    time=(time_simu-age(i))*unit_t
-                 end if
-                 ipart=ipart+1
-              endif
-           else
-              if(age(i).eq.0.0d0.and.id(i)>0) then
-                 ipart=ipart+1
-              endif
+           if(age(i).ne.0.0d0.and.id(i)>0)then
+              if(cosmo)then
+                 iii=1
+                 do while(tau_frw(iii)>age(i).and.iii<n_frw)
+                    iii=iii+1
+                 end do
+                 ! Interpolate time
+                 time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                      & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+                 time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
+              else
+                 time=(time_simu-age(i))*unit_t
+              end if
+              prof(irad,idstar)=prof(irad,idstar)+m(i)
+              prof(irad,iustar)=prof(irad,iustar)+m(i)*v(i,1)
+              prof(irad,ivstar)=prof(irad,ivstar)+m(i)*v(i,2)
+              prof(irad,iwstar)=prof(irad,iwstar)+m(i)*v(i,3)
+              prof(irad,ilxstar)=prof(irad,ilxstar)+m(i)*(yy*ww-zz*vv)
+              prof(irad,ilystar)=prof(irad,ilystar)-m(i)*(xx*ww-zz*uu)
+              prof(irad,ilzstar)=prof(irad,ilzstar)+m(i)*(xx*vv-yy*uu)
+           else if(id(i)>0) then
+              prof(irad,idcdm)=prof(irad,idcdm)+m(i)
+              prof(irad,iucdm)=prof(irad,iucdm)+m(i)*v(i,1)
+              prof(irad,ivcdm)=prof(irad,ivcdm)+m(i)*v(i,2)
+              prof(irad,iwcdm)=prof(irad,iwcdm)+m(i)*v(i,3)
+              prof(irad,ilxcdm)=prof(irad,ilxcdm)+m(i)*(yy*ww-zz*vv)
+              prof(irad,ilycdm)=prof(irad,ilycdm)-m(i)*(xx*ww-zz*uu)
+              prof(irad,ilzcdm)=prof(irad,ilzcdm)+m(i)*(xx*vv-yy*uu)
            end if
         end if
      end do
      deallocate(x,m,v,age,id)
   end do
-  
-  write(*,*)'Total number of particles selected=',ipart
-  npart_actual=ipart
-  allocate(mp(1:npart_actual),xp(1:npart_actual),yp(1:npart_actual),zp(1:npart_actual))
+  write(*,*) 'number marked particles',nmark
+  write(*,*) 'number marked particles within radius cutoff',nmark_inrad
+  ! Compute cumulated profiles
+  mcumstar=0d0; mcumcdm=0d0
+  ucumstar=0d0; vcumstar=0d0; wcumstar=0d0
+  ucumcdm=0d0; vcumcdm=0d0; wcumcdm=0d0
+  lxcumstar=0d0; lycumstar=0d0; lzcumstar=0d0
+  lxcumcdm=0d0; lycumcdm=0d0; lzcumcdm=0d0
+  do irad=1,nrad
+     mcumstar=mcumstar+prof(irad,idstar)
+     ucumstar=ucumstar+prof(irad,iustar)
+     vcumstar=vcumstar+prof(irad,ivstar)
+     wcumstar=wcumstar+prof(irad,iwstar)
+     lxcumstar=lxcumstar+prof(irad,ilxstar)
+     lycumstar=lycumstar+prof(irad,ilystar)
+     lzcumstar=lzcumstar+prof(irad,ilzstar)
 
-  !-----------------------------------------------
-  ! Read and store particle information
-  !----------------------------------------------
-  ipart=0
-  mcen=0.
-  do k=1,ncpu_read
-     icpu=cpu_list(k)
-     call title(icpu,ncharcpu)
-     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=1,file=nomfich,status='old',form='unformatted')
-!     write(*,*)'Processing file '//TRIM(nomfich)
-     read(1)ncpu2
-     read(1)ndim2
-     read(1)npart2
-     read(1)
-     read(1)
-     read(1)
-     read(1)
-     read(1)
-     allocate(m(1:npart2))
-     allocate(age(1:npart2))
-     allocate(id(1:npart2))
-     age=0d0
-     id=1
-     allocate(x(1:npart2,1:ndim2))
-     allocate(v(1:npart2,1:ndim2))
-     ! Read position
-     do i=1,ndim
-        read(1)m
-        x(1:npart2,i)=m/boxlen
-     end do
-     ! Skip velocity
-     do i=1,ndim
-        read(1)m
-        v(1:npart2,i)=m
-     end do
-     ! Read mass
-     read(1)m
-     if(nstar>0)then
-        read(1)id ! Read identity
-        read(1)   ! Skip level
-        read(1)age
-     endif
-     close(1)
+     mcumcdm=mcumcdm+prof(irad,idcdm)
+     ucumcdm=ucumcdm+prof(irad,iucdm)
+     vcumcdm=vcumcdm+prof(irad,ivcdm)
+     wcumcdm=wcumcdm+prof(irad,iwcdm)
+     lxcumcdm=lxcumcdm+prof(irad,ilxcdm)
+     lycumcdm=lycumcdm+prof(irad,ilycdm)
+     lzcumcdm=lzcumcdm+prof(irad,ilzcdm)
 
-     do i=1,npart2
-        rad2=(x(i,1)-xcen)**2+(x(i,2)-ycen)**2+(x(i,3)-zcen)**2
-        ok_part=(rad2<rmax**2)
-        if(ok_part)then
-           irad=int(dble(nrad)*sqrt(rad2)/rmax)+1
-           xx=x(i,1)-xcen
-           yy=x(i,2)-ycen
-           zz=x(i,3)-zcen
-           uu=v(i,1)-ucen/(unit_v/1d5)
-           vv=v(i,2)-vcen/(unit_v/1d5)
-           ww=v(i,3)-wcen/(unit_v/1d5)
-           if(star)then
-              if(age(i).ne.0.0d0.and.id(i)>0)then
-                 if(cosmo)then
-                    iii=1
-                    do while(tau_frw(iii)>age(i).and.iii<n_frw)
-                       iii=iii+1
-                    end do
-                    ! Interpolate time
-                    time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                         & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
-                    time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
-                 else
-                    time=(time_simu-age(i))*unit_t
-                 end if
-                 ipart=ipart+1
-                 mp(ipart)=m(i)
-                 xp(ipart)=x(i,1)
-                 yp(ipart)=x(i,2)
-                 zp(ipart)=x(i,3)
-                 mcen=mcen+mp(ipart)
-              endif
-           else
-              if(age(i).eq.0.0d0.and.id(i)>0) then
-                 ipart=ipart+1
-                 mp(ipart)=m(i)
-                 xp(ipart)=x(i,1)
-                 yp(ipart)=x(i,2)
-                 zp(ipart)=x(i,3)
-                 mcen=mcen+mp(ipart)
-              endif
-           end if
-        end if
-     end do
-     deallocate(x,m,v,age,id)
-  end do
+     prof(irad,imcumstar)=mcumstar
+     prof(irad,iucumstar)=ucumstar
+     prof(irad,ivcumstar)=vcumstar
+     prof(irad,iwcumstar)=wcumstar
+     prof(irad,ilxcumstar)=lxcumstar
+     prof(irad,ilycumstar)=lycumstar
+     prof(irad,ilzcumstar)=lzcumstar
 
-  iter=0
-  !TODO: this IS HARDCODED, should be changed based on levelmax at redshift of interest
-  do while(rmax.gt.1/2d0**24.)
-
-     mcen=0.
-     do i=1,npart_actual
-        mcen=mcen+mp(i)
-     end do
-
-     if(mcen>0.0)then
-        xcen=0.
-        ycen=0.
-        zcen=0.
-        do i=1,npart_actual
-           xcen=xcen+mp(i)*xp(i)
-           ycen=ycen+mp(i)*yp(i)
-           zcen=zcen+mp(i)*zp(i)
-        end do
-        xcen=xcen/mcen
-        ycen=ycen/mcen
-        zcen=zcen/mcen
-     endif
-
-     write(*,888)iter,rmax,mcen,xcen,ycen,zcen
-888  format(I4,5(1X,1PE14.7))
-
-     ipart=0
-     rmax=0.97*rmax
-     iter=iter+1
-
-     do i=1,npart_actual
-        rad2=(xp(i)-xcen)**2+(yp(i)-ycen)**2+(zp(i)-zcen)**2
-        ok_part=(rad2<rmax**2)
-        if(ok_part)then
-           ipart=ipart+1
-           mp(ipart)=mp(i)
-           xp(ipart)=xp(i)
-           yp(ipart)=yp(i)
-           zp(ipart)=zp(i)
-        endif
-     enddo
-     npart_actual=ipart
+     prof(irad,imcumcdm)=mcumcdm
+     prof(irad,iucumcdm)=ucumcdm
+     prof(irad,ivcumcdm)=vcumcdm
+     prof(irad,iwcumcdm)=wcumcdm
+     prof(irad,ilxcumcdm)=lxcumcdm
+     prof(irad,ilycumcdm)=lycumcdm
+     prof(irad,ilzcumcdm)=lzcumcdm
 
   end do
   
-  ! Output file                                                                 
+  ! Convert profiles into proper astro units
+  rprev=0d0
+  do irad=1,nrad
+     r(irad)=r(irad)*boxlen
+     vol=4./3.*3.1415926*(r(irad)**3-rprev**3)
+     ! Stars
+     if(prof(irad,idstar)>0.0)then
+        prof(irad,iustar)=prof(irad,iustar)/prof(irad,idstar)*unit_v/1d5
+        prof(irad,ivstar)=prof(irad,ivstar)/prof(irad,idstar)*unit_v/1d5
+        prof(irad,iwstar)=prof(irad,iwstar)/prof(irad,idstar)*unit_v/1d5
+        prof(irad,ilxstar)=prof(irad,ilxstar)/prof(irad,idstar)*unit_v/1d5/r(irad)
+        prof(irad,ilystar)=prof(irad,ilystar)/prof(irad,idstar)*unit_v/1d5/r(irad)
+        prof(irad,ilzstar)=prof(irad,ilzstar)/prof(irad,idstar)*unit_v/1d5/r(irad)
+     endif
+     prof(irad,idstar)=prof(irad,idstar)/vol*unit_d/1.66d-24
+     if(prof(irad,imcumstar)>0.0)then
+        prof(irad,iucumstar)=prof(irad,iucumstar)/prof(irad,imcumstar)*unit_v/1d5
+        prof(irad,ivcumstar)=prof(irad,ivcumstar)/prof(irad,imcumstar)*unit_v/1d5
+        prof(irad,iwcumstar)=prof(irad,iwcumstar)/prof(irad,imcumstar)*unit_v/1d5
+        prof(irad,ilxcumstar)=prof(irad,ilxcumstar)/prof(irad,imcumstar)*unit_v/1d5/r(irad)
+        prof(irad,ilycumstar)=prof(irad,ilycumstar)/prof(irad,imcumstar)*unit_v/1d5/r(irad)
+        prof(irad,ilzcumstar)=prof(irad,ilzcumstar)/prof(irad,imcumstar)*unit_v/1d5/r(irad)
+     endif
+     prof(irad,imcumstar)=sqrt(6.67e-8*prof(irad,imcumstar)*unit_m/r(irad)/unit_l)/1d5
+     ! Dark matter
+     if(prof(irad,idcdm)>0.0)then
+        prof(irad,iucdm)=prof(irad,iucdm)/prof(irad,idcdm)*unit_v/1d5
+        prof(irad,ivcdm)=prof(irad,ivcdm)/prof(irad,idcdm)*unit_v/1d5
+        prof(irad,iwcdm)=prof(irad,iwcdm)/prof(irad,idcdm)*unit_v/1d5
+        prof(irad,ilxcdm)=prof(irad,ilxcdm)/prof(irad,idcdm)*unit_v/1d5/r(irad)
+        prof(irad,ilycdm)=prof(irad,ilycdm)/prof(irad,idcdm)*unit_v/1d5/r(irad)
+        prof(irad,ilzcdm)=prof(irad,ilzcdm)/prof(irad,idcdm)*unit_v/1d5/r(irad)
+     endif
+     prof(irad,idcdm)=prof(irad,idcdm)/vol*unit_d/1.66d-24
+     if(prof(irad,imcumcdm)>0.0)then
+        prof(irad,iucumcdm)=prof(irad,iucumcdm)/prof(irad,imcumcdm)*unit_v/1d5
+        prof(irad,ivcumcdm)=prof(irad,ivcumcdm)/prof(irad,imcumcdm)*unit_v/1d5
+        prof(irad,iwcumcdm)=prof(irad,iwcumcdm)/prof(irad,imcumcdm)*unit_v/1d5
+        prof(irad,ilxcumcdm)=prof(irad,ilxcumcdm)/prof(irad,imcumcdm)*unit_v/1d5/r(irad)
+        prof(irad,ilycumcdm)=prof(irad,ilycumcdm)/prof(irad,imcumcdm)*unit_v/1d5/r(irad)
+        prof(irad,ilzcumcdm)=prof(irad,ilzcumcdm)/prof(irad,imcumcdm)*unit_v/1d5/r(irad)
+     endif
+     prof(irad,imcumcdm)=sqrt(6.67e-8*prof(irad,imcumcdm)*unit_m/r(irad)/unit_l)/1d5
+     rprev=r(irad)
+  end do
+
+  ! Output file
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
-  open(unit=10,file=TRIM(nomfich),form='formatted')
-  write(10,999)rmax,xcen,ycen,zcen
+  open(unit=10,file=TRIM(nomfich)//".dark",form='formatted')
+  write(10,'(A130)')" r(kpc)      n_d(H/cc)   vc_d(H/cc)  mc_d(Msol)  cu_d(km/s)  cv_d(km/s)  cw_d(km/s)  cl_d(km/s)  lx_d        ly_d        lz_d      "
+  do irad=1,nrad
+     write(10,999)r(irad)*unit_l/3.08d21,prof(irad,idcdm),prof(irad,imcumcdm),prof(irad,imcumcdm)**2*r(irad)*unit_l/6.67e-8*1d10/2d33 &
+          & ,prof(irad,iucumcdm),prof(irad,ivcumcdm),prof(irad,iwcumcdm),sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2) &
+          & ,prof(irad,ilxcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30) &
+          & ,prof(irad,ilycumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30) &
+          & ,prof(irad,ilzcumcdm)/sqrt(prof(irad,ilxcumcdm)**2+prof(irad,ilycumcdm)**2+prof(irad,ilzcumcdm)**2+1d-30)
+  end do
   close(10)
+  open(unit=10,file=TRIM(nomfich)//".star",form='formatted')
+  write(10,'(A130)')" r(kpc)      n_*(H/cc)   vc_*(H/cc)  mc_*(Msol)  cu_*(km/s)  cv_*(km/s)  cw_*(km/s)  cl_*(km/s)  lx_*        ly_*        lz_*      "
+  do irad=1,nrad
+     write(10,999)r(irad)*unit_l/3.08d21,prof(irad,idstar),prof(irad,imcumstar),prof(irad,imcumstar)**2*r(irad)*unit_l/6.67e-8*1d10/2d33 &
+          & ,prof(irad,iucumstar),prof(irad,ivcumstar),prof(irad,iwcumstar),sqrt(prof(irad,ilxcumstar)**2+prof(irad,ilycumstar)**2+prof(irad,ilzcumstar)**2) &
+          & ,prof(irad,ilxcumstar)/sqrt(prof(irad,ilxcumstar)**2+prof(irad,ilycumstar)**2+prof(irad,ilzcumstar)**2+1e-30) &
+          & ,prof(irad,ilycumstar)/sqrt(prof(irad,ilxcumstar)**2+prof(irad,ilycumstar)**2+prof(irad,ilzcumstar)**2+1e-30) &
+          & ,prof(irad,ilzcumstar)/sqrt(prof(irad,ilxcumstar)**2+prof(irad,ilycumstar)**2+prof(irad,ilzcumstar)**2+1e-30)
+  end do
+  close(10)
+999 format(30(1PE10.3,2X))
 
-999  format(4(1X,1PE14.7))
-  
 contains
 
   subroutine read_params
@@ -494,6 +400,7 @@ contains
       n = iargc()
       if (n < 4) then
          print *, 'usage: part2prof -inp  input_dir'
+         print *, '                 -mar  mark_file'
          print *, '                 -out  output_file'
          print *, '                 [-xce xcen] '
          print *, '                 [-yce ycen] '
@@ -503,9 +410,8 @@ contains
          print *, '                 [-wce wcen] '
          print *, '                 [-rma rmax] '
          print *, '                 [-nra nrad] '
-         print *, '                 [-str flag] '
          print *, '                 [-per flag] '
-         print *, 'ex: part2prof -inp output_00001 -out map.dat'// &
+         print *, 'ex: part2prof -mar mark_file -inp output_00001 -out map.dat'// &
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
          stop
       end if
@@ -520,6 +426,8 @@ contains
          select case (opt)
          case ('-inp')
             repository = trim(arg)
+         case ('-mar')
+            markfile = trim(arg)
          case ('-out')
             outfich = trim(arg)
          case ('-xce')
@@ -540,8 +448,6 @@ contains
             read (arg,*) rmax
          case ('-per')
             read (arg,*) periodic
-         case ('-str')
-            read (arg,*) star
          case default
             print '("unknown option ",a2," ignored")', opt
          end select

@@ -343,8 +343,8 @@ program part2cylprof
            u_t=uu*tx+vv*ty+ww*tz
 
            icirc=int(dble(ncirc)*r_cyl/rmax)+1
-           epsilon=u_t*unit_v/1d5/vcirc(icirc)
-           ivel=int(dble(nvel)*(epsilon+2.)/4.)+1
+           !epsilon=u_t*unit_v/1d5/vcirc(icirc) !removed per Romain's advice
+           !ivel=int(dble(nvel)*(epsilon+2.)/4.)+1 !removed per Romain's advice
 
            if(age(i).ne.0.0d0)then
               if(cosmo)then
