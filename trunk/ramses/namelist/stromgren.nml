@@ -1,0 +1,103 @@
+&RUN_PARAMS 
+hydro=.true.
+rt=.true.
+nrestart=0
+nremap=0
+nsubcycle=10*1
+verbose=.false.
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=3.3
+y_center=3.3
+z_center=3.3
+length_x=100.0
+length_y=100.0
+length_z=100.0
+exp_region=10.0
+d_region=1d-3		   	  ! 1e-3 hydrogen atoms per cc
+p_region=8.69869d-10		  ! 100 K
+/
+
+&AMR_PARAMS 
+levelmin=7
+levelmax=7
+ngridmax=300000
+nexpand=1
+boxlen=6.6			!  1 kpc
+/
+
+&OUTPUT_PARAMS
+delta_tout=1.
+tend=100.
+/
+
+&HYDRO_PARAMS
+gamma=1.6666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+/
+
+&PHYSICS_PARAMS
+cooling=.false.
+units_density=1.66d-24
+units_time=3.1556926d13
+units_length=3.08568025d21
+/
+
+&REFINE_PARAMS
+err_grad_d=0.4
+/
+
+&RT_PARAMS
+!X=1d0
+!Y=0d0
+rt_flux_scheme='glf'
+hll_evals_file='/Users/romain/ramses/trunk/ramses/rt/hll_evals.list'
+rt_courant_factor=0.8
+rt_c_fraction=0.001
+rt_cooling=.false.
+rt_nsource=1
+rt_source_type='point'
+rt_src_x_center=0.
+rt_src_y_center=0.
+rt_src_length_x=1.0
+rt_src_length_y=1.0
+rt_src_pac=1
+rt_n_source=1d27
+rt_u_source=0
+rt_v_source=0
+rt_w_source=0
+rt_nregion=1
+rt_region_type(1)='square'
+rt_reg_x_center=3.3
+rt_reg_y_center=3.3
+rt_reg_z_center=3.3
+rt_reg_length_x=100.0
+rt_reg_length_y=100.0
+rt_reg_length_z=100.0
+rt_exp_region=10.0
+rt_xion_region=1.d-6    ! hydrogen ionization state in box (no Helium)
+/
+
+&RT_PACS                        ! Blackbody at T=1.d5 Kelvin
+pac_csn(1,:)=3.00d-18, 0.,0.    ! pck 1-> HI, HeI, HeII
+!pac_csn(2,:)=5.69d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
+!pac_csn(3,:)=7.89d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
+pac_egy(1,:)=17.47, 0.,0.       ! pck 1-> HI, HeI, HeII
+!pac_egy(2,:)=31.07, 0.,0.      ! pck 2-> HI, HeI, HeII
+!pac_egy(3,:)=62.09, 0.,0.      ! pck 3-> HI, HeI, HeII
+spec2pac=1,2,3                  ! HI, HeI, HeII -> pck
+/
+
+&BOUNDARY_PARAMS 
+nboundary=4 
+ibound_min=-1,+1,-1,-1 
+ibound_max=-1,+1,+1,+1 
+jbound_min= 0, 0,+1,-1 
+jbound_max= 0, 0,+1,-1 
+bound_type= 1, 1, 1, 1 
+/
