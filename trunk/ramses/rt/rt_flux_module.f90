@@ -244,7 +244,7 @@ FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
 !              in the 3*4 flux function tensor  
 !------------------------------------------------------------------------
   use const             
-  use hydro_commons
+  use rt_hydro_commons
   real(dp),dimension(nDim+1)::fdn, fup, udn, uup, cmp_face
   real(dp)::lminus, lplus
   real(dp)::div

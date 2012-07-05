@@ -870,7 +870,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
 
 ! This routine is called by subroutine star_rt_feedback.
 ! Each star particle dumps a number of photons into the nearest grid cell
-! using array unew.
+! using array rtunew.
 ! Radiation is injected into cells at level ilevel, but it is important
 ! to know that ilevel-1 cells may also get some radiation. This is due
 ! to star particles that have just crossed to a coarser level. 
@@ -885,7 +885,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
 !-------------------------------------------------------------------------
   use amr_commons
   use pm_commons
-  use hydro_commons
+  use rt_hydro_commons
   use rt_parameters
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -1029,17 +1029,17 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   do j=1,np
      if( ok(j) ) then                                      !   ilevel cell
         do ip=1,nSEDPacs
-           unew(indp(j),iPac(ip))= unew(indp(j),iPac(ip))+part_NpInp(j,ip)
+           rtunew(indp(j),iPac(ip))= rtunew(indp(j),iPac(ip))+part_NpInp(j,ip)
         end do
      else                                                  ! ilevel-1 cell
         do ip=1,nSEDPacs
-           unew(indp(j),iPac(ip)) = unew(indp(j),iPac(ip))               &
+           rtunew(indp(j),iPac(ip)) = rtunew(indp(j),iPac(ip))               &
                 + part_NpInp(j,ip) / vol_factor
         end do
      endif
      !begin debug
-     !     if(unew(indp(j),iPac(1))*scale_np*rt_c_cgs .gt.1.d11) then
-     !        write(*,777),ilevel, myid, unew(indp(j),                   &
+     !     if(rtunew(indp(j),iPac(1))*scale_np*rt_c_cgs .gt.1.d11) then
+     !        write(*,777),ilevel, myid, rtunew(indp(j),                   &
      !           iPac(1))*scale_np*rt_c_cgs, &
      !             irad(j,1), irad(j,2),                                 &
      !             mp(ind_part(j)),                                      &
@@ -1065,7 +1065,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
 ! ind_grid(ind_grid_part(j)) refers to the grid that particle ind_part(j)
 ! resides in, and we don't need to bother searching for the particle's 
 ! grid.  Each star particle dumps a number of photons into the nearest 
-! grid cell using array unew.
+! grid cell using array rtunew.
 !
 ! ind_grid      =>  grid indexes in amr_commons (1 to ng)
 ! ind_part      =>  star indexes in pm_commons(1 to np)
@@ -1077,7 +1077,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
 !-------------------------------------------------------------------------
   use amr_commons
   use pm_commons
-  use hydro_commons
+  use rt_hydro_commons
   use rt_parameters
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -1167,7 +1167,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
 
   do j=1,np                       ! Update hydro variables due to feedback
      do ip=1,nSEDPacs
-        unew(indp(j),iPac(ip)) = unew(indp(j),iPac(ip)) + part_NpInp(j,ip)
+        rtunew(indp(j),iPac(ip)) = rtunew(indp(j),iPac(ip)) + part_NpInp(j,ip)
                 
      end do
   end do
@@ -1196,7 +1196,6 @@ END MODULE SED_module
 MODULE UV_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
-  use hydro_commons,only:nvar
   use spectrum_integrator_module
   use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, ionEVs, nPacs
 
