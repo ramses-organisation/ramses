@@ -344,7 +344,7 @@ recursive subroutine amr_step(ilevel,icount)
      !---------------
      ! Sink production
      !---------------
-     if(ilevel==levelmin)call create_sink
+!     if(ilevel==levelmin)call create_sink
      
   end if
   

@@ -2674,11 +2674,6 @@ subroutine update_cloud(ilevel)
   ! End loop over grids
   if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
-  if (myid==1)then
-     do isink=1,nsink
-        print*,sink_jump(isink,1:3,ilevel)
-     end do
-  end if
   sink_jump(1:nsink,1:ndim,ilevel)=0.d0
 
 111 format('   Entering update_cloud for level ',I2)
