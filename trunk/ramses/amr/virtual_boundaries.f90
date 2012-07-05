@@ -299,7 +299,6 @@ end subroutine authorize_fine
 !################################################################
 subroutine make_virtual_coarse_int(xx)
   use amr_commons
-  use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -849,7 +848,6 @@ end subroutine make_virtual_reverse_int
 !################################################################
 subroutine build_comm(ilevel)
   use amr_commons
-  use hydro_commons
   use poisson_commons, only: lookup_mg
   implicit none
 #ifndef WITHOUTMPI

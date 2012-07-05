@@ -324,7 +324,7 @@ recursive subroutine amr_step(ilevel,icount)
         call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
      end do
 
-     ! Set uold equal to unew
+     ! Set rtuold equal to rtunew
      call rt_set_uold(ilevel)
 
      ! Restriction operator
