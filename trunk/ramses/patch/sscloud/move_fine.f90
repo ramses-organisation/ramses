@@ -52,7 +52,8 @@ subroutine move_fine(ilevel)
   end do
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-
+  
+  
 111 format('   Entering move_fine for level ',I2)
 
 end subroutine move_fine
@@ -364,13 +365,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   
   ! For sink cloud particle only
   if(sink)then
-     ! Overwrite cloud particle mass with sink mass
-     do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           mp(ind_part(j))=msink(isink)/dble(ncloud_sink)
-        endif
-     end do
      ! Overwrite cloud particle velocity with sink velocity
      do idim=1,ndim
         do j=1,np
@@ -406,64 +400,4 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         xp(ind_part(j),idim)=new_xp(j,idim)
      end do
   end do
-
 end subroutine move1
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-subroutine update_sink(ilevel)
-  use amr_commons
-  use pm_commons
-  implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  integer::ilevel
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!This routine is called at the leafs of the tree structure (right after 
-!update time). Here is where the global sink variables vsink and xsink are
-!updated by summing the conributions from all levels.
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  real(kind=8)::dteff
-  integer::lev,isink
-  
-  if(verbose)write(*,*)'Entering update_sink for level ',ilevel
-
-  vsold(1:nsink,1:ndim,ilevel)=vsnew(1:nsink,1:ndim,ilevel)
-  vsnew(1:nsink,1:ndim,ilevel)=vsink(1:nsink,1:ndim)
-
-  do isink=1,nsink
-
-     ! sum force contributions from all levels
-     fsink(isink,1:ndim)=0.
-     do lev=levelmin,nlevelmax
-        fsink(isink,1:ndim)=fsink(isink,1:ndim)+fsink_partial(isink,1:ndim,lev)
-     end do
-     fsink(isink,1:ndim)=fsink(isink,1:ndim)/dble(ncloud_sink)
-
-     ! compute timestep for the synchronization 
-     if(level_sink(isink)>ilevel)then
-        dteff=dtnew(level_sink(isink))
-     else if(level_sink(isink)>0)then
-        dteff=dtold(level_sink(isink))
-     else
-        dteff=0d0 ! timestep must be zero for newly produced sink            
-     end if
- 
-     ! this is the kick-kick (half old half new timestep)
-     ! old timestep might be the one of a different level 
-     vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fsink(isink,1:ndim)+vsink(isink,1:ndim)
-
-     ! safe the velocity 
-     vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
-     
-     ! and this is the drift(only for the global sink variable)
-     xsink(isink,1:ndim)=xsink(isink,1:ndim)+vsink(isink,1:ndim)*dtnew(ilevel)
-     level_sink(isink)=ilevel
-
-  end do
-
-end subroutine update_sink

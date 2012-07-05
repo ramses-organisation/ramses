@@ -119,6 +119,8 @@ subroutine init_part
      allocate(lsink_all(1:nsinkmax,1:3))
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
+     allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
+     sink_jump=0.d0
      allocate(level_sink_all(1:nsinkmax))
      allocate(level_sink_new(1:nsinkmax))
      allocate(dMBHoverdt(1:nsinkmax))
@@ -763,7 +765,7 @@ subroutine init_part
 
         ! Create sink particle
         if(sink)then
-           msink_new=0d0; xsink_new=0d0; vsink_new=0d0
+           msink_new=0d0; xsink_new=0d0; vsink_new=0d0 
            nsink=npart_cpu(ncpu)
            ! Switch all particles to sink's cloud central particle
           do i=1,npart

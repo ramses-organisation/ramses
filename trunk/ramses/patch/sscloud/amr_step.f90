@@ -128,6 +128,8 @@ recursive subroutine amr_step(ilevel,icount)
      !if(sink)call create_sink !(moved to the end of amr_step!)
   endif
 
+  if(sink)call update_cloud(ilevel)
+
   !--------------------
   ! Poisson source term
   !--------------------
@@ -180,14 +182,6 @@ recursive subroutine amr_step(ilevel,icount)
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
-        !Density threshold and/or Bondi accretion onto sink particle
-        if(sink)then                         
-           if(bondi)then
-              call grow_bondi(ilevel)
-           else
-              call grow_jeans(ilevel)
-           endif
-        endif
         
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -251,7 +245,8 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Hyperbolic solver
      call godunov_fine(ilevel)
-
+     
+     
      ! Reverse update boundaries
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
@@ -267,6 +262,16 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Set uold equal to unew
      call set_uold(ilevel)
+     
+     !Density threshold and/or Bondi accretion onto sink particle
+     if(sink)then                         
+        if(bondi)then
+           call grow_bondi(ilevel)
+        else
+           call grow_jeans(ilevel)
+        endif
+     endif
+
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 

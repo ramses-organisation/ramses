@@ -19,7 +19,7 @@ module pm_commons
   real(kind=8),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
   real(kind=8),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
   real(kind=8),allocatable,dimension(:,:,:)::vsnew,vsold
-  real(kind=8),allocatable,dimension(:,:,:)::fsink_partial
+  real(kind=8),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
   real(kind=8),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
   real(kind=8),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(kind=8),allocatable,dimension(:)::acc_rate !sink accretion rate from one coarse step to next one
