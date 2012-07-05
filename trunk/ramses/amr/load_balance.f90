@@ -6,7 +6,10 @@ subroutine load_balance
   use amr_commons
   use pm_commons
   use hydro_commons, ONLY: nvar, uold
-  use poisson_commons, ONLY: f
+#ifdef rt
+  use rt_hydro_commons, ONLY: nrtvar, rtuold
+#endif
+  use poisson_commons, ONLY: phi, f
   use bisection
   implicit none
 #ifndef WITHOUTMPI
@@ -74,15 +77,30 @@ subroutine load_balance
         do ivar=1,nvar
 #endif
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
+#ifdef SOLVERmhd
         end do
-        if(poisson)then
-           do idim=1,ndim
-              call make_virtual_fine_dp(f(1,idim),ilevel)
-           end do
+#else
+        end do
+#endif
+        if(simple_boundary)then
+           call make_boundary_hydro(ilevel)
         end if
      end if
-     if(simple_boundary)then
-        if(hydro)call make_boundary_hydro(ilevel)
+#ifdef RT
+     if(rt)then
+        do ivar=1,nrtvar
+           call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+        end do
+        if(simple_boundary)then
+           call rt_make_boundary_hydro(ilevel)
+        end if
+     endif
+#endif
+     if(poisson)then
+        call make_virtual_fine_dp(phi(1),ilevel)
+        do idim=1,ndim
+           call make_virtual_fine_dp(f(1,idim),ilevel)
+        end do
      end if
   end do
 
@@ -927,6 +945,9 @@ subroutine defrag
   use pm_commons
   use poisson_commons
   use hydro_commons
+#ifdef RT
+  use rt_hydro_commons
+#endif
   implicit none
 
   integer::ncache,ngrid2,igridmax,i,igrid,ibound,ilevel
@@ -1286,7 +1307,75 @@ subroutine defrag
 
   end if
 
+#ifdef RT
+  if(rt)then
+
+  do ivar=1,nrtvar
+  do ind=1,twotondim
+  iskip2=ncoarse+(ind-1)*ngridmax
+  ngrid2=0
+  do igrid=1,igridmax
+     hilbert_key(igrid)=0.0D0
+  end do
+  do ilevel=1,nlevelmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           ncache=numbl(ibound,ilevel)
+           istart=headl(ibound,ilevel)
+        else
+           ncache=numbb(ibound-ncpu,ilevel)
+           istart=headb(ibound-ncpu,ilevel)
+        end if
+        if(ncache>0)then
+           igrid=istart
+           do i=1,ncache
+              hilbert_key(ngrid2+i)=real(rtuold(iskip2+igrid,ivar),kind=qdp)
+              igrid=next(igrid)
+           end do
+           ngrid2=ngrid2+ncache
+        end if
+     end do
+  end do
+  do igrid=1,igridmax
+     rtuold(iskip2+igrid,ivar)=real(hilbert_key(igrid),kind=8)
+  end do
+  end do
+  end do
+
+  end if
+#endif
+
   if(poisson)then
+
+  do ind=1,twotondim
+  iskip2=ncoarse+(ind-1)*ngridmax
+  ngrid2=0
+  do igrid=1,igridmax
+     hilbert_key(igrid)=0.0D0
+  end do
+  do ilevel=1,nlevelmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           ncache=numbl(ibound,ilevel)
+           istart=headl(ibound,ilevel)
+        else
+           ncache=numbb(ibound-ncpu,ilevel)
+           istart=headb(ibound-ncpu,ilevel)
+        end if
+        if(ncache>0)then
+           igrid=istart
+           do i=1,ncache
+              hilbert_key(ngrid2+i)=real(phi(iskip2+igrid),kind=qdp)
+              igrid=next(igrid)
+           end do
+           ngrid2=ngrid2+ncache
+        end if
+     end do
+  end do
+  do igrid=1,igridmax
+     phi(iskip2+igrid)=real(hilbert_key(igrid),kind=8)
+  end do
+  end do
 
   do idim=1,ndim
   do ind=1,twotondim
