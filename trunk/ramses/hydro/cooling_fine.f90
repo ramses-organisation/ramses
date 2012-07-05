@@ -250,7 +250,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                  dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
                  dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude                               
                  ! Update flux vector to get the right direction                                            
-                 uold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = unew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
+                 rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
                  Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling                               
               enddo
            else
