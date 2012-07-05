@@ -3,8 +3,8 @@ SUBROUTINE rt_godunov_fine(ilevel, dt)
 
 ! This routine is a wrapper to the grid solver for radiative transfer.
 ! Small grids (2x2x2) are gathered from level ilevel and sent to the
-! RT solver. On entry, RT variables are gathered from array uold.
-! On exit, unew has been updated. 
+! RT solver. On entry, RT variables are gathered from array rtuold.
+! On exit, rtunew has been updated. 
 !------------------------------------------------------------------------
   use amr_commons
   use rt_hydro_commons
@@ -37,8 +37,8 @@ END SUBROUTINE rt_godunov_fine
 !************************************************************************
 SUBROUTINE rt_set_unew(ilevel)
 
-! This routine sets array unew to its initial value uold before calling
-! the rt scheme. unew is set to zero in virtual boundaries.
+! This routine sets array rtunew to its initial value rtuold before calling
+! the rt scheme. rtunew is set to zero in virtual boundaries.
 !------------------------------------------------------------------------
   use amr_commons
   use rt_hydro_commons
@@ -59,7 +59,7 @@ SUBROUTINE rt_set_unew(ilevel)
      end do
   end do
 
-  ! Set unew to 0 for virtual boundary cells
+  ! Set rtunew to 0 for virtual boundary cells
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -78,7 +78,7 @@ END SUBROUTINE rt_set_unew
 !************************************************************************
 SUBROUTINE rt_set_uold(ilevel)
 
-! This routine sets array uold to its new value unew after the
+! This routine sets array rtuold to its new value rtunew after the
 ! hydro step.
 !------------------------------------------------------------------------
   use amr_commons
@@ -97,7 +97,7 @@ SUBROUTINE rt_set_uold(ilevel)
   ! This is useful to keep down the cooling-substepping.
   if(rt_smooth) return
 
-  ! Set uold to unew for myid cells
+  ! Set rtuold to rtunew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
@@ -136,7 +136,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 ! coarser level to missing grid variables. It then calls the solver
 ! that computes fluxes. These fluxes are zeroed at coarse-fine boundaries,
 ! since contribution from finer levels has already been taken into
-! account. Conservative variables are updated and stored in array unew(:),
+! account. Conservative variables are updated and stored in array rtunew(:),
 ! both at the current level and at the coarser level if necessary.
 ! 
 ! in ind_grid: Indexes of grids/octs to solve in
@@ -159,11 +159,9 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
   ! 500*6*6*6*4:
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nrtvar),save::uloc
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nrtvar,1:ndim)  &
-                                                               ,save::flux
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nrtvar,1:ndim),save::flux
   logical,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
-  integer ,dimension(1:nvector),save::&
-       igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
+  integer ,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
 
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
@@ -207,7 +205,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells
   ! of grid (ilevel-1). ind_cell are indexes 
-  ! in uold.
+  ! in rtuold.
   !------------------------------------------
   do i=1,ncache
      ind_cell(i)=father(ind_grid(i)) 
