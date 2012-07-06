@@ -74,13 +74,16 @@ subroutine create_sink
 !   if(myid==1)print*,totparts
 ! #endif
   
-  ! Scatter particle to the grid
+  ! Scatter particle to the grid 
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
      call virtual_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      call virtual_tree_fine(ilevel)
   end do
+
+  
+
 
   ! Update hydro quantities for split cells
   if(hydro)then
@@ -96,9 +99,17 @@ subroutine create_sink
 
   ! Compute Bondi parameters and gather particle
   do ilevel=nlevelmax,levelmin,-1
-     if(bondi)call bondi_hoyle(ilevel)
+     if(bondi)then 
+        call bondi_hoyle(ilevel)
+     else 
+        call grow_jeans(ilevel)
+     end if
      call merge_tree_fine(ilevel)
   end do
+  
+  !update the cloud particle properties at levelmin
+  call update_cloud(levelmin,.true.)
+  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
 
 
   call compute_accretion_rate(levelmin)
@@ -2621,7 +2632,7 @@ end subroutine update_sink
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine update_cloud(ilevel)
+subroutine update_cloud(ilevel,sink_creation)
   use amr_commons
   use pm_commons
   implicit none
@@ -2632,11 +2643,28 @@ subroutine update_cloud(ilevel)
   !----------------------------------------------------------------------
   ! update sink cloud particle properties
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer::moved_parts,moved_parts_all
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp),dimension(1:3)::skip_loc
+  logical::sink_creation
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+
+  moved_parts=0
 
   ! Update particles position and velocity
   ig=0
@@ -2652,18 +2680,21 @@ subroutine update_cloud(ilevel)
         ! Loop over particles
         do jpart=1,npart1
            ! Save next particle  <---- Very important !!!
-           next_part=nextp(ipart)
-           if(ig==0)then
-              ig=1
-              ind_grid(ig)=igrid
-           end if
-           ip=ip+1
-           ind_part(ip)=ipart
-           ind_grid_part(ip)=ig
-           if(ip==nvector)then
-              call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-              ip=0
-              ig=0
+           next_part=nextp(ipart) !move only particles which do actually belong to that level
+           if ((levelp(ipart)==ilevel).or.sink_creation)then
+              if(ig==0)then
+                 ig=1
+                 ind_grid(ig)=igrid
+              end if
+              ip=ip+1
+              moved_parts=moved_parts+1
+              ind_part(ip)=ipart
+              ind_grid_part(ip)=ig
+              if(ip==nvector)then
+                 call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 ip=0
+                 ig=0
+              end if
            end if
            ipart=next_part  ! Go to next particle
         end do
@@ -2673,7 +2704,17 @@ subroutine update_cloud(ilevel)
   end do
   ! End loop over grids
   if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  
+  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
 
+  if (myid==1)then
+     do isink=1,nsink
+        print*,'sink: ',isink,' level: ',ilevel,' jump: ',sink_jump(isink,1:ndim,ilevel)
+        print*,'sink: ',isink,' level: ',ilevel,' jump: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+     end do
+     print*,moved_parts_all,ilevel
+     print*,2109*nsink,ilevel
+  end if
   sink_jump(1:nsink,1:ndim,ilevel)=0.d0
 
 111 format('   Entering update_cloud for level ',I2)

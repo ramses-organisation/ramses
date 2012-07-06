@@ -86,6 +86,11 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   !-----------------
+  ! update sink cloud particle properties
+  !-----------------
+  if(sink)call update_cloud(ilevel,.false.)
+  
+  !-----------------
   ! Particle leakage
   !-----------------
   if(pic)call make_tree_fine(ilevel)
@@ -120,15 +125,9 @@ recursive subroutine amr_step(ilevel,icount)
      !----------------------------------------------------
      ! Kinetic feedback from giant molecular clouds
      !----------------------------------------------------
-     if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
-     
-     !-----------------------------------------------------
-     ! Create sink particles and associated cloud particles
-     !-----------------------------------------------------
-     !if(sink)call create_sink !(moved to the end of amr_step!)
+     if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback     
   endif
 
-  if(sink)call update_cloud(ilevel)
 
   !--------------------
   ! Poisson source term
