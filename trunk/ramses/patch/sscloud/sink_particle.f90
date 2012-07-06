@@ -108,8 +108,7 @@ subroutine create_sink
   end do
   
   !update the cloud particle properties at levelmin
-  call update_cloud(levelmin,.true.)
-  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
+  call update_cloud(levelmin)
 
 
   call compute_accretion_rate(levelmin)
@@ -2632,7 +2631,7 @@ end subroutine update_sink
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine update_cloud(ilevel,sink_creation)
+subroutine update_cloud(ilevel)
   use amr_commons
   use pm_commons
   implicit none
@@ -2648,7 +2647,6 @@ subroutine update_cloud(ilevel,sink_creation)
   integer::moved_parts,moved_parts_all
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp),dimension(1:3)::skip_loc
-  logical::sink_creation
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -2681,20 +2679,18 @@ subroutine update_cloud(ilevel,sink_creation)
         do jpart=1,npart1
            ! Save next particle  <---- Very important !!!
            next_part=nextp(ipart) !move only particles which do actually belong to that level
-           if ((levelp(ipart)==ilevel).or.sink_creation)then
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              moved_parts=moved_parts+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig
-              if(ip==nvector)then
-                 call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-                 ip=0
-                 ig=0
-              end if
+           if(ig==0)then
+              ig=1
+              ind_grid(ig)=igrid
+           end if
+           ip=ip+1
+           moved_parts=moved_parts+1
+           ind_part(ip)=ipart
+           ind_grid_part(ip)=ig
+           if(ip==nvector)then
+              call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              ip=0
+              ig=0
            end if
            ipart=next_part  ! Go to next particle
         end do
@@ -2705,16 +2701,17 @@ subroutine update_cloud(ilevel,sink_creation)
   ! End loop over grids
   if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   
-!  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
-
+  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
+  
   if (myid==1.and.verbose)then
      write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
         write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
- !    write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
+      write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
   end if
-  sink_jump(1:nsink,1:ndim,ilevel)=0.d0
+
+  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0.d0
 
 111 format('   Entering update_cloud for level ',I2)
 
@@ -2737,6 +2734,7 @@ subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !------------------------------------------------------------
   integer::j,idim,isink
   real(dp),dimension(1:nvector,1:ndim),save::new_xp,new_vp
+  integer,dimension(1:nvector)::level_p
 
   ! Overwrite cloud particle mass with sink mass
   do j=1,np
@@ -2771,6 +2769,12 @@ subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  ! read level
+  do j=1,np
+     level_p(j)=levelp(ind_part(j))
+  end do
+ 
+
   ! Update store position
   do idim=1,ndim
      do j=1,np
@@ -2781,9 +2785,7 @@ subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         isink=-idp(ind_part(j))
         if(isink>0)then
-           if (levelp(ind_part(j))==ilevel)then
-              new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,ilevel)
-           end if
+           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,levelp(j))
         endif
      end do
   end do
