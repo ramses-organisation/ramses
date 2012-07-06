@@ -2705,15 +2705,14 @@ subroutine update_cloud(ilevel,sink_creation)
   ! End loop over grids
   if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   
-  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
+!  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
 
-  if (myid==1)then
+  if (myid==1.and.verbose)then
+     write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        print*,'sink: ',isink,' level: ',ilevel,' jump: ',sink_jump(isink,1:ndim,ilevel)
-        print*,'sink: ',isink,' level: ',ilevel,' jump: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
-     print*,moved_parts_all,ilevel
-     print*,2109*nsink,ilevel
+ !    write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
   end if
   sink_jump(1:nsink,1:ndim,ilevel)=0.d0
 
