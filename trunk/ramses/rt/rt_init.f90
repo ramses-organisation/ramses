@@ -119,6 +119,7 @@ SUBROUTINE read_rt_params(nml_ok)
 !------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
+  use cooling_module, only:X, Y
   use rt_cooling_module
   use UV_module
   use SED_module

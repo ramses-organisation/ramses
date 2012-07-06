@@ -35,8 +35,8 @@ module cooling_module
   real(kind=8),parameter ::kB      = 1.3806200d-16
   real(kind=8),parameter ::clight  = 2.9979250d+10
   real(kind=8),parameter ::Gyr     = 3.1536000d+16
-  real(kind=8),parameter ::X       = 0.76
-  real(kind=8),parameter ::Y       = 0.24 
+  real(kind=8)           ::X       = 0.76
+  real(kind=8)           ::Y       = 0.24 
   real(kind=8),parameter ::rhoc    = 1.8800000d-29
   real(kind=8),parameter ::mH      = 1.6600000d-24
   real(kind=8),parameter ::mu_mol  = 1.2195D0

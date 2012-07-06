@@ -1,5 +1,6 @@
 module rt_cooling_module
-  use amr_commons,only:myid
+  use amr_commons,only:myid  
+  use cooling_module,only:X, Y
   use rt_parameters
   use coolrates_module
   implicit none
@@ -15,8 +16,8 @@ module rt_cooling_module
   ! NOTE: T2=T/mu
 
   logical::isHe=.true.
-  real(dp)::X                   = 0.76           !  Hydrogen mass fraction
-  real(dp)::Y                   = 0.24           !    Helium mass fraction
+!in cooling_module  real(dp)::X                   = 0.76           !  Hydrogen mass fraction
+!in cooling_module  real(dp)::Y                   = 0.24           !    Helium mass fraction
   real(dp),parameter::rhoc      = 1.88000d-29    !  Crit. density [g cm-3]
   real(dp),parameter::mH        = 1.66000d-24    !         H atom mass [g]
   real(dp),parameter::kB        = 1.38062d-16    ! Boltzm.const. [erg K-1]

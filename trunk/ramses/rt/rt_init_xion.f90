@@ -40,7 +40,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   use amr_commons
   use hydro_commons
   use rt_parameters,only:nIons,iIons
-  use rt_cooling_module,only:Y
+  use cooling_module,only:Y
   implicit none
   integer::ngrid
   integer,dimension(1:nvector)::ind_grid
@@ -114,7 +114,8 @@ SUBROUTINE calc_equilibrium_xion(vars, xion)
   use amr_commons
   use hydro_commons
   use rt_parameters
-  use rt_cooling_module,only:Y,UVrates,signc
+  use cooling_module,only:Y
+  use rt_cooling_module,only:UVrates,signc
   implicit none
   real(dp),dimension(nvar)::vars
   real(dp),dimension(nIons)::xion
