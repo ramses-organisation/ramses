@@ -131,10 +131,8 @@ subroutine rt_make_boundary_hydro(ilevel)
                  ! ------------------------------------------------------------
                  ! need to switch photon flux in RT...
                  ! rtVar= ivar = 1,2,3,4,.. = Np, Fx, Fy, Fz, Np, Fx,..
-                 if(ivar .gt. 1) then
-                    rtType = mod(ivar-1, ndim+1)
-                    if(rtType .ne. 0) switch=gs(rtType) !0=Np, 1=Fx, 2=Fy, 3=Fz
-                 endif
+                 rtType = mod(ivar-1, ndim+1)
+                 if(rtType .ne. 0) switch=gs(rtType) !0=Np, 1=Fx, 2=Fy, 3=Fz
                  ! ------------------------------------------------------------
                  do i=1,ngrid
                     rtuold(ind_cell(i),ivar)=uu(i,ivar)*switch
