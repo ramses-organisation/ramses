@@ -10,14 +10,14 @@ subroutine init_part
   ! Allocate particle-based arrays.
   ! Read particles positions and velocities from grafic files
   !------------------------------------------------------------
-  integer::npart2,ndim2,ncpu2
+  integer::npart2,ndim2,ncpu2,kk2,jj2,ii2,ncloud
   integer::ipart,jpart,ipart_old,ilevel,idim
-  integer::i,igrid,ncache,ngrid,iskip
+  integer::i,igrid,ncache,ngrid,iskip,isink
   integer::ind,ix,iy,iz,ilun,info,icpu,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
-  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
-  real(dp)::scale,dx_loc
+  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
+  real(dp)::scale,dx_loc,rr,rmax,dx_min
   integer::ncode,bit_length,temp
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -45,7 +45,7 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof
+  logical::error,keep_part,eof,jumped
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
@@ -67,7 +67,7 @@ subroutine init_part
   allocate(levelp(npartmax))
   allocate(idp   (npartmax))
   xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
-  if(star.or.sink)then
+  if(star.or.sink)then 
      allocate(tp(npartmax))
      tp=0.0
      if(metal)then
@@ -760,44 +760,74 @@ subroutine init_part
 #endif
         do icpu=2,ncpu
            npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
-        end do  
-        write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
-
-        ! Create sink particle
-        if(sink)then
-           msink_new=0d0; xsink_new=0d0; vsink_new=0d0 
-           nsink=npart_cpu(ncpu)
-           ! Switch all particles to sink's cloud central particle
-          do i=1,npart
-             msink_new(idp(i))=mp(i)
-             xsink_new(idp(i),1)=xp(i,1)
-             xsink_new(idp(i),2)=xp(i,2)
-             xsink_new(idp(i),3)=xp(i,3)
-             vsink_new(idp(i),1)=vp(i,1)
-             vsink_new(idp(i),2)=vp(i,2)
-             vsink_new(idp(i),3)=vp(i,3)
-             idp(i)=-idp(i)
-           end do
-#ifndef WITHOUTMPI
-           call MPI_ALLREDUCE(msink_new,msink_all ,nsinkmax     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-           call MPI_ALLREDUCE(xsink_new,xsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-           call MPI_ALLREDUCE(vsink_new,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-           msink_all=msink_new
-           xsink_all=xsink_new
-           vsink_all=vsink_new
-#endif
-           do i=1,nsink
-              msink(i)=msink_all(i)
-              xsink(i,1:ndim)=xsink_all(i,1:ndim)
-              vsink(i,1:ndim)=vsink_all(i,1:ndim)
-              lsink(i,1:3)=0.
-           end do
-        endif
-        
+        end do
+        if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
      end select
 
-  end if
 
+
+     ! read sink particles
+     ! Sink particles that exist at the beginning og the simu are always (independent of the type of
+     ! the other ic files) read from a text file.
+     if(sink)then
+        nx_loc=(icoarse_max-icoarse_min+1)
+        scale=boxlen/dble(nx_loc)
+        dx_min=scale*0.5D0**nlevelmax/aexp
+        
+        rmax=dble(ir_cloud)*dx_min
+        xx1=0.0; xx2=0.0; xx3=0.0
+        ncloud=0
+        do kk2=-2*ir_cloud,2*ir_cloud
+           xx3=dble(kk2)*dx_min/2.0
+           do jj2=-2*ir_cloud,2*ir_cloud
+              xx2=dble(jj2)*dx_min/2.0
+              do ii2=-2*ir_cloud,2*ir_cloud
+                 xx1=dble(ii2)*dx_min/2.0
+                 rr=sqrt(xx1*xx1+xx2*xx2+xx3*xx3)
+                 if(rr<=rmax)ncloud=ncloud+1
+              end do
+           end do
+        end do
+        ncloud_sink=ncloud
+        
+
+        nsink=0                
+        if(TRIM(initfile(levelmin)).NE.' ')then
+           filename=TRIM(initfile(levelmin))//'/ic_sink.txt'
+           open(10,file=filename,form='formatted')
+           eof=.false.
+           if (myid==1)write(*,*)'Reading_file ',filename
+           do
+              read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
+              nsink=nsink+1
+              idsink(nsink)=nsink
+              msink(nsink)=mm1
+              xsink(nsink,1)=xx1
+              xsink(nsink,2)=xx2
+              xsink(nsink,3)=xx3
+              vsink(nsink,1)=vv1
+              vsink(nsink,2)=vv2
+              vsink(nsink,3)=vv3
+              lsink(nsink,1)=ll1
+              lsink(nsink,2)=ll2
+              lsink(nsink,3)=ll3
+              tsink(nsink)=0.
+              level_sink(nsink)=levelmin
+           end do
+102        continue                 
+           close(10)
+        end if
+        if (myid==1.and.nsink==0)write(*,*)'No ic_sink.txt found: Starting without sink particles!'           
+        if (myid==1.and.nsink>0.and.verbose)then
+           write(*,*),'sinks read from ic_sink.txt'
+           write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
+           write(*,*),'====================================================================================='
+           do isink=1,nsink
+              write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+                   vsink(isink,1:ndim),lsink(isink,1:ndim)
+           end do
+        end if
+     end if
+  end if
 end subroutine init_part
 

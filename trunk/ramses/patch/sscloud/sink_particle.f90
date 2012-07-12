@@ -83,8 +83,6 @@ subroutine create_sink
   end do
 
   
-
-
   ! Update hydro quantities for split cells
   if(hydro)then
      do ilevel=nlevelmax,levelmin,-1
@@ -409,6 +407,7 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end do
+  ncloud_sink=ncloud
 
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)*dx_min/2.0
@@ -2641,6 +2640,11 @@ subroutine update_cloud(ilevel)
   integer::ilevel
   !----------------------------------------------------------------------
   ! update sink cloud particle properties
+  ! -the particles are moved whenever the level of the grid they sit in is updated
+  ! -the amount of drift they get is according to their levelp
+  ! -since this is happening on the way down, at level ilevel all particles with
+  ! level >= ilevel will be moved. Therefore, the sink_jump for all levels >= ilevel
+  ! is set ot zero on exit.
   !----------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
@@ -2701,14 +2705,14 @@ subroutine update_cloud(ilevel)
   ! End loop over grids
   if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   
-  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
+!  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
   
   if (myid==1.and.verbose)then
      write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
         write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
-      write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
+!      write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
   end if
 
   sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0.d0
@@ -2775,7 +2779,7 @@ subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
  
 
-  ! Update store position
+  ! Update position
   do idim=1,ndim
      do j=1,np
         new_xp(j,idim)=xp(ind_part(j),idim)
@@ -2785,7 +2789,7 @@ subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         isink=-idp(ind_part(j))
         if(isink>0)then
-           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,levelp(j))
+           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,level_p(j))
         endif
      end do
   end do

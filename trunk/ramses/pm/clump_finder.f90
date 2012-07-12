@@ -178,22 +178,26 @@ subroutine clump_finder(create_output)
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
+        if (verbose .and. myid==1)write(*,*)'clump number: ',jj
         if (relevance_tot(jj) > 1.0d-1 .and. occupied_all(jj)==0 .and. minmatch_tot(jj)==1)then           
+           if (verbose .and. myid==1)write(*,*)'relevance occupied and minmatch ok'
            if (e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)) > 1.)then
-           !   if (clump_mass_tot(jj)-clump_vol_tot(jj)*n_sink/scale_nH  > mass_threshold)then
-              pos(1,1:3)=peak_pos_tot(jj,1:3)
-              call cmp_cpumap(pos,cc,1)
-              if (cc(1) .eq. myid)then
-                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                 flag2(cell_index(1))=1
+              if (verbose .and. myid==1)write(*,*)'bound'
+              if(max_dens_tot(jj)>(n_sink/scale_nH))then
+                 if (verbose .and. myid==1)write(*,*)'peak_density ok'
+                 pos(1,1:3)=peak_pos_tot(jj,1:3)
+                 call cmp_cpumap(pos,cc,1)
+                 if (cc(1) .eq. myid)then
+                    call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+                    flag2(cell_index(1))=1
+                 end if
               end if
-              !  end if
            end if
         end if
      end do
      deallocate(occupied,occupied_all)
   endif
-
+  
   call remove_parts_brute_force
   nstar_tot=0
   call deallocate_all

@@ -17,7 +17,6 @@ subroutine compute_clump_properties()
   ! variables used for the loop over all particles
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,ilevel
   
-  ! 
   integer::info,i,j,jj,peak_nr
 
   !variables needed temporarily store cell properties
@@ -728,8 +727,8 @@ subroutine write_clump_properties(to_file)
                 ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
                 ,clump_vol_tot(jj)*(scale_l/1.496d13)**3&
                 ,relevance_tot(jj)&
-                ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj))&
-                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj))&
+                ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)+1.d-99)&
+                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)+1.d-99)&
                 ,minmatch_tot(jj)
 
            rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
