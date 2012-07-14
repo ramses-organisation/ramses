@@ -347,7 +347,7 @@ subroutine refine_fine(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
- 
+
   !--------------------------
   ! Compute authorization map
   !--------------------------
@@ -582,6 +582,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
 #endif
+#ifdef RT
+  real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
+  real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
+#endif  
   real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0
 
@@ -801,18 +805,18 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            ! Gather hydro variables
            do ivar=1,nrtvar
               do i=1,nn
-                 u1(i,j,ivar)=rtuold(ind_fathers(i,j),ivar)
+                 urt1(i,j,ivar)=rtuold(ind_fathers(i,j),ivar)
               end do
            end do
         end do
         ! Interpolate
-        call rt_interpol_hydro(u1,u2,nn)
+        call rt_interpol_hydro(urt1,urt2,nn)
         ! Scatter to children cells
         do j=1,twotondim
            iskip=ncoarse+(j-1)*ngridmax
            do ivar=1,nrtvar
               do i=1,nn
-                 rtuold(iskip+ind_grid_son(i),ivar)=u2(i,j,ivar)
+                 rtuold(iskip+ind_grid_son(i),ivar)=urt2(i,j,ivar)
               end do
            end do
         enddo
@@ -877,7 +881,6 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   integer::igrid,iskip,icpu
   integer::i,j,idim,ind,ivar
   integer,dimension(1:nvector),save::ind_grid_son,ind_cell_son
-  
   ! Gather son grids
   do i=1,nn
      ind_grid_son(i)=son(ind_cell(i))
