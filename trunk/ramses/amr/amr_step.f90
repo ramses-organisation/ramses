@@ -274,7 +274,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(hydro)then
 
      ! Hyperbolic solver
-     call godunov_fine(ilevel)
+     if(.not.static)call godunov_fine(ilevel)
 
      ! Reverse update boundaries
 #ifdef SOLVERmhd
