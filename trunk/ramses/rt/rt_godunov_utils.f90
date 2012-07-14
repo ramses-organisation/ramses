@@ -24,31 +24,31 @@ END SUBROUTINE get_rt_courant_coarse
 subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   use amr_parameters
   use const
-  use rt_parameters!---------------------------------------------------!RT
+  use rt_parameters
   implicit none
   ! dummy arguments
   integer nn
-  real(dp)::ug(1:nvector,1:nvar)
-  real(dp)::um(1:nvector,1:nvar)
-  real(dp)::ud(1:nvector,1:nvar)
+  real(dp)::ug(1:nvector,1:nrtvar)
+  real(dp)::um(1:nvector,1:nrtvar)
+  real(dp)::ud(1:nvector,1:nrtvar)
   logical ::ok(1:nvector)
   
-  integer::k,idim, i!--------------------------------------------------!RT
+  integer::k,i
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
   
-  if(rt .and. rt_err_grad_n >= 0. .and. aexp .gt. rt_refine_aexp) then !RT
-     do i=1,nPacs                                                      !RT
-        ! RT-photon density                                            !RT
-        do k=1,nn                                                      !RT
-           dg=ug(k,iPac(i)); dm=um(k,iPac(i)); dd=ud(k,iPac(i))        !RT
-           error=2.0d0*MAX( &                                          !RT
-                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &                  !RT
-                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )                    !RT
-           ok(k) = ok(k) .or. error > rt_err_grad_n                    !RT
-        end do                                                         !RT
-     end do                                                            !RT
-  end if                                                               !RT
-                                                                       !RT
+  if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------                           
+     do i=1,nPacs                                                 
+        ! RT-photon density                                       
+        do k=1,nn                                                 
+           dg=ug(k,iPac(i)); dm=um(k,iPac(i)); dd=ud(k,iPac(i))   
+           error=2.0d0*MAX( &                                    
+                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &            
+                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )              
+           ok(k) = ok(k) .or. error > rt_err_grad_n              
+        end do                                                   
+     end do                                                      
+  end if                                                         
+                                                                  
 end subroutine rt_hydro_refine
 !###########################################################
 !###########################################################

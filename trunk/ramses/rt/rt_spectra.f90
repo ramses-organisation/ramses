@@ -553,7 +553,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
                  ind_grid_part(ip) = ig ! points to grid a star is in  
               endif
               if(ip == nvector)then
-                 if(rt_pp .or. rt_coupling_pp) then
+                 if(static) then
                     call star_RT_vsweep_pp( &
                          ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
                  else
@@ -571,7 +571,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
      end do
      ! End loop over grids
      if(ip > 0) then
-        if(rt_pp .or. rt_coupling_pp) then
+        if(static) then
            call star_RT_vsweep_pp( &
                 ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
         else
@@ -1440,7 +1440,7 @@ SUBROUTINE update_UVsrc(a_exp)
   enddo
 
   call updateRTPac_CoolConstants     
-  if(redshift .gt. UV_maxz .and. .not. rt_pp) then
+  if(redshift .gt. UV_maxz .and. .not. static) then
      ! Turn on RT after z=UV_maxz
      !rt=.false.
   else if(.not. rt) then

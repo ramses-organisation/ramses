@@ -24,9 +24,12 @@ subroutine rt_hydro_flag(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:nvar),save::uug,uum,uud
+  real(dp),dimension(1:nvector,1:nrtvar),save::uug,uum,uud
+  ! ----------------------------------------------------------------------
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
+  if(.not. rt_refine .or. aexp.lt.rt_refine_aexp) return
+
   ! Rescaling factors
   dx=0.5d0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -47,8 +50,11 @@ subroutine rt_hydro_flag(ilevel)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  if( rt_err_grad_n==-1.0 )return
-  if( aexp .lt. rt_refine_aexp) return 
+  if( rt_err_grad_n==-1.0 .and.      &
+      rt_err_grad_xHII==-1.0 .and.   &
+      rt_err_grad_xHI==-1.0          &
+  & ) &
+      return
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -102,23 +108,6 @@ subroutine rt_hydro_flag(ilevel)
            call rt_hydro_refine(uug,uum,uud,ok,ngrid)
         end do
      
-        ! Apply geometry-based refinement criteria
-        if(r_refine(ilevel)>-1.0)then
-           ! Compute cell center in code units
-           do idim=1,ndim
-              do i=1,ngrid
-                 xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-              end do
-           end do
-           ! Rescale position from code units to user units
-           do idim=1,ndim
-              do i=1,ngrid
-                 xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-              end do
-           end do
-           call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
-        end if
-
         ! Count newly flagged cells
         nok=0
         do i=1,ngrid

@@ -38,12 +38,19 @@ SUBROUTINE rt_init
      call clean_stop
   endif
 
+  if(rt .and. .not. hydro) then
+     if(myid==1) then
+        write(*,*) 'hydro must be turned on when running radiative transfer.'
+        write(*,*) 'STOPPING!'
+     endif
+     call clean_stop
+  endif
+
   ! Update hydro variable to the initial ionized species
   var_region(1:rt_nregion,iIons-ndim-2)=rt_xion_region(1:rt_nregion)
-
   do i=1,nPacs  ! Starting indices in uold and unew of each photon package
      iPac(i)=1+(ndim+1)*(i-1)
-     if(nrestart.eq.0) then 
+     if(nrestart.eq.0) then
         rtuold(:,iPac(i))=smallNp
      endif
   end do
@@ -59,7 +66,6 @@ SUBROUTINE rt_init
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
   tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0
-
 END SUBROUTINE rt_init
 
 !************************************************************************
@@ -126,14 +132,15 @@ SUBROUTINE read_rt_params(nml_ok)
   implicit none
   logical::nml_ok
 !------------------------------------------------------------------------
-  namelist/rt_params/rt, rt_pp, rt_coupling_method, rt_star, rt_esc_frac&
+  namelist/rt_params/rt, rt_star, rt_esc_frac                           &
        & ,rt_flux_scheme, rt_smooth, rt_is_outflow_bound, rt_cooling    &
-       & ,rt_max_subcycles, rt_courant_factor, rt_c_fraction, rt_otsa   &
-       & ,sedprops_update, hll_evals_file, sed_dir, uv_file             &
-       & ,rt_UVsrc_nHmax, nUVpacs, rt_freeflow                          &
-       & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS       &
-       & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII    &
-       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                 &
+       & ,rt_TConst, rt_max_subcycles, rt_courant_factor                &
+       & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file       &
+       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, rt_freeflow        &
+       & ,rt_output_coolstats, upload_equilibrium_x, X, Y               &
+       & ,rt_is_init_xion, rt_UV_nhSS, rt_err_grad_n, rt_floor_n        &
+       & ,rt_err_grad_xHII, rt_floor_xHII,rt_err_grad_xHI               &
+       & ,rt_floor_xHI, rt_refine_aexp                                  &
        ! RT regions (for initialization)
        & ,rt_nregion, rt_region_type                                    &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center             &
@@ -154,31 +161,8 @@ SUBROUTINE read_rt_params(nml_ok)
   read(1,NML=rt_params,END=101)
 101 continue                                   ! No harm if no rt namelist
 
-  rt_coupling_full=.false.  !
-  rt_coupling_pp=.false.    !       These are all false if not rt or rt-pp
-  rt_coupling_adc=.false.   !
-  rt_coupling_dtrt=.false.  !
-
   if(nPacs.le.0) rt=.false. ! No sense in doing rt if there are no photons
-  if(rt_pp) rt=.true.
-  if(.not. rt .and. .not. rt_star) then
-     rt_pp=.false.
-     sedprops_update=-1
-  endif
-  !if(rt  .or. rt_star .and. .not. rt_pp) then
-     select case(rt_coupling_method)
-     case(:1)
-        rt_coupling_full=.true.
-     case(2)
-        rt_coupling_pp=.true.
-        if(myid==1 .and. (rt_star .or. rt)) write(*,*) &
-             'I suggest you use rt_max_subcycle with this RT method'
-     case(3)
-        rt_coupling_adc=.true.
-     case(4:)
-        rt_coupling_dtrt=.true.
-     end select
-  !endif
+  if(.not. rt .and. .not. rt_star) sedprops_update=-1
 
   if(rt_err_grad_n .gt. 0. .or. rt_err_grad_xHII .gt. 0.                 &
        .or. rt_err_grad_xHI .gt. 0.) rt_refine=.true.
@@ -186,6 +170,7 @@ SUBROUTINE read_rt_params(nml_ok)
   rt_c_cgs = c_cgs * rt_c_fraction
   !call update_rt_c
   if(haardt_madau) rt_UV_hom=.true.                     ! UV in every cell
+  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
   call read_rt_pacs(nml_ok)
 END SUBROUTINE read_rt_params
 
@@ -277,7 +262,6 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -440,7 +424,6 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
               ! Photon input is in # per sec...need to convert to uu
               uu(i,pac_ind)=uu(i,pac_ind)                                &
                             + rt_n_source(k) / scale_Np * r / vol * dt_cgs
-              ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,pac_ind+1)=uu(i,pac_ind+1) + rt_u_source(k) * rt_c    &
                             * rt_n_source(k) / scale_Np * r / vol * dt_cgs
 #if NDIM>1

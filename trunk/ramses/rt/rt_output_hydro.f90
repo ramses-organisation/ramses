@@ -173,6 +173,80 @@ SUBROUTINE write_PacProps(update,lun)
 
 END SUBROUTINE write_PacProps
 
+!*************************************************************************
+SUBROUTINE output_rt_stats
+
+! Output and reset rt statistics. These are cooling statistics and
+! star rt feedback statistics
+!-------------------------------------------------------------------------
+  use amr_commons
+  use rt_parameters
+  implicit none
+  integer*8:: max_all, tot_all, cells_all,loopCodes_tot
+  integer*8:: loopCodes_all(4)
+  integer::info
+  real(dp)::step_nPhot_all, step_nStar_all, step_mStar_all
+  real(dp)::scale_l, scale_t, scale_d, scale_v, scale_nh, scale_T2
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+!-------------------------------------------------------------------------
+  ! Cooling statistics:
+  if(rt_output_coolstats) then
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     cells_all=0 ; tot_all=0 ; max_all=0 ; loopCodes_all=0
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(n_cool_cells,         cells_all,     1, &
+          MPI_INTEGER,          MPI_SUM, MPI_COMM_WORLD, info)
+     call MPI_ALLREDUCE(tot_cool_loopcnt,     tot_all,       1, &
+          MPI_INTEGER,          MPI_SUM, MPI_COMM_WORLD, info)
+     call MPI_ALLREDUCE(max_cool_loopcnt,     max_all,       1, &
+          MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
+     call MPI_ALLREDUCE(loopCodes,            loopCodes_all, 4, &
+          MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
+     n_cool_cells     = cells_all ; tot_cool_loopcnt = tot_all
+     max_cool_loopcnt = max_all   ; loopCodes        = loopCodes_all
+#endif
+     if(myid .eq. 1) then
+        if(n_cool_cells .eq. 0) n_cool_cells=1.
+        write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt
+        loopCodes_tot = SUM(loopCodes)
+        if(loopCodes_tot .gt. 0) then
+           write(*, 112) dble(loopCodes)/dble(loopCodes_tot)
+        else
+           write(*, 112) dble(loopCodes)
+        endif
+     endif
+     max_cool_loopcnt=0; tot_cool_loopcnt=0; n_cool_cells=0; loopCodes(:)=0
+  endif ! output_coolstats
+111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt=',L)
+112 format(' Subcycling codes [Np, T, xH, xHe]% = ', 4(f7.3, ''))
+
+  ! Stellar rt feedback statistics:
+  if(showSEDstats .and. rt_star) then
+     step_nPhot_all=0.d0 ; step_nStar_all=0.d0 ; ; step_mStar_all=0.d0
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(step_nPhot,           step_nPhot_all,  1,        &
+          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+     call MPI_ALLREDUCE(step_nStar,           step_nStar_all,  1,        &
+          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+     call MPI_ALLREDUCE(step_mStar,           step_mStar_all,  1,        &
+          MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+     step_nPhot  = step_nPhot_all
+     step_nStar  = step_nStar_all
+     step_mStar  = step_mStar_all
+#endif
+     tot_nPhot = tot_nPhot + step_nPhot
+     if(myid .eq. 1)                                                     &
+          write(*, 113) step_nPhot, tot_nPhot, step_nStar/dtnew(levelmin)&
+          ,step_mStar/dtnew(levelmin), dtnew(levelmin)*scale_t/(3.15569d7)
+     step_nPhot = 0.d0 ; step_nStar = 0.d0 ; step_mStar = 0.d0
+  endif
+113 format(' SED feedback(phot/step/1d50, phot/tot/1d50, *, */Msun , dt[yr])= '  &
+                                                             ,10(1pe9.2))
+END SUBROUTINE output_rt_stats
+
+
 
 
 

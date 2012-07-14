@@ -99,6 +99,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   use amr_parameters
   use hydro_parameters
   use const
+#ifdef RT
+  use rt_parameters
+#endif
   implicit none
   ! dummy arguments
   integer nn
@@ -189,6 +192,34 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
         end do
      end do
   end if
+
+#ifdef RT 
+  ! Ionization state (only Hydrogen)                              
+  if(rt_err_grad_xHII >= 0.) then !--------------------------------------- 
+     do k=1,nn                                                    
+        dg=min(1.d0,max(0.d0,ug(k,iIons)))                        
+        dm=min(1.d0,max(0.d0,um(k,iIons)))                        
+        dd=min(1.d0,max(0.d0,ud(k,iIons)))                        
+        error=2.0d0*MAX( &                                        
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &             
+             & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
+        ok(k) = ok(k) .or. error > rt_err_grad_xHII  
+     end do                                                       
+  end if                                                          
+
+  ! Neutral state (only Hydrogen)                                 
+  if(rt_err_grad_xHI  >= 0.) then !---------------------------------------  
+     do k=1,nn                                                    
+        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))                 
+        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))                 
+        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))                 
+        error=2.0d0*MAX( &                                        
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &              
+             & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )                
+        ok(k) = ok(k) .or. error > rt_err_grad_xHI                
+     end do                                                      
+  end if                                                         
+#endif
 
 end subroutine hydro_refine
 !###########################################################

@@ -277,6 +277,12 @@ subroutine rt_init_flow_fine(ilevel)
      ! End loop over grids
 
   end if
+
+  if(rt_is_init_xion .and. rt_nregion .eq. 0) then
+     if(myid==1 .and. ilevel.eq.nlevelmax) &
+          write(*,*) 'Initializing ionization states from T profile'
+     call rt_init_xion(ilevel)
+  endif
   
 111 format('   Entering rt_init_flow_fine for level ',I2)
 
@@ -305,9 +311,14 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
   integer::i,j,k
   real(dp)::vol,area,r,xn,yn,zn,en
 !------------------------------------------------------------------------
+  ! Set some (tiny) default values in case n_region=0
+  do i=1,nPacs  ! Starting indices in uold and unew of each photon package
+     uu(1:nn,iPac(i))=smallNp
+  end do
   ! Loop over RT regions
   do k=1,rt_nregion
      
+     if (rt_n_region(k).le.0.0) rt_n_region(k)=smallnp
      ! For "square" regions only:
      if(rt_region_type(k) .eq. 'square')then
         ! Exponent of choosen norm

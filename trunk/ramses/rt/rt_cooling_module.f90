@@ -277,6 +277,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   nI(3)  = nHe*dU(4)                                             !  nHeIII
   mu= 1./(X*(1.+dU(2)) + 0.25*Y*(1.+dU(3)+2.*dU(4)))   
   TK = U(1) * mu                                            !  Temperature
+  if(rt_isTconst) TK=rt_Tconst                         !  Force constant T
   ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4))                    !  Electron density
   neInit=ne
  
@@ -346,7 +347,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(dUU .gt. 1.) then                                       ! 10% rule
         code=2 ; dU=dU-U; RETURN
      endif
-     TK=dU(1)*mu
+     if(.not. rt_isTconst) TK=dU(1)*mu
   endif
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
@@ -380,7 +381,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   if(isHe) then
      ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4)) ! Update ne because of changed xhii 
      mu= 1./(X*(1.+dU(2)) + 0.25*Y*(1.+dU(3)+2.*dU(4)))  
-     TK=dU(1)*mu                       !  Update TK because of changed  mu
+     if(.not. rt_isTconst) TK=dU(1)*mu !  Update TK because of changed  mu
 
      !(iv) UPDATE xHeI ***************************************************
      if(rt_OTSA) then

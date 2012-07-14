@@ -46,6 +46,7 @@ subroutine cooling_fine(ilevel)
 
 #ifdef RT
      if(rt.and.star.and.ilevel==levelmin)call update_SED_Pacprops
+     if(ilevel==levelmin) call output_rt_stats
 #endif
 
 111 format('   Entering cooling_fine for level',i2)
@@ -243,21 +244,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iPac(ivar))
               U(i,iFpU(ivar)) = scale_Fp * sqrt(sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
            enddo
-           if(rt_smooth) then                              ! Smooth RT update                               
-              do i=1,nleaf   ! Calc addition per sec to Np, Fp for current dt                               
+           if(rt_smooth) then                           ! Smooth RT update                               
+              do i=1,nleaf !Calc addition per sec to Np, Fp for current dt                               
                  Npnew = scale_Np *rtunew(ind_leaf(i),iPac(ivar))
                  Fpnew = scale_Fp * sqrt(sum((rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
                  dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
-                 dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude                               
+                 dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude
                  ! Update flux vector to get the right direction                                            
                  rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
                  Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling                               
-              enddo
+              end do
            else
               do i=1,nleaf
                  Fp_precool(i,ivar)=U(i,iFpU(ivar)) ! For update after solve_cooling                               
               end do
-           endif
+           end if
         end do
 
         if(cooling .and. delayed_cooling) then
@@ -265,7 +266,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            do i=1,nleaf
               if(uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1) .gt. 1d-3)cooling_on(i)=.false.
            end do
-        endif
+        end if
         if(isothermal)cooling_on(1:nleaf)=.false.
 
      endif

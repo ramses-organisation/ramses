@@ -38,17 +38,12 @@ module rt_parameters
   real(dp),parameter,dimension(nIons)::ionEvs=(/13.60d0, 24.59d0, 54.42d0/)
 
   ! RT_PARAMS namelist--------------------------------------------------------------------
-  logical::rt_pp=.false.               ! Post-processing (true) or coupled (false)?      !
   logical::rt_cool_only=.false.        ! Don't propagate photons but use them in cooling !
   logical::output_iState=.false.       ! Set to true if initial snapshot is to be output !
   logical::rt_smooth=.false.           ! Smooth the discrete RT update of op. splitting  !
-  integer::rt_coupling_method=2        ! 1==full coupling (not working), 2==pp coupling, !
-                                       ! 3=adaptive c, 4=rt_dt                           !
-  logical::rt_coupling_full=.false.    ! Full (slow and complicated) RT-hydro coupling?  !
-  logical::rt_coupling_pp=.false.      ! RT p-processing after each coarse hydro timestep!
-  logical::rt_coupling_adc=.false.     ! RT timestep = hydro timestep                    !
-  logical::rt_coupling_dtrt=.false.    ! Hydro timestep = RT timestep                    !
   logical::rt_cooling=.true.           ! Activate cooling inside radiation step          !
+  real(dp)::rt_Tconst=-1               ! If pos. use this value for all T-depend. rates  !
+  logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
   logical::rt_transp_ISM=.false.       ! Make polytropic cells transparent to RT         !
   real(dp)::rt_esc_frac=1.d0           ! Escape fraction of light from stellar particles !
@@ -137,6 +132,7 @@ module rt_parameters
 
 
   ! Cooling statistics: avg loop # per cell, maximum loop #, # of cooling calls-----------
+  logical::rt_output_coolstats=.false.    ! Output cooling statistics                     !
   integer*8::tot_cool_loopcnt=0,max_cool_loopcnt=0,n_cool_cells=0
   integer*8,dimension(4)::loopCodes=0
 
