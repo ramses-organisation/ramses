@@ -100,7 +100,8 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
   aend=astart_sim
   dasura=0.02d0
 
-  !if(rt_UV_hom .or. rt_isDiffuseUVsrc) call init_UV_tables()!UV background
+  ! Initialize UV background
+  if(rt_UV_hom .or. rt_isDiffuseUVsrc) call init_UV_backhround()
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL,  &
