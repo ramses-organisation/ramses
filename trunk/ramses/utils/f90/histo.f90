@@ -22,7 +22,7 @@ program histo_main
   real::tpoly=0d0, npoly=1.0
   
   integer::nx_sample=0,ny_sample=0,nz_sample=0
-  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
+  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin
@@ -433,7 +433,11 @@ program histo_main
                       & x(i,2)>yymin.and.x(i,2)<yymax.and. &
                       & x(i,3)>zzmin.and.x(i,3)<zzmax
                  if(ok_cell)then
-                    xx=log10(rho(i)/1.66d-24*0.76)
+                    if (gcc==0)then
+                       xx=log10(rho(i)/1.66d-24*0.76)
+                    else
+                       xx=log10(rho(i))
+                    end if
                     yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24 &
                          & -tpoly*(rho(i)/1.66d-24*0.76/npoly))
                     dxx=(xx-dymin)/(dymax-dymin)*dble(nhx)
@@ -566,6 +570,8 @@ contains
           read (arg,*) npoly
        case ('-fil')
           read (arg,*) filetype
+       case ('-gcc') ! if set to one, density output in g/cc
+          read (arg,*) gcc
        case default
           print '("unknown option ",a2," ignored")', opt
 

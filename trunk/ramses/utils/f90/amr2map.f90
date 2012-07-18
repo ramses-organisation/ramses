@@ -127,9 +127,9 @@ program amr2map
   read(10,*)
   read(10,*)
   read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,*)
+  read(10,'("unit_l      =",E23.15)')scale_l
+  read(10,'("unit_d      =",E23.15)')scale_d
+  read(10,'("unit_t      =",E23.15)')scale_t
   read(10,*)
 
 !  read(10,'("ordering type=",A80)'),ordering
@@ -479,8 +479,10 @@ program amr2map
                     map = var(:,ind,7)*var(:,ind,1)
                  endif
                  metmax=max(metmax,maxval(var(:,ind,7)))
+              case (8) !T/mu map
+                 map = var(:,ind,5)*(scale_l/scale_t)**2/var(:,ind,1)/1.38d-16*1.66d-24
+                 do_max=.true.
               end select
-
               ! Store data map
               do i=1,ngrida
                  ok_cell= .not.ref(i)
