@@ -10,6 +10,7 @@ subroutine init_part
   ! Allocate particle-based arrays.
   ! Read particles positions and velocities from grafic files
   !------------------------------------------------------------
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::npart2,ndim2,ncpu2,kk2,jj2,ii2,ncloud
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip,isink
@@ -28,7 +29,7 @@ subroutine init_part
 
   real(kind=4),allocatable,dimension(:,:)::init_plane
   real(dp),allocatable,dimension(:,:,:)::init_array
-  real(kind=8),dimension(1:nvector,1:3)::xx,vv
+  real(kind=8),dimension(1:nvector,1:3)::xx,vv,xs
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::ixx,iyy,izz
   real(qdp),dimension(1:nvector)::order
@@ -90,6 +91,8 @@ subroutine init_part
      allocate(fsink(1:nsinkmax,1:ndim))
      allocate(acc_rate(1:nsinkmax))
      acc_rate=0.
+     allocate(acc_lum(1:nsinkmax))
+     acc_lum=0.
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
      allocate(level_sink(1:nsinkmax))
@@ -253,6 +256,9 @@ subroutine init_part
      close(ilun)
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
+
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     if(ir_feedback)acc_lum(i)=acc_rate(i)*msink(i)/(3*6.955d10/scale_l)
 
   else     
 
@@ -827,6 +833,29 @@ subroutine init_part
                    vsink(isink,1:ndim),lsink(isink,1:ndim)
            end do
         end if
+
+        ! Loop over sinks
+        do isink=1,nsink
+           xs(1,1:ndim)=xsink(isink,1:ndim)
+           call cmp_cpumap(xs,cc,1)
+           
+           ! Create central cloud particles (negative index)
+           if(cc(1).eq.myid)then
+              npart=npart+1
+              tp(npart)=0.
+              mp(npart)=msink(isink)     ! Mass
+              levelp(npart)=levelmin
+              idp(npart)=-isink          ! Identity
+              xp(npart,1)=xsink(isink,1) ! Position
+              xp(npart,2)=xsink(isink,2)
+              xp(npart,3)=xsink(isink,3)
+              vp(npart,1)=vsink(isink,1) ! Velocity
+              vp(npart,2)=vsink(isink,2)
+              vp(npart,3)=vsink(isink,3)
+           endif
+           
+        end do
+        
      end if
   end if
 end subroutine init_part

@@ -138,30 +138,18 @@ subroutine init_tree
      call add_list(ind_part,ind_grid,ok,npart1)
   end do
 
+  if (sink.and.nsink>0.and.nrestart==0)call create_cloud(1)
 
   ! Sort particles down to levelmin
   do ilevel=1,levelmin-1
+     call make_tree_fine(ilevel)
+     call virtual_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
   end do
 
-
-  if (sink.and.nsink>0.and.nrestart==0)then
-     call create_part_from_sink
-     call create_cloud(1)
-
-     do ilevel=1,levelmin-1
-        call make_tree_fine(ilevel)
-        call kill_tree_fine(ilevel)
-        call virtual_tree_fine(ilevel)
-     end do
-  end if
-  
-
-
-
-  !show particle tree at startup
+!!  show particle tree at startup
   ! do ilevel=1,nlevelmax
   !    call count_parts(ilevel)
   ! end do

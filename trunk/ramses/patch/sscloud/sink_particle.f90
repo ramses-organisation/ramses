@@ -126,7 +126,7 @@ subroutine create_part_from_sink
   use amr_commons
   use pm_commons
   use hydro_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH 
+!  use cooling_module, ONLY: XH=>X, rhoc, mH 
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -220,7 +220,7 @@ subroutine create_part_from_sink
 #endif
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" skinks to be created= ",I6," Tot =",I8)')&
+        write(*,'(" sinks to be created= ",I6," Tot =",I8)')&
              & ntot_all,nsink
      endif
   end if
@@ -1648,26 +1648,34 @@ subroutine compute_accretion_rate(ilevel)
   else
      if (ilevel==levelmin)then    
         acc_rate(1:nsinkmax)=acc_rate(1:nsinkmax)/dtnew(levelmin)
-        if(myid==1.and.nsink>0)then
+
+        if(ir_feedback)then
+           do i=1,nsink ! 0.75 and 5 are ratio of infalling energy which is radiated and protostellar radius
+              acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+           end do
+        end if
+
+        if(myid==1.and.nsink>0.and. mod(nstep_coarse,ncontrol)==0)then
            do i=1,nsink
               xmsink(i)=msink(i)
            end do
            
            call quick_sort(xmsink(1),idsink_sort(1),nsink)
            write(*,*)'Number of sink = ',nsink
-           write(*,'(" ========================================================================================================================================= ")')
-           write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l|  acc_rate[Msol/y]  ")')
-           write(*,'(" ========================================================================================================================================= ")')
+           write(*,'(" ====================================================================================================================================================== ")')
+           write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l| acc_rate[Msol/y] acc_lum[Lsol]  ")')
+           write(*,'(" ====================================================================================================================================================== ")')
            do i=nsink,1,-1
               isink=idsink_sort(i)
               l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d-99
               rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-              write(*,'(I5,2X,F9.5,3(2X,F10.8),3(2X,F7.4),2X,F13.5,3(2X,F6.3),3X,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
+              write(*,'(I5,2X,F9.5,3(2X,F10.8),3(2X,F7.4),2X,F13.5,3(2X,F6.3),2X,E11.3,4x,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
                    xsink(isink,1:ndim),vsink(isink,1:ndim),&
                    rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
-                   acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.
+                   acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33
+              
            end do
-           write(*,'(" ========================================================================================================================================= ")')
+           write(*,'(" ====================================================================================================================================================== ")')
         endif
         acc_rate=0.
      end if
@@ -2105,7 +2113,7 @@ subroutine make_sink_from_clump(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH 
+!  use cooling_module, ONLY: XH=>X, rhoc, mH 
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
