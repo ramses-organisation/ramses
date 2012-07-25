@@ -48,9 +48,16 @@ subroutine hydro_flag(ilevel)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
+  if(    .not. neq_chem  .and.&
+       & err_grad_d==-1.0.and.&
+       & err_grad_p==-1.0.and.&
+       & err_grad_u==-1.0.and.&
+       & jeans_refine(ilevel)==-1.0 )return
+
 #ifdef RT 
   if( aexp .lt. rt_refine_aexp) return    
-  if(    err_grad_d==-1.0.and.          &
+  if(    neq_chem        .and.          &
+       & err_grad_d==-1.0.and.          &
        & err_grad_p==-1.0.and.          &
        & err_grad_u==-1.0.and.          &
        & jeans_refine(ilevel)==-1.0.and.&
@@ -58,13 +65,6 @@ subroutine hydro_flag(ilevel)
        & rt_err_grad_xHI==-1.0          & 
   & ) &
       return
-#else
-
-  if(    err_grad_d==-1.0.and.&
-       & err_grad_p==-1.0.and.&
-       & err_grad_u==-1.0.and.&
-       & jeans_refine(ilevel)==-1.0 )return
-
 #endif
 
   ! Loop over active grids

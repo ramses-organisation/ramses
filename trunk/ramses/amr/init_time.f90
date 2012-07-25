@@ -57,7 +57,7 @@ subroutine init_time
   end if
 
   ! Initialize cooling model
-  if(cooling)then
+  if(cooling.and..not.(neq_chem.or.rt))then
      if(myid==1)write(*,*)'Computing cooling model'
      Nmodel=-1
      if(.not. haardt_madau)then
@@ -83,9 +83,8 @@ subroutine init_time
   end if
 
 #ifdef RT
-  ! Initialize radiative transfer model
-  if(rt)then
-     if(myid==1)write(*,*)'Computing radiative transfer model'
+  if(neq_chem.or.rt) then
+     if(myid==1)write(*,*)'Computing thermochemistry model'
      Nmodel=-1
      if(.not. haardt_madau)then
         Nmodel=2

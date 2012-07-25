@@ -38,7 +38,7 @@ subroutine read_params
   call MPI_INIT(ierr)
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
-  myid=myid+1 ! Carefull with this...
+  myid=myid+1 ! Careful with this...
 #endif
 #ifdef WITHOUTMPI
   ncpu=1
@@ -155,9 +155,9 @@ subroutine read_params
   if(clumpfind.and.(.not.pic))then
      pic=.true.
   endif
-  if(pic.and.(.not.poisson))then
-     poisson=.true.
-  endif
+  !if(pic.and.(.not.poisson))then
+  !   poisson=.true.
+  !endif
   if (.not. sink)then
      sink_angular_momentum=.false.
   endif

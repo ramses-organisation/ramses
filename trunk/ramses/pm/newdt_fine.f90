@@ -3,6 +3,9 @@ subroutine newdt_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons, ONLY: gravity_type
+#ifdef RT
+  use rt_parameters, ONLY: rt_advect
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -54,9 +57,10 @@ subroutine newdt_fine(ilevel)
 
 #ifdef RT
   ! Maximum time step for radiative transfer
-  if(rt)then
+  if(rt_advect)then
      call get_rt_courant_coarse(dt_rt)
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_rt/2.0**(ilevel-levelmin))
+     if(static) RETURN
   endif
 #endif
 

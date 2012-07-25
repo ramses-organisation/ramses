@@ -15,6 +15,7 @@ subroutine move_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
+  if(static)return
   if(verbose)write(*,111)ilevel
 
   ! Set new sink variables to old ones

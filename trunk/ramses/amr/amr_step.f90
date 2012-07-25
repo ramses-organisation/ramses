@@ -28,7 +28,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------
   ! Make new refinements and update boundaries
   !-------------------------------------------
-  if(levelmin.lt.nlevelmax)then
+  if(levelmin.lt.nlevelmax .and..not. static)then
      if(ilevel==levelmin.or.icount>1)then
         do i=ilevel,nlevelmax
            if(i>levelmin)then
@@ -222,6 +222,12 @@ recursive subroutine amr_step(ilevel,icount)
      end if
   end if
 
+#ifdef RT
+  ! Turn on RT in case of rt_stars and first stars just created:
+  ! Update photon packages according to star particles
+  if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
+#endif
+
   !----------------------
   ! Compute new time step
   !----------------------
@@ -259,7 +265,10 @@ recursive subroutine amr_step(ilevel,icount)
      call update_time(ilevel)
   end if
 
-
+#ifdef RT
+  ! Add stellar radiation sources
+  if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+#endif
 
   !---------------
   ! Move particles
@@ -274,7 +283,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(hydro)then
 
      ! Hyperbolic solver
-     if(.not.static)call godunov_fine(ilevel)
+     call godunov_fine(ilevel)
 
      ! Reverse update boundaries
 #ifdef SOLVERmhd
@@ -310,12 +319,8 @@ recursive subroutine amr_step(ilevel,icount)
   ! Radiation step
   !---------------
   if(rt)then
-
      ! Hyperbolic solver
-     call rt_godunov_fine(ilevel,dtnew(ilevel))
-
-     ! Add stellar radiation sources
-     if(star) call star_RT_feedback(ilevel,dtnew(ilevel))
+     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
 
      call add_rt_sources(ilevel,dtnew(ilevel))
 
@@ -335,7 +340,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------
   ! Source term in leaf cells only
   !-------------------------------
-  if(rt.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 
   if(hydro)then
      ! Star formation in leaf cells only
@@ -383,7 +388,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------------
   ! Compute refinement map
   !-----------------------
-  call flag_fine(ilevel,icount)
+  if(.not.static) call flag_fine(ilevel,icount)
 
 
   !----------------------------

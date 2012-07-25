@@ -54,6 +54,7 @@ subroutine star_formation(ilevel)
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
   if(ndim.ne.3)return
+  if(static)return
 
   if(verbose)write(*,*)' Entering star_formation'
   

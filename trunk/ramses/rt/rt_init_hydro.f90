@@ -22,7 +22,6 @@ subroutine rt_init_hydro
   logical::ok
 
   if(verbose)write(*,*)'Entering init_rt'
-
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -39,18 +38,23 @@ subroutine rt_init_hydro
   ! For a restart, read rt file
   !--------------------------------
   if(nrestart>0)then
+
+     if(rt_is_init_xion .and. rt_nregion .eq. 0) then
+        if(myid==1) &
+             write(*,*) 'Initializing ionization states from T profile'
+        do ilevel=nlevelmax,1,-1
+           call rt_init_xion(ilevel)
+           call upload_fine(ilevel)
+        end do
+     end if
+
+     if(.not.rt) return
+
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     !BEGIN RT!---------------------------------------------------------RT!
-     ! Try to read rt info file and retrieve nrtvar2
-     fileloc='output_'//TRIM(nchar)//'/info_rt_'//TRIM(nchar)//'.txt'
-     inquire(file=fileloc, exist=ok)
-     open(unit=ilun,file=fileloc,status='old',form='formatted')
-     call read_int( ilun, 'nRTvar', nRTvar2)
-     close(ilun)
-     !END RT!----------------------------------------------------------RT!
-
      fileloc='output_'//TRIM(nchar)//'/rt_'//TRIM(nchar)//'.out'
+     inquire(file=fileloc, exist=ok)
+     if(.not.ok.and.static) return ! May be post-processing of normal RAMSES
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      open(unit=ilun,file=fileloc,form='unformatted')
@@ -59,7 +63,7 @@ subroutine rt_init_hydro
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
-     if(nrtvar2.gt.nrtvar .and. myid==1)then ! OK to drop variables -----RT!
+     if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables 
         write(*,*)'File rt.tmp is not compatible (1)'
         write(*,*)'Found nrtvar  =',nrtvar2
         write(*,*)'Expected=',nrtvar
@@ -113,14 +117,15 @@ subroutine rt_init_hydro
            end if
         end do
      end do
-     close(ilun)
+     close(ilun)  
+
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'rt.tmp read for processor ',myid
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
      if(verbose)write(*,*)'RT backup files read completed'
-  else ! not a restart
-     rt_is_init_xion = .true. !----------------------------------------RT!
+  else ! Not a restart, so initialize the ionization fractions after setup
+     rt_is_init_xion = .true.
   end if
 
 end subroutine rt_init_hydro

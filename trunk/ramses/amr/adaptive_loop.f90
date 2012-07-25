@@ -23,14 +23,16 @@ subroutine adaptive_loop
   call init_time                     ! Initialize time variables
   if(hydro)call init_hydro           ! Initialize hydro variables
 #ifdef RT
-  if(rt)call rt_init_hydro           ! Initialize radiation variables
+  if(rt.or.neq_chem) &
+       call rt_init_hydro            ! Initialize radiation variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
   if(aton)call init_radiation        ! Initialize radiation variables
 #endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
-  if(cooling.or.rt)call set_table(dble(aexp))  ! Initialize cooling look up table
+  if(cooling.and..not.neq_chem) &
+       call set_table(dble(aexp))    ! Initialize cooling look up table
   if(pic)call init_part              ! Initialize particle variables
   if(pic)call init_tree              ! Initialize particle tree
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again
@@ -68,7 +70,7 @@ subroutine adaptive_loop
 #endif
 
      ! Make new refinements
-     if(levelmin.lt.nlevelmax)then
+     if(levelmin.lt.nlevelmax .and..not.static)then
         call refine_coarse
         do ilevel=1,levelmin
            call build_comm(ilevel)
@@ -108,7 +110,7 @@ subroutine adaptive_loop
      ! Call base level
      call amr_step(levelmin,1)
 
-     if(levelmin.lt.nlevelmax)then
+     if(levelmin.lt.nlevelmax .and..not. static)then
         do ilevel=levelmin-1,1,-1
            ! Hydro book-keeping
            if(hydro)then

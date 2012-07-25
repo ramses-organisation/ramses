@@ -59,10 +59,10 @@ subroutine dump_all
         call backup_hydro(filename)
      end if
 #ifdef RT
-     if(rt)then
+     if(rt.or.neq_chem)then
         filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
         call rt_backup_hydro(filename)
-     end if
+     endif
 #endif
      if(pic)then
         filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'

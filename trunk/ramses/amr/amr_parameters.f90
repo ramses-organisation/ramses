@@ -134,6 +134,7 @@ module amr_parameters
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
   logical ::cooling=.false.
+  logical ::neq_chem=.false.  ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
   logical ::metal=.false.
   logical ::bondi=.true.      ! Activate Bondi accretion onto sink particle 

@@ -214,8 +214,9 @@ MODULE SED_module
   use rt_parameters,only:nPacs
   implicit none
 
-  PUBLIC nSEDpacs,                                                       &
-      init_SED_table, inp_SED_table, update_SED_PacProps, star_RT_feedback
+  PUBLIC nSEDpacs                                                        &
+      , init_SED_table, inp_SED_table, update_SED_PacProps               &
+      , update_star_RT_feedback, star_RT_feedback
 
   PRIVATE   ! default
 
@@ -266,7 +267,7 @@ SUBROUTINE init_SED_table()
   inquire(FILE=TRIM(sed_dir)//'/all_seds.dat', exist=ok)
   if(.not. ok)then
      if(myid.eq.1) then 
-        write(*,*)'Cannot access SED directory...',TRIM(sed_dir)
+        write(*,*)'Cannot access SED directory ',TRIM(sed_dir)
         write(*,*)'Directory '//TRIM(sed_dir)//' not found'
         write(*,*)'You need to set the RAMSES_SED_DIR envvar' // &
                   ' to the correct path, or use the namelist.'
@@ -487,6 +488,37 @@ SUBROUTINE update_SED_PacProps()
 END SUBROUTINE update_SED_PacProps
 
 !*************************************************************************
+SUBROUTINE update_star_RT_feedback(ilevel)
+
+! Turn on RT advection if needed.
+! Update photon package properties from stellar populations.
+!-------------------------------------------------------------------------
+  use amr_parameters
+  use amr_commons
+  use rt_parameters
+  use pm_commons
+  integer::ilevel
+  logical,save::pacprops_init=.false.
+!-------------------------------------------------------------------------
+  if(rt_star.and. nstar_tot .gt. 0) then
+     if(.not.rt_advect) then ! Turn on RT advection due to newborn stars:
+        if(myid==1) write(*,*) '*****************************************'
+        if(myid==1) write(*,*) 'Stellar RT turned on at a=',aexp      
+        if(myid==1) write(*,*) '*****************************************'
+        rt_advect=.true.     
+     endif
+     ! Set package props from stellar populations:                 
+     if(sedprops_update .gt. 0 .and. .not.pacprops_init) then
+        call update_SED_Pacprops                                         
+        pacprops_init=.true.        
+     else if(sedprops_update .gt. 0 .and. ilevel==levelmin &
+          .and. mod(nstep_coarse,sedprops_update)==0) then               
+        call update_SED_Pacprops                         
+     endif
+  endif
+END SUBROUTINE update_star_RT_feedback
+
+!*************************************************************************
 SUBROUTINE star_RT_feedback(ilevel, dt)
 
 ! This routine adds photons from radiating stars to appropriate cells in 
@@ -504,8 +536,9 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   integer:: i, ig, ip, npart1, npart2, icpu
   integer,dimension(1:nvector),save:: ind_grid, ind_part, ind_grid_part
 !-------------------------------------------------------------------------
-  if(numbtot(1,ilevel)==0)return ! number of grids in the level
+  if(.not.rt_advect)RETURN
   if(nstar_tot .le. 0 ) return
+  if(numbtot(1,ilevel)==0)return ! number of grids in the level
   if(verbose)write(*,111)ilevel
   ! Gather star particles only.
   ! Loop over cpus
@@ -917,7 +950,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  call rt_units(scale_np, scale_fp)
+  call rt_units(scale_Np, scale_Fp)
   dt_Gyr = dt*scale_t*sec2Gyr
   ! Mesh spacing in ilevel
   dx = 0.5D0**ilevel
@@ -1267,7 +1300,7 @@ SUBROUTINE init_UV_background()
   inquire(file=TRIM(uv_file), exist=ok)
   if(.not. ok)then
      if(myid.eq.1) then 
-        write(*,*)'Cannot access UV file...',TRIM(uv_file)
+        write(*,*)'Cannot access UV file ',TRIM(uv_file)
         write(*,*)'File '//TRIM(uv_file)//' not found'
         write(*,*)'You need to set the RAMSES_UV_FILE envvar' // &
                   ' to the correct path, or use the namelist var uv_file'
@@ -1292,9 +1325,11 @@ SUBROUTINE init_UV_background()
   ! Shift the highest z in the table (10) to reionization epoch,
   ! so that we start injecting at z_reion
   if(z_reion .gt. UV_zeds(UV_nz-1))  UV_zeds(UV_nz) = z_reion
+  UV_minz = UV_zeds(1) ; UV_maxz=UV_zeds(UV_nz)
   
   ! Non-propagated UV background -----------------------------------------
   if(rt_UV_hom) then
+     if(myid==1) print*,'The UV background is homogeneous'
      allocate(UV_rates_table(UV_nz, nIons, 2))
      allocate(tbl(UV_nz, 2))
      do ii = 1, nIons
@@ -1326,14 +1361,18 @@ SUBROUTINE init_UV_background()
 
   ! Propagated UV background----------------------------------------------
   if(rt_UVsrc_nHmax .gt. 0.d0) then ! UV propagation from diffuse cells--
+     if(myid==1) print*,'The UV background is propagated'
+     if(myid==1 .and. rt_UV_hom) then
+          print*,'ATT: UV background is BOTH homogeneous and propagated'
+          print*,'  You likely don''t want this duplicated background...'
+       endif
      rt_isDiffuseUVsrc=.true.
      if(nUVpacs .eq. 0) nUVpacs = npacs ! All pacs are UV pacs by default
      nSEDpacs=nPacs-nUVpacs
-     !SED pacs are the first nSEDpacs, UV pacs are the last nUVpacs
+     ! SED pacs are the first nSEDpacs, UV pacs are the last nUVpacs
      allocate(iUVpacs(nUVpacs)) ; allocate(iUVvars_cool(nUVpacs))
      do i=1,nUVpacs                   !      Initialize UV package indexes
         iUVpacs(i) = nPacs-nUVpacs+i  !  Indexes of UV packages among pacs
-        !iUVvars(i) = nhvar+1+(ndim+1)*(iUVpacs(i)-1) !  UV Np's among vars
         iUVvars_cool(i) = 4+iUVpacs(i)!UV Np's among vars in solve_cooling
      end do
      if(nUVpacs .gt. 0) then
@@ -1342,8 +1381,8 @@ SUBROUTINE init_UV_background()
      endif
 
      ! Initialize photon packages table-----------------------------------
-     allocate(UV_pacs_table(UV_nz, nUVpacs, 2+2*nIons))
-     allocate(tbl(UV_nz, 2+2*nIons))
+     allocate(UV_pacs_table(UV_nz, nUVpacs, 1+2*nIons))                   
+     allocate(tbl(UV_nz, 1+2*nIons))                                      
      do ip = 1,nUVpacs             !                  Loop photon packages
         tbl=0.
         pL0 = pacL0(nSEDpacs+ip)   !  energy interval of photon package ip
@@ -1367,11 +1406,11 @@ SUBROUTINE init_UV_background()
              tbl(UV_nz,2:)=tbl(UV_nz-1,2:)
         UV_pacs_table(:,ip,:)=tbl 
      end do
-     UV_minz = UV_zeds(1) ; UV_maxz=UV_zeds(UV_nz)
      deallocate(tbl) ; deallocate(Ls) ; deallocate(UV)
 
+     call update_UVsrc
      if (myid==1) call write_UVpacs_tables
-  endif
+  endif ! End propagated UV background
 
 END SUBROUTINE init_UV_background
 
@@ -1408,20 +1447,20 @@ SUBROUTINE inp_UV_pacs_table(z, ret)
 END SUBROUTINE inp_UV_pacs_table
 
 !*************************************************************************
-SUBROUTINE update_UVsrc(a_exp)
+SUBROUTINE update_UVsrc
 
 ! Update UV background source properties. So as not to do too much of
 ! this, this should only be done every coarse timestep.
 !-------------------------------------------------------------------------
   use rt_parameters
   use SED_module
-  use amr_commons,only:t,levelmin,myid
+  use amr_commons,only:t,levelmin,myid,aexp
   implicit none
-  real(dp) :: a_exp
   integer::ilevel,i
   real(dp),allocatable,save::UVprops(:,:)      ! Each pack: flux, csn, egy
   real(dp)::scale_Np, scale_Fp, redshift
 !-------------------------------------------------------------------------
+  if(.not.rt_isDiffuseUVsrc) return
   if(nUVPacs.le.0) then
      if(myid==1) write(*,*) 'No packages dedicated to the UV background!'
      RETURN
@@ -1429,28 +1468,30 @@ SUBROUTINE update_UVsrc(a_exp)
   if(.not. allocated(UVprops)) allocate(UVprops(nUVPacs,1+2*nIons))
   call rt_units(scale_Np, scale_Fp)
 
-  redshift=1./a_exp-1.
+  redshift=1./aexp-1.
+
+  ! Turn on RT after z=UV_maxz:
+  if(redshift.le.UV_maxz .and. .not. rt_advect) then
+     if(myid==1) then
+        write(*,*) '*****************************************************'
+        write(*,*) 'Turned on RT advection and the UV background'
+        write(*,*) '*****************************************************'
+     endif
+     rt_advect=.true.
+  endif
+
+  if(redshift .gt. UV_maxz) return ! UV background not turned on yet
 
   call inp_UV_pacs_table(redshift, UVprops)
   UV_fluxes_cgs(:)      = UVprops(:,1)
-  UV_Nphot_cgs          = UV_fluxes_CGS(i)/rt_c_cgs
+  UV_Nphot_cgs          = UV_fluxes_CGS/rt_c_cgs
   do i=1,nIons
      pac_csn(iUVpacs,i) = UVprops(:,0+2*i)
      pac_egy(iUVpacs,i) = UVprops(:,1+2*i)
   enddo
 
   call updateRTPac_CoolConstants     
-  if(redshift .gt. UV_maxz .and. .not. static) then
-     ! Turn on RT after z=UV_maxz
-     !rt=.false.
-  else if(.not. rt) then
-     if(myid==1) then
-        write(*,*) '*****************************************************'
-        write(*,*) 'Turned on radiative transfer and the UV background'
-        write(*,*) '*****************************************************'
-     endif
-     rt=.true.
-  endif
+
   if(myid==1) then
      write(*,*) 'Updated UV fluxes [# cm-2 s-1] to'
      write(*,900) UV_fluxes_cgs

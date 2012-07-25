@@ -27,6 +27,8 @@ SUBROUTINE rt_backup_hydro(filename)
      rt_filename=TRIM(filedir)//'info_rt_'//TRIM(nchar)//'.txt'
      call output_rtInfo(rt_filename)
   endif                                                           
+  
+  if(.not.rt)return
 
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -191,9 +193,9 @@ SUBROUTINE output_rt_stats
   include 'mpif.h'
 #endif
 !-------------------------------------------------------------------------
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   ! Cooling statistics:
   if(rt_output_coolstats) then
-     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      cells_all=0 ; tot_all=0 ; max_all=0 ; loopCodes_all=0
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(n_cool_cells,         cells_all,     1, &
@@ -209,7 +211,7 @@ SUBROUTINE output_rt_stats
 #endif
      if(myid .eq. 1) then
         if(n_cool_cells .eq. 0) n_cool_cells=1.
-        write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt
+        write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt_advect
         loopCodes_tot = SUM(loopCodes)
         if(loopCodes_tot .gt. 0) then
            write(*, 112) dble(loopCodes)/dble(loopCodes_tot)
@@ -219,7 +221,7 @@ SUBROUTINE output_rt_stats
      endif
      max_cool_loopcnt=0; tot_cool_loopcnt=0; n_cool_cells=0; loopCodes(:)=0
   endif ! output_coolstats
-111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt=',L)
+111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt_adv=',L)
 112 format(' Subcycling codes [Np, T, xH, xHe]% = ', 4(f7.3, ''))
 
   ! Stellar rt feedback statistics:

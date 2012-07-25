@@ -9,34 +9,29 @@ SUBROUTINE rt_init
   use rt_flux_module
   use rt_cooling_module, only: update_UVrates
   use SED_module
+  use UV_module
   implicit none
   integer:: i, ilevel, ivar, nvar_count
 !-------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering init_rt'
-  
-  call update_rt_c
-  call update_UVrates(aexp)
-  if(star)call update_SED_Pacprops
-
   ! Count the number of variables and check if ok:
-  nvar_count=ndim+2                        ! Density, momenta and pressure
-  if(metal) nvar_count=nvar_count+1
-  if(delayed_cooling) nvar_count=nvar_count+1
-  iIons=nvar_count+1                       !        Starting inxex of xion
-  nvar_count=nvar_count+nIons              !                   Xion states
-  
-  !if(myid==1) print*,'indexes=',nvar_count,nvar,iIons,i_BCT,i_Lya,nrtvar
-  if(nvar_count .gt. nvar) then 
+  nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
+  iIons=ichem              !         Starting index of xhii, xheii, xheiii
+  nvar_count = iIons+2     !                                  # hydro vars
+  if(nvar_count .ne. nvar) then 
      if(myid==1) then 
         write(*,*) 'rt_init(): Something wrong with NVAR.'
-        write(*,*) 'Should have NVAR=2+ndim+dcool+metal+'
-        write(*,*) 'nIons+1*BCT+2+Lya. STOPPING!'
-        write(*,*) 'Have nvar=',nvar
-        write(*,*) 'Should have nvar>=',nvar_count
+        write(*,*) 'Should have NVAR=2+ndim+1*metal+1*dcool+1*aton+nIons'
+        write(*,*) 'STOPPING!'
+        write(*,*) 'Have NVAR=',nvar
+        write(*,*) 'Should have NVAR=',nvar_count
         write(*,*) 'STOPPING!'
      endif
      call clean_stop
   endif
+
+  if(rt_star .or. sedprops_update .ge. 0) &
+     call init_SED_table    ! init stellar energy distribution properties
 
   if(rt .and. .not. hydro) then
      if(myid==1) then
@@ -45,6 +40,16 @@ SUBROUTINE rt_init
      endif
      call clean_stop
   endif
+  if(rt_star) use_proper_time=.true.    ! Need proper birth time for stars
+  if(rt) neq_chem=.true.        ! Equilibrium cooling doesn't work with RT
+  
+  ! To maximize efficiency, rt advection and rt timestepping is turned off
+  ! until needed.
+  if(rt .and. .not.rt_otsa) rt_advect=.true.                              
+  if(rt .and. rt_nsource .gt. 0) rt_advect=.true.                         
+  if(rt .and. rt_nregion .gt. 0) rt_advect=.true.                         
+  ! UV propagation is checked in set_model
+  ! Star feedback is checked in amr_step
 
   ! Update hydro variable to the initial ionized species
   var_region(1:rt_nregion,iIons-ndim-2)=rt_xion_region(1:rt_nregion)
@@ -56,12 +61,6 @@ SUBROUTINE rt_init
   end do
   if(trim(rt_flux_scheme).eq.'hll') rt_use_hll=.true.
   if(rt_use_hll) call read_hll_eigenvalues
-
-  if(rt_star .or. sedprops_update .ge. 0) then
-     call init_SED_table    ! init stellar energy distribution properties
-     if(sedprops_update .ge. 0) &
-          call update_SED_Pacprops ! set RT props from st. distributions 
-  endif
 
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
@@ -131,29 +130,28 @@ SUBROUTINE read_rt_params(nml_ok)
   use SED_module
   implicit none
   logical::nml_ok
-!------------------------------------------------------------------------
-  namelist/rt_params/rt, rt_star, rt_esc_frac                           &
-       & ,rt_flux_scheme, rt_smooth, rt_is_outflow_bound, rt_cooling    &
-       & ,rt_TConst, rt_max_subcycles, rt_courant_factor                &
-       & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file       &
-       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, rt_freeflow        &
-       & ,rt_output_coolstats, upload_equilibrium_x, X, Y               &
-       & ,rt_is_init_xion, rt_UV_nhSS, rt_err_grad_n, rt_floor_n        &
-       & ,rt_err_grad_xHII, rt_floor_xHII,rt_err_grad_xHI               &
-       & ,rt_floor_xHI, rt_refine_aexp                                  &
+!-------------------------------------------------------------------------
+  namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
+       & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
+       & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
+       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, nSEDpacs            &
+       & ,rt_freeflow, rt_output_coolstats, upload_equilibrium_x, X, Y   &
+       & ,rt_is_init_xion, rt_UV_nhSS, rt_err_grad_n, rt_floor_n         &
+       & ,rt_err_grad_xHII, rt_floor_xHII,rt_err_grad_xHI                &
+       & ,rt_floor_xHI, rt_refine_aexp, convert_birth_times              &
        ! RT regions (for initialization)
-       & ,rt_nregion, rt_region_type                                    &
-       & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center             &
-       & ,rt_reg_length_x, rt_reg_length_y, rt_reg_length_z             &
-       & ,rt_exp_region                                                 &
-       & ,rt_n_region, rt_u_region, rt_v_region, rt_w_region            &
-       & ,rt_xion_region                                                &
+       & ,rt_nregion, rt_region_type                                     &
+       & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
+       & ,rt_reg_length_x, rt_reg_length_y, rt_reg_length_z              &
+       & ,rt_exp_region                                                  &
+       & ,rt_n_region, rt_u_region, rt_v_region, rt_w_region             &
+       & ,rt_xion_region                                                 &
        ! RT source regions (for every timestep)
-       & ,rt_nsource, rt_source_type                                    &
-       & ,rt_src_x_center, rt_src_y_center, rt_src_z_center             &
-       & ,rt_src_length_x, rt_src_length_y, rt_src_length_z             &
-       & ,rt_exp_source, rt_src_pac                                     &
-       & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source            &
+       & ,rt_nsource, rt_source_type                                     &
+       & ,rt_src_x_center, rt_src_y_center, rt_src_z_center              &
+       & ,rt_src_length_x, rt_src_length_y, rt_src_length_z              &
+       & ,rt_exp_source, rt_src_pac                                      &
+       & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound
   ! Read namelist file

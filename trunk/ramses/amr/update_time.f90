@@ -275,7 +275,6 @@ end subroutine cmpmem
 SUBROUTINE getProperTime(tau,tproper)
 ! Calculate proper time tproper corresponding to conformal time tau (both
 ! in code units).
-! Added by joki on nov 18 2009
 !------------------------------------------------------------------------
   use amr_commons
   implicit none
@@ -296,7 +295,6 @@ END SUBROUTINE getProperTime
 SUBROUTINE getAgeGyr(t_birth_proper, age)
 ! Calculate proper time passed, in Gyrs, since proper time t_birth_proper 
 ! (given in code units) until the current time.
-! Added by joki on nov 18 2009
 !------------------------------------------------------------------------
   use amr_commons
   use pm_commons
@@ -318,7 +316,6 @@ END SUBROUTINE getAgeGyr
 SUBROUTINE getAgeSec(t_birth_proper, age)
 ! Calculate proper time passed, in sec, since proper time t_birth_proper 
 ! (given in code units) until the current time.
-! Added by joki on nov 18 2009
 !------------------------------------------------------------------------
   use amr_commons
   use pm_commons

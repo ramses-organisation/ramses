@@ -50,11 +50,7 @@ subroutine rt_hydro_flag(ilevel)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  if( rt_err_grad_n==-1.0 .and.      &
-      rt_err_grad_xHII==-1.0 .and.   &
-      rt_err_grad_xHI==-1.0          &
-  & ) &
-      return
+  if( rt_err_grad_n==-1.0) return
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid

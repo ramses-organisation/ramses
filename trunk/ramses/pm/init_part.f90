@@ -2,6 +2,9 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
+#ifdef RT      
+  use rt_parameters,only: convert_birth_times
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -198,6 +201,13 @@ subroutine init_part
         allocate(xdp(1:npart2))
         read(ilun)xdp
         tp(1:npart2)=xdp
+#ifdef RT      
+        if(convert_birth_times) then
+           do i = 1, npart2 ! Convert birth time to proper for RT postpr.
+              call getProperTime(tp(i),tp(i))
+           enddo
+        endif
+#endif
         if(metal)then
            ! Read metallicity
            read(ilun)xdp

@@ -38,20 +38,16 @@ module rt_parameters
   real(dp),parameter,dimension(nIons)::ionEvs=(/13.60d0, 24.59d0, 54.42d0/)
 
   ! RT_PARAMS namelist--------------------------------------------------------------------
-  logical::rt_cool_only=.false.        ! Don't propagate photons but use them in cooling !
-  logical::output_iState=.false.       ! Set to true if initial snapshot is to be output !
+  logical::rt_advect=.false.           ! Advection of photons?                           !
   logical::rt_smooth=.false.           ! Smooth the discrete RT update of op. splitting  !
-  logical::rt_cooling=.true.           ! Activate cooling inside radiation step          !
   real(dp)::rt_Tconst=-1               ! If pos. use this value for all T-depend. rates  !
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
-  logical::rt_transp_ISM=.false.       ! Make polytropic cells transparent to RT         !
   real(dp)::rt_esc_frac=1.d0           ! Escape fraction of light from stellar particles !
   logical::rt_is_init_xion=.false.     ! Initialize ionization from T profile?           !
   character(LEN=10)::rt_flux_scheme='glf'                                                !
   logical::rt_use_hll=.false.          ! Use hll flux (or the default glf)               !
   logical::rt_is_outflow_bound=.false. ! Make all boundaries=outflow for RT              !
-  real(dp)::rt_max_subcycles=-1        ! Max # of rt-steps in a hydro-step (<1 => no max)!
   real(dp)::rt_courant_factor=0.8d0    ! Courant factor for RT timesteps                 !
   logical::rt_refine=.false.           ! Refine on RT-related conditions?                !
   real(dp)::rt_err_grad_n=-1.0         ! Photon number density gradient for refinement   !
@@ -66,9 +62,10 @@ module rt_parameters
   logical::rt_UV_hom=.false.           ! Homogeneous UV in every cell?                   !
   real(dp)::rt_UV_nHSS=1d10            ! Self Shielding density threshold for hom UV     !
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
-  real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !x
+  real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !
   logical::rt_freeflow=.false.         ! True => disable photon interaction with gas     !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
+  logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper !
 
   character(LEN=128)::hll_evals_file=''! File HLL eigenvalues                            !
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
