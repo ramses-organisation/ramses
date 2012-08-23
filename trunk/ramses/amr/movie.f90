@@ -52,7 +52,7 @@ subroutine output_frame()
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
   call title(imov, istep_str)
-  !Update counter                                                                                                                                              
+  ! Update counter
   imov=imov+1
 
   moviedir = 'movie/'
@@ -61,7 +61,7 @@ subroutine output_frame()
 #ifdef NOSYSTEM
   if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
 #else
-!  if(myid==1)call system(filecmd)
+  if(myid==1)call system(filecmd)
 #endif
 
   moviefile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
