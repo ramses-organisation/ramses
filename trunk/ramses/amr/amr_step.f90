@@ -125,10 +125,17 @@ recursive subroutine amr_step(ilevel,icount)
         ! Dump lightcone
         if(lightcone) call output_cone()
         
-        !! Dump movie frame
-        !if(movie)call output_frame()
      endif
   endif
+
+  !----------------------------
+  ! Output frame to movie dump (without synced levels)
+  !----------------------------
+  if(movie) then
+     if(aexp>=movout(imov))then
+        call output_frame()
+     endif
+  end if
 
   !-----------------------------------------------------------
   ! Put here all stuffs that are done only at coarse time step

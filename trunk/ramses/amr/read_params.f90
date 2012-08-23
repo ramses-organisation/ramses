@@ -30,8 +30,10 @@ subroutine read_params
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
-!!$  namelist/movie_params/f_frame,nx_frame,ny_frame,ivar_frame &
-!!$       & ,xmin_frame,xmax_frame,ymin_frame,ymax_frame,zmin_frame,zmax_frame
+  namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame &
+       & ,deltax_frame,deltay_frame,deltaz_frame,movie &
+       & ,imovout,imov
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -97,9 +99,9 @@ subroutine read_params
   read(1,NML=lightcone_params,END=83)
 83 continue
   rewind(1)
-!!$  read(1,NML=movie_params,END=82)
-!!$82 continue
-!!$  rewind(1)
+  read(1,NML=movie_params,END=82)
+82 continue
+  rewind(1)
   read(1,NML=poisson_params,END=81)
 81 continue
   !-------------------------------------------------
@@ -119,7 +121,12 @@ subroutine read_params
      end do
   endif
   noutput=MIN(noutput,MAXOUT)
-
+  if(imovout>0) then
+     allocate(movout(1:imovout))
+     do i=1,imovout
+        movout(i)=dble(i)/dble(imovout)
+     enddo
+  endif
   !--------------------------------------------------
   ! Check for errors in the namelist so far
   !--------------------------------------------------
