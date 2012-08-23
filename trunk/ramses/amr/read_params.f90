@@ -33,7 +33,7 @@ subroutine read_params
   namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov
+       & ,imovout,imov,tendmov,aendmov
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -122,14 +122,16 @@ subroutine read_params
   endif
   noutput=MIN(noutput,MAXOUT)
   if(imovout>0) then
+     allocate(tmovout(1:imovout))
+     allocate(amovout(1:imovout))
+     tmovout=1d100
+     amovout=1d100
      if(tendmov>0)then
-        allocate(tmovout(1:imovout))
         do i=1,imovout
            tmovout(i)=tendmov*dble(i)/dble(imovout)
         enddo
      endif
      if(aendmov>0)then
-        allocate(amovout(1:imovout))
         do i=1,imovout
            amovout(i)=aendmov*dble(i)/dble(imovout)
         enddo

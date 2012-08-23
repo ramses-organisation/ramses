@@ -61,7 +61,7 @@ subroutine output_frame()
 #ifdef NOSYSTEM
   if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
 #else
-  if(myid==1)call system(filecmd)
+  if(myid==1)call system(moviecmd)
 #endif
 
   moviefile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
@@ -273,7 +273,11 @@ subroutine output_frame()
      open(ilun,file=TRIM(moviefile1),form='unformatted')
      data_single=data_frame(:,:,2)
      rewind(ilun)  
-     write(ilun)aexp,delx,dely,delz
+     if(tendmov>0)then
+        write(ilun)t,delx,dely,delz
+     else
+        write(ilun)aexp,delx,dely,delz
+     endif
      write(ilun)nx_frame,ny_frame
      write(ilun)data_single
      close(ilun)
@@ -282,19 +286,27 @@ subroutine output_frame()
      data_single=data_frame(:,:,3)
 !     write(*,*) 'testing', data_single(100,100)
      rewind(ilun)  
-     write(ilun)aexp,delx,dely,delz
+     if(tendmov>0)then
+        write(ilun)t,delx,dely,delz
+     else
+        write(ilun)aexp,delx,dely,delz
+     endif
      write(ilun)nx_frame,ny_frame
      write(ilun)data_single
      close(ilun)
      ! Output mass weighted metal fraction
      if(metal)then
-     open(ilun,file=TRIM(moviefile3),form='unformatted')
-     data_single=data_frame(:,:,4)
-     rewind(ilun)  
-     write(ilun)aexp,delx,dely,delz
-     write(ilun)nx_frame,ny_frame
-     write(ilun)data_single
-     close(ilun)
+        open(ilun,file=TRIM(moviefile3),form='unformatted')
+        data_single=data_frame(:,:,4)
+        rewind(ilun)  
+        if(tendmov>0)then
+           write(ilun)t,delx,dely,delz
+        else
+           write(ilun)aexp,delx,dely,delz
+        endif
+        write(ilun)nx_frame,ny_frame
+        write(ilun)data_single
+        close(ilun)
      endif
      deallocate(data_single)
   endif
