@@ -151,7 +151,8 @@ module amr_parameters
   ! Movie
   integer::imovout=0             ! Increment for output times
   integer::imov=1                ! Initialize
-  real(kind=8),allocatable,dimension(:)::movout
+  real(kind=8)::tendmov=0.,aendmov=0.
+  real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
   integer::nx_frame=512
   integer::ny_frame=512

@@ -122,10 +122,19 @@ subroutine read_params
   endif
   noutput=MIN(noutput,MAXOUT)
   if(imovout>0) then
-     allocate(movout(1:imovout))
-     do i=1,imovout
-        movout(i)=dble(i)/dble(imovout)
-     enddo
+     if(tendmov>0)then
+        allocate(tmovout(1:imovout))
+        do i=1,imovout
+           tmovout(i)=tendmov*dble(i)/dble(imovout)
+        enddo
+     endif
+     if(aendmov>0)then
+        allocate(amovout(1:imovout))
+        do i=1,imovout
+           amovout(i)=aendmov*dble(i)/dble(imovout)
+        enddo
+     endif
+     if(tendmov==0.and.aendmov==0)movie=.false.
   endif
   !--------------------------------------------------
   ! Check for errors in the namelist so far

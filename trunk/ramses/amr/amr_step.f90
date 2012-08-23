@@ -132,7 +132,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output frame to movie dump (without synced levels)
   !----------------------------
   if(movie) then
-     if(aexp>=movout(imov))then
+     if(aexp>=amovout(imov).or.t>=tmovout(imov))then
         call output_frame()
      endif
   end if
