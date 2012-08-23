@@ -25,13 +25,15 @@ program degrade_grafic
   !  
   !
   !========================================================
-  integer::i1,i2,i3,i,j,k,narg,iargc,i_file
+  integer::i1,i2,i3,i,j,k,narg,iargc,i_file,nfiles
   integer(kind=4)::np1,np2,np3
   integer(kind=4)::np1o2,np2o2,np3o2
   real::dx,dx2,x1o,x2o,x3o,astart,omegam,omegav,h0
   real,dimension(:,:,:),allocatable::f,f2
   character*80::input,output
   character*80,dimension(14)::filename
+  logical::cosmo_ics=.false.
+
 
   narg = iargc()
   IF(narg .NE. 2)THEN
@@ -43,7 +45,7 @@ program degrade_grafic
 
   CALL getarg(1,input)
   CALL getarg(2,output)
-
+  
   !  SAFETY CONDITION
   if (input == output) then 
      write(*,*)'If input and output directories are the same'
@@ -52,22 +54,46 @@ program degrade_grafic
      stop
   endif
 
-  ! READING INPUT FILES
-  filename(1) =TRIM(input)//'/ic_deltab'
-  filename(2) =TRIM(input)//'/ic_velcx'
-  filename(3) =TRIM(input)//'/ic_velcy'
-  filename(4) =TRIM(input)//'/ic_velcz'
-  filename(5) =TRIM(input)//'/ic_velbx'
-  filename(6) =TRIM(input)//'/ic_velby'
-  filename(7) =TRIM(input)//'/ic_velbz'
-  filename(8) =TRIM(output)//'/ic_deltab'
-  filename(9) =TRIM(output)//'/ic_velcx'
-  filename(10)=TRIM(output)//'/ic_velcy'
-  filename(11)=TRIM(output)//'/ic_velcz'
-  filename(12)=TRIM(output)//'/ic_velbx'
-  filename(13)=TRIM(output)//'/ic_velby'
-  filename(14)=TRIM(output)//'/ic_velbz'
   
+  !check wether its cosmoligical ics or not
+
+  INQUIRE(FILE=TRIM(input)//'/ic_deltab', EXIST=cosmo_ics)
+  if(cosmo_ics)then
+     write(*,*)'looking for ic_deltab, ic_velcx,...'
+     ! READING INPUT FILES
+     filename(1) =TRIM(input)//'/ic_deltab'
+     filename(2) =TRIM(input)//'/ic_velcx'
+     filename(3) =TRIM(input)//'/ic_velcy'
+     filename(4) =TRIM(input)//'/ic_velcz'
+     filename(5) =TRIM(input)//'/ic_velbx'
+     filename(6) =TRIM(input)//'/ic_velby'
+     filename(7) =TRIM(input)//'/ic_velbz'
+     filename(8) =TRIM(output)//'/ic_deltab'
+     filename(9) =TRIM(output)//'/ic_velcx'
+     filename(10)=TRIM(output)//'/ic_velcy'
+     filename(11)=TRIM(output)//'/ic_velcz'
+     filename(12)=TRIM(output)//'/ic_velbx'
+     filename(13)=TRIM(output)//'/ic_velby'
+     filename(14)=TRIM(output)//'/ic_velbz'
+  else
+     write(*,*)'looking for ic_d, ic_u,...'
+  ! READING INPUT FILES
+     filename(1) =TRIM(input)//'/ic_d'
+     filename(2) =TRIM(input)//'/ic_u'
+     filename(3) =TRIM(input)//'/ic_v'
+     filename(4) =TRIM(input)//'/ic_w'
+     filename(5) =TRIM(input)//'/ic_p'
+     filename(6) =''
+     filename(7) =''
+     filename(8) =TRIM(output)//'/ic_d'
+     filename(9) =TRIM(output)//'/ic_u'
+     filename(10)=TRIM(output)//'/ic_v'
+     filename(11)=TRIM(output)//'/ic_w'
+     filename(12)=TRIM(output)//'/ic_p'
+     filename(13)=''
+     filename(14)=''
+  end if
+
   open(10,file=filename(1),form='unformatted')
   read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
   close(10)
@@ -80,8 +106,9 @@ program degrade_grafic
   np3o2=np3/2
   dx2=2.*dx
 
-!  do i_file=1,1
-  do i_file=1,4
+  nfiles=5
+  if(cosmo_ics)nfiles=4
+  do i_file=1,nfiles
      write(*,*)'Reading input file '//TRIM(filename(i_file))
      open(10,file=filename(i_file),form='unformatted')
      rewind(10)
