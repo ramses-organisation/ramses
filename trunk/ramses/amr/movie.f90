@@ -65,7 +65,7 @@ subroutine output_frame()
 #endif
 
   moviefile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
-  call output_info(moviefile)
+  if(myid==1)call output_info(moviefile)
 
   moviefile1 = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefile2 = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
