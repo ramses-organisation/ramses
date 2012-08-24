@@ -302,6 +302,26 @@ subroutine init_amr
      read(ilun)mass_sph
      if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
 
+     ! Compute movie frame number if applicable
+     if(imovout>0) then
+        do i=2,imovout
+           if(aendmov>0)then
+              if(aexp>amovout(i-1).and.aexp<amovout(i)) then
+                 imov=i
+              endif
+           else
+              if(t>tmovout(i-1).and.t<tmovout(i)) then
+                 imov=i
+              endif
+           endif
+        enddo
+        if(aendmov>0)then
+           if(myid==1)write(*,*) "Frame number, aexp ",imov, amovout(imov)
+        else
+           if(myid==1)write(*,*) "Frame number, t ",imov, tmovout(imov)
+        endif
+     endif
+
      ! Read levels variables
      read(ilun)headl(1:ncpu,1:nlevelmax2)
      read(ilun)taill(1:ncpu,1:nlevelmax2)
