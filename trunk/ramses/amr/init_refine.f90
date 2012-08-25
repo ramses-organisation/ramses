@@ -122,6 +122,16 @@ subroutine init_refine_2
 
   end do
 
+#ifdef RT
+  if(rt_is_init_xion .and. rt_nregion .eq. 0) then
+     if(myid==1) write(*,*) 'Initializing ionization states from T profile'
+     do ilevel=nlevelmax,1,-1
+        call rt_init_xion(ilevel)
+        call upload_fine(ilevel)
+     end do
+  endif
+#endif  
+
 end subroutine init_refine_2
 !################################################################
 !################################################################

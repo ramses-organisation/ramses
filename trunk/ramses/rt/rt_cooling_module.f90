@@ -283,7 +283,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
      recRad(1:nPacs)=0. ; phI(1:nPacs)=0.              
-     if(.not. rt_OTSA) then ! ----------------------------- Rec. radiation
+     if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
         ! alpha(2) A-B becomes negative around 1K, hence the max
         alpha(2) = MAX(0.d0,comp_AlphaA_HeII(TK)-comp_AlphaB_HeII(TK))
@@ -350,7 +350,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   endif
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
-  if(rt_OTSA .or. .not. rt) then                  !    Recombination rates
+  if(rt_OTSA .or. .not. rt_advect) then           !    Recombination rates
      alpha(1) = comp_AlphaB_HII(TK)
      dalpha   = comp_dAlphaB_dT_HII(TK)
   else                               
@@ -383,7 +383,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(.not. rt_isTconst) TK=dU(1)*mu !  Update TK because of changed  mu
 
      !(iv) UPDATE xHeI ***************************************************
-     if(rt_OTSA) then
+     if(rt_OTSA .or. .not. rt_advect) then
         alpha(2) = comp_AlphaB_HeII(TK)
         alpha(3) = comp_AlphaB_HeIII(TK)
      else                               

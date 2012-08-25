@@ -278,12 +278,6 @@ subroutine rt_init_flow_fine(ilevel)
 
   end if
 
-  if(rt_is_init_xion .and. rt_nregion .eq. 0) then
-     if(myid==1 .and. ilevel.eq.nlevelmax) &
-          write(*,*) 'Initializing ionization states from T profile'
-     call rt_init_xion(ilevel)
-  endif
-  
 111 format('   Entering rt_init_flow_fine for level ',I2)
 
 end subroutine rt_init_flow_fine
