@@ -46,7 +46,7 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof,jumped
+  logical::error,keep_part,eof,jumped,ic_sink=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
@@ -800,6 +800,12 @@ subroutine init_part
         nsink=0                
         if(TRIM(initfile(levelmin)).NE.' ')then
            filename=TRIM(initfile(levelmin))//'/ic_sink.txt'
+        else
+           filename='ic_sink.txt'
+        end if
+        INQUIRE(FILE=filename, EXIST=ic_sink)
+        if (myid==1)write(*,*),'looking for ic_sink.txt: ',filename
+        if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
            if (myid==1)write(*,*)'Reading_file ',filename

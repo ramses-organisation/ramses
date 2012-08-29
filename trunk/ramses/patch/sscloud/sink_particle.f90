@@ -15,7 +15,7 @@ subroutine create_sink
   ! threshold has been crossed. It also removes from the gas the corresponding 
   ! particle mass. On exit, all fluid variables in the cell are modified.
   ! This routine is called only once per coarse step by routine amr_step.
-  ! Romain Teyssier, October 7th, 2007
+  ! Romain Teyssier, October 7th, 2007 
   !----------------------------------------------------------------------------
   ! local constants                                                                
   integer::ilevel,ivar,info,icpu,igrid,npartbound,isink,ii,jj,ilev,totparts
