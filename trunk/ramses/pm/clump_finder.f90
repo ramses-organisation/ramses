@@ -1241,7 +1241,7 @@ subroutine move_back_to_origin(ilevel)
   end do
   !end loop over all particles
 
-  if (verbose)write(*,*),'number of particles moved on ',myid,' = ',nparts
+  if (verbose)write(*,*)'number of particles moved on ',myid,' = ',nparts
 end subroutine move_back_to_origin
 !#########################################################################
 !#########################################################################
