@@ -16,9 +16,19 @@ subroutine create_sink
   ! particle mass. On exit, all fluid variables in the cell are modified.
   ! This routine is called only once per coarse step by routine amr_step.
   ! Romain Teyssier, October 7th, 2007 
+  !
+  ! The sink algorithm has been changed completely!
+  !
+  ! -If sink and clumpfind are both true, the new version is invoked.
+  ! -Clumps which are good for sink production are flagged by the clumpfinder
+  ! -The global sink variables are initialized, gas is accreted from the hostcell only.
+  ! -One true RAMSES particle is created 
+  ! -Sink cloud particles are created
+  ! -Cloud particles are scattered to grid
+  ! -Accretion routine is called
   !----------------------------------------------------------------------------
   ! local constants                                                                
-  integer::ilevel,ivar,info,icpu,igrid,npartbound,isink,ii,jj,ilev,totparts
+  integer::ilevel,ivar,totparts
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
 
@@ -108,7 +118,6 @@ subroutine create_sink
   !update the cloud particle properties at levelmin
   call update_cloud(levelmin)
 
-
   call compute_accretion_rate(levelmin)
   
   if(agn)call agn_feedback
@@ -136,29 +145,16 @@ subroutine create_part_from_sink
   ! of sink particles and stores them at level 1.
   !----------------------------------------------------------------------
   ! local constants
-  real(dp),dimension(1:twotondim,1:3)::xc
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot,icloud
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,isink,inew,nx_loc
-  integer ::ii,jj,kk,ind_cloud,ncloud,indp
+  integer ::icpu,index_sink
+  integer ::i,isink
+  integer ::indp
   integer ::ntot,ntot_all,info
   logical ::ok_free
 
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::d,x,y,z,u,v,w,e,temp,zg,factG
-  real(dp)::dxx,dyy,dzz,drr
-  real(dp)::rsink_max2
-  real(dp)::velc,uc,vc,wc,l_jeans,d_jeans,d_thres,d_sink
-  real(dp)::birth_epoch,xx,yy,zz,rr
-  real(dp),dimension(1:3)::skip_loc
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
-  real(dp)::bx1,bx2,by1,by2,bz1,bz2
-
   real(dp),dimension(1:nvector,1:ndim),save::xs
-
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,cc
-  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::ind_part_cloud,ind_grid_cloud
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector),save::ind_grid,cc
+  integer ,dimension(1:nvector),save::ind_part
+  logical ,dimension(1:nvector),save::ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
  
  
@@ -292,8 +288,8 @@ subroutine create_cloud(ilevel)
   !------------------------------------------------------------------------
   ! This routine creates a cloud of test particle around each sink particle.
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,info
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc
+  integer::igrid,jgrid,ipart,jpart,next_part
+  integer::ig,ip,npart1,npart2,icpu
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -369,19 +365,17 @@ end subroutine create_cloud
 !################################################################
 !################################################################
 !################################################################
-subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
-  integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid
+  integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine create_cloud.
   !-----------------------------------------------------------------------
-  logical::error
-  integer::j,isink,ii,jj,kk,ind,idim,nx_loc,ncloud
+  integer::j,isink,ii,jj,kk,nx_loc,ncloud
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
   ! Particle-based arrays
   integer ,dimension(1:nvector),save::ind_cloud
@@ -464,7 +458,7 @@ subroutine bondi_hoyle(ilevel)
   ! It calls routine bondi_velocity and bondi_average.
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,idim,info
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
+  integer::ig,ip,npart1,npart2,icpu,nx_loc,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   real(dp)::r2,dx_loc,dx_min,scale,factG
 
@@ -688,7 +682,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! each sink particle sits in.
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,isink
-  real(dp)::xxx,mmm,r2,v2,c2,d,u,v,w,e,bx1,bx2,by1,by2,bz1,bz2
+  real(dp)::v2,c2,d,u,v,w,e,bx1,bx2,by1,by2,bz1,bz2
   real(dp)::dx,dx_loc,scale,vol_loc
   logical::error
   ! Grid based arrays
@@ -697,10 +691,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::meff
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
@@ -858,7 +849,7 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::d,u,v=0d0,w=0d0,e,bx1,bx2,by1,by2,bz1,bz2
-  real(dp)::dx,length,scale,weight,r2
+  real(dp)::dx,scale,weight,r2
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
@@ -1171,11 +1162,10 @@ subroutine grow_bondi(ilevel)
   ! This routine performs Bondi-Hoyle accretion of the gas onto 
   ! sink particles. On exit, sink mass and velocity are modified.
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,idim,info,iskip,ind
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
+  integer::igrid,jgrid,ipart,jpart,next_part,info,iskip,ind
+  integer::i,ig,ip,npart1,npart2,icpu,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale
-  real(dp),dimension(1:3)::velocity
+
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1333,10 +1323,10 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! This routine is called by subroutine bondi_hoyle.
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,isink,ivar
-  real(dp)::xxx,mmm,r2,v2,c2,d,u,v,w,e,bx1,bx2,by1,by2,bz1,bz2,dini
+  real(dp)::r2,d,u,v,w,e,bx1,bx2,by1,by2,bz1,bz2,dini
   real(dp),dimension(1:nvar)::z
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::dx,dx_loc,scale,vol_loc,weight,acc_mass,temp
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::dx,dx_loc,scale,vol_loc,weight,acc_mass
   logical::error
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -1344,10 +1334,7 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::meff
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
@@ -1556,8 +1543,7 @@ subroutine compute_accretion_rate(ilevel)
   !------------------------------------------------------------------------
   ! This routine computes the accretion rate on the sink particles.
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,idim,info,iskip,ind
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
+  integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period
   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale
@@ -1647,7 +1633,7 @@ subroutine compute_accretion_rate(ilevel)
      
   else
      if (ilevel==levelmin)then    
-        acc_rate(1:nsinkmax)=acc_rate(1:nsinkmax)/dtnew(levelmin)
+        acc_rate(1:nsink)=acc_rate(1:nsink)/dtnew(levelmin)
 
         if(ir_feedback)then
            do i=1,nsink ! 0.75 and 5 are ratio of infalling energy which is radiated and protostellar radius
@@ -1677,7 +1663,7 @@ subroutine compute_accretion_rate(ilevel)
            end do
            write(*,'(" ====================================================================================================================================================== ")')
         endif
-        !acc_rate=0. taken away because accretion rate must not be set to 0 before dump_all! now in grow_jeans
+        !acc_rate=0. taken away because accretion rate must not be set to 0 before dump_all! now in amr_step just after dump_all
      end if
   endif
 
@@ -1695,13 +1681,13 @@ subroutine grow_jeans(ilevel)
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
-  ! All new...
+  ! This routine checks wether a cell hosting a cloud particle has crossed
+  ! the accretion threshold and accretes mass, center of mass, momentum, angular momentum
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,idim,info,lev
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,isink
+  integer::igrid,jgrid,ipart,jpart,next_part,info,lev
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  integer::ig,ip,npart1,npart2,icpu,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-  real(dp)::r2,density,volume
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
@@ -1709,9 +1695,6 @@ subroutine grow_jeans(ilevel)
   
   if(verbose)write(*,111)ilevel
 
-
-  !important to get right accretion rates from restart
-  if (ilevel==levelmin)acc_rate=0.
 
 
   ! Reset new sink variables
@@ -1835,7 +1818,7 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,factG
-  real(dp)::xxx,mmm,r2,v2,c2,d,u,v=0d0,w=0d0,e,bx1,bx2,by1,by2,bz1,bz2,delta_d
+  real(dp)::v2,d,u,v=0d0,w=0d0,e,bx1,bx2,by1,by2,bz1,bz2,delta_d
   real(dp),dimension(1:nvar)::z
   real(dp)::dx,dx_loc,scale,vol_loc,temp,d_jeans,acc_mass,d_sink,d_thres
   logical::error
@@ -1845,8 +1828,6 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
@@ -2126,31 +2107,31 @@ subroutine make_sink_from_clump(ilevel)
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
-  ! local constants
+  ! This routine uses creates a sink in every cell which was flagged (flag2)
+  ! The global sink variables are updated
+  ! The true RAMSES particle is NOT produced here...
+  !----------------------------------------------------------------------
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot,icloud
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,isink,inew,nx_loc
-  integer ::ii,jj,kk,ind_cloud,ncloud,n_cls
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot
+  integer ::igrid,ix,iy,iz,ind,i,iskip,isink,nx_loc
+  integer ::ii,jj,kk,ncloud
   integer ::ntot,ntot_all,info
   logical ::ok_free
 
   real(dp),dimension(1:nvar)::z
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::d,u,v,w,e,temp,zg,factG,delta_d,v2
-  real(dp)::dxx,dyy,dzz,drr
+  real(dp)::d,u,v,w,e,factG,delta_d,v2
   real(dp)::msink_max2,rsink_max2
   real(dp)::rmax,rmax2
-  real(dp)::velc,uc,vc,wc,l_jeans,d_jeans,d_thres,d_sink
+  real(dp)::d_thres,d_sink
   real(dp)::birth_epoch,xx,yy,zz,rr
   real(dp),dimension(1:3)::skip_loc,x
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
-  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::ind_part_cloud,ind_grid_cloud
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new
   integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
   
   if(.not. hydro)return
@@ -2378,8 +2359,8 @@ subroutine make_sink_from_clump(ilevel)
               d_thres=d_sink
 
               ! Mass of the new sink
+              delta_d=(d-d_thres)*0.0125
               if (d>d_thres)then
-                 delta_d=(d-d_thres)*0.0125
                  msink_new(index_sink)=delta_d*vol_loc
               else
                  write(*,*)'sink production with negative mass'
@@ -2455,6 +2436,7 @@ subroutine make_sink_from_clump(ilevel)
         vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
         delta_mass(isink)=delta_mass_all(isink)
         level_sink(isink)=level_sink_all(isink)
+        acc_rate(isink)=msink_all(isink)
      endif
   end do
 
@@ -2660,10 +2642,9 @@ subroutine update_cloud(ilevel)
   ! level >= ilevel will be moved. Therefore, the sink_jump for all levels >= ilevel
   ! is set ot zero on exit.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink,nx_loc
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,isink,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-  integer::moved_parts,moved_parts_all
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:3)::skip_loc
 
   if(numbtot(1,ilevel)==0)return
@@ -2680,7 +2661,6 @@ subroutine update_cloud(ilevel)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
 
-  moved_parts=0
 
   ! Update particles position and velocity
   ig=0
@@ -2702,11 +2682,10 @@ subroutine update_cloud(ilevel)
               ind_grid(ig)=igrid
            end if
            ip=ip+1
-           moved_parts=moved_parts+1
            ind_part(ip)=ipart
            ind_grid_part(ip)=ig
            if(ip==nvector)then
-              call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call upd_cloud(ind_part,ip)
               ip=0
               ig=0
            end if
@@ -2717,16 +2696,13 @@ subroutine update_cloud(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call upd_cloud(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  
-!  call MPI_ALLREDUCE(moved_parts,moved_parts_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info) 
+  if(ip>0)call upd_cloud(ind_part,ip)
   
   if (myid==1.and.verbose)then
      write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
         write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
-!      write(*,*),'moved parts on that level: ',moved_parts_all,' of total ',ncloud_sink*nsink
   end if
 
   sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0.d0
@@ -2738,15 +2714,14 @@ end subroutine update_cloud
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine upd_cloud(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine upd_cloud(ind_part,np)
   use amr_commons
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold
   implicit none
-  integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer::np
+  integer,dimension(1:nvector)::ind_part
   !------------------------------------------------------------
   !vector loop called by update_cloud
   !------------------------------------------------------------

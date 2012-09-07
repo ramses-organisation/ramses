@@ -22,7 +22,7 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton,sink_angular_momentum
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -176,9 +176,6 @@ subroutine read_params
   !if(pic.and.(.not.poisson))then
   !   poisson=.true.
   !endif
-  if (.not. sink)then
-     sink_angular_momentum=.false.
-  endif
 
   call read_hydro_params(nml_ok)
 #ifdef RT

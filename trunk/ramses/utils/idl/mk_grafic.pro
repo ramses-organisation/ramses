@@ -5,7 +5,7 @@ if not keyword_set(dir) then dir='test'
 vect=float(vect)
 
 if ((size(vect))(0) eq 3) then begin
-    print,'added dimension for mk_graficccc'
+    print,'added dimension for mk_grafic'
     vec=fltarr(1,(size(vect))(1),(size(vect))(2),(size(vect))(3))
     vec(0,*,*,*)=vect
     vect=vec

@@ -231,12 +231,10 @@ subroutine init_part
               read(ilun)xdp ! Read sink velocity
               vsink(1:nsink,idim)=xdp
            end do
-           if (sink_angular_momentum)then
-              do idim=1,3
-                 read(ilun)xdp ! Read sink angular momentum
-                 lsink(1:nsink,idim)=xdp
-              end do
-           endif
+           do idim=1,3
+              read(ilun)xdp ! Read sink angular momentum
+              lsink(1:nsink,idim)=xdp
+           end do
            read(ilun)xdp ! Read sink accumulated rest mass energy
            delta_mass(1:nsink)=xdp
            read(ilun)xdp ! Read sink accretion rate

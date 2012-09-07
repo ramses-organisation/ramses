@@ -117,14 +117,29 @@ subroutine init_hydro
                     else if(ivar==ndim+2)then
                        do i=1,ncache
                           xx(i)=xx(i)/(gamma-1d0)
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
+                          if (uold(ind_grid(i)+iskip,1)>0.)then                          
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
 #if NDIM>1
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
 #endif
 #if NDIM>2
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
 #endif
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)
+                             else if(uold(ind_grid(i)+iskip,2) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#if NDIM>1
+                             else if(uold(ind_grid(i)+iskip,3) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#endif
+#if NDIM>2
+                             else if(uold(ind_grid(i)+iskip,4) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#endif
+                             end if
+                             uold(ind_grid(i)+iskip,ivar)=xx(i)
                        end do
                     else
                        do i=1,ncache

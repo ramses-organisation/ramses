@@ -161,6 +161,7 @@ subroutine rho_fine(ilevel,icount)
 #endif
   if(nboundary==0)then
      rho_tot=multipole(1)/scale**ndim
+     if(debug)write(*,*)'rho_average=',rho_tot
   else
      rho_tot=0d0
   endif

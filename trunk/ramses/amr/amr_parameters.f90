@@ -47,8 +47,6 @@ module amr_parameters
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
   logical::rt      =.false.   ! Radiative transfer activated
-  ! Sink angular momentum is tracked (and must be read from input at restart)
-  logical::sink_angular_momentum =.false. 
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
   logical::tracer  =.false.   ! Tracer particles activated

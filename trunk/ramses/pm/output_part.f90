@@ -133,14 +133,12 @@ subroutine backup_part(filename)
            end do
            write(ilun)xdp ! Write sink velocity
         enddo
-        if (sink_angular_momentum)then 
-           do idim=1,ndim
-              do i=1,nsink
-                 xdp(i)=lsink(i,idim)
-              end do
-              write(ilun)xdp ! Write sink angular momentum
-           enddo
-        endif
+        do idim=1,ndim
+           do i=1,nsink
+              xdp(i)=lsink(i,idim)
+           end do
+           write(ilun)xdp ! Write sink angular momentum
+        enddo
         do i=1,nsink
            xdp(i)=delta_mass(i)
         end do
@@ -181,7 +179,7 @@ subroutine output_sink(filename)
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
 
-  if(verbose)write(*,*)'Entering output_amr'
+  if(verbose)write(*,*)'Entering output_sink'
 
   ilun=myid+10
 
