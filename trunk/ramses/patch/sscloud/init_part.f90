@@ -242,6 +242,10 @@ subroutine init_part
            delta_mass(1:nsink)=xdp
            read(ilun)xdp ! Read sink accretion rate
            acc_rate(1:nsink)=xdp
+!            if(myid==1)then
+!               print*,nsink
+!               print*,xdp
+!            end if
            deallocate(xdp)
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index
@@ -258,8 +262,11 @@ subroutine init_part
      npart=npart2
 
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-     if(ir_feedback)acc_lum(i)=acc_rate(i)*msink(i)/(3*6.955d10/scale_l)
-
+     if(sink .and. ir_feedback)then
+        do i=1,nsink
+           acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+        end do
+     end if
   else     
 
      filetype_loc=filetype

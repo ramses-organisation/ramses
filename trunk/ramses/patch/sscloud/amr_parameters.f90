@@ -134,6 +134,7 @@ module amr_parameters
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
   logical ::cooling=.false.
+  logical ::neq_chem=.false.  ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
   logical ::metal=.false.
   logical ::bondi=.true.      ! Activate Bondi accretion onto sink particle 
@@ -147,6 +148,23 @@ module amr_parameters
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
   real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times
+
+  ! Movie
+  integer::imovout=0             ! Increment for output times
+  integer::imov=1                ! Initialize
+  real(kind=8)::tendmov=0.,aendmov=0.
+  real(kind=8),allocatable,dimension(:)::amovout,tmovout
+  logical::movie=.false.
+  integer::nx_frame=512
+  integer::ny_frame=512
+  integer::levelmax_frame=0
+  integer::ivar_frame=1
+  real(kind=8),dimension(1:4)::xcentre_frame=0d0
+  real(kind=8),dimension(1:4)::ycentre_frame=0d0
+  real(kind=8),dimension(1:4)::zcentre_frame=0d0
+  real(kind=8),dimension(1:4)::deltax_frame=0d0
+  real(kind=8),dimension(1:4)::deltay_frame=0d0
+  real(kind=8),dimension(1:4)::deltaz_frame=0d0
 
   ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1.0 ! Lagrangian threshold

@@ -1677,7 +1677,7 @@ subroutine compute_accretion_rate(ilevel)
            end do
            write(*,'(" ====================================================================================================================================================== ")')
         endif
-        acc_rate=0.
+        !acc_rate=0. taken away because accretion rate must not be set to 0 before dump_all! now in grow_jeans
      end if
   endif
 
@@ -1708,6 +1708,12 @@ subroutine grow_jeans(ilevel)
   if(numbtot(1,ilevel)==0)return
   
   if(verbose)write(*,111)ilevel
+
+
+  !important to get right accretion rates from restart
+  if (ilevel==levelmin)acc_rate=0.
+
+
   ! Reset new sink variables
   msink_new=0d0; vsink_new=0d0; lsink_new=0d0; xsink_new=0.d0; 
 
