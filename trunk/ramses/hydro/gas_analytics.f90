@@ -39,7 +39,7 @@ subroutine gas_ana
   
 
   maxi_dens=0.d0
-  mini_dens=1.d99
+  mini_dens=huge(0.d0)
 
   xx=5.d-1; yy=5.d-1; zz=5.d-1
   vx=0.d0; vy=0.d0; vz=0.d0

@@ -43,7 +43,7 @@ subroutine compute_clump_properties()
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
 
-  min_dens=1.d99;  max_dens=0.d0; n_cells=0
+  min_dens=huge(0.d0);  max_dens=0.d0; n_cells=0
   clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0; center_of_mass=0.d0
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -727,8 +727,8 @@ subroutine write_clump_properties(to_file)
                 ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
                 ,clump_vol_tot(jj)*(scale_l/1.496d13)**3&
                 ,relevance_tot(jj)&
-                ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)+1.d-99)&
-                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)+1.d-99)&
+                ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)+tiny(0.d0))&
+                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)+tiny(0.d0))&
                 ,minmatch_tot(jj)
 
            rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
@@ -1423,7 +1423,7 @@ subroutine allocate_peak_batch_arrays
   saddle_max_tot=0.
   relevance_tot=1.
   clump_size_tot=0.
-  min_dens_tot=1.d99
+  min_dens_tot=huge(0.d0)
   max_dens_tot=0.
   av_dens_tot=0.
   clump_mass_tot=0.
