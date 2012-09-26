@@ -20,28 +20,28 @@ int main(int argc,char *argv[])
   
   /*******************************************/
 
-  CC=     16.;       /* halo concentration   (NFW DM Halo only)   */
+  CC=     10.;       /* halo concentration   (NFW DM Halo only)   */
 					 /* halo concentration      */
-  V200=   125.;      /* circular velocity v_200 (in km/sec) (NFW DM Halo only) */
+  V200=   150.;      /* circular velocity v_200 (in km/sec) (NFW DM Halo only) */
 					 /* circular velocity v_200 (in km/sec) (NFW DM Halo + baryons) */
-  LAMBDA= 0.085;     /* spin parameter          */
-  MD=     0.08;      /* disk mass fraction      */
-  MB=     0.1;       /* bulge mass fraction     */
+  LAMBDA= 0.04;      /* spin parameter          */
+  MD=     0.04;      /* disk mass fraction      */
+  MB=     0.004;     /* bulge mass fraction     */
   JD= MD;            /* disk spin fraction      */
 
-  GasFraction= 0.1;  /* relative content of gas in the disk*/ 
+  GasFraction= 0.2;  /* relative content of gas in the disk*/ 
   DiskHeight=  0.1;  /* thickness of disk in units of radial scale length */
-  BulgeSize=   1.0;  /* bulge scale length in units of disk scale length  */
+  BulgeSize=   0.1;  /* bulge scale length in units of disk scale length  */
 
   N_HALO= 100000;    /* desired number of particles in dark halo */
-  N_DISK=  50000;    /* desired number of collisionless particles in disk */
-  N_GAS=   10000;    /* number of gas particles in disk */ 
-  N_BULGE= 30000;    /* number of bulge particles */ 
+  N_DISK= 100000;    /* desired number of collisionless particles in disk */
+  N_GAS=  100000;    /* number of gas particles in disk */ 
+  N_BULGE= 10000;    /* number of bulge particles */ 
 
   HI_GasMassFraction=    0.1;     /* in terms of the total gas mass */
   HI_GasDiskScaleLength= 1.0;    /* in terms of scale length of the disk */ 
 
-  Qstabilizefactor=1.5;
+  Qstabilizefactor=1.3;
 
   /**********************************************************/
 

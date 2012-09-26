@@ -1,4 +1,4 @@
-7subroutine read_hydro_params(nml_ok)
+subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
   implicit none

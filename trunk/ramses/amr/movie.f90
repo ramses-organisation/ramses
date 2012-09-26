@@ -48,6 +48,7 @@ subroutine output_frame()
   logical::opened
   opened=.false.
   
+#if NDIM > 1
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
@@ -312,6 +313,7 @@ subroutine output_frame()
   endif
 
   deallocate(data_frame)
+#endif
 
 end subroutine output_frame
 

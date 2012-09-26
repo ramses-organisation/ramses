@@ -84,6 +84,8 @@ program part2map
   read(10,'("unit_t      =",E23.15)')unit_t
   read(10,*)
 
+  if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
+
   read(10,'("ordering type=",A80)'),ordering
   write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
@@ -411,7 +413,7 @@ program part2map
                             & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
                        time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
                     else
-                       time=age(i)*unit_t/(365.*24.*3600.*1d9)
+                       time=(time_simu-age(i))*unit_t/(365.*24.*3600.*1d9)
                     endif
                     if(time>0.01)then
                        weight=(time/0.01)**(-0.7)

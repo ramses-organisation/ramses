@@ -1,5 +1,3 @@
-
-
 subroutine make_sink(ilevel)
   use amr_commons
   use pm_commons

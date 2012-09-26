@@ -2,6 +2,7 @@ subroutine read_params
   use amr_commons
   use pm_parameters
   use poisson_parameters
+  use hydro_parameters
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -62,12 +63,29 @@ subroutine read_params
   write(*,*)'                     (c) CEA 1999-2007                         '
   write(*,*)' '
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
+  ! Check nvar is not too small
+#ifdef SOLVERhydro
+  write(*,'(" Using the hydro solver with nvar = ",I2)')nvar
+  if(nvar<ndim+2)then
+     write(*,*)'You should have: nvar>=ndim+2'
+     write(*,'(" Please recompile with -DNVAR=",I2)')ndim+2
+     call clean_stop
+  endif
+#endif
+#ifdef SOLVERmhd
+  write(*,'(" Using the mhd solver with nvar = ",I2)')nvar
+  if(nvar<8)then
+     write(*,*)'You should have: nvar>=8'
+     write(*,'(" Please recompile with -DNVAR=8")')
+     call clean_stop
+  endif
+#endif
   write(*,*)' '
 
   ! Read namelist filename from command line argument
   narg = iargc()
   IF(narg .LT. 1)THEN
-     write(*,*)'You should type: hydro3d input.nml'
+     write(*,*)'You should type: ramses3d input.nml'
      write(*,*)'File input.nml should contain a parameter namelist'
      call clean_stop
   END IF

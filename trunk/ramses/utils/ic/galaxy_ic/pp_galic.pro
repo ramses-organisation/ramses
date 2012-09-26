@@ -16,6 +16,7 @@ indint=where(m eq massint)
 indmax=where(m eq massmax)
 
 xr=[max([min(x),min(y),min(z)]),min([max(x),max(y),max(z)])]
+xr=[-20,20]
 
 window,0,xs=512,ys=512
 plot,x,y,/xs,/ys,/nodata,xr=xr,yr=xr,xtitle='!17x (kpc)',ytitle='!17y (kpc)'
@@ -38,7 +39,7 @@ oplot,y(indmin),z(indmin),color=2,psym=3
 
 window,3,xs=512,ys=512
 readcol,'Vcirc.dat',r,v
-plot,r/1d3,v,xtitl='!17 r (kpc)',ytit='!17V!dcirv!n (km/s)'
+plot,r,v,xtitl='!17 r (kpc)',ytit='!17V!dcirv!n (km/s)',xr=[0,max(xr)]
 
 
 

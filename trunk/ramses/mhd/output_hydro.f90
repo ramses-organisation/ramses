@@ -82,12 +82,14 @@ subroutine backup_hydro(filename)
                  xdp(i)=(gamma-1d0)*e
               end do
               write(ilun)xdp
+#if NVAR > 8
               do ivar=9,nvar ! Write passive scalars if any
                  do i=1,ncache
                     xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
                  end do
                  write(ilun)xdp
               end do
+#endif
            end do
            deallocate(ind_grid, xdp)
         end if

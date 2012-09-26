@@ -1173,7 +1173,7 @@ subroutine grow_bondi(ilevel)
   ! Compute sink accretion rates
   call compute_accretion_rate(0)
 
-  ! Reset new sink variables                                                                        
+  ! Reset new sink variables
   msink_new=0d0; vsink_new=0d0; delta_mass_new=0d0
 
   ! Store initial gas density in unew(:,1)
