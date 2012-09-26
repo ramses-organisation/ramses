@@ -112,6 +112,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
+  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig
+  real(dp)::sigma_d,delta_x,tau_factor,rad_factor
   real(dp)::dx,dx_loc,scale,vol_loc,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -167,6 +169,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Type II supernova specific energy from cgs to code units
   ESN=1d51/(10.*2d33)/scale_v**2
+
+  ! Life time radiation specific energy from cgs to code units
+  ERAD=1d53/(10.*2d33)/scale_v**2
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -329,8 +334,27 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Update hydro variables due to feedback
+
+  ! For IR radiation trapping,
+  ! we use the cell resolution to estimate the column density of gas
+  delta_x=200*3d18
+  if(metal)then
+     tau_factor=kappa_IR*delta_x*scale_d/0.02
+  else
+     tau_factor=kappa_IR*delta_x*scale_d*z_ave
+  endif
+  rad_factor=ERAD/ESN
   do j=1,np
      if(ok(j))then
+
+        ! Infrared photon trapping boost
+        if(metal)then
+           tauIR=tau_factor*max(uold(indp(j),imetal),smallr)
+        else
+           tauIR=tau_factor*max(uold(indp(j),1),smallr)
+        endif
+        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
+        
         ! Specific kinetic energy of the star
         ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
              &          +vp(ind_part(j),2)**2 &
@@ -340,7 +364,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         uold(indp(j),2)=uold(indp(j),2)+mloss(j)*vp(ind_part(j),1)
         uold(indp(j),3)=uold(indp(j),3)+mloss(j)*vp(ind_part(j),2)
         uold(indp(j),4)=uold(indp(j),4)+mloss(j)*vp(ind_part(j),3)
-        uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+        uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ &
+             & ethermal(j)*(1d0+RAD_BOOST)
         
      endif
   end do
