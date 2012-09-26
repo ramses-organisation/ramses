@@ -87,7 +87,7 @@ module cooling_module
   logical :: madau=.false.           
   logical :: weinberg=.false. 
   logical :: weinbergint=.false. 
-  logical :: courty=.true.
+  logical :: courty=.true.  ! Default model
 
   ! Si teyssier ou theuns :
   real(kind=8) :: J0in=1.d-22  ! J0 default 
