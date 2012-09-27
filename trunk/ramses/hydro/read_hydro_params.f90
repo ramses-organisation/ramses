@@ -253,7 +253,7 @@ subroutine read_hydro_params(nml_ok)
   ! bondi accretion conflicts with angular
   ! momentum tracking.
   !---------------------------------------
-  if(bondi .and. myid==1)write(*,*)'sink angular momentum is not tracked when using bondi accretion.'
+  if(sink .and. bondi .and. myid==1)write(*,*)'sink angular momentum is not tracked when using bondi accretion.'
 
 end subroutine read_hydro_params
 
