@@ -143,7 +143,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
        & ,rt_reg_length_x, rt_reg_length_y, rt_reg_length_z              &
-       & ,rt_exp_region                                                  &
+       & ,rt_exp_region, rt_reg_pac                                      &
        & ,rt_n_region, rt_u_region, rt_v_region, rt_w_region             &
        & ,rt_xion_region                                                 &
        ! RT source regions (for every timestep)

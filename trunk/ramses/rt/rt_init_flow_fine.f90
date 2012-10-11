@@ -244,6 +244,7 @@ subroutine rt_init_flow_fine(ilevel)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
+
         ! Loop over cells
         do ind=1,twotondim
            ! Gather cell indices
@@ -263,6 +264,7 @@ subroutine rt_init_flow_fine(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
+
            ! Call initial condition routine
            call rt_condinit(xx,uu,dx_loc,ngrid)
            ! Scatter variables
@@ -299,20 +301,27 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
   use rt_parameters
   implicit none
   integer ::nn
-  real(dp)::dx
+  real(dp)::dx,dx_cgs
   real(dp),dimension(1:nvector,1:nrtvar)::uu
   real(dp),dimension(1:nvector,1:ndim)  ::x
-  integer::i,j,k
-  real(dp)::vol,area,r,xn,yn,zn,en
+  integer::i,k,pac_ind
+  real(dp)::vol,r,xn,yn,zn,en
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
 !------------------------------------------------------------------------
-  ! Set some (tiny) default values in case n_region=0
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  call rt_units(scale_np, scale_fp)
+  dx_cgs=dx*scale_l
+ ! Set some (tiny) default values in case n_region=0
   do i=1,nPacs  ! Starting indices in uold and unew of each photon package
      uu(1:nn,iPac(i))=smallNp
   end do
+
   ! Loop over RT regions
   do k=1,rt_nregion
      
      if (rt_n_region(k).le.0.0) rt_n_region(k)=smallnp
+     pac_ind = ipac(rt_reg_pac(k))
+     if(rt_reg_pac(k) .le. 0 .or. rt_reg_pac(k) .gt. nPacs) cycle
      ! For "square" regions only:
      if(rt_region_type(k) .eq. 'square')then
         ! Exponent of choosen norm
@@ -335,25 +344,22 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            end if
            ! If cell lies within region, inject value
            if(r .lt. 1.0)then
-              do j=1,nPacs
-                 uu(i,iPac(j))=rt_n_region(k)
-                 uu(i,iPac(j)+1)=rt_u_region(k) * rt_c  
+              uu(i,pac_ind)=rt_n_region(k)
+              uu(i,pac_ind+1)=rt_u_region(k) * rt_c  
 #if NDIM>1 
-                 uu(i,iPac(j)+2)=rt_v_region(k) * rt_c
+              uu(i,pac_ind+2)=rt_v_region(k) * rt_c
 #endif
 #if NDIM>2
-                 uu(i,iPac(j)+3)=rt_w_region(k) * rt_c
+              uu(i,pac_ind+3)=rt_w_region(k) * rt_c
 #endif
-              end do
            end if
         end do
      end if
      
      ! For "point" regions only:
      if(rt_region_type(k) .eq. 'point')then
-        ! Volume and area elements
-        vol=dx**ndim
-        area=dx**(ndim-1)
+        ! Volume element
+        vol=dx_cgs**ndim
         ! Compute CIC weights relative to region center
         do i=1,nn
            xn=1.0; yn=1.0; zn=1.0
@@ -365,19 +371,18 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            zn=max(1.0-abs(x(i,3)-rt_reg_z_center(k))/dx,0.0_dp)
 #endif
            r=xn*yn*zn
-
-           ! If cell lies within CIC cloud, inject value
-           do j=1,nPacs
+           if(r .gt. 0.) then
+              ! If cell lies within CIC cloud, inject value
               ! Convert photon number to photon number density
-              uu(i,iPac(j)) = rt_n_region(k)*r/vol 
-              uu(i,iPac(j)+1) = rt_u_region(k)*r/vol*rt_c
+              uu(i,pac_ind) = rt_n_region(k)/scale_Np *r/vol 
+              uu(i,pac_ind+1) = rt_u_region(k)/scale_Np*r/vol*rt_c
 #if NDIM>1
-              uu(i,iPac(j)+2) = rt_v_region(k)*r/vol*rt_c
+              uu(i,pac_ind+2) = rt_v_region(k)/scale_Np*r/vol*rt_c
 #endif
 #if NDIM>2
-              uu(i,iPac(j)+3) = rt_w_region(k)*r/vol*rt_c
+              uu(i,pac_ind+3) = rt_w_region(k)/scale_Np *r/vol*rt_c
 #endif
-           end do
+           endif
         end do
      end if
   end do

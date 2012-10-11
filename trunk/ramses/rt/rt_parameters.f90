@@ -99,6 +99,7 @@ module rt_parameters
   real(dp),dimension(1:MAXREGION)   ::rt_reg_length_y=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_reg_length_z=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_exp_region=2.0
+  integer,dimension(1:MAXREGION)    ::rt_reg_pac=1
   real(dp),dimension(1:MAXREGION)   ::rt_n_region=0.                      ! Photon density
   real(dp),dimension(1:MAXREGION)   ::rt_u_region=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_v_region=0.                         ! Photon flux
