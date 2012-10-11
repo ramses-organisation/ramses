@@ -7,7 +7,7 @@ module rt_cooling_module
 
   private   ! default
 
-  public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq   &
+  public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
          , signc, PHrate, UVrates
 
@@ -39,7 +39,7 @@ module rt_cooling_module
 CONTAINS 
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
+SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
      zreioniz_in, correct_cooling, realistic_ne, h, omegab, omega0,      &
      omegaL, astart_sim, T2_sim)
 ! Initialize cooling. All these parameters are unused at the moment and
@@ -131,7 +131,7 @@ SUBROUTINE update_UVrates
 END SUBROUTINE update_UVrates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar         &
+SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
                           , dt, a_exp, nCell)
 ! Semi-implicitly solve for new temperature, ionization states, 
 ! photon density and flux in a number of cells.
@@ -300,7 +300,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      do i=1,nPacs           ! ------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
                    (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))/(1.d0+dt*phI(i)))
-        dU(iFpU(i)) = MAX(0.d0,(dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*phI(i)))
+        dU(iFpU(i)) = MAX(0d0,(dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*phI(i)))
         ! Check the flux: Too large relative to available photons? 
         q = dU(iFpU(i)) / (rt_c_cgs*dU(iNpU(i)))
         if(q .gt. 1.d0) then           ! Normalize flux if it is too large
@@ -323,7 +323,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   endif
   !(ii) UPDATE TEMPERATURE ***********************************************
   if(c_switch .and. cooling) then
-     Hrate=0.                                              !  Heating rate
+     Hrate=0.                               !  Heating rate [erg cm-3 s-1]
      if(rt) then
         do i=1,nPacs                                       !  Photoheating
            Hrate = Hrate + dU(iNpU(i)) * SUM(nN(:) * PHrate(i,:))
