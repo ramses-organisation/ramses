@@ -22,7 +22,6 @@ SUBROUTINE rt_init
      if(myid==1) then 
         write(*,*) 'rt_init(): Something wrong with NVAR.'
         write(*,*) 'Should have NVAR=2+ndim+1*metal+1*dcool+1*aton+nIons'
-        write(*,*) 'STOPPING!'
         write(*,*) 'Have NVAR=',nvar
         write(*,*) 'Should have NVAR=',nvar_count
         write(*,*) 'STOPPING!'
