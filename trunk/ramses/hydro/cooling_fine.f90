@@ -229,35 +229,35 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            U(i,1) = T2(i)
         end do
      
-        ! Get the ionization fractions                                                                      
+        ! Get the ionization fractions
         do ivar=0,nIons-1
            do i=1,nleaf
               U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/uold(ind_leaf(i),1)
            end do
         end do
      
-        ! Get photon densities and flux magnitudes                                                          
+        ! Get photon densities and flux magnitudes
         do ivar=1,nPacs
            do i=1,nleaf
               U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iPac(ivar))
               U(i,iFpU(ivar)) = scale_Fp &
                    * sqrt(sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
            enddo
-           if(rt_smooth) then                           ! Smooth RT update                               
-              do i=1,nleaf !Calc addition per sec to Np, Fp for current dt                               
+           if(rt_smooth) then                           ! Smooth RT update
+              do i=1,nleaf !Calc addition per sec to Np, Fp for current dt
                  Npnew = scale_Np * rtunew(ind_leaf(i),iPac(ivar))
                  Fpnew = scale_Fp &
                       * sqrt(sum((rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
                  dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
                  dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude
-                 ! Update flux vector to get the right direction                                            
+                 ! Update flux vector to get the right direction
                  rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = &
                       rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
-                 Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling                              
+                 Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling
               end do
            else
               do i=1,nleaf
-                 Fp_precool(i,ivar)=U(i,iFpU(ivar)) ! For update after solve_cooling                              
+                 Fp_precool(i,ivar)=U(i,iFpU(ivar)) ! For update after solve_cooling
               end do
            end if
         end do
@@ -272,7 +272,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         if(isothermal)cooling_on(1:nleaf)=.false.
      endif
 #endif
-
 
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then
