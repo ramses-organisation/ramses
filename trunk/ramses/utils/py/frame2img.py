@@ -51,6 +51,7 @@ def main():
 	# Read image data
 	print "Reading raw Fortran data..."
 	f = fortranfile.FortranFile(infile)
+	[t,dx,dy,dz] = f.read_fortran_record('f8', endian=endianness)
 	[nx,ny] = f.read_fortran_record('i4', endian=endianness)
 	dat = f.read_fortran_record('f4', endian=endianness)
 	f.close()
