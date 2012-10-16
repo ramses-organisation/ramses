@@ -342,10 +342,11 @@ program part2cylprof
            u_r=uu*rx+vv*ry+ww*rz
            u_t=uu*tx+vv*ty+ww*tz
 
-           icirc=int(dble(ncirc)*r_cyl/rmax)+1
-           !epsilon=u_t*unit_v/1d5/vcirc(icirc) !removed per Romain's advice
-           !ivel=int(dble(nvel)*(epsilon+2.)/4.)+1 !removed per Romain's advice
-
+           if(circexist)then
+              icirc=int(dble(ncirc)*r_cyl/rmax)+1
+              epsilon=u_t*unit_v/1d5/vcirc(icirc)
+              ivel=int(dble(nvel)*(epsilon+2.)/4.)+1
+           endif
            if(age(i).ne.0.0d0)then
               if(cosmo)then
                  iii=1
@@ -366,9 +367,11 @@ program part2cylprof
               prof(irad,iu2star)=prof(irad,iu2star)+m(i)*u_r**2
               prof(irad,iv2star)=prof(irad,iv2star)+m(i)*u_t**2
               prof(irad,iw2star)=prof(irad,iw2star)+m(i)*u_z**2
-              if(ivel>0.and.ivel<=nvel)then
-                 circ(irad,ivel)=circ(irad,ivel)+m(i)
-              end if
+              if(circexist)then
+                 if(ivel>0.and.ivel<=nvel)then
+                    circ(irad,ivel)=circ(irad,ivel)+m(i)
+                 end if
+              endif
            else
               prof(irad,idcdm)=prof(irad,idcdm)+m(i)
               prof(irad,iucdm)=prof(irad,iucdm)+m(i)*u_r
@@ -426,10 +429,12 @@ program part2cylprof
      write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=8,14)
   end do
   close(10)
-  open(unit=10,file=TRIM(nomfich)//".circ",form='unformatted')
-  write(10)nrad,nvel
-  write(10)circ
-  close(10)
+  if(circexist)then
+     open(unit=10,file=TRIM(nomfich)//".circ",form='unformatted')
+     write(10)nrad,nvel
+     write(10)circ
+     close(10)
+  endif
 999 format(30(1PE10.3,2X))
 
 contains
