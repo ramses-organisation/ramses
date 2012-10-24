@@ -72,8 +72,7 @@ is  =lonarr(nmax)
 n   =lonarr(nmax)
 nl  =lonarr(nmax,lmax)
 dt  =dblarr(nmax)
-nstar=dblarr(nmax)
-sfr =dblarr(nmax)
+mstar=dblarr(nmax)
 mem =dblarr(nmax)
 memp =dblarr(nmax)
 
@@ -152,12 +151,11 @@ while not eof(1) and j lt nmax do begin
         while ipos eq -1 and jpos eq -1 and not eof(1) do begin
             readf,1,st
             ipos=strpos(st,'Mesh')
-            jpos=strpos(st,'Total stars')
+            jpos=strpos(st,'New star')
         endwhile
         if jpos ne -1 then begin
-            nstar[j]=long(strmid(st,jpos+13,100))
-            kpos=strpos(st,'New stars')
-            sfr[j]=long(strmid(st,kpos+11,100))
+            kpos=strpos(st,'Mass=')
+            mstar[j]=double(strmid(st,kpos+5,100))
         endif
         iipos=ipos
         j=j+1L
@@ -171,6 +169,6 @@ memp=memp/100.
 log={ncpu:ncpu,ntime:ntime, $
      t:t[0:ntime-1],dt:dt[0:ntime-1],aexp:aexp[0:ntime-1],nstep:is[0:ntime-1], $
      noct:n[0:ntime-1],noctl:nl[0:ntime-1,0:ilevmax],ekin:ekin[0:ntime-1],emag:emag[0:ntime-1], $
-     eint:eint[0:ntime-1],epot:epot[0:ntime-1],econs:econs[0:ntime-1],tmean:tmean[0:ntime-1],nstar:nstar[0:ntime-1],sfr:sfr[0:ntime-1],mem:mem[0:ntime-1],memp:memp[0:ntime-1]}
+     eint:eint[0:ntime-1],epot:epot[0:ntime-1],econs:econs[0:ntime-1],tmean:tmean[0:ntime-1],mstar:mstar[0:ntime-1],mem:mem[0:ntime-1],memp:memp[0:ntime-1]}
 
 end
