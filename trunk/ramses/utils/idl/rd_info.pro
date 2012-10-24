@@ -44,7 +44,7 @@
 ;-
 
 
-pro rd_info,file_info,info,dir=dir,verbose=verbose
+pro rd_info,file_info,info,dir=dir,verbose=verbose,nout=nout
   
   if n_params() ne 2 then begin
      DOC_LIBRARY,'rd_info'
