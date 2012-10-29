@@ -87,11 +87,9 @@ subroutine create_sink
   ! Scatter particle to the grid 
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
-     call virtual_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      call virtual_tree_fine(ilevel)
   end do
-
   
   ! Update hydro quantities for split cells
   if(hydro)then
@@ -2737,7 +2735,7 @@ subroutine upd_cloud(ind_part,np)
      endif
   end do
 
-  ! store velocity 
+  ! store velocity (important for non-sink parts)
   do idim=1,ndim
      do j=1,np
         new_vp(j,idim)=vp(ind_part(j),idim)
