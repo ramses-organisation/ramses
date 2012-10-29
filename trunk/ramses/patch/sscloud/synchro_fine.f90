@@ -19,6 +19,7 @@ subroutine synchro_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
   
+
   if(sink)then
      fsink_new=0.
   endif
@@ -391,5 +392,18 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
+
+  ! For sink particle only, overwrite cloud particle velocity with sink velocity
+  if(sink)then
+     do idim=1,ndim
+        do j=1,np
+           isink=-idp(ind_part(j))
+           if(isink>0)then
+              ! Remember that vsink is half time step older than other particles
+              vp(ind_part(j),idim)=vsink(isink,idim)
+           endif
+        end do
+     end do
+  end if
 
 end subroutine sync
