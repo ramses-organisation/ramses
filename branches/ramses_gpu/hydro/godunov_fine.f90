@@ -13,15 +13,43 @@ subroutine godunov_fine(ilevel)
   ! hydro solver. On entry, hydro variables are gathered from array uold.
   ! On exit, unew has been updated. 
   !--------------------------------------------------------------------------
-  integer::i,ivar,igrid,ncache,ngrid
-  integer,dimension(1:nvector),save::ind_grid
+  integer::i,j,ivar,nx_ok,ngrid_ok,ilev,igrid,ncache,ngrid,levelup,iskip
+  integer,dimension(1:nvector)::ind_grid
+  integer,dimension(1:nlevelmax)::ngroup
+  integer,allocatable,dimension(:)::isort
 
   if(numbtot(1,ilevel)==0)return
   if(static)return
   if(verbose)write(*,111)ilevel
 
-  ! Loop over active grids by vector sweeps
+  ! Local constants
+  levelup=max(ilevel-3,1)
   ncache=active(ilevel)%ngrid
+
+  ! Sort grids in large patches
+  allocate(isort(ncache))
+  call sort_group_grid(isort,ilevel,levelup,ngroup,ncache)
+  
+  iskip=1
+  do ilev=levelup,ilevel-1
+     nx_ok=2**(ilevel-1-ilev)
+     ngrid_ok=nx_ok**ndim
+     write(*,*)'=========================================='
+     write(*,999)ilev+1,ngroup(ilev)/ngrid_ok,ngrid_ok
+999 format(' Level',I3,' found ',I6,' groups of size ',I2,'')
+     if(ngroup(ilev)>0)then
+        write(*,*)'=========================================='
+        do i=iskip,iskip+ngroup(ilev)-1,ngrid_ok
+           write(*,888)(active(ilevel)%igrid(isort(i+j-1)),j=1,ngrid_ok)
+888 format(16(I3,1X))
+           igrid=active(ilevel)%igrid(isort(i))
+           call fill_hydro_grid(igrid,nx_ok,ilevel)           
+        end do
+        iskip=iskip+ngroup(ilev)
+     endif
+  end do
+  write(*,*)'=========================================='
+
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -30,9 +58,152 @@ subroutine godunov_fine(ilevel)
      call godfine1(ind_grid,ngrid,ilevel)
   end do
 
+  ! Deallocate local arrays
+  deallocate(isort)
+
 111 format('   Entering godunov_fine for level ',i2)
 
 end subroutine godunov_fine
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel,levelup,ncache
+  integer,dimension(1:ncache)::isort_fin
+  integer,dimension(1:nlevelmax)::ngroup
+  !--------------------------------------------------------------------------
+  !--------------------------------------------------------------------------
+  integer::i,j,ivar,igrid,ngrid,bit_length,ncode,nxny,nx_loc
+  integer::ifirst,ilast,iskip,ngrid_ok,i_new,ifin,ilevelup
+  real(dp),dimension(1:nvector,1:ndim)::x
+  real(qdp),dimension(1:nvector)::order_min,order_max
+  integer,dimension(1:nvector)::ix,iy,iz,ind_grid
+
+  real(qdp),dimension(1:ncache)::hkeys
+  integer,dimension(1:ncache)::isort,isort_new,inext,done
+
+  real(qdp)::hstep,hcomp,hcurr
+  real(kind=8)::bscale
+  real(dp)::scale
+
+  ! Local constants
+  nxny=nx*ny
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+
+  ! Loop over active grids by vector sweeps
+  ifin=0; done=0
+  ngroup=0
+
+  do ilevelup=levelup,ilevel-1
+
+     bscale=2**ilevelup
+     ncode=nx_loc*bscale
+     do bit_length=1,32
+        ncode=ncode/2
+        if(ncode<=1) exit
+     end do
+     if(bit_length==32) then
+        write(*,*)'Error in cmp_minmaxorder'
+#ifndef WITHOUTMPI
+        call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#else
+        stop
+#endif
+     end if
+     
+!!$     write(*,*)'level up=',ilevelup
+!!$     write(*,*)'bit length=',bit_length
+     
+     ! Assign hilbert keys at ilevel-2 to the grid positions and sort them
+     do i=1,ncache
+        igrid=active(ilevel)%igrid(i)
+        x(1,1)=(xg(igrid,1)-dble(icoarse_min))
+#if NDIM>1
+        x(1,2)=(xg(igrid,2)-dble(jcoarse_min))
+#endif
+#if NDIM>2
+        x(1,3)=(xg(igrid,3)-dble(kcoarse_min))
+#endif
+        
+        ix(1)=int(x(1,1)*bscale)
+#if NDIM>1
+        iy(1)=int(x(1,2)*bscale)
+#endif
+#if NDIM>2
+        iz(1)=int(x(1,3)*bscale)
+#endif
+        
+#if NDIM==1
+        call hilbert1d(ix,order_min,1)
+#endif
+#if NDIM==2
+        call hilbert2d(ix,iy,order_min,bit_length,1)
+#endif
+#if NDIM==3
+        call hilbert3d(ix,iy,iz,order_min,bit_length,1)
+#endif
+        hkeys(i)=order_min(1)
+     end do
+     
+     call quick_sort(hkeys,isort,ncache)
+
+!!$     do i=1,ncache
+!!$        write(*,*)i,hkeys(i),isort(i),active(ilevel)%igrid(isort(i))
+!!$     end do
+     
+     ! Compute scan for ilevel-2 grids
+     j=1
+     inext(j)=1
+     hcomp=hkeys(j)
+     do i=2,ncache
+        hcurr=hkeys(i)
+        if(hcurr.eq.hcomp)then
+           inext(j)=inext(j)+1
+        else
+           j=j+1
+           inext(j)=1
+           hcomp=hcurr
+        endif
+     end do
+     
+     ngrid_ok=(2**(ilevel-1-ilevelup))**ndim
+     ifirst=1
+     iskip=1
+     do i=1,j
+        if(inext(i)==ngrid_ok)then
+           do i_new=1,inext(i)
+              isort_new(ifirst-1+i_new)=isort(iskip-1+i_new)
+           end do
+           ifirst=ifirst+inext(i)
+        endif
+        iskip=iskip+inext(i)
+     end do
+     do i=1,ifirst-1
+        if(done(isort_new(i))==0)then
+           ifin=ifin+1
+           ngroup(ilevelup)=ngroup(ilevelup)+1
+           isort_fin(ifin)=isort_new(i)
+           done(isort_new(i))=1
+        endif
+     end do
+     iskip=1
+     do i=1,j
+        if(inext(i).NE.ngrid_ok)then
+           do i_new=1,inext(i)
+              isort_new(ifirst-1+i_new)=isort(iskip-1+i_new)
+           end do
+           ifirst=ifirst+inext(i)
+        endif
+        iskip=iskip+inext(i)
+     end do
+  end do
+  
+end subroutine sort_group_grid
 !###########################################################
 !###########################################################
 !###########################################################
@@ -186,6 +357,205 @@ subroutine set_uold(ilevel)
 111 format('   Entering set_uold for level ',i2)
 
 end subroutine set_uold
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine fill_hydro_grid(igrid,nxp,ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::igrid,ilevel,nxp
+  !
+  ! This routine fills up a Cartesian grid from AMR data 
+  ! and send it to the hydro kernel
+  !
+#if NDIM==1
+  real(dp),dimension(-1:nxp+2,1:nvar)::uloc
+  real(dp),dimension(-1:nxp+2,1:ndim)::gloc
+  real(dp),dimension(1:nxp+1,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nxp+1,1:2,1:ndim)::tmp
+#endif
+#if NDIM==2
+  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:nvar)::uloc
+  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:ndim)::gloc
+  real(dp),dimension(1:nxp+1,1:nxp+1,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nxp+1,1:nxp+1,1:2,1:ndim)::tmp
+#endif
+#if NDIM==3
+  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::uloc
+  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:ndim)::gloc
+  real(dp),dimension(1:nxp+1,1:nxp+1,1:nxp+1,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nxp+1,1:nxp+1,1:nxp+1,1:2,1:ndim)::tmp
+#endif
+
+  integer::nx_loc,i,j,k,i0,j0,k0,idim,ivar
+  real(dp)::dx,scale,dx_loc,dx_box
+  real(dp),dimension(1:nvector,1:ndim)::xx_dp
+  real(dp),dimension(1:ndim)::box_xmin
+  integer,dimension(1:nvector)::cell_index,cell_levl
+
+  ! Mesh spacing at that level
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+  dx=0.5D0**ilevel
+  dx_box=nxp*dx
+  dx_loc=scale*dx
+ 
+  ! Compute box coordinates in normalized unites
+  do idim=1,ndim
+     box_xmin(idim)=int(xg(igrid,idim)/dx_box)*dx_box
+  end do
+
+  ! Compute cell coordinate
+  do i=-1,nxp+2
+     xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
+#if NDIM>1
+     do j=-1,nxp+2
+        xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
+#endif
+#if NDIM>2
+        do k=-1,nxp+2
+           xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
+#endif
+           ! Compute cell index
+           call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
+           ! Store hydro variable in local Cartesian grid
+           do ivar=1,nvar
+#if NDIM==1
+              uloc(i,ivar)=uold(cell_index(1),ivar)
+#endif
+#if NDIM==2
+              uloc(i,j,ivar)=uold(cell_index(1),ivar)
+#endif
+#if NDIM==3
+              uloc(i,j,k,ivar)=uold(cell_index(1),ivar)
+#endif
+           end do
+           gloc=0d0
+           if(poisson)then
+              do idim=1,ndim
+#if NDIM==1
+                 gloc(i,idim)=f(cell_index(1),idim)
+#endif
+#if NDIM==2
+                 gloc(i,j,idim)=f(cell_index(1),idim)
+#endif
+#if NDIM==3
+                 gloc(i,j,k,idim)=f(cell_index(1),idim)
+#endif
+              end do
+           end if
+#if NDIM>2
+        end do
+#endif
+#if NDIM>1
+     end do
+#endif
+  end do
+
+  ! Compute flux using second-order Godunov method
+!  call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
+
+  return
+
+  ! Compute cell coordinate
+  do i=1,nxp
+     xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
+#if NDIM>1
+     do j=1,nxp
+        xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
+#endif
+#if NDIM>2
+        do k=1,nxp           
+           xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
+#endif
+           ! Compute cell index
+           call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
+           do idim=1,ndim
+              i0=0; j0=0; k0=0
+              if(idim==1)i0=1
+              if(idim==2)j0=1
+              if(idim==3)k0=1
+              ! Update conservative variables new state vector
+              do ivar=1,nvar
+#if NDIM==1
+                 unew(cell_index(1),ivar)=unew(cell_index(1),ivar)+(flux(i,ivar,idim)-flux(i+i0,ivar,idim))
+#endif
+#if NDIM==2
+                 unew(cell_index(1),ivar)=unew(cell_index(1),ivar)+(flux(i,j,ivar,idim)-flux(i+i0,j+j0,ivar,idim))
+#endif
+#if NDIM==3
+                 unew(cell_index(1),ivar)=unew(cell_index(1),ivar)+(flux(i,j,k,ivar,idim)-flux(i+i0,j+j0,k+k0,ivar,idim))
+#endif
+              end do
+              ! Update velocity divergence and internal energy
+              if(pressure_fix)then
+#if NDIM==1
+                 divu(cell_index(1))=divu(cell_index(1))+(tmp(i,1,idim)-tmp(i+i0,1,idim))
+                 enew(cell_index(1))=enew(cell_index(1))+(tmp(i,2,idim)-tmp(i+i0,2,idim))
+#endif
+#if NDIM==2
+                 divu(cell_index(1))=divu(cell_index(1))+(tmp(i,j,1,idim)-tmp(i+i0,j+j0,1,idim))
+                 enew(cell_index(1))=enew(cell_index(1))+(tmp(i,j,2,idim)-tmp(i+i0,j+j0,2,idim))
+#endif
+#if NDIM==3
+                 divu(cell_index(1))=divu(cell_index(1))+(tmp(i,j,k,1,idim)-tmp(i+i0,j+j0,k+k0,1,idim))
+                 enew(cell_index(1))=enew(cell_index(1))+(tmp(i,j,k,2,idim)-tmp(i+i0,j+j0,k+k0,2,idim))
+#endif
+              end if
+           end do
+#if NDIM>2
+        end do
+#endif
+#if NDIM>1
+     end do
+#endif
+  end do
+
+end subroutine fill_hydro_grid
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine hydro_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
+  use amr_commons
+  implicit none
+  integer::np,ilevel
+  integer,dimension(1:nvector)::cell_index,cell_levl
+  real(dp),dimension(1:nvector,1:ndim)::xpart
+  !----------------------------------------------------------------------------
+  ! This routine returns the index of the cell, at maximum level
+  ! ilevel, in which the input particle sits.
+  ! Warning: coordinates are supposed to be in normalized units
+  ! so between 0 and 1 (periodic BC) or between 1 and 2 (other BC).
+  !----------------------------------------------------------------------------
+  real(dp)::xx,yy,zz
+  integer::i,j,ii,jj,kk,ind,iskip,igrid,ind_cell,igrid0
+  ind_cell=0
+  igrid0=son(1+icoarse_min+jcoarse_min*nx+kcoarse_min*nx*ny)
+  do i=1,np
+     igrid=igrid0
+     do j=1,ilevel
+        ii=0; jj=0; kk=0
+        if(xpart(i,1)>xg(igrid,1))ii=1
+#if NDIM>1
+        if(xpart(i,2)>xg(igrid,2))jj=1
+#endif
+#if NDIM>2
+        if(xpart(i,3)>xg(igrid,3))kk=1
+#endif
+        ind=1+ii+2*jj+4*kk
+        iskip=ncoarse+(ind-1)*ngridmax
+        ind_cell=iskip+igrid
+        igrid=son(ind_cell)
+        if(igrid==0.or.j==ilevel)exit
+     end do
+     cell_index(i)=ind_cell
+     cell_levl(i)=j
+  end do
+end subroutine hydro_get_cell_index
 !###########################################################
 !###########################################################
 !###########################################################

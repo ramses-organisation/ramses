@@ -1155,16 +1155,13 @@ end subroutine get_cell_indices
 subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
   use amr_commons
   implicit none
-
   integer::np,ilevel
   integer,dimension(1:nvector)::cell_index,cell_levl
   real(dp),dimension(1:nvector,1:3)::xpart
-
   !----------------------------------------------------------------------------
   ! This routine returns the index of the cell, at maximum level
   ! ilevel, in which the input particle sits
   !----------------------------------------------------------------------------
-
   real(dp)::xx,yy,zz
   integer::i,j,ii,jj,kk,ind,iskip,igrid,ind_cell,igrid0
 
@@ -1197,7 +1194,6 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
      cell_levl(i)=j
   end do
 end subroutine get_cell_index
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
