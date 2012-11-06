@@ -142,7 +142,8 @@ module amr_parameters
   logical ::smbh=.false.
   logical ::agn=.false.
   logical ::use_proper_time=.false.
-  
+  logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
+   
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
   real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times

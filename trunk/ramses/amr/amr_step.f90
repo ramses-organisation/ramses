@@ -103,6 +103,11 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   !-----------------
+  ! Update sink cloud particle properties
+  !-----------------
+  if(sink)call update_cloud(ilevel,.false.)
+
+  !-----------------
   ! Particle leakage
   !-----------------
   if(pic)call make_tree_fine(ilevel)
@@ -117,15 +122,22 @@ recursive subroutine amr_step(ilevel,icount)
         endif
 
         call dump_all
-       
+
         if(gas_analytics) call gas_ana
-        ! Run the clumpfinder       
-!        if(clumpfind .and. ndim==3) call clump_finder(.true.)
-        
+
+        ! Run the clumpfinder
+        if (.not.sink)then 
+           if(clumpfind .and. ndim==3) call clump_finder(.true.)
+        end if
+
         ! Dump lightcone
         if(lightcone) call output_cone()
-        
+
      endif
+
+     ! Important can't be done in sink routines because it must be done after dump all
+     if(sink)acc_rate=0.
+
   endif
 
   !----------------------------
@@ -145,11 +157,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Kinetic feedback from giant molecular clouds
      !----------------------------------------------------
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
-     
-     !-----------------------------------------------------
-     ! Create sink particles and associated cloud particles
-     !-----------------------------------------------------
-     !if(sink)call create_sink !(moved to the end of amr_step!)
+
   endif
 
   !--------------------
@@ -204,15 +212,6 @@ recursive subroutine amr_step(ilevel,icount)
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
-        !Density threshold and/or Bondi accretion onto sink particle
-        if(sink)then                         
-           if(bondi)then
-              call grow_bondi(ilevel)
-           else
-              call grow_jeans(ilevel)
-           endif
-        endif
-        
         ! Update boundaries
 #ifdef SOLVERmhd
         do ivar=1,nvar+3
@@ -267,9 +266,11 @@ recursive subroutine amr_step(ilevel,icount)
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         call update_time(ilevel)
+        if(sink)call update_sink(ilevel)
      end if
   else
      call update_time(ilevel)
+     if(sink)call update_sink(ilevel)
   end if
 
 #ifdef RT
@@ -311,6 +312,15 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Set uold equal to unew
      call set_uold(ilevel)
+
+     ! Density threshold and/or Bondi accretion onto sink particle
+     if(sink)then                         
+        if(bondi)then
+           call grow_bondi(ilevel)
+        else
+           call grow_jeans(ilevel)
+        endif
+     endif
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
@@ -412,16 +422,21 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #endif
 
-
-  !---------------
-  ! Sink production
-  !---------------
-  if(sink .and.(ilevel==levelmin))then
-     call create_sink
-     ! do ilev=1,nlevelmax
-     !    call count_parts(ilev)
-     ! end do
-     ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++donesink' 
+  if(sink)then
+     !-------------------------------
+     ! Update coarser level sink velocity
+     !-------------------------------
+     if(ilevel>levelmin)then
+        vsold(1:nsink,1:ndim,ilevel-1)=vsnew(1:nsink,1:ndim,ilevel-1)
+        if(nsubcycle(ilevel-1)==1)vsnew(1:nsink,1:ndim,ilevel-1)=vsnew(1:nsink,1:ndim,ilevel)
+        if(icount==2)vsnew(1:nsink,1:ndim,ilevel-1)= &
+             (vsold(1:nsink,1:ndim,ilevel)*dtold(ilevel)+vsnew(1:nsink,1:ndim,ilevel)*dtnew(ilevel))/ &
+             (dtold(ilevel)+dtnew(ilevel))
+     end if
+     !---------------
+     ! Sink production
+     !---------------
+     if(ilevel==levelmin)call create_sink
   end if
 
   !-------------------------------
