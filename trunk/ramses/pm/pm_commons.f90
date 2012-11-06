@@ -17,9 +17,12 @@ module pm_commons
   real(kind=8),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new,total_volume
   real(kind=8),allocatable,dimension(:,:)::wmom,wmom_new
   real(kind=8),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
+  real(kind=8),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
+  real(kind=8),allocatable,dimension(:,:,:)::vsnew,vsold
+  real(kind=8),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
   real(kind=8),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
   real(kind=8),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
-  real(kind=8),allocatable,dimension(:)::acc_rate !sink accretion rate from one coarse step to next one
+  real(kind=8),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
   real(kind=8),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
   real(kind=8),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all

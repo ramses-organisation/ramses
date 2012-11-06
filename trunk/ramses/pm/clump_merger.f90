@@ -1,4 +1,4 @@
-subroutine compute_clump_properties()
+subroutine compute_clump_properties(ntest,ntest_all)
   use amr_commons
   use hydro_commons
   use pm_commons
@@ -8,32 +8,36 @@ subroutine compute_clump_properties()
   include 'mpif.h'
 #endif
 
+  integer::ntest,ntest_all
   !----------------------------------------------------------------------------
   ! this subroutine performs one loop over all particles and collects the 
   ! relevant information from the cells where the particles sit. after a lot
-  ! of mpi-communication, all necessary peak-batch properties can be computed
+  ! of mpi-communication, all necessary peak-patch properties can be computed
   !----------------------------------------------------------------------------
 
   ! variables used for the loop over all particles
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,ilevel
   
-  integer::info,i,j,jj,peak_nr
+  integer::info,i,j,jj,peak_nr,nv
 
   !variables needed temporarily store cell properties
   real(kind=8)::d,vol
   real(kind=8),dimension(1:3)::vd
 
-  ! variables to be used with get_cell_indices (vector-sweeps)
+  ! variables to be used for vector-sweeps
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
 
   ! variables related to the size of a cell on a given level
   real(kind=8)::dx,dx_loc,scale,vol_loc
   real(kind=8),dimension(1:nlevelmax)::volume
-  integer::nx_loc
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer::nx_loc,ind
+  integer ::ix,iy,iz
 
-  !peak-batch related arrays before sharing information with other cpus
+  !peak-patch related arrays before sharing information with other cpus
   real(kind=8),dimension(0:npeaks_tot)::max_dens
   real(kind=8),dimension(1:npeaks_tot)::min_dens,av_dens,clump_mass,clump_vol
   real(kind=8),dimension(1:npeaks_tot,1:3)::center_of_mass,clump_momentum
@@ -41,7 +45,6 @@ subroutine compute_clump_properties()
 
   !units
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-
 
   min_dens=huge(0.d0);  max_dens=0.d0; n_cells=0
   clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0; center_of_mass=0.d0
@@ -61,178 +64,84 @@ subroutine compute_clump_properties()
      volume(ilevel)=vol_loc
   end do
 
-  !---------------------------------
-  ! find number of particles on cpus
-  !---------------------------------
-  nparts=0
-  !loop over all particles
-  do ilevel=nlevelmax,levelmin,-1
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) 
-        nparts=nparts+numbp(igrid)
-        igrid=next(igrid)   ! Go to next grid
-     end do
-  end do
-
-#ifndef WITHOUTMPI     
-  call MPI_ALLREDUCE(nparts,nparts_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI     
-  nparts_tot=nparts
-#endif
-  if(verbose)write(*,*)'number of particles on ',myid,' after moving back = ',nparts,' of ',nparts_tot
-
-
-  
-  !set flag2 to zero for the reuse as clump number a cell belongs to
-  flag2=0 
-
-     
-
-
-
   !---------------------------------------------------------------------------
   ! big loop over all parts to collect information from the cells
   !---------------------------------------------------------------------------
-  !loop over all particles
-  do ilevel=nlevelmax,levelmin,-1
-     ig=0
-     ip=0
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) ! Number of grids in the level ilevel on process myid
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle  <---- Very important !!!
-              next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig   
-              if(ip==nvector)then 
-                 call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-                 do jj=1,nvector
-                    if(cell_lev(jj) /= ilevel)write(*,*)'alert_problem in get cell index'
-                    !find peak_nr
-                    peak_nr=int(mp(ind_part(jj)))
-                    d=dble(uold(ind_cell(jj),1))
-                    do i=1,ndim
-                       vd(i)=uold(ind_cell(jj),i+1)
-                    end do
-                    vol=volume(cell_lev(jj))
-                    if (peak_nr /=0 ) then
-                       !nuber of leafcells per clump
-                       n_cells(peak_nr)=n_cells(peak_nr)+1
+  ! loop over all particles
+  do ipart=1,ntest
+     nv=1
+     ig=1
+     ip=1
+     ilevel=levp(ipart) !level
+     indv(nv)=1+icellp(ipart)/ngridmax
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ind_part(nv)=ipart
+     ind_grid_part(nv)=1
 
-                       !find min density
-                       if(d<=min_dens(peak_nr))min_dens(peak_nr)=d
-                       !find max density
-                       if(d>=max_dens(peak_nr))max_dens(peak_nr)=d
+     dx=0.5D0**ilevel
+     nx_loc=(icoarse_max-icoarse_min+1)
+     skip_loc(1)=dble(icoarse_min)
+     skip_loc(2)=dble(jcoarse_min)
+     skip_loc(3)=dble(kcoarse_min)
+     scale=boxlen/dble(nx_loc)
 
-                       !find clump mass
-                       clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
-
-                       !center of mass velocity
-                       do i=1,3
-                          clump_momentum(peak_nr,i)=clump_momentum(peak_nr,i)+vd(i)*vol
-                       end do
-
-                       !clump size (maybe take center of mass instead of peak as reference point)
-                       do i=1,ndim
-                          center_of_mass(peak_nr,i)=center_of_mass(peak_nr,i)+&
-                               dble(init_pos(jj,i))*vol*d
-
-                          !compute second order moments
-                          do j=1,ndim
-                             second_moments(peak_nr,i,j)=second_moments(peak_nr,i,j)+init_pos(jj,i)*init_pos(jj,j)*&
-                                  vol*d
-                          end do
-                       end do
-
-                       !clump volume
-                       clump_vol(peak_nr)=clump_vol(peak_nr)+vol
-
-                       !now change the purpose of flag2 and make it a lookup table for the
-                       !clump a certain cell belongs to
-                       flag2(ind_cell(jj))=peak_nr
-                    end if
-                 end do
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
+     do ind=1,twotondim
+        iz=(ind-1)/4
+        iy=(ind-1-4*iz)/2
+        ix=(ind-1-2*iy-4*iz)
+        xc(ind,1)=(dble(ix)-0.5D0)*dx
+        xc(ind,2)=(dble(iy)-0.5D0)*dx
+        xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
-     if(ip>0)then 
-        call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-        do jj=1,ip
-           !find peak_nr
-           peak_nr=int(mp(ind_part(jj)))
-           d=dble(uold(ind_cell(jj),1))
-           do i=1,ndim
-              vd(i)=uold(ind_cell(jj),i+1)
-           end do
-           vol=volume(cell_lev(jj))                  
-           if (peak_nr /=0 ) then
-              !nuber of leafcells per clump
-              n_cells(peak_nr)=n_cells(peak_nr)+1
+     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
+     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
+     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
 
-              !find min density
-              if(d<=min_dens(peak_nr))min_dens(peak_nr)=d
-              !find max density
-              if(d>=max_dens(peak_nr))max_dens(peak_nr)=d
+     ! find peak_nr
+     peak_nr=flag2(icellp(ipart))
+     d=dble(uold(icellp(ipart),1))
+     do i=1,ndim
+        vd(i)=uold(icellp(ipart),i+1)
+     end do
+     vol=volume(levp(ipart))
 
-              !find clump mass
-              clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
+     if (peak_nr /=0 ) then
+        ! number of leaf cells per clump
+        n_cells(peak_nr)=n_cells(peak_nr)+1
+        
+        ! find min density
+        if(d<=min_dens(peak_nr))min_dens(peak_nr)=d
+        ! find max density
+        if(d>=max_dens(peak_nr))max_dens(peak_nr)=d
 
-              !center of mass velocity
-              do i=1,3
-                 clump_momentum(peak_nr,i)=clump_momentum(peak_nr,i)+vd(i)*vol
-              end do
-
-              !clump size (maybe take center of mass instead of peak as reference point)
-              do i=1,ndim
-                 center_of_mass(peak_nr,i)=center_of_mass(peak_nr,i)+&
-                      dble(init_pos(jj,i))*vol*d
-
-                 !compute second order moments
-                 do j=1,ndim
-                    second_moments(peak_nr,i,j)=second_moments(peak_nr,i,j)+init_pos(jj,i)*init_pos(jj,j)*&
-                         vol*d
-                 end do
-              end do
-
-              !clump volume
-              clump_vol(peak_nr)=clump_vol(peak_nr)+vol
-
-              !now change the purpose of flag2 and make it a lookup table for the
-              !clump a certain cell belongs to
-              flag2(ind_cell(jj))=peak_nr
-           end if
+        ! find clump mass
+        clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
+        
+        ! center of mass velocity
+        do i=1,3
+           clump_momentum(peak_nr,i)=clump_momentum(peak_nr,i)+vd(i)*vol
         end do
+        
+        ! clump size (maybe take center of mass instead of peak as reference point)
+        do i=1,ndim
+           center_of_mass(peak_nr,i)=center_of_mass(peak_nr,i)+dble(init_pos(nv,i))*vol*d
+           
+           ! compute second order moments
+           do j=1,ndim
+              second_moments(peak_nr,i,j)=second_moments(peak_nr,i,j)+init_pos(nv,i)*init_pos(nv,j)*vol*d
+           end do
+        end do
+        
+        ! clump volume
+        clump_vol(peak_nr)=clump_vol(peak_nr)+vol
+        
      end if
   end do
-  !end loop over all particles
 
 
-
-
-
-!---------------------------------------------------------------------------
-! a lot of MPI communication to collect the results from the different cpu's
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! a lot of MPI communication to collect the results from the different cpu's
+  !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(n_cells,n_cells_tot,npeaks_tot,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
@@ -282,8 +191,6 @@ subroutine compute_clump_properties()
   second_moments_tot=second_moments
 #endif
 
-  
-
   !---------------------------------------------------------------------------
   ! compute further information related to the clumps
   !---------------------------------------------------------------------------
@@ -297,15 +204,12 @@ subroutine compute_clump_properties()
      end if
   end do
 
-
 end subroutine compute_clump_properties
-
 !################################################################
 !################################################################
 !################################################################
 !################################################################
-
-subroutine compute_clump_properties_round2()
+subroutine compute_clump_properties_round2(ntest,ntest_all)
   use poisson_commons
   use amr_commons
   use hydro_commons
@@ -316,6 +220,7 @@ subroutine compute_clump_properties_round2()
   include 'mpif.h'
 #endif
 
+  integer::ntest,ntest_all
   !----------------------------------------------------------------------------                
   ! this subroutine performs another loop over all particles and collects the 
   ! information more information like the velocity of a cell realtive to the 
@@ -326,32 +231,32 @@ subroutine compute_clump_properties_round2()
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,ilevel
   
   ! 
-  integer::info,i,j,jj,peak_nr
+  integer::info,i,j,jj,peak_nr,nv
 
   !variables needed temporarily store cell properties
   real(kind=8)::d,vol,M,ekk,phi_rel,de
   real(kind=8),dimension(1:3)::vd,xcell,xpeak
 
-  ! variables to be used with get_cell_indices (vector-sweeps)
+  ! variables to be used with vector-sweeps
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
 
   ! variables related to the size of a cell on a given level
   real(kind=8)::dx,dx_loc,scale,vol_loc
   real(kind=8),dimension(1:nlevelmax)::volume
-  integer::nx_loc
+  integer::nx_loc,ix,iy,iz,ind
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
 
-  !peak-batch related arrays before sharing information with other cpus
+  !peak-patch related arrays before sharing information with other cpus
   real(kind=8),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,e_kin_int4,e_bind4,e_thermal4
   real(kind=8),dimension(1:npeaks_tot,1:3)::clump_size
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-
   e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0; e_bind4=0.d0; e_thermal4=0.d0; e_kin_int4=0.d0
-
 
   !------------------------------------------
   ! compute volume of a cell in a given level
@@ -366,268 +271,111 @@ subroutine compute_clump_properties_round2()
      volume(ilevel)=vol_loc
   end do
 
-  !---------------------------------
-  ! find number of particles on cpus
-  !---------------------------------
-  nparts=0
-  !loop over all particles
-  do ilevel=nlevelmax,levelmin,-1
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) 
-        nparts=nparts+numbp(igrid)
-        igrid=next(igrid)   ! Go to next grid
-     end do
-  end do
-
-#ifndef WITHOUTMPI     
-  call MPI_ALLREDUCE(nparts,nparts_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI     
-  nparts_tot=nparts
-#endif
-  if(verbose)write(*,*)'number of particles on ',myid,' after moving back = ',nparts,' of ',nparts_tot
-
-
-  
-  !set flag2 to zero for the reuse as clump number a cell belongs to
-  flag2=0
-
-     
-
-
-
   !---------------------------------------------------------------------------
   ! big loop over all parts to collect information from the cells
   !---------------------------------------------------------------------------
-  !loop over all particles
-  do ilevel=nlevelmax,levelmin,-1
-     ig=0
-     ip=0
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) ! Number of grids in the level ilevel on process myid
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle  <---- Very important !!!
-              next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig   
-              if(ip==nvector)then 
-                 call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-                 do jj=1,nvector
-                    if(cell_lev(jj) /= ilevel)write(*,*)'alert_problem in get cell index'
-                    !find peak_nr
-                    peak_nr=int(mp(ind_part(jj)))
-                    d=dble(uold(ind_cell(jj),1))
-                    de=uold(ind_cell(jj),ndim+2)
-                                        
-                    if (peak_nr /=0 ) then
+  ! loop over all particles
+  do ipart=1,ntest
+     nv=1
+     ig=1
+     ip=1
+     ilevel=levp(ipart) !level
+     indv(nv)=1+icellp(ipart)/ngridmax
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ind_part(nv)=ipart
+     ind_grid_part(nv)=1
 
-                       do i=1,ndim
-                          vd(i)=uold(ind_cell(jj),i+1)
-                          xcell(i)=init_pos(jj,i)
-                          xpeak(i)=peak_pos_tot(peak_nr,i)
-                       end do
-                       M=clump_mass_tot(peak_nr)
-                       vol=volume(cell_lev(jj))                  
-                       phi_rel=(phi(ind_cell(jj))-phi_min_tot(peak_nr))*scale
-                       
-                       
-                       !Radius and kinetic energy
-                       ekk=0.
-                       do i=1,3 
-                          ekk=ekk+0.5*vd(i)**2/d                          
-                       end do
+     dx=0.5D0**ilevel
+     nx_loc=(icoarse_max-icoarse_min+1)
+     skip_loc(1)=dble(icoarse_min)
+     skip_loc(2)=dble(jcoarse_min)
+     skip_loc(3)=dble(kcoarse_min)
+     scale=boxlen/dble(nx_loc)
 
-                       
-                       !internal kinetic energy
-                       do i=1,3
-                          e_kin_int(peak_nr)=e_kin_int(peak_nr)+ &
-                               (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
-                       end do
-                       
-                       !potential energy of the clump (crude approach)
-                       !e_bind(peak_nr)=e_bind(peak_nr)+M*d*vol/(rr+0.5*vol**0.3333333333)*0.4              
-                       
-                       !potential energy using the acutal phi W= 0.5*int phi*rho
-                       e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol*5.d-1
-                       !add gravitational self energy of every cell
-                       e_bind(peak_nr)=e_bind(peak_nr)+9.d-1*d**2.d0*vol**(5.d0/3.d0)
-                       
-                       
-                       !size relative to center of mass 
-                       do i=1,ndim
-                          clump_size(peak_nr,i)=clump_size(peak_nr,i)+ &
-                               (xcell(i)-center_of_mass_tot(peak_nr,i))**2.d0*vol
-                       end do
-                       
-                       !thermal energy
-                       e_thermal(peak_nr)=e_thermal(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
-
-                       !repeat same for smaller region if cell is close enough
-                       if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. &
-                            16.*volume(nlevelmax)**(2./3.))then
-                          do i=1,3
-                             e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+ &
-                                  (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
-                          end do
-                          
-                          e_bind4(peak_nr)=e_bind4(peak_nr)+phi_rel*d*vol*0.5
-                          e_bind4(peak_nr)=e_bind4(peak_nr)+0.9*d**2.*vol**(5./3.)
-                          e_thermal4(peak_nr)=e_thermal4(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
-                       end if
-
-                       
-                       !now change the purpose of flag2 and make it a lookup table for the
-                       !clump a certain cell belongs to
-                       flag2(ind_cell(jj))=peak_nr
-
-                    end if
-                 end do
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
+     do ind=1,twotondim
+        iz=(ind-1)/4
+        iy=(ind-1-4*iz)/2
+        ix=(ind-1-2*iy-4*iz)
+        xc(ind,1)=(dble(ix)-0.5D0)*dx
+        xc(ind,2)=(dble(iy)-0.5D0)*dx
+        xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
-     if(ip>0)then 
-        call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-        do jj=1,ip
-           !find peak_nr
-           peak_nr=int(mp(ind_part(jj)))
-           d=uold(ind_cell(jj),1)
-           de=uold(ind_cell(jj),ndim+2)
+     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
+     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
+     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
 
-           if (peak_nr /=0 ) then
+     ! use peak number after merge
+     peak_nr=new_peak(flag2(icellp(ipart))) 
+     ! make sure flag2 is properly updated after merge
+     flag2(icellp(ipart))=peak_nr
 
-              do i=1,ndim
-                 vd(i)=uold(ind_cell(jj),i+1)
-                 xcell(i)=init_pos(jj,i)
-                 xpeak(i)=peak_pos_tot(peak_nr,i)
-              end do
-              M=clump_mass_tot(peak_nr)
-              vol=volume(cell_lev(jj))                  
-              phi_rel=(phi(ind_cell(jj))-phi_min_tot(peak_nr))*scale
-              
-              !Radius and kinetic energy
-              ekk=0.
-              do i=1,3 
-                 ekk=ekk+0.5*vd(i)**2/d                          
-              end do
+     pos(nv,1)=peak_pos_tot(peak_nr,1)
+     pos(nv,2)=peak_pos_tot(peak_nr,2)
+     pos(nv,3)=peak_pos_tot(peak_nr,3)
+     call get_cell_index(ind_cell,cell_lev,init_pos,ilevel,ip)
 
-              !internal kinetic energy
-              do i=1,3
-                 e_kin_int(peak_nr)=e_kin_int(peak_nr)+ &
-                      (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
-              end do
+     if(cell_lev(nv) /= ilevel)write(*,*)'alert_problem in get cell index'
 
-              !potential energy of the clump (crude approach)
-              !e_bind(peak_nr)=e_bind(peak_nr)+M*d*vol/(rr+0.5*vol**0.3333333333)*0.4              
-
-              !potential energy using the acutal phi W= 0.5*int phi*rho
-              e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol*5.d-1
-              !add gravitational self energy of every cell
-              e_bind(peak_nr)=e_bind(peak_nr)+9.d-1*d**2.d0*vol**(5.d0/3.d0)
-
-              !size relative to center of mass 
-              do i=1,ndim
-                 clump_size(peak_nr,i)=clump_size(peak_nr,i)+ &
-                      (xcell(i)-center_of_mass_tot(peak_nr,i))**2.d0*vol
-              end do
-              
-              
-              !thermal energy
-              e_thermal(peak_nr)=e_thermal(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
-
-
-              !repeat same for smaller region if cell is close enough
-              if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. &
-                   16.*volume(nlevelmax)**(2./3.))then
-                 do i=1,3
-                    e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+ &
-                         (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
-                 end do
-                 
-                 e_bind4(peak_nr)=e_bind4(peak_nr)+phi_rel*d*vol*0.5
-                 e_bind4(peak_nr)=e_bind4(peak_nr)+0.9*d**2.*vol**(5./3.)
-                 e_thermal4(peak_nr)=e_thermal4(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
-              end if
-
-
-              !now change the purpose of flag2 and make it a lookup table for the
-              !clump a certain cell belongs to
-              flag2(ind_cell(jj))=peak_nr
-
-           ! peak_nr=int(mp(ind_part(jj)))
-           ! if (peak_nr /=0 ) then
-
-           !    !internal kinetic energy
-           !    do i=1,ndim
-           !       e_kin_int(peak_nr)=e_kin_int(peak_nr)+ &
-           !            ((uold(ind_cell(jj),2)/uold(ind_cell(jj),1)&
-           !            -clump_momentum_tot(peak_nr,1)/clump_mass_tot(peak_nr))**2&
-           !            +(uold(ind_cell(jj),3)/uold(ind_cell(jj),1)-&
-           !            clump_momentum_tot(peak_nr,2)/clump_mass_tot(peak_nr))**2&
-           !            +(uold(ind_cell(jj),4)/uold(ind_cell(jj),1)-&
-           !            clump_momentum_tot(peak_nr,3)/clump_mass_tot(peak_nr))**2)*&
-           !            uold(ind_cell(jj),1)*volume(cell_lev(jj))*0.5
-           !    end do
-
-           !    !potential energy of the clump (crude approach)
-           !    rr=((init_pos(jj,1)-peak_pos_tot(peak_nr,1))**2+&
-           !         (init_pos(jj,2)-peak_pos_tot(peak_nr,2))**2+&
-           !         (init_pos(jj,3)-peak_pos_tot(peak_nr,3))**2)**0.5
-           !    e_bind(peak_nr)=e_bind(peak_nr)+&
-           !         clump_mass_tot(peak_nr)*uold(ind_cell(jj),1)*volume(cell_lev(jj))/&
-           !         (rr+0.5*cellsize(cell_lev(jj)))              
-              
-              
-           !    !size relative to center of mass 
-           !    do i=1,ndim
-           !       clump_size(peak_nr,i)=clump_size(peak_nr,i)+ &
-           !            (init_pos(jj,i)-center_of_mass_tot(peak_nr,i))**2 * volume(cell_lev(jj))
-           !    end do
-
-           !    !thermal energy
-           !    d=uold(ind_cell(jj),1)
-           !    ekk=0
-           !    do i=1,ndim
-           !       ekk=ekk+0.5*uold(ind_cell(jj),i+1)**2/d                          
-           !    end do
-           !    e_thermal(peak_nr)=e_thermal(peak_nr)&
-           !         +(uold(ind_cell(jj),ndim+2)-ekk)*volume(cell_lev(jj))
-
-              
-           !    !now change the purpose of flag2 and make it a lookup table for the
-           !    !clump a certain cell belongs to
-           !    flag2(ind_cell(jj))=peak_nr
-           end if
+     d=dble(uold(ind_cell(nv),1))
+     de=uold(ind_cell(nv),ndim+2)
+     
+     if (peak_nr /=0 ) then
+        
+        do i=1,ndim
+           vd(i)=uold(ind_cell(nv),i+1)
+           xcell(i)=init_pos(nv,i)
+           xpeak(i)=peak_pos_tot(peak_nr,i)
         end do
+        M=clump_mass_tot(peak_nr)
+        vol=volume(cell_lev(nv))                  
+        phi_rel=(phi(ind_cell(nv))-phi_min_tot(peak_nr))*scale
+       
+        ! Radius and kinetic energy
+        ekk=0.
+        do i=1,3 
+           ekk=ekk+0.5*vd(i)**2/d                          
+        end do
+        
+        ! internal kinetic energy
+        do i=1,3
+           e_kin_int(peak_nr)=e_kin_int(peak_nr)+ &
+                (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
+        end do
+        
+        ! potential energy of the clump (crude approach)
+        ! e_bind(peak_nr)=e_bind(peak_nr)+M*d*vol/(rr+0.5*vol**0.3333333333)*0.4              
+        
+        ! potential energy using the acutal phi W= 0.5*int phi*rho
+        e_bind(peak_nr)=e_bind(peak_nr)+phi_rel*d*vol*5.d-1
+        ! add gravitational self energy of every cell
+        e_bind(peak_nr)=e_bind(peak_nr)+9.d-1*d**2.d0*vol**(5.d0/3.d0)
+        
+        
+        ! size relative to center of mass 
+        do i=1,ndim
+           clump_size(peak_nr,i)=clump_size(peak_nr,i)+(xcell(i)-center_of_mass_tot(peak_nr,i))**2.d0*vol
+        end do
+        
+        ! thermal energy
+        e_thermal(peak_nr)=e_thermal(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+        
+        ! repeat same for smaller region if cell is close enough
+        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.))then
+           do i=1,3
+              e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+(vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
+           end do
+           
+           e_bind4(peak_nr)=e_bind4(peak_nr)+phi_rel*d*vol*0.5
+           e_bind4(peak_nr)=e_bind4(peak_nr)+0.9*d**2.*vol**(5./3.)
+           e_thermal4(peak_nr)=e_thermal4(peak_nr)+(de-ekk)*vol*(gamma-1)/(g_star-1)
+        end if
+        
      end if
   end do
-  !end loop over all particles
 
-
-
-
-
-!---------------------------------------------------------------------------
-! a lot of MPI communication to collect the results from the different cpu's
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! a lot of MPI communication to collect the results from the different cpu's
+  !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(e_kin_int,e_kin_int_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(e_kin_int4,e_kin_int_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -659,15 +407,11 @@ subroutine compute_clump_properties_round2()
   e_thermal_tot4=e_thermal4
 #endif
 
-
 end subroutine compute_clump_properties_round2
-
 !################################################################
 !################################################################
 !################################################################
 !################################################################
-
-
 subroutine write_clump_properties(to_file)
   use amr_commons
   use hydro_commons
@@ -752,12 +496,11 @@ subroutine write_clump_properties(to_file)
   end if
 
 end subroutine write_clump_properties
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine saddlepoint_search()
+subroutine saddlepoint_search(ntest)
   use amr_commons
   use hydro_commons
   use pm_commons
@@ -767,78 +510,77 @@ subroutine saddlepoint_search()
   include 'mpif.h'
 #endif
 
+  integer::ntest
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks_tot**2 sized array of saddlepoint densities
   !---------------------------------------------------------------------------
 
   ! variables for particle loop
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,ilevel
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,ilevel,nv
   ! dummy variables
-  integer::jj,i,j,kk,info
-  ! variables to be used with get_cell_indices (vector-sweeps)
+  integer::jj,i,j,kk,info,peak_nr
+  ! variables to be used for vector-sweeps
   integer,dimension(1:nvector),save::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev,clump_nr
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  integer,dimension(1:nvector),save::ind_part,ind_grid_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
+
+  ! variables related to the size of a cell on a given level
+  real(kind=8)::dx,dx_loc,scale,vol_loc
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer::nx_loc,ind,ix,iy,iz
 
   ! saddle point array for 1 cpu
   real(kind=8),dimension(1:npeaks_tot,1:npeaks_tot)::saddle_dens
   saddle_dens=0.
 
-
-
   !---------------------------------------------------------------------------
   ! big loop over all parts, pass the information of nvector parts to 
   ! subroutine find_best_neighbor
   !---------------------------------------------------------------------------
-  do ilevel=nlevelmax,levelmin,-1
-     ig=0
-     ip=0
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) ! Number of grids in the level ilevel on process myid
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle  <---- Very important !!!
-              next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig   
-              if(ip==nvector)then 
-                 call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-                 do jj=1,nvector
-                    clump_nr(jj)=int(mp(ind_part(jj)))
-                    ind_grid(jj)=mod((ind_cell(jj)-ncoarse),ngridmax)
-                 end do
-                 call find_best_neighbor(ind_grid,clump_nr,init_pos,ip,ilevel,saddle_dens)
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
-     end do
-     if(ip>0)then 
-        call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-        do jj=1,ip
-           clump_nr(jj)=int(mp(ind_part(jj)))
-           ind_grid(jj)=mod((ind_cell(jj)-ncoarse),ngridmax)
-        end do
-        call find_best_neighbor(ind_grid,clump_nr,init_pos,ip,ilevel,saddle_dens)
-     end if
-  end do
-  !end loop over all particles
+  do ipart=1,ntest
+     nv=1
+     ig=1
+     ip=1
+     ilevel=levp(ipart) !level
+     indv(nv)=1+icellp(ipart)/ngridmax
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ind_part(nv)=ipart
+     ind_grid_part(nv)=1
 
+     dx=0.5D0**ilevel
+     nx_loc=(icoarse_max-icoarse_min+1)
+     skip_loc(1)=dble(icoarse_min)
+     skip_loc(2)=dble(jcoarse_min)
+     skip_loc(3)=dble(kcoarse_min)
+     scale=boxlen/dble(nx_loc)
+
+     do ind=1,twotondim
+        iz=(ind-1)/4
+        iy=(ind-1-4*iz)/2
+        ix=(ind-1-2*iy-4*iz)
+        xc(ind,1)=(dble(ix)-0.5D0)*dx
+        xc(ind,2)=(dble(iy)-0.5D0)*dx
+        xc(ind,3)=(dble(iz)-0.5D0)*dx
+     end do
+
+     ! test particle position
+     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
+     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
+     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
+
+     ! peak number
+     peak_nr=flag2(icellp(ipart))
+
+     ! local arrays
+     clump_nr(nv)=flag2(icellp(ipart))
+     ind_grid(nv)=mod((icellp(ipart)-ncoarse),ngridmax)
+
+     call find_best_neighbor(ind_grid,clump_nr,init_pos,ip,ilevel,saddle_dens)
+
+  end do
+  ! end loop over all particles
+  
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(saddle_dens,saddle_dens_tot,(npeaks_tot**2),MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
 #endif
@@ -846,7 +588,7 @@ subroutine saddlepoint_search()
   saddle_dens_tot=saddle_dens
 #endif
 
-  !symmetrize saddle_point array
+  ! symmetrize saddle_point array
   do i=1,npeaks_tot
      do j=1,i
         saddle_dens_tot(i,j)=0.5*(saddle_dens_tot(i,j)+saddle_dens_tot(j,i))
@@ -854,7 +596,7 @@ subroutine saddlepoint_search()
      end do
   end do
 
-  !compute saddle_max value and relevance
+  ! compute saddle_max value and relevance
   do i=1,npeaks_tot
      do j=1,npeaks_tot
         if (saddle_dens_tot(i,j)>saddle_max_tot(i))then
@@ -868,11 +610,7 @@ subroutine saddlepoint_search()
      end if
   end do
 
-
 end subroutine saddlepoint_search
-
-
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
@@ -911,13 +649,11 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   integer ,dimension(1:nvector,1:ndim),save::ig,id
   integer ,dimension(1:nvector)::cc
 
-
   real(kind=8),dimension(1:nvector,1:ndim,1:twotondim),save::xpart
 
   real(kind=8),dimension(1:3)::skip_loc
 
-
-  ! Meshspacing in that level
+  ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -950,7 +686,6 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   !====================================================
   if(ilevel>levelmin)then
 
-
      ! Lower left corner of 3x3x3 grid-cube
      do idim=1,ndim
         do j=1,np
@@ -958,71 +693,7 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
         end do
      end do
 
-     ! Rescale particle position at level ilevel-1
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=pos(j,idim)/scale+skip_loc(idim)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)-x0(j,idim)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)/dx
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)/2.0D0
-        end do
-     end do
-
-     ! Check for illegal moves
-     error=.false.
-     do idim=1,ndim
-        do j=1,np
-           if(x(j,idim)<0.5D0.or.x(j,idim)>2.5D0)error=.true.
-        end do
-     end do
-     if(error)then
-        write(*,*)'problem in neighbor-check'
-        do idim=1,ndim
-           do j=1,np
-              if(x(j,idim)<0.5D0.or.x(j,idim)>2.5D0)then
-                 write(*,*)x(j,1:ndim)
-              endif
-           end do
-        end do
-        stop
-     end if
-
      ! Compute parent cell position
-#if NDIM==1
-     do j=1,np
-        xpart(j,1,1)=0.5+ig(j,1)
-        xpart(j,1,2)=0.5+id(j,1)
-     end do
-#endif
-#if NDIM==2
-     do j=1,np
-        ! Particle 1
-        xpart(j,1,1)=0.5+ig(j,1)
-        xpart(j,2,1)=0.5+ig(j,2)
-        ! Particle 2
-        xpart(j,1,2)=0.5+id(j,1)
-        xpart(j,2,2)=0.5+ig(j,2)
-        ! Particle 3
-        xpart(j,1,3)=0.5+ig(j,1)
-        xpart(j,2,3)=0.5+id(j,2)
-        ! Particle 4
-        xpart(j,1,4)=0.5+id(j,1)
-        xpart(j,2,4)=0.5+id(j,2)
-     end do
-#endif
-#if NDIM==3
      do j=1,np
         ! Particle 1
         xpart(j,1,1)=0.5+ig(j,1)
@@ -1057,7 +728,6 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
         xpart(j,2,8)=0.5+id(j,2)
         xpart(j,3,8)=0.5+id(j,3)
      end do
-#endif
 
      ! Test those particles
      do ind=1,twotondim
@@ -1069,12 +739,13 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
               xtest(j,idim)=(xtest(j,idim)-skip_loc(idim))*scale
            end do
         end do
+
         call get_cell_index(ind_cell,cell_levl,xtest,ilevel-1,np)
+
         do j=1,np
            if(son(ind_cell(j))==0 .and. cell_levl(j)==(ilevel-1) .and. flag2(ind_cell(j))/=0 )then
               if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
                  saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
-                 !print*,'found clump parts in lower levels!!!'
               end if
            endif
         end do
@@ -1091,19 +762,14 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
         do i1=i1min,i1max
            do j=1,np
               xtest(j,1)=pos(j,1)+(i1-1)*dx_loc
-#if NDIM>1
               xtest(j,2)=pos(j,2)+(j1-1)*dx_loc
-#endif     
-#if NDIM>2
               xtest(j,3)=pos(j,3)+(k1-1)*dx_loc
-#endif     
            end do
            
            call get_cell_index(ind_cell,cell_levl,xtest,ilevel,np)
-           call cmp_cpumap(xtest,cc,np) 
+
            do j=1,np
-              if(son(ind_cell(j))==0 .and. flag2(ind_cell(j))/=0)then
-              !if (cc(j)/=myid)print*,nstep_coarse,xtest(j,1:3),uold(ind_cell(j),1),'false'
+              if(son(ind_cell(j))==0 .and. cell_levl(j)==ilevel .and. flag2(ind_cell(j))/=0)then
                  if((clump_nr(j) /= flag2(ind_cell(j))).and.(uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j)))))then   
                     saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
                  end if
@@ -1125,14 +791,12 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
 
               do j=1,np
                  xtest(j,1)=pos(j,1)+(i2-1.5)*dx_loc/2.0
-#if NDIM>1
                  xtest(j,2)=pos(j,2)+(j2-1.5)*dx_loc/2.0
-#endif     
-#if NDIM>2
                  xtest(j,3)=pos(j,3)+(k2-1.5)*dx_loc/2.0
-#endif     
               end do
+
               call get_cell_index(ind_cell,cell_levl,xtest,ilevel+1,np)
+
               do j=1,np
                  if(son(ind_cell(j))==0 .and. cell_levl(j)==(ilevel+1) .and. flag2(ind_cell(j))/=0)then
                     if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then
@@ -1146,14 +810,12 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
 
   endif
 
-
 end subroutine find_best_neighbor
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine merge_clumps()
+subroutine merge_clumps(ntest)
   use amr_commons
   use pm_commons
   use poisson_commons
@@ -1161,37 +823,26 @@ subroutine merge_clumps()
   use clfind_commons
   implicit none
 
+  integer::ntest
   integer::j,jj,i,ii
   integer::igrid,jgrid,ipart,jpart,next_part,npart1,info,ilevel,merge_to
   real(kind=8)::max_val
   logical::merging
 
 
-
   if (verbose)write(*,*)'Now merging clumps'
 
+  ! Sort clumps by peak density in ascending order
+  call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
 
-  merging=.true.
-  do while(merging .eqv. .true.)
-     merging=.false.
-
-     !sort clumps by peak density ind ascending order
-     call heapsort_index(relevance_tot,sort_index,npeaks_tot)
-
-     i=1
+  do i=1,npeaks_tot
      ii=sort_index(i)
-     
-     !find the first clump which has not yet been merged to another one
-     do while (relevance_tot(ii) < 1.d-80 .and. i<npeaks_tot)
-        i=i+1
-        ii=sort_index(i)
-     end do
-     
-     !if the relevance is below the threshold -> merge
-     if (relevance_tot(ii)<relevance_threshold .and. relevance_tot(ii) > 1.d-80) then
-        merging=.true.
+     new_peak(ii)=ii
 
-        !go through the ii-th line in the saddle point array to find the neighbor to merge to
+     ! If the relevance is below the threshold -> merge
+     if (relevance_tot(ii)<relevance_threshold .and. relevance_tot(ii) > 1.d-80) then
+        
+        ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
         merge_to=0; max_val=0.
         do j=1,npeaks_tot
            if (saddle_dens_tot(ii,j)>max_val)then
@@ -1199,33 +850,12 @@ subroutine merge_clumps()
               max_val=saddle_dens_tot(ii,j)
            end if
         end do
-
-        !loop over all particles
-        do ilevel=nlevelmax,levelmin,-1
-           ! Loop over grids
-           igrid=headl(myid,ilevel) 
-           do jgrid=1,numbl(myid,ilevel) ! Number of grids in the level ilevel on process myid
-              npart1=numbp(igrid)  ! Number of particles in the grid
-              if(npart1>0)then
-                 ipart=headp(igrid)
-                 ! Loop over particles
-                 do jpart=1,npart1
-                    ! Save next particle  <---- Very important !!!
-                    next_part=nextp(ipart)
-                    if (int(mp(ipart))==ii) then
-                       mp(ipart)=merge_to*1.d0
-                    end if
-                    ipart=next_part  ! Go to next particle
-                 end do
-                 ! End loop over particles
-              end if
-              igrid=next(igrid)   ! Go to next grid
-           end do
-        end do
-        !end loop over all particles
+        
+        ! Store new peak index
+        new_peak(ii)=merge_to
         if(verbose)write(*,*)'clump ',ii,'merged to ',merge_to
-
-        !update clump properties
+        
+        ! Update clump properties
         if (merge_to>0)then
            do j=1,ndim
               clump_momentum_tot(merge_to,j)=&
@@ -1248,9 +878,8 @@ subroutine merge_clumps()
         max_dens_tot(ii)=0.
         min_dens_tot(ii)=0.
         clump_mass_tot(ii)=0.
-
-
-        !update saddle point array
+        
+        ! Update saddle point array
         do j=1,npeaks_tot
            if (merge_to>0)then
               if(saddle_dens_tot(ii,j)>saddle_dens_tot(merge_to,j))then
@@ -1262,8 +891,8 @@ subroutine merge_clumps()
            saddle_dens_tot(ii,j)=0.        
            saddle_dens_tot(j,ii)=0.
         end do
-
-        !update saddle_max value
+        
+        ! Update saddle_max value
         if (merge_to>0)then
            saddle_max_tot(merge_to)=0
            do j=1,npeaks_tot
@@ -1272,8 +901,8 @@ subroutine merge_clumps()
               end if
            end do
         end if
-
-        !update relevance of clumps
+        
+        ! Update relevance of clumps
         if (merge_to>0)then
            if (saddle_max_tot(merge_to)>1.d-40)then
               relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
@@ -1283,16 +912,15 @@ subroutine merge_clumps()
         end if
         relevance_tot(ii)=0.
      end if
-     
   end do
+  
   if (verbose)write(*,*)'Done merging clumps'  
 end subroutine merge_clumps
-
 !################################################################
 !################################################################
 !################################################################
 !################################################################
-subroutine write_peak_map
+subroutine write_peak_map(ntest)
   use amr_commons
   use hydro_commons
   use pm_commons
@@ -1302,6 +930,7 @@ subroutine write_peak_map
   include 'mpif.h'
 #endif
 
+  integer::ntest
   !----------------------------------------------------------------------------                
   ! One loop over all the particles creating a textfile for each cpu
   ! -number of parts on cpu
@@ -1312,11 +941,18 @@ subroutine write_peak_map
   !----------------------------------------------------------------------------
 
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,ilevel
-  integer::jj,i,kk 
+  integer::jj,i,kk,nv,peak_nr
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
   character(LEN=5)::myidstring,nchar
+
+  ! variables related to the size of a cell on a given level                                                                                                                
+  real(kind=8)::dx,dx_loc,scale,vol_loc
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer::nx_loc,ind,ix,iy,iz
+
 
 #if NDIM>2
   call title(ifout-1,nchar)
@@ -1325,53 +961,42 @@ subroutine write_peak_map
   !write(20,*)nparts
 
   !loop over all particles
-  do ilevel=nlevelmax,levelmin,-1
-     ig=0
-     ip=0
-     ! Loop over grids
-     igrid=headl(myid,ilevel) 
-     do jgrid=1,numbl(myid,ilevel) 
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle  <---- Very important !!!
-              next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig   
-              if(ip==nvector)then 
-                 call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-                 do jj=1,nvector
-                    if (int(mp(ind_part(jj)))>0)then
-                       write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
-                            ,init_pos(jj,3),',',int(mp(ind_part(jj)))
-                       end if
-                 end do
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
+  do ipart=1,ntest
+     nv=1
+     ig=1
+     ip=1
+     ilevel=levp(ipart) !level                                                                                                                                              
+     indv(nv)=1+icellp(ipart)/ngridmax
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index                                                                                                   
+     ind_part(nv)=ipart
+     ind_grid_part(nv)=1
+
+     dx=0.5D0**ilevel
+     nx_loc=(icoarse_max-icoarse_min+1)
+     skip_loc=(/0.0d0,0.0d0,0.0d0/)
+     if(ndim>0)skip_loc(1)=dble(icoarse_min)
+     if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+     if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+     scale=boxlen/dble(nx_loc)
+     do ind=1,twotondim
+        iz=(ind-1)/4
+        iy=(ind-1-4*iz)/2
+        ix=(ind-1-2*iy-4*iz)
+        xc(ind,1)=(dble(ix)-0.5D0)*dx
+        xc(ind,2)=(dble(iy)-0.5D0)*dx
+        xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
-     if(ip>0)then 
-        call get_cell_indices(init_ind_cell,init_cell_lev,ind_cell,cell_lev,ind_part,init_pos,pos,ip,nlevelmax)
-        do jj=1,ip
-           if (int(mp(ind_part(jj)))>0)then
-              write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(jj,1),',',init_pos(jj,2),','&
-                   ,init_pos(jj,3),',',int(mp(ind_part(jj)))
-           end if
-        end do
+
+     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
+     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
+     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
+
+     ! peak number                                                                                                                                                         
+     peak_nr=flag2(icellp(ipart))
+
+     if (flag2(peak_nr)>0)then
+        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(nv,1),',',init_pos(nv,2),','&
+             ,init_pos(nv,3),',',flag2(icellp(ipart))
      end if
   end do
   !end loop over all particles
@@ -1380,21 +1005,18 @@ subroutine write_peak_map
 #endif
 
 end subroutine write_peak_map
-
-
 !################################################################                 
 !################################################################ 
 !################################################################                 
 !################################################################     
-subroutine allocate_peak_batch_arrays
+subroutine allocate_peak_patch_arrays
   use amr_commons
   use hydro_commons
   use pm_commons
   use clfind_commons
   implicit none
 
-
-  !allocate peak-batch_properties
+  ! Allocate peak-patch_properties
   allocate(n_cells_tot(1:npeaks_tot))
   allocate(clump_size_tot(1:npeaks_tot,1:ndim))
   allocate(center_of_mass_tot(1:npeaks_tot,1:ndim))
@@ -1417,6 +1039,7 @@ subroutine allocate_peak_batch_arrays
   allocate(e_thermal_tot4(npeaks_tot)) 
   allocate(phi_min_tot(npeaks_tot))
   allocate(minmatch_tot(npeaks_tot))
+  allocate(new_peak(npeaks_tot))
 
   !initialize all peak based arrays
   n_cells_tot=0
@@ -1437,9 +1060,9 @@ subroutine allocate_peak_batch_arrays
   e_thermal_tot=0.; e_thermal_tot4=0.
   phi_min_tot=0.
   minmatch_tot=1
+  new_peak=0
 
-end subroutine allocate_peak_batch_arrays
-
+end subroutine allocate_peak_patch_arrays
 !################################################################                 
 !################################################################ 
 !################################################################                 
@@ -1469,13 +1092,11 @@ subroutine deallocate_all
   deallocate(e_thermal_tot,e_thermal_tot4)
   deallocate(phi_min_tot)
   deallocate(minmatch_tot)
-
   deallocate(saddle_dens_tot)
-
   deallocate(peak_pos_tot)
+  deallocate(new_peak)
 
 end subroutine deallocate_all
-
 !################################################################                 
 !################################################################ 
 !################################################################                 

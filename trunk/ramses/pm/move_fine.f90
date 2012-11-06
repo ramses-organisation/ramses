@@ -11,18 +11,11 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,isink
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
-  if(static)return
   if(verbose)write(*,111)ilevel
-
-  ! Set new sink variables to old ones
-  if(sink)then
-     vsink_new=0d0
-     oksink_new=0d0
-  endif
 
   ! Update particles position and velocity
   ig=0
@@ -60,24 +53,6 @@ subroutine move_fine(ilevel)
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
-  if(sink)then
-     if(nsink>0)then
-#ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(oksink_new,oksink_all,nsinkmax     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-        call MPI_ALLREDUCE(vsink_new ,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-        oksink_all=oksink_new
-        vsink_all=vsink_new
-#endif
-     endif
-     do isink=1,nsink
-        if(oksink_all(isink)==1d0)then
-           vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
-           xsink(isink,1:ndim)=xsink(isink,1:ndim)+vsink(isink,1:ndim)*dtnew(ilevel)
-        endif
-     end do
-  endif
-  
 111 format('   Entering move_fine for level ',I2)
 
 end subroutine move_fine
@@ -385,50 +360,27 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dtnew(ilevel)
         end do
      endif
-     ! For sink cloud particle, overwrite velocity with sink velocity
-     if(sink)then
+  end do
+
+  ! For sink cloud particle only
+  if(sink)then
+     ! Overwrite cloud particle velocity with sink velocity
+     do idim=1,ndim
         do j=1,np
            isink=-idp(ind_part(j))
            if(isink>0)then
-              new_vp(j,idim)=vsink(isink,idim)+ff(j,idim)*0.5D0*dtnew(ilevel)
-           endif
+              new_vp(j,idim)=vsnew(isink,idim,ilevel)
+           end if
         end do
-     end if
-  end do
-  ! For sink cloud particle, overwrite mass with sink mass
-  if(sink)then
-     do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           mp(ind_part(j))=msink(isink)/dble(ncloud_sink)
-        endif
      end do
   end if
+
+  ! Store velocity
   do idim=1,ndim
      do j=1,np
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
-
-  ! Update sink particle velocity using closest cloud particle
-  if(sink)then
-     do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           r2=(xp(ind_part(j),1)-xsink(isink,1))**2
-#if NDIM>1
-           r2=(xp(ind_part(j),2)-xsink(isink,2))**2+r2
-#endif
-#if NDIM>2
-           r2=(xp(ind_part(j),3)-xsink(isink,3))**2+r2
-#endif
-           if(r2==0.0)then
-              vsink_new(isink,1:ndim)=vp(ind_part(j),1:ndim)
-              oksink_new(isink)=1.0
-           end if
-        endif
-     end do
-  end if
 
   ! Update position
   do idim=1,ndim

@@ -18,10 +18,9 @@ subroutine synchro_fine(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  
-  ! Set new sink variables to old ones
+
   if(sink)then
-     vsink_new=0.d0; oksink_new=0.d0; level_sink_new=0
+     fsink_new=0.
   endif
 
   ! Synchronize velocity using CIC
@@ -61,24 +60,13 @@ subroutine synchro_fine(ilevel)
   if(sink)then
      if(nsink>0)then
 #ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(oksink_new,oksink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-        call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-        call MPI_ALLREDUCE(level_sink_new,level_sink_all,nsinkmax,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+        call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-        oksink_all=oksink_new
-        vsink_all=vsink_new
-        level_sink_all=level_sink
+        fsink_all=fsink_new
 #endif
      endif
      do isink=1,nsink
-        if(oksink_all(isink)==1d0)then
-           vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
-           level_sink(isink)=level_sink_all(isink)
-        endif
-!!$        if(myid==1)then
-!!$           write(*,*)msink(isink)
-!!$           write(*,*)vsink(isink,1:3)
-!!$        endif
+        fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
      end do
   endif
   
@@ -360,15 +348,25 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  ! For sink particle only, store contribution to the sink force
+  if(sink)then
+     do idim=1,ndim
+        do j=1,np
+           isink=-idp(ind_part(j))
+           if(isink>0)then
+              fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
+           endif
+        end do
+     end do
+  end if
+
   ! Compute individual time steps
   do j=1,np
      if(levelp(ind_part(j))>=ilevel)then
         dteff(j)=dtnew(levelp(ind_part(j)))
-     else if(levelp(ind_part(j))>0)then
-        dteff(j)=dtold(levelp(ind_part(j)))
      else
-        dteff(j)=0d0 ! timestep must be zero for newly produced sink
-     end if
+        dteff(j)=dtold(levelp(ind_part(j)))
+     endif
   end do
 
   ! Update particles level
@@ -394,24 +392,16 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Update sink particle velocity and level using closest cloud particle
+  ! For sink particle only, overwrite cloud particle velocity with sink velocity
   if(sink)then
-     do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           r2=(xp(ind_part(j),1)-xsink(isink,1))**2
-#if NDIM>1
-           r2=(xp(ind_part(j),2)-xsink(isink,2))**2+r2
-#endif
-#if NDIM>2
-           r2=(xp(ind_part(j),3)-xsink(isink,3))**2+r2
-#endif
-           if(r2==0.0)then
-              vsink_new(isink,1:ndim)=vp(ind_part(j),1:ndim)
-              level_sink_new(isink)=levelp(ind_part(j))
-              oksink_new(isink)=1.0
-           end if
-        endif
+     do idim=1,ndim
+        do j=1,np
+           isink=-idp(ind_part(j))
+           if(isink>0)then
+              ! Remember that vsink is half time step older than other particles
+              vp(ind_part(j),idim)=vsink(isink,idim)
+           endif
+        end do
      end do
   end if
 
