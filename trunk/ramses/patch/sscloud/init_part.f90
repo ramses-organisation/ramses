@@ -736,7 +736,6 @@ subroutine init_part
            call MPI_BCAST(jpart,1     ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
            call cmp_cpumap(xx,cc,jpart)
 #endif
-
            do i=1,jpart
 #ifndef WITHOUTMPI
               if(cc(i)==myid)then
@@ -751,7 +750,6 @@ subroutine init_part
               endif
 #endif
            enddo
-
         end do
         if(myid==1)close(10)
 
@@ -771,8 +769,6 @@ subroutine init_part
         if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
      end select
 
-
-
      ! read sink particles
      ! Sink particles that exist at the beginning og the simu are always (independent of the type of
      ! the other ic files) read from a text file.
@@ -781,31 +777,14 @@ subroutine init_part
         scale=boxlen/dble(nx_loc)
         dx_min=scale*0.5D0**nlevelmax/aexp
         
-        rmax=dble(ir_cloud)*dx_min
-        xx1=0.0; xx2=0.0; xx3=0.0
-        ncloud=0
-        do kk2=-2*ir_cloud,2*ir_cloud
-           xx3=dble(kk2)*dx_min/2.0
-           do jj2=-2*ir_cloud,2*ir_cloud
-              xx2=dble(jj2)*dx_min/2.0
-              do ii2=-2*ir_cloud,2*ir_cloud
-                 xx1=dble(ii2)*dx_min/2.0
-                 rr=sqrt(xx1*xx1+xx2*xx2+xx3*xx3)
-                 if(rr<=rmax)ncloud=ncloud+1
-              end do
-           end do
-        end do
-        ncloud_sink=ncloud
-        
-
         nsink=0                
         if(TRIM(initfile(levelmin)).NE.' ')then
-           filename=TRIM(initfile(levelmin))//'/ic_sink.txt'
+           filename=TRIM(initfile(levelmin))//'/ic_sink'
         else
-           filename='ic_sink.txt'
+           filename='ic_sink'
         end if
         INQUIRE(FILE=filename, EXIST=ic_sink)
-        if (myid==1)write(*,*),'looking for ic_sink.txt: ',filename
+        if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -830,9 +809,10 @@ subroutine init_part
 102        continue                 
            close(10)
         end if
-        if (myid==1.and.nsink==0)write(*,*)'No ic_sink.txt found: Starting without sink particles!'           
+        nindsink=MAXVAL(idsink) ! Reset max index
+        if (myid==1.and.nsink==0)write(*,*)'File ic_sink not found: starting without sink particles!'           
         if (myid==1.and.nsink>0.and.verbose)then
-           write(*,*),'sinks read from ic_sink.txt'
+           write(*,*),'sinks read from file ic_sink'
            write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
            write(*,*),'====================================================================================='
            do isink=1,nsink

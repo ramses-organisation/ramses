@@ -118,7 +118,8 @@ recursive subroutine amr_step(ilevel,icount)
         !! Dump movie frame
         !if(movie)call output_frame()
      endif
-     !important can't be done in sink routines because it must be done after dump all
+
+     ! Important can't be done in sink routines because it must be done after dump all
      if(sink)acc_rate=0.
 
   endif
@@ -132,7 +133,6 @@ recursive subroutine amr_step(ilevel,icount)
      !----------------------------------------------------
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback     
   endif
-
 
   !--------------------
   ! Poisson source term
@@ -185,7 +185,6 @@ recursive subroutine amr_step(ilevel,icount)
 
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
-
         
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -209,7 +208,6 @@ recursive subroutine amr_step(ilevel,icount)
 
   ! Set unew equal to uold
   if(hydro)call set_unew(ilevel)
-
 
   !---------------------------
   ! Recursive call to amr_step
@@ -249,8 +247,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Hyperbolic solver
      call godunov_fine(ilevel)
-     
-     
+          
      ! Reverse update boundaries
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
@@ -275,7 +272,6 @@ recursive subroutine amr_step(ilevel,icount)
            call grow_jeans(ilevel)
         endif
      endif
-
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
@@ -316,7 +312,6 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------------
   call flag_fine(ilevel,icount)
 
-
   !----------------------------
   ! Merge finer level particles
   !----------------------------
@@ -330,8 +325,6 @@ recursive subroutine amr_step(ilevel,icount)
      call rad_step(dtnew(ilevel))
   endif
 #endif
-
-
 
   if(sink)then
      !-------------------------------
@@ -352,7 +345,6 @@ recursive subroutine amr_step(ilevel,icount)
      
   end if
   
-
   !-------------------------------
   ! Update coarser level time-step
   !-------------------------------
