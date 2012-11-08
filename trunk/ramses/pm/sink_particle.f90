@@ -2541,9 +2541,16 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end if
   end do
 
+  ! Check if particles are in a leaf cell                                                                               
+  do j=1,np
+     ok(j)=ok(j).and.son(indp(j))==0
+  end do
+
   ! Remove mass from hydro cells
   do j=1,np
      if(ok(j))then
+
+        ! Get sink index
         isink=-idp(ind_part(j))
         r2=0d0
         do idim=1,ndim
@@ -2569,15 +2576,19 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do ivar=imetal,nvar
            z(ivar)=uold(indp(j),ivar)/d
         end do
+
         ! Compute accreted mass with cloud weighting
         acc_mass=dMBHoverdt(isink)*weight/total_volume(isink)*dtnew(ilevel)
+
         ! Cannot accrete more than 25% of initial gass mass in the cell
         acc_mass=max(min(acc_mass,(d-0.75*dini)*vol_loc),0.0_dp)
+
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
         vsink_new(isink,1)=vsink_new(isink,1)+acc_mass*u
         vsink_new(isink,2)=vsink_new(isink,2)+acc_mass*v
         vsink_new(isink,3)=vsink_new(isink,3)+acc_mass*w
+
         ! Remove accreted mass
         d=d-acc_mass/vol_loc
 #ifdef SOLVERmhd
@@ -3016,7 +3027,6 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ok(j)=ok(j).and.igrid(j)>0
   end do
 
-
   ! Compute parent cell position
   do idim=1,ndim
      do j=1,np
@@ -3059,12 +3069,11 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ok(j)=ok(j).and.son(indp(j))==0
   end do
 
-
-  ! Gather hydro variables
+  ! Remove mass from hydro cells
   do j=1,np
      if(ok(j))then
 
-        !get cell center positions
+        ! Get cell center positions
         xx(1)=(x0(ind_grid_part(j),1)+3.0D0*dx+xc(icell(j),1)-skip_loc(1))*scale
         xx(2)=(x0(ind_grid_part(j),2)+3.0D0*dx+xc(icell(j),2)-skip_loc(2))*scale
         xx(3)=(x0(ind_grid_part(j),3)+3.0D0*dx+xc(icell(j),3)-skip_loc(3))*scale
@@ -3089,7 +3098,6 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do ivar=imetal,nvar
            z(ivar)=uold(indp(j),ivar)/d
         end do
-
 
         ! User defined density threshold 
         d_thres=d_sink
