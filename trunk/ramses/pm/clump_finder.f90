@@ -128,7 +128,7 @@ subroutine clump_finder(create_output)
   ! Determine peak-ids positions for each cpu
   !----------------------------------------------------------------------------
   peak_nr=0
-  do icpu=2,myid-1
+  do icpu=1,myid-1
      peak_nr=peak_nr+npeaks_per_cpu_tot(icpu)
   end do
 
@@ -137,10 +137,17 @@ subroutine clump_finder(create_output)
   !----------------------------------------------------------------------------
   nmove=0
   nskip=peak_nr
+  flag2=0
   if(ntest>0)call scan_for_peaks(ntest,nmove,nskip,2)
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
+
+  !-------------------------------------------------------------------------------
+  ! Compute position of the peaks in global peak array peak_pos_tot
+  !-------------------------------------------------------------------------------
+  nskip=peak_nr
+  if(nstep>0)call assign_part_to_peak(ntest,nskip)
 
   !-------------------------------------------------------------------------------               
   ! Identify peak patches using density ordering
@@ -159,13 +166,8 @@ subroutine clump_finder(create_output)
      call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nmove=nmove_all
 #endif   
-     if(myid==1 .and. verbose)write(*,*)"istep=",istep,"nmove=",nmove   
+     if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove   
   end do
-
-  !-------------------------------------------------------------------------------
-  ! Compute position of the peaks in global peak array peak_pos_tot
-  !-------------------------------------------------------------------------------
-  call assign_part_to_peak(ntest,peak_nr)
 
   !-------------------------------------------------------------------------------
   ! Allocate peak-patch property arrays
@@ -789,12 +791,29 @@ subroutine assign_part_to_peak(ntest,peak_nr)
   real(dp),dimension(1:3)::skip_loc
   real(dp)::d,x,y,z,dx,dx_loc,scale,vol_loc,dx_min,vol_min
 
+  ! Set local constants
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_min=(0.5D0**nlevelmax)*scale
+  vol_min=dx_min**ndim
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)
+     xc(ind,2)=(dble(iy)-0.5D0)
+     xc(ind,3)=(dble(iz)-0.5D0)
+  end do
+
   !----------------------------------------------------------------------------
   ! allocate arrays where the postiton of the peaks is stored
   !----------------------------------------------------------------------------
   allocate(peak_pos_tot(1:npeaks_tot,1:ndim))
-  
-  ! Allocate local array
   allocate(peak_pos(1:npeaks_tot,1:ndim))
   peak_pos=0.
   
@@ -806,41 +825,19 @@ subroutine assign_part_to_peak(ntest,peak_nr)
 
   do i=1,ntest
      if(flag2(icellp(testp_sort(i)))==peak_nr)then
-        ! Mesh spacing in that level                      
-        ilevel=levp(testp_sort(i))
-        dx=0.5D0**ilevel
-        nx_loc=(icoarse_max-icoarse_min+1)
-        skip_loc=(/0.0d0,0.0d0,0.0d0/)
-        if(ndim>0)skip_loc(1)=dble(icoarse_min)
-        if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-        if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-        scale=boxlen/dble(nx_loc)
-        dx_loc=dx*scale
-        vol_loc=dx_loc**ndim
-        dx_min=(0.5D0**nlevelmax)*scale
-        vol_min=dx_min**ndim
-        ! Cells center position relative to grid center position
-        do ind=1,twotondim
-           iz=(ind-1)/4
-           iy=(ind-1-4*iz)/2
-           ix=(ind-1-2*iy-4*iz)
-           xc(ind,1)=(dble(ix)-0.5D0)*dx
-           xc(ind,2)=(dble(iy)-0.5D0)*dx
-           xc(ind,3)=(dble(iz)-0.5D0)*dx
-        end do
-
-        nv=1
-        ind=(icellp(testp_sort(i))-ncoarse-1)/ngridmax+1
-        ind_grid(nv)=icellp(testp_sort(i))-ncoarse-(ind-1)*ngridmax !grid index 
-        peak_pos(peak_nr,1)=(xg(ind_grid(nv),1)+xc(ind,1)-skip_loc(1))*scale
-        peak_pos(peak_nr,2)=(xg(ind_grid(nv),2)+xc(ind,2)-skip_loc(2))*scale
-        peak_pos(peak_nr,3)=(xg(ind_grid(nv),3)+xc(ind,3)-skip_loc(3))*scale
-
+        ilevel=levp(testp_sort(i)) ! cell level
+        dx=0.5D0**ilevel ! mesh spacing at that level
+        ind=(icellp(testp_sort(i))-ncoarse-1)/ngridmax+1 ! cell position
+        igrid=icellp(testp_sort(i))-ncoarse-(ind-1)*ngridmax ! grid index 
+        peak_pos(peak_nr,1)=(xg(igrid,1)+xc(ind,1)*dx-skip_loc(1))*scale
+        peak_pos(peak_nr,2)=(xg(igrid,2)+xc(ind,2)*dx-skip_loc(2))*scale
+        peak_pos(peak_nr,3)=(xg(igrid,3)+xc(ind,3)*dx-skip_loc(3))*scale
+        ! jump to next peak
         peak_loc=peak_loc+1
         peak_nr=peak_nr+1
      end if
   end do
-
+  ! reset peak skip
   peak_nr=peak_nr-peak_loc
 
   !----------------------------------------------------------------------------
