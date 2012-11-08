@@ -73,7 +73,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
      ig=1
      ip=1
      ilevel=levp(ipart) !level
-     indv(nv)=1+icellp(ipart)/ngridmax
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
      ind_grid_part(nv)=1
@@ -280,7 +280,7 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
      ig=1
      ip=1
      ilevel=levp(ipart) !level
-     indv(nv)=1+icellp(ipart)/ngridmax
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
      ind_grid_part(nv)=1
@@ -543,7 +543,7 @@ subroutine saddlepoint_search(ntest)
      ig=1
      ip=1
      ilevel=levp(ipart) !level
-     indv(nv)=1+icellp(ipart)/ngridmax
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
      ind_grid_part(nv)=1
@@ -966,7 +966,7 @@ subroutine write_peak_map(ntest)
      ig=1
      ip=1
      ilevel=levp(ipart) !level                                                                                                                                              
-     indv(nv)=1+icellp(ipart)/ngridmax
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index                                                                                                   
      ind_part(nv)=ipart
      ind_grid_part(nv)=1

@@ -3922,8 +3922,6 @@ subroutine make_sink_from_clump(ilevel)
               index_sink=index_sink+1
               index_sink_tot=index_sink_tot+1
 
-
-
               ! Convert uold to primitive variables
               d=uold(ind_cell_new(i),1)
               u=uold(ind_cell_new(i),2)/d

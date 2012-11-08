@@ -459,7 +459,7 @@ subroutine scan_for_peaks(npartt,nmove,counter,action)
   do ipart=1,npartt
      nv=1
      ilevel=levp(testp_sort(ipart)) !level
-     indv(nv)=1+icellp(testp_sort(ipart))/ngridmax
+     indv(nv)=(icellp(testp_sort(ipart))-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(testp_sort(ipart))-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=testp_sort(ipart)
      ind_grid_part(nv)=1
@@ -830,7 +830,7 @@ subroutine assign_part_to_peak(ntest,peak_nr)
         end do
 
         nv=1
-        ind=1+icellp(testp_sort(i))/ngridmax
+        ind=(icellp(testp_sort(i))-ncoarse-1)/ngridmax+1
         ind_grid(nv)=icellp(testp_sort(i))-ncoarse-(ind-1)*ngridmax !grid index 
         peak_pos(peak_nr,1)=(xg(ind_grid(nv),1)+xc(ind,1)-skip_loc(1))*scale
         peak_pos(peak_nr,2)=(xg(ind_grid(nv),2)+xc(ind,2)-skip_loc(2))*scale
