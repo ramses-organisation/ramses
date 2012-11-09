@@ -843,7 +843,7 @@ subroutine init_part
            ! Create central cloud particles (negative index)
            if(cc(1).eq.myid)then
               npart=npart+1
-              tp(npart)=0.
+              tp(npart)=1d-10
               mp(npart)=msink(isink)     ! Mass
               levelp(npart)=levelmin
               idp(npart)=-isink          ! Identity
