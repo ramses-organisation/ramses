@@ -495,7 +495,7 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   integer::nv=1
   logical::error
   logical,dimension(1:nvector)::okpeak
-  integer::i,j,ind,idim,nx_loc,i1,j1,k1,i2,j2,k2,ix,iy,iz
+  integer::i,j,ind,idim,nx_loc,i1,j1,k1,i2,j2,k2,i3,j3,k3,ix,iy,iz
   real(dp)::dx,dx_loc,scale,vol_loc
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
