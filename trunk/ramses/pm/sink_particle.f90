@@ -2652,6 +2652,7 @@ subroutine compute_accretion_rate(ilevel)
 
      ! Compute sink particle accretion rate
      do isink=1,nsink
+
         density=0d0
         volume=0d0
         velocity=0d0
@@ -2674,19 +2675,17 @@ subroutine compute_accretion_rate(ilevel)
         r2=(factG*msink(isink)/(c2+v2))**2
         
         ! Compute Bondi-Hoyle accretion rate in code units
-        boost=1.0
-        if(star)boost=max((density/d_star)**2,1.0_dp)
-        !     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
-        dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
-        
+        if(bondi)then
+           boost=1.0
+           if(star)boost=max((density/d_star)**2,1.0_dp)
+           !     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
+           dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
+        else
+           dMBHoverdt(isink)=acc_rate(isink)/dtnew(levelmin)           
+        endif
+
         ! Compute Eddington accretion rate in code units
         dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-        
-        ! Compute BH radius of influence in kpc
-        rBH(isink)=250.*(msink(isink)*scale_m/(5d9*2d33))**(0.5)
-        
-        ! Compute BH radius of influence in code units
-        epsBH(isink)=max(4.*dx_min,rBH(isink)*3.08d21/scale_l)
         
      end do
      

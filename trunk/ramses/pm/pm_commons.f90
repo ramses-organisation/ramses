@@ -9,7 +9,6 @@ module pm_commons
   real(kind=8),allocatable,dimension(:)::v2sink_all,c2sink_all
   real(qdp)   ,allocatable,dimension(:)::xmsink
   real(kind=8),allocatable,dimension(:)::dMBHoverdt,dMEDoverdt
-  real(kind=8),allocatable,dimension(:)::rBH,epsBH
   real(kind=8),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
   real(kind=8),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
   real(kind=8),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn

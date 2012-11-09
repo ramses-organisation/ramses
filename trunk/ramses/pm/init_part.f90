@@ -132,8 +132,6 @@ subroutine init_part
      allocate(level_sink_new(1:nsinkmax))
      allocate(dMBHoverdt(1:nsinkmax))
      allocate(dMEDoverdt(1:nsinkmax))
-     allocate(rBH(1:nsinkmax))
-     allocate(epsBH(1:nsinkmax))
      allocate(r2sink(1:nsinkmax))
      allocate(r2k(1:nsinkmax))
      allocate(v2sink(1:nsinkmax))
