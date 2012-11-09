@@ -1,4 +1,5 @@
 module clfind_commons
+  use amr_commons, ONLY: qdp
 
   integer::nparts,nparts_tot,npeaks,npeaks_tot
   real(kind=8)::tot_mass
@@ -22,7 +23,7 @@ module clfind_commons
   real(kind=8),allocatable,dimension(:)::relevance_tot
 
   ! Test particles properties
-  real(kind=8),allocatable,dimension(:)::denp ! Density of the cell containing a test particle. Davide: used by the clump finder.
+  real(qdp),allocatable,dimension(:)::denp ! Density of the cell containing a test particle. Davide: used by the clump finder.
   integer,allocatable,dimension(:)::iglobalp,icellp,levp,testp_sort ! Used to sort test particles by density  
   integer,allocatable,dimension(:)::n_cells_tot,minmatch_tot,new_peak
   integer,allocatable,dimension(:)::sort_index

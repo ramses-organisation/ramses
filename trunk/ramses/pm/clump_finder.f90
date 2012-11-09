@@ -72,8 +72,10 @@ subroutine clump_finder(create_output)
   !-------------------------------------------------------------------------------
   ! Allocate test particle arrays
   !-------------------------------------------------------------------------------
-  allocate(denp(ntest),levp(ntest),iglobalp(ntest),icellp(ntest))
-  denp=0.d0; levp=0; iglobalp=0; icellp=0
+  if (ntest>0) then 
+     allocate(denp(ntest),levp(ntest),iglobalp(ntest),icellp(ntest))
+     denp=0.d0; levp=0; iglobalp=0; icellp=0
+  endif
   !-------------------------------------------------------------------------------
   ! Compute test particle properties
   !-------------------------------------------------------------------------------
@@ -85,27 +87,28 @@ subroutine clump_finder(create_output)
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
+
   !-------------------------------------------------------------------------------
   ! Sort particles according to density
   !-------------------------------------------------------------------------------
-  allocate(testp_sort(ntest)) 
-  do i=1,ntest
-     denp(i)=-denp(i)
-     testp_sort(i)=i
-  end do
-  if(ntest>0)call quick_sort(denp(1),testp_sort(1),ntest) 
-  deallocate(denp)
+  if (ntest>0) then
+     allocate(testp_sort(ntest)) 
+     do i=1,ntest
+        denp(i)=-denp(i)
+        testp_sort(i)=i
+     end do
+     call quick_sort(denp(1),testp_sort(1),ntest) 
+     deallocate(denp)
+  endif
 
   !-------------------------------------------------------------------------------               
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
   npeaks=0; nmove=0
-  if(ntest>0) then 
-     call scan_for_peaks(ntest,nmove,npeaks,1)
-  end if
+  if(ntest>0)call scan_for_peaks(ntest,nmove,npeaks,1)
   npeaks_per_cpu=0
   npeaks_per_cpu(myid)=npeaks
-  write(*,*)'n_peaks on processor number',myid,'= ',npeaks
+  write(*,*)'n_peaks on processor number',myid,'= ',npeaks,ntest
 
   !----------------------------------------------------------------------------                       
   ! Share number of peaks per cpu and create a list  
@@ -147,7 +150,7 @@ subroutine clump_finder(create_output)
   ! Compute position of the peaks in global peak array peak_pos_tot
   !-------------------------------------------------------------------------------
   nskip=peak_nr
-  if(nstep>0)call assign_part_to_peak(ntest,nskip)
+  call assign_part_to_peak(ntest,nskip)
 
   !-------------------------------------------------------------------------------               
   ! Identify peak patches using density ordering
@@ -270,10 +273,12 @@ subroutine clump_finder(create_output)
   endif
   
   ! Deallocate test particle and peak arrays
-  deallocate(icellp)
-  deallocate(levp)
-  deallocate(testp_sort)
-  deallocate(iglobalp)
+  if (ntest>0)then
+     deallocate(icellp)
+     deallocate(levp)
+     deallocate(testp_sort)
+     deallocate(iglobalp)
+  endif
   call deallocate_all
   
 end subroutine clump_finder
