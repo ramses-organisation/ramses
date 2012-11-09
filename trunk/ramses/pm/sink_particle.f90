@@ -1121,10 +1121,26 @@ subroutine create_cloud(ilevel)
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu
+  integer::ii,jj,kk
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  real(dp)::xx,yy,zz,rr
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+
+  ! Compute number of cloud particles
+  ncloud_sink=0
+  do kk=-2*ir_cloud,2*ir_cloud
+     zz=dble(kk)/2.0
+     do jj=-2*ir_cloud,2*ir_cloud
+        yy=dble(jj)/2.0
+        do ii=-2*ir_cloud,2*ir_cloud
+           xx=dble(ii)/2.0
+           rr=sqrt(xx*xx+yy*yy+zz*zz)
+           if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+        end do
+     end do
+  end do
 
   ! Gather sink particles only.
 
@@ -1220,19 +1236,6 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
 
   rmax=dble(ir_cloud)*dx_min
   xx=0.0; yy=0.0;zz=0.0
-  ncloud=0
-  do kk=-2*ir_cloud,2*ir_cloud
-     zz=dble(kk)*dx_min/2.0
-     do jj=-2*ir_cloud,2*ir_cloud
-        yy=dble(jj)*dx_min/2.0
-        do ii=-2*ir_cloud,2*ir_cloud
-           xx=dble(ii)*dx_min/2.0
-           rr=sqrt(xx*xx+yy*yy+zz*zz)
-           if(rr<=rmax)ncloud=ncloud+1
-        end do
-     end do
-  end do
-  ncloud_sink=ncloud
 
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)*dx_min/2.0
@@ -1248,7 +1251,7 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
                  isink=-idp(ind_part(j))
                  idp(ind_cloud(j))=-isink
                  levelp(ind_cloud(j))=levelmin
-                 mp(ind_cloud(j))=msink(isink)/dble(ncloud)
+                 mp(ind_cloud(j))=msink(isink)/dble(ncloud_sink)
                  xp(ind_cloud(j),1)=xp(ind_part(j),1)+xx
                  vp(ind_cloud(j),1)=vsink(isink,1)
                  xp(ind_cloud(j),2)=xp(ind_part(j),2)+yy
@@ -1264,7 +1267,7 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
   ! Reduce sink particle mass
   do j=1,np
      isink=-idp(ind_part(j))
-     mp(ind_part(j))=msink(isink)/dble(ncloud)
+     mp(ind_part(j))=msink(isink)/dble(ncloud_sink)
      vp(ind_part(j),1)=vsink(isink,1)
      vp(ind_part(j),2)=vsink(isink,2)
      vp(ind_part(j),3)=vsink(isink,3)
