@@ -460,9 +460,9 @@ subroutine scan_for_peaks(npartt,nmove,counter,action)
 
   do ipart=1,npartt
      nv=1
-     ilevel=levp(testp_sort(ipart)) !level
-     indv(nv)=(icellp(testp_sort(ipart))-ncoarse-1)/ngridmax+1
-     ind_grid(nv)=icellp(testp_sort(ipart))-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ilevel=levp(testp_sort(ipart)) ! level
+     indv(nv)=(icellp(testp_sort(ipart))-ncoarse-1)/ngridmax+1 ! cell position
+     ind_grid(nv)=icellp(testp_sort(ipart))-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=testp_sort(ipart)
      ind_grid_part(nv)=1
      ig=1
@@ -525,17 +525,17 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   vol_loc=dx_loc**3
 
   ! Integer constants
-  i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
-  j1min=0; j1max=0; j2min=0; j2max=0; j3min=1; j3max=1
-  k1min=0; k1max=0; k2min=0; k2max=0; k3min=1; k3max=1
+  i1min=0; i1max=0; i2min=0; i2max=0; i3min=0; i3max=0
+  j1min=0; j1max=0; j2min=0; j2max=0; j3min=0; j3max=0
+  k1min=0; k1max=0; k2min=0; k2max=0; k3min=0; k3max=0
   if(ndim>0)then
-     i1max=2; i2max=3; i3max=2
+     i1max=1; i2max=2; i3max=3
   end if
   if(ndim>1)then
-     j1max=2; j2max=3; j3max=2
+     j1max=1; j2max=2; j3max=3
   end if
   if(ndim>2)then
-     k1max=2; k2max=3; k3max=2
+     k1max=1; k2max=2; k3max=3
   end if
 
   ! Cells center position relative to grid center position
@@ -548,9 +548,9 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
   
-  !====================================================
+  !==============================
   ! Get particle density and cell
-  !====================================================
+  !==============================
   do j=1,np
      xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale
      xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale
@@ -566,115 +566,43 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   ! Check for potential new positions at level ilevel-1
   !====================================================
   if(ilevel>levelmin)then
-
-     ! Lower left corner of 3x3x3 grid-cube
-     do idim=1,ndim
-        do i=1,ng
-           x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
-        end do
-     end do
-
-     ! Rescale particle position at level ilevel-1
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=xg(ind_grid(j),idim)+xc(indv(j),1)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)/dx
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)/2.0D0
-        end do
-     end do
-
-     ! Compute parent cell position
-     do j=1,np
-        ! Particle 1
-        xpart(j,1,1)=0.5+ig(j,1)
-        xpart(j,2,1)=0.5+ig(j,2)
-        xpart(j,3,1)=0.5+ig(j,3)
-        ! Particle 2
-        xpart(j,1,2)=0.5+id(j,1)
-        xpart(j,2,2)=0.5+ig(j,2)
-        xpart(j,3,2)=0.5+ig(j,3)
-        ! Particle 3
-        xpart(j,1,3)=0.5+ig(j,1)
-        xpart(j,2,3)=0.5+id(j,2)
-        xpart(j,3,3)=0.5+ig(j,3)
-        ! Particle 4
-        xpart(j,1,4)=0.5+id(j,1)
-        xpart(j,2,4)=0.5+id(j,2)
-        xpart(j,3,4)=0.5+ig(j,3)
-        ! Particle 5
-        xpart(j,1,5)=0.5+ig(j,1)
-        xpart(j,2,5)=0.5+ig(j,2)
-        xpart(j,3,5)=0.5+id(j,3)
-        ! Particle 6
-        xpart(j,1,6)=0.5+id(j,1)
-        xpart(j,2,6)=0.5+ig(j,2)
-        xpart(j,3,6)=0.5+id(j,3)
-        ! Particle 7
-        xpart(j,1,7)=0.5+ig(j,1)
-        xpart(j,2,7)=0.5+id(j,2)
-        xpart(j,3,7)=0.5+id(j,3)
-        ! Particle 8
-        xpart(j,1,8)=0.5+id(j,1)
-        xpart(j,2,8)=0.5+id(j,2)
-        xpart(j,3,8)=0.5+id(j,3)
-     end do
-
-     ! Test those particles
-     do ind=1,twotondim
-
-        do idim=1,ndim
-           do j=1,np
-              xtest(j,idim)=xpart(j,idim,ind)*2.*dx+x0(ind_grid_part(j),idim)
-           end do
-           do j=1,np
-              xtest(j,idim)=(xtest(j,idim)-skip_loc(idim))*scale
+     ! Generate 2x2x2 neighboring cells at level ilevel-1
+     do k1=k1min,k1max
+        do j1=j1min,j1max
+           do i1=i1min,i1max
+              do j=1,np
+                 xtest(j,1)=(xg(ind_grid(j),1)+2*xc(indv(j),1)-skip_loc(1))*scale+(2*i1-1)*dx_loc
+                 xtest(j,2)=(xg(ind_grid(j),2)+2*xc(indv(j),2)-skip_loc(2))*scale+(2*j1-1)*dx_loc
+                 xtest(j,3)=(xg(ind_grid(j),3)+2*xc(indv(j),3)-skip_loc(3))*scale+(2*k1-1)*dx_loc
+              end do
+              call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
+              do j=1,np
+                 if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1))then
+                    if(uold(cell_index(j),1)>density_max(j))then
+                       okpeak(j)=.false.
+                       density_max(j)=uold(cell_index(j),1)
+                       ind_max(j)=cell_index(j)
+                    endif
+                 endif
+              end do
            end do
         end do
-
-        call get_cell_index(cell_index,cell_levl,xtest,ilevel-1,np)
-
-        do j=1,np 
-           if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1))then
-              if(uold(cell_index(j),1)>density_max(j))then
-                 okpeak(j)=.false.
-                 density_max(j)=uold(cell_index(j),1)
-                 ind_max(j)=cell_index(j)
-              endif
-           endif
-        end do
      end do
-
   endif
 
   !====================================================
   ! Check for potential new positions at level ilevel
   !====================================================
   ! Generate 3x3x3 neighboring cells at level ilevel
-  do k1=k1min,k1max
-     do j1=j1min,j1max
-        do i1=i1min,i1max
-
+  do k2=k2min,k2max
+     do j2=j2min,j2max
+        do i2=i2min,i2max
            do j=1,np
-              xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i1-1)*dx_loc
-              xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j1-1)*dx_loc
-              xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k1-1)*dx_loc
+              xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc
+              xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
+              xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
            end do
-
            call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
-
            do j=1,np
               if(son(cell_index(j))==0.and.cell_levl(j)==ilevel)then
                  if(uold(cell_index(j),1)>density_max(j))then
@@ -684,7 +612,6 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
                  endif
               endif
            end do
-
         end do
      end do
   end do
@@ -694,18 +621,15 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   !====================================================
   if(ilevel<nlevelmax)then
      ! Generate 4x4x4 neighboring cells at level ilevel+1
-     do k2=k2min,k2max
-        do j2=j2min,j2max
-           do i2=i2min,i2max
-
+     do k3=k3min,k3max
+        do j3=j3min,j3max
+           do i3=i3min,i3max
               do j=1,np
-                 xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1.5)*dx_loc/2.0
-                 xtest(j,2)=(xg(ind_grid(j),3)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1.5)*dx_loc/2.0
-                 xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1.5)*dx_loc/2.0
+                 xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
+                 xtest(j,2)=(xg(ind_grid(j),3)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
+                 xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
               end do
-
               call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)
-
               do j=1,np
                  if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1))then
                     if(uold(cell_index(j),1)>density_max(j))then
@@ -718,7 +642,6 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
            end do
         end do
      end do
-
   endif
 
   select case (action)
@@ -750,7 +673,6 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   end select
 
 end subroutine flag_peak
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
@@ -780,7 +702,7 @@ subroutine assign_part_to_peak(ntest,peak_nr)
 
   integer::minf2,maxf2,cum
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_part
   integer,dimension(:),allocatable::flip
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
   real(kind=8),allocatable,dimension(:,:)::peak_pos
