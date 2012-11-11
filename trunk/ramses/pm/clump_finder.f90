@@ -198,7 +198,7 @@ subroutine clump_finder(create_output)
      !do i=1,npeaks_tot
      !   if (myid==1)write(*,'(50(F4.3,X))'),saddle_dens_tot(i,1:npeaks_tot)
      !end do
-     call merge_clumps(ntest) 
+     call merge_clumps
   end if
 
   !-------------------------------------------------------------------------------

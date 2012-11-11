@@ -579,7 +579,7 @@ subroutine saddlepoint_search(ntest)
      call find_best_neighbor(ind_grid,clump_nr,init_pos,ip,ilevel,saddle_dens)
 
   end do
-  ! end loop over all particles
+  ! end loop over test particles
   
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(saddle_dens,saddle_dens_tot,(npeaks_tot**2),MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
@@ -635,16 +635,12 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   !------------------------------------------------------------
   logical::error
   integer::j,ind,idim,nx_loc
-  integer::i1,j1,k1,i2,j2,k2
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3
   real(kind=8)::dx,dx_loc,scale,vol_loc
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
-  ! Grid-based arrays
-
   real(dp),dimension(1:nvector,1:ndim),save::x0
-  ! Particle-based arrays
-
   real(dp),dimension(1:nvector,1:ndim)::x,xtest,pos
   integer ,dimension(1:nvector,1:ndim),save::ig,id
   integer ,dimension(1:nvector)::cc
@@ -665,112 +661,65 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   vol_loc=dx_loc**3
 
   ! Integer constants
-  i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
-  j1min=0; j1max=0; j2min=0; j2max=0; j3min=1; j3max=1
-  k1min=0; k1max=0; k2min=0; k2max=0; k3min=1; k3max=1
+  i1min=0; i1max=0; i2min=0; i2max=0; i3min=0; i3max=0
+  j1min=0; j1max=0; j2min=0; j2max=0; j3min=0; j3max=0
+  k1min=0; k1max=0; k2min=0; k2max=0; k3min=0; k3max=0
   if(ndim>0)then
-     i1max=2; i2max=3; i3max=2
+     i1max=1; i2max=2; i3max=3
   end if
   if(ndim>1)then
-     j1max=2; j2max=3; j3max=2
+     j1max=1; j2max=2; j3max=3
   end if
   if(ndim>2)then
-     k1max=2; k2max=3; k3max=2
+     k1max=1; k2max=2; k3max=3
   end if
 
   do j=1,np
      xtest(j,1:ndim)=pos(j,1:ndim)
   end do
+
   !====================================================
   ! Check for potential new positions at level ilevel-1
   !====================================================
   if(ilevel>levelmin)then
-
-     ! Lower left corner of 3x3x3 grid-cube
-     do idim=1,ndim
-        do j=1,np
-           x0(j,idim)=xg(ind_grid_part(j),idim)-3.0D0*dx
-        end do
-     end do
-
-     ! Compute parent cell position
-     do j=1,np
-        ! Particle 1
-        xpart(j,1,1)=0.5+ig(j,1)
-        xpart(j,2,1)=0.5+ig(j,2)
-        xpart(j,3,1)=0.5+ig(j,3)
-        ! Particle 2
-        xpart(j,1,2)=0.5+id(j,1)
-        xpart(j,2,2)=0.5+ig(j,2)
-        xpart(j,3,2)=0.5+ig(j,3)
-        ! Particle 3
-        xpart(j,1,3)=0.5+ig(j,1)
-        xpart(j,2,3)=0.5+id(j,2)
-        xpart(j,3,3)=0.5+ig(j,3)
-        ! Particle 4
-        xpart(j,1,4)=0.5+id(j,1)
-        xpart(j,2,4)=0.5+id(j,2)
-        xpart(j,3,4)=0.5+ig(j,3)
-        ! Particle 5
-        xpart(j,1,5)=0.5+ig(j,1)
-        xpart(j,2,5)=0.5+ig(j,2)
-        xpart(j,3,5)=0.5+id(j,3)
-        ! Particle 6
-        xpart(j,1,6)=0.5+id(j,1)
-        xpart(j,2,6)=0.5+ig(j,2)
-        xpart(j,3,6)=0.5+id(j,3)
-        ! Particle 7
-        xpart(j,1,7)=0.5+ig(j,1)
-        xpart(j,2,7)=0.5+id(j,2)
-        xpart(j,3,7)=0.5+id(j,3)
-        ! Particle 8
-        xpart(j,1,8)=0.5+id(j,1)
-        xpart(j,2,8)=0.5+id(j,2)
-        xpart(j,3,8)=0.5+id(j,3)
-     end do
-
-     ! Test those particles
-     do ind=1,twotondim
-        do idim=1,ndim
-           do j=1,np
-              xtest(j,idim)=xpart(j,idim,ind)*2.*dx+x0(j,idim)
-           end do
-           do j=1,np
-              xtest(j,idim)=(xtest(j,idim)-skip_loc(idim))*scale
+     ! Generate 2x2x2 neighboring cells at level ilevel-1
+     do k1=k1min,k1max
+        do j1=j1min,j1max
+           do i1=i1min,i1max
+              do j=1,np
+                 xtest(j,1)=(xg(ind_grid(j),1)+2*xc(indv(j),1)-skip_loc(1))*scale+(2*i1-1)*dx_loc
+                 xtest(j,2)=(xg(ind_grid(j),2)+2*xc(indv(j),2)-skip_loc(2))*scale+(2*j1-1)*dx_loc
+                 xtest(j,3)=(xg(ind_grid(j),3)+2*xc(indv(j),3)-skip_loc(3))*scale+(2*k1-1)*dx_loc
+              end do
+              call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
+              do j=1,np
+                 if(son(ind_cell(j))==0.and.cell_levl(j)==(ilevel-1).and.flag2(ind_cell(j))/=0)then
+                    if(clump_nr(j)/=flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
+                       saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
+                    end if
+                 endif
+              end do
            end do
         end do
-
-        call get_cell_index(ind_cell,cell_levl,xtest,ilevel-1,np)
-
-        do j=1,np
-           if(son(ind_cell(j))==0 .and. cell_levl(j)==(ilevel-1) .and. flag2(ind_cell(j))/=0 )then
-              if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
-                 saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
-              end if
-           endif
-        end do
      end do
-
   endif
 
   !====================================================
   ! Check for potential new positions at level ilevel
   !====================================================
   ! Generate 3x3x3 neighboring cells at level ilevel
-  do k1=k1min,k1max
-     do j1=j1min,j1max
-        do i1=i1min,i1max
+  do k2=k2min,k2max
+     do j2=j2min,j2max
+        do i2=i2min,i2max
            do j=1,np
-              xtest(j,1)=pos(j,1)+(i1-1)*dx_loc
-              xtest(j,2)=pos(j,2)+(j1-1)*dx_loc
-              xtest(j,3)=pos(j,3)+(k1-1)*dx_loc
-           end do
-           
+              xtest(j,1)=pos(j,1)+(i2-1)*dx_loc
+              xtest(j,2)=pos(j,2)+(j2-1)*dx_loc
+              xtest(j,3)=pos(j,3)+(k2-1)*dx_loc
+           end do           
            call get_cell_index(ind_cell,cell_levl,xtest,ilevel,np)
-
            do j=1,np
-              if(son(ind_cell(j))==0 .and. cell_levl(j)==ilevel .and. flag2(ind_cell(j))/=0)then
-                 if((clump_nr(j) /= flag2(ind_cell(j))).and.(uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j)))))then   
+              if(son(ind_cell(j))==0.and.cell_levl(j)==ilevel.and.flag2(ind_cell(j))/=0)then
+                 if((clump_nr(j)/=flag2(ind_cell(j))).and.(uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j)))))then   
                     saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
                  end if
               end if
@@ -783,23 +732,19 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   ! Check for potential new positions at level ilevel+1
   !====================================================
   if(ilevel<nlevelmax)then
-
      ! Generate 4x4x4 neighboring cells at level ilevel+1
-     do k2=k2min,k2max
-        do j2=j2min,j2max
-           do i2=i2min,i2max
-
+     do k3=k3min,k3max
+        do j3=j3min,j3max
+           do i3=i3min,i3max
               do j=1,np
-                 xtest(j,1)=pos(j,1)+(i2-1.5)*dx_loc/2.0
-                 xtest(j,2)=pos(j,2)+(j2-1.5)*dx_loc/2.0
-                 xtest(j,3)=pos(j,3)+(k2-1.5)*dx_loc/2.0
+                 xtest(j,1)=pos(j,1)+(i3-1.5)*dx_loc/2.0
+                 xtest(j,2)=pos(j,2)+(j3-1.5)*dx_loc/2.0
+                 xtest(j,3)=pos(j,3)+(k3-1.5)*dx_loc/2.0
               end do
-
               call get_cell_index(ind_cell,cell_levl,xtest,ilevel+1,np)
-
               do j=1,np
-                 if(son(ind_cell(j))==0 .and. cell_levl(j)==(ilevel+1) .and. flag2(ind_cell(j))/=0)then
-                    if(clump_nr(j) /= flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then
+                 if(son(ind_cell(j))==0.and.cell_levl(j)==(ilevel+1).and.flag2(ind_cell(j))/=0)then
+                    if(clump_nr(j)/=flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then
                        saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)   
                     end if
                  end if
@@ -807,7 +752,6 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
            end do
         end do
      end do
-
   endif
 
 end subroutine find_best_neighbor
@@ -815,20 +759,16 @@ end subroutine find_best_neighbor
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine merge_clumps(ntest)
+subroutine merge_clumps
   use amr_commons
   use pm_commons
-  use poisson_commons
-  use hydro_commons, ONLY: uold
   use clfind_commons
   implicit none
 
-  integer::ntest
   integer::j,jj,i,ii
   integer::igrid,jgrid,ipart,jpart,next_part,npart1,info,ilevel,merge_to
   real(kind=8)::max_val
   logical::merging
-
 
   if (verbose)write(*,*)'Now merging clumps'
 
