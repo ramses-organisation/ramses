@@ -26,7 +26,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
 
   ! variables to be used for vector-sweeps
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
+  integer,dimension(1:nvector)::ind_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
 
   ! variables related to the size of a cell on a given level
@@ -76,7 +76,6 @@ subroutine compute_clump_properties(ntest,ntest_all)
      indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
-     ind_grid_part(nv)=1
 
      dx=0.5D0**ilevel
      nx_loc=(icoarse_max-icoarse_min+1)
@@ -137,7 +136,6 @@ subroutine compute_clump_properties(ntest,ntest_all)
         
      end if
   end do
-
 
   !---------------------------------------------------------------------------
   ! a lot of MPI communication to collect the results from the different cpu's
@@ -239,7 +237,7 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
 
   ! variables to be used with vector-sweeps
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
+  integer,dimension(1:nvector)::ind_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
 
   ! variables related to the size of a cell on a given level
@@ -283,7 +281,6 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
      indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
-     ind_grid_part(nv)=1
 
      dx=0.5D0**ilevel
      nx_loc=(icoarse_max-icoarse_min+1)
@@ -521,8 +518,7 @@ subroutine saddlepoint_search(ntest)
   integer::jj,i,j,kk,info,peak_nr
   ! variables to be used for vector-sweeps
   integer,dimension(1:nvector),save::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev,clump_nr
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part,indv
-  real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
+  integer,dimension(1:nvector),save::ind_part,indv
 
   ! variables related to the size of a cell on a given level
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -540,44 +536,14 @@ subroutine saddlepoint_search(ntest)
   !---------------------------------------------------------------------------
   do ipart=1,ntest
      nv=1
-     ig=1
-     ip=1
-     ilevel=levp(ipart) !level
-     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
+     ilevel=levp(ipart) ! level
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
      ind_part(nv)=ipart
-     ind_grid_part(nv)=1
-
-     dx=0.5D0**ilevel
-     nx_loc=(icoarse_max-icoarse_min+1)
-     skip_loc(1)=dble(icoarse_min)
-     skip_loc(2)=dble(jcoarse_min)
-     skip_loc(3)=dble(kcoarse_min)
-     scale=boxlen/dble(nx_loc)
-
-     do ind=1,twotondim
-        iz=(ind-1)/4
-        iy=(ind-1-4*iz)/2
-        ix=(ind-1-2*iy-4*iz)
-        xc(ind,1)=(dble(ix)-0.5D0)*dx
-        xc(ind,2)=(dble(iy)-0.5D0)*dx
-        xc(ind,3)=(dble(iz)-0.5D0)*dx
-     end do
-
-     ! test particle position
-     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
-     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
-     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
-
-     ! peak number
-     peak_nr=flag2(icellp(ipart))
-
-     ! local arrays
-     clump_nr(nv)=flag2(icellp(ipart))
-     ind_grid(nv)=mod((icellp(ipart)-ncoarse),ngridmax)
-
-     call find_best_neighbor(ind_grid,clump_nr,init_pos,ip,ilevel,saddle_dens)
-
+     clump_nr(nv)=flag2(icellp(ipart)) ! peak number
+     ig=1
+     ip=1
+     call find_best_neighbor(indv,ind_grid,ind_part,clump_nr,ig,ip,ilevel,saddle_dens)
   end do
   ! end loop over test particles
   
@@ -615,16 +581,17 @@ end subroutine saddlepoint_search
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
+subroutine find_best_neighbor(indv,ind_grid,ind_part,clump_nr,ng,np,ilevel,saddle_dens)
   use amr_commons
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold
   use clfind_commons
   implicit none
-  integer::np,ilevel
-  integer,dimension(1:nvector)::ind_grid_part,cell_levl,clump_nr,ind_cell
-  ! saddle point array for 1 cpu
+  integer::ng,np,ilevel
+  integer,dimension(1:nvector)::ind_grid,indv
+  integer,dimension(1:nvector)::ind_part
+  integer,dimension(1:nvector)::clump_nr
   real(kind=8),dimension(1:npeaks_tot,1:npeaks_tot)::saddle_dens
   !------------------------------------------------------------
   ! 
@@ -640,13 +607,8 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  real(dp),dimension(1:nvector,1:ndim)::x,xtest,pos
-  integer ,dimension(1:nvector,1:ndim),save::ig,id
-  integer ,dimension(1:nvector)::cc
-
-  real(kind=8),dimension(1:nvector,1:ndim,1:twotondim),save::xpart
-
+  real(dp),dimension(1:nvector,1:ndim)::xtest
+  integer,dimension(1:nvector)::cell_levl,cell_index
   real(kind=8),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -674,8 +636,14 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
      k1max=1; k2max=2; k3max=3
   end if
 
-  do j=1,np
-     xtest(j,1:ndim)=pos(j,1:ndim)
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
   !====================================================
@@ -693,9 +661,9 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
               end do
               call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
               do j=1,np
-                 if(son(ind_cell(j))==0.and.cell_levl(j)==(ilevel-1).and.flag2(ind_cell(j))/=0)then
-                    if(clump_nr(j)/=flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then   
-                       saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
+                 if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1).and.flag2(cell_index(j))/=0)then
+                    if(clump_nr(j)/=flag2(cell_index(j)).and.uold(cell_index(j),1)>saddle_dens(clump_nr(j),flag2(cell_index(j))))then   
+                       saddle_dens(clump_nr(j),flag2(cell_index(j)))=uold(cell_index(j),1)
                     end if
                  endif
               end do
@@ -712,15 +680,15 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
      do j2=j2min,j2max
         do i2=i2min,i2max
            do j=1,np
-              xtest(j,1)=pos(j,1)+(i2-1)*dx_loc
-              xtest(j,2)=pos(j,2)+(j2-1)*dx_loc
-              xtest(j,3)=pos(j,3)+(k2-1)*dx_loc
+              xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc
+              xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
+              xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
            end do           
-           call get_cell_index(ind_cell,cell_levl,xtest,ilevel,np)
+           call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
            do j=1,np
-              if(son(ind_cell(j))==0.and.cell_levl(j)==ilevel.and.flag2(ind_cell(j))/=0)then
-                 if((clump_nr(j)/=flag2(ind_cell(j))).and.(uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j)))))then   
-                    saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)
+              if(son(cell_index(j))==0.and.cell_levl(j)==ilevel.and.flag2(cell_index(j))/=0)then
+                 if((clump_nr(j)/=flag2(cell_index(j))).and.(uold(cell_index(j),1)>saddle_dens(clump_nr(j),flag2(cell_index(j)))))then   
+                    saddle_dens(clump_nr(j),flag2(cell_index(j)))=uold(cell_index(j),1)
                  end if
               end if
            end do
@@ -737,15 +705,15 @@ subroutine find_best_neighbor(ind_grid_part,clump_nr,pos,np,ilevel,saddle_dens)
         do j3=j3min,j3max
            do i3=i3min,i3max
               do j=1,np
-                 xtest(j,1)=pos(j,1)+(i3-1.5)*dx_loc/2.0
-                 xtest(j,2)=pos(j,2)+(j3-1.5)*dx_loc/2.0
-                 xtest(j,3)=pos(j,3)+(k3-1.5)*dx_loc/2.0
+                 xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
+                 xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
+                 xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
               end do
-              call get_cell_index(ind_cell,cell_levl,xtest,ilevel+1,np)
+              call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)
               do j=1,np
-                 if(son(ind_cell(j))==0.and.cell_levl(j)==(ilevel+1).and.flag2(ind_cell(j))/=0)then
-                    if(clump_nr(j)/=flag2(ind_cell(j)).and.uold(ind_cell(j),1)>saddle_dens(clump_nr(j),flag2(ind_cell(j))))then
-                       saddle_dens(clump_nr(j),flag2(ind_cell(j)))=uold(ind_cell(j),1)   
+                 if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1).and.flag2(cell_index(j))/=0)then
+                    if(clump_nr(j)/=flag2(cell_index(j)).and.uold(cell_index(j),1)>saddle_dens(clump_nr(j),flag2(cell_index(j))))then
+                       saddle_dens(clump_nr(j),flag2(cell_index(j)))=uold(cell_index(j),1)   
                     end if
                  end if
               end do
@@ -883,7 +851,7 @@ subroutine write_peak_map(ntest)
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,ilevel
   integer::jj,i,kk,nv,peak_nr
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
-  integer,dimension(1:nvector)::ind_part,ind_grid_part,indv
+  integer,dimension(1:nvector)::ind_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
   character(LEN=5)::myidstring,nchar
 
@@ -909,7 +877,6 @@ subroutine write_peak_map(ntest)
      indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index                                                                                                   
      ind_part(nv)=ipart
-     ind_grid_part(nv)=1
 
      dx=0.5D0**ilevel
      nx_loc=(icoarse_max-icoarse_min+1)

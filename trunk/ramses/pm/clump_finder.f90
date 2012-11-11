@@ -461,7 +461,7 @@ subroutine scan_for_peaks(npartt,nmove,counter,action)
   !----------------------------------------------------------------------
   integer::nv
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npartmin
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part,indv
+  integer,dimension(1:nvector),save::ind_grid,ind_part,indv
 
   do ipart=1,npartt
      nv=1
@@ -469,10 +469,9 @@ subroutine scan_for_peaks(npartt,nmove,counter,action)
      indv(nv)=(icellp(testp_sort(ipart))-ncoarse-1)/ngridmax+1 ! cell position
      ind_grid(nv)=icellp(testp_sort(ipart))-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=testp_sort(ipart)
-     ind_grid_part(nv)=1
      ig=1
      ip=1
-     call flag_peak(indv,ind_grid,ind_part,ind_grid_part,ig,ip,nmove,ilevel,counter,action)
+     call flag_peak(indv,ind_grid,ind_part,ig,ip,nmove,ilevel,counter,action)
   end do
 
   if(verbose)write(*,*)'   Exiting scan_for_peaks',nmove
@@ -482,7 +481,7 @@ end subroutine scan_for_peaks
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counter,action)
+subroutine flag_peak(indv,ind_grid,ind_part,ng,np,nm,ilevel,counter,action)
   use amr_commons
   use pm_commons
   use poisson_commons
@@ -491,7 +490,7 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   implicit none
   integer::ng,np,nm,ilevel,counter,action
   integer,dimension(1:nvector)::ind_grid,indv
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_part
   !------------------------------------------------------------
   ! This routine moves the particles in the arrays of length 
   ! nvector one step to the densest neighbor. It returns the
@@ -509,16 +508,14 @@ subroutine flag_peak(indv,ind_grid,ind_part,ind_grid_part,ng,np,nm,ilevel,counte
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
  ! Particle-based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x,xtest,xmax
+  real(dp),dimension(1:nvector,1:ndim),save::xtest
   real(dp),dimension(1:nvector),save::density_max
-  integer ,dimension(1:nvector,1:ndim),save::ig,id
   integer ,dimension(1:nvector),save::cell_index,cell_levl,ind_max
-  real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xpart
   real(dp),dimension(1:3)::skip_loc
 
   okpeak=.true.
 
-  ! Meshspacing in that level
+  ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
