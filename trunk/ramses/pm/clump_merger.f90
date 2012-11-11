@@ -92,6 +92,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
         xc(ind,2)=(dble(iy)-0.5D0)*dx
         xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
+
      init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
      init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
      init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
@@ -277,9 +278,9 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
      nv=1
      ig=1
      ip=1
-     ilevel=levp(ipart) !level
-     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
-     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ilevel=levp(ipart) ! level
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=ipart
 
      dx=0.5D0**ilevel
@@ -297,6 +298,7 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
         xc(ind,2)=(dble(iy)-0.5D0)*dx
         xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
+
      init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
      init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
      init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
@@ -837,7 +839,6 @@ subroutine write_peak_map(ntest)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
   integer::ntest
   !----------------------------------------------------------------------------                
   ! One loop over all the particles creating a textfile for each cpu
@@ -847,35 +848,31 @@ subroutine write_peak_map(ntest)
   ! -zpos for all parts
   ! -clump number for all parts
   !----------------------------------------------------------------------------
-
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info,ilevel
   integer::jj,i,kk,nv,peak_nr
   integer,dimension(1:nvector)::ind_grid,ind_cell,init_ind_cell,init_cell_lev,cell_lev
   integer,dimension(1:nvector)::ind_part,indv
   real(dp),dimension(1:nvector,1:ndim)::pos,init_pos
   character(LEN=5)::myidstring,nchar
-
-  ! variables related to the size of a cell on a given level                                                                                                                
+  ! variables related to the size of a cell on a given level
   real(kind=8)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   integer::nx_loc,ind,ix,iy,iz
 
-
 #if NDIM>2
   call title(ifout-1,nchar)
   call title(myid,myidstring)
   open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
-  !write(20,*)nparts
 
-  !loop over all particles
+  ! loop over test particles
   do ipart=1,ntest
      nv=1
      ig=1
      ip=1
-     ilevel=levp(ipart) !level                                                                                                                                              
-     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
-     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index                                                                                                   
+     ilevel=levp(ipart) ! level
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=ipart
 
      dx=0.5D0**ilevel
@@ -885,6 +882,7 @@ subroutine write_peak_map(ntest)
      if(ndim>1)skip_loc(2)=dble(jcoarse_min)
      if(ndim>2)skip_loc(3)=dble(kcoarse_min)
      scale=boxlen/dble(nx_loc)
+
      do ind=1,twotondim
         iz=(ind-1)/4
         iy=(ind-1-4*iz)/2
@@ -898,15 +896,14 @@ subroutine write_peak_map(ntest)
      init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
      init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
 
-     ! peak number                                                                                                                                                         
+     ! peak number                 
      peak_nr=flag2(icellp(ipart))
 
      if (flag2(peak_nr)>0)then
-        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(nv,1),',',init_pos(nv,2),','&
-             ,init_pos(nv,3),',',flag2(icellp(ipart))
+        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')init_pos(nv,1),',',init_pos(nv,2),',',init_pos(nv,3),',',flag2(icellp(ipart))
      end if
   end do
-  !end loop over all particles
+  ! end loop over test particles
 
   close(20)
 #endif
@@ -1018,14 +1015,11 @@ subroutine clump_phi
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
-
   !---------------------------------------------------------------
   ! This subroutine checks wheter a density maximum corresponds to 
   ! a potential minimum -> pot_min(peak_nr)=ok in this case.
   ! Furthermore, the minimum potential is stored for every peak.
   !---------------------------------------------------------------
-
   integer::k1,j1,i1,jj,info
   integer,dimension(1:nvector)::cell_index,cell_levl,ind_cell,lev_cell,cc
   real(dp),dimension(1:nvector,1:3)::pos,xtest
@@ -1050,9 +1044,9 @@ subroutine clump_phi
            call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
            phim=phi(cell_index(1))
 
-           !Check for neighbors
+           ! Check for neighbors
 
-           !one cell offset
+           ! one cell offset
            do k1=-1,1
               do j1=-1,1
                  do i1=-1,1
@@ -1070,8 +1064,7 @@ subroutine clump_phi
               end do
            end do
 
-
-           ! !two cells offset
+           ! two cells offset
            do k1=-2,2
               do j1=-2,2
                  do i1=-2,2
