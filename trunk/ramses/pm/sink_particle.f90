@@ -4234,9 +4234,11 @@ subroutine update_cloud(ilevel)
   ! is set ot zero on exit.
   !----------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,isink,nx_loc
+  integer ::ii,jj,kk
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:3)::skip_loc
+  real(dp)::xx,yy,zz,rr
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -4251,6 +4253,20 @@ subroutine update_cloud(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
+
+  ! Compute number of cloud particles
+  ncloud_sink=0
+  do kk=-2*ir_cloud,2*ir_cloud
+     zz=dble(kk)/2.0
+     do jj=-2*ir_cloud,2*ir_cloud
+        yy=dble(jj)/2.0
+        do ii=-2*ir_cloud,2*ir_cloud
+           xx=dble(ii)/2.0
+           rr=sqrt(xx*xx+yy*yy+zz*zz)
+           if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+        end do
+     end do
+  end do
 
   ! Update particles position and velocity
   ig=0
