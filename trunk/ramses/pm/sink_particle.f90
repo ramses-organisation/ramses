@@ -2546,7 +2546,9 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Check if particles are in a leaf cell                                                                               
   do j=1,np
-     ok(j)=ok(j).and.son(indp(j))==0
+     if(ok(j))then
+        ok(j)=son(indp(j))==0
+     endif
   end do
 
   ! Remove mass from hydro cells
@@ -2923,6 +2925,9 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
+  ! Density threshold for sink particle formation
+  d_sink=n_sink/scale_nH
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -2943,9 +2948,6 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      xc(ind,2)=(dble(iy)-0.5D0)*dx
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-
-  ! Density threshold for sink particle formation
-  d_sink=n_sink/scale_nH
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -3068,7 +3070,9 @@ subroutine accrete_jeans(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Check if particles are in a leaf cell
   do j=1,np
-     ok(j)=ok(j).and.son(indp(j))==0
+     if(ok(j))then
+        ok(j)=son(indp(j))==0
+     endif
   end do
 
   ! Remove mass from hydro cells
