@@ -65,7 +65,7 @@ subroutine clump_finder(create_output)
   ntest_all=ntest_cpu(ncpu)
   if(myid==1)then
      if(ntest_all.gt.0)then
-        write(*,'(" Total number of test particles=",I6)')ntest_all
+        write(*,'(" Total number of test particles=",I10)')ntest_all
      endif
   end if
 
@@ -441,7 +441,7 @@ subroutine create_test_particle(ilevel,ntot,nskip)
      ! End loop over cells
   end do
   ! End loop over grids
-
+ 
 end subroutine create_test_particle
 !################################################################
 !################################################################
@@ -485,7 +485,7 @@ subroutine flag_peak(indv,ind_grid,ind_part,ng,np,nm,ilevel,counter,action)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use clfind_commons, ONLY: icellp,npeaks
+  use clfind_commons, ONLY: icellp
   use hydro_commons, ONLY: uold
   implicit none
   integer::ng,np,nm,ilevel,counter,action
@@ -496,7 +496,6 @@ subroutine flag_peak(indv,ind_grid,ind_part,ng,np,nm,ilevel,counter,action)
   ! nvector one step to the densest neighbor. It returns the
   ! number of particles which have effectively moved.
   !------------------------------------------------------------
-  integer::nv=1
   logical::error
   logical,dimension(1:nvector)::okpeak
   integer::i,j,ind,idim,nx_loc,i1,j1,k1,i2,j2,k2,i3,j3,k3,ix,iy,iz
@@ -628,7 +627,7 @@ subroutine flag_peak(indv,ind_grid,ind_part,ng,np,nm,ilevel,counter,action)
            do i3=i3min,i3max
               do j=1,np
                  xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
-                 xtest(j,2)=(xg(ind_grid(j),3)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
+                 xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
                  xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
               end do
               call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)
