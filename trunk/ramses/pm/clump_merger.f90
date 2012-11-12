@@ -303,21 +303,19 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
      init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
      init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
 
-     ! use peak number after merge
-     peak_nr=new_peak(flag2(icellp(ipart))) 
-     ! make sure flag2 is properly updated after merge
-     flag2(icellp(ipart))=peak_nr
-
-     pos(nv,1)=peak_pos_tot(peak_nr,1)
-     pos(nv,2)=peak_pos_tot(peak_nr,2)
-     pos(nv,3)=peak_pos_tot(peak_nr,3)
      call get_cell_index(ind_cell,cell_lev,init_pos,ilevel,ip)
 
      if(cell_lev(nv) /= ilevel)write(*,*)'alert_problem in get cell index'
 
-     d=dble(uold(ind_cell(nv),1))
+     d=uold(ind_cell(nv),1)
      de=uold(ind_cell(nv),ndim+2)
      
+     ! use peak number after merge
+     peak_nr=new_peak(flag2(icellp(ipart))) 
+
+     ! make sure flag2 is properly updated after merge
+     flag2(icellp(ipart))=peak_nr
+
      if (peak_nr /=0 ) then
         
         do i=1,ndim
@@ -370,6 +368,7 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
         end if
         
      end if
+
   end do
 
   !---------------------------------------------------------------------------
@@ -530,6 +529,7 @@ subroutine saddlepoint_search(ntest)
 
   ! saddle point array for 1 cpu
   real(kind=8),dimension(1:npeaks_tot,1:npeaks_tot)::saddle_dens
+
   saddle_dens=0.
 
   !---------------------------------------------------------------------------
