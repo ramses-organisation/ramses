@@ -604,7 +604,7 @@ subroutine find_best_neighbor(indv,ind_grid,ind_part,clump_nr,ng,np,ilevel,saddl
   !------------------------------------------------------------
   logical::error
   integer::j,ind,idim,nx_loc
-  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ix,iy,iz
   real(kind=8)::dx,dx_loc,scale,vol_loc
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
@@ -612,6 +612,7 @@ subroutine find_best_neighbor(indv,ind_grid,ind_part,clump_nr,ng,np,ilevel,saddl
   real(dp),dimension(1:nvector,1:ndim)::xtest
   integer,dimension(1:nvector)::cell_levl,cell_index
   real(kind=8),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
