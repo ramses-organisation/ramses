@@ -268,7 +268,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      if(cooling)then
-        ! Compute thermal temperature by subtracting polytrope
+        ! Compute thermal temperature by substracting polytrope
         do i=1,nleaf
            T2(i) = max(T2(i)-T2min(i),T2_min_fix)
         end do
