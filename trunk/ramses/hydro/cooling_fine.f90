@@ -90,7 +90,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dx,dx_loc,scale,vol_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -213,7 +213,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
 
      if(cooling)then
-        ! Compute thermal temperature by subtracting polytrope
+        ! Compute thermal temperature by substracting polytrope
         do i=1,nleaf
            T2(i) = max(T2(i)-T2min(i),T2_min_fix)
         end do
