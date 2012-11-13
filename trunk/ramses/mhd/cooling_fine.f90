@@ -10,7 +10,7 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info,isink
+  integer::ncache,i,igrid,ngrid,info
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
