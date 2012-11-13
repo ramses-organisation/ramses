@@ -228,14 +228,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            U(i,1) = T2(i)
         end do
-     
+
         ! Get the ionization fractions
         do ivar=0,nIons-1
            do i=1,nleaf
               U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/uold(ind_leaf(i),1)
            end do
         end do
-     
+
         ! Get photon densities and flux magnitudes
         do ivar=1,nPacs
            do i=1,nleaf
@@ -261,7 +261,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               end do
            end if
         end do
-        
+
         if(cooling .and. delayed_cooling) then
            cooling_on(1:nleaf)=.true.
            do i=1,nleaf
@@ -283,10 +283,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         call rt_solve_cooling(U, dNpdt, dFpdt, nH, cooling_on, Zsolar, dtcool, aexp, nleaf)
         do i=1,nleaf
            delta_T2(i) = U(i,1) - T2(i)
-           !        if(T2(i)<100.)then
-           !           write(*,*)'Before',T2(i),nH(i),U_old(i,1),'spec',U_old(i,2),U_old(i,3),U_old(i,4),'rad',U_old(i,5),U_old(i,6)
-           !           write(*,*)'After ',T2(i),nH(i),U(i,1),'spec',U(i,2),U(i,3),U(i,4),'rad',U(i,5),U(i,6)
-           !        endif
         end do
      endif
 #endif
