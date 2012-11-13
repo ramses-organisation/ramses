@@ -8,7 +8,7 @@ end subroutine swap
  
 subroutine sift_down(a,ind,end,i,size) 
   integer::i,size,ln,j,end
-  real(kind=8),dimension(0:size)::a
+  real(kind=8),dimension(1:size)::a
   integer,dimension(1:size)::ind
  
   j = i
@@ -32,7 +32,7 @@ end subroutine sift_down
  
 subroutine heapify(a,ind,size)
   integer::size,i
-  real(kind=8),dimension(0:size)::a
+  real(kind=8),dimension(1:size)::a
   integer,dimension(1:size)::ind
  
   do i = size/2,1,-1
@@ -43,7 +43,7 @@ end subroutine heapify
  
 subroutine heapsort_index(a,ind,size) 
   integer::size,i
-  real(kind=8),dimension(0:size)::a
+  real(kind=8),dimension(1:size)::a
   integer,dimension(1:size)::ind
 
   do i=1,size 

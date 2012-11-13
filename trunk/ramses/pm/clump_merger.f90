@@ -7,7 +7,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
+ 
   integer::ntest,ntest_all
   !----------------------------------------------------------------------------
   ! this subroutine performs one loop over all particles and collects the 
@@ -38,7 +38,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
   integer ::ix,iy,iz
 
   !peak-patch related arrays before sharing information with other cpus
-  real(kind=8),dimension(0:npeaks_tot)::max_dens
+  real(kind=8),dimension(1:npeaks_tot)::max_dens
   real(kind=8),dimension(1:npeaks_tot)::min_dens,av_dens,clump_mass,clump_vol
   real(kind=8),dimension(1:npeaks_tot,1:3)::center_of_mass,clump_momentum
   integer,dimension(1:npeaks_tot)::n_cells
@@ -72,9 +72,9 @@ subroutine compute_clump_properties(ntest,ntest_all)
      nv=1
      ig=1
      ip=1
-     ilevel=levp(ipart) !level
-     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1
-     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax !grid index
+     ilevel=levp(ipart) ! level
+     indv(nv)=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+     ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=ipart
 
      dx=0.5D0**ilevel
@@ -99,7 +99,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
 
      ! find peak_nr
      peak_nr=flag2(icellp(ipart))
-     d=dble(uold(icellp(ipart),1))
+     d=uold(icellp(ipart),1)
      do i=1,ndim
         vd(i)=uold(icellp(ipart),i+1)
      end do
@@ -154,7 +154,7 @@ subroutine compute_clump_properties(ntest,ntest_all)
   min_dens_tot=min_dens
 #endif
 #ifndef WITHOUTMPI     
-  call MPI_ALLREDUCE(max_dens,max_dens_tot,npeaks_tot+1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(max_dens,max_dens_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   max_dens_tot=max_dens
@@ -435,7 +435,6 @@ subroutine write_clump_properties(to_file)
   !sort clumps by peak density in ascending order
   call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
 
-
   if(to_file)then
      ilun=20
   else 
@@ -456,7 +455,7 @@ subroutine write_clump_properties(to_file)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > 0)then          
-           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(XE11.2E2),X,F13.5,XE11.2E2,X,F7.3,1X,F6.3,3X,F6.3,4X,I1)')jj&
+           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(XE21.12E2),X,F13.5,XE11.2E2,X,F7.3,1X,F6.3,3X,F6.3,4X,I1)')jj&
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
                 ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*(scale_l/1.496d13)&
@@ -736,10 +735,11 @@ subroutine merge_clumps
   use clfind_commons
   implicit none
 
-  integer::j,jj,i,ii
+  integer::j,jj,i,ii,merge_count,nn,final_peak
   integer::igrid,jgrid,ipart,jpart,next_part,npart1,info,ilevel,merge_to
   real(kind=8)::max_val
   logical::merging
+  integer,dimension(1:npeaks_tot)::old_peak
 
   if (verbose)write(*,*)'Now merging clumps'
 
@@ -764,8 +764,16 @@ subroutine merge_clumps
         
         ! Store new peak index
         new_peak(ii)=merge_to
-        if(verbose)write(*,*)'clump ',ii,'merged to ',merge_to
-        
+        if(verbose .and. myid==1)then
+           if(merge_to>0)then
+              write(*,*)'clump ',ii,'merged to ',merge_to
+              do j=1,3
+                 print*,'merg#',i,peak_pos_tot(ii,j),peak_pos_tot(merge_to,j)
+              end do
+              print*,saddle_dens_tot(ii,merge_to)
+           endif
+        endif
+
         ! Update clump properties
         if (merge_to>0)then
            do j=1,ndim
@@ -824,7 +832,26 @@ subroutine merge_clumps
         relevance_tot(ii)=0.
      end if
   end do
-  
+
+  !change new_peak so that it points to the end point of the merging 
+  !history and not only to the clump it has been merged to in first place 
+  do i=1,npeaks_tot
+     j=i
+     merge_count=0
+     nn=new_peak(j)
+     do while(j.NE.nn)
+        old_peak(nn)=j
+        merge_count=merge_count+1
+        j=nn
+        nn=new_peak(j)
+     end do
+     final_peak=nn
+     do j=merge_count,1,-1
+        nn=old_peak(nn)
+        new_peak(nn)=final_peak
+     end do
+  end do
+
   if (verbose)write(*,*)'Done merging clumps'  
 end subroutine merge_clumps
 !################################################################
@@ -925,15 +952,16 @@ subroutine allocate_peak_patch_arrays
   allocate(n_cells_tot(1:npeaks_tot))
   allocate(clump_size_tot(1:npeaks_tot,1:ndim))
   allocate(center_of_mass_tot(1:npeaks_tot,1:ndim))
-  allocate(second_moments(1:npeaks_tot,1:ndim,1:ndim)); allocate(second_moments_tot(1:npeaks_tot,1:ndim,1:ndim))
+  allocate(second_moments(1:npeaks_tot,1:ndim,1:ndim)) 
+  allocate(second_moments_tot(1:npeaks_tot,1:ndim,1:ndim))
   allocate(min_dens_tot(1:npeaks_tot))
   allocate(av_dens_tot(1:npeaks_tot))
-  allocate(max_dens_tot(0:npeaks_tot))
+  allocate(max_dens_tot(1:npeaks_tot))
   allocate(clump_mass_tot(1:npeaks_tot))
   allocate(clump_vol_tot(1:npeaks_tot))
-  allocate(saddle_max_tot(npeaks_tot))
-  allocate(relevance_tot(0:npeaks_tot))
-  allocate(sort_index(npeaks_tot))
+  allocate(saddle_max_tot(1:npeaks_tot))
+  allocate(relevance_tot(1:npeaks_tot))
+  allocate(sort_index(1:npeaks_tot))
   allocate(saddle_dens_tot(1:npeaks_tot,1:npeaks_tot))
   allocate(clump_momentum_tot(1:npeaks_tot,1:ndim))
   allocate(e_kin_int_tot(npeaks_tot))
@@ -982,7 +1010,8 @@ subroutine deallocate_all
   deallocate(n_cells_tot)
   deallocate(clump_size_tot)
   deallocate(center_of_mass_tot)
-  deallocate(second_moments); deallocate(second_moments_tot)
+  deallocate(second_moments)
+  deallocate(second_moments_tot)
   deallocate(min_dens_tot)
   deallocate(av_dens_tot)
   deallocate(max_dens_tot)
