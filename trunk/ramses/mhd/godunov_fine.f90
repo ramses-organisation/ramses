@@ -17,6 +17,7 @@ subroutine godunov_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
+  if(static)return
   if(verbose)write(*,111)ilevel
 
   ! Loop over active grids by vector sweeps

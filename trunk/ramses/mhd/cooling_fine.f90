@@ -16,9 +16,6 @@ subroutine cooling_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! Compute sink accretion rates
-  if(sink)call compute_accretion_rate(0)
-
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -83,6 +80,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            ind_leaf(nleaf)=ind_cell(i)
         end if
      end do
+     if(nleaf.eq.0)cycle
 
      ! Compute rho
      do i=1,nleaf
@@ -92,7 +90,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute metallicity in solar units
      if(metal)then
         do i=1,nleaf
-           Zsolar(i)=uold(ind_leaf(i),neul+4)/nH(i)/0.02
+           Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/0.02
         end do
      else
         do i=1,nleaf
@@ -155,15 +153,18 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! You can put your own polytrope EOS here
      !==========================================
 
-     ! Compute cooling time step in second
-     dtcool = dtnew(ilevel)*scale_t
-
-     ! Compute net cooling at constant nH
      if(cooling)then
         ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
            T2(i)=max(T2(i)-T2min(i),T2_min_fix)
         end do
+     endif
+
+     ! Compute cooling time step in second
+     dtcool = dtnew(ilevel)*scale_t
+
+     ! Compute net cooling at constant nH
+     if(cooling)then
         call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
 
@@ -177,6 +178,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
         end do
+        ! Turn off cooling in blast wave regions                                                                              
+        if(delayed_cooling)then
+           do i=1,nleaf
+              cooling_switch = uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
+              if(cooling_switch > 1d-3)then
+                 delta_T2(i) = MAX(delta_T2(i),real(0,kind=dp))
+              endif
+           end do
+        endif
      endif
 
      ! Compute minimal total energy from polytrope
@@ -200,6 +210,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      else
         do i=1,nleaf
            uold(ind_leaf(i),neul) = max(T2(i),T2min(i))
+        end do
+     endif
+
+     ! Update delayed cooling switch                                                                                          
+     if(delayed_cooling)then
+        t_blast=20d0*1d6*(365.*24.*3600.)
+        damp_factor=exp(-dtcool/t_blast)
+        do i=1,nleaf
+           uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor
         end do
      endif
 
