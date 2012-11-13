@@ -49,13 +49,15 @@ subroutine output_frame()
   opened=.false.
   
 #if NDIM > 1
+
+  ! Update counter
+  imov=imov+1
+  if(imov>imovout)return
+
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
   call title(imov, istep_str)
-  ! Update counter
-  imov=imov+1
-
   moviedir = 'movie/'
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(myid==1) write(*,*) "Writing frame ", istep_str
