@@ -209,6 +209,9 @@ recursive subroutine amr_step(ilevel,icount)
 
      if(hydro)then
 
+        ! Compute Bondi-Hoyle accretion parameters
+        if(sink.and.bondi)call bondi_hoyle(ilevel)
+
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
@@ -359,13 +362,10 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------
   if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 
-  if(hydro)then
-     ! Star formation in leaf cells only
-     if(star)call star_formation(ilevel)
-
-     ! Compute Bondi-Hoyle accretion parameters
-     if(sink.and.bondi)call bondi_hoyle(ilevel)
-  end if
+  !----------------------------------
+  ! Star formation in leaf cells only
+  !----------------------------------
+  if(hydro.and.star)call star_formation(ilevel)
 
   !---------------------------------------
   ! Update physical and virtual boundaries
