@@ -846,7 +846,6 @@ subroutine merge_clumps
         j=nn
         nn=new_peak(j)
      end do
-     if(nn==0)merge_count=merge_count-1
      final_peak=nn
      nn=j
      do j=merge_count,1,-1
