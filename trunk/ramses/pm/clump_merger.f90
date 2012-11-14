@@ -455,7 +455,7 @@ subroutine write_clump_properties(to_file)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > 0)then          
-           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(XE21.12E2),X,F13.5,XE11.2E2,X,F7.3,1X,F6.3,3X,F6.3,4X,I1)')jj&
+           write(ilun,'(I6,X,I10,3(X,F21.17),3(X,F11.5),X,F13.5,3(XE26.18E2),X,F13.5,XE11.2E2,X,F7.3,1X,F6.3,3X,F6.3,4X,I1)')jj&
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
                 ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*(scale_l/1.496d13)&
@@ -846,6 +846,7 @@ subroutine merge_clumps
         j=nn
         nn=new_peak(j)
      end do
+     if(nn==0)merge_count=merge_count-1
      final_peak=nn
      nn=j
      do j=merge_count,1,-1
