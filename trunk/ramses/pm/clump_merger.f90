@@ -833,12 +833,13 @@ subroutine merge_clumps
      end if
   end do
 
-  !change new_peak so that it points to the end point of the merging 
-  !history and not only to the clump it has been merged to in first place 
+  ! Change new_peak so that it points to the end point of the merging 
+  ! history and not only to the clump it has been merged to in first place 
   do i=1,npeaks_tot
      j=i
      merge_count=0
      nn=new_peak(j)
+     if(nn.EQ.0)cycle
      do while(j.NE.nn)
         old_peak(nn)=j
         merge_count=merge_count+1
