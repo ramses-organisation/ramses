@@ -840,13 +840,14 @@ subroutine merge_clumps
      merge_count=0
      nn=new_peak(j)
      if(nn.EQ.0)cycle
-     do while(j.NE.nn)
+     do while(j.NE.nn.AND.nn>0)
         old_peak(nn)=j
         merge_count=merge_count+1
         j=nn
         nn=new_peak(j)
      end do
      final_peak=nn
+     nn=j
      do j=merge_count,1,-1
         nn=old_peak(nn)
         new_peak(nn)=final_peak
