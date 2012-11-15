@@ -67,6 +67,21 @@ subroutine compute_clump_properties(ntest,ntest_all)
   !---------------------------------------------------------------------------
   ! big loop over all parts to collect information from the cells
   !---------------------------------------------------------------------------
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)
+     xc(ind,2)=(dble(iy)-0.5D0)
+     xc(ind,3)=(dble(iz)-0.5D0)
+  end do
+
   ! loop over all particles
   do ipart=1,ntest
      nv=1
@@ -77,35 +92,26 @@ subroutine compute_clump_properties(ntest,ntest_all)
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=ipart
 
-     dx=0.5D0**ilevel
-     nx_loc=(icoarse_max-icoarse_min+1)
-     skip_loc(1)=dble(icoarse_min)
-     skip_loc(2)=dble(jcoarse_min)
-     skip_loc(3)=dble(kcoarse_min)
-     scale=boxlen/dble(nx_loc)
-
-     do ind=1,twotondim
-        iz=(ind-1)/4
-        iy=(ind-1-4*iz)/2
-        ix=(ind-1-2*iy-4*iz)
-        xc(ind,1)=(dble(ix)-0.5D0)*dx
-        xc(ind,2)=(dble(iy)-0.5D0)*dx
-        xc(ind,3)=(dble(iz)-0.5D0)*dx
-     end do
-
-     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
-     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
-     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
-
      ! find peak_nr
      peak_nr=flag2(icellp(ipart))
-     d=uold(icellp(ipart),1)
-     do i=1,ndim
-        vd(i)=uold(icellp(ipart),i+1)
-     end do
-     vol=volume(levp(ipart))
 
      if (peak_nr /=0 ) then
+
+        ! Cell coordinates
+        dx=0.5D0**ilevel
+        init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)*dx-skip_loc(1))*scale
+        init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)*dx-skip_loc(2))*scale
+        init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)*dx-skip_loc(3))*scale
+
+        ! Cell density and velocity
+        d=uold(icellp(ipart),1)
+        do i=1,ndim
+           vd(i)=uold(icellp(ipart),i+1)
+        end do
+
+        ! Cell volume
+        vol=volume(levp(ipart))
+
         ! number of leaf cells per clump
         n_cells(peak_nr)=n_cells(peak_nr)+1
         
@@ -273,6 +279,21 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
   !---------------------------------------------------------------------------
   ! big loop over all parts to collect information from the cells
   !---------------------------------------------------------------------------
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)
+     xc(ind,2)=(dble(iy)-0.5D0)
+     xc(ind,3)=(dble(iz)-0.5D0)
+  end do
+
   ! loop over all particles
   do ipart=1,ntest
      nv=1
@@ -283,33 +304,6 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
      ind_grid(nv)=icellp(ipart)-ncoarse-(indv(nv)-1)*ngridmax ! grid index
      ind_part(nv)=ipart
 
-     dx=0.5D0**ilevel
-     nx_loc=(icoarse_max-icoarse_min+1)
-     skip_loc(1)=dble(icoarse_min)
-     skip_loc(2)=dble(jcoarse_min)
-     skip_loc(3)=dble(kcoarse_min)
-     scale=boxlen/dble(nx_loc)
-
-     do ind=1,twotondim
-        iz=(ind-1)/4
-        iy=(ind-1-4*iz)/2
-        ix=(ind-1-2*iy-4*iz)
-        xc(ind,1)=(dble(ix)-0.5D0)*dx
-        xc(ind,2)=(dble(iy)-0.5D0)*dx
-        xc(ind,3)=(dble(iz)-0.5D0)*dx
-     end do
-
-     init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)-skip_loc(1))*scale
-     init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)-skip_loc(2))*scale
-     init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)-skip_loc(3))*scale
-
-     call get_cell_index(ind_cell,cell_lev,init_pos,ilevel,ip)
-
-     if(cell_lev(nv) /= ilevel)write(*,*)'alert_problem in get cell index'
-
-     d=uold(ind_cell(nv),1)
-     de=uold(ind_cell(nv),ndim+2)
-     
      ! use peak number after merge
      peak_nr=new_peak(flag2(icellp(ipart))) 
 
@@ -318,6 +312,20 @@ subroutine compute_clump_properties_round2(ntest,ntest_all)
 
      if (peak_nr /=0 ) then
         
+        ! Cell coordinates
+        dx=0.5D0**ilevel
+        init_pos(nv,1)=(xg(ind_grid(nv),1)+xc(indv(nv),1)*dx-skip_loc(1))*scale
+        init_pos(nv,2)=(xg(ind_grid(nv),2)+xc(indv(nv),2)*dx-skip_loc(2))*scale
+        init_pos(nv,3)=(xg(ind_grid(nv),3)+xc(indv(nv),3)*dx-skip_loc(3))*scale
+        
+        ! Cell index
+        call get_cell_index(ind_cell,cell_lev,init_pos,ilevel,ip)        
+        if(cell_lev(nv) /= ilevel)write(*,*)'alert_problem in get cell index'
+        
+        ! Cell density and energy
+        d=uold(ind_cell(nv),1)
+        de=uold(ind_cell(nv),ndim+2)
+     
         do i=1,ndim
            vd(i)=uold(ind_cell(nv),i+1)
            xcell(i)=init_pos(nv,i)
