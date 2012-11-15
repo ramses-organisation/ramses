@@ -853,10 +853,6 @@ subroutine read_clumpfind_params()
   call clean_stop
 102 rewind(1)
   
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  !convert mass_threshold from solar masses to grams
-  !...and to user units
-  mass_threshold=mass_threshold*1.98892d33 /(scale_l**3. * scale_d)
 end subroutine read_clumpfind_params
 !#########################################################################
 !#########################################################################
