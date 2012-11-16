@@ -2201,6 +2201,8 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         vgas(j)=vgas(j)+d*v*vol(j,ind)
         wgas(j)=wgas(j)+d*w*vol(j,ind)
         egas(j)=egas(j)+d*e*vol(j,ind)
+        isink=-idp(ind_part(j))
+        wmin(isink)=min(wmin(isink),d)
      end do
   end do
 
@@ -2212,7 +2214,6 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
      weight=exp(-r2/r2k(isink))
      wden(isink)=wden(isink)+weight*dgas(j)
-     wmin(isink)=min(wmin(isink),dgas(j))
      wmom(isink,1)=wmom(isink,1)+weight*ugas(j)
      wmom(isink,2)=wmom(isink,2)+weight*vgas(j)
      wmom(isink,3)=wmom(isink,3)+weight*wgas(j)
@@ -2247,7 +2248,7 @@ subroutine grow_bondi(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Compute sink accretion rates
-  call compute_accretion_rate(0)
+  call compute_accretion_rate(levelmin)
 
   ! Reset new sink variables
   msink_new=0d0; vsink_new=0d0; delta_mass_new=0d0
