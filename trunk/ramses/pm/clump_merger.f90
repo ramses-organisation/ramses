@@ -459,11 +459,11 @@ subroutine write_clump_properties(to_file)
         open(unit=21,file=TRIM('output_'//TRIM(nchar)//'/clump_masses.txt'),form='formatted')
      end if
      if(smbh)then
-     write(ilun,*)'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. V/(U+Q) V4/(U4+Q4) m_match'
+     write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. V/(U+Q) V4/(U4+Q4) m_match'
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > 0)then
-           write(ilun,'(I6,X,I10,3(X,F15.9),3(XE21.12E2),X,F13.5,3(XE21.12E2),XE21.12E2,X,E21.12E2,XE21.12E2,1X,F6.3,3X,F6.3,4X,I1)')jj&          
+           write(ilun,'(I6,X,I10,13(X,PE21.12E2),1X,F6.3,3X,F6.3,4X,I1)')jj&          
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
                 ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
