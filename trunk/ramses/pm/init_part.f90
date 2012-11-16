@@ -144,6 +144,7 @@ subroutine init_part
      allocate(v2sink_all(1:nsinkmax))
      allocate(c2sink_all(1:nsinkmax))
      allocate(minimum_density(1:nsinkmax,1:nlevelmax))
+     minimum_density=1d100
      allocate(weighted_density(1:nsinkmax,1:nlevelmax))
      allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
      allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
