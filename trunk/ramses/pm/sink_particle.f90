@@ -1650,7 +1650,7 @@ subroutine bondi_hoyle(ilevel)
   end do
 
   ! Gather sink and cloud particles.
-  wden=0d0; wvol=0d0; weth=0d0; wmom=0d0
+  wmin=1d100; wden=0d0; wvol=0d0; weth=0d0; wmom=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -1715,11 +1715,13 @@ subroutine bondi_hoyle(ilevel)
 
   if(nsink>0)then
 #ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(wmin,wmin_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wden,wden_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wvol,wvol_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(weth,weth_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wmom,wmom_new,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
+     wmin_new=wmin
      wden_new=wden
      wvol_new=wvol
      weth_new=weth
@@ -1727,6 +1729,7 @@ subroutine bondi_hoyle(ilevel)
 #endif
   endif
   do isink=1,nsink
+     minimum_density(isink,ilevel)=wmin_new(isink)
      weighted_density(isink,ilevel)=wden_new(isink)
      weighted_volume(isink,ilevel)=wvol_new(isink)
      weighted_momentum(isink,ilevel,1:ndim)=wmom_new(isink,1:ndim)
@@ -2209,6 +2212,7 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
      weight=exp(-r2/r2k(isink))
      wden(isink)=wden(isink)+weight*dgas(j)
+     wmin(isink)=min(wmin(isink),dgas(j))
      wmom(isink,1)=wmom(isink,1)+weight*ugas(j)
      wmom(isink,2)=wmom(isink,2)+weight*vgas(j)
      wmom(isink,3)=wmom(isink,3)+weight*wgas(j)
@@ -2248,14 +2252,6 @@ subroutine grow_bondi(ilevel)
   ! Reset new sink variables
   msink_new=0d0; vsink_new=0d0; delta_mass_new=0d0
 
-  ! Store initial gas density in unew(:,1)
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,active(ilevel)%ngrid
-        unew(active(ilevel)%igrid(i)+iskip,1) = uold(active(ilevel)%igrid(i)+iskip,1)
-     enddo
-  enddo
-     
   ! Loop over cpus
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
@@ -2563,8 +2559,10 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
         weight=exp(-r2/r2k(isink))
            
+        ! Define the density floor as half the minimum density in the sink radius
+        dini=0.5*density_floor(isink)
+
         d=uold(indp(j),1)
-        dini=unew(indp(j),1) ! Initial density
         u=uold(indp(j),2)/d
         v=uold(indp(j),3)/d
         w=uold(indp(j),4)/d
@@ -2585,8 +2583,8 @@ subroutine accrete_bondi(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         ! Compute accreted mass with cloud weighting
         acc_mass=dMBHoverdt(isink)*weight/total_volume(isink)*dtnew(ilevel)
 
-        ! Cannot accrete more than 25% of initial gass mass in the cell
-        acc_mass=max(min(acc_mass,(d-0.75*dini)*vol_loc),0.0_dp)
+        ! Cannot accrete more than the density floor
+        acc_mass=max(min(acc_mass,(d-dini)*vol_loc),0.0_dp)
 
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
@@ -2631,7 +2629,7 @@ subroutine compute_accretion_rate(ilevel)
   integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period
-  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale
+  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,floor
   real(dp),dimension(1:3)::velocity
 
   ! Gravitational constant
@@ -2659,6 +2657,7 @@ subroutine compute_accretion_rate(ilevel)
         volume=0d0
         velocity=0d0
         ethermal=0d0
+        floor=1d100
         ! Loop over level: sink cloud can overlap several levels
         do i=levelmin,nlevelmax
            density=density+weighted_density(isink,i)
@@ -2667,11 +2666,13 @@ subroutine compute_accretion_rate(ilevel)
            velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
            velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
            volume=volume+weighted_volume(isink,i)
+           floor=MIN(floor,minimum_density(isink,i))
         end do
         density=density/volume
         velocity(1:3)=velocity(1:3)/density/volume
         ethermal=ethermal/density/volume
         total_volume(isink)=volume
+        density_floor(isink)=floor
         c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
         v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
         r2=(factG*msink(isink)/(c2+v2))**2
