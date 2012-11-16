@@ -2667,7 +2667,7 @@ subroutine compute_accretion_rate(ilevel)
            velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
            velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
            volume=volume+weighted_volume(isink,i)
-           floor=MIN(floor,minimum_density(isink,i))
+           if(numbtot(1,i)>0)floor=MIN(floor,minimum_density(isink,i))
         end do
         density=density/volume
         velocity(1:3)=velocity(1:3)/density/volume
