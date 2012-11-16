@@ -458,6 +458,34 @@ subroutine write_clump_properties(to_file)
         open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_info.txt'),form='formatted')
         open(unit=21,file=TRIM('output_'//TRIM(nchar)//'/clump_masses.txt'),form='formatted')
      end if
+     if(smbh)then
+     write(ilun,*)'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. V/(U+Q) V4/(U4+Q4) m_match'
+     do j=npeaks_tot,1,-1
+        jj=sort_index(j)
+        if (relevance_tot(jj) > 0)then
+           write(ilun,'(I6,X,I10,3(X,F15.9),3(XE21.12E2),X,F13.5,3(XE21.12E2),XE21.12E2,X,E21.12E2,XE21.12E2,1X,F6.3,3X,F6.3,4X,I1)')jj&          
+                ,n_cells_tot(jj)&
+                ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
+                ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
+                clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
+                ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
+                ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
+                ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
+                ,clump_vol_tot(jj)*(scale_l)**3&
+                ,relevance_tot(jj)&
+                ,e_bind_tot(jj)/(e_thermal_tot(jj)+e_kin_int_tot(jj)+tiny(0.d0))&
+                ,e_bind_tot4(jj)/(e_thermal_tot4(jj)+e_kin_int_tot4(jj)+tiny(0.d0))&
+                ,minmatch_tot(jj)
+
+           rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
+           n_rel=n_rel+1
+        end if
+     end do
+
+     else
      write(ilun,*)'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'//&
           ' size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel. V/(U+Q) V4/(U4+Q4) m_match'
      do j=npeaks_tot,1,-1
@@ -484,7 +512,7 @@ subroutine write_clump_properties(to_file)
            n_rel=n_rel+1
         end if
      end do
-     
+     end if
      if(to_file)then
         write(21,*)n_rel
         do j=npeaks_tot,1,-1
