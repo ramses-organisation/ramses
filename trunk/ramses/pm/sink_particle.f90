@@ -2706,7 +2706,7 @@ subroutine compute_accretion_rate(ilevel)
            write(*,'(I3,10(1X,1PE14.7))')idsink(isink),msink(isink)*scale_m/2d33 &
                 & ,dMBHoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
                 & ,dMEDoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
-                & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33
+                & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33,density_floor(isink)
         end do
         write(*,'(" ============================================================================================")')
      endif
