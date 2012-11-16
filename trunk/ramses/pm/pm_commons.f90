@@ -13,8 +13,8 @@ module pm_commons
   real(kind=8),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
   real(kind=8),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
   real(kind=8),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
-  real(kind=8),allocatable,dimension(:)::wmin,wden,weth,wvol,wmin_new,wden_new,weth_new,wvol_new
-  real(kind=8),allocatable,dimension(:)::total_volume,density_floor
+  real(kind=8),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
+  real(kind=8),allocatable,dimension(:)::total_volume
   real(kind=8),allocatable,dimension(:,:)::wmom,wmom_new
   real(kind=8),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
   real(kind=8),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
@@ -23,7 +23,7 @@ module pm_commons
   real(kind=8),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
   real(kind=8),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(kind=8),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
-  real(kind=8),allocatable,dimension(:,:)::minimum_density,weighted_density,weighted_volume,weighted_ethermal
+  real(kind=8),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
   real(kind=8),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
