@@ -8,7 +8,7 @@ module clfind_commons
   real(kind=8)::mass_threshold=0.
 
   ! Big array for saddlepoint values
-  real(kind=8),allocatable,dimension(:,:)::saddle_dens_tot
+  real(kind=8),allocatable,dimension(:,:)::saddle_dens,saddle_dens_tot
 
 
   ! Peak patch properties
