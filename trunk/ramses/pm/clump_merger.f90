@@ -935,7 +935,7 @@ subroutine clump_phi
         end do
      
         call cmp_cpumap(xtest_cpu,cc,itest)
-        do i=1,nvector
+        do i=1,itest
            if(cc(i) == myid) then
               xtest_ind(1,1:3)=xtest_cpu(i,1:3)
               call get_cell_index(cell_index,cell_levl,xtest_ind,nlevelmax,1)
