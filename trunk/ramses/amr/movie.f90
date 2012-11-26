@@ -50,10 +50,9 @@ subroutine output_frame()
   
 #if NDIM > 1
 
-  if(imov>imovout)return
-
   ! Update counter
   imov=imov+1
+  if(imov>imovout)return
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
