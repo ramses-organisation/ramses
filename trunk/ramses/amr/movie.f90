@@ -50,9 +50,13 @@ subroutine output_frame()
   
 #if NDIM > 1
 
+  if(imov>imovout)return
+
   ! Update counter
   imov=imov+1
-  if(imov>imovout)return
+
+  ! Determine the filename, dir, etc
+  if(myid==1)write(*,*)'Computing and dumping movie frame'
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
@@ -267,7 +271,6 @@ subroutine output_frame()
   end do
 
 !     write(*,*) 'testing1', data_frame(100,100,1),data_frame(100,100,2)
-
 
   if(myid==1)then
      ilun=10
