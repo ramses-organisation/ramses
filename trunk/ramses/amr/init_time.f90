@@ -196,6 +196,8 @@ subroutine init_cosmo
   use amr_commons
   use hydro_commons
   use pm_commons
+  use gadgetreadfilemod
+
   implicit none
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
@@ -208,6 +210,8 @@ subroutine init_cosmo
   character(LEN=80)::filename
   character(LEN=5)::nchar
   logical::ok
+  TYPE(gadgetheadertype) :: gadgetheader 
+  integer::i
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -216,73 +220,111 @@ subroutine init_cosmo
      call clean_stop
   end if
 
-  ! Reading initial conditions parameters only
-  aexp=2.0
-  nlevelmax_part=levelmin-1
-  do ilevel=levelmin,nlevelmax
-     if(initfile(ilevel).ne.' ')then
-        if(multiple)then
-           call title(myid,nchar)
-           filename=TRIM(initfile(ilevel))//'/dir_deltab/ic_deltab.'//TRIM(nchar)
-        else
-           filename=TRIM(initfile(ilevel))//'/ic_deltab'
-        endif
-        INQUIRE(file=filename,exist=ok)
-        if(.not.ok)then
-           if(myid==1)then
-              write(*,*)'File '//TRIM(filename)//' does not exist'
+  SELECT CASE (filetype)
+  case ('grafic', 'ascii')
+     ! Reading initial conditions parameters only
+     aexp=2.0
+     nlevelmax_part=levelmin-1
+     do ilevel=levelmin,nlevelmax
+        if(initfile(ilevel).ne.' ')then
+           if(multiple)then
+              call title(myid,nchar)
+              filename=TRIM(initfile(ilevel))//'/dir_deltab/ic_deltab.'//TRIM(nchar)
+           else
+              filename=TRIM(initfile(ilevel))//'/ic_deltab'
+           endif
+           INQUIRE(file=filename,exist=ok)
+           if(.not.ok)then
+              if(myid==1)then
+                 write(*,*)'File '//TRIM(filename)//' does not exist'
+              end if
+              call clean_stop
            end if
-           call clean_stop
-        end if
-        open(10,file=filename,form='unformatted')
-        if(myid==1)write(*,*)'Reading file '//TRIM(filename)
-        rewind 10
-        read(10)n1(ilevel),n2(ilevel),n3(ilevel),dxini0 &
-             & ,xoff10,xoff20,xoff30 &
-             & ,astart0,omega_m0,omega_l0,h00
-        close(10)
-        dxini(ilevel)=dxini0
-        xoff1(ilevel)=xoff10
-        xoff2(ilevel)=xoff20
-        xoff3(ilevel)=xoff30
-        astart(ilevel)=astart0
-        omega_m=omega_m0
-        omega_l=omega_l0
-        if(hydro)omega_b=0.045
-        h0=h00
-        aexp=MIN(aexp,astart(ilevel))
-        nlevelmax_part=nlevelmax_part+1
-        ! Compute SPH equivalent mass (initial gas mass resolution)
-        mass_sph=omega_b/omega_m*0.5d0**(ndim*ilevel)
+           open(10,file=filename,form='unformatted')
+           if(myid==1)write(*,*)'Reading file '//TRIM(filename)
+           rewind 10
+           read(10)n1(ilevel),n2(ilevel),n3(ilevel),dxini0 &
+                & ,xoff10,xoff20,xoff30 &
+                & ,astart0,omega_m0,omega_l0,h00
+           close(10)
+           dxini(ilevel)=dxini0
+           xoff1(ilevel)=xoff10
+           xoff2(ilevel)=xoff20
+           xoff3(ilevel)=xoff30
+           astart(ilevel)=astart0
+           omega_m=omega_m0
+           omega_l=omega_l0
+           if(hydro)omega_b=0.045
+           h0=h00
+           aexp=MIN(aexp,astart(ilevel))
+           nlevelmax_part=nlevelmax_part+1
+           ! Compute SPH equivalent mass (initial gas mass resolution)
+           mass_sph=omega_b/omega_m*0.5d0**(ndim*ilevel)
+           
+        endif
+     end do
 
+     ! Compute initial expansion factor
+     if(aexp_ini.lt.1.0)then
+        aexp=aexp_ini
+     else
+        aexp_ini=aexp
      endif
-  end do
-
-  ! Compute initial expansion factor
-  if(aexp_ini.lt.1.0)then
-     aexp=aexp_ini
-  else
-     aexp_ini=aexp
-  endif
-
-  ! Check compatibility with run parameters
-  if(.not. multiple) then
-     if(         nx.ne.n1(levelmin)/2**levelmin &
-          & .or. ny.ne.n2(levelmin)/2**levelmin &
-          & .or. nz.ne.n3(levelmin)/2**levelmin) then 
-        write(*,*)'coarser grid is not compatible with initial conditions file'
-        write(*,*)'Found    n1=',n1(levelmin),&
-             &            ' n2=',n2(levelmin),&
-             &            ' n3=',n3(levelmin)
-        write(*,*)'Expected n1=',nx*2**levelmin &
-             &           ,' n2=',ny*2**levelmin &
-             &           ,' n3=',nz*2**levelmin
+     
+     ! Check compatibility with run parameters
+     if(.not. multiple) then
+        if(         nx.ne.n1(levelmin)/2**levelmin &
+             & .or. ny.ne.n2(levelmin)/2**levelmin &
+             & .or. nz.ne.n3(levelmin)/2**levelmin) then 
+           write(*,*)'coarser grid is not compatible with initial conditions file'
+           write(*,*)'Found    n1=',n1(levelmin),&
+                &            ' n2=',n2(levelmin),&
+                &            ' n3=',n3(levelmin)
+           write(*,*)'Expected n1=',nx*2**levelmin &
+                &           ,' n2=',ny*2**levelmin &
+                &           ,' n3=',nz*2**levelmin
+           call clean_stop
+        endif
+     end if
+     
+     ! Compute box length in the initial conditions in units of h-1 Mpc
+     boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100.)
+     
+  CASE ('gadget')
+     if (verbose) write(*,*)'Reading in gadget format from '//TRIM(initfile(levelmin))
+     call gadgetreadheader(TRIM(initfile(levelmin)), 0, gadgetheader, ok)
+     if(.not.ok) call clean_stop
+     do i=1,6
+        if (i .ne. 2) then
+           if (gadgetheader%nparttotal(i) .ne. 0) then
+              write(*,*) 'Non DM particles present in bin ', i
+              call clean_stop
+           endif
+        endif
+     enddo
+     if (gadgetheader%mass(2) == 0) then
+        write(*,*) 'Particles have different masses, not supported'
         call clean_stop
      endif
-  end if
+     omega_m = gadgetheader%omega0
+     omega_l = gadgetheader%omegalambda
+     h0 = gadgetheader%hubbleparam * 100.d0
+     boxlen_ini = gadgetheader%boxsize
+     aexp = gadgetheader%time
+     aexp_ini = aexp
+     ! Compute SPH equivalent mass (initial gas mass resolution)
+     mass_sph=omega_b/omega_m*0.5d0**(ndim*levelmin)
+     nlevelmax_part = levelmin
+     astart(levelmin) = aexp
+     xoff1(levelmin)=0
+     xoff2(levelmin)=0
+     xoff3(levelmin)=0
+     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
 
-  ! Compute box length in the initial conditions in units of h-1 Mpc
-  boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100.)
+  CASE DEFAULT
+     write(*,*) 'Unsupported input format '//filetype
+     call clean_stop
+  END SELECT
 
   ! Write cosmological parameters
   if(myid==1)then

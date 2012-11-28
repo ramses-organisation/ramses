@@ -779,6 +779,13 @@ subroutine init_part
         end do
         if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
 
+     case ('gadget')
+        call load_gadget
+
+     case DEFAULT
+        write(*,*) 'Unsupported format file ' // filetype
+        call clean_stop
+
      end select
 
      ! Read initial sink particles
@@ -859,4 +866,101 @@ subroutine init_part
   end if
 
 end subroutine init_part
+#define TIME_START(cs) call SYSTEM_CLOCK(COUNT=cs)
+#define TIME_END(ce) call SYSTEM_CLOCK(COUNT=ce)
+#define TIME_SPENT(cs,ce,cr) REAL((ce-cs)/cr)
+subroutine load_gadget
+  use amr_commons
+  use pm_commons
+  use gadgetreadfilemod
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+
+  logical::ok
+  TYPE(gadgetheadertype) :: gadgetheader
+  integer::numfiles
+  integer::ifile  
+  real(dp),dimension(1:nvector,1:3)::xx_dp
+  real, dimension(:, :), allocatable:: pos, vel
+  integer, dimension(:), allocatable:: ids 
+  integer::nparticles, arraysize
+  integer::i, icpu, ipart, info, np, start
+  integer ,dimension(1:ncpu)::npart_cpu,npart_all
+  character(LEN=256)::filename
+  integer ,dimension(1:nvector)::cc
+  integer :: clock_start, clock_end, clock_rate
+  integer :: mpi_cs, mpi_ce
+  real:: gadgetvfact
+  ! Local particle count
+  ipart=0
+  call SYSTEM_CLOCK(COUNT_RATE=clock_rate)
+
+  if(TRIM(initfile(levelmin)).NE.' ')then
+     filename=TRIM(initfile(levelmin))
+     ! read first header to get information
+     call gadgetreadheader(filename, 0, gadgetheader, ok)
+     if(.not.ok) call clean_stop
+     numfiles = gadgetheader%numfiles
+     gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+     do ifile=0,numfiles-1
+        call gadgetreadheader(filename, ifile, gadgetheader, ok)
+        nparticles = gadgetheader%npart(2)
+        allocate(pos(3,nparticles))
+        allocate(vel(3,nparticles))
+        allocate(ids(nparticles))
+        TIME_START(clock_start)
+        call gadgetreadfile(filename,ifile,gadgetheader, pos, vel, ids)
+        TIME_END(clock_end)
+        if(debug) write(*,*) myid, ':Read ', nparticles, ' from gadget file ', ifile, ' in ', &
+        TIME_SPENT(clock_start, clock_end, clock_rate)
+        start = 1
+        TIME_START(clock_start)
+#ifndef WITHOUTMPI
+        do i=1,nparticles
+           xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
+           xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
+           xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+           call cmp_cpumap(xx_dp,cc,1)
+           if(cc(1)==myid)then
+#endif
+              ipart=ipart+1
+              if (ipart .ge. size(mp)) then
+                 write(*,*) "For ", myid, ipart, " exceeds ", size(mp)
+                 call clean_stop
+              end if
+              xp(ipart,1:3)=xx_dp(1,1:3)
+              vp(ipart,1)=vel(1, i) * gadgetvfact
+              vp(ipart,2)=vel(2, i) * gadgetvfact
+              vp(ipart,3)=vel(3, i) * gadgetvfact
+              mp(ipart)    = 1.d0/gadgetheader%nparttotal(2)
+              levelp(ipart)=levelmin
+              idp(ipart)   =ids(i)
+#ifndef WITHOUTMPI
+            endif
+        enddo
+        TIME_END(clock_end)
+        if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ', TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart
+#endif
+        deallocate(pos,vel,ids)
+     end do
+
+  end if
+  npart=ipart
+  ! Compute total number of particleclock_rate
+  npart_cpu=0; npart_all=0
+  npart_cpu(myid)=npart
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  npart_cpu(1)=npart_all(1)
+#endif
+  do icpu=2,ncpu
+     npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
+  end do
+  write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
+
+end subroutine load_gadget
+
+
 

@@ -80,6 +80,10 @@ subroutine dump_all
         call store_radiation(filename)
      end if
 #endif
+     if (gadget_output) then
+        filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
+        call savegadget(filename)
+     end if
   end if
 
 end subroutine dump_all
@@ -384,4 +388,77 @@ subroutine output_header(filename)
   endif
 
 end subroutine output_header
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine savegadget(filename)
+  use amr_commons
+  use hydro_commons
+  use pm_commons
+  use gadgetreadfilemod
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  character(LEN=80)::filename
+  TYPE (gadgetheadertype) :: header
+  real,allocatable,dimension(:,:)::pos, vel
+  integer,allocatable,dimension(:)::ids
+  integer::i, idim, ipart
+  real:: gadgetvfact
+  integer::npart_tot, info
+  real, parameter:: RHOcrit = 2.7755d11
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+
+  allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
+  gadgetvfact = 100.0 * boxlen_ini / aexp / SQRT(aexp)
+
+  header%npart = 0
+  header%npart(2) = npart
+  header%mass = 0
+  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1.d10
+  header%time = aexp
+  header%redshift = 1.d0/aexp-1.d0
+  header%flag_sfr = 0
+  header%nparttotal = 0
+  header%nparttotal(2) = npart_tot
+  header%flag_cooling = 0
+  header%numfiles = ncpu
+  header%boxsize = boxlen_ini
+  header%omega0 = omega_m
+  header%omegalambda = omega_l
+  header%hubbleparam = h0/100.0
+  header%flag_stellarage = 0
+  header%flag_metals = 0
+  header%totalhighword = 0
+  header%flag_entropy_instead_u = 0
+  header%flag_doubleprecision = 0
+  header%flag_ic_info = 0
+  header%lpt_scalingfactor = 0
+  header%unused = ' '
+
+  do idim=1,ndim
+     ipart=0
+     do i=1,npartmax
+        if(levelp(i)>0)then
+           ipart=ipart+1
+           if (ipart .gt. npart) then
+                write(*,*) myid, "Ipart=",ipart, "exceeds", npart
+                call clean_stop
+           endif
+           pos(idim, ipart)=xp(i,idim) * boxlen_ini
+           vel(idim, ipart)=vp(i,idim) * gadgetvfact
+           if (idim.eq.1) ids(ipart) = idp(i)
+        end if
+     end do
+  end do
+
+  call gadgetwritefile(filename, myid-1, header, pos, vel, ids)
+  deallocate(pos, vel, ids)
+
+end subroutine savegadget
 
