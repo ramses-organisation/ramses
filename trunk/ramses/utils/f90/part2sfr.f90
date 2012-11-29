@@ -11,19 +11,19 @@ program part2sfr
   real(KIND=8)::mtot,ddx,ddy,dex,dey,time,time_tot,time_simu,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mmax=1d10
   real(KIND=8)::xcenter,ycenter,zcenter
-  real(KIND=8)::x_coord,y_coord,z_coord
+  real(KIND=8)::age,birth_date
   real(KIND=8)::jxin=0,jyin=0,jzin=0,jx,jy,jz
   real(KIND=8)::kxin,kyin,kzin,kx,ky,kz
   real(KIND=8)::lxin,lyin,lzin,lx,ly,lz
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,npart_actual
   real(KIND=8)::xxmin,xxmax,yymin,yymax,dx,dy,deltax,boxlen
-  real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d
+  real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d,unit_m
   real(KIND=4),dimension(:,:),allocatable::toto
   real(KIND=4),dimension(:),allocatable::density
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
   real(KIND=8),dimension(:),allocatable::sfr
   real(KIND=8),dimension(:,:),allocatable::x
-  real(KIND=8),dimension(:)  ,allocatable::m,age
+  real(KIND=8),dimension(:)  ,allocatable::m,birth
   integer,dimension(:)  ,allocatable::id
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
@@ -80,6 +80,7 @@ program part2sfr
   read(10,'("unit_l      =",E23.15)')unit_l
   read(10,'("unit_d      =",E23.15)')unit_d
   read(10,'("unit_t      =",E23.15)')unit_t
+  unit_m=unit_d*unit_l**3
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
@@ -306,7 +307,7 @@ program part2sfr
 
      end do
      deallocate(x,m)
-     deallocate(age,id)
+     deallocate(birth,id)
   end do
   write(*,*)'Total mass=',mtot*unit_m/2d33
   write(*,*)'npart tot=',npart_actual
@@ -318,7 +319,7 @@ program part2sfr
      open(unit=10,file=nomfich,form='formatted')
      do i=0,nx
         xx=(dble(i)+0.5)/dble(nx)*15.
-        write(10,*)xx,sfr(i)
+        write(10,*)xx,sfr(i)/(15./dble(nx))/1d9
      end do
      close(10)
   endif

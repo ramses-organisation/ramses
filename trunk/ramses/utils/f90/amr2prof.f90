@@ -30,7 +30,7 @@ program amr2prof
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax,dummy,h0,dv
-  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rmax=0.5
+  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rmin=1e-10,rmax=0.5
   real(KIND=8)::xcen=0.5,ycen=0.5,zcen=0.5
   real(KIND=8)::ucen=0.0,vcen=0.0,wcen=0.0
   real(KIND=8)::xx,yy,zz,uu,vv,ww,rr
@@ -52,6 +52,7 @@ program amr2prof
   integer::ilxcum=12,ilycum=13,ilzcum=14,ip=15,imet=16,ihot=17
   integer::ilxc=18,ilyc=19,ilzc=20,ilxccum=21,ilyccum=22,ilzccum=23
   integer::nprof=23
+  logical::logscale=.false.
 
   call read_params
 
@@ -127,18 +128,38 @@ program amr2prof
   write(*,*)'Generating random sampling points'
   write(*,*)'ncell=',ncell
   icell=0
-  do while (icell<ncell)
-     call ranf(localseed,xx)
-     call ranf(localseed,yy)
-     call ranf(localseed,zz)
-     rr=(xx-0.5)**2+(yy-0.5)**2+(zz-0.5)**2
-     if(rr<0.25)then
+  if(logscale)then
+     do while (icell<ncell)
+        logrmax=log10(rmax)
+        logrmin=log10(rmin)
+        call ranf(localseed,xx)
+        call ranf(localseed,yy)
+        call ranf(localseed,zz)
+        logr=logrmin+(logrmax-logrmin)*xx
+        costheta=2.*(yy-0.5)
+        sintheta=sqrt(1.-costheta**2)
+        cosphi=cos(zz*2.*!DPI)
+        sinphi=sin(zz*2.*!DPI)
+        rr=10.**logr
         icell=icell+1
-        x(icell)=xcen+(2.*xx-1.)*rmax
-        y(icell)=ycen+(2.*yy-1.)*rmax
-        z(icell)=zcen+(2.*zz-1.)*rmax
-     end if
-  end do
+        x(icell)=xcen+r*cosphi*sintheta
+        y(icell)=ycen+r*sinphi*sintheta
+        z(icell)=zcen+r*costheta
+     end do
+  else
+     do while (icell<ncell)
+        call ranf(localseed,xx)
+        call ranf(localseed,yy)
+        call ranf(localseed,zz)
+        rr=(xx-0.5)**2+(yy-0.5)**2+(zz-0.5)**2
+        if(rr<0.25)then
+           icell=icell+1
+           x(icell)=xcen+(2.*xx-1.)*rmax
+           y(icell)=ycen+(2.*yy-1.)*rmax
+           z(icell)=zcen+(2.*zz-1.)*rmax
+        end if
+     end do
+  endif
 
   ! Sampling points volume element
   dv=4./3.*3.1415926*(rmax*boxlen)**3./dble(ncell)
@@ -288,6 +309,7 @@ contains
        print *, '                 [-uce ucen] '
        print *, '                 [-vce vcen] '
        print *, '                 [-wce wcen] '
+       print *, '                 [-rmi rmin] '
        print *, '                 [-rma rmax] '
        print *, '                 [-nra nrad] '
        print *, '                 [-lma lmax] '
@@ -322,10 +344,14 @@ contains
           read (arg,*) wcen
        case ('-nra')
           read (arg,*) nrad
+       case ('-rmi')
+          read (arg,*) rmin
        case ('-rma')
           read (arg,*) rmax
        case ('-lma')
           read (arg,*) lmax
+       case ('-log')
+          read (arg,*) logscale
        case default
           print '("unknown option ",a2," ignored")', opt
        end select
