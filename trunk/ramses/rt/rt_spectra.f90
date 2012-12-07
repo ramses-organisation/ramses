@@ -228,8 +228,10 @@ MODULE SED_module
   real(dp)::SED_dlgZ
   real(dp)::SED_lgA0, SED_lgZ0
   real(dp),allocatable,dimension(:)::SED_ages,SED_zeds![Gyr],[m_met/m_gas]
-  ! iAges, imetallicities, ipackages, properties (Lum, Lum-acc, csn, egy).
-  ! Lum is photons per sec per solar mass. Lum-acc is accumulated lum.
+  ! SED_table: iAges, imetallicities, ipackages, properties 
+  !                                         (Lum, Lum-acc, egy, csn, cse).
+  ! Lum is photons per sec per solar mass (eV per sec per solar mass in 
+  ! the case of SED_isEgy=true). Lum-acc is accumulated lum.
   real(dp),allocatable,dimension(:,:,:,:)::SED_table
   ! ----------------------------------------------------------------------
 
@@ -259,7 +261,7 @@ SUBROUTINE init_SED_table()
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp, minAge
   integer::locid,ncpu,ierr
-  integer::nv=2+2*nIons      ! # vars in SED table: L,Lacc,nions*(csn,egy)
+  integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
 !-------------------------------------------------------------------------
   if(myid==1) &
         write(*,*) 'Stars are photon emitting, so initializing SED table'
@@ -337,9 +339,10 @@ SUBROUTINE init_SED_table()
      do iz = 1, nzs                                     ! Loop metallicity
      do ia = locid+1,nAges,ncpu                                 ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
+        tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         do ii = 1,nIons                                     ! Loop species
-           tbl(ia,iz,1+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
-           tbl(ia,iz,2+ii*2) = getSEDegy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
+           tbl(ia,iz,2+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
+           tbl(ia,iz,3+ii*2) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
         end do ! End species loop
      end do ! End age loop
      end do ! End Z loop
@@ -406,49 +409,57 @@ SUBROUTINE update_SED_PacProps()
 #endif
   integer :: i, ip, ii, nstars, info
   real(dp),save,allocatable,dimension(:)::  L_star
-  real(dp),save,allocatable,dimension(:,:)::csn_star, egy_star
+  real(dp),save,allocatable,dimension(:,:)::csn_star, cse_star
+  real(dp),save,allocatable,dimension(:)::  egy_star
   real(dp),save,allocatable,dimension(:)::  sum_L_cpu,sum_L_all
   real(dp),save,allocatable,dimension(:,:)::sum_csn_cpu,sum_csn_all
-  real(dp),save,allocatable,dimension(:,:)::sum_egy_cpu,sum_egy_all
+  real(dp),save,allocatable,dimension(:,:)::sum_cse_cpu,sum_cse_all
+  real(dp),save,allocatable,dimension(:)::sum_egy_cpu,sum_egy_all
   real(dp):: mass, age, Z
 !-------------------------------------------------------------------------
   if(.not. allocated(L_star)) then
      allocate(L_star(nSEDpacs)) 
+     allocate(egy_star(nSEDpacs)) 
      allocate(csn_star(nSEDpacs,nIons)) 
-     allocate(egy_star(nSEDpacs,nIons)) 
+     allocate(cse_star(nSEDpacs,nIons)) 
      allocate(sum_L_cpu(nSEDpacs))    
      allocate(sum_L_all(nSEDpacs)) 
+     allocate(sum_egy_cpu(nSEDpacs)) 
+     allocate(sum_egy_all(nSEDpacs)) 
      allocate(sum_csn_cpu(nSEDpacs,nIons)) 
      allocate(sum_csn_all(nSEDpacs,nIons)) 
-     allocate(sum_egy_cpu(nSEDpacs,nIons)) 
-     allocate(sum_egy_all(nSEDpacs,nIons)) 
+     allocate(sum_cse_cpu(nSEDpacs,nIons)) 
+     allocate(sum_cse_all(nSEDpacs,nIons)) 
   endif
-  sum_L_cpu   = 0. ! accumulated luminosity, avg cross sections and 
-  sum_csn_cpu = 0. ! photon energies for all stars belonging to  
-  sum_egy_cpu = 0. ! 'this' cpu
+  sum_L_cpu   = 0d0 ! Accumulated luminosity, avg cross sections and 
+  sum_egy_cpu = 0d0 ! photon energies for all stars belonging to  
+  sum_csn_cpu = 0d0 ! 'this' cpu
+  sum_cse_cpu = 0d0
   do i=1,npartmax
      if(levelp(i).le.0 .or. idp(i).eq.0 .or. tp(i).eq.0.)                &
         cycle ! not a star
      ! particle exists and is a star
      nstars = nstars + 1
      mass = mp(i)
-     call getAgeGyr(tp(i), age)                        !     age = [Gyrs]
+     call getAgeGyr(tp(i), age)                         !     age = [Gyrs]
      if(metal) then
         Z = max(zp(i), 10.d-5)                          ! [m_metals/m_tot]
      else
         Z = max(z_ave*0.02, 10.d-5)                     ! [m_metals/m_tot]
      endif
-     call inp_SED_table(age, Z, 1, L_star)              !  [# s-1 m_sun-1]
+     call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 m_sun-1]
+     call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [ev]
      do ii=1,nIons
-        call inp_SED_table(age, Z, 1+2*ii, csn_star(:,ii))        ! [cm^2]
-        call inp_SED_table(age, Z, 2+2*ii, egy_star(:,ii))        !   [ev]
+        call inp_SED_table(age, Z, 2+2*ii, .true., csn_star(:,ii))! [cm^2]
+        call inp_SED_table(age, Z, 3+2*ii, .true., cse_star(:,ii))! [cm^2]
      end do
 
      do ip=1,nSEDpacs
         L_star(ip) = L_star(ip) * mass             !       [# photons s-1]       
         sum_L_cpu(ip)    =   sum_L_cpu(ip)   + L_star(ip)
+        sum_egy_cpu(ip) =  sum_egy_cpu(ip)   + L_star(ip) * egy_star(ip)
         sum_csn_cpu(ip,:)= sum_csn_cpu(ip,:) + L_star(ip) * csn_star(ip,:)
-        sum_egy_cpu(ip,:)= sum_egy_cpu(ip,:) + L_star(ip) * egy_star(ip,:)
+        sum_cse_cpu(ip,:)= sum_cse_cpu(ip,:) + L_star(ip) * cse_star(ip,:)
      end do
 
   end do
@@ -456,26 +467,31 @@ SUBROUTINE update_SED_PacProps()
   ! Sum up for all cpus
 #ifdef WITHOUTMPI
   sum_L_all   = sum_L_cpu
-  sum_csn_all = sum_csn_cpu
   sum_egy_all = sum_egy_cpu
+  sum_csn_all = sum_csn_cpu
+  sum_cse_all = sum_cse_cpu
 #else
   call MPI_ALLREDUCE(sum_L_cpu,   sum_L_all,   nSEDPacs,                 &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+  call MPI_ALLREDUCE(sum_egy_cpu, sum_egy_all, nSEDPacs,                 &
+                     MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
   call MPI_ALLREDUCE(sum_csn_cpu, sum_csn_all, nSEDPacs*nIons,           &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
-  call MPI_ALLREDUCE(sum_egy_cpu, sum_egy_all, nSEDPacs*nIons,           &
+  call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDPacs*nIons,           &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
 #endif
   
   ! ...and take averages weighted by luminosities
   do ip=1,nSEDPacs
      if(sum_L_all(ip) .gt. 0.) then
+        pac_egy(ip)   = sum_egy_all(ip)   / sum_L_all(ip)
         pac_csn(ip,:) = sum_csn_all(ip,:) / sum_L_all(ip)
-        pac_egy(ip,:) = sum_egy_all(ip,:) / sum_L_all(ip)
+        pac_cse(ip,:) = sum_cse_all(ip,:) / sum_L_all(ip)
      else ! no stars -> assign zero-age zero-metallicity props
+        pac_egy(ip)       = SED_table(1,1,ip,3)
         do ii=1,nIons
-           pac_csn(ip,ii) = SED_table(1,1,ip,1+2*ii)
-           pac_egy(ip,ii) = SED_table(1,1,ip,2+2*ii)
+           pac_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
+           pac_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
         enddo
      endif
   end do
@@ -630,9 +646,10 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
 ! in SED Y(X). Assumes X is in Angstroms and Y in Lo/Angstroms/Msun. 
 ! (Lo=[Lo_sun], Lo_sun=[erg s-1]. total solar luminosity is 
 ! Lo_sun=10^33.58 erg/s)
-! returns: Photon luminosity in [# s-1 Msun-1]
+! returns: Photon luminosity in, [# s-1 Msun-1], 
+!                             or [eV s-1 Msun-1] if SED_isEgy=true
 !-------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs, hp
+  use rt_parameters,only:c_cgs, hp, ev_to_erg, SED_isEgy
   use spectrum_integrator_module
   real(kind=8):: getSEDLuminosity, X(n), Y(n), e0, e1
   integer :: N, species
@@ -642,33 +659,35 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   ! cgs, since wly=[angstrom] h=[erg s-1], c=[cm s-1]
 !-------------------------------------------------------------------------
   species          = 1                   ! irrelevant but must be included
-  getSEDLuminosity = const &
-                   * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
-  ! Need to scale by solar luminosity 
-  getSEDLuminosity = getSEDLuminosity*Lsun    
+  if(.not. SED_isEgy) then               !  Photon number per sec per Msun
+     getSEDLuminosity = const &
+          * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
+     getSEDLuminosity = getSEDLuminosity*Lsun  ! Scale by solar luminosity
+  else                             ! SED_isEgy=true -> eV per sec per Msun
+     getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
+     ! Scale by solar lum and convert to eV (bc group energies are in eV)
+     getSEDLuminosity = getSEDLuminosity/eV_to_erg*Lsun 
+  endif
 END FUNCTION getSEDLuminosity
 
 !*************************************************************************
-FUNCTION getSEDegy(X, Y, N, e0, e1, species)
+FUNCTION getSEDEgy(X, Y, N, e0, e1)
 
-! Compute cross section weighted energy, in eV, in energy interval (e0,e1) 
-! [eV] in SED Y(X). Assumes X is in Angstroms and Y is energy weight per 
-! angstrom (not photon count). 
-! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
+! Compute average energy, in eV, in energy interval (e0,e1) [eV] in SED
+! Y(X). Assumes X is in Angstroms and Y is energy weight per angstrom
+! (not photon count). 
 !-------------------------------------------------------------------------
-  use rt_parameters,only:ionEvs, c_cgs, eV_to_erg, hp
+  use rt_parameters,only:c_cgs, eV_to_erg, hp
   use spectrum_integrator_module
-  real(kind=8):: getSEDegy, X(N), Y(N), e0, e1, norm
+  real(dp):: getSEDEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
-  real(kind=8),parameter :: const=1.d8*hp*c_cgs/eV_to_erg  ! energy conv.
+  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg! energy conversion
 !-------------------------------------------------------------------------
-  if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
-     getSEDegy=0. ; RETURN      ! [e0,e1] below species' ionization energy
-  endif
-  norm      = integrateSpectrum(X, Y, N, e0, e1, species, fSigLambda)
-  getSEDegy = const * &
-           integrateSpectrum(X, Y, N, e0, e1, species, fSig) / norm
-END FUNCTION getSEDegy
+  species      = 1                       ! irrelevant but must be included
+  norm         = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
+  getSEDEgy    = const * &
+                 integrateSpectrum(X, Y, N, e0, e1, species, f1) / norm
+END FUNCTION getSEDEgy
 
 !*************************************************************************
 FUNCTION getSEDcsn(X, Y, N, e0, e1, species)
@@ -690,6 +709,27 @@ FUNCTION getSEDcsn(X, Y, N, e0, e1, species)
   norm     = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
   getSEDcsn= integrateSpectrum(X, Y, N, e0, e1, species, fSigLambda)/norm
 END FUNCTION getSEDcsn
+
+!************************************************************************
+FUNCTION getSEDcse(X, Y, N, e0, e1, species)
+
+! Compute and return average energy weighted photoionization 
+! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in 
+! SED Y(X). Assumes X is in Angstroms and that Y is energy weight per 
+! angstrom (not photon #).
+! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
+!-------------------------------------------------------------------------
+  use spectrum_integrator_module
+  use rt_parameters,only:ionEVs
+  real(dp):: getSEDcse, X(N), Y(N), e0, e1, norm
+  integer :: N, species
+!-------------------------------------------------------------------------
+  if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
+     getSEDcse=0. ; RETURN    ! [e0,e1] below ionization energy of species
+  endif
+  norm      = integrateSpectrum(X, Y, N, e0, e1, species, f1)
+  getSEDcse = integrateSpectrum(X, Y, N, e0, e1, species, fSig) / norm
+END FUNCTION getSEDcse
 
 !*************************************************************************
 SUBROUTINE rebin_log(xint_log, yint_log,                                 &
@@ -820,25 +860,30 @@ SUBROUTINE write_SEDtable()
                 SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
                 SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
                 SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
-                SED_table(i,j,ip,7),    SED_table(i,j,ip,8)
+                SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
+                SED_table(i,j,ip,9)
         end do
      end do
      close(10)
   end do
-900 format (ES15.4, ES15.4, ES15.4, ES15.4,  ES15.4                         &
-           ,f15.4,  ES15.4, f15.4,  ES15.4, f15.4  )
+900 format (ES15.4, ES15.4, ES15.4, ES15.4, f15.4                        &
+           ,ES15.4, ES15.4, ES15.4, ES15.4, ES15.4, ES15.4)
 
 END SUBROUTINE write_SEDtable
 
 !*************************************************************************
-SUBROUTINE inp_SED_table(age, Z, nProp, ret)
+SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
 
 ! Compute SED property by interpolation from table.
 ! input/output:
 ! age   => Star population age [Gyrs]
 ! Z     => Star population metallicity [m_metals/m_tot] 
 ! nprop => Number of property to fetch 
-!          1=log(photon # intensity [# Msun-1 s-1]), 2=pac_csn, 3=pac_egy 
+!          1=log(photon # intensity [# Msun-1 s-1]),
+!          2=log(cumulative photon # intensity [# Msun-1]),
+!          3=avg_egy, 2+2*iIon=avg_csn, 3+2*iIon=avg_cse 
+! same  => If true then assume same age and Z as used in last call. 
+!          In this case the interpolation indexes can be recycled.
 ! ret   => The interpolated values of the sed property for every photon 
 !          package
 !-------------------------------------------------------------------------
@@ -846,29 +891,34 @@ SUBROUTINE inp_SED_table(age, Z, nProp, ret)
   use rt_parameters
   real(dp), intent(in):: age, Z
   real(dp):: lgAge, lgZ
-  integer:: nProp, ia, iz
+  integer:: nProp
+  logical:: same
   real(dp),dimension(:):: ret
-  real(dp):: da, da0, da1, dz, dz0, dz1
+  integer,save:: ia, iz
+  real(dp),save:: da, da0, da1, dz, dz0, dz1
 !-------------------------------------------------------------------------
   ! ia, iz: lower indexes: 0<ia<sed_nA etc.
   ! da0, da1, dz0, dz1: proportional distances from edges: 
   ! 0<=da0<=1, 0<=da1<=1 etc.
-  lgAge = log10(age) ; lgZ=log10(Z)
-  ia = min(max(floor((lgAge-SED_lgA0)/SED_dlgA ) + 2, 1  ),  SED_nA-1 )
-  da = SED_ages(ia+1)-SED_ages(ia)
-  da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )
-  da1= min( max(  (SED_ages(ia+1)-age)/da,       0. ), 1.          )
+  if(.not. same) then
+     lgAge = log10(age) ; lgZ=log10(Z)
+     ia = min(max(floor((lgAge-SED_lgA0)/SED_dlgA ) + 2, 1  ),  SED_nA-1 )
+     da = SED_ages(ia+1)-SED_ages(ia)
+     da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )
+     da1= min( max(  (SED_ages(ia+1)-age)/da,       0. ), 1.          )
+     
+     iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
+     dz = sed_Zeds(iz+1)-SED_Zeds(iz)
+     dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
+     dz1= min( max(  (SED_Zeds(iz+1)-Z)/dz,         0. ),  1.         )
 
-  iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1   )
-  dz = sed_Zeds(iz+1)-SED_Zeds(iz)
-  dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
-  dz1= min( max(  (SED_Zeds(iz+1)-Z)/dz,         0. ),  1.         )
+     if (abs(da0+da1-1.0d0) > 1.0d-5 .or. abs(dz0+dz1-1.0d0) > 1.0d-5) then
+        write(*,*) 'Screwed up the sed interpolation ... '
+        write(*,*) da0+da1,dz0+dz1
+        call clean_stop
+     end if
+  endif
 
-  if (abs(da0+da1-1.0d0) > 1.0d-5 .or. abs(dz0+dz1-1.0d0) > 1.0d-5) then
-     write(*,*) 'Screwed up the sed interpolation ... '
-     write(*,*) da0+da1,dz0+dz1
-     call clean_stop
-  end if
   ret = da0 * dz0 * SED_table(ia+1, iz+1, :, nProp) + &
         da1 * dz0 * SED_table(ia,   iz+1, :, nProp) + &
         da0 * dz1 * SED_table(ia+1, iz,   :, nProp) + &
@@ -889,13 +939,17 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
 !-------------------------------------------------------------------------
   use rt_parameters
   real(dp),intent(in):: age1_Gyr, dt_Gyr, Z
-  real(dp),dimension(nSEDPacs):: ret, Lc0, Lc1
+  real(dp),dimension(nSEDPacs):: ret, Lc0, Lc1, SEDegy
 !-------------------------------------------------------------------------
   ! Lc0 = cumulative emitted photons at the start of the timestep
-  call inp_SED_table(age1_Gyr-dt_Gyr, Z, 2, Lc0)
+  call inp_SED_table(age1_Gyr-dt_Gyr, Z, 2, .false., Lc0)
   ! Lc1 = cumulative emitted photons at the end of the timestep
-  call inp_SED_table(age1_Gyr, Z, 2, Lc1)
+  call inp_SED_table(age1_Gyr, Z, 2, .false., Lc1)
   ret = max(Lc1-Lc0,0.)
+  if(SED_isEgy) then ! Integrate correct energy rather than # of photons
+     ! Divide emitted energy by group energy -> Photon count
+     ret = ret / pac_egy(1:nSEDpacs)
+  endif
 END SUBROUTINE getNPhotonsEmitted
 
 !*************************************************************************
@@ -1039,10 +1093,10 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ! Compute parent cell adress and particle radiation contribution
   do j = 1, np
      if(metal)z= max(zp(ind_part(j)), 10.d-5)      !      [m_metals/m_tot]
-     call getAgeGyr(tp(ind_part(j)), age)         !  End-of-dt age [Gyrs]
-     !Possibilities: Born i) before dt, ii) within dt, iii) after dt:
+     call getAgeGyr(tp(ind_part(j)), age)          !  End-of-dt age [Gyrs]
+     ! Possibilities:     Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
-     call getNPhotonsEmitted(age, dt_loc_Gyr, z,part_NpInp(j,1:nSEDPacs))
+     call getNPhotonsEmitted(age, dt_loc_Gyr, z, part_NpInp(j,1:nSEDPacs))
      part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
 
      if(showSEDstats .and. nSEDPacs .gt. 0) then
@@ -1181,9 +1235,9 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
 
   ! Compute parent cell adress and particle effective mass
   do j = 1, np
-     if(metal) z = max(zp(ind_part(j)), 10.d-5)    ! [m_metals/m_tot]
-     call getAgeGyr(tp(ind_part(j)), age)         !  End-of-dt age [Gyrs]
-     !Possibilities: Born i) before dt, ii) within dt, iii) after dt:
+     if(metal) z = max(zp(ind_part(j)), 10.d-5)   !       [m_metals/m_tot]
+     call getAgeGyr(tp(ind_part(j)), age)         !   End-of-dt age [Gyrs]
+     !Possibilities:      Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
      call getNPhotonsEmitted(age, dt_loc_Gyr, z,part_NpInp(j,1:nSEDpacs))
      part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
@@ -1381,18 +1435,19 @@ SUBROUTINE init_UV_background()
      endif
 
      ! Initialize photon packages table-----------------------------------
-     allocate(UV_pacs_table(UV_nz, nUVpacs, 1+2*nIons))                   
-     allocate(tbl(UV_nz, 1+2*nIons))                                      
+     allocate(UV_pacs_table(UV_nz, nUVpacs, 2+2*nIons))                   
+     allocate(tbl(UV_nz, 2+2*nIons))                                      
      do ip = 1,nUVpacs             !                  Loop photon packages
         tbl=0.
         pL0 = pacL0(nSEDpacs+ip)   !  energy interval of photon package ip
         pL1 = pacL1(nSEDpacs+ip)   !
         do iz = locid+1,UV_nz,ncpu
-           tbl(iz,1) =         getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
+           tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0.d0) cycle     ! Can't integrate zero fluxes
+           tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)
            do ii = 1,nIons
-              tbl(iz,0+ii*2)= getUVcsn(Ls,UV(:,iz),nLs,pL0,pL1,ii)
-              tbl(iz,1+ii*2)= getUVegy(Ls,UV(:,iz),nLs,pL0,pL1,ii)
+              tbl(iz,1+ii*2)= getUVcsn( Ls,UV(:,iz),nLs,pL0,pL1,ii)
+              tbl(iz,2+ii*2)= getUVcse( Ls,UV(:,iz),nLs,pL0,pL1,ii)
            end do
         end do
 #ifndef WITHOUTMPI
@@ -1438,7 +1493,7 @@ SUBROUTINE inp_UV_pacs_table(z, ret)
 !         1=photon flux [#/cm2/s], 2*i=pac_csn[cm-2], 1+2*i=pac_egy [ev]
 !-------------------------------------------------------------------------
   real(dp), intent(in):: z
-  real(dp):: ret(nUVpacs,1+2*nIons), dz0, dz1
+  real(dp):: ret(nUVpacs,2+2*nIons), dz0, dz1
   integer:: iz0, iz1
 !-------------------------------------------------------------------------
   ret=0. ; if(z .gt. UV_maxz) RETURN
@@ -1457,7 +1512,7 @@ SUBROUTINE update_UVsrc
   use amr_commons,only:t,levelmin,myid,aexp
   implicit none
   integer::ilevel,i
-  real(dp),allocatable,save::UVprops(:,:)      ! Each pack: flux, csn, egy
+  real(dp),allocatable,save::UVprops(:,:) ! Each pack: flux, egy, csn, cse
   real(dp)::scale_Np, scale_Fp, redshift
 !-------------------------------------------------------------------------
   if(.not.rt_isDiffuseUVsrc) return
@@ -1465,7 +1520,7 @@ SUBROUTINE update_UVsrc
      if(myid==1) write(*,*) 'No packages dedicated to the UV background!'
      RETURN
   endif
-  if(.not. allocated(UVprops)) allocate(UVprops(nUVPacs,1+2*nIons))
+  if(.not. allocated(UVprops)) allocate(UVprops(nUVPacs,2+2*nIons))
   call rt_units(scale_Np, scale_Fp)
 
   redshift=1./aexp-1.
@@ -1485,9 +1540,10 @@ SUBROUTINE update_UVsrc
   call inp_UV_pacs_table(redshift, UVprops)
   UV_fluxes_cgs(:)      = UVprops(:,1)
   UV_Nphot_cgs          = UV_fluxes_CGS/rt_c_cgs
+  pac_egy(iUVpacs)      = UVprops(:,2)
   do i=1,nIons
-     pac_csn(iUVpacs,i) = UVprops(:,0+2*i)
-     pac_egy(iUVpacs,i) = UVprops(:,1+2*i)
+     pac_csn(iUVpacs,i)  = UVprops(:,1+2*i)
+     pac_cse(iUVpacs,i)  = UVprops(:,2+2*i)
   enddo
 
   call updateRTPac_CoolConstants     
@@ -1550,6 +1606,21 @@ FUNCTION getUVFlux(X, Y, N, e0, e1)
 END FUNCTION getUVflux
 
 !*************************************************************************
+FUNCTION getUVEgy(X, Y, N, e0, e1)
+! Compute average photon energy, in eV, in energy interval (e0,e1) [eV] in
+! UV spectrum Y(X). Assumes X is in [A] and Y is # cm-2 s-1 sr-1 A-1.
+!-------------------------------------------------------------------------
+  real(dp):: getUVEgy, X(N), Y(N), e0, e1, norm
+  integer :: N,species
+  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg    ! unit conversion
+!-------------------------------------------------------------------------
+  species      = 1                       ! irrelevant but must be included
+  norm         = integrateSpectrum(X, Y, N, e0, e1, species, f1)
+  getUVEgy  = const * &
+            integrateSpectrum(X, Y, N, e0, e1, species, fdivLambda) / norm
+END FUNCTION getUVEgy
+
+!*************************************************************************
 FUNCTION getUVcsn(X, Y, N, e0, e1, species)
 ! Compute and return average photoionization cross-section [cm2] for given 
 ! energy interval (e0,e1) [eV] in UV spectrum Y. Assumes X is in Angstroms
@@ -1566,24 +1637,23 @@ FUNCTION getUVcsn(X, Y, N, e0, e1, species)
   getUVcsn = integrateSpectrum(X, Y, N, e0, e1, species, fSig)/norm
 END FUNCTION getUVcsn
 
-!*************************************************************************
-FUNCTION getUVegy(X, Y, N, e0, e1, species)
-! Compute cross section weighted photon energy [ev] for
+!************************************************************************
+FUNCTION getUVcse(X, Y, N, e0, e1, species)
+! Compute average energy weighted photoionization cross-section [cm2] for
 ! given energy interval (e0,e1) [eV] in UV spectrum Y. Assumes X is in 
-! Angstroms and Y is # cm-2 s-1 sr-1 A-1.
+! Angstroms and that Y is energy intensity per angstrom.
 ! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
 !-------------------------------------------------------------------------
-  real(kind=8):: getUVegy, X(N), Y(N), e0, e1, norm
+  real(dp):: getUVcse, X(N), Y(N), e0, e1, norm
   integer :: N, species
-  real(kind=8),parameter::const=1.d8*hp*c_cgs/eV_to_erg  ! unit conversion
 !-------------------------------------------------------------------------
   if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
-     getUVegy=0. ; RETURN    ! [e0,e1] below ionization energy of species
+     getUVcse=0. ; RETURN    ! [e0,e1] below ionization energy of species
   endif
-  norm     = integrateSpectrum(X, Y, N, e0, e1, species, fsig)
-  getUVegy = const * &
-       integrateSpectrum(X, Y, N, e0, e1, species, fSigdivLambda) / norm
-END FUNCTION getUVegy
+  norm     = integrateSpectrum(X, Y, N, e0, e1, species, fdivLambda)
+  getUVcse = integrateSpectrum(X, Y, N, e0, e1, species, fSigdivLambda)  &
+           / norm
+END FUNCTION getUVcse
 
 !*************************************************************************
 SUBROUTINE write_UVrates_table()
@@ -1624,7 +1694,7 @@ SUBROUTINE write_UVpacs_tables()
                 UV_pacs_table(i,ip,1),    UV_pacs_table(i,ip,2),         &
                 UV_pacs_table(i,ip,3),    UV_pacs_table(i,ip,4),         &
                 UV_pacs_table(i,ip,5),    UV_pacs_table(i,ip,6),         &
-                UV_pacs_table(i,ip,7)!,    UV_pacs_table(i,ip,8)
+                UV_pacs_table(i,ip,7),    UV_pacs_table(i,ip,8)
      end do
      close(10)
   end do

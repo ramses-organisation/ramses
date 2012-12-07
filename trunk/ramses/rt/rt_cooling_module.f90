@@ -9,7 +9,7 @@ module rt_cooling_module
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
-         , signc, PHrate, UVrates
+         , signc, sigec, PHrate, UVrates
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
   ! where n=nPacs.
@@ -31,8 +31,8 @@ module rt_cooling_module
   integer,dimension(nPacs)::iNpU,iFpU                !       See set_model
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
 
-  ! Cooling constants, must be updated on SED change and c-change:
-  real(dp),dimension(nPacs,nIons)::signc,PHrate ! [cm3 s-1], [erg cm3 s-1]
+  ! Cooling constants, updated on SED and c change [cm3 s-1],[erg cm3 s-1]
+  real(dp),dimension(nPacs,nIons)::signc,sigec,PHrate
 
   real(dp),dimension(nIons, 2)::UVrates     !UV backgr. heating/ion. rates
 
@@ -347,6 +347,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         code=2 ; dU=dU-U; RETURN
      endif
      if(.not. rt_isTconst) TK=dU(1)*mu
+     if(rt_isTconst) dU(1)=rt_Tconst
   endif
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
@@ -860,9 +861,12 @@ SUBROUTINE updateRTPac_CoolConstants()
   integer::iP, iI
 !------------------------------------------------------------------------
   signc=pac_csn*rt_c_cgs                                      ! [cm3 s-1]
+  sigec=pac_cse*rt_c_cgs                                      ! [cm3 s-1]
   do iP=1,nPacs
      do iI=1,nIons               ! Photoheating rates for photons on ions
-        PHrate(iP,iI)= ev_to_erg*signc(iP,iI)*(pac_egy(iP,iI)-ionEvs(iI))
+        PHrate(iP,iI) =  ev_to_erg * &        ! See eq (19) in Aubert(08)
+             (sigec(iP,iI) * pac_egy(iP) - signc(iP,iI)*ionEvs(iI))
+        PHrate(iP,iI) = max(PHrate(iP,iI),0d0) !      No negative heating
      end do
   end do
 END SUBROUTINE updateRTPac_CoolConstants

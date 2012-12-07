@@ -74,10 +74,12 @@ module rt_parameters
   ! RT_PACS namelist----------------------------------------------------------------------
   integer::sedprops_update=-1                      ! Update sedprops from star populations
   ! negative: never update, 0:update on init, pos x: update every x coarse steps
-  ! Sedprops: avg and energy weigthed photoionization c-section (cm2), avg. energy (ev).
+  logical::SED_isEgy=.false. ! Integrate energy out of SEDs rather than photon count
+  ! Grop props: avg and energy weigthed photoionization c-section (cm2), avg. energy (ev).
   ! Indexes nPacs, nIons stand for photon package vs species (e.g. 1=H, 2=He).
   integer,dimension(nPacs)::iPac=1                               !   Start indices of pacs
-  real(dp),dimension(nPacs,nIons)::pac_csn=0, pac_egy=0          !          Cross sections
+  real(dp),dimension(nPacs,nIons)::pac_csn=0, pac_cse=0          !    Cross sections (cm2)
+  real(dp),dimension(nPacs)::pac_egy=0                           !  Avg photon energy (ev)
   real(dp),dimension(nPacs)::pacL0=13.60                         ! Wavelength lower limits
   real(dp),dimension(nPacs)::pacL1=0                             ! Wavelength upper limits
   integer,dimension(nIons)::spec2pac=0                     !Ion -> pac # in recombinations

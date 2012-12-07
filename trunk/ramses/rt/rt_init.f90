@@ -133,7 +133,7 @@ SUBROUTINE read_rt_params(nml_ok)
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
        & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
-       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, nSEDpacs            &
+       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, nSEDpacs, SED_isEgy &
        & ,rt_freeflow, rt_output_coolstats, upload_equilibrium_x, X, Y   &
        & ,rt_is_init_xion, rt_UV_nhSS, rt_err_grad_n, rt_floor_n         &
        & ,rt_err_grad_xHII, rt_floor_xHII,rt_err_grad_xHI                &
@@ -182,7 +182,7 @@ SUBROUTINE read_rt_pacs(nml_ok)
   implicit none
   logical::nml_ok
   integer::i
-  namelist/rt_pacs/pac_csn, pac_egy, spec2pac, pacL0, pacL1
+  namelist/rt_pacs/pac_csn, pac_cse, pac_egy, spec2pac, pacL0, pacL1
 !------------------------------------------------------------------------
   if(myid==1) then
      write(*,'(" Working with ",I2," photon packages and  " &
@@ -201,19 +201,19 @@ SUBROUTINE read_rt_pacs(nml_ok)
 
   ! Default pacs are all blackbodies at E5 Kelvin
   pac_csn(1,:)=(/3.007d-18, 0d0, 0d0/)     ! avg photoion. c-section (cm2)
+  pac_cse(1,:)=(/2.781d-18, 0d0, 0d0/)! weighted photoion. c-section (cm2)
+  pac_egy(1)  =18.85                              ! avg photon Energy (eV)
 #if NPACS>1
   if(nPacs .ge. 2) pac_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
+  if(nPacs .ge. 2) pac_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
+  if(nPacs .ge. 2) pac_egy(2)  = 35.079
 #endif
 #if NPACS>2
   if(nPacs .ge. 3) pac_csn(3,:)=(/7.889d-20, 1.197d-18, 1.055d-18/)
+  if(nPacs .ge. 3) pac_cse(3,:)=(/7.456d-20, 1.142d-18, 1.001d-18/)
+  if(nPacs .ge. 3) pac_egy(3)  =65.666
 #endif
-  pac_egy(1,:)=(/17.439, 0., 0./)           ! cs weighted photon Energy (eV)
-#if NPACS>1
-  if(nPacs .ge. 2) pac_egy(2,:)=(/31.100, 32.359, 0./)
-#endif
-#if NPACS>2
-  if(nPacs .ge. 3) pac_egy(3,:)=(/62.056, 62.696, 62.307/)
-#endif
+
   do i=1,min(nIons,nPacs)
      spec2pac(i)=i                  ! Species contributions to packages
   end do

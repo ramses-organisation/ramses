@@ -160,18 +160,20 @@ SUBROUTINE write_PacProps(update,lun)
   write(lun,902) pacL1(:)
   write(lun,903) spec2pac(:)
   do ip=1,nPacs
-     write(lun,906) ip
-     write(lun,904) pac_csn(ip,:)
-     write(lun,905) pac_egy(ip,:)
+     write(lun,907) ip
+     write(lun,904) pac_egy(ip)
+     write(lun,905) pac_csn(ip,:)
+     write(lun,906) pac_cse(ip,:)
   enddo
   write (lun,*) '-------------------------------------------------------'
 
 901 format ('  pacL0    [eV] =', 20f12.3)
 902 format ('  pacL1    [eV] =', 20f12.3)
 903 format ('  spec2pac      =', 20I12)
-904 format ('  csn    [cm^2] =', 20(1pe12.3))
-905 format ('  egy      [eV] =', 20f12.3)
-906 format ('  ---Package',I2)
+904 format ('  egy      [eV] =', 20f12.3)
+905 format ('  csn    [cm^2] =', 20(1pe12.3))
+906 format ('  cse    [cm^2] =', 20(1pe12.3))
+907 format ('  ---Package',I2)
 
 END SUBROUTINE write_PacProps
 
