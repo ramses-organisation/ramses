@@ -29,9 +29,9 @@ subroutine dump_all
      filedir='output_'//TRIM(nchar)//'/'
      filecmd='mkdir -p '//TRIM(filedir)
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+     call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
 #else
-     if(myid==1)call system(filecmd)
+     call system(filecmd)
 #endif
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
