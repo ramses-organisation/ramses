@@ -2,6 +2,7 @@
 hydro=.true.
 static=.true.
 nrestart=0
+rt=.true.
 /
 
 &INIT_PARAMS
@@ -50,8 +51,6 @@ err_grad_d=0.1
 &RT_PARAMS
 X=1d0
 Y=0d0
-rt=.true.
-rt_cooling=.false.
 rt_TConst=1d4			! Kelvin
 rt_flux_scheme='glf'
 rt_c_fraction=0.01
@@ -79,9 +78,10 @@ rt_err_grad_xHII=0.8
 rt_err_grad_xHI=0.8 
 /
 
-&RT_PACS
-pac_csn=6.3d-18, 0., 0.         ! monochromatic source at 13.6 eV
-pac_egy=13.6d0, 0., 0.
+&RT_GROUPS
+group_csn=6.3d-18, 0., 0.         ! monochromatic source at 13.6 eV
+group_cse=6.3d-18, 0., 0.         ! monochromatic source at 13.6 eV
+group_egy=13.6d0, 0., 0.
 /
 
 &BOUNDARY_PARAMS

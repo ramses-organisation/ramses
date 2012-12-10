@@ -211,24 +211,24 @@ END MODULE spectrum_integrator_module
 MODULE SED_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
-  use rt_parameters,only:nPacs
+  use rt_parameters,only:nGroups
   implicit none
 
-  PUBLIC nSEDpacs                                                        &
-      , init_SED_table, inp_SED_table, update_SED_PacProps               &
+  PUBLIC nSEDgroups                                                      &
+      , init_SED_table, inp_SED_table, update_SED_group_props            &
       , update_star_RT_feedback, star_RT_feedback
 
   PRIVATE   ! default
 
   ! Light properties for different spectral energy distributions----------
-  integer::nSEDpacs=nPacs               ! All pacs are SED pacs by default 
-  integer::SED_nA, SED_nZ=8             ! Number of age bins and Z bins
+  integer::nSEDgroups=nGroups         ! Default: All groups are SED groups
+  integer::SED_nA, SED_nZ=8           ! Number of age bins and Z bins
   ! Age and z logarithmic intervals and lowest values:
   real(dp),parameter::SED_dlgA=0.02d0
   real(dp)::SED_dlgZ
   real(dp)::SED_lgA0, SED_lgZ0
   real(dp),allocatable,dimension(:)::SED_ages,SED_zeds![Gyr],[m_met/m_gas]
-  ! SED_table: iAges, imetallicities, ipackages, properties 
+  ! SED_table: iAges, imetallicities, igroups, properties 
   !                                         (Lum, Lum-acc, egy, csn, cse).
   ! Lum is photons per sec per solar mass (eV per sec per solar mass in 
   ! the case of SED_isEgy=true). Lum-acc is accumulated lum.
@@ -242,7 +242,7 @@ SUBROUTINE init_SED_table()
 
 ! Initiate SED properties table, which gives photon luminosities, 
 ! integrated luminosities, average photon cross sections and energies of 
-! each photon package as a function of stellar population age and 
+! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
   use amr_commons,only:myid
@@ -333,9 +333,9 @@ SUBROUTINE init_SED_table()
 
   ! Perform SED integration of luminosity, csn and egy per (age,Z) bin----
   allocate(tbl(nAges,nZs,nv))
-  do ip = 1,nSEDpacs                                ! Loop photon packages
+  do ip = 1,nSEDgroups                                ! Loop photon groups
      tbl=0.
-     pL0 = pacL0(ip) ; pL1 = pacL1(ip)  ! eV interval of photon package ip
+     pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
      do iz = 1, nzs                                     ! Loop metallicity
      do ia = locid+1,nAges,ncpu                                 ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
@@ -369,13 +369,13 @@ SUBROUTINE init_SED_table()
           , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), zs, nv        &
           , reb_tbl, SED_nA, SED_nZ, rebAges, SED_Zeds)
      SED_nA=SED_nA+1                              ! Make room for zero age
-     if(ip .eq. 1 ) allocate(SED_table(SED_nA, SED_nZ, nSEDpacs, nv))
+     if(ip .eq. 1 ) allocate(SED_table(SED_nA, SED_nZ, nSEDgroups, nv))
      SED_table(1, :,ip,:) = reb_tbl(1,:,:)            ! Zero age properties
      SED_table(1, :,ip,2) = 0.                        !  Lacc=0 at zero age
      SED_table(2:,:,ip,:) = reb_tbl
      deallocate(reb_tbl)
 
-  end do ! End package loop
+  end do ! End photon group loop
 
   SED_lgZ0 = log10(SED_Zeds(1))                  ! Interpolation intervals
   SED_lgA0 = log10(rebAges(1))
@@ -392,10 +392,10 @@ SUBROUTINE init_SED_table()
 END SUBROUTINE init_SED_table
 
 !*************************************************************************
-SUBROUTINE update_SED_PacProps()
+SUBROUTINE update_SED_group_props()
 
-! Compute and assign to all SED photon packages an average of the  
-! quantities pac_csn and pac_egy from all the star particles in the
+! Compute and assign to all SED photon groups an average of the  
+! quantities group_csn and group_egy from all the star particles in the
 ! simulation, weighted by the luminosity of the particles.
 ! If there are no stars, we assign the SED properties of zero-age,
 ! zero-metallicity stellar populations.
@@ -418,18 +418,18 @@ SUBROUTINE update_SED_PacProps()
   real(dp):: mass, age, Z
 !-------------------------------------------------------------------------
   if(.not. allocated(L_star)) then
-     allocate(L_star(nSEDpacs)) 
-     allocate(egy_star(nSEDpacs)) 
-     allocate(csn_star(nSEDpacs,nIons)) 
-     allocate(cse_star(nSEDpacs,nIons)) 
-     allocate(sum_L_cpu(nSEDpacs))    
-     allocate(sum_L_all(nSEDpacs)) 
-     allocate(sum_egy_cpu(nSEDpacs)) 
-     allocate(sum_egy_all(nSEDpacs)) 
-     allocate(sum_csn_cpu(nSEDpacs,nIons)) 
-     allocate(sum_csn_all(nSEDpacs,nIons)) 
-     allocate(sum_cse_cpu(nSEDpacs,nIons)) 
-     allocate(sum_cse_all(nSEDpacs,nIons)) 
+     allocate(L_star(nSEDgroups)) 
+     allocate(egy_star(nSEDgroups)) 
+     allocate(csn_star(nSEDgroups,nIons)) 
+     allocate(cse_star(nSEDgroups,nIons)) 
+     allocate(sum_L_cpu(nSEDgroups))    
+     allocate(sum_L_all(nSEDgroups)) 
+     allocate(sum_egy_cpu(nSEDgroups)) 
+     allocate(sum_egy_all(nSEDgroups)) 
+     allocate(sum_csn_cpu(nSEDgroups,nIons)) 
+     allocate(sum_csn_all(nSEDgroups,nIons)) 
+     allocate(sum_cse_cpu(nSEDgroups,nIons)) 
+     allocate(sum_cse_all(nSEDgroups,nIons)) 
   endif
   sum_L_cpu   = 0d0 ! Accumulated luminosity, avg cross sections and 
   sum_egy_cpu = 0d0 ! photon energies for all stars belonging to  
@@ -454,7 +454,7 @@ SUBROUTINE update_SED_PacProps()
         call inp_SED_table(age, Z, 3+2*ii, .true., cse_star(:,ii))! [cm^2]
      end do
 
-     do ip=1,nSEDpacs
+     do ip=1,nSEDgroups
         L_star(ip) = L_star(ip) * mass             !       [# photons s-1]       
         sum_L_cpu(ip)    =   sum_L_cpu(ip)   + L_star(ip)
         sum_egy_cpu(ip) =  sum_egy_cpu(ip)   + L_star(ip) * egy_star(ip)
@@ -471,50 +471,50 @@ SUBROUTINE update_SED_PacProps()
   sum_csn_all = sum_csn_cpu
   sum_cse_all = sum_cse_cpu
 #else
-  call MPI_ALLREDUCE(sum_L_cpu,   sum_L_all,   nSEDPacs,                 &
+  call MPI_ALLREDUCE(sum_L_cpu,   sum_L_all,   nSEDgroups,               &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
-  call MPI_ALLREDUCE(sum_egy_cpu, sum_egy_all, nSEDPacs,                 &
+  call MPI_ALLREDUCE(sum_egy_cpu, sum_egy_all, nSEDgroups,               &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
-  call MPI_ALLREDUCE(sum_csn_cpu, sum_csn_all, nSEDPacs*nIons,           &
+  call MPI_ALLREDUCE(sum_csn_cpu, sum_csn_all, nSEDgroups*nIons,         &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
-  call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDPacs*nIons,           &
+  call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDgroups*nIons,         &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
 #endif
   
   ! ...and take averages weighted by luminosities
-  do ip=1,nSEDPacs
+  do ip=1,nSEDgroups
      if(sum_L_all(ip) .gt. 0.) then
-        pac_egy(ip)   = sum_egy_all(ip)   / sum_L_all(ip)
-        pac_csn(ip,:) = sum_csn_all(ip,:) / sum_L_all(ip)
-        pac_cse(ip,:) = sum_cse_all(ip,:) / sum_L_all(ip)
+        group_egy(ip)   = sum_egy_all(ip)   / sum_L_all(ip)
+        group_csn(ip,:) = sum_csn_all(ip,:) / sum_L_all(ip)
+        group_cse(ip,:) = sum_cse_all(ip,:) / sum_L_all(ip)
      else ! no stars -> assign zero-age zero-metallicity props
-        pac_egy(ip)       = SED_table(1,1,ip,3)
+        group_egy(ip)       = SED_table(1,1,ip,3)
         do ii=1,nIons
-           pac_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
-           pac_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
+           group_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
+           group_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
         enddo
      endif
   end do
 
-  call updateRTPac_CoolConstants
+  call updateRTgroups_coolConstants
   if(myid==1) write(*,*) &
-                    'SED Photon packages updated through stellar polling'
-  call write_PacProps(.true.,6)
+                    'SED Photon groups updated through stellar polling'
+  call write_group_props(.true.,6)
 
-END SUBROUTINE update_SED_PacProps
+END SUBROUTINE update_SED_group_props
 
 !*************************************************************************
 SUBROUTINE update_star_RT_feedback(ilevel)
 
 ! Turn on RT advection if needed.
-! Update photon package properties from stellar populations.
+! Update photon group properties from stellar populations.
 !-------------------------------------------------------------------------
   use amr_parameters
   use amr_commons
   use rt_parameters
   use pm_commons
   integer::ilevel
-  logical,save::pacprops_init=.false.
+  logical,save::groupProps_init=.false.
 !-------------------------------------------------------------------------
   if(rt_star.and. nstar_tot .gt. 0) then
      if(.not.rt_advect) then ! Turn on RT advection due to newborn stars:
@@ -523,13 +523,13 @@ SUBROUTINE update_star_RT_feedback(ilevel)
         if(myid==1) write(*,*) '*****************************************'
         rt_advect=.true.     
      endif
-     ! Set package props from stellar populations:                 
-     if(sedprops_update .gt. 0 .and. .not.pacprops_init) then
-        call update_SED_Pacprops                                         
-        pacprops_init=.true.        
+     ! Set group props from stellar populations:                 
+     if(sedprops_update .gt. 0 .and. .not.groupProps_init) then
+        call update_SED_group_props                                         
+        groupProps_init=.true.        
      else if(sedprops_update .gt. 0 .and. ilevel==levelmin &
           .and. mod(nstep_coarse,sedprops_update)==0) then               
-        call update_SED_Pacprops                         
+        call update_SED_group_props                         
      endif
   endif
 END SUBROUTINE update_star_RT_feedback
@@ -848,7 +848,7 @@ SUBROUTINE write_SEDtable()
   character(len=128)::filename
   integer::ip, i, j
 !-------------------------------------------------------------------------
-  do ip=1,nSEDPacs
+  do ip=1,nSEDgroups
      write(filename,'(A, I1, A)') 'SEDtable', ip, '.list'
      open(10, file=filename, status='unknown')
      write(10,*) SED_nA, SED_nZ
@@ -885,7 +885,7 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
 ! same  => If true then assume same age and Z as used in last call. 
 !          In this case the interpolation indexes can be recycled.
 ! ret   => The interpolated values of the sed property for every photon 
-!          package
+!          group
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
@@ -939,7 +939,7 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
 !-------------------------------------------------------------------------
   use rt_parameters
   real(dp),intent(in):: age1_Gyr, dt_Gyr, Z
-  real(dp),dimension(nSEDPacs):: ret, Lc0, Lc1, SEDegy
+  real(dp),dimension(nSEDgroups):: ret, Lc0, Lc1, SEDegy
 !-------------------------------------------------------------------------
   ! Lc0 = cumulative emitted photons at the start of the timestep
   call inp_SED_table(age1_Gyr-dt_Gyr, Z, 2, .false., Lc0)
@@ -948,7 +948,7 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
   ret = max(Lc1-Lc0,0.)
   if(SED_isEgy) then ! Integrate correct energy rather than # of photons
      ! Divide emitted energy by group energy -> Photon count
-     ret = ret / pac_egy(1:nSEDpacs)
+     ret = ret / group_egy(1:nSEDgroups)
   endif
 END SUBROUTINE getNPhotonsEmitted
 
@@ -990,7 +990,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
   logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector,nPacs),save::part_NpInp
+  real(dp),dimension(1:nvector,ngroups),save::part_NpInp
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,3),save::id=0,igd=0,icd=0
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
@@ -1096,10 +1096,10 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      call getAgeGyr(tp(ind_part(j)), age)          !  End-of-dt age [Gyrs]
      ! Possibilities:     Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
-     call getNPhotonsEmitted(age, dt_loc_Gyr, z, part_NpInp(j,1:nSEDPacs))
+     call getNPhotonsEmitted(age,dt_loc_Gyr,z,part_NpInp(j,1:nSEDgroups))
      part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
 
-     if(showSEDstats .and. nSEDPacs .gt. 0) then
+     if(showSEDstats .and. nSEDgroups .gt. 0) then
         step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
         step_nStar = step_nStar+dt_loc_Gyr*Gyr2sec/scale_t
         step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
@@ -1115,19 +1115,20 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ! Increase photon density in cell due to stellar radiation
   do j=1,np
      if( ok(j) ) then                                      !   ilevel cell
-        do ip=1,nSEDPacs
-           rtunew(indp(j),iPac(ip))= rtunew(indp(j),iPac(ip))+part_NpInp(j,ip)
+        do ip=1,nSEDgroups
+           rtunew(indp(j),iGroups(ip)) &
+                = rtunew(indp(j),iGroups(ip))+part_NpInp(j,ip)
         end do
      else                                                  ! ilevel-1 cell
-        do ip=1,nSEDPacs
-           rtunew(indp(j),iPac(ip)) = rtunew(indp(j),iPac(ip))               &
+        do ip=1,nSEDgroups
+           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
                 + part_NpInp(j,ip) / vol_factor
         end do
      endif
      !begin debug
-     !     if(rtunew(indp(j),iPac(1))*scale_np*rt_c_cgs .gt.1.d11) then
+     !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
      !        write(*,777),ilevel, myid, rtunew(indp(j),                   &
-     !           iPac(1))*scale_np*rt_c_cgs, &
+     !           iGroups(1))*scale_np*rt_c_cgs, &
      !             irad(j,1), irad(j,2),                                 &
      !             mp(ind_part(j)),                                      &
      !             mp(ind_part(j))*scale_d*scale_l**3/m_sun,             &
@@ -1176,7 +1177,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   ! Particle based arrays
-  real(dp),dimension(1:nvector,nPacs),save::part_NpInp
+  real(dp),dimension(1:nvector,nGroups),save::part_NpInp
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,3),save::id=0
   !integer ,dimension(1:nvector,1:ndim),save::id
@@ -1239,10 +1240,10 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
      call getAgeGyr(tp(ind_part(j)), age)         !   End-of-dt age [Gyrs]
      !Possibilities:      Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
-     call getNPhotonsEmitted(age, dt_loc_Gyr, z,part_NpInp(j,1:nSEDpacs))
+     call getNPhotonsEmitted(age,dt_loc_Gyr, z,part_NpInp(j,1:nSEDGroups))
      part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
 
-     if(showSEDstats .and. nSEDpacs .gt. 0) then
+     if(showSEDstats .and. nSEDgroups .gt. 0) then
         step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
         step_nStar = step_nStar+dt_loc_Gyr*Gyr2sec/scale_t
         step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
@@ -1253,8 +1254,9 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   end do
 
   do j=1,np                       ! Update hydro variables due to feedback
-     do ip=1,nSEDPacs
-        rtunew(indp(j),iPac(ip)) = rtunew(indp(j),iPac(ip)) + part_NpInp(j,ip)
+     do ip=1,nSEDgroups
+        rtunew(indp(j),iGroups(ip)) &
+             = rtunew(indp(j),iGroups(ip)) + part_NpInp(j,ip)
                 
      end do
   end do
@@ -1266,16 +1268,16 @@ END MODULE SED_module
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Module for UV table of redshift dependent photon fluxes, cross sections
-! and photon energies, per photon package. This is mainly useful for 
+! and photon energies, per photon group. This is mainly useful for 
 ! calculating heating rates due to the homogeneous UV background in the 
 ! cooling-module, and for  radiative transfer of the UV background, where 
 ! we then assign intensities, average cross sections and energies to UV 
-! photon packages.
+! photon groups.
 ! 
 ! There are two tables of UV properties:
 ! UV_rates_table: Integrated ionization and heating rates for a 
 !                 homogeneous UV background.
-! UV_pacs_table:  UV properties integrated over each photon package 
+! UV_groups_table: UV properties integrated over each photon group 
 !                 wavelength interval: photon flux, average energy, 
 !                 average cross section, energy weighted cross section.
 !_________________________________________________________________________
@@ -1284,12 +1286,12 @@ MODULE UV_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
   use spectrum_integrator_module
-  use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, ionEVs, nPacs
+  use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, ionEVs, nGroups
 
   implicit none
 
-  PUBLIC nUVpacs, iUVvars_cool, UV_Nphot_cgs, init_UV_background         &
-       , inp_UV_rates_table, inp_UV_pacs_table, UV_minz, UV_maxz         &
+  PUBLIC nUVgroups, iUVvars_cool, UV_Nphot_cgs, init_UV_background       &
+       , inp_UV_rates_table, inp_UV_groups_table, UV_minz, UV_maxz       &
        , update_UVsrc
 
   PRIVATE   ! default
@@ -1305,12 +1307,13 @@ MODULE UV_module
   ! rt_n_UVsrc vectors of redshift dependent fluxes for UV background
   real(dp),allocatable::UV_fluxes_cgs(:)    !                    [#/cm2/s]
   real(dp),allocatable::UV_Nphot_cgs(:)     !        Photon density [cm-3]
-  integer::nUVpacs=0                        !      # of UV photon packages 
-  !UV pac indexes among nPac pacs, UV Np indexes among solve_cooling vars:
-  integer,allocatable::iUVpacs(:),iUVvars_cool(:) 
-  ! Table of photon package props (UV_nz, nUVpacs, 1+2*nIons): 
-  !(z, pac, flux [#/cm2/s]: nIons*csn [cm-2]: nIons*egy [ev])
-  real(dp),allocatable,dimension(:,:,:)::UV_pacs_table
+  integer::nUVgroups=0                      !        # of UV photon groups 
+  ! UV group indexes among nGroup groups, 
+  ! UV Np indexes among solve_cooling vars:
+  integer,allocatable::iUVgroups(:),iUVvars_cool(:) 
+  ! Table of photon group props (UV_nz, nUVgroups, 1+2*nIons): 
+  !(z, group, flux [#/cm2/s]: nIons*csn [cm-2]: nIons*egy [ev])
+  real(dp),allocatable,dimension(:,:,:)::UV_groups_table
   ! The tables do not have constant redshift intervals, so we need to
   ! first locate the correct interval when doing interpolation.
   real(dp),parameter::fourPi=12.566371
@@ -1321,7 +1324,7 @@ CONTAINS
 !*************************************************************************
 SUBROUTINE init_UV_background()
 ! Initiate UV props table, which gives photon fluxes and average photon 
-! cross sections and energies of each photon package as a function of z.
+! cross sections and energies of each photon group as a function of z.
 ! The data is read from a file specified by uv_file containing: 
 ! a) number of redshifts
 ! b) redshifts (increasing order)
@@ -1421,26 +1424,26 @@ SUBROUTINE init_UV_background()
           print*,'  You likely don''t want this duplicated background...'
        endif
      rt_isDiffuseUVsrc=.true.
-     if(nUVpacs .eq. 0) nUVpacs = npacs ! All pacs are UV pacs by default
-     nSEDpacs=nPacs-nUVpacs
-     ! SED pacs are the first nSEDpacs, UV pacs are the last nUVpacs
-     allocate(iUVpacs(nUVpacs)) ; allocate(iUVvars_cool(nUVpacs))
-     do i=1,nUVpacs                   !      Initialize UV package indexes
-        iUVpacs(i) = nPacs-nUVpacs+i  !  Indexes of UV packages among pacs
-        iUVvars_cool(i) = 4+iUVpacs(i)!UV Np's among vars in solve_cooling
+     if(nUVgroups .eq. 0) nUVgroups = nGroups ! Default: All groups are UV
+     nSEDgroups=nGroups-nUVgroups
+     ! SED groups are the first nSEDgroups, UV groups the last nUVgroups
+     allocate(iUVgroups(nUVgroups)) ; allocate(iUVvars_cool(nUVgroups))
+     do i=1,nUVgroups                 !      Initialize UV group indexes
+        iUVgroups(i) = nGroups-nUVgroups+i        ! UV groups among groups
+        iUVvars_cool(i) = 4+iUVgroups(i) !UV Np's in vars in solve_cooling
      end do
-     if(nUVpacs .gt. 0) then
-        allocate(UV_fluxes_cgs(nUVpacs))              ; UV_fluxes_cgs=0.
-        allocate(UV_Nphot_cgs(nUVpacs))               ; UV_Nphot_cgs=0.
+     if(nUVgroups .gt. 0) then
+        allocate(UV_fluxes_cgs(nUVgroups))             ; UV_fluxes_cgs=0.
+        allocate(UV_Nphot_cgs(nUVgroups))              ; UV_Nphot_cgs=0.
      endif
 
-     ! Initialize photon packages table-----------------------------------
-     allocate(UV_pacs_table(UV_nz, nUVpacs, 2+2*nIons))                   
+     ! Initialize photon groups table-------------------------------------
+     allocate(UV_groups_table(UV_nz, nUVgroups, 2+2*nIons))                   
      allocate(tbl(UV_nz, 2+2*nIons))                                      
-     do ip = 1,nUVpacs             !                  Loop photon packages
+     do ip = 1,nUVgroups           !                    Loop photon groups
         tbl=0.
-        pL0 = pacL0(nSEDpacs+ip)   !  energy interval of photon package ip
-        pL1 = pacL1(nSEDpacs+ip)   !
+        pL0 = groupL0(nSEDgroups+ip) !  Energy interval of photon group ip
+        pL1 = groupL1(nSEDgroups+ip) !
         do iz = locid+1,UV_nz,ncpu
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0.d0) cycle     ! Can't integrate zero fluxes
@@ -1459,12 +1462,12 @@ SUBROUTINE init_UV_background()
 #endif     
         if(tbl(UV_nz,1) .eq. 0.d0) &            !                Zero flux
              tbl(UV_nz,2:)=tbl(UV_nz-1,2:)
-        UV_pacs_table(:,ip,:)=tbl 
+        UV_groups_table(:,ip,:)=tbl 
      end do
      deallocate(tbl) ; deallocate(Ls) ; deallocate(UV)
 
      call update_UVsrc
-     if (myid==1) call write_UVpacs_tables
+     if (myid==1) call write_UVgroups_tables
   endif ! End propagated UV background
 
 END SUBROUTINE init_UV_background
@@ -1486,20 +1489,20 @@ SUBROUTINE inp_UV_rates_table(z, ret)
 END SUBROUTINE inp_UV_rates_table
 
 !*************************************************************************
-SUBROUTINE inp_UV_pacs_table(z, ret)
+SUBROUTINE inp_UV_groups_table(z, ret)
 ! Compute UV properties by interpolation from table.
 ! z    => Redshift
-! ret <=  [nPac,1+2*nIons) interpolated values of all UV properties.
-!         1=photon flux [#/cm2/s], 2*i=pac_csn[cm-2], 1+2*i=pac_egy [ev]
+! ret <=  [nGroups,1+2*nIons) interpolated values of all UV properties.
+!         1=ph. flux [#/cm2/s], 2*i=group_csn[cm-2], 1+2*i=group_egy [ev]
 !-------------------------------------------------------------------------
   real(dp), intent(in):: z
-  real(dp):: ret(nUVpacs,2+2*nIons), dz0, dz1
+  real(dp):: ret(nUVgroups,2+2*nIons), dz0, dz1
   integer:: iz0, iz1
 !-------------------------------------------------------------------------
   ret=0. ; if(z .gt. UV_maxz) RETURN
   call inp_1d(UV_zeds, UV_nz, z, iz0, iz1, dz0, dz1)
-  ret = dz0 * UV_pacs_table(iz1, :, :) + dz1 * UV_pacs_table(iz0, :, :)
-END SUBROUTINE inp_UV_pacs_table
+  ret = dz0 * UV_groups_table(iz1, :, :) + dz1 * UV_groups_table(iz0, :,:)
+END SUBROUTINE inp_UV_groups_table
 
 !*************************************************************************
 SUBROUTINE update_UVsrc
@@ -1512,15 +1515,15 @@ SUBROUTINE update_UVsrc
   use amr_commons,only:t,levelmin,myid,aexp
   implicit none
   integer::ilevel,i
-  real(dp),allocatable,save::UVprops(:,:) ! Each pack: flux, egy, csn, cse
+  real(dp),allocatable,save::UVprops(:,:) !Each group: flux, egy, csn, cse
   real(dp)::scale_Np, scale_Fp, redshift
 !-------------------------------------------------------------------------
   if(.not.rt_isDiffuseUVsrc) return
-  if(nUVPacs.le.0) then
-     if(myid==1) write(*,*) 'No packages dedicated to the UV background!'
+  if(nUVgroups.le.0) then
+     if(myid==1) write(*,*) 'No groups dedicated to the UV background!'
      RETURN
   endif
-  if(.not. allocated(UVprops)) allocate(UVprops(nUVPacs,2+2*nIons))
+  if(.not. allocated(UVprops)) allocate(UVprops(nUVgroups,2+2*nIons))
   call rt_units(scale_Np, scale_Fp)
 
   redshift=1./aexp-1.
@@ -1537,21 +1540,21 @@ SUBROUTINE update_UVsrc
 
   if(redshift .gt. UV_maxz) return ! UV background not turned on yet
 
-  call inp_UV_pacs_table(redshift, UVprops)
+  call inp_UV_groups_table(redshift, UVprops)
   UV_fluxes_cgs(:)      = UVprops(:,1)
   UV_Nphot_cgs          = UV_fluxes_CGS/rt_c_cgs
-  pac_egy(iUVpacs)      = UVprops(:,2)
+  group_egy(iUVgroups)  = UVprops(:,2)
   do i=1,nIons
-     pac_csn(iUVpacs,i)  = UVprops(:,1+2*i)
-     pac_cse(iUVpacs,i)  = UVprops(:,2+2*i)
+     group_csn(iUVgroups,i)  = UVprops(:,1+2*i)
+     group_cse(iUVgroups,i)  = UVprops(:,2+2*i)
   enddo
 
-  call updateRTPac_CoolConstants     
+  call updateRTgroups_CoolConstants     
 
   if(myid==1) then
      write(*,*) 'Updated UV fluxes [# cm-2 s-1] to'
      write(*,900) UV_fluxes_cgs
-     call write_PacProps(.true.,6)
+     call write_group_props(.true.,6)
   endif
 
 900 format (20f16.6)
@@ -1675,15 +1678,15 @@ SUBROUTINE write_UVrates_table()
 END SUBROUTINE write_UVrates_table
 
 !*************************************************************************
-SUBROUTINE write_UVpacs_tables()
+SUBROUTINE write_UVgroups_tables()
 
-! Write the UV photon package properties to files (this is just in 
+! Write the UV photon group properties to files (this is just in 
 ! debugging, to check if the UV spectra are being read correctly).
 !-------------------------------------------------------------------------
   character(len=128)::filename
   integer::ip, i, j
 !-------------------------------------------------------------------------
-  do ip=1,nUVPacs
+  do ip=1,nUVgroups
      write(filename,'(A, I1, A)') 'UVtable', ip, '.list'
      open(10, file=filename, status='unknown')
      write(10,*) UV_nz
@@ -1691,16 +1694,16 @@ SUBROUTINE write_UVpacs_tables()
      do i = 1,UV_nz
         write(10,901)                                                    &
                 UV_zeds(i)           ,                                   &
-                UV_pacs_table(i,ip,1),    UV_pacs_table(i,ip,2),         &
-                UV_pacs_table(i,ip,3),    UV_pacs_table(i,ip,4),         &
-                UV_pacs_table(i,ip,5),    UV_pacs_table(i,ip,6),         &
-                UV_pacs_table(i,ip,7),    UV_pacs_table(i,ip,8)
+                UV_groups_table(i,ip,1), UV_groups_table(i,ip,2),        &
+                UV_groups_table(i,ip,3), UV_groups_table(i,ip,4),        &
+                UV_groups_table(i,ip,5), UV_groups_table(i,ip,6),        &
+                UV_groups_table(i,ip,7), UV_groups_table(i,ip,8)
      end do
      close(10)
   end do
 901 format (f21.6,   f21.6,   f21.6,   1pe21.6, &
           & 1pe21.6, 1pe21.6, 1pe21.6, 1pe21.6, 1pe21.6  )
-END SUBROUTINE write_UVpacs_tables
+END SUBROUTINE write_UVgroups_tables
 
 END MODULE UV_module
 

@@ -12,7 +12,7 @@ module rt_cooling_module
          , signc, sigec, PHrate, UVrates
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
-  ! where n=nPacs.
+  ! where n=nGroups.
   ! NOTE: T2=T/mu
 
   logical::isHe=.true.
@@ -23,16 +23,18 @@ module rt_cooling_module
   real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
   real(dp),parameter::twopi     = 6.2831853d0    !            Two times pi
 
-  integer,parameter::n_U=1+nIons+2*nPacs       ! # of vars in state vector
+  integer,parameter::n_U=1+nIons+2*nGroups     ! # of vars in state vector
   integer,parameter::iT=1                            !       Indexes in U
   integer,parameter::ix0=2, ix1=1+nIons              !            --
-  integer,parameter::iNp0=2+nIons, iNp1=1+nIons+nPacs!            --
-  integer,parameter::iFp0=2+nIons+nPacs, iFp1=1+nIons+2*nPacs !    --
-  integer,dimension(nPacs)::iNpU,iFpU                !       See set_model
+  integer,parameter::iNp0=2+nIons                    !            --
+  integer,parameter::iNp1=1+nIons+nGroups            !            --
+  integer,parameter::iFp0=2+nIons+nGroups            !            --
+  integer,parameter::iFp1=1+nIons+2*nGroups          !            --
+  integer,dimension(nGroups)::iNpU,iFpU              !       See set_model
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
 
   ! Cooling constants, updated on SED and c change [cm3 s-1],[erg cm3 s-1]
-  real(dp),dimension(nPacs,nIons)::signc,sigec,PHrate
+  real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
 
   real(dp),dimension(nIons, 2)::UVrates     !UV backgr. heating/ion. rates
 
@@ -80,7 +82,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   U_FRAC(iFp0:iFp1) = 1.d6               !   No direct restr. on Fp update    
 
   ! Set up indexes of photon densities and fluxes in U:
-  do ip=0,nPacs-1
+  do ip=0,nGroups-1
      iNpU(ip+1)=iNp0+ip
      iFpU(ip+1)=iFp0+ip
   enddo
@@ -152,7 +154,7 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
   use amr_commons
   implicit none  
   real(dp),dimension(1:nvector, n_U):: U
-  real(dp),dimension(1:nvector, npacs)::dNpdt,dFpdt
+  real(dp),dimension(1:nvector, nGroups)::dNpdt,dFpdt
   real(dp),dimension(1:nvector):: nH, Zsolar
   logical,dimension(1:nvector)::c_switch
   real(dp)::dt, a_exp
@@ -250,13 +252,13 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   use const
   implicit none  
   real(dp),dimension(n_U):: U, dU
-  real(dp),dimension(nPacs):: dNpdt, dFpdt
+  real(dp),dimension(nGroups):: dNpdt, dFpdt
   real(dp):: nH, nHe, Zsolar, dt_rec, dt, a_exp
   logical::dt_ok, c_switch!-----------------------------------------------
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
   real(dp):: xHeI, mu, TK, ne, neInit, Hrate, dAlpha, dBeta, s, jac, q
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
-  real(dp),dimension(nPacs):: recRad, phI
+  real(dp),dimension(nGroups):: recRad, phI
   real(dp)::metal_tot,metal_prime
   integer::i, nc, loopcnt, code
 !-------------------------------------------------------------------------
@@ -282,22 +284,22 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
  
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
-     recRad(1:nPacs)=0. ; phI(1:nPacs)=0.              
+     recRad(1:nGroups)=0. ; phI(1:nGroups)=0.              
      if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
         ! alpha(2) A-B becomes negative around 1K, hence the max
         alpha(2) = MAX(0.d0,comp_AlphaA_HeII(TK)-comp_AlphaB_HeII(TK))
         alpha(3) = comp_AlphaA_HeIII(TK) - comp_AlphaB_HeIII(TK)
         do i=1,nIons
-           if(spec2pac(i) .gt. 0)   & ! Contribution of ion -> ph. pack
-                recRad(spec2Pac(i)) = &
-                recRad(spec2Pac(i)) + alpha(i) * nI(i) * ne
+           if(spec2group(i) .gt. 0)   & ! Contribution of ion -> ph. group
+                recRad(spec2group(i)) = &
+                recRad(spec2group(i)) + alpha(i) * nI(i) * ne
         enddo
      endif
-     do i=1,nPacs        ! ------------------------------------ Absorbtion
+     do i=1,nGroups      ! ------------------------------------ Absorbtion
         phI(i) = SUM(nN(:)*signc(i,:))
      end do
-     do i=1,nPacs           ! ------------------- Do the update of N and F
+     do i=1,nGroups      ! ---------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
                    (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))/(1.d0+dt*phI(i)))
         dU(iFpU(i)) = MAX(0d0,(dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*phI(i)))
@@ -325,7 +327,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   if(c_switch .and. cooling) then
      Hrate=0.                               !  Heating rate [erg cm-3 s-1]
      if(rt) then
-        do i=1,nPacs                                       !  Photoheating
+        do i=1,nGroups                                     !  Photoheating
            Hrate = Hrate + dU(iNpU(i)) * SUM(nN(:) * PHrate(i,:))
         end do
      endif
@@ -474,7 +476,7 @@ SUBROUTINE display_U_change(U_old, U_new, nH, loopcnt, code)
   write(*,888)'xHeIII', U_old(4), U_new(4), abs((U_new(4)-U_old(4))/U_old(4))
   write(*,777)'ne',     ne_old,   ne_new,   abs((ne_new-ne_old)/ne_old)
   write(*,999), loopcnt, code, nH, nHe
-  do i=0,nPacs-1
+  do i=0,nGroups-1
      write(*,777)'Np',  U_old(iNp0+i), U_new(iNp0+i), &
           abs((U_new(iNp0+i)-U_old(iNp0+i))/U_old(iNp0+i))
   enddo
@@ -642,7 +644,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   integer::niter
   real(dp) :: n_spec(1:6)
   real(dp),dimension(1:nvector, n_U)::U=0.
-  real(dp),dimension(1:nvector,nPacs)::dNpdt=0., dFpdt=0.
+  real(dp),dimension(1:nvector,nGroups)::dNpdt=0., dFpdt=0.
   real(dp),dimension(1:nvector)::nH=0., Zsolar=0.
   logical,dimension(1:nvector)::c_switch=.true.
 !-------------------------------------------------------------------------
@@ -851,22 +853,22 @@ END FUNCTION getRecLyaEmi
 END MODULE rt_cooling_module
 
 !************************************************************************
-SUBROUTINE updateRTPac_CoolConstants()
-! Update photon package cooling and heating constants, to reflect an 
-! update in rt_c_cgs and in the cross-sections and energies in the pacs.
+SUBROUTINE updateRTGroups_CoolConstants()
+! Update photon group cooling and heating constants, to reflect an update
+! in rt_c_cgs and in the cross-sections and energies in the groups.
 !------------------------------------------------------------------------
   use rt_cooling_module
   use rt_parameters
   implicit none
   integer::iP, iI
 !------------------------------------------------------------------------
-  signc=pac_csn*rt_c_cgs                                      ! [cm3 s-1]
-  sigec=pac_cse*rt_c_cgs                                      ! [cm3 s-1]
-  do iP=1,nPacs
+  signc=group_csn*rt_c_cgs                                    ! [cm3 s-1]
+  sigec=group_cse*rt_c_cgs                                    ! [cm3 s-1]
+  do iP=1,nGroups
      do iI=1,nIons               ! Photoheating rates for photons on ions
         PHrate(iP,iI) =  ev_to_erg * &        ! See eq (19) in Aubert(08)
-             (sigec(iP,iI) * pac_egy(iP) - signc(iP,iI)*ionEvs(iI))
+             (sigec(iP,iI) * group_egy(iP) - signc(iP,iI)*ionEvs(iI))
         PHrate(iP,iI) = max(PHrate(iP,iI),0d0) !      No negative heating
      end do
   end do
-END SUBROUTINE updateRTPac_CoolConstants
+END SUBROUTINE updateRTGroups_CoolConstants

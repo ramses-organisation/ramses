@@ -4,7 +4,7 @@
 !############################################################
 subroutine rt_boundana(x,u,dx,ibound,ncell)
   use amr_parameters, ONLY: dp,ndim,nvector
-  use rt_parameters, ONLY: nrtvar,rt_boundary_var,nPacs,iPac,rt_c
+  use rt_parameters, ONLY: nrtvar,rt_boundary_var,nGroups,iGroups,rt_c
   implicit none
   integer ::ibound                          ! Index of boundary region
   integer ::ncell                           ! Number of active cells
@@ -20,19 +20,19 @@ subroutine rt_boundana(x,u,dx,ibound,ncell)
   ! U is in user units.
   ! ibound is the index of the boundary region defined in the namelist.
   !================================================================
-  integer::ivar,i,iP
+  integer::i,ig
   real(dp)::scale_Np, scale_Fp
   real(dp),parameter::Fpx(3)=(/ 0.447d6, 0.494d6, 0.059d6 /)
 
   call rt_units(scale_Np, scale_Fp)
-  do ip=1,nPacs
+  do ig=1,nGroups
      do i=1,ncell
         ! Photon density:
-        u(i,iPac(ip))   = Fpx(ip) / scale_Fp /rt_c
+        u(i,iGroups(ig))   = Fpx(ig) / scale_Fp /rt_c
         ! Photon x-flux:
-        u(i,iPac(ip)+1) = Fpx(ip) / scale_Fp
+        u(i,iGroups(ig)+1) = Fpx(ig) / scale_Fp
         ! Photon y-flux:
-        u(i,iPac(ip)+2) = 0
+        u(i,iGroups(ig)+2) = 0
      end do
   end do
 

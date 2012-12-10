@@ -8,6 +8,7 @@ SUBROUTINE rt_backup_hydro(filename)
 !------------------------------------------------------------------------
   use amr_commons
   use rt_hydro_commons
+  use rt_parameters
   implicit none
   character(LEN=80)::filename,filedir,rt_filename
 
@@ -60,16 +61,16 @@ SUBROUTINE rt_backup_hydro(filename)
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
-              do ivar=1,nPacs
+              do ivar=1,nGroups
                  ! Store photon density in flux units
                  do i=1,ncache
-                    xdp(i)=rt_c*rtuold(ind_grid(i)+iskip,iPac(ivar))
+                    xdp(i)=rt_c*rtuold(ind_grid(i)+iskip,iGroups(ivar))
                  end do
                  write(ilun)xdp
                  do idim=1,ndim
                     ! Store photon flux
                     do i=1,ncache
-                       xdp(i)=rtuold(ind_grid(i)+iskip,iPac(ivar)+idim)
+                       xdp(i)=rtuold(ind_grid(i)+iskip,iGroups(ivar)+idim)
                     end do
                     write(ilun)xdp
                  enddo
@@ -112,7 +113,7 @@ SUBROUTINE output_rtInfo(filename)
   ! Write run parameters
   write(ilun,'("nRTvar      =",I11)')nRTvar
   write(ilun,'("nIons       =",I11)')nIons
-  write(ilun,'("nPacs       =",I11)')nPacs
+  write(ilun,'("nGroups     =",I11)')nGroups
   write(ilun,'("iIons       =",I11)')iIons
   write(ilun,*)
 
@@ -132,16 +133,16 @@ SUBROUTINE output_rtInfo(filename)
   write(ilun,'("T2_star     =",E23.15)')T2_star
   write(ilun,'("g_star      =",E23.15)')g_star
   write(ilun,*)
-  call write_PacProps(.false.,ilun)
+  call write_group_props(.false.,ilun)
 
   close(ilun)
 
 end subroutine output_rtInfo
 
 !************************************************************************
-SUBROUTINE write_PacProps(update,lun)
+SUBROUTINE write_group_props(update,lun)
 
-! Write photon package properties to file or std output.
+! Write photon group properties to file or std output.
 ! lun => File identifier (use 6 for std. output)
 !------------------------------------------------------------------------
   use rt_parameters
@@ -152,30 +153,30 @@ SUBROUTINE write_PacProps(update,lun)
 !------------------------------------------------------------------------
   if(myid .ne. 1) RETURN
   if(.not. update) then
-     write(lun,*) 'Photon package properties------------------------------ '
+     write(lun,*) 'Photon group properties------------------------------ '
   else
      write(lun,*) 'Photon properties have been changed to----------------- '
   endif
-  write(lun,901) pacL0(:)
-  write(lun,902) pacL1(:)
-  write(lun,903) spec2pac(:)
-  do ip=1,nPacs
+  write(lun,901) groupL0(:)
+  write(lun,902) groupL1(:)
+  write(lun,903) spec2group(:)
+  do ip=1,nGroups
      write(lun,907) ip
-     write(lun,904) pac_egy(ip)
-     write(lun,905) pac_csn(ip,:)
-     write(lun,906) pac_cse(ip,:)
+     write(lun,904) group_egy(ip)
+     write(lun,905) group_csn(ip,:)
+     write(lun,906) group_cse(ip,:)
   enddo
   write (lun,*) '-------------------------------------------------------'
 
-901 format ('  pacL0    [eV] =', 20f12.3)
-902 format ('  pacL1    [eV] =', 20f12.3)
-903 format ('  spec2pac      =', 20I12)
+901 format ('  groupL0  [eV] =', 20f12.3)
+902 format ('  groupL1  [eV] =', 20f12.3)
+903 format ('  spec2group    =', 20I12)
 904 format ('  egy      [eV] =', 20f12.3)
 905 format ('  csn    [cm^2] =', 20(1pe12.3))
 906 format ('  cse    [cm^2] =', 20(1pe12.3))
-907 format ('  ---Package',I2)
+907 format ('  ---Group',I2)
 
-END SUBROUTINE write_PacProps
+END SUBROUTINE write_group_props
 
 !*************************************************************************
 SUBROUTINE output_rt_stats

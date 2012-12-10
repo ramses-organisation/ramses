@@ -304,24 +304,24 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
   real(dp)::dx,dx_cgs
   real(dp),dimension(1:nvector,1:nrtvar)::uu
   real(dp),dimension(1:nvector,1:ndim)  ::x
-  integer::i,k,pac_ind
+  integer::i,k,group_ind
   real(dp)::vol,r,xn,yn,zn,en
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
 !------------------------------------------------------------------------
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   call rt_units(scale_np, scale_fp)
   dx_cgs=dx*scale_l
- ! Set some (tiny) default values in case n_region=0
-  do i=1,nPacs  ! Starting indices in uold and unew of each photon package
-     uu(1:nn,iPac(i))=smallNp
+  ! Set some (tiny) default values in case n_region=0
+  do i=1,nGroups ! Starting indices in uold and unew of each photon group
+     uu(1:nn,iGroups(i))=smallNp
   end do
 
   ! Loop over RT regions
   do k=1,rt_nregion
      
      if (rt_n_region(k).le.0.0) rt_n_region(k)=smallnp
-     pac_ind = ipac(rt_reg_pac(k))
-     if(rt_reg_pac(k) .le. 0 .or. rt_reg_pac(k) .gt. nPacs) cycle
+     group_ind = iGroups(rt_reg_group(k))
+     if(rt_reg_group(k) .le. 0 .or. rt_reg_group(k) .gt. nGroups) cycle
      ! For "square" regions only:
      if(rt_region_type(k) .eq. 'square')then
         ! Exponent of choosen norm
@@ -344,13 +344,13 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            end if
            ! If cell lies within region, inject value
            if(r .lt. 1.0)then
-              uu(i,pac_ind)=rt_n_region(k)
-              uu(i,pac_ind+1)=rt_u_region(k) * rt_c  
+              uu(i,group_ind)=rt_n_region(k)
+              uu(i,group_ind+1)=rt_u_region(k) * rt_c  
 #if NDIM>1 
-              uu(i,pac_ind+2)=rt_v_region(k) * rt_c
+              uu(i,group_ind+2)=rt_v_region(k) * rt_c
 #endif
 #if NDIM>2
-              uu(i,pac_ind+3)=rt_w_region(k) * rt_c
+              uu(i,group_ind+3)=rt_w_region(k) * rt_c
 #endif
            end if
         end do
@@ -374,13 +374,13 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            if(r .gt. 0.) then
               ! If cell lies within CIC cloud, inject value
               ! Convert photon number to photon number density
-              uu(i,pac_ind) = rt_n_region(k)/scale_Np *r/vol 
-              uu(i,pac_ind+1) = rt_u_region(k)/scale_Np*r/vol*rt_c
+              uu(i,group_ind) = rt_n_region(k)/scale_Np *r/vol 
+              uu(i,group_ind+1) = rt_u_region(k)/scale_Np*r/vol*rt_c
 #if NDIM>1
-              uu(i,pac_ind+2) = rt_v_region(k)/scale_Np*r/vol*rt_c
+              uu(i,group_ind+2) = rt_v_region(k)/scale_Np*r/vol*rt_c
 #endif
 #if NDIM>2
-              uu(i,pac_ind+3) = rt_w_region(k)/scale_Np *r/vol*rt_c
+              uu(i,group_ind+3) = rt_w_region(k)/scale_Np *r/vol*rt_c
 #endif
            endif
         end do

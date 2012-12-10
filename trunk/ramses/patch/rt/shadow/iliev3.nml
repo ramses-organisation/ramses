@@ -80,14 +80,15 @@ rt_exp_region=10.0
 rt_xion_region=1.d-6	        ! xHII fraction in box
 /
 
-&RT_PACS			! Blackbody at T=1d5 Kelvin
-pac_csn(1,:)= 3.00d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
-pac_csn(2,:)= 5.69d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
-pac_csn(3,:)= 7.89d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
-pac_egy(1,:)= 17.47, 0.,0.      ! pck 1-> HI, HeI, HeII
-pac_egy(2,:)= 31.07, 0.,0.      ! pck 2-> HI, HeI, HeII
-pac_egy(3,:)= 62.09, 0.,0.      ! pck 3-> HI, HeI, HeII
-spec2pac    = 1,2,3             ! HI, HeI, HeII -> pck
+&RT_GROUP			  ! Blackbody at T=1d5 Kelvin
+group_csn(1,:)= 3.00d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
+group_cse(1,:)= 2.78d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
+group_csn(2,:)= 5.69d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
+group_cse(2,:)= 5.04d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
+group_csn(3,:)= 7.89d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
+group_cse(3,:)= 7.46d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
+group_egy = 18.85, 35.079, 65.666
+spec2group    = 1,2,3             ! HI, HeI, HeII -> group
 /
 
 &BOUNDARY_PARAMS

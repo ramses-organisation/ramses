@@ -65,7 +65,7 @@ rt_src_x_center=0.46875,0.53125
 rt_src_y_center=0.5,0.5
 rt_src_length_x=1.0,1.0
 rt_src_length_y=1.0,1.0
-rt_src_pac=1,1
+rt_src_group=1,1
 rt_n_source=1d50,1d50
 /
 

@@ -86,7 +86,7 @@ SUBROUTINE rt_set_uold(ilevel)
   use rt_hydro_commons
   implicit none
   integer::ilevel
-  integer::i,ivar,ind,iskip,ip,icell
+  integer::i,ivar,ind,iskip,ig,icell
   real(dp)::Npc,fred
 !------------------------------------------------------------------------
   if(numbtot(1,ilevel)==0)return
@@ -107,16 +107,17 @@ SUBROUTINE rt_set_uold(ilevel)
      end do
 
      ! Make a photon conservation fix (prevent beam induced crash)
-     do ip=1,nPacs
+     do ig=1,nGroups
         do i=1,active(ilevel)%ngrid
            icell=active(ilevel)%igrid(i)+iskip
            ! No negative photon densities:
-           rtuold(icell,iPac(ip)) = max(rtuold(icell,iPac(ip)),smallNp)
-           Npc=rtuold(icell,iPac(ip))*rt_c
+           rtuold(icell,iGroups(ig)) = max(rtuold(icell,iGroups(ig)),smallNp)
+           Npc=rtuold(icell,iGroups(ig))*rt_c
            ! Reduced flux, should always be .le. 1
-           fred = sqrt(sum((rtuold(icell,iPac(ip)+1:iPac(ip)+ndim))**2))/Npc
+           fred = sqrt(sum((rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim))**2))/Npc
            if(fred .gt. 1.d0) then ! Too big so normalize flux to one
-              rtuold(icell,iPac(ip)+1:iPac(ip)+ndim) = rtuold(icell,iPac(ip)+1:iPac(ip)+ndim)/fred
+              rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim) &
+                   = rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim)/fred
            endif
         end do
      end do
@@ -147,6 +148,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   use amr_commons
   use rt_hydro_commons
   use rt_flux_module
+  use rt_parameters
   implicit none
   integer::ilevel,ncache
   real(dp)::dt
@@ -322,10 +324,10 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   ! End loop over neighboring grids
 
   !----------------------------------------------------------------------
-  ! Compute fluxes of each photon package, using Eddington tensor
+  ! Compute fluxes of each photon group, using Eddington tensor
   !----------------------------------------------------------------------
-  do i = 1,nPacs
-     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iPac(i), ncache)
+  do i = 1,nGroups
+     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iGroups(i), ncache)
   end do
 
   !----------------------------------------------------------------------

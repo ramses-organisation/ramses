@@ -156,7 +156,7 @@ END SUBROUTINE inp_eigenvals
 !************************************************************************
 subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
   
-! Compute central fluxes for a photon package, for each cell in a vector 
+! Compute central fluxes for a photon group, for each cell in a vector 
 ! of grids. 
 ! The flux tensor is a three by four tensor (2*3 and 1*2 in 1D and 2D, 
 ! respectively) where the first column is photon flux (x,y,z) and 
@@ -165,9 +165,9 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
 ! input/output:
 ! uin       => RT variables of all cells in a vector of grids
 !              (photon energy densities and photon fluxes).
-! iP0       => Starting index of photon package among the RT variables.
+! iP0       => Starting index of photon group among the RT variables.
 ! ngrid     => Number of 'valid' grids in uin.
-! F        <=  Package flux tensors for all the cells.
+! F        <=  Group flux tensors for all the cells.
 !------------------------------------------------------------------------
   real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nrtvar)::    uin 
   real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nDim+1, 1:ndim)::F 
@@ -266,7 +266,7 @@ END FUNCTION cmp_face
 !************************************************************************
 SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 
-!  Compute intercell fluxes for one photon package in all dimensions,
+!  Compute intercell fluxes for one photon group in all dimensions,
 !  using the Eddington tensor with the M1 closure relation.
 !  The intercell fluxes are the right-hand sides of the equations:
 !      dN/dt = - nabla(F),
@@ -280,7 +280,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 !  iFlx       <=  return fluxes in the 3 coord directions.
 !  dx,dy,dz    => (dx,dy,dz)
 !  dt          => time step
-!  iP0         => Starting index, among the RT variables, of the package.
+!  iP0         => Starting index, among the RT variables, of the group.
 !  ngrid       => number of sub-grids
 !
 !  other vars
@@ -303,13 +303,13 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
            dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim+1, ndim)::cFlx
   real(dp),save, &                                     ! Cell eigenvalues
            dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim)::  lmin, lmax
-  ! Upwards and downwards fluxes and states of the package
+  ! Upwards and downwards fluxes and states of the group
   real(dp),dimension(nDim+1),save:: fdn, fup, udn, uup 
   real(dp):: lminus, lplus                        ! Intercell eigenvalues
   real(dp)::dtdx
   integer ::i, j, k, n
 !------------------------------------------------------------------------
-  iP1=iP0+nDim                              ! end index of photon package
+  iP1=iP0+nDim                                ! end index of photon group
 
   ! compute flux tensors for all the cells
   call cmp_flux_tensors(uin, iP0, ngrid, cFlx)    ! flux tensors of cells

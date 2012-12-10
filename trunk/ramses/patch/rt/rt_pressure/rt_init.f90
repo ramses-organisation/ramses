@@ -8,6 +8,7 @@ SUBROUTINE rt_init
   use rt_hydro_commons
   use rt_flux_module
   use rt_cooling_module, only: update_UVrates
+  use rt_parameters
   use SED_module
   use UV_module
   implicit none
@@ -52,10 +53,10 @@ SUBROUTINE rt_init
 
   ! Update hydro variable to the initial ionized species
   var_region(1:rt_nregion,iIons-ndim-2)=rt_xion_region(1:rt_nregion)
-  do i=1,nPacs  ! Starting indices in uold and unew of each photon package
-     iPac(i)=1+(ndim+1)*(i-1)
+  do i=1,nGroups  ! Starting indices in uold and unew of each photon group
+     iGroups(i)=1+(ndim+1)*(i-1)
      if(nrestart.eq.0) then
-        rtuold(:,iPac(i))=smallNp
+        rtuold(:,iGroups(i))=smallNp
      endif
   end do
   if(trim(rt_flux_scheme).eq.'hll') rt_use_hll=.true.
@@ -66,29 +67,29 @@ SUBROUTINE rt_init
   tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0
 END SUBROUTINE rt_init
 
-!************************************************************************
+!*************************************************************************
 SUBROUTINE update_rt_c
 
 ! Update the speed of light for radiative transfer, in code units.
 ! This cannot be just a constant, since scale_v changes with time in 
 ! cosmological simulations.
-!------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   use rt_parameters
   use amr_commons
   implicit none
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-!------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   rt_c=rt_c_cgs/scale_v
   rt_c2=rt_c**2
 END SUBROUTINE update_rt_c
 
-!************************************************************************
+!*************************************************************************
 SUBROUTINE adaptive_rt_c_update(ilevel, dt)
 
 ! Set the lightspeed such that RT can be done at ilevel in time dt in 
 ! a single step.
-!------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   use amr_parameters
   use rt_parameters
   use SED_module
@@ -96,7 +97,7 @@ SUBROUTINE adaptive_rt_c_update(ilevel, dt)
   integer:: ilevel, nx_loc
   real(dp):: dt, scale, dx
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-!------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   ! Mesh spacing at ilevel
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -111,16 +112,16 @@ SUBROUTINE adaptive_rt_c_update(ilevel, dt)
   rt_c_cgs = rt_c*scale_v
   rt_c_fraction = rt_c_cgs/c_cgs
 
-  call updateRTPac_CoolConstants           ! These change as a consequence
+  call updateRTGroups_CoolConstants        ! These change as a consequence
 
 END SUBROUTINE adaptive_rt_c_update
 
 
-!************************************************************************
+!*************************************************************************
 SUBROUTINE read_rt_params(nml_ok)
 
 ! Read rt_params namelist
-!------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
   use cooling_module, only:X, Y
@@ -133,34 +134,36 @@ SUBROUTINE read_rt_params(nml_ok)
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
        & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
-       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVpacs, nSEDpacs, SED_isEgy &
-       & ,rt_freeflow, rt_output_coolstats, upload_equilibrium_x, X, Y   &
-       & ,rt_is_init_xion, rt_UV_nhSS, rt_err_grad_n, rt_floor_n         &
-       & ,rt_err_grad_xHII, rt_floor_xHII,rt_err_grad_xHI                &
-       & ,rt_floor_xHI, rt_refine_aexp, convert_birth_times              &
-       ! RT regions (for initialization)
+       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
+       & ,SED_isEgy, rt_freeflow, rt_output_coolstats                    &
+       & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS        &
+       & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
+       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
+       & ,convert_birth_times                                            &
+       ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
        & ,rt_reg_length_x, rt_reg_length_y, rt_reg_length_z              &
-       & ,rt_exp_region, rt_reg_pac                                      &
+       & ,rt_exp_region, rt_reg_group                                    &
        & ,rt_n_region, rt_u_region, rt_v_region, rt_w_region             &
        & ,rt_xion_region                                                 &
-       ! RT source regions (for every timestep)
+       ! RT source regions (for every timestep)                          &
        & ,rt_nsource, rt_source_type                                     &
        & ,rt_src_x_center, rt_src_y_center, rt_src_z_center              &
        & ,rt_src_length_x, rt_src_length_y, rt_src_length_z              &
-       & ,rt_exp_source, rt_src_pac                                      &
+       & ,rt_exp_source, rt_src_group                                    &
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
-       ! RT boundary (for boundary conditions)
+       ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
        ! RT pressure patch                                                  !RTpress
        & ,rt_Pconst,rt_isIR,rt_isNUV                                        !RTpress
+
   ! Read namelist file
   rewind(1)
   read(1,NML=rt_params,END=101)
 101 continue                                   ! No harm if no rt namelist
 
-  if(nPacs.le.0) rt=.false. ! No sense in doing rt if there are no photons
+  if(nGroups.le.0) rt=.false. ! No sense  doing rt if there are no photons
   if(.not. rt .and. .not. rt_star) sedprops_update=-1
 
   if(rt_err_grad_n .gt. 0. .or. rt_err_grad_xHII .gt. 0.                 &
@@ -171,13 +174,13 @@ SUBROUTINE read_rt_params(nml_ok)
   if(haardt_madau) rt_UV_hom=.true.                     ! UV in every cell
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
   if(rt_Pconst .ge. 0.d0) isIsoPressure=.true.                              !RTpress 
-  call read_rt_pacs(nml_ok)
+  call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
-SUBROUTINE read_rt_pacs(nml_ok)
+SUBROUTINE read_rt_groups(nml_ok)
 
-! Read rt_pacs namelist
+! Read rt_groups namelist
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
@@ -185,50 +188,51 @@ SUBROUTINE read_rt_pacs(nml_ok)
   implicit none
   logical::nml_ok
   integer::i
-  namelist/rt_pacs/pac_csn, pac_cse, pac_aegy, spec2pac, pacL0, pacL1
 !------------------------------------------------------------------------
+  namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
+       & , groupL0, groupL1
   if(myid==1) then
-     write(*,'(" Working with ",I2," photon packages and  " &
-          ,I2, " ion species")')nPacs,nIons
+     write(*,'(" Working with ",I2," photon groups and  " &
+          ,I2, " ion species")')nGroups,nIons
      write(*,*) ''
   endif
    
-  if(nPacs .le. 0) then
+  if(nGroups .le. 0) then
      rt = .false.
      return
   endif
-  ! Use the ionization energies for HI, HeI, HeII as default package intervals
-  pacL0(1:min(nPacs,3))=ionEvs(1:min(nPacs,3))  !    Lower interval bounds
-  pacL1(1:min(nPacs,2))=ionEvs(2:min(nPacs+1,3))!    Upper interval bounds
-  pacL1(min(nPacs,3))=0.                        !     Upper bound=infinity
+  !   Use ionization energies for HI, HeI, HeII as default group intervals
+  groupL0(1:min(nGroups,3))=ionEvs(1:min(nGroups,3))!Lower interval bounds
+  groupL1(1:min(nGroups,2))=ionEvs(2:min(nGroups+1,3)) !      Upper bounds
+  groupL1(min(nGroups,3))=0.                        ! Upper bound=infinity
 
-  ! Default pacs are all blackbodies at E5 Kelvin
-  pac_csn(1,:)=(/3.007d-18, 0d0, 0d0/)     ! avg photoion. c-section (cm2)
-  pac_cse(1,:)=(/2.781d-18, 0d0, 0d0/)! weighted photoion. c-section (cm2)
-  pac_aegy(1) =18.85                              ! avg photon Energy (eV)
-#if NPACS>1
-  if(nPacs .ge. 2) pac_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
-  if(nPacs .ge. 2) pac_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
-  if(nPacs .ge. 2) pac_aegy(2)  = 35.079
+  ! Default groups are all blackbodies at E5 Kelvin
+  group_csn(1,:)=(/3.007d-18, 0d0, 0d0/)   ! Avg photoion. c-section (cm2)
+  group_cse(1,:)=(/2.781d-18, 0d0, 0d0/)   !     Weighted  c-section (cm2)
+  group_egy(1)  =18.85                     !        Avg photon Energy (eV)
+#if NGROUPS>1
+  if(nGroups .ge. 2) group_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
+  if(nGroups .ge. 2) group_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
+  if(nGroups .ge. 2) group_egy(2)  = 35.079
 #endif
-#if NPACS>2
-  if(nPacs .ge. 3) pac_csn(3,:)=(/7.889d-20, 1.197d-18, 1.055d-18/)
-  if(nPacs .ge. 3) pac_cse(3,:)=(/7.456d-20, 1.142d-18, 1.001d-18/)
-  if(nPacs .ge. 3) pac_aegy(3)=65.666
+#if NGROUPS>2
+  if(nGroups .ge. 3) group_csn(3,:)=(/7.889d-20, 1.197d-18, 1.055d-18/)
+  if(nGroups .ge. 3) group_cse(3,:)=(/7.456d-20, 1.142d-18, 1.001d-18/)
+  if(nGroups .ge. 3) group_egy(3)  =65.666
 #endif
 
-  do i=1,min(nIons,nPacs)
-     spec2pac(i)=i                  ! Species contributions to packages
+  do i=1,min(nIons,nGroups)
+     spec2group(i)=i                   ! Species contributions to groups
   end do
   
   ! Read namelist file
   rewind(1)
-  read(1,NML=rt_pacs,END=101)
+  read(1,NML=rt_groups,END=101)
 101 continue              ! no harm if no rt namelist
 
-  call updateRTPac_CoolConstants
-  call write_PacProps(.false.,6)
-END SUBROUTINE read_rt_pacs
+  call updateRTGroups_CoolConstants
+  call write_group_props(.false.,6)
+END SUBROUTINE read_rt_groups
 
 !************************************************************************
 SUBROUTINE add_rt_sources(ilevel,dt)
@@ -349,7 +353,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
   real(dp)::dx,dt,dx_cgs,dt_cgs
   real(dp),dimension(1:nvector,1:nrtvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::x
-  integer::i,k,pac_ind
+  integer::i,k,group_ind
   real(dp)::vol,r,xn,yn,zn,en
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
 !------------------------------------------------------------------------
@@ -362,10 +366,10 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
   ! Loop over RT regions
   do k=1,rt_nsource
 
-     ! Find which photon package we should be contributing to
-     if(rt_src_pac(k) .le. 0 .or. rt_src_pac(k) .gt. nPacs) cycle
-     pac_ind = ipac(rt_src_pac(k))
-     !pac_ind = 1+(ndim+1)*(rt_src_pac(k)-1)
+     ! Find which photon group we should be contributing to
+     if(rt_src_group(k) .le. 0 .or. rt_src_group(k) .gt. nGroups) cycle
+     group_ind = iGroups(rt_src_group(k))
+     !group_ind = 1+(ndim+1)*(rt_src_group(k)-1)
      ! For "square" regions only:
      if(rt_source_type(k) .eq. 'square')then
        ! Exponent of choosen norm
@@ -388,17 +392,17 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            end if
            ! If cell lies within region, inject value
            if(r<1.0)then
-              uu(i,pac_ind) = uu(i,pac_ind)+rt_n_source(k)/scale_Np
+              uu(i,group_ind) = uu(i,group_ind)+rt_n_source(k)/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
-              uu(i,pac_ind+1) = uu(i,pac_ind+1)                           &
-                        + rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+1) = uu(i,group_ind+1)                      &
+                       + rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
 #if NDIM>1 
-              uu(i,pac_ind+2) = uu(i,pac_ind+2)                           &
-                        + rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+2) = uu(i,group_ind+2)                      &
+                       + rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
 #if NDIM>2
-              uu(i,pac_ind+3) = uu(i,pac_ind+3)                           &
-                        + rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+3) = uu(i,group_ind+3)                      &
+                       + rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
            end if
         end do
@@ -422,16 +426,16 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            if(r .gt. 0.) then
               ! If cell lies within CIC cloud, inject value.
               ! Photon input is in # per sec...need to convert to uu
-              uu(i,pac_ind)=uu(i,pac_ind)                                &
+              uu(i,group_ind)=uu(i,group_ind)                            &
                             + rt_n_source(k) / scale_Np * r / vol * dt_cgs
-              uu(i,pac_ind+1)=uu(i,pac_ind+1) + rt_u_source(k) * rt_c    &
+              uu(i,group_ind+1)=uu(i,group_ind+1) + rt_u_source(k) *rt_c &
                             * rt_n_source(k) / scale_Np * r / vol * dt_cgs
 #if NDIM>1
-              uu(i,pac_ind+2)=uu(i,pac_ind+2) + rt_v_source(k) * rt_c    &
+              uu(i,group_ind+2)=uu(i,group_ind+2) + rt_v_source(k) *rt_c &
                             * rt_n_source(k) / scale_Np * r / vol * dt_cgs
 #endif
 #if NDIM>2
-              uu(i,pac_ind+3)=uu(i,pac_ind+3) + rt_w_source(k) * rt_c    &
+              uu(i,group_ind+3)=uu(i,group_ind+3) + rt_w_source(k) *rt_c &
                             * rt_n_source(k) / scale_Np * r / vol * dt_cgs
 #endif
            endif
@@ -457,7 +461,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
                 r .lt. rt_src_length_y(k)) then
               ! If cell lies within CIC cloud, inject value
               ! photon input is in # per sec...need to convert to uu
-              uu(i,pac_ind)=rt_n_source(k) / scale_np
+              uu(i,group_ind)=rt_n_source(k) / scale_np
            endif
         end do
      end if

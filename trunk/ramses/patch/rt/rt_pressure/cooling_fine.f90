@@ -2,8 +2,8 @@
 ! Momentum from directional photons (Fp) absorbed by gas is put into gas 
 ! momentum. 
 ! This momentum is returned from solve_cooling
-! via the last nPac entries in the U-vector, and added to the gas momentum
-! in cooling_fine.
+! via the last nGroup entries in the U-vector, and added to the gas 
+! momentum in cooling_fine.
 ! ------------------------------------------------------------------------
 subroutine cooling_fine(ilevel)
   use amr_commons
@@ -79,7 +79,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ii,ig,ig0,ig1
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant,Fpnew,Npnew
@@ -88,12 +88,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
   real(dp)::scale_Np,scale_Fp
   real(dp)::fmag,speed,speed_limit                                        !RTpress
-  real(dp),dimension(ndim)::funitVec                                      !RTpress
+  real(dp),dimension(ndim)::fuVec  ! flux unit vector                     !RTpress
   real(kind=8),dimension(1:nvector),save::eTherm                          !RTpress
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp),dimension(1:nvector,n_U),save::U,U_old
-  real(dp),dimension(1:nvector,nPacs),save::Fp, Fp_precool
-  real(dp),dimension(1:nvector,nPacs),save::dNpdt=0., dFpdt=0.
+  real(dp),dimension(1:nvector,nGroups),save::Fp, Fp_precool
+  real(dp),dimension(1:nvector,nGroups),save::dNpdt=0., dFpdt=0.
 #endif
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
@@ -239,34 +239,34 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            U(i,1) = T2(i)
         end do
         ! Get the ionization fractions
-        do ivar=0,nIons-1
+        do ii=0,nIons-1
            do i=1,nleaf
-              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/uold(ind_leaf(i),1)
+              U(i,2+ii) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
            end do
         end do
      
         ! Get photon densities and flux magnitudes
-        do ivar=1,nPacs
+        do ig=1,nGroups
            do i=1,nleaf
-              U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iPac(ivar))
-              U(i,iFpU(ivar)) = scale_Fp &
-                   * sqrt(sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
+              U(i,iNpU(ig)) = scale_Np * rtuold(ind_leaf(i),iGroups(ig))
+              U(i,iFpU(ig)) = scale_Fp &
+                   * sqrt(sum((rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim))**2))
            enddo
            if(rt_smooth) then                           ! Smooth RT update
               do i=1,nleaf !Calc addition per sec to Np, Fp for current dt
-                 Npnew = scale_Np * rtunew(ind_leaf(i),iPac(ivar))
+                 Npnew = scale_Np * rtunew(ind_leaf(i),iGroups(ig))
                  Fpnew = scale_Fp &
-                      * sqrt(sum((rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
-                 dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
-                 dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude
+                      * sqrt(sum((rtunew(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim))**2))
+                 dNpdt(i,ig) = (Npnew - U(i,iNpU(ig))) / dtcool
+                 dFpdt(i,ig) = (Fpnew - U(i,iFpU(ig))) / dtcool ! Change in magnitude
                  ! Update flux vector to get the right direction
-                 rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = &
-                      rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
-                 Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling
+                 rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim) = &
+                      rtunew(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)
+                 Fp_precool(i,ig)=Fpnew           ! For update after solve_cooling
               end do
            else
               do i=1,nleaf
-                 Fp_precool(i,ivar)=U(i,iFpU(ivar)) ! For update after solve_cooling
+                 Fp_precool(i,ig)=U(i,iFpU(ig)) ! For update after solve_cooling
               end do
            end if
         end do
@@ -324,16 +324,16 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Add to gas momentum, in the direction of the photon flux             !RTpress
      ! Convert the injected momenta to code units:                          !RTpress
      U(1:nleaf,iP0:iP1)= U(1:nleaf,iP0:iP1)/scale_d/scale_v                 !RTpress
-     do ivar=1,nPacs                                                        !RTpress
+     do ig=1,nGroups                                                        !RTpress
+        ig0=iGroups(ig)+1 ; ig1=iGroups(ig)+ndim                            !RTpress
         do i=1,nleaf                                                        !RTpress
-           fmag=sqrt( &                     ! Photon flux vector magnitude  !RTpress
-                sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2)) !RTpress
+           fmag=sqrt(sum((rtuold(ind_leaf(i),ig0:ig1))**2)) !Flux magnitude !RTpress
            if(fmag .gt. 0.d0) then                                          !RTpress
               ! Photon flux unit direction vector                           !RTpress
-              funitVec=rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)/fmag!RTpress
+              fuVec=rtuold(ind_leaf(i),ig0:ig1)/fmag   !RTpress
               ! Update cell momentum                                        !RTpress
               uold(ind_leaf(i),2:1+ndim) =                               &  !RTpress
-                   uold(ind_leaf(i),2:1+ndim) + funitVec*U(i,iP0+ivar-1)    !RTpress
+                   uold(ind_leaf(i),2:1+ndim) + fuVec*U(i,iP0+ig-1)         !RTpress
            endif                                                            !RTpress
         end do                                                              !RTpress
      end do                                                                 !RTpress
@@ -418,21 +418,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
      if(neq_chem) then
         ! Update ionization fraction
-        do ivar=0,nIons-1
+        do ii=0,nIons-1
            do i=1,nleaf
-              uold(ind_leaf(i),iIons+ivar) = U(i,2+ivar)*nH(i)
+              uold(ind_leaf(i),iIons+ii) = U(i,2+ii)*nH(i)
            end do
         end do
      endif
      if(rt) then
         ! Update photon densities and flux magnitudes
-        do ivar=1,nPacs
+        do ig=1,nGroups
            do i=1,nleaf
-              rtuold(ind_leaf(i),iPac(ivar)) = U(i,iNpU(ivar)) /scale_Np
-              if(Fp_precool(i,ivar) .gt. 0.d0)then
-                 rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)  &
-                      & =U(i,iFpU(ivar))/Fp_precool(i,ivar)        &
-                      & *rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
+              rtuold(ind_leaf(i),iGroups(ig)) = U(i,iNpU(ig)) /scale_Np
+              if(Fp_precool(i,ig) .gt. 0.d0)then
+                 rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)  &
+                      & =U(i,iFpU(ig))/Fp_precool(i,ig)        &
+                      & *rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)
               endif
            enddo
         end do

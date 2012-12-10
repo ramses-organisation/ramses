@@ -2,6 +2,7 @@
 hydro=.true.
 static=.true.
 nrestart=0
+rt=.true.
 /
 
 &INIT_PARAMS
@@ -45,8 +46,6 @@ units_length=3.0857d21 		! 1 kpc in cm
 &RT_PARAMS
 X=1d0
 Y=0d0
-rt=.true.
-rt_cooling=.true.
 rt_flux_scheme='glf'
 rt_c_fraction=0.01
 rt_otsa=.false.			! no OTSA
@@ -68,18 +67,19 @@ rt_src_z_center=3*0.0
 rt_src_length_x=3*1.0
 rt_src_length_y=3*1.0
 rt_src_length_z=3*1.0
-rt_src_pac=1,2,3
+rt_src_group=1,2,3
 rt_n_source=2.235d48, 2.47d48, 0.295d48 ! 5E48 photons per s emitted
 /
 
-&RT_PACS			! Blackbody at T=1d5 Kelvin
-pac_csn(1,:)= 3.00d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
-pac_csn(2,:)= 5.69d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
-pac_csn(3,:)= 7.89d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
-pac_egy(1,:)= 17.47, 0.,0.      ! pck 1-> HI, HeI, HeII
-pac_egy(2,:)= 31.07, 0.,0.      ! pck 2-> HI, HeI, HeII
-pac_egy(3,:)= 62.09, 0.,0.      ! pck 3-> HI, HeI, HeII
-spec2pac    = 1,2,3             ! HI, HeI, HeII -> pck
+&RT_GROUPS			  ! Blackbody at T=1d5 Kelvin
+group_csn(1,:)= 3.00d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
+group_cse(1,:)= 2.78d-18, 0.,0.   ! pck 1-> HI, HeI, HeII
+group_csn(2,:)= 5.69d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
+group_cse(2,:)= 5.04d-19, 0.,0.   ! pck 2-> HI, HeI, HeII
+group_csn(3,:)= 7.89d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
+group_cse(3,:)= 7.46d-20, 0.,0.   ! pck 3-> HI, HeI, HeII
+group_egy = 18.85, 35.079, 65.666
+spec2group    = 1,2,3             ! HI, HeI, HeII -> pck
 /
 
 &BOUNDARY_PARAMS

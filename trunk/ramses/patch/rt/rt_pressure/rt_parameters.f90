@@ -1,12 +1,12 @@
 module rt_parameters
   use hydro_parameters
 
-#ifdef NPACS
-  integer,parameter::nPacs=NPACS                  ! # of photon packages (set in Makefile)
+#ifdef NGROUPS
+  integer,parameter::nGroups=NGROUPS          ! # of photon groups (set in Makefile)
 #else
-  integer,parameter::nPacs=1
+  integer,parameter::nGroups=1
 #endif
-  integer,parameter::nRTvar=nPacs*(1+ndim)    ! # of RT variables (photon density and flux)
+  integer,parameter::nRTvar=nGroups*(1+ndim) ! # of RT variables (photon density and flux)
 
   real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
   real(dp),parameter::c_cgs=2.9979250d+10                  ! Actual lightspeed in [cm s-1]
@@ -71,18 +71,18 @@ module rt_parameters
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
   character(LEN=128)::uv_file=''       ! File containing stellar energy distributions    !
 
-  ! RT_PACS namelist----------------------------------------------------------------------
+  ! RT_GROUPS namelist--------------------------------------------------------------------
   integer::sedprops_update=-1                      ! Update sedprops from star populations
   ! negative: never update, 0:update on init, pos x: update every x coarse steps
   logical::SED_isEgy=.false. ! Integrate energy out of SEDs rather than photon count
-  ! Sedprops: avg and energy weigthed photoionization c-section (cm2), avg. energy (ev).
-  ! Indexes nPacs, nIons stand for photon package vs species (e.g. 1=H, 2=He).
-  integer,dimension(nPacs)::iPac=1                               !   Start indices of pacs
-  real(dp),dimension(nPacs,nIons)::pac_csn=0, pac_cse=0          !    Cross sections (cm2)
-  real(dp),dimension(nPacs)::pac_aegy=0                          !  Avg photon energy (ev)
-  real(dp),dimension(nPacs)::pacL0=13.60                         ! Wavelength lower limits
-  real(dp),dimension(nPacs)::pacL1=0                             ! Wavelength upper limits
-  integer,dimension(nIons)::spec2pac=0                     !Ion -> pac # in recombinations
+  ! Grop props: avg and energy weigthed photoionization c-section (cm2), avg. energy (ev).
+  ! Indexes nGroups, nIons stand for photon group vs species (e.g. 1=H, 2=He).
+  integer,dimension(nGroups)::iGroups=1                          ! Start indices of groups
+  real(dp),dimension(nGroups,nIons)::group_csn=0, group_cse=0    !    Cross sections (cm2)
+  real(dp),dimension(nGroups)::group_egy=0                       !  Avg photon energy (ev)
+  real(dp),dimension(nGroups)::groupL0=13.60                     ! Wavelength lower limits
+  real(dp),dimension(nGroups)::groupL1=0                         ! Wavelength upper limits
+  integer,dimension(nIons)::spec2group=0                 !Ion -> group # in recombinations
 
   ! Imposed boundary condition variables
   real(dp),dimension(1:MAXBOUND,1:nrtvar)::rt_boundary_var
@@ -101,7 +101,7 @@ module rt_parameters
   real(dp),dimension(1:MAXREGION)   ::rt_reg_length_y=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_reg_length_z=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_exp_region=2.0
-  integer,dimension(1:MAXREGION)    ::rt_reg_pac=1
+  integer,dimension(1:MAXREGION)    ::rt_reg_group=1
   real(dp),dimension(1:MAXREGION)   ::rt_n_region=0.                      ! Photon density
   real(dp),dimension(1:MAXREGION)   ::rt_u_region=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_v_region=0.                         ! Photon flux
@@ -118,7 +118,7 @@ module rt_parameters
   real(dp),dimension(1:MAXREGION)   ::rt_src_length_y=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_src_length_z=1.E10
   real(dp),dimension(1:MAXREGION)   ::rt_exp_source=2.0
-  integer,dimension(1:MAXREGION)    ::rt_src_pac=1
+  integer, dimension(1:MAXREGION)   ::rt_src_group=1
   real(dp),dimension(1:MAXREGION)   ::rt_n_source=0.                      ! Photon density
   real(dp),dimension(1:MAXREGION)   ::rt_u_source=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_v_source=0.                         ! Photon flux
@@ -147,8 +147,5 @@ module rt_parameters
   logical::isIsoPressure=.false.       ! Using iso-pressure?                                !RTpress
   logical::rt_isIR                     ! Using IR photon scattering on dust?                !RTpress
   logical::rt_isNUV                    ! Using NUV photon scattering on dust?               !RTpress
-  
-  
-
 
 end module rt_parameters

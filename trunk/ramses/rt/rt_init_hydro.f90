@@ -6,6 +6,7 @@ subroutine rt_init_hydro
   use amr_commons
   use hydro_commons
   use rt_hydro_commons
+  use rt_parameters
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -98,17 +99,17 @@ subroutine rt_init_hydro
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
                  ! Loop over RT variables
-                 do ivar=1,nPacs
+                 do ivar=1,nGroups
                     ! Read photon density in flux units
                     read(ilun)xx
                     do i=1,ncache
-                       rtuold(ind_grid(i)+iskip,iPac(ivar))=xx(i)/rt_c
+                       rtuold(ind_grid(i)+iskip,iGroups(ivar))=xx(i)/rt_c
                     end do
                     ! Read photon flux
                     do idim=1,ndim
                        read(ilun)xx
                        do i=1,ncache
-                          rtuold(ind_grid(i)+iskip,iPac(ivar)+idim)=xx(i)
+                          rtuold(ind_grid(i)+iskip,iGroups(ivar)+idim)=xx(i)
                        end do
                     end do
                  end do

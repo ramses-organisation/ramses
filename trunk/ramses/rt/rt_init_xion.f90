@@ -131,9 +131,10 @@ SUBROUTINE calc_equilibrium_xion(vars, xion)
 
   ! Calculate photoionization rates:
   phI_rates(:)=0.0
-  do ip=1, nPacs
+  do ip=1, nGroups
      do iI=1,nIons
-        phI_rates(iI) = phI_rates(iI)+vars(iPac(ip))*scale_Np*signc(ip,iI)
+        phI_rates(iI) = phI_rates(iI) &
+                      + vars(iGroups(ip))*scale_Np*signc(ip,iI)
      end do
   end do
 
