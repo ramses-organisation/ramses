@@ -18,7 +18,7 @@ module rt_cooling_module
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
          , signc, sigec, PHrate, UVrates                                 &
          , iP0, iP1, isIsoPressure, rt_pconst                            & !RTpress
-         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                    !RTpress
+         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV, rt_multiscatt     !RTpress
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
   ! where n=nGroups.
@@ -332,12 +332,11 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         phI(i) = SUM(nN(:)*signc(i,:))
      end do
 
-     ! IR and NUV scattering on dust (comment out for multiscattering):     !RTpress
-     ! IR scattering on dust:                                               !RTpress
-     !if(rt_isIR)  &                                                        !RTpress
-     !     phI(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                          !RTpress
-     !if(rt_isNUV) &                                                        !RTpress
-     !     phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                         !RTpress
+     ! IR and NUV depletion by dust absorption:                            !RTpress
+     if(rt_isIR .and. .not. rt_multiscatt)  &                              !RTpress
+          phI(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                          !RTpress
+     if(rt_isNUV .and. .not. rt_multiscatt) &                              !RTpress
+          phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                         !RTpress
 
      do i=1,nGroups         ! ------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
