@@ -17,7 +17,8 @@ module rt_cooling_module
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
          , signc, sigec, PHrate, UVrates                                 &
-         , iP0, iP1                                                         !RTpress
+         , iP0, iP1, isIsoPressure, rt_pconst                            & !RTpress
+         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                    !RTpress
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
   ! where n=nGroups.
@@ -42,9 +43,17 @@ module rt_cooling_module
   integer,parameter::iP1=1+nIons+3*nGroups           !            --        !RTpress
   integer,dimension(nGroups)::iNpU,iFpU              !       See set_model
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
+
   integer,parameter::iGroupIR=1                      !      IR group index  !RTpress
   integer::iGroupNUV=1                               !     NUV group index  !RTpress
-  real(dp)::csIR=1.7d-21,csNUV=1.3d-21               !   Cr sections [cm2]  !RTpress
+  real(dp)::rt_Pconst=-1.              ! Iso-pressure value (for tests)     !RTpress
+  logical::rt_multiscatt=.false.       ! Crude multisc. approximation       !RTpress
+  logical::isIsoPressure=.false.       ! Using iso-pressure?                !RTpress
+  logical::rt_isIR                     ! Using IR scattering on dust?       !RTpress
+  logical::rt_isNUV                    ! Using NUV scattering on dust?      !RTpress
+  real(dp)::rt_kappa_IR=1d3            ! IR dust opacity                    !RTpress
+  real(dp)::rt_kappa_NUV=8d2           ! NUV dust opacity                   !RTpress
+  real(dp)::csIR,csNUV                 ! Cross sections [cm2]               !RTpress
 
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc, sigec, PHrate
@@ -97,7 +106,10 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
   U_FRAC(iFp0:iFp1) = 0.2                !           Fp update restriction    
   U_FRAC(iP0:iP1) = 1.d6                 !    No direct restr. on P update   !RTpress
 
-  if (rt_isIR)  iGroupNUV=2              !     Group index for NUV photons    !RTpress
+  if (rt_isIR)  iGroupNUV=2              !     Group index for NUV photons   !RTpress
+  csIR  = rt_kappa_IR  * mH                                                  !RTPress 
+  csNUV = rt_kappa_NUV * mH                                                  !RTPress 
+
   ! Set up indexes of photon densities and fluxes in U:
   do ig=0,nGroups-1
      iNpU(ig+1)=iNp0+ig

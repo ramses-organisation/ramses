@@ -156,7 +156,7 @@ SUBROUTINE read_rt_params(nml_ok)
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
        ! RT pressure patch                                                  !RTpress
-       & ,rt_Pconst,rt_isIR,rt_isNUV                                        !RTpress
+       & ,rt_Pconst,rt_isIR,rt_isNUV, rt_kappa_IR, rt_kappa_NUV             !RTpress
 
   ! Read namelist file
   rewind(1)

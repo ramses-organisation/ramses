@@ -72,7 +72,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
   use rt_parameters
   use rt_hydro_commons
-  use rt_cooling_module, only: n_U,iNpU,iFpU,rt_solve_cooling,iP0,iP1     !RTpress
+  use rt_cooling_module, only: n_U,iNpU,iFpU &                             !RTpress
+  ,rt_solve_cooling,iP0,iP1,isIsoPressure,rt_pconst                        !RTpress
 #endif
   implicit none
   integer::ilevel,ngrid
