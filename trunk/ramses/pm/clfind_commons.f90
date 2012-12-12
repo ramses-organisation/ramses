@@ -18,9 +18,13 @@ module clfind_commons
   real(kind=8),allocatable,dimension(:)::max_dens_tot,e_kin_int_tot,e_bind_tot,e_thermal_tot
   real(kind=8),allocatable,dimension(:)::e_kin_int_tot4,e_bind_tot4,e_thermal_tot4
   real(kind=8),allocatable,dimension(:)::clump_mass_tot,clump_vol_tot
-  real(kind=8),allocatable,dimension(:,:)::peak_pos_tot
+  real(kind=8),allocatable,dimension(:,:)::peak_pos_tot,bulk_momentum_tot
   real(kind=8),allocatable,dimension(:)::saddle_max_tot
   real(kind=8),allocatable,dimension(:)::relevance_tot
+  real(kind=8),allocatable,dimension(:)::phi_ref, phi_ref_tot,phi_ref2_tot
+  real(kind=8),allocatable,dimension(:)::Psurf,Psurf_tot,v_therm_tot,v_rms_tot,m4_tot
+  real(kind=8),allocatable,dimension(:)::E_bind_iso_tot,E_therm_iso_tot,E_kin_iso_tot
+  real(kind=8),allocatable,dimension(:)::peak_check,ball4_check,isodens_check,clump_check
 
   ! Test particles properties
   real(qdp),allocatable,dimension(:)::denp ! Density of the cell containing a test particle. Davide: used by the clump finder.
