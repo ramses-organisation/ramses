@@ -447,22 +447,23 @@ subroutine write_clump_properties(to_file)
      ilun=6
   end if
 
-  !print results in descending order to screen/file
-  if(myid==1) then 
+
      
-     do j=npeaks_tot,1,-1
-        jj=sort_index(j)
-        
-        !compute all the checks
-        v_bulk2=(bulk_momentum_tot(jj,1)**2+bulk_momentum_tot(jj,2)**2&
-             +bulk_momentum_tot(jj,3)**2)/(m4_tot(jj)**2+tiny(0.d0))     
-        peak_check(jj)=scale*(phi_ref_tot(jj)-phi_min_tot(jj))/((v_therm_tot(jj)**2+v_rms_tot(jj)+v_bulk2)*0.5+tiny(0.d0))
-        ball4_check(jj)=scale*e_bind_tot4(jj)/(tiny(0.d0)+2*e_thermal_tot4(jj)+2*e_kin_int_tot4(jj))
-        isodens_check(jj)=scale*E_bind_iso_tot(jj)/(tiny(0.d0)+2*E_kin_iso_tot(jj)+2*E_therm_iso_tot(jj))
-        clump_check(jj)=(scale*e_bind_tot(jj)+Psurf_tot(jj))/(tiny(0.d0)+2*e_kin_int_tot(jj)+2*e_thermal_tot(jj))     
-     end do
-
-
+  do j=npeaks_tot,1,-1
+     jj=sort_index(j)
+     
+     !compute all the checks
+     v_bulk2=(bulk_momentum_tot(jj,1)**2+bulk_momentum_tot(jj,2)**2&
+          +bulk_momentum_tot(jj,3)**2)/(m4_tot(jj)**2+tiny(0.d0))     
+     peak_check(jj)=scale*(phi_ref_tot(jj)-phi_min_tot(jj))/((v_therm_tot(jj)**2+v_rms_tot(jj)+v_bulk2)*0.5+tiny(0.d0))
+     ball4_check(jj)=scale*e_bind_tot4(jj)/(tiny(0.d0)+2*e_thermal_tot4(jj)+2*e_kin_int_tot4(jj))
+     isodens_check(jj)=scale*E_bind_iso_tot(jj)/(tiny(0.d0)+2*E_kin_iso_tot(jj)+2*E_therm_iso_tot(jj))
+     clump_check(jj)=(scale*e_bind_tot(jj)+Psurf_tot(jj))/(tiny(0.d0)+2*e_kin_int_tot(jj)+2*e_thermal_tot(jj))     
+  end do
+  
+  !print results in descending order to screen/file
+  if(myid==1)then
+     
      rel_mass=0.
      n_rel=0
      if (to_file .eqv. .true.) then
@@ -594,6 +595,7 @@ subroutine saddlepoint_search(ntest)
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
      ind_cell(ip)=icellp(testp_sort(ipart))
+     if (flag2(ind_cell(ip))==0)print*,'alert neighborsearch',ind_cell(ip),myid,ilevel
      if(ip==nvector .or. next_level /= ilevel)then
         call neighborsearch(ind_cell,ip,dummyint,ilevel,4)
         ip=0
