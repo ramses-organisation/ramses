@@ -87,6 +87,9 @@ subroutine create_sink
 
      ! Create only the central cloud particle for all sinks (old and new)
      call create_part_from_sink
+
+     ! Merge sink using FOF 
+     call merge_sink(1)
   end if
 
   ! Create new particle clouds
@@ -812,7 +815,7 @@ subroutine merge_sink(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   integer,dimension(:),allocatable::psink,gsink
   real(dp),dimension(1:3)::xbound,skip_loc
-
+  real(dp)::egrav,ekin,uxcom,uycom,uzcom,v2rel1,v2rel2,dx_min2
 
   if(numbtot(1,ilevel)==0)return
   if(nsink==0)return
@@ -828,6 +831,7 @@ subroutine merge_sink(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min2=dx_min*dx_min
   rmax=dble(ir_cloud)*dx_min ! Linking length in physical units
   rmax2=rmax*rmax
 
@@ -877,9 +881,22 @@ subroutine merge_sink(ilevel)
            zz=zz+scale*xbound(3)
         endif
         rr=zz**2+rr
-        if(rr.le.rmax2)then
-           ifirst=ifirst+1
-           gsink(indx)=igrp
+        if(rr.le.dx_min2)then
+           egrav=msink(indx)*msink(gndx)/rr
+           uxcom=(msink(indx)*vsink(indx,1)+msink(gndx)*vsink(gndx,1))/(msink(indx)+msink(gndx))
+           uycom=(msink(indx)*vsink(indx,2)+msink(gndx)*vsink(gndx,2))/(msink(indx)+msink(gndx))
+           uzcom=(msink(indx)*vsink(indx,3)+msink(gndx)*vsink(gndx,3))/(msink(indx)+msink(gndx))
+           v2rel1=(vsink(indx,1)-uxcom)**2+(vsink(indx,2)-uycom)**2+(vsink(indx,3)-uzcom)**2
+           v2rel2=(vsink(gndx,1)-uxcom)**2+(vsink(gndx,2)-uycom)**2+(vsink(gndx,3)-uzcom)**2
+           ekin=0.5d0*(msink(indx)*v2rel1+msink(gndx)*v2rel2)
+           if(ekin.lt.egrav)then
+              ifirst=ifirst+1
+              gsink(indx)=igrp
+           else
+              psink(ifirst)=psink(ilast)
+              psink(ilast)=indx
+              ilast=ilast-1
+           endif
         else
            psink(ifirst)=psink(ilast)
            psink(ilast)=indx

@@ -2,12 +2,12 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NVECTOR = 64
+NVECTOR = 16
 NDIM = 3
 NPRE = 8
-NVAR = 5
+NVAR = 6
 SOLVER = hydro
-PATCH =
+PATCH = ../patch/hydro/DISC2
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
@@ -15,8 +15,8 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSO
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
-FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+#F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -46,8 +46,9 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 #FFLAGS = -Mpreprocess $(DEFINES)
 
 # --- MPI, ifort syntax ------------------------------
-#F90 = mpif90
-#FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
+F90 = mpif90 -O3
+#F90 = mpif90 -O0 -traceback -check bounds #-fpe0
+FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
