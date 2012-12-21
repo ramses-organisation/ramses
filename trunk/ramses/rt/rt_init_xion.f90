@@ -23,7 +23,7 @@ SUBROUTINE rt_init_xion(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     call rt_init_xion_vsweep(ind_grid, ngrid, ilevel)
+     call rt_init_xion_vsweep(ind_grid, ngrid)
   end do
 
 111 format('   Entering rt_init_xion for level',i2)
