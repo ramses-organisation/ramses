@@ -365,7 +365,6 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
      ! Find which photon group we should be contributing to
      if(rt_src_group(k) .le. 0 .or. rt_src_group(k) .gt. nGroups) cycle
      group_ind = iGroups(rt_src_group(k))
-     !group_ind = 1+(ndim+1)*(rt_src_group(k)-1)
      ! For "square" regions only:
      if(rt_source_type(k) .eq. 'square')then
        ! Exponent of choosen norm
@@ -388,16 +387,16 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            end if
            ! If cell lies within region, inject value
            if(r<1.0)then
-              uu(i,group_ind) = uu(i,group_ind)+rt_n_source(k)/scale_Np
+              uu(i,group_ind) = rt_n_source(k)/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
-              uu(i,group_ind+1) = uu(i,group_ind+1)                      &
+              uu(i,group_ind+1) =                       &
                        + rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
 #if NDIM>1 
-              uu(i,group_ind+2) = uu(i,group_ind+2)                      &
+              uu(i,group_ind+2) =                       &
                        + rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
 #if NDIM>2
-              uu(i,group_ind+3) = uu(i,group_ind+3)                      &
+              uu(i,group_ind+3) =                       &
                        + rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
            end if
@@ -411,9 +410,12 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
         ! Compute CIC weights relative to region center
         do i=1,nn
            xn=1.0; yn=1.0; zn=1.0
+           ! Buffer injection:
+           !xn=max(1.0-(abs(x(i,1)-rt_src_x_center(k))+dx/4.)/dx, 0.0_dp) 
            xn=max(1.0-abs(x(i,1)-rt_src_x_center(k))/dx, 0.0_dp)
 #if NDIM>1
            yn=max(1.0-abs(x(i,2)-rt_src_y_center(k))/dx, 0.0_dp)
+           !yn=max(1.0-abs(x(i,2)-rt_src_y_center(k))/dx/3d0, 0.0_dp)
 #endif
 #if NDIM>2
            zn=max(1.0-abs(x(i,3)-rt_src_z_center(k))/dx, 0.0_dp)
