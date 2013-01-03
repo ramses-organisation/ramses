@@ -866,6 +866,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use poisson_commons
 #ifdef RT
   use rt_hydro_commons
+  use rt_parameters
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -881,6 +882,19 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   integer::igrid,iskip,icpu
   integer::i,j,idim,ind,ivar
   integer,dimension(1:nvector),save::ind_grid_son,ind_cell_son
+  real(dp),dimension(nIons)::xion
+
+#ifdef RT
+  if(upload_equilibrium_x) then                                       
+     ! Enforce equilibrium on ionization states when merging, to      
+     ! prevent unnatural values (e.g when merging hot and cold cells).
+     do i=1,nn                                                        
+        call calc_equilibrium_xion(uold(ind_cell(i),1:nvar), xion)    
+        uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
+     enddo                                                            
+  endif                                                               
+#endif
+
   ! Gather son grids
   do i=1,nn
      ind_grid_son(i)=son(ind_cell(i))
