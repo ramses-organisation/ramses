@@ -349,20 +349,24 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         endif
         ! ----------------------------------------------------------------  !RTpress
         ! Momentum transfer from ionizing photons to gas:                   !RTpress
-        !dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i)) * dt     &                 !RTpress
-        !    *SUM(group_csn(i,:) * nN(:) * group_egy(i)) * ev_to_erg/c_cgs  !RTpress
-        dU(iP0+i-1) = dU(iP0+i-1) + dU(iNpU(i))*rt_c_cgs * dt      &        !RTpress
-             *SUM(group_csn(i,:) * nN(:) ) * group_egy(i) * ev_to_erg/c_cgs !RTpress
+        dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i)) * dt     &                  !RTpress
+            *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
+        !dU(iP0+i-1) = dU(iP0+i-1) + dU(iNpU(i))*rt_c_cgs * dt      &       !RTpress
+        !   *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
         ! ----------------------------------------------------------------  !RTpress
      end do
      ! Momentum transfer from IR and NUV photons to dust:                   !RTpress
      if(rt_isIR)                                                         &  !RTpress
-          dU(iP0+iGroupIR-1) = dU(iP0+iGroupIR-1) + dU(iNpU(iGroupIR))   &  !RTpress
-          * rt_c_cgs * dt * csIR * nH * Zsolar * group_egy(iGroupIR)     &  !RTpress
+          dU(iP0+iGroupIR-1) = dU(iP0+iGroupIR-1)                        &  !RTpress
+          !+ dU(iNpU(iGroupIR)) * rt_c_cgs                               &  !RTpress
+          + dU(iFpU(iGroupIR))  & ! Either use this or preceding line    &  !RTpress
+          * dt * csIR * nH * Zsolar * group_egy(iGroupIR)                &  !RTpress
           * ev_to_erg/c_cgs                                                 !RTpress
      if(rt_isNUV)                                                        &  !RTpress
-          dU(iP0+iGroupNUV-1)= dU(iP0+iGroupNUV-1) + dU(iNpU(iGroupNUV)) &  !RTpress
-          * rt_c_cgs * dt * csNUV * nH * Zsolar * group_egy(iGroupNUV)   &  !RTpress
+          dU(iP0+iGroupNUV-1) = dU(iP0+iGroupNUV-1)                      &  !RTpress 
+          !+ dU(iNpU(iGroupNUV)) * rt_c_cgs                              &  !RTpress
+          + dU(iFpU(iGroupNUV)) & ! Either use this or preceding line    &  !RTpress
+          * dt * csNUV * nH * Zsolar * group_egy(iGroupNUV)              &  !RTpress
           * ev_to_erg/c_cgs                                                 !RTpress
      ! -------------------------------------------------------------------  !RTpress
      dUU=MAXVAL(                                                         &

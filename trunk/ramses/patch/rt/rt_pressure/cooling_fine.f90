@@ -359,7 +359,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      uold(ind_leaf(1:nleaf),ndim+2)=ekk(1:nleaf)+eTherm(1:nleaf)            !RTpress
      if(isIsoPressure) uold(ind_leaf(1:nleaf),ndim+2) = &                   !RTpress
                                  ekk(1:nleaf)+rt_Pconst/scale_d/scale_v**2  !RTpress
-                                 !ekk(1:nleaf)+1.4d-12/scale_d/scale_v**2   !RTpress
      ! End energy update =================================================  !RTpress
 
      ! Compute net energy sink
