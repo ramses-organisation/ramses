@@ -882,7 +882,9 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   integer::igrid,iskip,icpu
   integer::i,j,idim,ind,ivar
   integer,dimension(1:nvector),save::ind_grid_son,ind_cell_son
+#ifdef RT
   real(dp),dimension(nIons)::xion
+#endif
 
 #ifdef RT
   if(upload_equilibrium_x) then                                       
