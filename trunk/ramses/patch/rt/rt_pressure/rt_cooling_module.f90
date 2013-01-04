@@ -335,7 +335,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      ! IR and NUV depletion by dust absorption:                            !RTpress
      if(rt_isIR .and. .not. rt_multiscatt)  &                              !RTpress
           phI(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                          !RTpress
-     if(rt_isNUV .and. .not. rt_multiscatt) &                              !RTpress
+     if(rt_isNUV) & ! Always deplete these photons, since they go into IR  !RTpress
           phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                         !RTpress
 
      do i=1,nGroups         ! ------------------- Do the update of N and F
@@ -355,6 +355,14 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         !   *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
         ! ----------------------------------------------------------------  !RTpress
      end do
+     ! Add absorbed NUV energy to the pool of IR photons:                   !RTpress
+     ! Use DE_IR = - DE_NUV => DN_IR = -DN_NUV * egy_NUV / egy_IR           !RTpress
+     if(rt_isIR .and. rt_isNUV) then                                        !RTpress
+        dU(iNpU(iGroupIR)) =                                             &  !RTpress
+             MAX(0d0,U(iNpU(iGroupNUV))-dU(iNpU(iGroupNUV)))             &  !RTpress
+             * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
+     endif                                                                  !RTpress
+
      ! Momentum transfer from IR and NUV photons to dust:                   !RTpress
      if(rt_isIR)                                                         &  !RTpress
           dU(iP0+iGroupIR-1) = dU(iP0+iGroupIR-1)                        &  !RTpress
