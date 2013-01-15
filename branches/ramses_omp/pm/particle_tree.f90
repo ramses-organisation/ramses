@@ -169,8 +169,9 @@ subroutine make_tree_fine(ilevel)
   real(dp),dimension(1:3)::xbound
   real(dp),dimension(1:3)::skip_loc
   integer::igrid,jgrid,ipart,jpart,next_part
-  integer::ig,ip,npart1,icpu
+  integer::ig,ip,npart1,icpu,ngrid_act
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  integer, dimension(:), pointer:: igrid_ptr
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -186,12 +187,23 @@ subroutine make_tree_fine(ilevel)
   scale=boxlen/dble(nx_loc)
 
   ! Loop over cpus
+!$OMP PARALLEL DEFAULT(none)SHARED(headl,numbl,numbp,headp,nextp,next,active,reception) PRIVATE(jgrid,npart1,ind_grid,ipart,jpart,next_part,ind_part,ind_grid_part,ig,ip,igrid,icpu,ngrid_act,igrid_ptr) FIRSTPRIVATE(ilevel,ncpu,myid)
   do icpu=1,ncpu
-     igrid=headl(icpu,ilevel)
+!     igrid=headl(icpu,ilevel)
+     if(icpu==myid)then
+        ngrid_act= active(ilevel)%ngrid
+        igrid_ptr=>active(ilevel)%igrid
+     else
+        ngrid_act= reception(icpu,ilevel)%ngrid
+        igrid_ptr=>reception(icpu,ilevel)%igrid
+     endif
      ig=0
      ip=0
      ! Loop over grids
-     do jgrid=1,numbl(icpu,ilevel)
+!$OMP DO SCHEDULE(DYNAMIC) 
+     do jgrid=1,ngrid_act
+!      do jgrid=1,numbl(icpu,ilevel)
+        igrid=igrid_ptr(jgrid)
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then        
            ig=ig+1
@@ -218,11 +230,13 @@ subroutine make_tree_fine(ilevel)
            end do
            ! End loop over particles
         end if
-        igrid=next(igrid)   ! Go to next grid
+!        igrid=next(igrid)   ! Go to next grid
      end do
+!$OMP END DO
      ! End loop over grids
      if(ip>0)call check_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   end do
+!$OMP END PARALLEL
   ! End loop over cpus
 
   ! Periodic boundaries
@@ -336,9 +350,13 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         if(ok(j))then
            xxx=xp(ind_part(j),idim)/scale+skip_loc(idim)-xg(igrid_son(j),idim)
            if(xxx> xbound(idim)/2.0)then
+! doesn't need omp atomic as every particle occurs only once, so no competing access
+! from threads
               xp(ind_part(j),idim)=xp(ind_part(j),idim)-(xbound(idim)-skip_loc(idim))*scale
            endif
            if(xxx<-xbound(idim)/2.0)then
+! doesn't need omp atomic as every particle occurs only once, so no competing access
+! from threads
               xp(ind_part(j),idim)=xp(ind_part(j),idim)+(xbound(idim)-skip_loc(idim))*scale
            endif
         endif
@@ -352,8 +370,10 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         list2(j)=igrid_son(j)
      end if
   end do
+!$OMP CRITICAL (rem_list)
   call remove_list(ind_part,list1,ok,np)
   call add_list(ind_part,list2,ok,np)
+!$OMP END CRITICAL (rem_list)
 
 end subroutine check_tree
 !################################################################

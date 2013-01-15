@@ -17,7 +17,7 @@ subroutine newdt_fine(ilevel)
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
   integer::npart1,ip,info
-  integer,dimension(1:nvector)::ind_part
+  integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
 
@@ -108,7 +108,7 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
 
   integer::i,idim,nx_loc
   real(dp)::dx,dx_loc,scale,dtpart
-  real(dp),dimension(1:nvector)::v2
+  real(dp),dimension(1:nvector),save::v2
 
   ! Compute time step
   dx=0.5D0**ilevel

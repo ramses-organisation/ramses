@@ -1,10 +1,11 @@
 subroutine synchro_fine(ilevel)
   use pm_commons
   use amr_commons
-  implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  use mpi
 #endif
+  implicit none
+
   integer::ilevel
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
@@ -28,8 +29,10 @@ subroutine synchro_fine(ilevel)
   ig=0
   ip=0
   ! Loop over grids
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
+!$OMP PARALLEL DEFAULT(none) SHARED(active,numbp,headp,nextp,ilevel) PRIVATE(jgrid,igrid,npart1,ind_grid,ind_part,jpart,ipart,ind_grid_part) FIRSTPRIVATE(ig,ip)
+!$OMP DO SCHEDULE(DYNAMIC)
+  do jgrid=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
      if(npart1>0)then        
         ig=ig+1
@@ -53,11 +56,11 @@ subroutine synchro_fine(ilevel)
         end do
         ! End loop over particles
      end if
-     igrid=next(igrid)   ! Go to next grid
   end do
+!$OMP ENDDO
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  
+!$OMP END PARALLEL  
   if(sink)then
      if(nsink>0)then
 #ifndef WITHOUTMPI
@@ -68,15 +71,13 @@ subroutine synchro_fine(ilevel)
         vsink_all=vsink_new
 #endif
      endif
+!$OMP PARALLEL DO SCHEDULE(DYNAMIC) IF(nsink.ge.1024) DEFAULT(none) SHARED(oksink_all,nsink,vsink,vsink_all) PRIVATE(isink) 
      do isink=1,nsink
         if(oksink_all(isink)==1d0)then
            vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
         endif
-!!$        if(myid==1)then
-!!$           write(*,*)msink(isink)
-!!$           write(*,*)vsink(isink,1:3)
-!!$        endif
      end do
+!$OMP END PARALLEL DO
   endif
   
 111 format('   Entering synchro_fine for level ',I2)
@@ -139,17 +140,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Rescale position at level ilevel
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)/dx
+        x(j,idim)=(xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx
      end do
   end do
 
@@ -230,25 +221,18 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! If not, rescale position at level ilevel-1
-  do idim=1,ndim
-     do j=1,np
-        if(.not.ok(j))then
+  ! If not, rescale position at level ilevel-1 and redo CIC at level ilevel-1
+  do j=1,np
+     if(.not.ok(j))then
+        do idim=1,ndim
            x(j,idim)=x(j,idim)/2.0D0
-        end if
-     end do
-  end do
-  ! If not, redo CIC at level ilevel-1
-  do idim=1,ndim
-     do j=1,np
-        if(.not.ok(j))then
            dd(j,idim)=x(j,idim)+0.5D0
            id(j,idim)=dd(j,idim)
            dd(j,idim)=dd(j,idim)-id(j,idim)
            dg(j,idim)=1.0D0-dd(j,idim)
            ig(j,idim)=id(j,idim)-1
-        end if
-     end do
+        end do
+     end if
   end do
 
  ! Compute parent cell position
@@ -309,14 +293,16 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
         
   ! Compute parent cell adresses
-  do ind=1,twotondim
-     do j=1,np
-        if(ok(j))then
+  do j=1,np
+     if(ok(j))then
+        do ind=1,twotondim
            indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
-        else
+        enddo
+     else
+        do ind=1,twotondim
            indp(j,ind)=nbors_father_cells(ind_grid_part(j),icell(j,ind))
-        end if
-     end do
+        enddo
+     end if
   end do
 
   ! Compute cloud volumes

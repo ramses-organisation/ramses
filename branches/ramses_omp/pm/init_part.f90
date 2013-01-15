@@ -104,6 +104,9 @@ subroutine init_part
      allocate(vsink_all(1:nsinkmax,1:ndim))
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
+     allocate(tsink(1:nsinkmax))
+     allocate(tsink_new(1:nsinkmax))
+     allocate(tsink_all(1:nsinkmax))
      allocate(dMBHoverdt(1:nsinkmax))
      allocate(dMEDoverdt(1:nsinkmax))
      allocate(rBH(1:nsinkmax))
@@ -129,6 +132,7 @@ subroutine init_part
      allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+     allocate(ind_blast_agn(1:nsinkmax))
   endif
 
   !--------------------

@@ -6,7 +6,7 @@ subroutine add_list(ind_part,list2,ok,np)
   use amr_commons
   use pm_commons
   implicit none
-  integer::np
+  integer::np,ipart
   integer,dimension(1:nvector)::ind_part,list2
   logical,dimension(1:nvector)::ok
   !
@@ -18,17 +18,27 @@ subroutine add_list(ind_part,list2,ok,np)
      if(ok(j))then
         if(numbp(list2(j))>0)then
            ! Add particle at the tail of its linked list
+!!$OMP ATOMIC WRITE
            nextp(tailp(list2(j)))=ind_part(j)
+!!$OMP ATOMIC UPDATE
            prevp(ind_part(j))=tailp(list2(j))
+!!$OMP ATOMIC WRITE
            nextp(ind_part(j))=0
+!!$OMP ATOMIC WRITE
            tailp(list2(j))=ind_part(j)
+!!$OMP ATOMIC UPDATE
            numbp(list2(j))=numbp(list2(j))+1
         else
            ! Initialise linked list
+!!$OMP ATOMIC WRITE
            headp(list2(j))=ind_part(j)
+!!$OMP ATOMIC WRITE
            tailp(list2(j))=ind_part(j)
+!!$OMP ATOMIC WRITE
            prevp(ind_part(j))=0
+!!$OMP ATOMIC WRITE
            nextp(ind_part(j))=0
+!!$OMP ATOMIC WRITE
            numbp(list2(j))=1
         end if
      end if

@@ -17,7 +17,7 @@ subroutine thermal_feedback(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc
   real(dp),dimension(1:3)::skip_loc
-  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -58,12 +58,12 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
+              if(ig==0)then
+                 ig=1
+                 ind_grid(ig)=igrid
+              end if
               ! Select only star particles
               if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
-                 if(ig==0)then
-                    ig=1
-                    ind_grid(ig)=igrid
-                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -112,18 +112,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim)::x0
-  integer ,dimension(1:nvector)::ind_cell
-  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+  integer ,dimension(1:nvector),save::ind_cell
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector)::igrid_son,ind_son
-  integer,dimension(1:nvector)::list1
-  logical,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector)::mloss,mzloss,ethermal,ekinetic,dteff
-  real(dp),dimension(1:nvector,1:ndim)::x
-  integer ,dimension(1:nvector,1:ndim)::id,igd,icd
-  integer ,dimension(1:nvector)::igrid,icell,indp,kg
+  integer,dimension(1:nvector),save::igrid_son,ind_son
+  integer,dimension(1:nvector),save::list1
+  logical,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector),save::mloss,mzloss,ethermal,ekinetic,dteff
+  real(dp),dimension(1:nvector,1:ndim),save::x
+  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
+  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 #ifdef SOLVERhydro
   integer ::imetal=6
@@ -193,6 +193,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(error)then
      write(*,*)'problem in sn2'
      write(*,*)ilevel,ng,np
+     stop
   end if
 
   ! NGP at level ilevel
@@ -537,7 +538,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   !------------------------------------------------------------------------
   integer::ilevel,ncache,nSN,j,iSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info
-  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 #ifdef SOLVERhydro
   integer ::imetal=6
 #endif
@@ -556,7 +557,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   real(dp),dimension(1:nSN)::m_gas_all,vol_gas_all,ekBlast_all
   real(dp),dimension(1:nSN,1:3)::u_gas_all,dq_all,u2Blast_all
 #endif
-  logical ,dimension(1:nvector)::ok
+  logical ,dimension(1:nvector),save::ok
 
   if(nSN==0)return
   if(verbose)write(*,*)'Entering average_SN'
@@ -704,7 +705,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   !------------------------------------------------------------------------
   integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
-  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 #ifdef SOLVERhydro
   integer ::imetal=6
 #endif
@@ -719,7 +720,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   real(dp),dimension(1:nSN)::mSN,sSN,ZSN,m_gas,p_gas,d_gas,d_metal,vol_gas,uSedov,ekBlast
   real(dp),dimension(1:nSN,1:3)::xSN,vSN,u_gas,dq
   integer ,dimension(1:nSN)::indSN
-  logical ,dimension(1:nvector)::ok
+  logical ,dimension(1:nvector),save::ok
 
   if(nSN==0)return
   if(verbose)write(*,*)'Entering Sedov_blast'

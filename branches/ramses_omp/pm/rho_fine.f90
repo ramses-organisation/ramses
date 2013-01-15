@@ -216,75 +216,142 @@ subroutine rho_from_current_level(ilevel)
   ! level ilevel (boundary particles).
   ! Arrays flag1 and flag2 are used as temporary work space.
   !------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,idim,icpu
-  integer::i,ig,ip,npart1
-  real(dp)::dx
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,notok
+  integer::i,ig,ip,npart1,ngrid_act,pos_cell,icol,ind_cell,nx_loc
+  real(dp)::dx,scale
+  real(dp),dimension(1:ndim+1)::multipole_loc ! for omp
 
-  integer,dimension(1:nvector)::ind_grid,ind_cell
-  integer,dimension(1:nvector)::ind_part,ind_grid_part
+  integer,dimension(1:nvector)::ind_grid,ind_part
   real(dp),dimension(1:nvector,1:ndim)::x0
+  real(dp),dimension(ndim)::dist
+  real(dp),dimension(1:3)::skip_loc
     
+  integer, dimension(:), pointer:: igrid_ptr
+  integer, dimension(:,:),allocatable::index_col,index_partgrid_col
+  integer, dimension(1:twotondim)::n_color,n_colorp
+
+
+integer ipmax,nn  
+
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
   
   ! Loop over cpus
   do icpu=1,ncpu
-     ! Loop over grids
-     igrid=headl(icpu,ilevel)
-     ig=0
-     ip=0   
-     do jgrid=1,numbl(icpu,ilevel)
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then        
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           
-           ! Loop over particles
-           do jpart=1,npart1
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig
-              if(ip==nvector)then
-                 ! Lower left corner of 3x3x3 grid-cube
-                 do idim=1,ndim
-                    do i=1,ig
-                       x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
-                    end do
-                 end do
-                 do i=1,ig
-                    ind_cell(i)=father(ind_grid(i))
-                 end do
-                 call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
-                 ip=0
-                 ig=0
-              end if
-              ipart=nextp(ipart)  ! Go to next particle
-           end do
-           ! End loop over particles
-           
-        end if
+     if(icpu==myid)then
+        ngrid_act= active(ilevel)%ngrid
+        igrid_ptr=>active(ilevel)%igrid
+     else
+        ngrid_act= reception(icpu,ilevel)%ngrid
+        igrid_ptr=>reception(icpu,ilevel)%igrid
+     endif
 
-        igrid=next(igrid)   ! Go to next grid
+     ! Regroup grids accroding to color
+     allocate(index_col(1:ngrid_act,1:twotondim))
+     n_color (:)=0
+     n_colorp(:)=0
+     do i=1,ngrid_act
+        ind_cell=father(igrid_ptr(i))
+        pos_cell=(ind_cell-ncoarse-1)/ngridmax+1
+        n_color(pos_cell)=n_color(pos_cell)+1
+        index_col(n_color(pos_cell),pos_cell)=igrid_ptr(i)
+! get the number of particles per color and total
+        n_colorp(pos_cell)=n_colorp(pos_cell)+numbp(igrid_ptr(i))
      end do
-     ! End loop over grids
 
-     if(ip>0)then
-        ! Lower left corner of 3x3x3 grid-cube
-        do idim=1,ndim
-           do i=1,ig
-              x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
-           end do
-        end do
-        do i=1,ig
-           ind_cell(i)=father(ind_grid(i))
-        end do
-        call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
-     end if
+     ! Loop over the colors and then all particles inside the grids of that color
+     ! to put them on a particle list, which is then processed in parallel where
+     ! possible
+     do icol=1,twotondim
+        if(n_colorp(icol)/=0)then
+           allocate(index_partgrid_col(1:2,n_colorp(icol)))
+
+           ip=0
+           notok=0
+           multipole_loc(:)=0d0
+!$OMP PARALLEL DEFAULT(none) SHARED(index_col,numbp,headp,nextp,notok,xp,xg,index_partgrid_col,multipole,ilevel,levelmin) PRIVATE(jgrid,igrid,npart1,ipart,jpart,dist,ind_part,ind_grid,i) FIRSTPRIVATE(ip,n_color,scale,skip_loc,dx,icol,multipole_loc)
+!$OMP DO SCHEDULE(DYNAMIC) 
+           do jgrid=1,n_color(icol)
+              igrid=index_col(jgrid,icol)
+              npart1=numbp(igrid)  ! Number of particles in the grid
+              if(npart1>0)then        
+                 ipart=headp(igrid)
+                 do jpart=1,npart1
+                    ! flag particles which have moved too far for later processing
+                    do idim=1,ndim
+                       dist(idim)=abs(xp(ipart,idim)/scale+skip_loc(idim)-xg(igrid,idim))
+                    enddo
+                    if(maxval(dist(:)) .lt. 1.5  * dx)then
+                       ip=ip+1
+                       ind_part(ip)=ipart
+                       ind_grid(ip)=igrid
+                       if(ip==nvector)then
+                          call cic_amr(ind_part,ind_grid,ip,ilevel,multipole_loc)
+                          ip=0
+                       end if
+                    else
+!$OMP CRITICAL (counter)
+                       notok=notok+1
+                       index_partgrid_col(1,notok)=ipart
+                       index_partgrid_col(2,notok)=igrid
+!$OMP END CRITICAL (counter)
+                    endif
+                    ipart=nextp(ipart)
+                 enddo
+              endif
+           enddo
+!$OMP ENDDO NOWAIT
+        ! process remaining block of < nvector particles which had moved too far
+           if(ip > 0)then
+              call cic_amr(ind_part,ind_grid,ip,ilevel,multipole_loc)
+              ip=0
+           endif
+
+        ! sum the thread local multipole contributions
+           if(ilevel==levelmin)then
+!$OMP CRITICAL (multip)
+              do i=1,ndim+1
+                 multipole(i)=multipole(i)+multipole_loc(i)
+              enddo
+!$OMP END CRITICAL (multip)
+              multipole_loc(:)=0d0
+           endif
+!$OMP END PARALLEL
+           ! process particles that moved to far in serial
+           do jpart=1,notok
+              ip=ip+1
+              ind_part(ip)=index_partgrid_col(1,jpart)
+              ind_grid(ip)=index_partgrid_col(2,jpart)
+              if(ip==nvector)then
+                 call cic_amr(ind_part,ind_grid,ip,ilevel,multipole_loc)
+                 ip=0
+              end if
+           enddo
+           ! process remaining block of < nvector particles which had moved too far
+           if(ip > 0)then
+              call cic_amr(ind_part,ind_grid,ip,ilevel,multipole_loc)
+              ip=0
+           endif
+           ! sum the additional contributions to multipole from particles processed 
+           ! in serial
+           if(ilevel==levelmin)then
+              do i=1,ndim+1
+                 multipole(i)=multipole(i)+multipole_loc(i)
+              enddo
+           endif
+
+           deallocate(index_partgrid_col)
+        endif  ! if(n_colorp(icol)/=0)
+     enddo
+
+     deallocate(index_col)
 
   end do
   ! End loop over cpus
@@ -294,14 +361,15 @@ end subroutine rho_from_current_level
 !##############################################################################
 !##############################################################################
 !##############################################################################
-subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
+subroutine cic_amr(ind_part,ind_grid,np,ilevel,multipole_loc)
   use amr_commons
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
-  integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
+  real(dp),dimension(1:ndim+1)::multipole_loc ! for omp
+  integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part,ind_grid,ind_grid_compact
   real(dp),dimension(1:nvector,1:ndim)::x0
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
@@ -309,7 +377,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! are updated by the input particle list.
   !------------------------------------------------------------------
   logical::error
-  integer::j,ind,idim,nx_loc
+  integer::j,ind,idim,nx_loc,i
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
@@ -336,23 +404,38 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
 
+  ! scan the array of grid indices and compact it to a new one so that every index is only
+  ! used once
+  ng=1
+  ind_grid_compact(1)=ind_grid(1)
+  ind_grid_part(1)=1
+  do i=2,np
+     if(ind_grid(i)/=ind_grid(i-1))then
+        ng=ng+1
+        ind_grid_compact(ng)=ind_grid(i)
+     endif
+     ind_grid_part(i)=ng
+  enddo
+
+  ! get the positions and father grids for this compact list
+  do idim=1,ndim
+     do i=1,ng
+        ! Lower left corner of 3x3x3 grid-cube
+       x0(i,idim)=xg(ind_grid_compact(i),idim)-3.0D0*dx
+     end do
+  end do
+
+  do i=1,ng
+     ind_cell(i)=father(ind_grid_compact(i))
+  end do
+
   ! Gather neighboring father cells (should be present anytime !)
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)/dx
+        x(j,idim)=(xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx
      end do
   end do
 
@@ -363,11 +446,11 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   if(ilevel==levelmin)then
      do j=1,np
-        multipole(1)=multipole(1)+mp(ind_part(j))
+        multipole_loc (1)=multipole_loc (1)+mp(ind_part(j))
      end do
      do idim=1,ndim
         do j=1,np
-           multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+           multipole_loc (idim+1)=multipole_loc (idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -650,20 +733,27 @@ subroutine multipole_fine(ilevel)
   end do
 
   ! Initialize fields to zero
+!$OMP PARALLEL DEFAULT(none) SHARED(active,unew) PRIVATE(ind,iskip,i,idim) FIRSTPRIVATE(ncoarse,ilevel,ngridmax)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+!$OMP DO
      do i=1,active(ilevel)%ngrid
         unew(active(ilevel)%igrid(i)+iskip,1)=0.0D0
      end do
+!$OMP ENDDO NOWAIT
      do idim=1,ndim
+!$OMP DO
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,idim+1)=0.0D0
         end do
+!$OMP ENDDO NOWAIT
      end do
   end do
+!$OMP END PARALLEL
 
   ! Compute mass multipoles in each cell
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) SHARED(active,son,xg,uold,unew) PRIVATE(igrid,ngrid,i,ind_grid,ind_cell,iskip,nleaf,ind_leaf,xx,mm,dd,nsplit,ind_split,iskip_son,ind_grid_son,ind_cell_son) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,scale,xc,skip_loc,smallr,vol_loc,hydro,gravity_type,dx_loc) SCHEDULE(DYNAMIC)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -748,6 +838,7 @@ subroutine multipole_fine(ilevel)
 
      end do
   enddo
+!$OMP END PARALLEL DO
 
   ! Update boundaries
   do idim=1,ndim+1
@@ -781,13 +872,17 @@ subroutine cic_from_multipole(ilevel)
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
   integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer ::idim,nleaf,ix,iy,iz,igrid,ind_cell,pos_cell
   integer,dimension(1:nvector)::ind_grid
+  integer,dimension(:,:),allocatable::index_fine
+  integer, dimension(1:twotondim)::n_color
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Initialize density field to zero
+!$OMP PARALLEL DEFAULT(none) SHARED(rho,reception,active,boundary,father) PRIVATE(icpu,ind,ibound,iskip,i,ngrid,n_color,index_fine,ind_cell,pos_cell) FIRSTPRIVATE(ncoarse,ngridmax,ilevel,ncache,ncpu,nboundary,hydro,ind_grid)
+!$OMP DO SCHEDULE(DYNAMIC)
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -796,13 +891,17 @@ subroutine cic_from_multipole(ilevel)
         end do
      end do
   end do
+!$OMP ENDDO NOWAIT
+!$OMP DO SCHEDULE(DYNAMIC)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
         rho(active(ilevel)%igrid(i)+iskip)=0.0D0
      end do
   end do
+!$OMP ENDDO NOWAIT
   ! Reset rho in physical boundaries
+!$OMP DO SCHEDULE(DYNAMIC)
   do ibound=1,nboundary
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -811,19 +910,37 @@ subroutine cic_from_multipole(ilevel)
         end do
      end do
   end do
-  
+!$OMP ENDDO NOWAIT  
   if(hydro)then
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ! Gather nvector grids
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        call cic_cell(ind_grid,ngrid,ilevel)
+     
+     ! Regroup grids accroding to color
+     allocate(index_fine(1:ncache,1:twotondim))
+     n_color(1:twotondim)=0
+     do i=1,ncache
+        ind_cell=father( active(ilevel)%igrid(i) )
+        pos_cell=(ind_cell-ncoarse-1)/ngridmax+1
+        n_color(pos_cell)=n_color(pos_cell)+1
+        index_fine(n_color(pos_cell),pos_cell)=active(ilevel)%igrid(i)
      end do
+     
+     do ind=1,twotondim
+!$OMP DO SCHEDULE(DYNAMIC)
+        do igrid=1,n_color(ind),nvector
+           ! Gather nvector grids
+           ngrid=MIN(nvector,n_color(ind)-igrid+1)
+           do i=1,ngrid
+              ind_grid(i)=index_fine(igrid+1-1,ind)
+           end do
+           call cic_cell(ind_grid,ngrid,ilevel)
+        end do
+!$OMP ENDDO
+     end do
+     deallocate(index_fine)
+
   end if
+!$OMP END PARALLEL
 
 111 format('   Entering cic_from_multipole for level',i2)
 
@@ -855,6 +972,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:ndim+1)::multipole_loc ! for omp
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
   
@@ -879,6 +997,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
 
   ! Loop over grid cells
+  multipole_loc(:)=0d0
   do ind_son=1,twotondim
      iskip_son=ncoarse+(ind_son-1)*ngridmax
 
@@ -895,7 +1014,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         do idim=1,ndim+1
            do j=1,np
               ind_cell_son=iskip_son+ind_grid(j)
-              multipole(idim)=multipole(idim)+unew(ind_cell_son,idim)
+              multipole_loc(idim)=multipole_loc(idim)+unew(ind_cell_son,idim)
            end do
         end do
      endif
@@ -903,20 +1022,10 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      ! Rescale particle position at level ilevel
      do idim=1,ndim
         do j=1,np
-           x(j,idim)=x(j,idim)/scale+skip_loc(idim)
+           x(j,idim)=(x(j,idim)/scale+skip_loc(idim)-(xg(ind_grid(j),idim)-3d0*dx))/dx
         end do
      end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)-(xg(ind_grid(j),idim)-3d0*dx)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
-           x(j,idim)=x(j,idim)/dx
-        end do
-     end do
-     
+
      ! Gather particle mass
      do j=1,np
         ind_cell_son=iskip_son+ind_grid(j)
@@ -1078,6 +1187,13 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      
   end do
   ! End loop over grid cells
+
+  ! sum the thread local multipole contributions
+!$OMP CRITICAL
+  do i=1,ndim+1
+     multipole(i)=multipole(i)+multipole_loc(i)
+  enddo
+!$OMP END CRITICAL
 
 end subroutine cic_cell
 !###########################################################

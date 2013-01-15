@@ -24,7 +24,7 @@ subroutine star_formation(ilevel)
   ! Yann Rasera  10/2002-01/2003
   !----------------------------------------------------------------------
   ! local constants
-  real(dp)::t0,d0,d00,e0,mgas,mcell
+  real(dp)::t0,d0,e0,mgas,mcell
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
@@ -50,10 +50,10 @@ subroutine star_formation(ilevel)
   real(dp)::mdebris,vdebris,zdebris,rdebris
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector)::ind_grid,ind_cell,nstar
-  integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector)::list_debris,ind_debris
-  logical ,dimension(1:nvector)::ok,ok_new=.true.,ok_true=.true.
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
+  integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector),save::list_debris,ind_debris
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   
   if(numbtot(1,ilevel)==0) return
@@ -87,7 +87,6 @@ subroutine star_formation(ilevel)
   nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*XH/mH
   nISM = MAX(nCOM,nISM)
   d0   = nISM/scale_nH
-  d00  = n_star/scale_nH
 
   ! Initial star particle mass
   mstar=n_star/(scale_nH*aexp**3)*vol_min
@@ -200,7 +199,7 @@ subroutine star_formation(ilevel)
               ! Compute mean number of events
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
-              tstar=t0*sqrt(d00/d)
+              tstar=t0*sqrt(d0/d)
               PoissMean=dtnew(ilevel)/tstar*mcell/mstar
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
