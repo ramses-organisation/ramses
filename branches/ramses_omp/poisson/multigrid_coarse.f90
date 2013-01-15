@@ -356,10 +356,10 @@ subroutine gauss_seidel(ilevel,redstep)
   integer,dimension(1:3,1:4)::ired,iblack
   integer,dimension(1:3,1:2,1:8)::iii,jjj
 
-  integer,dimension(1:nvector)::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim)::igridn
-  real(dp),dimension(1:nvector,1:ndim)::phig,phid
-  real(dp),dimension(1:nvector)::residu
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim),save::igridn
+  real(dp),dimension(1:nvector,1:ndim),save::phig,phid
+  real(dp),dimension(1:nvector),save::residu
 
   ! Set constants
   dx=0.5d0**ilevel
@@ -468,10 +468,10 @@ subroutine cmp_residual_mg(ilevel)
   real(kind=8)::oneoversix,dx,dx2
   integer,dimension(1:3,1:2,1:8)::iii,jjj
 
-  integer ,dimension(1:nvector)::ind_grid,ind_cell
-  integer ,dimension(1:nvector,0:twondim)::igridn
-  real(dp),dimension(1:nvector,1:ndim)::phig,phid
-  real(kind=8),dimension(1:nvector)::residu
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector,0:twondim),save::igridn
+  real(dp),dimension(1:nvector,1:ndim),save::phig,phid
+  real(kind=8),dimension(1:nvector),save::residu
 
   ! Set constants
   dx=0.5d0**ilevel
@@ -571,9 +571,9 @@ subroutine restriction_fine(ilevel,multigrid)
   !-------------------------------------------------------------------
   integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,info,ibound,nx_loc
   integer ::idim,nleaf,ix,iy,iz
-  integer,dimension(1:nvector)::ind_grid, ind_cell, ind_leaf
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector)::dd
+  integer,dimension(1:nvector),save::ind_grid, ind_cell, ind_leaf
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector),save::dd
   real(kind=8)::vol,dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -644,10 +644,10 @@ subroutine restrict(ind_grid,ngrid,ilevel,multigrid)
   integer,dimension(1:nvector)::ind_grid
   !
   !
-  integer ,dimension(1:nvector)::ind_cell,ind_cell_father
-  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
-  real(dp),dimension(1:nvector)::new_rho
+  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector),save::new_rho
 
   real(dp)::a,b,c,d,coeff
   real(dp),dimension(1:8)::bbb
@@ -733,10 +733,10 @@ subroutine prolong(ilevel)
   real(dp),dimension(1:8)::bbb
   integer,dimension(1:8,1:8)::ccc
 
-  integer ,dimension(1:nvector)::ind_grid,ind_cell
-  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
-  real(dp),dimension(1:nvector)::new_rho
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector),save::new_rho
 
   ! Local constants
   a = 1.0D0/4.0D0**ndim

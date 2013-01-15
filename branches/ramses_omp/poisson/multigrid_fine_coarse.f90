@@ -44,7 +44,9 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
    allmasked=.true.
 
    ! Loop over coarse cells of the myid active comm
-!$OMP PARALLEL DEFAULT(NONE) REDUCTION(.and.:allmasked) SHARED(active_mg,son,f,cpu_map,lookup_mg) PRIVATE(ind_c_cell,iskip_c_amr,iskip_c_mg,igrid_c_mg,igrid_c_amr,icell_c_amr,icell_c_mg,ngpmask,igrid_f_amr,ind_f_cell,iskip_f_mg,icell_f_mg,cpu_amr,igrid_f_mg) FIRSTPRIVATE(ncoarse,ngridmax,myid,ifinelevel,icoarselevel,dtwotondim)
+!!!$OMP PARALLEL DEFAULT(NONE) REDUCTION(.and.:allmasked) SHARED(active_mg,son,f,cpu_map,lookup_mg) PRIVATE(ind_c_cell,iskip_c_amr,iskip_c_mg,igrid_c_mg,igrid_c_amr,
+!!!icell_c_amr,icell_c_mg,ngpmask,igrid_f_amr,ind_f_cell,iskip_f_mg,icell_f_mg,cpu_amr,igrid_f_mg) FIRSTPRIVATE(ncoarse,ngridmax,myid,ifinelevel,icoarselevel,dtwotondim)
+!$OMP PARALLEL DEFAULT(private) REDUCTION(.and.:allmasked) SHARED(active_mg,son,f,cpu_map,lookup_mg) FIRSTPRIVATE(ncoarse,ngridmax,myid,ifinelevel,icoarselevel,dtwotondim)
    do ind_c_cell=1,twotondim
       iskip_c_amr=ncoarse+(ind_c_cell-1)*ngridmax
       iskip_c_mg =(ind_c_cell-1)*active_mg(myid,icoarselevel)%ngrid
@@ -114,6 +116,7 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
    real(dp) :: dtwotondim = (twotondim)
 
    integer :: icoarselevel
+
    icoarselevel=ifinelevel-1
 
    ! Loop over fine cells of the myid active comm
@@ -135,8 +138,9 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
          ! Stack cell volume fraction in coarse cell
          ngpmask=(1d0+active_mg(myid,ifinelevel)%u(icell_f_mg,4))/2d0/dtwotondim
+
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
-            active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
+              active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
       end do
    end do
 
@@ -145,7 +149,6 @@ end subroutine restrict_mask_coarse_reverse
 ! ------------------------------------------------------------------------
 ! Residual computation
 ! ------------------------------------------------------------------------
-
 subroutine cmp_residual_mg_coarse(ilevel)
    ! Computes the residual for pure MG levels, and stores it into active_mg(myid,ilevel)%u(:,3)
    use amr_commons
@@ -155,13 +158,16 @@ subroutine cmp_residual_mg_coarse(ilevel)
 
    integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
-   real(dp) :: dx, oneoverdx2, phi_c, nb_sum
-   integer  :: ngrid
-   integer  :: ind, igrid_mg, idim, inbor
-   integer  :: icell_mg, iskip_mg, igrid_nbor_mg, icell_nbor_mg
-   integer  :: igrid_amr, iskip_amr, cpu_nbor_amr 
-   integer  :: igshift, igrid_nbor_amr
+  integer ,dimension(1:nvector)::igrid_amr,igrid_mg,icell_mg,icell_mg_ok
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr_ok,igrid_nbor_mg_ok,cpu_nbor_amr_ok
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  real(dp),dimension(1:nvector)::nb_sum,weight
 
+   real(dp) :: dx, oneoverdx2
+   integer  :: ngrid, ncache
+   integer  :: i, ind, idim, inbor, iskip, igrid, ncell_ok
+   integer  :: igshift, icell_nbor_mg, icpu_nbor_amr
    real(dp) :: dtwondim = (twondim)
 
    ! Set constants
@@ -175,99 +181,143 @@ subroutine cmp_residual_mg_coarse(ilevel)
    iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
    iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
-   ngrid=active_mg(myid,ilevel)%ngrid
+  ! Loop over active grids
+  ncache=active_mg(myid,ilevel)%ngrid
+!!!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind,iskip,igrid,icell_mg,icell_mg_ok,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,
+!!igrid_amr,igrid_mg,ind_left,ind_right,ncell_ok,igrid_nbor_mg,igrid_nbor_amr_ok,cpu_nbor_amr_ok,igrid_nbor_mg_ok,icell_nbor_mg,icpu_nbor_amr) FIRSTPRIVATE(ngrid,ilevel,myid,iii,jjj,oneoverdx2,dtwondim,ncache)
+!$OMP PARALLEL DEFAULT(private) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) FIRSTPRIVATE(ngrid,ilevel,myid,iii,jjj,oneoverdx2,dtwondim,ncache)
+!$OMP DO SCHEDULE(DYNAMIC) 
+  do igrid=1,ncache,nvector
+     
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        igrid_amr(i)=active_mg(myid,ilevel)%igrid(igrid+i-1)
+        igrid_mg(i)=igrid+i-1
+     end do
 
-   ! Loop over cells myid
-!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind,iskip_mg,iskip_amr,igrid_mg,igrid_amr,icell_mg,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,igrid_nbor_mg,icell_nbor_mg,phi_c) FIRSTPRIVATE(ngrid,ilevel,myid,iii,jjj,oneoverdx2,dtwondim,ngridmax,ncoarse)
-   do ind=1,twotondim
-      iskip_mg  = (ind-1)*ngrid
-      iskip_amr = ncoarse+(ind-1)*ngridmax
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igrid_nbor_amr(i,0)=igrid_amr(i)
+        cpu_nbor_amr(i,0)=myid
+        igrid_nbor_mg(i,0)=lookup_mg(igrid_amr(i))
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(igrid_amr(i),2*idim-1)
+           ind_right(i,idim)=nbor(igrid_amr(i),2*idim  )
+           igrid_nbor_amr(i,2*idim-1)=son(ind_left (i,idim))
+           igrid_nbor_amr(i,2*idim  )=son(ind_right(i,idim))
+           cpu_nbor_amr(i,2*idim-1)=cpu_map(ind_left (i,idim))
+           cpu_nbor_amr(i,2*idim  )=cpu_map(ind_right(i,idim))
+           igrid_nbor_mg(i,2*idim-1)=lookup_mg(igrid_nbor_amr(i,2*idim-1))
+           igrid_nbor_mg(i,2*idim  )=lookup_mg(igrid_nbor_amr(i,2*idim  ))
+        end do
+     end do
 
-      ! Loop over active grids myid
-!$OMP DO SCHEDULE(DYNAMIC)
-      do igrid_mg=1,ngrid
-         igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
-         icell_mg = igrid_mg + iskip_mg
+     ! Loop over cells
+     do ind=1,twotondim
+     
+        ! Compute central cell index
+        iskip=(ind-1)*ncache
+        do i=1,ngrid
+           icell_mg(i)=iskip+igrid_mg(i)
+        end do
 
-         phi_c = active_mg(myid,ilevel)%u(icell_mg,1)
-         nb_sum=0.0d0  ! Sum of phi on neighbors
+        ! Gather inner cells
+        ncell_ok=0
+        do i=1,ngrid
+           if( .not. btest(active_mg(myid,ilevel)%f(icell_mg(i),1),0))then
+              ncell_ok=ncell_ok+1
+              icell_mg_ok(ncell_ok)=icell_mg(i)
+              igrid_nbor_mg_ok(ncell_ok,0:twondim)=igrid_nbor_mg(i,0:twondim)
+              cpu_nbor_amr_ok(ncell_ok,0:twondim)=cpu_nbor_amr(i,0:twondim)
+           endif
+        end do
 
-         ! SCAN FLAG TEST
-         if(.not. btest(active_mg(myid,ilevel)%f(icell_mg,1),0)) then ! NO SCAN
-            do inbor=1,2
-               do idim=1,ndim
-                  ! Get neighbor grid
-                  igshift = iii(idim,inbor,ind)
-                  if(igshift==0) then
-                     igrid_nbor_amr = igrid_amr
-                     cpu_nbor_amr   = myid
-                  else
-                     igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                     cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
-                  end if
-                  igrid_nbor_mg = lookup_mg(igrid_nbor_amr) 
-                  ! Add up
-                  icell_nbor_mg = igrid_nbor_mg + &
-                      (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
-                  nb_sum = nb_sum + &
-                      active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
-               end do
-            end do
-         else ! PERFORM SCAN
-            if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) then
-               active_mg(myid,ilevel)%u(icell_mg,3)=0.0
-               cycle
-            end if
-            do idim=1,ndim
-               do inbor=1,2
-                  ! Get neighbor grid
-                  igshift = iii(idim,inbor,ind)
-                  if(igshift==0) then
-                     igrid_nbor_amr = igrid_amr
-                     cpu_nbor_amr   = myid
-                  else
-                     igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                     cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
-                  end if
+        ! Use max-speed "dumb" Gauss-Seidel for "inner" cells
+        ! Those cells are active, have all their neighbors active
+        ! and all neighbors are in the AMR+MG trees
+        nb_sum(1:ncell_ok)=0.
+        do inbor=1,2
+           do idim=1,ndim
+              ! Get neighbor grid shift
+              igshift = iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 icpu_nbor_amr=cpu_nbor_amr_ok(i,igshift)
+                 icell_nbor_mg=igrid_nbor_mg_ok(i,igshift)+((jjj(idim,inbor,ind)-1)*active_mg(icpu_nbor_amr,ilevel)%ngrid)
+                 nb_sum(i)=nb_sum(i)+active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
+              end do
+           end do
+        end do
+        do i=1,ncell_ok
+           active_mg(myid,ilevel)%u(icell_mg_ok(i),3)= &
+                & -oneoverdx2*(nb_sum(i)-dtwondim*active_mg(myid,ilevel)%u(icell_mg_ok(i),1) ) &
+                & +active_mg(myid,ilevel)%u(icell_mg_ok(i),2)
+        end do
 
-                  if(igrid_nbor_amr==0) then
-                     ! No neighbor cell !
-                     ! Virtual phi value on unrefnd neighbor cell : -phi_c/mask_c
-                     ! (simulates mask=-1.0 for the nonexistent refined cell)
-                     nb_sum = nb_sum - phi_c/active_mg(myid,ilevel)%u(icell_mg,4)
-                  else
-                     ! Fetch neighbor cell
-                     igrid_nbor_mg  = lookup_mg(igrid_nbor_amr)
-                     if(igrid_nbor_mg<=0) then
-                        nb_sum=nb_sum-phi_c/active_mg(myid,ilevel)%u(icell_mg,4)
-                        cycle
-                     end if
+        ! Gather boundary cells
+        ncell_ok=0
+        do i=1,ngrid
+           if(btest(active_mg(myid,ilevel)%f(icell_mg(i),1),0)) then
+              if (active_mg(myid,ilevel)%u(icell_mg(i),4)>0.0) then
+                 ncell_ok=ncell_ok+1
+                 icell_mg_ok(ncell_ok)=icell_mg(i)
+                 igrid_nbor_amr_ok(ncell_ok,0:twondim)=igrid_nbor_amr(i,0:twondim)
+                 igrid_nbor_mg_ok(ncell_ok,0:twondim)=igrid_nbor_mg(i,0:twondim)
+                 cpu_nbor_amr_ok(ncell_ok,0:twondim)=cpu_nbor_amr(i,0:twondim)
+              else
+                 active_mg(myid,ilevel)%u(icell_mg(i),3)=0.0
+              endif
+           endif
+        end do
 
-                     icell_nbor_mg  = igrid_nbor_mg + &
-                       (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
-                     if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
-                        ! Neighbor cell is masked : compute its virtual phi with the mask
-                        nb_sum = nb_sum + phi_c * &
-                           (active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)/active_mg(myid,ilevel)%u(icell_mg,4))
-                     else
-                        ! Neighbor cell is active, use its true potential
-                        nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
-                     end if
-                  end if
-               end do
-            end do
-         end if ! END SCAN TEST
+        ! Use the finer "solve" Gauss-Seidel near boundaries,
+        ! with all necessary checks
+        nb_sum(1:ncell_ok)=0.
+        do inbor=1,2
+           do idim=1,ndim
+              ! Get neighbor grid shift
+              igshift = iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 ! In case neighbor grid does not exist
+                 if(igrid_nbor_amr_ok(i,igshift)==0) then
+                    ! No neighbor cell, set mask=-1 on nonexistent neighbor cell
+                    nb_sum(i)=nb_sum(i)-active_mg(myid,ilevel)%u(icell_mg_ok(i),1)/active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                 else
+                    if(igrid_nbor_mg_ok(i,igshift)<=0)then
+                       ! No MG neighbor
+                       nb_sum(i)=nb_sum(i)-active_mg(myid,ilevel)%u(icell_mg_ok(i),1)/active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                    else
+                       ! Fetch neighbor cell
+                       icpu_nbor_amr=cpu_nbor_amr_ok(i,igshift)
+                       icell_nbor_mg=igrid_nbor_mg_ok(i,igshift)+((jjj(idim,inbor,ind)-1)*active_mg(icpu_nbor_amr,ilevel)%ngrid)
+                       if(active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
+                          ! Neighbor cell is masked
+                          nb_sum(i)=nb_sum(i)+active_mg(myid,ilevel)%u(icell_mg_ok(i),1)* &
+                               & active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,4) &
+                               & /active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                       else
+                          ! Neighbor cell is active, increment neighbor sum
+                          nb_sum(i)=nb_sum(i)+active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
+                       end if
+                    endif
+                 end if
+              end do
+           end do
+        end do
+        do i=1,ncell_ok
+           active_mg(myid,ilevel)%u(icell_mg_ok(i),3)= &
+                & -oneoverdx2*(nb_sum(i)-dtwondim*active_mg(myid,ilevel)%u(icell_mg_ok(i),1) ) &
+                & +active_mg(myid,ilevel)%u(icell_mg_ok(i),2)
+        end do
 
-         ! Store ***MINUS THE RESIDUAL***
-         active_mg(myid,ilevel)%u(icell_mg,3) = &
-          -oneoverdx2*( nb_sum - dtwondim*phi_c )+active_mg(myid,ilevel)%u(icell_mg,2)
-      end do
-!$OMP END DO
-   end do
+     end do
+     ! End loop over cells
+  end do
 !$OMP END PARALLEL
 
 end subroutine cmp_residual_mg_coarse
-
 ! ##################################################################
 ! ##################################################################
 
@@ -337,145 +387,184 @@ end subroutine cmp_fvar_norm2_coarse
 ! ------------------------------------------------------------------------
 ! Gauss-Seidel smoothing
 ! ------------------------------------------------------------------------
-
 subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
-   use amr_commons
-   use pm_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in) :: ilevel
-   logical, intent(in) :: safe
-   logical, intent(in) :: redstep
+  use amr_commons
+  use pm_commons
+  use poisson_commons
+  implicit none
+  integer, intent(in) :: ilevel
+  logical, intent(in) :: safe
+  logical, intent(in) :: redstep
+  
+  integer, dimension(1:3,1:2,1:8) :: iii, jjj
+  integer, dimension(1:3,1:4)     :: ired, iblack
+  
+  integer ,dimension(1:nvector)::igrid_amr,igrid_mg,icell_mg,icell_mg_ok
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr_ok,igrid_nbor_mg_ok,cpu_nbor_amr_ok
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  real(dp),dimension(1:nvector)::nb_sum,weight
 
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
-   integer, dimension(1:3,1:4)     :: ired, iblack
+  real(dp) :: dx2
+  integer  :: ngrid, ncache
+  integer  :: i, ind, ind0, idim, inbor
+  integer  :: iskip, igrid, ncell_ok
+  integer  :: igshift, icell_nbor_mg, icpu_nbor_amr
+  real(dp) :: dtwondim = (twondim)
+  
+  ! Set constants
+  dx2  = (0.5d0**ilevel)**2
+  
+  ired  (1,1:4)=(/1,0,0,0/)
+  iblack(1,1:4)=(/2,0,0,0/)
+  ired  (2,1:4)=(/1,4,0,0/)
+  iblack(2,1:4)=(/2,3,0,0/)
+  ired  (3,1:4)=(/1,4,6,7/)
+  iblack(3,1:4)=(/2,3,5,8/)
+  
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+  
+  ! Loop over active grids
+  ncache=active_mg(myid,ilevel)%ngrid
+!!!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind0,ind,iskip,igrid,icell_mg,icell_mg_ok,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,
+!!igrid_amr,igrid_mg,ind_left,ind_right,ncell_ok,igrid_nbor_mg,igrid_nbor_amr_ok,cpu_nbor_amr_ok,igrid_nbor_mg_ok,icell_nbor_mg,icpu_nbor_amr,weight) FIRSTPRIVATE(ired,iblack,ngrid,ilevel,myid,iii,jjj,dx2,dtwondim,safe,redstep,ncache)
+!$OMP PARALLEL DEFAULT(private) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) FIRSTPRIVATE(ired,iblack,ngrid,ilevel,myid,iii,jjj,dx2,dtwondim,safe,redstep,ncache)
+!$OMP DO SCHEDULE(DYNAMIC) 
+  do igrid=1,ncache,nvector
+     
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        igrid_amr(i)=active_mg(myid,ilevel)%igrid(igrid+i-1)
+        igrid_mg(i)=igrid+i-1
+     end do
 
-   real(dp) :: dx2, nb_sum, weight
-   integer  :: ngrid
-   integer  :: ind, ind0, igrid_mg, idim, inbor
-   integer  :: igrid_amr, cpu_nbor_amr 
-   integer  :: iskip_mg, igrid_nbor_mg, icell_mg, icell_nbor_mg
-   integer  :: igshift, igrid_nbor_amr
-   real(dp) :: dtwondim = (twondim)
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igrid_nbor_amr(i,0)=igrid_amr(i)
+        cpu_nbor_amr(i,0)=myid
+        igrid_nbor_mg(i,0)=lookup_mg(igrid_amr(i))
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(igrid_amr(i),2*idim-1)
+           ind_right(i,idim)=nbor(igrid_amr(i),2*idim  )
+           igrid_nbor_amr(i,2*idim-1)=son(ind_left (i,idim))
+           igrid_nbor_amr(i,2*idim  )=son(ind_right(i,idim))
+           cpu_nbor_amr(i,2*idim-1)=cpu_map(ind_left (i,idim))
+           cpu_nbor_amr(i,2*idim  )=cpu_map(ind_right(i,idim))
+           igrid_nbor_mg(i,2*idim-1)=lookup_mg(igrid_nbor_amr(i,2*idim-1))
+           igrid_nbor_mg(i,2*idim  )=lookup_mg(igrid_nbor_amr(i,2*idim  ))
+        end do
+     end do
 
-   ! Set constants
-   dx2  = (0.5d0**ilevel)**2
+     ! Only half of the cells for a red or black sweep
+     do ind0=1,twotondim/2    
+        if(redstep) then
+           ind=ired  (ndim,ind0)
+        else
+           ind=iblack(ndim,ind0)
+        end if
+     
+        ! Compute central cell index
+        iskip=(ind-1)*ncache
+        do i=1,ngrid
+           icell_mg(i)=iskip+igrid_mg(i)
+        end do
 
-   ired  (1,1:4)=(/1,0,0,0/)
-   iblack(1,1:4)=(/2,0,0,0/)
-   ired  (2,1:4)=(/1,4,0,0/)
-   iblack(2,1:4)=(/2,3,0,0/)
-   ired  (3,1:4)=(/1,4,6,7/)
-   iblack(3,1:4)=(/2,3,5,8/)
+        ! Gather inner cells
+        ncell_ok=0
+        do i=1,ngrid
+           if( .not. btest(active_mg(myid,ilevel)%f(icell_mg(i),1),0))then
+              ncell_ok=ncell_ok+1
+              icell_mg_ok(ncell_ok)=icell_mg(i)
+              igrid_nbor_mg_ok(ncell_ok,0:twondim)=igrid_nbor_mg(i,0:twondim)
+              cpu_nbor_amr_ok(ncell_ok,0:twondim)=cpu_nbor_amr(i,0:twondim)
+           endif
+        end do
 
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+        ! Use max-speed "dumb" Gauss-Seidel for "inner" cells
+        ! Those cells are active, have all their neighbors active
+        ! and all neighbors are in the AMR+MG trees
+        nb_sum(1:ncell_ok)=0.
+        do inbor=1,2
+           do idim=1,ndim
+              ! Get neighbor grid shift
+              igshift = iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 icpu_nbor_amr=cpu_nbor_amr_ok(i,igshift)
+                 icell_nbor_mg=igrid_nbor_mg_ok(i,igshift)+((jjj(idim,inbor,ind)-1)*active_mg(icpu_nbor_amr,ilevel)%ngrid)
+                 nb_sum(i)=nb_sum(i)+active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
+              end do
+           end do
+        end do
+        do i=1,ncell_ok
+           active_mg(myid,ilevel)%u(icell_mg_ok(i),1)=(nb_sum(i)-dx2*active_mg(myid,ilevel)%u(icell_mg_ok(i),2))/dtwondim
+        end do
 
-   ngrid=active_mg(myid,ilevel)%ngrid
+        ! Gather boundary cells
+        ncell_ok=0
+        do i=1,ngrid
+           if(btest(active_mg(myid,ilevel)%f(icell_mg(i),1),0)) then
+              if (active_mg(myid,ilevel)%u(icell_mg(i),4)>0.0) then
+                 if (.not. safe .or.  active_mg(myid,ilevel)%u(icell_mg(i),4)>=1.0) then
+                    ncell_ok=ncell_ok+1
+                    icell_mg_ok(ncell_ok)=icell_mg(i)
+                    igrid_nbor_amr_ok(ncell_ok,0:twondim)=igrid_nbor_amr(i,0:twondim)
+                    igrid_nbor_mg_ok(ncell_ok,0:twondim)=igrid_nbor_mg(i,0:twondim)
+                    cpu_nbor_amr_ok(ncell_ok,0:twondim)=cpu_nbor_amr(i,0:twondim)
+                 endif
+              endif
+           endif
+        end do
 
-   ! Loop over cells, with red/black ordering
-!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,son,cpu_map,nbor,lookup_mg) PRIVATE(ind0,ind,iskip_mg,igrid_mg,igrid_amr,icell_mg,nb_sum,inbor,idim,igshift,igrid_nbor_amr,cpu_nbor_amr,igrid_nbor_mg,icell_nbor_mg,weight) FIRSTPRIVATE(ired,iblack,ngrid,ilevel,myid,iii,jjj,dx2,dtwondim,safe,redstep)
-   do ind0=1,twotondim/2      ! Only half of the cells for a red or black sweep
-      if(redstep) then
-         ind = ired  (ndim,ind0)
-      else
-         ind = iblack(ndim,ind0)
-      end if
+        ! Use the finer "solve" Gauss-Seidel near boundaries,
+        ! with all necessary checks
+        nb_sum(1:ncell_ok)=0.
+        weight(1:ncell_ok)=0.
+        do inbor=1,2
+           do idim=1,ndim
+              ! Get neighbor grid shift
+              igshift = iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 ! In case neighbor grid does not exist
+                 if(igrid_nbor_amr_ok(i,igshift)==0) then
+                    ! No neighbor cell, set mask=-1 on nonexistent neighbor cell
+                    weight(i)=weight(i)-1.0d0/active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                 else
+                    if(igrid_nbor_mg_ok(i,igshift)<=0)then
+                       ! No MG neighbor
+                       weight(i)=weight(i)-1.0d0/active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                    else
+                       ! Fetch neighbor cell
+                       icpu_nbor_amr=cpu_nbor_amr_ok(i,igshift)
+                       icell_nbor_mg=igrid_nbor_mg_ok(i,igshift)+((jjj(idim,inbor,ind)-1)*active_mg(icpu_nbor_amr,ilevel)%ngrid)
+                       if(active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
+                          ! Neighbor cell is masked
+                          weight(i)=weight(i)+ &
+                               & active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,4) &
+                               & /active_mg(myid,ilevel)%u(icell_mg_ok(i),4)
+                       else
+                          ! Neighbor cell is active, increment neighbor sum
+                          nb_sum(i)=nb_sum(i)+active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
+                       end if
+                    endif
+                 end if
+              end do
+           end do
+        end do
+        do i=1,ncell_ok
+           active_mg(myid,ilevel)%u(icell_mg_ok(i),1)=(nb_sum(i)-dx2*active_mg(myid,ilevel)%u(icell_mg_ok(i),2))/(dtwondim-weight(i))
+        end do
 
-      iskip_mg  = (ind-1)*ngrid
-
-      ! Loop over active grids
-!$OMP DO SCHEDULE(DYNAMIC)
-      do igrid_mg=1,ngrid
-         igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
-         icell_mg  = iskip_mg  + igrid_mg
-
-         nb_sum=0.0d0                       ! Sum of phi on neighbors
-         ! Read scan flag
-         if(.not. btest(active_mg(myid,ilevel)%f(icell_mg,1),0)) then
-            ! Use max-speed "dumb" Gauss-Seidel for "inner" cells
-            ! Those cells are active, have all their neighbors active
-            ! and all neighbors are in the AMR+MG trees
-            do inbor=1,2
-               do idim=1,ndim
-                  ! Get neighbor grid shift
-                  igshift = iii(idim,inbor,ind)
-                  ! Get neighbor grid
-                  if(igshift==0) then
-                     igrid_nbor_amr = igrid_amr
-                     cpu_nbor_amr   = myid
-                  else
-                     igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                     cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
-                  end if
-                  ! Get neighbor cpu
-                  igrid_nbor_mg  = lookup_mg(igrid_nbor_amr)
-                  icell_nbor_mg  = igrid_nbor_mg + &
-                      (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
-                  nb_sum = nb_sum + &
-                      active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
-               end do
-            end do
-            ! Update the potential, solving for potential on icell_amr
-            active_mg(myid,ilevel)%u(icell_mg,1)=(nb_sum-dx2*active_mg(myid,ilevel)%u(icell_mg,2))/dtwondim
-         else
-            ! Use the finer "solve" Gauss-Seidel near boundaries,
-            ! with all necessary checks
-
-            if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) cycle
-            if(safe .and. active_mg(myid,ilevel)%u(icell_mg,4)<1.0) cycle
-
-            weight=0.0d0                       ! Central weight for "Solve G-S"
-
-            do inbor=1,2
-               do idim=1,ndim
-                  ! Get neighbor grid shift
-                  igshift = iii(idim,inbor,ind)
-
-                  ! Get neighbor grid
-                  if(igshift==0) then
-                     igrid_nbor_amr = igrid_amr
-                     cpu_nbor_amr   = myid
-                  else
-                     igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                     cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
-                  end if
-
-                  if(igrid_nbor_amr==0) then
-                     ! No neighbor cell, set mask=-1 on nonexistent neighbor cell
-                     weight = weight - 1.0d0/active_mg(myid,ilevel)%u(icell_mg,4)
-                  else
-                     ! Fetch neighbor cell
-                     igrid_nbor_mg  = lookup_mg(igrid_nbor_amr)
-                     if(igrid_nbor_mg<=0) then
-                        ! No MG neighbor
-                        weight = weight - 1.0d0/active_mg(myid,ilevel)%u(icell_mg,4)
-                     else
-                        icell_nbor_mg  = igrid_nbor_mg  + (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
-
-                        if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
-                           ! Neighbor cell is masked
-                           weight = weight + &
-                                 active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)/active_mg(myid,ilevel)%u(icell_mg,4)
-                        else
-                           ! Neighbor cell is active, increment neighbor sum
-                           nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
-                        end if
-                     end if
-                  end if
-               end do
-            end do
-            ! Update the potential, solving for potential on icell_amr
-            active_mg(myid,ilevel)%u(icell_mg,1) = (nb_sum - dx2*active_mg(myid,ilevel)%u(icell_mg,2)) &
-                     / (dtwondim - weight)
-         end if
-      end do
-!$OMP END DO
-   end do
+     end do
+     ! End loop over cells
+  end do
 !$OMP END PARALLEL
 end subroutine gauss_seidel_mg_coarse
 
@@ -576,7 +665,9 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
    icoarselevel=ifinelevel-1
 
    ! Loop over fine cells of the myid active comm
-!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(ind_f_cell,iskip_f_mg,igrid_f_mg,icell_f_mg,igrid_f_amr,icell_c_amr,ind_c_cell,igrid_c_amr,cpu_amr,igrid_c_mg,iskip_c_mg,icell_c_mg,res) FIRSTPRIVATE(myid,ifinelevel,icoarselevel,ngridmax,ncoarse,dtwotondim)
+!!!$OMP PARALLEL DEFAULT(NONE) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(ind_f_cell,iskip_f_mg,igrid_f_mg,icell_f_mg,igrid_f_amr,icell_c_amr,ind_c_cell,igrid_c_amr,cpu_amr,
+!!!igrid_c_mg,iskip_c_mg,icell_c_mg,res) FIRSTPRIVATE(myid,ifinelevel,icoarselevel,ngridmax,ncoarse,dtwotondim)
+!$OMP PARALLEL DEFAULT(private) SHARED(active_mg,father,cpu_map,lookup_mg) FIRSTPRIVATE(myid,ifinelevel,icoarselevel,ngridmax,ncoarse,dtwotondim)
    do ind_f_cell=1,twotondim
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
@@ -656,7 +747,9 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active_mg(myid,ifinelevel)%ngrid
-!$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(DYNAMIC) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(istart,nbatch,i,igrid_f_amr,icell_amr,cpu_amr,nbors_father_cells,nbors_father_grids,ind_f,iskip_f_amr,iskip_f_mg,corr,ind_average,ind_father,coeff,icell_f_mg,icell_c_amr,ind_c,igrid_c_amr,igrid_c_mg,cpu_c_amr,icell_c_mg) FIRSTPRIVATE(ngrid_f,ifinelevel,bbb,ccc,icoarselevel,ncoarse,ngridmax,myid)
+!!!!$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(DYNAMIC) SHARED(active_mg,father,cpu_map,lookup_mg) PRIVATE(istart,nbatch,i,igrid_f_amr,icell_amr,cpu_amr,nbors_father_cells,nbors_father_grids,ind_f,
+!!!iskip_f_amr,iskip_f_mg,corr,ind_average,ind_father,coeff,icell_f_mg,icell_c_amr,ind_c,igrid_c_amr,igrid_c_mg,cpu_c_amr,icell_c_mg) FIRSTPRIVATE(ngrid_f,ifinelevel,bbb,ccc,icoarselevel,ncoarse,ngridmax,myid)
+!$OMP PARALLEL DO DEFAULT(private) SCHEDULE(DYNAMIC) SHARED(active_mg,father,cpu_map,lookup_mg) FIRSTPRIVATE(ngrid_f,ifinelevel,bbb,ccc,icoarselevel,ncoarse,ngridmax,myid)
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids
@@ -726,79 +819,124 @@ end subroutine interpolate_and_correct_coarse
 ! ------------------------------------------------------------------------
 ! Flag setting
 ! ------------------------------------------------------------------------
-
 subroutine set_scan_flag_coarse(ilevel)
-   use amr_commons
-   use poisson_commons
-   implicit none
-
-   integer, intent(in) :: ilevel
-
-   integer :: ind, ngrid, scan_flag
-   integer :: igrid_mg, inbor, idim, igshift
-   integer :: igrid_amr, igrid_nbor_amr, cpu_nbor_amr, icell_nbor_amr
-
-   integer :: iskip_mg, icell_mg, igrid_nbor_mg, icell_nbor_mg
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
-
-   ngrid = active_mg(myid,ilevel)%ngrid
-   if(ngrid==0) return
-
-   ! Loop over cells and set coarse SCAN flag
- !$OMP PARALLEL DEFAULT(none) SHARED(active_mg,son,nbor,cpu_map,lookup_mg) PRIVATE(ind,iskip_mg,igrid_mg,igrid_amr,icell_mg,scan_flag,idim,igshift,inbor,igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr,icell_nbor_mg) FIRSTPRIVATE(myid,ilevel,ngrid,iii,jjj)
-  do ind=1,twotondim
-      iskip_mg  = (ind-1)*ngrid
+  use amr_commons
+  use poisson_commons
+  implicit none
+  
+  integer, intent(in) :: ilevel
+  
+  integer :: i, ind, ngrid, ncache
+  integer :: inbor, idim, igshift
+  integer :: icpu_nbor_amr, icell_nbor_mg
+  
+  integer :: igrid, iskip, ncell_ok
+  
+  integer ,dimension(1:nvector)::igrid_amr,igrid_mg,icell_mg,icell_mg_ok
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr
+  integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr_ok,igrid_nbor_mg_ok,cpu_nbor_amr_ok
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  integer ,dimension(1:nvector)::scan_flag
+  
+  integer, dimension(1:3,1:2,1:8) :: iii, jjj
+  
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+  
+  ncache=active_mg(myid,ilevel)%ngrid
+  if(ncache==0) return
+  
+  ! Loop over cells and set coarse SCAN flag
+!!!!$OMP PARALLEL DEFAULT(none) SHARED(active_mg,son,nbor,cpu_map,lookup_mg) PRIVATE(i,ind,ind_left,ind_right,ncell_ok,iskip,igrid,igrid_mg,igrid_amr,icell_mg,icell_mg_ok,scan_flag,idim,
+!!!igshift,inbor,igrid_nbor_amr,igrid_nbor_amr_ok,igrid_nbor_mg,igrid_nbor_mg_ok,cpu_nbor_amr,cpu_nbor_amr_ok,icell_nbor_mg,icpu_nbor_amr) FIRSTPRIVATE(myid,ilevel,ngrid,iii,jjj,ncache)
+!$OMP PARALLEL DEFAULT(private) SHARED(active_mg,son,nbor,cpu_map,lookup_mg) FIRSTPRIVATE(myid,ilevel,ngrid,iii,jjj,ncache)
 !$OMP DO SCHEDULE(DYNAMIC) 
-      do igrid_mg=1,ngrid
-         igrid_amr = active_mg(myid,ilevel)%igrid(igrid_mg)
-         icell_mg  = iskip_mg  + igrid_mg
-
-         if(active_mg(myid,ilevel)%u(icell_mg,4)==1d0) then
-            scan_flag=0       ! Init flag to 'no scan needed'
-            scan_flag_loop: do inbor=1,2
-               do idim=1,ndim
-                  igshift = iii(idim,inbor,ind)
-                  if(igshift==0) then
-                     igrid_nbor_amr = igrid_amr
-                     cpu_nbor_amr   = myid
-                  else
-                     igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                     cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
-                  end if
-
-                  if(igrid_nbor_amr==0) then
-                     scan_flag=1
-                     exit scan_flag_loop
-                  else
-                     igrid_nbor_mg = lookup_mg(igrid_nbor_amr)
-                     if(igrid_nbor_mg<=0) then
-                        scan_flag=1
-                        exit scan_flag_loop
-                     else
-                        icell_nbor_mg  = igrid_nbor_mg  + &
-                                 (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
-                        if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
-                           scan_flag=1
-                           exit scan_flag_loop
-                        end if
-                     end if
-                  end if
-               end do
-            end do scan_flag_loop
-         else
-            scan_flag=1
-         end if
-         active_mg(myid,ilevel)%f(icell_mg,1)=scan_flag
-      end do
-!$OMP END DO NOWAIT
-   end do
+  do igrid=1,ncache,nvector
+     
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        igrid_amr(i)=active_mg(myid,ilevel)%igrid(igrid+i-1)
+        igrid_mg(i)=igrid+i-1
+     end do
+     
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igrid_nbor_amr(i,0)=igrid_amr(i)
+        cpu_nbor_amr(i,0)=myid
+        igrid_nbor_mg(i,0)=lookup_mg(igrid_amr(i))
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(igrid_amr(i),2*idim-1)
+           ind_right(i,idim)=nbor(igrid_amr(i),2*idim  )
+           igrid_nbor_amr(i,2*idim-1)=son(ind_left (i,idim))
+           igrid_nbor_amr(i,2*idim  )=son(ind_right(i,idim))
+           cpu_nbor_amr(i,2*idim-1)=cpu_map(ind_left (i,idim))
+           cpu_nbor_amr(i,2*idim  )=cpu_map(ind_right(i,idim))
+           igrid_nbor_mg(i,2*idim-1)=lookup_mg(igrid_nbor_amr(i,2*idim-1))
+           igrid_nbor_mg(i,2*idim  )=lookup_mg(igrid_nbor_amr(i,2*idim  ))
+        end do
+     end do
+     
+     ! Loop over cells
+     do ind=1,twotondim
+        
+        ! Compute central cell index
+        iskip=(ind-1)*ncache
+        do i=1,ngrid
+           icell_mg(i)=iskip+igrid_mg(i)
+        end do
+        
+        ! Select flagged cells
+        ncell_ok=0
+        do i=1,ngrid
+           if(active_mg(myid,ilevel)%u(icell_mg(i),4)==1d0)then
+              ncell_ok=ncell_ok+1
+              icell_mg_ok(ncell_ok)=icell_mg(i)
+              igrid_nbor_amr_ok(ncell_ok,0:twondim)=igrid_nbor_amr(i,0:twondim)
+              igrid_nbor_mg_ok(ncell_ok,0:twondim)=igrid_nbor_mg(i,0:twondim)
+              cpu_nbor_amr_ok(ncell_ok,0:twondim)=cpu_nbor_amr(i,0:twondim)
+           else
+              active_mg(myid,ilevel)%f(icell_mg(i),1)=1
+           endif
+        end do
+        
+        ! Init flag to 'no scan needed'
+        scan_flag(1:ncell_ok)=0
+        do inbor=1,2
+           do idim=1,ndim
+              ! Get neighbor grid shift
+              igshift=iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 if(igrid_nbor_amr_ok(i,igshift)==0) then
+                    scan_flag(i)=1
+                 else
+                    if(igrid_nbor_mg_ok(i,igshift)<=0)then
+                       scan_flag(i)=1
+                    else
+                       icpu_nbor_amr=cpu_nbor_amr_ok(i,igshift)
+                       icell_nbor_mg=igrid_nbor_mg_ok(i,igshift)+((jjj(idim,inbor,ind)-1)*active_mg(icpu_nbor_amr,ilevel)%ngrid)
+                       if(active_mg(icpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
+                          scan_flag(i)=1
+                       endif
+                    endif
+                 endif
+              end do
+           end do
+        end do
+        do i=1,ncell_ok
+           active_mg(myid,ilevel)%f(icell_mg_ok(i),1)=scan_flag(i)
+        end do
+        
+     end do
+     ! End loop over cells
+  end do
 !$OMP END PARALLEL 
+  ! End loop over grids
+
 end subroutine set_scan_flag_coarse

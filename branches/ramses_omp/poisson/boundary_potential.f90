@@ -49,7 +49,9 @@ subroutine make_boundary_force(ilevel)
   end do
 
   ! Loop over boundaries
-!$OMP PARALLEL DEFAULT(NONE) SHARED(boundary_type,boundary,son,nbor,f,xg,xc) PRIVATE(ibound,boundary_dir,igrid,ngrid,i,ind,ind_grid,ind_grid_ref,ind_cell_ref,iskip,ind_cell,iskip_ref,ivar,ff,switch,xx,inbor,ind_ref,gs) FIRSTPRIVATE(nboundary,ncache,ilevel,ngridmax,ncoarse,scale,skip_loc,dx_loc)
+!!!$OMP PARALLEL DEFAULT(NONE) SHARED(boundary_type,boundary,son,nbor,f,xg,xc) PRIVATE(ibound,boundary_dir,igrid,ngrid,i,ind,ind_grid,ind_grid_ref,ind_cell_ref,
+!!!iskip,ind_cell,iskip_ref,ivar,ff,switch,xx,inbor,ind_ref,gs) FIRSTPRIVATE(nboundary,ncache,ilevel,ngridmax,ncoarse,scale,skip_loc,dx_loc)
+!$OMP PARALLEL DEFAULT(private) SHARED(boundary_type,boundary,son,nbor,f,xg,xc) FIRSTPRIVATE(nboundary,ncache,ilevel,ngridmax,ncoarse,scale,skip_loc,dx_loc)
   do ibound=1,nboundary
 
      ! Compute direction of reference neighbors

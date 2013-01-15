@@ -40,7 +40,7 @@ subroutine multigrid_fine(ilevel)
 
    integer  :: ifine, i, iter, info, icpu
    real(kind=8) :: res_norm2, i_res_norm2, i_res_norm2_tot, res_norm2_tot
-   real(kind=8) :: err, last_err
+   real(kind=8) :: err, last_err, cgt1, cgt2
 
    logical :: allmasked, allmasked_tot
 
@@ -91,11 +91,12 @@ subroutine multigrid_fine(ilevel)
       call make_virtual_mg_dp(4,ilevel-1)
 
       ! Convert volume fraction to mask value
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ilevel,ncpu) PRIVATE(icpu)
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
          active_mg(icpu,ilevel-1)%u(:,4)=2d0*active_mg(icpu,ilevel-1)%u(:,4)-1d0
       end do
-
+!$OMP END PARALLEL DO 
       ! Check active mask state
       if(active_mg(myid,ilevel-1)%ngrid>0) then
          allmasked=(maxval(active_mg(myid,ilevel-1)%u(:,4))<=0d0)
@@ -125,11 +126,12 @@ subroutine multigrid_fine(ilevel)
          call make_virtual_mg_dp(4,ifine-1)
 
          ! Convert volume fraction to mask value
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ifine,ncpu) PRIVATE(icpu)
          do icpu=1,ncpu
             if(active_mg(icpu,ifine-1)%ngrid==0) cycle
             active_mg(icpu,ifine-1)%u(:,4)=2d0*active_mg(icpu,ifine-1)%u(:,4)-1d0
          end do
-
+!$OMP END PARALLEL DO 
          ! Check active mask state
          if(active_mg(myid,ifine-1)%ngrid>0) then
             allmasked=(maxval(active_mg(myid,ifine-1)%u(:,4))<=0d0)
@@ -189,24 +191,28 @@ subroutine multigrid_fine(ilevel)
       end if
 
       ! First clear the rhs in coarser reception comms
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ilevel,ncpu) PRIVATE(icpu)
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
          active_mg(icpu,ilevel-1)%u(:,2)=0.0d0
       end do
+!$OMP END PARALLEL DO
+
       ! Restrict and do reverse-comm
       call restrict_residual_fine_reverse(ilevel)
       call make_reverse_mg_dp(2,ilevel-1) ! communicate rhs
 
       if(ilevel>1) then
          ! Reset correction at upper level before solve
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ilevel,ncpu) PRIVATE(icpu)
          do icpu=1,ncpu
             if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
             active_mg(icpu,ilevel-1)%u(:,1)=0.0d0
          end do
+!$OMP END PARALLEL DO
 
          ! Multigrid-solve the upper level
          call recursive_multigrid_coarse(ilevel-1, safe_mode(ilevel))
-
          ! Interpolate coarse solution and correct fine solution
          call interpolate_and_correct_fine(ilevel)
          call make_virtual_fine_dp(phi(1),ilevel)   ! Communicate phi
@@ -214,6 +220,9 @@ subroutine multigrid_fine(ilevel)
 
       ! Post-smoothing
       do i=1,ngs_fine
+#ifndef WITHOUTMPI
+         cgt1=mpi_wtime()
+#endif
          call gauss_seidel_mg_fine(ilevel,.true. )  ! Red step
          call make_virtual_fine_dp(phi(1),ilevel)   ! Communicate phi
          call gauss_seidel_mg_fine(ilevel,.false.)  ! Black step
@@ -256,12 +265,12 @@ subroutine multigrid_fine(ilevel)
    ! ---------------------------------------------------------------------
    ! Cleanup MG levels after solve complete
    ! ---------------------------------------------------------------------
+!$OMP PARALLEL DO DEFAULT(NONE) SCHEDULE(DYNAMIC) PRIVATE(ifine) FIRSTPRIVATE(ilevel)
    do ifine=1,ilevel-1
       call cleanup_mg_level(ifine)
    end do
-
+!$OMP END PARALLEL DO
 end subroutine multigrid_fine
-
 
 ! ########################################################################
 ! ########################################################################
@@ -317,19 +326,23 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
 
 
       ! First clear the rhs in coarser reception comms
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ifinelevel,ncpu) PRIVATE(icpu)
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
          active_mg(icpu,ifinelevel-1)%u(:,2)=0.0d0
       end do
+!$OMP END PARALLEL DO
       ! Restrict and do reverse-comm
       call restrict_residual_coarse_reverse(ifinelevel)
       call make_reverse_mg_dp(2,ifinelevel-1) ! communicate rhs
 
       ! Reset correction from upper level before solve
+!$OMP PARALLEL DO DEFAULT(NONE) IF(ncpu > 10*nthreads) SCHEDULE(DYNAMIC) SHARED(active_mg,ifinelevel,ncpu) PRIVATE(icpu)
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
          active_mg(icpu,ifinelevel-1)%u(:,1)=0.0d0
       end do
+!$OMP END PARALLEL DO
 
       ! Multigrid-solve the upper level
       call recursive_multigrid_coarse(ifinelevel-1, safe)
@@ -350,15 +363,11 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
 
 end subroutine recursive_multigrid_coarse
 
-
 ! ########################################################################
 ! ########################################################################
 ! ########################################################################
 ! ########################################################################
 
-! ------------------------------------------------------------------------
-! Multigrid communicator building
-! ------------------------------------------------------------------------
 subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    use amr_commons
    use poisson_commons
@@ -379,9 +388,9 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    integer :: nact_tot, nreq_tot, nreq_tot2
    integer, dimension(1:ncpu) :: nreq, nreq2
 
-   integer, dimension(1:nvector), save :: ind_cell_father
-   integer, dimension(1:nvector,1:twotondim),   save :: nbors_father_grids
-   integer, dimension(1:nvector,1:threetondim), save :: nbors_father_cells
+   integer, dimension(1:nvector) :: ind_cell_father
+   integer, dimension(1:nvector,1:twotondim)  :: nbors_father_grids
+   integer, dimension(1:nvector,1:threetondim):: nbors_father_cells
 
    type(communicator), dimension(1:ncpu) :: comm_send, comm_receive
    type(communicator), dimension(1:ncpu) :: comm_send2, comm_receive2
@@ -391,6 +400,10 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    integer :: countrecv, countsend
    integer :: tag = 777
 
+! OMP: keep loops here serial because either mpi comms are going on or loops are 
+! very small, or have intrinsically serial structures with sequential increase of
+! counters to access arrays. A rewrite to make the first loop omp par failed in terms
+! of performance
 
    icoarselevel=ifinelevel-1
 
@@ -442,7 +455,6 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
          end do
       end do
    end do
-
 
    ! ---------------------------------------------------------------------
    ! STAGE 2 : Coarse grid MG activation request
@@ -764,7 +776,6 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
 
 end subroutine build_parent_comms_mg
 
-
 ! ########################################################################
 ! ########################################################################
 ! ########################################################################
@@ -839,6 +850,10 @@ subroutine make_fine_mask(ilevel)
    integer  :: igrid_amr, icell_amr, iskip_amr
 
    ngrid=active(ilevel)%ngrid
+! CHECK: OTHER CONSTRUCT BETTER, maybe use SECTIONS, but thne only 3 threads???
+
+!$OMP PARALLEL DEFAULT(NONE) SHARED(active,f,reception,boundary) PRIVATE(ind,iskip_amr,igrid_mg,igrid_amr,icell_amr,icpu,ibound) FIRSTPRIVATE(ilevel,ncoarse,ngridmax,ngrid,ncpu,nboundary)
+!$OMP DO
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
       do igrid_mg=1,ngrid
@@ -848,7 +863,8 @@ subroutine make_fine_mask(ilevel)
          f(icell_amr,3) = 1.0d0
       end do
    end do
-
+!$OMP END DO NOWAIT
+!$OMP DO
    do icpu=1,ncpu
       ngrid=reception(icpu,ilevel)%ngrid
       do ind=1,twotondim
@@ -861,7 +877,8 @@ subroutine make_fine_mask(ilevel)
          end do
       end do
    end do
-
+!$OMP END DO NOWAIT
+!$OMP DO
    do ibound=1,nboundary
       ngrid=boundary(ibound,ilevel)%ngrid
       do ind=1,twotondim
@@ -874,6 +891,8 @@ subroutine make_fine_mask(ilevel)
          end do
       end do
    end do
+!$OMP END DO
+!$OMP END PARALLEL
 
 end subroutine make_fine_mask
 
@@ -899,108 +918,152 @@ end subroutine make_fine_mask
 !
 ! ------------------------------------------------------------------------
 subroutine make_fine_bc_rhs(ilevel)
+  
+  use amr_commons
+  use pm_commons
+  use poisson_commons
+  implicit none
+  integer, intent(in) :: ilevel
+  
+  integer, dimension(1:3,1:2,1:8) :: iii, jjj
+  
+  ! Arrays for vectorized interpol_phi
+  real(dp), dimension(1:nvector,1:twotondim) :: phi_int
+  integer ,dimension(1:nvector)::ind_int
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,ind_grid_ok,ind_cell_ok
+  integer ,dimension(1:nvector,0:twondim)::igridn,igridn_ok
+  integer ,dimension(1:nvector,0:twondim)::icelln,icelln_ok
+  integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
+  real(dp),dimension(1:nvector)::nb_mask, nb_phi
 
-   use amr_commons
-   use pm_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in) :: ilevel
+  real(dp) :: dx, oneoverdx2, phi_b, w
+  integer  :: ngrid, ncache, ncell_ok
+  integer  :: i, ind, igrid, idim, inbor
+  integer  :: igrid_amr, icell_amr, iskip
+  integer  :: igshift, igrid_nbor_amr, icell_nbor_amr
+  integer  :: ifathercell_nbor_amr
+  
+  integer  :: nx_loc
+  real(dp) :: scale, fourpi
+  
+  ! Set constants
+  nx_loc = icoarse_max-icoarse_min+1
+  scale  = boxlen/dble(nx_loc)
+  fourpi = 4.D0*ACOS(-1.0D0)*scale
+  if(cosmo) fourpi = 1.5D0*omega_m*aexp*scale
+  
+  dx  = 0.5d0**ilevel
+  oneoverdx2 = 1.0d0/(dx*dx)
+  
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+  
+  ! Loop over active grids
+  ncache=active(ilevel)%ngrid
+!!!!$OMP PARALLEL DEFAULT(NONE) SHARED(active,ilevel,f,rho,father,son,nbor,phi) PRIVATE(i,ind,iskip,ngrid,igrid,igrid_amr,icell_amr,idim,inbor,igshift,igrid_nbor_amr,ncell_ok,ind_grid,ind_cell,ind_left,ind_right,igridn,
+!!!icelln,icelln_ok,igridn_ok,ind_cell_ok,ind_grid_ok,nb_mask,ind_int,phi_int,nb_phi,w,phi_b,icell_nbor_amr) FIRSTPRIVATE(ncoarse,ngridmax,rho_tot,iii,jjj,oneoverdx2,fourpi,ncache)
+!$OMP PARALLEL DEFAULT(private) SHARED(active,ilevel,f,rho,father,son,nbor,phi) FIRSTPRIVATE(ncoarse,ngridmax,rho_tot,iii,jjj,oneoverdx2,fourpi,ncache)
+!$OMP DO SCHEDULE(DYNAMIC) 
+  do igrid=1,ncache,nvector
 
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igridn(i,0)=ind_grid(i)
+        icelln(i,0)=father(ind_grid(i))
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
+           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
+           icelln(i,2*idim-1)=ind_left (i,idim)
+           icelln(i,2*idim  )=ind_right(i,idim)
+           igridn(i,2*idim-1)=son(ind_left (i,idim))
+           igridn(i,2*idim  )=son(ind_right(i,idim))
+        end do
+     end do
+     
+     ! Loop over cells
+     do ind=1,twotondim        
+        
+        ! Compute central cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        
+        ! Init BC-modified RHS to rho - rho_tot :
+        do i=1,ngrid
+           f(ind_cell(i),2) = fourpi*(rho(ind_cell(i)) - rho_tot)
+        end do
+        
+        ! Gather unmasked cells
+        ncell_ok=0
+        do i=1,ngrid
+           if(f(ind_cell(i),3)>0)then
+              ncell_ok=ncell_ok+1
+              ind_cell_ok(ncell_ok)=ind_cell(i)
+              ind_grid_ok(ncell_ok)=ind_grid(i)
+              icelln_ok(ncell_ok,0:twondim)=icelln(i,0:twondim)
+              igridn_ok(ncell_ok,0:twondim)=igridn(i,0:twondim)
+           endif
+        end do
+        
+        nb_phi(1:ncell_ok)=0.
+        nb_mask(1:ncell_ok)=0.
+        do idim=1,ndim
+           do inbor=1,2
+              ! Get neighbor grid shift
+              igshift = iii(idim,inbor,ind)
+              do i=1,ncell_ok
+                 igrid_nbor_amr=igridn_ok(i,igshift)
+                 ! In case neighbor grid does not exist
+                 if(igrid_nbor_amr==0) then
+                    ! No neighbor cell.
+                    nb_mask(i)=-1.0
+                    ! Interpolate from upper level
+                    ind_int(1)=icelln_ok(i,igshift)
+                    call interpol_phi2(ind_int,phi_int,1,ilevel)
+                    nb_phi(i) = phi_int(1,jjj(idim,inbor,ind))
+                 else
+                    ! Fetch neighbor cell
+                    icell_nbor_amr=igrid_nbor_amr+(ncoarse+(jjj(idim,inbor,ind)-1)*ngridmax)
+                    nb_mask(i)=f(icell_nbor_amr,3)
+                    if(nb_mask(i)<=0.0) then
+                       ! Neighbor cell is masked
+                       nb_phi(i)=phi(icell_nbor_amr)
+                    endif
+                 end if
+              end do
+              ! phi(#) interpolated with mask:
+              do i=1,ncell_ok
+                 if(nb_mask(i)<=0)then
+                    w = nb_mask(i)/(nb_mask(i)-f(ind_cell_ok(i),3)) ! Linear parameter
+                    phi_b = ((1.0d0-w)*nb_phi(i) + w*phi(ind_cell_ok(i)))
+                    ! Increment correction for current cell
+                    f(ind_cell_ok(i),2) = f(ind_cell_ok(i),2) - 2.0d0*oneoverdx2*phi_b
+                 endif
+              end do
+           end do
+        end do
+           
+     end do
+     ! End loop over cells
 
-   real(dp) :: dx, oneoverdx2, phi_b, nb_mask, nb_phi, w
-
-   ! Arrays for vectorized interpol_phi
-   real(dp), dimension(1:nvector,1:twotondim) :: phi_int
-   integer,  dimension(1:nvector) :: ind_cell
-
-   integer  :: ngrid
-   integer  :: ind, igrid_mg, idim, inbor
-   integer  :: igrid_amr, icell_amr, iskip_amr
-   integer  :: igshift, igrid_nbor_amr, icell_nbor_amr
-   integer  :: ifathercell_nbor_amr
-
-   integer  :: nx_loc
-   real(dp) :: scale, fourpi
-
-   ! Set constants
-   nx_loc = icoarse_max-icoarse_min+1
-   scale  = boxlen/dble(nx_loc)
-   fourpi = 4.D0*ACOS(-1.0D0)*scale
-   if(cosmo) fourpi = 1.5D0*omega_m*aexp*scale
-
-   dx  = 0.5d0**ilevel
-   oneoverdx2 = 1.0d0/(dx*dx)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
-
-   ngrid=active(ilevel)%ngrid
-
-   ! Loop over cells
-   do ind=1,twotondim
-      iskip_amr = ncoarse+(ind-1)*ngridmax
-
-      ! Loop over active grids
-      do igrid_mg=1,ngrid
-         igrid_amr = active(ilevel)%igrid(igrid_mg)
-         icell_amr = iskip_amr + igrid_amr
-
-         ! Init BC-modified RHS to rho - rho_tot :
-         f(icell_amr,2) = fourpi*(rho(icell_amr) - rho_tot)
-
-         if(f(icell_amr,3)<=0.0) cycle ! Do not process masked cells
-
-         ! Separate directions 
-         do idim=1,ndim
-            ! Loop over the 2 neighbors
-            do inbor=1,2
-               ! Get neighbor grid shift
-               igshift = iii(idim,inbor,ind)
-
-               ! Get neighbor grid and its parent cell
-               if(igshift==0) then
-                  igrid_nbor_amr = igrid_amr
-                  ifathercell_nbor_amr = father(igrid_nbor_amr)
-               else
-                  igrid_nbor_amr = son(nbor(igrid_amr,igshift))
-                  ifathercell_nbor_amr = nbor(igrid_amr,igshift)
-               end if
-
-               if(igrid_nbor_amr==0) then
-                  ! No neighbor: set mask to -1 and interp. phi
-                  nb_mask = -1.0d0
-
-                  ! Interpolate from upper level
-                  ind_cell(1)=ifathercell_nbor_amr
-                  call interpol_phi(ind_cell,phi_int,1,ilevel)
-                  nb_phi = phi_int(1,jjj(idim,inbor,ind))
-               else
-                  ! Fetch neighbor cell id
-                  icell_nbor_amr = igrid_nbor_amr + (ncoarse + (jjj(idim,inbor,ind)-1)*ngridmax)
-                  ! Check neighbor cell mask
-                  nb_mask = f(icell_nbor_amr,3)
-                  if(nb_mask>0) cycle ! Neighbor cell is active too: cycle
-                  nb_phi  = phi(icell_nbor_amr)
-               end if
-               ! phi(#) interpolated with mask:
-               w = nb_mask/(nb_mask-f(icell_amr,3)) ! Linear parameter
-               phi_b = ((1.0d0-w)*nb_phi + w*phi(icell_amr))
-
-               ! Increment correction for current cell
-               f(icell_amr,2) = f(icell_amr,2) - 2.0d0*oneoverdx2*phi_b
-            end do
-         end do
-      end do
-   end do
+  end do
+!$OMP END PARALLEL
+  ! End loop over grids
 
 end subroutine make_fine_bc_rhs
-
-
 ! ########################################################################
 ! ########################################################################
 ! ########################################################################
@@ -1040,6 +1103,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
   end do
 
   ! Gather emission array
+!OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC,1) SHARED(emission_mg,active_mg) PRIVATE(icpu,j,step,iskip,i,icell) FIRSTPRIVATE(ncpu,ilevel,myid)
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1052,6 +1116,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
         end do
      end if
   end do
+!OMP END PARALLEL DO 
 
   ! Send all messages
   countsend=0
@@ -1188,6 +1253,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Gather emission array
+!OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission_mg,active_mg) PRIVATE(icpu,j,step,iskip,i,icell) FIRSTPRIVATE(ncpu,ilevel,myid)
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1201,6 +1267,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
         end do
      end if
   end do
+!OMP END PARALLEL DO 
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)

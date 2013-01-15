@@ -57,6 +57,7 @@ subroutine force_fine(ilevel)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) SHARED(active,xg,f) PRIVATE(igrid,ngrid,i,ind_grid,ind,iskip,ind_cell,idim,xx,ff) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,xc,skip_loc,scale,dx_loc)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -98,6 +99,7 @@ subroutine force_fine(ilevel)
         ! End loop over cells
 
      end do
+!$OMP END PARALLEL DO
      ! End loop over grids
 
      ! Update boundaries
@@ -115,6 +117,7 @@ subroutine force_fine(ilevel)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) SHARED(active) PRIVATE(igrid,ngrid,i,ind_grid) FIRSTPRIVATE(ncache,ilevel)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -123,6 +126,7 @@ subroutine force_fine(ilevel)
         ! Compute gradient of potential
         call gradient_phi(ind_grid,ngrid,ilevel)
      end do
+!$OMP END PARALLEL DO
      ! End loop over grids
 
      ! Update boundaries
@@ -144,6 +148,7 @@ subroutine force_fine(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) SHARED(active,rho,son,f) PRIVATE(igrid,ngrid,i,ind_grid,ind,ind_cell,iskip,idim) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,fact) REDUCTION(+:epot_loc) REDUCTION(MAX:rho_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -171,6 +176,7 @@ subroutine force_fine(ilevel)
      end do
      ! End loop over cells
   end do
+!$OMP END PARALLEL DO
   ! End loop over grids
 
 #ifndef WITHOUTMPI

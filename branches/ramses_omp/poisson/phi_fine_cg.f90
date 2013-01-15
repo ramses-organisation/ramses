@@ -272,8 +272,7 @@ subroutine cmp_residual_cg(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
-!$OMP PARALLEL DEFAULT(none) SHARED(active,nbor,son,phi,f,rho) PRIVATE(igrid,ngrid,i,ind_grid,igridn,idim,ind_left,ind_right,phi_left,phi_right,ind,id1,ig1,ih1,id2,ig2,ih2,phig,phid,iskip,ind_cell,residu) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,iii,jjj,oneoversix,fact,rho_tot)
-!$OMP DO
+!!!$OMP DO
  do igrid=1,ncache,nvector
 
      ! Gather nvector grids
@@ -361,7 +360,7 @@ subroutine cmp_residual_cg(ilevel)
 
   end do
   ! End loop over grids
-!$OMP END PARALLEL
+!!!$OMP END PARALLEL
 
 end subroutine cmp_residual_cg
 !###########################################################
