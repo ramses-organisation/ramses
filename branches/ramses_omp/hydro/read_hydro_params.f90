@@ -35,8 +35,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
        & ,t_star,n_star,T2_star,g_star,del_star,eps_star &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w &
-       & ,J21,a_spec,z_ave,z_reion,n_sink,bondi,delayed_cooling &
-       & ,self_shielding
+       & ,J21,a_spec,z_ave,z_reion,n_sink,bondi,delayed_cooling
 
   ! Read namelist file
   rewind(1)

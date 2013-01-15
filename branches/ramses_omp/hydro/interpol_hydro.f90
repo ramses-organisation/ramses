@@ -21,6 +21,7 @@ subroutine upload_fine(ilevel)
  
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active,son) PRIVATE(igrid,i,ngrid,ind_grid,ind,iskip,ind_cell,ok,nsplit,ind_split,icell) FIRSTPRIVATE(ncache,ncoarse,ngridmax,ilevel) SCHEDULE(DYNAMIC)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -61,6 +62,7 @@ subroutine upload_fine(ilevel)
      ! End loop over cells
 
   end do
+!$OMP END PARALLEL DO
   ! End loop over grids
 
 111 format('   Entering upload_fine for level',i2)

@@ -5,6 +5,8 @@
 subroutine godunov_fine(ilevel)
   use amr_commons
   use hydro_commons
+! omp TRY !!!
+!$ use omp_lib
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
@@ -21,8 +23,9 @@ subroutine godunov_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
-!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(i,ngrid,igrid,ind_grid) &
-!$OMP SHARED(active) FIRSTPRIVATE(ilevel,ncache) SCHEDULE(DYNAMIC)
+! changed because cray ftn compiler can't parse continued omp lines
+!
+!$OMP PARALLEL DO DEFAULT(NONE) PRIVATE(i,ngrid,igrid,ind_grid) SHARED(active) FIRSTPRIVATE(ilevel,ncache) SCHEDULE(DYNAMIC)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -55,17 +58,23 @@ subroutine set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
+!$OMP PARALLEL DEFAULT(NONE) SHARED(active,unew,uold,divu,enew) PRIVATE(iskip,ind,ivar,i,d,u,v,w,e) FIRSTPRIVATE(ilevel,ncoarse,ngridmax,pressure_fix)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
+!$OMP DO
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$OMP ENDDO NOWAIT
      end do
      if(pressure_fix)then
+!$OMP DO
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
         end do
+!$OMP ENDDO NOWAIT
+!$OMP DO
         do i=1,active(ilevel)%ngrid
            d=uold(active(ilevel)%igrid(i)+iskip,1)
            u=0.0; v=0.0; w=0.0
@@ -75,11 +84,15 @@ subroutine set_unew(ilevel)
            e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
+!$OMP ENDDO  NOWAIT
      end if
   end do
+!$OMP END PARALLEL
 
   ! Set unew to 0 for virtual boundary cells
+!$OMP PARALLEL DEFAULT(NONE) SHARED(unew,reception,divu,enew) PRIVATE(icpu,ind,iskip,ivar,i) FIRSTPRIVATE(ilevel,ncpu,ncoarse,ngridmax,pressure_fix)
   do icpu=1,ncpu
+!$OMP DO
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
@@ -94,7 +107,9 @@ subroutine set_unew(ilevel)
         end do
      end if
   end do
+!$OMP ENDDO NOWAIT
   end do
+!$OMP END PARALLEL
 
 111 format('   Entering set_unew for level ',i2)
 
@@ -123,16 +138,20 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
+!$OMP PARALLEL DEFAULT(NONE) SHARED(uold,unew,enew,divu,dtnew,active) PRIVATE(ind,iskip,ivar,e_kin,e_cons,e_prim,div,d,u,v,w,e_trunc,fact) FIRSTPRIVATE(ilevel,ncoarse,ngridmax,pressure_fix,dx,beta_fix,gamma,hexp)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
-        do i=1,active(ilevel)%ngrid
+      do ivar=1,nvar
+!$OMP DO
+         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$OMP ENDDO NOWAIT
      end do
      if(pressure_fix)then
         fact=(gamma-1.0d0)
-        do i=1,active(ilevel)%ngrid
+!$OMP DO
+         do i=1,active(ilevel)%ngrid
            d=uold(active(ilevel)%igrid(i)+iskip,1)
            u=0.0; v=0.0; w=0.0
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
@@ -148,8 +167,10 @@ subroutine set_uold(ilevel)
               uold(active(ilevel)%igrid(i)+iskip,ndim+2)=e_prim+e_kin
            end if
         end do
+!$OMP ENDDO NOWAIT
      end if
   end do
+!$OMP END PARALLEL
 
 111 format('   Entering set_uold for level ',i2)
 
@@ -252,22 +273,24 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      
      ! If not, interpolate variables from parent cells
-     call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
-     do j=0,twondim
-        do ivar=1,nvar
-           do i=1,nbuffer
-              u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-           end do
-        end do
-        if(poisson)then
-           do idim=1,ndim
+     if(nbuffer > 0) then
+        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
+        do j=0,twondim
+           do ivar=1,nvar
               do i=1,nbuffer
-                 g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
               end do
            end do
-        end if
-     end do
-     call interpol_hydro(u1,g1,u2,g2,nbuffer)
+           if(poisson)then
+              do idim=1,ndim
+                 do i=1,nbuffer
+                    g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 end do
+              end do
+           end if
+        end do
+        call interpol_hydro(u1,g1,u2,g2,nbuffer)
+     endif
 
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
@@ -383,23 +406,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         ! Update conservative variables new state vector
         do ivar=1,nvar
            do i=1,ncache
-              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)+ &
-                   & (flux(i,i3   ,j3   ,k3   ,ivar,idim) &
-                   & -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)+(flux(i,i3   ,j3   ,k3   ,ivar,idim)-flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
            end do
         end do
         if(pressure_fix)then
         ! Update velocity divergence
         do i=1,ncache
-           divu(ind_cell(i))=divu(ind_cell(i))+ &
-                & (tmp(i,i3   ,j3   ,k3   ,1,idim) &
-                & -tmp(i,i3+i0,j3+j0,k3+k0,1,idim))
+           divu(ind_cell(i))=divu(ind_cell(i))+(tmp(i,i3   ,j3   ,k3   ,1,idim)-tmp(i,i3+i0,j3+j0,k3+k0,1,idim))
         end do
         ! Update internal energy
         do i=1,ncache
-           enew(ind_cell(i))=enew(ind_cell(i))+ &
-                & (tmp(i,i3   ,j3   ,k3   ,2,idim) &
-                & -tmp(i,i3+i0,j3+j0,k3+k0,2,idim))
+           enew(ind_cell(i))=enew(ind_cell(i))+ (tmp(i,i3   ,j3   ,k3   ,2,idim)-tmp(i,i3+i0,j3+j0,k3+k0,2,idim))
         end do
         end if
      end do
@@ -437,8 +454,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min,j3max-j0
         do i3=i3min,i3max-i0
            do i=1,nb_noneigh
-              unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
-                   & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
+!$OMP ATOMIC
+              unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar)-flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
            end do
         end do
         end do
@@ -450,8 +467,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
-           divu(ind_buffer(i))=divu(ind_buffer(i)) &
-                & -tmp(ind_cell(i),i3,j3,k3,1,idim)*oneontwotondim
+!$OMP ATOMIC
+           divu(ind_buffer(i))=divu(ind_buffer(i))-tmp(ind_cell(i),i3,j3,k3,1,idim)*oneontwotondim
         end do
      end do
      end do
@@ -461,8 +478,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
-           enew(ind_buffer(i))=enew(ind_buffer(i)) &
-                & -tmp(ind_cell(i),i3,j3,k3,2,idim)*oneontwotondim
+!$OMP ATOMIC
+           enew(ind_buffer(i))=enew(ind_buffer(i))-tmp(ind_cell(i),i3,j3,k3,2,idim)*oneontwotondim
         end do
      end do
      end do
@@ -489,8 +506,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min+j0,j3max
         do i3=i3min+i0,i3max
            do i=1,nb_noneigh
-              unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
-                   & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
+!$OMP ATOMIC
+              unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar)+flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
            end do
         end do
         end do
@@ -502,8 +519,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
-           divu(ind_buffer(i))=divu(ind_buffer(i)) &
-                & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,1,idim)*oneontwotondim
+!$OMP ATOMIC
+           divu(ind_buffer(i))=divu(ind_buffer(i))+tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,1,idim)*oneontwotondim
         end do
      end do
      end do
@@ -513,8 +530,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
-           enew(ind_buffer(i))=enew(ind_buffer(i)) &
-                & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,2,idim)*oneontwotondim
+!$OMP ATOMIC
+           enew(ind_buffer(i))=enew(ind_buffer(i))+tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,2,idim)*oneontwotondim
         end do
      end do
      end do

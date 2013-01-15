@@ -10,17 +10,17 @@ subroutine hydro_flag(ilevel)
   integer::i,j,ncache,nok,ix,iy,iz,iskip
   integer::igrid,ind,idim,ngrid,ivar
   integer::nx_loc
-  integer,dimension(1:nvector)::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim)::igridn
-  integer,dimension(1:nvector,1:twondim)::indn
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim),save::igridn
+  integer,dimension(1:nvector,1:twondim),save::indn
 
-  logical,dimension(1:nvector)::ok
+  logical,dimension(1:nvector),save::ok
 
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector,1:nvar)::uug,uum,uud
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:nvar),save::uug,uum,uud
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -52,6 +52,7 @@ subroutine hydro_flag(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) REDUCTION(+:nflag) PRIVATE(igrid,ngrid,ind_grid,igridn,ind,iskip,i,ind_cell,ok,indn,j,ivar,idim,uug,uum,uud,xx,nok) SHARED(ncache,active,ilevel,ncoarse,ngridmax,nbor,uold,poisson,jeans_refine,r_refine,xg,xc,flag1,scale,skip_loc)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids
@@ -140,7 +141,9 @@ subroutine hydro_flag(ilevel)
      ! End loop over cells
      
   end do
-  ! End loop over grids
+!$OMP END PARALLEL DO
+ 
+ ! End loop over grids
 
 end subroutine hydro_flag
 !#####################################################################

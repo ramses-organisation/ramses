@@ -22,6 +22,7 @@ subroutine cooling_fine(ilevel)
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(none) SHARED(active) PRIVATE(igrid,i,ngrid,ind_grid) FIRSTPRIVATE(ncache,ilevel)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -29,7 +30,7 @@ subroutine cooling_fine(ilevel)
      end do
      call coolfine1(ind_grid,ngrid,ilevel)
   end do
-
+!$OMP END PARALLEL DO
   if(cooling.and.ilevel==levelmin.and.cosmo)then
      if(myid==1)write(*,*)'Computing new cooling table'
      call set_table(dble(aexp))
@@ -56,8 +57,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,t_yso,t_off
   real(dp),dimension(1:nvector,1:ndim)::xx
   integer,dimension(1:nvector)::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector)::nH,T2,delta_T2,ekk
-  real(kind=8),dimension(1:nvector)::T2min,Zsolar,boost
+  real(kind=8),dimension(1:nvector)::nH,T2,delta_T2,ekk,T2min,Zsolar
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -154,22 +154,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i)=nH(i)*scale_nH
      end do
 
-     ! Compute radiation boost factor
-     if(self_shielding)then
-        do i=1,nleaf
-           boost(i)=exp(-nH(i)/0.01)
-        end do
-     else
-        do i=1,nleaf
-           boost(i)=1.0
-        end do
-     endif
-
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
      do i=1,nleaf
         T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+        if(cooling)T2min(i)=T2min(i)+T2_min_fix
      end do
      !==========================================
      ! You can put your own polytrope EOS here
@@ -180,11 +170,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute net cooling at constant nH
      if(cooling)then
-        ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
-           T2(i)=max(T2(i)-T2min(i),T2_min_fix)
+           T2(i)=MAX(T2(i),T2min(i))
         end do
-        call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
+        call solve_cooling(nH,T2,Zsolar,dtcool,delta_T2,nleaf)
      endif
 
      ! Compute rho

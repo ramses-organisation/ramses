@@ -38,11 +38,13 @@ subroutine courant_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
-!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active,son,uold,f) &
-!$OMP FIRSTPRIVATE(ilevel,poisson,ngridmax,vol,dx,ncache,ncoarse) &
-!$OMP PRIVATE(i,ngrid,igrid,ind_grid,ind,ind_cell,iskip,nleaf,ind_leaf,uu,ivar, &
-!$OMP         gg,idim,dt_lev) &
-!$OMP REDUCTION(+: mass_loc, ekin_loc, eint_loc) REDUCTION (min:dt_loc)
+! changed because of line length limit of 255 in cray ftn compiler
+!$OMP PARALLEL DO DEFAULT(PRIVATE) SHARED(active,son,uold,f) FIRSTPRIVATE(ilevel,poisson,ngridmax,vol,dx,ncache,ncoarse) REDUCTION(+: mass_loc, ekin_loc, eint_loc) REDUCTION (min:dt_loc)
+!!!!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active,son,uold,f) &
+!!!!$OMP FIRSTPRIVATE(ilevel,poisson,ngridmax,vol,dx,ncache,ncoarse) &
+!!!!$OMP PRIVATE(i,ngrid,igrid,ind_grid,ind,ind_cell,iskip,nleaf,ind_leaf,uu,ivar, &
+!!!!$OMP         gg,idim,dt_lev) &
+!!!!$OMP REDUCTION(+: mass_loc, ekin_loc, eint_loc) REDUCTION (min:dt_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid

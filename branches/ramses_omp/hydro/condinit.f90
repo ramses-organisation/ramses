@@ -23,7 +23,7 @@ subroutine condinit(x,u,dx,nn)
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
   integer::ivar
-  real(dp),dimension(1:nvector,1:nvar)::q   ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 
   ! Call built-in initial condition generator
   call region_condinit(x,q,dx,nn)

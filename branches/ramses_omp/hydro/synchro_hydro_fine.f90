@@ -12,7 +12,7 @@ subroutine synchro_hydro_fine(ilevel,dteff)
   ! Update velocity  from gravitational acceleration
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
-  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return
@@ -20,6 +20,7 @@ subroutine synchro_hydro_fine(ilevel,dteff)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active,dteff) PRIVATE(igrid,i,ngrid,ind_grid,ind,iskip,ind_cell) FIRSTPRIVATE(ncache,ncoarse,ngridmax,ilevel)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -37,6 +38,7 @@ subroutine synchro_hydro_fine(ilevel,dteff)
      ! End loop over cells
 
   end do
+!$OMP END PARALLEL DO
   ! End loop over grids
 
 111 format('   Entering synchro_hydro_fine for level',i2)
@@ -59,6 +61,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   !-------------------------------------------------------------------
   integer::i,idim,neul=ndim+2,nndim=ndim
   real(dp),dimension(1:nvector)::pp
+!  real(dp),dimension(1:nvector),save::pp
 
   ! Compute internal + magnetic energy
   do i=1,ncell

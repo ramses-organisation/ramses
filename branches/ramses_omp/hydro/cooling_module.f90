@@ -22,6 +22,13 @@
 !          donne le J0 en fonction du redshift dans les modeles Teyssier 
 !          ou Theuns
 !
+! AUTRES ROUTINES POUR LES PROGRAMMES D'ANALYSE
+!
+!    interpolate_table(nH,Tsurmu,n_spec,T,mu) : un utilitaire. 
+!          Sachant que la table est connue, les abondances n_spec, 
+!          la temperature T et le poids moleculaire mu sont interpoles pour
+!          des valeurs donnees de nH et Tsurmu. 
+!
 !=============================================================================
 module cooling_module
   use amr_parameters
@@ -57,16 +64,13 @@ module cooling_module
      integer::n2
      real(kind=8),dimension(:)    ,pointer::nH
      real(kind=8),dimension(:)    ,pointer::T2
+     real(kind=8),dimension(:)    ,pointer::T2eq
+     real(kind=8),dimension(:,:)  ,pointer::metal
      real(kind=8),dimension(:,:)  ,pointer::cool
      real(kind=8),dimension(:,:)  ,pointer::heat
-     real(kind=8),dimension(:,:)  ,pointer::cool_com
-     real(kind=8),dimension(:,:)  ,pointer::heat_com
-     real(kind=8),dimension(:,:)  ,pointer::metal
+     real(kind=8),dimension(:,:)  ,pointer::metal_prime
      real(kind=8),dimension(:,:)  ,pointer::cool_prime
      real(kind=8),dimension(:,:)  ,pointer::heat_prime
-     real(kind=8),dimension(:,:)  ,pointer::cool_com_prime
-     real(kind=8),dimension(:,:)  ,pointer::heat_com_prime
-     real(kind=8),dimension(:,:)  ,pointer::metal_prime
      real(kind=8),dimension(:,:)  ,pointer::mu
      real(kind=8),dimension(:,:,:),pointer::n_spec
   end type cooling_table
@@ -339,20 +343,59 @@ subroutine output_cool(filename)
   write(10)table%n1,table%n2
   write(10)table%nH
   write(10)table%T2
+  write(10)table%T2eq
   write(10)table%cool
   write(10)table%heat
-  write(10)table%cool_com
-  write(10)table%heat_com
   write(10)table%metal
   write(10)table%cool_prime
   write(10)table%heat_prime
-  write(10)table%cool_com_prime
-  write(10)table%heat_com_prime
   write(10)table%metal_prime
   write(10)table%mu
   if (if_species_abundances) write(10)table%n_spec
   close(10)
 end subroutine output_cool
+!=======================================================================
+subroutine interpolate_table(nH,Tsurmu,n_spec,T,mu)
+!=======================================================================
+! Une subroutine utilitaire pour calculer les abondances (n_spec), la
+! temperature (T) et le poids moleculaire (mu) pour une valeur donnee
+! de nH et de Tsurmu, sachant que la table et nspec sont connus.
+! Pour utiliser cette subroutine, il faut avoir if_species_abundances=.true.
+!=======================================================================
+  implicit none
+  real(kind=8) :: nH, Tsurmu, mu
+  real(kind=8) :: n_spec(1:6),T
+  real(kind=8) :: facT,facH,T2eq
+  integer :: i_T2,i_nH,j
+  real(kind=8) :: w1T,w2T,w1H,w2H,w11,w12,w21,w22,dlog_nH,dlog_T2
+
+  dlog_nH = dble(table%n1-1)/(table%nH(table%n1)-table%nH(1))
+  dlog_T2 = dble(table%n2-1)/(table%T2(table%n2)-table%T2(1))
+  facH  = log10(nH)
+  i_nH=  MIN(MAX(int((facH-table%nH(1))*dlog_nH)+1,1),table%n1-1) 
+  w1H   = (table%nH(i_nH+1)-facH)*dlog_nH
+  w2H   = (facH-table%nH(i_nH  ))*dlog_nH
+  T2eq=table%T2eq(i_nH)**w1H*table%T2eq(i_nH+1)**w2H
+  facT  = log10(Tsurmu/T2eq)
+  i_T2 = MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
+  w1T   = (table%T2(i_T2+1)-facT)*dlog_T2
+  w2T   = (facT-table%T2(i_T2  ))*dlog_T2
+  w11=w1T*w1H
+  w12=w1T*w2H
+  w21=w2T*w1H
+  w22=w2T*w2H
+  do j=1,6
+     n_spec(j)=10.d0**( log10(table%n_spec(i_nH  ,i_T2  ,j))*w11 &
+          &            +log10(table%n_spec(i_nH  ,i_T2+1,j))*w21 &
+          &            +log10(table%n_spec(i_nH+1,i_T2  ,j))*w12 &
+          &            +log10(table%n_spec(i_nH+1,i_T2+1,j))*w22 )
+  enddo
+  mu=10.d0**( log10(table%mu(i_nH  ,i_T2  ))*w11 &
+    &        +log10(table%mu(i_nH  ,i_T2+1))*w21 &
+    &        +log10(table%mu(i_nH+1,i_T2  ))*w12 &
+    &        +log10(table%mu(i_nH+1,i_T2+1))*w22 )
+  T=Tsurmu*mu
+end subroutine interpolate_table
 !=======================================================================
 subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
  &                          J0min_in,T2end,mu,ne,if_write_result)
@@ -379,12 +422,12 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
   implicit none
   real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,J0min_in,ne,dasura
   logical :: if_write_result
-  real(kind=8)::aexp,daexp,dt_cool,coeff,coeff2
+  real(kind=8)::aexp,daexp,dt_cool,coeff
   real(kind=8)::T2_com,T2_old,T2,T2_left,T2_right,err_T2
   real(kind=8)::nH_com,nH  
   real(kind=8),dimension(1:3)::t_rad_spec,h_rad_spec
   real(kind=8) ::mu
-  real(kind=8) ::cool_tot,heat_tot,cool_com,heat_com
+  real(kind=8) ::cool_tot,heat_tot
   real(kind=8) ::diff
   integer::niter
   real(kind=8) :: n_spec(1:6)
@@ -416,11 +459,10 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
      T2_right=1.d8
      niter=0
      coeff = 2.*nH*X/3./kB
-     coeff2 = 2.*X/3./kB
      do while (err_T2 > 1.d-10.and.niter <= 100)
         T2=0.5*(T2_left+T2_right)        
-        call cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu,aexp,n_spec)
-        diff = coeff*(heat_tot-cool_tot) + coeff2*(heat_com-cool_com) + (T2_old-T2)/dt_cool
+        call cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,mu,aexp,n_spec)
+        diff = coeff*(heat_tot-cool_tot) +(T2_old-T2)/dt_cool
         if(diff>0.)then 
            T2_left =0.5*(T2_left+T2_right)
            T2_right=T2_right
@@ -455,7 +497,9 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   xval=sqrt(omega0)/(h*omegab)
   ne_to_find=1.2d-5*xval ! From the book of Peebles p. 173
   astart=aexp_ref
-  aend=MIN(0.05d0,0.5d0/(1d0+zreioniz))
+  aend=0.05 ! Attention a cette valeur. Il ne faut pas que la reionisation
+            ! commence avant (pour le moment c'est le cas, car dans tous
+            ! les modeles consideres, la reionisation commence a z < 15)
   dasura=0.05
   err_J0min=1.
   J0min_left=1d-20
@@ -482,17 +526,17 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   if (verbose_cooling)  write(*,*) 'J0min found ',J0min_in
 end subroutine compute_J0min
 !=======================================================================
-subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
+subroutine solve_cooling(nH,T2,zsolar,dt,deltaT2,ncell)
 !=======================================================================
   implicit none  
   integer::ncell
   real(kind=8)::dt
-  real(kind=8),dimension(1:ncell)::nH,T2,deltaT2,zsolar,boost
+  real(kind=8),dimension(1:ncell)::nH,T2,deltaT2,zsolar
     
-  real(kind=8)::facT,dlog_nH,dlog_T2,coeff,precoeff,h,h2,h3
-  real(kind=8)::metal,cool,heat,cool_com,heat_com,w1T,w2T,w11,w12,w21,w22,err,yy,yy2,yy3
-  real(kind=8)::metal_prime,cool_prime,heat_prime,cool_com_prime,heat_com_prime,wcool
-  real(kind=8)::lambda,lambda_prime,logT2max
+  real(kind=8)::facT,dlog_nH,dlog_T2,coeff,T2eq,precoeff,h,h2,h3
+  real(kind=8)::metal,cool,heat,w1T,w2T,w11,w12,w21,w22,err,yy,yy2,yy3
+  real(kind=8)::metal_prime,cool_prime,heat_prime,wcool
+  real(kind=8)::lambda,lambda_prime
   real(kind=8)::fa,fb,fprimea,fprimeb,alpha,beta,gamma
   real(kind=8),dimension(1:ncell)::rgt,lft,tau,tau_old
   real(kind=8),dimension(1:ncell)::time,time_old,facH,zzz,tau_ini
@@ -503,7 +547,6 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   logical::tau_negative
   
   ! Initializations
-  logT2max=log10(T2_max_fix)
   dlog_nH=dble(table%n1-1)/(table%nH(table%n1)-table%nH(1))
   dlog_T2=dble(table%n2-1)/(table%T2(table%n2)-table%T2(1))
   h=1d0/dlog_T2
@@ -512,7 +555,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   precoeff=2d0*X/(3d0*kB)
   do i=1,ncell
      zzz(i)=zsolar(i)
-     facH(i)=log10(nH(i)/boost(i))
+     facH(i)=log10(nH(i))
      i_nH(i)=MIN(MAX(int((facH(i)-table%nH(1))*dlog_nH)+1,1),table%n1-1)
      w1H(i)=(table%nH(i_nH(i)+1)-facH(i))*dlog_nH
      w2H(i)=(facH(i)-table%nH(i_nH(i)  ))*dlog_nH
@@ -553,80 +596,43 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
      n_active=0
      do i=1,n
         facT=log10(tau(ind(i)))
+        i_T2=MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
+        yy=facT-table%T2(i_T2)
+        yy2=yy*yy
+        yy3=yy2*yy
+        
+        fa=table%cool(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+        fb=table%cool(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        fprimea=table%cool_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+        fprimeb=table%cool_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        alpha=fprimea
+        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+        cool=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+        cool_prime=cool/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
 
-        if(facT.le.logT2max)then
+        fa=table%heat(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+        fb=table%heat(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        fprimea=table%heat_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
+        fprimeb=table%heat_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        alpha=fprimea
+        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+        heat=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+        heat_prime=heat/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
 
-           i_T2=MIN(MAX(int((facT-table%T2(1))*dlog_T2)+1,1),table%n2-1)
-           yy=facT-table%T2(i_T2)
-           yy2=yy*yy
-           yy3=yy2*yy
+        fa=table%metal(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+        fb=table%metal(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        fprimea=table%metal_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
+        fprimeb=table%metal_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
+        alpha=fprimea
+        beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
+        gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
+        metal=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+        metal_prime=metal/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
 
-           ! Cooling
-           fa=table%cool(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fb=table%cool(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%cool_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fprimeb=table%cool_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           alpha=fprimea
-           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-           cool=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-           cool_prime=cool/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
-
-           ! Heating
-           fa=table%heat(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fb=table%heat(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%heat_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
-           fprimeb=table%heat_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           alpha=fprimea
-           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-           heat=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-           heat_prime=heat/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
-
-           ! Compton cooling
-           fa=table%cool_com(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_com(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fb=table%cool_com(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_com(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%cool_com_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%cool_com_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fprimeb=table%cool_com_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%cool_com_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           alpha=fprimea
-           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-           cool_com=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-           cool_com_prime=cool_com/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
-
-           ! Compton heating
-           fa=table%heat_com(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%heat_com(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fb=table%heat_com(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_com(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%heat_com_prime(i_nH(ind(i)),i_T2)*w1H(ind(i))+table%heat_com_prime(i_nH(ind(i))+1,i_T2)*w2H(ind(i))
-           fprimeb=table%heat_com_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%heat_com_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           alpha=fprimea
-           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-           heat_com=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-           heat_com_prime=heat_com/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
-
-           ! Metal cooling
-           fa=table%metal(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fb=table%metal(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           fprimea=table%metal_prime(i_nH(ind(i)),i_T2  )*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2  )*w2H(ind(i))
-           fprimeb=table%metal_prime(i_nH(ind(i)),i_T2+1)*w1H(ind(i))+table%metal_prime(i_nH(ind(i))+1,i_T2+1)*w2H(ind(i))
-           alpha=fprimea
-           beta=3d0*(fb-fa)/h2-(2d0*fprimea+fprimeb)/h
-           gamma=(fprimea+fprimeb)/h2-2d0*(fb-fa)/h3
-           metal=10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
-           metal_prime=metal/tau(ind(i))*(alpha+2d0*beta*yy+3d0*gamma*yy2)
-
-           ! Total net cooling
-           lambda=cool+zzz(ind(i))*metal-heat+(cool_com-heat_com)/nH(ind(i))
-           lambda_prime=cool_prime+zzz(ind(i))*metal_prime-heat_prime+(cool_com_prime-heat_com_prime)/nH(ind(i))
-
-        else
-
-           lambda=1.42*1d-27*sqrt(tau(ind(i)))*1.1
-           lambda_prime=lambda/2./tau(ind(i))
-
-        endif
-
+        lambda=cool+zzz(ind(i))*metal-heat
+        lambda_prime=cool_prime+zzz(ind(i))*metal_prime-heat_prime
         wcool=MAX(abs(lambda)/tau(ind(i))*varmax,wmax(ind(i)),-lambda_prime*varmax)
 
         tau_old(ind(i))=tau(ind(i))
@@ -715,17 +721,14 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   if(.not.first)then
      deallocate(table%cool)
      deallocate(table%heat)
-     deallocate(table%cool_com)
-     deallocate(table%heat_com)
      deallocate(table%metal)
      deallocate(table%cool_prime)
      deallocate(table%heat_prime)
-     deallocate(table%cool_com_prime)
-     deallocate(table%heat_com_prime)
      deallocate(table%metal_prime)
      deallocate(table%mu)
      deallocate(table%T2)
      deallocate(table%nH)
+     deallocate(table%T2eq)
      if (if_species_abundances) deallocate(table%n_spec)
   else
      first=.false.
@@ -735,30 +738,24 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   table%n2=nbin_T
   allocate(table%cool(nbin_n,nbin_T))
   allocate(table%heat(nbin_n,nbin_T))
-  allocate(table%cool_com(nbin_n,nbin_T))
-  allocate(table%heat_com(nbin_n,nbin_T))
   allocate(table%metal(nbin_n,nbin_T))
   allocate(table%cool_prime(nbin_n,nbin_T))
   allocate(table%heat_prime(nbin_n,nbin_T))
-  allocate(table%cool_com_prime(nbin_n,nbin_T))
-  allocate(table%heat_com_prime(nbin_n,nbin_T))
   allocate(table%metal_prime(nbin_n,nbin_T))
   allocate(table%mu  (nbin_n,nbin_T))
+  allocate(table%T2eq(nbin_n))
   allocate(table%nH  (1:nbin_n))
   allocate(table%T2  (1:nbin_T))
   if (if_species_abundances) allocate(table%n_spec(nbin_n,nbin_T,1:6))
 #ifndef WITHOUTMPI
   allocate(table2%cool(nbin_n,nbin_T))
   allocate(table2%heat(nbin_n,nbin_T))
-  allocate(table2%cool_com(nbin_n,nbin_T))
-  allocate(table2%heat_com(nbin_n,nbin_T))
   allocate(table2%metal(nbin_n,nbin_T))
   allocate(table2%cool_prime(nbin_n,nbin_T))
   allocate(table2%heat_prime(nbin_n,nbin_T))
-  allocate(table2%cool_com_prime(nbin_n,nbin_T))
-  allocate(table2%heat_com_prime(nbin_n,nbin_T))
   allocate(table2%metal_prime(nbin_n,nbin_T))
   allocate(table2%mu  (nbin_n,nbin_T))
+  allocate(table2%T2eq(nbin_n))
   if (if_species_abundances) allocate(table2%n_spec(nbin_n,nbin_T,1:6))
 #endif  
   do i_n=1,nbin_n
@@ -774,45 +771,35 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   call set_rates(t_rad_spec,h_rad_spec,aexp)
 
   ! Create the table
+  table%T2eq=0.0
   table%mu=0.0
+  table%metal=0.0
   table%cool=0.0
   table%heat=0.0
-  table%cool_com=0.0
-  table%heat_com=0.0
-  table%metal=0.0
+  table%metal_prime=0.0
   table%cool_prime=0.0
   table%heat_prime=0.0
-  table%cool_com_prime=0.0
-  table%heat_com_prime=0.0
-  table%metal_prime=0.0
   if (if_species_abundances) table%n_spec=0.0
   do i_n = myid+1,nbin_n,ncpu
      call iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   end do
 #ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(table%T2eq,table2%T2eq,nbin_n,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%mu,table2%mu,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%cool,table2%cool,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%heat,table2%heat,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(table%cool_com,table2%cool_com,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(table%heat_com,table2%heat_com,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%metal,table2%metal,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%cool_prime,table2%cool_prime,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%heat_prime,table2%heat_prime,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(table%cool_com_prime,table2%cool_com_prime,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
-  call MPI_ALLREDUCE(table%heat_com_prime,table2%heat_com_prime,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   call MPI_ALLREDUCE(table%metal_prime,table2%metal_prime,nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   if (if_species_abundances)then
      call MPI_ALLREDUCE(table%n_spec,table2%n_spec,6*nbin_n*nbin_T,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
   end if
   table%cool = table2%cool
   table%heat = table2%heat
-  table%cool_com = table2%cool_com
-  table%heat_com = table2%heat_com
   table%metal = table2%metal
   table%cool_prime = table2%cool_prime
   table%heat_prime = table2%heat_prime
-  table%cool_com_prime = table2%cool_com_prime
-  table%heat_com_prime = table2%heat_com_prime
   table%metal_prime = table2%metal_prime
   table%mu = table2%mu
   if (if_species_abundances)then
@@ -823,15 +810,12 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
 #ifndef WITHOUTMPI
   deallocate(table2%cool)
   deallocate(table2%heat)
-  deallocate(table2%cool_com)
-  deallocate(table2%heat_com)
   deallocate(table2%metal)
   deallocate(table2%cool_prime)
   deallocate(table2%heat_prime)
-  deallocate(table2%cool_com_prime)
-  deallocate(table2%heat_com_prime)
   deallocate(table2%metal_prime)
   deallocate(table2%mu)
+  deallocate(table2%T2eq)
   if (if_species_abundances)then
      deallocate(table2%n_spec)
   endif
@@ -901,8 +885,8 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   real(kind=8) ::T2,T2_eps,nH
   real(kind=8) ::mu,mu_eps
   real(kind=8) ::T2_left,T2_right,err_T2
-  real(kind=8) ::cool_tot,heat_tot,cool_com,heat_com,metal_tot,metal_prime
-  real(kind=8) ::cool_tot_eps,heat_tot_eps,cool_com_eps,heat_com_eps,metal_tot_eps
+  real(kind=8) ::cool_tot,heat_tot,metal_tot,metal_prime
+  real(kind=8) ::cool_tot_eps,heat_tot_eps,metal_tot_eps
   real(kind=8) ::diff
   integer::niter
   real(kind=8),dimension(1:6) :: n_spec,n_spec_eps
@@ -911,22 +895,18 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   do i_T = 1,nbin_T
      T2=10d0**table%T2(i_T)
      ! Compute cooling, heating and mean molecular weight
-     call cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu,aexp,n_spec)
+     call cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,mu,aexp,n_spec)
      table%cool(i_n,i_T)=log10(cool_tot)
      table%heat(i_n,i_T)=log10(heat_tot)
-     table%cool_com(i_n,i_T)=log10(cool_com)
-     table%heat_com(i_n,i_T)=log10(heat_com)
      table%mu(i_n,i_T)=mu
      if (if_species_abundances)then
         table%n_spec(i_n,i_T,1:6)=log10(n_spec(1:6))
      endif
      ! Compute cooling and heating derivatives
      T2_eps=10d0**(table%T2(i_T)+0.01d0)
-     call cmp_cooling(T2_eps,nH,t_rad_spec,h_rad_spec,cool_tot_eps,heat_tot_eps,cool_com_eps,heat_com_eps,mu_eps,aexp,n_spec_eps)
+     call cmp_cooling(T2_eps,nH,t_rad_spec,h_rad_spec,cool_tot_eps,heat_tot_eps,mu_eps,aexp,n_spec_eps)
      table%cool_prime(i_n,i_T)=(log10(cool_tot_eps)-log10(cool_tot))/0.01
      table%heat_prime(i_n,i_T)=(log10(heat_tot_eps)-log10(heat_tot))/0.01
-     table%cool_com_prime(i_n,i_T)=(log10(cool_com_eps)-log10(cool_com))/0.01
-     table%heat_com_prime(i_n,i_T)=(log10(heat_com_eps)-log10(heat_com))/0.01
      ! Compute metal contribution for solar metallicity
      call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
      table%metal(i_n,i_T)=log10(metal_tot)
@@ -1053,16 +1033,13 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
   ! This is a simple model to take into account the ionization background
   ! on metal cooling (calibrated using CLOUDY). 
   if(madau.or.weinbergint.or.courty)then
-     if(ZZ.le.0.0.or.ZZ.ge.z_courty(50))then
-        f_courty=1d0
-     else
-        iZ=1+int(ZZ/z_courty(50)*49.)
-        iZ=min(iZ,49)
-        iZ=max(iZ,1)
-        deltaZ=z_courty(iZ+1)-z_courty(iZ)
-        ux=1d-4*(phi_courty(iZ+1)*(ZZ-z_courty(iZ))/deltaZ & 
-             & + phi_courty(iZ)*(z_courty(iZ+1)-ZZ)/deltaZ )/nH
-     endif
+     iZ=1+int(ZZ/z_courty(50)*49.)
+     iZ=min(iZ,49)
+     iZ=max(iZ,1)
+     deltaZ=z_courty(iZ+1)-z_courty(iZ)
+     ZZ=min(ZZ,z_courty(50))
+     ux=1d-4*(phi_courty(iZ+1)*(ZZ-z_courty(iZ))/deltaZ & 
+          & + phi_courty(iZ)*(z_courty(iZ+1)-ZZ)/deltaZ )/nH
   else ! Theuns or Teyssier
      ux=1d-4*J0simple(aexp)/1d-22/nH
   endif
@@ -1110,12 +1087,12 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
 
 end subroutine cmp_metals
 !=======================================================================
-subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu_out,aexp,n_spec)
+subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,mu_out,aexp,n_spec)
 !=======================================================================
   implicit none
   
   real(kind=8),dimension(1:3)::t_rad_spec,h_rad_spec
-  real(kind=8) ::T2,nH,cool_tot,heat_tot,cool_com,heat_com,mu_out,aexp
+  real(kind=8) ::T2,nH,cool_tot,heat_tot,mu_out,aexp
   real(kind=8) ::mu,mu_old,err_mu,mu_left,mu_right
   real(kind=8) ::T
   real(kind=8) ::n_E,n_HI,n_HII,n_HEI,n_HEII,n_HEIII,n_TOT
@@ -1171,29 +1148,25 @@ subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,he
   cd  = cool_die(T     )*n_E*n_HEII /nH**2
   ! Line cooling
   ce1 = cool_exc(HI  ,T)*n_E*n_HI   /nH**2
-  ce2 = cool_exc(HEI, T)*n_E*n_HEI  /nH**2
+!  ce2 = cool_exc(HEI, T)*n_E*n_HEI  /nH**2 Terme elimine car cubique en nH d'apres Cen
   ce3 = cool_exc(HEII,T)*n_E*n_HEII /nH**2
+  ! Compton cooling
+  coc  = cool_com(T,aexp)*n_E        /nH**2
   ! Radiative heating
   ch1 = h_rad_spec(HI  )    *n_HI   /nH**2
   ch2 = h_rad_spec(HEI )    *n_HEI  /nH**2
   ch3 = h_rad_spec(HEII)    *n_HEII /nH**2
-  ! Total cooling and heating rates
-  heat_tot = ch1+ch2+ch3
-  cool_tot = cb1+cb2+cb3+ci1+ci2+ci3+cr1+cr2+cr3+cd+ce1+ce2+ce3
-  ! Compton cooling
-  coc = cool_compton(T,aexp)*n_E/nH
-  cool_com = coc
   ! Compton heating
-  coh = heat_compton(T,aexp)*n_E/nH
-  heat_com = coh
-  ! Mean molecular weight
-  mu_out = mu
+  coh = heat_com(T,aexp)*n_E        /nH**2
+  ! Total cooling and heating rates
+  heat_tot = ch1+ch2+ch3+coh
+!  cool_tot = cb1+cb2+cb3+ci1+ci2+ci3+cr1+cr2+cr3+cd+ce1+ce2+ce3+coc
+  cool_tot = cb1+cb2+cb3+ci1+ci2+ci3+cr1+cr2+cr3+cd+ce1+ce3+coc
+  mu_out  =mu
   
   if (if_cooling_functions) then
      cool_out=max(cool_tot,smallnum_cooling)
      heat_out=max(heat_tot,smallnum_cooling)
-     cool_com=max(cool_com,smallnum_cooling)
-     heat_com=max(heat_com,smallnum_cooling)
      cb1s=max(cb1,smallnum_cooling)
      cb2s=max(cb2,smallnum_cooling)
      cb3s=max(cb3,smallnum_cooling)
@@ -1296,7 +1269,8 @@ function cool_exc(ispec,T)
   real(kind=8)   ::T,cool_exc,T5
   T5=1.d-5*T
   if(ispec==HI  )cool_exc = 7.50D-19/(1.+sqrt(T5))              *exp(-118348.D0/T)
-  if(ispec==HEI )cool_exc = 9.10D-27/(1.+sqrt(T5))/(T**0.1687D0)*exp(-13179.D0/T)
+!  Terme elimine car cubique en nH d'apres Cen
+!  if(ispec==HEI )cool_exc = 9.10D-27/(1.+sqrt(T5))/(T**0.1687D0)*exp(-13179.D0/T)
   if(ispec==HEII)cool_exc = 5.54D-17/(1.+sqrt(T5))/(T**0.397D0 )*exp(-473638.D0/T)
   return
 end function cool_exc
@@ -1358,21 +1332,21 @@ function cool_ion(ispec,T)
   return
 end function cool_ion
 !=======================================================================
-function cool_compton(T,aexp)
+function cool_com(T,aexp)
 !=======================================================================
   implicit none
-  real(kind=8) ::T,aexp,cool_compton
-  cool_compton=5.406D-36*T/aexp**4 
+  real(kind=8) ::T,aexp,cool_com
+  cool_com=5.406D-36*T/aexp**4 
   return
-end function cool_compton
+end function cool_com
 !=======================================================================
-function heat_compton(T,aexp)
+function heat_com(T,aexp)
 !=======================================================================
   implicit none
-  real(kind=8) ::T,aexp,heat_compton
-  heat_compton=5.406D-36*2.726D0/aexp**5
+  real(kind=8) ::T,aexp,heat_com
+  heat_com=5.406D-36*2.726D0/aexp**5
   return
-end function heat_compton
+end function heat_com
 !=======================================================================
 function taux_ion(ispec,T)
 !=======================================================================

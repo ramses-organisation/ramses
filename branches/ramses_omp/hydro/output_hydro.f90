@@ -52,17 +52,17 @@ subroutine backup_hydro(filename)
                     end do
                  else if(ivar>=2.and.ivar<=ndim+1)then ! Write velocity field
                     do i=1,ncache
-                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)
                     end do                    
                  else if(ivar==ndim+2)then ! Write pressure
                     do i=1,ncache
                        xdp(i)=uold(ind_grid(i)+iskip,ndim+2)
-                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,2)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #if NDIM>1
-                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,3)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
 #if NDIM>2
-                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,4)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
                        xdp(i)=(gamma-1d0)*xdp(i)
                     end do                                        
