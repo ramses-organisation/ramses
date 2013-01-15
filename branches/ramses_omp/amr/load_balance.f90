@@ -264,11 +264,11 @@ subroutine cmp_new_cpu_map
   integer::info,icpu,jcpu,isub,idom,jdom
   integer::nxny,ix,iy,iz,iskip
   integer::ind_long
-  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::dx,scale,weight
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:ndim),save::xx
   real(kind=8)::incost_tot,local_cost,cell_cost
   real(kind=8),dimension(0:ndomain)::incost_new,incost_old
   integer(kind=8),dimension(1:overload)::npart_sub
@@ -277,12 +277,12 @@ subroutine cmp_new_cpu_map
   real(kind=8),dimension(1:ndomain)::cost_loc,cost_old,cost_new
   real(qdp),dimension(0:ndomain)::bound_key_loc
   real(kind=8),dimension(0:ndomain)::bigdbl,bigtmp
-  integer,dimension(1:nvector)::dom
-  real(qdp),dimension(1:nvector)::order_min,order_max
-  integer,dimension(1:MAXLEVEL)::niter_cost
+  integer,dimension(1:nvector),save::dom
+  real(qdp),dimension(1:nvector),save::order_min,order_max
+  integer,dimension(1:MAXLEVEL),save::niter_cost
 
-  real(dp),dimension(1:1,1:ndim) :: xx_tmp
-  integer,dimension(1:1) :: c_tmp
+  real(dp),dimension(1:1,1:ndim),save :: xx_tmp
+  integer,dimension(1:1),save :: c_tmp
 
   ! Local constants
   nxny=nx*ny
@@ -615,7 +615,7 @@ subroutine cmp_cpumap(x,c,nn)
   real(dp),dimension(1:nvector,1:ndim)::x
 
   integer::i,idom
-  real(qdp),dimension(1:nvector)::order
+  real(qdp),dimension(1:nvector),save::order
 
   if(ordering /= 'bisection') then
      call cmp_ordering(x,order,nn)
@@ -651,7 +651,7 @@ subroutine cmp_dommap(x,c,nn)
   real(dp),dimension(1:nvector,1:ndim)::x
 
   integer::i,idom
-  real(qdp),dimension(1:nvector)::order
+  real(qdp),dimension(1:nvector),save::order
 
   call cmp_ordering(x,order,nn)
   do i=1,nn
@@ -684,7 +684,7 @@ subroutine cmp_ordering(x,order,nn)
   ! according to its position in space and for the chosen
   ! ordering. Position x are in user units.
   !-----------------------------------------------------
-  integer,dimension(1:nvector)::ix,iy,iz
+  integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nx_loc
   integer::temp,info
   real(kind=8)::scale,bscale,xx,yy,zz,xc,yc,zc
@@ -785,7 +785,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   ! key contained in the input cell and for the chosen 
   ! ordering.
   !-----------------------------------------------------
-  integer,dimension(1:nvector)::ix,iy,iz
+  integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nxny,nx_loc
 
   real(dp)::theta1,theta2,theta3,theta4,dxx,dxmin  

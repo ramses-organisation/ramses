@@ -117,8 +117,8 @@ subroutine init_boundary_fine(ilevel)
   integer,dimension(1:3)::n_nbor
   integer::i,ncache,iskip
   integer::igrid,ind,ngrid
-  integer,dimension(1:nvector)::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim)::igridn
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector,0:twondim),save::igridn
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -269,9 +269,9 @@ subroutine make_boundary_flag(ilevel)
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:nvector)::ind_grid,ind_grid_ref
-  integer,dimension(1:nvector)::ind_cell,ind_cell_ref
-  integer,dimension(1:nvector)::fff
+  integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
+  integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
+  integer,dimension(1:nvector),save::fff
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel

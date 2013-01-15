@@ -117,42 +117,79 @@ subroutine init_flag(ilevel)
   ! to a minimal state in order to satisfy the
   ! refinement rules.
   !-------------------------------------------
-  integer::i,ind,iskip
+  integer :: i,ind,ind_son,iskip,ngrid,oki
+  integer, pointer, dimension(:) :: igrid
+  logical::ok
+  integer::iskip_son,ind_grid_son,ind_cell_son
 
-  ! Initialize flag1 to 0
+
+  ngrid = active(ilevel)%ngrid
+  if (ngrid > 0) igrid => active(ilevel)%igrid
+  
   nflag=0
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,active(ilevel)%ngrid
-        flag1(active(ilevel)%igrid(i)+iskip)=0
-     end do
-  end do
-
+    
   ! If load balancing operations, flag only refined cells
+
   if(balance)then
+
+!$OMP PARALLEL DEFAULT(none) SHARED(son,flag1,igrid) PRIVATE(ind,i,iskip,oki) FIRSTPRIVATE(ncoarse,ngrid,ngridmax) REDUCTION(+:nflag)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,active(ilevel)%ngrid
-           if(son(active(ilevel)%igrid(i)+iskip)>0)then
-              flag1(active(ilevel)%igrid(i)+iskip)=1
-              nflag=nflag+1
-           end if
+!$OMP DO
+        !DEC$ IVDEP
+        do i=1,ngrid
+           oki = merge(1,0,son(igrid(i)+iskip)>0)
+           flag1(igrid(i)+iskip)=oki
+           nflag=nflag+oki
         end do
+!$OMP ENDDO NOWAIT
      end do
+!$OMP END PARALLEL
   else
      ! If cell is refined and contains a flagged son
      ! or a refined son, then flag cell for refinement.
      if(ilevel>=levelmin)then
-        call test_flag(ilevel)
-     else
-        ! If ilevel < levelmin, set flag to 1 for all cells
+        ! Test all refined cells
+!$OMP PARALLEL DEFAULT(none) PRIVATE(ind,i,ind_grid_son,ok,ind_son,iskip_son,ind_cell_son,iskip) SHARED(ngrid,igrid,son,flag1,ncoarse,ngridmax) REDUCTION(+:nflag) 
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
-           do i=1,active(ilevel)%ngrid
-              flag1(active(ilevel)%igrid(i)+iskip)=1
+!$OMP DO
+           !DEC$ IVDEP
+           do i=1,ngrid
+              ! Gather child grid number
+              ind_grid_son=son(igrid(i)+iskip)
+              ! Test child if it exists
+              ok=.false.
+              if(ind_grid_son>0)then
+                 ! Loop over children cells
+                 !DEC$ UNROLL (8)
+                 do ind_son=1,twotondim
+                    ind_cell_son=ncoarse+(ind_son-1)*ngridmax+ind_grid_son
+                    ok=(ok.or.(son  (ind_cell_son)> 0))
+                    ok=(ok.or.(flag1(ind_cell_son)==1))
+                 end do
+              end if
+              ! If ok, then flag1 cells.
+              flag1(igrid(i)+iskip)=merge(1,0,ok)
+              nflag=nflag+merge(1,0,ok)
            end do
-           nflag=nflag+active(ilevel)%ngrid
+!$OMP ENDDO NOWAIT
         end do
+!$OMP END PARALLEL
+     else
+        ! If ilevel < levelmin, set flag to 1 for all cells
+!$OMP PARALLEL DEFAULT(none) SHARED(flag1,igrid) PRIVATE(ind,i,iskip) FIRSTPRIVATE(ncoarse,ngrid,ngridmax)
+        do ind=1,twotondim
+           iskip=ncoarse+(ind-1)*ngridmax
+!$OMP DO
+           !DEC$ IVDEP
+           do i=1,ngrid
+              flag1(igrid(i)+iskip)=1
+           end do
+!$OMP ENDDO NOWAIT
+        end do
+!$OMP END PARALLEL
+        nflag=nflag+twotondim*ngrid
      end if
   end if
   
@@ -161,51 +198,6 @@ subroutine init_flag(ilevel)
   if(simple_boundary)call make_boundary_flag(ilevel)
 
 end subroutine init_flag
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine test_flag(ilevel)
-  use amr_commons
-  implicit none
-  integer::ilevel
-  !---------------------------------------------------------
-  ! This routine sets flag1 to 1 if cell is refined and 
-  ! contains a flagged son or a refined son.
-  ! This ensures that refinement rules are satisfied.
-  !---------------------------------------------------------
-  integer::i,ind_son,ind,iskip
-  integer::iskip_son,ind_grid_son,ind_cell_son
-  logical::ok
-
-  ! Loop over cells
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     ! Test all refined cells
-     do i=1,active(ilevel)%ngrid
-        ! Gather child grid number
-        ind_grid_son=son(active(ilevel)%igrid(i)+iskip)
-        ! Test child if it exists
-        ok=.false.
-        if(ind_grid_son>0)then
-           ! Loop over children cells
-           do ind_son=1,twotondim
-              iskip_son=ncoarse+(ind_son-1)*ngridmax
-              ind_cell_son=iskip_son+ind_grid_son
-              ok=(ok.or.(son  (ind_cell_son)> 0))
-              ok=(ok.or.(flag1(ind_cell_son)==1))
-           end do
-        end if
-        ! If ok, then flag1 cells.
-        if(ok)then
-           flag1(active(ilevel)%igrid(i)+iskip)=1
-           nflag=nflag+1
-        end if
-     end do
-  end do
-  ! End loop over cells
-
-end subroutine test_flag
 !################################################################
 !################################################################
 !################################################################
@@ -372,6 +364,7 @@ subroutine userflag_fine(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
+!$OMP PARALLEL DO SCHEDULE(dynamic) DEFAULT(none) REDUCTION(+:nflag) PRIVATE(igrid,ngrid,i,ind_grid,ind,iskip,ind_cell,ok,idim,xx) SHARED(ncache,active,ilevel,flag1,m_refine,r_refine,xg,xc,skip_loc,scale,ncoarse,ngridmax)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids
@@ -415,18 +408,11 @@ subroutine userflag_fine(ilevel)
         end if
 
         ! Count newly flagged cells
-        nok=0
         do i=1,ngrid
-           if(flag1(ind_cell(i))==0.and.ok(i))then
-              nok=nok+1
-           end if
-        end do
-        
-        do i=1,ngrid
-           if(ok(i))flag1(ind_cell(i))=1
+          nflag=nflag+merge(1,0,flag1(ind_cell(i))==0.and.ok(i))
+          flag1(ind_cell(i))=merge(1,flag1(ind_cell(i)),ok(i))
         end do
 
-        nflag=nflag+nok
      end do
      ! End loop over cells
 
@@ -584,8 +570,10 @@ subroutine smooth_fine(ilevel)
   flag1(0)=0
   ncache=active(ilevel)%ngrid
   ! Loop over steps
+!$OMP PARALLEL DEFAULT(none) REDUCTION(+:nflag) SHARED(active,flag1,flag2) PRIVATE(ismooth,igrid,ngrid,i,ind_grid,ind,iskip,ind_cell,igridn) FIRSTPRIVATE(ncache,ncoarse,ngridmax,ilevel,n_nbor,simple_boundary)
   do ismooth=1,ndim
      ! Initialize flag2 to 0
+!$OMP DO
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -601,7 +589,9 @@ subroutine smooth_fine(ilevel)
            end do
         end do
      end do
+!$OMP ENDDO
      ! Count neighbors and set flag2 accordingly
+!$OMP DO SCHEDULE(DYNAMIC)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -612,7 +602,9 @@ subroutine smooth_fine(ilevel)
            call count_nbors(igridn,ind,n_nbor(ismooth),ngrid)
         end do
      end do
+!$OMP ENDDO
      ! Set flag1=1 for cells with flag2=1
+!$OMP DO SCHEDULE(DYNAMIC) 
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -634,12 +626,15 @@ subroutine smooth_fine(ilevel)
            end do
         end do
      end do
+!$OMP ENDDO
      ! Update boundaries
+!$OMP MASTER
      call make_virtual_fine_int(flag1(1),ilevel)
      if(simple_boundary)call make_boundary_flag(ilevel)
+!$OMP END MASTER
   end do
+!$OMP END PARALLEL
   ! End loop over steps
-
 end subroutine smooth_fine
 !############################################################
 !############################################################
@@ -661,6 +656,7 @@ subroutine count_nbors(igridn,ind,n_nbor,nn)
   integer::i,in,iskip
   integer,dimension(1:nvector)::ind_cell,i_nbor
   integer,dimension(1:nvector,1:twondim)::indn
+
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn
@@ -677,7 +673,7 @@ subroutine count_nbors(igridn,ind,n_nbor,nn)
   end do
   ! flag2 cell if necessary
   do i=1,nn
-     if(i_nbor(i)>=n_nbor)flag2(ind_cell(i))=1
+     if(i_nbor(i)>=n_nbor) flag2(ind_cell(i))=1
   end do
 end subroutine count_nbors
 !############################################################
@@ -700,6 +696,7 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   integer::i,in,iskip
   integer,dimension(1:nvector)::ind_cell,i_nbor
   integer,dimension(1:nvector,1:twondim)::indn
+
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn
@@ -718,6 +715,7 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   do i=1,nn
      if(i_nbor(i)>=n_nbor)flag1(ind_cell(i))=1
   end do
+
 end subroutine count_nbors2
 !############################################################
 !############################################################

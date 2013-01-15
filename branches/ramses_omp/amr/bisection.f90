@@ -481,7 +481,7 @@ contains
       integer::icpu,ncell,ncell_loc
       integer::nxny,ix,iy,iz,iskip
   
-      integer,dimension(1:nvector)::ind_grid,ind_cell
+      integer,dimension(1:nvector),save::ind_grid,ind_cell
 
       real(dp)::dx,scale
       real(dp),dimension(1:twotondim,1:3)::xc

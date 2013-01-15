@@ -35,6 +35,8 @@ module amr_parameters
 #else
   integer,parameter::nvector=NVECTOR
 #endif
+! for crayftn
+!!$OMP THREADPRIVATE (nvector)
 
   integer, parameter :: nstride = 65536
 
@@ -97,7 +99,7 @@ module amr_parameters
   real(dp)::h0     =1.0D0     ! Hubble constant in km/s/Mpc
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
-  real(dp)::n_sink =1D30      ! Sink particle density threshold in H/cc
+  real(dp)::n_sink =1D30     ! Sink particle density threshold in H/cc
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
   real(dp)::eps_star=0.0D0    ! Star formation efficiency (0.02 at n_star=0.1 gives t_star=8 Gyr)
@@ -118,7 +120,6 @@ module amr_parameters
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
-  logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
   logical ::cooling=.false.

@@ -28,10 +28,11 @@ subroutine refine_coarse
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::nxny,i,j,k
-  integer::ind,info,ibound
+  integer::nxny,i,j,k,ncreate,nkill
+  integer::info,ibound
   logical::boundary_region
   logical::ok_free,ok_all
+  integer,dimension(1:nvector):: ind
   
   if(verbose)write(*,*)'  Entering refine_coarse'
   
@@ -46,8 +47,8 @@ subroutine refine_coarse
   do k=0,nz-1
   do j=0,ny-1
   do i=0,nx-1
-     ind=1+i+j*nx+k*nxny
-     if(flag2(ind)==1.and.flag1(ind)==1.and.son(ind)==0)then
+     ind(1)=1+i+j*nx+k*nxny
+     if(flag2(ind(1))==1.and.flag1(ind(1))==1.and.son(ind(1))==0)then
         ncreate=ncreate+1
      end if
   end do
@@ -71,9 +72,9 @@ subroutine refine_coarse
   do k=kcoarse_min,kcoarse_max
   do j=jcoarse_min,jcoarse_max
   do i=icoarse_min,icoarse_max
-     ind=1+i+j*nx+k*nxny
-     if(flag2(ind)==1.and.flag1(ind)==1.and.son(ind)==0)then
-        call make_grid_coarse(ind,ibound,boundary_region)
+     ind(1)=1+i+j*nx+k*nxny
+     if(flag2(ind(1))==1.and.flag1(ind(1))==1.and.son(ind(1))==0)then
+        call make_grid_coarse(ind(1),ibound,boundary_region)
      end if
   end do
   end do
@@ -83,9 +84,9 @@ subroutine refine_coarse
      do k=kbound_min(ibound),kbound_max(ibound)
      do j=jbound_min(ibound),jbound_max(ibound)
      do i=ibound_min(ibound),ibound_max(ibound)
-        ind=1+i+j*nx+k*nxny
-        if(flag2(ind)==1.and.flag1(ind)==1.and.son(ind)==0)then
-           call make_grid_coarse(ind,ibound,boundary_region)
+        ind(1)=1+i+j*nx+k*nxny
+        if(flag2(ind(1))==1.and.flag1(ind(1))==1.and.son(ind(1))==0)then
+           call make_grid_coarse(ind(1),ibound,boundary_region)
         end if
      end do
      end do
@@ -100,8 +101,8 @@ subroutine refine_coarse
   do k=kcoarse_min,kcoarse_max
   do j=jcoarse_min,jcoarse_max
   do i=icoarse_min,icoarse_max
-     ind=1+i+j*nx+k*nxny
-     if(flag1(ind)==0.and.son(ind)>0)then
+     ind(1)=1+i+j*nx+k*nxny
+     if(flag1(ind(1))==0.and.son(ind(1))>0)then
         nkill=nkill+1
         call kill_grid(ind,1,1,ibound,boundary_region)
      end if
@@ -113,8 +114,8 @@ subroutine refine_coarse
      do k=kbound_min(ibound),kbound_max(ibound)
      do j=jbound_min(ibound),jbound_max(ibound)
      do i=ibound_min(ibound),ibound_max(ibound)
-        ind=1+i+j*nx+k*nxny
-        if(flag1(ind)==0.and.son(ind)>0)then
+        ind(1)=1+i+j*nx+k*nxny
+        if(flag1(ind(1))==0.and.son(ind(1))>0)then
            nkill=nkill+1
            call kill_grid(ind,1,1,ibound,boundary_region)
         end if
@@ -164,8 +165,8 @@ subroutine make_grid_coarse(ind_cell,ibound,boundary_region)
 
   real(dp)::dx_loc,scale
   real(dp),dimension(1:3)::xc,skip_loc
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  integer ,dimension(1:nvector)::cc
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  integer ,dimension(1:nvector),save::cc
 
   ! Local constants
   nxny=nx*ny
@@ -331,15 +332,16 @@ subroutine refine_fine(ilevel)
   ! automatically satisfied. For adaptive time-stepping,
   ! numerical rules are checked before refining any cell.
   !---------------------------------------------------------
-  integer::ncache,ngrid
+  integer::ncache,ngrid,ngrid_active,ngrid_boundary,ngrid_ghost
   integer::igrid,icell,i
-  integer::ind,iskip,info,icpu,ibound
-  integer::ncreate_tmp,nkill_tmp
+  integer::ind,iskip,info,icpu,jcpu,ibound
+  integer::ncreate,ncreate_tmp,nkill,nkill_tmp
+  integer, allocatable :: ngrid_list(:)
   logical::boundary_region
   integer,dimension(1:nvector)::ind_grid,ind_cell
   integer,dimension(1:nvector)::ind_grid_tmp,ind_cell_tmp
   logical,dimension(1:nvector)::ok
-  logical::ok_free,ok_all
+  logical:: ok_free,ok_all,ok_mem,do_omp,do_exit
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -350,6 +352,7 @@ subroutine refine_fine(ilevel)
   !--------------------------
   call authorize_fine(ilevel)
 
+  ok_mem = .true.
   if(.not. shrink)then
   !---------------------------------------------------
   ! Step 1: if cell is flagged for refinement and
@@ -360,21 +363,33 @@ subroutine refine_fine(ilevel)
   ! Refine cells marked for refinement
   !------------------------------------
   ncreate=0
-  do icpu=1,ncpu+nboundary  ! Loop over cpus and boundaries
+LCPU: do icpu=1,ncpu+nboundary  ! Loop over cpus and boundaries
      if(icpu==myid)then
         ibound=0
         boundary_region=.false.
         ncache=active(ilevel)%ngrid
+        do_omp=.true.
      else if(icpu<=ncpu)then
         ibound=0
         boundary_region=.false.
         ncache=reception(icpu,ilevel)%ngrid
+        do_omp=.false.
      else
         ibound=icpu-ncpu
         boundary_region=.true.
         ncache=boundary(ibound,ilevel)%ngrid
+        do_omp=.false.
      end if
+     do_exit=.false.
+!     !$omp parallel do default(none) if(do_omp) &
+!     !$omp&  private(igrid,ngrid,i,ind_grid,ind,iskip,ind_cell,ncreate_tmp,ok, &
+!     !$omp&    icell,ind_grid_tmp,ind_cell_tmp) &
+!     !$omp&  shared(ncpu,icpu,ibound,myid,ilevel,active,reception,do_exit, &
+!     !$omp&    nboundary,boundary,boundary_region,ncoarse,ngridmax,ncreate, &
+!     !$omp&    ncache,flag1,flag2,son,numbf,ok_mem,nlevelmax,ngrid_active, &
+!     !$omp&    ngrid_ghost,ngrid_boundary)
      do igrid=1,ncache,nvector  ! Loop over grids
+        if (do_exit) cycle
         ngrid=MIN(nvector,ncache-igrid+1)
         if(myid==icpu)then
            do i=1,ngrid
@@ -396,29 +411,57 @@ subroutine refine_fine(ilevel)
               ind_cell(i)=iskip+ind_grid(i)
            end do
            ! Gather flagged, unrefined and authorized cells
+           ncreate_tmp=0
            do i=1,ngrid
               ok(i)= flag2(ind_cell(i))==1 .and. &
                    & flag1(ind_cell(i))==1 .and. &
                    & son  (ind_cell(i))==0
+              ncreate_tmp = ncreate_tmp + merge(1,0,ok(i))
            end do
-           ! Count cells for refinement
-           ncreate_tmp=0
-           do i=1,ngrid
-              if(ok(i))ncreate_tmp=ncreate_tmp+1
-           end do
+!           !$omp atomic
            ncreate=ncreate+ncreate_tmp
 
            ! Check for free memory
+           
            if(ncreate_tmp>=numbf) then
-              write(*,*)'No more free memory'
+!!$omp critical
+             if (.not. do_exit) then
+              write(*,*)'No more free memory on thread ', myid
               write(*,*)'Increase ngridmax'
-#ifndef WITHOUTMPI
-              call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-              stop
-#endif
+              write(*,*)'numbf, ngridmax :', ncreate_tmp, numbf, ngridmax
+              ok_mem = .false.
+              print '(a)','lvl grid    ghostzone boundary'
+              print '(a)','------------------------------'
+              do i=1,nlevelmax
+                 ngrid_active = active(i)%ngrid
+                 ngrid_ghost  = 0
+                 do jcpu=1,ncpu
+                    if (jcpu==myid) cycle
+                    ngrid_ghost = ngrid_ghost + reception(jcpu,i)%ngrid
+                 enddo
+                 ngrid_boundary  = 0
+                 do jcpu=1,nboundary
+                    ngrid_boundary = ngrid_boundary + boundary(jcpu,i)%ngrid
+                 enddo
+                 print '(i3,3i9)',i,ngrid_active,ngrid_ghost,ngrid_boundary
+              enddo
+              print '(a)','------------------------------'
+              ngrid_active = sum(active(:)%ngrid)
+              ngrid_ghost  = 0
+              do jcpu=1,ncpu
+                 if (jcpu==myid) cycle
+                 ngrid_ghost = ngrid_ghost + sum(reception(jcpu,:)%ngrid)
+              enddo
+              ngrid_boundary  = 0
+              do jcpu=1,nboundary
+                 ngrid_boundary = ngrid_boundary + sum(boundary(jcpu,:)%ngrid)
+              enddo
+              print '(a,3i9)','TOTAL:',ngrid_active,ngrid_ghost,ngrid_boundary
+              do_exit=.true.
+             endif
+!!$omp end critical 
+              cycle
            end if
-
            ! Refine selected cells
            if(ncreate_tmp>0)then
               icell=0
@@ -434,8 +477,40 @@ subroutine refine_fine(ilevel)
            end if
         end do
      end do
-  end do
+!     !$omp end parallel do
+     if (do_exit) exit LCPU
+  end do LCPU
   if(verbose)write(*,112)ncreate
+  endif
+
+  if (.not. ok_mem) write (*,*) 'Refine_fine :', myid, ok_mem
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(ok_mem,ok_all,1,MPI_LOGICAL,MPI_LAND,MPI_COMM_WORLD, info)
+#else
+  ok_all = ok_mem
+#endif
+  if (.not. ok_all) then
+     allocate(ngrid_list(ncpu))
+#ifndef WITHOUTMPI
+     call MPI_GATHER(numbf,1,MPI_INTEGER,ngrid_list,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
+#else
+     ngrid_list(1) = numbf
+#endif
+     if (myid==1) then
+        print '(a,i13)','Ngridmax       :', ngridmax
+        do icpu=1,ncpu
+           print '(a,i5,2i13,f8.4)', 'Ncpu, Ngrid, Nfree, % :', icpu, &
+             ngridmax-ngrid_list(icpu), ngrid_list(icpu), real(ngridmax-ngrid_list(icpu))/ngridmax*100.
+        enddo
+        if (ncpu > 32) print '(a,i13)','Ngridmax       :', ngridmax
+     endif
+#ifndef WITHOUTMPI
+     call sleep(1)
+     call MPI_BARRIER(MPI_COMM_WORLD, info)
+     call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#else
+     stop
+#endif
   endif
 
   !-----------------------------------------------------
@@ -448,15 +523,22 @@ subroutine refine_fine(ilevel)
         ibound=0
         boundary_region=.false.
         ncache=active(ilevel)%ngrid
+        do_omp=.true.
      else if(icpu<=ncpu)then
         ibound=0
         boundary_region=.false.
         ncache=reception(icpu,ilevel)%ngrid
+        do_omp=.false.
      else
         ibound=icpu-ncpu
         boundary_region=.true.
         ncache=boundary(ibound,ilevel)%ngrid
+        do_omp=.false.
      end if
+!     !$omp parallel do default(none) if(do_omp) &
+!     !$omp&  private(igrid,ngrid,i,ind_grid,ind,iskip,ind_cell,nkill_tmp,ok,icell,ind_cell_tmp) &
+!     !$omp&  shared(ncpu,icpu,ibound,myid,ilevel,active,reception,ncoarse,ngridmax, &
+!     !$omp&    boundary,boundary_region,nkill,ncache,flag1,flag2,son,shrink)
      do igrid=1,ncache,nvector  ! Loop over grids
         ngrid=MIN(nvector,ncache-igrid+1)
         if(myid==icpu)then
@@ -477,26 +559,24 @@ subroutine refine_fine(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
+           ! Count cells for de-refinement
+           nkill_tmp=0
            if(shrink)then
               ! Gather unauthorized and refined cells
               do i=1,ngrid
                  ok(i)= flag2(ind_cell(i))==0 .and. &
                       & son  (ind_cell(i))>0
+                 nkill_tmp=nkill_tmp+merge(1,0,ok(i))
               end do
            else
               ! Gather unflagged and refined cells
               do i=1,ngrid
                  ok(i)= flag1(ind_cell(i))==0 .and. &
                       & son  (ind_cell(i))>0
+                 nkill_tmp=nkill_tmp+merge(1,0,ok(i))
               end do
            endif
-           ! Count cells for de-refinement
-           nkill_tmp=0
-           do i=1,ngrid
-              if(ok(i))then
-                 nkill_tmp=nkill_tmp+1
-              end if
-           end do
+!           !$omp atomic
            nkill=nkill+nkill_tmp
            ! De-refine selected cells
            if(nkill_tmp>0)then
@@ -573,14 +653,14 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar)::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar)::u2
 #endif
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)::g1=0.0
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::g2=0.0
+  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)::g1
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::g2
 
   real(dp),dimension(1:nvector,1:ndim)::xx
   integer ,dimension(1:nvector)::cc
 
   logical::error
-
+  
   ! Mesh spacing in father level
   dx=0.5D0**(ilevel-1)
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -593,18 +673,22 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 
   ! Get nn new grids from free memory
   do i=1,nn
-     igrid=headf
-     ind_grid_son(i)=igrid
+!!$omp critical
+     ind_grid_son(i)=headf
      headf=next(headf)
-     numbf=numbf-1
-     used_mem=ngridmax-numbf
+!!$omp end critical
   end do
+!!$omp atomic
+  numbf=numbf-nn
+!!$omp critical
+  used_mem=ngridmax-numbf
+!!$omp end critical
   
   ! Set new grids position
   iz=(ind-1)/4
   iy=(ind-1-4*iz)/2
   ix=(ind-1-2*iy-4*iz)
-  if(ndim>0)xc(1)=(dble(ix)-0.5D0)*dx
+  xc(1)=(dble(ix)-0.5D0)*dx
   if(ndim>1)xc(2)=(dble(iy)-0.5D0)*dx
   if(ndim>2)xc(3)=(dble(iz)-0.5D0)*dx
   do idim=1,ndim
@@ -614,9 +698,6 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   end do
 
   ! Connect new grids to father cells
-  do i=1,nn
-     son(ind_cell(i))=ind_grid_son(i)
-  end do
   do i=1,nn
      father(ind_grid_son(i))=ind_cell(i)
   end do
@@ -628,9 +709,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   do j=1,twondim
      do i=1,nn
         nbor(ind_grid_son(i),j)=indn(i,j)
-        if(indn(i,j)==0)then
-           error=.true.
-        end if
+        error = error .or. indn(i,j)==0
      end do
   end do
   if(error)then
@@ -665,14 +744,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         if(ndim>1)xc(2)=(dble(iy)-0.5D0)*dx/2.0d0
         if(ndim>2)xc(3)=(dble(iz)-0.5D0)*dx/2.0d0
         ! Compute cell coordinates
-        do idim=1,ndim
-           do i=1,nn
-              xx(i,idim)=xg(ind_grid_son(i),idim)+xc(idim)
-           end do
-        end do
         ! Rescale position from code units to user units
         do idim=1,ndim
            do i=1,nn
+              xx(i,idim)=xg(ind_grid_son(i),idim)+xc(idim)
               xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
            end do
         end do
@@ -686,6 +761,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 
   ! Connect news grids to level ilevel linked list
   if(boundary_region)then
+!!$omp critical
      do i=1,nn
         igrid=ind_grid_son(i)
         if(numbb(ibound,ilevel)>0)then
@@ -702,10 +778,12 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            numbb(ibound,ilevel)=1
         end if
      end do
+!!$omp end critical
   else
      do i=1,nn
         igrid=ind_grid_son(i)
         icpu=cpu_map(ind_cell(i))
+!!$omp critical
         if(numbl(icpu,ilevel)>0)then
            next(igrid)=0
            prev(igrid)=taill(icpu,ilevel)
@@ -719,6 +797,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            taill(icpu,ilevel)=igrid
            numbl(icpu,ilevel)=1
         end if
+!!$omp end critical
      end do
   end if
 
@@ -754,9 +833,11 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         end if
 #ifdef SOLVERmhd
        ! Gather son index
+        !!$omp critical
         do i=1,nn
            ind1(i,j)=son(ind_fathers(i,j))
         end do
+        !!$omp end critical
 #endif
       end do
      ! Interpolate
@@ -778,20 +859,34 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
         end do
         if(poisson)then
-           do idim=1,ndim
-              do i=1,nn
-                 f(iskip+ind_grid_son(i),idim)=g2(i,j,idim)
-              end do
+           do i=1,nn ! straight injection for phi_old
+              f(iskip+ind_grid_son(i),1)=g2(i,j,1)
+#if NDIM>1
+              f(iskip+ind_grid_son(i),2)=g2(i,j,2)
+#endif
+#if NDIM>2
+              f(iskip+ind_grid_son(i),3)=g2(i,j,3)
+#endif
            end do
         end if
      end do
   end if
+  ! Done with interpolating; update father cells link to newly created cells
+!!$omp critical
+  do i=1,nn
+     son(ind_cell(i))=ind_grid_son(i)
+  end do
+!!$omp end critical
 
 end subroutine make_grid_fine
 !###############################################################
 !###############################################################
 !###############################################################
 !###############################################################
+
+   ! NEW version
+
+#if 0==0
 subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use amr_commons
   use pm_commons
@@ -808,6 +903,171 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   integer::igrid,iskip,icpu
   integer::i,j,idim,ind,ivar
   integer,dimension(1:nvector)::ind_grid_son,ind_cell_son
+  
+  ! Gather son grids and disconnect son grids from father cells
+  do i=1,nn
+     ind_grid_son(i)=son(ind_cell(i))
+     son(ind_cell(i))=0
+  end do
+
+  ! Disconnect son grids from level ilevel linked list
+  if(boundary_region)then
+     !!$omp critical
+     do i=1,nn
+        igrid=ind_grid_son(i)
+        if(prev(igrid).ne.0) then
+           if(next(igrid).ne.0)then
+              next(prev(igrid))=next(igrid)
+              prev(next(igrid))=prev(igrid)
+           else
+              next(prev(igrid))=0
+              tailb(ibound,ilevel)=prev(igrid)
+           end if
+        else
+           if(next(igrid).ne.0)then
+              prev(next(igrid))=0
+              headb(ibound,ilevel)=next(igrid)
+           else
+              headb(ibound,ilevel)=0
+              tailb(ibound,ilevel)=0
+           end if
+        end if
+        numbb(ibound,ilevel)=numbb(ibound,ilevel)-1 
+     end do
+     !!$omp end critical
+  else
+     !!$omp critical
+     do i=1,nn
+        igrid=ind_grid_son(i)
+        icpu=cpu_map(ind_cell(i))
+        if(prev(igrid).ne.0) then
+           if(next(igrid).ne.0)then
+              next(prev(igrid))=next(igrid)
+              prev(next(igrid))=prev(igrid)
+           else
+              next(prev(igrid))=0
+              taill(icpu,ilevel)=prev(igrid)
+           end if
+        else
+           if(next(igrid).ne.0)then
+              prev(next(igrid))=0
+              headl(icpu,ilevel)=next(igrid)
+           else
+              headl(icpu,ilevel)=0
+              taill(icpu,ilevel)=0
+           end if
+        end if
+        numbl(icpu,ilevel)=numbl(icpu,ilevel)-1 
+     end do
+     !!$omp end critical
+  end if
+
+  ! Reset grid variables
+  do i=1,nn
+     father(ind_grid_son(i))=0
+     xg(ind_grid_son(i),1)=0.0_dp
+     nbor(ind_grid_son(i),1)=0
+     nbor(ind_grid_son(i),2)=0
+#if NDIM>1
+     xg(ind_grid_son(i),2)=0.0_dp
+     nbor(ind_grid_son(i),3)=0
+     nbor(ind_grid_son(i),4)=0
+#endif
+#if NDIM>2
+     xg(ind_grid_son(i),3)=0.0_dp
+     nbor(ind_grid_son(i),5)=0
+     nbor(ind_grid_son(i),6)=0
+#endif
+  end do
+  if(pic)then
+     do i=1,nn
+        headp(ind_grid_son(i))=0
+        tailp(ind_grid_son(i))=0
+        numbp(ind_grid_son(i))=0
+     end do
+  end if
+
+  ! Reset cell variables
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,nn
+        ind_cell_son(i)=iskip+ind_grid_son(i)
+     end do
+     ! Tree variables
+     do i=1,nn
+        son     (ind_cell_son(i))=0
+        flag1   (ind_cell_son(i))=0
+        flag2   (ind_cell_son(i))=0
+        cpu_map (ind_cell_son(i))=0
+        cpu_map2(ind_cell_son(i))=0
+     end do
+     ! Gravity variables
+     if(poisson)then
+        do i=1,nn
+           rho(ind_cell_son(i))=0.0_dp
+           phi(ind_cell_son(i))=0.0_dp
+           f(ind_cell_son(i),1)=0.0_dp
+#if NDIM>1
+           f(ind_cell_son(i),2)=0.0_dp
+#endif
+#if NDIM>2
+           f(ind_cell_son(i),3)=0.0_dp
+#endif
+        end do
+     end if
+     ! Hydro variables
+     if(hydro)then
+#ifdef SOLVERmhd
+        do ivar=1,nvar+3
+#else
+        do ivar=1,nvar
+#endif
+           do i=1,nn
+              uold(ind_cell_son(i),ivar)=0.0D0
+              unew(ind_cell_son(i),ivar)=0.0D0
+           end do
+        end do
+     end if
+  end do
+
+  ! Put son grids at the tail of the free memory linked list
+  !!$omp critical
+  do i=1,nn
+     igrid=ind_grid_son(i)
+     next(tailf)=igrid
+     prev(igrid)=tailf
+     next(igrid)=0
+     tailf=igrid
+  end do
+  !!$omp end critical
+  !!$omp atomic
+  numbf=numbf+nn
+  
+end subroutine kill_grid
+
+
+#endif
+
+
+! OLD version
+
+#if 0==1
+subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::nn,ilevel,ibound
+  logical::boundary_region
+  integer,dimension(1:nvector)::ind_cell
+  !----------------------------------------------------
+  ! This routine destroy the grids at level ilevel
+  ! contained in father cell ind_cell(:)
+  !----------------------------------------------------
+  integer::igrid,iskip,icpu
+  integer::i,j,idim,ind,ivar
+  integer,dimension(1:nvector),save::ind_grid_son,ind_cell_son
   
   ! Gather son grids
   do i=1,nn
@@ -941,3 +1201,6 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   end do
   
 end subroutine kill_grid
+
+
+#endif

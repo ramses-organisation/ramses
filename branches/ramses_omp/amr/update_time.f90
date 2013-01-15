@@ -165,6 +165,7 @@ subroutine clean_stop
 #ifndef WITHOUTMPI
   call MPI_FINALIZE(info)
 #endif
+
   stop
 end subroutine clean_stop
 

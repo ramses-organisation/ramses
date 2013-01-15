@@ -2,6 +2,7 @@ subroutine read_params
   use amr_commons
   use pm_parameters
   use poisson_parameters
+  use openmp_support
 #ifndef WITHOUTMPI
   use mpi
 #endif
@@ -18,6 +19,10 @@ subroutine read_params
   real(kind=8)::delta_tout=0,tend=0
   real(kind=8)::delta_aout=0,aend=0
   logical::nml_ok
+
+#ifndef WITHOUTMPI
+  integer::mpi_provided
+#endif
 
   !--------------------------------------------------
   ! Namelist definitions
@@ -37,24 +42,50 @@ subroutine read_params
 
   ! MPI initialization
 #ifndef WITHOUTMPI
+
+#ifdef _OPENMP
+  call MPI_INIT_THREAD(MPI_THREAD_MULTIPLE,mpi_provided,ierr)
+#else
   call MPI_INIT(ierr)
+#endif
+
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
   myid=myid+1 ! Carefull with this...
+
+#ifdef _OPENMP
+  if (mpi_provided==MPI_THREAD_SINGLE.and.myid==1) then
+    print *, 'MPI implementation provides support for MPI calls outside openmp regions'
+    print *, 'This is the minimum requirement for this version of ramses'
+  endif
+  if (mpi_provided==MPI_THREAD_FUNNELED.and.myid==1) then
+    print *, 'MPI implementation provides support for MPI calls in master regions'
+    print *, 'This is more than what ramses requires in this version.'
+  endif
+  if (mpi_provided==MPI_THREAD_SERIALIZED.and.myid==1) then
+    print *, 'MPI implementation provides support for serial MPI calls by any thread'
+    print *, 'This is more than what ramses requires in this version.'
+  endif
+  if (mpi_provided==MPI_THREAD_MULTIPLE .and. myid==1) then
+    print *, 'MPI implementation provides support for simultaneous MPI calls by different threads'
+    print *, 'This is more than what ramses requires in this version.'
+ endif
+ if (myid==1) print*,' ' 
 #endif
-#ifdef WITHOUTMPI
+
+#else  ! WITHOUTMPI
   ncpu=1
   myid=1
 #endif
 
-! OpenMP initialization
-  nthreads=1
-!$ nthreads=omp_get_max_threads()
- 
+  ! OpenMP initialization
+  call init_openmp
+
   !--------------------------------------------------
   ! Advertise RAMSES
   !--------------------------------------------------
   if(myid==1)then
+
   write(*,*)'_/_/_/       _/_/     _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'_/    _/    _/  _/    _/_/_/_/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/ _/ _/   _/        _/         _/       '
@@ -66,7 +97,12 @@ subroutine read_params
   write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP)           '
   write(*,*)'                     (c) CEA 1999-2007                         '
   write(*,*)' '
-  write(*,'(" Working with ",I4," mpi tasks and ",I4," openmp threads for ndim = ",I1)')ncpu,nthreads,ndim
+  write(*,'(" Working in ",I1," dimensions")') ndim
+  if (ncpu > 1)   write(*,'("  # of MPI tasks           :",I8)') ncpu
+  if (omp_nthreads > 1) then
+                  write(*,'("  # of OpenMP threads      :",I8)') omp_nthreads
+    if (ncpu > 1) write(*,'("  # of cores used in total :",I8)') ncore
+  endif
   write(*,*)' '
 
   ! Read namelist filename from command line argument

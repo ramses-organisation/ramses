@@ -16,13 +16,6 @@ recursive subroutine amr_step(ilevel,icount)
   integer::icycle,i,idim,ivar,info
   logical::ok_defrag
   logical,save::first_step=.true.
-! timing ONLY !!!
-  real(kind=kind(0d0)):: cgt1,cgt2,cgtmax,cgt
-  real(kind=kind(0d0)),save::cgtsum=0d0
-  real(kind=kind(0d0)):: mgt1,mgt2,mgt,mgtmax
-  real(kind=kind(0d0)),save::mgtsum=0d0
-  real(kind=kind(0d0)):: ht1,ht2
-  real(kind=kind(0d0)),save::ht=0d0
 
   if(numbtot(1,ilevel)==0)return
 
@@ -67,6 +60,7 @@ recursive subroutine amr_step(ilevel,icount)
            ! Refine grids
            !--------------------------
            call refine_fine(i)
+
         end do
      end if
   end if
@@ -167,38 +161,9 @@ recursive subroutine amr_step(ilevel,icount)
      ! Compute gravitational potential
      if(ilevel>levelmin)then
         if(ilevel .ge. cg_levelmin) then
-! timing only
-#ifndef WITHOUTMPI
-           cgt1=mpi_wtime()
-#endif
            call phi_fine_cg(ilevel,icount)
-! timing only
-#ifndef WITHOUTMPI
-           cgt2=mpi_wtime()
-           cgt=cgt2-cgt1
-           call mpi_reduce(cgt,cgtmax,1,mpi_double_precision,mpi_max,0, &
-                           mpi_comm_world,info)
-           if(myid==1)then
-              cgtsum=cgtsum+cgtmax
-              print*,'CGT:',cgtsum,'new:',cgtmax
-           endif
-#endif
         else
-#ifndef WITHOUTMPI
-           mgt1=mpi_wtime()
-#endif
            call multigrid_fine(ilevel)
-! timing only
-#ifndef WITHOUTMPI
-           mgt2=mpi_wtime()
-           mgt=mgt2-mgt1
-           call mpi_reduce(mgt,mgtmax,1,mpi_double_precision,mpi_max,0, &
-                           mpi_comm_world,info)
-           if(myid==1)then
-              mgtsum=mgtsum+mgtmax
-              print*,'MGT:',mgtsum,'new:',mgtmax
-           endif
-#endif
         end if
      else
         call multigrid_fine(levelmin)
@@ -288,17 +253,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(hydro)then
 
      ! Hyperbolic solver
-! timing only
-#ifndef WITHOUTMPI
-     ht1=mpi_wtime()
-#endif
      call godunov_fine(ilevel)
-! timing only
-#ifndef WITHOUTMPI
-     ht2=mpi_wtime()
-     ht=ht+ht2-ht1
-     print*,'HT:',ht,'new:',ht2-ht1
-#endif
 
      ! Reverse update boundaries
 #ifdef SOLVERmhd

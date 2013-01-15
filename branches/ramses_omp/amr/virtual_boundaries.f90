@@ -17,7 +17,7 @@ subroutine authorize_coarse
   ! Initialize flag2(0) to zero
   flag2(0)=0
   ! Duplicate full domain over cpus
-!$OMP PARALLEL DO DEFAULT(none) PRIVATE(i,j,k,ind) SHARED(flag2) FIRSTPRIVATE(nxny,nx,ny,nz)
+!!$OMP PARALLEL DO DEFAULT(none) PRIVATE(i,j,k,ind) SHARED(flag2) FIRSTPRIVATE(nxny,nx,ny,nz)
   do k=0,nz-1
   do j=0,ny-1
   do i=0,nx-1
@@ -26,7 +26,7 @@ subroutine authorize_coarse
   end do
   end do
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
  
 end subroutine authorize_coarse
 !################################################################
@@ -87,7 +87,7 @@ subroutine authorize_fine(ilevel)
   ! Authorize all myid grids (needed for uploads)
   ncache=active(ilevel)%ngrid
   ! Loop over grids by vector sweeps
-!$OMP PARALLEL DO DEFAULT(none) SHARED(active,flag2) PRIVATE(igrid,ngrid,i,ind_grid,ind_cell,iskip,ind) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none) SHARED(active,flag2) PRIVATE(igrid,ngrid,i,ind_grid,ind_cell,iskip,ind) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax)
   do igrid=1,ncache,nvector
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -107,15 +107,14 @@ subroutine authorize_fine(ilevel)
      end do
      ! End loop over cells
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
   ! End loop over grids
 
   ! Authorize virtual cells that contains myid children cells
-!$OMP PARALLEL DEFAULT(none) SHARED(reception,xg,flag2,bound_key,bisec_cpubox_min,bisec_cpubox_max,bisec_cpubox_min2,bisec_cpubox_max2,cpu_map2,bound_key2,father) PRIVATE(ncache,igrid,ngrid,i,ind_grid,iskip,icpu,xx,isub,order_max,order_min,test,xmin,xmax,ind_cell) FIRSTPRIVATE(ilevel,ncoarse,ngridmax,xc,skip_loc,scale,ordering,overload,ncpu,dx_loc,balance,myid)
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
      ! Loop over grids by vector sweeps
-!$OMP DO
+!!!!$OMP DO
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
@@ -209,18 +208,18 @@ subroutine authorize_fine(ilevel)
         end do
         ! End loop over cells
      end do
-!$OMP END DO
-! [ADD NOWAIT?]
+!!!!$OMP END DO
+!!! [ADD NOWAIT?]
      ! End loop over grids
   end do
-!$OMP END PARALLEL
+!!!!$OMP END PARALLEL
   ! End loop over cpus
 
   ! Apply dilatation operator over flag2 cells on virtual cells only
      
   flag2(0)=0
   ! Set flag2 to 0 for physical boundary grids
-!$OMP PARALLEL DO IF(nboundary > 1) SCHEDULE(STATIC,1) DEFAULT(none) SHARED(flag2,boundary) PRIVATE(ind,iskip) FIRSTPRIVATE(nboundary,ncoarse,ngridmax,ilevel)
+!!$OMP PARALLEL DO IF(nboundary > 1) SCHEDULE(STATIC,1) DEFAULT(none) SHARED(flag2,boundary) PRIVATE(ind,iskip) FIRSTPRIVATE(nboundary,ncoarse,ngridmax,ilevel)
   do ibound=1,nboundary
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -229,15 +228,15 @@ subroutine authorize_fine(ilevel)
      end do
   end do
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   n_nbor(1:3)=(/1,2,3/)
   ! Loop over steps
-!$OMP PARALLEL DEFAULT(none) SHARED(reception,flag1,flag2) PRIVATE(ismooth,icpu,ncache,igrid,ngrid,igridn,ind_grid,ind_cell,iskip) FIRSTPRIVATE(ncpu,n_nbor,ilevel,ngridmax,nexpand_bound,ncoarse) 
+!!$OMP PARALLEL DEFAULT(none) SHARED(reception,flag1,flag2) PRIVATE(ismooth,icpu,ncache,igrid,ngrid,igridn,ind_grid,ind_cell,iskip) FIRSTPRIVATE(ncpu,n_nbor,ilevel,ngridmax,nexpand_bound,ncoarse) 
   do ibound=1,nexpand_bound
   do ismooth=1,ndim
      ! Initialize flag1 to 0 in virtual cells
-!$OMP DO
+!!$OMP DO
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
         do igrid=1,ncache,nvector
@@ -256,9 +255,9 @@ subroutine authorize_fine(ilevel)
            end do
         end do
      end do
-!$OMP ENDDO
+!!$OMP ENDDO
      ! Count neighbors and set flag2 accordingly
-!$OMP DO
+!!$OMP DO
     do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
         do igrid=1,ncache,nvector
@@ -272,10 +271,10 @@ subroutine authorize_fine(ilevel)
            end do
         end do
      end do
-!$OMP ENDDO
+!!$OMP ENDDO
 
      ! Set flag2=1 for cells with flag1=1
-!$OMP DO
+!!$OMP DO
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
         do igrid=1,ncache,nvector
@@ -294,12 +293,12 @@ subroutine authorize_fine(ilevel)
            end do
         end do
      end do
-!$OMP ENDDO
+!!$OMP ENDDO
 
   end do
   ! End loop over steps
   end do
-!$OMP END PARALLEL
+!!$OMP END PARALLEL
 
   ! Compute authorization map for physical boundaries
   if(simple_boundary)call init_boundary_fine(ilevel)
@@ -355,19 +354,19 @@ subroutine make_virtual_coarse_int(xx)
     
   ! Communications
   fff=0; ffg=0
-!$OMP PARALLEL DO DEFAULT(none) IF(ncell > 1024) PRIVATE(icell) SHARED(cpu_map,fff,xx) FIRSTPRIVATE(ind_cell,myid,ncell)
+!!$OMP PARALLEL DO DEFAULT(none) IF(ncell > 1024) PRIVATE(icell) SHARED(cpu_map,fff,xx) FIRSTPRIVATE(ind_cell,myid,ncell)
   do icell=1,ncell
      if(cpu_map(ind_cell(icell))==myid)fff(icell)=xx(ind_cell(icell))
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   call MPI_ALLREDUCE(fff,ffg,ncell,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 
-!$OMP PARALLEL DO DEFAULT(none) IF(ncell > 1024) PRIVATE(icell) SHARED(ffg,xx) FIRSTPRIVATE(ind_cell,ncell)
+!!$OMP PARALLEL DO DEFAULT(none) IF(ncell > 1024) PRIVATE(icell) SHARED(ffg,xx) FIRSTPRIVATE(ind_cell,ncell)
   do icell=1,ncell
      xx(ind_cell(icell))=ffg(icell)
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
      
   ! Deallocate local arrays
   deallocate(ind_cell,fff,ffg)
@@ -412,7 +411,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   end do
   
   ! Gather emission array
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
     if (emission(icpu,ilevel)%ngrid>0) then
       do j=1,twotondim
@@ -424,7 +423,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
       end do
     end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Send all messages
   countsend=0
@@ -442,7 +441,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
     if (reception(icpu,ilevel)%ngrid>0) then
       do j=1,twotondim
@@ -454,7 +453,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
       end do 
     end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -501,7 +500,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
   end do
   
   ! Gather emission array
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
     if (emission(icpu,ilevel)%ngrid>0) then
       do j=1,twotondim
@@ -513,7 +512,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
       end do
     end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Send all messages
   countsend=0
@@ -531,7 +530,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
     if (reception(icpu,ilevel)%ngrid>0) then
       do j=1,twotondim
@@ -543,7 +542,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
       end do 
     end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -583,7 +582,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   if(ilevel.LE.switchlevel)then
 
  ! Gather emission array                                                                      
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (reception(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -597,7 +596,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Receive all messages                                                                       
 ! do not use openmp here to make sure only master thread is used for mpi comms
@@ -642,7 +641,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   end do
   
   ! Scatter reception array                                                                    
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -655,7 +654,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   else
 
@@ -672,7 +671,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   end do
 
   ! Gather emission array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (reception(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -684,7 +683,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Send all messages
 ! do not use openmp here to make sure only master thread is used for mpi comms
@@ -702,7 +701,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
     if (emission(icpu,ilevel)%ngrid>0) then
       do j=1,twotondim
@@ -715,7 +714,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
       end do 
     end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -759,7 +758,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   if(ilevel.le.switchlevel) then
 
   ! Gather emission array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i,icell,ibuf) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (reception(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -773,7 +772,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
   
   ! Receive all messages
 ! do not use openmp here to make sure only master thread is used for mpi comms
@@ -819,7 +818,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   end do
   
   ! Scatter reception array
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -832,7 +831,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
  
   else
 
@@ -849,7 +848,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   end do
 
   ! Gather emission array
-!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none)  SCHEDULE(DYNAMIC) SHARED(reception,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (reception(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -861,7 +860,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
   
   ! Send all messages
 ! do not use openmp here to make sure only master thread is used for mpi comms
@@ -879,7 +878,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(emission,xx) PRIVATE(icpu,step,j,iskip,i) FIRSTPRIVATE(ncpu,ilevel,ncoarse,ngridmax)
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -892,7 +891,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
- !$OMP END PARALLEL DO
+ !!$OMP END PARALLEL DO
  
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -941,7 +940,7 @@ subroutine build_comm(ilevel)
   ! Compute grids global adress using flag2 array at level ilevel-1
   !----------------------------------------------------------------
   if(ilevel==1)then
-!$OMP PARALLEL DO DEFAULT(none) SHARED(flag2,cpu_map,son) PRIVATE(i,j,k,ind) FIRSTPRIVATE(kcoarse_min,jcoarse_min,icoarse_min,kcoarse_max,jcoarse_max,icoarse_max,nxny,nx,myid)
+!!$OMP PARALLEL DO DEFAULT(none) SHARED(flag2,cpu_map,son) PRIVATE(i,j,k,ind) FIRSTPRIVATE(kcoarse_min,jcoarse_min,icoarse_min,kcoarse_max,jcoarse_max,icoarse_max,nxny,nx,myid)
      do k=kcoarse_min,kcoarse_max
      do j=jcoarse_min,jcoarse_max
      do i=icoarse_min,icoarse_max
@@ -954,13 +953,13 @@ subroutine build_comm(ilevel)
      end do
      end do
      end do  
- !$OMP END PARALLEL DO
+ !!$OMP END PARALLEL DO
     call make_virtual_coarse_int(flag2(1))
   else
      ! Initialize flag2 to local adress for cpu map = myid cells
      ncache=active(ilevel-1)%ngrid
-!$OMP PARALLEL DEFAULT(none) SHARED(active,flag2,cpu_map,son,reception) PRIVATE(icpu,i,igrid,ngrid,ind_grid,ind,ind_cell,iskip) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,myid,ncpu) 
-!$OMP DO
+!!$OMP PARALLEL DEFAULT(none) SHARED(active,flag2,cpu_map,son,reception) PRIVATE(icpu,i,igrid,ngrid,ind_grid,ind,ind_cell,iskip) FIRSTPRIVATE(ncache,ilevel,ncoarse,ngridmax,myid,ncpu) 
+!!$OMP DO
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -980,8 +979,8 @@ subroutine build_comm(ilevel)
            end do
         end do
      end do
-!$OMP ENDDO NOWAIT
-!$OMP DO SCHEDULE(DYNAMIC)
+!!$OMP ENDDO NOWAIT
+!!$OMP DO SCHEDULE(DYNAMIC)
       do icpu=1,ncpu
         ncache=reception(icpu,ilevel-1)%ngrid
         do igrid=1,ncache,nvector
@@ -1004,8 +1003,8 @@ subroutine build_comm(ilevel)
            end do
         end do
      end do
-!$OMP ENDDO
-!$OMP END PARALLEL
+!!$OMP ENDDO
+!!$OMP END PARALLEL
      call make_virtual_reverse_int(flag2(1),ilevel-1)
      call make_virtual_fine_int   (flag2(1),ilevel-1)
   end if
@@ -1023,6 +1022,15 @@ subroutine build_comm(ilevel)
      ! Allocate grid index to new communicator
      active(ilevel)%ngrid=ncache
      allocate(active(ilevel)%igrid(1:ncache))
+! now first touch the active array, same approach as used in 
+! loadbalance.f90:defrag for the other arrays, BUT without the Hilbert key sort
+!
+!!$OMP PARALLEL DO DEFAULT(NONE) SHARED(active) PRIVATE(i) FIRSTPRIVATE(ilevel,ncache)SCHEDULE(STATIC)     
+     do i=1,ncache
+        active(ilevel)%igrid(i)=0
+     enddo
+!!$OMP END PARALLEL DO
+
      ! Gather all grids
      igrid=headl(myid,ilevel)
      do jgrid=1,numbl(myid,ilevel)
@@ -1066,7 +1074,7 @@ subroutine build_comm(ilevel)
   ! Compute number and index of virtual boundary grids
   !----------------------------------------------------
 #ifndef WITHOUTMPI
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(numbl,emission,reception,headl,flag2,lookup_mg,sendbuf,father,next) PRIVATE(icpu,ncache,jgrid,igrid) FIRSTPRIVATE(ncpu,myid,ilevel,poisson)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(numbl,emission,reception,headl,flag2,lookup_mg,sendbuf,father,next) PRIVATE(icpu,ncache,jgrid,igrid) FIRSTPRIVATE(ncpu,myid,ilevel,poisson)
    do icpu=1,ncpu
       ncache=0
       if(icpu.ne.myid)ncache=numbl(icpu,ilevel)
@@ -1108,7 +1116,7 @@ subroutine build_comm(ilevel)
       end if
       sendbuf(icpu)=reception(icpu,ilevel)%ngrid
    end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   !--------------------------------------------------------
   ! Communicate virtual grid number and index to parent cpu
@@ -1116,13 +1124,13 @@ subroutine build_comm(ilevel)
   call MPI_ALLTOALL(sendbuf,1,MPI_INTEGER,recvbuf,1,MPI_INTEGER,MPI_COMM_WORLD,info)
 
   ! Allocate grid index
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(recvbuf,emission) PRIVATE(icpu,ncache) FIRSTPRIVATE(ilevel,ncpu)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(recvbuf,emission) PRIVATE(icpu,ncache) FIRSTPRIVATE(ilevel,ncpu)
   do icpu=1,ncpu
      emission(icpu,ilevel)%ngrid=recvbuf(icpu)
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0)allocate(emission(icpu,ilevel)%igrid(1:ncache))
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
   ! Receive grid list    
   countrecv=0
@@ -1159,7 +1167,7 @@ subroutine build_comm(ilevel)
   end do
 
   ! Allocate temporary communication buffers
-!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(reception,emission) PRIVATE(icpu,ncache) FIRSTPRIVATE(ilevel,ncpu)
+!!$OMP PARALLEL DO DEFAULT(none) SCHEDULE(DYNAMIC) SHARED(reception,emission) PRIVATE(icpu,ncache) FIRSTPRIVATE(ilevel,ncpu)
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0)then
@@ -1172,7 +1180,7 @@ subroutine build_comm(ilevel)
         allocate(reception(icpu,ilevel)%f(1:ncache*twotondim,1:1))
      endif
   end do
-!$OMP END PARALLEL DO
+!!$OMP END PARALLEL DO
 
 #endif
 

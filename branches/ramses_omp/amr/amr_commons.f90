@@ -8,7 +8,7 @@ module amr_commons
   integer::nstep=0                              ! Time step
   integer::nstep_coarse=0                       ! Coarse step
   integer::nstep_coarse_old=0                   ! Old coarse step
-  integer::nflag,ncreate,nkill                  ! Refinements
+  integer::nflag
   integer::ncoarse                              ! nx.ny.nz
   integer::ngrid_current                        ! Actual number of octs
 
@@ -24,7 +24,7 @@ module amr_commons
   real(dp)::t=0.0D0                             ! Time variable
 
   ! MPI variables
-  integer::ncpu,ndomain,myid,overload=1
+  integer::ncpu,ncore,ndomain,myid,overload=1
 
   ! OpenMP variables
   integer:: nthreads
@@ -124,4 +124,46 @@ module amr_commons
   
 
 end module amr_commons
+
+!==============================================================================!
+module openmp_support
+  use amr_commons
+  implicit none
+  integer :: omp_nthreads, omp_mythread, mpi_omp_threads
+  logical :: omp_master
+  common /omp/ omp_mythread, omp_master
+  !$omp threadprivate(/omp/)
+contains
+!
+subroutine init_openmp
+#if defined (_OPENMP)
+  use omp_lib, only : omp_get_thread_num, omp_get_num_threads
+#endif
+  implicit none
+#if defined (_OPENMP)
+!$omp parallel
+!$omp master
+  omp_nthreads = omp_get_num_threads()
+!$omp end master
+! NOTE: not sure the omp standard guarantees persistent numbring of threads across parallel regions, even without nested parallelism, although most implementations use  a fixed numbering for threads
+  omp_mythread = omp_get_thread_num() 
+
+  call omp_set_nested(.false.) ! make sure no nested parallelism is enabled, since some
+                           ! omp parallel routines are also called out of other parallel
+                           ! regions
+#else
+  omp_mythread = 0
+  omp_nthreads = 1
+#endif
+  omp_master = omp_mythread .eq. 0
+!$omp end parallel
+  mpi_omp_threads = (ncpu-1)/omp_nthreads+1 ! Ratio of mpi to openmp threads. For hybrid communication.
+  ncore = ncpu*omp_nthreads
+
+  
+end subroutine init_openmp
+end module openmp_support
+!==============================================================================!
+
+
 

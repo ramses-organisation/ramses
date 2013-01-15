@@ -20,7 +20,7 @@ subroutine output_cone()
   integer::ilun,nx_loc,ipout,npout,npart_out
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
-  real(kind=8),dimension(1:ndim,1:nvector)::pos,vel
+  real(kind=8),dimension(1:ndim,1:nvector),save::pos,vel
   real(kind=8),dimension(:,:),allocatable::posout,velout
   real(kind=8),dimension(:),allocatable::zout
   real(kind=8),dimension(:,:),allocatable::tmparr
@@ -32,7 +32,7 @@ subroutine output_cone()
   integer::i,ig,ip,npart1
   integer::nalloc1,nalloc2
 
-  integer,dimension(1:nvector)::ind_part
+  integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
   
