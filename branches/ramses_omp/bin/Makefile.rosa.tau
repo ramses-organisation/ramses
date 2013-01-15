@@ -1,60 +1,59 @@
+
 #############################################################################
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NDIM = 1
+NDIM = 3
+NVAR = 5
 NPRE = 8
-NVAR = 8
-SOLVER = mhd
-PATCH = 
+SOLVER = hydro
+#PATCH = ../patch/tau_dbg:../patch/hydro_omp:../patch/hilbert #../patch/array 
+PATCH =  ../patch/tau_dbg:../patch/hydro_omp_sse
+#PATCH = ../patch/tau_dbg:../patch/poisson_omp
+#PATCH = ../patch/array2
 EXEC = ramses
 #############################################################################
 # Fortran compiler options and directives
 
-F90 = mpif90 -g -traceback
-FFLAGS = -O0 -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVAR=$(NVAR)
-# --- No MPI, gfortran ----------------------------------
-#F90 = gfortran
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, pgf90 ----------------------------------
-#F90 = pgf90
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, xlf ------------------------------------
-#F90 = xlf
-#FFLAGS = -WF,-DNDIM=$(NDIM),-DNPRE=$(NPRE),-DSOLVER$(SOLVER),-DWITHOUTMPI -qfree=f90 -qsuffix=f=f90 -qsuffix=cpp=f90
-
-# --- No MPI, f90 ------------------------------------
-#F90 = f90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, ifort ----------------------------------
-#F90 = ifort
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-#
-# --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
 # --- MPI, pgf90 syntax ------------------------------
-#F90 = mpif90 -O3
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER)
+F90 = tau_f90.sh  -optAppF90=ftn -optKeepFiles -optPreProcess \
+-optCPPOpts=-DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) \
+-DSOLVER$(SOLVER) -DNVECTOR=90 \
+-optCompile= "-fast -openmp" \
+-optTauSelectFile=../select.tau.hydro
+#-optTauSelectFile=../select.tau.poisson
 
-# --- MPI, ifort syntax ------------------------------
-#F90 = mpif90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
 
-# --- MPI, ifort syntax, additional checks -----------
-#F90 = mpif90
-#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
+# -openmp
+
+#-optCompInst -optVerbose
+
+# options to use with pgf90
+#-optCompile= "-fastsse -mp" \
+
+# options to use with cray ftn
+#-optCompile= "-O 2 cache3 ipa5  -h network=gemini  -N 255" \
+
+#-optPreProcess \
+#-optCPPOpts=-DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) \
+#-DNVECTOR=64 
+
+
+# Crau fortran compiler options (default values like -O omp omitted)
+#F90 = ftn
+#FFLAGS= -O 2 -O cache3 -O ipa5 -h network=gemini -N 255
+
+
+#F90 = ftn -mp 
+
+#FFLAGS = -Mpreprocess -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) \
+#-DSOLVER$(SOLVER) -DNVECTOR=16 -DWITHOUTMPI
 
 #############################################################################
 MOD = mod
 #############################################################################
 # MPI librairies
 LIBMPI = 
-#LIBMPI = -lfmpi -lmpi -lelan
 LIBS = $(LIBMPI)
 #############################################################################
 # Sources directories are searched in this exact order
@@ -73,7 +72,7 @@ HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_f
 AMRLIB = $(MODOBJ) $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 #############################################################################
 ramses:	$(AMRLIB) ramses.o
-	$(F90) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
+	$(F90) $(FFLAGS) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d_tau $(LIBS)
 #############################################################################
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@

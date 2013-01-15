@@ -2,59 +2,59 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NDIM = 1
+NDIM = 3
+NVAR = 5
 NPRE = 8
-NVAR = 8
-SOLVER = mhd
-PATCH = 
+SOLVER = hydro
+#PATCH = ../patch/array
+#PATCH = ../patch/hilbert
+#PATCH = ../patch/threadmemtouch
 EXEC = ramses
 #############################################################################
 # Fortran compiler options and directives
 
-F90 = mpif90 -g -traceback
-FFLAGS = -O0 -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVAR=$(NVAR)
-# --- No MPI, gfortran ----------------------------------
-#F90 = gfortran
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, pgf90 ----------------------------------
-#F90 = pgf90
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, xlf ------------------------------------
-#F90 = xlf
-#FFLAGS = -WF,-DNDIM=$(NDIM),-DNPRE=$(NPRE),-DSOLVER$(SOLVER),-DWITHOUTMPI -qfree=f90 -qsuffix=f=f90 -qsuffix=cpp=f90
-
-# --- No MPI, f90 ------------------------------------
-#F90 = f90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
-# --- No MPI, ifort ----------------------------------
-#F90 = ifort
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-#
-# --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3
-#FFLAGS = -x f95-cpp-input -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DWITHOUTMPI
-
 # --- MPI, pgf90 syntax ------------------------------
-#F90 = mpif90 -O3
-#FFLAGS = -Mpreprocess -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER)
+# pgi or others through cray wrappers
+#F90 = ftn 
+#FFLAGS = -mp -Mpreprocess -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=512 -DWITHOUTMPI
+#
+# debugging flags for use with totalview
+#FFLAGS = -g -mp -Mpreprocess -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=512 -DWITHOUTMPI 
 
-# --- MPI, ifort syntax ------------------------------
-#F90 = mpif90
-#FFLAGS = -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
+# debugging flags
+#FFLAGS = -g  -Mnoopenmp -Mpreprocess -Mbounds  -Mchkfpstk  -Mchkptr  -Mchkstk -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=512 -DWITHOUTMPI
 
-# --- MPI, ifort syntax, additional checks -----------
-#F90 = mpif90
-#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNOSYSTEM
+# intel compiler
+#F90 = ftn
+FFLAGS = -fpp -O3 -ipo -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=30 -DNOSYSTEM
+
+#-openmp 
+# -DWITHOUTMPI   
+# -DQUADHILBERT
+
+# intel compiler, debugging flags
+F90 = ftn
+#FFLAGS = -fpp -openmp -check all -g -debug -ftrapuv -warn interface -traceback -z muldefs \
+#   -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=30 -DNOSYSTEM
+
+# -DWITHOUTMPI
+
+# intel compiler, debugging flags for use with totalview
+#FFLAGS = -fpp -g -z muldefs -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=30
+
+# -openmp
+#-DWITHOUTMPI
+
+# Cray compiler
+#F90 = ftn -e Z -O 3 -O cache3 -O ipa5 -O scalar3 -O thread3
+#FFLAGS = -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=8
+# -DNVECTOR=64 -DWITHOUTMPI
 
 #############################################################################
 MOD = mod
 #############################################################################
 # MPI librairies
 LIBMPI = 
-#LIBMPI = -lfmpi -lmpi -lelan
 LIBS = $(LIBMPI)
 #############################################################################
 # Sources directories are searched in this exact order
@@ -73,7 +73,7 @@ HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_f
 AMRLIB = $(MODOBJ) $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 #############################################################################
 ramses:	$(AMRLIB) ramses.o
-	$(F90) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
+	$(F90) $(FFLAGS) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
 #############################################################################
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
