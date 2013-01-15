@@ -11,9 +11,9 @@ subroutine upload_fine(ilevel)
   ! This routine performs a restriction operation (averaging down)
   ! for the hydro variables.
   !----------------------------------------------------------------------
-  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_split
-  integer,dimension(1:nvector)::ind_unsplit,igrid_son
-  integer ,dimension(1:nvector,0:twondim)::igridn
+  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_split
+  integer,dimension(1:nvector),save::ind_unsplit,igrid_son
+  integer ,dimension(1:nvector,0:twondim),save::igridn
 
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   integer::ind_left,ind_right,neul=5
@@ -22,7 +22,7 @@ subroutine upload_fine(ilevel)
 
   real(dp)::emag
 
-  logical,dimension(1:nvector)::ok,ok_leaf
+  logical,dimension(1:nvector),save::ok,ok_leaf
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -243,8 +243,8 @@ subroutine upl(ind_cell,ncell)
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
   integer ::ivar,i,idim,ind_son,iskip_son,ind,neul=5
-  integer ,dimension(1:nvector)::igrid_son,ind_cell_son
-  real(dp),dimension(1:nvector)::getx,ekin,emag
+  integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
+  real(dp),dimension(1:nvector),save::getx,ekin,emag
   integer,dimension(1:6,1:4)::hhh
 
   ! Get child oct index
@@ -421,8 +421,8 @@ subroutine upl_left(ind_cell,igrid_son,idim,ncell)
   ! for the magnetic field on cell faces
   !---------------------------------------------------------------------
   integer::i,ind_son,iskip_son,ind,neul=5
-  integer ,dimension(1:nvector)::ind_cell_son
-  real(dp),dimension(1:nvector)::getx
+  integer ,dimension(1:nvector),save::ind_cell_son
+  real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
 
   hhh(1,1:4)=(/1,3,5,7/)
@@ -469,8 +469,8 @@ subroutine upl_right(ind_cell,igrid_son,idim,ncell)
   ! for the magnetic field on cell faces
   !---------------------------------------------------------------------
   integer::i,ind_son,iskip_son,ind,neul=5
-  integer ,dimension(1:nvector)::ind_cell_son
-  real(dp),dimension(1:nvector)::getx
+  integer ,dimension(1:nvector),save::ind_cell_son
+  real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
 
   hhh(1,1:4)=(/1,3,5,7/) 
@@ -534,11 +534,11 @@ subroutine interpol_hydro(u1,g1,ind1,u2,g2,nn)
   integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
 
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,0:twondim)::a
-  real(dp),dimension(1:nvector,1:ndim)::w
-  real(dp),dimension(1:nvector)::ekin,emag
-  real(dp),dimension(1:nvector,0:twondim  ,1:6)::B1
-  real(dp),dimension(1:nvector,1:twotondim,1:6)::B2
+  real(dp),dimension(1:nvector,0:twondim),save::a
+  real(dp),dimension(1:nvector,1:ndim),save::w
+  real(dp),dimension(1:nvector),save::ekin,emag
+  real(dp),dimension(1:nvector,0:twondim  ,1:6),save::B1
+  real(dp),dimension(1:nvector,1:twotondim,1:6),save::B2
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -758,9 +758,9 @@ subroutine compute_limiter_central(a,w,nn)
   integer::i,j,idim,ind,ix,iy,iz
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp)::xxc
-  real(dp),dimension(1:nvector,1:twotondim)::ac
-  real(dp),dimension(1:nvector)::corner,kernel,diff_corner,diff_kernel
-  real(dp),dimension(1:nvector)::max_limiter,min_limiter,limiter
+  real(dp),dimension(1:nvector,1:twotondim),save::ac
+  real(dp),dimension(1:nvector),save::corner,kernel,diff_corner,diff_kernel
+  real(dp),dimension(1:nvector),save::max_limiter,min_limiter,limiter
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -901,9 +901,9 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   ! interpol_type=3: linear interpolation without limiters
   !----------------------------------------------------------
   integer::i,j,k,ind,l,idim,imax,jmax,kmax
-  real(dp),dimension(1:nvector,-1:1,0:1,0:1)::u
-  real(dp),dimension(1:nvector,0:1,-1:1,0:1)::v
-  real(dp),dimension(1:nvector,0:1,0:1,-1:1)::w
+  real(dp),dimension(1:nvector,-1:1,0:1,0:1),save::u
+  real(dp),dimension(1:nvector,0:1,-1:1,0:1),save::v
+  real(dp),dimension(1:nvector,0:1,0:1,-1:1),save::w
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1
@@ -956,8 +956,8 @@ subroutine interpol_faces(b1,u,v,w,nn)
 
   ! TVD interpolation from coarse faces
   integer::i,j,k,l,imax,jmax,kmax
-  real(dp),dimension(1:nvector,0:4)::b
-  real(dp),dimension(1:nvector,1:2)::s
+  real(dp),dimension(1:nvector,0:4),save::b
+  real(dp),dimension(1:nvector,1:2),save::s
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1
@@ -1256,7 +1256,7 @@ subroutine cmp_central_faces(u,v,w,nn)
   real(dp),dimension(1:nvector,0:1,0:1,-1:1)::w
 
   integer::i,j,k,l,ii,jj,kk,imax,jmax,kmax
-  real(dp),dimension(1:nvector)::UXX,VYY,WZZ,UXYZ,VXYZ,WXYZ
+  real(dp),dimension(1:nvector),save::UXX,VYY,WZZ,UXYZ,VXYZ,WXYZ
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1

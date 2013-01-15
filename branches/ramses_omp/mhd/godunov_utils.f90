@@ -11,7 +11,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
-  real(dp),dimension(1:nvector)::a2,B2,rho,ctot
+  real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
   
   real(dp)::dtcell,smallp,cf,cc,bc,bn
   integer::k,idim
@@ -107,8 +107,8 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   logical ::ok(1:nvector)
   
   integer::k,idim
-  real(dp),dimension(1:nvector)::eking,ekinm,ekind
-  real(dp),dimension(1:nvector)::emagg,emagm,emagd
+  real(dp),dimension(1:nvector),save::eking,ekinm,ekind
+  real(dp),dimension(1:nvector),save::emagg,emagm,emagd
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error,emag_loc,ethres
   
   ! Convert to primitive variables

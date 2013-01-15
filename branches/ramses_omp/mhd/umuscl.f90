@@ -51,29 +51,29 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,1:3,1:3,1:3)::emfz
 
   ! Primitive variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::qin 
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin 
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),save::bf  
 
   ! Cell-centered slopes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
 
   ! Face-centered slopes
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim),save::dbf
 
   ! Face-averaged left and right state arrays
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
   
   ! Edge-averaged left-right and top-bottom state arrays
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRB
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLB
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRB
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qLT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qLB
 
   ! Intermediate fluxes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::fx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   )::tx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)       ::emf
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)       ,save::emf
 
   ! Local scalar variables
   integer::i,j,k,l,ivar
@@ -391,7 +391,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLB
 
   ! Declare local variables
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::Ez
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
   INTEGER ::i, j, k, l, n
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
@@ -663,9 +663,9 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLB
 
   ! Declare local variables
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::Ex
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::Ey
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::Ez
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ex
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ey
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
 
   INTEGER ::i, j, k, l, n
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
@@ -1667,7 +1667,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 
   integer ::i, j, k, l, n, idim
   real(dp)::eint, smalle, smallp, etot
-  real(dp),dimension(1:nvector)::eken,emag
+  real(dp),dimension(1:nvector),save::eken,emag
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma

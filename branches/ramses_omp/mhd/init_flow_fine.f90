@@ -39,15 +39,15 @@ subroutine init_flow_fine(ilevel)
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,info,nvar_in
-  integer ,dimension(1:nvector)::ind_grid,ind_cell
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,rr,vx,vy,vz,bx,by,bz,ek,ei,em,pp,xx1,xx2,xx3,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector)       ::vv
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector,1:nvar+3)::uu
+  real(dp),dimension(1:nvector)       ,save::vv
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:nvar+3),save::uu
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane

@@ -16,15 +16,15 @@ subroutine make_boundary_hydro(ilevel)
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
   integer,dimension(1:2,1:4)::ind0
-  integer,dimension(1:nvector)::ind_grid,ind_grid_ref
-  integer,dimension(1:nvector)::ind_cell,ind_cell_ref
+  integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
+  integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
   real(dp)::switch,dx,dx_loc,scale,emag
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector,1:nvar+3)::uu
-  real(dp),dimension(1:nvector,1:twotondim)::uu_ref
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:nvar+3),save::uu
+  real(dp),dimension(1:nvector,1:twotondim),save::uu_ref
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel

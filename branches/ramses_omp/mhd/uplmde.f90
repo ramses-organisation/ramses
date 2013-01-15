@@ -71,7 +71,7 @@ subroutine diffusion_fine(ilevel,dtdiff)
   real(dp)::dtdiff
 
   integer::i,ivar,igrid,ncache,ngrid
-  integer,dimension(1:nvector)::ind_grid
+  integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -107,27 +107,27 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   ! and boundary currents are stored in buffer regions. Updated 
   ! conservative variables are stored in array unew(:).
   !-------------------------------------------------------------------
-  integer ,dimension(1:nvector,1:threetondim     )::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim       )::nbors_father_grids
-  integer ,dimension(1:nvector,0:twondim         )::ibuffer_father
-  real(dp),dimension(1:nvector,0:twondim  ,1:6   )::B1
-  integer ,dimension(1:nvector,0:twondim)         ::ind1
-  real(dp),dimension(1:nvector,1:twotondim,1:6   )::B2
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::v2
-  real(dp),dimension(1:nvector,1:ndim)::vv,xx
+  integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim       ),save::nbors_father_grids
+  integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
+  real(dp),dimension(1:nvector,0:twondim  ,1:6   ),save::B1
+  integer ,dimension(1:nvector,0:twondim)         ,save::ind1
+  real(dp),dimension(1:nvector,1:twotondim,1:6   ),save::B2
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::v2
+  real(dp),dimension(1:nvector,1:ndim),save::vv,xx
 
-  logical ,dimension(1:nvector,-1:4,-1:4,-1:4)::ok
-  logical ,dimension(1:nvector,-1:4,-1:4,-1:4)::buffer
-  real(dp),dimension(1:nvector, 0:4,-1:4,-1:4)::Bx
-  real(dp),dimension(1:nvector,-1:4, 0:4,-1:4)::By
-  real(dp),dimension(1:nvector,-1:4,-1:4, 0:4)::Bz
-  real(dp),dimension(1:nvector, 1:2, 1:3, 1:3)::emfx
-  real(dp),dimension(1:nvector, 1:3, 1:2, 1:3)::emfy
-  real(dp),dimension(1:nvector, 1:3, 1:3, 1:2)::emfz
-  real(dp),dimension(1:nvector) :: dB
+  logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::ok
+  logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::buffer
+  real(dp),dimension(1:nvector, 0:4,-1:4,-1:4),save::Bx
+  real(dp),dimension(1:nvector,-1:4, 0:4,-1:4),save::By
+  real(dp),dimension(1:nvector,-1:4,-1:4, 0:4),save::Bz
+  real(dp),dimension(1:nvector, 1:2, 1:3, 1:3),save::emfx
+  real(dp),dimension(1:nvector, 1:3, 1:2, 1:3),save::emfy
+  real(dp),dimension(1:nvector, 1:3, 1:3, 1:2),save::emfz
+  real(dp),dimension(1:nvector),save :: dB
 
-  integer,dimension(1:nvector)::igrid_nbor,ind_cell,ind_buffer,igrid
-  logical,dimension(1:nvector)::exist_nbor
+  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,igrid
+  logical,dimension(1:nvector),save::exist_nbor
 
   real(dp),dimension(1:3)::skip_loc
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer

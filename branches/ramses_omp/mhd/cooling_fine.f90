@@ -10,14 +10,11 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info,isink
-  integer,dimension(1:nvector)::ind_grid
+  integer::ncache,i,igrid,ngrid,info
+  integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-
-  ! Compute sink accretion rates
-  if(sink)call compute_accretion_rate(0)
 
   ! Operator splitting step for cooling source term
   ! by vector sweeps
@@ -54,9 +51,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer::i,ind,iskip,idim,nleaf,neul=5
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM
-  integer,dimension(1:nvector)::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector)::nH,T2,delta_T2,ekk,emag
-  real(kind=8),dimension(1:nvector)::T2min,Zsolar,boost
+  integer,dimension(1:nvector),save::ind_cell,ind_leaf
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,emag,T2min,Zsolar
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -134,22 +130,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i)=nH(i)*scale_nH
      end do
 
-     ! Compute radiation boost factor
-     if(self_shielding)then
-        do i=1,nleaf
-           boost(i)=exp(-nH(i)/0.01)
-        end do
-     else
-        do i=1,nleaf
-           boost(i)=1.0
-        end do
-     endif
-
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
      do i=1,nleaf
         T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+        if(cooling)T2min(i)=T2min(i)+T2_min_fix
      end do
      !==========================================
      ! You can put your own polytrope EOS here
@@ -160,13 +146,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute net cooling at constant nH
      if(cooling)then
-        ! Compute "thermal" temperature by substracting polytrope
         do i=1,nleaf
-           T2(i)=max(T2(i)-T2min(i),T2_min_fix)
+           T2(i)=MAX(T2(i),T2min(i))
         end do
-        call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
+        call solve_cooling(nH,T2,Zsolar,dtcool,delta_T2,nleaf)
      endif
-
+     
      ! Compute rho
      do i=1,nleaf
         nH(i) = nH(i)/scale_nH

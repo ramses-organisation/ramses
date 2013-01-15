@@ -12,7 +12,7 @@ subroutine synchro_hydro_fine(ilevel,dteff)
   ! Update velocity  from gravitational acceleration
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
-  integer,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return
@@ -58,7 +58,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   ! Gravity update for hydro variables
   !-------------------------------------------------------------------
   integer::i,idim,neul=5,nndim=3
-  real(dp),dimension(1:nvector)::pp
+  real(dp),dimension(1:nvector),save::pp
 
   ! Compute internal + magnetic energy
   do i=1,ncell

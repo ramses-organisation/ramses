@@ -13,14 +13,14 @@ subroutine courant_fine(ilevel)
   !----------------------------------------------------------------------
   integer::i,ivar,idim,ind,ncache,igrid,iskip
   integer::info,nleaf,ngrid,nx_loc
-  integer,dimension(1:nvector)::ind_grid,ind_cell,ind_leaf
+  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
 
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,emag_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
-  real(dp),dimension(1:nvector,1:nvar+3)::uu
-  real(dp),dimension(1:nvector,1:ndim)::gg
+  real(dp),dimension(1:nvector,1:nvar+3),save::uu
+  real(dp),dimension(1:nvector,1:ndim),save::gg
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -170,9 +170,9 @@ subroutine velocity_fine(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
 
-  integer ,dimension(1:nvector)::ind_grid,ind_cell
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector,1:3)::vv
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:3),save::vv
  
   if(numbtot(1,ilevel)==0)return
 
