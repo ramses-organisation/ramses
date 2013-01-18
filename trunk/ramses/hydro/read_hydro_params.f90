@@ -35,7 +35,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
-       & ,J21,a_spec,z_ave,z_reion,n_sink,bondi,delayed_cooling &
+       & ,J21,a_spec,z_ave,z_reion,n_sink,ind_rsink,bondi,delayed_cooling &
        & ,self_shielding,smbh,agn,rsink_max,msink_max &
        & ,units_density,units_time,units_length,neq_chem,ir_feedback
 
@@ -85,6 +85,15 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
+
+  !--------------------------------------------------
+  ! Check ind_rsink
+  !--------------------------------------------------
+  if(ind_rsink<=0.0d0)then
+     if(myid==1)write(*,*)'Error in the namelist'
+     if(myid==1)write(*,*)'Check ind_rsink'
+     nml_ok=.false.
+  end if
 
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions

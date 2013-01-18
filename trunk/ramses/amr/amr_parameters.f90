@@ -130,6 +130,7 @@ module amr_parameters
   real(dp)::rsink_max=10      ! Sink isolation criterion in kpc
   real(dp)::msink_max=1d5     ! Maximum seed mass in solar masses
   real(dp)::kappa_IR=0d0      ! IR dust opacity
+  real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.

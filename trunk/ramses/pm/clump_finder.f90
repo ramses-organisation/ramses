@@ -40,6 +40,8 @@ subroutine clump_finder(create_output)
   
   logical::ok
 
+  real(kind=8)::fourpi,threepi2,tff,acc_r
+
   if(verbose)write(*,*)' Entering clump_finder'
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -232,23 +234,66 @@ subroutine clump_finder(create_output)
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
-        
-        ok=.true.
-        ok=ok.and.relevance_tot(jj)>0.
-        ok=ok.and.occupied_all(jj)==0
-        ok=ok.and.peak_check(jj)>1.
-        ok=ok.and.ball4_check(jj)>1.
-        ok=ok.and.isodens_check(jj)>1.
-!        ok=ok.and.peak_check>0.
-        ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
 
-        if (ok)then
-           pos(1,1:3)=peak_pos_tot(jj,1:3)
-           call cmp_cpumap(pos,cc,1)
-           if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-              flag2(cell_index(1))=1
-              write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
+        if (smbh .eqv. .false.)then
+           ok=.true.
+           ok=ok.and.relevance_tot(jj)>0.
+           ok=ok.and.occupied_all(jj)==0
+           ok=ok.and.peak_check(jj)>1.
+           ok=ok.and.ball4_check(jj)>1.
+           ok=ok.and.isodens_check(jj)>1.
+           !        ok=ok.and.peak_check>0.
+           ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
+
+           if (ok .eqv. .true.)then
+              pos(1,1:3)=peak_pos_tot(jj,1:3)
+              call cmp_cpumap(pos,cc,1)
+              if (cc(1) .eq. myid)then
+                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+                 flag2(cell_index(1))=jj
+                 write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
+              end if
+           end if
+        else 
+           ok=.true.
+           ok=ok.and.relevance_tot(jj)>0.
+           ok=ok.and.occupied_all(jj)==0
+           ok=ok.and.peak_check(jj)>1.
+           !ok=ok.and.ball4_check(jj)>1.
+           !ok=ok.and.isodens_check(jj)>1.
+           fourpi=4.0d0*ACOS(-1.0d0)
+           threepi2=3.0d0*ACOS(-1.0d0)**2
+           if(cosmo)fourpi=1.5d0*omega_m*aexp
+           tff=sqrt(threepi2/8./fourpi/(max_dens_tot(jj)+1.0d-30))
+           acc_r=clump_mass_tot4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
+           ok=ok.and.acc_r > 100.d0
+
+           if (ok .eqv. .true.)then
+              pos(1,1:3)=peak_pos_tot(jj,1:3)
+              call cmp_cpumap(pos,cc,1)
+              if (cc(1) .eq. myid)then
+                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+                 flag2(cell_index(1))=jj
+                 write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
+                 write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&
+                      ,n_cells_tot(jj)&
+                      ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
+                      ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
+                      ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
+                      ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
+                      ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
+                      clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
+                      ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
+                      ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
+                      ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
+                      ,clump_vol_tot(jj)*(scale_l)**3&
+                      ,relevance_tot(jj)&
+                      ,peak_check(jj)&
+                      ,ball4_check(jj)&
+                      ,isodens_check(jj)&
+                      ,clump_check(jj)
+                 write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
+              end if
            end if
         end if
      end do
@@ -305,7 +350,7 @@ subroutine count_test_particle(ilevel,ntot,nskip,action)
 
   ! Clump density threshold from H/cc to code units
   d0 = density_threshold/scale_nH
-
+  if(cosmo)d0=d0/aexp**3
 
   ! Loop over grids
   ncache=active(ilevel)%ngrid
@@ -951,7 +996,7 @@ subroutine surface_int(ind_cell,np,ilevel)
                        ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
                        P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
                        Psurf(clump_nr(j))=Psurf(clump_nr(j))+r_dot_n(j)*0.25*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
-                       if(((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
+                       if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
                     endif
                  end do                 
 

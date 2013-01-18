@@ -5,18 +5,18 @@
 NVECTOR = 64
 NDIM = 3
 NPRE = 8
-NVAR = 5
+NVAR = 7
 SOLVER = hydro
 PATCH =
-EXEC = ramses
+EXEC = ramsesdragmerge
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 #############################################################################
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
-FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+#F90 = gfortran -O3 -frecord-marker=4 -O3 -fbacktrace -ffree-line-length-none -g
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -52,6 +52,14 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
 #FFLAGS = -O3 -g -cpp -fbacktrace -fcheck=bounds -ffree-line-length-none $(DEFINES) #-DRT #-DNOSYSTEM
+
+# --- MPI, ifort syntax ------------------------------
+F90 = ftn
+FFLAGS = -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT 
+
+# --- MPI, ifort syntax, additional checks -----------
+#F90 = ftn
+#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM #-DRT
 
 #############################################################################
 MOD = mod

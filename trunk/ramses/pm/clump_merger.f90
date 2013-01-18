@@ -224,13 +224,13 @@ subroutine compute_clump_properties_round2(ntest,map)
 
   !peak-patch related arrays before sharing information with other cpus
   real(kind=8),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,e_kin_int4,e_bind4,e_thermal4,v_therm,v_rms,m4
-  real(kind=8),dimension(1:npeaks_tot)::E_kin_iso,E_bind_iso,E_therm_iso
+  real(kind=8),dimension(1:npeaks_tot)::clump_mass4,E_kin_iso,E_bind_iso,E_therm_iso
   real(kind=8),dimension(1:npeaks_tot,1:3)::clump_size,bulk_momentum
+  real(dp)::Ggrav=1.d0
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  !strings for file output
-  character(LEN=5)::myidstring,nchar
-  
+  !strings for file output           
+  character(LEN=5)::myidstring,nchar 
 
   !  first, get minimum potential on saddle surface
   call get_phi_ref(ntest)
@@ -238,13 +238,15 @@ subroutine compute_clump_properties_round2(ntest,map)
   
   !initialize arrays
   e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0; e_bind4=0.d0; e_thermal4=0.d0; e_kin_int4=0.d0
+  clump_mass4=0.d0
   v_therm=0.; v_rms=0.; bulk_momentum=0.; m4=0.
   E_kin_iso=0.; E_bind_iso=0.; E_therm_iso=0.
   
   ! Conversion factor from user units to cgs units                                             
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   d0 = density_threshold/scale_nH;
-  
+  if(cosmo)d0=d0/aexp**3
+
   !prepare file output for peak map
   if (map)then
      call title(ifout-1,nchar)
@@ -307,7 +309,9 @@ subroutine compute_clump_properties_round2(ntest,map)
         end do
         
         vol=volume(levp(ipart))                  
-        phi_rel=(phi(icellp(ipart))-phi_ref_tot(peak_nr))
+
+        phi_rel=(phi(icellp(ipart))-phi_min_tot(peak_nr))*scale
+
         M=clump_mass_tot(peak_nr)
         v_cl(1:ndim)=clump_momentum_tot(peak_nr,1:ndim)/M
        
@@ -352,11 +356,13 @@ subroutine compute_clump_properties_round2(ntest,map)
               e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+(vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
               bulk_momentum(peak_nr,i)=bulk_momentum(peak_nr,i)+(vd(i)/d-v_cl(i))*vol*(d-d0)
            end do
+
            m4(peak_nr)=m4(peak_nr)+(d-d0)*vol
            
            e_bind4(peak_nr)=e_bind4(peak_nr)-phi_rel*d*vol*0.5
            e_thermal4(peak_nr)=e_thermal4(peak_nr)+1.5*(de-ekk)*vol*(gamma-1)
 
+           clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
         end if
 
         !repeat for region enclosed by isopotential surface 
@@ -406,6 +412,13 @@ subroutine compute_clump_properties_round2(ntest,map)
   E_kin_iso_tot=E_kin_iso
   E_therm_iso_tot=E_therm_iso
 #endif
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(clump_mass4,clump_mass_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  clump_mass_tot4=clump_mass4
+#endif
+
 
 end subroutine compute_clump_properties_round2
 !################################################################
@@ -451,14 +464,15 @@ subroutine write_clump_properties(to_file)
      
   do j=npeaks_tot,1,-1
      jj=sort_index(j)
-     
-     !compute all the checks
-     v_bulk2=(bulk_momentum_tot(jj,1)**2+bulk_momentum_tot(jj,2)**2&
-          +bulk_momentum_tot(jj,3)**2)/(m4_tot(jj)**2+tiny(0.d0))     
-     peak_check(jj)=scale*(phi_ref_tot(jj)-phi_min_tot(jj))/((v_therm_tot(jj)**2+v_rms_tot(jj)+v_bulk2)*0.5+tiny(0.d0))
-     ball4_check(jj)=scale*e_bind_tot4(jj)/(tiny(0.d0)+2*e_thermal_tot4(jj)+2*e_kin_int_tot4(jj))
-     isodens_check(jj)=scale*E_bind_iso_tot(jj)/(tiny(0.d0)+2*E_kin_iso_tot(jj)+2*E_therm_iso_tot(jj))
-     clump_check(jj)=(scale*e_bind_tot(jj)+Psurf_tot(jj))/(tiny(0.d0)+2*e_kin_int_tot(jj)+2*e_thermal_tot(jj))     
+     if (relevance_tot(jj) > 0.) then
+        !compute all the checks
+        v_bulk2=(bulk_momentum_tot(jj,1)**2+bulk_momentum_tot(jj,2)**2&
+             +bulk_momentum_tot(jj,3)**2)/(m4_tot(jj)**2+1.0d-20)
+        peak_check(jj)=scale*(phi_ref_tot(jj)-phi_min_tot(jj))/((v_therm_tot(jj)**2+v_rms_tot(jj)+v_bulk2)*0.5+1.0d-20)
+        ball4_check(jj)=scale*e_bind_tot4(jj)/(1.0d-20+2*e_thermal_tot4(jj)+2*e_kin_int_tot4(jj))
+        isodens_check(jj)=scale*E_bind_iso_tot(jj)/(1.0d-20+2*E_kin_iso_tot(jj)+2*E_therm_iso_tot(jj))
+        clump_check(jj)=(scale*e_bind_tot(jj)+Psurf_tot(jj))/(1.0d-20+2*e_kin_int_tot(jj)+2*e_thermal_tot(jj))     
+     end if
   end do
   
   !print results in descending order to screen/file
@@ -472,11 +486,11 @@ subroutine write_clump_properties(to_file)
         open(unit=21,file=TRIM('output_'//TRIM(nchar)//'/clump_masses.txt'),form='formatted')
      end if
      if(smbh)then
-     write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [AU] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_check   isodens_check   clump_check '
+     if(verbose)write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cc] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_check   isodens_check   clump_check '
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
         if (relevance_tot(jj) > 0)then
-           write(ilun,'(I6,X,I10,17(1X,1PE14.7))')jj&          
+           if(verbose)write(ilun,'(I6,X,I10,17(1X,1PE14.7))')jj&          
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
                 ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
@@ -502,14 +516,14 @@ subroutine write_clump_properties(to_file)
      end do
 
   else
-     write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'//&
+     if(verbose)write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU] size_y [AU]'//&
           ' size_z [AU]  |v|_CM [u.u.]  rho- [H/cc]  rho+ [H/cc]  rho_av [H/cc] M_cl [M_sol] V_cl [AU^3]   rel.  peak_check   ball4_check   isodens_check   clump_check phi_ref_tot phi_ref2_tot'
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
 
         
         if (relevance_tot(jj) > 0)then
-           write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),2(X,E11.2E2),X,E11.2E2,6(2X,E11.2E2))')&
+           if(verbose)write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),2(X,E11.2E2),X,E11.2E2,6(2X,E11.2E2))')&
                 jj&
                 ,n_cells_tot(jj)&
                 ,peak_pos_tot(jj,1)&
@@ -546,8 +560,8 @@ subroutine write_clump_properties(to_file)
            if (relevance_tot(jj)>0)write(21,*)clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
         end do
      end if
-     write(ilun,'(A,F9.3)')'total mass above threshold =',tot_mass*scale_d*dble(scale_l)**3/1.98892d33
-     write(ilun,'(A,I6,A,F9.3)')'total mass in',n_rel,' listed clumps =',rel_mass
+     write(ilun,'(A,F15.6)')'total mass above threshold =',tot_mass*scale_d*dble(scale_l)**3/1.98892d33
+     write(ilun,'(A,I6,A,F15.6)')'total mass in',n_rel,' listed clumps =',rel_mass
      if (to_file)then
         close(20)
         close(21)
@@ -789,6 +803,7 @@ subroutine allocate_peak_patch_arrays
   allocate(av_dens_tot(1:npeaks_tot))
   allocate(max_dens_tot(1:npeaks_tot))
   allocate(clump_mass_tot(1:npeaks_tot))
+  allocate(clump_mass_tot4(1:npeaks_tot))
   allocate(clump_vol_tot(1:npeaks_tot))
   allocate(saddle_max_tot(1:npeaks_tot))
   allocate(relevance_tot(1:npeaks_tot))
@@ -831,6 +846,7 @@ subroutine allocate_peak_patch_arrays
   max_dens_tot=0.
   av_dens_tot=0.
   clump_mass_tot=0.
+  clump_mass_tot4=0.
   clump_vol_tot=0.
   peak_pos_tot=0.
   center_of_mass_tot=0.
@@ -843,7 +859,7 @@ subroutine allocate_peak_patch_arrays
   phi_min_tot=0.
   minmatch_tot=1
   new_peak=0
-  phi_ref=huge(0.d0) 
+  phi_ref=huge(0.d0)
   Psurf=0.
   
 
@@ -961,11 +977,11 @@ subroutine get_phi_ref2
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  !---------------------------------------------------------------                                                                                                                                                                     
-  ! This subroutine checks wheter a density maximum corresponds to                                                                                                                                                                     
-  ! a potential minimum -> pot_min(peak_nr)=ok in this case.                                                                                                                                                                           
-  ! Furthermore, the minimum potential is stored for every peak.                                                                                                                                                                       
-  !---------------------------------------------------------------                                                                                                                                                                     
+  !---------------------------------------------------------------
+  ! This subroutine checks wheter a density maximum corresponds to
+  ! a potential minimum -> pot_min(peak_nr)=ok in this case.
+  ! Furthermore, the minimum potential is stored for every peak.
+  !---------------------------------------------------------------
   integer::k1,j1,i1,jj,info,N,i,itest
   integer,dimension(1:nvector)::cell_index,cell_levl,ind_cell,lev_cell,cc
   real(dp),dimension(1:nvector,1:3)::pos,xtest,xtest_cpu,xtest_ind
@@ -980,8 +996,7 @@ subroutine get_phi_ref2
   dx=0.5D0**nlevelmax
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-
+  dx_loc=dx*scale/aexp  
 
   N=10
   do jj=1,npeaks_tot
@@ -997,10 +1012,10 @@ subroutine get_phi_ref2
                  y=dble(j1)/N*4.
                  z=dble(i1)/N*4.
                  r=(x**2.+y**2.+z**2.)**0.5
-                 !reject all points with radius > 4dx                                                                                                                                                                                  
+                 !reject all points with radius > 4dx
                  if (r<=4. .and. r>0)then
                     itest=itest+1
-                    ! project the other points to the sphere surface                                                                                                                                                                   
+                    ! project the other points to the sphere surface
                     x=x/r*4.
                     y=y/r*4.
                     z=z/r*4.
@@ -1032,9 +1047,8 @@ subroutine get_phi_ref2
            endif
         end do
 
-     end if ! end if relevance > than..                                                                                                                                                                                                
-  end do ! end loop over clumps                                                                                                                                                                                                        
-
+     end if ! end if relevance > than..
+  end do ! end loop over clumps
 
 
 #ifndef WITHOUTMPI
