@@ -2202,7 +2202,7 @@ subroutine grow_bondi(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Compute sink accretion rates
-  call compute_accretion_rate(levelmin)
+  call compute_accretion_rate(ilevel)
 
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0
@@ -2660,48 +2660,48 @@ subroutine compute_accretion_rate(ilevel)
   vel_max=vel_max*1d5/scale_v
   
   if(smbh)then
-     if (ilevel==levelmin) then
-        ! Compute sink particle accretion rate
-        do isink=1,nsink
-           
-           density=0d0
-           volume=0d0
-           velocity=0d0
-           ethermal=0d0
-           ! Loop over level: sink cloud can overlap several levels
-           do i=levelmin,nlevelmax
-              density=density+weighted_density(isink,i)
-              ethermal=ethermal+weighted_ethermal(isink,i)
-              velocity(1)=velocity(1)+weighted_momentum(isink,i,1)
-              velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
-              velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
-              volume=volume+weighted_volume(isink,i)
-           end do
-           density=density/volume
-           velocity(1:3)=velocity(1:3)/density/volume
-           ethermal=ethermal/density/volume
-           total_volume(isink)=volume
-           c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
-           v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
-           r2=(factG*msink(isink)/(c2+v2))**2
-           ! Correct the Bondi radius to limit the accretion to the free fall rate
-           r2=min(r2,(4.d0*dx_min)**2)
-           
-           ! Compute Bondi-Hoyle accretion rate in code units
-           if(bondi)then
-              boost=1.0
-              if(star)boost=max((density/d_star)**2,1.0_dp)
-              !     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
-              dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
-           else
-              dMBHoverdt(isink)=acc_rate(isink)/dtnew(levelmin)           
-           endif
-           
-           ! Compute Eddington accretion rate in code units
-           dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-           
-        end do
+     ! Compute sink particle accretion rate
+     do isink=1,nsink
         
+        density=0d0
+        volume=0d0
+        velocity=0d0
+        ethermal=0d0
+        ! Loop over level: sink cloud can overlap several levels
+        do i=levelmin,nlevelmax
+           density=density+weighted_density(isink,i)
+           ethermal=ethermal+weighted_ethermal(isink,i)
+           velocity(1)=velocity(1)+weighted_momentum(isink,i,1)
+           velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
+           velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
+           volume=volume+weighted_volume(isink,i)
+        end do
+        density=density/volume
+        velocity(1:3)=velocity(1:3)/density/volume
+        ethermal=ethermal/density/volume
+        total_volume(isink)=volume
+        c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
+        v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
+        r2=(factG*msink(isink)/(c2+v2))**2
+        ! Correct the Bondi radius to limit the accretion to the free fall rate
+        r2=min(r2,(4.d0*dx_min)**2)
+        
+        ! Compute Bondi-Hoyle accretion rate in code units
+        if(bondi)then
+           boost=1.0
+           if(star)boost=max((density/d_star)**2,1.0_dp)
+           !     dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(1.12**2*c2+v2)/bondi_alpha(1.2*dx_min/sqrt(r2))
+           dMBHoverdt(isink)=boost*4.*3.1415926*density*r2*sqrt(c2+v2)
+        else
+           dMBHoverdt(isink)=acc_rate(isink)/dtnew(levelmin)           
+        endif
+        
+        ! Compute Eddington accretion rate in code units
+        dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
+        
+     end do
+        
+     if (ilevel==levelmin) then
         if(myid==1.and.nsink>0)then
            do i=1,nsink
               xmsink(i)=msink(i)
@@ -2720,28 +2720,27 @@ subroutine compute_accretion_rate(ilevel)
            end do
            write(*,'(" ============================================================================================")')
         endif
-        
-        ! Take the minimum accretion rate
-        do isink=1,nsink
-           dMBHoverdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
-        end do
-        
      end if
+     
+     ! Take the minimum accretion rate
+     do isink=1,nsink
+        dMBHoverdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
+     end do
+        
   else
+     acc_rate(1:nsink)=acc_rate(1:nsink)/dtnew(levelmin)
+     
+     if(ir_feedback)then
+        do i=1,nsink ! 0.75 and 5 are ratio of infalling energy which is radiated and protostellar radius
+           acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+        end do
+     end if
+     
      if (ilevel==levelmin)then    
-        acc_rate(1:nsink)=acc_rate(1:nsink)/dtnew(levelmin)
-
-        if(ir_feedback)then
-           do i=1,nsink ! 0.75 and 5 are ratio of infalling energy which is radiated and protostellar radius
-              acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
-           end do
-        end if
-
         if(myid==1.and.nsink>0.and. mod(nstep_coarse,ncontrol)==0)then
            do i=1,nsink
               xmsink(i)=msink(i)
            end do
-           
            call quick_sort(xmsink(1),idsink_sort(1),nsink)
            write(*,*)'Number of sink = ',nsink
            write(*,'(" ====================================================================================================================================================== ")')
@@ -2755,7 +2754,6 @@ subroutine compute_accretion_rate(ilevel)
                    xsink(isink,1:ndim),vsink(isink,1:ndim),&
                    rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
                    acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33
-              
            end do
            write(*,'(" ====================================================================================================================================================== ")')
         endif
