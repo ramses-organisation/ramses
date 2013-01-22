@@ -546,8 +546,6 @@ subroutine write_clump_properties(to_file)
                 ,phi_ref_tot(jj)&
                 ,phi_ref2_tot(jj)
                 
-
-
            rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
            n_rel=n_rel+1
         end if
@@ -559,9 +557,10 @@ subroutine write_clump_properties(to_file)
            jj=sort_index(j)
            if (relevance_tot(jj)>0)write(21,*)clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
         end do
-     end if
-     write(ilun,'(A,F15.6)')'total mass above threshold =',tot_mass*scale_d*dble(scale_l)**3/1.98892d33
-     write(ilun,'(A,I6,A,F15.6)')'total mass in',n_rel,' listed clumps =',rel_mass
+     else
+        write(ilun,'(A,1PE12.5)')'total mass above threshold =',tot_mass*scale_d*dble(scale_l)**3/1.98892d33
+        write(ilun,'(A,I6,A,1PE12.5)')'total mass in',n_rel,' listed clumps =',rel_mass
+     endif
      if (to_file)then
         close(20)
         close(21)

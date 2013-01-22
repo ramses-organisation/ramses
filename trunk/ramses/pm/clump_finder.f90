@@ -109,7 +109,7 @@ subroutine clump_finder(create_output)
   if(ntest>0)call scan_for_peaks(ntest,npeaks,1)
   npeaks_per_cpu=0
   npeaks_per_cpu(myid)=npeaks
-  write(*,*)'n_peaks on processor number',myid,'= ',npeaks
+  if(verbose)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
   !----------------------------------------------------------------------------                       
   ! Share number of peaks per cpu and create a list  
   !----------------------------------------------------------------------------
