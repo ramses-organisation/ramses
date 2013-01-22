@@ -37,6 +37,8 @@ subroutine clump_finder(create_output)
 
   integer::peak_nr
   integer,dimension(1:ncpu)::npeaks_per_cpu,npeaks_per_cpu_tot
+
+  integer::flag_form,flag_form_tot
   
   logical::ok
 
@@ -233,6 +235,7 @@ subroutine clump_finder(create_output)
      flag2=0
      allocate(form(1:npeaks_tot),form_all(1:npeaks_tot))
      form=0; form_all=0;
+     flag_form=0
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
@@ -279,12 +282,13 @@ subroutine clump_finder(create_output)
                     if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
                        flag2(cell_index(1))=jj
                        form(jj)=1
+                       flag_form=1
                     end if
                  else
                     flag2(cell_index(1))=jj
                     form(jj)=1
+                    flag_form=1
                  end if
-                 write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
               end if
            end if
         end if
@@ -295,8 +299,14 @@ subroutine clump_finder(create_output)
 #ifdef WITHOUTMPI
      form_all=form
 #endif
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(flag_form,flag_form_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+     flag_form_tot=flag_form
+#endif
      if(myid == 1)then
-        write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
+        if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
         do j=npeaks_tot,1,-1
            jj=sort_index(j)
            if(form_all(jj) == 1)write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&

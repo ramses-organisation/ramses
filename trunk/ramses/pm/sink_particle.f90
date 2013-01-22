@@ -143,7 +143,7 @@ subroutine create_sink
   call update_cloud(levelmin)
 
   ! Compute new accretion rates
-  call compute_accretion_rate(levelmin)
+  call compute_accretion_rate(levelmin,.true.)
   
   ! Do AGN feedback
   if(agn)call agn_feedback
@@ -2202,7 +2202,7 @@ subroutine grow_bondi(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Compute sink accretion rates
-  call compute_accretion_rate(ilevel)
+  call compute_accretion_rate(ilevel,.false.)
 
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0
@@ -2625,7 +2625,7 @@ end subroutine accrete_bondi
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_accretion_rate(ilevel)
+subroutine compute_accretion_rate(ilevel,write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -2634,6 +2634,7 @@ subroutine compute_accretion_rate(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
+  logical::write_sinks
   !------------------------------------------------------------------------
   ! This routine computes the accretion rate on the sink particles.
   !------------------------------------------------------------------------
@@ -2701,7 +2702,7 @@ subroutine compute_accretion_rate(ilevel)
         
      end do
         
-     if (ilevel==levelmin) then
+     if (ilevel==levelmin.and.write_sinks) then
         if(myid==1.and.nsink>0)then
            do i=1,nsink
               xmsink(i)=msink(i)
