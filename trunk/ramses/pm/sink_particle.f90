@@ -3211,7 +3211,7 @@ subroutine agn_feedback
   vol_min=dx_min**ndim
 
   ! AGN specific energy
-  T2_AGN=0.3*1d12 ! in Kelvin
+  T2_AGN=0.15*1d12 ! in Kelvin
 
   ! Minimum specific energy
   T2_min=1d7  ! in Kelvin
@@ -3475,7 +3475,7 @@ subroutine AGN_blast
   rmax2=rmax*rmax
   
   ! AGN specific energy
-  T2_AGN=0.3*1d12 ! in Kelvin
+  T2_AGN=0.15*1d12 ! in Kelvin
   T2_AGN=T2_AGN/scale_T2 ! in code units
 
   ! Maximum specific energy
@@ -3835,13 +3835,7 @@ subroutine make_sink_from_clump(ilevel)
            end do
            do i=1,ngrid
               if(flag2(ind_cell(i))>0)then
-                 ! Geometrical criterion 
-                 if(ivar_refine>0)then
-                    d=uold(ind_cell(i),ivar_refine)
-                    if(d>var_cut_refine)ntot=ntot+1
-                 else
-                    ntot=ntot+1
-                 end if
+                 ntot=ntot+1
               end if
            end do
         end do
@@ -3928,19 +3922,9 @@ subroutine make_sink_from_clump(ilevel)
            nnew=0
            do i=1,ngrid
               if (flag2(ind_cell(i))>0)then
-                 ! Geometrical criterion 
-                 if(ivar_refine>0)then
-                    d=uold(ind_cell(i),ivar_refine)
-                    if(d>var_cut_refine)then
-                       nnew=nnew+1
-                       ind_grid_new(nnew)=ind_grid(i)
-                       ind_cell_new(nnew)=ind_cell(i)
-                    end if
-                 else
-                    nnew=nnew+1
-                    ind_grid_new(nnew)=ind_grid(i)
-                    ind_cell_new(nnew)=ind_cell(i)
-                 end if
+                 nnew=nnew+1
+                 ind_grid_new(nnew)=ind_grid(i)
+                 ind_cell_new(nnew)=ind_cell(i)
               end if
            end do
 
@@ -3987,7 +3971,7 @@ subroutine make_sink_from_clump(ilevel)
                  if(cosmo)fourpi=1.5d0*omega_m*aexp
                  tff=sqrt(threepi2/8./fourpi/(d+1d-30))
                  tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
-                 msink_new(index_sink)=1.d-5/0.3*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
+                 msink_new(index_sink)=1.d-5/0.15*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
                  delta_d=d-msink_new(index_sink)/vol_loc
                  if(delta_d<0.)write(*,*)'sink production with negative mass'
               else

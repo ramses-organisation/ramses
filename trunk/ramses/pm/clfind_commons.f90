@@ -31,6 +31,7 @@ module clfind_commons
   integer,allocatable,dimension(:)::iglobalp,icellp,levp,testp_sort ! Used to sort test particles by density  
   integer,allocatable,dimension(:)::n_cells_tot,minmatch_tot,new_peak
   integer,allocatable,dimension(:)::sort_index
-  integer,allocatable,dimension(:)::occupied,occupied_all ! Tells whether there is already a sink in a clump
+  integer,allocatable,dimension(:)::occupied,occupied_all ! Tells whether there is already a sink in a clump.
+  integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
 
 end module clfind_commons

@@ -231,10 +231,11 @@ subroutine clump_finder(create_output)
      !------------------------------------------------------------------------------     
      pos=0.0
      flag2=0
+     allocate(form(1:npeaks_tot),form_all(1:npeaks_tot))
+     form=0; form_all=0;
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
-
         if (smbh .eqv. .false.)then
            ok=.true.
            ok=ok.and.relevance_tot(jj)>0.
@@ -266,38 +267,59 @@ subroutine clump_finder(create_output)
            if(cosmo)fourpi=1.5d0*omega_m*aexp
            tff=sqrt(threepi2/8./fourpi/(max_dens_tot(jj)+1.0d-30))
            acc_r=clump_mass_tot4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
-           ok=ok.and.acc_r > 100.d0
+           ok=ok.and.acc_r > 30.d0
 
            if (ok .eqv. .true.)then
               pos(1,1:3)=peak_pos_tot(jj,1:3)
               call cmp_cpumap(pos,cc,1)
               if (cc(1) .eq. myid)then
                  call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                 flag2(cell_index(1))=jj
-                 write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
-                 write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&
-                      ,n_cells_tot(jj)&
-                      ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
-                      ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
-                      ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
-                      ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
-                      ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
-                      clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
-                      ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
-                      ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
-                      ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
-                      ,clump_vol_tot(jj)*(scale_l)**3&
-                      ,relevance_tot(jj)&
-                      ,peak_check(jj)&
-                      ,ball4_check(jj)&
-                      ,isodens_check(jj)&
-                      ,clump_check(jj)
+                 ! Geometrical criterion 
+                 if(ivar_refine>0)then
+                    if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
+                       flag2(cell_index(1))=jj
+                       form(jj)=1
+                    end if
+                 else
+                    flag2(cell_index(1))=jj
+                    form(jj)=1
+                 end if
                  write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
               end if
            end if
         end if
      end do
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(form,form_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+     form_all=form
+#endif
+     if(myid == 1)then
+        write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
+        do j=npeaks_tot,1,-1
+           jj=sort_index(j)
+           if(form_all(jj) == 1)write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&
+                ,n_cells_tot(jj)&
+                ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
+                ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
+                ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
+                clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
+                ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
+                ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
+                ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
+                ,clump_vol_tot(jj)*(scale_l)**3&
+                ,relevance_tot(jj)&
+                ,peak_check(jj)&
+                ,ball4_check(jj)&
+                ,isodens_check(jj)&
+                ,clump_check(jj)
+        end do
+     end if
      deallocate(occupied,occupied_all)
+     deallocate(form,form_all)
   endif
   
   ! Deallocate test particle and peak arrays
