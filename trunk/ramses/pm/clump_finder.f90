@@ -40,7 +40,7 @@ subroutine clump_finder(create_output)
 
   integer::flag_form,flag_form_tot
   
-  logical::ok
+  logical::ok,all_bound
 
   real(kind=8)::fourpi,threepi2,tff,acc_r
 
@@ -104,7 +104,7 @@ subroutine clump_finder(create_output)
      deallocate(denp)
   endif
 
-  !-------------------------------------------------------------------------------               
+  !-------------------------------------------------------------------------------
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
   npeaks=0; nmove=0
@@ -190,15 +190,28 @@ subroutine clump_finder(create_output)
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
 
-     call compute_clump_properties_round2(ntest,create_output)
+     !------------------------------------------------------------------------------
+     !if all clumps need to be gravitationally bound to survive - merge again
+     !------------------------------------------------------------------------------
+     if (merge_unbound)then
+        do while (.not. all_bound)
+           do j=npeaks_tot,1,-1
+              if (isodens_check(j)<1.)relevance_tot(j)=1.
+           end do
+           call merge_clumps(ntest)
+        end do
+     endif
+
+     call compute_clump_properties_round2(ntest,create_output,all_bound)
      !if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))
      
      ! write properties to screen
-     call write_clump_properties(.false.)
+     call write_clump_properties(.false.,all_bound)
 
      ! ..and if wanted to disk
-     call write_clump_properties(create_output)
+     call write_clump_properties(create_output,all_bound)
   end if
+
 
   !------------------------------------------------------------------------------
   ! if the clumpfinder is used to produce sinks, flag all the cells which contain
@@ -814,7 +827,7 @@ subroutine read_clumpfind_params()
   ! Namelist definitions                                                        
   !--------------------------------------------------                           
 
-  namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold
+  namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold,merge_unbound
 
   ! Read namelist file 
   rewind(1)

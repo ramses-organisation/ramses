@@ -6,6 +6,8 @@ module clfind_commons
   real(kind=8)::relevance_threshold=1.5
   real(kind=8)::density_threshold=0.
   real(kind=8)::mass_threshold=0.
+  logical::merge_unbound=.false.
+
 
   ! Big array for saddlepoint values
   real(kind=8),allocatable,dimension(:,:)::saddle_dens,saddle_dens_tot

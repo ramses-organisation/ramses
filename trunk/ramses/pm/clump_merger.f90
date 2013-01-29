@@ -185,7 +185,7 @@ end subroutine compute_clump_properties
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_clump_properties_round2(ntest,map)
+subroutine compute_clump_properties_round2(ntest,map,all_bound)
   use amr_commons
   use hydro_commons, ONLY:uold,gamma
   use poisson_commons, ONLY:phi
@@ -195,7 +195,7 @@ subroutine compute_clump_properties_round2(ntest,map)
   include 'mpif.h'
 #endif
 
-  logical::map
+  logical::map,all_bound
   integer::ntest
 
   !----------------------------------------------------------------------------
@@ -206,10 +206,10 @@ subroutine compute_clump_properties_round2(ntest,map)
   ! to disk
   !----------------------------------------------------------------------------
 
-  integer::ipart,ilevel,info,i,peak_nr
+  integer::ipart,ilevel,info,i,peak_nr,j
 
   !variables needed temporarily store cell properties
-  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0
+  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2
   real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl
 
   ! variables to be used with vector-sweeps
@@ -419,6 +419,19 @@ subroutine compute_clump_properties_round2(ntest,map)
   clump_mass_tot4=clump_mass4
 #endif
 
+  all_bound=.true.
+  do j=npeaks_tot,1,-1
+     if (relevance_tot(j)>0.)then
+        !compute all the checks
+        v_bulk2=(bulk_momentum_tot(j,1)**2+bulk_momentum_tot(j,2)**2&
+             +bulk_momentum_tot(j,3)**2)/(m4_tot(j)**2+tiny(0.d0))     
+        peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms_tot(j)+v_bulk2)*0.5+tiny(0.d0))
+        ball4_check(j)=scale*e_bind_tot4(j)/(tiny(0.d0)+2*e_thermal_tot4(j)+2*e_kin_int_tot4(j))
+        isodens_check(j)=scale*E_bind_iso_tot(j)/(tiny(0.d0)+2*E_kin_iso_tot(j)+2*E_therm_iso_tot(j))
+        clump_check(j)=(scale*e_bind_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))     
+        all_bound=all_bound.and.(isodens_check(j)>1.)
+     endif
+  end do
 
 end subroutine compute_clump_properties_round2
 !################################################################
@@ -440,7 +453,7 @@ subroutine write_clump_properties(to_file)
   !---------------------------------------------------------------------------
 
   integer::j,jj,ilun,n_rel,info,nx_loc
-  real(kind=8)::rel_mass,v_bulk2,scale
+  real(kind=8)::rel_mass,scale
   character(LEN=5)::nchar
 
 
@@ -460,21 +473,6 @@ subroutine write_clump_properties(to_file)
      ilun=6
   end if
 
-
-     
-  do j=npeaks_tot,1,-1
-     jj=sort_index(j)
-     if (relevance_tot(jj) > 0.) then
-        !compute all the checks
-        v_bulk2=(bulk_momentum_tot(jj,1)**2+bulk_momentum_tot(jj,2)**2&
-             +bulk_momentum_tot(jj,3)**2)/(m4_tot(jj)**2+1.0d-20)
-        peak_check(jj)=scale*(phi_ref_tot(jj)-phi_min_tot(jj))/((v_therm_tot(jj)**2+v_rms_tot(jj)+v_bulk2)*0.5+1.0d-20)
-        ball4_check(jj)=scale*e_bind_tot4(jj)/(1.0d-20+2*e_thermal_tot4(jj)+2*e_kin_int_tot4(jj))
-        isodens_check(jj)=scale*E_bind_iso_tot(jj)/(1.0d-20+2*E_kin_iso_tot(jj)+2*E_therm_iso_tot(jj))
-        clump_check(jj)=(scale*e_bind_tot(jj)+Psurf_tot(jj))/(1.0d-20+2*e_kin_int_tot(jj)+2*e_thermal_tot(jj))     
-     end if
-  end do
-  
   !print results in descending order to screen/file
   if(myid==1)then
      
@@ -674,7 +672,7 @@ subroutine merge_clumps(ntest)
      new_peak(ii)=ii
 
      ! If the relevance is below the threshold -> merge
-     if (relevance_tot(ii)<relevance_threshold) then
+     if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>=1.) then
         
         ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
         merge_to=0; max_val=0.
@@ -776,8 +774,8 @@ subroutine merge_clumps(ntest)
   end do
 
   !update flag 2
-   do ipart=1,ntest
-     flag2(icellp(ipart))=new_peak(flag2(icellp(ipart)))
+  do ipart=1,ntest
+     if (flag2(icellp(ipart))>0)flag2(icellp(ipart))=new_peak(flag2(icellp(ipart)))
   end do
 
   if (verbose)write(*,*)'Done merging clumps'  
