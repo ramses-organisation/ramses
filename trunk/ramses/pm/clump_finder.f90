@@ -199,6 +199,7 @@ subroutine clump_finder(create_output)
               if (isodens_check(j)<1.)relevance_tot(j)=1.
            end do
            call merge_clumps(ntest)
+           call compute_clump_properties_round2(ntest,create_output,all_bound)
         end do
      endif
 
