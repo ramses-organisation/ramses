@@ -445,7 +445,14 @@ subroutine kinetic_feedback
   mstar=n_star/(scale_nH*aexp**3)*vol_min
 
   ! Lifetime of Giant Molecular Clouds from Myr to code units
-  t0=10.*(1d6*365.*24.*3600.)/scale_t
+  ! Massive star lifetime from Myr to code units
+  if(use_proper_time)then
+     t0=10.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+     t0=10.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   !------------------------------------------------------
   ! Gather GMC particles eligible for disruption
@@ -466,7 +473,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(t-t0))then
+              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -526,7 +533,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(t-t0))then
+              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
                  iSN=iSN+1
                  xSN(iSN,1)=xp(ipart,1)
                  xSN(iSN,2)=xp(ipart,2)
