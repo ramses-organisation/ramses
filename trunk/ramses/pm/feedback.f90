@@ -419,6 +419,7 @@ subroutine kinetic_feedback
   integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
+  real(dp)::current_time
   real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar
   integer::nx_loc
   integer,dimension(:),allocatable::ind_part,ind_grid
