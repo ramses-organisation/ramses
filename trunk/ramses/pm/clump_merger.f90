@@ -661,20 +661,109 @@ subroutine merge_clumps(ntest)
   real(kind=8)::max_val
   integer,dimension(1:npeaks_tot)::old_peak
   integer::peak,next_peak
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
+
 
   if (verbose)write(*,*)'Now merging clumps'
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  d0 = density_threshold/scale_nH;
+  if(cosmo)d0=d0/aexp**3
 
   ! Sort clumps by peak density in ascending order
   call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
 
-  do i=1,npeaks_tot
-     ii=sort_index(i)
-     new_peak(ii)=ii
-
-     ! If the relevance is below the threshold -> merge
-     if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>=1.) then
+  if (smbh == .false.) then
+     do i=1,npeaks_tot
+        ii=sort_index(i)
+        new_peak(ii)=ii
         
-        ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
+        ! If the relevance is below the threshold -> merge
+        if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>=1.) then
+           
+           ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
+           merge_to=0; max_val=0.
+           do j=1,npeaks_tot
+              if (saddle_dens_tot(ii,j)>max_val)then
+                 merge_to=j
+                 max_val=saddle_dens_tot(ii,j)
+              end if
+           end do
+           
+           ! Store new peak index
+           new_peak(ii)=merge_to
+           if(verbose .and. myid==1)then
+              if(merge_to>0)then
+                 write(*,*)'clump ',ii,'merged to ',merge_to
+              endif
+           endif
+           
+           ! Update clump properties
+           if (merge_to>0)then
+              do j=1,ndim
+                 clump_momentum_tot(merge_to,j)=&
+                      clump_momentum_tot(merge_to,j)+clump_momentum_tot(ii,j)
+                 clump_momentum_tot(ii,j)=0.
+                 center_of_mass_tot(merge_to,j)=&
+                      (clump_mass_tot(merge_to)*center_of_mass_tot(merge_to,j) &
+                      +clump_mass_tot(ii)*center_of_mass_tot(ii,j)) &
+                      /(clump_mass_tot(merge_to)+clump_mass_tot(ii))
+                 center_of_mass_tot(ii,j)=0.
+              end do
+              n_cells_tot(merge_to)=n_cells_tot(merge_to)+n_cells_tot(ii)
+              clump_vol_tot(merge_to)=clump_vol_tot(ii)+clump_vol_tot(merge_to)
+              max_dens_tot(merge_to)=max(max_dens_tot(merge_to),max_dens_tot(ii))
+              min_dens_tot(merge_to)=min(min_dens_tot(merge_to),min_dens_tot(ii))
+              clump_mass_tot(merge_to)=clump_mass_tot(merge_to)+clump_mass_tot(ii)
+           end if
+           n_cells_tot(ii)=0
+           clump_vol_tot(ii)=0.
+           max_dens_tot(ii)=0.
+           min_dens_tot(ii)=0.
+           clump_mass_tot(ii)=0.
+           
+           ! Update saddle point array
+           do j=1,npeaks_tot
+              if (merge_to>0)then
+                 if(saddle_dens_tot(ii,j)>saddle_dens_tot(merge_to,j))then
+                    saddle_dens_tot(merge_to,j)=saddle_dens_tot(ii,j)
+                    saddle_dens_tot(j,merge_to)=saddle_dens_tot(ii,j)
+                 end if
+                 saddle_dens_tot(merge_to,merge_to)=0.
+              end if
+              saddle_dens_tot(ii,j)=0.        
+              saddle_dens_tot(j,ii)=0.
+           end do
+           
+           ! Update saddle_max value
+           if (merge_to>0)then
+              saddle_max_tot(merge_to)=0
+              do j=1,npeaks_tot
+                 if (saddle_dens_tot(merge_to,j)>saddle_max_tot(merge_to))then
+                    saddle_max_tot(merge_to)=saddle_dens_tot(merge_to,j)
+                 end if
+              end do
+           end if
+           
+           ! Update relevance of clumps
+           if (merge_to>0)then
+              if (saddle_max_tot(merge_to)>1.d-40)then
+                 relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
+              else 
+                 relevance_tot(merge_to)=max_dens_tot(merge_to)/min_dens_tot(merge_to)
+              end if
+           end if
+           relevance_tot(ii)=0.
+        end if
+     end do
+  else
+     ! If SMBH merge all peaks
+     do i=1,npeaks_tot
+        ii=sort_index(i)
+        new_peak(ii)=ii
+        
+        ! Go through the ii-th line in the saddle point array to find the neighbor to merge to                                                                                                                                         
         merge_to=0; max_val=0.
         do j=1,npeaks_tot
            if (saddle_dens_tot(ii,j)>max_val)then
@@ -683,15 +772,15 @@ subroutine merge_clumps(ntest)
            end if
         end do
         
-        ! Store new peak index
-        new_peak(ii)=merge_to
+        ! Store new peak index                                                                                                                                                                                                         
+        if(merge_to>0)new_peak(ii)=merge_to
         if(verbose .and. myid==1)then
            if(merge_to>0)then
               write(*,*)'clump ',ii,'merged to ',merge_to
            endif
         endif
-
-        ! Update clump properties
+        
+        ! Update clump properties                                                                                                                                                                                                      
         if (merge_to>0)then
            do j=1,ndim
               clump_momentum_tot(merge_to,j)=&
@@ -708,14 +797,14 @@ subroutine merge_clumps(ntest)
            max_dens_tot(merge_to)=max(max_dens_tot(merge_to),max_dens_tot(ii))
            min_dens_tot(merge_to)=min(min_dens_tot(merge_to),min_dens_tot(ii))
            clump_mass_tot(merge_to)=clump_mass_tot(merge_to)+clump_mass_tot(ii)
+           n_cells_tot(ii)=0
+           clump_vol_tot(ii)=0.
+           max_dens_tot(ii)=0.
+           min_dens_tot(ii)=0.
+           clump_mass_tot(ii)=0.
         end if
-        n_cells_tot(ii)=0
-        clump_vol_tot(ii)=0.
-        max_dens_tot(ii)=0.
-        min_dens_tot(ii)=0.
-        clump_mass_tot(ii)=0.
         
-        ! Update saddle point array
+        ! Update saddle point array                                                                                                                                                                                                    
         do j=1,npeaks_tot
            if (merge_to>0)then
               if(saddle_dens_tot(ii,j)>saddle_dens_tot(merge_to,j))then
@@ -723,12 +812,12 @@ subroutine merge_clumps(ntest)
                  saddle_dens_tot(j,merge_to)=saddle_dens_tot(ii,j)
               end if
               saddle_dens_tot(merge_to,merge_to)=0.
+              saddle_dens_tot(ii,j)=0.
+              saddle_dens_tot(j,ii)=0.
            end if
-           saddle_dens_tot(ii,j)=0.        
-           saddle_dens_tot(j,ii)=0.
         end do
         
-        ! Update saddle_max value
+        ! Update saddle_max value                                                                                                                                                                                                      
         if (merge_to>0)then
            saddle_max_tot(merge_to)=0
            do j=1,npeaks_tot
@@ -738,20 +827,21 @@ subroutine merge_clumps(ntest)
            end do
         end if
         
-        ! Update relevance of clumps
+        ! Update relevance of clumps                                                                                                                                                                                                   
         if (merge_to>0)then
            if (saddle_max_tot(merge_to)>1.d-40)then
               relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
-           else 
+           else
               relevance_tot(merge_to)=max_dens_tot(merge_to)/min_dens_tot(merge_to)
            end if
+           relevance_tot(ii)=0.
         end if
-        relevance_tot(ii)=0.
-     end if
-  end do
+     end do
+  end if
 
-  ! Change new_peak so that it points to the end point of the merging 
-  ! history and not only to the clump it has been merged to in first place 
+
+! Change new_peak so that it points to the end point of the merging 
+! history and not only to the clump it has been merged to in first place 
   do i=1,npeaks_tot
      peak=i
      merge_count=0
@@ -773,12 +863,33 @@ subroutine merge_clumps(ntest)
      end do
   end do
 
+  if (verbose)write(*,*)'Done merging clumps I'
+
+! Remove peaks using HOP-based criterion
+  do i=1,npeaks_tot
+     ii=sort_index(i)
+     if( max_dens_tot(new_peak(ii)) < 3.0*d0 )then
+        new_peak(ii)=0
+        n_cells_tot(ii)=0
+        clump_vol_tot(ii)=0.
+        max_dens_tot(ii)=0.
+        min_dens_tot(ii)=0.
+        clump_mass_tot(ii)=0.
+        ! Update saddle point array                                                                                                                                                                                                      
+        do j=1,npeaks_tot
+           saddle_dens_tot(ii,j)=0.
+           saddle_dens_tot(j,ii)=0.
+        end do
+        relevance_tot(ii)=0.        
+     end if
+  end do
+
   !update flag 2
   do ipart=1,ntest
      if (flag2(icellp(ipart))>0)flag2(icellp(ipart))=new_peak(flag2(icellp(ipart)))
   end do
 
-  if (verbose)write(*,*)'Done merging clumps'  
+  if (verbose)write(*,*)'Done merging clumps II'  
 end subroutine merge_clumps
 !################################################################                 
 !################################################################ 
