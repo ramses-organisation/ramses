@@ -37,24 +37,26 @@ subroutine init_time
           & 1.d-6,dble(aexp_ini), &
           & aexp_frw,hexp_frw,tau_frw,t_frw,n_frw)
 
-     ! Compute initial conformal time
-     if(nrestart==0)then
-        ! Find neighboring expansion factors
-        i=1
-        do while(aexp_frw(i)>aexp.and.i<n_frw)
-           i=i+1
-        end do
-        ! Interploate time
-        t=tau_frw(i)*(aexp-aexp_frw(i-1))/(aexp_frw(i)-aexp_frw(i-1))+ &
-             & tau_frw(i-1)*(aexp-aexp_frw(i))/(aexp_frw(i-1)-aexp_frw(i))
-        aexp=aexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
-             & aexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
-        hexp=hexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
-             & hexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
-        texp=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
-             & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
-     end if
-  end if
+     ! Compute initial conformal time                                    
+     ! Find neighboring expansion factors                                  
+     i=1                                                                   
+     do while(aexp_frw(i)>aexp.and.i<n_frw)                                
+        i=i+1                                                              
+     end do                                                                
+     ! Interploate time                                                    
+     if(nrestart==0)then                                                   
+        t=tau_frw(i)*(aexp-aexp_frw(i-1))/(aexp_frw(i)-aexp_frw(i-1))+ &   
+             & tau_frw(i-1)*(aexp-aexp_frw(i))/(aexp_frw(i-1)-aexp_frw(i)) 
+        aexp=aexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &     
+             & aexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))      
+        hexp=hexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &     
+             & hexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))      
+     end if                                                                
+     texp=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &           
+          & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))            
+  else                                                                     
+     texp=t                                                                
+  end if                                                                   
 
   ! Initialize cooling model
   if(cooling.and..not.(neq_chem.or.rt))then
