@@ -411,11 +411,9 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
         do i=1,nn
            xn=1.0; yn=1.0; zn=1.0
            ! Buffer injection:
-           !xn=max(1.0-(abs(x(i,1)-rt_src_x_center(k))+dx/4.)/dx, 0.0_dp) 
            xn=max(1.0-abs(x(i,1)-rt_src_x_center(k))/dx, 0.0_dp)
 #if NDIM>1
            yn=max(1.0-abs(x(i,2)-rt_src_y_center(k))/dx, 0.0_dp)
-           !yn=max(1.0-abs(x(i,2)-rt_src_y_center(k))/dx/3d0, 0.0_dp)
 #endif
 #if NDIM>2
            zn=max(1.0-abs(x(i,3)-rt_src_z_center(k))/dx, 0.0_dp)
