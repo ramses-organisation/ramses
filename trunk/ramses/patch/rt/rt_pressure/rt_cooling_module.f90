@@ -17,8 +17,9 @@ module rt_cooling_module
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
          , signc, sigec, PHrate, UVrates                                 &
-         , iP0, iP1, isIsoPressure, rt_pconst                            & !RTpress
-         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV, rt_multiscatt     !RTpress
+         , iP0, iP1, iPtot, rt_isoPress                                  & !RTpress
+         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                  & !RTpress
+         , isIsoPressure, rt_pconst                                        !RTpress
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
   ! where n=nGroups.
@@ -32,7 +33,7 @@ module rt_cooling_module
   real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
   real(dp),parameter::twopi     = 6.2831853d0    !            Two times pi
 
-  integer,parameter::n_U=1+nIons+3*nGroups       !  # vars in state vector  !RTpress
+  integer,parameter::n_U=1+nIons+3*nGroups+1     !  # vars in state vector  !RTpress
   integer,parameter::iT=1                            !       Indexes in U
   integer,parameter::ix0=2, ix1=1+nIons              !            --
   integer,parameter::iNp0=2+nIons                    !            --
@@ -41,14 +42,15 @@ module rt_cooling_module
   integer,parameter::iFp1=1+nIons+2*nGroups          !            --
   integer,parameter::iP0=2+nIons+2*nGroups           !            --        !RTpress
   integer,parameter::iP1=1+nIons+3*nGroups           !            --        !RTpress
+  integer,parameter::iPtot=iP1+1    ! Total momentum inj. (incl isotropic)  !RTpress
   integer,dimension(nGroups)::iNpU,iFpU              !       See set_model
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
 
   integer,parameter::iGroupIR=1                      !      IR group index  !RTpress
   integer::iGroupNUV=1                               !     NUV group index  !RTpress
-  real(dp)::rt_Pconst=-1.              ! Iso-pressure value (for tests)     !RTpress
-  logical::rt_multiscatt=.false.       ! Crude multisc. approximation       !RTpress
+  logical::rt_isoPress=.false.         ! Isotr. photon mom -> gas heating   !RTpress
   logical::isIsoPressure=.false.       ! Using iso-pressure?                !RTpress
+  real(dp)::rt_Pconst=-1.              ! Iso-pressure value (for tests)     !RTpress
   logical::rt_isIR                     ! Using IR scattering on dust?       !RTpress
   logical::rt_isNUV                    ! Using NUV scattering on dust?      !RTpress
   real(dp)::rt_kappa_IR=1d3            ! IR dust opacity                    !RTpress
@@ -105,6 +107,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
   U_MIN(iFp0:iFp1)  = 1D-13*rt_c_cgs     !           Minimum photon fluxes
   U_FRAC(iFp0:iFp1) = 0.2                !           Fp update restriction    
   U_FRAC(iP0:iP1) = 1.d6                 !    No direct restr. on P update   !RTpress
+  U_FRAC(iPtot) = 1.d6                   !    No direct restr. on P update   !RTpress
 
   if (rt_isIR)  iGroupNUV=2              !     Group index for NUV photons   !RTpress
   csIR  = rt_kappa_IR  * mH                                                  !RTPress 
@@ -167,10 +170,12 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
 ! Semi-implicitly solve for new temperature, ionization states, 
 ! photon density and flux in a number of cells.
 ! parameters: 
-! U      <=>  Initial cell states: (T/mu [K], xHII, xHeII, xHeIII, 
-!             Np_i [cm-3], Fp_i [cm-2 s-1], dP [g cm-2 s-1]).             !RTpress
+! U      <=>  Initial cell states: (T/mu [K], xHII, xHeII, xHeIII 
+!             ,Np_i [cm-3], Fp_i [cm-2 s-1], dP [g cm-2 s-1]              !RTpress
+!             ,dPtot [[g cm-2 s-1]]).                                     !RTpress
 !             dP_i is impact in gas momentum from each photon group,      !RTpress
 !             in the direction of the group flux (momentum transfer).     !RTpress
+!             dPtot is the total mom. injection (incl. isotropic photons) !RTpress
 ! dNpdt   =>  Op split increment in photon densities during dt
 ! dFpdt   =>  Op split increment in photon flux magnitudes during dt
 ! c_switch=>  Cooling switch (1 for cool/heat, 0 for no cool/heat)
@@ -217,6 +222,7 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
         endif
      endif
      U(i,iP0:iP1)= 0.d0         ! Initialize momentum transfer to gas to 0 !RTpress
+     U(i,iPtot)= 0.d0           ! Init total momentum transfer to gas to 0 !agnrt
   end do
 
   ! Loop until all cells have tleft=0
@@ -290,7 +296,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
   real(dp):: xHeI, mu, TK, ne, neInit, Hrate, dAlpha, dBeta, s, jac, q
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
-  real(dp),dimension(nGroups):: recRad, phI
+  real(dp),dimension(nGroups):: recRad, phI, scRate
   real(dp)::metal_tot,metal_prime
   integer::i, nc, loopcnt, code
 !-------------------------------------------------------------------------
@@ -317,6 +323,8 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
      recRad(1:nGroups)=0. ; phI(1:nGroups)=0.              
+     ! Scattering rate; reduce the photon flux, but not photon density:    !RTpress
+     scRate(1:nGroups)=0.                                                  !RTpress
      if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
         ! alpha(2) A-B becomes negative around 1K, hence the max
@@ -329,20 +337,22 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         enddo
      endif
      do i=1,nGroups      ! ------------------------------------ Absorbtion
-        phI(i) = SUM(nN(:)*signc(i,:))
+        phI(i) = SUM(nN(:)*signc(i,:)) ! s-1
      end do
 
-     ! IR and NUV depletion by dust absorption:                            !RTpress
-     if(rt_isIR .and. .not. rt_multiscatt)  &                              !RTpress
-          phI(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                          !RTpress
-     if(rt_isNUV) & ! Always deplete these photons, since they go into IR  !RTpress
-          phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                         !RTpress
+     ! IR and NUV depletion by dust absorption:                             !RTpress
+     if(rt_isIR)  & !IR scattering on dust                                  !RTpress
+          scRate(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                        !RTpress
+     if(rt_isNUV) & ! Always deplete these photons, since they go into IR   !RTpress
+          phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                          !RTpress
 
      do i=1,nGroups         ! ------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
-                   (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))/(1.d0+dt*phI(i)))
-        dU(iFpU(i)) = MAX(0d0,(dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*phI(i)))
-        ! Check the flux: Too large relative to available photons? 
+             (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))                       &
+                /(1.d0+dt*(phI(i)+scRate(i)*0.001))) !1/1000 sc depletion   !RTpress
+        dU(iFpU(i)) = MAX(0d0, &
+                   (dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*(phI(i)+scRate(i))))  !RTpress
+        ! Check the photon flux: Too large relative to available photons? 
         q = dU(iFpU(i)) / (rt_c_cgs*dU(iNpU(i)))
         if(q .gt. 1.d0) then           ! Normalize flux if it is too large
            dU(iFpU(i))=dU(iFpU(i))/q
@@ -351,8 +361,9 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         ! Momentum transfer from ionizing photons to gas:                   !RTpress
         dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i)) * dt     &                  !RTpress
             *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
-        !dU(iP0+i-1) = dU(iP0+i-1) + dU(iNpU(i))*rt_c_cgs * dt      &       !RTpress
-        !   *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
+        ! Total momentum, including isotropic component:                    !RTpress
+        dU(iPtot)   = dU(iPtot)   + dU(iNpu(i)) * rt_c_cgs * dt &           !RTpress
+            *SUM(group_csn(i,:) * nN(:)) * group_egy(i)* ev_to_erg/c_cgs    !RTpress
         ! ----------------------------------------------------------------  !RTpress
      end do
      ! Add absorbed NUV energy to the pool of IR photons:                   !RTpress
@@ -364,18 +375,22 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      endif                                                                  !RTpress
 
      ! Momentum transfer from IR and NUV photons to dust:                   !RTpress
-     if(rt_isIR)                                                         &  !RTpress
+     if(rt_isIR) then                                                       !RTpress
           dU(iP0+iGroupIR-1) = dU(iP0+iGroupIR-1)                        &  !RTpress
-          !+ dU(iNpU(iGroupIR)) * rt_c_cgs                               &  !RTpress
-          + dU(iFpU(iGroupIR))  & ! Either use this or preceding line    &  !RTpress
-          * dt * csIR * nH * Zsolar * group_egy(iGroupIR)                &  !RTpress
-          * ev_to_erg/c_cgs                                                 !RTpress
-     if(rt_isNUV)                                                        &  !RTpress
+             + dU(iFpU(iGroupIR)) * dt * csIR * nH * Zsolar              &  !RTpress
+             * group_egy(iGroupIR) * ev_to_erg/c_cgs                        !RTpress
+          dU(iPTot) = dU(iPtot)                                          &  !RTpress
+             + dU(iNpU(iGroupIR)) * rt_c_cgs * dt * csIR * nH * Zsolar   &  !RTpress
+             * group_egy(iGroupIR) * ev_to_erg/c_cgs                        !RTpress
+     endif                                                                  !RTpress
+     if(rt_isNUV) then                                                      !RTpress
           dU(iP0+iGroupNUV-1) = dU(iP0+iGroupNUV-1)                      &  !RTpress 
-          !+ dU(iNpU(iGroupNUV)) * rt_c_cgs                              &  !RTpress
-          + dU(iFpU(iGroupNUV)) & ! Either use this or preceding line    &  !RTpress
-          * dt * csNUV * nH * Zsolar * group_egy(iGroupNUV)              &  !RTpress
-          * ev_to_erg/c_cgs                                                 !RTpress
+             + dU(iFpU(iGroupNUV)) * dt * csNUV * nH * Zsolar            &  !RTpress
+             * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
+          dU(iPtot) = dU(iPtot)                                          &  !RTpress 
+             + dU(iNpU(iGroupNUV)) * rt_c_cgs * dt * csNUV * nH * Zsolar &  !RTpress
+             * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
+     endif                                                                  !RTpress
      ! -------------------------------------------------------------------  !RTpress
      dUU=MAXVAL(                                                         &
         ABS((dU(iNp0:iNp1)-U(iNp0:iNp1))/(U(iNp0:iNp1)+U_MIN(iNp0:iNp1)))&

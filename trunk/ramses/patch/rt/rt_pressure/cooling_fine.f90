@@ -72,8 +72,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
   use rt_parameters
   use rt_hydro_commons
-  use rt_cooling_module, only: n_U,iNpU,iFpU &                             !RTpress
-  ,rt_solve_cooling,iP0,iP1,isIsoPressure,rt_pconst                        !RTpress
+  use rt_cooling_module, only: n_U,iNpU,iFpU, rt_solve_cooling,iP0,iP1   &
+       ,iPtot,rt_isoPress,isIsoPressure,rt_pconst                         !RTpress
 #endif
   implicit none
   integer::ilevel,ngrid
@@ -357,6 +357,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do                                                                 !RTpress
      ! Update the pressure variable with the new kinetic energy:            !RTpress
      uold(ind_leaf(1:nleaf),ndim+2)=ekk(1:nleaf)+eTherm(1:nleaf)            !RTpress
+     ! Use the isotropic photon pressure to heat the gas:                   !RTpress
+     if(rt_isoPress) then                                                   !RTpress
+        U(1:nleaf,iPtot)= U(1:nleaf,iPtot)/scale_d/scale_v                  !RTpress
+        ! Subtract the directional momentum impact:                         !RTpress
+        do ig=1,nGroups                                                     !RTpress
+           U(1:nleaf,iPtot) = U(1:nleaf,iPtot) - U(1:nleaf,iP0+ig-1)        !RTpress
+        end do                                                              !RTpress
+        ! Make sure the remaining isotropic pressure isn't negative         !RTpress
+        do i=1,nleaf                                                        !RTpress
+           U(i,iPtot) = max(U(i,iPtot), 0d0)                                !RTpress
+        end do                                                              !RTpress
+        ! And heat:                                                         !RTpress
+        uold(ind_leaf(1:nleaf),ndim+2) = uold(ind_leaf(1:nleaf),ndim+2)  &  !RTpress
+             + 0.5 * U(1:nleaf,iPtot)**2 / nH(1:nleaf)                      !RTpress
+     endif                                                                  !RTpress
      if(isIsoPressure) uold(ind_leaf(1:nleaf),ndim+2) = &                   !RTpress
                                  ekk(1:nleaf)+rt_Pconst/scale_d/scale_v**2  !RTpress
      ! End energy update =================================================  !RTpress
