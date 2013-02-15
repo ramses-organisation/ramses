@@ -138,9 +138,8 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
          ! Stack cell volume fraction in coarse cell
          ngpmask=(1d0+active_mg(myid,ifinelevel)%u(icell_f_mg,4))/2d0/dtwotondim
-
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
-              active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
+            active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
       end do
    end do
 
@@ -149,6 +148,7 @@ end subroutine restrict_mask_coarse_reverse
 ! ------------------------------------------------------------------------
 ! Residual computation
 ! ------------------------------------------------------------------------
+
 subroutine cmp_residual_mg_coarse(ilevel)
    ! Computes the residual for pure MG levels, and stores it into active_mg(myid,ilevel)%u(:,3)
    use amr_commons
@@ -318,6 +318,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
 !$OMP END PARALLEL
 
 end subroutine cmp_residual_mg_coarse
+
 ! ##################################################################
 ! ##################################################################
 
@@ -387,6 +388,7 @@ end subroutine cmp_fvar_norm2_coarse
 ! ------------------------------------------------------------------------
 ! Gauss-Seidel smoothing
 ! ------------------------------------------------------------------------
+
 subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
   use amr_commons
   use pm_commons
@@ -784,7 +786,6 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
             coeff      = bbb(ind_average)
             do i=1,nbatch
                icell_f_mg  = iskip_f_mg + istart+i-1
-
                if(active_mg(cpu_amr(i),ifinelevel)%u(icell_f_mg,4)<=0.0) then
                   corr(i)=0.0d0        ! Fine cell is masked : no correction
                   cycle
@@ -819,6 +820,7 @@ end subroutine interpolate_and_correct_coarse
 ! ------------------------------------------------------------------------
 ! Flag setting
 ! ------------------------------------------------------------------------
+
 subroutine set_scan_flag_coarse(ilevel)
   use amr_commons
   use poisson_commons
@@ -831,7 +833,7 @@ subroutine set_scan_flag_coarse(ilevel)
   integer :: icpu_nbor_amr, icell_nbor_mg
   
   integer :: igrid, iskip, ncell_ok
-  
+  logical ,dimension(1:nvector)::nbor_son_exist
   integer ,dimension(1:nvector)::igrid_amr,igrid_mg,icell_mg,icell_mg_ok
   integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr,igrid_nbor_mg,cpu_nbor_amr
   integer ,dimension(1:nvector,0:twondim)::igrid_nbor_amr_ok,igrid_nbor_mg_ok,cpu_nbor_amr_ok
@@ -874,12 +876,17 @@ subroutine set_scan_flag_coarse(ilevel)
         do i=1,ngrid
            ind_left (i,idim)=nbor(igrid_amr(i),2*idim-1)
            ind_right(i,idim)=nbor(igrid_amr(i),2*idim  )
-           igrid_nbor_amr(i,2*idim-1)=son(ind_left (i,idim))
-           igrid_nbor_amr(i,2*idim  )=son(ind_right(i,idim))
-           cpu_nbor_amr(i,2*idim-1)=cpu_map(ind_left (i,idim))
-           cpu_nbor_amr(i,2*idim  )=cpu_map(ind_right(i,idim))
-           igrid_nbor_mg(i,2*idim-1)=lookup_mg(igrid_nbor_amr(i,2*idim-1))
-           igrid_nbor_mg(i,2*idim  )=lookup_mg(igrid_nbor_amr(i,2*idim  ))
+           if(son(ind_left (i,idim))/=0.and.son(ind_right(i,idim))/=0)then
+              nbor_son_exist(i)=.true.
+              igrid_nbor_amr(i,2*idim-1)=son(ind_left (i,idim))
+              igrid_nbor_amr(i,2*idim  )=son(ind_right(i,idim))
+              cpu_nbor_amr(i,2*idim-1)=cpu_map(ind_left (i,idim))
+              cpu_nbor_amr(i,2*idim  )=cpu_map(ind_right(i,idim))
+              igrid_nbor_mg(i,2*idim-1)=lookup_mg(igrid_nbor_amr(i,2*idim-1))
+              igrid_nbor_mg(i,2*idim  )=lookup_mg(igrid_nbor_amr(i,2*idim  ))
+           else
+              nbor_son_exist(i)=.false.
+           endif
         end do
      end do
      
@@ -895,7 +902,7 @@ subroutine set_scan_flag_coarse(ilevel)
         ! Select flagged cells
         ncell_ok=0
         do i=1,ngrid
-           if(active_mg(myid,ilevel)%u(icell_mg(i),4)==1d0)then
+           if(active_mg(myid,ilevel)%u(icell_mg(i),4)==1d0.and.nbor_son_exist(i))then
               ncell_ok=ncell_ok+1
               icell_mg_ok(ncell_ok)=icell_mg(i)
               igrid_nbor_amr_ok(ncell_ok,0:twondim)=igrid_nbor_amr(i,0:twondim)

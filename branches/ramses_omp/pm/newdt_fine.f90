@@ -108,7 +108,7 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
 
   integer::i,idim,nx_loc
   real(dp)::dx,dx_loc,scale,dtpart
-  real(dp),dimension(1:nvector),save::v2
+  real(dp),dimension(1:nvector)::v2
 
   ! Compute time step
   dx=0.5D0**ilevel

@@ -770,7 +770,7 @@ subroutine set_scan_flag_fine(ilevel)
   
   integer, intent(in) :: ilevel
   
-  
+  logical ,dimension(1:nvector)::nbor_son_exist
   integer ,dimension(1:nvector)::ind_grid,ind_cell,ind_cell_ok
   integer ,dimension(1:nvector,0:twondim)::igridn,igridn_ok
   integer ,dimension(1:nvector,1:ndim)::ind_left,ind_right
@@ -811,12 +811,17 @@ subroutine set_scan_flag_fine(ilevel)
      do i=1,ngrid
         igridn(i,0)=ind_grid(i)
      end do
+     nbor_son_exist(:)=.true.
      do idim=1,ndim
         do i=1,ngrid
            ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
            ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
-           igridn(i,2*idim-1)=son(ind_left (i,idim))
-           igridn(i,2*idim  )=son(ind_right(i,idim))
+           if(son(ind_left (i,idim))/=0.and.son(ind_right(i,idim))/=0.and.nbor_son_exist(i))then
+              igridn(i,2*idim-1)=son(ind_left (i,idim))
+              igridn(i,2*idim  )=son(ind_right(i,idim))
+           else
+              nbor_son_exist(i)=.false.
+           endif
         end do
      end do
 
@@ -841,7 +846,7 @@ subroutine set_scan_flag_fine(ilevel)
         ! Gather flagged cells
         ncell_ok=0
         do i=1,ngrid
-           if(f(ind_cell(i),3)==1.0)then
+           if(f(ind_cell(i),3)==1.0.and.nbor_son_exist(i))then
               ncell_ok=ncell_ok+1
               ind_cell_ok(ncell_ok)=ind_cell(i)
               igridn_ok  (ncell_ok,0:twondim)=igridn(i,0:twondim)
