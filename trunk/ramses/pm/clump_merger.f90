@@ -592,7 +592,7 @@ subroutine saddlepoint_search(ntest)
   integer::ipart,ip,ilevel,next_level
   integer::i,j,info,dummyint
   integer,dimension(1:nvector)::ind_cell
-
+  real(kind=8),allocatable,dimension(:)::temp,temp_tot
 
   ! saddle point array for 1 cpu
   allocate(saddle_dens(1:npeaks_tot,1:npeaks_tot))
@@ -616,7 +616,18 @@ subroutine saddlepoint_search(ntest)
 
   ! share the results among MPI domains  
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(saddle_dens,saddle_dens_tot,(npeaks_tot**2),MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+  ! OLD VERSION
+  ! call MPI_ALLREDUCE(saddle_dens,saddle_dens_tot,(npeaks_tot**2),MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+  allocate(temp(1:npeaks_tot))
+  allocate(temp_tot(1:npeaks_tot))
+  do i=1,npeaks_tot
+     temp(1:npeaks_tot)=saddle_dens(1:npeaks_tot,i)
+     temp_tot=0.d0
+     call MPI_ALLREDUCE(temp,temp_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info) 
+     saddle_dens_tot(1:npeaks_tot,i)=temp_tot(1:npeaks_tot)
+  end do
+  deallocate(temp)
+  deallocate(temp_tot)
 #endif
 #ifdef WITHOUTMPI
   saddle_dens_tot=saddle_dens
@@ -839,6 +850,7 @@ subroutine merge_clumps(ntest)
      end do
   end if
 
+  if (verbose)write(*,*)'Done merging clumps 0'
 
 ! Change new_peak so that it points to the end point of the merging 
 ! history and not only to the clump it has been merged to in first place 
