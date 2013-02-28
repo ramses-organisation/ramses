@@ -189,7 +189,8 @@ subroutine clump_finder(create_output)
      end do
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
-
+     call compute_clump_properties_round2(ntest,create_output,all_bound)
+     
      !------------------------------------------------------------------------------
      !if all clumps need to be gravitationally bound to survive - merge again
      !------------------------------------------------------------------------------
@@ -203,14 +204,11 @@ subroutine clump_finder(create_output)
         end do
      endif
 
-     call compute_clump_properties_round2(ntest,create_output,all_bound)
-     !if ((sink .eqv. .false.) .or. (mod(nstep_coarse,ncontrol)==0))
-     
      ! write properties to screen
-     call write_clump_properties(.false.,all_bound)
+     call write_clump_properties(.false.)
 
      ! ..and if wanted to disk
-     call write_clump_properties(create_output,all_bound)
+     call write_clump_properties(create_output)
   end if
 
 
@@ -257,8 +255,8 @@ subroutine clump_finder(create_output)
            ok=.true.
            ok=ok.and.relevance_tot(jj)>0.
            ok=ok.and.occupied_all(jj)==0
-           ok=ok.and.peak_check(jj)>1.
-           ok=ok.and.ball4_check(jj)>1.
+!           ok=ok.and.peak_check(jj)>1.
+!           ok=ok.and.ball4_check(jj)>1.
            ok=ok.and.isodens_check(jj)>1.
            !        ok=ok.and.peak_check>0.
            ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
