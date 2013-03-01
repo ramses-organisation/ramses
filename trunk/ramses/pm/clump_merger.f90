@@ -878,23 +878,25 @@ subroutine merge_clumps(ntest)
   if (verbose)write(*,*)'Done merging clumps I'
 
 ! Remove peaks using HOP-based criterion
-  do i=1,npeaks_tot
-     ii=sort_index(i)
-     if( max_dens_tot(new_peak(ii)) < 3.0*d0 )then
-        new_peak(ii)=0
-        n_cells_tot(ii)=0
-        clump_vol_tot(ii)=0.
-        max_dens_tot(ii)=0.
-        min_dens_tot(ii)=0.
-        clump_mass_tot(ii)=0.
-        ! Update saddle point array                                                                                                                                                                                                      
-        do j=1,npeaks_tot
-           saddle_dens_tot(ii,j)=0.
-           saddle_dens_tot(j,ii)=0.
-        end do
-        relevance_tot(ii)=0.        
-     end if
-  end do
+  if (smbh)then
+     do i=1,npeaks_tot
+        ii=sort_index(i)
+        if( max_dens_tot(new_peak(ii)) < 3.0*d0 )then
+           new_peak(ii)=0
+           n_cells_tot(ii)=0
+           clump_vol_tot(ii)=0.
+           max_dens_tot(ii)=0.
+           min_dens_tot(ii)=0.
+           clump_mass_tot(ii)=0.
+           ! Update saddle point array                                                                                                                                                                                                      
+           do j=1,npeaks_tot
+              saddle_dens_tot(ii,j)=0.
+              saddle_dens_tot(j,ii)=0.
+           end do
+           relevance_tot(ii)=0.        
+        end if
+     end do
+  endif
 
   !update flag 2
   do ipart=1,ntest

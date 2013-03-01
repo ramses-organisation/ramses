@@ -267,7 +267,7 @@ subroutine init_part
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      if(sink .and. ir_feedback)then
         do i=1,nsink
-           acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+           acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
   else     

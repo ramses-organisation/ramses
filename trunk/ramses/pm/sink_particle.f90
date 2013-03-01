@@ -85,13 +85,13 @@ subroutine create_sink
      do ilevel=levelmin,nlevelmax
         call make_sink_from_clump(ilevel)
      end do
-     deallocate(clump_mass_tot4)
+     if (smbh)deallocate(clump_mass_tot4)
 
      ! Create only the central cloud particle for all sinks (old and new)
      call create_part_from_sink
 
      ! Merge sink using FOF 
-     call merge_sink(1)
+     if (smbh)call merge_sink(1)
   end if
 
   ! Create new particle clouds
@@ -2732,8 +2732,8 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
      acc_rate(1:nsink)=acc_rate(1:nsink)/dtnew(levelmin)
      
      if(ir_feedback)then
-        do i=1,nsink ! 0.75 and 5 are ratio of infalling energy which is radiated and protostellar radius
-           acc_lum(i)=0.75*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+        do i=1,nsink ! ir_eff and 5 are ratio of infalling energy which is radiated and protostellar radius
+           acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
      
@@ -2870,7 +2870,7 @@ subroutine grow_jeans(ilevel)
   
   do isink=1,nsink
      ! Reset jump in sink coordinates
-     do lev=levelmin,nlevelmax        
+     do lev=levelmin,nlevelmax
         sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)-xsink(isink,1:ndim)
      end do
      ! Change to conservative quantities
