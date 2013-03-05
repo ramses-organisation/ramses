@@ -257,7 +257,7 @@ subroutine clump_finder(create_output)
            ok=ok.and.occupied_all(jj)==0
            if (.not. merge_unbound)then
               !ok=ok.and.peak_check(jj)>1.
-              ok=ok.and.peak_check>0.
+              ok=ok.and.peak_check(jj)>0.
               ok=ok.and.ball4_check(jj)>1.
            endif
            ok=ok.and.isodens_check(jj)>1.
