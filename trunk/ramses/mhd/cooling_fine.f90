@@ -63,7 +63,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use radiation_commons, ONLY: Erad
 #endif
 #ifdef RT
-  use rt_parameters, only: nPacs, iPac
+  use rt_parameters, only: nGroups, iGroup
   use rt_hydro_commons
   use rt_cooling_module, only: n_U,iNpU,iFpU,rt_solve_cooling
 #endif
@@ -83,8 +83,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp)::scale_Np,scale_Fp
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp),dimension(1:nvector,n_U),save::U,U_old
-  real(dp),dimension(1:nvector,nPacs),save::Fp, Fp_precool
-  real(dp),dimension(1:nvector,nPacs),save::dNpdt=0., dFpdt=0.
+  real(dp),dimension(1:nvector,nGroups),save::Fp, Fp_precool
+  real(dp),dimension(1:nvector,nGroups),save::dNpdt=0., dFpdt=0.
 #endif
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
@@ -246,22 +246,22 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
 
         ! Get photon densities and flux magnitudes
-        do ivar=1,nPacs
+        do ivar=1,nGroups
            do i=1,nleaf
-              U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iPac(ivar))
+              U(i,iNpU(ivar)) = scale_Np * rtuold(ind_leaf(i),iGroups(ivar))
               U(i,iFpU(ivar)) = scale_Fp &
-                   * sqrt(sum((rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
+                   * sqrt(sum((rtuold(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim))**2))
            enddo
            if(rt_smooth) then                           ! Smooth RT update
               do i=1,nleaf !Calc addition per sec to Np, Fp for current dt
-                 Npnew = scale_Np * rtunew(ind_leaf(i),iPac(ivar))
+                 Npnew = scale_Np * rtunew(ind_leaf(i),iGroups(ivar))
                  Fpnew = scale_Fp &
-                      * sqrt(sum((rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim))**2))
+                      * sqrt(sum((rtunew(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim))**2))
                  dNpdt(i,ivar) = (Npnew - U(i,iNpU(ivar))) / dtcool
                  dFpdt(i,ivar) = (Fpnew - U(i,iFpU(ivar))) / dtcool ! Change in magnitude
                  ! Update flux vector to get the right direction
-                 rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = &
-                      rtunew(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
+                 rtuold(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim) = &
+                      rtunew(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim)
                  Fp_precool(i,ivar)=Fpnew           ! For update after solve_cooling
               end do
            else
@@ -361,12 +361,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
      if(rt) then
         ! Update photon densities and flux magnitudes
-        do ivar=1,nPacs
+        do ivar=1,nGroups
            do i=1,nleaf
-              rtuold(ind_leaf(i),iPac(ivar)) = U(i,iNpU(ivar)) /scale_Np
+              rtuold(ind_leaf(i),iGroups(ivar)) = U(i,iNpU(ivar)) /scale_Np
               if(Fp_precool(i,ivar) .gt. 0.d0)then
-                 rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim) = U(i,iFpU(ivar))/Fp_precool(i,ivar) &
-                      & *rtuold(ind_leaf(i),iPac(ivar)+1:iPac(ivar)+ndim)
+                 rtuold(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim) = U(i,iFpU(ivar))/Fp_precool(i,ivar) &
+                      & *rtuold(ind_leaf(i),iGroups(ivar)+1:iGroups(ivar)+ndim)
               endif
            enddo
         end do
