@@ -495,11 +495,10 @@ SUBROUTINE update_SED_group_props()
         enddo
      endif
   end do
-
   call updateRTgroups_coolConstants
   if(myid==1) write(*,*) &
                     'SED Photon groups updated through stellar polling'
-  call write_group_props(.true.,6)
+  !call write_group_props(.true.,6)
 
 END SUBROUTINE update_SED_group_props
 
