@@ -196,7 +196,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2, nH, phI_rates, mu, nSpec)
      niter=niter+1
   end do
   if (niter > 50) then
-     write(*,*) 'ERROR in cmp_cooling : too many iterations.'
+     write(*,*) 'ERROR in cmp_Equilibrium_Abundances : too many iterations.'
      STOP
   endif
     
