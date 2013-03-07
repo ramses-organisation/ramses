@@ -599,7 +599,8 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH,   &
   endif
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-     call clean_stop
+     !call clean_stop !joki: Doesn't work on some machines!!!
+     STOP
   endif
 
 111 format(' Stopping because of large number of timestesps in', &
