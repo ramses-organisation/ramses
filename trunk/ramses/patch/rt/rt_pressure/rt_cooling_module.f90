@@ -366,13 +366,6 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
             *SUM(group_csn(i,:) * nN(:)) * group_egy(i)* ev_to_erg/c_cgs    !RTpress
         ! ----------------------------------------------------------------  !RTpress
      end do
-     ! Add absorbed NUV energy to the pool of IR photons:                   !RTpress
-     ! Use DE_IR = - DE_NUV => DN_IR = -DN_NUV * egy_NUV / egy_IR           !RTpress
-     if(rt_isIR .and. rt_isNUV) then                                        !RTpress
-        dU(iNpU(iGroupIR)) =                                             &  !RTpress
-             MAX(0d0,U(iNpU(iGroupNUV))-dU(iNpU(iGroupNUV)))             &  !RTpress
-             * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
-     endif                                                                  !RTpress
 
      ! Momentum transfer from IR and NUV photons to dust:                   !RTpress
      if(rt_isIR) then                                                       !RTpress
@@ -391,6 +384,18 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
              + dU(iNpU(iGroupNUV)) * rt_c_cgs * dt * csNUV * nH * Zsolar &  !RTpress
              * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
      endif                                                                  !RTpress
+
+     ! NUV->IR; Add absorbed NUV energy to the pool of IR photons:          !RTpress
+     ! Use DE_IR = - DE_NUV => DN_IR = -DN_NUV * egy_NUV / egy_IR           !RTpress
+     if(rt_isIR .and. rt_isNUV) then                                        !RTpress
+        !dU(iNpU(iGroupIR)) =  dU(iNpU(iGroupIR)) +                       &  !RTpress
+        !     MAX(0d0,U(iNpU(iGroupNUV))-dU(iNpU(iGroupNUV)))             &  !RTpress
+        !     * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
+        dU(iNpU(iGroupIR)) = dU(iNpU(iGroupIR))                          &  !RTpress
+             + dU(iNpU(iGroupNUV)) * phI(iGroupNUV) * dt                 &  !RTpress
+             * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
+        dU(iNpU(iGroupIR)) = MAX(smallNp, dU(iNpU(iGroupIR)))               !RTpress
+     endif                                                                  !RTpress
      ! -------------------------------------------------------------------  !RTpress
      dUU=MAXVAL(                                                         &
         ABS((dU(iNp0:iNp1)-U(iNp0:iNp1))/(U(iNp0:iNp1)+U_MIN(iNp0:iNp1)))&
@@ -398,12 +403,12 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(dUU .gt. 1.) then                                 
        code=1 ;   dU=dU-U; RETURN                             ! dt too big
      endif
-     !dUU=MAXVAL(                                                         &  !RTpress
-     !   ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&  !RTpress
-     !   /U_FRAC(iFp0:iFp1) )                                                !RTpress
-     !if(dUU .gt. 1.) then                                                   !RTpress
-     !  code=1 ;   dU=dU-U; RETURN                             ! dt too big  !RTpress
-     !endif                                                                  !RTpress
+     dUU=MAXVAL(                                                         &  !RTpress
+        ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&  !RTpress
+        /U_FRAC(iFp0:iFp1) )                                                !RTpress
+     if(dUU .gt. 1.) then                                                   !RTpress
+       code=1 ;   dU=dU-U; RETURN                             ! dt too big  !RTpress
+     endif                                                                  !RTpress
   endif
   !(ii) UPDATE TEMPERATURE ***********************************************
   if(c_switch .and. cooling) then

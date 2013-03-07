@@ -331,7 +331,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            fmag=sqrt(sum((rtuold(ind_leaf(i),ig0:ig1))**2)) !Flux magnitude !RTpress
            if(fmag .gt. 0.d0) then                                          !RTpress
               ! Photon flux unit direction vector                           !RTpress
-              fuVec=rtuold(ind_leaf(i),ig0:ig1)/fmag   !RTpress
+              fuVec=rtuold(ind_leaf(i),ig0:ig1)/fmag                        !RTpress
               ! Update cell momentum                                        !RTpress
               uold(ind_leaf(i),2:1+ndim) =                               &  !RTpress
                    uold(ind_leaf(i),2:1+ndim) + fuVec*U(i,iP0+ig-1)         !RTpress
