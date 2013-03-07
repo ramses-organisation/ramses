@@ -30,6 +30,16 @@ SUBROUTINE rt_init
      call clean_stop
   endif
 
+  if(.not. rt) then                                                         !RTpress
+     if(myid==1) then                                                       !RTpress
+        write(*,*) 'Running non-rt simulations is incompatible '            !RTpress
+        write(*,*) 'with this patch (rt_pressure) '                         !RTpress
+        write(*,*) 'You should set rt=.true. '                              !RTpress
+        write(*,*) 'STOPPING!'                                              !RTpress
+     endif                                                                  !RTpress
+     call clean_stop                                                        !RTpress
+  endif                                                                     !RTpress
+
   if(rt_star .or. sedprops_update .ge. 0) &
      call init_SED_table    ! init stellar energy distribution properties
 
