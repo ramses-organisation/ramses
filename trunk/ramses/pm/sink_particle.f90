@@ -87,6 +87,8 @@ subroutine create_sink
      end do
      if (smbh)deallocate(clump_mass_tot4)
 
+     if (merge_stars)call merge_star_sink
+
      ! Create only the central cloud particle for all sinks (old and new)
      call create_part_from_sink
 
@@ -2744,19 +2746,21 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            end do
            call quick_sort(xmsink(1),idsink_sort(1),nsink)
            write(*,*)'Number of sink = ',nsink
-           write(*,'(" ====================================================================================================================================================== ")')
-           write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l| acc_rate[Msol/y] acc_lum[Lsol]  ")')
-           write(*,'(" ====================================================================================================================================================== ")')
+           write(*,'(" ============================================================================================================================================================= ")')
+           write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l| acc_rate[Msol/y] acc_lum[Lsol]   age   ")')
+           write(*,'(" ============================================================================================================================================================= ")')
            do i=nsink,1,-1
               isink=idsink_sort(i)
               l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+tiny(0.d0)
               rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-              write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,F13.5,3(2X,F6.3),2X,E11.3,4x,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
+              write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,F13.5,3(2X,F6.3),2X,E11.3,4X,E11.3,2X,E11.3)')idsink(isink),msink(isink)*scale_m/2d33, &
                    xsink(isink,1:ndim),vsink(isink,1:ndim),&
                    rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
-                   acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33
+                   acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33,&
+                   (t-tsink(isink))*scale_t/(3600*24*365.25)
+              
            end do
-           write(*,'(" ====================================================================================================================================================== ")')
+           write(*,'(" ============================================================================================================================================================= ")')
         endif
         !acc_rate=0. taken away because accretion rate must not be set to 0 before dump_all! now in amr_step just after dump_all
      end if
@@ -4465,3 +4469,132 @@ subroutine upd_cloud(ind_part,np)
   end do
 
 end subroutine upd_cloud
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine merge_star_sink
+  use pm_commons
+  use amr_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  !------------------------------------------------------------------------
+  ! This routine merges sink particles for the star formation case if 
+  ! they are too close and one of them is younger than ~1000 years
+  !------------------------------------------------------------------------
+  integer::j,isink,jsink,ii,jj,kk,ind,idim,new_sink
+  real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax2,rmax,mnew,t_larson1
+  integer::igrid,jgrid,ipart,jpart,next_part,info
+  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,mergers
+  integer::igrp,icomp,gndx,ifirst,ilast,indx
+  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  integer,dimension(:),allocatable::psink,gsink
+  real(dp),dimension(1:3)::xbound,skip_loc
+  real(dp)::egrav,ekin,uxcom,uycom,uzcom,v2rel1,v2rel2,dx_min2
+  logical::iyoung,jyoung,merge
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+
+
+
+  if(nsink==0)return
+
+  ! Mesh spacing in that level
+  dx_loc=0.5D0**nlevelmax
+  xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min2=dx_min*dx_min
+  rmax=dble(ir_cloud)*dx_min ! Linking length in physical units
+  rmax2=rmax*rmax
+
+  !lifetime of first larson core in code units 
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  t_larson1=larson_lifetime*365.25*24*3600/scale_t
+
+  mergers=0
+  do isink=1,nsink-1
+     if (msink(isink)>-1.)then
+        do jsink=isink+1,nsink
+           iyoung=(t-tsink(isink)<t_larson1)
+           jyoung=(t-tsink(jsink)<t_larson1)
+
+           rr=(xsink(isink,1)-xsink(jsink,1))**2&
+                +(xsink(isink,2)-xsink(jsink,2))**2&
+                +(xsink(isink,3)-xsink(jsink,3))**2
+           
+           merge=(iyoung .or. jyoung).and.rr<rmax2
+           merge=merge .or. (iyoung .and. jyoung .and. rr<4*rmax2)
+           
+           
+
+           if (merge)then
+              mergers=mergers+1
+              mnew=msink(isink)+msink(jsink)
+              xsink(isink,1:3)=(xsink(isink,1:3)*msink(isink)+xsink(jsink,1:3)*msink(jsink))/mnew
+              vsink(isink,1:3)=(vsink(isink,1:3)*msink(isink)+vsink(jsink,1:3)*msink(jsink))/mnew
+              lsink(isink,1:3)=(lsink(isink,1:3)*msink(isink)+lsink(jsink,1:3)*msink(jsink))/mnew
+              msink(isink)=mnew
+
+
+              acc_rate(isink)=acc_rate(isink)+msink(jsink)
+              acc_lum(isink)=ir_eff*acc_rate(isink)*msink(isink)/(5*6.955d10/scale_l)
+
+
+              msink(jsink)=-10.
+
+              tsink(isink)=min(tsink(isink),tsink(jsink))
+              idsink(isink)=min(idsink(isink),idsink(jsink))
+
+
+              
+           endif
+           
+        end do
+     end if
+  end do
+
+  if (myid==1)write(*,*)'merged ',mergers,' sinks'
+
+  i=1
+  do while (mergers>0)
+
+     if (msink(i)<-1.)then !if sink has been merged to another one        
+
+        mergers=mergers-1
+        nsink=nsink-1
+
+        !let them all slide back one index
+        do j=i,nsink
+           xsink(j,1:3)=xsink(j+1,1:3)
+           vsink(j,1:3)=vsink(j+1,1:3)
+           lsink(j,1:3)=lsink(j+1,1:3)
+           msink(j)=msink(j+1)
+           tsink(j)=tsink(j+1)
+           idsink(j)=idsink(j+1)
+           acc_rate(j)=acc_rate(j+1)
+           acc_lum(j)=acc_lum(j+1)
+        end do
+
+        !whipe last position in the sink list
+        xsink(j+1,1:3)=0.
+        vsink(j+1,1:3)=0.
+        lsink(j+1,1:3)=0.
+        msink(j+1)=0.
+        tsink(j+1)=0.
+        idsink(j+1)=0
+        acc_rate(j+1)=0.
+        acc_lum(j+1)=0.
+
+     else
+        i=i+1
+     end if
+  end do
+
+end subroutine merge_star_sink
