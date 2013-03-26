@@ -7,7 +7,7 @@ SUBROUTINE rt_init
   use hydro_commons
   use rt_hydro_commons
   use rt_flux_module
-  use rt_cooling_module, only: update_UVrates
+  use rt_cooling_module, only: update_UVrates,rt_isoPress,iRTisoPressVar    !RTpress
   use rt_parameters
   use SED_module
   use UV_module
@@ -17,8 +17,13 @@ SUBROUTINE rt_init
   if(verbose)write(*,*)'Entering init_rt'
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
-  iIons=ichem              !         Starting index of xhii, xheii, xheiii
-  nvar_count = iIons+2     !                                  # hydro vars
+  if(rt_isoPress) then                                                      !RTpress
+     nvar_count = nvar_count+1                                              !RTpress
+     iRTisoPressVar = nvar_count                                            !RTpress
+  endif
+  iIons=nvar_count+1         !       Starting index of xhii, xheii, xheiii
+  nvar_count = nvar_count+3  !                                # hydro vars
+
   if(nvar_count .ne. nvar) then 
      if(myid==1) then 
         write(*,*) 'rt_init(): Something wrong with NVAR.'
@@ -38,6 +43,10 @@ SUBROUTINE rt_init
         write(*,*) 'STOPPING!'                                              !RTpress
      endif                                                                  !RTpress
      call clean_stop                                                        !RTpress
+  endif                                                                     !RTpress
+
+  if(rt_isoPress) then                                                      !RTpress
+     uold(:,iRTisoPressVar)=0d0                                             !RTpress
   endif                                                                     !RTpress
 
   if(rt_star .or. sedprops_update .ge. 0) &
@@ -166,7 +175,7 @@ SUBROUTINE read_rt_params(nml_ok)
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
        ! RT pressure patch                                               &  !RTpress
-       & ,rt_Pconst, rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV        &  !RTpress
+       & ,rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                   &  !RTpress
        & ,rt_isoPress                                                       !RTpress
 
   ! Read namelist file
@@ -184,7 +193,6 @@ SUBROUTINE read_rt_params(nml_ok)
   !call update_rt_c
   if(haardt_madau) rt_UV_hom=.true.                     ! UV in every cell
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
-  if(rt_Pconst .ge. 0.d0) isIsoPressure=.true.                              !RTpress 
   call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params
 

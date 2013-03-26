@@ -19,7 +19,7 @@ module rt_cooling_module
          , signc, sigec, PHrate, UVrates                                 &
          , iP0, iP1, iPtot, rt_isoPress                                  & !RTpress
          , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                  & !RTpress
-         , isIsoPressure, rt_pconst                                        !RTpress
+         , iRTisoPressVar                                                  !RTpress
 
   ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
   ! where n=nGroups.
@@ -48,9 +48,8 @@ module rt_cooling_module
 
   integer,parameter::iGroupIR=1                      !      IR group index  !RTpress
   integer::iGroupNUV=1                               !     NUV group index  !RTpress
-  logical::rt_isoPress=.false.         ! Isotr. photon mom -> gas heating   !RTpress
-  logical::isIsoPressure=.false.       ! Using iso-pressure?                !RTpress
-  real(dp)::rt_Pconst=-1.              ! Iso-pressure value (for tests)     !RTpress
+  integer::iRTisoPressVar=1                          ! Isop. pscalar index  !RTpress
+  logical::rt_isoPress=.false.         ! Isotr. photon mom -> P_nt?         !RTpress
   logical::rt_isIR                     ! Using IR scattering on dust?       !RTpress
   logical::rt_isNUV                    ! Using NUV scattering on dust?      !RTpress
   real(dp)::rt_kappa_IR=1d3            ! IR dust opacity                    !RTpress
@@ -222,7 +221,7 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
         endif
      endif
      U(i,iP0:iP1)= 0.d0         ! Initialize momentum transfer to gas to 0 !RTpress
-     U(i,iPtot)= 0.d0           ! Init total momentum transfer to gas to 0 !agnrt
+     U(i,iPtot)= 0.d0           ! Init total momentum transfer to gas to 0 !RTpress
   end do
 
   ! Loop until all cells have tleft=0
@@ -384,13 +383,9 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
              + dU(iNpU(iGroupNUV)) * rt_c_cgs * dt * csNUV * nH * Zsolar &  !RTpress
              * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
      endif                                                                  !RTpress
-
      ! NUV->IR; Add absorbed NUV energy to the pool of IR photons:          !RTpress
      ! Use DE_IR = - DE_NUV => DN_IR = -DN_NUV * egy_NUV / egy_IR           !RTpress
      if(rt_isIR .and. rt_isNUV) then                                        !RTpress
-        !dU(iNpU(iGroupIR)) =  dU(iNpU(iGroupIR)) +                       &  !RTpress
-        !     MAX(0d0,U(iNpU(iGroupNUV))-dU(iNpU(iGroupNUV)))             &  !RTpress
-        !     * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
         dU(iNpU(iGroupIR)) = dU(iNpU(iGroupIR))                          &  !RTpress
              + dU(iNpU(iGroupNUV)) * phI(iGroupNUV) * dt                 &  !RTpress
              * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
@@ -403,12 +398,12 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(dUU .gt. 1.) then                                 
        code=1 ;   dU=dU-U; RETURN                             ! dt too big
      endif
-     dUU=MAXVAL(                                                         &  !RTpress
-        ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&  !RTpress
-        /U_FRAC(iFp0:iFp1) )                                                !RTpress
-     if(dUU .gt. 1.) then                                                   !RTpress
-       code=1 ;   dU=dU-U; RETURN                             ! dt too big  !RTpress
-     endif                                                                  !RTpress
+     !dUU=MAXVAL(                                                         &  !RTpress
+     !   ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&  !RTpress
+     !   /U_FRAC(iFp0:iFp1) )                                                !RTpress
+     !if(dUU .gt. 1.) then                                                   !RTpress
+     !  code=1 ;   dU=dU-U; RETURN                             ! dt too big  !RTpress
+     !endif                                                                  !RTpress
   endif
   !(ii) UPDATE TEMPERATURE ***********************************************
   if(c_switch .and. cooling) then
@@ -599,7 +594,6 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH,   &
   endif
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-     !call clean_stop !joki: Doesn't work on some machines!!!
      STOP
   endif
 

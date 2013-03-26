@@ -73,7 +73,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_parameters
   use rt_hydro_commons
   use rt_cooling_module, only: n_U,iNpU,iFpU, rt_solve_cooling,iP0,iP1   &
-       ,iPtot,rt_isoPress,isIsoPressure,rt_pconst                         !RTpress
+       ,iPtot,rt_isoPress,iRTisoPressVar                                    !RTpress
 #endif
   implicit none
   integer::ilevel,ngrid
@@ -88,9 +88,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
 #ifdef RT
   real(dp)::scale_Np,scale_Fp
-  real(dp)::fmag,speed,speed_limit                                        !RTpress
-  real(dp),dimension(ndim)::fuVec  ! flux unit vector                     !RTpress
-  real(kind=8),dimension(1:nvector),save::eTherm                          !RTpress
+  real(dp)::fmag                                                            !RTpress
+  real(dp),dimension(ndim)::fuVec  ! flux unit vector                       !RTpress
+  real(kind=8),dimension(1:nvector),save::eTherm                            !RTpress
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp),dimension(1:nvector,n_U),save::U,U_old
   real(dp),dimension(1:nvector,nGroups),save::Fp, Fp_precool
@@ -99,6 +99,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
+  real(kind=8)::dx_div_6                                                    !RTpress
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -109,8 +110,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
+  dx_div_6 = dx_loc / 6d0                                                   !RTpress
   vol_loc=dx_loc**ndim
-
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 #ifdef RT
@@ -300,7 +301,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute rho
      do i=1,nleaf
         nH(i) = nH(i)/scale_nH
-        !uold(ind_leaf(i),1)=nH(i) ! DEBUG JOKI TO AVOID NEGATIVE DENSITY
      end do
 
      ! --------------------                                                 !RTpress
@@ -338,16 +338,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            endif                                                            !RTpress
         end do                                                              !RTpress
      end do                                                                 !RTpress
-     !! Limit the gas speed to 0.1 c, to prevent negative densities         !RTpress
-     !speed_limit = 0.1 * c_cgs/scale_v                                     !RTpress
-     !do i=1,nleaf                                                          !RTpress
-     !   speed = sqrt(sum(uold(ind_leaf(i),2:1+ndim)**2))/nH(i)             !RTpress
-     !   if(speed .gt. speed_limit) then                                    !RTpress
-     !      uold(ind_leaf(i),2:1+ndim) =                              &     !RTpress
-     !           uold(ind_leaf(i),2:1+ndim)/speed*speed_limit               !RTpress
-     !   endif                                                              !RTpress
-     !end do                                                                !RTpress
-                                                                            !RTpress
      ! Energy update =====================================================  !RTpress
      ! Calculate NEW pressure from updated momentum                         !RTpress
      ekk(1:nleaf) = 0.0d0                                                   !RTpress
@@ -357,8 +347,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do                                                                 !RTpress
      ! Update the pressure variable with the new kinetic energy:            !RTpress
      uold(ind_leaf(1:nleaf),ndim+2)=ekk(1:nleaf)+eTherm(1:nleaf)            !RTpress
-     ! Use the isotropic photon pressure to heat the gas:                   !RTpress
-     if(rt_isoPress) then                                                   !RTpress
+                                                                            !RTpress
+     ! Use the isotropic photon pressure in a separate variable:            !RTpress
+     uold(ind_leaf(1:nleaf),iRTisoPressVar)=0d0                             !RTpress
+     if(rt_isoPress .and. rt_advect) then                                   !RTpress
         U(1:nleaf,iPtot)= U(1:nleaf,iPtot)/scale_d/scale_v                  !RTpress
         ! Subtract the directional momentum impact:                         !RTpress
         do ig=1,nGroups                                                     !RTpress
@@ -368,12 +360,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf                                                        !RTpress
            U(i,iPtot) = max(U(i,iPtot), 0d0)                                !RTpress
         end do                                                              !RTpress
-        ! And heat:                                                         !RTpress
-        uold(ind_leaf(1:nleaf),ndim+2) = uold(ind_leaf(1:nleaf),ndim+2)  &  !RTpress
-             + 0.5 * U(1:nleaf,iPtot)**2 / nH(1:nleaf)                      !RTpress
+        ! And set (multiply by vol, dx^3 and div by 6*area, 6dx^2):         !RTpress
+        uold(ind_leaf(1:nleaf),iRTisoPressVar) = &                          !RTpress
+             U(1:nleaf,iPtot) / dtnew(ilevel) * dx_div_6 * nH(1:nleaf)      !RTpress
      endif                                                                  !RTpress
-     if(isIsoPressure) uold(ind_leaf(1:nleaf),ndim+2) = &                   !RTpress
-                                 ekk(1:nleaf)+rt_Pconst/scale_d/scale_v**2  !RTpress
      ! End energy update =================================================  !RTpress
 
      ! Compute net energy sink
@@ -395,9 +385,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute minimal total energy from polytrope
      do i=1,nleaf
         T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i)
-        ! Joki: Trying this to avoid negative temperature:
-        if(rt_isTconst) &                                                   !RTpress
-             T2min(i)=rt_Tconst*nH(i)/scale_T2/(gamma-1.0) + ekk(i)         !RTpress
      end do
 
      ! Update total fluid energy
@@ -414,11 +401,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            uold(ind_leaf(i),ndim+2) = T2min(i)
         end do
      else       
-        if (.not. isIsoPressure) then                                       !RTpress
-           do i=1,nleaf                                                     
-              uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))                
-           end do
-        endif                                                               !RTpress
+        do i=1,nleaf                                                     
+           uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))                
+        end do
      endif
 
      ! Update delayed cooling switch
