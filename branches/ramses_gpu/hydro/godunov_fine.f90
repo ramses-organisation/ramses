@@ -529,22 +529,38 @@ subroutine hydro_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
   ! This routine returns the index of the cell, at maximum level
   ! ilevel, in which the input particle sits.
   ! Warning: coordinates are supposed to be in normalized units
-  ! so between 0 and 1 (periodic BC) or between 1 and 2 (other BC).
+  ! for the inner computational box so always between 0 and 1.
   !----------------------------------------------------------------------------
   real(dp)::xx,yy,zz
-  integer::i,j,ii,jj,kk,ind,iskip,igrid,ind_cell,igrid0
+  integer::i,j,ii,jj=0,kk=0,ind,iskip,igrid,ind_cell,igrid0
   ind_cell=0
-  igrid0=son(1+icoarse_min+jcoarse_min*nx+kcoarse_min*nx*ny)
   do i=1,np
-     igrid=igrid0
-     do j=1,ilevel
-        ii=0; jj=0; kk=0
-        if(xpart(i,1)>xg(igrid,1))ii=1
+     ii=0; jj=0; kk=0
+     xx=xpart(i,1)
+     if(xx<0d0)xx=xx+dble(nx)
+     if(xx>=dble(nx))xx=xx-dble(nx)
+     ii=int(xx/nx)
 #if NDIM>1
-        if(xpart(i,2)>xg(igrid,2))jj=1
+     yy=xpart(i,2)
+     if(yy<0d0)yy=yy+dble(ny)
+     if(yy>=dble(ny))yy=yy-dble(ny)
+     jj=int(yy/nx)
 #endif
 #if NDIM>2
-        if(xpart(i,3)>xg(igrid,3))kk=1
+     zz=xpart(i,3)
+     if(zz<0d0)zz=zz+dble(nz)
+     if(zz>=dble(nz))zz=zz-dble(nz)
+     kk=int(zz/nx)
+#endif
+     igrid=son(1+ii+jj+nx+kk*nx*ny)
+     do j=1,ilevel
+        ii=0; jj=0; kk=0
+        if(xx>xg(igrid,1))ii=1
+#if NDIM>1
+        if(yy>xg(igrid,2))jj=1
+#endif
+#if NDIM>2
+        if(zz>xg(igrid,3))kk=1
 #endif
         ind=1+ii+2*jj+4*kk
         iskip=ncoarse+(ind-1)*ngridmax
