@@ -539,18 +539,18 @@ subroutine hydro_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
      xx=xpart(i,1)
      if(xx<0d0)xx=xx+dble(nx)
      if(xx>=dble(nx))xx=xx-dble(nx)
-     ii=int(xx/nx)
+     ii=int(xx)
 #if NDIM>1
      yy=xpart(i,2)
      if(yy<0d0)yy=yy+dble(ny)
      if(yy>=dble(ny))yy=yy-dble(ny)
-     jj=int(yy/nx)
+     jj=int(yy)
 #endif
 #if NDIM>2
      zz=xpart(i,3)
      if(zz<0d0)zz=zz+dble(nz)
      if(zz>=dble(nz))zz=zz-dble(nz)
-     kk=int(zz/nx)
+     kk=int(zz)
 #endif
      igrid=son(1+ii+jj+nx+kk*nx*ny)
      do j=1,ilevel
