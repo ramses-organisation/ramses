@@ -400,7 +400,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5D0**ilevel
-  dx_box=nxp*dx
+  dx_box=2*nxp*dx
   dx_loc=scale*dx
  
   ! Compute box coordinates in normalized unites
