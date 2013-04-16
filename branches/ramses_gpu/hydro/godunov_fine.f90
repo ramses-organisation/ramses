@@ -13,7 +13,7 @@ subroutine godunov_fine(ilevel)
   ! hydro solver. On entry, hydro variables are gathered from array uold.
   ! On exit, unew has been updated. 
   !--------------------------------------------------------------------------
-  integer::i,j,ivar,nx_ok,ngrid_ok,ilev,igrid,ncache,ngrid,levelup,iskip
+  integer::i,j,ivar,nx_ok,nx_cell,ngrid_ok,ilev,igrid,ncache,ngrid,levelup,iskip
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nlevelmax)::ngroup
   integer,allocatable,dimension(:)::isort
@@ -34,6 +34,7 @@ subroutine godunov_fine(ilevel)
   do ilev=levelup,ilevel-1
      nx_ok=2**(ilevel-1-ilev)
      ngrid_ok=nx_ok**ndim
+     nx_cell=2*nx_ok
      write(*,*)'=========================================='
      write(*,999)ilev+1,ngroup(ilev)/ngrid_ok,ngrid_ok
 999 format(' Level',I3,' found ',I6,' groups of size ',I2,'')
@@ -43,7 +44,7 @@ subroutine godunov_fine(ilevel)
            write(*,888)(active(ilevel)%igrid(isort(i+j-1)),j=1,ngrid_ok)
 888 format(16(I3,1X))
            igrid=active(ilevel)%igrid(isort(i))
-           call fill_hydro_grid(igrid,nx_ok,ilevel)           
+           call fill_hydro_grid(igrid,nx_cell,ilevel)
         end do
         iskip=iskip+ngroup(ilev)
      endif
@@ -400,7 +401,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5D0**ilevel
-  dx_box=2*nxp*dx
+  dx_box=nxp*dx
   dx_loc=scale*dx
  
   ! Compute box coordinates in normalized unites
