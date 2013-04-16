@@ -50,7 +50,7 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof,jumped,ic_sink=.false.,read_pos=.false.
+  logical::error,keep_part,eof,jumped,ic_sink=.false.,read_pos=.false.,ok
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
@@ -527,7 +527,7 @@ subroutine init_part
                           if(keep_part)then
                              ipart=ipart+1
                              vp(ipart,idim)=init_array(i1,i2,i3)
-                             if(.not read_pos)then
+                             if(.not. read_pos)then
                                 dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
                              else
                                 xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
