@@ -31,8 +31,8 @@ subroutine init_part
   real(dp),allocatable,dimension(:)::xdp
   integer ,allocatable,dimension(:)::isp
 
-  real(kind=4),allocatable,dimension(:,:)::init_plane
-  real(dp),allocatable,dimension(:,:,:)::init_array
+  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
+  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
   real(kind=8),dimension(1:nvector,1:3)::xx,vv,xs
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::ixx,iyy,izz
@@ -50,8 +50,8 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof,jumped,ic_sink=.false.
-  character(LEN=80)::filename
+  logical::error,keep_part,eof,jumped,ic_sink=.false.,read_pos=.false.
+  character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar
@@ -381,9 +381,12 @@ subroutine init_part
            ! Allocate initial conditions array
            if(active(ilevel)%ngrid>0)then
               allocate(init_array(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
+              allocate(init_array_x(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
               init_array=0d0
+              init_array_x=0d0
            end if
            allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
+           allocate(init_plane_x(1:n1(ilevel),1:n2(ilevel)))
            
            ! Loop over input variables
            do idim=1,ndim
@@ -398,6 +401,19 @@ subroutine init_part
                  if(idim==1)filename=TRIM(initfile(ilevel))//'/ic_velcx'
                  if(idim==2)filename=TRIM(initfile(ilevel))//'/ic_velcy'
                  if(idim==3)filename=TRIM(initfile(ilevel))//'/ic_velcz'
+
+                 if(idim==1)filename_x=TRIM(initfile(ilevel))//'/ic_poscx'
+                 if(idim==2)filename_x=TRIM(initfile(ilevel))//'/ic_poscy'
+                 if(idim==3)filename_x=TRIM(initfile(ilevel))//'/ic_poscz'
+                 
+                 INQUIRE(file=filename_x,exist=ok)
+                 if(.not.ok)then
+                    read_pos = .false.
+                 else
+                    read_pos = .true.
+                    if(myid==1)write(*,*)'Reading file '//TRIM(filename_x)
+                 end if
+
               endif
 
               if(myid==1)write(*,*)'Reading file '//TRIM(filename)
@@ -443,12 +459,42 @@ subroutine init_part
                     endif
                  end do
                  if(myid==1)close(10)
+
+                 if(read_pos) then
+                    if(myid==1)then
+                       open(10,file=filename_x,form='unformatted')
+                       rewind 10
+                       read(10) ! skip first line
+                    end if
+                    do i3=1,n3(ilevel)
+                       if(myid==1)then
+                          if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
+                          read(10)((init_plane_x(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
+                       else
+                          init_plane_x=0.0
+                       endif
+                       buf_count=n1(ilevel)*n2(ilevel)
+#ifndef WITHOUTMPI
+                       call MPI_BCAST(init_plane_x,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
+#endif
+                       if(active(ilevel)%ngrid>0)then
+                          if(i3.ge.i3_min.and.i3.le.i3_max)then
+                             init_array_x(i1_min:i1_max,i2_min:i2_max,i3) = &
+                                  & init_plane_x(i1_min:i1_max,i2_min:i2_max)
+                          end if
+                       endif
+                    end do
+                    if(myid==1)close(10)
+                 end if
+
               endif
               
               if(active(ilevel)%ngrid>0)then
                  ! Rescale initial displacement field to code units
                  init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
-                 
+                 if(read_pos)then
+                    init_array_x = init_array_x/boxlen_ini
+                 endif
                  ! Loop over grids by vector sweeps
                  ipart=ipart_old
                  ncache=active(ilevel)%ngrid
@@ -481,7 +527,12 @@ subroutine init_part
                           if(keep_part)then
                              ipart=ipart+1
                              vp(ipart,idim)=init_array(i1,i2,i3)
-                             dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
+                             if(.not read_pos)then
+                                dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
+                             else
+                                xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
+                                dispmax=max(dispmax,abs(init_array_x(i1,i2,i3)/dx))
+                             endif
                           end if
                        end do
                     end do
@@ -495,9 +546,9 @@ subroutine init_part
            
            ! Deallocate initial conditions array
            if(active(ilevel)%ngrid>0)then
-              deallocate(init_array)
+              deallocate(init_array,init_array_x)
            end if
-           deallocate(init_plane)
+           deallocate(init_plane,init_plane_x)
            
            if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
            
@@ -508,7 +559,9 @@ subroutine init_part
         npart=ipart
         
         ! Move particle according to Zeldovich approximation
-        xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
+        if(.not. read_pos)then
+           xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
+        endif
         
         ! Scale displacement to velocity
         vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
