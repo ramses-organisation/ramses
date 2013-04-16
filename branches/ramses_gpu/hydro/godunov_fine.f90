@@ -552,7 +552,7 @@ subroutine hydro_get_cell_index(cell_index,cell_levl,xpart,ilevel,np)
      if(zz>=dble(nz))zz=zz-dble(nz)
      kk=int(zz)
 #endif
-     igrid=son(1+ii+jj+nx+kk*nx*ny)
+     igrid=son(1+ii+jj*nx+kk*nx*ny)
      do j=1,ilevel
         ii=0; jj=0; kk=0
         if(xx>xg(igrid,1))ii=1
