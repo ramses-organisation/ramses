@@ -163,7 +163,8 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nrtvar),save::uloc
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nrtvar,1:ndim),save::flux
   logical,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
-  integer ,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
+  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
+  integer,dimension(1:nvector),save::ind_exist,ind_nexist
 
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
@@ -278,6 +279,28 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         call rt_interpol_hydro(u1,u2,nbuffer)
      endif
 
+     ! RT ouflow boundary begin-------------------------------------------
+     if(rt_is_outflow_bound) then
+        rt_per_bnd(:)=.false.           ! Flag indicates periodic boundary
+        do i=1,ncache
+           ind_nbor = son(nbors_father_cells(i,ind_father))
+           if(ind_nbor .le. 0) then
+              ! Neighbor is leaf.......need container grid to get position
+              ind_nbor = (nbors_father_cells(i,ind_father)-ncoarse-1)    & 
+                   / ngridmax + 1
+              ind_nbor = nbors_father_cells(i,ind_father)                &
+                   - ncoarse - (ind_nbor-1)*ngridmax
+           endif
+           maxDist = MAXVAL(ABS( xg(ind_grid(i),:)- xg(ind_nbor,:) ))
+           if( maxDist .gt. dx8 ) then
+              rt_per_bnd(i)=.true.  ! Neighbor is across periodic boundary
+           else
+              rt_per_bnd(i)=.false.
+           endif
+        end do
+     endif
+     ! RT outflow boundary end---------------------------------------------
+
      ! Loop 2x2x2 cells within father cell and add them to stencil (uloc)
      do k2=k2min,k2max
      do j2=j2min,j2max
@@ -296,14 +319,47 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         
         ! Gather hydro variables
 
-        do ivar=1,nrtvar
+        ! RT outflow boundary begin---------------------------------------
+        if(rt_is_outflow_bound) then
            do i=1,nexist
-              uloc(ind_exist(i),i3,j3,k3,ivar) = rtuold(ind_cell(i),ivar)
+              if (rt_per_bnd(ind_exist(i))) then
+                 uloc(ind_exist(i),i3,j3,k3,1:nrtvar) =  0.D0
+              else              
+                 do ivar=1,nrtvar
+                    uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
+                                                  rtuold(ind_cell(i),ivar)
+                 end do
+              endif
            end do
            do i=1,nbuffer
-              uloc(ind_nexist(i),i3,j3,k3,ivar) = u2(i,ind_son,ivar)
+              if (rt_per_bnd(ind_nexist(i))) then
+                 uloc(ind_nexist(i),i3,j3,k3,1:nrtvar) =  0.D0
+              else
+                 do ivar=1,nrtvar
+                    uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+                 end do
+              endif
            end do
-        end do
+        else
+           do ivar=1,nrtvar
+              do i=1,nexist
+                 uloc(ind_exist(i),i3,j3,k3,ivar)=rtuold(ind_cell(i),ivar)
+              end do
+              do i=1,nbuffer
+                 uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+              end do
+           end do
+        endif
+        ! RT outflow boundary end-----------------------------------------
+
+        !do ivar=1,nrtvar
+        !    do i=1,nexist
+        !       uloc(ind_exist(i),i3,j3,k3,ivar) = rtuold(ind_cell(i),ivar)
+        !    end do
+        !    do i=1,nbuffer
+        !       uloc(ind_nexist(i),i3,j3,k3,ivar) = u2(i,ind_son,ivar)
+        !    end do
+        !end do
 
         ! Gather refinement flag
         do i=1,nexist
