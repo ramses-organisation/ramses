@@ -84,7 +84,6 @@ subroutine clump_finder(create_output)
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-!     call create_test_particle(ilevel,itest,nskip) 
      call count_test_particle(ilevel,itest,nskip,2) 
   end do
   do ilevel=nlevelmax,levelmin,-1
@@ -103,7 +102,6 @@ subroutine clump_finder(create_output)
      call quick_sort(denp(1),testp_sort(1),ntest) 
      deallocate(denp)
   endif
-
   !-------------------------------------------------------------------------------
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
@@ -190,27 +188,34 @@ subroutine clump_finder(create_output)
      end do
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
-     call compute_clump_properties_round2(ntest,create_output,all_bound)
-     
+     call compute_clump_properties_round2(ntest,.false.,all_bound)
+     call write_clump_properties(.false.)
+
+     if (.not. smbh)then
+        call trim_clumps(ntest)
+        call compute_clump_properties(ntest)
+        call compute_clump_properties_round2(ntest,.true.,all_bound)
+     end if 
+
 
      !------------------------------------------------------------------------------
      !if all clumps need to be gravitationally bound to survive - merge again
      !------------------------------------------------------------------------------
-     if (merge_unbound)then
-        do while (.not. all_bound)
-           call write_clump_properties(.false.)
-           do j=npeaks_tot,1,-1
-              if (isodens_check(j)<1.)relevance_tot(j)=1.
-           end do
-           call merge_clumps(ntest)
-           call compute_clump_properties_round2(ntest,.false.,all_bound)
-        end do
-     endif
+!      if (merge_unbound)then
+!         do while (.not. all_bound)
+!            call write_clump_properties(.false.)
+!            do j=npeaks_tot,1,-1
+!               if (isodens_check(j)<1.)relevance_tot(j)=1.
+!            end do
+!            call merge_clumps(ntest)
+!            call compute_clump_properties_round2(ntest,.false.,all_bound)
+!         end do
+!      endif
 
      ! write properties to screen
      call write_clump_properties(.false.)
      ! ..and if wanted to disk
-     if (create_output)call write_clump_properties(.true.)
+!     if (create_output)call write_clump_properties(.true.)
      
   end if
 
@@ -263,7 +268,7 @@ subroutine clump_finder(create_output)
            ok=ok.and.occupied_all(jj)==0
 !           ok=ok.and.peak_check(jj)>1.
 !           ok=ok.and.ball4_check(jj)>1.
-           ok=ok.and.clump_check(jj)>1.
+!           ok=ok.and.clump_check(jj)>1.
            ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
            ok=ok.and.contracting(jj)
 
@@ -849,7 +854,7 @@ end subroutine read_clumpfind_params
 !#########################################################################
 subroutine surface_int(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: icellp,center_of_mass_tot,Psurf
+  use clfind_commons, ONLY: icellp,center_of_mass_tot,Psurf,peak_pos_tot
   use hydro_commons, ONLY: uold,gamma
   implicit none
   integer::np,ilevel
@@ -1059,7 +1064,3 @@ subroutine surface_int(ind_cell,np,ilevel)
      
 
 end subroutine surface_int
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################

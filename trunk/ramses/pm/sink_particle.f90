@@ -4519,6 +4519,7 @@ subroutine merge_star_sink
   t_larson1=larson_lifetime*365.25*24*3600/scale_t
 
   mergers=0
+  !loop over all possible pairs (n-square, problematic when there are zilions of sinks)
   do isink=1,nsink-1
      if (msink(isink)>-1.)then
         do jsink=isink+1,nsink
@@ -4531,10 +4532,11 @@ subroutine merge_star_sink
            
            merge=(iyoung .or. jyoung).and.rr<rmax2
            merge=merge .or. (iyoung .and. jyoung .and. rr<4*rmax2)
-           
+           merge=merge .and. msink(jsink)>=0
            
 
            if (merge)then
+              if (myid==1)write(*,*)'merged ', idsink(jsink),' to ',idsink(isink)
               mergers=mergers+1
               mnew=msink(isink)+msink(jsink)
               xsink(isink,1:3)=(xsink(isink,1:3)*msink(isink)+xsink(jsink,1:3)*msink(jsink))/mnew
@@ -4583,14 +4585,14 @@ subroutine merge_star_sink
         end do
 
         !whipe last position in the sink list
-        xsink(j+1,1:3)=0.
-        vsink(j+1,1:3)=0.
-        lsink(j+1,1:3)=0.
-        msink(j+1)=0.
-        tsink(j+1)=0.
-        idsink(j+1)=0
-        acc_rate(j+1)=0.
-        acc_lum(j+1)=0.
+        xsink(nsink+1,1:3)=0.
+        vsink(nsink+1,1:3)=0.
+        lsink(nsink+1,1:3)=0.
+        msink(nsink+1)=0.
+        tsink(nsink+1)=0.
+        idsink(nsink+1)=0
+        acc_rate(nsink+1)=0.
+        acc_lum(nsink+1)=0.
 
      else
         i=i+1

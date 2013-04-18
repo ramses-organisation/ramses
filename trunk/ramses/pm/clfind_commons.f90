@@ -15,7 +15,7 @@ module clfind_commons
 
   ! Peak patch properties
   real(kind=8),allocatable,dimension(:,:)::clump_size_tot,center_of_mass_tot,clump_momentum_tot,clump_force_tot
-  real(kind=8),allocatable,dimension(:,:,:)::second_moments,second_moments_tot
+  real(kind=8),allocatable,dimension(:,:,:)::second_moments,second_moments_tot,Icl_d_3by3_tot,Icl_3by3_tot
   real(kind=8),allocatable,dimension(:)::min_dens_tot,av_dens_tot,phi_min_tot
   real(kind=8),allocatable,dimension(:)::max_dens_tot,e_kin_int_tot,e_bind_tot,e_thermal_tot
   real(kind=8),allocatable,dimension(:)::e_kin_int_tot4,e_bind_tot4,e_thermal_tot4

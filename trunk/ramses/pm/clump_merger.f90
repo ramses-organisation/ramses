@@ -39,7 +39,7 @@ subroutine compute_clump_properties(ntest)
   real(kind=8),dimension(1:npeaks_tot,1:3)::center_of_mass,clump_momentum,peak_pos,clump_force
   integer,dimension(1:npeaks_tot)::n_cells
 
-  min_dens=huge(0.d0);  max_dens=0.d0; n_cells=0; phi_min=huge(0.d0)
+  min_dens=huge(0.d0);  max_dens=0.d0; n_cells=0; phi_min=huge(0.d0); second_moments=0.
   clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0; center_of_mass=0.d0; clump_force=0.d0 
 
   !------------------------------------------
@@ -154,7 +154,7 @@ subroutine compute_clump_properties(ntest)
   call MPI_ALLREDUCE(center_of_mass,center_of_mass_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(second_moments,second_moments_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
-#ifdef WITHOUTMPI     
+#ifdef WITHOUTMPI      
   n_cells_tot=n_cells
   min_dens_tot=min_dens
   phi_min_tot=phi_min
@@ -183,10 +183,10 @@ subroutine compute_clump_properties(ntest)
   
   !calculate total mass above threshold
   tot_mass=sum(clump_mass_tot)
-  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/clump_vol_tot(1:npeaks_tot)
+  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/(clump_vol_tot(1:npeaks_tot)+tiny(0.d0))
   do i=1,ndim
-     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/clump_mass_tot(1:npeaks_tot)
-     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/clump_mass_tot(1:npeaks_tot)
+     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
+     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
   end do
 
 end subroutine compute_clump_properties
@@ -218,8 +218,8 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   integer::ipart,ilevel,info,i,peak_nr,j
 
   !variables needed temporarily store cell properties
-  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,rrel_i,tff
-  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl
+  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,tff
+  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel
 
   ! variables to be used with vector-sweeps
   integer::grid
@@ -230,10 +230,13 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   integer::nx_loc,ix,iy,iz,ind
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp)::Icl_d_xx,Icl_d_yy,Icl_d_zz
 
   !peak-patch related arrays before sharing information with other cpus
   real(kind=8),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,e_kin_int4,e_bind4,e_thermal4,v_therm,v_rms,m4
   real(kind=8),dimension(1:npeaks_tot)::clump_mass4,E_kin_iso,E_bind_iso,E_therm_iso,grav_term,Icl_d,Icl
+  real(kind=8),dimension(1:npeaks_tot,1:3,1:3)::Icl_d_3by3,Icl_3by3
+  real(kind=8),dimension(1:3,1:3)::eigenvectors,a
   real(kind=8),dimension(1:npeaks_tot,1:3)::clump_size,bulk_momentum
   real(dp)::Ggrav=1.d0,t_larson1
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -251,6 +254,7 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   v_therm=0.; v_rms=0.; bulk_momentum=0.; m4=0.
   E_kin_iso=0.; E_bind_iso=0.; E_therm_iso=0.
   grav_term=0.d0; Icl_d=0.d0; Icl=0.; Icl_dd_tot=0.
+  Icl_3by3=0.;  Icl_d_3by3=0.
   
   ! Conversion factor from user units to cgs units                                             
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -262,6 +266,7 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
      call title(ifout-1,nchar)
      call title(myid,myidstring)
      open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
+     if (myid==1)print*,nchar
   end if
 
   !------------------------------------------
@@ -385,11 +390,16 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         endif
 
         !terms for virial theorem 
+        rrel=(xcell(1:3)-center_of_mass_tot(peak_nr,1:3))
+        vrel=(vd(1:3)/d-clump_momentum_tot(peak_nr,1:3)/M)
         do i=1,3
-           rrel_i=(xcell(i)-center_of_mass_tot(peak_nr,i))
-           grav_term(peak_nr) = grav_term(peak_nr)  + (f(icellp(ipart),i)-clump_force_tot(peak_nr,i))  * rrel_i  * vol*d
-           Icl_d(peak_nr)     = Icl_d(peak_nr)      + (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)        * rrel_i  * vol*d
-           Icl(peak_nr)       = Icl(peak_nr)        + rrel_i                                           * rrel_i  * vol*d
+           grav_term(peak_nr) = grav_term(peak_nr)  + (f(icellp(ipart),i)-clump_force_tot(peak_nr,i))  * rrel(i)  * vol*d
+           Icl_d(peak_nr)     = Icl_d(peak_nr)      + (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)        * rrel(i)  * vol*d
+           Icl(peak_nr)       = Icl(peak_nr)        + rrel(i)                                          * rrel(i)  * vol*d
+           do j=1,3
+              Icl_d_3by3(peak_nr,i,j)=  Icl_d_3by3(peak_nr,i,j)   + ( vrel(j) * rrel(i)  +  vrel(i) * rrel(j) )   * vol*d
+              Icl_3by3(peak_nr,i,j)  =  Icl_3by3(peak_nr,i,j)     +   rrel(j) * rrel(i)                           * vol*d
+           end do
         end do
      end if
   end do
@@ -415,6 +425,8 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   call MPI_ALLREDUCE(grav_term,grav_term_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl_d,Icl_d_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl,Icl_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(Icl_d_3by3,Icl_d_3by3_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(Icl_3by3,Icl_3by3_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   e_kin_int_tot=e_kin_int
@@ -434,6 +446,8 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   grav_term_tot=grav_term
   Icl_d_tot=Icl_d
   Icl_tot=Icl
+  Icl_d_3by3_tot=Icl_d_3by3
+  Icl_3by3_tot=Icl_3by3
 #endif
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(clump_mass4,clump_mass_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -441,6 +455,9 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 #ifdef WITHOUTMPI
   clump_mass_tot4=clump_mass4
 #endif
+
+
+
 
   Icl_dd_tot=0.
   Icl_dd_tot(1:npeaks_tot)=2.*(grav_term_tot(1:npeaks_tot)-Psurf_tot(1:npeaks_tot)+2*e_kin_int_tot(1:npeaks_tot)+2*e_thermal_tot(1:npeaks_tot))
@@ -452,6 +469,9 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   all_bound=.true.
   do j=npeaks_tot,1,-1
      if (relevance_tot(j)>0.)then
+        !compute eigenvalues of Icl_d_3by3_tot
+        a=Icl_d_3by3_tot(j,1:3,1:3)
+        call Jacobi(a,eigenvectors,1.d-9,3)
         !compute all the checks
         v_bulk2=(bulk_momentum_tot(j,1)**2+bulk_momentum_tot(j,2)**2&
              +bulk_momentum_tot(j,3)**2)/(m4_tot(j)**2+tiny(0.d0))     
@@ -460,7 +480,11 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         isodens_check(j)=scale*E_bind_iso_tot(j)/(tiny(0.d0)+2*E_kin_iso_tot(j)+2*E_therm_iso_tot(j))        
         if(clump_check(j)<1.)clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))             
         all_bound=all_bound.and.(clump_check(j)>1.)
-        if (Icl_tot(j)>0)contracting(j)=contracting(j) .or. (Icl_d_tot(j)/Icl_tot(j) < (-1./t_larson1) .and. Icl_dd_tot(j) < 0.)
+!        if (Icl_tot(j)>0)contracting(j)=contracting(j) .or. (Icl_d_tot(j)/Icl_tot(j) < (-1./t_larson1) .and. Icl_dd_tot(j) < 0.)
+        if (Icl_tot(j)>0)contracting(j)=(Icl_d_xx/Icl_tot(j) < (-1./t_larson1) .and. Icl_d_yy/Icl_tot(j) < (-1./t_larson1) .and. &
+             Icl_d_zz/Icl_tot(j) < (-1./t_larson1) .and. Icl_dd_tot(j) < 0.)
+        if (myid==1 .and. .not. smbh)print*,j,0.5*Psurf_tot(j)/e_thermal_tot(j),0.5*grav_term_tot(j)/e_thermal_tot(j),Icl_d_tot(j)/Icl_tot(j),Icl_dd_tot(j)
+        if (myid==1 .and. .not. smbh)print*,a(1,1)/Icl_tot(j),a(2,2)/Icl_tot(j),a(3,3)/Icl_tot(j),(-1./t_larson1),Icl_d_tot(j)/Icl_tot(j)
      endif
   end do
 
@@ -506,7 +530,6 @@ subroutine write_clump_properties(to_file)
 
   !print results in descending order to screen/file
   if(myid==1)then
-     
      rel_mass=0.
      n_rel=0
      if (to_file .eqv. .true.) then
@@ -1002,7 +1025,8 @@ subroutine allocate_peak_patch_arrays
   allocate(Icl_tot(npeaks_tot))
   allocate(Icl_d_tot(npeaks_tot))
   allocate(Icl_dd_tot(npeaks_tot))
-  
+  allocate(Icl_d_3by3_tot(npeaks_tot,1:3,1:3))  
+  allocate(Icl_3by3_tot(npeaks_tot,1:3,1:3))  
 
   !initialize all peak based arrays
   n_cells_tot=0
@@ -1033,7 +1057,7 @@ subroutine allocate_peak_patch_arrays
   isodens_check=-1.
   clump_check=-1.
   contracting=.false.
-  Icl_tot=0.; Icl_d_tot=0.; Icl_dd_tot=0.
+  Icl_tot=0.; Icl_d_tot=0.; Icl_dd_tot=0.; Icl_d_3by3_tot=0.; Icl_3by3_tot=0.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################                 
@@ -1074,7 +1098,7 @@ subroutine deallocate_all
   deallocate(E_kin_iso_tot,E_bind_iso_tot,E_therm_iso_tot)
   deallocate(peak_check,ball4_check,isodens_check,clump_check)
   deallocate(contracting)
-  deallocate(Icl_dd_tot,Icl_d_tot,Icl_tot)
+  deallocate(Icl_dd_tot,Icl_d_tot,Icl_tot,Icl_d_3by3_tot,Icl_3by3_tot)
 
 end subroutine deallocate_all
 !################################################################                 
@@ -1101,13 +1125,14 @@ subroutine get_phi_ref(ntest)
   integer::ipart,ip,ilevel,next_level
   integer,dimension(1:nvector)::ind_cell
 
-
+  Psurf=0.
 
   ! loop 'testparts', pass the information of nvector parts to neighborsearch 
   ip=0
   do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart)) ! level
+     if (ilevel/=nlevelmax)print*,'not all paricles in max level',ilevel
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
      ind_cell(ip)=icellp(testp_sort(ipart))
@@ -1232,6 +1257,151 @@ subroutine get_phi_ref2
   phi_ref2_tot=phi_ref2
 #endif
 end subroutine get_phi_ref2
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine trim_clumps(ntest)
+  use amr_commons
+  use clfind_commons
+  implicit none
+  integer::ntest
+  !---------------------------------------------------------------------------
+  ! in this routine, all clumps are trimmed to a region of 4 cell radii around the peak
+  !---------------------------------------------------------------------------
+  integer::j,i,ii,merge_count,final_peak,merge_to,ipart,ilevel,nx_loc,ind
+  real(kind=8)::max_val,dx,scale,dx_loc,vol_loc
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
+  real(kind=8),dimension(1:nlevelmax)::volume
+  integer ::ix,iy,iz,grid,peak_nr
+
+  real(dp),dimension(1:3)::skip_loc,xcell
+  real(dp),dimension(1:twotondim,1:3)::xc
+
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  d0 = density_threshold/scale_nH;
 
 
 
+  do ilevel=1,nlevelmax
+     ! Mesh spacing in that level
+     dx=0.5D0**ilevel
+     nx_loc=(icoarse_max-icoarse_min+1)
+     scale=boxlen/dble(nx_loc)
+     dx_loc=dx*scale
+     vol_loc=dx_loc**ndim
+     volume(ilevel)=vol_loc
+  end do
+  
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)
+     xc(ind,2)=(dble(iy)-0.5D0)
+     xc(ind,3)=(dble(iz)-0.5D0)
+  end do
+
+  !update flag 2
+  do ipart=1,ntest
+     peak_nr=flag2(icellp(ipart))
+     if (peak_nr /=0 ) then
+        ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+        grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
+        dx=0.5D0**levp(ipart)
+        xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+        if (((peak_pos_tot(peak_nr,1)-xcell(1))**2.+(peak_pos_tot(peak_nr,2)-xcell(2))**2.+(peak_pos_tot(peak_nr,3)-xcell(3))**2.) > 16.*volume(nlevelmax)**(2./3.))then        
+           !update flag2 to zero
+           flag2(icellp(ipart))=0
+        end if
+     end if
+
+  end do
+
+
+end subroutine trim_clumps
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine Jacobi(a,x,abserr,n)
+  implicit none
+  integer::n
+  real(kind=8)::abserr
+  real(kind=8),dimension(3,3)::a,x
+  !===========================================================
+  ! Evaluate eigenvalues and eigenvectors
+  ! method: Jacoby method for symmetric matrices 
+  !-----------------------------------------------------------
+  ! input ...
+  ! a(n,n) - array of coefficients for matrix A
+  ! n      - number of equations
+  ! abserr - abs tolerance [sum of (off-diagonal elements)**2]
+  ! a(i,i) - eigenvalues
+  ! x(1:n,j) - eigenvectors
+  !===========================================================
+  integer::i,j,k
+  real(kind=8)::b2, bar
+  real(kind=8)::beta, coeff, c, s, cs, sc
+
+  ! initialize x(i,j)=0, x(i,i)=1
+  x = 0.0
+  do i=1,n
+     x(i,i) = 1.0
+  end do
+
+  ! find the sum of all off-diagonal elements (squared)
+  b2 = 0.0
+  do i=1,n
+     do j=1,n
+        if (i.ne.j) b2 = b2 + a(i,j)**2
+     end do
+  end do
+
+  if (b2 <= abserr) return
+
+  ! average for off-diagonal elements /2
+  bar = 0.5*b2/float(n*n)
+
+  do while (b2.gt.abserr)
+     do i=1,n-1
+        do j=i+1,n
+           if (a(j,i)**2 <= bar) cycle  ! do not touch small elements
+           b2 = b2 - 2.0*a(j,i)**2
+           bar = 0.5*b2/float(n*n)
+           ! calculate coefficient c and s for Givens matrix
+           beta = (a(j,j)-a(i,i))/(2.0*a(j,i))
+           coeff = 0.5*beta/sqrt(1.0+beta**2)
+           s = sqrt(max(0.5+coeff,0.0))
+           c = sqrt(max(0.5-coeff,0.0))
+           ! recalculate rows i and j
+           do k=1,n
+              cs =  c*a(i,k)+s*a(j,k)
+              sc = -s*a(i,k)+c*a(j,k)
+              a(i,k) = cs
+              a(j,k) = sc
+           end do
+           ! new matrix a_{k+1} from a_{k}, and eigenvectors 
+           do k=1,n
+              cs =  c*a(k,i)+s*a(k,j)
+              sc = -s*a(k,i)+c*a(k,j)
+              a(k,i) = cs
+              a(k,j) = sc
+              cs =  c*x(k,i)+s*x(k,j)
+              sc = -s*x(k,i)+c*x(k,j)
+              x(k,i) = cs
+              x(k,j) = sc
+           end do
+        end do
+     end do
+  end do
+  return
+end subroutine Jacobi
