@@ -34,7 +34,7 @@ subroutine godunov_fine(ilevel)
   do ilev=levelup,ilevel-1
      nx_ok=2**(ilevel-1-ilev)
      ngrid_ok=nx_ok**ndim
-     nx_cell=2*nx_ok
+     nx_cell=2*nx_ok ! FOR CLAUDIO
      write(*,*)'=========================================='
      write(*,999)ilev+1,ngroup(ilev)/ngrid_ok,ngrid_ok
 999 format(' Level',I3,' found ',I6,' groups of size ',I2,'')
