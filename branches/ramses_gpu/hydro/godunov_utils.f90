@@ -794,64 +794,64 @@ subroutine riemann_llf_scalar(qleft,qright,qgdnv,fgdnv)
   entho = one/(gamma-one)
 
   ! Maximum wave speed
-     rl=max(qleft (1),smallr)
-     ul=    qleft (2)
-     pl=max(qleft (3),rl*smallp)
-     rr=max(qright(1),smallr)
-     ur=    qright(2)
-     pr=max(qright(3),rr*smallp)
-     cl= sqrt(gamma*pl/rl)
-     cr= sqrt(gamma*pr/rr)
-     cmax=max(abs(ul)+cl,abs(ur)+cr)
-
+  rl=max(qleft (1),smallr)
+  ul=    qleft (2)
+  pl=max(qleft (3),rl*smallp)
+  rr=max(qright(1),smallr)
+  ur=    qright(2)
+  pr=max(qright(3),rr*smallp)
+  cl= sqrt(gamma*pl/rl)
+  cr= sqrt(gamma*pr/rr)
+  cmax=max(abs(ul)+cl,abs(ur)+cr)
+  
   ! Compute average velocity
-     qgdnv(2) = half*(qleft(2)+qright(2))
-
+  qgdnv(2) = half*(qleft(2)+qright(2))
+  
   ! Compute conservative variables  
-     ! Mass density
-     uleft (1) = qleft (1)
-     uright(1) = qright(1)
-     ! Normal momentum
-     uleft (2) = qleft (1)*qleft (2)
-     uright(2) = qright(1)*qright(2)
-     ! Total energy
-     uleft (3) = qleft (3)*entho + half*qleft (1)*qleft (2)**2
-     uright(3) = qright(3)*entho + half*qright(1)*qright(2)**2
+  ! Mass density
+  uleft (1) = qleft (1)
+  uright(1) = qright(1)
+  ! Normal momentum
+  uleft (2) = qleft (1)*qleft (2)
+  uright(2) = qright(1)*qright(2)
+  ! Total energy
+  uleft (3) = qleft (3)*entho + half*qleft (1)*qleft (2)**2
+  uright(3) = qright(3)*entho + half*qright(1)*qright(2)**2
 #if NDIM>1
-     uleft (3) = uleft (3)       + half*qleft (1)*qleft (4)**2
-     uright(3) = uright(3)       + half*qright(1)*qright(4)**2
+  uleft (3) = uleft (3)       + half*qleft (1)*qleft (4)**2
+  uright(3) = uright(3)       + half*qright(1)*qright(4)**2
 #endif
 #if NDIM>2
-     uleft (3) = uleft (3)       + half*qleft (1)*qleft (5)**2
-     uright(3) = uright(3)       + half*qright(1)*qright(5)**2
+  uleft (3) = uleft (3)       + half*qleft (1)*qleft (5)**2
+  uright(3) = uright(3)       + half*qright(1)*qright(5)**2
 #endif
   ! Other advected quantities
   do n = 4, nvar
-        uleft (n) = qleft (1)*qleft (n)
-        uright(n) = qright(1)*qright(n)
+     uleft (n) = qleft (1)*qleft (n)
+     uright(n) = qright(1)*qright(n)
   end do
-
+  
   ! Compute left and right fluxes  
-     ! Mass density
-     fleft (1) = uleft (2)
-     fright(1) = uright(2)
-     ! Normal momentum
-     fleft (2) = qleft (3)+uleft (2)*qleft (2)
-     fright(2) = qright(3)+uright(2)*qright(2)
-     ! Total energy
-     fleft (3) = qleft (2)*(uleft (3)+qleft (3))
-     fright(3) = qright(2)*(uright(3)+qright(3))
+  ! Mass density
+  fleft (1) = uleft (2)
+  fright(1) = uright(2)
+  ! Normal momentum
+  fleft (2) = qleft (3)+uleft (2)*qleft (2)
+  fright(2) = qright(3)+uright(2)*qright(2)
+  ! Total energy
+  fleft (3) = qleft (2)*(uleft (3)+qleft (3))
+  fright(3) = qright(2)*(uright(3)+qright(3))
   ! Other advected quantities
   do n = 4, nvar
-        fleft (n) = fleft (1)*qleft (n)
-        fright(n) = fright(1)*qright(n)
+     fleft (n) = fleft (1)*qleft (n)
+     fright(n) = fright(1)*qright(n)
   end do
-
+  
   ! Compute Lax-Friedrich fluxes
   do n = 1, nvar
-        fgdnv(n) = half*(fleft(n)+fright(n)-cmax*(uright(n)-uleft(n)))
+     fgdnv(n) = half*(fleft(n)+fright(n)-cmax*(uright(n)-uleft(n)))
   end do
-
+  
 end subroutine riemann_llf_scalar
 !###########################################################
 !###########################################################

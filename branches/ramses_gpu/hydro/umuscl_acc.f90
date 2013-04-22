@@ -26,7 +26,7 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
   use acc_parameters
   implicit none 
 
-  integer ::ngrid,nxp
+  integer ::nxp
   real(dp)::dx,dy,dz,dt
 
   ! Input states
@@ -75,7 +75,6 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
   kf10=1
   kf20=nxp+1
 
-  ngrid=1
   dy=dx
   dz=dx
 !!!!!!!!!!!!!!!!!!!!!!
@@ -90,32 +89,32 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
 !$acc& pcopyout(flux,tmp)
 
   ! Translate to primative variables, compute sound speeds  
-  call ctoprim_gpu_2d(uin,qin,cin,gravin,dt,ngrid,nxp)
+  call ctoprim_gpu_2d(uin,qin,cin,gravin,dt,nxp)
 
   ! Compute TVD slopes
-  call uslope_gpu_2d(qin,dq,dx,dt,ngrid,nxp)
+  call uslope_gpu_2d(qin,dq,dx,dt,nxp)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
 #if NDIM==1
-     call trace1d_gpu_2d(qin,dq,qm,qp,dx      ,dt,ngrid,nxp)
+     call trace1d_gpu_2d(qin,dq,qm,qp,dx      ,dt,nxp)
 #endif
 #if NDIM==2
-     call trace2d_gpu_2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid,nxp)
+     call trace2d_gpu_2d(qin,dq,qm,qp,dx,dy   ,dt,nxp)
 #endif
 #if NDIM==3
-     call trace3d_gpu_2d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid,nxp)
+     call trace3d_gpu_2d(qin,dq,qm,qp,dx,dy,dz,dt,nxp)
 #endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
-     call tracex_gpu_2d(qin,dq,cin,qm,qp,dx      ,dt,ngrid,nxp)
+     call tracex_gpu_2d(qin,dq,cin,qm,qp,dx      ,dt,nxp)
 #endif
 #if NDIM==2
-     call tracexy_gpu_2d(qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid,nxp)
+     call tracexy_gpu_2d(qin,dq,cin,qm,qp,dx,dy   ,dt,nxp)
 #endif
 #if NDIM==3
-     call tracexyz_gpu_2d(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid,nxp)
+     call tracexyz_gpu_2d(qin,dq,cin,qm,qp,dx,dy,dz,dt,nxp)
 #endif
   endif
 
@@ -123,24 +122,18 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
   fx=0.0
   call cmpflxm_gpu_2d(qm,iu10+1,iu20+1,ju10  ,ju20  ,ku10  ,ku20  , &
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
-       &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,ngrid,nxp)
+       &          if10  ,if20  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,nxp)
   ! Save flux in output array
 !$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
-  do i=if1,if2
+  do i=if10,if20
   do j=jlo,jhi
   do k=klo,khi
-        do l=1,ngrid
      do ivar=1,nvar
-!        do l=1,ngrid
            flux(i,j,k,ivar,1)=fx(i,j,k,ivar)*dt/dx
-!        end do
      end do
      do ivar=1,2
-!        do l=1,ngrid
            tmp (i,j,k,ivar,1)=tx(i,j,k,ivar)*dt/dx
-!        end do
      end do
-        end do
   end do
   end do
   end do
@@ -150,24 +143,18 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
 #if NDIM>1
   call cmpflxm_gpu_2d(qm,iu10  ,iu20  ,ju10+1,ju20+1,ku10  ,ku20  , &
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
-       &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,fx,tx,ngrid,nxp)
+       &          ilo  ,ihi  ,jf10  ,jf20  ,klo  ,khi  , 3,2,4,fx,tx,nxp)
   ! Save flux in output array
 !$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
   do i=ilo,ihi
-  do j=jf1,jf2
+  do j=jf10,jf20
   do k=klo,khi
-        do l=1,ngrid
      do ivar=1,nvar
-!        do l=1,ngrid
            flux(i,j,k,ivar,2)=fx(i,j,k,ivar)*dt/dy
-!        end do
      end do
      do ivar=1,2
-!        do l=1,ngrid
            tmp (i,j,k,ivar,2)=tx(i,j,k,ivar)*dt/dy
-!        end do
      end do
-        end do
   end do
   end do
   end do
@@ -178,24 +165,18 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
 #if NDIM>2
   call cmpflxm_gpu_2d(qm,iu10  ,iu20  ,ju10  ,ju20  ,ku10+1,ku20+1, &
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
-       &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,fx,tx,ngrid,nxp)
+       &          ilo  ,ihi  ,jlo  ,jhi  ,kf10  ,kf20  , 4,2,3,fx,tx,nxp)
   ! Save flux in output array
 !$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
   do i=ilo,ihi
   do j=jlo,jhi
-  do k=kf1,kf2
-        do l=1,ngrid
+  do k=kf10,kf20
      do ivar=1,nvar
-!        do l=1,ngrid
-           flux(i,j,k,ivar,3)=fx(i,j,k,ivar)*dt/dz
-!        end do
+        flux(i,j,k,ivar,3)=fx(i,j,k,ivar)*dt/dz
      end do
      do ivar=1,2
-!        do l=1,ngrid
-           tmp (i,j,k,ivar,3)=tx(i,j,k,ivar)*dt/dz
-!        end do
+        tmp (i,j,k,ivar,3)=tx(i,j,k,ivar)*dt/dz
      end do
-        end do
   end do
   end do
   end do
@@ -209,14 +190,14 @@ end subroutine unsplit_gpu_2d
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace1d_gpu_2d(q,dq,qm,qp,dx,dt,ngrid,nxp)
+subroutine trace1d_gpu_2d(q,dq,qm,qp,dx,dt,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  integer ::ngrid,nxp
+  integer ::nxp
   real(dp)::dx, dt
 
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::q  
@@ -243,7 +224,6 @@ subroutine trace1d_gpu_2d(q,dq,qm,qp,dx,dt,ngrid,nxp)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
-           do l = 1, ngrid
 
               ! Cell centered values
               r   =  q(i,j,k,ir)
@@ -272,7 +252,6 @@ subroutine trace1d_gpu_2d(q,dq,qm,qp,dx,dt,ngrid,nxp)
               qm(i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
               qm(i,j,k,ir,1) = max(smallr, qm(i,j,k,ir,1))
 
-           end do
         end do
      end do
   end do
@@ -282,14 +261,12 @@ subroutine trace1d_gpu_2d(q,dq,qm,qp,dx,dt,ngrid,nxp)
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
-              do l = 1, ngrid
                  a   = q(i,j,k,n)       ! Cell centered values
                  u   = q(i,j,k,iu)
                  dax = dq(i,j,k,n,1)    ! TVD slopes
                  sa0 = -u*dax             ! Source terms
                  qp(i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
                  qm(i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
-              end do
            end do
         end do
      end do
@@ -301,14 +278,14 @@ end subroutine trace1d_gpu_2d
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,ngrid,nxp)
+subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  integer ::ngrid,nxp
+  integer ::nxp
   real(dp)::dx, dy, dt
 
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::q  
@@ -336,7 +313,6 @@ subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,ngrid,nxp)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
-           do l = 1, ngrid
 
               ! Cell centered values
               r   =  q(i,j,k,ir)
@@ -389,7 +365,6 @@ subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,ngrid,nxp)
               qm(i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
               qm(i,j,k,ir,2) = max(smallr, qm(i,j,k,ir,2))
 
-           end do
         end do
      end do
   end do
@@ -399,7 +374,6 @@ subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,ngrid,nxp)
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
-              do l = 1, ngrid
                  a   = q(i,j,k,n)       ! Cell centered values
                  u   = q(i,j,k,iu)
                  v   = q(i,j,k,iv)
@@ -410,7 +384,6 @@ subroutine trace2d_gpu_2d(q,dq,qm,qp,dx,dy,dt,ngrid,nxp)
                  qm(i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
                  qp(i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
                  qm(i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
-              end do
            end do
         end do
      end do
@@ -423,14 +396,14 @@ end subroutine trace2d_gpu_2d
 !###########################################################
 !###########################################################
 #if NDIM>2
-subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,ngrid,nxp)
+subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  INTEGER, INTENT(in) :: ngrid,nxp
+  INTEGER, INTENT(in) :: nxp
   REAL(dp), INTENT(in) :: dx, dy, dz, dt
 
   REAL(dp),DIMENSION(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar), &
@@ -457,8 +430,8 @@ subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,ngrid,nxp)
 !!$ and avoid possible use of private variables/registers
   INTEGER, PARAMETER :: ir=1, iu=2, iv=3, iw=4, ip=5
  
-! !$omp acc_data acc_copyin(q,dq,dx,dy,dz,dt,ngrid) acc_copyout(qm,qp)
-!$acc data present(q,dq,qm,qp) copyin(dx,dy,dz,dt,ngrid)
+! !$omp acc_data acc_copyin(q,dq,dx,dy,dz,dt) acc_copyout(qm,qp)
+!$acc data present(q,dq,qm,qp) copyin(dx,dy,dz,dt)
 
   dtdx = dt/dx
   dtdy = dt/dy
@@ -473,90 +446,88 @@ subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,ngrid,nxp)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
-           do l = 1, ngrid
-
-              ! Cell centered values
-              r   =  q(i,j,k,ir)
-              u   =  q(i,j,k,iu)
-              v   =  q(i,j,k,iv)
-              w   =  q(i,j,k,iw)
-              p   =  q(i,j,k,ip)
-
-              ! TVD slopes in all 3 directions
-              drx = dq(i,j,k,ir,1)
-              dpx = dq(i,j,k,ip,1)
-              dux = dq(i,j,k,iu,1)
-              dvx = dq(i,j,k,iv,1)
-              dwx = dq(i,j,k,iw,1)
-              
-              dry = dq(i,j,k,ir,2)
-              dpy = dq(i,j,k,ip,2)
-              duy = dq(i,j,k,iu,2)
-              dvy = dq(i,j,k,iv,2)
-              dwy = dq(i,j,k,iw,2)
-              
-              drz = dq(i,j,k,ir,3)
-              dpz = dq(i,j,k,ip,3)
-              duz = dq(i,j,k,iu,3)
-              dvz = dq(i,j,k,iv,3)
-              dwz = dq(i,j,k,iw,3)
-
-              ! Source terms (including transverse derivatives)
-              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
-              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
-              su0 = -u*dux-v*duy-w*duz - (dpx        )/r
-              sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
-              sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
-
-              ! Right state at left interface
-              qp(i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-              qp(i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
-              qp(i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
-              qp(i,j,k,ir,1) = max(smallr, qp(i,j,k,ir,1))
-
-              ! Left state at left interface
-              qm(i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-              qm(i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
-              qm(i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
-              qm(i,j,k,ir,1) = max(smallr, qm(i,j,k,ir,1))
-
-              ! Top state at bottom interface
-              qp(i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
-              qp(i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
-              qp(i,j,k,iu,2) = u - half*duy + su0*dtdy*half
-              qp(i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
-              qp(i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
-              qp(i,j,k,ir,2) = max(smallr, qp(i,j,k,ir,2))
-
-              ! Bottom state at top interface
-              qm(i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
-              qm(i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
-              qm(i,j,k,iu,2) = u + half*duy + su0*dtdy*half
-              qm(i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
-              qm(i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
-              qm(i,j,k,ir,2) = max(smallr, qm(i,j,k,ir,2))
-
-              ! Back state at front interface
-              qp(i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
-              qp(i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half
-              qp(i,j,k,iu,3) = u - half*duz + su0*dtdz*half
-              qp(i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
-              qp(i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
-              qp(i,j,k,ir,3) = max(smallr, qp(i,j,k,ir,3))
-
-              ! Front state at back interface
-              qm(i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
-              qm(i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half
-              qm(i,j,k,iu,3) = u + half*duz + su0*dtdz*half
-              qm(i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
-              qm(i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
-              qm(i,j,k,ir,3) = max(smallr, qm(i,j,k,ir,3))
-
-           end do
+           
+           ! Cell centered values
+           r   =  q(i,j,k,ir)
+           u   =  q(i,j,k,iu)
+           v   =  q(i,j,k,iv)
+           w   =  q(i,j,k,iw)
+           p   =  q(i,j,k,ip)
+           
+           ! TVD slopes in all 3 directions
+           drx = dq(i,j,k,ir,1)
+           dpx = dq(i,j,k,ip,1)
+           dux = dq(i,j,k,iu,1)
+           dvx = dq(i,j,k,iv,1)
+           dwx = dq(i,j,k,iw,1)
+           
+           dry = dq(i,j,k,ir,2)
+           dpy = dq(i,j,k,ip,2)
+           duy = dq(i,j,k,iu,2)
+           dvy = dq(i,j,k,iv,2)
+           dwy = dq(i,j,k,iw,2)
+           
+           drz = dq(i,j,k,ir,3)
+           dpz = dq(i,j,k,ip,3)
+           duz = dq(i,j,k,iu,3)
+           dvz = dq(i,j,k,iv,3)
+           dwz = dq(i,j,k,iw,3)
+           
+           ! Source terms (including transverse derivatives)
+           sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
+           sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
+           su0 = -u*dux-v*duy-w*duz - (dpx        )/r
+           sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
+           sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
+           
+           ! Right state at left interface
+           qp(i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+           qp(i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
+           qp(i,j,k,iu,1) = u - half*dux + su0*dtdx*half
+           qp(i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
+           qp(i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
+           qp(i,j,k,ir,1) = max(smallr, qp(i,j,k,ir,1))
+           
+           ! Left state at left interface
+           qm(i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+           qm(i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
+           qm(i,j,k,iu,1) = u + half*dux + su0*dtdx*half
+           qm(i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
+           qm(i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
+           qm(i,j,k,ir,1) = max(smallr, qm(i,j,k,ir,1))
+           
+           ! Top state at bottom interface
+           qp(i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
+           qp(i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
+           qp(i,j,k,iu,2) = u - half*duy + su0*dtdy*half
+           qp(i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
+           qp(i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
+           qp(i,j,k,ir,2) = max(smallr, qp(i,j,k,ir,2))
+           
+           ! Bottom state at top interface
+           qm(i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
+           qm(i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
+           qm(i,j,k,iu,2) = u + half*duy + su0*dtdy*half
+           qm(i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
+           qm(i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
+           qm(i,j,k,ir,2) = max(smallr, qm(i,j,k,ir,2))
+           
+           ! Back state at front interface
+           qp(i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
+           qp(i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half
+           qp(i,j,k,iu,3) = u - half*duz + su0*dtdz*half
+           qp(i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
+           qp(i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
+           qp(i,j,k,ir,3) = max(smallr, qp(i,j,k,ir,3))
+           
+           ! Front state at back interface
+           qm(i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
+           qm(i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half
+           qm(i,j,k,iu,3) = u + half*duz + su0*dtdz*half
+           qm(i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
+           qm(i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
+           qm(i,j,k,ir,3) = max(smallr, qm(i,j,k,ir,3))
+           
         end do
      end do
   end do
@@ -577,22 +548,20 @@ subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,ngrid,nxp)
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
-              do l = 1, ngrid
-                 a   = q(i,j,k,n)       ! Cell centered values
-                 u   = q(i,j,k,iu)
-                 v   = q(i,j,k,iv)
-                 w   = q(i,j,k,iw)
-                 dax = dq(i,j,k,n,1)    ! TVD slopes
-                 day = dq(i,j,k,n,2)
-                 daz = dq(i,j,k,n,3)
-                 sa0 = -u*dax-v*day-w*daz     ! Source terms
-                 qp(i,j,k,n,1) = a - half*dax + sa0*dtdx*half  ! Right state
-                 qm(i,j,k,n,1) = a + half*dax + sa0*dtdx*half  ! Left state
-                 qp(i,j,k,n,2) = a - half*day + sa0*dtdy*half  ! Bottom state
-                 qm(i,j,k,n,2) = a + half*day + sa0*dtdy*half  ! Upper state
-                 qp(i,j,k,n,3) = a - half*daz + sa0*dtdz*half  ! Front state
-                 qm(i,j,k,n,3) = a + half*daz + sa0*dtdz*half  ! Back state
-              end do
+              a   = q(i,j,k,n)       ! Cell centered values
+              u   = q(i,j,k,iu)
+              v   = q(i,j,k,iv)
+              w   = q(i,j,k,iw)
+              dax = dq(i,j,k,n,1)    ! TVD slopes
+              day = dq(i,j,k,n,2)
+              daz = dq(i,j,k,n,3)
+              sa0 = -u*dax-v*day-w*daz     ! Source terms
+              qp(i,j,k,n,1) = a - half*dax + sa0*dtdx*half  ! Right state
+              qm(i,j,k,n,1) = a + half*dax + sa0*dtdx*half  ! Left state
+              qp(i,j,k,n,2) = a - half*day + sa0*dtdy*half  ! Bottom state
+              qm(i,j,k,n,2) = a + half*day + sa0*dtdy*half  ! Upper state
+              qp(i,j,k,n,3) = a - half*daz + sa0*dtdz*half  ! Front state
+              qm(i,j,k,n,3) = a + half*daz + sa0*dtdz*half  ! Back state
            end do
         end do
      end do
@@ -612,14 +581,14 @@ end subroutine trace3d_gpu_2d
 subroutine cmpflxm_gpu_2d(qm,im1,im2,jm1,jm2,km1,km2, &
      &             qp,ip1,ip2,jp1,jp2,kp1,kp2, &
      &                ilo,ihi,jlo,jhi,klo,khi, ln,lt1,lt2, &
-     &            flx,tmp,ngrid,nxp)
+     &            flx,tmp,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  integer ::ngrid,nxp
+  integer ::nxp
   integer ::ln,lt1,lt2
   integer ::im1,im2,jm1,jm2,km1,km2
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
@@ -659,159 +628,82 @@ subroutine cmpflxm_gpu_2d(qm,im1,im2,jm1,jm2,km1,km2, &
         do i = ilo, ihi
 
            ! Mass density
-           do l = 1, ngrid
-              qleft (1) = qm(i,j,k,1,xdim)
-              qright(1) = qp(i,j,k,1,xdim)
-#ifdef Nofuse
-           end do
+           qleft (1) = qm(i,j,k,1,xdim)
+           qright(1) = qp(i,j,k,1,xdim)
            
            ! Normal velocity
-           do l = 1, ngrid
-#endif
-              qleft (2) = qm(i,j,k,ln,xdim)
-              qright(2) = qp(i,j,k,ln,xdim)
-#ifdef Nofuse
-           end do
+           qleft (2) = qm(i,j,k,ln,xdim)
+           qright(2) = qp(i,j,k,ln,xdim)
            
            ! Pressure
-           do l = 1, ngrid
-#endif
-              qleft (3) = qm(i,j,k,ndim+2,xdim)
-              qright(3) = qp(i,j,k,ndim+2,xdim)
-#ifdef Nofuse
-           end do
-#endif
+           qleft (3) = qm(i,j,k,ndim+2,xdim)
+           qright(3) = qp(i,j,k,ndim+2,xdim)
            
            ! Tangential velocity 1
 #if NDIM>1
-#ifdef Nofuse
-           do l = 1, ngrid
-#endif
-              qleft (4) = qm(i,j,k,lt1,xdim)
-              qright(4) = qp(i,j,k,lt1,xdim)
-#ifdef Nofuse
-           end do
-#endif
+           qleft (4) = qm(i,j,k,lt1,xdim)
+           qright(4) = qp(i,j,k,lt1,xdim)
 #endif
            ! Tangential velocity 2
 #if NDIM>2
-#ifdef Nofuse
-           do l = 1, ngrid
-#endif
-              qleft (5) = qm(i,j,k,lt2,xdim)
-              qright(5) = qp(i,j,k,lt2,xdim)
-#ifdef Nofuse
-           end do
-#endif
+           qleft (5) = qm(i,j,k,lt2,xdim)
+           qright(5) = qp(i,j,k,lt2,xdim)
 #endif           
            ! Other advected quantities
-#if 0
            do n = ndim+3, nvar
-              do l = 1, ngrid
-                 qleft (n) = qm(i,j,k,n,xdim)
-                 qright(n) = qp(i,j,k,n,xdim)
-              end do
+              qleft (n) = qm(i,j,k,n,xdim)
+              qright(n) = qp(i,j,k,n,xdim)
            end do
-#endif
 
 !! CLAU AH VERSION          
            ! Solve Riemann problem
-#if 0
-           if(riemann.eq.'acoustic')then
-              call riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
-           else if (riemann.eq.'exact')then
-              call riemann_approx  (qleft,qright,qgdnv,fgdnv,ngrid)
-           else if (riemann.eq.'llf')then
-#endif
-!!!!!$ AH: This is the one to worry about at the moment
-#ifdef Nofuse
-              call riemann_llf     (qleft,qright,qgdnv,fgdnv,ngrid)
-#else
+!           if(riemann.eq.'acoustic')then
+!              call riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
+!           else if (riemann.eq.'exact')then
+!              call riemann_approx  (qleft,qright,qgdnv,fgdnv,ngrid)
+!           else if (riemann.eq.'llf')then
+!              call riemann_llf     (qleft,qright,qgdnv,fgdnv,ngrid)
               call riemann_llf_scalar(qleft,qright,qgdnv,fgdnv)
-#endif
-#if 0
-           else if (riemann.eq.'hllc')then
-              call riemann_hllc    (qleft,qright,qgdnv,fgdnv,ngrid)
-           else if (riemann.eq.'hll')then
-              call riemann_hll     (qleft,qright,qgdnv,fgdnv,ngrid)
-           else
-              write(*,*)'unknown Riemann solver'
-              stop
-           end if
-#endif
+!           else if (riemann.eq.'hllc')then
+!              call riemann_hllc    (qleft,qright,qgdnv,fgdnv,ngrid)
+!           else if (riemann.eq.'hll')then
+!              call riemann_hll     (qleft,qright,qgdnv,fgdnv,ngrid)
+!           else
+!              write(*,*)'unknown Riemann solver'
+!              stop
+!           end if
            
            ! Compute fluxes
            
            ! Mass density
-#ifdef Nofuse
-           do l = 1, ngrid 
-#endif
-              flx(i,j,k,1) = fgdnv(1)
-#ifdef Nofuse
-           end do
+           flx(i,j,k,1) = fgdnv(1)
            
            ! Normal momentum
-           do l = 1, ngrid
-#endif
-              flx(i,j,k,ln) = fgdnv(2)
-#ifdef Nofuse
-           end do
-#endif
+           flx(i,j,k,ln) = fgdnv(2)
 
            ! Transverse momentum 1
 #if NDIM>1
-#ifdef Nofuse
-           do l = 1, ngrid 
-#endif
-              flx(i,j,k,lt1) = fgdnv(4)
-#ifdef Nofuse
-           end do
-#endif           
+           flx(i,j,k,lt1) = fgdnv(4)
 #endif
            ! Transverse momentum 2
 #if NDIM>2
-#ifdef Nofuse
-           do l = 1, ngrid 
-#endif
-              flx(i,j,k,lt2) = fgdnv(5)
-#ifdef Nofuse
-           end do
-#endif           
+           flx(i,j,k,lt2) = fgdnv(5)
 #endif           
            ! Total energy
-#ifdef Nofuse
-           do l = 1, ngrid 
-#endif
-              flx(i,j,k,ndim+2) = fgdnv(3)
-#ifdef Nofuse
-           end do
+           flx(i,j,k,ndim+2) = fgdnv(3)
 
            ! Other advected quantities
-#if 0
-!!$ AH: This is not used in the code as it is, with nvar=ndim+2
            do n = ndim+3, nvar
-!              do l = 1, ngrid
-                 flx(i,j,k,n) = fgdnv(n)
-!              end do
+              flx(i,j,k,n) = fgdnv(n)
            end do
-#endif
 
            ! Temporary Godunov states
-           do l = 1, ngrid
-#endif
-              tmp(i,j,k,1) = qgdnv(2)   ! Normal velocity
-#ifdef Nofuse
-           end do
-
-           do l = 1,ngrid
-#endif
-              if(qgdnv(2)>zero)then       ! Internal energy flux
-                 tmp(i,j,k,2) = qleft (3)*qgdnv(2)*entho
-              else
-                 tmp(i,j,k,2) = qright(3)*qgdnv(2)*entho
-              end if
-
-           end do
+           tmp(i,j,k,1) = qgdnv(2)   ! Normal velocity
+           if(qgdnv(2)>zero)then       ! Internal energy flux
+              tmp(i,j,k,2) = qleft (3)*qgdnv(2)*entho
+           else
+              tmp(i,j,k,2) = qright(3)*qgdnv(2)*entho
+           end if
 
         end do
      end do
@@ -823,14 +715,14 @@ end subroutine cmpflxm_gpu_2d
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim_gpu_2d(uin,q,c,gravin,dt,ngrid,nxp)
+subroutine ctoprim_gpu_2d(uin,q,c,gravin,dt,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  integer ::ngrid,nxp
+  integer ::nxp
   real(dp)::dt
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::uin
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:ndim)::gravin
@@ -851,47 +743,45 @@ subroutine ctoprim_gpu_2d(uin,q,c,gravin,dt,ngrid,nxp)
   do k = ku10, ku20
      do j = ju10, ju20
         do i = iu10, iu20
-           do l = 1, ngrid
 
-              ! Compute density
-              q(i,j,k,1) = max(uin(i,j,k,1),smallr)
-
-              ! Compute velocities
-              oneonrho = 1.d0/q(i,j,k,1)
-              q(i,j,k,2) = uin(i,j,k,2)*oneonrho
+           ! Compute density
+           q(i,j,k,1) = max(uin(i,j,k,1),smallr)
+           
+           ! Compute velocities
+           oneonrho = 1.d0/q(i,j,k,1)
+           q(i,j,k,2) = uin(i,j,k,2)*oneonrho
 #if NDIM>1
-              q(i,j,k,3) = uin(i,j,k,3)*oneonrho
+           q(i,j,k,3) = uin(i,j,k,3)*oneonrho
 #endif
 #if NDIM>2
-              q(i,j,k,4) = uin(i,j,k,4)*oneonrho
+           q(i,j,k,4) = uin(i,j,k,4)*oneonrho
 #endif
-
-              ! Compute specific kinetic energy
-              eken = half*q(i,j,k,2)*q(i,j,k,2)
+           
+           ! Compute specific kinetic energy
+           eken = half*q(i,j,k,2)*q(i,j,k,2)
 #if NDIM>1
-              eken = eken + half*q(i,j,k,3)*q(i,j,k,3)
+           eken = eken + half*q(i,j,k,3)*q(i,j,k,3)
 #endif
 #if NDIM>2
-              eken = eken + half*q(i,j,k,4)*q(i,j,k,4)
+           eken = eken + half*q(i,j,k,4)*q(i,j,k,4)
 #endif
-
-              ! Compute pressure
-              eint = MAX(uin(i,j,k,ndim+2)*oneonrho-eken,smalle)
-              q(i,j,k,ndim+2)=(gamma-one)*q(i,j,k,1)*eint
-
-              ! Compute sound speed
-              c(i,j,k)=sqrt(gamma*q(i,j,k,ndim+2)*oneonrho)
-
-              ! Gravity predictor step
-              q(i,j,k,2) = q(i,j,k,2) + gravin(i,j,k,1)*dtxhalf
+           
+           ! Compute pressure
+           eint = MAX(uin(i,j,k,ndim+2)*oneonrho-eken,smalle)
+           q(i,j,k,ndim+2)=(gamma-one)*q(i,j,k,1)*eint
+           
+           ! Compute sound speed
+           c(i,j,k)=sqrt(gamma*q(i,j,k,ndim+2)*oneonrho)
+           
+           ! Gravity predictor step
+           q(i,j,k,2) = q(i,j,k,2) + gravin(i,j,k,1)*dtxhalf
 #if NDIM>1
-              q(i,j,k,3) = q(i,j,k,3) + gravin(i,j,k,2)*dtxhalf
+           q(i,j,k,3) = q(i,j,k,3) + gravin(i,j,k,2)*dtxhalf
 #endif
 #if NDIM>2
-              q(i,j,k,4) = q(i,j,k,4) + gravin(i,j,k,3)*dtxhalf
+           q(i,j,k,4) = q(i,j,k,4) + gravin(i,j,k,3)*dtxhalf
 #endif
-
-           end do
+           
         end do
      end do
   end do
@@ -903,10 +793,8 @@ subroutine ctoprim_gpu_2d(uin,q,c,gravin,dt,ngrid,nxp)
      do k = ku10, ku20
         do j = ju10, ju20
            do i = iu10, iu20
-              do l = 1, ngrid
-                 oneonrho = 1.d0/q(i,j,k,1)
-                 q(i,j,k,n) = uin(i,j,k,n)*oneonrho
-              end do
+              oneonrho = 1.d0/q(i,j,k,1)
+              q(i,j,k,n) = uin(i,j,k,n)*oneonrho
            end do
         end do
      end do
@@ -920,14 +808,14 @@ end subroutine ctoprim_gpu_2d
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
+subroutine uslope_gpu_2d(q,dq,dx,dt,nxp)
   use amr_parameters
   use hydro_parameters
   use acc_parameters
   use const
   implicit none
 
-  integer::ngrid,nxp
+  integer::nxp
   real(dp)::dx,dt
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::q 
   real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar,1:ndim)::dq
@@ -958,7 +846,6 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
         do j = jlo, jhi
            do i = ilo, ihi
               if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
-                 do l = 1, ngrid
                     dlft = MIN(slope_type,2)*(q(i  ,j,k,n) - q(i-1,j,k,n))
                     drgt = MIN(slope_type,2)*(q(i+1,j,k,n) - q(i  ,j,k,n))
                     dcen = half*(dlft+drgt)/MIN(slope_type,2)
@@ -967,9 +854,7 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                     dlim = slop
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
               else if(slope_type==4)then ! superbee
-                 do l = 1, ngrid
                     dcen = q(i,j,k,2)*dt/dx
                     dlft = two/(one+dcen)*(q(i,j,k,n)-q(i-1,j,k,n))
                     drgt = two/(one-dcen)*(q(i+1,j,k,n)-q(i,j,k,n))
@@ -979,10 +864,8 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                     dlim = slop
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
-                 end do
               else if(slope_type==5)then ! ultrabee
                  if(n==1)then
-                    do l = 1, ngrid
                        dcen = q(i,j,k,2)*dt/dx
                        if(dcen>=0)then
                           dlft = two/(zero+dcen+1d-10)*(q(i,j,k,n)-q(i-1,j,k,n))
@@ -997,25 +880,18 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                        dcen = half*(q(i+1,j,k,n)-q(i-1,j,k,n))
                        if((dlft*drgt)<=zero)dlim=zero
                        dq(i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
-                    end do
                  else
-                    do l = 1, ngrid
                        dq(i,j,k,n,1) = 0.0
-                    end do
                  end if
               else if(slope_type==6)then ! unstable
                  if(n==1)then
-                    do l = 1, ngrid
                        dlft = (q(i,j,k,n)-q(i-1,j,k,n))
                        drgt = (q(i+1,j,k,n)-q(i,j,k,n))
                        slop = 0.5*(dlft+drgt)
                        dlim = slop
                        dq(i,j,k,n,1) = dlim
-                    end do
                  else
-                    do l = 1, ngrid
                        dq(i,j,k,n,1) = 0.0
-                    end do
                  end if
               else
                  write(*,*)'Unknown slope type'
@@ -1034,7 +910,6 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
            do j = jlo, jhi
               do i = ilo, ihi
                  ! slopes in first coordinate direction
-                 do l = 1, ngrid
                     dlft = slope_type*(q(i  ,j,k,n) - q(i-1,j,k,n))
                     drgt = slope_type*(q(i+1,j,k,n) - q(i  ,j,k,n))
                     dcen = half*(dlft+drgt)/slope_type
@@ -1043,9 +918,7 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                     dlim = slop
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
                  ! slopes in second coordinate direction
-                 do l = 1, ngrid
                     dlft = slope_type*(q(i,j  ,k,n) - q(i,j-1,k,n))
                     drgt = slope_type*(q(i,j+1,k,n) - q(i,j  ,k,n))
                     dcen = half*(dlft+drgt)/slope_type
@@ -1054,7 +927,6 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                     dlim = slop
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
               end do
            end do
         end do
@@ -1064,7 +936,6 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 do l = 1, ngrid
                     dfll = q(i-1,j-1,k,n)-q(i,j,k,n)
                     dflm = q(i-1,j  ,k,n)-q(i,j,k,n)
                     dflr = q(i-1,j+1,k,n)-q(i,j,k,n)
@@ -1093,7 +964,6 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
                     dq(i,j,k,n,1) = dlim*dfx
                     dq(i,j,k,n,2) = dlim*dfy
 
-                 end do
               end do
            end do
         end do
@@ -1112,47 +982,35 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
            do j = jlo, jhi
               do i = ilo, ihi
                  ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(i  ,j,k,n) - q(i-1,j,k,n)
-                    drgt = q(i+1,j,k,n) - q(i  ,j,k,n)
-!                    if((dlft*drgt)<=zero) then
-!                       dq(i,j,k,n,1) = zero
-                    if((dlft*drgt)<=0) then
-                       dq(i,j,k,n,1) = 0
-                    else if(dlft>0) then
-                       dq(i,j,k,n,1) = min(dlft,drgt)
-                    else
-                       dq(i,j,k,n,1) = max(dlft,drgt)
-                    end if
-!                 end do
+                 dlft = q(i  ,j,k,n) - q(i-1,j,k,n)
+                 drgt = q(i+1,j,k,n) - q(i  ,j,k,n)
+                 if((dlft*drgt)<=zero) then
+                    dq(i,j,k,n,1) = zero
+                 else if(dlft>0) then
+                    dq(i,j,k,n,1) = min(dlft,drgt)
+                 else
+                    dq(i,j,k,n,1) = max(dlft,drgt)
+                 end if
                  ! slopes in second coordinate direction
-!                 do l = 1, ngrid
-                    dlft = q(i,j  ,k,n) - q(i,j-1,k,n)
-                    drgt = q(i,j+1,k,n) - q(i,j  ,k,n)
-!                    if((dlft*drgt)<=zero) then
-!                       dq(i,j,k,n,2) = zero
-                    if((dlft*drgt)<=0) then
-                       dq(i,j,k,n,2) = 0
-                    else if(dlft>0) then
-                       dq(i,j,k,n,2) = min(dlft,drgt)
-                    else
-                       dq(i,j,k,n,2) = max(dlft,drgt)
-                    end if
-!                 end do
+                 dlft = q(i,j  ,k,n) - q(i,j-1,k,n)
+                 drgt = q(i,j+1,k,n) - q(i,j  ,k,n)
+                 if((dlft*drgt)<=zero) then
+                    dq(i,j,k,n,2) = zero
+                 else if(dlft>0) then
+                    dq(i,j,k,n,2) = min(dlft,drgt)
+                 else
+                    dq(i,j,k,n,2) = max(dlft,drgt)
+                 end if
                  ! slopes in third coordinate direction
-!                 do l = 1, ngrid
-                    dlft = q(i,j,k  ,n) - q(i,j,k-1,n)
-                    drgt = q(i,j,k+1,n) - q(i,j,k  ,n)
-!                    if((dlft*drgt)<=zero) then
-!                       dq(i,j,k,n,3) = zero
-                    if((dlft*drgt)<=0) then
-                       dq(i,j,k,n,3) = 0
-                    else if(dlft>0) then
-                       dq(i,j,k,n,3) = min(dlft,drgt)
-                    else
-                       dq(i,j,k,n,3) = max(dlft,drgt)
-                    end if
-                 end do
+                 dlft = q(i,j,k  ,n) - q(i,j,k-1,n)
+                 drgt = q(i,j,k+1,n) - q(i,j,k  ,n)
+                 if((dlft*drgt)<=zero) then
+                    dq(i,j,k,n,3) = zero
+                 else if(dlft>0) then
+                    dq(i,j,k,n,3) = min(dlft,drgt)
+                 else
+                    dq(i,j,k,n,3) = max(dlft,drgt)
+                 end if
               end do
            end do
         end do
@@ -1164,38 +1022,32 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
            do j = jlo, jhi
               do i = ilo, ihi
                  ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(i  ,j,k,n) - q(i-1,j,k,n))
-                    drgt = slope_type*(q(i+1,j,k,n) - q(i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
+                 dlft = slope_type*(q(i  ,j,k,n) - q(i-1,j,k,n))
+                 drgt = slope_type*(q(i+1,j,k,n) - q(i  ,j,k,n))
+                 dcen = half*(dlft+drgt)/slope_type
+                 dsgn = sign(one, dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dq(i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(i,j  ,k,n) - q(i,j-1,k,n))
-                    drgt = slope_type*(q(i,j+1,k,n) - q(i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
+                 dlft = slope_type*(q(i,j  ,k,n) - q(i,j-1,k,n))
+                 drgt = slope_type*(q(i,j+1,k,n) - q(i,j  ,k,n))
+                 dcen = half*(dlft+drgt)/slope_type
+                 dsgn = sign(one,dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dq(i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(i,j,k  ,n) - q(i,j,k-1,n))
-                    drgt = slope_type*(q(i,j,k+1,n) - q(i,j,k  ,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
+                 dlft = slope_type*(q(i,j,k  ,n) - q(i,j,k-1,n))
+                 drgt = slope_type*(q(i,j,k+1,n) - q(i,j,k  ,n))
+                 dcen = half*(dlft+drgt)/slope_type
+                 dsgn = sign(one,dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dq(i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
               end do
            end do
         end do
@@ -1205,63 +1057,61 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,ngrid,nxp)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 do l = 1, ngrid
-                    dflll = q(i-1,j-1,k-1,n)-q(i,j,k,n)
-                    dflml = q(i-1,j  ,k-1,n)-q(i,j,k,n)
-                    dflrl = q(i-1,j+1,k-1,n)-q(i,j,k,n)
-                    dfmll = q(i  ,j-1,k-1,n)-q(i,j,k,n)
-                    dfmml = q(i  ,j  ,k-1,n)-q(i,j,k,n)
-                    dfmrl = q(i  ,j+1,k-1,n)-q(i,j,k,n)
-                    dfrll = q(i+1,j-1,k-1,n)-q(i,j,k,n)
-                    dfrml = q(i+1,j  ,k-1,n)-q(i,j,k,n)
-                    dfrrl = q(i+1,j+1,k-1,n)-q(i,j,k,n)
-
-                    dfllm = q(i-1,j-1,k  ,n)-q(i,j,k,n)
-                    dflmm = q(i-1,j  ,k  ,n)-q(i,j,k,n)
-                    dflrm = q(i-1,j+1,k  ,n)-q(i,j,k,n)
-                    dfmlm = q(i  ,j-1,k  ,n)-q(i,j,k,n)
-                    dfmmm = q(i  ,j  ,k  ,n)-q(i,j,k,n)
-                    dfmrm = q(i  ,j+1,k  ,n)-q(i,j,k,n)
-                    dfrlm = q(i+1,j-1,k  ,n)-q(i,j,k,n)
-                    dfrmm = q(i+1,j  ,k  ,n)-q(i,j,k,n)
-                    dfrrm = q(i+1,j+1,k  ,n)-q(i,j,k,n)
-
-                    dfllr = q(i-1,j-1,k+1,n)-q(i,j,k,n)
-                    dflmr = q(i-1,j  ,k+1,n)-q(i,j,k,n)
-                    dflrr = q(i-1,j+1,k+1,n)-q(i,j,k,n)
-                    dfmlr = q(i  ,j-1,k+1,n)-q(i,j,k,n)
-                    dfmmr = q(i  ,j  ,k+1,n)-q(i,j,k,n)
-                    dfmrr = q(i  ,j+1,k+1,n)-q(i,j,k,n)
-                    dfrlr = q(i+1,j-1,k+1,n)-q(i,j,k,n)
-                    dfrmr = q(i+1,j  ,k+1,n)-q(i,j,k,n)
-                    dfrrr = q(i+1,j+1,k+1,n)-q(i,j,k,n)
-                    
-
-                    vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-                    vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-
-                    dfx  = half*(q(i+1,j,k,n)-q(i-1,j,k,n))
-                    dfy  = half*(q(i,j+1,k,n)-q(i,j-1,k,n))
-                    dfz  = half*(q(i,j,k+1,n)-q(i,j,k-1,n))
-                    dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
-                    
-                    if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
-                    else
-                       slop = one
-                    endif
-                    
-                    dlim = slop
-                    
-                    dq(i,j,k,n,1) = dlim*dfx
-                    dq(i,j,k,n,2) = dlim*dfy
-                    dq(i,j,k,n,3) = dlim*dfz
-
-                 end do
+                 dflll = q(i-1,j-1,k-1,n)-q(i,j,k,n)
+                 dflml = q(i-1,j  ,k-1,n)-q(i,j,k,n)
+                 dflrl = q(i-1,j+1,k-1,n)-q(i,j,k,n)
+                 dfmll = q(i  ,j-1,k-1,n)-q(i,j,k,n)
+                 dfmml = q(i  ,j  ,k-1,n)-q(i,j,k,n)
+                 dfmrl = q(i  ,j+1,k-1,n)-q(i,j,k,n)
+                 dfrll = q(i+1,j-1,k-1,n)-q(i,j,k,n)
+                 dfrml = q(i+1,j  ,k-1,n)-q(i,j,k,n)
+                 dfrrl = q(i+1,j+1,k-1,n)-q(i,j,k,n)
+                 
+                 dfllm = q(i-1,j-1,k  ,n)-q(i,j,k,n)
+                 dflmm = q(i-1,j  ,k  ,n)-q(i,j,k,n)
+                 dflrm = q(i-1,j+1,k  ,n)-q(i,j,k,n)
+                 dfmlm = q(i  ,j-1,k  ,n)-q(i,j,k,n)
+                 dfmmm = q(i  ,j  ,k  ,n)-q(i,j,k,n)
+                 dfmrm = q(i  ,j+1,k  ,n)-q(i,j,k,n)
+                 dfrlm = q(i+1,j-1,k  ,n)-q(i,j,k,n)
+                 dfrmm = q(i+1,j  ,k  ,n)-q(i,j,k,n)
+                 dfrrm = q(i+1,j+1,k  ,n)-q(i,j,k,n)
+                 
+                 dfllr = q(i-1,j-1,k+1,n)-q(i,j,k,n)
+                 dflmr = q(i-1,j  ,k+1,n)-q(i,j,k,n)
+                 dflrr = q(i-1,j+1,k+1,n)-q(i,j,k,n)
+                 dfmlr = q(i  ,j-1,k+1,n)-q(i,j,k,n)
+                 dfmmr = q(i  ,j  ,k+1,n)-q(i,j,k,n)
+                 dfmrr = q(i  ,j+1,k+1,n)-q(i,j,k,n)
+                 dfrlr = q(i+1,j-1,k+1,n)-q(i,j,k,n)
+                 dfrmr = q(i+1,j  ,k+1,n)-q(i,j,k,n)
+                 dfrrr = q(i+1,j+1,k+1,n)-q(i,j,k,n)
+                 
+                 
+                 vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+                      &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+                      &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+                 vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+                      &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+                      &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+                 
+                 dfx  = half*(q(i+1,j,k,n)-q(i-1,j,k,n))
+                 dfy  = half*(q(i,j+1,k,n)-q(i,j-1,k,n))
+                 dfz  = half*(q(i,j,k+1,n)-q(i,j,k-1,n))
+                 dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
+                 
+                 if(dff>zero)then
+                    slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                 else
+                    slop = one
+                 endif
+                 
+                 dlim = slop
+                 
+                 dq(i,j,k,n,1) = dlim*dfx
+                 dq(i,j,k,n,2) = dlim*dfy
+                 dq(i,j,k,n,3) = dlim*dfz
+                 
               end do
            end do
         end do
