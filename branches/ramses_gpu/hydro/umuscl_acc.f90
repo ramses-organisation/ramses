@@ -124,7 +124,7 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
        &          if10  ,if20  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,nxp)
   ! Save flux in output array
-!$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
+!$acc parallel loop collapse(3) gang worker vector vector_length(NTPB)
   do i=if10,if20
   do j=jlo,jhi
   do k=klo,khi
@@ -145,7 +145,7 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
        &          ilo  ,ihi  ,jf10  ,jf20  ,klo  ,khi  , 3,2,4,fx,tx,nxp)
   ! Save flux in output array
-!$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
+!$acc parallel loop collapse(3) gang worker vector vector_length(NTPB)
   do i=ilo,ihi
   do j=jf10,jf20
   do k=klo,khi
@@ -167,7 +167,7 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
        &       qp,iu10  ,iu20  ,ju10  ,ju20  ,ku10  ,ku20  , &
        &          ilo  ,ihi  ,jlo  ,jhi  ,kf10  ,kf20  , 4,2,3,fx,tx,nxp)
   ! Save flux in output array
-!$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
+!$acc parallel loop collapse(3) gang worker vector vector_length(NTPB)
   do i=ilo,ihi
   do j=jlo,jhi
   do k=kf10,kf20
@@ -180,10 +180,12 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
   end do
   end do
   end do
-!$llerc end parallel loop
+!$acc end parallel loop
 #endif
+WRITE(*,*)"<>>>>>>>>>>><<<<<><><><><><><><><><><"
 
 !$acc end data
+WRITE(*,*)"ooooooooooooooooooooooooooooooooooooo"
 
 end subroutine unsplit_gpu_2d
 !###########################################################
@@ -442,7 +444,7 @@ subroutine trace3d_gpu_2d(q,dq,qm,qp,dx,dy,dz,dt,nxp)
 !  ir=1; iu=2; iv=3; iw=4; ip=5
 
 ! !$omp acc_region_loop num_pes(2:NTPB)
-!$acc parallel loop collapse(4) vector_length(NTPB)
+!$acc parallel loop collapse(3) vector_length(NTPB)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
@@ -976,7 +978,7 @@ subroutine uslope_gpu_2d(q,dq,dx,dt,nxp)
 
 #if NDIM==3
   if(slope_type==1)then  ! minmod
-!$acc parallel loop collapse(5) gang worker vector vector_length(NTPB)
+!$acc parallel loop collapse(4) gang worker vector vector_length(NTPB)
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi

@@ -513,9 +513,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 
   call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
 
-  !if(maxval(flux) > 10.0)then
-  !  WRITE(500,"(e13.7,1x)")flux
-  !endif
+  WRITE(*,*)"SON QUA............"
 
 !$acc end data
 
