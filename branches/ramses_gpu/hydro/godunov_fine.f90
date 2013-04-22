@@ -17,6 +17,7 @@ subroutine godunov_fine(ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nlevelmax)::ngroup
   integer,allocatable,dimension(:)::isort
+  integer countaux
 
   if(numbtot(1,ilevel)==0)return
   if(static)return
@@ -28,36 +29,39 @@ subroutine godunov_fine(ilevel)
 
   ! Sort grids in large patches
   allocate(isort(ncache))
+!CLA This is the first additional routine
   call sort_group_grid(isort,ilevel,levelup,ngroup,ncache)
   
+  countaux=0
   iskip=1
   do ilev=levelup,ilevel-1
      nx_ok=2**(ilevel-1-ilev)
      ngrid_ok=nx_ok**ndim
-     nx_cell=2*nx_ok ! FOR CLAUDIO
+     nx_cell=2*nx_ok 
      write(*,*)'=========================================='
      write(*,999)ilev+1,ngroup(ilev)/ngrid_ok,ngrid_ok
 999 format(' Level',I3,' found ',I6,' groups of size ',I2,'')
      if(ngroup(ilev)>0)then
         write(*,*)'=========================================='
         do i=iskip,iskip+ngroup(ilev)-1,ngrid_ok
-           write(*,888)(active(ilevel)%igrid(isort(i+j-1)),j=1,ngrid_ok)
+           !!write(*,*)(active(ilevel)%igrid(isort(i+j-1)),j=1,ngrid_ok)
 888 format(16(I3,1X))
            igrid=active(ilevel)%igrid(isort(i))
-           call fill_hydro_grid(igrid,nx_cell,ilevel)
+!CLA This is the second additional routine
+           call fill_hydro_grid(igrid,nx_cell,ilevel)           
         end do
         iskip=iskip+ngroup(ilev)
      endif
   end do
   write(*,*)'=========================================='
 
-  do igrid=1,ncache,nvector
-     ngrid=MIN(nvector,ncache-igrid+1)
-     do i=1,ngrid
-        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-     end do
-     call godfine1(ind_grid,ngrid,ilevel)
-  end do
+!!  do igrid=1,ncache,nvector
+!!     ngrid=MIN(nvector,ncache-igrid+1)
+!!     do i=1,ngrid
+!!        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+!!     end do
+!!     call godfine1(ind_grid,ngrid,ilevel)
+!!  end do
 
   ! Deallocate local arrays
   deallocate(isort)
@@ -70,6 +74,7 @@ end subroutine godunov_fine
 !###########################################################
 !###########################################################
 subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
+!CLAU
   use amr_commons
   use hydro_commons
   implicit none
@@ -150,12 +155,13 @@ subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
 #endif
         hkeys(i)=order_min(1)
      end do
-     
+
      call quick_sort(hkeys,isort,ncache)
 
-!!$     do i=1,ncache
-!!$        write(*,*)i,hkeys(i),isort(i),active(ilevel)%igrid(isort(i))
-!!$     end do
+     !do i=1,ncache
+     !  WRITE(400,'(3(i3,1x),e13.7)')ix(i),iy(i),iz(i),hkeys(i)
+     !   write(500,'(i7,1x,e13.7,1x,i7,1x,i7)')i,hkeys(i),isort(i),active(ilevel)%igrid(isort(i))
+     !end do
      
      ! Compute scan for ilevel-2 grids
      j=1
@@ -202,6 +208,7 @@ subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
         endif
         iskip=iskip+inext(i)
      end do
+
   end do
   
 end subroutine sort_group_grid
@@ -221,17 +228,24 @@ subroutine set_unew(ilevel)
   integer::i,ivar,ind,icpu,iskip
   real(dp)::d,u,v,w,e
 
+  WRITE(*,*)"ILEVEL, NGRID ",ilevel,active(ilevel)%ngrid
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+  !!!WRITE(*,*)"DENTRO A SET_UNEW"
+  !!!open(unit=200, form='formatted')
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+        !!!do i=1,active(ilevel)%ngrid
+        !!!   write(200,*)unew(active(ilevel)%igrid(i)+iskip,5)
+        !!!end do
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -266,6 +280,7 @@ subroutine set_unew(ilevel)
   end do
   end do
 
+  !!!close(200)
 111 format('   Entering set_unew for level ',i2)
 
 end subroutine set_unew
@@ -362,12 +377,15 @@ end subroutine set_uold
 !###########################################################
 !###########################################################
 !###########################################################
+!CLAU
 subroutine fill_hydro_grid(igrid,nxp,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
   implicit none
   integer::igrid,ilevel,nxp
+  integer::i1,j1,k1,l1,m1
+  integer:: cindex
   !
   ! This routine fills up a Cartesian grid from AMR data 
   ! and send it to the hydro kernel
@@ -401,13 +419,15 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5D0**ilevel
-  dx_box=nxp*dx
+  dx_box=nxp*dx*2d0
   dx_loc=scale*dx
  
   ! Compute box coordinates in normalized unites
   do idim=1,ndim
      box_xmin(idim)=int(xg(igrid,idim)/dx_box)*dx_box
   end do
+  !WRITE(300,'(3(e13.7,1x))')box_xmin(1),box_xmin(2),box_xmin(3)
+  
 
   ! Compute cell coordinate
   do i=-1,nxp+2
@@ -420,6 +440,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
         do k=-1,nxp+2
            xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
 #endif
+           !WRITE(300,'(3(e13.7,1x))')xx_dp(1,1),xx_dp(1,2),xx_dp(1,3)
            ! Compute cell index
            call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
            ! Store hydro variable in local Cartesian grid
@@ -456,11 +477,52 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 #endif
   end do
 
-  ! Compute flux using second-order Godunov method
-!  call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
+!CLAU
+!$acc data copyin(uloc,gloc,dtnew) copyout(flux,tmp)&
+!$acc&     create(xx_dp,cell_index,cell_levl)
 
-  return
+!$acc parallel loop collapse(5)
+  do m1=1,ndim
+  do l1=1,nvar
+  do k1=1,nxp+1
+  do j1=1,nxp+1
+  do i1=1,nxp+1
+     flux(i1,j1,k1,l1,m1)=0.0
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+!$acc end parallel loop
+!$acc parallel loop collapse(5)
+  do m1=1,ndim
+  do l1=1,2
+  do k1=1,nxp+1
+  do j1=1,nxp+1
+  do i1=1,nxp+1
+     tmp(i1,j1,k1,l1,m1)=0.0
+  enddo
+  enddo
+  enddo
+  enddo
+  enddo
+!$acc end parallel loop
 
+
+! Compute flux using second-order Godunov method
+
+  call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
+
+  !if(maxval(flux) > 10.0)then
+  !  WRITE(500,"(e13.7,1x)")flux
+  !endif
+
+!$acc end data
+
+  !stop
+  !return
+
+  cindex=0
   ! Compute cell coordinate
   do i=1,nxp
      xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
@@ -507,6 +569,8 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 #endif
               end if
            end do
+           !if(cindex<1)write(*,*)unew(cell_index(1),2)
+           !cindex=cindex+1
 #if NDIM>2
         end do
 #endif
@@ -514,6 +578,8 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
      end do
 #endif
   end do
+
+!!!!!!!!!$acc end data
 
 end subroutine fill_hydro_grid
 !###########################################################

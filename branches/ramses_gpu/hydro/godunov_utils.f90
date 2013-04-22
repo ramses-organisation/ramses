@@ -99,9 +99,6 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   use amr_parameters
   use hydro_parameters
   use const
-#ifdef RT
-  use rt_parameters
-#endif
   implicit none
   ! dummy arguments
   integer nn
@@ -111,7 +108,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   logical ::ok(1:nvector)
   
   integer::k,idim
-  real(dp),dimension(1:nvector),save::eking,ekinm,ekind
+  real(dp),dimension(1:nvector)::eking,ekinm,ekind
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
   
   ! Convert to primitive variables
@@ -145,9 +142,8 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      ug(k,ndim+2) = (gamma-one)*(ug(k,ndim+2)-eking(k))
      um(k,ndim+2) = (gamma-one)*(um(k,ndim+2)-ekinm(k))
      ud(k,ndim+2) = (gamma-one)*(ud(k,ndim+2)-ekind(k))
-  end do
+  end do  
   ! Passive scalars
-#if NVAR > NDIM + 2
   do idim = ndim+3,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
@@ -155,7 +151,6 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
         ud(k,idim) = ud(k,idim)/ud(k,1)
      end do
   end do
-#endif
 
   ! Compute errors
   if(err_grad_d >= 0.)then
@@ -193,34 +188,6 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      end do
   end if
 
-#ifdef RT 
-  ! Ionization state (only Hydrogen)                              
-  if(rt_err_grad_xHII >= 0.) then !--------------------------------------- 
-     do k=1,nn                                                    
-        dg=min(1.d0,max(0.d0,ug(k,iIons)))                        
-        dm=min(1.d0,max(0.d0,um(k,iIons)))                        
-        dd=min(1.d0,max(0.d0,ud(k,iIons)))                        
-        error=2.0d0*MAX( &                                        
-             & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &             
-             & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
-        ok(k) = ok(k) .or. error > rt_err_grad_xHII  
-     end do                                                       
-  end if                                                          
-
-  ! Neutral state (only Hydrogen)                                 
-  if(rt_err_grad_xHI  >= 0.) then !---------------------------------------  
-     do k=1,nn                                                    
-        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))                 
-        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))                 
-        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))                 
-        error=2.0d0*MAX( &                                        
-             & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &              
-             & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )                
-        ok(k) = ok(k) .or. error > rt_err_grad_xHI                
-     end do                                                      
-  end if                                                         
-#endif
-
 end subroutine hydro_refine
 !###########################################################
 !###########################################################
@@ -237,14 +204,14 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
   real(dp),dimension(1:nvector,1:nvar)::qleft,qright,qgdnv,fgdnv
 
   ! local arrays
-  real(dp),dimension(1:nvector),save::rl   ,ul   ,pl   ,cl
-  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr   
-  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co   
-  real(dp),dimension(1:nvector),save::rstar,ustar,pstar,cstar
-  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo   
-  real(dp),dimension(1:nvector),save::sgnm ,spin ,spout,ushock
-  real(dp),dimension(1:nvector),save::frac ,delp ,pold  
-  integer ,dimension(1:nvector),save::ind  ,ind2
+  real(dp),dimension(1:nvector)::rl   ,ul   ,pl   ,cl
+  real(dp),dimension(1:nvector)::rr   ,ur   ,pr   ,cr   
+  real(dp),dimension(1:nvector)::ro   ,uo   ,po   ,co   
+  real(dp),dimension(1:nvector)::rstar,ustar,pstar,cstar
+  real(dp),dimension(1:nvector)::wl   ,wr   ,wo   
+  real(dp),dimension(1:nvector)::sgnm ,spin ,spout,ushock
+  real(dp),dimension(1:nvector)::frac ,delp ,pold  
+  integer ,dimension(1:nvector)::ind  ,ind2
 
   ! local variables
   real(dp)::smallp, gamma6, ql, qr, usr, usl, wwl, wwr, smallpp, entho, etot
@@ -414,7 +381,6 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
-#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -424,7 +390,6 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
-#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -440,13 +405,11 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
-#endif
 
 end subroutine riemann_approx
 !###########################################################
@@ -468,13 +431,13 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
   real(dp)::smallp, entho, etot
 
   ! local arrays
-  real(dp),dimension(1:nvector),save::rl   ,ul   ,pl   ,cl
-  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr   
-  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co   
-  real(dp),dimension(1:nvector),save::rstar,ustar,pstar,cstar
-  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo   
-  real(dp),dimension(1:nvector),save::sgnm ,spin ,spout,ushock
-  real(dp),dimension(1:nvector),save::frac
+  real(dp),dimension(1:nvector)::rl   ,ul   ,pl   ,cl
+  real(dp),dimension(1:nvector)::rr   ,ur   ,pr   ,cr   
+  real(dp),dimension(1:nvector)::ro   ,uo   ,po   ,co   
+  real(dp),dimension(1:nvector)::rstar,ustar,pstar,cstar
+  real(dp),dimension(1:nvector)::wl   ,wr   ,wo   
+  real(dp),dimension(1:nvector)::sgnm ,spin ,spout,ushock
+  real(dp),dimension(1:nvector)::frac
 
   ! constants
   smallp = smallc**2/gamma
@@ -570,7 +533,6 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
-#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -580,7 +542,6 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
-#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -596,13 +557,11 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
-#endif
 
 end subroutine riemann_acoustic
 !###########################################################
@@ -620,8 +579,8 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
   real(dp),dimension(1:nvector,1:nvar)::qleft,qright,qgdnv,fgdnv
 
   ! local arrays
-  real(dp),dimension(1:nvector,1:nvar),save::fleft,fright,uleft,uright
-  real(dp),dimension(1:nvector),save::cmax
+  real(dp),dimension(1:nvector,1:nvar)::fleft,fright,uleft,uright
+  real(dp),dimension(1:nvector)::cmax
 
   ! local variables
   integer::i,n
@@ -672,14 +631,12 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
-#endif
 
   ! Compute left and right fluxes  
   do i = 1, ngrid 
@@ -694,14 +651,12 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
-#endif
 
   ! Compute Lax-Friedrich fluxes
   do n = 1, nvar
@@ -711,6 +666,193 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
 end subroutine riemann_llf
+!###########################################################
+subroutine riemann_llf_inline(qleft,qright,qgdnv,fgdnv,i)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  ! dummy arguments
+  INTEGER, intent(in) :: i
+  real(dp),dimension(1:nvector,1:nvar)::qleft,qright,qgdnv,fgdnv
+
+  ! local arrays
+  real(dp),dimension(1:nvector,1:nvar)::fleft,fright,uleft,uright
+  real(dp),dimension(1:nvector)::cmax
+
+  ! local variables
+  integer::n
+  real(dp)::smallp, entho
+  real(dp)::rl   ,ul   ,pl   ,cl
+  real(dp)::rr   ,ur   ,pr   ,cr   
+
+  ! constants
+  smallp = smallc**2/gamma
+  entho = one/(gamma-one)
+
+  ! Maximum wave speed
+!  do i=1,ngrid
+     rl=max(qleft (i,1),smallr)
+     ul=    qleft (i,2)
+     pl=max(qleft (i,3),rl*smallp)
+     rr=max(qright(i,1),smallr)
+     ur=    qright(i,2)
+     pr=max(qright(i,3),rr*smallp)
+     cl= sqrt(gamma*pl/rl)
+     cr= sqrt(gamma*pr/rr)
+     cmax(i)=max(abs(ul)+cl,abs(ur)+cr)
+!  end do
+
+  ! Compute average velocity
+!  do i=1,ngrid
+     qgdnv(i,2) = half*(qleft(i,2)+qright(i,2))
+!  end do
+
+  ! Compute conservative variables  
+!  do i = 1, ngrid 
+     ! Mass density
+     uleft (i,1) = qleft (i,1)
+     uright(i,1) = qright(i,1)
+     ! Normal momentum
+     uleft (i,2) = qleft (i,1)*qleft (i,2)
+     uright(i,2) = qright(i,1)*qright(i,2)
+     ! Total energy
+     uleft (i,3) = qleft (i,3)*entho + half*qleft (i,1)*qleft (i,2)**2
+     uright(i,3) = qright(i,3)*entho + half*qright(i,1)*qright(i,2)**2
+#if NDIM>1
+     uleft (i,3) = uleft (i,3)       + half*qleft (i,1)*qleft (i,4)**2
+     uright(i,3) = uright(i,3)       + half*qright(i,1)*qright(i,4)**2
+#endif
+#if NDIM>2
+     uleft (i,3) = uleft (i,3)       + half*qleft (i,1)*qleft (i,5)**2
+     uright(i,3) = uright(i,3)       + half*qright(i,1)*qright(i,5)**2
+#endif
+!  end do
+  ! Other advected quantities
+!dir$ unroll
+  do n = 4, nvar
+!     do i = 1, ngrid
+        uleft (i,n) = qleft (i,1)*qleft (i,n)
+        uright(i,n) = qright(i,1)*qright(i,n)
+!     end do
+  end do
+
+  ! Compute left and right fluxes  
+!  do i = 1, ngrid 
+     ! Mass density
+     fleft (i,1) = uleft (i,2)
+     fright(i,1) = uright(i,2)
+     ! Normal momentum
+     fleft (i,2) = qleft (i,3)+uleft (i,2)*qleft (i,2)
+     fright(i,2) = qright(i,3)+uright(i,2)*qright(i,2)
+     ! Total energy
+     fleft (i,3) = qleft (i,2)*(uleft (i,3)+qleft (i,3))
+     fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
+!  end do
+  ! Other advected quantities
+!dir$ unroll
+  do n = 4, nvar
+!     do i = 1, ngrid
+        fleft (i,n) = fleft (i,1)*qleft (i,n)
+        fright(i,n) = fright(i,1)*qright(i,n)
+!     end do
+  end do
+
+  ! Compute Lax-Friedrich fluxes
+!dir$ unroll
+  do n = 1, nvar
+!     do i = 1, ngrid 
+        fgdnv(i,n) = half*(fleft(i,n)+fright(i,n)-cmax(i)*(uright(i,n)-uleft(i,n)))
+!     end do
+  end do
+
+end subroutine riemann_llf_inline
+!###########################################################
+!###########################################################
+subroutine riemann_llf_scalar(qleft,qright,qgdnv,fgdnv)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  ! dummy arguments
+  real(dp),dimension(1:nvar)::qleft,qright,qgdnv,fgdnv
+
+  ! local arrays
+  real(dp),dimension(1:nvar)::fleft,fright,uleft,uright
+  real(dp)::cmax
+
+  ! local variables
+  integer::n
+  real(dp)::smallp, entho
+  real(dp)::rl   ,ul   ,pl   ,cl
+  real(dp)::rr   ,ur   ,pr   ,cr   
+
+  ! constants
+  smallp = smallc**2/gamma
+  entho = one/(gamma-one)
+
+  ! Maximum wave speed
+     rl=max(qleft (1),smallr)
+     ul=    qleft (2)
+     pl=max(qleft (3),rl*smallp)
+     rr=max(qright(1),smallr)
+     ur=    qright(2)
+     pr=max(qright(3),rr*smallp)
+     cl= sqrt(gamma*pl/rl)
+     cr= sqrt(gamma*pr/rr)
+     cmax=max(abs(ul)+cl,abs(ur)+cr)
+
+  ! Compute average velocity
+     qgdnv(2) = half*(qleft(2)+qright(2))
+
+  ! Compute conservative variables  
+     ! Mass density
+     uleft (1) = qleft (1)
+     uright(1) = qright(1)
+     ! Normal momentum
+     uleft (2) = qleft (1)*qleft (2)
+     uright(2) = qright(1)*qright(2)
+     ! Total energy
+     uleft (3) = qleft (3)*entho + half*qleft (1)*qleft (2)**2
+     uright(3) = qright(3)*entho + half*qright(1)*qright(2)**2
+#if NDIM>1
+     uleft (3) = uleft (3)       + half*qleft (1)*qleft (4)**2
+     uright(3) = uright(3)       + half*qright(1)*qright(4)**2
+#endif
+#if NDIM>2
+     uleft (3) = uleft (3)       + half*qleft (1)*qleft (5)**2
+     uright(3) = uright(3)       + half*qright(1)*qright(5)**2
+#endif
+  ! Other advected quantities
+  do n = 4, nvar
+        uleft (n) = qleft (1)*qleft (n)
+        uright(n) = qright(1)*qright(n)
+  end do
+
+  ! Compute left and right fluxes  
+     ! Mass density
+     fleft (1) = uleft (2)
+     fright(1) = uright(2)
+     ! Normal momentum
+     fleft (2) = qleft (3)+uleft (2)*qleft (2)
+     fright(2) = qright(3)+uright(2)*qright(2)
+     ! Total energy
+     fleft (3) = qleft (2)*(uleft (3)+qleft (3))
+     fright(3) = qright(2)*(uright(3)+qright(3))
+  ! Other advected quantities
+  do n = 4, nvar
+        fleft (n) = fleft (1)*qleft (n)
+        fright(n) = fright(1)*qright(n)
+  end do
+
+  ! Compute Lax-Friedrich fluxes
+  do n = 1, nvar
+        fgdnv(n) = half*(fleft(n)+fright(n)-cmax*(uright(n)-uleft(n)))
+  end do
+
+end subroutine riemann_llf_scalar
 !###########################################################
 !###########################################################
 !###########################################################
@@ -829,7 +971,6 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,1) = ro*uo
      fgdnv(i,2) = ro*uo*uo+Ptoto
      fgdnv(i,3) = (etoto+Ptoto)*uo
-#if NVAR > 3
      do ivar = 4,nvar
         if(fgdnv(i,1)>0)then
            fgdnv(i,ivar) = fgdnv(i,1)*qleft (i,ivar)
@@ -837,7 +978,7 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
            fgdnv(i,ivar) = fgdnv(i,1)*qright(i,ivar)
         endif
      end do
-#endif
+
      ! Compute the Godunov velocity
      qgdnv(i,2) = uo
 
@@ -856,8 +997,8 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
   IMPLICIT NONE
   integer::ngrid
   real(dp),dimension(1:nvector,1:nvar)::qleft,qright,qgdnv,fgdnv
-  real(dp),dimension(1:nvector,1:nvar),save::fleft,fright,uleft,uright
-  real(dp),dimension(1:nvector),save::SL,SR
+  real(dp),dimension(1:nvector,1:nvar)::fleft,fright,uleft,uright
+  real(dp),dimension(1:nvector)::SL,SR
   integer::i,n
   real(dp)::smallp, entho
   real(dp)::rl   ,ul   ,pl   ,cl
@@ -904,14 +1045,12 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
-#endif
 
   ! Compute left and right fluxes
   do i = 1, ngrid
@@ -923,14 +1062,12 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
-#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
-#endif
 
   ! Compute HLL fluxes
   do n = 1, nvar
