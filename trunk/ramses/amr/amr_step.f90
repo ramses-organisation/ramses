@@ -126,9 +126,7 @@ recursive subroutine amr_step(ilevel,icount)
         if(gas_analytics) call gas_ana
 
         ! Run the clumpfinder
-        if (.not.sink)then 
-           if(clumpfind .and. ndim==3) call clump_finder(.true.)
-        end if
+        if(clumpfind .and. ndim==3) call clump_finder(.true.)
 
         ! Dump lightcone
         if(lightcone) call output_cone()

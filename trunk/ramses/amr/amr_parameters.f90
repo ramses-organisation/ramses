@@ -132,7 +132,7 @@ module amr_parameters
   real(dp)::kappa_IR=0d0      ! IR dust opacity
   real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
   real(dp)::ir_eff=0.75       ! efficiency of the IR feedback (only when ir_feedback=.true.)
-  real(dp)::larson_lifetime   ! lifetime of first larson core in years
+  real(dp)::larson_lifetime=5000! lifetime of first larson core in years
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
