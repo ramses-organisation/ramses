@@ -39,6 +39,7 @@ SUBROUTINE rt_backup_hydro(filename)
   write(ilun)ndim
   write(ilun)nlevelmax
   write(ilun)nboundary
+  write(ilun)gamma
   do ilevel=1,nlevelmax
      do ibound=1,nboundary+ncpu
         if(ibound<=ncpu)then

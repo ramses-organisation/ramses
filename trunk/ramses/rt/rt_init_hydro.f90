@@ -64,6 +64,7 @@ subroutine rt_init_hydro
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
+     read(ilun)gamma2
      if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables 
         write(*,*)'File rt.tmp is not compatible (1)'
         write(*,*)'Found nrtvar  =',nrtvar2
