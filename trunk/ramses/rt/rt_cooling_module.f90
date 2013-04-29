@@ -348,8 +348,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(dUU .gt. 1.) then                                       ! 10% rule
         code=2 ; dU=dU-U; RETURN
      endif
-     if(.not. rt_isTconst) TK=dU(1)*mu
-     if(rt_isTconst) dU(1)=rt_Tconst
+     TK=dU(1)*mu
   endif
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
@@ -441,6 +440,8 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      !print *,'e OVERSTEP ', loopcnt
      code=4 ; dU=dU-U; RETURN
   endif
+
+  if(rt_isTconst) dU(1)=rt_Tconst/mu
 
   !(ix) Check if we are safe to use a bigger timestep in next iteration:
   dU=dU-U    
