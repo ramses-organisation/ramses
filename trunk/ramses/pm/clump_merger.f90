@@ -465,7 +465,7 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   Icl_dd_tot(1:npeaks_tot)=2.*(grav_term_tot(1:npeaks_tot)-Psurf_tot(1:npeaks_tot)+2*e_kin_int_tot(1:npeaks_tot)+2*e_thermal_tot(1:npeaks_tot))
 
   !lifetime of first larson core in code units                                                  
-  cty=scale_t/365.25*24*3600
+  cty=scale_t/(365.25*24.*3600.)
   t_larson1=larson_lifetime/cty
 
 
@@ -1392,10 +1392,12 @@ subroutine jacobi(A,x,err2)
   ! as for example described in Numerical Recipes. Returns eigenvalues
   ! as diagonal elements of A
   !===========================================================
-  integer::n=3
+  integer::n
   integer::i,j,k
   real(kind=8)::b2, bar
   real(kind=8)::beta, coeff, c, s, cs, sc
+  
+  n=3
 
   ! x is identity matrix to start with
   x = 0.0
@@ -1417,14 +1419,14 @@ subroutine jacobi(A,x,err2)
   endif
 
   ! average for off-diagonal elements /2
-  bar = 0.5*b2/float(n*n)
+  bar = 0.5*b2/9.
 
   do while (b2 > err2)
      do i=1,n-1
         do j=i+1,n
            if (A(j,i)**2 <= bar) cycle  ! do not touch small elements
            b2 = b2 - 2.0*A(j,i)**2
-           bar = 0.5*b2/float(n*n)
+           bar = 0.5*b2/9.
            ! calculate coefficient c and s for Givens matrix
            beta = (A(j,j)-A(i,i))/(2.0*A(j,i))
            coeff = 0.5*beta*(1.0+beta**2)**-0.5
