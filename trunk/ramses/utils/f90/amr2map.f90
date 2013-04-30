@@ -127,9 +127,12 @@ program amr2map
   read(10,*)
   read(10,*)
   read(10,*)
-  read(10,'("unit_l      =",E23.15)')scale_l
-  read(10,'("unit_d      =",E23.15)')scale_d
-  read(10,'("unit_t      =",E23.15)')scale_t
+!  read(10,'("unit_l      =",E23.15)')scale_l
+  read(10,'(A13,E23.15)')GMGM,scale_l
+!  read(10,'("unit_d      =",E23.15)')scale_d
+  read(10,'(A13,E23.15)')GMGM,scale_d
+!  read(10,'("unit_t      =",E23.15)')scale_t
+  read(10,'(A13,E23.15)')GMGM,scale_t
   read(10,*)
 
 !  read(10,'("ordering type=",A80)'),ordering
