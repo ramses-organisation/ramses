@@ -74,7 +74,6 @@ end subroutine godunov_fine
 !###########################################################
 !###########################################################
 subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
-!CLAU
   use amr_commons
   use hydro_commons
   implicit none
@@ -513,23 +512,23 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 
   call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
 
-  WRITE(*,*)"SON QUA............"
-
-!$acc end data
 
   !stop
   !return
 
   cindex=0
   ! Compute cell coordinate
+
+!$acc parallel loop collapse(3)
+
   do i=1,nxp
-     xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
 #if NDIM>1
      do j=1,nxp
-        xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
 #endif
 #if NDIM>2
         do k=1,nxp           
+           xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
+           xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
            xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
 #endif
            ! Compute cell index
@@ -552,7 +551,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 #endif
               end do
               ! Update velocity divergence and internal energy
-              if(pressure_fix)then
+              !!!!!!!!!!!!if(pressure_fix)then
 #if NDIM==1
                  divu(cell_index(1))=divu(cell_index(1))+(tmp(i,1,idim)-tmp(i+i0,1,idim))
                  enew(cell_index(1))=enew(cell_index(1))+(tmp(i,2,idim)-tmp(i+i0,2,idim))
@@ -565,7 +564,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
                  divu(cell_index(1))=divu(cell_index(1))+(tmp(i,j,k,1,idim)-tmp(i+i0,j+j0,k+k0,1,idim))
                  enew(cell_index(1))=enew(cell_index(1))+(tmp(i,j,k,2,idim)-tmp(i+i0,j+j0,k+k0,2,idim))
 #endif
-              end if
+              !!!!!!!!!!!end if
            end do
            !if(cindex<1)write(*,*)unew(cell_index(1),2)
            !cindex=cindex+1
@@ -576,8 +575,9 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
      end do
 #endif
   end do
+!$acc end parallel loop
 
-!!!!!!!!!$acc end data
+!$acc end data
 
 end subroutine fill_hydro_grid
 !###########################################################

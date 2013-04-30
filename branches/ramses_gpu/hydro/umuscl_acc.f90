@@ -182,10 +182,8 @@ subroutine unsplit_gpu_2d(uin,gravin,flux,tmp,dx,nxp,dt)
   end do
 !$acc end parallel loop
 #endif
-WRITE(*,*)"<>>>>>>>>>>><<<<<><><><><><><><><><><"
 
 !$acc end data
-WRITE(*,*)"ooooooooooooooooooooooooooooooooooooo"
 
 end subroutine unsplit_gpu_2d
 !###########################################################
@@ -622,8 +620,11 @@ subroutine cmpflxm_gpu_2d(qm,im1,im2,jm1,jm2,km1,km2, &
   dk = khi-klo
 #endif
 
-!$acc parallel loop present(qm,qp,flx,tmp) private(qleft,qright,qgdnv,fgdnv) &
-!$acc& vector_length(NTPB) collapse(3) gang worker vector
+!$acc parallel loop present(qm,qp,flx,tmp) private(qleft,qright,qgdnv,fgdnv)
+
+!!!!!!!!CLAU: this does not work @ 5000: seems to be the "collapse(3)"
+!!!!!!!!$acc parallel loop present(qm,qp,flx,tmp) private(qleft,qright,qgdnv,fgdnv) &
+!!!!!!!!!$acc& vector_length(NTPB) collapse(3) gang worker vector
 !dir$ noblocking
   do k = klo, khi
      do j = jlo, jhi
@@ -685,7 +686,8 @@ subroutine cmpflxm_gpu_2d(qm,im1,im2,jm1,jm2,km1,km2, &
 
            ! Transverse momentum 1
 #if NDIM>1
-           flx(i,j,k,lt1) = fgdnv(4)
+! prima riga in cui fallisce 5000
+           flx(i,j,k,lt1) = fgdnv(4) 
 #endif
            ! Transverse momentum 2
 #if NDIM>2
