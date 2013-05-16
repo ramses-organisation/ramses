@@ -515,11 +515,12 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 
   !stop
   !return
+!$acc end data
 
   cindex=0
   ! Compute cell coordinate
 
-!$acc parallel loop collapse(3)
+!NEW!$acc parallel loop 
 
   do i=1,nxp
 #if NDIM>1
@@ -532,6 +533,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
            xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
 #endif
            ! Compute cell index
+!!!!! WARNING THIS IS NOT PORTED: CHECK
            call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
            do idim=1,ndim
               i0=0; j0=0; k0=0
@@ -551,7 +553,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 #endif
               end do
               ! Update velocity divergence and internal energy
-              !!!!!!!!!!!!if(pressure_fix)then
+              if(pressure_fix)then
 #if NDIM==1
                  divu(cell_index(1))=divu(cell_index(1))+(tmp(i,1,idim)-tmp(i+i0,1,idim))
                  enew(cell_index(1))=enew(cell_index(1))+(tmp(i,2,idim)-tmp(i+i0,2,idim))
@@ -564,7 +566,7 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
                  divu(cell_index(1))=divu(cell_index(1))+(tmp(i,j,k,1,idim)-tmp(i+i0,j+j0,k+k0,1,idim))
                  enew(cell_index(1))=enew(cell_index(1))+(tmp(i,j,k,2,idim)-tmp(i+i0,j+j0,k+k0,2,idim))
 #endif
-              !!!!!!!!!!!end if
+              end if
            end do
            !if(cindex<1)write(*,*)unew(cell_index(1),2)
            !cindex=cindex+1
@@ -575,9 +577,8 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
      end do
 #endif
   end do
-!$acc end parallel loop
+!NEW!$acc end parallel loop
 
-!$acc end data
 
 end subroutine fill_hydro_grid
 !###########################################################
