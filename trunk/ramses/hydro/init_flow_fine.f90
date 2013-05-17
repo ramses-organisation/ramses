@@ -188,10 +188,12 @@ subroutine init_flow_fine(ilevel)
               read(ilun) ! skip first line
               do i3=1,n3(ilevel)
                  read(ilun) ((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
-                 if(i3.ge.i3_min.and.i3.le.i3_max)then
-                    init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
-                         & init_plane(i1_min:i1_max,i2_min:i2_max)
-                 end if
+                 if(ncache>0)then
+                    if(i3.ge.i3_min.and.i3.le.i3_max)then
+                       init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
+                            & init_plane(i1_min:i1_max,i2_min:i2_max)
+                    end if
+                 endif
               end do
               close(ilun)
            else
@@ -224,12 +226,14 @@ subroutine init_flow_fine(ilevel)
            ! In most cases, this is zero (you can change that if necessary)
            if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
-           init_array=0d0
-           ! Default value for metals
-           if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02 ! from solar units
-           ! Default value for ionization fraction
-           xval=sqrt(omega_m)/(h0/100.*omega_b) ! From the book of Peebles p. 173
-           if(cosmo.and.ivar==ixion.and.aton)init_array=1.2d-5*xval
+           if(ncache>0)then
+              init_array=0d0
+              ! Default value for metals
+              if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02 ! from solar units
+              ! Default value for ionization fraction
+              xval=sqrt(omega_m)/(h0/100.*omega_b) ! From the book of Peebles p. 173
+              if(cosmo.and.ivar==ixion.and.aton)init_array=1.2d-5*xval
+           endif
         endif
 
         if(ncache>0)then
