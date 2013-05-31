@@ -865,8 +865,6 @@ subroutine surface_int(ind_cell,np,ilevel)
   ! This routine constructs all neighboring leaf cells that 
   ! have a common cell surface at levels 
   ! ilevel-1, ilevel, ilevel+1.
-  ! Depending on the action case value, fuctions performing
-  ! further checks for the neighbor cells are called.
   !------------------------------------------------------------
 
   integer::j,ind,nx_loc,i2,j2,k2,ix,iy,iz,idim,jdim,i3,j3,k3

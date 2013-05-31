@@ -314,14 +314,9 @@ recursive subroutine amr_step(ilevel,icount)
      ! Set uold equal to unew
      call set_uold(ilevel)
 
-     ! Density threshold and/or Bondi accretion onto sink particle
-     if(sink)then                         
-        if(bondi)then
-           call grow_bondi(ilevel)
-        else
-           call grow_jeans(ilevel)
-        endif
-     endif
+     ! Density threshold or Bondi accretion onto sink particle
+     if(sink)call grow_sink(ilevel)
+
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 

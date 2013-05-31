@@ -259,11 +259,5 @@ subroutine read_hydro_params(nml_ok)
   ichem=ixion
   if(aton)ichem=ixion+1
 
-  !--------------------------------------
-  ! bondi accretion conflicts with angular
-  ! momentum tracking.
-  !---------------------------------------
-  if(sink .and. bondi .and. myid==1)write(*,*)'sink angular momentum is not tracked when using bondi accretion.'
-
 end subroutine read_hydro_params
 

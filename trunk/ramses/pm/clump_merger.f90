@@ -247,7 +247,7 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 
   !  first, get minimum potential on saddle surface
   call get_phi_ref(ntest)
-  call get_phi_ref2(ntest)
+  call get_phi_ref2
   
   !initialize arrays
   e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0; e_bind4=0.d0; e_thermal4=0.d0; e_kin_int4=0.d0
@@ -475,11 +475,11 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 
   if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then 
      write(*,'(135A)')'============================================================='//&
-          '=========================================================='
+          '=============================================================================================='
      write(*,'(135A)')'Cl_N   e1x   e1y   e1z    e2x   e2y   e2z    e3x   e3y   e3z '//&
-          '   t1[y]     t2[y]     t3[y]    I_d/I_dd[y]   form_sink?'
+          '   t1[y]     t2[y]     t3[y]  |I_d|/I_dd[y]  sink?   tidal_Fg  Psurf     e_kin     e_therm'
      write(*,'(135A)')'============================================================='//&
-          '=========================================================='
+          '=============================================================================================='
   endif
      
 
@@ -488,7 +488,7 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 
         !compute eigenvalues of Icl_d_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
-        abs_err=1.d-8*Icl_tot(j)**2+tiny(0.d0)
+        abs_err=1.d-8*Icl_tot(j)**2+1.d-40
         call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
 
@@ -515,14 +515,15 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         if(clinfo .and. .not. smbh .and. sink)then
 !           if (myid==1 .and. .not. smbh .and. e_thermal_tot(j)>0.)print*,j,0.5*Psurf_tot(j)/e_thermal_tot(j)&
 !                ,0.5*grav_term_tot(j)/e_thermal_tot(j)
-           if (myid==1 .and. .not. smbh)write(*,'(I4,2X,3(3(F5.3,X)X),4(E8.2E2,2X),X,L5)'),j&
+           if (myid==1 .and. .not. smbh)write(*,'(I4,2X,3(3(F5.3,X)X),4(E8.2E2,2X),L5,3X,4(2X,E8.2E2))'),j&
                 ,eigenv(1,1),eigenv(1,2),eigenv(1,3)&
                 ,eigenv(2,1),eigenv(2,2),eigenv(2,3)&
                 ,eigenv(3,1),eigenv(3,2),eigenv(3,3)&
                 ,A1/(contractions(1)+tiny(0.d0))*cty,A2/(contractions(2)+tiny(0.d0))*cty,A3/(contractions(3)+tiny(0.d0))*cty&
-                ,Icl_d_tot(j)/Icl_dd_tot(j)*cty&
-                ,contracting(j)
-           
+                ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
+                ,contracting(j),grav_term_tot(j)&
+                ,Psurf_tot(j),e_kin_int_tot(j)&
+                ,e_thermal_tot(j)           
         endif
         
         !compute peak check for smbh sink formation
@@ -540,7 +541,9 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   end do
 
   if(myid==1 .and. clinfo .and. .not. smbh .and. sink)write(*,'(135A)')'============================================================='//&
-          '=========================================================='
+       '=============================================================================================='
+
+
      
 end subroutine compute_clump_properties_round2
 !################################################################
@@ -671,6 +674,10 @@ subroutine write_clump_properties(to_file)
         close(21)
      end if
   end if
+
+#ifndef WITHOUTMPI
+  call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
 
 end subroutine write_clump_properties
 !#########################################################################
@@ -1429,7 +1436,7 @@ subroutine jacobi(A,x,err2)
            bar = 0.5*b2/9.
            ! calculate coefficient c and s for Givens matrix
            beta = (A(j,j)-A(i,i))/(2.0*A(j,i))
-           coeff = 0.5*beta*(1.0+beta**2)**-0.5
+           coeff = 0.5*beta*(1.0+beta**2)**(-0.5)
            s = (max(0.5+coeff,0.0))**0.5
            c = (max(0.5-coeff,0.0))**0.5
            ! update rows i and j
