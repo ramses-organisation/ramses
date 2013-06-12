@@ -5,6 +5,7 @@
 subroutine godunov_fine(ilevel)
   use amr_commons
   use hydro_commons
+  use acc_commons
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
@@ -17,7 +18,10 @@ subroutine godunov_fine(ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nlevelmax)::ngroup
   integer,allocatable,dimension(:)::isort
+  integer nrefinedu
+  integer nrefinedg
   integer countaux
+  integer npatches
 
   if(numbtot(1,ilevel)==0)return
   if(static)return
@@ -29,9 +33,29 @@ subroutine godunov_fine(ilevel)
 
   ! Sort grids in large patches
   allocate(isort(ncache))
-!CLA This is the first additional routine
   call sort_group_grid(isort,ilevel,levelup,ngroup,ncache)
+
+  ! Calculate the total number of cells 
+  nrefinedu = 0
+  nrefinedg = 0
+  do ilev=levelup,ilevel-1
+     nx_ok=2**(ilevel-1-ilev)
+     ngrid_ok=nx_ok**ndim
+     nx_cell=2*nx_ok 
+     npatches = ngroup(ilev)/ngrid_ok
+
+     nrefinedu = nrefinedu + npatches*(nx_cell+4)**3*nvar
+     nrefinedg = nrefinedg + npatches*(nx_cell+4)**3*ndim
+  enddo
+  !WRITE(*,*)"Mesh total size: ", nrefinedu, nrefinedg
+
+  ! Allocate auxiliary arrays
+  allocate(uloc_tot(nrefinedu))
+  allocate(gloc_tot(nrefinedg)) 
+  ucount = 1
+  gcount = 1
   
+!$acc data pcopyout(unew)
   countaux=0
   iskip=1
   do ilev=levelup,ilevel-1
@@ -47,13 +71,13 @@ subroutine godunov_fine(ilevel)
            !!write(*,*)(active(ilevel)%igrid(isort(i+j-1)),j=1,ngrid_ok)
 888 format(16(I3,1X))
            igrid=active(ilevel)%igrid(isort(i))
-!CLA This is the second additional routine
            call fill_hydro_grid(igrid,nx_cell,ilevel)           
         end do
         iskip=iskip+ngroup(ilev)
      endif
   end do
   write(*,*)'=========================================='
+!$acc end data
 
 !!  do igrid=1,ncache,nvector
 !!     ngrid=MIN(nvector,ncache-igrid+1)
@@ -65,6 +89,8 @@ subroutine godunov_fine(ilevel)
 
   ! Deallocate local arrays
   deallocate(isort)
+  deallocate(uloc_tot)
+  deallocate(gloc_tot) 
 
 111 format('   Entering godunov_fine for level ',i2)
 
@@ -157,11 +183,6 @@ subroutine sort_group_grid(isort_fin,ilevel,levelup,ngroup,ncache)
 
      call quick_sort(hkeys,isort,ncache)
 
-     !do i=1,ncache
-     !  WRITE(400,'(3(i3,1x),e13.7)')ix(i),iy(i),iz(i),hkeys(i)
-     !   write(500,'(i7,1x,e13.7,1x,i7,1x,i7)')i,hkeys(i),isort(i),active(ilevel)%igrid(isort(i))
-     !end do
-     
      ! Compute scan for ilevel-2 grids
      j=1
      inext(j)=1
@@ -231,8 +252,6 @@ subroutine set_unew(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  !!!WRITE(*,*)"DENTRO A SET_UNEW"
-  !!!open(unit=200, form='formatted')
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -376,11 +395,11 @@ end subroutine set_uold
 !###########################################################
 !###########################################################
 !###########################################################
-!CLAU
 subroutine fill_hydro_grid(igrid,nxp,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use acc_commons
   implicit none
   integer::igrid,ilevel,nxp
   integer::i1,j1,k1,l1,m1,ivar
@@ -390,24 +409,24 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   ! and send it to the hydro kernel
   !
 #if NDIM==1
-  real(dp),dimension(-1:nxp+2,1:nvar)::uloc
-  real(dp),dimension(-1:nxp+2,1:ndim)::gloc
+!!!  real(dp),dimension(-1:nxp+2,1:nvar)::uloc
+!!!  real(dp),dimension(-1:nxp+2,1:ndim)::gloc
   real(dp),dimension(1:nxp+1,1:nvar,1:ndim)::flux
   real(dp),dimension(1:nxp+1,1:2,1:ndim)::tmp
   real(dp),dimension(nxp)::divuloc
   real(dp),dimension(nxp)::enewloc
 #endif
 #if NDIM==2
-  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:nvar)::uloc
-  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:ndim)::gloc
+!!!  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:nvar)::uloc
+!!!  real(dp),dimension(-1:nxp+2,-1:nxp+2,1:ndim)::gloc
   real(dp),dimension(1:nxp+1,1:nxp+1,1:nvar,1:ndim)::flux
   real(dp),dimension(1:nxp+1,1:nxp+1,1:2,1:ndim)::tmp
   real(dp),dimension(nxp,nxp)::divuloc
   real(dp),dimension(nxp,nxp)::enewloc
 #endif
 #if NDIM==3
-  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::uloc
-  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:ndim)::gloc
+!!!  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:nvar)::uloc
+!!!  real(dp),dimension(-1:nxp+2,-1:nxp+2,-1:nxp+2,1:ndim)::gloc
   real(dp),dimension(1:nxp+1,1:nxp+1,1:nxp+1,1:nvar,1:ndim)::flux
   real(dp),dimension(1:nxp+1,1:nxp+1,1:nxp+1,1:2,1:ndim)::tmp
   real(dp),dimension(nxp,nxp,nxp)::divuloc
@@ -419,7 +438,12 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   real(dp),dimension(1:nvector,1:ndim)::xx_dp
   real(dp),dimension(1:ndim)::box_xmin
   integer,dimension(1:nvector)::cell_index,cell_levl
-  real xxxx
+  integer :: ucount0, ucount1
+  integer :: gcount0, gcount1
+  integer :: uindex, gindex, bindex
+  integer :: nxp4
+  integer :: iiii
+!CLAU
 
   ! Mesh spacing at that level
   nx_loc=icoarse_max-icoarse_min+1
@@ -427,54 +451,45 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
   dx=0.5D0**ilevel
   dx_box=nxp*dx
   dx_loc=scale*dx
+  nxp4 = nxp+4
  
   ! Compute box coordinates in normalized unites
   do idim=1,ndim
      box_xmin(idim)=int(xg(igrid,idim)/dx_box)*dx_box
   end do
-  !WRITE(300,'(3(e13.7,1x))')box_xmin(1),box_xmin(2),box_xmin(3)
-  
+
+  ! Update main patch counters
+
+  ucount0 = ucount
+  gcount0 = gcount
 
   ! Compute cell coordinate
-  do i=-1,nxp+2
-     xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
+  do k=-1,nxp+2
+     xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
 #if NDIM>1
      do j=-1,nxp+2
         xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
 #endif
 #if NDIM>2
-        do k=-1,nxp+2
-           xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
+        do i=-1,nxp+2
+           xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
 #endif
-           !WRITE(300,'(3(e13.7,1x))')xx_dp(1,1),xx_dp(1,2),xx_dp(1,3)
            ! Compute cell index
            call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
            ! Store hydro variable in local Cartesian grid
+           bindex = (ucount0-1) + ( i+2 + nxp4*(j+1) + nxp4*nxp4*(k+1) )
            do ivar=1,nvar
-#if NDIM==1
-              uloc(i,ivar)=uold(cell_index(1),ivar)
-#endif
-#if NDIM==2
-              uloc(i,j,ivar)=uold(cell_index(1),ivar)
-#endif
-#if NDIM==3
-              uloc(i,j,k,ivar)=uold(cell_index(1),ivar)
-#endif
+              uindex = bindex + (ivar-1)*nxp4**3
+              uloc_tot(uindex) = uold(cell_index(1),ivar)
+              ucount = ucount+1
            end do
-           gloc=0d0
-           if(poisson)then
-              do idim=1,ndim
-#if NDIM==1
-                 gloc(i,idim)=f(cell_index(1),idim)
-#endif
-#if NDIM==2
-                 gloc(i,j,idim)=f(cell_index(1),idim)
-#endif
-#if NDIM==3
-                 gloc(i,j,k,idim)=f(cell_index(1),idim)
-#endif
-              end do
-           end if
+!!! CHECK INDICES: CRASHES WITH SEGFAULT
+           !do idim=1,ndim
+           !   gindex = bindex + (idim-1)*nxp4**3
+           !   gloc_tot(gindex) = 0.0
+           !   gcount = gcount+1
+           !   if(poisson)gloc_tot(gcount) = f(cell_index(1),idim)
+           !end do
 #if NDIM>2
         end do
 #endif
@@ -483,10 +498,17 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 #endif
   end do
 
+  ucount1 = ucount-1
+  gcount1 = gcount-1
+
+
 !CLAUACC
-!$acc data copy(uloc,gloc,dtnew) pcopyout(divuloc,enewloc)&
-!$acc&     pcreate(flux,tmp)
+!!!!!$acc data copy(uloc,gloc,dtnew) pcopyout(divuloc,enewloc)&
+!$acc data pcreate (flux, tmp, divuloc, enewloc, uloc_tot, gloc_tot) pcopyin(cell_index)
+!!!!!$acc&     pcreate(flux,tmp)
 !!!!$acc pcopyout(flux,tmp)
+
+!$acc update device(uloc_tot(ucount0:ucount1), gloc_tot(gcount0:gcount1)) !!!!!!async(acount)
 
 !$acc parallel loop collapse(5)
   do m1=1,ndim
@@ -518,17 +540,30 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 
 ! Compute flux using second-order Godunov method
 
-  call unsplit_gpu_2d(uloc,gloc,flux,tmp,dx_loc,nxp,dtnew(ilevel))
-
+  call unsplit_gpu_2d(uloc_tot(ucount0:ucount1),gloc_tot(gcount0:gcount1),flux,tmp,dx_loc,nxp,dtnew(ilevel))
 
 !$acc parallel loop 
 
-  do i=1,nxp
+  do k=1,nxp
 #if NDIM>1
      do j=1,nxp
 #endif
 #if NDIM>2
-        do k=1,nxp           
+        do i=1,nxp           
+#endif
+           xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
+           xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
+           xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
+           call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
+           do ivar=1,nvar
+#if NDIM==1
+           uindex = (ucount0-1) + (i+2) + (ivar-1)*nxp4
+#endif
+#if NDIM==2
+           uindex = (ucount0-1) + (i+2) + (j+1)*nxp4 + (ivar-1)*nxp4**2
+#endif
+#if NDIM==3
+           uindex = (ucount0-1) + ((i+2) + (j+1)*nxp4 + (k+1)*nxp4*nxp4) + (ivar-1)*nxp4**3
 #endif
            do idim=1,ndim
               i0=0; j0=0; k0=0
@@ -536,32 +571,27 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
               if(idim==2)j0=1
               if(idim==3)k0=1
               ! Update conservative variables new state vector
-              do ivar=1,nvar
-#if NDIM==1
-                 uloc(i,ivar) = uloc(i,ivar) + (flux(i,ivar,idim)-flux(i+i0,ivar,idim))
-#endif
-#if NDIM==2
-                 uloc(i,j,ivar) = uloc(i,j,ivar) + (flux(i,j,ivar,idim)-flux(i+i0,j+j0,ivar,idim))
-#endif
-#if NDIM==3
-                 uloc(i,j,k,ivar) = uloc(i,j,k,ivar) + (flux(i,j,k,ivar,idim)-flux(i+i0,j+j0,k+k0,ivar,idim))
-#endif
-              end do
+              uloc_tot(uindex)  = uloc_tot(uindex) + (flux(i,j,k,ivar,idim)-flux(i+i0,j+j0,k+k0,ivar,idim))
+           end do
+
+           unew(cell_index(1),ivar)  = uloc_tot(uindex) 
+
               ! Update velocity divergence and internal energy
-              if(pressure_fix)then
-#if NDIM==1
-                 divuloc(i) = (tmp(i,1,idim)-tmp(i+i0,1,idim))
-                 enewloc(i) = (tmp(i,2,idim)-tmp(i+i0,2,idim))
-#endif
-#if NDIM==2
-                 divuloc(i,j) = (tmp(i,j,1,idim)-tmp(i+i0,j+j0,1,idim))
-                 enewloc(i,j) = (tmp(i,j,2,idim)-tmp(i+i0,j+j0,2,idim))
-#endif
-#if NDIM==3
-                 divuloc(i,j,k) = (tmp(i,j,k,1,idim)-tmp(i+i0,j+j0,k+k0,1,idim))
-                 enewloc(i,j,k) = (tmp(i,j,k,2,idim)-tmp(i+i0,j+j0,k+k0,2,idim))
-#endif
-              end if
+!!CLAU: TO BE ASYNCED
+!!              if(pressure_fix)then
+!!#if NDIM==1
+!!                 divuloc(i) = (tmp(i,1,idim)-tmp(i+i0,1,idim))
+!!                 enewloc(i) = (tmp(i,2,idim)-tmp(i+i0,2,idim))
+!!#endif
+!!#if NDIM==2
+!!                 divuloc(i,j) = (tmp(i,j,1,idim)-tmp(i+i0,j+j0,1,idim))
+!!                 enewloc(i,j) = (tmp(i,j,2,idim)-tmp(i+i0,j+j0,2,idim))
+!!#endif
+!!#if NDIM==3
+!!                 divuloc(i,j,k) = (tmp(i,j,k,1,idim)-tmp(i+i0,j+j0,k+k0,1,idim))
+!!                 enewloc(i,j,k) = (tmp(i,j,k,2,idim)-tmp(i+i0,j+j0,k+k0,2,idim))
+!!#endif
+!!              end if
            end do
 #if NDIM>2
         end do
@@ -573,49 +603,24 @@ subroutine fill_hydro_grid(igrid,nxp,ilevel)
 !$acc end parallel loop
 !$acc end data
 
-! recompose the original array
 
-  do i=1,nxp
-#if NDIM>1
-     do j=1,nxp
-#endif
-#if NDIM>2
-        do k=1,nxp
+!! TO BE REMOVED!!!!!!!!!!!!!!!!!!!!!!
+     if(pressure_fix)then
+     do i=1,nxp
+        do j=1,nxp
+           do k=1,nxp
            xx_dp(1,1) = box_xmin(1) + (dble(i)-0.5)*dx
            xx_dp(1,2) = box_xmin(2) + (dble(j)-0.5)*dx
            xx_dp(1,3) = box_xmin(3) + (dble(k)-0.5)*dx
-#endif
-           ! Compute cell index
            call hydro_get_cell_index(cell_index,cell_levl,xx_dp,ilevel,1)
-           do ivar=1,nvar
-#if NDIM==1
-                 unew(cell_index(1),ivar) = uloc(i,ivar)
-                 if(pressure_fix)then
-                   divu(cell_index(1)) = divu(cell_index(1)) + divuloc(i)
-                   enew(cell_index(1)) = enew(cell_index(1)) + enewloc(i)
-                 endif
-#endif
-#if NDIM==2
-                 unew(cell_index(1),ivar) = uloc(i,j,ivar)
-                 if(pressure_fix)then
-                   divu(cell_index(1)) = divu(cell_index(1)) + divuloc(i,j)
-                   enew(cell_index(1)) = enew(cell_index(1)) + enewloc(i,j)
-                 endif
-#endif
-#if NDIM==3
-                 unew(cell_index(1),ivar) = uloc(i,j,k,ivar)
-                 if(pressure_fix)then
-                   divu(cell_index(1)) = divu(cell_index(1)) + divuloc(i,j,k)
-                   enew(cell_index(1)) = enew(cell_index(1)) + enewloc(i,j,k)
-                 endif
-#endif
+                   divu(cell_index(1)) = 0.0 
+                   enew(cell_index(1)) = 0.0 
            enddo
         enddo
       enddo
-   enddo 
-
-
-
+      endif
+  !CLOSE(300)
+  !READ(*,*)iiii
 
 end subroutine fill_hydro_grid
 !###########################################################
