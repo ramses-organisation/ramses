@@ -178,8 +178,8 @@ subroutine init_flow_fine(ilevel)
         if(ivar==nvar+2)filename=TRIM(initfile(ilevel))//'/ic_byright'
         if(ivar==nvar+3)filename=TRIM(initfile(ilevel))//'/ic_bzright'
         call title(ivar,ncharvar)
-        if(ivar>5.and.ivar<=nvar)then
-           call title(ivar-5,ncharvar)
+        if(ivar>8.and.ivar<=nvar)then
+           call title(ivar-8,ncharvar)
            filename=TRIM(initfile(ilevel))//'/ic_pvar_'//TRIM(ncharvar)
         endif
 
@@ -194,10 +194,12 @@ subroutine init_flow_fine(ilevel)
               read(ilun) ! skip first line
               do i3=1,n3(ilevel)
                  read(ilun) ((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
-                 if(i3.ge.i3_min.and.i3.le.i3_max)then
-                    init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
-                         & init_plane(i1_min:i1_max,i2_min:i2_max)
-                 end if
+                 if(ncache>0)then
+                    if(i3.ge.i3_min.and.i3.le.i3_max)then
+                       init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
+                            & init_plane(i1_min:i1_max,i2_min:i2_max)
+                    end if
+                 endif
               end do
               close(ilun)
            else
@@ -230,47 +232,49 @@ subroutine init_flow_fine(ilevel)
            ! In most cases, this is zero (you can change that if necessary)
            if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
-           init_array=0d0
-           ! Default value for metals
-           if(cosmo.and.ivar==6.and.metal)init_array=z_ave*0.02
-           ! Default value for Bz
-           if(cosmo.and.ivar==8)init_array=B_ave
-           if(cosmo.and.ivar==nvar+3)init_array=B_ave
+           if(ncache>0)then
+              init_array=0d0
+              ! Default value for metals
+              if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02
+              ! Default value for Bz
+              if(cosmo.and.ivar==8)init_array=B_ave
+              if(cosmo.and.ivar==nvar+3)init_array=B_ave
+           endif
         endif
 
         if(ncache>0)then
-        if(cosmo)then
-           ! Rescale initial conditions to code units
-           if(.not. cooling)T2_start = 1.356d-2/aexp**2
-           if(ivar==1)init_array=(1.0+dfact(ilevel)*init_array)*omega_b/omega_m
-           if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==5)init_array=(1.0+init_array)*T2_start/scale_T2
-        endif
-        ! Loop over cells
-        do ind=1,twotondim
-           iskip=ncoarse+(ind-1)*ngridmax
-           do i=1,ncache
-              igrid=active(ilevel)%igrid(i)
-              icell=igrid+iskip
-              xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
-              xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-              xx2=xg(igrid,2)+xc(ind,2)-skip_loc(2)
-              xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-              xx3=xg(igrid,3)+xc(ind,3)-skip_loc(3)
-              xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
-              i1=int(xx1)+1
-              i1=int(xx1)+1
-              i2=int(xx2)+1
-              i2=int(xx2)+1
-              i3=int(xx3)+1
-              i3=int(xx3)+1
-              ! Scatter to corresponding primitive variable
-              uold(icell,ivar)=init_array(i1,i2,i3)
+           if(cosmo)then
+              ! Rescale initial conditions to code units
+              if(.not. cooling)T2_start = 1.356d-2/aexp**2
+              if(ivar==1)init_array=(1.0+dfact(ilevel)*init_array)*omega_b/omega_m
+              if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==5)init_array=(1.0+init_array)*T2_start/scale_T2
+           endif
+           ! Loop over cells
+           do ind=1,twotondim
+              iskip=ncoarse+(ind-1)*ngridmax
+              do i=1,ncache
+                 igrid=active(ilevel)%igrid(i)
+                 icell=igrid+iskip
+                 xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
+                 xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
+                 xx2=xg(igrid,2)+xc(ind,2)-skip_loc(2)
+                 xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
+                 xx3=xg(igrid,3)+xc(ind,3)-skip_loc(3)
+                 xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
+                 i1=int(xx1)+1
+                 i1=int(xx1)+1
+                 i2=int(xx2)+1
+                 i2=int(xx2)+1
+                 i3=int(xx3)+1
+                 i3=int(xx3)+1
+                 ! Scatter to corresponding primitive variable
+                 uold(icell,ivar)=init_array(i1,i2,i3)
+              end do
            end do
-        end do
-        ! End loop over cells
+           ! End loop over cells
         endif
      end do
      ! End loop over input variables

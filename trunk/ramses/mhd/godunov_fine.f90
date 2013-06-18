@@ -818,12 +818,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,1,1)+emfz(i,1,1,2))*0.25*weight
      unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)+dflux
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)+dflux
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)-dflux
      unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)-dflux*0.5
+        unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)+dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=0 and Y=1 grid edge
@@ -835,12 +840,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,3,1)+emfz(i,1,3,2))*0.25*weight
      unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)-dflux
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)-dflux
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)-dflux
      unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)+dflux*0.5
+        unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)+dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=1 grid edge
@@ -852,12 +862,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,3,1)+emfz(i,3,3,2))*0.25*weight
      unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)-dflux
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)-dflux
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)+dflux
      unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)+dflux*0.5
+        unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)-dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=0 grid edge
@@ -869,12 +884,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,1,1)+emfz(i,3,1,2))*0.25*weight
      unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)+dflux
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)+dflux
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)+dflux
      unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)-dflux*0.5
+        unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)-dflux*0.5
+     endif
   end do
 #endif
   !--------------------------------------
@@ -890,12 +910,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,1)+emfx(i,2,1,1))*0.25*weight
      unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)+dflux
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)+dflux
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)-dflux
      unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)+dflux*0.5
+        unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)-dflux*0.5
+     endif
   end do
 
   ! Update coarse By and Bz using fine EMFx on Y=0 and Z=1 grid edge
@@ -907,12 +932,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,3)+emfx(i,2,1,3))*0.25*weight
      unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)-dflux
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)-dflux
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)-dflux
      unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)+dflux*0.5
+        unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)+dflux*0.5
+     endif
   end do
 
   ! Update coarse By and Bz using fine EMFx on Y=1 and Z=1 grid edge
@@ -924,12 +954,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,3)+emfx(i,2,3,3))*0.25*weight
      unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)-dflux
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)-dflux
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)+dflux
      unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)+dflux*0.5
+        unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)-dflux*0.5
+     endif
   end do
 
   ! Update coarse By and Bz using fine EMFx on Y=1 and Z=0 grid edge
@@ -941,12 +976,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,1)+emfx(i,2,3,1))*0.25*weight
      unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)+dflux
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)+dflux
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)+dflux
      unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)-dflux*0.5
+        unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)-dflux*0.5
+     endif
   end do
 
   !--------------------------------------
@@ -962,12 +1002,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,1)+emfy(i,1,2,1))*0.25*weight
      unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)-dflux
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)-dflux
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)+dflux
      unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)+dflux*0.5
+        unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)-dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and Bz using fine EMFy on X=0 and Z=1 grid edge
@@ -979,12 +1024,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,3)+emfy(i,1,2,3))*0.25*weight
      unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)+dflux
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)+dflux
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)+dflux
      unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)-dflux*0.5
+        unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)-dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and Bz using fine EMFy on X=1 and Z=1 grid edge
@@ -996,15 +1046,20 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,3)+emfy(i,3,2,3))*0.25*weight
      unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)+dflux
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)+dflux
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)-dflux
      unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)-dflux*0.5
+        unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)+dflux*0.5
+     endif
   end do
 
-  ! Update coarse Bx and Bz using fine EMFx on X=1 and Z=0 grid edge
+  ! Update coarse Bx and Bz using fine EMFy on X=1 and Z=0 grid edge
   ind_father1=1+(i1+1)+3*(j1  )+9*(k1  )
   ind_father2=1+(i1+1)+3*(j1  )+9*(k1-1)
   ind_father3=1+(i1  )+3*(j1  )+9*(k1-1)
@@ -1013,12 +1068,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,1)+emfy(i,3,2,1))*0.25*weight
      unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)-dflux
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)-dflux
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)-dflux
      unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)+dflux*0.5
+        unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)+dflux*0.5
+     endif
   end do
 #endif
 
