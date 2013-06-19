@@ -23,7 +23,7 @@
 ! Main multigrid routine, called by amr_step
 ! ------------------------------------------------------------------------
 
-subroutine multigrid_fine(ilevel)
+subroutine multigrid_fine(ilevel,icount)
    use amr_commons
    use poisson_commons
    use poisson_parameters
@@ -33,7 +33,7 @@ subroutine multigrid_fine(ilevel)
    include "mpif.h"
 #endif
 
-   integer, intent(in) :: ilevel
+   integer, intent(in) :: ilevel,icount
 
    integer, parameter  :: MAXITER  = 10
    real(dp), parameter :: SAFE_FACTOR = 0.5
@@ -55,7 +55,7 @@ subroutine multigrid_fine(ilevel)
    ! ---------------------------------------------------------------------
 
    if(ilevel>levelmin)then
-      call make_initial_phi(ilevel)         ! Interpolate phi down
+      call make_initial_phi(ilevel,icount)         ! Interpolate phi down
    else
       call make_multipole_phi(ilevel)       ! Fill with simple initial guess
    endif
@@ -66,7 +66,7 @@ subroutine multigrid_fine(ilevel)
    call make_virtual_fine_dp(f(:,3),ilevel) ! Communicate mask
    call make_boundary_mask(ilevel)          ! Set mask to -1 in phys bounds
 
-   call make_fine_bc_rhs(ilevel)            ! Fill BC-modified RHS
+   call make_fine_bc_rhs(ilevel,icount)            ! Fill BC-modified RHS
 
    ! ---------------------------------------------------------------------
    ! Build communicators up
@@ -899,13 +899,13 @@ end subroutine make_fine_mask
 ! Sets BC-modified RHS    into f(:,2)
 !
 ! ------------------------------------------------------------------------
-subroutine make_fine_bc_rhs(ilevel)
+subroutine make_fine_bc_rhs(ilevel,icount)
 
    use amr_commons
    use pm_commons
    use poisson_commons
    implicit none
-   integer, intent(in) :: ilevel
+   integer, intent(in) :: ilevel,icount
 
    integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
@@ -978,7 +978,7 @@ subroutine make_fine_bc_rhs(ilevel)
 
                   ! Interpolate from upper level
                   ind_cell(1)=ifathercell_nbor_amr
-                  call interpol_phi(ind_cell,phi_int,1,ilevel)
+                  call interpol_phi(ind_cell,phi_int,1,ilevel,icount)
                   nb_phi = phi_int(1,jjj(idim,inbor,ind))
                else
                   ! Fetch neighbor cell id

@@ -22,6 +22,7 @@ subroutine init_poisson
   ncell=ncoarse+twotondim*ngridmax
   allocate(rho (1:ncell))
   allocate(phi (1:ncell))
+  allocate(phi_old (1:ncell))
   allocate(f   (1:ncell,1:3))
   rho=0.0D0; phi=0.0D0; f=0.0D0
   if(cic_levelmax>0)then

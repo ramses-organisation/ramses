@@ -161,7 +161,11 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------
   ! Poisson source term
   !--------------------
-  if(poisson)call rho_fine(ilevel,icount)
+  if(poisson)then
+     !save old potential for time-extrapolation at level boundaries
+     call save_phi_old(ilevel)
+     call rho_fine(ilevel,icount)
+  endif
 
   !-------------------------------------------
   ! Sort particles between ilevel and ilevel+1
@@ -182,20 +186,21 @@ recursive subroutine amr_step(ilevel,icount)
      if(hydro)then
         call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
      endif
-
+     
      ! Compute gravitational potential
      if(ilevel>levelmin)then
         if(ilevel .ge. cg_levelmin) then
            call phi_fine_cg(ilevel,icount)
         else
-           call multigrid_fine(ilevel)
+           call multigrid_fine(ilevel,icount)
         end if
      else
-        call multigrid_fine(levelmin)
+        call multigrid_fine(levelmin,icount)
      end if
+     if (nstep==0)call save_phi_old(ilevel)
 
      ! Compute gravitational acceleration
-     call force_fine(ilevel)
+     call force_fine(ilevel,icount)
 
      ! Thermal feedback from stars
      if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel,icount)

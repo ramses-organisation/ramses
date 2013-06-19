@@ -544,7 +544,7 @@ end subroutine refine_fine
 subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region)
   use amr_commons
   use hydro_commons
-  use poisson_commons, ONLY:f, phi
+  use poisson_commons, ONLY:f, phi,phi_old
 #ifdef RT
   use rt_hydro_commons
 #endif
@@ -836,6 +836,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
            do i=1,nn
               phi(iskip+ind_grid_son(i))=phi(ind_fathers(i,0))
+              phi_old(iskip+ind_grid_son(i))=phi_old(ind_fathers(i,0))
            end do
         end do
      end if
@@ -996,6 +997,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         do i=1,nn
            rho(ind_cell_son(i))=0.0D0
            phi(ind_cell_son(i))=0.0D0
+           phi_old(ind_cell_son(i))=0.0D0
         end do
         do idim=1,ndim
            do i=1,nn

@@ -46,7 +46,7 @@ subroutine phi_fine_cg(ilevel,icount)
   ! Compute initial phi
   !===============================
    if(ilevel>levelmin)then
-      call make_initial_phi(ilevel)              ! Interpolate phi down
+      call make_initial_phi(ilevel,icount)              ! Interpolate phi down
    else
       call make_multipole_phi(ilevel)            ! Fill up with simple initial guess
    endif
@@ -76,7 +76,7 @@ subroutine phi_fine_cg(ilevel,icount)
   ! Compute r = b - Ax and store it into f(i,1)
   ! Also set p = r and store it into f(i,2)
   !==============================================
-  call cmp_residual_cg(ilevel)
+  call cmp_residual_cg(ilevel,icount)
 
   !====================================
   ! Main iteration loop
@@ -202,13 +202,13 @@ end subroutine phi_fine_cg
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine cmp_residual_cg(ilevel)
+subroutine cmp_residual_cg(ilevel,icount)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
   implicit none
-  integer::ilevel
+  integer::ilevel,icount
   !------------------------------------------------------------------
   ! This routine computes the residual for the Conjugate Gradient
   ! Poisson solver. The residual is stored in f(i,1).
@@ -266,8 +266,8 @@ subroutine cmp_residual_cg(ilevel)
      
      ! Interpolate potential from upper level
      do idim=1,ndim
-        call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel)
-        call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel)
+        call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel,icount)
+        call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel,icount)
      end do
 
      ! Loop over cells
@@ -442,12 +442,12 @@ end subroutine cmp_Ap_cg
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine make_initial_phi(ilevel)
+subroutine make_initial_phi(ilevel,icount)
   use amr_commons
   use pm_commons
   use poisson_commons
   implicit none
-  integer::ilevel
+  integer::ilevel,icount
   !
   !
   !
@@ -488,7 +488,7 @@ subroutine make_initial_phi(ilevel)
         end do
         
         ! Interpolate
-        call interpol_phi(ind_cell_father,phi_int,ngrid,ilevel)
+        call interpol_phi(ind_cell_father,phi_int,ngrid,ilevel,icount)
         
         ! Loop over cells
         do ind=1,twotondim
@@ -620,6 +620,3 @@ subroutine make_multipole_phi(ilevel)
   ! End loop over grids
 
 end subroutine make_multipole_phi
-
-
-

@@ -2,7 +2,7 @@
 !#########################################################
 !#########################################################
 !#########################################################
-subroutine force_fine(ilevel)
+subroutine force_fine(ilevel,icount)
   use amr_commons
   use pm_commons
   use poisson_commons
@@ -10,7 +10,7 @@ subroutine force_fine(ilevel)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel
+  integer::ilevel,icount
   !----------------------------------------------------------
   ! This routine computes the gravitational acceleration,
   ! the maximum density rho_max, and the potential energy
@@ -121,7 +121,7 @@ subroutine force_fine(ilevel)
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
         ! Compute gradient of potential
-        call gradient_phi(ind_grid,ngrid,ilevel)
+        call gradient_phi(ind_grid,ngrid,ilevel,icount)
      end do
      ! End loop over grids
 
@@ -189,13 +189,13 @@ end subroutine force_fine
 !#########################################################
 !#########################################################
 !#########################################################
-subroutine gradient_phi(ind_grid,ngrid,ilevel)
+subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
   implicit none
-  integer::ngrid,ilevel
+  integer::ngrid,ilevel,icount
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------
   ! This routine compute the 3-force for all cells
@@ -256,11 +256,12 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel)
   end do
 
   ! Interpolate potential from upper level
-  do idim=1,ndim
-     call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel)
-     call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel)
-  end do
-
+  if (ilevel>levelmin)then
+     do idim=1,ndim
+        call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel,icount)
+        call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel,icount)
+     end do
+  end if
   ! Loop over cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax

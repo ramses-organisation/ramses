@@ -2,13 +2,13 @@
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine full_multigrid
+subroutine full_multigrid(icount)
   use amr_commons
   use pm_commons
   use poisson_commons
   implicit none
   !
-  integer::ilevel
+  integer::ilevel,icount
   logical::multigrid=.false.
 
   ! Exit routine if no self-gravity
@@ -21,19 +21,19 @@ subroutine full_multigrid
 
   ! Compute potential and acceleration for all coarser levels
   do ilevel=1,levelmin-1
-     call multigrid_coarse(ilevel)
-     call force_fine(ilevel)
+     call multigrid_coarse(ilevel,icount)
+     call force_fine(ilevel,icount)
    end do
 
    ! Compute potential at levelmin
-   call multigrid_coarse(levelmin)
+   call multigrid_coarse(levelmin,icount)
 
 end subroutine full_multigrid
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine multigrid_coarse(ilevel)
+subroutine multigrid_coarse(ilevel,icount)
   use hydro_commons
   use amr_commons
   use pm_commons
@@ -42,7 +42,7 @@ subroutine multigrid_coarse(ilevel)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel
+  integer::ilevel,icount
   !--------------------------------------------------------
   ! Multigrid Poisson solver using Gauss-Seidel smoother
   ! with Red-Black ordering.
@@ -64,7 +64,7 @@ subroutine multigrid_coarse(ilevel)
   ! Interpolate potential from coarse to fine as a first guess
   ! and initialize array f(:,1:ndim) to zero
   !-----------------------------------------------------------
-  call make_initial_phi(ilevel)
+  call make_initial_phi(ilevel,icount)
 
   ! Divide by 4PI
   nx_loc=icoarse_max-icoarse_min+1
