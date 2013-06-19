@@ -50,9 +50,8 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
 
   !compute fraction of timesteps for interpolation
   if (dtold(ilevel-1)> 0)then
-     tfrac=0.
-     !tfrac=1.15*dtnew(ilevel)/dtold(ilevel-1)
-     !tfrac=1.0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
+     !tfrac=0.
+     tfrac=1.0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
   else
      tfrac=0.
   end if
