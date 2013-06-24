@@ -257,6 +257,7 @@ subroutine init_cosmo
            omega_m=omega_m0
            omega_l=omega_l0
            if(hydro)omega_b=0.045
+           !!!if(hydro)omega_b=0.999999*omega_m
            h0=h00
            aexp=MIN(aexp,astart(ilevel))
            nlevelmax_part=nlevelmax_part+1

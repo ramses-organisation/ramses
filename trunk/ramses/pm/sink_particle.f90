@@ -85,7 +85,7 @@ subroutine create_sink
      do ilevel=levelmin,nlevelmax
         call make_sink_from_clump(ilevel)
      end do
-     if (smbh)deallocate(clump_mass_tot4)
+     deallocate(clump_mass_tot4)
 
      if (merge_stars)call merge_star_sink
 
@@ -99,15 +99,6 @@ subroutine create_sink
   ! Create new particle clouds
   call create_cloud(1)
 
-  !!do i=1,npartmax
-  !!   if(idp(i)<0)write(*,*)idp(i),levelp(i),mp(i),xp(i,1),xp(i,2),xp(i,3),nextp(i)
-  !!end do
-
-! #ifndef WITHOUTMPI
-!   call MPI_ALLREDUCE(npart,totparts,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-!   if(myid==1)print*,totparts
-! #endif
-  
   ! Scatter particle to the grid 
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
@@ -115,13 +106,10 @@ subroutine create_sink
      call virtual_tree_fine(ilevel)
   end do
   
-  !!do i=1,npartmax
-  !!   if(idp(i)<0)write(*,*)'late',idp(i),levelp(i),mp(i),xp(i,1),xp(i,2),xp(i,3),nextp(i)
-  !!end do
-  
   ! Compute Bondi parameters and gather particle
   do ilevel=nlevelmax,levelmin,-1
-     call grow_sink(ilevel)
+     if(bondi .eqv. .false.)call grow_sink(ilevel)
+     if(bondi .eqv. .true. )call bondi_hoyle(ilevel)
      call merge_tree_fine(ilevel)
   end do
   
@@ -260,7 +248,7 @@ subroutine create_part_from_sink
      do i=1,nsink
         xmsink(i)=msink(i)
      end do
-     call quick_sort(xmsink(1),idsink_sort(1),nsink)
+     call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
   endif
 
   ! Loop over sinks
@@ -1203,7 +1191,7 @@ subroutine create_cloud(ilevel)
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
               endif
-        !      if(ip==nvector)then
+              !      if(ip==nvector)then
               if(ip==1)then
                  call mk_cloud(ind_part,ind_grid_part,ip,ilevel)
                  ip=0
@@ -2798,7 +2786,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            do i=1,nsink
               xmsink(i)=msink(i)
            end do
-           call quick_sort(xmsink(1),idsink_sort(1),nsink)
+           call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
            write(*,*)'Number of sink = ',nsink
            write(*,'(" ============================================================================================")')
            write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)              x              y              z")')
@@ -2841,7 +2829,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            do i=1,nsink
               xmsink(i)=msink(i)
            end do
-           call quick_sort(xmsink(1),idsink_sort(1),nsink)
+           call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
            write(*,*)'Number of sink = ',nsink
            write(*,'(" ============================================================================================================================================================= ")')
            write(*,'("  Id     M[Msol]    x           y           z           vx        vy        vz     rot_period[y] lx/|l|  ly/|l|  lz/|l| acc_rate[Msol/y] acc_lum[Lsol]   age   ")')
@@ -2864,7 +2852,6 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
   endif
 
 end subroutine compute_accretion_rate
-
 !################################################################
 !################################################################
 !################################################################
@@ -3500,7 +3487,7 @@ subroutine make_sink_from_clump(ilevel)
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  xx=0.0; yy=0.0;zz=0.0
+  xx=0.0; yy=0.0; zz=0.0
   ncloud=0
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)*0.5
@@ -3558,17 +3545,17 @@ subroutine make_sink_from_clump(ilevel)
 #ifdef WITHOUTMPI
   numbp_free_tot=numbp_free
 #endif
-   if(.not. ok_free)then
-      write(*,*)'No more free memory for particles'
-      write(*,*)'New sink particles',ntot
-      write(*,*)'Increase npartmax'
+  if(.not. ok_free)then
+     write(*,*)'No more free memory for particles'
+     write(*,*)'New sink particles',ntot
+     write(*,*)'Increase npartmax'
 #ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+     call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #endif
 #ifdef WITHOUTMPI
-      stop
+     stop
 #endif
-   end if
+  end if
    
   !---------------------------------
   ! Compute global sink statistics
@@ -4101,7 +4088,7 @@ subroutine upd_cloud(ind_part,np)
   !------------------------------------------------------------
   ! Vector loop called by update_cloud
   !------------------------------------------------------------
-  integer::j,idim,isink
+  integer::j,idim,isink,lev
   real(dp),dimension(1:nvector,1:ndim),save::new_xp,new_vp
   integer,dimension(1:nvector)::level_p
 
@@ -4153,7 +4140,8 @@ subroutine upd_cloud(ind_part,np)
      do j=1,np
         isink=-idp(ind_part(j))
         if(isink>0)then
-           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,level_p(j))
+           lev=level_p(j)
+           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,lev)
         endif
      end do
   end do

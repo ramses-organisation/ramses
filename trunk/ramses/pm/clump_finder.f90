@@ -99,7 +99,7 @@ subroutine clump_finder(create_output)
         denp(i)=-denp(i)
         testp_sort(i)=i
      end do
-     call quick_sort(denp(1),testp_sort(1),ntest) 
+     call quick_sort_dp(denp(1),testp_sort(1),ntest) 
      deallocate(denp)
   endif
   !-------------------------------------------------------------------------------
@@ -364,6 +364,7 @@ subroutine clump_finder(create_output)
      deallocate(iglobalp)
   endif
   call deallocate_all
+  if(create_output)deallocate(clump_mass_tot4)
 
 end subroutine clump_finder
 !################################################################

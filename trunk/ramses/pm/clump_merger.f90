@@ -533,9 +533,10 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 
         !compute all other clump checks (currently not needed for sink formation)
         ball4_check(j)=scale*e_bind_tot4(j)/(tiny(0.d0)+2*e_thermal_tot4(j)+2*e_kin_int_tot4(j))
-        isodens_check(j)=scale*E_bind_iso_tot(j)/(tiny(0.d0)+2*E_kin_iso_tot(j)+2*E_therm_iso_tot(j))        
-        if(clump_check(j)<1.)clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))             
-        all_bound=all_bound.and.(clump_check(j)>1.)
+        isodens_check(j)=scale*E_bind_iso_tot(j)/(tiny(0.d0)+2*E_kin_iso_tot(j)+2*E_therm_iso_tot(j))
+        if(clump_check(j)<1.)clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
+        if(.not.smbh)all_bound=all_bound.and.(clump_check(j)>1.)
+        if(smbh)all_bound=all_bound.and.(isodens_check(j)>1.)
 
      endif
   end do
@@ -1134,7 +1135,7 @@ subroutine deallocate_all
   deallocate(min_dens_tot)
   deallocate(av_dens_tot)
   deallocate(max_dens_tot)
-  deallocate(clump_mass_tot,clump_mass_tot4)
+  deallocate(clump_mass_tot)
   deallocate(clump_vol_tot)
   deallocate(saddle_max_tot)
   deallocate(relevance_tot)
@@ -1189,7 +1190,7 @@ subroutine get_phi_ref(ntest)
   do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart)) ! level
-     if (ilevel/=nlevelmax)print*,'not all paricles in max level',ilevel
+     if (verbose.and.ilevel/=nlevelmax)print*,'not all paricles in max level',ilevel
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
      ind_cell(ip)=icellp(testp_sort(ipart))
@@ -1260,7 +1261,8 @@ subroutine get_phi_ref2
         pos(1,1:3)=peak_pos_tot(jj,1:3)
         
         itest=0
-        !construct sample points on 4 cell radius ball surface                                                                                                                                                                         
+        !construct sample points on 4 cell radius ball surface
+
         do k1=-N,N
            do j1=-N,N
               do i1=-N,N

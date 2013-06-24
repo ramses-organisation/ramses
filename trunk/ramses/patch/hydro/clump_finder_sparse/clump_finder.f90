@@ -44,7 +44,7 @@ subroutine clump_finder(create_output)
 
   real(kind=8)::fourpi,threepi2,tff,acc_r
 
-  if(verbose)write(*,*)' Entering clump_finder'
+  if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -84,7 +84,6 @@ subroutine clump_finder(create_output)
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-!     call create_test_particle(ilevel,itest,nskip) 
      call count_test_particle(ilevel,itest,nskip,2) 
   end do
   do ilevel=nlevelmax,levelmin,-1
@@ -100,10 +99,9 @@ subroutine clump_finder(create_output)
         denp(i)=-denp(i)
         testp_sort(i)=i
      end do
-     call quick_sort(denp(1),testp_sort(1),ntest) 
+     call quick_sort_dp(denp(1),testp_sort(1),ntest) 
      deallocate(denp)
   endif
-
   !-------------------------------------------------------------------------------
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
@@ -111,7 +109,7 @@ subroutine clump_finder(create_output)
   if(ntest>0)call scan_for_peaks(ntest,npeaks,1)
   npeaks_per_cpu=0
   npeaks_per_cpu(myid)=npeaks
-  if(verbose)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
+  if(clinfo .and. npeaks>0)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
   !----------------------------------------------------------------------------                       
   ! Share number of peaks per cpu and create a list  
   !----------------------------------------------------------------------------
@@ -176,7 +174,7 @@ subroutine clump_finder(create_output)
   ! Compute peak-patch mass etc. and output these properties before merging 
   !-------------------------------------------------------------------------------
   call compute_clump_properties(ntest) 
-  if (verbose)call write_clump_properties(.false.)
+  if (clinfo)call write_clump_properties(.false.)
 
   !-------------------------------------------------------------------------------
   ! Find the saddle point densities and merge irrelevant clumps
@@ -189,27 +187,36 @@ subroutine clump_finder(create_output)
      end do
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
-     call compute_clump_properties_round2(ntest,create_output,all_bound)
-     
+
      !------------------------------------------------------------------------------
      !if all clumps need to be gravitationally bound to survive - merge again
      !------------------------------------------------------------------------------
      if (merge_unbound)then
         do while (.not. all_bound)
+           call compute_clump_properties_round2(ntest,create_output,all_bound)
+           call write_clump_properties(.false.)
            do j=npeaks_tot,1,-1
               if (isodens_check(j)<1.)relevance_tot(j)=1.
            end do
            call merge_clumps(ntest)
-           call compute_clump_properties_round2(ntest,create_output,all_bound)
         end do
      endif
 
+     !------------------------------------------------------------------------------
+     !for sink formation, only intersection of 4cell ball and clump is considered
+     !------------------------------------------------------------------------------
+     if (.not. smbh .and. sink)then
+        call trim_clumps(ntest)
+        call compute_clump_properties(ntest)
+     end if
+
+     call compute_clump_properties_round2(ntest,create_output,all_bound)
      ! write properties to screen
      call write_clump_properties(.false.)
-
      ! ..and if wanted to disk
-     call write_clump_properties(create_output)
+     if (create_output)call write_clump_properties(.true.)
   end if
+
 
   !------------------------------------------------------------------------------
   ! if the clumpfinder is used to produce sinks, flag all the cells which contain
@@ -220,7 +227,7 @@ subroutine clump_finder(create_output)
      occupied=0; occupied_all=0;
      ! loop over sinks and mark all clumps containing a sink
      pos=0.0
-     if(myid==1 .and. verbose)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
+     if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
      do j=1,nsink
         pos(1,1:3)=xsink(j,1:3)
         call cmp_cpumap(pos,cc,1)
@@ -228,16 +235,19 @@ subroutine clump_finder(create_output)
            call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
            if (flag2(cell_index(1))>0)then
               occupied(flag2(cell_index(1)))=1
-              if(verbose)write(*,*)'CPU # ',myid,'blocked clump # ',flag2(cell_index(1)),' for sink production because of sink # ',j
+              if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',flag2(cell_index(1)),' for sink production because of sink # ',j
            end if
         end if
      end do
+
+
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(occupied,occupied_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI
      occupied_all=occupied
 #endif
+
      !------------------------------------------------------------------------------
      ! determine whether a peak patch is eligible to form a new sink.
      ! if a new sink has to be created, flag2 is set to 1 at the peak position
@@ -254,13 +264,11 @@ subroutine clump_finder(create_output)
            ok=.true.
            ok=ok.and.relevance_tot(jj)>0.
            ok=ok.and.occupied_all(jj)==0
-           if (.not. merge_unbound)then
-              !ok=ok.and.peak_check(jj)>1.
-              ok=ok.and.peak_check(jj)>0.
-              ok=ok.and.ball4_check(jj)>1.
-           endif
-           ok=ok.and.isodens_check(jj)>1.
+!           ok=ok.and.peak_check(jj)>1.
+!           ok=ok.and.ball4_check(jj)>1.
+!           ok=ok.and.clump_check(jj)>1.
            ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
+           ok=ok.and.contracting(jj)
 
            if (ok)then
               pos(1,1:3)=peak_pos_tot(jj,1:3)
@@ -353,6 +361,7 @@ subroutine clump_finder(create_output)
      deallocate(iglobalp)
   endif
   call deallocate_all
+  if(create_output)deallocate(clump_mass_tot4)
 
 end subroutine clump_finder
 !################################################################
@@ -388,7 +397,7 @@ subroutine count_test_particle(ilevel,ntot,nskip,action)
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
 
-  if(verbose)write(*,*)' Entering count test particle'
+  if(verbose .and. myid==1)write(*,*)' Entering count test particle'
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -728,8 +737,6 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
   end do
   do j=1,np
      if(ok(j))then ! if all criteria met, replace saddle density array value
-        !OLD VERSION
-        !saddle_dens(clump_nr(j),neigh_cl(j))=max(saddle_dens(clump_nr(j),neigh_cl(j)),av_dens(j))
         if(last_imat_free==0)then ! initialize first element of the linked list
            last_imat_free=last_imat_free+1
            saddle_dens(last_imat_free)=max(saddle_dens(last_imat_free),av_dens(j))
@@ -868,7 +875,7 @@ subroutine read_clumpfind_params()
   ! Namelist definitions                                                        
   !--------------------------------------------------                           
 
-  namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold,merge_unbound
+  namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold,merge_unbound,clinfo
 
   ! Read namelist file 
   rewind(1)
@@ -885,7 +892,7 @@ end subroutine read_clumpfind_params
 !#########################################################################
 subroutine surface_int(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: icellp,center_of_mass_tot,Psurf
+  use clfind_commons, ONLY: icellp,center_of_mass_tot,Psurf,peak_pos_tot
   use hydro_commons, ONLY: uold,gamma
   implicit none
   integer::np,ilevel
