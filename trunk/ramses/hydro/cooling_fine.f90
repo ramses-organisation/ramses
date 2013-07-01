@@ -3,7 +3,7 @@ subroutine cooling_fine(ilevel)
   use hydro_commons
   use cooling_module
 #ifdef RT
-  use rt_parameters, only: rt_freeflow,rt_UV_hom,rt_isDiffuseUVsrc
+  use rt_parameters, only: rt_UV_hom,rt_isDiffuseUVsrc
   use rt_cooling_module, only: update_UVrates
   use UV_module
 #endif
@@ -19,9 +19,6 @@ subroutine cooling_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
-#ifdef RT
-  if(rt_freeflow) return
-#endif
   if(verbose)write(*,111)ilevel
 
   ! Operator splitting step for cooling source term

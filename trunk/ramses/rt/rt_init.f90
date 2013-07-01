@@ -135,7 +135,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
        & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
-       & ,SED_isEgy, rt_freeflow, rt_output_coolstats                    &
+       & ,SED_isEgy, rt_output_coolstats                                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS        &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
@@ -387,7 +387,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            end if
            ! If cell lies within region, inject value
            if(r<1.0)then
-              uu(i,group_ind) = rt_n_source(k)/scale_Np
+              uu(i,group_ind) = rt_n_source(k)/rt_c_cgs/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,group_ind+1) =                       &
                        + rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np

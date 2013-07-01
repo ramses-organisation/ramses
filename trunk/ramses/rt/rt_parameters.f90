@@ -63,7 +63,6 @@ module rt_parameters
   real(dp)::rt_UV_nHSS=1d10            ! Self Shielding density threshold for hom UV     !
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
   real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !
-  logical::rt_freeflow=.false.         ! True => disable photon interaction with gas     !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
   logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper !
 
