@@ -1,6 +1,5 @@
 subroutine clump_finder(create_output)
   use amr_commons
-  use pm_commons, ONLY:nsink,xsink
   use poisson_commons, ONLY:phi
   use clfind_commons
   use hydro_commons
@@ -14,46 +13,31 @@ subroutine clump_finder(create_output)
   ! Description of clump_finder:
   ! The clumpfinder assigns a test particle to each cell having a density above 
   ! a given threshold. These particles are moved to the densest neighbors until 
-  ! particles sit in a local density maximum. The particles (now containing the
-  ! peak_nr they belong to) are moved back to their original position and all
+  ! all particles sit in a local density maximum. The particles (now knowing 
+  ! the peak they belong to) are moved back to their original position and all
   ! the relevant properties are computed. If a so called peak patch is 
   ! considered irrelevant, it is merged to the neighbor which it is connected 
   ! to through the saddle point with the highest density.
-  ! Andreas Bleuler & Romain Teyssier 10/2010 - ?
-  ! Davide Martizzi & Romain Teyssier 10/2012 - ?
+  ! Andreas Bleuler & Davide Martizzi & Romain Teyssier
   !----------------------------------------------------------------------------
 
-  ! local constants
   integer::itest,istep,nskip,ilevel,info,icpu,nmove,nmove_all
-
-  !new variables for clump/sink comb
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  integer::j,jj,i
-  real(kind=8),dimension(1:nvector,1:3)::pos
-  integer,dimension(1:nvector)::cell_index,cell_levl,cc
-
-  integer::ntest,ntest_all
+  integer::i,j,ntest,ntest_all,peak_nr
   integer,dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
-
-  integer::peak_nr
   integer,dimension(1:ncpu)::npeaks_per_cpu,npeaks_per_cpu_tot
-
-  integer::flag_form,flag_form_tot
-  
-  logical::ok,all_bound
-
-  real(kind=8)::fourpi,threepi2,tff,acc_r
+  logical::all_bound
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   !-------------------------------------------------------------------------------
-  ! Count test particles
+  ! count the number of test particles to be created, flag the cells, share info
   !-------------------------------------------------------------------------------
   ntest=0
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,ntest,0,1) !count 'particles' and flag cells
+     call count_test_particle(ilevel,ntest,0,1) !action 1: count and flag
   end do
   ntest_cpu=0; ntest_cpu_all=0
   ntest_cpu(myid)=ntest
@@ -72,19 +56,16 @@ subroutine clump_finder(create_output)
   end if
 
   !-------------------------------------------------------------------------------
-  ! Allocate test particle arrays
+  ! Allocate arrays and create test particles
   !-------------------------------------------------------------------------------
   if (ntest>0) then 
      allocate(denp(ntest),levp(ntest),iglobalp(ntest),icellp(ntest))
      denp=0.d0; levp=0; iglobalp=0; icellp=0
   endif
-  !-------------------------------------------------------------------------------
-  ! Compute test particle properties
-  !-------------------------------------------------------------------------------
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,itest,nskip,2) 
+     call count_test_particle(ilevel,itest,nskip,2) !case2 : create the parts
   end do
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
@@ -102,14 +83,16 @@ subroutine clump_finder(create_output)
      call quick_sort_dp(denp(1),testp_sort(1),ntest) 
      deallocate(denp)
   endif
+
   !-------------------------------------------------------------------------------
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
   npeaks=0; nmove=0
-  if(ntest>0)call scan_for_peaks(ntest,npeaks,1)
+  if(ntest>0)call scan_for_peaks(ntest,npeaks,1) !case 1: count peaks
   npeaks_per_cpu=0
   npeaks_per_cpu(myid)=npeaks
   if(clinfo .and. npeaks>0)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
+
   !----------------------------------------------------------------------------                       
   ! Share number of peaks per cpu and create a list  
   !----------------------------------------------------------------------------
@@ -136,17 +119,22 @@ subroutine clump_finder(create_output)
   end do
 
   !----------------------------------------------------------------------------
-  ! Change the value of flag2 at the peak positions
+  ! flag peaks with global peak id
   !----------------------------------------------------------------------------
   nmove=0
   nskip=peak_nr
   flag2=0
-  if(ntest>0)call scan_for_peaks(ntest,nskip,2)
+  if(ntest>0)call scan_for_peaks(ntest,nskip,2) !case 2: flag peaks
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
+
   !-------------------------------------------------------------------------------               
-  ! Identify peak patches using density ordering
+  ! main step: 
+  ! - order cells in descending density
+  ! - get peak id from densest neighbor
+  ! - nmove is number of peak id's passed along
+  ! - done when nmove=0 (for single cores, only one sweep necessary)
   !-------------------------------------------------------------------------------
   nmove=1
   istep=0
@@ -165,14 +153,10 @@ subroutine clump_finder(create_output)
      if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove   
   end do
 
-  !-------------------------------------------------------------------------------
   ! Allocate peak-patch property arrays
-  !-------------------------------------------------------------------------------
-  call allocate_peak_patch_arrays()
-
-  !-------------------------------------------------------------------------------
+  call allocate_peak_patch_arrays
+  
   ! Compute peak-patch mass etc. and output these properties before merging 
-  !-------------------------------------------------------------------------------
   call compute_clump_properties(ntest) 
   if (clinfo)call write_clump_properties(.false.)
 
@@ -189,12 +173,11 @@ subroutine clump_finder(create_output)
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
 
-     !------------------------------------------------------------------------------
+
      !if all clumps need to be gravitationally bound to survive - merge again
-     !------------------------------------------------------------------------------
      if (merge_unbound)then
         do while (.not. all_bound)
-           call compute_clump_properties_round2(ntest,create_output,all_bound)
+           call compute_clump_properties_round2(ntest,all_bound)
            call write_clump_properties(.false.)      
            do j=npeaks_tot,1,-1
               if (isodens_check(j)<1.)relevance_tot(j)=1.
@@ -203,158 +186,26 @@ subroutine clump_finder(create_output)
         end do
      endif
      
-     !------------------------------------------------------------------------------
-     !for sink formation, only intersection of 4cell ball and clump is considered
-     !------------------------------------------------------------------------------
-     if (.not. smbh .and. sink)then
+     !for sink formation, in star formation case, intersection of 4cell ball and clump is considered
+     if (.not. smbh .and. sink .and. .not. create_output)then
         call trim_clumps(ntest)
         call compute_clump_properties(ntest)
      end if
     
 
-     call compute_clump_properties_round2(ntest,create_output,all_bound)
+     call compute_clump_properties_round2(ntest,all_bound)
      ! write properties to screen
      call write_clump_properties(.false.)
      ! ..and if wanted to disk
-     if (create_output)call write_clump_properties(.true.)
-     
+     if (create_output)then
+        call write_clump_properties(.true.)
+        call write_clump_map(ntest)
+     end if
+
   end if
 
-
-  !------------------------------------------------------------------------------
-  ! if the clumpfinder is used to produce sinks, flag all the cells which contain
-  ! a relevant density peak whose peak patch doesn't yet contain a sink.
-  !------------------------------------------------------------------------------
-  if(sink)then
-     allocate(occupied(1:npeaks_tot),occupied_all(1:npeaks_tot))
-     occupied=0; occupied_all=0;
-     ! loop over sinks and mark all clumps containing a sink
-     pos=0.0
-     if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
-     do j=1,nsink
-        pos(1,1:3)=xsink(j,1:3)
-        call cmp_cpumap(pos,cc,1)
-        if (cc(1) .eq. myid)then
-           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-           if (flag2(cell_index(1))>0)then
-              occupied(flag2(cell_index(1)))=1
-              if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',flag2(cell_index(1)),' for sink production because of sink # ',j
-           end if
-        end if
-     end do
-     
-
-#ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(occupied,occupied_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-     occupied_all=occupied
-#endif
-
-     !------------------------------------------------------------------------------
-     ! determine whether a peak patch is eligible to form a new sink.
-     ! if a new sink has to be created, flag2 is set to 1 at the peak position
-     !------------------------------------------------------------------------------     
-     pos=0.0
-     flag2=0
-     allocate(form(1:npeaks_tot),form_all(1:npeaks_tot))
-     form=0; form_all=0;
-     flag_form=0
-     call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
-     do j=npeaks_tot,1,-1
-        jj=sort_index(j)
-        if (smbh .eqv. .false.)then
-           ok=.true.
-           ok=ok.and.relevance_tot(jj)>0.
-           ok=ok.and.occupied_all(jj)==0
-!           ok=ok.and.peak_check(jj)>1.
-!           ok=ok.and.ball4_check(jj)>1.
-!           ok=ok.and.clump_check(jj)>1.
-           ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
-           ok=ok.and.contracting(jj)
-
-           if (ok)then
-              pos(1,1:3)=peak_pos_tot(jj,1:3)
-              call cmp_cpumap(pos,cc,1)
-              if (cc(1) .eq. myid)then
-                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                 flag2(cell_index(1))=jj
-                 write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
-              end if
-           end if
-        else 
-           ok=.true.
-           ok=ok.and.relevance_tot(jj)>0.
-           ok=ok.and.occupied_all(jj)==0
-           ok=ok.and.peak_check(jj)>1.
-           !ok=ok.and.ball4_check(jj)>1.
-           !ok=ok.and.isodens_check(jj)>1.
-           fourpi=4.0d0*ACOS(-1.0d0)
-           threepi2=3.0d0*ACOS(-1.0d0)**2
-           if(cosmo)fourpi=1.5d0*omega_m*aexp
-           tff=sqrt(threepi2/8./fourpi/(max_dens_tot(jj)+1.0d-30))
-           acc_r=clump_mass_tot4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
-           ok=ok.and.acc_r > 30.d0
-
-           if (ok .eqv. .true.)then
-              pos(1,1:3)=peak_pos_tot(jj,1:3)
-              call cmp_cpumap(pos,cc,1)
-              if (cc(1) .eq. myid)then
-                 call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                 ! Geometrical criterion 
-                 if(ivar_refine>0)then
-                    if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
-                       flag2(cell_index(1))=jj
-                       form(jj)=1
-                       flag_form=1
-                    end if
-                 else
-                    flag2(cell_index(1))=jj
-                    form(jj)=1
-                    flag_form=1
-                 end if
-              end if
-           end if
-        end if
-     end do
-#ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(form,form_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-     form_all=form
-#endif
-#ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(flag_form,flag_form_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-     flag_form_tot=flag_form
-#endif
-     if(myid == 1)then
-        if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
-        do j=npeaks_tot,1,-1
-           jj=sort_index(j)
-           if(form_all(jj) == 1)write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&
-                ,n_cells_tot(jj)&
-                ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
-                ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
-                ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
-                ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
-                ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
-                clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
-                ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
-                ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
-                ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
-                ,clump_vol_tot(jj)*(scale_l)**3&
-                ,relevance_tot(jj)&
-                ,peak_check(jj)&
-                ,ball4_check(jj)&
-                ,isodens_check(jj)&
-                ,clump_check(jj)
-        end do
-     end if
-     deallocate(occupied,occupied_all)
-     deallocate(form,form_all)
-  endif
+  !use flag2 to mark cells for sink creation
+  if(sink)call flag_formation_sites
   
   ! Deallocate test particle and peak arrays
   if (ntest>0)then
@@ -364,7 +215,7 @@ subroutine clump_finder(create_output)
      deallocate(iglobalp)
   endif
   call deallocate_all
-  if(create_output)deallocate(clump_mass_tot4)
+  if(create_output.and.smbh)deallocate(clump_mass_tot4)
 
 end subroutine clump_finder
 !################################################################
@@ -388,10 +239,8 @@ subroutine count_test_particle(ilevel,ntot,nskip,action)
   ! case 2: create the test particle
   !----------------------------------------------------------------------
 
-  ! local constants
   real(dp)::d0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  ! other variables
   integer ::ncache,ngrid
   integer ::igrid,ind,i,iskip
   integer ,dimension(1:nvector)::ind_grid,ind_cell
@@ -501,7 +350,6 @@ end subroutine scan_for_peaks
 !#########################################################################
 subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   use amr_commons
-  use clfind_commons, ONLY: icellp
   use hydro_commons, ONLY: uold
   implicit none
   integer::np,count,ilevel,action
@@ -519,7 +367,6 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,dx_loc,scale,vol_loc
-  !nvector length arrays
   integer ,dimension(1:nvector)::cell_index,cell_levl,ind_max,clump_nr,indv
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xtest
@@ -687,11 +534,13 @@ end subroutine neighborsearch
 !#########################################################################
 !#########################################################################
 subroutine peakcheck(cell_index,okpeak,ok,density_max,ind_max,np)
-  use amr_commons, ONLY:flag2,nvector,dp
+  use amr_commons, ONLY:nvector,dp
   use hydro_commons, ONLY: uold
   implicit none
 
-  !small routine to check wether neighbor is denser or not
+  !----------------------------------------------------------------------
+  ! routine to check wether neighbor is denser or not
+  !----------------------------------------------------------------------
 
   logical,dimension(1:nvector)::ok,okpeak
   integer,dimension(1:nvector)::cell_index,ind_max
@@ -721,7 +570,9 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
   use hydro_commons, ONLY: uold
   implicit none
 
-  !small routine to check wether neighbor is connected through new densest saddle
+  !----------------------------------------------------------------------
+  ! routine to check wether neighbor is connected through new densest saddle
+  !----------------------------------------------------------------------
 
   logical,dimension(1:nvector)::ok
   integer,dimension(1:nvector)::cell_index,clump_nr,ind_cell,neigh_cl
@@ -753,7 +604,9 @@ subroutine phi_ref_check(ind_cell,cell_index,clump_nr,ok,np)
   use poisson_commons, ONLY: phi
   implicit none
 
-  !small routine to check wether neighbor is connected through new densest saddle
+  !----------------------------------------------------------------------
+  ! routine to check wether neighbor is connected through new densest saddle
+  !----------------------------------------------------------------------
 
   logical,dimension(1:nvector)::ok
   integer,dimension(1:nvector)::cell_index,clump_nr,ind_cell,neigh_cl
@@ -856,7 +709,7 @@ end subroutine read_clumpfind_params
 !#########################################################################
 subroutine surface_int(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: icellp,center_of_mass_tot,Psurf,peak_pos_tot
+  use clfind_commons, ONLY: center_of_mass_tot,Psurf
   use hydro_commons, ONLY: uold,gamma
   implicit none
   integer::np,ilevel
@@ -865,17 +718,17 @@ subroutine surface_int(ind_cell,np,ilevel)
   !------------------------------------------------------------
   ! This routine constructs all neighboring leaf cells that 
   ! have a common cell surface at levels 
-  ! ilevel-1, ilevel, ilevel+1.
+  ! ilevel-1, ilevel, ilevel+1. Then, it computes the pressure
+  ! pressure onto these surfaces and integrates over the surface
+  ! of the clumps.
   !------------------------------------------------------------
 
   integer::j,ind,nx_loc,i2,j2,k2,ix,iy,iz,idim,jdim,i3,j3,k3
-
   real(dp)::dx,dx_loc,scale,vol_loc
-  !nvector length arrays
   integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,neigh_cl
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xtest,r
-  real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_idim,r_dot_n
+  real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_dot_n
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
 
@@ -1055,12 +908,10 @@ subroutine surface_int(ind_cell,np,ilevel)
                        if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
                     endif
                  end do                 
-
               endif
            end do
         end do
      end do
   endif
      
-
 end subroutine surface_int

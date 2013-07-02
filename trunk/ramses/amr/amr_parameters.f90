@@ -149,7 +149,8 @@ module amr_parameters
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
   logical ::merge_stars=.false. ! Merge young star formation sink particles (first larson cores)
-  
+  logical ::flux_accretion=.false.
+
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
   real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times

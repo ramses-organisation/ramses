@@ -101,15 +101,17 @@ END SUBROUTINE quick_sort
 !########################################################################
 !########################################################################
 SUBROUTINE quick_sort_dp(list, order, n)
+  use amr_parameters, ONLY: dp
+  IMPLICIT NONE
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified by Alan Miller to include an associated integer array which gives
   ! the positions of the elements in the original order.
-  IMPLICIT NONE
+
 
   INTEGER :: n
-  REAL(kind=8), DIMENSION (1:n), INTENT(INOUT)  :: list
+  REAL(dp), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
 
   ! Local variable

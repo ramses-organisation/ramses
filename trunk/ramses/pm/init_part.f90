@@ -111,6 +111,9 @@ subroutine init_part
      allocate(wmom_new(1:nsinkmax,1:ndim))
      allocate(weth_new(1:nsinkmax))
      allocate(wvol_new(1:nsinkmax))
+     allocate(divsink(1:nsinkmax,1:nlevelmax))
+     allocate(divsink_new(1:nsinkmax,1:nlevelmax))
+     divsink=0.;  divsink_new=0.
      allocate(msink_new(1:nsinkmax))
      allocate(msink_all(1:nsinkmax))
      allocate(tsink_new(1:nsinkmax))
@@ -130,8 +133,7 @@ subroutine init_part
      sink_jump=0.d0
      allocate(level_sink_all(1:nsinkmax))
      allocate(level_sink_new(1:nsinkmax))
-     allocate(dMBHoverdt(1:nsinkmax))
-     allocate(dMEDoverdt(1:nsinkmax))
+     allocate(dMsink_overdt(1:nsinkmax))
      allocate(r2sink(1:nsinkmax))
      allocate(r2k(1:nsinkmax))
      allocate(v2sink(1:nsinkmax))
@@ -845,6 +847,8 @@ subroutine init_part
      ! Sink particles that exist at the beginning of the simu are always (independent of the type of
      ! the other ic files) read from a text file.
      if(sink)then
+        call compute_ncloud_sink
+
         nx_loc=(icoarse_max-icoarse_min+1)
         scale=boxlen/dble(nx_loc)
         dx_min=scale*0.5D0**nlevelmax/aexp
@@ -866,9 +870,9 @@ subroutine init_part
               nsink=nsink+1
               idsink(nsink)=nsink
               msink(nsink)=mm1
-              xsink(nsink,1)=xx1+boxlen/2
-              xsink(nsink,2)=xx2+boxlen/2
-              xsink(nsink,3)=xx3+boxlen/2
+              xsink(nsink,1)=xx1
+              xsink(nsink,2)=xx2
+              xsink(nsink,3)=xx3
               vsink(nsink,1)=vv1
               vsink(nsink,2)=vv2
               vsink(nsink,3)=vv3
@@ -1016,4 +1020,29 @@ subroutine load_gadget
 end subroutine load_gadget
 
 
+
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine compute_ncloud_sink
+  use amr_commons, only:dp
+  use pm_commons, only:ir_cloud,ncloud_sink
+  real(dp)::xx,yy,zz,rr
+  integer::ii,jj,kk  
+  ! Compute number of cloud particles
+  ncloud_sink=0
+  do kk=-2*ir_cloud,2*ir_cloud
+     zz=dble(kk)/2.0
+     do jj=-2*ir_cloud,2*ir_cloud
+        yy=dble(jj)/2.0
+        do ii=-2*ir_cloud,2*ir_cloud
+           xx=dble(ii)/2.0
+           rr=sqrt(xx*xx+yy*yy+zz*zz)
+           if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+        end do
+     end do
+  end do
+
+end subroutine compute_ncloud_sink
 

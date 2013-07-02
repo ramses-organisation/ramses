@@ -11,13 +11,13 @@ recursive subroutine amr_step(ilevel,icount)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,icount,ilev
+  integer::ilevel,icount
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
   ! unless you check all consequences first                           !
   !-------------------------------------------------------------------!
-  integer::icycle,i,idim,ivar,info
+  integer::i,idim,ivar
   logical::ok_defrag
   logical,save::first_step=.true.
 
@@ -197,6 +197,7 @@ recursive subroutine amr_step(ilevel,icount)
      else
         call multigrid_fine(levelmin,icount)
      end if
+     !when there is no old potential...
      if (nstep==0)call save_phi_old(ilevel)
 
      ! Compute gravitational acceleration
@@ -321,7 +322,6 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Density threshold or Bondi accretion onto sink particle
      if(sink)call grow_sink(ilevel)
-
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 

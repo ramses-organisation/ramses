@@ -195,7 +195,7 @@ subroutine output_sink(filename)
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
-  open(unit=ilun,file=TRIM(fileloc),form='formatted')
+  open(unit=ilun,file=TRIM(fileloc),form='formatted',status='replace')
   !======================
   ! Write sink properties
   !======================
@@ -247,7 +247,7 @@ subroutine output_sink_csv(filename)
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
-  open(unit=ilun,file=TRIM(fileloc),form='formatted')
+  open(unit=ilun,file=TRIM(fileloc),form='formatted',status='replace')
   !======================
   ! Write sink properties
   !======================

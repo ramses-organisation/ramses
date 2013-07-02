@@ -113,7 +113,7 @@ subroutine newdt_fine(ilevel)
   end if
 
   if(hydro)call courant_fine(ilevel)
-
+  
 111 format('   Entering newdt_fine for level ',I2)
 
 end subroutine newdt_fine

@@ -3,28 +3,29 @@ module pm_commons
   use pm_parameters
   use random
   ! Sink particle related arrays
-  real(kind=8),allocatable,dimension(:)::msink,r2sink,v2sink,c2sink,oksink_new,oksink_all
-  real(kind=8),allocatable,dimension(:)::tsink,tsink_new,tsink_all
-  real(kind=8),allocatable,dimension(:)::msink_new,msink_all,r2k,v2sink_new,c2sink_new
-  real(kind=8),allocatable,dimension(:)::v2sink_all,c2sink_all
-  real(qdp)   ,allocatable,dimension(:)::xmsink
-  real(kind=8),allocatable,dimension(:)::dMBHoverdt,dMEDoverdt
-  real(kind=8),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
-  real(kind=8),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
-  real(kind=8),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
-  real(kind=8),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
-  real(kind=8),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
-  real(kind=8),allocatable,dimension(:)::total_volume
-  real(kind=8),allocatable,dimension(:,:)::wmom,wmom_new
-  real(kind=8),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
-  real(kind=8),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
-  real(kind=8),allocatable,dimension(:,:,:)::vsnew,vsold
-  real(kind=8),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
-  real(kind=8),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
-  real(kind=8),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
-  real(kind=8),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
-  real(kind=8),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
-  real(kind=8),allocatable,dimension(:,:,:)::weighted_momentum
+  real(dp),allocatable,dimension(:)::msink,r2sink,v2sink,c2sink,oksink_new,oksink_all
+  real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
+  real(dp),allocatable,dimension(:)::msink_new,msink_all,r2k,v2sink_new,c2sink_new
+  real(dp),allocatable,dimension(:)::v2sink_all,c2sink_all
+  real(dp),allocatable,dimension(:)::xmsink
+  real(dp),allocatable,dimension(:)::dMsink_overdt
+  real(dp),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
+  real(dp),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
+  real(dp),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
+  real(dp),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
+  real(dp),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
+  real(dp),allocatable,dimension(:,:)::divsink,divsink_new
+  real(dp),allocatable,dimension(:)::total_volume
+  real(dp),allocatable,dimension(:,:)::wmom,wmom_new
+  real(dp),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
+  real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
+  real(dp),allocatable,dimension(:,:,:)::vsnew,vsold
+  real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
+  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
+  real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
+  real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
+  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
+  real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
   logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
