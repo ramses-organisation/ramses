@@ -2054,15 +2054,15 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
            rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
-           write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,E13.3,3(2X,F6.3),6(2X,E11.3))')&
+           write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,E13.3,3(2X,F6.3),3(2X,E11.3))')&
                 idsink(isink),msink(isink)*scale_m/2d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
                 rot_period*scale_t/(3600*24*365.25),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
                 acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33,&
-                (t-tsink(isink))*scale_t/(3600*24*365.25),&
-                dMsink_overdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600,&
-                divergence(isink)/ncloud_sink*4./3.*3.14*(ir_cloud*dx_min)**3*scale_m/2.d33/(scale_t)*365.*24.*3600,&
-                dMBHoverdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600
+                (t-tsink(isink))*scale_t/(3600*24*365.25)!,&
+!                dMsink_overdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600,&
+!                divergence(isink)/ncloud_sink*4./3.*3.14*(ir_cloud*dx_min)**3*scale_m/2.d33/(scale_t)*365.*24.*3600,&
+!                dMBHoverdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600
         end do
         write(*,'(" =========================================================================================================================================================== ")')
      endif
