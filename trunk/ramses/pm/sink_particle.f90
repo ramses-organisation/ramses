@@ -1969,7 +1969,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
            velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
            volume=volume+weighted_volume(isink,i)
-           divergence(isink)=divergence(isink)+divsink(isink,ilevel)
+           divergence(isink)=divergence(isink)+divsink(isink,i)
         end do
         !averaged (with some weigts) quantities
         density=density/volume

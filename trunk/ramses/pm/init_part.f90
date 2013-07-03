@@ -266,6 +266,10 @@ subroutine init_part
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
+     !allow for ncloud_sink to change at restart
+     call compute_ncloud_sink
+
+
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      if(sink .and. ir_feedback)then
         do i=1,nsink
