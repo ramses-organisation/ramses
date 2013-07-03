@@ -256,7 +256,7 @@ subroutine clump_finder(create_output)
      flag2=0
      allocate(form(1:npeaks_tot),form_all(1:npeaks_tot))
      form=0; form_all=0; 
-     flag_form=0; flag_form_tot=0;
+     flag_form=0; flag_form_tot=0;  
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
