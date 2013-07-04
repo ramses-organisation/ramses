@@ -743,9 +743,9 @@ subroutine merge_clumps(ntest)
            ! Store new peak index
            new_peak(ii)=merge_to
            if(clinfo .and. myid==1)then
-              if(merge_to>0)then
-                 write(*,*)'clump ',ii,'merged to ',merge_to
-              endif
+!              if(merge_to>0)then
+              write(*,*)'clump ',ii,'merged to ',merge_to
+ !             endif
            endif
            
            ! Update clump properties
@@ -1108,7 +1108,7 @@ subroutine get_phi_ref(ntest)
   do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart)) ! level
-     if (verbose.and.ilevel/=nlevelmax)print*,'not all paricles in max level',ilevel
+     if (verbose.and.ilevel/=nlevelmax)print*,'not all particles in max level',ilevel
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
      ind_cell(ip)=icellp(testp_sort(ipart))

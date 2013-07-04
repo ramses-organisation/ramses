@@ -1058,7 +1058,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
   integer ,dimension(1:ndim)::id,igd,icd
   integer::igrid,icell,indp,kg
 
-
+#if NDIM==3
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1071,7 +1071,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
   vol_loc=dx_loc**ndim
 
 
-#if NDIM==3
+
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
      x0(idim)=xg(ind_grid(1),idim)-3.0D0*dx
@@ -1647,6 +1647,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+ 
+
+#if NDIM==3
 
   ! Gravitational constant
   factG=1d0
@@ -1906,6 +1909,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
+#endif
 end subroutine accrete_sink
 !################################################################
 !################################################################
@@ -3086,6 +3090,8 @@ subroutine update_sink(ilevel)
   real(dp),dimension(1:nsink,1:ndim)::velc,fdrag
   real(dp),dimension(1:ndim)::vrel
 
+#if NDIM==3
+
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
 
   ! Conversion factor from user units to cgs units
@@ -3162,6 +3168,7 @@ subroutine update_sink(ilevel)
      level_sink(isink)=ilevel
   end do
 
+#endif
 end subroutine update_sink
 !#########################################################################
 !#########################################################################

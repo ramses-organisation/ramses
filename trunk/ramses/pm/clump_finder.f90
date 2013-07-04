@@ -187,7 +187,8 @@ subroutine clump_finder(create_output)
      endif
      
      !for sink formation, in star formation case, intersection of 4cell ball and clump is considered
-     if (.not. smbh .and. sink .and. .not. create_output)then
+     if ((.not. smbh) .and. sink .and. (.not. create_output))then
+        if(myid==1) print*,'now trimming clumps'
         call trim_clumps(ntest)
         call compute_clump_properties(ntest)
      end if
@@ -205,7 +206,7 @@ subroutine clump_finder(create_output)
   end if
 
   !use flag2 to mark cells for sink creation
-  if(sink)call flag_formation_sites
+  if(sink .and. (.not. create_output))call flag_formation_sites
   
   ! Deallocate test particle and peak arrays
   if (ntest>0)then
@@ -374,6 +375,8 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak,ok
 
+#if NDIM==3
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -527,6 +530,8 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
         flag2(ind_cell(j))=flag2(ind_max(j))
      end do
   end select
+
+#endif
 
 end subroutine neighborsearch
 !#########################################################################
@@ -732,6 +737,8 @@ subroutine surface_int(ind_cell,np,ilevel)
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
 
+#if NDIM==3
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -767,9 +774,6 @@ subroutine surface_int(ind_cell,np,ilevel)
   end do
 
 
-
-
-  
   
   !================================
   ! generate neighbors at level ilevel (and ilevel -1)
@@ -913,5 +917,6 @@ subroutine surface_int(ind_cell,np,ilevel)
         end do
      end do
   endif
+#endif
      
 end subroutine surface_int
