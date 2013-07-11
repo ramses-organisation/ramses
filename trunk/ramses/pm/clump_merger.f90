@@ -729,7 +729,7 @@ subroutine merge_clumps(ntest)
         new_peak(ii)=ii
         
         ! If the relevance is below the threshold -> merge
-        if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>=1.) then
+        if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>.5) then
            
            ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
            merge_to=0; max_val=0.

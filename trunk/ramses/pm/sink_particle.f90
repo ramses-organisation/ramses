@@ -651,7 +651,7 @@ subroutine create_cloud(ilevel)
               endif
               !      if(ip==nvector)then !changed in order to preserve mass ordering
               if(ip==1)then
-                 call mk_cloud(ind_part,ind_grid_part,ip,ilevel)
+                 call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
                  ip=0
                  ig=0
               end if
@@ -663,7 +663,7 @@ subroutine create_cloud(ilevel)
      end do
 
      ! End loop over grids
-     if(ip>0)call mk_cloud(ind_part,ind_grid_part,ip,ilevel)
+     if(ip>0)call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
   end do 
   ! End loop over cpus
 
@@ -674,13 +674,14 @@ end subroutine create_cloud
 !################################################################
 !################################################################
 !################################################################
-subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
+subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_grid
 
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine create_cloud. It produces 
@@ -689,8 +690,10 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
 
   integer::j,isink,ii,jj,kk,nx_loc
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
-  integer ,dimension(1:nvector)::ind_cloud
+  integer ,dimension(1:nvector)::ind_cloud,grid_index
   logical ,dimension(1:nvector)::ok_true=.true.
+
+  grid_index(1:np)=ind_grid(ind_grid_part(1:np))
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**ilevel
@@ -710,7 +713,7 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr>0.and.rr<=rmax)then
               call remove_free(ind_cloud,np)
-              call add_list(ind_cloud,ind_grid_part,ok_true,np)
+              call add_list(ind_cloud,grid_index,ok_true,np)
               do j=1,np
                  isink=-idp(ind_part(j))
                  idp(ind_cloud(j))=-isink
@@ -1095,7 +1098,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
     end do
   if(error)then
      write(*,*)'problem in bondi_velocity'
-     write(*,*)ilevel
+     write(*,*)ilevel,x(1:3)
      stop
   end if
 
@@ -1749,6 +1752,25 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
      kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
   end do
+
+
+!bugcheck
+  do j=1,np
+     if (kg(j) > 27 .or. kg(j) < 1)then
+        print*,'cpu ', myid, ' produced an error in accrete sink'
+        print*,'kg: ',kg(j)
+        print*,'igd: ',igd(j,1),igd(j,2),igd(j,3)
+        print*,'id: ',id(j,1),id(j,2),id(j,3)
+        print*,'x: ',x(j,1),x(j,2),x(j,3)
+        print*,'x0: ',x0(j,1),x0(j,2),x0(j,3)
+        print*,'xp: ',xp(ind_part(j),1:3)
+        print*,'skip_loc: ',skip_loc(1:3)
+        print*,'scale: ',scale
+        print*,'ind_part: ',ind_part(j)
+     end if
+  end do
+
+
 #endif
   do j=1,np
      igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
