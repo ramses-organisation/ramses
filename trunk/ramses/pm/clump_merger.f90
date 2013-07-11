@@ -770,6 +770,7 @@ subroutine merge_clumps(ntest)
               max_dens_tot(merge_to)=max(max_dens_tot(merge_to),max_dens_tot(ii))
               min_dens_tot(merge_to)=min(min_dens_tot(merge_to),min_dens_tot(ii))
               clump_mass_tot(merge_to)=clump_mass_tot(merge_to)+clump_mass_tot(ii)
+              phi_min_tot(merge_to)=min(phi_min_tot(merge_to),phi_min_tot(ii))
            end if
            n_cells_tot(ii)=0
            clump_vol_tot(ii)=0.
@@ -851,6 +852,7 @@ subroutine merge_clumps(ntest)
            max_dens_tot(merge_to)=max(max_dens_tot(merge_to),max_dens_tot(ii))
            min_dens_tot(merge_to)=min(min_dens_tot(merge_to),min_dens_tot(ii))
            clump_mass_tot(merge_to)=clump_mass_tot(merge_to)+clump_mass_tot(ii)
+           phi_min_tot(merge_to)=min(phi_min_tot(merge_to),phi_min_tot(ii))
            n_cells_tot(ii)=0
            clump_vol_tot(ii)=0.
            max_dens_tot(ii)=0.
