@@ -823,7 +823,6 @@ subroutine consup(uin,flux,div,dt,ngrid)
            end do
         end do
      end do
-     end if
 #endif
 
 #if NDIM>2
