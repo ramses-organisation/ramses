@@ -774,25 +774,19 @@ subroutine consup(uin,flux,div,dt,ngrid)
      do k = kf1, MAX(kf1,ku2-2)
         do j = jf1, MAX(jf1, ju2-2) 
            do i = if1, if2
-
               div1 = zero
               do l = 1, ngrid
                  div1(l) = factor*div(l,i,j,k)
               end do
 #if NDIM>1
-              if(ndim>1)then
-                 do l = 1, ngrid
-                    div1(l)=div1(l)+factor*div(l,i,j+1,k)
-                 end do
-              end if
+              do l = 1, ngrid
+                 div1(l)=div1(l)+factor*div(l,i,j+1,k)
+              end do
 #endif
 #if NDIM>2
-              if(ndim>2)then
-                 do l = 1, ngrid
-                    div1(l)=div1(l)+factor*(div(l,i,j,k+1)+div(l,i,j+1,k+1))
-                    div1(l)=difmag*min(zero,div1(l))
-                 end do
-              end if
+              do l = 1, ngrid
+                 div1(l)=div1(l)+factor*(div(l,i,j,k+1)+div(l,i,j+1,k+1))
+              end do
 #endif
               do l = 1, ngrid
                  div1(l) = difmag*min(zero,div1(l))
@@ -807,20 +801,18 @@ subroutine consup(uin,flux,div,dt,ngrid)
      end do
 
 #if NDIM>1
-     if(ndim>1)then
      do k = kf1, MAX(kf1,ku2-2)
         do j = jf1, jf2
            do i = iu1+2, iu2-2
-
               div1 = zero
               do l = 1, ngrid
                  div1(l)=div1(l)+factor*(div(l,i,j,k ) + div(l,i+1,j,k))
               end do
-              if(ndim>2)then
-                 do l = 1, ngrid
-                    div1(l)=div1(l)+factor*(div(l,i,j,k+1) + div(l,i+1,j,k+1))
-                 end do
-              end if
+#if NDIM>2
+              do l = 1, ngrid
+                 div1(l)=div1(l)+factor*(div(l,i,j,k+1) + div(l,i+1,j,k+1))
+              end do
+#endif
               do l = 1, ngrid
                  div1(l) = difmag*min(zero,div1(l))
               end do
@@ -828,7 +820,6 @@ subroutine consup(uin,flux,div,dt,ngrid)
                  flux(l,i,j,k,n,2) = flux(l,i,j,k,n,2) + &
                       &  dt*div1(l)*(uin(l,i,j,k,n) - uin(l,i,j-1,k,n))
               end do
-
            end do
         end do
      end do
@@ -836,11 +827,9 @@ subroutine consup(uin,flux,div,dt,ngrid)
 #endif
 
 #if NDIM>2
-     if(ndim>2)then
      do k = kf1, kf2
         do j = ju1+2, ju2-2 
            do i = iu1+2, iu2-2 
-
               do l = 1, ngrid
                  div1(l)=factor*(div(l,i,j  ,k) + div(l,i+1,j  ,k) &
                       &        + div(l,i,j+1,k) + div(l,i+1,j+1,k))
@@ -855,7 +844,6 @@ subroutine consup(uin,flux,div,dt,ngrid)
            end do
         end do
      end do
-     end if
 #endif
 
   end do
