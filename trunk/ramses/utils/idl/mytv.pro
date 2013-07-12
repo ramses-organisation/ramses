@@ -27,7 +27,8 @@ endelse
 xscale=double(xmax)/double(xeff)
 yscale=double(ymax)/double(yeff)
 lscale=min([xscale,yscale])
-imtv=CONGRID(image,lscale*xeff,lscale*yeff)
+;imtv=CONGRID(image,lscale*xeff,lscale*yeff)
+imtv=REBIN(image,lscale*xeff,lscale*yeff,/sample)
 
 if not keyword_set(save) then begin
     tv,imtv

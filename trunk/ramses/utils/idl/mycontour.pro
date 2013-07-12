@@ -177,7 +177,7 @@ offswin=[ioffset,joffset,ioffset,joffset]*sizewin
 ; Plot color table
 if keyword_set(table) then begin
     posleg=[0.9,0.1,0.95,0.9]*sizewin+offswin
-    contour,/follow,/fill,/closed,levels=niv,c,b,a $
+    contour,/follow,/fill,levels=niv,c,b,a $
       ,title='!17Value/!CColor' $
       ,xr=[0,b[1]],yr=[min(a),max(a)],/xs,/ys,ticklen=0. $
       ,xticks=1,xtickn=[' ',' '],c_colors=clr $

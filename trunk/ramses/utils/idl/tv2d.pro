@@ -219,8 +219,9 @@ for ilevel=leveldown,levelup do begin
                     endif
 
                 endfor
-            endfor
+             endfor
             im=im > ( REBIN(subim,nimx,nimy,/sample) > im)
+            
        endif
     endif
 endfor
@@ -230,7 +231,9 @@ im=im(iimin:iimax,jjmin:jjmax)
 xscale=double(ximmax)/double(xeff)
 yscale=double(yimmax)/double(yeff)
 lscale=min([xscale,yscale])
-imtv=CONGRID(im,lscale*xeff,lscale*yeff)
+;imtv=CONGRID(im,lscale*xeff,lscale*yeff)
+imtv=REBIN(im,lscale*xeff,lscale*yeff,/sample)
+
 
 inddummy=where(imtv le dummy,ndummy)
 notdummy=where(imtv gt dummy,nnotdummy)
@@ -269,7 +272,7 @@ if not keyword_set(save) then begin
     if keyword_set(showgrid) then begin
         TVLCT,r,g,b,/get
         mmm = !d.table_size - 1
-        r(mmm) = 255 & g(mmm) = 255 & b(mmm) = 255 ; reserve for white
+        r(mmm) = 0 & g(mmm) = 0 & b(mmm) = 0 ; reserve for white
         TVLCT,r,g,b
         zoom=max([(xrn(1)-xrn(0)),(yrn(1)-yrn(0))])
         pp_amr2d,grid,xr=xr,yr=yr,x0=xrn(0)+0.5*zoom,y0=yrn(0)+0.5*zoom $
