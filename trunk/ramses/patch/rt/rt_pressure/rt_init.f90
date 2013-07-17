@@ -66,7 +66,7 @@ SUBROUTINE rt_init
   ! until needed.
   if(rt .and. .not.rt_otsa) rt_advect=.true.                              
   if(rt .and. rt_nsource .gt. 0) rt_advect=.true.                         
-  if(rt .and. rt_nregion .gt. 0) rt_advect=.true.                         
+  if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
@@ -154,7 +154,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
        & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
-       & ,SED_isEgy, rt_freeflow, rt_output_coolstats                    &
+       & ,SED_isEgy, rt_output_coolstats                                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS        &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
@@ -175,7 +175,7 @@ SUBROUTINE read_rt_params(nml_ok)
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
        ! RT pressure patch                                               &  !RTpress
-       & ,rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                   &  !RTpress
+       & ,rt_isIR, rt_isOpt, rt_kIR, rt_kOpt                             &  !RTpress
        & ,rt_isoPress                                                       !RTpress
 
   ! Read namelist file

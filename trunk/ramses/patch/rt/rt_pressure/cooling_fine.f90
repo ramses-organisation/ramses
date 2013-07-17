@@ -10,7 +10,7 @@ subroutine cooling_fine(ilevel)
   use hydro_commons
   use cooling_module
 #ifdef RT
-  use rt_parameters, only: rt_freeflow,rt_UV_hom,rt_isDiffuseUVsrc
+  use rt_parameters, only: rt_UV_hom,rt_isDiffuseUVsrc
   use rt_cooling_module, only: update_UVrates
   use UV_module
 #endif
@@ -26,9 +26,6 @@ subroutine cooling_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
-#ifdef RT
-  if(rt_freeflow) return
-#endif
   if(verbose)write(*,111)ilevel
 
   ! Operator splitting step for cooling source term
@@ -310,7 +307,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! corresponding decrease in kinetic energy. Note that in UV emitting   !RTpress
      ! cells, where the photon density is large but the photon flux is      !RTpress
      ! zero, there is no momentum transfer and all the energy of absorbed   !RTpress
-     ! photons goes into photoheating.                                      !RTpress
+     ! photons optionally goes into a non-thermal pressure term.            !RTpress
      ! I'm making the assumption that during photoionization, the whole     !RTpress
      ! energy of the photon is transferred into gas momentum, i.e. for each !RTpress
      ! ionization event, dp_gas = e_photon/c, where c is the (non-reduced)  !RTpress
@@ -349,7 +346,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      uold(ind_leaf(1:nleaf),ndim+2)=ekk(1:nleaf)+eTherm(1:nleaf)            !RTpress
                                                                             !RTpress
      ! Use the isotropic photon pressure in a separate variable:            !RTpress
-     uold(ind_leaf(1:nleaf),iRTisoPressVar)=0d0                             !RTpress
+     if(rt_isoPress) uold(ind_leaf(1:nleaf),iRTisoPressVar)=0d0             !RTpress
      if(rt_isoPress .and. rt_advect) then                                   !RTpress
         U(1:nleaf,iPtot)= U(1:nleaf,iPtot)/scale_d/scale_v                  !RTpress
         ! Subtract the directional momentum impact:                         !RTpress

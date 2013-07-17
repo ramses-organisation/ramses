@@ -18,12 +18,17 @@ module rt_cooling_module
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
          , signc, sigec, PHrate, UVrates                                 &
          , iP0, iP1, iPtot, rt_isoPress                                  & !RTpress
-         , rt_isIR, rt_isNUV, rt_kappa_IR, rt_kappa_NUV                  & !RTpress
+         , rt_isIR, rt_isOpt, rt_kIR, rt_kOpt                            & !RTpress
          , iRTisoPressVar                                                  !RTpress
 
-  ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n), 
+  ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n
+  !    ,P_1, ..., P_n, Ptot ), 
   ! where n=nGroups.
   ! NOTE: T2=T/mu
+  ! Np = photon density, Fp = photon flux, 
+  ! P = directional momentum injection per photon group, 
+  ! Ptot = Total momentum injection magnitude over all groups, including
+  !        'isotropic' injection.
 
   logical::isHe=.true.
   real(dp),parameter::rhoc      = 1.88000d-29    !  Crit. density [g cm-3]
@@ -47,14 +52,13 @@ module rt_cooling_module
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
 
   integer,parameter::iGroupIR=1                      !      IR group index  !RTpress
-  integer::iGroupNUV=1                               !     NUV group index  !RTpress
+  integer::iGroupOpt=1                               ! Optical group index  !RTpress
   integer::iRTisoPressVar=1                          ! Isop. pscalar index  !RTpress
   logical::rt_isoPress=.false.         ! Isotr. photon mom -> P_nt?         !RTpress
   logical::rt_isIR                     ! Using IR scattering on dust?       !RTpress
-  logical::rt_isNUV                    ! Using NUV scattering on dust?      !RTpress
-  real(dp)::rt_kappa_IR=1d3            ! IR dust opacity                    !RTpress
-  real(dp)::rt_kappa_NUV=8d2           ! NUV dust opacity                   !RTpress
-  real(dp)::csIR,csNUV                 ! Cross sections [cm2]               !RTpress
+  logical::rt_isOpt                    ! Using Optical scattering on dust?  !RTpress
+  real(dp)::rt_kIR=1d3                 ! IR vs dust opacity                 !RTpress
+  real(dp)::rt_kOpt=8d2                ! Optical vs dust opacity            !RTpress
 
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc, sigec, PHrate
@@ -108,9 +112,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
   U_FRAC(iP0:iP1) = 1.d6                 !    No direct restr. on P update   !RTpress
   U_FRAC(iPtot) = 1.d6                   !    No direct restr. on P update   !RTpress
 
-  if (rt_isIR)  iGroupNUV=2              !     Group index for NUV photons   !RTpress
-  csIR  = rt_kappa_IR  * mH                                                  !RTPress 
-  csNUV = rt_kappa_NUV * mH                                                  !RTPress 
+  if (rt_isIR)  iGroupOpt=2              ! Group index for optical photons   !RTpress
 
   ! Set up indexes of photon densities and fluxes in U:
   do ig=0,nGroups-1
@@ -295,7 +297,8 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
   real(dp):: xHeI, mu, TK, ne, neInit, Hrate, dAlpha, dBeta, s, jac, q
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
-  real(dp),dimension(nGroups):: recRad, phI, scRate
+  real(dp),dimension(nGroups):: recRad, phAbs, phSc                         !RTpress
+  real(dp):: rho                                                            !RTpress
   real(dp)::metal_tot,metal_prime
   integer::i, nc, loopcnt, code
 !-------------------------------------------------------------------------
@@ -318,12 +321,15 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   if(rt_isTconst) TK=rt_Tconst                         !  Force constant T
   ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4))                    !  Electron density
   neInit=ne
- 
+  rho = nH / X * mH                                                        !RTpress
+
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
-     recRad(1:nGroups)=0. ; phI(1:nGroups)=0.              
+     ! Must have this line if restriction on the Fp frac change:
+     U(iFp0:iFp1) = MAX(0D0,MIN(U(iFp0:iFp1), U(iNp0:iNp1)*rt_c_cgs))      !RTpress
+     recRad(1:nGroups)=0. ; phAbs(1:nGroups)=0.              
      ! Scattering rate; reduce the photon flux, but not photon density:    !RTpress
-     scRate(1:nGroups)=0.                                                  !RTpress
+     phSc(1:nGroups)=0.                                                    !RTpress
      if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
         ! alpha(2) A-B becomes negative around 1K, hence the max
@@ -336,59 +342,43 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         enddo
      endif
      do i=1,nGroups      ! ------------------------------------ Absorbtion
-        phI(i) = SUM(nN(:)*signc(i,:)) ! s-1
+        phAbs(i) = SUM(nN(:)*signc(i,:)) ! s-1
      end do
 
-     ! IR and NUV depletion by dust absorption:                             !RTpress
-     if(rt_isIR)  & !IR scattering on dust                                  !RTpress
-          scRate(iGroupIR) = nH*Zsolar*csIR*rt_c_cgs                        !RTpress
-     if(rt_isNUV) & ! Always deplete these photons, since they go into IR   !RTpress
-          phI(iGroupNUV)= nH*Zsolar*csNUV*rt_c_cgs                          !RTpress
+     ! IR and optical depletion by dust absorption:                         !RTpress
+     if(rt_isIR) then !IR scattering on dust                                !RTpress
+        phAbs(iGroupIR)=phAbs(iGroupIR) + 0.001*rho*Zsolar*rt_kIR*rt_c_cgs  !RTpress
+        phSc(iGroupIR)= phSc(iGroupIR) + 0.999*rho*Zsolar*rt_kIR*rt_c_cgs   !RTpress
+     endif                                                                  !RTpress
+     if(rt_isOpt) & ! Always deplete these photons, since they go into IR   !RTpress
+          phAbs(iGroupOpt)= phAbs(iGroupOpt) + rho*Zsolar*rt_kOpt*rt_c_cgs  !RTpress
 
      do i=1,nGroups         ! ------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
-             (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))                       &
-                /(1.d0+dt*(phI(i)+scRate(i)*0.001))) !1/1000 sc depletion   !RTpress
+             (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i))) / (1.d0+dt*phAbs(i)))
         dU(iFpU(i)) = MAX(0d0, &
-                   (dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*(phI(i)+scRate(i))))  !RTpress
+                (dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*(phAbs(i)+phSc(i))))    !RTpress
         ! Check the photon flux: Too large relative to available photons? 
         q = dU(iFpU(i)) / (rt_c_cgs*dU(iNpU(i)))
         if(q .gt. 1.d0) then           ! Normalize flux if it is too large
            dU(iFpU(i))=dU(iFpU(i))/q
         endif
         ! ----------------------------------------------------------------  !RTpress
-        ! Momentum transfer from ionizing photons to gas:                   !RTpress
-        dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i)) * dt     &                  !RTpress
-            *SUM(group_csn(i,:) * nN(:)) * group_egy(i) * ev_to_erg/c_cgs   !RTpress
+        ! Momentum transfer from photons to gas:                            !RTpress
+        dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i))/rt_c_cgs * dt            &  !RTpress
+            * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs          !RTpress
         ! Total momentum, including isotropic component:                    !RTpress
-        dU(iPtot)   = dU(iPtot)   + dU(iNpu(i)) * rt_c_cgs * dt &           !RTpress
-            *SUM(group_csn(i,:) * nN(:)) * group_egy(i)* ev_to_erg/c_cgs    !RTpress
+        dU(iPtot)   = dU(iPtot)   + dU(iNpu(i))          * dt            &  !RTpress
+            * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs          !RTpress
         ! ----------------------------------------------------------------  !RTpress
      end do
 
-     ! Momentum transfer from IR and NUV photons to dust:                   !RTpress
-     if(rt_isIR) then                                                       !RTpress
-          dU(iP0+iGroupIR-1) = dU(iP0+iGroupIR-1)                        &  !RTpress
-             + dU(iFpU(iGroupIR)) * dt * csIR * nH * Zsolar              &  !RTpress
-             * group_egy(iGroupIR) * ev_to_erg/c_cgs                        !RTpress
-          dU(iPTot) = dU(iPtot)                                          &  !RTpress
-             + dU(iNpU(iGroupIR)) * rt_c_cgs * dt * csIR * nH * Zsolar   &  !RTpress
-             * group_egy(iGroupIR) * ev_to_erg/c_cgs                        !RTpress
-     endif                                                                  !RTpress
-     if(rt_isNUV) then                                                      !RTpress
-          dU(iP0+iGroupNUV-1) = dU(iP0+iGroupNUV-1)                      &  !RTpress 
-             + dU(iFpU(iGroupNUV)) * dt * csNUV * nH * Zsolar            &  !RTpress
-             * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
-          dU(iPtot) = dU(iPtot)                                          &  !RTpress 
-             + dU(iNpU(iGroupNUV)) * rt_c_cgs * dt * csNUV * nH * Zsolar &  !RTpress
-             * group_egy(iGroupNUV) * ev_to_erg/c_cgs                       !RTpress
-     endif                                                                  !RTpress
-     ! NUV->IR; Add absorbed NUV energy to the pool of IR photons:          !RTpress
-     ! Use DE_IR = - DE_NUV => DN_IR = -DN_NUV * egy_NUV / egy_IR           !RTpress
-     if(rt_isIR .and. rt_isNUV) then                                        !RTpress
+     ! Opt->IR; Add absorbed Opt energy to the pool of IR photons:          !RTpress
+     ! Use DE_IR = - DE_Opt => DN_IR = -DN_Opt * egy_Opt / egy_IR           !RTpress
+     if(rt_isIR .and. rt_isOpt) then                                        !RTpress
         dU(iNpU(iGroupIR)) = dU(iNpU(iGroupIR))                          &  !RTpress
-             + dU(iNpU(iGroupNUV)) * phI(iGroupNUV) * dt                 &  !RTpress
-             * group_egy(iGroupNUV) / group_egy(iGroupIR)                   !RTpress
+             + dU(iNpU(iGroupOpt)) * phAbs(iGroupOpt) * dt               &  !RTpress
+             * group_egy(iGroupOpt) / group_egy(iGroupIR)                   !RTpress
         dU(iNpU(iGroupIR)) = MAX(smallNp, dU(iNpU(iGroupIR)))               !RTpress
      endif                                                                  !RTpress
      ! -------------------------------------------------------------------  !RTpress
