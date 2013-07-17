@@ -104,11 +104,12 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 END SUBROUTINE rt_init_xion_vsweep
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE calc_equilibrium_xion(vars, xion)
+SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
 
 ! Calculate and return photoionization equilibrium abundance states for 
 ! a cell
 ! vars     => Cell variables (rho, v, u, w, etc)
+! rtvars   => Cell RT variables (Np1, Fpx1, Fpy1, etc)
 ! xion     => Equilibrium ionization states of cell
 !-------------------------------------------------------------------------
   use amr_commons
@@ -118,6 +119,7 @@ SUBROUTINE calc_equilibrium_xion(vars, xion)
   use rt_cooling_module,only:UVrates,signc
   implicit none
   real(dp),dimension(nvar)::vars
+  real(dp),dimension(nrtvar)::rtvars
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
@@ -134,13 +136,13 @@ SUBROUTINE calc_equilibrium_xion(vars, xion)
   do ip=1, nGroups
      do iI=1,nIons
         phI_rates(iI) = phI_rates(iI) &
-                      + vars(iGroups(ip))*scale_Np*signc(ip,iI)
+                      + rtvars(iGroups(ip))*scale_Np*signc(ip,iI)
      end do
   end do
 
-  if(rt_UV_hom) phI_rates = phI_rates + UVrates(:,1) 
 
   nH = MAX(vars(1),smallr)                  !   Number density of gas [UU]
+
   ! Compute pressure from energy density
   T2 = vars(ndim+2)                         ! Energy dens. (kin+heat) [UU]
   ekk = 0.0d0                               !          Kinetic energy [UU]
@@ -151,6 +153,9 @@ SUBROUTINE calc_equilibrium_xion(vars, xion)
                                             !      now T2 is pressure [UU]
   T2 = T2/nH*scale_T2                       !                T/mu [Kelvin]
   nH = nH*scale_nH                          !        Number density [H/cc]
+
+  if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) &  !   UV backgr. photoionization
+       phI_rates = phI_rates + UVrates(:,1)
 
   call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec)
   xion(1)=nSpec(3)/(nSpec(2)+nSpec(3))                    !   HII fraction

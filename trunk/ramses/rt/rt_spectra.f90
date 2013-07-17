@@ -483,6 +483,9 @@ SUBROUTINE update_SED_group_props()
   
   ! ...and take averages weighted by luminosities
   do ip=1,nSEDgroups
+     ! No update for non-SED groups (L0>L1):
+     if(groupL0(ip).ne. 0d0 .and. groupL1(ip) .ne. 0d0 .and. &
+          (groupL0(ip) .ge. groupL1(ip)) ) cycle
      if(sum_L_all(ip) .gt. 0.) then
         group_egy(ip)   = sum_egy_all(ip)   / sum_L_all(ip)
         group_csn(ip,:) = sum_csn_all(ip,:) / sum_L_all(ip)
@@ -900,7 +903,12 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
   ! da0, da1, dz0, dz1: proportional distances from edges: 
   ! 0<=da0<=1, 0<=da1<=1 etc.
   if(.not. same) then
-     lgAge = log10(age) ; lgZ=log10(Z)
+     if(age.le.0d0) then
+        lgAge=-4d0 
+     else
+        lgAge = log10(age)
+     endif
+     lgZ=log10(Z)
      ia = min(max(floor((lgAge-SED_lgA0)/SED_dlgA ) + 2, 1  ),  SED_nA-1 )
      da = SED_ages(ia+1)-SED_ages(ia)
      da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )

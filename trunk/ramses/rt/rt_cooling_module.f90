@@ -78,7 +78,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   U_MIN(iNp0:iNp1) = 1.d-13              !        Minimum photon densities
   U_FRAC(iNp0:iNp1) = 0.2    
 
-  U_MIN(iFp0:iFp1)  = 0.0                !           Minimum photon fluxes
+  U_MIN(iFp0:iFp1)  = 1d-50              !  For timestepping on ph. fluxes
   U_FRAC(iFp0:iFp1) = 1.d6               !   No direct restr. on Fp update    
 
   ! Set up indexes of photon densities and fluxes in U:
