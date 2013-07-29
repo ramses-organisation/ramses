@@ -1,6 +1,6 @@
 // map2bmp
 //=============================================================================
-// Author: Michael Rieder (2013)
+// Author: Michael Rieder (2013) rieder@physik.uzh.ch
 //
 // Opens files produced by amr2map and produces BMP images
 // Compile with -lm switch (link with math library)
@@ -293,71 +293,39 @@ float	max( float a, float b ) {
 
 uint8_t heatmap_red( float heat ) {
 
-	if ( heat < 0.5 )
+	if ( heat < 0.6 )
 		return 0;
+	else if ( heat < 0.8 )
+		return 255 * (5*heat - 3);
+	else
+		return 255;
+}
+
+uint8_t heatmap_green( float heat ) {
+
+	if ( heat < 0.2 )
+		return 0;
+	else if ( heat < 0.4 )
+		return 255 * (5*heat - 1);
+	else if ( heat < 0.8 )
+		return 255;
 	else if ( heat < 1.0 )
-		return 255 * (4*heat-2);
+		return 255 * (-5*heat + 5);
 	else
-		return 255;
-}
-
-uint8_t heatmap_green( float heat ) {
-
-	if ( heat < 0 )
 		return 0;
-	else if ( heat < 0.25 )
-		return 255 * 4*heat;
-	else if ( heat < 0.75 )
-		return 255;
-	else if ( heat > 1 )
-		return 0;
-	else
-		return 255 * (4 - 4*heat);
 }
 
 uint8_t heatmap_blue( float heat ) {
 
-	if ( heat < 0.25 )
-		return 255;
-	else if ( heat < 0.5 )
-		return 255 * (2 - 4*heat);
+	if ( heat < 0.0 )
+		return 0;
+	else if ( heat < 0.2 )
+		return 255 * (5*heat);
+	else if ( heat < 0.4 )
+		return 255 ;
+	else if ( heat < 0.6 )
+		return 255 * (-5*heat + 3);
 	else
 		return 0;
 }
 
-
-/* // 1024 colors
-uint8_t heatmap_red( float heat ) {
-
-	if ( heat < 0.5 )
-		return 0;
-	else if ( heat < 0.75 )
-		return 255 * (4*heat-2);
-	else
-		return 255;
-}
-
-uint8_t heatmap_green( float heat ) {
-
-	if ( heat < 0 )
-		return 0;
-	else if ( heat < 0.25 )
-		return 255 * 4*heat;
-	else if ( heat < 0.75 )
-		return 255;
-	else if ( heat > 1 )
-		return 0;
-	else
-		return 255 * (4 - 4*heat);
-}
-
-uint8_t heatmap_blue( float heat ) {
-
-	if ( heat < 0.25 )
-		return 255;
-	else if ( heat < 0.5 )
-		return 255 * (2 - 4*heat);
-	else
-		return 0;
-}
-*/
