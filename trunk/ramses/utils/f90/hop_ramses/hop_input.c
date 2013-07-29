@@ -68,6 +68,7 @@ has to be done. */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "kd.h"
 

@@ -66,8 +66,8 @@ program poshalo
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
+  read(10,'(13X,I11)')ncpu
+  read(10,'(13X,I11)')ndim
   close(10)
 
   npart=0
