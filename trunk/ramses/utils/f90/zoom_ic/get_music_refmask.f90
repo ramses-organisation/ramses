@@ -369,8 +369,7 @@ program get_music_refmask
   ipos=INDEX(repository2,'output_')
   nchar=repository2(ipos+7:ipos+13)
   
-  do k=1,ncpu_read
-     icpu=cpu_list(k)
+  do icpu=1,ncpu
      call title(icpu,ncharcpu)
      nomfich=TRIM(repository2)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
      open(unit=1,file=nomfich,status='old',form='unformatted')
