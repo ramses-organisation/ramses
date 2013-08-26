@@ -651,7 +651,7 @@ subroutine create_cloud(ilevel)
               endif
               !      if(ip==nvector)then !changed in order to preserve mass ordering
               if(ip==1)then
-                 call mk_cloud(ind_part,ind_grid_part,ip,ilevel)
+                 call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
                  ip=0
                  ig=0
               end if
@@ -663,7 +663,7 @@ subroutine create_cloud(ilevel)
      end do
 
      ! End loop over grids
-     if(ip>0)call mk_cloud(ind_part,ind_grid_part,ip,ilevel)
+     if(ip>0)call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
   end do 
   ! End loop over cpus
 
@@ -674,13 +674,14 @@ end subroutine create_cloud
 !################################################################
 !################################################################
 !################################################################
-subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
+subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_grid
 
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine create_cloud. It produces 
@@ -689,8 +690,10 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
 
   integer::j,isink,ii,jj,kk,nx_loc
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
-  integer ,dimension(1:nvector)::ind_cloud
+  integer ,dimension(1:nvector)::ind_cloud,grid_index
   logical ,dimension(1:nvector)::ok_true=.true.
+
+  grid_index(1:np)=ind_grid(ind_grid_part(1:np))
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**ilevel
@@ -710,7 +713,7 @@ subroutine mk_cloud(ind_part,ind_grid_part,np,ilevel)
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr>0.and.rr<=rmax)then
               call remove_free(ind_cloud,np)
-              call add_list(ind_cloud,ind_grid_part,ok_true,np)
+              call add_list(ind_cloud,grid_index,ok_true,np)
               do j=1,np
                  isink=-idp(ind_part(j))
                  idp(ind_cloud(j))=-isink
@@ -1058,7 +1061,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
   integer ,dimension(1:ndim)::id,igd,icd
   integer::igrid,icell,indp,kg
 
-
+#if NDIM==3
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1071,7 +1074,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
   vol_loc=dx_loc**ndim
 
 
-#if NDIM==3
+
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
      x0(idim)=xg(ind_grid(1),idim)-3.0D0*dx
@@ -1095,7 +1098,7 @@ subroutine bondi_velocity(ind_grid,ind_part,ilevel)
     end do
   if(error)then
      write(*,*)'problem in bondi_velocity'
-     write(*,*)ilevel
+     write(*,*)ilevel,x(1:3)
      stop
   end if
 
@@ -1648,6 +1651,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
+
+#if NDIM==3
+
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
@@ -1746,6 +1752,25 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
      kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
   end do
+
+
+!bugcheck
+  do j=1,np
+     if (kg(j) > 27 .or. kg(j) < 1)then
+        print*,'cpu ', myid, ' produced an error in accrete sink'
+        print*,'kg: ',kg(j)
+        print*,'igd: ',igd(j,1),igd(j,2),igd(j,3)
+        print*,'id: ',id(j,1),id(j,2),id(j,3)
+        print*,'x: ',x(j,1),x(j,2),x(j,3)
+        print*,'x0: ',x0(j,1),x0(j,2),x0(j,3)
+        print*,'xp: ',xp(ind_part(j),1:3)
+        print*,'skip_loc: ',skip_loc(1:3)
+        print*,'scale: ',scale
+        print*,'ind_part: ',ind_part(j)
+     end if
+  end do
+
+
 #endif
   do j=1,np
      igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
@@ -1906,6 +1931,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
+#endif
 end subroutine accrete_sink
 !################################################################
 !################################################################
@@ -1969,7 +1995,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            velocity(2)=velocity(2)+weighted_momentum(isink,i,2)
            velocity(3)=velocity(3)+weighted_momentum(isink,i,3)
            volume=volume+weighted_volume(isink,i)
-           divergence(isink)=divergence(isink)+divsink(isink,ilevel)
+           divergence(isink)=divergence(isink)+divsink(isink,i)
         end do
         !averaged (with some weigts) quantities
         density=density/volume
@@ -3086,6 +3112,8 @@ subroutine update_sink(ilevel)
   real(dp),dimension(1:nsink,1:ndim)::velc,fdrag
   real(dp),dimension(1:ndim)::vrel
 
+#if NDIM==3
+
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
 
   ! Conversion factor from user units to cgs units
@@ -3162,6 +3190,7 @@ subroutine update_sink(ilevel)
      level_sink(isink)=ilevel
   end do
 
+#endif
 end subroutine update_sink
 !#########################################################################
 !#########################################################################

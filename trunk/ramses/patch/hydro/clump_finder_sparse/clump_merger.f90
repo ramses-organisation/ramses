@@ -7,39 +7,34 @@ subroutine compute_clump_properties(ntest)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-   
   integer::ntest
 
   !----------------------------------------------------------------------------
-  ! this subroutine performs one loop over all particles and collects the 
+  ! this subroutine performs one loop over all "test particles" and collects the 
   ! relevant information from the cells where the particles sit. after a lot
   ! of mpi-communication, all necessary peak-patch properties can be computed
   !----------------------------------------------------------------------------
 
-  ! variables used for the loop over all particles
-  integer::ipart,ilevel,grid
-  integer::info,i,j,peak_nr
 
+  integer::ipart,grid,info,i,j,peak_nr,ilevel
+  real(dp)::zero=0.
   !variables needed temporarily store cell properties
-  real(kind=8)::d,vol
-  real(kind=8),dimension(1:3)::vd
-
-
+  real(dp)::d,vol
+  real(dp),dimension(1:3)::vd
   ! variables related to the size of a cell on a given level
-  real(kind=8)::dx,dx_loc,scale,vol_loc
-  real(kind=8),dimension(1:nlevelmax)::volume
+  real(dp)::dx,dx_loc,scale,vol_loc
+  real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer::nx_loc,ind
-  integer ::ix,iy,iz
-
+  integer::nx_loc,ind,ix,iy,iz
   !peak-patch related arrays before sharing information with other cpus
-  real(kind=8),dimension(1:npeaks_tot)::max_dens,phi_min
-  real(kind=8),dimension(1:npeaks_tot)::min_dens,clump_mass,clump_vol
-  real(kind=8),dimension(1:npeaks_tot,1:3)::center_of_mass,clump_momentum,peak_pos,clump_force
+  real(dp),dimension(1:npeaks_tot)::max_dens,phi_min
+  real(dp),dimension(1:npeaks_tot)::min_dens,clump_mass,clump_vol
+  real(dp),dimension(1:npeaks_tot,1:3)::center_of_mass,clump_momentum,peak_pos,clump_force
   integer,dimension(1:npeaks_tot)::n_cells
 
-  min_dens=huge(0.d0);  max_dens=0.d0; n_cells=0; phi_min=huge(0.d0); second_moments=0.
+
+  min_dens=huge(zero);  max_dens=0.d0; n_cells=0; phi_min=huge(zero); second_moments=0.
   clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0; center_of_mass=0.d0; clump_force=0.d0
   peak_pos=0.
 
@@ -87,7 +82,7 @@ subroutine compute_clump_properties(ntest)
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
         
-        ! Cell density and energy- and momentum density
+        ! gas density and momentum density
         d=uold(icellp(ipart),1)
         do i=1,ndim
            vd(i)=uold(icellp(ipart),i+1)
@@ -103,7 +98,6 @@ subroutine compute_clump_properties(ntest)
         min_dens(peak_nr)=min(d,min_dens(peak_nr))
         phi_min(peak_nr)=min(phi(icellp(ipart)),phi_min(peak_nr))
 
-
         ! find max density and peak location
         if(d>=max_dens(peak_nr))then
            max_dens(peak_nr)=d
@@ -112,37 +106,30 @@ subroutine compute_clump_properties(ntest)
 
         ! find clump mass
         clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
-        
-        ! center of mass velocity
-        do i=1,3
-           clump_momentum(peak_nr,i)=clump_momentum(peak_nr,i)+vd(i)*vol
-        end do
 
-        ! center of mass force
-        do i=1,3
-           clump_force(peak_nr,i)=clump_force(peak_nr,i)+f(icellp(ipart),i)*vol*d
-        end do
+        ! clump volume
+        clump_vol(peak_nr)=clump_vol(peak_nr)+vol
         
-        ! clump size (maybe take center of mass instead of peak as reference point)
         do i=1,ndim
+
+           !ceter of mass location
            center_of_mass(peak_nr,i)=center_of_mass(peak_nr,i)+xcell(i)*vol*d
-           
+
+           !center of mass velocity
+           clump_momentum(peak_nr,i)=clump_momentum(peak_nr,i)+vd(i)*vol
+
+           ! center of mass force
+           clump_force(peak_nr,i)=clump_force(peak_nr,i)+f(icellp(ipart),i)*vol*d
+
            ! compute second order moments
            do j=1,ndim
               second_moments(peak_nr,i,j)=second_moments(peak_nr,i,j)+xcell(i)*xcell(j)*vol*d
            end do
         end do
-        
-        ! clump volume
-        clump_vol(peak_nr)=clump_vol(peak_nr)+vol
-
-        
      end if
   end do
 
-  !---------------------------------------------------------------------------
   ! a lot of MPI communication to collect the results from the different cpu's
-  !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(n_cells,n_cells_tot,npeaks_tot,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(min_dens,min_dens_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
@@ -167,6 +154,7 @@ subroutine compute_clump_properties(ntest)
   center_of_mass_tot=center_of_mass
   second_moments_tot=second_moments
 #endif
+  !clean some wannabe peaks (due to MPI)
   do j=1,npeaks_tot
      do i=1,ndim
         if (max_dens(j)<max_dens_tot(j))peak_pos(j,i)=0.d0
@@ -178,16 +166,14 @@ subroutine compute_clump_properties(ntest)
 #ifdef WITHOUTMPI
   peak_pos_tot=peak_pos
 #endif
-  !---------------------------------------------------------------------------
-  ! compute further information related to the clumps
-  !---------------------------------------------------------------------------
   
   !calculate total mass above threshold
   tot_mass=sum(clump_mass_tot)
-  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/clump_vol_tot(1:npeaks_tot)
+  ! compute further properties of the clumps
+  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/(clump_vol_tot(1:npeaks_tot)+tiny(0.d0))
   do i=1,ndim
-     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/clump_mass_tot(1:npeaks_tot)
-     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/clump_mass_tot(1:npeaks_tot)
+     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
+     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
   end do
 
 end subroutine compute_clump_properties
@@ -195,7 +181,7 @@ end subroutine compute_clump_properties
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_clump_properties_round2(ntest,map,all_bound)
+subroutine compute_clump_properties_round2(ntest,all_bound)
   use amr_commons
   use hydro_commons, ONLY:uold,gamma
   use poisson_commons, ONLY:phi,f
@@ -204,55 +190,38 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
-  logical::map,all_bound
+  logical::all_bound
   integer::ntest
 
   !----------------------------------------------------------------------------
-  ! this subroutine performs another loop over all particles and collects the 
-  ! information more information like the velocity of a cell realtive to the 
-  ! center of mass
-  ! this routine is also used to write a peak map of the merged peak patches 
-  ! to disk
-  !----------------------------------------------------------------------------
+  ! This subroutine performs another loop over all particles and collects
+  ! more information like binding energies, etc, that can not be created by 
+  ! just summing up cell properties. 
+  !---------------------------------------------------------------------------- 
 
   integer::ipart,ilevel,info,i,peak_nr,j,ii,jj
-
-  !variables needed temporarily store cell properties
-  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,tff
-  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel
-
-  ! variables to be used with vector-sweeps
-  integer::grid
-
-  ! variables related to the size of a cell on a given level
-  real(kind=8)::dx,dx_loc,scale,vol_loc,abs_err,A1,A2,A3
-  real(kind=8),dimension(1:nlevelmax)::volume
-  integer::nx_loc,ix,iy,iz,ind
-  real(dp),dimension(1:3)::skip_loc,contractions
-  real(dp),dimension(1:twotondim,1:3)::xc
-
-  !peak-patch related arrays before sharing information with other cpus
-  real(kind=8),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,e_kin_int4,e_bind4,e_thermal4,v_therm,v_rms,m4
-  real(kind=8),dimension(1:npeaks_tot)::clump_mass4,E_kin_iso,E_bind_iso,E_therm_iso,grav_term,Icl_d,Icl
-  real(kind=8),dimension(1:npeaks_tot,1:3,1:3)::Icl_d_3by3,Icl_3by3
-  real(kind=8),dimension(1:3,1:3)::eigenv,a
-  real(kind=8),dimension(1:npeaks_tot,1:3)::clump_size,bulk_momentum
-  real(dp)::Ggrav=1.d0,t_larson1
+  integer::grid,nx_loc,ix,iy,iz,ind
+  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p,v_rms
+  real(dp)::t_larson1,cont_speed=0.
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,cty
-
-  !strings for file output           
-  character(LEN=5)::myidstring,nchar 
+  real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
+  real(dp),dimension(1:nlevelmax)::volume
+  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:npeaks_tot)::e_kin_int,e_bind,e_thermal,v_therm,m4
+  real(dp),dimension(1:npeaks_tot)::clump_mass4,e_kin_iso,e_bind_iso,e_therm_iso,grav_term,Icl_d,Icl
+  real(dp),dimension(1:npeaks_tot,1:3)::clump_size,bulk_momentum,contractions
+  real(dp),dimension(1:npeaks_tot,1:3,1:3)::Icl_d_3by3,Icl_3by3
+  real(dp),dimension(1:3,1:3)::eigenv,a
 
   !  first, get minimum potential on saddle surface
   call get_phi_ref(ntest)
-  call get_phi_ref2
   
   !initialize arrays
-  e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0; e_bind4=0.d0; e_thermal4=0.d0; e_kin_int4=0.d0
+  e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0
   clump_mass4=0.d0
-  v_therm=0.; v_rms=0.; bulk_momentum=0.; m4=0.
-  E_kin_iso=0.; E_bind_iso=0.; E_therm_iso=0.
+  v_therm=0.; bulk_momentum=0.; m4=0.
+  e_kin_iso=0.; e_bind_iso=0.; e_therm_iso=0.
   grav_term=0.d0; Icl_d=0.d0; Icl=0.; Icl_dd_tot=0.
   Icl_3by3=0.;  Icl_d_3by3=0.
   contracting=.false.
@@ -261,14 +230,12 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   d0 = density_threshold/scale_nH;
   if(cosmo)d0=d0/aexp**3
+  !lifetime of first larson core in code units
+  cty=scale_t/(365.25*24.*3600.)
+  t_larson1=larson_lifetime/cty
+  if (merge_stars)cont_speed=-1./t_larson1
 
-  !prepare file output for peak map
-  if (map)then
-     call title(ifout-1,nchar)
-     call title(myid,myidstring)
-     open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
-     if (myid==1)print*,nchar
-  end if
+
 
   !------------------------------------------
   ! compute volume of a cell in a given level
@@ -312,11 +279,8 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-
-        !peak_map
-        if (map)write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',peak_nr
         
-        ! Cell density and energy- and momentum density
+        ! gas density and energy density
         d=uold(icellp(ipart),1)
         de=uold(icellp(ipart),ndim+2)
         do i=1,ndim
@@ -326,77 +290,67 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         
         vol=volume(levp(ipart))                  
 
-        phi_rel=(phi(icellp(ipart))-phi_min_tot(peak_nr))*scale
 
         M=clump_mass_tot(peak_nr)
         v_cl(1:ndim)=clump_momentum_tot(peak_nr,1:ndim)/M
+
+        !properties of the cell relative to center of mass 
+        rrel=xcell(1:3)-center_of_mass_tot(peak_nr,1:3)
+        vrel=vd(1:3)/d-v_cl(1:3)
+        frel=f(icellp(ipart),1:3)-clump_force_tot(peak_nr,1:3)
        
-        ! kinetic energy
+
+
+        do i=1,ndim
+           ! size relative to center of mass
+           clump_size(peak_nr,i)=clump_size(peak_nr,i)+rrel(i)**2 * vol
+
+           ! internal kinetic energy
+           e_kin_int(peak_nr)=e_kin_int(peak_nr)+vrel(i)**2*d*vol*0.5
+        end do
+
+        ! potential energy using the acutal phi W= 0.5*int phi_rel*rho
+        phi_rel=(phi(icellp(ipart))-phi_ref_tot(peak_nr))*scale
+        e_bind(peak_nr)=e_bind(peak_nr)-phi_rel*d*vol*5.d-1
+
+        ! thermal energy
         ekk=0.
         do i=1,3 
            ekk=ekk+0.5*vd(i)**2/d                          
         end do
+        p=(de-ekk)*(gamma-1)
+        e_thermal(peak_nr)=e_thermal(peak_nr)+1.5*vol*p
         
-        ! internal kinetic energy
-        do i=1,3
-           e_kin_int(peak_nr)=e_kin_int(peak_nr)+ &
-                (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
-        end do
-        
-        ! potential energy using the acutal phi W= 0.5*int phi*rho
-        e_bind(peak_nr)=e_bind(peak_nr)-phi_rel*d*vol*5.d-1
-        
-        ! size relative to center of mass
-        do i=1,ndim
-           clump_size(peak_nr,i)=clump_size(peak_nr,i)+(xcell(i)-center_of_mass_tot(peak_nr,i))**2.d0*vol
-        end do
-        
-        ! thermal energy
-        e_thermal(peak_nr)=e_thermal(peak_nr)+1.5*(de-ekk)*vol*(gamma-1)
-
         ! sound speed
         c_sound=(de-ekk)/d*gamma/(gamma-1)
 
         !Mass weighted thermal Velocity
-        v_therm(peak_nr)=v_therm(peak_nr)+c_sound*d*vol/M        
-                
-        !MS Velocity
-        do i=1,ndim
-           v_rms(peak_nr)=v_rms(peak_nr)+(vd(i)/d-v_cl(i))**2*vol*d/M
-        end do
-        
+        v_therm(peak_nr)=v_therm(peak_nr)+c_sound*d*vol/M
 
-        !for smaller region if cell is close enough (4 cells away)
+        !properties for regions close to peak (4 cells away)
         if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.))then
            do i=1,3
-              e_kin_int4(peak_nr)=e_kin_int4(peak_nr)+(vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
               bulk_momentum(peak_nr,i)=bulk_momentum(peak_nr,i)+(vd(i)/d-v_cl(i))*vol*(d-d0)
            end do
-
            m4(peak_nr)=m4(peak_nr)+(d-d0)*vol
-           
-           e_bind4(peak_nr)=e_bind4(peak_nr)-phi_rel*d*vol*0.5
-           e_thermal4(peak_nr)=e_thermal4(peak_nr)+1.5*(de-ekk)*vol*(gamma-1)
-
            clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
         end if
 
-        !repeat for region enclosed by isopotential surface 
+        !properties for region enclosed by isopotential surface
         if (phi_rel<0.)then
            do i=1,3
-              E_kin_iso(peak_nr)=E_kin_iso(peak_nr)+(vd(i)/d-clump_momentum_tot(peak_nr,i)/M)**2*d*vol*0.5
+              !not strictly correct since v_cl is av. vel of WHOLE clump
+              e_kin_iso(peak_nr)=e_kin_iso(peak_nr)+(vd(i)/d-v_cl(i))**2*d*vol*0.5
            end do
-           E_bind_iso(peak_nr)=E_bind_iso(peak_nr)-phi_rel*d*vol*0.5
-           E_therm_iso(peak_nr)=E_therm_iso(peak_nr)+1.5*(de-ekk)*vol*(gamma-1)
+           e_bind_iso(peak_nr)=e_bind_iso(peak_nr)-phi_rel*d*vol*0.5
+           e_therm_iso(peak_nr)=e_therm_iso(peak_nr)+1.5*p*vol
         endif
 
-        !terms for virial theorem
-        rrel=(xcell(1:3)-center_of_mass_tot(peak_nr,1:3))
-        vrel=(vd(1:3)/d-clump_momentum_tot(peak_nr,1:3)/M)
+        !terms for virial theorem analysis
         do i=1,3
-           grav_term(peak_nr) = grav_term(peak_nr)  + (f(icellp(ipart),i)-clump_force_tot(peak_nr,i))  * rrel(i)  * vol*d
-           Icl_d(peak_nr)     = Icl_d(peak_nr)      + (vd(i)/d-clump_momentum_tot(peak_nr,i)/M)        * rrel(i)  * vol*d
-           Icl(peak_nr)       = Icl(peak_nr)        + rrel(i)                                          * rrel(i)  * vol*d
+           grav_term(peak_nr) = grav_term(peak_nr) + frel(i) * rrel(i) * vol*d
+           Icl_d(peak_nr)     = Icl_d(peak_nr)     + vrel(i) * rrel(i) * vol*d
+           Icl(peak_nr)       = Icl(peak_nr)       + rrel(i) * rrel(i) * vol*d
            do j=1,3
               Icl_d_3by3(peak_nr,i,j)=  Icl_d_3by3(peak_nr,i,j)   + ( vrel(j) * rrel(i)  +  vrel(i) * rrel(j) )   * vol*d
               Icl_3by3(peak_nr,i,j)  =  Icl_3by3(peak_nr,i,j)     +   rrel(j) * rrel(i)                           * vol*d
@@ -404,145 +358,109 @@ subroutine compute_clump_properties_round2(ntest,map,all_bound)
         end do
      end if
   end do
-  if (map)close(20)
   !---------------------------------------------------------------------------
   ! a lot of MPI communication to collect the results from the different cpu's
   !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call MPI_ALLREDUCE(e_kin_int,e_kin_int_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(e_kin_int4,e_kin_int_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(e_bind,e_bind_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(e_bind4,e_bind_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(clump_size,clump_size_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(m4,m4_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(bulk_momentum,bulk_momentum_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(e_thermal,e_thermal_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(e_thermal4,e_thermal_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(v_therm,v_therm_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(v_rms,v_rms_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(E_therm_iso,E_therm_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(E_kin_iso,E_kin_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(E_bind_iso,E_bind_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_therm_iso,e_therm_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_kin_iso,e_kin_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(e_bind_iso,e_bind_iso_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(grav_term,grav_term_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl_d,Icl_d_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl,Icl_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl_d_3by3,Icl_d_3by3_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(Icl_3by3,Icl_3by3_tot,9*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(clump_mass4,clump_mass_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI     
   e_kin_int_tot=e_kin_int
-  e_kin_int_tot4=e_kin_int4
   e_bind_tot=e_bind
-  e_bind_tot4=e_bind4
   clump_size_tot=clump_size
   m4_tot=m4
   bulk_momentum_tot=bulk_momentum
   e_thermal_tot=e_thermal
-  e_thermal_tot4=e_thermal4
   v_therm_tot=v_therm
-  v_rms_tot=v_rms
-  E_bind_iso_tot=E_bind_iso
-  E_kin_iso_tot=E_kin_iso
-  E_therm_iso_tot=E_therm_iso
+  e_bind_iso_tot=e_bind_iso
+  e_kin_iso_tot=e_kin_iso
+  e_therm_iso_tot=e_therm_iso
   grav_term_tot=grav_term
   Icl_d_tot=Icl_d
   Icl_tot=Icl
   Icl_d_3by3_tot=Icl_d_3by3
   Icl_3by3_tot=Icl_3by3
-#endif
-#ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(clump_mass4,clump_mass_tot4,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
   clump_mass_tot4=clump_mass4
 #endif
 
-
-
-
-  Icl_dd_tot=0.
+  !second time derivative of I 
   Icl_dd_tot(1:npeaks_tot)=2.*(grav_term_tot(1:npeaks_tot)-Psurf_tot(1:npeaks_tot)+2*e_kin_int_tot(1:npeaks_tot)+2*e_thermal_tot(1:npeaks_tot))
-
-  !lifetime of first larson core in code units
-  cty=scale_t/(365.25*24.*3600.)
-  t_larson1=larson_lifetime/cty
-
-
-
 
   all_bound=.true.
 
-  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then
-     write(*,'(135A)')'============================================================='//&
-          '=============================================================================================='
-     write(*,'(135A)')'Cl_N   e1x   e1y   e1z    e2x   e2y   e2z    e3x   e3y   e3z '//&
-          '   t1[y]     t2[y]     t3[y]  |I_d|/I_dd[y]  sink?   tidal_Fg  Psurf     e_kin     e_therm'
-     write(*,'(135A)')'============================================================='//&
-          '=============================================================================================='
-  endif
-
-
   do j=npeaks_tot,1,-1
      if (relevance_tot(j)>0.)then
-
-        !compute eigenvalues of Icl_d_3by3_tot
+        !compute eigenvalues and eigenvectors of Icl_d_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
         abs_err=1.d-8*Icl_tot(j)**2+1.d-40
         call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
 
         !compute the contractions along the eigenvectors of Icl
-        contractions=0.
+        contractions(j,1:3)=0.
         do ii=1,3
            do jj=1,3
-              contractions(1)=contractions(1)+Icl_d_3by3_tot(j,ii,jj)*eigenv(1,ii)*eigenv(1,jj)
-              contractions(2)=contractions(2)+Icl_d_3by3_tot(j,ii,jj)*eigenv(2,ii)*eigenv(2,jj)
-              contractions(3)=contractions(3)+Icl_d_3by3_tot(j,ii,jj)*eigenv(3,ii)*eigenv(3,jj)
+              contractions(j,1)=contractions(j,1)+Icl_d_3by3_tot(j,ii,jj)*eigenv(1,ii)*eigenv(1,jj)
+              contractions(j,2)=contractions(j,2)+Icl_d_3by3_tot(j,ii,jj)*eigenv(2,ii)*eigenv(2,jj)
+              contractions(j,3)=contractions(j,3)+Icl_d_3by3_tot(j,ii,jj)*eigenv(3,ii)*eigenv(3,jj)
            end do
         end do
 
         !Check wether clump is contracting fast enough along all axis
-        !Check wether contraction is accelerating
         if (Icl_tot(j)>0)then
-           contracting(j)=contractions(1)/(A1+tiny(0.d0)) < (-1./t_larson1)
-           contracting(j)=contracting(j) .and. contractions(2)/(A2+tiny(0.d0)) < (-1./t_larson1)
-           contracting(j)=contracting(j) .and. contractions(3)/(A3+tiny(0.d0)) < (-1./t_larson1)
-           contracting(j)=contracting(j) .and. Icl_dd_tot(j) < 0.
+           contracting(j)=.true.
+           contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0.d0)) < cont_speed
+           contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0.d0)) < cont_speed
+           contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed
         end if
 
-        !write to log file some information that could be of interest
-        if(clinfo .and. .not. smbh .and. sink)then
-!           if (myid==1 .and. .not. smbh .and. e_thermal_tot(j)>0.)print*,j,0.5*Psurf_tot(j)/e_thermal_tot(j)&
-!                ,0.5*grav_term_tot(j)/e_thermal_tot(j)
-           if (myid==1 .and. .not. smbh)write(*,'(I4,2X,3(3(F5.3,X)X),4(E8.2E2,2X),L5,3X,4(2X,E8.2E2))'),j&
-                ,eigenv(1,1),eigenv(1,2),eigenv(1,3)&
-                ,eigenv(2,1),eigenv(2,2),eigenv(2,3)&
-                ,eigenv(3,1),eigenv(3,2),eigenv(3,3)&
-                ,A1/(contractions(1)+tiny(0.d0))*cty,A2/(contractions(2)+tiny(0.d0))*cty,A3/(contractions(3)+tiny(0.d0))*cty&
-                ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
-                ,contracting(j),grav_term_tot(j)&
-                ,Psurf_tot(j),e_kin_int_tot(j)&
-                ,e_thermal_tot(j)
-        endif
-
         !compute peak check for smbh sink formation  
+        v_rms=2.*e_kin_int_tot(j)/clump_mass_tot(j)
         v_bulk2=(bulk_momentum_tot(j,1)**2+bulk_momentum_tot(j,2)**2&
              +bulk_momentum_tot(j,3)**2)/(m4_tot(j)**2+tiny(0.d0))     
-        peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms_tot(j)+v_bulk2)*0.5+tiny(0.d0))
+        peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms+v_bulk2)*0.5+tiny(0.d0))
 
-        !compute all other clump checks (currently not needed for sink formation)   
-        ball4_check(j)=scale*e_bind_tot4(j)/(tiny(0.d0)+2*e_thermal_tot4(j)+2*e_kin_int_tot4(j))
-        isodens_check(j)=scale*E_bind_iso_tot(j)/(tiny(0.d0)+2*E_kin_iso_tot(j)+2*E_therm_iso_tot(j))
-        if(clump_check(j)<1.)clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
-        if(.not.smbh)all_bound=all_bound.and.(clump_check(j)>1.)
-        if(smbh)all_bound=all_bound.and.(isodens_check(j)>1.)
+        !compute other checks (currently not needed for sink formation)
+        isodens_check(j)=scale*e_bind_iso_tot(j)/(tiny(0.d0)+2*e_kin_iso_tot(j)+2*e_therm_iso_tot(j))
+        clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
+
+        !update the all_bound property
+        all_bound=all_bound.and.(isodens_check(j)>1.)
+
      endif
   end do
 
-  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)write(*,'(135A)')'============================================================='//&
-       '=============================================================================================='
-
-
+  !write to the log file some information that could be of interest for debugging etc.
+  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then
+     write(*,'(135A)')'==========================================================================================='
+     write(*,'(135A)')'Cl_N     t1[y]      t2[y]      t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
+     write(*,'(135A)')'==========================================================================================='
+     do j=npeaks_tot,1,-1
+        if (relevance_tot(j)>0.)then
+           write(*,'(I4,2X,8(E8.2E2,3X))'),j&
+                ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
+                ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
+                ,grav_term_tot(j),-1.*Psurf_tot(j)&
+                ,e_kin_int_tot(j),e_thermal_tot(j)
+        end if
+     end do
+     write(*,'(135A)')'==========================================================================================='
+  end if
 
 end subroutine compute_clump_properties_round2
 !################################################################
@@ -556,7 +474,6 @@ subroutine write_clump_properties(to_file)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
   logical::to_file
 
   !---------------------------------------------------------------------------
@@ -566,10 +483,8 @@ subroutine write_clump_properties(to_file)
   integer::j,jj,ilun,n_rel,info,nx_loc
   real(kind=8)::rel_mass,scale
   character(LEN=5)::nchar
-
-
-
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -595,7 +510,7 @@ subroutine write_clump_properties(to_file)
      end if
      if(smbh)then
         if(verbose)write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cc]'//&
-             ' |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_check   isodens_check   clump_check '
+             ' |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   isodens_check   clump_check '
         do j=npeaks_tot,1,-1
            jj=sort_index(j)
            if (relevance_tot(jj) > 0)then
@@ -613,7 +528,7 @@ subroutine write_clump_properties(to_file)
                    ,clump_vol_tot(jj)*(scale_l)**3&
                    ,relevance_tot(jj)&
                    ,peak_check(jj)&
-                   ,ball4_check(jj)&
+                   !,ball4_check(jj)&
                    ,isodens_check(jj)&
                    ,clump_check(jj)
               
@@ -623,15 +538,15 @@ subroutine write_clump_properties(to_file)
         end do
         
      else
-        if(clinfo .and. (to_file .eqv. .false.))write(ilun,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU]'//&
-             ' size_y [AU] size_z [AU]  |v|_CM [u.u.]  rho- [H/cc]  rho+ [H/cc]  rho_av [H/cc] M_cl [M_sol] V_cl [AU^3]   rel.    '//&
-             ' peak_check   clump_check '
+        if(clinfo .and. (to_file .eqv. .false.))write(ilun,'(135A)')' Cl_N #leaf-cells peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU]'//&
+             ' size_y [AU] size_z [AU]  |v|_CM [u.u.]  rho- [H/cc]  rho+ [H/cc] rho_av[H/cc] M_cl[M_sol] V_cl [AU^3]    rel.   '//&
+             ' peak_check  clump_check '
         do j=npeaks_tot,1,-1
            jj=sort_index(j)
            
            if (relevance_tot(jj) > 0)then
               if(clinfo .and. (to_file .eqv. .false.))then
-                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),2(X,E11.2E2),X,E11.2E2,6(2X,E11.2E2))')&
+                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),5(X,E11.2E2))')&
                       jj&
                       ,n_cells_tot(jj)&
                       ,peak_pos_tot(jj,1)&
@@ -647,9 +562,7 @@ subroutine write_clump_properties(to_file)
                       ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
                       ,clump_vol_tot(jj)*(scale_l/1.496d13)**3&
                       ,relevance_tot(jj)&
-                      ,peak_check(jj)&
-                      !,ball4_check(jj)&
-                      !,isodens_check(jj)&
+                      ,isodens_check(jj)&
                       ,clump_check(jj)
                  
                  rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
@@ -1260,9 +1173,10 @@ end subroutine merge_clumps
 !################################################################
 !################################################################
 subroutine allocate_peak_patch_arrays
-  use amr_commons, ONLY:ndim
+  use amr_commons, ONLY:ndim,dp
   use clfind_commons
   implicit none
+  real(dp)::zero=0.
 
   ! Allocate peak-patch_properties
   allocate(n_cells_tot(1:npeaks_tot))
@@ -1287,11 +1201,8 @@ subroutine allocate_peak_patch_arrays
   allocate(imat_prev(1:nmatmax))
   allocate(clump_momentum_tot(1:npeaks_tot,1:ndim))
   allocate(e_kin_int_tot(npeaks_tot))
-  allocate(e_kin_int_tot4(npeaks_tot))!all the "4" variables are for the 4cell ball properties...
   allocate(e_bind_tot(npeaks_tot))
-  allocate(e_bind_tot4(npeaks_tot))
   allocate(e_thermal_tot(npeaks_tot))
-  allocate(e_thermal_tot4(npeaks_tot)) 
   allocate(phi_min_tot(npeaks_tot))
   allocate(minmatch_tot(npeaks_tot))
   allocate(new_peak(npeaks_tot))
@@ -1300,17 +1211,14 @@ subroutine allocate_peak_patch_arrays
   allocate(Psurf(npeaks_tot))
   allocate(Psurf_tot(npeaks_tot))
   allocate(v_therm_tot(npeaks_tot))
-  allocate(v_rms_tot(npeaks_tot))
   allocate(m4_tot(npeaks_tot))
   allocate(bulk_momentum_tot(1:npeaks_tot,1:ndim))
-  allocate(E_kin_iso_tot(npeaks_tot))
-  allocate(E_bind_iso_tot(npeaks_tot))
-  allocate(E_therm_iso_tot(npeaks_tot))
+  allocate(e_kin_iso_tot(npeaks_tot))
+  allocate(e_bind_iso_tot(npeaks_tot))
+  allocate(e_therm_iso_tot(npeaks_tot))
   allocate(peak_check(npeaks_tot))
-  allocate(ball4_check(npeaks_tot))
   allocate(isodens_check(npeaks_tot))
   allocate(clump_check(npeaks_tot))
-  allocate(phi_ref2_tot(npeaks_tot))
   allocate(grav_term_tot(npeaks_tot))
   allocate(contracting(npeaks_tot))
   allocate(Icl_tot(npeaks_tot))
@@ -1324,7 +1232,7 @@ subroutine allocate_peak_patch_arrays
   saddle_max_tot=0.
   relevance_tot=1.
   clump_size_tot=0.
-  min_dens_tot=huge(0.d0)
+  min_dens_tot=huge(zero)
   max_dens_tot=0.
   av_dens_tot=0.
   clump_mass_tot=0.
@@ -1339,13 +1247,13 @@ subroutine allocate_peak_patch_arrays
   imat_next=0
   imat_prev=0
   clump_momentum_tot=0.
-  e_kin_int_tot=0.; e_kin_int_tot4=0.
-  e_bind_tot=0.; e_bind_tot4=0.
-  e_thermal_tot=0.; e_thermal_tot4=0.
+  e_kin_int_tot=0.
+  e_bind_tot=0.
+  e_thermal_tot=0.
   phi_min_tot=0.
   minmatch_tot=1
   new_peak=0
-  phi_ref=huge(0.d0)
+  phi_ref=huge(zero)
   Psurf=0.;Psurf_tot=0.
   grav_term_tot=0.d0
   isodens_check=-1.;  clump_check=-1.; peak_check=-1.;
@@ -1359,6 +1267,7 @@ end subroutine allocate_peak_patch_arrays
 !################################################################     
 subroutine deallocate_all
   use clfind_commons
+  use amr_commons, only:smbh
   implicit none
 
   deallocate(n_cells_tot)
@@ -1380,21 +1289,21 @@ subroutine deallocate_all
   deallocate(imat_prev)
   deallocate(imat_next)
   deallocate(clump_momentum_tot)
-  deallocate(e_kin_int_tot,e_kin_int_tot4)
-  deallocate(e_bind_tot,e_bind_tot4,grav_term_tot)
-  deallocate(e_thermal_tot,e_thermal_tot4)
+  deallocate(e_kin_int_tot)
+  deallocate(e_bind_tot,grav_term_tot)
+  deallocate(e_thermal_tot)
   deallocate(phi_min_tot)
   deallocate(minmatch_tot)
   deallocate(new_peak)
-  deallocate(phi_ref,phi_ref_tot,phi_ref2_tot)
+  deallocate(phi_ref,phi_ref_tot)
   deallocate(Psurf,Psurf_tot)
   deallocate(v_therm_tot)
-  deallocate(v_rms_tot)
   deallocate(m4_tot,bulk_momentum_tot)
-  deallocate(E_kin_iso_tot,E_bind_iso_tot,E_therm_iso_tot)
-  deallocate(peak_check,ball4_check,isodens_check,clump_check)
+  deallocate(e_kin_iso_tot,e_bind_iso_tot,e_therm_iso_tot)
+  deallocate(peak_check,isodens_check,clump_check)
   deallocate(contracting)
   deallocate(Icl_dd_tot,Icl_d_tot,Icl_tot,Icl_d_3by3_tot,Icl_3by3_tot)
+  if (.not. smbh)deallocate(clump_mass_tot4)
 
 end subroutine deallocate_all
 !################################################################                 
@@ -1412,23 +1321,24 @@ subroutine get_phi_ref(ntest)
   include 'mpif.h'
 #endif
   integer::ntest
+
   !---------------------------------------------------------------
-  ! This subroutine finds the minimum potential on the saddle 
-  ! surface of the peak patch
+  ! This subroutine finds the minimum potential on the saddle
+  ! surface of the peak patch by looping over all "test-particles"
+  ! This loop is also used to compute the surface pressure term.
   !---------------------------------------------------------------
-  integer::info
-   
+
+  integer::info   
   integer::ipart,ip,ilevel,next_level
   integer,dimension(1:nvector)::ind_cell
 
   Psurf=0.
-
   ! loop 'testparts', pass the information of nvector parts to neighborsearch 
   ip=0
   do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart)) ! level
-     if (verbose .and. ilevel/=nlevelmax)print*,'not all paricles in max level',ilevel
+     if (verbose.and.ilevel/=nlevelmax)print*,'not all particles in max level',ilevel
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
      ind_cell(ip)=icellp(testp_sort(ipart))
@@ -1453,150 +1363,42 @@ subroutine get_phi_ref(ntest)
 #endif
 
 end subroutine get_phi_ref
-
-
-
-
-
-
-
-
-
-subroutine get_phi_ref2
-  use amr_commons
-  use hydro_commons
-  use pm_commons
-  use clfind_commons
-  use poisson_commons
-  implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  !---------------------------------------------------------------
-  ! This subroutine checks wheter a density maximum corresponds to
-  ! a potential minimum -> pot_min(peak_nr)=ok in this case.
-  ! Furthermore, the minimum potential is stored for every peak.
-  !---------------------------------------------------------------
-  integer::k1,j1,i1,jj,info,N,i,itest
-  integer,dimension(1:nvector)::cell_index,cell_levl,ind_cell,lev_cell,cc
-  real(dp),dimension(1:nvector,1:3)::pos,xtest,xtest_cpu,xtest_ind
-  real(dp)::dx,dx_loc,scale,phim,x,y,z,r
-  integer::nx_loc
-
-  real(dp),dimension(1:npeaks_tot)::phi_ref2
-  integer,dimension(1:npeaks_tot)::minmatch
-
-  phi_ref2=0.d0; minmatch=1
-
-  dx=0.5D0**nlevelmax
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale/aexp  
-
-  N=10
-  do jj=1,npeaks_tot
-     if (relevance_tot(jj)>0)then
-        pos(1,1:3)=peak_pos_tot(jj,1:3)
-        
-        itest=0
-        !construct sample points on 4 cell radius ball surface
-
-        do k1=-N,N
-           do j1=-N,N
-              do i1=-N,N
-                 x=dble(k1)/N*4.
-                 y=dble(j1)/N*4.
-                 z=dble(i1)/N*4.
-                 r=(x**2.+y**2.+z**2.)**0.5
-                 !reject all points with radius > 4dx
-                 if (r<=4. .and. r>0)then
-                    itest=itest+1
-                    ! project the other points to the sphere surface
-                    x=x/r*4.
-                    y=y/r*4.
-                    z=z/r*4.
-                    xtest_cpu(itest,1)=pos(1,1)+x*dx_loc
-                    xtest_cpu(itest,2)=pos(1,2)+y*dx_loc
-                    xtest_cpu(itest,3)=pos(1,3)+z*dx_loc
-                    if (itest==nvector)then
-                       call cmp_cpumap(xtest_cpu,cc,itest)
-                       do i=1,nvector
-                          if(cc(i) == myid) then
-                             xtest_ind(1,1:3)=xtest_cpu(i,1:3)
-                             call get_cell_index(cell_index,cell_levl,xtest_ind,nlevelmax,1)
-                             phi_ref2(jj)=min(phi_ref2(jj),phi(cell_index(1)))
-                          endif
-                       end do
-                       itest=0
-                    endif
-                 endif
-              end do
-           end do
-        end do
-
-        call cmp_cpumap(xtest_cpu,cc,itest)
-        do i=1,itest
-           if(cc(i) == myid) then
-              xtest_ind(1,1:3)=xtest_cpu(i,1:3)
-              call get_cell_index(cell_index,cell_levl,xtest_ind,nlevelmax,1)
-              phi_ref2(jj)=min(phi_ref2(jj),phi(cell_index(1)))
-           endif
-        end do
-
-     end if ! end if relevance > than..
-  end do ! end loop over clumps
-
-
-#ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(phi_ref2,phi_ref2_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-  phi_ref2_tot=phi_ref2
-#endif
-end subroutine get_phi_ref2
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################                                                                                                                         
+!################################################################
+!################################################################
+!################################################################
+!################################################################
 subroutine trim_clumps(ntest)
   use amr_commons
   use clfind_commons
+  use pm_commons, only:ir_cloud
   implicit none
   integer::ntest
+
   !---------------------------------------------------------------------------
-  ! in this routine, all clumps are trimmed to a region of 4 cell radii around the peak
+  ! this routine trims the clumps down to the intersection of the clump with
+  ! the accretion zone of the sink. Cells that are too far away from the peak
+  ! are removed from the clump by setting flag2 to 0.
   !---------------------------------------------------------------------------
-  integer::j,i,ii,merge_count,final_peak,merge_to,ipart,ilevel,nx_loc,ind
-  real(kind=8)::max_val,dx,scale,dx_loc,vol_loc
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
-  real(kind=8),dimension(1:nlevelmax)::volume
+
+  integer::ipart,nx_loc,ind
+  real(dp)::dx,scale,dx_loc,r2
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer ::ix,iy,iz,grid,peak_nr
 
   real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
 
-
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  d0 = density_threshold/scale_nH;
 
-
-
-  do ilevel=1,nlevelmax
-     ! Mesh spacing in that level
-     dx=0.5D0**ilevel
-     nx_loc=(icoarse_max-icoarse_min+1)
-     scale=boxlen/dble(nx_loc)
-     dx_loc=dx*scale
-     vol_loc=dx_loc**ndim
-     volume(ilevel)=vol_loc
-  end do
-
+  ! Mesh spacing in max level
+  dx=0.5D0**nlevelmax
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc(1)=dble(icoarse_min)
   skip_loc(2)=dble(jcoarse_min)
   skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
 
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -1615,14 +1417,15 @@ subroutine trim_clumps(ntest)
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-        if (((peak_pos_tot(peak_nr,1)-xcell(1))**2.+(peak_pos_tot(peak_nr,2)-xcell(2))**2.+(peak_pos_tot(peak_nr,3)-xcell(3))**2.) > 16.*volume(nlevelmax)**(2./3.))then
-           !update flag2 to zero
+        r2=(peak_pos_tot(peak_nr,1)-xcell(1))**2&
+             +(peak_pos_tot(peak_nr,2)-xcell(2))**2&
+             +(peak_pos_tot(peak_nr,3)-xcell(3))**2.
+        if (r2 > (ir_cloud*dx_loc)**2.)then
+           !remove cell from clump
            flag2(icellp(ipart))=0
         end if
      end if
-
   end do
-
 
 end subroutine trim_clumps
 !#########################################################################
@@ -1630,29 +1433,30 @@ end subroutine trim_clumps
 !#########################################################################
 !#########################################################################    
 subroutine jacobi(A,x,err2)
-  use amr_commons, only:myid
+  use amr_commons, only:myid,dp
   implicit none
-  real(kind=8)::err2
-  real(kind=8),dimension(3,3)::A,x
-  !===========================================================
+  real(dp)::err2
+  real(dp),dimension(3,3)::A,x
+
+  !---------------------------------------------------------------------------
   ! Compute eigenvalues and eigenvectors using the jacobi-Method
-  ! as for example described in Numerical Recipes. Returns eigenvalues
-  ! as diagonal elements of A
-  !===========================================================
+  ! as for example described in Numerical Recipes. 
+  ! Returns eigenvalues as diagonal elements of A
+  !---------------------------------------------------------------------------
+
   integer::n
   integer::i,j,k
-  real(kind=8)::b2, bar
-  real(kind=8)::beta, coeff, c, s, cs, sc
+  real(dp)::b2, bar
+  real(dp)::beta, coeff, c, s, cs, sc
 
   n=3
-
-  ! x is identity matrix to start with
+  ! x is identity matrix initially
   x = 0.0
   do i=1,n
      x(i,i) = 1.0
   end do
 
-  ! sum of all squared off-diagonal elements
+  ! sum all squared off-diagonal elements
   b2 = 0.0
   do i=1,n
      do j=1,n
@@ -1661,7 +1465,7 @@ subroutine jacobi(A,x,err2)
   end do
 
   if (b2 <= err2) then
-     if (myid==1)print*, 'returning. maybe err2 too small? ',err2
+     if (myid==1)write(*,*), 'returning. maybe err2 too small? ',err2
      return
   endif
 
@@ -1701,4 +1505,57 @@ subroutine jacobi(A,x,err2)
      end do
   end do
 end subroutine jacobi
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine write_clump_map(ntest)
+  use amr_commons
+  use clfind_commons
+  implicit none
+  integer::ntest
 
+  !---------------------------------------------------------------------------
+  ! This routine writes a csv-file of cell center coordinates and clump number
+  ! for each cell which is in a clump. Makes only sense to be called when the 
+  ! clump finder is called at output-writing and not for sink-formation. 
+  !---------------------------------------------------------------------------
+
+  integer::ind,grid,ix,iy,iz,ipart,nx_loc,peak_nr
+  real(dp)::scale,dx
+  real(dp),dimension(1:3)::xcell,skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  character(LEN=5)::myidstring,nchar 
+
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)
+     xc(ind,2)=(dble(iy)-0.5D0)
+     xc(ind,3)=(dble(iz)-0.5D0)
+  end do
+
+  !prepare file output for peak map
+  call title(ifout-1,nchar)
+  call title(myid,myidstring)
+  open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
+
+  !loop parts
+  do ipart=1,ntest
+     peak_nr=flag2(icellp(ipart))
+     if (peak_nr /=0 ) then
+        ! Cell coordinates
+        ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+        grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
+        dx=0.5D0**levp(ipart)
+        xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+        !peak_map
+        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',peak_nr
+     end if
+  end do
+  close(20)
+end subroutine write_clump_map

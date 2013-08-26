@@ -12,48 +12,38 @@ subroutine clump_finder(create_output)
 
   !----------------------------------------------------------------------------
   ! Description of clump_finder:
-  ! The clumpfinder assigns a test particle to each cell having a density above 
-  ! a given threshold. These particles are moved to the densest neighbors until 
-  ! particles sit in a local density maximum. The particles (now containing the
-  ! peak_nr they belong to) are moved back to their original position and all
-  ! the relevant properties are computed. If a so called peak patch is 
-  ! considered irrelevant, it is merged to the neighbor which it is connected 
+  ! The clumpfinder assigns a test particle to each cell having a density above
+  ! a given threshold. These particles are moved to the densest neighbors until
+  ! all particles sit in a local density maximum. The particles (now knowing
+  ! the peak they belong to) are moved back to their original position and all
+  ! the relevant properties are computed. If a so called peak patch is
+  ! considered irrelevant, it is merged to the neighbor which it is connected
   ! to through the saddle point with the highest density.
-  ! Andreas Bleuler & Romain Teyssier 10/2010 - ?
-  ! Davide Martizzi & Romain Teyssier 10/2012 - ?
-  !----------------------------------------------------------------------------
+  ! Andreas Bleuler & Davide Martizzi & Romain Teyssier 
+  !---------------------------------------------------------------------------- 
 
-  ! local constants
   integer::itest,istep,nskip,ilevel,info,icpu,nmove,nmove_all
-
-  !new variables for clump/sink comb
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  integer::j,jj,i
-  real(kind=8),dimension(1:nvector,1:3)::pos
-  integer,dimension(1:nvector)::cell_index,cell_levl,cc
-
-  integer::ntest,ntest_all
+  integer::i,j,jj,ntest,ntest_all,peak_nr
   integer,dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
-
-  integer::peak_nr
   integer,dimension(1:ncpu)::npeaks_per_cpu,npeaks_per_cpu_tot
-
+  logical::all_bound,ok
+  real(dp),dimension(1:nvector,1:3)::pos
+  integer,dimension(1:nvector)::cell_index,cell_levl,cc
   integer::flag_form,flag_form_tot
-  
-  logical::ok,all_bound
-
-  real(kind=8)::fourpi,threepi2,tff,acc_r
+  real(dp)::dx,dx_min,dist,scale,tff,acc_r
+  real(dp)::fourpi,threepi2
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   !-------------------------------------------------------------------------------
-  ! Count test particles
-  !-------------------------------------------------------------------------------
+  ! count the number of test particles to be created, flag the cells, share info
+  !------------------------------------------------------------------------------- 
   ntest=0
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,ntest,0,1) !count 'particles' and flag cells
+     call count_test_particle(ilevel,ntest,0,1) !action 1: count and flag 
   end do
   ntest_cpu=0; ntest_cpu_all=0
   ntest_cpu(myid)=ntest
@@ -72,19 +62,16 @@ subroutine clump_finder(create_output)
   end if
 
   !-------------------------------------------------------------------------------
-  ! Allocate test particle arrays
+  ! Allocate arrays and create test particles
   !-------------------------------------------------------------------------------
-  if (ntest>0) then 
+  if (ntest>0) then
      allocate(denp(ntest),levp(ntest),iglobalp(ntest),icellp(ntest))
      denp=0.d0; levp=0; iglobalp=0; icellp=0
   endif
-  !-------------------------------------------------------------------------------
-  ! Compute test particle properties
-  !-------------------------------------------------------------------------------
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,itest,nskip,2) 
+     call count_test_particle(ilevel,itest,nskip,2) !case2 : create the parts 
   end do
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
@@ -102,14 +89,16 @@ subroutine clump_finder(create_output)
      call quick_sort_dp(denp(1),testp_sort(1),ntest) 
      deallocate(denp)
   endif
+
   !-------------------------------------------------------------------------------
   ! Count number of density peaks
   !-------------------------------------------------------------------------------
   npeaks=0; nmove=0
-  if(ntest>0)call scan_for_peaks(ntest,npeaks,1)
+  if(ntest>0)call scan_for_peaks(ntest,npeaks,1) !case 1: count peaks
   npeaks_per_cpu=0
   npeaks_per_cpu(myid)=npeaks
   if(clinfo .and. npeaks>0)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
+
   !----------------------------------------------------------------------------                       
   ! Share number of peaks per cpu and create a list  
   !----------------------------------------------------------------------------
@@ -136,17 +125,22 @@ subroutine clump_finder(create_output)
   end do
 
   !----------------------------------------------------------------------------
-  ! Change the value of flag2 at the peak positions
+  ! flag peaks with global peak id
   !----------------------------------------------------------------------------
   nmove=0
   nskip=peak_nr
   flag2=0
-  if(ntest>0)call scan_for_peaks(ntest,nskip,2)
+  if(ntest>0)call scan_for_peaks(ntest,nskip,2) !case 2: flag peaks
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
+
   !-------------------------------------------------------------------------------               
-  ! Identify peak patches using density ordering
+  ! main step:
+  ! - order cells in descending density
+  ! - get peak id from densest neighbor 
+  ! - nmove is number of peak id's passed along
+  ! - done when nmove=0 (for single cores, only one sweep necessary)   
   !-------------------------------------------------------------------------------
   nmove=1
   istep=0
@@ -165,16 +159,13 @@ subroutine clump_finder(create_output)
      if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove   
   end do
 
-  !-------------------------------------------------------------------------------
   ! Allocate peak-patch property arrays
-  !-------------------------------------------------------------------------------
-  call allocate_peak_patch_arrays()
+  call allocate_peak_patch_arrays
 
-  !-------------------------------------------------------------------------------
   ! Compute peak-patch mass etc. and output these properties before merging 
-  !-------------------------------------------------------------------------------
   call compute_clump_properties(ntest) 
   if (clinfo)call write_clump_properties(.false.)
+
 
   !-------------------------------------------------------------------------------
   ! Find the saddle point densities and merge irrelevant clumps
@@ -188,12 +179,11 @@ subroutine clump_finder(create_output)
      call saddlepoint_search(ntest) 
      call merge_clumps(ntest)
 
-     !------------------------------------------------------------------------------
+
      !if all clumps need to be gravitationally bound to survive - merge again
-     !------------------------------------------------------------------------------
      if (merge_unbound)then
         do while (.not. all_bound)
-           call compute_clump_properties_round2(ntest,create_output,all_bound)
+           call compute_clump_properties_round2(ntest,all_bound)
            call write_clump_properties(.false.)
            do j=npeaks_tot,1,-1
               if (isodens_check(j)<1.)relevance_tot(j)=1.
@@ -202,27 +192,30 @@ subroutine clump_finder(create_output)
         end do
      endif
 
-     !------------------------------------------------------------------------------
-     !for sink formation, only intersection of 4cell ball and clump is considered
-     !------------------------------------------------------------------------------
-     if (.not. smbh .and. sink)then
+     !for sink formation, in star formation case, intersection of 4cell ball and clump is considered
+     if ((.not. smbh) .and. sink .and. (.not. create_output))then
+        if(myid==1) print*,'now trimming clumps'
         call trim_clumps(ntest)
         call compute_clump_properties(ntest)
      end if
 
-     call compute_clump_properties_round2(ntest,create_output,all_bound)
-     ! write properties to screen
+
+     call compute_clump_properties_round2(ntest,all_bound)
+     ! write properties to screen 
      call write_clump_properties(.false.)
      ! ..and if wanted to disk
-     if (create_output)call write_clump_properties(.true.)
-  end if
+     if (create_output)then
+        call write_clump_properties(.true.)
+        call write_clump_map(ntest)
+     end if
 
+  end if
 
   !------------------------------------------------------------------------------
   ! if the clumpfinder is used to produce sinks, flag all the cells which contain
   ! a relevant density peak whose peak patch doesn't yet contain a sink.
   !------------------------------------------------------------------------------
-  if(sink)then
+  if(sink.and.(.not. create_output))then
      allocate(occupied(1:npeaks_tot),occupied_all(1:npeaks_tot))
      occupied=0; occupied_all=0;
      ! loop over sinks and mark all clumps containing a sink
@@ -264,12 +257,9 @@ subroutine clump_finder(create_output)
            ok=.true.
            ok=ok.and.relevance_tot(jj)>0.
            ok=ok.and.occupied_all(jj)==0
-!           ok=ok.and.peak_check(jj)>1.
-!           ok=ok.and.ball4_check(jj)>1.
-!           ok=ok.and.clump_check(jj)>1.
            ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
            ok=ok.and.contracting(jj)
-
+           ok=ok.and.Icl_dd_tot(jj)<0.
            if (ok)then
               pos(1,1:3)=peak_pos_tot(jj,1:3)
               call cmp_cpumap(pos,cc,1)
@@ -327,7 +317,7 @@ subroutine clump_finder(create_output)
      flag_form_tot=flag_form
 #endif
      if(myid == 1)then
-        if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
+        if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   isodens_check   clump_check '
         do j=npeaks_tot,1,-1
            jj=sort_index(j)
            if(form_all(jj) == 1)write(*,'(I6,X,I10,17(1X,1PE14.7))')jj&
@@ -344,7 +334,7 @@ subroutine clump_finder(create_output)
                 ,clump_vol_tot(jj)*(scale_l)**3&
                 ,relevance_tot(jj)&
                 ,peak_check(jj)&
-                ,ball4_check(jj)&
+                !,ball4_check(jj)&
                 ,isodens_check(jj)&
                 ,clump_check(jj)
         end do
@@ -361,7 +351,7 @@ subroutine clump_finder(create_output)
      deallocate(iglobalp)
   endif
   call deallocate_all
-  if(create_output)deallocate(clump_mass_tot4)
+  if(create_output.and.smbh)deallocate(clump_mass_tot4)
 
 end subroutine clump_finder
 !################################################################
