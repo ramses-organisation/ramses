@@ -9,8 +9,7 @@ NVAR = 8
 SOLVER = hydro
 PATCH = 
 EXEC = ramses
-ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS) -DQUADHILBERT
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 
