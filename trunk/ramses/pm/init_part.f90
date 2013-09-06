@@ -2,8 +2,7 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
-
-#ifdef RT      
+#ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
   implicit none
@@ -15,7 +14,7 @@ subroutine init_part
   ! Read particles positions and velocities from grafic files
   !------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  integer::npart2,ndim2,ncpu2,kk2,jj2,ii2
+  integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip,isink
   integer::ind,ix,iy,iz,ilun,info,icpu,nx_loc
@@ -213,7 +212,7 @@ subroutine init_part
         allocate(xdp(1:npart2))
         read(ilun)xdp
         tp(1:npart2)=xdp
-#ifdef RT      
+#ifdef RT
         if(convert_birth_times) then
            do i = 1, npart2 ! Convert birth time to proper for RT postpr.
               call getProperTime(tp(i),tp(i))
@@ -411,7 +410,7 @@ subroutine init_part
                  if(idim==1)filename_x=TRIM(initfile(ilevel))//'/ic_poscx'
                  if(idim==2)filename_x=TRIM(initfile(ilevel))//'/ic_poscy'
                  if(idim==3)filename_x=TRIM(initfile(ilevel))//'/ic_poscz'
-                 
+
                  INQUIRE(file=filename_x,exist=ok)
                  if(.not.ok)then
                     read_pos = .false.
@@ -568,7 +567,7 @@ subroutine init_part
         if(.not. read_pos)then
            xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
         endif
-        
+
         ! Scale displacement to velocity
         vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
         
@@ -942,10 +941,10 @@ subroutine load_gadget
   logical::ok
   TYPE(gadgetheadertype) :: gadgetheader
   integer::numfiles
-  integer::ifile  
+  integer::ifile
   real(dp),dimension(1:nvector,1:3)::xx_dp
   real, dimension(:, :), allocatable:: pos, vel
-  integer, dimension(:), allocatable:: ids 
+  integer, dimension(:), allocatable:: ids
   integer::nparticles, arraysize
   integer::i, icpu, ipart, info, np, start
   integer ,dimension(1:ncpu)::npart_cpu,npart_all
@@ -1033,7 +1032,7 @@ subroutine compute_ncloud_sink
   use amr_commons, only:dp
   use pm_commons, only:ir_cloud,ncloud_sink
   real(dp)::xx,yy,zz,rr
-  integer::ii,jj,kk  
+  integer::ii,jj,kk
   ! Compute number of cloud particles
   ncloud_sink=0
   do kk=-2*ir_cloud,2*ir_cloud
