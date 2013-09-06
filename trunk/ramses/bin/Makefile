@@ -3,11 +3,11 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 64
-NDIM = 3
+NDIM = 1
 NPRE = 8
-NVAR = 6
+NVAR = 3
 SOLVER = hydro
-PATCH = ../patch/hydro/merger
+PATCH = 
 EXEC = ramsesdisk
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
