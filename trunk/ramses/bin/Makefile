@@ -8,7 +8,7 @@ NPRE = 8
 NVAR = 3
 SOLVER = hydro
 PATCH = 
-EXEC = ramsesdisk
+EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
