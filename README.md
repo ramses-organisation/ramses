@@ -1,4 +1,4 @@
-[ramses](https://bitbucket.org/rteyssie/ramses) is an open source code
+##[ramses](https://bitbucket.org/rteyssie/ramses) is an open source code
 to   model   astrophysical    systems,   featuring   self-gravitating,
 magnetised, compressible,  radiative fluid flows.  It is based  on the
 Adaptive Mesh  Refinement (AMR)  technique on a  fully-threaded graded
