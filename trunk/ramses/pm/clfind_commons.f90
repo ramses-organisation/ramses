@@ -1,5 +1,6 @@
 module clfind_commons
   use amr_commons, ONLY: qdp,dp
+  use sparse_matrix
 
   integer::nparts,nparts_tot,npeaks,npeaks_tot
   real(dp)::tot_mass
@@ -11,7 +12,8 @@ module clfind_commons
 
   ! Big array for saddlepoint values
   real(dp),allocatable,dimension(:,:)::saddle_dens,saddle_dens_tot
-
+  ! spare array
+  type(sparse_mat)::sparse_saddle_dens
 
   ! Peak patch properties
   real(dp),allocatable,dimension(:,:)::clump_size_tot,center_of_mass_tot,clump_momentum_tot,clump_force_tot
@@ -21,7 +23,7 @@ module clfind_commons
 !  real(dp),allocatable,dimension(:)::e_kin_int_tot4,e_bind_tot4,e_thermal_tot4
   real(dp),allocatable,dimension(:)::clump_mass_tot,clump_vol_tot,clump_mass_tot4
   real(dp),allocatable,dimension(:,:)::peak_pos_tot,bulk_momentum_tot
-  real(dp),allocatable,dimension(:)::saddle_max_tot
+  real(dp),allocatable,dimension(:)::saddle_max_tot,global_saddle_max,local_saddle_max
   real(dp),allocatable,dimension(:)::relevance_tot
   real(dp),allocatable,dimension(:)::phi_ref, phi_ref_tot
   real(dp),allocatable,dimension(:)::Psurf,Psurf_tot,v_therm_tot,v_rms_tot,m4_tot
