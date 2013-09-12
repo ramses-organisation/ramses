@@ -75,7 +75,7 @@ subroutine compute_clump_properties(ntest)
      peak_nr=flag2(icellp(ipart)) 
 
      if (peak_nr /=0 ) then
-        
+
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
@@ -733,7 +733,7 @@ subroutine merge_clumps(ntest)
   !---------------------------------------------------------------------------
 
   integer::info,j,i,ii,iii,merge_count,final_peak,merge_to,ipart,saddle_max_host
-  integer::peak,next_peak,merge_to2
+  integer::peak,next_peak,merge_to2,merge_to3
   real(dp)::max_val,value_iij,zero=0.
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
   integer,dimension(1:npeaks_tot)::old_peak,ind_sort
@@ -760,7 +760,11 @@ subroutine merge_clumps(ntest)
      do i=1,npeaks_tot
         ii=ind_sort(i)
         new_peak(ii)=ii
-        
+
+        call MPI_BARRIER(MPI_COMM_WORLD,info)
+        call compare_saddle_densities
+        call MPI_BARRIER(MPI_COMM_WORLD,info)
+
         ! If the relevance is below the threshold -> merge
         if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>.5) then
            
@@ -789,9 +793,24 @@ subroutine merge_clumps(ntest)
            !communicate merge_to from cpu which hosts maximum saddle value to others
            call MPI_Bcast(merge_to2,1,MPI_INTEGER,saddle_max_host-1,MPI_COMM_WORLD,info) !F***! mpi starts to count at 0 !
 #endif
+
+
+           merge_to3=sparse_saddle_dens%maxloc(ii)
+#ifndef WITHOUTMPI
+           !find maximum saddle host cpu 
+           !MPI_MAXLOC needs weird datatype...
+           max_loc_input(1)=sparse_saddle_dens%maxval(ii)
+           max_loc_input(2)=1._dp*myid
+           call MPI_ALLREDUCE(max_loc_input,max_loc_output,1,MPI_2DOUBLE_PRECISION,MPI_MAXLOC,MPI_COMM_WORLD,info)
+           saddle_max_host=int(max_loc_output(2))
+
+           !communicate merge_to from cpu which hosts maximum saddle value to others
+           call MPI_Bcast(merge_to3,1,MPI_INTEGER,saddle_max_host-1,MPI_COMM_WORLD,info) !F***! mpi starts to count at 0 !
+#endif
            
            ! sanity check
-           if (merge_to2/=merge_to)write(*,*)'merging catastrophy'
+           if (merge_to2/=merge_to)write(*,*)'local merging catastrophy: ',myid,merge_to,merge_to2
+           if (merge_to3/=merge_to)write(*,*)'sparse merging catastrophy: ',myid,merge_to,merge_to3
 
            ! Store new peak index
            new_peak(ii)=merge_to
@@ -802,7 +821,7 @@ subroutine merge_clumps(ntest)
            endif
            
            ! Update clump properties
-           if (merge_to>0)then
+           if (merge_to2>0)then
               do j=1,ndim
                  clump_momentum_tot(merge_to,j)=&
                       clump_momentum_tot(merge_to,j)+clump_momentum_tot(ii,j)
@@ -844,7 +863,7 @@ subroutine merge_clumps(ntest)
               saddle_dens_tot(ii,j)=0.        
               saddle_dens_tot(j,ii)=0.
            end do
-           !local version
+           ! local version
            do j=1,npeaks_tot
               if (merge_to2>0)then
                  if(saddle_dens(ii,j)>saddle_dens(merge_to,j))then
@@ -895,17 +914,13 @@ subroutine merge_clumps(ntest)
 
            !sparse version
            if (merge_to2>0)then
-              local_saddle_max(merge_to)=sparse_saddle_dens%maxval(merge_to)
 #ifndef WITHOUTMPI
-              call MPI_ALLREDUCE(local_saddle_max(merge_to),global_saddle_max(merge_to),1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+              call MPI_ALLREDUCE(sparse_saddle_dens%maxval(merge_to),global_saddle_max(merge_to),1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI
-              global_saddle_max(merge_to)=local_saddle_max(merge_to)
+              global_saddle_max(merge_to)=sparse_saddle_dens%maxval(merge_to)
 #endif
            end if
-
-
-
 
 
 
@@ -1465,17 +1480,30 @@ subroutine compare_saddle_densities
   use clfind_commons
   use sparse_matrix
   
-
+  real(dp),dimension(1:npeaks_tot)::maxvals
+  integer,dimension(1:npeaks_tot)::maxlocs
   integer::i,j
   logical::ok
+
+  maxvals=maxval(saddle_dens,dim=1)
+  maxlocs=maxloc(saddle_dens,dim=1)
+
+
   ok=.true.
   do i=1,npeaks_tot
+     if (maxvals(i)==0)maxlocs(i)=0
      do j=1,npeaks_tot
         if (get_value(i,j,sparse_saddle_dens)/=saddle_dens(i,j))then
            write(*,*)'There is a problem with your sparse matrix implementation: ',i,j,get_value(i,j,sparse_saddle_dens),saddle_dens(i,j)
            ok=.false.
         end if
      end do
+     if (maxvals(i)/=sparse_saddle_dens%maxval(i))print*,'maxval problem:',myid,maxvals(i),sparse_saddle_dens%maxval(i)
+     if (maxlocs(i)/=sparse_saddle_dens%maxloc(i))then
+        print*,'maxloc problem1:',myid,maxlocs(i),sparse_saddle_dens%maxloc(i)
+        print*,'maxloc problem2:',myid,get_value(i,sparse_saddle_dens%maxloc(i),sparse_saddle_dens),get_value(i,maxlocs(i),sparse_saddle_dens)
+        print*,'maxloc problem3:',myid,saddle_dens(i,sparse_saddle_dens%maxloc(i)),saddle_dens(i,maxlocs(i))
+     end if
    end do
 
   
