@@ -43,6 +43,10 @@ contains
        mat%maxval(i)=new_value
        mat%maxloc(i)=j
     end if
+    ! in case of equal values, take smaller index (for comparability)
+    if (new_value==mat%maxval(i))then
+       mat%maxloc(i)=min(mat%maxloc(i),j)
+    end if
 
     ! start new line
     if (mat%first(i)==0) then
