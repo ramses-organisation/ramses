@@ -171,7 +171,7 @@ subroutine clump_finder(create_output)
         call make_virtual_fine_dp(phi(1),ilevel)
      end do
      call saddlepoint_search(ntest) 
-     call compare_saddle_densities
+!     call compare_saddle_densities
      call merge_clumps(ntest)
 
 
@@ -572,7 +572,7 @@ end subroutine peakcheck
 !#########################################################################
 subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
   use amr_commons, ONLY:flag2,nvector,dp
-  use clfind_commons, ONLY: saddle_dens,sparse_saddle_dens
+  use clfind_commons, ONLY: sparse_saddle_dens!,saddle_dens
   use hydro_commons, ONLY: uold
   use sparse_matrix
   implicit none
@@ -596,8 +596,8 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
   end do
   do j=1,np
      if(ok(j))then ! if all criteria met, replace saddle density array value
-        saddle_dens(clump_nr(j),neigh_cl(j))=max(saddle_dens(clump_nr(j),neigh_cl(j)),av_dens(j))
-        saddle_dens(neigh_cl(j),clump_nr(j))=max(saddle_dens(neigh_cl(j),clump_nr(j)),av_dens(j))
+!        saddle_dens(clump_nr(j),neigh_cl(j))=max(saddle_dens(clump_nr(j),neigh_cl(j)),av_dens(j))
+!        saddle_dens(neigh_cl(j),clump_nr(j))=max(saddle_dens(neigh_cl(j),clump_nr(j)),av_dens(j))
         if (get_value(clump_nr(j),neigh_cl(j),sparse_saddle_dens) < av_dens(j))then
            call set_value(clump_nr(j),neigh_cl(j),av_dens(j),sparse_saddle_dens)
         end if
