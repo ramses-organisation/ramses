@@ -1,18 +1,27 @@
+! basic sparse matrix package for the use in the RAMSES clumpfinder
+! every line of the matrix is saved as a linked list
+! issues/improvements:
+!    -write a routine for quicker "maxmerging" two lines (outer loop calling "get_value" at each position 
+!     is very iniefficient)
+!    -disconnect a value which is set to zero rather than just writing zero into memory (not too bad since
+!    -have short lifetime)
+!    -reuse disconnected space
+
+
 module sparse_matrix
   use amr_commons
-
   type sparse_mat
      real(dp),allocatable,dimension(:)::val,maxval
      integer,allocatable,dimension(:)::next,col,first,maxloc
      integer::used,n,m
   end type sparse_mat
 
-
 contains
 
+!----------------------------------------------------------------------------------------------
   subroutine sparse_initialize(m,n,mat)
     type(sparse_mat)::mat 
-    integer::m,n !size of the array
+    integer::m !size of the array
     allocate(mat%val(1:100000))
     mat%val=0.
     allocate(mat%next(1:100000))
@@ -27,15 +36,25 @@ contains
     allocate(mat%maxloc(1:m))
     mat%maxloc=0
     mat%used=0
-    
-
   end subroutine sparse_initialize
+!----------------------------------------------------------------------------------------------
 
+!----------------------------------------------------------------------------------------------
+  subroutine sparse_kill(mat)
+    type(sparse_mat)::mat 
+    deallocate(mat%val,mat%maxval)
+    deallocate(mat%next,mat%col,mat%first,mat%maxloc)
+  end subroutine sparse_kill
+!----------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------
   subroutine set_value(i,j,new_value,mat)
     type(sparse_mat)::mat 
     integer::i,j !new entry
     real(dp)::new_value
-
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! set new_value at position i,j in mat
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     integer::current,save_next
 
     ! update maximum and its location
@@ -48,7 +67,7 @@ contains
        mat%maxloc(i)=min(mat%maxloc(i),j)
     end if
 
-    ! start new line
+    ! if corresponding line is empty
     if (mat%first(i)==0) then
        mat%used=mat%used+1
        mat%first(i)=mat%used
@@ -58,7 +77,7 @@ contains
        return
     end if
 
-    ! if element needs to be added to start
+    ! if element needs to be added to start of the list
     if (mat%col(mat%first(i))>j) then
        mat%used=mat%used+1
        save_next=mat%first(i)
@@ -99,7 +118,7 @@ contains
        return
     end if
 
-    !next point not to zero -> link in between
+    !next points not to zero -> link in between
     if ( mat%next(current) > 0)then
        mat%used=mat%used+1
        save_next=mat%next(current)
@@ -109,19 +128,20 @@ contains
        mat%val(mat%used)=new_value
        return
     end if
-
+    
     write(*,*)'ooops, I should not be here!'
-
   end subroutine set_value
+!----------------------------------------------------------------------------------------------
 
-
+!----------------------------------------------------------------------------------------------
   function get_value(i,j,mat)
     type(sparse_mat)::mat 
     integer::i,j 
     real(dp)::get_value
-
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! gets the value of mat at position i,j
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     integer::current
-
 
     !empty line
     if (mat%first(i)==0)then
@@ -148,18 +168,20 @@ contains
     end if
 
     write(*,*)'ooops, I should not be here!'
-
   end function get_value
+!----------------------------------------------------------------------------------------------
 
+!----------------------------------------------------------------------------------------------
   subroutine get_max(i,mat)
     type(sparse_mat)::mat 
     integer::i
-
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! get maximum in line by walking the linked list
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     integer::current
 
     mat%maxval(i)=0.
     mat%maxloc(i)=0
-
 
     !walk the line...
     current=mat%first(i)
@@ -170,17 +192,7 @@ contains
        end if
        current=mat%next(current)
     end do
-    
   end subroutine get_max
-
-
-
-
-  subroutine sparse_kill(mat)
-    type(sparse_mat)::mat 
-    deallocate(mat%val,mat%maxval)
-    deallocate(mat%next,mat%col,mat%first,mat%maxloc)
-  end subroutine sparse_kill
-
+!----------------------------------------------------------------------------------------------
 
 end module sparse_matrix
