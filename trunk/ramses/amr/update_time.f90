@@ -77,8 +77,14 @@ subroutine update_time(ilevel)
 #endif
            else if(cooling.or.pressure_fix)then
               write(*,778)nstep_coarse,econs,epot_tot,ekin_tot,eint_tot
+#ifdef SOLVERmhd
+              write(*,'(" emag=",ES9.2)') emag_tot
+#endif
            else
               write(*,777)nstep_coarse,mcons,econs,epot_tot,ekin_tot
+#ifdef SOLVERmhd
+              write(*,'(" emag=",ES9.2)') emag_tot
+#endif
            end if
            if(pic)then
               write(*,888)nstep,t,dt,aexp,&
