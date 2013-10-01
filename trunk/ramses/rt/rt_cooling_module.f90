@@ -341,7 +341,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
 
      X_nHkb= X/(1.5 * nH * kB)                     ! Multiplication factor   
      rate  = X_nHkb*(Hrate - Crate - Zsolar*metal_tot)
-     dRate = -X_nHkb*(dCdT2 - Zsolar*metal_prime)              ! dRate/dT2
+     dRate = -X_nHkb*(dCdT2 + Zsolar*metal_prime)              ! dRate/dT2
      dUU   = ABS(MAX(T2_min_fix, U(1)+rate*dt)-U(1)) ! 1st order dt constr
      dU(1) = MAX(T2_min_fix, U(1)+rate*dt/(1.-dRate*dt))    ! New T2 value 
      dUU   = MAX(dUU, ABS(dU(1)-U(1))) / (U(1)+U_MIN(1)) / U_FRAC(1)
