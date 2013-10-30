@@ -268,7 +268,7 @@ subroutine condinit(x,u,dx,nn)
   endif
 
 
-  a2=T2_star / scale_T2 ! sound speed squared
+  a2=1d4 / scale_T2 ! sound speed squared
   aa=sqrt(a2)
 
   ! Galactic central gas densities
@@ -400,14 +400,13 @@ subroutine condinit(x,u,dx,nn)
         q(i,ndim-1:ndim+1) = Vrot * vect_prod(axe_rot,xx_rad)/r + vgal
         if(metal)q(i,6)=z_ave*0.02 ! z_ave is in solar units
     else ! Cell out of the gaseous disk : density = peanut and velocity = V_gal
-        q(i,1)=dmin
-        q(i,ndim+2)=a2*q(i,1)
+        q(i,1)=1d-7/scale_nH
+        q(i,ndim+2)=1d7/scale_T2*q(i,1)
         ! V = Vgal
         q(i,ndim-1:ndim+1)= vgal
         if(metal)q(i,6)=0.0
      endif
   enddo
-
 
   ! Convert primitive to conservative variables
   ! density -> density

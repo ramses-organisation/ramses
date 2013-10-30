@@ -3,14 +3,13 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 64
-NDIM = 3
+NDIM = 1
 NPRE = 8
-NVAR = 8
+NVAR = 3
 SOLVER = hydro
 PATCH = /home/itp/ableuler/ramses/mypatch/EOS_100/normal
 EXEC = ramses
-ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS) -DQUADHILBERT
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 

@@ -2,6 +2,10 @@ subroutine init_part
   use amr_commons
   use merger_commons
   use pm_commons
+  use clfind_commons
+#ifdef RT
+  use rt_parameters,only: convert_birth_times
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -10,15 +14,15 @@ subroutine init_part
   ! Allocate particle-based arrays.
   ! Read particles positions and velocities from grafic files
   !------------------------------------------------------------
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
-  integer::i,igrid,ncache,ngrid,iskip
+  integer::i,igrid,ncache,ngrid,iskip,isink
   integer::ind,ix,iy,iz,ilun,info,icpu,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
-  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
-  real(dp)::scale,dx_loc
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
+  real(dp)::scale,dx_loc,rr,rmax,dx_min
   integer::ncode,bit_length,temp
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -27,9 +31,9 @@ subroutine init_part
   real(dp),allocatable,dimension(:)::xdp
   integer ,allocatable,dimension(:)::isp
 
-  real(kind=4),allocatable,dimension(:,:)::init_plane
-  real(dp),allocatable,dimension(:,:,:)::init_array
-  real(kind=8),dimension(1:nvector,1:3)::xx,vv
+  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
+  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
+  real(kind=8),dimension(1:nvector,1:3)::xx,vv,xs
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::ixx,iyy,izz
   real(qdp),dimension(1:nvector)::order
@@ -50,8 +54,8 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof
-  character(LEN=80)::filename
+  logical::error,keep_part,eof,jumped,ic_sink=.false.,read_pos=.false.,ok
+  character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar
@@ -86,8 +90,20 @@ subroutine init_part
      allocate(tsink(1:nsinkmax))
      allocate(idsink(1:nsinkmax))
      idsink=0 ! Important: need to set idsink to zero
+     nindsink=MAXVAL(idsink) ! Reset max index
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
+     allocate(vsold(1:nsinkmax,1:ndim,levelmin:nlevelmax))
+     allocate(vsnew(1:nsinkmax,1:ndim,levelmin:nlevelmax))
+     allocate(fsink_partial(1:nsinkmax,1:ndim,levelmin:nlevelmax))
+     allocate(fsink(1:nsinkmax,1:ndim))
+     allocate(acc_rate(1:nsinkmax))
+     acc_rate=0.
+     allocate(acc_lum(1:nsinkmax))
+     acc_lum=0.
+     allocate(lsink(1:nsinkmax,1:3))
+     lsink=0.d0
+     allocate(level_sink(1:nsinkmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
      allocate(total_volume(1:nsinkmax))
@@ -99,6 +115,9 @@ subroutine init_part
      allocate(wmom_new(1:nsinkmax,1:ndim))
      allocate(weth_new(1:nsinkmax))
      allocate(wvol_new(1:nsinkmax))
+     allocate(divsink(1:nsinkmax,1:nlevelmax))
+     allocate(divsink_new(1:nsinkmax,1:nlevelmax))
+     divsink=0.;  divsink_new=0.
      allocate(msink_new(1:nsinkmax))
      allocate(msink_all(1:nsinkmax))
      allocate(tsink_new(1:nsinkmax))
@@ -108,13 +127,17 @@ subroutine init_part
      allocate(idsink_old(1:nsinkmax))
      allocate(vsink_new(1:nsinkmax,1:ndim))
      allocate(vsink_all(1:nsinkmax,1:ndim))
+     allocate(fsink_new(1:nsinkmax,1:ndim))
+     allocate(fsink_all(1:nsinkmax,1:ndim))
+     allocate(lsink_new(1:nsinkmax,1:3))
+     allocate(lsink_all(1:nsinkmax,1:3))
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
-     allocate(tsink(1:nsinkmax))
-     allocate(tsink_new(1:nsinkmax))
-     allocate(tsink_all(1:nsinkmax))
-     allocate(dMBHoverdt(1:nsinkmax))
-     allocate(dMEDoverdt(1:nsinkmax))
+     allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
+     sink_jump=0.d0
+     allocate(level_sink_all(1:nsinkmax))
+     allocate(level_sink_new(1:nsinkmax))
+     allocate(dMsink_overdt(1:nsinkmax))
      allocate(r2sink(1:nsinkmax))
      allocate(r2k(1:nsinkmax))
      allocate(v2sink(1:nsinkmax))
@@ -136,7 +159,7 @@ subroutine init_part
      allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
-     allocate(ind_blast_agn(1:nsinkmax))
+     allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
   endif
 
   !--------------------
@@ -194,6 +217,13 @@ subroutine init_part
         allocate(xdp(1:npart2))
         read(ilun)xdp
         tp(1:npart2)=xdp
+#ifdef RT
+        if(convert_birth_times) then
+           do i = 1, npart2 ! Convert birth time to proper for RT postpr.
+              call getProperTime(tp(i),tp(i))
+           enddo
+        endif
+#endif
         if(metal)then
            ! Read metallicity
            read(ilun)xdp
@@ -217,20 +247,39 @@ subroutine init_part
               read(ilun)xdp ! Read sink velocity
               vsink(1:nsink,idim)=xdp
            end do
+           do idim=1,3
+              read(ilun)xdp ! Read sink angular momentum
+              lsink(1:nsink,idim)=xdp
+           end do
            read(ilun)xdp ! Read sink accumulated rest mass energy
            delta_mass(1:nsink)=xdp
+           read(ilun)xdp ! Read sink accretion rate
+           acc_rate(1:nsink)=xdp
            deallocate(xdp)
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index
            idsink(1:nsink)=isp
+           read(ilun)isp ! Read sink level
+           level_sink(1:nsink)=isp
            nindsink=MAXVAL(idsink) ! Reset max index
            deallocate(isp)
+           read(ilun)ncloud_sink
         end if
      endif
      close(ilun)
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
+     !allow for ncloud_sink to change at restart
+     call compute_ncloud_sink
+
+
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     if(sink .and. ir_feedback)then
+        do i=1,nsink
+           acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
+        end do
+     end if
   else     
 
      filetype_loc=filetype
@@ -305,9 +354,9 @@ subroutine init_part
                           write(*,*)'npartmax should be greater than',ipart
                           call clean_stop
                        endif
-                       xp(ipart,1)=xg(ind_grid(i),1)+xc(ind,1)
-                       xp(ipart,2)=xg(ind_grid(i),2)+xc(ind,2)
-                       xp(ipart,3)=xg(ind_grid(i),3)+xc(ind,3)
+                       if(ndim>0)xp(ipart,1)=xg(ind_grid(i),1)+xc(ind,1)
+                       if(ndim>1)xp(ipart,2)=xg(ind_grid(i),2)+xc(ind,2)
+                       if(ndim>2)xp(ipart,3)=xg(ind_grid(i),3)+xc(ind,3)
                        mp(ipart)=0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
                     end if
                  end do
@@ -342,9 +391,12 @@ subroutine init_part
            ! Allocate initial conditions array
            if(active(ilevel)%ngrid>0)then
               allocate(init_array(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
+              allocate(init_array_x(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
               init_array=0d0
+              init_array_x=0d0
            end if
            allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
+           allocate(init_plane_x(1:n1(ilevel),1:n2(ilevel)))
            
            ! Loop over input variables
            do idim=1,ndim
@@ -359,6 +411,19 @@ subroutine init_part
                  if(idim==1)filename=TRIM(initfile(ilevel))//'/ic_velcx'
                  if(idim==2)filename=TRIM(initfile(ilevel))//'/ic_velcy'
                  if(idim==3)filename=TRIM(initfile(ilevel))//'/ic_velcz'
+
+                 if(idim==1)filename_x=TRIM(initfile(ilevel))//'/ic_poscx'
+                 if(idim==2)filename_x=TRIM(initfile(ilevel))//'/ic_poscy'
+                 if(idim==3)filename_x=TRIM(initfile(ilevel))//'/ic_poscz'
+
+                 INQUIRE(file=filename_x,exist=ok)
+                 if(.not.ok)then
+                    read_pos = .false.
+                 else
+                    read_pos = .true.
+                    if(myid==1)write(*,*)'Reading file '//TRIM(filename_x)
+                 end if
+
               endif
 
               if(myid==1)write(*,*)'Reading file '//TRIM(filename)
@@ -404,12 +469,42 @@ subroutine init_part
                     endif
                  end do
                  if(myid==1)close(10)
+
+                 if(read_pos) then
+                    if(myid==1)then
+                       open(10,file=filename_x,form='unformatted')
+                       rewind 10
+                       read(10) ! skip first line
+                    end if
+                    do i3=1,n3(ilevel)
+                       if(myid==1)then
+                          if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
+                          read(10)((init_plane_x(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
+                       else
+                          init_plane_x=0.0
+                       endif
+                       buf_count=n1(ilevel)*n2(ilevel)
+#ifndef WITHOUTMPI
+                       call MPI_BCAST(init_plane_x,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
+#endif
+                       if(active(ilevel)%ngrid>0)then
+                          if(i3.ge.i3_min.and.i3.le.i3_max)then
+                             init_array_x(i1_min:i1_max,i2_min:i2_max,i3) = &
+                                  & init_plane_x(i1_min:i1_max,i2_min:i2_max)
+                          end if
+                       endif
+                    end do
+                    if(myid==1)close(10)
+                 end if
+
               endif
               
               if(active(ilevel)%ngrid>0)then
                  ! Rescale initial displacement field to code units
                  init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
-                 
+                 if(read_pos)then
+                    init_array_x = init_array_x/boxlen_ini
+                 endif
                  ! Loop over grids by vector sweeps
                  ipart=ipart_old
                  ncache=active(ilevel)%ngrid
@@ -442,7 +537,12 @@ subroutine init_part
                           if(keep_part)then
                              ipart=ipart+1
                              vp(ipart,idim)=init_array(i1,i2,i3)
-                             dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
+                             if(.not. read_pos)then
+                                dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
+                             else
+                                xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
+                                dispmax=max(dispmax,abs(init_array_x(i1,i2,i3)/dx))
+                             endif
                           end if
                        end do
                     end do
@@ -456,9 +556,9 @@ subroutine init_part
            
            ! Deallocate initial conditions array
            if(active(ilevel)%ngrid>0)then
-              deallocate(init_array)
+              deallocate(init_array,init_array_x)
            end if
-           deallocate(init_plane)
+           deallocate(init_plane,init_plane_x)
            
            if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
            
@@ -469,19 +569,27 @@ subroutine init_part
         npart=ipart
         
         ! Move particle according to Zeldovich approximation
-        xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
-        
+        if(.not. read_pos)then
+           xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
+        endif
+
         ! Scale displacement to velocity
         vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
         
         ! Periodic box
         do ipart=1,npart
+#if NDIM>0
            if(xp(ipart,1)<  0.0d0  )xp(ipart,1)=xp(ipart,1)+dble(nx)
-           if(xp(ipart,2)<  0.0d0  )xp(ipart,2)=xp(ipart,2)+dble(ny)
-           if(xp(ipart,3)<  0.0d0  )xp(ipart,3)=xp(ipart,3)+dble(nz)
            if(xp(ipart,1)>=dble(nx))xp(ipart,1)=xp(ipart,1)-dble(nx)
+#endif
+#if NDIM>1
+           if(xp(ipart,2)<  0.0d0  )xp(ipart,2)=xp(ipart,2)+dble(ny)
            if(xp(ipart,2)>=dble(ny))xp(ipart,2)=xp(ipart,2)-dble(ny)
+#endif
+#if NDIM>2
+           if(xp(ipart,3)<  0.0d0  )xp(ipart,3)=xp(ipart,3)+dble(nz)
            if(xp(ipart,3)>=dble(nz))xp(ipart,3)=xp(ipart,3)-dble(nz)
+#endif
         end do
         
 #ifndef WITHOUTMPI        
@@ -903,43 +1011,218 @@ subroutine init_part
 #endif
         do icpu=2,ncpu
            npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
-        end do  
-        write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
+        end do
+        if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
 
-        ! Create sink particle
-        if(sink)then
-           msink_new=0d0; xsink_new=0d0; vsink_new=0d0
-           nsink=npart_cpu(ncpu)
-           ! Switch all particles to sink's cloud central particle
-          do i=1,npart
-             msink_new(idp(i))=mp(i)
-             xsink_new(idp(i),1)=xp(i,1)
-             xsink_new(idp(i),2)=xp(i,2)
-             xsink_new(idp(i),3)=xp(i,3)
-             vsink_new(idp(i),1)=vp(i,1)
-             vsink_new(idp(i),2)=vp(i,2)
-             vsink_new(idp(i),3)=vp(i,3)
-             idp(i)=-idp(i)
-           end do
-#ifndef WITHOUTMPI
-           call MPI_ALLREDUCE(msink_new,msink_all ,nsinkmax     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-           call MPI_ALLREDUCE(xsink_new,xsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-           call MPI_ALLREDUCE(vsink_new,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-           msink_all=msink_new
-           xsink_all=xsink_new
-           vsink_all=vsink_new
-#endif
-           do i=1,nsink
-              msink(i)=msink_all(i)
-              xsink(i,1:ndim)=xsink_all(i,1:ndim)
-              vsink(i,1:ndim)=vsink_all(i,1:ndim)
-           end do
-        endif
-        
+     case ('gadget')
+        call load_gadget
+
+     case DEFAULT
+        write(*,*) 'Unsupported format file ' // filetype
+        call clean_stop
+
      end select
 
+     ! Read initial sink particles
+     ! Sink particles that exist at the beginning of the simu are always (independent of the type of
+     ! the other ic files) read from a text file.
+     if(sink)then
+        call compute_ncloud_sink
+
+        nx_loc=(icoarse_max-icoarse_min+1)
+        scale=boxlen/dble(nx_loc)
+        dx_min=scale*0.5D0**nlevelmax/aexp
+
+        nsink=0
+        if(TRIM(initfile(levelmin)).NE.' ')then
+           filename=TRIM(initfile(levelmin))//'/ic_sink'
+        else
+           filename='ic_sink'
+        end if
+        INQUIRE(FILE=filename, EXIST=ic_sink)
+        if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+        if (ic_sink)then
+           open(10,file=filename,form='formatted')
+           eof=.false.
+           if (myid==1)write(*,*)'Reading_file ',filename
+           do
+              read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
+              nsink=nsink+1
+              idsink(nsink)=nsink
+              msink(nsink)=mm1
+              xsink(nsink,1)=xx1
+              xsink(nsink,2)=xx2
+              xsink(nsink,3)=xx3
+              vsink(nsink,1)=vv1
+              vsink(nsink,2)=vv2
+              vsink(nsink,3)=vv3
+              lsink(nsink,1)=ll1
+              lsink(nsink,2)=ll2
+              lsink(nsink,3)=ll3
+              tsink(nsink)=0.
+              level_sink(nsink)=levelmin
+           end do
+102        continue
+           close(10)
+        end if
+        nindsink=MAXVAL(idsink) ! Reset max index
+        if (myid==1.and.nsink==0)write(*,*)'File ic_sink not found: starting without sink particles!'
+        if (myid==1.and.nsink>0.and.verbose)then
+           write(*,*),'sinks read from file ic_sink'
+           write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
+           write(*,*),'====================================================================================='
+           do isink=1,nsink
+              write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+                   vsink(isink,1:ndim),lsink(isink,1:ndim)
+           end do
+        end if
+
+        ! Loop over sinks
+        do isink=1,nsink
+           xs(1,1:ndim)=xsink(isink,1:ndim)
+           call cmp_cpumap(xs,cc,1)
+
+           ! Create central cloud particles (negative index)
+           if(cc(1).eq.myid)then
+              npart=npart+1
+              tp(npart)=1d-10
+              mp(npart)=msink(isink)     ! Mass
+              levelp(npart)=levelmin
+              idp(npart)=-isink          ! Identity
+              xp(npart,1)=xsink(isink,1) ! Position
+              xp(npart,2)=xsink(isink,2)
+              xp(npart,3)=xsink(isink,3)
+              vp(npart,1)=vsink(isink,1) ! Velocity
+              vp(npart,2)=vsink(isink,2)
+              vp(npart,3)=vsink(isink,3)
+           endif
+
+        end do
+
+     end if
   end if
 
 end subroutine init_part
+#define TIME_START(cs) call SYSTEM_CLOCK(COUNT=cs)
+#define TIME_END(ce) call SYSTEM_CLOCK(COUNT=ce)
+#define TIME_SPENT(cs,ce,cr) REAL((ce-cs)/cr)
+subroutine load_gadget
+  use amr_commons
+  use pm_commons
+  use gadgetreadfilemod
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+
+  logical::ok
+  TYPE(gadgetheadertype) :: gadgetheader
+  integer::numfiles
+  integer::ifile
+  real(dp),dimension(1:nvector,1:3)::xx_dp
+  real, dimension(:, :), allocatable:: pos, vel
+  integer, dimension(:), allocatable:: ids
+  integer::nparticles, arraysize
+  integer::i, icpu, ipart, info, np, start
+  integer ,dimension(1:ncpu)::npart_cpu,npart_all
+  character(LEN=256)::filename
+  integer ,dimension(1:nvector)::cc
+  integer :: clock_start, clock_end, clock_rate
+  integer :: mpi_cs, mpi_ce
+  real:: gadgetvfact
+  ! Local particle count
+  ipart=0
+  call SYSTEM_CLOCK(COUNT_RATE=clock_rate)
+
+  if(TRIM(initfile(levelmin)).NE.' ')then
+     filename=TRIM(initfile(levelmin))
+     ! read first header to get information
+     call gadgetreadheader(filename, 0, gadgetheader, ok)
+     if(.not.ok) call clean_stop
+     numfiles = gadgetheader%numfiles
+     gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+     do ifile=0,numfiles-1
+        call gadgetreadheader(filename, ifile, gadgetheader, ok)
+        nparticles = gadgetheader%npart(2)
+        allocate(pos(3,nparticles))
+        allocate(vel(3,nparticles))
+        allocate(ids(nparticles))
+        TIME_START(clock_start)
+        call gadgetreadfile(filename,ifile,gadgetheader, pos, vel, ids)
+        TIME_END(clock_end)
+        if(debug) write(*,*) myid, ':Read ', nparticles, ' from gadget file ', ifile, ' in ', &
+        TIME_SPENT(clock_start, clock_end, clock_rate)
+        start = 1
+        TIME_START(clock_start)
+#ifndef WITHOUTMPI
+        do i=1,nparticles
+           xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
+           xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
+           xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+           call cmp_cpumap(xx_dp,cc,1)
+           if(cc(1)==myid)then
+#endif
+              ipart=ipart+1
+              if (ipart .ge. size(mp)) then
+                 write(*,*) "For ", myid, ipart, " exceeds ", size(mp)
+                 call clean_stop
+              end if
+              xp(ipart,1:3)=xx_dp(1,1:3)
+              vp(ipart,1)=vel(1, i) * gadgetvfact
+              vp(ipart,2)=vel(2, i) * gadgetvfact
+              vp(ipart,3)=vel(3, i) * gadgetvfact
+              mp(ipart)    = 1.d0/gadgetheader%nparttotal(2)
+              levelp(ipart)=levelmin
+              idp(ipart)   =ids(i)
+#ifndef WITHOUTMPI
+            endif
+        enddo
+        TIME_END(clock_end)
+        if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ', TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart
+#endif
+        deallocate(pos,vel,ids)
+     end do
+
+  end if
+  npart=ipart
+  ! Compute total number of particleclock_rate
+  npart_cpu=0; npart_all=0
+  npart_cpu(myid)=npart
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  npart_cpu(1)=npart_all(1)
+#endif
+  do icpu=2,ncpu
+     npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
+  end do
+  write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
+
+end subroutine load_gadget
+
+
+
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine compute_ncloud_sink
+  use amr_commons, only:dp
+  use pm_commons, only:ir_cloud,ncloud_sink
+  real(dp)::xx,yy,zz,rr
+  integer::ii,jj,kk
+  ! Compute number of cloud particles
+  ncloud_sink=0
+  do kk=-2*ir_cloud,2*ir_cloud
+     zz=dble(kk)/2.0
+     do jj=-2*ir_cloud,2*ir_cloud
+        yy=dble(jj)/2.0
+        do ii=-2*ir_cloud,2*ir_cloud
+           xx=dble(ii)/2.0
+           rr=sqrt(xx*xx+yy*yy+zz*zz)
+           if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+        end do
+     end do
+  end do
+
+end subroutine compute_ncloud_sink
 

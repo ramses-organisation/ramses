@@ -20,7 +20,7 @@ subroutine output_cone()
   integer::ilun,nx_loc,ipout,npout,npart_out
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
-  real(kind=8),dimension(1:ndim,1:nvector),save::pos,vel
+  real(kind=8),dimension(1:3,1:nvector),save::pos,vel
   real(kind=8),dimension(:,:),allocatable::posout,velout
   real(kind=8),dimension(:),allocatable::zout
   real(kind=8),dimension(:,:),allocatable::tmparr
@@ -78,16 +78,16 @@ subroutine output_cone()
 
   ! Pre-allocate arrays for particle selection -----
   nalloc1=nvector
-  allocate(posout(1:ndim, 1:nalloc1))
-  allocate(velout(1:ndim, 1:nalloc1))
+  allocate(posout(1:3, 1:nalloc1))
+  allocate(velout(1:3, 1:nalloc1))
   allocate(zout(1:nalloc1))
 
   nalloc2=nvector+nstride
-  allocate(xp_out(1:nalloc2,1:ndim))
-  allocate(vp_out(1:nalloc2,1:ndim))
+  allocate(xp_out(1:nalloc2,1:3))
+  allocate(vp_out(1:nalloc2,1:3))
   allocate(zp_out(1:nalloc2))
 
-  allocate(tmparr(1:ndim, 1:nalloc2))
+  allocate(tmparr(1:3, 1:nalloc2))
   ! ------------------------------------------------
 
   ilevel=levelmin
@@ -316,14 +316,14 @@ contains
 
         ! Resize temp array
         deallocate(tmparr)
-        allocate(tmparr(1:ndim,1:max(new_nalloc1,new_nalloc2)))
+        allocate(tmparr(1:3,1:max(new_nalloc1,new_nalloc2)))
 
 
         ! Resize xp_out, vp_out, zp_out
         do idim=1,ndim
             tmparr(idim,1:nalloc2)=xp_out(1:nalloc2,idim)
         end do
-        deallocate(xp_out); allocate(xp_out(1:new_nalloc2,1:ndim))
+        deallocate(xp_out); allocate(xp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
             xp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
         end do
@@ -331,7 +331,7 @@ contains
         do idim=1,ndim
             tmparr(idim,1:nalloc2)=vp_out(1:nalloc2,idim) 
         end do
-        deallocate(vp_out); allocate(vp_out(1:new_nalloc2,1:ndim))
+        deallocate(vp_out); allocate(vp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
             vp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
         end do
@@ -346,7 +346,7 @@ contains
         ! Resize posout, velout, zout
         do idim=1,ndim
             tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1) 
-        deallocate(posout); allocate(posout(1:ndim,1:new_nalloc1))
+        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         end do
         do idim=1,ndim
             posout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
@@ -355,7 +355,7 @@ contains
         do idim=1,ndim
             tmparr(idim,1:nalloc1)=velout(idim,1:nalloc1) 
         end do
-        deallocate(velout); allocate(velout(1:ndim,1:new_nalloc1))
+        deallocate(velout); allocate(velout(1:3,1:new_nalloc1))
         do idim=1,ndim
             velout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
         end do
@@ -446,7 +446,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
-  real(kind=8) :: pos(3,nvector),vel(3,nvector)
+  real(kind=8) :: pos(1:3,1:nvector),vel(1:3,1:nvector)
   real(kind=8) :: posout(3,npartout),velout(3,npartout),zout(npartout)
   real(kind=8) :: coord_distance
   real(kind=8) :: thetarad,phirad,thetayrad,thetazrad,tanybound,tanzbound
