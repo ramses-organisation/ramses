@@ -1001,7 +1001,8 @@ subroutine load_gadget
             endif
         enddo
         TIME_END(clock_end)
-        if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ', TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart
+        if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ',&
+             &  TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart
 #endif
         deallocate(pos,vel,ids)
      end do
