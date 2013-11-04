@@ -1659,7 +1659,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Density threshold for sink particle formation 
-  d_sink=n_sink/scale_nH   
+  d_sink=n_sink/scale_nH 
+  if(cosmo)d_sink=d_sink/aexp**3  
   
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1978,6 +1979,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
   
   ! Density threshold for sink particle creation
   d_sink=n_sink/scale_nH
+  if(cosmo)d_sink=d_sink/aexp**3
 
   divergence=0.
   if(bondi)then
@@ -2692,6 +2694,7 @@ subroutine make_sink_from_clump(ilevel)
 
   ! Density threshold for sink particle creation
   d_sink=n_sink/scale_nH
+  if(cosmo)d_sink=d_sink/aexp**3
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
