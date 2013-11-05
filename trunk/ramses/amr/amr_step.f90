@@ -214,7 +214,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(hydro)then
 
         ! Compute Bondi-Hoyle accretion parameters
-        if(sink.and.bondi)call bondi_hoyle(ilevel)
+        if(sink)call bondi_hoyle(ilevel)
 
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
@@ -321,7 +321,7 @@ recursive subroutine amr_step(ilevel,icount)
      call set_uold(ilevel)
 
      ! Density threshold or Bondi accretion onto sink particle
-     if(sink)call grow_sink(ilevel)
+     if(sink)call grow_sink(ilevel,.false.)
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 

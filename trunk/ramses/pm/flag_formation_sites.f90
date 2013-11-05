@@ -17,7 +17,7 @@ subroutine flag_formation_sites
   integer::j,jj,i,nx_loc
   integer::flag_form,flag_form_tot,info
   logical::ok
-  real(dp)::dx,dx_min,dist,scale,tff,acc_r
+  real(dp)::dx,dx_min,dist2,scale,tff,acc_r
   real(dp)::fourpi,threepi2
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(dp),dimension(1:npeaks_tot)::peakd
@@ -52,13 +52,13 @@ subroutine flag_formation_sites
         end if
      end do
   else
-     !block peaks that are closer than 4 cells from existing sinks
+     !block peaks that are closer than 8 cells from existing sinks
      do j=1,nsink
         do i=1,npeaks_tot
-           dist=(xsink(j,1)-peak_pos_tot(i,1))**2+&
+           dist2=(xsink(j,1)-peak_pos_tot(i,1))**2+&
                 (xsink(j,2)-peak_pos_tot(i,2))**2+&
                 (xsink(j,3)-peak_pos_tot(i,3))**2
-           if (dist<(ir_cloud*dx_min)**2)then
+           if (dist2<(2*ir_cloud*dx_min)**2)then
               occupied(i)=1
               if(myid==1 .and. clinfo)write(*,*)'blocked clump # ',i,' for sink production because of sink # ',idsink(j)
            end if
@@ -133,7 +133,7 @@ subroutine flag_formation_sites
         ok=ok.and.occupied_all(jj)==0
         ok=ok.and.max_dens_tot(jj)>(n_sink/scale_nH)
         ok=ok.and.contracting(jj)
-        ok=ok.and.Icl_dd_tot(jj)<0.
+        ok=ok.and.(Icl_dd_tot(jj)<0.)
         if (ok)then
            pos(1,1:3)=peak_pos_tot(jj,1:3)
            call cmp_cpumap(pos,cc,1)

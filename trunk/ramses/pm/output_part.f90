@@ -252,7 +252,7 @@ subroutine output_sink_csv(filename)
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,8(A1,ES20.10))')idsink(isink),',',msink(isink)*scale_m/2d33,',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),',',t-tsink(isink)
+     write(ilun,'(I10,11(A1,ES20.10))')idsink(isink),',',msink(isink)*scale_m/2d33,',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),',',t-tsink(isink)
   end do
 
   close(ilun)

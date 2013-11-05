@@ -2,6 +2,7 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
+
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -98,11 +99,15 @@ subroutine init_part
      acc_lum=0.
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
+     allocate(delta_l_tot(1:nsinkmax,1:3))
+     delta_l_tot=0.
      allocate(level_sink(1:nsinkmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
      allocate(total_volume(1:nsinkmax))
      allocate(wden(1:nsinkmax))
+     allocate(lnor(1:nsinkmax))
+     allocate(lnor_new(1:nsinkmax))
      allocate(wmom(1:nsinkmax,1:ndim))
      allocate(weth(1:nsinkmax))
      allocate(wvol(1:nsinkmax))
@@ -143,6 +148,7 @@ subroutine init_part
      allocate(c2sink_all(1:nsinkmax))
      allocate(weighted_density(1:nsinkmax,1:nlevelmax))
      allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
+     allocate(rho_rz_tot(1:nsinkmax,1:nlevelmax))
      allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
      allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
      allocate(oksink_new(1:nsinkmax))
@@ -156,6 +162,9 @@ subroutine init_part
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
      allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
   endif
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  if (sink)protostar_seedmass=0.00043*2.d33/(scale_d*scale_l**3)
 
   !--------------------
   ! Read part.tmp file
@@ -266,15 +275,16 @@ subroutine init_part
      npart=npart2
 
      !allow for ncloud_sink to change at restart
-     call compute_ncloud_sink
+     if (sink)call compute_ncloud_sink
 
 
-     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
      if(sink .and. ir_feedback)then
         do i=1,nsink
            acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
+     
   else     
 
      filetype_loc=filetype

@@ -24,7 +24,7 @@ subroutine compute_clump_properties(ntest)
   ! variables related to the size of a cell on a given level
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:nlevelmax)::volume
-  real(dp),dimension(1:3)::skip_loc,xcell
+  real(dp),dimension(1:3)::skip_loc,xcell,x
   real(dp),dimension(1:twotondim,1:3)::xc
   integer::nx_loc,ind,ix,iy,iz
   !peak-patch related arrays before sharing information with other cpus
@@ -75,7 +75,7 @@ subroutine compute_clump_properties(ntest)
      peak_nr=flag2(icellp(ipart)) 
 
      if (peak_nr /=0 ) then
-
+        
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
@@ -157,7 +157,13 @@ subroutine compute_clump_properties(ntest)
   !clean some wannabe peaks (due to MPI)
   do j=1,npeaks_tot
      do i=1,ndim
-        if (max_dens(j)<max_dens_tot(j))peak_pos(j,i)=0.d0
+        if(max_dens(j)<max_dens_tot(j))then
+           peak_pos(j,i)=0.d0
+        else
+           x(1:3)=peak_pos(j,1:3)
+           call true_max(x(1),x(2),x(3),nlevelmax)
+           peak_pos(j,1:3)=x(1:3)
+        end if
      end do
   end do
 #ifndef WITHOUTMPI
@@ -298,8 +304,6 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
         rrel=xcell(1:3)-center_of_mass_tot(peak_nr,1:3)
         vrel=vd(1:3)/d-v_cl(1:3)
         frel=f(icellp(ipart),1:3)-clump_force_tot(peak_nr,1:3)
-
-        
 
         do i=1,ndim
            ! size relative to center of mass
@@ -442,24 +446,27 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
         !update the all_bound property
         all_bound=all_bound.and.(isodens_check(j)>1.)
 
+        !tweak
+!        Icl_dd_tot(j)=abs(Icl_d_tot(j))/Icl_dd_tot(j)-Icl_tot(j)/abs(Icl_d_tot(j))
+
      endif
   end do
 
   !write to the log file some information that could be of interest for debugging etc.
   if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then 
-     write(*,'(135A)')'==========================================================================================='
-     write(*,'(135A)')'Cl_N     t1[y]      t2[y]      t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
-     write(*,'(135A)')'==========================================================================================='
+     write(*,'(135A)')'==================================================================================================='
+     write(*,'(135A)')'Cl_N      t1[y]       t2[y]       t3[y]  |I_d|/I_dd[y]  tidal_Fg    Psurf       e_kin       e_therm'
+     write(*,'(135A)')'==================================================================================================='
      do j=npeaks_tot,1,-1
         if (relevance_tot(j)>0.)then
-           write(*,'(I4,2X,8(E8.2E2,3X))'),j&
+           write(*,'(I4,2X,8(E9.2E2,3X))'),j&
                 ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
                 ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
                 ,grav_term_tot(j),-1.*Psurf_tot(j)&
                 ,e_kin_int_tot(j),e_thermal_tot(j)
         end if
      end do
-     write(*,'(135A)')'==========================================================================================='
+     write(*,'(135A)')'==================================================================================================='
   end if
      
 end subroutine compute_clump_properties_round2
@@ -552,7 +559,7 @@ subroutine write_clump_properties(to_file)
            
            if (relevance_tot(jj) > 0)then
               if(clinfo .and. (to_file .eqv. .false.))then
-                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),5(X,E11.2E2))')&
+                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),5(X,E11.3E2))')&
                       jj&
                       ,n_cells_tot(jj)&
                       ,peak_pos_tot(jj,1)&
@@ -812,7 +819,7 @@ subroutine merge_clumps(ntest)
               if (saddle_max_tot(merge_to)>1.d-40)then
                  relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
               else 
-                 relevance_tot(merge_to)=max_dens_tot(merge_to)/min_dens_tot(merge_to)
+                 relevance_tot(merge_to)=max_dens_tot(merge_to)/d0
               end if
            end if
            relevance_tot(ii)=0.
