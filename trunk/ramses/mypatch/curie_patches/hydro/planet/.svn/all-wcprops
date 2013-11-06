@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/planet
+END
+condinit.f90
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/planet/condinit.f90
+END
+amr_step.f90
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/planet/amr_step.f90
+END
+planet.nml
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/planet/planet.nml
+END
+gravana.f90
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/planet/gravana.f90
+END

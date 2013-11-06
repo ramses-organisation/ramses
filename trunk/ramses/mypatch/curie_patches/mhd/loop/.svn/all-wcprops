@@ -1,0 +1,23 @@
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/mhd/loop
+END
+condinit.f90
+K 25
+svn:wc:ra_dav:version-url
+V 69
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/mhd/loop/condinit.f90
+END
+im.pro
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/mhd/loop/im.pro
+END
+loop.nml
+K 25
+svn:wc:ra_dav:version-url
+V 65
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/mhd/loop/loop.nml
+END

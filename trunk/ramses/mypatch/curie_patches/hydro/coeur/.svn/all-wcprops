@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur
+END
+read_hydro_params.f90
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/read_hydro_params.f90
+END
+condinit.f90
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/condinit.f90
+END
+hydro_parameters.f90
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/hydro_parameters.f90
+END
+amr_step.f90
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/amr_step.f90
+END
+dense_core.nml
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/dense_core.nml
+END
+gravana.f90
+K 25
+svn:wc:ra_dav:version-url
+V 71
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/coeur/gravana.f90
+END
