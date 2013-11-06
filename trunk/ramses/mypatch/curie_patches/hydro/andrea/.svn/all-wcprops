@@ -1,0 +1,89 @@
+K 25
+svn:wc:ra_dav:version-url
+V 60
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea
+END
+amr_parameters.f90
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/amr_parameters.f90
+END
+units.f90
+K 25
+svn:wc:ra_dav:version-url
+V 70
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/units.f90
+END
+agn_very_big.nml
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_very_big.nml
+END
+agn_noref.nml
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_noref.nml
+END
+agn_hires.nml
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_hires.nml
+END
+agn_ultim.nml
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_ultim.nml
+END
+boundana.f90
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/boundana.f90
+END
+condinit.f90
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/condinit.f90
+END
+agn_very_hires.nml
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_very_hires.nml
+END
+courant_fine.f90
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/courant_fine.f90
+END
+agn.nml
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn.nml
+END
+agn_big.nml
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/agn_big.nml
+END
+read_params.f90
+K 25
+svn:wc:ra_dav:version-url
+V 76
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/read_params.f90
+END
+gravana.f90
+K 25
+svn:wc:ra_dav:version-url
+V 72
+/repos/itp/ramses/!svn/ver/3/trunk/ramses/patch/hydro/andrea/gravana.f90
+END
