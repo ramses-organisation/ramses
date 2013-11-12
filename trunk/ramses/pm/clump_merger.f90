@@ -1003,7 +1003,6 @@ subroutine allocate_peak_patch_arrays
   allocate(e_bind_tot(npeaks_tot))
   allocate(e_thermal_tot(npeaks_tot))
   allocate(phi_min_tot(npeaks_tot))
-  allocate(minmatch_tot(npeaks_tot))
   allocate(new_peak(npeaks_tot))
   allocate(phi_ref(npeaks_tot))
   allocate(phi_ref_tot(npeaks_tot))
@@ -1047,7 +1046,6 @@ subroutine allocate_peak_patch_arrays
   e_bind_tot=0.
   e_thermal_tot=0.
   phi_min_tot=0.
-  minmatch_tot=1
   new_peak=0
   phi_ref=huge(zero)
   Psurf=0.;Psurf_tot=0.
@@ -1087,7 +1085,6 @@ subroutine deallocate_all
   deallocate(e_bind_tot,grav_term_tot)
   deallocate(e_thermal_tot)
   deallocate(phi_min_tot)
-  deallocate(minmatch_tot)
   deallocate(new_peak)
   deallocate(phi_ref,phi_ref_tot)
   deallocate(Psurf,Psurf_tot)

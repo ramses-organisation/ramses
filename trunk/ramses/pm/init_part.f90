@@ -148,7 +148,7 @@ subroutine init_part
      allocate(c2sink_all(1:nsinkmax))
      allocate(weighted_density(1:nsinkmax,1:nlevelmax))
      allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
-     allocate(rho_rz_tot(1:nsinkmax,1:nlevelmax))
+     allocate(rho_rz2_tot(1:nsinkmax,1:nlevelmax))
      allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
      allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
      allocate(oksink_new(1:nsinkmax))
@@ -164,8 +164,10 @@ subroutine init_part
   endif
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  if (sink)protostar_seedmass=0.00043*2.d33/(scale_d*scale_l**3)
-
+  if (sink)then
+     protostar_seedmass=0.00043*2.d33/(scale_d*scale_l**3)
+     d_sink=n_sink/scale_nH
+  end if
   !--------------------
   ! Read part.tmp file
   !--------------------

@@ -24,7 +24,7 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all,delta_l_tot !sink angular momentum
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
-  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz_tot
+  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
