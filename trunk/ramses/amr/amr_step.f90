@@ -321,7 +321,15 @@ recursive subroutine amr_step(ilevel,icount)
      call set_uold(ilevel)
 
      ! Density threshold or Bondi accretion onto sink particle
-     if(sink)call grow_sink(ilevel,.false.)
+     if(sink)then
+        !this is a trick to temporarily solve the issue with sink accretion 
+        !from ghost zones. Only an option for simulations without dark matter.
+        if (.not. cosmo)then
+           call make_tree_fine(ilevel)
+           call virtual_tree_fine(ilevel)
+        end if
+        call grow_sink(ilevel,.false.)
+     end if
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 

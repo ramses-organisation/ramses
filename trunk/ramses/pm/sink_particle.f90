@@ -1550,33 +1550,6 @@ subroutine grow_sink(ilevel,on_creation)
      delta_l_tot(1:nsink,1:3)=0.
   else
      if (l_feedback)then
-        ! do isink=1,nsink
-        !    delta_l_max=0.
-
-        !    density=0d0
-        !    volume=0d0
-        !    ethermal=0d0
-
-        !    do i=levelmin,nlevelmax
-        !       delta_l_max=delta_l_max+rho_rz2_tot(isink,i)
-
-        !       density=density+weighted_density(isink,i)
-        !       ethermal=ethermal+weighted_ethermal(isink,i)
-        !       volume=volume+weighted_volume(isink,i)
-        !    end do
-
-        !    density=density/(volume+tiny(0.0_dp))
-        !    ethermal=ethermal/(density*volume+tiny(0.0_dp))
-        !    c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
-
-        !    delta_l_max=delta_l_max*vol_min/8.*5.*c2**0.5/(ir_cloud*dx_min)
-        !    delta_l_tot(isink,1:3)=0.98*lsink(isink,1:3)
-        !    delta_l_tot_abs=sum(delta_l_tot(isink,1:3)**2)**0.5
-        !    if (delta_l_tot_abs>delta_l_max)then
-        !       delta_l_tot(isink,1:3)=delta_l_tot(isink,1:3)*delta_l_max/delta_l_tot_abs
-        !    end if
-        !    if (myid==1)print*,delta_l_tot(isink,1:3)/lsink(isink,1:3)
-        ! end do
         delta_l_tot(1:nsink,1:3)=0.9*lsink(1:nsink,1:3)
      else
         delta_l_tot(1:nsink,1:3)=0.
@@ -1642,6 +1615,67 @@ subroutine grow_sink(ilevel,on_creation)
      if(ip>0)call accrete_sink(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   end do
   ! End loop over cpus
+
+  if (l_feedback)then
+     ! Loop over cpus
+     do icpu=1,ncpu
+        igrid=headl(icpu,ilevel)
+        ig=0
+        ip=0
+        ! Loop over grids
+        do jgrid=1,numbl(icpu,ilevel)
+           npart1=numbp(igrid)  ! Number of particles in the grid
+           npart2=0
+           ! Count sink and cloud particles
+           if(npart1>0)then
+              ipart=headp(igrid)
+              ! Loop over particles
+              do jpart=1,npart1
+                 ! Save next particle   <--- Very important !!!
+                 next_part=nextp(ipart)
+                 if(idp(ipart).lt.0)then
+                    npart2=npart2+1
+                 endif
+                 ipart=next_part  ! Go to next particle
+              end do
+           endif
+           ! Gather sink and cloud particles
+           if(npart2>0)then        
+              ig=ig+1
+              ind_grid(ig)=igrid
+              ipart=headp(igrid)
+              ! Loop over particles
+              do jpart=1,npart1
+                 ! Save next particle   <--- Very important !!!
+                 next_part=nextp(ipart)
+                 ! Select only sink particles
+                 if(idp(ipart).lt.0)then
+                    if(ig==0)then
+                       ig=1
+                       ind_grid(ig)=igrid
+                    end if
+                    ip=ip+1
+                    ind_part(ip)=ipart
+                    ind_grid_part(ip)=ig   
+                 endif
+                 if(ip==nvector)then
+                    call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                    ip=0
+                    ig=0
+                 end if
+                 ipart=next_part  ! Go to next particle
+              end do
+              ! End loop over particles
+           end if
+           igrid=next(igrid)   ! Go to next grid
+        end do
+        ! End loop over grids
+        if(ip>0)call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+     end do
+     ! End loop over cpus
+  end if
+
+
   
   if(nsink>0)then
 #ifndef WITHOUTMPI
@@ -1660,34 +1694,39 @@ subroutine grow_sink(ilevel,on_creation)
   endif
   do isink=1,nsink
      ! Reset jump in sink coordinates
-     do lev=levelmin,nlevelmax
-        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)-xsink(isink,1:ndim)
-     end do
+!     do lev=levelmin,nlevelmax
+!        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)-xsink(isink,1:ndim)
+!     end do
      ! Change to conservative quantities
-     xsink(isink,1:ndim)=xsink(isink,1:ndim)*msink(isink)
-     vsink(isink,1:ndim)=vsink(isink,1:ndim)*msink(isink)
+!     xsink(isink,1:ndim)=xsink(isink,1:ndim)*msink(isink)
+!     vsink(isink,1:ndim)=vsink(isink,1:ndim)*msink(isink)
      
      !accrete angular momentum (DON'T CHANGE ORDER)
      !change to reference point (0,0,0)
-     lsink(isink,1:3)=lsink(isink,1:3)+cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
-     lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
+!     lsink(isink,1:3)=lsink(isink,1:3)+cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
+!     lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
 
      ! Accrete to sink variables
      msink(isink)=msink(isink)+msink_all(isink)
-     xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)
-     vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)
+     xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)/msink(isink)
+     vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)/msink(isink)
+     !compute lsink with reference point of old xsink
+     lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
+     !correct for new center of mass location/velocity
+     lsink(isink,1:3)=lsink(isink,1:3)-1/msink(isink)*cross(xsink_all(isink,1:3),vsink_all(isink,1:ndim))
      
      ! angular momentum 
      !change back to reference point xsink
-     lsink(isink,1:3)=lsink(isink,1:3)-cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
+ !    lsink(isink,1:3)=lsink(isink,1:3)-cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
 
      ! Change back
-     xsink(isink,1:ndim)=xsink(isink,1:ndim)/msink(isink)
-     vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
+ !    xsink(isink,1:ndim)=xsink(isink,1:ndim)/msink(isink)
+ !    vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
 
      ! Store jump in sink coordinates
      do lev=levelmin,nlevelmax
-        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink(isink,1:ndim)
+        !        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink(isink,1:ndim)
+        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink_all(isink,1:ndim)/msink(isink)
      end do
      ! Store accreted mass
      acc_rate(isink)=acc_rate(isink)+msink_all(isink)
@@ -2016,9 +2055,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
-        xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*xx(1:3)
-        vsink_new(isink,1:3)=vsink_new(isink,1:3)+acc_mass*vv(1:3)
-        lsink_new(isink,1:3)=lsink_new(isink,1:3)+acc_mass*cross(xx,vv)
+        xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*(xx(1:3)-xsink(isink,1:3))
+        vsink_new(isink,1:3)=vsink_new(isink,1:3)+acc_mass*(vv(1:3)-vsink(isink,1:3))
+        lsink_new(isink,1:3)=lsink_new(isink,1:3)+acc_mass*cross(xx(1:3)-xsink(isink,1:3),vv(1:3)-vsink(isink,1:3))
 
         ! Remove accreted mass
         d=d-acc_mass/vol_loc
@@ -2026,6 +2065,45 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            write(*,*),'I accreted too much and created a neg density :-('
            write(*,*),d,acc_mass/vol_loc,d_floor,new_born_all(isink)
         end if
+
+
+
+
+
+        
+        ! !give angular momentum back to ambient gas...
+        ! if (sum(abs(delta_l_tot(isink,1:3)))>0.)then
+        !    r_rel(1:3)=xp(ind_part(j),1:3)-xsink(isink,1:3)
+           
+        !    l_abs=sum(lsink(isink,1:3)**2)**0.5
+        !    r_abs=sum(r_rel(1:3)**2)**0.5
+        !    lcrossr=cross(lsink(isink,1:3),r_rel(1:3))
+        !    rz=sum(lcrossr(1:3)**2)**0.5/(tiny(0.d0)+l_abs)
+           
+        !    l_weight=rz**2*d/(l_norm+tiny(0.d0))           
+           
+        !    delta_l(1:3)=delta_l_tot(isink,1:3)*l_weight
+        !    delta_l_abs=sum((delta_l(1:3))**2)**0.5
+           
+        !    delta_p(1:3)=lcrossr(1:3)/(l_abs*rz**2+tiny(0.d0))*delta_l_abs
+        !    !limit delta_v to 25% of sound speed (25% since there are 4 particles in the cell)
+        !    delta_p_abs=sum(delta_p(1:3)**2)**0.5
+        !    v_frac=delta_p_abs/(d*vol_loc*0.25*c2**0.5)
+        !    if (v_frac>1.)then
+        !       delta_p(1:3)=delta_p(1:3)/v_frac
+        !    end if
+        !    vv(1:3)=vv(1:3)+delta_p(1:3)/(d*vol_loc)
+
+        !    !correct for the angular and linear momentum of the sink
+        !    lsink_new(isink,1:3)=lsink_new(isink,1:3)-cross(xx(1:3)-xsink(isink,1:3),delta_p(1:3))
+        !    vsink_new(isink,1:3)=vsink_new(isink,1:3)-delta_p(1:3)
+        ! endif
+        
+
+
+
+        !convert back to conservative variables
+        v2=(vv(1)**2+vv(2)**2+vv(3)**2)
 #ifdef SOLVERmhd
         e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
 #endif
@@ -2038,8 +2116,297 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do ivar=imetal,nvar
            uold(indp(j),ivar)=d*z(ivar)
         end do
+     endif
+  end do
 
-           !give angular momentum back to ambient gas...
+#endif
+end subroutine accrete_sink
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine return_l(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  implicit none
+  integer::ng,np,ilevel
+  integer,dimension(1:nvector)::ind_grid
+  integer,dimension(1:nvector)::ind_grid_part,ind_part
+
+  !-----------------------------------------------------------------------
+  ! This routine is called by subroutine grow_sink. It performs accretion
+  ! for nvector particles.
+  !-----------------------------------------------------------------------
+
+  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz
+  real(dp)::r2,v2,d,e,d_floor,density,norm
+#ifdef SOLVERmhd
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2
+#endif
+  real(dp),dimension(1:nvar)::z
+  real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::dx,dx_loc,dx_min,scale,vol_loc,weight,acc_mass,temp,d_jeans,l_weight,c2,ethermal
+  logical::error
+  ! Grid based arrays
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  ! Particle based arrays
+  logical,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer ,dimension(1:nvector,1:ndim)::id,igd,icd
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg
+  real(dp),dimension(1:3)::skip_loc,xx,vv
+  real(dp),dimension(1:twotondim,1:3)::xc
+
+
+  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr
+  real(dp)::l_abs,r_abs,rz,l_norm,delta_l_abs,delta_p_abs,v_frac
+
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+ 
+
+#if NDIM==3
+
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  dx_min=scale*0.5D0**nlevelmax/aexp
+
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+
+  ! Lower left corner of 3x3x3 grid-cube
+  do idim=1,ndim
+     do i=1,ng
+        x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+     end do
+  end do
+
+  ! Gather 27 neighboring father cells (should be present anytime !)
+  do i=1,ng
+     ind_cell(i)=father(ind_grid(i))
+  end do
+  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+
+  ! Rescale position at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)/dx
+     end do
+  end do
+
+  ! Check for illegal moves
+  error=.false.
+  do idim=1,ndim
+     do j=1,np
+        if(x(j,idim)<=0.0D0.or.x(j,idim)>=6.0D0)error=.true.
+     end do
+  end do
+  if(error)then
+     write(*,*)'problem in accrete_sink'
+     write(*,*)ilevel,ng,np
+     stop
+  end if
+
+  ! NGP at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        id(j,idim)=int(x(j,idim))
+     end do
+  end do
+
+   ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        igd(j,idim)=id(j,idim)/2
+     end do
+  end do
+#if NDIM==1
+  do j=1,np
+     kg(j)=1+igd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     kg(j)=1+igd(j,1)+3*igd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+  end do
+
+
+!bugcheck
+  do j=1,np
+     if (kg(j) > 27 .or. kg(j) < 1)then
+        print*,'cpu ', myid, ' produced an error in accrete sink'
+        print*,'kg: ',kg(j)
+        print*,'igd: ',igd(j,1),igd(j,2),igd(j,3)
+        print*,'id: ',id(j,1),id(j,2),id(j,3)
+        print*,'x: ',x(j,1),x(j,2),x(j,3)
+        print*,'x0: ',x0(j,1),x0(j,2),x0(j,3)
+        print*,'xp: ',xp(ind_part(j),1:3)
+        print*,'skip_loc: ',skip_loc(1:3)
+        print*,'scale: ',scale
+        print*,'ind_part: ',ind_part(j)
+     end if
+  end do
+
+
+#endif
+  do j=1,np
+     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+  end do
+
+  ! Check if particles are entirely in level ilevel
+  ok(1:np)=.true.
+  do j=1,np
+     ok(j)=ok(j).and.igrid(j)>0
+  end do
+
+  ! Compute parent cell position
+  do idim=1,ndim
+     do j=1,np
+        if(ok(j))then
+           icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        end if
+     end do
+  end do
+#if NDIM==1
+  do j=1,np
+     if(ok(j))then
+        icell(j)=1+icd(j,1)
+     end if
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     if(ok(j))then
+        icell(j)=1+icd(j,1)+2*icd(j,2)
+     end if
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     if(ok(j))then
+        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+     end if
+  end do
+#endif
+        
+  ! Compute parent cell adress
+  do j=1,np
+     if(ok(j))then
+        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     end if
+  end do
+
+  ! Check if particles are in a leaf cell                                                                               
+  do j=1,np
+     if(ok(j))then
+        ok(j)=son(indp(j))==0
+     endif
+  end do
+
+  ! Remove mass from hydro cells
+  do j=1,np
+     if(ok(j))then
+        
+        if (ilevel<nlevelmax)write(*,*),'trying to accrete from cell which is not at levelmax...'
+
+        ! Get cell center positions
+        xx(1)=(x0(ind_grid_part(j),1)+3.0D0*dx+xc(icell(j),1)-skip_loc(1))*scale
+        xx(2)=(x0(ind_grid_part(j),2)+3.0D0*dx+xc(icell(j),2)-skip_loc(2))*scale
+        xx(3)=(x0(ind_grid_part(j),3)+3.0D0*dx+xc(icell(j),3)-skip_loc(3))*scale
+
+        ! Convert uold to primitive variables
+        d=uold(indp(j),1)
+        vv(1)=uold(indp(j),2)/d
+        vv(2)=uold(indp(j),3)/d
+        vv(3)=uold(indp(j),4)/d
+        e=uold(indp(j),5)/d
+
+#ifdef SOLVERmhd
+        bx1=uold(indp(j),6)
+        by1=uold(indp(j),7)
+        bz1=uold(indp(j),8)
+        bx2=uold(indp(j),nvar+1)
+        by2=uold(indp(j),nvar+2)
+        bz2=uold(indp(j),nvar+3)
+        e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+#endif
+        v2=(vv(1)**2+vv(2)**2+vv(3)**2)
+        e=e-0.5d0*v2
+        do ivar=imetal,nvar
+           z(ivar)=uold(indp(j),ivar)/d
+        end do
+        
+        ! Get sink index
+        isink=-idp(ind_part(j))
+        
+
+        ! r2=0d0
+        ! do idim=1,ndim
+        !    r2=r2+(xp(ind_part(j),idim)-xsink(isink,idim))**2
+        ! end do
+        ! weight=exp(-r2/(dx_min**2))
+        weight=1.
+
+        ! Loop over level: sink cloud can overlap several levels
+        density=0.d0
+        norm=0.d0
+        l_norm=0.d0
+        ethermal=0d0
+        do i=levelmin,nlevelmax
+           density=density+weighted_density(isink,i)
+           norm=norm+weighted_volume(isink,i)
+           l_norm=l_norm+rho_rz2_tot(isink,i)
+           ethermal=ethermal+weighted_ethermal(isink,i)
+        end do
+        density=density/norm
+        ethermal=ethermal/(density*norm+tiny(0.0_dp))
+        c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
+
+        
+        !give angular momentum back to ambient gas...
         if (sum(abs(delta_l_tot(isink,1:3)))>0.)then
            r_rel(1:3)=xp(ind_part(j),1:3)-xsink(isink,1:3)
            
@@ -2054,23 +2421,39 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            delta_l_abs=sum((delta_l(1:3))**2)**0.5
            
            delta_p(1:3)=lcrossr(1:3)/(l_abs*rz**2+tiny(0.d0))*delta_l_abs
-           !limit delta_v to sound speed
+           !limit delta_v to 25% of sound speed (25% since there are 4 particles in the cell)
            delta_p_abs=sum(delta_p(1:3)**2)**0.5
-           v_frac=delta_p_abs/(d*vol_loc*c2**0.5)
-           if (v_frac>1)then
+           v_frac=delta_p_abs/(d*vol_loc*0.125*c2**0.5)
+           if (v_frac>1.)then
               delta_p(1:3)=delta_p(1:3)/v_frac
            end if
-           uold(indp(j),2:4)=uold(indp(j),2:4)+delta_p(1:3)/vol_loc
+           vv(1:3)=vv(1:3)+delta_p(1:3)/(d*vol_loc)
 
            !correct for the angular and linear momentum of the sink
-           lsink_new(isink,1:3)=lsink_new(isink,1:3)-cross(xx,delta_p)
+           lsink_new(isink,1:3)=lsink_new(isink,1:3)-cross(xx(1:3)-xsink(isink,1:3),delta_p(1:3))
            vsink_new(isink,1:3)=vsink_new(isink,1:3)-delta_p(1:3)
         endif
+        
+
+        !convert back to conservative variables
+        v2=(vv(1)**2+vv(2)**2+vv(3)**2)
+#ifdef SOLVERmhd
+        e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+#endif
+        e=e+0.5d0*v2
+        uold(indp(j),1)=d
+        uold(indp(j),2)=d*vv(1)
+        uold(indp(j),3)=d*vv(2)
+        uold(indp(j),4)=d*vv(3)
+        uold(indp(j),5)=d*e
+        do ivar=imetal,nvar
+           uold(indp(j),ivar)=d*z(ivar)
+        end do
      endif
   end do
 
 #endif
-end subroutine accrete_sink
+end subroutine return_l
 !################################################################
 !################################################################
 !################################################################
