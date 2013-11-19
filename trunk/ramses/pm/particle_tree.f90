@@ -641,6 +641,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
   integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
   logical::ok_free,ok_all
+  integer::particle_data_width
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -660,21 +661,27 @@ subroutine virtual_tree_fine(ilevel)
      sendbuf(icpu)=reception(icpu,ilevel)%npart
   end do
 
+  ! Calculate how many particle properties are being transferred
+  particle_data_width = twondim+1
+  if(star.or.sink) then
+     if(metal) then
+        particle_data_width=twondim+3
+     else
+        particle_data_width=twondim+2
+     endif
+  endif
+
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  particle_data_width=particle_data_width+1
+#endif
+  
   ! Allocate communication buffer in emission
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
         allocate(reception(icpu,ilevel)%fp(1:ncache,1:3))
-        if(star.or.sink)then
-           if(metal)then
-              allocate(reception(icpu,ilevel)%up(1:ncache,1:twondim+3))
-           else
-              allocate(reception(icpu,ilevel)%up(1:ncache,1:twondim+2))
-           endif
-        else
-           allocate(reception(icpu,ilevel)%up(1:ncache,1:twondim+1))
-        end if
+        allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
 
@@ -718,15 +725,7 @@ subroutine virtual_tree_fine(ilevel)
      if(ncache>0)then
         ! Allocate reception buffer
         allocate(emission(icpu,ilevel)%fp(1:ncache,1:3))
-        if(star.or.sink)then
-           if(metal)then
-              allocate(emission(icpu,ilevel)%up(1:ncache,1:twondim+3))
-           else
-              allocate(emission(icpu,ilevel)%up(1:ncache,1:twondim+2))
-           endif
-        else
-           allocate(emission(icpu,ilevel)%up(1:ncache,1:twondim+1))
-        end if
+        allocate(emission(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
 
@@ -740,15 +739,7 @@ subroutine virtual_tree_fine(ilevel)
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
              & MPI_INTEGER,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
-        if(star.or.sink)then
-           if(metal)then
-              buf_count=ncache*(twondim+3)
-           else
-              buf_count=ncache*(twondim+2)
-           endif
-        else
-           buf_count=ncache*(twondim+1)
-        endif
+        buf_count=ncache*particle_data_width
         countrecv=countrecv+1
         call MPI_IRECV(emission(icpu,ilevel)%up,buf_count, &
              & MPI_DOUBLE_PRECISION,icpu-1,&
@@ -766,15 +757,7 @@ subroutine virtual_tree_fine(ilevel)
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
              & MPI_INTEGER,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
-        if(star.or.sink)then
-           if(metal)then
-              buf_count=ncache*(twondim+3)
-           else
-              buf_count=ncache*(twondim+2)
-           endif
-        else
-           buf_count=ncache*(twondim+1)
-        endif
+        buf_count=ncache*particle_data_width
         countsend=countsend+1
         call MPI_ISEND(reception(icpu,ilevel)%up,buf_count, &
              & MPI_DOUBLE_PRECISION,icpu-1,&
@@ -848,7 +831,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   implicit none
   integer::np,ilevel,icpu
   integer,dimension(1:nvector)::ind_part,ind_com,ind_list
-  
+  integer::current_property
   integer::i,idim
   logical,dimension(1:nvector),save::ok=.true.
 
@@ -866,22 +849,35 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      end do
   end do
   
+  current_property = twondim+1
   ! Gather particle mass
   do i=1,np
-     reception(icpu,ilevel)%up(ind_com(i),twondim+1)=mp(ind_part(i))
+     reception(icpu,ilevel)%up(ind_com(i),current_property)=mp(ind_part(i))
   end do
+  current_property = current_property+1
+
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  ! Gather particle potential
+  do i=1,np
+     reception(icpu,ilevel)%up(ind_com(i),current_property)=ptcl_phi(ind_part(i))
+  end do
+  current_property = current_property+1
+#endif
   
   ! Gather particle birth epoch
   if(star.or.sink)then
      do i=1,np
-        reception(icpu,ilevel)%up(ind_com(i),twondim+2)=tp(ind_part(i))
+        reception(icpu,ilevel)%up(ind_com(i),current_property)=tp(ind_part(i))
      end do
      if(metal)then
         do i=1,np
-           reception(icpu,ilevel)%up(ind_com(i),twondim+3)=zp(ind_part(i))
+           reception(icpu,ilevel)%up(ind_com(i),current_property+1)=zp(ind_part(i))
         end do
      end if
   end if
+
+  ! following line is not strictly necessary, but in case one adds extra data later
+  current_property = current_property + 2 
   
   ! Remove particles from parent linked list
   call remove_list(ind_part,ind_list,ok,np)
@@ -902,6 +898,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
+  integer::current_property
 
   ! Compute parent grid index
   do i=1,np
@@ -927,22 +924,37 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   end do
   end do
 
+  current_property = twondim+1
+
   ! Scatter particle mass
   do i=1,np
-     mp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),twondim+1)
+     mp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
   end do
+  current_property = current_property+1
+
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  ! Scatter particle phi
+  do i=1,np
+     ptcl_phi(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+  end do
+  current_property = current_property+1
+#endif
 
   ! Scatter particle birth eopch
   if(star.or.sink)then
      do i=1,np
-        tp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),twondim+2)
+        tp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
      end do
      if(metal)then
         do i=1,np
-           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),twondim+3)
+           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property+1)
         end do
      end if
   end if
+
+  ! As with the gather routine, we leave this in case extra properties are
+  ! added later:
+  current_property = current_property+2
 
 end subroutine empty_comm
 !################################################################

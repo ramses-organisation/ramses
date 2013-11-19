@@ -83,6 +83,21 @@ subroutine backup_part(filename)
   end do
   write(ilun)ll
   deallocate(ll)
+
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  ! Write potential (added by AP)
+  allocate(xdp(1:npart))
+  ipart=0
+  do i=1, npartmax
+     if(levelp(i)>0) then
+        ipart=ipart+1
+        xdp(ipart)=ptcl_phi(i)
+     end if
+  end do
+  write(ilun)xdp
+  deallocate(xdp)
+#endif
+
   ! Write birth epoch
   if(star.or.sink)then
      allocate(xdp(1:npart))
