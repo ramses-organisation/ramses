@@ -2421,7 +2421,7 @@ subroutine return_l(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            delta_l_abs=sum((delta_l(1:3))**2)**0.5
            
            delta_p(1:3)=lcrossr(1:3)/(l_abs*rz**2+tiny(0.d0))*delta_l_abs
-           !limit delta_v to 25% of sound speed (25% since there are 4 particles in the cell)
+           !limit delta_v to 12.5% of sound speed (since there are 8 particles in the cell)
            delta_p_abs=sum(delta_p(1:3)**2)**0.5
            v_frac=delta_p_abs/(d*vol_loc*0.125*c2**0.5)
            if (v_frac>1.)then
