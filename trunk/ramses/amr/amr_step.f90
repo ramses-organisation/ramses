@@ -328,6 +328,7 @@ recursive subroutine amr_step(ilevel,icount)
            call make_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
         end if
+        call cmp_new_cpu_map
         call grow_sink(ilevel,.false.)
      end if
 

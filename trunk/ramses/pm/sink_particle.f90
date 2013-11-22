@@ -103,7 +103,7 @@ subroutine create_sink
   if(ir_feedback)acc_lum(1:nsink)=ir_eff*acc_rate(1:nsink)*msink(1:nsink)/(5*6.955d10/scale_l)
 
   ! Compute new accretion rates
-  call compute_accretion_rate(levelmin,.true.)
+  call compute_accretion_rate(.true.)
   do isink=1,nsink
      if (new_born_all(isink)==2)new_born_all(isink)=0
   end do
@@ -1544,7 +1544,7 @@ subroutine grow_sink(ilevel,on_creation)
 
 
   ! Compute sink accretion rates
-  if (bondi .and. .not. on_creation)call compute_accretion_rate(ilevel,.false.)
+  if (bondi .and. .not. on_creation)call compute_accretion_rate(.false.)
   
   if (on_creation)then 
      delta_l_tot(1:nsink,1:3)=0.
@@ -1758,7 +1758,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! for nvector particles.
   !-----------------------------------------------------------------------
 
-  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz
+  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz,dummy
   real(dp)::r2,v2,d,e,d_floor,density,norm
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -1774,9 +1774,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector,1:ndim)::x
+  real(dp),dimension(1:nvector,1:ndim)::x,xcell
   integer ,dimension(1:nvector,1:ndim)::id,igd,icd
-  integer ,dimension(1:nvector)::igrid,icell,indp,kg
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg,cc
   real(dp),dimension(1:3)::skip_loc,xx,vv
   real(dp),dimension(1:twotondim,1:3)::xc
 
@@ -1954,23 +1954,32 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end if
   end do
 
-  ! Check if particles are in a leaf cell                                                                               
+  ! Check if particles are in a leaf cell
   do j=1,np
      if(ok(j))then
         ok(j)=son(indp(j))==0
      endif
   end do
+  
+  do j=1,np
+     if (ok(j) .and. cpu_map(father(igrid(j)))/=myid)then
+        ok(j)=.false.
+        if ((.not. cosmo) .and. new_born_all(-idp(ind_part(j)))==0)write(*,*)'I am in accrete_sink at a place where I should never be.'
+     end if
+  end do
+
 
   ! Remove mass from hydro cells
   do j=1,np
      if(ok(j))then
-        
+
         if (ilevel<nlevelmax)write(*,*),'trying to accrete from cell which is not at levelmax...'
 
         ! Get cell center positions
         xx(1)=(x0(ind_grid_part(j),1)+3.0D0*dx+xc(icell(j),1)-skip_loc(1))*scale
         xx(2)=(x0(ind_grid_part(j),2)+3.0D0*dx+xc(icell(j),2)-skip_loc(2))*scale
         xx(3)=(x0(ind_grid_part(j),3)+3.0D0*dx+xc(icell(j),3)-skip_loc(3))*scale
+
 
         ! Convert uold to primitive variables
         d=uold(indp(j),1)
@@ -2458,7 +2467,7 @@ end subroutine return_l
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_accretion_rate(ilevel,write_sinks)
+subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -2466,7 +2475,6 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel
   logical::write_sinks
 
   !------------------------------------------------------------------------
@@ -2484,6 +2492,8 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
+  dt_sink=huge(0.d0)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -2573,9 +2583,12 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
            
         !make sure, accretion rate is positive
         dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
+        
+        !compute maximum timestep allowed by sink
+        dt_sink=min(dt_sink,0.25*mgas/dMsink_overdt(isink))
      end do
         
-     if (ilevel==levelmin.and.write_sinks.and.smbh) then
+     if (write_sinks.and.smbh) then
         if(myid==1.and.nsink>0)then
            xmsink(1:nsink)=msink(1:nsink)
            call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
@@ -2595,7 +2608,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
      end if
   end if
 
-  if (ilevel==levelmin .and. write_sinks .and. (.not. smbh))then    
+  if (write_sinks .and.(.not. smbh))then    
      if(myid==1.and.nsink>0.and. mod(nstep_coarse,ncontrol)==0)then
         xmsink(1:nsink)=msink(1:nsink)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)

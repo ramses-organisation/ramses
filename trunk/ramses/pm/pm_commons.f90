@@ -33,6 +33,7 @@ module pm_commons
   integer::ncloud_sink
   integer::nindsink=0
   real(dp)::protostar_seedmass
+  real(dp)::dt_sink !maximum timestep allowed by the sink
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions
