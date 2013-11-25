@@ -346,6 +346,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
            end do
         end do
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+        do j=1,np
+           ptcl_phi(ind_part(j)) = phi(indp(j,ind))
+        end do
+#endif
      end do
   endif
 
