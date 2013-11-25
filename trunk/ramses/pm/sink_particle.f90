@@ -1616,64 +1616,64 @@ subroutine grow_sink(ilevel,on_creation)
   end do
   ! End loop over cpus
 
-  if (l_feedback)then
-     ! Loop over cpus
-     do icpu=1,ncpu
-        igrid=headl(icpu,ilevel)
-        ig=0
-        ip=0
-        ! Loop over grids
-        do jgrid=1,numbl(icpu,ilevel)
-           npart1=numbp(igrid)  ! Number of particles in the grid
-           npart2=0
-           ! Count sink and cloud particles
-           if(npart1>0)then
-              ipart=headp(igrid)
-              ! Loop over particles
-              do jpart=1,npart1
-                 ! Save next particle   <--- Very important !!!
-                 next_part=nextp(ipart)
-                 if(idp(ipart).lt.0)then
-                    npart2=npart2+1
-                 endif
-                 ipart=next_part  ! Go to next particle
-              end do
-           endif
-           ! Gather sink and cloud particles
-           if(npart2>0)then        
-              ig=ig+1
-              ind_grid(ig)=igrid
-              ipart=headp(igrid)
-              ! Loop over particles
-              do jpart=1,npart1
-                 ! Save next particle   <--- Very important !!!
-                 next_part=nextp(ipart)
-                 ! Select only sink particles
-                 if(idp(ipart).lt.0)then
-                    if(ig==0)then
-                       ig=1
-                       ind_grid(ig)=igrid
-                    end if
-                    ip=ip+1
-                    ind_part(ip)=ipart
-                    ind_grid_part(ip)=ig   
-                 endif
-                 if(ip==nvector)then
-                    call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-                    ip=0
-                    ig=0
-                 end if
-                 ipart=next_part  ! Go to next particle
-              end do
-              ! End loop over particles
-           end if
-           igrid=next(igrid)   ! Go to next grid
-        end do
-        ! End loop over grids
-        if(ip>0)call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-     end do
-     ! End loop over cpus
-  end if
+  ! if (l_feedback)then
+  !    ! Loop over cpus
+  !    do icpu=1,ncpu
+  !       igrid=headl(icpu,ilevel)
+  !       ig=0
+  !       ip=0
+  !       ! Loop over grids
+  !       do jgrid=1,numbl(icpu,ilevel)
+  !          npart1=numbp(igrid)  ! Number of particles in the grid
+  !          npart2=0
+  !          ! Count sink and cloud particles
+  !          if(npart1>0)then
+  !             ipart=headp(igrid)
+  !             ! Loop over particles
+  !             do jpart=1,npart1
+  !                ! Save next particle   <--- Very important !!!
+  !                next_part=nextp(ipart)
+  !                if(idp(ipart).lt.0)then
+  !                   npart2=npart2+1
+  !                endif
+  !                ipart=next_part  ! Go to next particle
+  !             end do
+  !          endif
+  !          ! Gather sink and cloud particles
+  !          if(npart2>0)then        
+  !             ig=ig+1
+  !             ind_grid(ig)=igrid
+  !             ipart=headp(igrid)
+  !             ! Loop over particles
+  !             do jpart=1,npart1
+  !                ! Save next particle   <--- Very important !!!
+  !                next_part=nextp(ipart)
+  !                ! Select only sink particles
+  !                if(idp(ipart).lt.0)then
+  !                   if(ig==0)then
+  !                      ig=1
+  !                      ind_grid(ig)=igrid
+  !                   end if
+  !                   ip=ip+1
+  !                   ind_part(ip)=ipart
+  !                   ind_grid_part(ip)=ig   
+  !                endif
+  !                if(ip==nvector)then
+  !                   call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  !                   ip=0
+  !                   ig=0
+  !                end if
+  !                ipart=next_part  ! Go to next particle
+  !             end do
+  !             ! End loop over particles
+  !          end if
+  !          igrid=next(igrid)   ! Go to next grid
+  !       end do
+  !       ! End loop over grids
+  !       if(ip>0)call return_l(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  !    end do
+  !    ! End loop over cpus
+  ! end if
 
 
   
@@ -1781,7 +1781,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
 
 
-  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr
+  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr,p_acc,p_rel,p_rel_rad
   real(dp)::l_abs,r_abs,rz,l_norm,delta_l_abs,delta_p_abs,v_frac
 
 
@@ -2041,7 +2041,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 !           if (acc_mass>d*vol_loc)print*,'problem: emptied cell completely'
 
            ! Cannot accrete more than the density floor
-           acc_mass=max(min(acc_mass,(d-d_floor)*vol_loc),0.0_dp)           
+!           acc_mass=max(min(acc_mass,(d-d_floor)*vol_loc),0.0_dp)    
+           acc_mass=max(acc_mass,0.0_dp)    
 
 
         elseif(bondi .and. new_born_all(isink)==2)then
@@ -2062,11 +2063,35 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            acc_mass=max((d-d_floor)*vol_loc*0.025,0.d0)
         end if
         
+
+
+
+
+
+
+
+        r_rel(1:3)=xx(1:3)-xsink(isink,1:3)                                                                                                     
+        r_abs=sum(r_rel(1:3)**2)**0.5      
+        p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
+
+        p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
+!        p_rel_orth=p_rel(1:3)-p_rel_rad(1:3)
+
+        !accrete radial momentum
+        if(l_feedback)then
+           p_acc=p_rel_rad*acc_mass/(d*vol_loc)
+        else
+           p_acc=p_rel*acc_mass/(d*vol_loc)
+        end if
+
+        vv(1:3)=(p_rel(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)+vsink(isink,1:3)
+        
+
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
         xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*(xx(1:3)-xsink(isink,1:3))
-        vsink_new(isink,1:3)=vsink_new(isink,1:3)+acc_mass*(vv(1:3)-vsink(isink,1:3))
-        lsink_new(isink,1:3)=lsink_new(isink,1:3)+acc_mass*cross(xx(1:3)-xsink(isink,1:3),vv(1:3)-vsink(isink,1:3))
+        vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
+        lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(xx(1:3)-xsink(isink,1:3),p_acc(1:3))
 
         ! Remove accreted mass
         d=d-acc_mass/vol_loc
