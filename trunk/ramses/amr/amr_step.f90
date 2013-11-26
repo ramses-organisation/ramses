@@ -203,9 +203,6 @@ recursive subroutine amr_step(ilevel,icount)
      ! Compute gravitational acceleration
      call force_fine(ilevel,icount)
 
-     ! Thermal feedback from stars
-     if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel,icount)
-
      ! Synchronize remaining particles for gravity
      if(pic)then
         call synchro_fine(ilevel)
@@ -279,6 +276,9 @@ recursive subroutine amr_step(ilevel,icount)
      call update_time(ilevel)
      if(sink)call update_sink(ilevel)
   end if
+
+  ! Thermal feedback from stars
+  if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
 
 #ifdef RT
   ! Add stellar radiation sources
