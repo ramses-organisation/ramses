@@ -2,11 +2,11 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine thermal_feedback(ilevel,icount)
+subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
   implicit none
-  integer::ilevel,icount
+  integer::ilevel
   !------------------------------------------------------------------------
   ! This routine computes the thermal energy, the kinetic energy and 
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
@@ -21,7 +21,6 @@ subroutine thermal_feedback(ilevel,icount)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  if(icount==2)return
 
   ! Gather star particles only.
 
@@ -104,9 +103,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
-  ! This routine is called by subroutine feedback. Each debris particle
+  ! This routine is called by subroutine feedback. Each stellar particle
   ! dumps mass, momentum and energy in the nearest grid cell using array
-  ! uold.
+  ! unew.
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc
   real(kind=8)::RandNum
@@ -114,7 +113,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::dx,dx_loc,scale,vol_loc,birth_time,current_time
+  real(dp)::dx,dx_loc,scale,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
   ! Grid based arrays
@@ -127,6 +126,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mloss,mzloss,ethermal,ekinetic,dteff
+  real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
@@ -144,7 +144,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  vol_loc=dx_loc**ndim
+  vol_loc(1:nvector)=dx_loc**ndim
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
@@ -204,17 +204,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Check for illegal moves
-  error=.false.
-  do idim=1,ndim
-     do j=1,np
-        if(x(j,idim)<=2.0D0.or.x(j,idim)>=4.0D0)error=.true.
-     end do
-  end do
-  if(error)then
-     write(*,*)'problem in sn2'
-     write(*,*)ilevel,ng,np
-  end if
+  ! Removed since this is done right after anyway (in move_particles)
+  !! Check for illegal moves
+  !error=.false.
+  !do idim=1,ndim
+  !   do j=1,np
+  !      if(x(j,idim)<=0.5D0.or.x(j,idim)>=5.5D0)error=.true.
+  !   end do
+  !end do
+  !if(error)then
+  !   write(*,*)'problem in sn2'
+  !   write(*,*)ilevel,ng,np
+  !end if
 
   ! NGP at level ilevel
   do idim=1,ndim
@@ -260,76 +261,62 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
      if(ok(j))then
         indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     else
+        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
+        vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
      end if
   end do
 
   ! Compute individual time steps
-  ! WARNING: the time step is always the coarser level time step
-  ! since we do not have feedback for icount=2
-  if(ilevel==levelmin)then
-     do j=1,np
-        if(ok(j))then
-           dteff(j)=dtold(levelp(ind_part(j)))
-        end if
-     end do
-  else
-     do j=1,np
-        if(ok(j))then
-           dteff(j)=dtold(levelp(ind_part(j))-1)
-        end if
-     end do
-  endif
+  do j=1,np
+     dteff(j)=dtnew(levelp(ind_part(j)))
+  end do
+
   if(use_proper_time)then
      do j=1,np
-        if(ok(j))then
-           dteff(j)=dteff(j)*aexp**2
-        end if
+        dteff(j)=dteff(j)*aexp**2
      end do
   endif
 
   ! Reset ejected mass, metallicity, thermal energy
   do j=1,np
-     if(ok(j))then
-        mloss(j)=0d0
-        mzloss(j)=0d0
-        ethermal(j)=0d0
-     endif
+     mloss(j)=0d0
+     mzloss(j)=0d0
+     ethermal(j)=0d0
   end do
 
   ! Compute stellar mass loss and thermal feedback due to supernovae
   if(f_w==0)then
      do j=1,np
-        if(ok(j))then
-           birth_time=tp(ind_part(j))
-           ! Make sure that we don't count feedback twice
-           if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
-              ! Stellar mass loss
-              mejecta=eta_sn*mp(ind_part(j))
-              mloss(j)=mloss(j)+mejecta/vol_loc
-              ! Thermal energy
-              ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc
-              ! Metallicity
-              if(metal)then
-                 zloss=yield+(1d0-yield)*zp(ind_part(j))
-                 mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc
-              endif
-              ! Reduce star particle mass
-              mp(ind_part(j))=mp(ind_part(j))-mejecta
-              ! Boost SNII energy and depopulate accordingly
-              if(SN_BOOST>1d0)then
-                 call ranf(localseed,RandNum)
-                 if(RandNum<1d0/SN_BOOST)then
-                    mloss(j)=SN_BOOST*mloss(j)
-                    mzloss(j)=SN_BOOST*mzloss(j)
-                    ethermal(j)=SN_BOOST*ethermal(j)
-                 else
-                    mloss(j)=0d0
-                    mzloss(j)=0d0
-                    ethermal(j)=0d0
-                 endif
-              endif
+        birth_time=tp(ind_part(j))
+        ! Make sure that we don't count feedback twice
+        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then           
+           ! Stellar mass loss
+           mejecta=eta_sn*mp(ind_part(j))
+           mloss(j)=mloss(j)+mejecta/vol_loc(j)
+           ! Thermal energy
+           ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
+           ! Metallicity
+           if(metal)then
+              zloss=yield+(1d0-yield)*zp(ind_part(j))
+              mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
            endif
-        end if
+           ! Reduce star particle mass
+           mp(ind_part(j))=mp(ind_part(j))-mejecta
+           ! Boost SNII energy and depopulate accordingly
+           if(SN_BOOST>1d0)then
+              call ranf(localseed,RandNum)
+              if(RandNum<1d0/SN_BOOST)then
+                 mloss(j)=SN_BOOST*mloss(j)
+                 mzloss(j)=SN_BOOST*mzloss(j)
+                 ethermal(j)=SN_BOOST*ethermal(j)
+              else
+                 mloss(j)=0d0
+                 mzloss(j)=0d0
+                 ethermal(j)=0d0
+              endif
+           endif           
+        endif
      end do
   endif
 
@@ -345,46 +332,39 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
   rad_factor=ERAD/ESN
   do j=1,np
-     if(ok(j))then
-
-        ! Infrared photon trapping boost
-        if(metal)then
-           tauIR=tau_factor*max(uold(indp(j),imetal),smallr)
-        else
-           tauIR=tau_factor*max(uold(indp(j),1),smallr)
-        endif
-        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
-        
-        ! Specific kinetic energy of the star
-        ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
-             &          +vp(ind_part(j),2)**2 &
-             &          +vp(ind_part(j),3)**2)
-        ! Update hydro variable in NGP cell
-        uold(indp(j),1)=uold(indp(j),1)+mloss(j)
-        uold(indp(j),2)=uold(indp(j),2)+mloss(j)*vp(ind_part(j),1)
-        uold(indp(j),3)=uold(indp(j),3)+mloss(j)*vp(ind_part(j),2)
-        uold(indp(j),4)=uold(indp(j),4)+mloss(j)*vp(ind_part(j),3)
-        uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ &
-             & ethermal(j)*(1d0+RAD_BOOST)
-        
+     ! Infrared photon trapping boost
+     if(metal)then
+        tauIR=tau_factor*max(unew(indp(j),imetal),smallr)
+     else
+        tauIR=tau_factor*max(unew(indp(j),1),smallr)
      endif
+     RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
+     
+     ! Specific kinetic energy of the star
+     ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
+          &          +vp(ind_part(j),2)**2 &
+          &          +vp(ind_part(j),3)**2)
+     ! Update hydro variable in NGP cell
+     unew(indp(j),1)=unew(indp(j),1)+mloss(j)
+     unew(indp(j),2)=unew(indp(j),2)+mloss(j)*vp(ind_part(j),1)
+     unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
+     unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
+     unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
+          & ethermal(j)*(1d0+RAD_BOOST)
+          
   end do
 
   ! Add metals
   if(metal)then
      do j=1,np
-        if(ok(j))then
-           uold(indp(j),imetal)=uold(indp(j),imetal)+mzloss(j)
-        endif
+        unew(indp(j),imetal)=unew(indp(j),imetal)+mzloss(j)
      end do
   endif
 
   ! Add delayed cooling switch variable
   if(delayed_cooling)then
      do j=1,np
-        if(ok(j))then
-           uold(indp(j),idelay)=uold(indp(j),idelay)+mloss(j)
-        endif
+        unew(indp(j),idelay)=unew(indp(j),idelay)+mloss(j)
      end do
   endif
 
