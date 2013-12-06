@@ -114,7 +114,7 @@ subroutine newdt_fine(ilevel)
      !issue here: what if sink lives not a levelmax? timestep can be too big!
      if(sink .and. ilevel==nlevelmax) then
         call compute_accretion_rate(.false.)
-        if (myid==1)print*,dt_sink/dtnew(ilevel)
+!        if (myid==1)print*,dt_sink/dtnew(ilevel)
         dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
      end if
 

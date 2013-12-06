@@ -1532,6 +1532,7 @@ subroutine grow_sink(ilevel,on_creation)
   integer::ig,ip,npart1,npart2,icpu,isink,lev,nx_loc
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::delta_l_tot_abs,delta_l_max,scale,dx_min,vol_min,density,volume,ethermal,c2
+  real(dp),dimension(1:ndim)::old_loc,old_vel
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1694,40 +1695,39 @@ subroutine grow_sink(ilevel,on_creation)
   endif
   do isink=1,nsink
      ! Reset jump in sink coordinates
-!     do lev=levelmin,nlevelmax
-!        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)-xsink(isink,1:ndim)
-!     end do
-     ! Change to conservative quantities
-!     xsink(isink,1:ndim)=xsink(isink,1:ndim)*msink(isink)
-!     vsink(isink,1:ndim)=vsink(isink,1:ndim)*msink(isink)
+     do lev=levelmin,nlevelmax
+        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)-xsink(isink,1:ndim)
+     end do
      
-     !accrete angular momentum (DON'T CHANGE ORDER)
-     !change to reference point (0,0,0)
-!     lsink(isink,1:3)=lsink(isink,1:3)+cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
-!     lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
+     !save old velocity and location to compute deltas
+     old_loc(1:ndim)=xsink(isink,1:ndim)
+     old_vel(1:ndim)=vsink(isink,1:ndim)
+     
+     ! Change to conservative quantities
+     xsink(isink,1:ndim)=xsink(isink,1:ndim)*msink(isink)
+     vsink(isink,1:ndim)=vsink(isink,1:ndim)*msink(isink)
+     
 
      ! Accrete to sink variables
      msink(isink)=msink(isink)+msink_all(isink)
-     xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)/msink(isink)
-     vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)/msink(isink)
+     xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)
+     vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)
      !compute lsink with reference point of old xsink
      lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)
-     !correct for new center of mass location/velocity
-     lsink(isink,1:3)=lsink(isink,1:3)-1/msink(isink)*cross(xsink_all(isink,1:3),vsink_all(isink,1:ndim))
+
      
-     ! angular momentum 
-     !change back to reference point xsink
- !    lsink(isink,1:3)=lsink(isink,1:3)-cross(xsink(isink,1:3)/msink(isink),vsink(isink,1:3))
-
      ! Change back
- !    xsink(isink,1:ndim)=xsink(isink,1:ndim)/msink(isink)
- !    vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
+     xsink(isink,1:ndim)=xsink(isink,1:ndim)/msink(isink)
+     vsink(isink,1:ndim)=vsink(isink,1:ndim)/msink(isink)
 
+     !correct for new center of mass location/velocity
+     lsink(isink,1:3)=lsink(isink,1:3)-msink(isink)*cross((xsink(isink,1:ndim)-old_loc(1:ndim)),(vsink(isink,1:ndim)-old_vel(1:ndim)))
+     
      ! Store jump in sink coordinates
      do lev=levelmin,nlevelmax
-        !        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink(isink,1:ndim)
-        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink_all(isink,1:ndim)/msink(isink)
+        sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink(isink,1:ndim)
      end do
+
      ! Store accreted mass
      acc_rate(isink)=acc_rate(isink)+msink_all(isink)
      delta_mass(isink)=delta_mass(isink)+delta_mass_all(isink)
@@ -1781,7 +1781,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
 
 
-  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr,p_acc,p_rel,p_rel_rad
+  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr,p_acc,p_rel,p_rel_rad,p_rel_acc
   real(dp)::l_abs,r_abs,rz,l_norm,delta_l_abs,delta_p_abs,v_frac
 
 
@@ -1961,14 +1961,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
   
-  do j=1,np
-     if (ok(j) .and. cpu_map(father(igrid(j)))/=myid)then
-        ok(j)=.false.
-        if ((.not. cosmo) .and. new_born_all(-idp(ind_part(j)))==0)write(*,*)'I am in accrete_sink at a place where I should never be.'
-     end if
-  end do
-
-
   ! Remove mass from hydro cells
   do j=1,np
      if(ok(j))then
@@ -2070,28 +2062,33 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
 
 
-        r_rel(1:3)=xx(1:3)-xsink(isink,1:3)                                                                                                     
+        r_rel(1:3)=xx(1:3)-xsink(isink,1:3) 
         r_abs=sum(r_rel(1:3)**2)**0.5      
         p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
 
         p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
 !        p_rel_orth=p_rel(1:3)-p_rel_rad(1:3)
 
-        !accrete radial momentum
+
+        !accrete momentum due to relative motion
         if(l_feedback)then
-           p_acc=p_rel_rad*acc_mass/(d*vol_loc)
+           p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
         else
-           p_acc=p_rel*acc_mass/(d*vol_loc)
+           p_rel_acc=p_rel*acc_mass/(d*vol_loc)
         end if
 
-        vv(1:3)=(p_rel(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)+vsink(isink,1:3)
-        
+        !total accreted momentum 
+        p_acc=p_rel_acc+vsink(isink,1:3)*acc_mass
 
+        !new gas velocity
+        vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)
+
+        !add accreted properties
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
-        xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*(xx(1:3)-xsink(isink,1:3))
+        xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*xx(1:3)
         vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
-        lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(xx(1:3)-xsink(isink,1:3),p_acc(1:3))
+        lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
         ! Remove accreted mass
         d=d-acc_mass/vol_loc
@@ -2378,6 +2375,16 @@ subroutine return_l(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(ok(j))then
         ok(j)=son(indp(j))==0
      endif
+  end do
+
+  ! Remove mass from hydro cells
+  do j=1,np
+     if(ok(j))then
+        if (ilevel<nlevelmax)then
+           write(*,*),'trying to accrete from cell which is not at levelmax...'
+           ok(j)=.false.
+        end if
+     end if
   end do
 
   ! Remove mass from hydro cells
