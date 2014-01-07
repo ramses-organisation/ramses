@@ -18,7 +18,7 @@ subroutine cooling_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Compute sink accretion rates
-!  if(sink)call compute_accretion_rate(0)
+!  if(sink)call compute_accretion_rate(.false.)
 
 
   ! Operator splitting step for cooling source term

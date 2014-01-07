@@ -2024,43 +2024,29 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         ! Density floor 
         d_floor=0.25*density
 
-        if (bondi .and. new_born_all(isink)==0)then 
-           
-           ! Compute accreted mass with cloud weighting
-           acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm*d/density
-
-!           if (acc_mass>(d-d_floor)*vol_loc .and. .not. flux_accretion)print*,'limit'
-!           if (acc_mass>d*vol_loc)print*,'problem: emptied cell completely'
-
-           ! Cannot accrete more than the density floor
-!           acc_mass=max(min(acc_mass,(d-d_floor)*vol_loc),0.0_dp)    
-           acc_mass=max(acc_mass,0.0_dp)    
-
-
-        elseif(bondi .and. new_born_all(isink)==2)then
+        if (new_born_all(isink)==2)then
            acc_mass=0.
-        elseif(bondi .and. new_born_all(isink)==1)then
+        else if (new_born_all(isink)==1)then
            acc_mass=protostar_seedmass/ncloud_sink
-           acc_mass=max(min(acc_mass,(d-d_sink)*vol_loc),0.01*d*vol_loc)
-        else
-           ! User defined density threshold
-           d_floor=d_sink
-           
-           ! Jeans length related density threshold  
-           if(d_sink<0.0)then
-              temp=max(e*(gamma-1.0),smallc**2)
-              d_jeans=temp*3.1415926/(4.0*dx_loc)**2/factG
-              d_floor=d_jeans
-           endif           
-           acc_mass=max((d-d_floor)*vol_loc*0.025,0.d0)
+           acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),0.001*d_sink*vol_loc)
+        else           
+           if (bondi)then 
+              ! Compute accreted mass with cloud weighting and density weighting
+              acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm*d/density
+              ! Cannot accrete more than the density floor
+              acc_mass=max(acc_mass,0.0_dp)    
+           else
+              ! User defined density threshold
+              d_floor=d_sink           
+              ! Jeans length related density threshold  
+              if(d_sink<0.0)then
+                 temp=max(e*(gamma-1.0),smallc**2)
+                 d_jeans=temp*3.1415926/(4.0*dx_loc)**2/factG
+                 d_floor=d_jeans
+              endif
+              acc_mass=max((d-d_floor)*vol_loc*0.025,0.d0)
+           end if
         end if
-        
-
-
-
-
-
-
 
         r_rel(1:3)=xx(1:3)-xsink(isink,1:3) 
         r_abs=sum(r_rel(1:3)**2)**0.5      
