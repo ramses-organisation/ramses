@@ -382,7 +382,19 @@ subroutine output_header(filename)
      write(ilun,*)nstar_tot
      write(ilun,*)'Total number of sink particles'
      write(ilun,*)nsink
-     
+
+     ! Keep track of what particle fields are present
+     write(ilun,*)'Particle fields'
+     write(ilun,'(a)',advance='no')'pos vel mass iord level '
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+     write(ilun,'(a)',advance='no')'phi '
+#endif
+     if(star.or.sink) then
+        write(ilun,'(a)',advance='no')'tform '
+        if(metal) then
+           write(ilun,'(a)',advance='no')'metal '
+        endif
+     endif
      close(ilun)
 
   endif

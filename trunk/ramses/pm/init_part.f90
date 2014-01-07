@@ -70,6 +70,9 @@ subroutine init_part
   allocate(prevp (npartmax))
   allocate(levelp(npartmax))
   allocate(idp   (npartmax))
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  allocate(ptcl_phi(npartmax))
+#endif
   xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
   if(star.or.sink)then
      allocate(tp(npartmax))
