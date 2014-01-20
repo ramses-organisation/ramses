@@ -22,10 +22,16 @@ DEFS = -DDIFFERENT_MASSES
 
 ###############
 
-default:	hop regroup
+default:	hop regroup poshalo
 
 clean:
-	rm -f hop.o hop_input.o kd.o smooth.o regroup.o slice.o
+	rm -f hop.o hop_input.o kd.o smooth.o regroup.o slice.o poshalo.o
+
+poshalo: poshalo.o
+	ifort -assume buffered_io -cpp -DDIR poshalo.o -o poshalo
+
+poshalo.o: poshalo.f90
+	ifort -assume buffered_io -cpp -DDIR -c poshalo.f90
 
 hop: hop.o kd.o smooth.o hop_input.o
 	$(CC) $(CFLAGS) -o hop hop.o kd.o smooth.o hop_input.o $(LIBS)
