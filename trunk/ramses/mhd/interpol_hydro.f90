@@ -880,10 +880,10 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   ! The interpolated variables are Bx, By and Bz.
   ! Divergence free is garanteed.
   ! The scheme is the one invented by Toth and Balsara.
-  ! interpol_type=0: straight injection
-  ! interpol_type=1: linear interpolation with MinMod slope
-  ! interpol_type=2: linear interpolation with Monotonized Central slope
-  ! interpol_type=3: linear interpolation without limiters
+  ! interpol_mag_type=0: straight injection
+  ! interpol_mag_type=1: linear interpolation with MinMod slope
+  ! interpol_mag_type=2: linear interpolation with Monotonized Central slope
+  ! interpol_mag_type=3: linear interpolation without limiters
   !----------------------------------------------------------
   integer::i,j,k,ind,l,idim,imax,jmax,kmax
   real(dp),dimension(1:nvector,-1:1,0:1,0:1),save::u
@@ -931,7 +931,7 @@ end subroutine interpol_mag
 !###########################################################
 subroutine interpol_faces(b1,u,v,w,nn)
   use amr_commons
-  use hydro_commons, ONLY: interpol_type
+  use hydro_commons, ONLY: interpol_mag_type
   implicit none
   integer::nn
   real(dp),dimension(1:nvector,0:twondim,1:6)::b1
@@ -971,10 +971,10 @@ subroutine interpol_faces(b1,u,v,w,nn)
 
   s(1:nn,1:2)=0.0
 #if NDIM==2
-  if(interpol_type>0)call compute_1d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_1d_tvd(b,s,nn)
 #endif
 #if NDIM==3
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
 #endif
   do j=0,jmax
   do k=0,kmax
@@ -1003,10 +1003,10 @@ subroutine interpol_faces(b1,u,v,w,nn)
 
   s(1:nn,1:2)=0.0
 #if NDIM==2
-  if(interpol_type>0)call compute_1d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_1d_tvd(b,s,nn)
 #endif
 #if NDIM==3
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
 #endif
   do j=0,jmax
   do k=0,kmax
@@ -1034,10 +1034,10 @@ subroutine interpol_faces(b1,u,v,w,nn)
 
   s(1:nn,1:2)=0.0
 #if NDIM==2
-  if(interpol_type>0)call compute_1d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_1d_tvd(b,s,nn)
 #endif
 #if NDIM==3
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
 #endif
   do i=0,imax
   do k=0,kmax
@@ -1064,10 +1064,10 @@ subroutine interpol_faces(b1,u,v,w,nn)
 
   s(1:nn,1:2)=0.0
 #if NDIM==2
-  if(interpol_type>0)call compute_1d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_1d_tvd(b,s,nn)
 #endif
 #if NDIM==3
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
 #endif
   do i=0,imax
   do k=0,kmax
@@ -1089,7 +1089,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
   end do
 
   s(1:nn,1:2)=0.0
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
   do i=0,1
      do j=0,1
         do l=1,nn
@@ -1108,7 +1108,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
   end do
 
   s(1:nn,1:2)=0.0
-  if(interpol_type>0)call compute_2d_tvd(b,s,nn)
+  if(interpol_mag_type>0)call compute_2d_tvd(b,s,nn)
   do i=0,1
      do j=0,1
         do l=1,nn
@@ -1358,7 +1358,7 @@ end subroutine cmp_central_faces
 !###########################################################
 subroutine compute_2d_tvd(b,s,nn)
   use amr_commons, ONLY: nvector
-  use hydro_commons, ONLY: interpol_type
+  use hydro_commons, ONLY: interpol_mag_type
   use const
   implicit none
   integer::nn
@@ -1368,7 +1368,7 @@ subroutine compute_2d_tvd(b,s,nn)
   integer::i
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
 
-  if(interpol_type==3)then
+  if(interpol_mag_type==3)then
      do i=1,nn
         dlft = half*(b(i,0) - b(i,1))
         drgt = half*(b(i,2) - b(i,0))
@@ -1383,9 +1383,9 @@ subroutine compute_2d_tvd(b,s,nn)
   endif
 
   do i=1,nn
-     dlft = interpol_type*(b(i,0) - b(i,1))
-     drgt = interpol_type*(b(i,2) - b(i,0))
-     dcen = half*(dlft+drgt)/interpol_type
+     dlft = interpol_mag_type*(b(i,0) - b(i,1))
+     drgt = interpol_mag_type*(b(i,2) - b(i,0))
+     dcen = half*(dlft+drgt)/interpol_mag_type
      dsgn = sign(one, dcen)
      slop = min(abs(dlft),abs(drgt))
      dlim = slop
@@ -1394,9 +1394,9 @@ subroutine compute_2d_tvd(b,s,nn)
   end do
 
   do i=1,nn
-     dlft = interpol_type*(b(i,0) - b(i,3))
-     drgt = interpol_type*(b(i,4) - b(i,0))
-     dcen = half*(dlft+drgt)/interpol_type
+     dlft = interpol_mag_type*(b(i,0) - b(i,3))
+     drgt = interpol_mag_type*(b(i,4) - b(i,0))
+     dcen = half*(dlft+drgt)/interpol_mag_type
      dsgn = sign(one, dcen)
      slop = min(abs(dlft),abs(drgt))
      dlim = slop
@@ -1412,7 +1412,7 @@ end subroutine compute_2d_tvd
 !###########################################################
 subroutine compute_1d_tvd(b,s,nn)
   use amr_commons, ONLY: nvector
-  use hydro_commons, ONLY: interpol_type
+  use hydro_commons, ONLY: interpol_mag_type
   use const
   implicit none
   integer::nn
@@ -1422,7 +1422,7 @@ subroutine compute_1d_tvd(b,s,nn)
   integer::i
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
 
-  if(interpol_type==3)then
+  if(interpol_mag_type==3)then
      do i=1,nn
         dlft = half*(b(i,0) - b(i,1))
         drgt = half*(b(i,2) - b(i,0))
@@ -1431,9 +1431,9 @@ subroutine compute_1d_tvd(b,s,nn)
      return
   endif
   do i=1,nn
-     dlft = interpol_type*(b(i,0) - b(i,1))
-     drgt = interpol_type*(b(i,2) - b(i,0))
-     dcen = half*(dlft+drgt)/interpol_type
+     dlft = interpol_mag_type*(b(i,0) - b(i,1))
+     drgt = interpol_mag_type*(b(i,2) - b(i,0))
+     dcen = half*(dlft+drgt)/interpol_mag_type
      dsgn = sign(one, dcen)
      slop = min(abs(dlft),abs(drgt))
      dlim = slop
