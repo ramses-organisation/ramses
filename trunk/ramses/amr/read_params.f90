@@ -128,10 +128,14 @@ subroutine read_params
   !-------------------------------------------------
   ! Read optional nrestart command-line argument
   !-------------------------------------------------
-  if (narg == 2) then
+  if (myid==1 .and. narg == 2) then
     CALL getarg(2,cmdarg)
-    read( cmdarg, '(I80)' ) nrestart
+    read(cmdarg,*) nrestart
   endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
 
   !-------------------------------------------------
   ! Compute time step for outputs
