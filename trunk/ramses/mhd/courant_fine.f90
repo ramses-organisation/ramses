@@ -37,6 +37,10 @@ subroutine courant_fine(ilevel)
   dx=0.5D0**ilevel*scale
   vol=dx**ndim
 
+  if (scheme .eq. 'induction') then
+    CALL velocity_fine(ilevel)
+  endif
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
