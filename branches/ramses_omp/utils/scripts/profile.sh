@@ -1,33 +1,76 @@
-count='00420'
-xc=0.499055
-yc=0.500313
-zc=0.500152
-uc=-85.
-vc=144.
-wc=157.
-jx=0.402
-jy=-0.644
-jz=0.657
+#! /bin/bash
 
-#part2prof -inp output_$count -out snap_zoom0.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.02 -nra 50
-amr2prof -inp output_$count -out snap_zoom0.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.02 -nra 50
+bin=$HOME'/bin'
 
-#part2prof -inp output_$count -out snap_zoom1.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.004 -nra 50
-amr2prof -inp output_$count -out snap_zoom1.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.004 -nra 50
+a=$1
+count='0000'$a
+if [ $a -ge 10 ]; then
+    count='000'$a
+fi
+if [ $a -ge 100 ]; then
+    count='00'$a
+fi
+echo output_$count
+aexp=`grep aexp output_$count/info_* | cut -d = -f 2`
+lbox=`grep unit_l output_$count/info_* | cut -d = -f 2`
+h0=`grep H0 output_$count/info_* | cut -d = -f 2`
+echo 'aexp='$aexp
+echo 'lbox='$lbox
+echo 'h0='$h0
+redshift=`echo $aexp|awk '{OFMT="%.4f"; print 1/$1-1}'`
+hh=`echo $h0|awk '{OFMT="%.4f"; print $1/100.}'`
+ll=`echo $lbox|awk '{OFMT="%.4f"; print $1/3.08E+21}'`
+echo 'z='$redshift
+echo 'h='$hh
+echo 'l='$ll
 
-#part2prof -inp output_$count -out snap_zoom2.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.0008 -nra 50
-amr2prof -inp output_$count -out snap_zoom2.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.0008 -nra 50
+source params_$count.sh
 
-#part2prof -inp output_$count -out snap_zoom3.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.00016 -nra 50
-amr2prof -inp output_$count -out snap_zoom3.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc  -rma 0.00016 -nra 50
+r200=`echo $rvir $ll|awk '{print (($1)/($2))}'`
+rgal=`echo $r200|awk '{print $1/10}'`
+hgal=`echo $rgal|awk '{print $1/10}'`
 
-#cat snap_zoom3.prof.dark snap_zoom2.prof.dark snap_zoom1.prof.dark snap_zoom0.prof.dark > snap_$count.prof.dark
-#cat snap_zoom3.prof.star snap_zoom2.prof.star snap_zoom1.prof.star snap_zoom0.prof.star > snap_$count.prof.star
-cat snap_zoom3.prof.gas  snap_zoom2.prof.gas  snap_zoom1.prof.gas  snap_zoom0.prof.gas  > snap_$count.prof.gas
+echo 'rvir='$rvir
+echo 'r200c='$r200
+echo 'rgal='$rgal
+echo 'hgal='$hgal
 
-#part2cylprof -inp output_$count -out snap_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jx -jy $jy -jz $jz -rma 0.003 -nra 200 -hma 0.0002
+echo $xc
+echo $yc
+echo $zc
 
+xmi=`echo $xc $imsize|awk '{print $1-$2}'`
+xma=`echo $xc $imsize|awk '{print $1+$2}'`
+ymi=`echo $yc $imsize|awk '{print $1-$2}'`
+yma=`echo $yc $imsize|awk '{print $1+$2}'`
+zmi=`echo $zc $imsize|awk '{print $1-$2}'`
+zma=`echo $zc $imsize|awk '{print $1+$2}'`
 
+part2prof -inp output_$count -out virial_$count.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -rma $r200 -nra 400
 
+part2prof -inp output_$count -out gal_$count.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -rma $rgal -nra 400
 
+if [ -z "$2" ]; then
+    exit
+fi
+
+if [ $2 eq 0 ]; then
+    exit
+fi
+
+amr2prof  -inp output_$count -out virial_$count.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -rma $r200 -nra 400
+
+paste virial_$count.prof.dark virial_$count.prof.star virial_$count.prof.gas > virial_$count.prof.tot
+
+part2prof -inp output_$count -out gal_$count.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -rma $rgal -nra 400
+
+amr2prof  -inp output_$count -out gal_$count.prof -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -rma $rgal -nra 400
+
+paste gal_$count.prof.dark gal_$count.prof.star gal_$count.prof.gas > gal_$count.prof.tot
+
+amr2cylprof -inp output_$count -out gal_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jxc -jy $jyc -jz $jzc -rma $rgal -nra 200 -hma $hgal
+
+part2cylprof -inp output_$count -out gal_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jxc -jy $jyc -jz $jzc -rma $rgal -nra 200 -hma $hgal -cir  gal_$count.prof.tot
+
+part2cylprof -inp output_$count -out virial_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jxc -jy $jyc -jz $jzc -rma $r200 -nra 400 -hma $r200 -cir  virial_$count.prof.tot
 

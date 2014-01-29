@@ -138,12 +138,22 @@ subroutine init_tree
      call add_list(ind_part,ind_grid,ok,npart1)
   end do
 
+  if (sink.and.nsink>0.and.nrestart==0)call create_cloud(1)
+
   ! Sort particles down to levelmin
   do ilevel=1,levelmin-1
+     call make_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
   end do
+
+  !show particle tree at startup
+  ! do ilevel=1,nlevelmax
+  !    call count_parts(ilevel)
+  ! end do
+  ! if(myid==1)print*,'+++++++++++++++++++++++++++++++++++++++++doneinit'
+  
 
 end subroutine init_tree
 !################################################################
@@ -187,7 +197,7 @@ subroutine make_tree_fine(ilevel)
   scale=boxlen/dble(nx_loc)
 
   ! Loop over cpus
-!$OMP PARALLEL DEFAULT(none)SHARED(headl,numbl,numbp,headp,nextp,next,active,reception) PRIVATE(jgrid,npart1,ind_grid,ipart,jpart,next_part,ind_part,ind_grid_part,ig,ip,igrid,icpu,ngrid_act,igrid_ptr) FIRSTPRIVATE(ilevel,ncpu,myid)
+!$OMP PARALLEL DEFAULT(none) SHARED(headl,numbl,numbp,headp,nextp,next,active,reception) PRIVATE(jgrid,npart1,ind_grid,ipart,jpart,next_part,ind_part,ind_grid_part,ig,ip,igrid,icpu,ngrid_act,igrid_ptr) FIRSTPRIVATE(ilevel,ncpu,myid)
   do icpu=1,ncpu
 !     igrid=headl(icpu,ilevel)
      if(icpu==myid)then
@@ -230,7 +240,6 @@ subroutine make_tree_fine(ilevel)
            end do
            ! End loop over particles
         end if
-!        igrid=next(igrid)   ! Go to next grid
      end do
 !$OMP END DO
      ! End loop over grids

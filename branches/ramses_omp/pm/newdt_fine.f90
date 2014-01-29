@@ -3,6 +3,9 @@ subroutine newdt_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons, ONLY: gravity_type
+#ifdef RT
+  use rt_parameters, ONLY: rt_advect
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -13,6 +16,7 @@ subroutine newdt_fine(ilevel)
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp 
+  ! 4- maximum step time for ATON
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -20,6 +24,7 @@ subroutine newdt_fine(ilevel)
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
+  real(dp)::aton_time_step,dt_aton,dt_rt
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -40,52 +45,77 @@ subroutine newdt_fine(ilevel)
      dtnew(ilevel)=MIN(dtnew(ilevel),0.1/hexp)
   end if
 
+#ifdef ATON
+  ! Maximum time step for ATON
+  if(aton)then
+     dt_aton = aton_time_step()
+     if(dt_aton>0d0)then
+        dtnew(ilevel)=MIN(dtnew(ilevel),dt_aton)
+     end if
+  end if
+#endif
+
+#ifdef RT
+  ! Maximum time step for radiative transfer
+  if(rt_advect)then
+     call get_rt_courant_coarse(dt_rt)
+     dtnew(ilevel)=MIN(dtnew(ilevel),dt_rt/2.0**(ilevel-levelmin))
+     if(static) RETURN
+  endif
+#endif
+
   if(pic) then
 
-  dt_all=dtnew(ilevel); dt_loc=dt_all
-  ekin_all=0.0; ekin_loc=0.0
+     dt_all=dtnew(ilevel); dt_loc=dt_all
+     ekin_all=0.0; ekin_loc=0.0
+     
+     ! Compute maximum time step on active region
+     if(numbl(myid,ilevel)>0)then
+        ! Loop over grids
+        ip=0
+!$OMP PARALLEL DEFAULT(none) SHARED(active,numbp,headp,nextp,ilevel) PRIVATE(jgrid,igrid,npart1,ind_part,jpart,ipart) FIRSTPRIVATE(ip) REDUCTION(+:ekin_loc) REDUCTION(min:dt_loc) 
+!$OMP DO SCHEDULE(DYNAMIC)
+        do jgrid=1,active(ilevel)%ngrid
+           igrid=active(ilevel)%igrid(jgrid)
+           npart1=numbp(igrid)   ! Number of particles in the grid
+           if(npart1>0)then
+              ! Loop over particles
+              ipart=headp(igrid)
+              do jpart=1,npart1
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 if(ip==nvector)then
+                    call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
+                    ip=0
+                 end if
+                 ipart=nextp(ipart)    ! Go to next particle
+              end do
+              ! End loop over particles
+           end if
+        end do
+        ! End loop over grids
+!$OMP ENDDO
+        if(ip>0)call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
+!$OMP END PARALLEL  
+     end if
+! omp min reduction does not take initial global value into account
+     dt_loc=MIN(dt_loc,dt_all)
 
-  ! Compute maximum time step on active region
-  if(numbl(myid,ilevel)>0)then
-     ! Loop over grids
-     ip=0
-     igrid=headl(myid,ilevel)
-     do jgrid=1,numbl(myid,ilevel)
-        npart1=numbp(igrid)   ! Number of particles in the grid
-        if(npart1>0)then
-           ! Loop over particles
-           ipart=headp(igrid)
-           do jpart=1,npart1
-              ip=ip+1
-              ind_part(ip)=ipart
-              if(ip==nvector)then
-                 call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
-                 ip=0
-              end if
-              ipart=nextp(ipart)    ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
-     end do
-     ! End loop over grids
-     if(ip>0)call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
-  end if
-
-  ! Minimize time step over all cpus
+     
+     ! Minimize time step over all cpus
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(dt_loc,dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
-       & MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(ekin_loc,ekin_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
-       & MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(dt_loc,dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+          & MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(ekin_loc,ekin_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
+          & MPI_COMM_WORLD,info)
 #endif
 #ifdef WITHOUTMPI
-  dt_all=dt_loc
-  ekin_all=ekin_loc
+     dt_all=dt_loc
+     ekin_all=ekin_loc
 #endif
-  ekin_tot=ekin_tot+ekin_all
-  dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
-
+     ekin_tot=ekin_tot+ekin_all
+     dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
+     
   end if
 
   if(hydro)call courant_fine(ilevel)

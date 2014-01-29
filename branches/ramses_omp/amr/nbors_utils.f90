@@ -79,7 +79,6 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
                  do i=1,ncell
                     iix(i)=ix(i)+i1-1
                     if(iix(i) < 0   )iix(i)=nx-1
-
                     if(iix(i) > nx-1)iix(i)=0
                  end do
               end if
@@ -544,5 +543,34 @@ subroutine getnborgrids(igrid,igridn,ngrid)
   end do
     
 end subroutine getnborgrids
+!##############################################################
+!##############################################################
+!##############################################################
+!##############################################################
+subroutine getnborgrids_check(igrid,igridn,ngrid)
+  use amr_commons
+  implicit none
+  integer::ngrid
+  integer,dimension(1:nvector)::igrid
+  integer,dimension(1:nvector,0:twondim)::igridn
+  !---------------------------------------------------------
+  ! This routine does EXACTLY the same as getnborgrids
+  ! but it checks if the neighbor of igrid exists in order
+  ! to avoid son(0) leading to crash.
+  !---------------------------------------------------------
+  integer::i,j
+
+  ! Store central grid
+  do i=1,ngrid
+     igridn(i,0)=igrid(i)
+  end do
+  ! Store neighboring grids
+  do j=1,twondim
+     do i=1,ngrid
+        if (nbor(igrid(i),j)>0)igridn(i,j)=son(nbor(igrid(i),j))
+     end do
+  end do
+    
+end subroutine getnborgrids_check
 
 

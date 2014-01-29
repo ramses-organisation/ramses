@@ -783,7 +783,7 @@ subroutine set_scan_flag_fine(ilevel)
   integer :: iskip_amr, icell_amr, icell_nbor_amr
   
   integer, dimension(1:3,1:2,1:8) :: iii, jjj
-  
+
   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)

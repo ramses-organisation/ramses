@@ -61,7 +61,6 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   !-------------------------------------------------------------------
   integer::i,idim,neul=ndim+2,nndim=ndim
   real(dp),dimension(1:nvector)::pp
-!  real(dp),dimension(1:nvector),save::pp
 
   ! Compute internal + magnetic energy
   do i=1,ncell

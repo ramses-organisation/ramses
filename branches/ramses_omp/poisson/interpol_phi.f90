@@ -3,8 +3,6 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel)
   use poisson_commons
   implicit none
   integer::ncell,ilevel
-!  integer ,dimension(1:nvector,1:ndim)::ind_cell
-!  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::phi_int
   integer ,dimension(1:nvector)::ind_cell
   real(dp),dimension(1:nvector,1:twotondim)::phi_int
   !

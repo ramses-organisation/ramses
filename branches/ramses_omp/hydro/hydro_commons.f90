@@ -4,6 +4,8 @@ module hydro_commons
   real(dp),allocatable,dimension(:,:)::uold,unew ! State vector and its update
   real(dp),allocatable,dimension(:)  ::divu,enew ! Non conservative variables
   real(dp)::mass_tot=0.0D0,mass_tot_0=0.0D0
+  real(dp)::ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
+  integer::nbins
 end module hydro_commons
 
 module const

@@ -158,8 +158,8 @@ program poshalo
   end do
 
   open(18,file=TRIM(directory)//'.pos')
-  write(*,*)'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
-  write(18,*)'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
+  write(*,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
+  write(18,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
   do i=1,ngroup
      x_group(i)=shift1d(x_group(i)/m_group(i),0.5d0,period) ! Ensure group center is within bounds
      y_group(i)=shift1d(y_group(i)/m_group(i),0.5d0,period)

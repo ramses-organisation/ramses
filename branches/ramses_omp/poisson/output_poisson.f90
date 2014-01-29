@@ -46,6 +46,12 @@ subroutine backup_poisson(filename)
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
+              ! Write potential
+              do i=1,ncache
+                 xdp(i)=phi(ind_grid(i)+iskip)
+              end do
+              write(ilun)xdp
+              ! Write force
               do ivar=1,ndim
                  do i=1,ncache
                     xdp(i)=f(ind_grid(i)+iskip,ivar)

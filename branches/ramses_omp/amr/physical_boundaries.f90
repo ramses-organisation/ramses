@@ -175,7 +175,7 @@ subroutine init_boundary_fine(ilevel)
            do i=1,ngrid
               ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
            end do
-           call getnborgrids(ind_grid,igridn,ngrid)
+           call getnborgrids_check(ind_grid,igridn,ngrid)
            do ind=1,twotondim
               call count_nbors2(igridn,ind,n_nbor(ismooth),ngrid)
            end do

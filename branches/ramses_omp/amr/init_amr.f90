@@ -12,6 +12,7 @@ subroutine init_amr
   integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
   integer::noutput2,iout2,ifout2,ilun,info
   integer::ix,iy,iz,ix_max,iy_max,iz_max,nxny,nx_loc
+  real(dp)::mass_sph2 
   integer,dimension(:),allocatable::ind_grid,iig,pos,grid
   real(dp),dimension(1:MAXOUT)::aout2=1.1d0 
   real(dp),dimension(1:MAXOUT)::tout2=0.0d0 
@@ -299,8 +300,32 @@ subroutine init_amr
      read(ilun)const,mass_tot_0,rho_tot
      read(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
      read(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
-     read(ilun)mass_sph
+     if(cosmo)then
+        read(ilun)mass_sph
+     else
+        read(ilun)mass_sph2
+     endif
      if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
+
+     ! Compute movie frame number if applicable
+     if(imovout>0) then
+        do i=2,imovout
+           if(aendmov>0)then
+              if(aexp>amovout(i-1).and.aexp<amovout(i)) then
+                 imov=i
+              endif
+           else
+              if(t>tmovout(i-1).and.t<tmovout(i)) then
+                 imov=i
+              endif
+           endif
+        enddo
+        if(aendmov>0)then
+           if(myid==1)write(*,*) "Frame number, aexp ",imov, amovout(imov)
+        else
+           if(myid==1)write(*,*) "Frame number, t ",imov, tmovout(imov)
+        endif
+     endif
 
      ! Read levels variables
      read(ilun)headl(1:ncpu,1:nlevelmax2)

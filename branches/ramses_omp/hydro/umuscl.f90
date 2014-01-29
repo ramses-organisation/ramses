@@ -51,6 +51,9 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::fx
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   )::tx
 
+  ! Velocity divergence
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::divu
+
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
@@ -159,6 +162,11 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   end do
 #endif
 
+  if(difmag>0.0)then
+    call cmpdivu(qin,divu,dx,dy,dz,ngrid)
+    call consup(uin,flux,divu,dt,ngrid)
+  endif
+
 end subroutine unsplit
 !###########################################################
 !###########################################################
@@ -231,6 +239,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! Passive scalars
   do n = ndim+3, nvar
      do k = klo, khi
@@ -248,6 +257,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine trace1d
 !###########################################################
@@ -347,6 +357,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! passive scalars
   do n = ndim+3, nvar
      do k = klo, khi
@@ -368,6 +379,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine trace2d
 #endif
@@ -500,6 +512,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! Passive scalars
   do n = ndim+3, nvar
      do k = klo, khi
@@ -525,6 +538,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
         end do
      end do
   end do
+#endif
 
 end subroutine trace3d
 #endif
@@ -595,6 +609,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qright(l,5) = qp(l,i,j,k,lt2,xdim)
            end do
 #endif           
+#if NVAR > NDIM + 2
            ! Other advected quantities
            do n = ndim+3, nvar
               do l = 1, ngrid
@@ -602,7 +617,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  qright(l,n) = qp(l,i,j,k,n,xdim)
               end do
            end do
-          
+#endif          
            ! Solve Riemann problem
            if(riemann.eq.'acoustic')then
               call riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
@@ -648,13 +663,14 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               flx(l,i,j,k,ndim+2) = fgdnv(l,3)
            end do
 
+#if NVAR > NDIM + 2
            ! Other advected quantities
            do n = ndim+3, nvar
               do l = 1, ngrid
                  flx(l,i,j,k,n) = fgdnv(l,n)
               end do
            end do
-
+#endif
            ! Temporary Godunov states
            do l = 1, ngrid
               tmp(l,i,j,k,1) = qgdnv(l,2)   ! Normal velocity
@@ -745,6 +761,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
      end do
   end do
 
+#if NVAR > NDIM + 2
   ! Passive scalar
   do n = ndim+3, nvar
      do k = ku1, ku2
@@ -758,6 +775,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
         end do
      end do
   end do
+#endif
  
 end subroutine ctoprim
 !###########################################################

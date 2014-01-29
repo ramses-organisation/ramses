@@ -6,7 +6,7 @@ subroutine remove_list(ind_part,list1,ok,np)
   use amr_commons
   use pm_commons
   implicit none
-  integer::np,ipart
+  integer::np
   integer,dimension(1:nvector)::ind_part,list1
   logical,dimension(1:nvector)::ok
   !----------------------------------------------------
@@ -17,30 +17,21 @@ subroutine remove_list(ind_part,list1,ok,np)
      if(ok(j))then
         if(prevp(ind_part(j)) .ne. 0) then
            if( nextp(ind_part(j)) .ne. 0 )then
-!!$OMP ATOMIC UPDATE
               nextp(prevp(ind_part(j)))=nextp(ind_part(j))
-!!$OMP ATOMIC UPDATE
               prevp(nextp(ind_part(j)))=prevp(ind_part(j))
            else
-!!$OMP ATOMIC WRITE
               nextp(prevp(ind_part(j)))=0
-!!$OMP ATOMIC UPDATE
               tailp(list1(j))=prevp(ind_part(j))
            end if
         else
            if(nextp(ind_part(j)) .ne. 0)then
-!!$OMP ATOMIC WRITE
               prevp(nextp(ind_part(j)))=0
-!!$OMP ATOMIC UPDATE
               headp(list1(j))=nextp(ind_part(j))
            else
-!!$OMP ATOMIC WRITE
               headp(list1(j))=0
-!!$OMP ATOMIC WRITE
               tailp(list1(j))=0
            end if
         end if
-!!$OMP ATOMIC UPDATE
         numbp(list1(j))=numbp(list1(j))-1
      end if
   end do

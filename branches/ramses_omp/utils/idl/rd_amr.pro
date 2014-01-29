@@ -28,7 +28,6 @@
 ; OUTPUTS:
 ;	Grid:   store the AMR tree in structure Grid.
 ;
-; COMMON BLOCKS:
 ;       None.
 ;
 ; EXAMPLE:
