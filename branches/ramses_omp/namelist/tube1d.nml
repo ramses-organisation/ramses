@@ -40,7 +40,7 @@ tout=0.245
 gamma=1.4
 courant_factor=0.8
 slope_type=2
-scheme='muscl'
+riemann='hllc'
 /
 
 &REFINE_PARAMS 

@@ -112,7 +112,7 @@ subroutine force_fine(ilevel)
   ! Compute gradient of potential
   !------------------------------
   else
-
+     ! Update physical boundaries
      call make_boundary_phi(ilevel)
 
      ! Loop over myid grids by vector sweeps
@@ -263,8 +263,6 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel)
 
   ! Interpolate potential from upper level
   do idim=1,ndim
-!     call interpol_phi(ind_left ,phi_left ,idim,ndim,ngrid,ilevel)
-!     call interpol_phi(ind_right,phi_right,idim,ndim,ngrid,ilevel)
      call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel)
      call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel)
   end do

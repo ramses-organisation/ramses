@@ -63,6 +63,9 @@ program amr2cell
 
   type(level),dimension(1:100)::grid
 
+  ! Temporary space for reading labels from the info file.
+  character(LEN=128)::temp_label
+
   call read_params
 
   !-----------------------------------------------
@@ -111,14 +114,14 @@ program amr2cell
   open(unit=10,file=nomfich,form='formatted',status='old')
   read(10,*)
   read(10,*)
-  read(10,'("levelmin    =",I11)')levelmin
+  read(10,'(A13,I11)')temp_label,levelmin
   read(10,*)
   read(10,*)
   read(10,*)
   read(10,*)
 
   read(10,*)
-  read(10,'("time        =",E23.15)')t
+  read(10,'(A13,E23.15)')temp_label,t
   read(10,*)
   read(10,*)
   read(10,*)
@@ -130,8 +133,8 @@ program amr2cell
   read(10,*)
   read(10,*)
 
-  read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  read(10,'(A14,A80)')temp_label,ordering
+  write(*,'(XA14,A20)')temp_label,TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -442,7 +445,7 @@ program amr2cell
   close(20)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(outfich)
 
-999 format(4(1pe12.5,1x),2(i6,1x),10(e10.3,1x))
+999 format(4(1pe12.5,1x),2(i6,1x),10(e12.5,1x))
   
 contains
   

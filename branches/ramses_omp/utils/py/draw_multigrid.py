@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Draw multigrid levels as dumped by dump_mg_levels
-
+ 
 import sys
 from pyx import *
 

@@ -71,21 +71,14 @@ subroutine update_time(ilevel)
            !----------------------------------------------
            ! Output mass and energy conservation to screen
            !----------------------------------------------
-           if(scheme.eq.'induction')then
-#ifdef SOLVERmhd
-              write(*,778)nstep_coarse,econs,epot_tot,ekin_tot,emag_tot
-#endif
-           else if(cooling.or.pressure_fix)then
+           if(cooling.or.pressure_fix)then
               write(*,778)nstep_coarse,econs,epot_tot,ekin_tot,eint_tot
-#ifdef SOLVERmhd
-              write(*,'(" emag=",ES9.2)') emag_tot
-#endif
            else
               write(*,777)nstep_coarse,mcons,econs,epot_tot,ekin_tot
-#ifdef SOLVERmhd
-              write(*,'(" emag=",ES9.2)') emag_tot
-#endif
            end if
+#ifdef SOLVERmhd
+           write(*,'(" emag=",ES9.2)') emag_tot
+#endif
            if(pic)then
               write(*,888)nstep,t,dt,aexp,&
                    & real(100.0D0*dble(used_mem_tot)/dble(ngridmax+1)),&

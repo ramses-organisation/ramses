@@ -31,7 +31,26 @@ subroutine condinit(x,u,dx,nn)
   call region_condinit(x,q,dx,nn)
 
   ! Add here, if you wish, some user-defined initial conditions
-  ! ........
+  ! Loop over cells
+  !do i=1,nn
+  ! density
+  q(1:nn,1)=1.0
+
+  ! velocity
+  q(1:nn,2:4)=0.0
+
+  ! pressure
+  q(1:nn,5)=1.0
+
+  ! magnetic field left
+  q(1:nn,6)=0.0
+  q(1:nn,7)=0.0
+  q(1:nn,8)=1d-3
+  ! magnetic field right
+  q(1:nn,9)=0.0
+  q(1:nn,10)=0.0
+  q(1:nn,11)=1d-3
+  !enddo
 
   ! Convert primitive to conservative variables
   ! density -> density

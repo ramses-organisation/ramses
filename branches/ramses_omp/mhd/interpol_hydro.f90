@@ -506,17 +506,15 @@ end subroutine upl_right
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine interpol_hydro(u1,g1,ind1,u2,g2,nn)
+subroutine interpol_hydro(u1,ind1,u2,nn)
   use amr_commons
   use hydro_commons
   use poisson_commons
   implicit none
   integer::nn
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3)::u1
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)  ::g1
   integer ,dimension(1:nvector,0:twondim)           ::ind1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3)::u2
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)  ::g2
   !----------------------------------------------------------
   ! This routine performs a prolongation (interpolation)
   ! operation for newly refined cells or buffer cells.
@@ -528,8 +526,6 @@ subroutine interpol_hydro(u1,g1,ind1,u2,g2,nn)
   ! interpol_type=1 linear interpolation with MinMod slope
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation without limiters
-  ! The gravitational acceleration is also prolongated
-  ! using straight injection only.
   !----------------------------------------------------------
   integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
 
@@ -671,17 +667,6 @@ subroutine interpol_hydro(u1,g1,ind1,u2,g2,nn)
            u2(i,ind,neul)=u2(i,ind,neul)+ekin(i)+emag(i)
         end do
      end do
-  end if
-
-  ! Straight injection for gravitational acceleration
-  if(poisson)then
-     do ivar=1,ndim ! Loop over dimensions
-        do ind=1,twotondim
-           do i=1,nn
-              g2(i,ind,ivar)=g1(i,0,ivar)
-           end do
-        end do
-     end do ! End loop over dimensions
   end if
 
 end subroutine interpol_hydro

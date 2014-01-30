@@ -122,6 +122,16 @@ subroutine init_flag(ilevel)
   logical::ok
   integer::iskip_son,ind_grid_son,ind_cell_son
 
+! CHECK AGAIN: omp version had no init to 0 loop, add omp?
+  ! Initialize flag1 to 0
+  nflag=0
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        flag1(active(ilevel)%igrid(i)+iskip)=0
+     end do
+  end do
+! END CHECK AGAIN
 
   ngrid = active(ilevel)%ngrid
   if (ngrid > 0) igrid => active(ilevel)%igrid
@@ -129,7 +139,6 @@ subroutine init_flag(ilevel)
   nflag=0
     
   ! If load balancing operations, flag only refined cells
-
   if(balance)then
 
 !$OMP PARALLEL DEFAULT(none) SHARED(son,flag1,igrid) PRIVATE(ind,i,iskip,oki) FIRSTPRIVATE(ncoarse,ngrid,ngridmax) REDUCTION(+:nflag)
@@ -421,6 +430,11 @@ subroutine userflag_fine(ilevel)
 
   ! Do the same for hydro solver
   if(hydro)call hydro_flag(ilevel)
+
+#ifdef RT
+  ! Do the same for RT solver
+  if(rt)call rt_hydro_flag(ilevel)
+#endif
 
   ! Update boundaries
   call make_virtual_fine_int(flag1(1),ilevel)
@@ -715,7 +729,6 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   do i=1,nn
      if(i_nbor(i)>=n_nbor)flag1(ind_cell(i))=1
   end do
-
 end subroutine count_nbors2
 !############################################################
 !############################################################

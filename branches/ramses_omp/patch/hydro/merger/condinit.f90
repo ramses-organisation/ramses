@@ -386,10 +386,10 @@ subroutine condinit(x,u,dx,nn)
                 q(i,1)= q(i,1) * exp(-0.5D0 * (abs_z / HH)**2)
         end select
         q(i,1) = max(weight * q(i,1), dmin)
-        ! P = rho * a² = rho * Cs²
+        ! P=rho*cs^2
         q(i,ndim+2)=a2*q(i,1)
         ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
-        !  -> Vrot = sqrt(Vcirc**2 - 3*Cs² + r/rho * grad(rho) * Cs²)
+        !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
             case ('exponential')
                 Vrot = sqrt(max(Vcirc**2 - 3.0D0*a2 - r/rgal * a2,0.0D0))
@@ -398,11 +398,13 @@ subroutine condinit(x,u,dx,nn)
         end select
         Vrot = weight * Vrot
         q(i,ndim-1:ndim+1) = Vrot * vect_prod(axe_rot,xx_rad)/r + vgal
+        if(metal)q(i,6)=z_ave*0.02 ! z_ave is in solar units
     else ! Cell out of the gaseous disk : density = peanut and velocity = V_gal
         q(i,1)=dmin
         q(i,ndim+2)=a2*q(i,1)
         ! V = Vgal
         q(i,ndim-1:ndim+1)= vgal
+        if(metal)q(i,6)=0.0
      endif
   enddo
 
@@ -543,8 +545,8 @@ subroutine read_vcirc_files
 	read(123,*) Vcirc_dat1(i,:)
   end do
   close(123)
-  ! Unit conversion pc -> code unit and km/s -> code unit
-  Vcirc_dat1(:,1) = Vcirc_dat1(:,1) * 3.085677581282D18 / scale_l
+  ! Unit conversion kpc -> code unit and km/s -> code unit
+  Vcirc_dat1(:,1) = Vcirc_dat1(:,1) * 3.085677581282D21 / scale_l
   Vcirc_dat1(:,2) = Vcirc_dat1(:,2) * 1.0D5 / scale_v
 
   ! Galaxy #2
@@ -563,8 +565,8 @@ subroutine read_vcirc_files
 	read(123,*) Vcirc_dat2(i,:)
   end do
   close(123)
-  ! Unit conversion pc -> code unit and km/s -> code unit
-  Vcirc_dat2(:,1) = Vcirc_dat2(:,1) * 3.085677581282D18 / scale_l
+  ! Unit conversion kpc -> code unit and km/s -> code unit
+  Vcirc_dat2(:,1) = Vcirc_dat2(:,1) * 3.085677581282D21 / scale_l
   Vcirc_dat2(:,2) = Vcirc_dat2(:,2) * 1.0D5 / scale_v
 
 

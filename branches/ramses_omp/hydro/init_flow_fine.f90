@@ -42,7 +42,7 @@ subroutine init_flow_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale
+  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale,xval
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector)       ,save::vv
@@ -226,7 +226,10 @@ subroutine init_flow_fine(ilevel)
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
            init_array=0d0
            ! Default value for metals
-           if(cosmo.and.ivar==6.and.metal)init_array=z_ave*0.02
+           if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02 ! from solar units
+           ! Default value for ionization fraction
+           xval=sqrt(omega_m)/(h0/100.*omega_b) ! From the book of Peebles p. 173
+           if(cosmo.and.ivar==ixion.and.aton)init_array=1.2d-5*xval
         endif
 
         if(ncache>0)then
@@ -234,12 +237,12 @@ subroutine init_flow_fine(ilevel)
         ! For cosmo runs, rescale initial conditions to code units
         if(cosmo)then
            ! Compute approximate average temperature in K
-           if(.not. cooling)T2_start = 1.356d-2/aexp**2
+           if(.not. cooling)T2_start=1.356d-2/aexp**2
            if(ivar==1)init_array=(1.0+dfact(ilevel)*init_array)*omega_b/omega_m
            if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
            if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
            if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==5)init_array=(1.0+init_array)*T2_start/scale_T2
+           if(ivar==ndim+2)init_array=(1.0+init_array)*T2_start/scale_T2
         endif
 
         ! Loop over cells
@@ -297,7 +300,7 @@ subroutine init_flow_fine(ilevel)
               end do
               ! Compute pressure from temperature and density
               do i=1,ngrid
-                 uold(ind_cell(i),5)=uold(ind_cell(i),1)*uold(ind_cell(i),5)
+                 uold(ind_cell(i),ndim+2)=uold(ind_cell(i),1)*uold(ind_cell(i),ndim+2)
               end do
            end do
            ! End loop over cells
@@ -314,6 +317,8 @@ subroutine init_flow_fine(ilevel)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
+        vy=0.0
+        vz=0.0
         ! Loop over cells
         do ind=1,twotondim
            ! Gather cell indices
@@ -325,16 +330,20 @@ subroutine init_flow_fine(ilevel)
            do i=1,ngrid
               rr=uold(ind_cell(i),1)
               vx=uold(ind_cell(i),2)
+#if NDIM>1
               vy=uold(ind_cell(i),3)
+#endif
+#if NDIM>2
               vz=uold(ind_cell(i),4)
-              pp=uold(ind_cell(i),5)
+#endif
+              pp=uold(ind_cell(i),ndim+2)
               ek=0.5d0*(vx**2+vy**2+vz**2)
               ei=pp/(gamma-1.0)
               vv(i)=ei+rr*ek
            end do
            ! Scatter to corresponding conservative variable
            do i=1,ngrid
-              uold(ind_cell(i),5)=vv(i)
+              uold(ind_cell(i),ndim+2)=vv(i)
            end do
            ! Compute momentum density
            do ivar=1,ndim
@@ -348,6 +357,7 @@ subroutine init_flow_fine(ilevel)
                  uold(ind_cell(i),ivar+1)=vv(i)
               end do
            end do
+#if NVAR > NDIM + 2
            ! Compute passive variable density
            do ivar=ndim+3,nvar
               do i=1,ngrid
@@ -355,6 +365,7 @@ subroutine init_flow_fine(ilevel)
                  uold(ind_cell(i),ivar)=rr*uold(ind_cell(i),ivar)
               end do
            enddo
+#endif
         end do
         ! End loop over cells
         
@@ -435,9 +446,11 @@ subroutine region_condinit(x,q,dx,nn)
   q(1:nn,4)=0.0d0
 #endif
   q(1:nn,ndim+2)=smallr*smallc**2/gamma
+#if NVAR > NDIM + 2
   do ivar=ndim+3,nvar
      q(1:nn,ivar)=0.0d0
   end do
+#endif
 
   ! Loop over initial conditions regions
   do k=1,nregion
@@ -474,6 +487,11 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,4)=w_region(k)
 #endif
               q(i,ndim+2)=p_region(k)
+#if NVAR>NDIM+2
+              do ivar=ndim+3,nvar
+                 q(i,ivar)=var_region(k,ivar-ndim-2)
+              end do
+#endif
            end if
         end do
      end if
@@ -504,6 +522,11 @@ subroutine region_condinit(x,q,dx,nn)
            q(i,4)=q(i,4)+w_region(k)*r
 #endif
            q(i,ndim+2)=q(i,ndim+2)+p_region(k)*r/vol
+#if NVAR>NDIM+2
+           do ivar=ndim+3,nvar
+              q(i,ivar)=var_region(k,ivar-ndim-2)
+           end do
+#endif
         end do
      end if
   end do

@@ -2,6 +2,7 @@ subroutine read_params
   use amr_commons
   use pm_parameters
   use poisson_parameters
+  use hydro_parameters
   use openmp_support
 #ifndef WITHOUTMPI
   use mpi
@@ -27,18 +28,20 @@ subroutine read_params
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/run_params/cosmo,pic,sink,lightcone,poisson,hydro,verbose,debug &
-       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting
+  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
+       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
-       & ,tend,delta_tout,aend,delta_aout
+       & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nsinkmax,nexpand,boxlen
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
-!!$  namelist/movie_params/f_frame,nx_frame,ny_frame,ivar_frame &
-!!$       & ,xmin_frame,xmax_frame,ymin_frame,ymax_frame,zmin_frame,zmax_frame
+  namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame &
+       & ,deltax_frame,deltay_frame,deltaz_frame,movie &
+       & ,imovout,imov,tendmov,aendmov
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -85,7 +88,6 @@ subroutine read_params
   ! Advertise RAMSES
   !--------------------------------------------------
   if(myid==1)then
-
   write(*,*)'_/_/_/       _/_/     _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'_/    _/    _/  _/    _/_/_/_/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/ _/ _/   _/        _/         _/       '
@@ -103,12 +105,29 @@ subroutine read_params
                   write(*,'("  # of OpenMP threads      :",I8)') omp_nthreads
     if (ncpu > 1) write(*,'("  # of cores used in total :",I8)') ncore
   endif
+
+#ifdef SOLVERhydro
+  write(*,'(" Using the hydro solver with nvar = ",I2)')nvar
+  if(nvar<ndim+2)then
+     write(*,*)'You should have: nvar>=ndim+2'
+     write(*,'(" Please recompile with -DNVAR=",I2)')ndim+2
+     call clean_stop
+  endif
+#endif
+#ifdef SOLVERmhd
+  write(*,'(" Using the mhd solver with nvar = ",I2)')nvar
+  if(nvar<8)then
+     write(*,*)'You should have: nvar>=8'
+     write(*,'(" Please recompile with -DNVAR=8")')
+     call clean_stop
+  endif
+#endif
   write(*,*)' '
 
   ! Read namelist filename from command line argument
   narg = iargc()
   IF(narg .LT. 1)THEN
-     write(*,*)'You should type: hydro3d input.nml'
+     write(*,*)'You should type: ramses3d input.nml'
      write(*,*)'File input.nml should contain a parameter namelist'
      call clean_stop
   END IF
@@ -140,9 +159,9 @@ subroutine read_params
   read(1,NML=lightcone_params,END=83)
 83 continue
   rewind(1)
-!!$  read(1,NML=movie_params,END=82)
-!!$82 continue
-!!$  rewind(1)
+  read(1,NML=movie_params,END=82)
+82 continue
+  rewind(1)
   read(1,NML=poisson_params,END=81)
 81 continue
   !-------------------------------------------------
@@ -150,16 +169,34 @@ subroutine read_params
   !-------------------------------------------------
   if(tend>0)then
      if(delta_tout==0)delta_tout=tend
-     noutput=int(tend/delta_tout)
+     noutput=MIN(int(tend/delta_tout),MAXOUT)
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
-     noutput=int(aend/delta_aout)
+     noutput=MIN(int(aend/delta_aout),MAXOUT)
      do i=1,noutput
         aout(i)=dble(i)*delta_aout
      end do
+  endif
+  noutput=MIN(noutput,MAXOUT)
+  if(imovout>0) then
+     allocate(tmovout(1:imovout))
+     allocate(amovout(1:imovout))
+     tmovout=1d100
+     amovout=1d100
+     if(tendmov>0)then
+        do i=1,imovout
+           tmovout(i)=tendmov*dble(i)/dble(imovout)
+        enddo
+     endif
+     if(aendmov>0)then
+        do i=1,imovout
+           amovout(i)=aendmov*dble(i)/dble(imovout)
+        enddo
+     endif
+     if(tendmov==0.and.aendmov==0)movie=.false.
   endif
   !--------------------------------------------------
   ! Check for errors in the namelist so far
@@ -193,11 +230,20 @@ subroutine read_params
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
-  if(pic.and.(.not.poisson))then
-     poisson=.true.
+  if(clumpfind.and.(.not.pic))then
+     pic=.true.
   endif
+  !if(pic.and.(.not.poisson))then
+  !   poisson=.true.
+  !endif
 
   call read_hydro_params(nml_ok)
+#ifdef RT
+  call rt_read_hydro_params(nml_ok)
+#endif
+
+  if (clumpfind)call read_clumpfind_params
+  if (gas_analytics)call read_gas_analytics_params
 
   close(1)
 

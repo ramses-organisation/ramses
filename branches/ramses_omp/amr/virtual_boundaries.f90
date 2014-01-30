@@ -316,7 +316,6 @@ end subroutine authorize_fine
 !################################################################
 subroutine make_virtual_coarse_int(xx)
   use amr_commons
-  use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -605,7 +604,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0) then
         countrecv=countrecv+1
-        ! request to send                                                                      
+        ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
@@ -619,7 +618,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
         countsend=countsend+1
-        ! wait for request to send                                                             
+        ! wait for request to send
         call MPI_RECV(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD, &
              & MPI_STATUS_IGNORE, info)
         call MPI_SEND(reception(icpu,ilevel)%u,ncache*twotondim, &
@@ -627,13 +626,13 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      end if
   end do
   
-  ! Receive all messages                                                                       
+  ! Receive all messages
   countrecv=0
   do icpu=myid+1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0) then
         countrecv=countrecv+1
-        ! request to send                                                                      
+        ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
@@ -909,7 +908,6 @@ end subroutine make_virtual_reverse_int
 !################################################################
 subroutine build_comm(ilevel)
   use amr_commons
-  use hydro_commons
   use poisson_commons, only: lookup_mg
   implicit none
 #ifndef WITHOUTMPI

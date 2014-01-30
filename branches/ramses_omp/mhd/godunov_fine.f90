@@ -17,6 +17,7 @@ subroutine godunov_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
+  if(static)return
   if(verbose)write(*,111)ilevel
 
   ! Loop over active grids by vector sweeps
@@ -105,6 +106,7 @@ end subroutine set_unew
 subroutine set_uold(ilevel)
   use amr_commons
   use hydro_commons
+  use poisson_commons
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
@@ -113,7 +115,7 @@ subroutine set_uold(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ivar,ind,iskip,nx_loc
   real(dp)::scale,d,u,v,w,A,B,C
-  real(dp)::e_mag,e_kin,e_cons,e_prim,e_trunc,div,dx,fact
+  real(dp)::e_mag,e_kin,e_cons,e_prim,e_trunc,div,dx,fact,d_old
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -121,6 +123,37 @@ subroutine set_uold(ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
+
+  ! Add gravity source term at time t with half time step                                                                                    
+  if(poisson)then
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,active(ilevel)%ngrid
+           d=unew(active(ilevel)%igrid(i)+iskip,1)
+           u=unew(active(ilevel)%igrid(i)+iskip,2)/d
+           v=unew(active(ilevel)%igrid(i)+iskip,3)/d
+           w=unew(active(ilevel)%igrid(i)+iskip,4)/d
+           e_kin=0.5*d*(u**2+v**2+w**2)
+           e_prim=unew(active(ilevel)%igrid(i)+iskip,5)-e_kin
+           d_old=uold(active(ilevel)%igrid(i)+iskip,1)
+           fact=d_old/d*0.5*dtnew(ilevel)
+           if(ndim>0)then
+              u=u+f(active(ilevel)%igrid(i)+iskip,1)*fact
+              unew(active(ilevel)%igrid(i)+iskip,2)=d*u
+           endif
+           if(ndim>1)then
+              v=v+f(active(ilevel)%igrid(i)+iskip,2)*fact
+              unew(active(ilevel)%igrid(i)+iskip,3)=d*v
+           end if
+           if(ndim>2)then
+              w=w+f(active(ilevel)%igrid(i)+iskip,3)*fact
+              unew(active(ilevel)%igrid(i)+iskip,4)=d*w
+           endif
+           e_kin=0.5*d*(u**2+v**2+w**2)
+           unew(active(ilevel)%igrid(i)+iskip,5)=e_prim+e_kin
+        end do
+     end do
+  end if
 
   ! Set uold to unew for myid cells
   do ind=1,twotondim
@@ -263,25 +296,20 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      
      ! If not, interpolate variables from parent cells
-     call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
-     do j=0,twondim
-        do ivar=1,nvar+3
-           do i=1,nbuffer
-              u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-           end do
-        end do
-        do i=1,nbuffer
-           ind1(i,j)=son(ibuffer_father(i,j))
-        end do
-        if(poisson)then
-           do idim=1,ndim
+     if(nbuffer>0)then
+        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
+        do j=0,twondim
+           do ivar=1,nvar+3
               do i=1,nbuffer
-                 g1(i,j,idim)=f(ibuffer_father(i,j),idim)
+                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
               end do
            end do
-        end if
-     end do
-     call interpol_hydro(u1,g1,ind1,u2,g2,nbuffer)
+           do i=1,nbuffer
+              ind1(i,j)=son(ibuffer_father(i,j))
+           end do
+        end do
+        call interpol_hydro(u1,ind1,u2,nbuffer)
+     endif
 
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
@@ -316,7 +344,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
                  gloc(ind_exist(i),i3,j3,k3,idim)=f(ind_cell(i),idim)
               end do
               do i=1,nbuffer
-                 gloc(ind_nexist(i),i3,j3,k3,idim)=g2(i,ind_son,idim)
+                 gloc(ind_nexist(i),i3,j3,k3,idim)=f(ibuffer_father(i,0),idim)
               end do
            end do
         end if

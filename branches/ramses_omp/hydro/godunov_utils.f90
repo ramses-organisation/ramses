@@ -99,6 +99,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   use amr_parameters
   use hydro_parameters
   use const
+#ifdef RT
+  use rt_parameters
+#endif
   implicit none
   ! dummy arguments
   integer nn
@@ -142,8 +145,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      ug(k,ndim+2) = (gamma-one)*(ug(k,ndim+2)-eking(k))
      um(k,ndim+2) = (gamma-one)*(um(k,ndim+2)-ekinm(k))
      ud(k,ndim+2) = (gamma-one)*(ud(k,ndim+2)-ekind(k))
-  end do  
+  end do
   ! Passive scalars
+#if NVAR > NDIM + 2
   do idim = ndim+3,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
@@ -151,6 +155,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
         ud(k,idim) = ud(k,idim)/ud(k,1)
      end do
   end do
+#endif
 
   ! Compute errors
   if(err_grad_d >= 0.)then
@@ -187,6 +192,34 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
         end do
      end do
   end if
+
+#ifdef RT 
+  ! Ionization state (only Hydrogen)                              
+  if(rt_err_grad_xHII >= 0.) then !--------------------------------------- 
+     do k=1,nn                                                    
+        dg=min(1.d0,max(0.d0,ug(k,iIons)))                        
+        dm=min(1.d0,max(0.d0,um(k,iIons)))                        
+        dd=min(1.d0,max(0.d0,ud(k,iIons)))                        
+        error=2.0d0*MAX( &                                        
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &             
+             & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
+        ok(k) = ok(k) .or. error > rt_err_grad_xHII  
+     end do                                                       
+  end if                                                          
+
+  ! Neutral state (only Hydrogen)                                 
+  if(rt_err_grad_xHI  >= 0.) then !---------------------------------------  
+     do k=1,nn                                                    
+        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))                 
+        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))                 
+        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))                 
+        error=2.0d0*MAX( &                                        
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &              
+             & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )                
+        ok(k) = ok(k) .or. error > rt_err_grad_xHI                
+     end do                                                      
+  end if                                                         
+#endif
 
 end subroutine hydro_refine
 !###########################################################
@@ -381,6 +414,7 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
+#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -390,6 +424,7 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
+#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -405,11 +440,13 @@ subroutine riemann_approx(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
+#endif
 
 end subroutine riemann_approx
 !###########################################################
@@ -533,6 +570,7 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
   end do
 
   ! Passive scalars
+#if NVAR > 3
   do n = 4,nvar
      do i=1,ngrid
         if(sgnm(i)==one)then
@@ -542,6 +580,7 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
         end if
      end do
   end do
+#endif
 
   ! Compute fluxes
   do i = 1, ngrid
@@ -557,11 +596,13 @@ subroutine riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,3) = qgdnv(i,2)*(etot+qgdnv(i,3))     ! Total energy
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fgdnv(i,n) = fgdnv(i,1)*qgdnv(i,n)
      end do
   end do
+#endif
 
 end subroutine riemann_acoustic
 !###########################################################
@@ -631,12 +672,14 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute left and right fluxes  
   do i = 1, ngrid 
@@ -651,12 +694,14 @@ subroutine riemann_llf(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute Lax-Friedrich fluxes
   do n = 1, nvar
@@ -784,6 +829,7 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
      fgdnv(i,1) = ro*uo
      fgdnv(i,2) = ro*uo*uo+Ptoto
      fgdnv(i,3) = (etoto+Ptoto)*uo
+#if NVAR > 3
      do ivar = 4,nvar
         if(fgdnv(i,1)>0)then
            fgdnv(i,ivar) = fgdnv(i,1)*qleft (i,ivar)
@@ -791,7 +837,7 @@ subroutine riemann_hllc(qleft,qright,qgdnv,fgdnv,ngrid)
            fgdnv(i,ivar) = fgdnv(i,1)*qright(i,ivar)
         endif
      end do
-
+#endif
      ! Compute the Godunov velocity
      qgdnv(i,2) = uo
 
@@ -858,12 +904,14 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
 #endif
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
         uright(i,n) = qright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute left and right fluxes
   do i = 1, ngrid
@@ -875,12 +923,14 @@ subroutine riemann_hll(qleft,qright,qgdnv,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
   end do
   ! Other advected quantities
+#if NVAR > 3
   do n = 4, nvar
      do i = 1, ngrid
         fleft (i,n) = fleft (i,1)*qleft (i,n)
         fright(i,n) = fright(i,1)*qright(i,n)
      end do
   end do
+#endif
 
   ! Compute HLL fluxes
   do n = 1, nvar

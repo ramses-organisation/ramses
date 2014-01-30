@@ -138,7 +138,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   integer::ind_father1,ind_father2,ind_father3
   integer::ind_buffer1,ind_buffer2,ind_buffer3
-  integer::interpol_type_old,ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
+  integer::ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
   real(dp)::dx,dflux,weight,dflux_x,dflux_y,dflux_z,scale,dx_loc
 
   ! Mesh size at level ilevel in coarse cell units
@@ -601,7 +601,6 @@ end subroutine diffine1
 subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
      & Nx,Ny,Nz,ngrid,dx,dy,dz)
   use amr_parameters,ONLY:dp,verbose,nvector
-  use hydro_parameters,ONLY:slope_type
   implicit none
   integer :: Nx,Ny,Nz,ngrid
   real(dp),dimension(1:nvector, 0:Nx+2,-1:Ny+2,-1:Nz+2) :: Bx

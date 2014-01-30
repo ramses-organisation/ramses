@@ -3,11 +3,15 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+#ifdef RT
+  use rt_hydro_commons
+  use SED_module
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,icount
+  integer::ilevel,icount,ilev
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -24,7 +28,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------
   ! Make new refinements and update boundaries
   !-------------------------------------------
-  if(levelmin.lt.nlevelmax)then
+  if(levelmin.lt.nlevelmax .and..not. static)then
      if(ilevel==levelmin.or.icount>1)then
         do i=ilevel,nlevelmax
            if(i>levelmin)then
@@ -45,14 +49,27 @@ recursive subroutine amr_step(ilevel,icount)
                  do ivar=1,nvar
 #endif
                     call make_virtual_fine_dp(uold(1,ivar),i)
+#ifdef SOLVERmhd
                  end do
+#else
+                 end do
+#endif
                  if(simple_boundary)call make_boundary_hydro(i)
-                 if(poisson)then
-                    do idim=1,ndim
-                       call make_virtual_fine_dp(f(1,idim),i)
-                    end do
-                    if(simple_boundary)call make_boundary_force(i)
-                 end if
+              end if
+#ifdef RT
+              if(rt)then
+                 do ivar=1,nrtvar
+                    call make_virtual_fine_dp(rtuold(1,ivar),i)
+                 end do
+                 if(simple_boundary)call rt_make_boundary_hydro(i)
+              end if
+#endif
+              if(poisson)then
+                 call make_virtual_fine_dp(phi(1),i)
+                 do idim=1,ndim
+                    call make_virtual_fine_dp(f(1,idim),i)
+                 end do
+                 if(simple_boundary)call make_boundary_force(i)
               end if
            end if
 
@@ -60,7 +77,6 @@ recursive subroutine amr_step(ilevel,icount)
            ! Refine grids
            !--------------------------
            call refine_fine(i)
-
         end do
      end if
   end if
@@ -87,10 +103,15 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   !-----------------
+  ! Update sink cloud particle properties
+  !-----------------
+  if(sink)call update_cloud(ilevel,.false.)
+
+  !-----------------
   ! Particle leakage
   !-----------------
   if(pic)call make_tree_fine(ilevel)
-
+  
   !------------------------
   ! Output results to files
   !------------------------
@@ -99,20 +120,34 @@ recursive subroutine amr_step(ilevel,icount)
         if(.not.ok_defrag)then
            call defrag
         endif
-        call dump_all
-     endif
- 
-    ! Dump lightcone
-     if(lightcone) then
-        call output_cone()
-     end if
 
-!     ! Dump movie frame
-!     if(movie) then
-!        call output_frame()
-!     end if
+        call dump_all
+
+        if(gas_analytics) call gas_ana
+
+        ! Run the clumpfinder
+        if (.not.sink)then 
+           if(clumpfind .and. ndim==3) call clump_finder(.true.)
+        end if
+
+        ! Dump lightcone
+        if(lightcone) call output_cone()
+
+     endif
+
+     ! Important can't be done in sink routines because it must be done after dump all
+     if(sink)acc_rate=0.
 
   endif
+
+  !----------------------------
+  ! Output frame to movie dump (without synced levels)
+  !----------------------------
+  if(movie) then
+     if(aexp>=amovout(imov).or.t>=tmovout(imov))then
+        call output_frame()
+     endif
+  end if
 
   !-----------------------------------------------------------
   ! Put here all stuffs that are done only at coarse time step
@@ -122,11 +157,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Kinetic feedback from giant molecular clouds
      !----------------------------------------------------
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
-     
-     !-----------------------------------------------------
-     ! Create sink particles and associated cloud particles
-     !-----------------------------------------------------
-     if(sink)call create_sink
+
   endif
 
   !--------------------
@@ -149,13 +180,9 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
   if(poisson)then
  
-     ! Synchronize hydro for gravity (first pass)
+     ! Remove gravity source term with half time step and old force
      if(hydro)then
-        if(nordlund_fix)then
-           call synchro_hydro_fine(ilevel,-1.0*dtnew(ilevel))
-        else
-           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
-        endif
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
      endif
 
      ! Compute gravitational potential
@@ -173,7 +200,7 @@ recursive subroutine amr_step(ilevel,icount)
      call force_fine(ilevel)
 
      ! Thermal feedback from stars
-     if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
+     if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel,icount)
 
      ! Synchronize remaining particles for gravity
      if(pic)then
@@ -182,18 +209,11 @@ recursive subroutine amr_step(ilevel,icount)
 
      if(hydro)then
 
-        ! Synchronize hydro for gravity (second pass)
-        if(nordlund_fix)then
-           call synchro_hydro_fine(ilevel,+1.0*dtnew(ilevel))
-        else
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
-        endif
+        ! Compute Bondi-Hoyle accretion parameters
+        if(sink.and.bondi)call bondi_hoyle(ilevel)
 
-        ! Density threshold and/or Bondi accretion onto sink particle
-        if(sink)then
-!           call grow_jeans(ilevel)
-           if(bondi)call grow_bondi(ilevel)
-        endif
+        ! Add gravity source term with half time step and new force
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -202,11 +222,20 @@ recursive subroutine amr_step(ilevel,icount)
         do ivar=1,nvar
 #endif
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
+#ifdef SOLVERmhd
         end do
+#else
+        end do
+#endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end if
-
   end if
+
+#ifdef RT
+  ! Turn on RT in case of rt_stars and first stars just created:
+  ! Update photon packages according to star particles
+  if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
+#endif
 
   !----------------------
   ! Compute new time step
@@ -218,6 +247,11 @@ recursive subroutine amr_step(ilevel,icount)
 
   ! Set unew equal to uold
   if(hydro)call set_unew(ilevel)
+
+#ifdef RT
+  ! Set rtunew equal to rtuold
+  if(rt)call rt_set_unew(ilevel)
+#endif
 
   !---------------------------
   ! Recursive call to amr_step
@@ -235,10 +269,17 @@ recursive subroutine amr_step(ilevel,icount)
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         call update_time(ilevel)
+        if(sink)call update_sink(ilevel)
      end if
   else
      call update_time(ilevel)
+     if(sink)call update_sink(ilevel)
   end if
+
+#ifdef RT
+  ! Add stellar radiation sources
+  if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+#endif
 
   !---------------
   ! Move particles
@@ -262,7 +303,11 @@ recursive subroutine amr_step(ilevel,icount)
      do ivar=1,nvar
 #endif
         call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+#ifdef SOLVERmhd
      end do
+#else
+     end do
+#endif
      if(pressure_fix)then
         call make_virtual_reverse_dp(enew(1),ilevel)
         call make_virtual_reverse_dp(divu(1),ilevel)
@@ -271,48 +316,128 @@ recursive subroutine amr_step(ilevel,icount)
      ! Set uold equal to unew
      call set_uold(ilevel)
 
-     ! Gravity source term
-     if(poisson)call synchro_hydro_fine(ilevel,dtnew(ilevel))
+     ! Density threshold and/or Bondi accretion onto sink particle
+     if(sink)then                         
+        if(bondi)then
+           call grow_bondi(ilevel)
+        else
+           call grow_jeans(ilevel)
+        endif
+     endif
+
+     ! Add gravity source term with half time step and old force
+     ! in order to complete the time step 
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator
      call upload_fine(ilevel)
 
-     ! Cooling source term in leaf cells only
-     if(cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
 
-     ! Star formation in leaf cells only
-     if(star)call star_formation(ilevel)
+#ifdef RT
+  !---------------
+  ! Radiation step
+  !---------------
+  if(rt)then
+     ! Hyperbolic solver
+     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
 
-     ! Compute Bondi-Hoyle accretion parameters
-     if(sink.and.bondi)call bondi_hoyle(ilevel)
+     call add_rt_sources(ilevel,dtnew(ilevel))
 
-     ! Update boundaries 
+     ! Reverse update boundaries
+     do ivar=1,nrtvar
+        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
+     end do
+
+     ! Set rtuold equal to rtunew
+     call rt_set_uold(ilevel)
+
+     ! Restriction operator
+     call rt_upload_fine(ilevel)
+  endif
+#endif
+  
+  !-------------------------------
+  ! Source term in leaf cells only
+  !-------------------------------
+  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+
+  !----------------------------------
+  ! Star formation in leaf cells only
+  !----------------------------------
+  if(hydro.and.star)call star_formation(ilevel)
+
+  !---------------------------------------
+  ! Update physical and virtual boundaries
+  !---------------------------------------
+  if(hydro)then
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
 #else
      do ivar=1,nvar
 #endif
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
-     end do
-     if(simple_boundary)call make_boundary_hydro(ilevel)
-
-     ! Magnetic diffusion step
 #ifdef SOLVERmhd
+     end do
+#else
+     end do
+#endif
+     if(simple_boundary)call make_boundary_hydro(ilevel)
+  endif
+#ifdef RT
+  if(rt)then
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+  end if
+#endif
+
+#ifdef SOLVERmhd
+  ! Magnetic diffusion step
+ if(hydro)then
      if(eta_mag>0d0.and.ilevel==levelmin)then
         call diffusion
      endif
-#endif
   end if
+#endif
 
   !-----------------------
   ! Compute refinement map
   !-----------------------
-  call flag_fine(ilevel,icount)
+  if(.not.static) call flag_fine(ilevel,icount)
+
 
   !----------------------------
   ! Merge finer level particles
   !----------------------------
   if(pic)call merge_tree_fine(ilevel)
+
+  !---------------
+  ! Radiation step
+  !---------------
+#ifdef ATON
+  if(aton.and.ilevel==levelmin)then
+     call rad_step(dtnew(ilevel))
+  endif
+#endif
+
+  if(sink)then
+     !-------------------------------
+     ! Update coarser level sink velocity
+     !-------------------------------
+     if(ilevel>levelmin)then
+        vsold(1:nsink,1:ndim,ilevel-1)=vsnew(1:nsink,1:ndim,ilevel-1)
+        if(nsubcycle(ilevel-1)==1)vsnew(1:nsink,1:ndim,ilevel-1)=vsnew(1:nsink,1:ndim,ilevel)
+        if(icount==2)vsnew(1:nsink,1:ndim,ilevel-1)= &
+             (vsold(1:nsink,1:ndim,ilevel)*dtold(ilevel)+vsnew(1:nsink,1:ndim,ilevel)*dtnew(ilevel))/ &
+             (dtold(ilevel)+dtnew(ilevel))
+     end if
+     !---------------
+     ! Sink production
+     !---------------
+     if(ilevel==levelmin)call create_sink
+  end if
 
   !-------------------------------
   ! Update coarser level time-step
