@@ -2028,7 +2028,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            acc_mass=0.
         else if (new_born_all(isink)==1)then
            acc_mass=protostar_seedmass/ncloud_sink
-           acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),0.001*d_sink*vol_loc)
+           acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),0.001*d*vol_loc)
         else           
            if (bondi)then 
               ! Compute accreted mass with cloud weighting and density weighting
