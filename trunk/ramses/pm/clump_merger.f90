@@ -659,11 +659,6 @@ subroutine saddlepoint_search(ntest)
 #endif
   
 
-  ! sanity check
-  ! do i=1,npeaks_tot
-  !    if (global_saddle_max(i)/=saddle_max_tot(i))write(*,*)'saddle max values are not equal - big problem'
-  ! end do
-  
   do i=1,npeaks_tot
      if (saddle_max_tot(i)>0.)then
         relevance_tot(i)=max_dens_tot(i)/saddle_max_tot(i)
@@ -672,9 +667,6 @@ subroutine saddlepoint_search(ntest)
      end if
   end do
   
-  !from here only saddle_dens_tot is used
-!  deallocate(saddle_dens)
-
 end subroutine saddlepoint_search
 !#########################################################################
 !#########################################################################
@@ -722,10 +714,6 @@ subroutine merge_clumps(ntest)
         ii=ind_sort(i)
         new_peak(ii)=ii
 
-!        call MPI_BARRIER(MPI_COMM_WORLD,info)
-!        call compare_saddle_densities
-!        call MPI_BARRIER(MPI_COMM_WORLD,info)
-
         ! If the relevance is below the threshold -> merge
         if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>.5) then
            
@@ -741,10 +729,6 @@ subroutine merge_clumps(ntest)
            call MPI_Bcast(merge_to,1,MPI_INTEGER,saddle_max_host-1,MPI_COMM_WORLD,info) !F***! mpi starts to count at 0 !
 #endif
            
-           ! sanity check
-           ! if (merge_to2/=merge_to)write(*,*)'local merging catastrophy: ',myid,merge_to,merge_to2
-           ! if (merge_to3/=merge_to)write(*,*)'sparse merging catastrophy: ',myid,merge_to,merge_to3
-
            ! Store new peak index
            new_peak(ii)=merge_to
            if(clinfo .and. myid==1)then
@@ -988,8 +972,6 @@ subroutine allocate_peak_patch_arrays
   allocate(clump_vol_tot(1:npeaks_tot))
   allocate(saddle_max_tot(1:npeaks_tot))
   allocate(relevance_tot(1:npeaks_tot))
-!  allocate(saddle_dens_tot(1:npeaks_tot,1:npeaks_tot))
-!  allocate(saddle_dens(1:npeaks_tot,1:npeaks_tot))
   call sparse_initialize(npeaks_tot,npeaks_tot,sparse_saddle_dens)
   allocate(clump_momentum_tot(1:npeaks_tot,1:ndim))
   allocate(e_kin_int_tot(npeaks_tot))
@@ -1034,7 +1016,6 @@ subroutine allocate_peak_patch_arrays
   center_of_mass_tot=0.
   clump_force_tot=0.
   second_moments=0.; second_moments_tot=0.
-!  saddle_dens=0.;  saddle_dens_tot=0.
   clump_momentum_tot=0.
   e_kin_int_tot=0.
   e_bind_tot=0.
@@ -1073,7 +1054,6 @@ subroutine deallocate_all
   deallocate(clump_vol_tot)
   deallocate(saddle_max_tot)
   deallocate(relevance_tot)
-!  deallocate(saddle_dens,saddle_dens_tot)
   call sparse_kill(sparse_saddle_dens)
   deallocate(clump_momentum_tot)
   deallocate(e_kin_int_tot)
@@ -1346,41 +1326,3 @@ subroutine write_clump_map(ntest)
   end do
   close(20)
 end subroutine write_clump_map
-
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-! subroutine compare_saddle_densities
-!   use amr_commons
-!   use clfind_commons
-!   use sparse_matrix
-  
-!   real(dp),dimension(1:npeaks_tot)::maxvals
-!   integer,dimension(1:npeaks_tot)::maxlocs
-!   integer::i,j
-!   logical::ok
-
-!   maxvals=maxval(saddle_dens,dim=1)
-!   maxlocs=maxloc(saddle_dens,dim=1)
-
-
-!   ok=.true.
-!   do i=1,npeaks_tot
-!      if (maxvals(i)==0)maxlocs(i)=0
-!      do j=1,npeaks_tot
-!         if (get_value(i,j,sparse_saddle_dens)/=saddle_dens(i,j))then
-!            write(*,*)'There is a problem with your sparse matrix implementation: ',i,j,get_value(i,j,sparse_saddle_dens),saddle_dens(i,j)
-!            ok=.false.
-!         end if
-!      end do
-!      if (maxvals(i)/=sparse_saddle_dens%maxval(i))print*,'maxval problem:',myid,maxvals(i),sparse_saddle_dens%maxval(i)
-!      if (maxlocs(i)/=sparse_saddle_dens%maxloc(i))then
-!         print*,'maxloc problem1:',myid,maxlocs(i),sparse_saddle_dens%maxloc(i)
-!         print*,'maxloc problem2:',myid,get_value(i,sparse_saddle_dens%maxloc(i),sparse_saddle_dens),get_value(i,maxlocs(i),sparse_saddle_dens)
-!         print*,'maxloc problem3:',myid,saddle_dens(i,sparse_saddle_dens%maxloc(i)),saddle_dens(i,maxlocs(i))
-!      end if
-!    end do
-
-  
-! end subroutine compare_saddle_densities
