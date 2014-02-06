@@ -29,13 +29,15 @@ subroutine dump_all
      filedir='output_'//TRIM(nchar)//'/'
      filecmd='mkdir -p '//TRIM(filedir)
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+     call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
 #else
-     if(myid==1)call system(filecmd)
+     call system(filecmd)
 #endif
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
+     call output_header(filename)
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
@@ -43,6 +45,12 @@ subroutine dump_all
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
         end if
+        if(sink)then
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
+           call output_sink(filename)
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
+           call output_sink_csv(filename)
+        endif
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
      call backup_amr(filename)
@@ -50,6 +58,12 @@ subroutine dump_all
         filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
         call backup_hydro(filename)
      end if
+#ifdef RT
+     if(rt.or.neq_chem)then
+        filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
+        call rt_backup_hydro(filename)
+     endif
+#endif
      if(pic)then
         filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
         call backup_part(filename)
@@ -57,6 +71,18 @@ subroutine dump_all
      if(poisson)then
         filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
         call backup_poisson(filename)
+     end if
+#ifdef ATON
+     if(aton)then
+        filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
+        call backup_radiation(filename)
+        filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
+        call store_radiation(filename)
+     end if
+#endif
+     if (gadget_output) then
+        filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
+        call savegadget(filename)
      end if
   end if
 
@@ -252,7 +278,7 @@ subroutine output_info(filename)
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
 
-  if(verbose)write(*,*)'Entering output_amr'
+  if(verbose)write(*,*)'Entering output_info'
 
   ilun=myid+10
 
@@ -312,4 +338,127 @@ subroutine output_info(filename)
   close(ilun)
 
 end subroutine output_info
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine output_header(filename)
+  use amr_commons
+  use hydro_commons
+  use pm_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  character(LEN=80)::filename
+
+  integer::info,npart_tot,ilun
+  character(LEN=80)::fileloc
+
+  if(verbose)write(*,*)'Entering output_header'
+
+  ! Compute total number of particles
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  npart_tot=npart
+#endif
+
+  if(myid==1)then
+
+     ilun=myid+10
+
+     ! Open file
+     fileloc=TRIM(filename)
+     open(unit=ilun,file=fileloc,form='formatted')
+     
+     ! Write header information
+     write(ilun,*)'Total number of particles'
+     write(ilun,*)npart_tot
+     write(ilun,*)'Total number of dark matter particles'
+     write(ilun,*)npart_tot-nstar_tot
+     write(ilun,*)'Total number of star particles'
+     write(ilun,*)nstar_tot
+     write(ilun,*)'Total number of sink particles'
+     write(ilun,*)nsink
+     
+     close(ilun)
+
+  endif
+
+end subroutine output_header
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine savegadget(filename)
+  use amr_commons
+  use hydro_commons
+  use pm_commons
+  use gadgetreadfilemod
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  character(LEN=80)::filename
+  TYPE (gadgetheadertype) :: header
+  real,allocatable,dimension(:,:)::pos, vel
+  integer,allocatable,dimension(:)::ids
+  integer::i, idim, ipart
+  real:: gadgetvfact
+  integer::npart_tot, info
+  real, parameter:: RHOcrit = 2.7755d11
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+
+  allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
+  gadgetvfact = 100.0 * boxlen_ini / aexp / SQRT(aexp)
+
+  header%npart = 0
+  header%npart(2) = npart
+  header%mass = 0
+  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1.d10
+  header%time = aexp
+  header%redshift = 1.d0/aexp-1.d0
+  header%flag_sfr = 0
+  header%nparttotal = 0
+  header%nparttotal(2) = npart_tot
+  header%flag_cooling = 0
+  header%numfiles = ncpu
+  header%boxsize = boxlen_ini
+  header%omega0 = omega_m
+  header%omegalambda = omega_l
+  header%hubbleparam = h0/100.0
+  header%flag_stellarage = 0
+  header%flag_metals = 0
+  header%totalhighword = 0
+  header%flag_entropy_instead_u = 0
+  header%flag_doubleprecision = 0
+  header%flag_ic_info = 0
+  header%lpt_scalingfactor = 0
+  header%unused = ' '
+
+  do idim=1,ndim
+     ipart=0
+     do i=1,npartmax
+        if(levelp(i)>0)then
+           ipart=ipart+1
+           if (ipart .gt. npart) then
+                write(*,*) myid, "Ipart=",ipart, "exceeds", npart
+                call clean_stop
+           endif
+           pos(idim, ipart)=xp(i,idim) * boxlen_ini
+           vel(idim, ipart)=vp(i,idim) * gadgetvfact
+           if (idim.eq.1) ids(ipart) = idp(i)
+        end if
+     end do
+  end do
+
+  call gadgetwritefile(filename, myid-1, header, pos, vel, ids)
+  deallocate(pos, vel, ids)
+
+end subroutine savegadget
 

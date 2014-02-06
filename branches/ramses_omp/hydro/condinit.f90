@@ -53,9 +53,11 @@ subroutine condinit(x,u,dx,nn)
 #endif
   ! pressure -> total fluid energy
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+q(1:nn,ndim+2)/(gamma-1.0d0)
+#if NVAR > NDIM + 2
   ! passive scalars
   do ivar=ndim+3,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
+#endif
 
 end subroutine condinit

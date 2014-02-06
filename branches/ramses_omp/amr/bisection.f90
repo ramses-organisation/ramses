@@ -207,7 +207,12 @@ contains
                   
                   ! init best wall and init score to a terrible value
                   best_wall(i) = bisec_wall(cur_cell)
+#if NPRE==4
+                  best_score(i) = huge(1.0e0)
+#endif
+#if NPRE==8
                   best_score(i) = huge(1.0d0)
+#endif
 
                   ! setup domain limits
                   l_limit(i) = tmp_bxmin(cur_cell, dir)

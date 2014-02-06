@@ -3,12 +3,12 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 64
-NDIM = 1
+NDIM = 3
 NPRE = 8
-NVAR = 3
+NVAR = 7
 SOLVER = hydro
-PATCH = 
-EXEC = ramses
+PATCH = ../patch/hydro/yohan
+EXEC = dwarf
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives

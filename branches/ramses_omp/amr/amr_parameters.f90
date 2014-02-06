@@ -35,8 +35,6 @@ module amr_parameters
 #else
   integer,parameter::nvector=NVECTOR
 #endif
-! for crayftn
-!!$OMP THREADPRIVATE (nvector)
 
   integer, parameter :: nstride = 65536
 
@@ -48,10 +46,14 @@ module amr_parameters
   logical::cosmo   =.false.   ! Cosmology activated
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
+  logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
+  logical::clumpfind=.false.  ! Enable clump finder
+  logical::gas_analytics=.false.  ! Turn on a routine that outputs some gas-related data at every output
+  logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
 
   ! Mesh parameters
   integer::geom=1             ! 1: cartesian, 2: cylindrical, 3: spherical
@@ -84,6 +86,7 @@ module amr_parameters
   integer::noutput=1          ! Total number of outputs
   integer::foutput=1000000    ! Frequency of outputs
   integer::output_mode=0      ! Output mode (for hires runs)
+  logical::gadget_output=.false. ! Output in gadget format
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5
@@ -99,12 +102,15 @@ module amr_parameters
   real(dp)::h0     =1.0D0     ! Hubble constant in km/s/Mpc
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
-  real(dp)::n_sink =1D30     ! Sink particle density threshold in H/cc
+  real(dp)::texp   =0.0D0     ! Current proper time
+  real(dp)::n_sink =1D30      ! Sink particle density threshold in H/cc
+  real(dp)::m_star =-1.0      ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
   real(dp)::eps_star=0.0D0    ! Star formation efficiency (0.02 at n_star=0.1 gives t_star=8 Gyr)
-  real(dp)::T2_star=0.0D0     ! Typical ISM temperature
+  real(dp)::T2_star=0.0D0     ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6D0     ! Typical ISM polytropic index
+  real(dp)::jeans_ncells=-1   ! Jeans polytropic EOS
   real(dp)::del_star=2.D2     ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0.0D0     ! Supernova mass fraction
   real(dp)::yield  =0.0D0     ! Supernova yield
@@ -112,6 +118,7 @@ module amr_parameters
   real(dp)::rbubble=0.0D0     ! Supernovae superbubble radius in pc
   real(dp)::f_w    =0.0D0     ! Supernovae mass loading factor
   integer ::ndebris=1         ! Supernovae debris particle number
+  real(dp)::mass_gmc=-1.0     ! Stochastic exploding GMC mass
   real(dp)::z_ave  =0.0D0     ! Average metal abundance
   real(dp)::B_ave  =0.0D0     ! Average magnetic field
   real(dp)::z_reion=8.5D0     ! Reionization redshift
@@ -120,18 +127,45 @@ module amr_parameters
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
+  real(dp)::rsink_max=10      ! Sink isolation criterion in kpc
+  real(dp)::msink_max=1d5     ! Maximum seed mass in solar masses
+  real(dp)::kappa_IR=0d0      ! IR dust opacity
+  real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
+  logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
   logical ::cooling=.false.
+  logical ::neq_chem=.false.  ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
   logical ::metal=.false.
-  logical ::bondi=.true.      ! Activate Bondi accretion onto sink particle 
+  logical ::bondi=.false.      ! Activate Bondi accretion onto sink particle 
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
-
+  logical ::smbh=.false.
+  logical ::agn=.false.
+  logical ::use_proper_time=.false.
+  logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
+   
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
   real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times
+
+  ! Movie
+  integer::imovout=0             ! Increment for output times
+  integer::imov=1                ! Initialize
+  real(kind=8)::tendmov=0.,aendmov=0.
+  real(kind=8),allocatable,dimension(:)::amovout,tmovout
+  logical::movie=.false.
+  integer::nx_frame=512
+  integer::ny_frame=512
+  integer::levelmax_frame=0
+  integer::ivar_frame=1
+  real(kind=8),dimension(1:4)::xcentre_frame=0d0
+  real(kind=8),dimension(1:4)::ycentre_frame=0d0
+  real(kind=8),dimension(1:4)::zcentre_frame=0d0
+  real(kind=8),dimension(1:4)::deltax_frame=0d0
+  real(kind=8),dimension(1:4)::deltay_frame=0d0
+  real(kind=8),dimension(1:4)::deltaz_frame=0d0
 
   ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1.0 ! Lagrangian threshold

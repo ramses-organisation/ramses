@@ -44,9 +44,19 @@
 ;-
 
 
-pro rd_info,file_info,info,dir=dir,verbose=verbose
+pro rd_info,info,file=file,dir=dir,verbose=verbose,nout=nout
   
-  if n_params() ne 2 then begin
+if not keyword_set(file) and not keyword_set(nout) then begin
+    key='*info*.txt'+suffix(jcpu-1)
+    file=DIALOG_PICKFILE(/READ,filter=key)
+ endif
+if keyword_set(nout) then begin 
+    suffnout=getcarnum(nout)
+    file='output_'+suffnout(nout-1)+'/info_'+suffnout(nout-1)+'.txt'
+ endif
+if not keyword_set(file) then return
+
+  if n_params() ne 1 then begin
      DOC_LIBRARY,'rd_info'
      print, "Wrong number of arguments"
      return
@@ -60,13 +70,13 @@ pro rd_info,file_info,info,dir=dir,verbose=verbose
   my_rarr(0:10) = 0.
 
   if(not keyword_set(dir)) then dir = ""
-  file_info = string(dir,file_info)
-  if(file_test(file_info) ne 1) then begin
-     print,"file ",file_info," does not exist"
+  file = string(dir,file)
+  if(file_test(file) ne 1) then begin
+     print,"file ",file," does not exist"
      stop
   endif
-  openr,2,file_info
-  if keyword_set(verbose) then print, "reading : ",file_info
+  openr,2,file
+  if keyword_set(verbose) then print, "reading : ",file
   value = 0L
   for il = 0,5 do begin
      readf,2,dataname,value,format='(a13,I11)'
@@ -128,6 +138,9 @@ pro rd_info,file_info,info,dir=dir,verbose=verbose
   scale_l    = my_rarr(8)
   scale_d    = my_rarr(9)
   scale_t    = my_rarr(10)
+
+;; scale_m convert mass in user units into g
+  scale_m    = scale_d*(double(scale_l))^3
 ;; scale_v convert velocity in user units into cm/s
   scale_v    = scale_l / scale_t
 ;; scale_T2 converts (P/rho) in user unit into (T/mu) in Kelvin
@@ -141,6 +154,7 @@ pro rd_info,file_info,info,dir=dir,verbose=verbose
      print,'unit_l :',scale_l
      print,'unit_d :',scale_d
      print,'unit_t :',scale_t
+     print,'unit_m :',scale_m
      print,'unit_v :',scale_v
      print,'unit_T2:',scale_T2
      print,'unit_nH:',scale_nH
@@ -149,7 +163,7 @@ pro rd_info,file_info,info,dir=dir,verbose=verbose
 ;;jl = sqrt(3.*!pi*kB /(32.*G)) / mH did not agree first hand
 ;; used  jl = sqrt(!pi*kB /(G)) / mH
   
-  info={boxtokpc:my_rarr(0)*scale_l/kpc,tGyr:my_rarr(1)*scale_t/Gyr,boxlen:my_rarr(0),levmin:my_narr(2),levmax:my_narr(3),unit_l:scale_l,unit_d:scale_d,unit_t:scale_t,unit_v:scale_v,unit_nH:scale_nH,unit_T2:scale_T2,unit_Z:scale_Z,kms:scale_v/1d5,unit_flux:scale_d*scale_v*(1e-9*Gyr)*(kpc)*(kpc)/m_sun,aexp:my_rarr(2)}
+  info={boxtokpc:my_rarr(0)*scale_l/kpc,tGyr:my_rarr(1)*scale_t/Gyr,boxlen:my_rarr(0),levmin:my_narr(2),levmax:my_narr(3),unit_l:scale_l,unit_d:scale_d,unit_t:scale_t,unit_m:scale_m,unit_v:scale_v,unit_nH:scale_nH,unit_T2:scale_T2,unit_Z:scale_Z,kms:scale_v/1d5,unit_flux:scale_d*scale_v*(1e-9*Gyr)*(kpc)*(kpc)/m_sun,aexp:my_rarr(2)}
   
   if keyword_set(verbose) then begin
      print,"time Gyr:",info.tGyr

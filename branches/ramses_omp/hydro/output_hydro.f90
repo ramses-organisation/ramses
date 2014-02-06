@@ -68,7 +68,7 @@ subroutine backup_hydro(filename)
                     end do                                        
                  else ! Write passive scalars if any
                     do i=1,ncache
-                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  endif
                  write(ilun)xdp

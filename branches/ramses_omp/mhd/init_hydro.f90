@@ -117,12 +117,14 @@ subroutine init_hydro
                     C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
                     uold(ind_grid(i)+iskip,5)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
                  end do
+#if NVAR > 8
                  do ivar=9,nvar ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache
                        uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
                     end do
                  end do
+#endif
               end do
               deallocate(ind_grid,xx)
            end if

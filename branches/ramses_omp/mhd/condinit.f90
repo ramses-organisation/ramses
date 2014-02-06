@@ -54,9 +54,11 @@ subroutine condinit(x,u,dx,nn)
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
   ! passive scalars
+#if NDIM > 8
   do ivar=9,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
+#endif
 
 end subroutine condinit
 !================================================================
@@ -86,9 +88,12 @@ subroutine velana(x,v,dx,t,ncell)
   do i=1,ncell
 
      xx=x(i,1)
+#if NDIM > 1
      yy=x(i,2)
+#endif
+#if NDIM > 2
      zz=x(i,3)
-
+#endif
      ! ABC
      vx=aa*(cos(twopi*yy)+sin(twopi*zz))
      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
@@ -119,9 +124,12 @@ subroutine velana(x,v,dx,t,ncell)
 !!$     vy=+cos(tt)*rr*omega
      
      v(i,1)=vx
+#if NDIM > 1
      v(i,2)=vy
+#endif
+#if NDIM > 2
      v(i,3)=vz
-
+#endif
   end do
 
 

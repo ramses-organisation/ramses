@@ -342,6 +342,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   END DO
   
   ! passive scalars
+#if NVAR > 8
   DO n = 9, nvar
      DO k = klo, khi
         DO j = jlo, jhi
@@ -359,7 +360,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
         END DO
      END DO
   END DO
-
+#endif
 
 END SUBROUTINE trace1d
 #endif
@@ -611,6 +612,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
      END DO
   END DO
 
+#if NVAR > 8
   ! Passive scalars
   DO n = 9, nvar
      DO k = klo, khi
@@ -633,6 +635,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
         END DO
      END DO
   END DO
+#endif
 
 END SUBROUTINE trace2d
 #endif
@@ -1056,6 +1059,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
      END DO
   END DO
 
+#if NVAR > 8
   ! Passive scalars
   DO n = 9, nvar
      DO k = klo, khi
@@ -1082,6 +1086,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
         END DO
      END DO
   END DO
+#endif
 
 END SUBROUTINE trace3d
 #endif
@@ -1145,11 +1150,12 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qright(8) = qp(l,i,j,k,bt2,xdim) ! Tangential magnetic field 2
 
               ! Other advected quantities
+#if NVAR > 8
               do n = 9, nvar
                  qleft (n) = qm(l,i,j,k,n,xdim)
                  qright(n) = qp(l,i,j,k,n,xdim)    
               end do
-          
+#endif
               ! Solve 1D Riemann problem
               zero_flux = one
               IF(scheme.NE.'induction')THEN
@@ -1185,10 +1191,11 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               flx(l,i,j,k,bt2) = fgdnv(8)  ! Transverse magnetic field 2
 
               ! Other advected quantities
+#if NVAR > 8
               do n = 9, nvar
                  flx(l,i,j,k,n) = fgdnv(n)
               end do
-              
+#endif  
               ! Normal velocity estimate
               tmp(l,i,j,k,1) = half*(qleft(3)+qright(3))
               ! Internal energy flux
@@ -1773,6 +1780,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   end do
 
   ! Passive scalar
+#if NVAR > 8
   do n = 9, nvar
      do k = ku1, ku2
         do j = ju1, ju2
@@ -1784,6 +1792,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
         end do
      end do
   end do
+#endif
  
 end subroutine ctoprim
 !###########################################################

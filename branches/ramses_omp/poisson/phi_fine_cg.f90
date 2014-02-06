@@ -88,8 +88,7 @@ subroutine phi_fine_cg(ilevel,icount)
   !====================================
   iter=0; itermax=10000
   error=1.0D0; error_ini=1.0D0
-!  do while(error>epsilon*error_ini.and.iter<itermax)
-  do while(iter<100)
+  do while(error>epsilon*error_ini.and.iter<itermax)
 
      iter=iter+1
 
@@ -296,8 +295,6 @@ subroutine cmp_residual_cg(ilevel)
      
      ! Interpolate potential from upper level
      do idim=1,ndim
-!        call interpol_phi(ind_left ,phi_left ,idim,ndim,ngrid,ilevel)
-!        call interpol_phi(ind_right,phi_right,idim,ndim,ngrid,ilevel)
         call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel)
         call interpol_phi(ind_right(1,idim),phi_right(1,1,idim),ngrid,ilevel)
      end do
