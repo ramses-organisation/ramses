@@ -44,12 +44,10 @@ module merger_parameters!{{{
   ! then converted in user unit.
   real(dp)::typ_radius1 = 3.0D0
   real(dp)::typ_radius2 = 3.0D0
-  real(dp)::typ_mag_radius = 3.0D0
   real(dp)::cut_radius1 = 10.0D0
   real(dp)::cut_radius2 = 10.0D0
   real(dp)::typ_height1 = 1.5D-1
   real(dp)::typ_height2 = 1.5D-1
-  real(dp)::typ_mag_height = 1.5D-1
   real(dp)::cut_height1 = 4.0D-1
   real(dp)::cut_height2 = 4.0D-1
   ! Gas density profile : radial =>'exponential' (default) or 'Toomre'
@@ -58,6 +56,15 @@ module merger_parameters!{{{
   character(len=16)::z_profile='gaussian'
   ! Inter galactic gas density contrast factor
   real(dp)::IG_density_factor = 1.0D-5
+
+  ! Magnetic Field Setup
+  real(dp)::typ_mag_radius = 3.0D0           ! radial scale length
+  real(dp)::typ_mag_height = 1.5D-1          ! vertical scale length
+  character(len=16)::mag_topology='constant' ! magnetic topology: 
+                                             ! 'constant' (along x-axis)
+                                             ! 'toroidal'
+                                             ! 'dipole'
+                                             ! 'quadrupole'
   
   !~~~~~~~~~~~~~~~~~~~~~~~~ NOTE ~~~~~~~~~~~~~~~~~~~~~~~~!
   ! For isolated galaxy runs :                           !
@@ -101,7 +108,7 @@ subroutine read_merger_params! {{{
        & ,rad_profile, z_profile, Vcirc_dat_file1, Vcirc_dat_file2 &
        & ,ic_part_file_gal1, ic_part_file_gal2 &
        & ,gal_axis1, gal_axis2, Vgal1, Vgal2 &
-       & ,typ_mag_radius, typ_mag_height
+       & ,typ_mag_radius, typ_mag_height, mag_topology
 
 
   CALL getarg(1,infile)
@@ -210,6 +217,21 @@ subroutine read_merger_params! {{{
     end if
   end if
 
+  ! Magnetic Topology
+  select case (mag_topology)
+      case ('constant')
+          if(myid==1) write(*,*) "Chosen magnetic topology: 'constant'"
+      case ('toroidal')
+          if(myid==1) write(*,*) "Chosen magnetic topology: 'toroidal'"
+      case ('dipole')
+          if(myid==1) write(*,*) "Chosen magnetic topology: 'dipole'"
+      case ('quadrupole')
+          if(myid==1) write(*,*) "Chosen magnetic topology: 'quadrupole'"
+      case default
+          if(myid==1) write(*,*) "Magnetic field topology not recognised."
+          nml_ok=.false.
+  end select
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'
@@ -241,7 +263,7 @@ subroutine condinit(x,u,dx,nn)
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
-  integer::ivar,i,it,nticks,ind_gal
+  integer::ivar,i,ind_gal
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
   real(dp)::v,M,rho,dzz,zint, HH, rdisk, dpdr,dmax
   real(dp)::r, rr, rr1, rr2, abs_z
@@ -251,16 +273,9 @@ subroutine condinit(x,u,dx,nn)
   real(dp)::M_b,az,eps
   real(dp)::rmin,rmax,a2,aa,Vcirc, HH_max
   real(dp)::rho_0_1, rho_0_2, rho_0, weight, da1, Vrot
-  real(dp)::dxmin,zfl,zceil,rtick,x_edge,y_edge,r_scale,z_scale,twothird
-  real(dp),dimension(1:2,1:2,1:2)::A_mag  ! x/y,left/right,up/down
   logical, save:: init_nml=.false.
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  twothird = 2D0 / 3D0
-
-  dxmin=boxlen*0.5d0**nlevelmax
-  nticks=nint(dx/dxmin)
 
   ! Read user-defined merger parameters from the namelist
   if (.not. init_nml) then
@@ -423,79 +438,19 @@ subroutine condinit(x,u,dx,nn)
         if(metal)q(i,imetal)=0.0
 
      endif
-
-    ! Magnetic field, Quadrupolar, roughly prop. to rho**(2/3)
-    zfl   = xx(3) - 0.5*dx
-    zceil = xx(3) + 0.5*dx
-
-    A_mag = 0.0
-    r_scale = twothird / typ_mag_radius
-    z_scale = twothird / typ_mag_height
-
-    ! A_(x,l)
-    x_edge = xx(1) + 0.5*(dxmin-dx)
-    y_edge = xx(2) - 0.5*dx
-    do it=1,nticks
-      rtick = SQRT( x_edge**2 + y_edge**2 )
-
-      A_mag(1,1,1) = A_mag(1,1,1) - zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *y_edge
-      A_mag(1,1,2) = A_mag(1,1,2) - zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*y_edge
-      x_edge=x_edge + dxmin
-    end do
-
-    ! A_(x,r)
-    x_edge = xx(1) + 0.5*(dxmin-dx)
-    y_edge = xx(2) + 0.5*dx
-    do it=1,nticks
-      rtick = SQRT( x_edge**2 + y_edge**2 )
-
-      A_mag(1,2,1) = A_mag(1,2,1) - zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *y_edge
-      A_mag(1,2,2) = A_mag(1,2,2) - zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*y_edge
-      x_edge=x_edge + dxmin
-    end do
-
-    ! A_(y,l)
-    x_edge = xx(1) - 0.5*dx
-    y_edge = xx(2) + 0.5*(dxmin-dx)
-    do it=1,nticks
-      rtick = SQRT( x_edge**2 + y_edge**2 )
-
-      A_mag(2,1,1) = A_mag(2,1,1) + zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *x_edge
-      A_mag(2,1,2) = A_mag(2,1,2) + zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*x_edge
-      y_edge=y_edge + dxmin
-    end do
-
-    ! A_(y,r)
-    x_edge = xx(1) + 0.5*dx
-    y_edge = xx(2) + 0.5*(dxmin-dx)
-    do it=1,nticks
-      rtick = SQRT( x_edge**2 + y_edge**2 )
-
-      A_mag(2,2,1) = A_mag(2,2,1) + zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *x_edge
-      A_mag(2,2,2) = A_mag(2,2,2) + zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*x_edge
-      y_edge=y_edge + dxmin
-    end do
-
-    ! average value
-    A_mag = A_mag / DBLE(nticks)
-
-    ! B left
-    ! X direction
-    q(i,6)= - B_ave * (A_mag(2,1,2)-A_mag(2,1,1)) / dx ! -d/dz A_y
-    ! Y direction
-    q(i,7)=   B_ave * (A_mag(1,1,2)-A_mag(1,1,1)) / dx !  d/dz A_x
-    ! Z direction  d/dx A_y - d/dy A_x
-    q(i,8)=   B_ave * ( A_mag(2,2,1)-A_mag(2,1,1) - A_mag(1,2,1)+A_mag(1,1,1)  ) / dx
-
-    ! B right
-    ! X direction
-    q(i,nvar+1)= - B_ave * (A_mag(2,2,2)-A_mag(2,2,1)) / dx ! -d/dz A_y
-    ! Y direction
-    q(i,nvar+2)=   B_ave * (A_mag(1,2,2)-A_mag(1,2,1)) / dx !  d/dz A_x
-    ! Z direction  d/dx A_y - d/dy A_x
-    q(i,nvar+3)=   B_ave * ( A_mag(2,2,2)-A_mag(2,1,2) - A_mag(1,2,2)+A_mag(1,1,2)  ) / dx
   enddo
 
+  ! Magnetic Topology
+  select case (mag_topology)
+    case ('constant')
+      call mag_constant(q,nn,B_ave)
+    case ('toroidal')
+      call mag_toroidal(x,q,dx,nn,B_ave,typ_mag_radius,typ_mag_height)
+    case ('dipole')
+      call mag_dipole(x,q,dx,nn,B_ave,typ_mag_radius,typ_mag_height)
+    case ('quadrupole')
+      call mag_quadrupole(x,q,dx,nn,B_ave,typ_mag_radius,typ_mag_height)
+  end select
 
 
   ! Convert primitive to conservative variables
@@ -600,6 +555,316 @@ end function norm2
 !}}}
 
 end subroutine condinit
+
+subroutine mag_constant(q,nn,B_0)
+  use amr_parameters
+  use hydro_parameters, only: nvar
+  implicit none
+
+  real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
+  integer ::nn                               ! Number of cells
+  real(dp)::dx                               ! Cell size
+  real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
+
+  ! B-left
+  q(1:nn,6) = B_0
+  q(1:nn,7) = 0.0
+  q(1:nn,8) = 0.0
+
+  ! B-right
+  q(1:nn,nvar+1) = B_0
+  q(1:nn,nvar+2) = 0.0
+  q(1:nn,nvar+3) = 0.0
+
+end subroutine mag_constant
+
+subroutine mag_toroidal(x,q,dx,nn,B_0,mag_radius,mag_height)
+  use amr_parameters
+  use hydro_parameters, only: nvar
+  use const
+  implicit none
+
+  real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
+  integer::nn                                ! Number of cells
+  real(dp)::dx                               ! Cell size
+  real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
+  real(dp)::xx,yy,zz
+  integer::i,it,nticks
+  real(dp)::dxmin,Al,Ar,ztick,rltick,rrtick,zavg,Bscale,r_scale,z_scale
+
+  ! Toroidal field, prop. to rho**(2/3)
+
+  dxmin=boxlen*0.5d0**nlevelmax
+  nticks=nint(dx/dxmin)
+
+  r_scale = two3rd / mag_radius
+  z_scale = two3rd / mag_height
+
+  do i=1,nn
+    ! box-centered coordinates
+    xx=x(i,1) - boxlen * 0.5d0
+    yy=x(i,2) - boxlen * 0.5d0
+    zz=x(i,3) - boxlen * 0.5d0
+
+    ! average exp(-h) over the z axis
+    ztick = zz + 0.5*(dxmin-dx)
+    zavg = 0.0
+    do it=1,nticks
+      zavg=zavg + exp(-ABS(ztick)*z_scale)
+      ztick=ztick + dxmin
+    end do
+    Bscale = B_0 * zavg/DBLE(nticks) / r_scale / dx
+
+    ! B left
+    ! X direction
+    rltick = SQRT( (xx - 0.5*dx)**2 + (yy - 0.5*dx)**2 )
+    rrtick = SQRT( (xx - 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+
+    Al= exp(-rltick*r_scale)
+    Ar= exp(-rrtick*r_scale)
+
+    q(i,6)=Bscale * (Ar-Al)
+
+    ! Y direction
+    rltick = SQRT( (xx - 0.5*dx)**2 + (yy - 0.5*dx)**2 )
+    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy - 0.5*dx)**2 )
+
+    Al= exp(-rltick*r_scale)
+    Ar= exp(-rrtick*r_scale)
+
+    q(i,7)=Bscale * (Al-Ar)
+
+    ! Z direction
+    q(i,8)=0.0
+
+    ! B right
+    ! X direction
+    rltick = SQRT( (xx + 0.5*dx)**2 + (yy - 0.5*dx)**2 )
+    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+
+    Al= exp(-rltick*r_scale)
+    Ar= exp(-rrtick*r_scale)
+
+    q(i,nvar+1)=Bscale * (Ar-Al)
+
+    ! Y direction
+    rltick = SQRT( (xx - 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+
+    Al= exp(-rltick*r_scale)
+    Ar= exp(-rrtick*r_scale)
+
+    q(i,nvar+2)=Bscale * (Al-Ar)
+
+    ! Z direction
+    q(i,nvar+3)=0.0
+  end do
+
+end subroutine mag_toroidal
+
+subroutine mag_dipole(x,q,dx,nn,B_0,mag_radius,mag_height)
+  use amr_parameters
+  use hydro_parameters, only: nvar
+  use const
+  implicit none
+
+  real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
+  integer::nn                                ! Number of cells
+  real(dp)::dx                               ! Cell size
+  real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
+  real(dp)::xx,yy,zz
+  integer::i,it,nticks
+  real(dp)::dxmin,zfl,zceil,rtick,x_edge,y_edge,r_scale,z_scale
+  real(dp),dimension(1:2,1:2,1:2)::A_mag     ! x/y,left/right,up/down
+
+  ! Dipole field, prop. to rho**(2/3)
+
+  dxmin=boxlen*0.5d0**nlevelmax
+  nticks=nint(dx/dxmin)
+
+  r_scale = two3rd / mag_radius
+  z_scale = two3rd / mag_height
+
+  do i=1,nn
+    ! box-centered coordinates
+    xx=x(i,1) - boxlen * 0.5d0
+    yy=x(i,2) - boxlen * 0.5d0
+    zz=x(i,3) - boxlen * 0.5d0
+
+    zfl   = ABS( zz - 0.5*dx )
+    zceil = ABS( zz + 0.5*dx )
+
+    A_mag = 0.0
+
+    ! A_(x,l)
+    x_edge = xx + 0.5*(dxmin-dx)
+    y_edge = yy - 0.5*dx
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(1,1,1) = A_mag(1,1,1) - exp(-r_scale*rtick)*exp(-z_scale*zfl)  *y_edge
+      A_mag(1,1,2) = A_mag(1,1,2) - exp(-r_scale*rtick)*exp(-z_scale*zceil)*y_edge
+      x_edge=x_edge + dxmin
+    end do
+
+    ! A_(x,r)
+    x_edge = xx + 0.5*(dxmin-dx)
+    y_edge = yy + 0.5*dx
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(1,2,1) = A_mag(1,2,1) - exp(-r_scale*rtick)*exp(-z_scale*zfl)  *y_edge
+      A_mag(1,2,2) = A_mag(1,2,2) - exp(-r_scale*rtick)*exp(-z_scale*zceil)*y_edge
+      x_edge=x_edge + dxmin
+    end do
+
+    ! A_(y,l)
+    x_edge = xx - 0.5*dx
+    y_edge = yy + 0.5*(dxmin-dx)
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(2,1,1) = A_mag(2,1,1) + exp(-r_scale*rtick)*exp(-z_scale*zfl)  *x_edge
+      A_mag(2,1,2) = A_mag(2,1,2) + exp(-r_scale*rtick)*exp(-z_scale*zceil)*x_edge
+      y_edge=y_edge + dxmin
+    end do
+
+    ! A_(y,r)
+    x_edge = xx + 0.5*dx
+    y_edge = yy + 0.5*(dxmin-dx)
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(2,2,1) = A_mag(2,2,1) + exp(-r_scale*rtick)*exp(-z_scale*zfl)  *x_edge
+      A_mag(2,2,2) = A_mag(2,2,2) + exp(-r_scale*rtick)*exp(-z_scale*zceil)*x_edge
+      y_edge=y_edge + dxmin
+    end do
+
+    ! average value
+    A_mag = A_mag / DBLE(nticks)
+
+    ! B left
+    ! X direction
+    q(i,6)= - B_0 * (A_mag(2,1,2)-A_mag(2,1,1)) / dx ! [-d/dz A_y]
+    ! Y direction
+    q(i,7)=   B_0 * (A_mag(1,1,2)-A_mag(1,1,1)) / dx ! [ d/dz A_x]
+    ! Z direction  [d/dx A_y - d/dy A_x]
+    q(i,8)=   B_0 * ( A_mag(2,2,1)-A_mag(2,1,1) - A_mag(1,2,1)+A_mag(1,1,1) ) / dx
+
+    ! B right
+    ! X direction
+    q(i,nvar+1)= - B_0 * (A_mag(2,2,2)-A_mag(2,2,1)) / dx ! [-d/dz A_y]
+    ! Y direction
+    q(i,nvar+2)=   B_0 * (A_mag(1,2,2)-A_mag(1,2,1)) / dx ! [ d/dz A_x]
+    ! Z direction  [d/dx A_y - d/dy A_x]
+    q(i,nvar+3)=   B_0 * ( A_mag(2,2,2)-A_mag(2,1,2) - A_mag(1,2,2)+A_mag(1,1,2) ) / dx
+  end do
+
+end subroutine mag_dipole
+
+subroutine mag_quadrupole(x,q,dx,nn,B_0,mag_radius,mag_height)
+  use amr_parameters
+  use hydro_parameters, only: nvar
+  use const
+  implicit none
+
+  real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
+  integer::nn                                ! Number of cells
+  real(dp)::dx                               ! Cell size
+  real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
+  real(dp)::xx,yy,zz
+  integer::i,it,nticks
+  real(dp)::dxmin,zfl,zceil,rtick,x_edge,y_edge,r_scale,z_scale
+  real(dp),dimension(1:2,1:2,1:2)::A_mag     ! x/y,left/right,up/down
+
+  ! Quadrupole field, prop. to rho**(2/3)
+
+  dxmin=boxlen*0.5d0**nlevelmax
+  nticks=nint(dx/dxmin)
+
+  r_scale = two3rd / mag_radius
+  z_scale = two3rd / mag_height
+
+  do i=1,nn
+    ! box-centered coordinates
+    xx=x(i,1) - boxlen * 0.5d0
+    yy=x(i,2) - boxlen * 0.5d0
+    zz=x(i,3) - boxlen * 0.5d0
+
+    zfl   = zz - 0.5*dx
+    zceil = zz + 0.5*dx
+
+    A_mag = 0.0
+
+    ! A_(x,l)
+    x_edge = xx + 0.5*(dxmin-dx)
+    y_edge = yy - 0.5*dx
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(1,1,1) = A_mag(1,1,1) - zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *y_edge
+      A_mag(1,1,2) = A_mag(1,1,2) - zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*y_edge
+      x_edge=x_edge + dxmin
+    end do
+
+    ! A_(x,r)
+    x_edge = xx + 0.5*(dxmin-dx)
+    y_edge = yy + 0.5*dx
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(1,2,1) = A_mag(1,2,1) - zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *y_edge
+      A_mag(1,2,2) = A_mag(1,2,2) - zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*y_edge
+      x_edge=x_edge + dxmin
+    end do
+
+    ! A_(y,l)
+    x_edge = xx - 0.5*dx
+    y_edge = yy + 0.5*(dxmin-dx)
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(2,1,1) = A_mag(2,1,1) + zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *x_edge
+      A_mag(2,1,2) = A_mag(2,1,2) + zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*x_edge
+      y_edge=y_edge + dxmin
+    end do
+
+    ! A_(y,r)
+    x_edge = xx + 0.5*dx
+    y_edge = yy + 0.5*(dxmin-dx)
+    do it=1,nticks
+      rtick = SQRT( x_edge**2 + y_edge**2 )
+
+      A_mag(2,2,1) = A_mag(2,2,1) + zfl*exp(-r_scale*rtick)*exp(-z_scale*ABS(zfl))  *x_edge
+      A_mag(2,2,2) = A_mag(2,2,2) + zceil*exp(-r_scale*rtick)*exp(-z_scale*ABS(zceil))*x_edge
+      y_edge=y_edge + dxmin
+    end do
+
+    ! average value
+    A_mag = A_mag / DBLE(nticks)
+
+    ! B left
+    ! X direction
+    q(i,6)= - B_0 * (A_mag(2,1,2)-A_mag(2,1,1)) / dx ! [-d/dz A_y]
+    ! Y direction
+    q(i,7)=   B_0 * (A_mag(1,1,2)-A_mag(1,1,1)) / dx ! [ d/dz A_x]
+    ! Z direction  [d/dx A_y - d/dy A_x]
+    q(i,8)=   B_0 * ( A_mag(2,2,1)-A_mag(2,1,1) - A_mag(1,2,1)+A_mag(1,1,1) ) / dx
+
+    ! B right
+    ! X direction
+    q(i,nvar+1)= - B_0 * (A_mag(2,2,2)-A_mag(2,2,1)) / dx ! [-d/dz A_y]
+    ! Y direction
+    q(i,nvar+2)=   B_0 * (A_mag(1,2,2)-A_mag(1,2,1)) / dx ! [ d/dz A_x]
+    ! Z direction  [d/dx A_y - d/dy A_x]
+    q(i,nvar+3)=   B_0 * ( A_mag(2,2,2)-A_mag(2,1,2) - A_mag(1,2,2)+A_mag(1,1,2) ) / dx
+  end do
+
+end subroutine mag_quadrupole
 
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
