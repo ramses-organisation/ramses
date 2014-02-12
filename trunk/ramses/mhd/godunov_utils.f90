@@ -737,7 +737,8 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   IMPLICIT NONE
 
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
-  REAL(dp),DIMENSION(1:nvar)::fleft,fright,fmean,qmean,uleft,uright,vleft,vright,udiff
+  REAL(dp),DIMENSION(1:nvar)::fleft,fright,fmean,qmean
+  REAL(dp),DIMENSION(1:nvar)::uleft,uright,udiff
 
   REAL(dp), DIMENSION(7,7) :: lem, rem
   REAL(dp), DIMENSION(7)        :: lambda, lambdal, lambdar, a
@@ -753,7 +754,7 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   REAL(dp) :: mxl, myl, mzl, el
   REAL(dp) :: mxr, myr, mzr, er
   REAL(dp) :: coef, bx_mean
-
+  REAL(dp) :: vleft,vright
   REAL(dp) :: zero_flux,dim,pim,eim,mxm,mym,mzm,bym,bzm,etm,l1,l2
 
   INTEGER :: i, n, m
