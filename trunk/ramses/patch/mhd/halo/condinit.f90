@@ -190,11 +190,11 @@ subroutine condinit(x,u,dx,nn)
     case ('constant')
       call mag_constant(q,nn,Bnfw)
     case ('toroidal')
-      call mag_toroidal(x,q,dx,nn,Bnfw,mag_radius,mag_height)
+      call mag_toroidal(x,q,dx,nn,Bnfw)
     case ('dipole')
-      call mag_dipole(x,q,dx,nn,Bnfw,mag_radius,mag_height)
+      call mag_dipole(x,q,dx,nn,Bnfw)
     case ('quadrupole')
-      call mag_quadrupole(x,q,dx,nn,Bnfw,mag_radius,mag_height)
+      call mag_quadrupole(x,q,dx,nn,Bnfw)
   end select
 
   ! Convert primitive to conservative variables
