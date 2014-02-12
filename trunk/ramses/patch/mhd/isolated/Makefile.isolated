@@ -7,8 +7,8 @@ NDIM = 3
 NPRE = 8
 NVAR = 10
 SOLVER = mhd
-PATCH = ../patch/mhd/dipole
-EXEC = dipole
+PATCH = ../patch/mhd/isolated
+EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
