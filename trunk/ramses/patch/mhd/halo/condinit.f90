@@ -5,8 +5,6 @@
 module halo_parameters!{{{
   use amr_commons
 
-  real(dp)::mag_radius = 1.0D0
-  real(dp)::mag_height = 1.0D0
   character(len=16)::mag_topology='constant' ! magnetic topology:
                                              ! 'constant' (along x-axis)
                                              ! 'toroidal'
@@ -39,7 +37,7 @@ subroutine read_halo_params! {{{
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/halo_params/ mag_radius, mag_height, mag_topology
+  namelist/halo_params/ mag_topology
 
 
   CALL getarg(1,infile)
@@ -56,8 +54,6 @@ subroutine read_halo_params! {{{
   !--------------------------------------------------------------
   ! This section deals with the halo initial conditions
   !--------------------------------------------------------------
-  mag_radius = mag_radius * 3.085677581282D21 / scale_l
-  mag_height = mag_height * 3.085677581282D21 / scale_l
 
   ! Magnetic Topology
   select case (mag_topology)
@@ -344,9 +340,8 @@ subroutine mag_toroidal(x,q,dx,nn,B_0)
   real(dp)::B_0                              ! Default B-strength
   real(dp)::xx,yy,zz
   integer::i,it,nticks
-  real(dp)::dxmin,Al,Ar,ztick,rltick,rrtick,zavg,Bscale
+  real(dp)::dxmin,Al,Ar,ztick,rc,rs,Bscale
   real(dp)::dmax,dnfw
-  real(dp)::z_scale,r_scale,rtick
 
   ! Toroidal field, prop. to rho**(2/3)
 
@@ -361,59 +356,117 @@ subroutine mag_toroidal(x,q,dx,nn,B_0)
     yy=x(i,2) - boxlen * 0.5d0
     zz=x(i,3) - boxlen * 0.5d0
 
-    ! average exp(-h) over the z axis
-    ztick = zz + 0.5*(dxmin-dx)
-    zavg = 0.0
-    do it=1,nticks
-    zavg=zavg + exp(-ABS(ztick)*z_scale)
-    ztick=ztick + dxmin
-    end do
-    Bscale = B_0 * zavg/DBLE(nticks) / r_scale / dx
+    Bscale = B_0/DBLE(nticks)/dx
 
     ! B left
     ! X direction
-    rltick = SQRT( (xx - 0.5*dx)**2 + (yy - 0.5*dx)**2 )
-    rrtick = SQRT( (xx - 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+    Al = 0.0
+    Ar = 0.0
+    ztick = zz + 0.5d0*(dxmin-dx)
+    do it=1,nticks
+      ! left
+      rs = SQRT( (xx - 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx - 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 )
+      Al= Al + rc * dnfw**two3rd
 
-    dnfw=1d0/rtick/(1d0+rtick)**2
-    dnfw=MIN(dmax,dnfw)
+      ! right
+      rs = SQRT( (xx - 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx - 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 )
+      Ar= Ar + rc * dnfw**two3rd
 
-    Al= exp(-rltick*r_scale)
-    Ar= exp(-rrtick*r_scale)
+      ! advance in z direction
+      ztick=ztick + dxmin
+    end do
 
     q(i,6)=Bscale * (Ar-Al)
 
+    ! B left
     ! Y direction
-    rltick = SQRT( (xx - 0.5*dx)**2 + (yy - 0.5*dx)**2 )
-    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy - 0.5*dx)**2 )
+    Al = 0.0
+    Ar = 0.0
+    ztick = zz + 0.5d0*(dxmin-dx)
+    do it=1,nticks
+      ! left
+      rs = SQRT( (xx - 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx - 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 )
+      Al= Al + rc * dnfw**two3rd
 
-    Al= exp(-rltick*r_scale)
-    Ar= exp(-rrtick*r_scale)
+      ! right
+      rs = SQRT( (xx + 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx + 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 )
+      Ar= Ar + rc * dnfw**two3rd
+
+      ! advance in z direction
+      ztick=ztick + dxmin
+    end do
 
     q(i,7)=Bscale * (Al-Ar)
 
+    ! B left
     ! Z direction
     q(i,8)=0.0
 
     ! B right
     ! X direction
-    rltick = SQRT( (xx + 0.5*dx)**2 + (yy - 0.5*dx)**2 )
-    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+    Al = 0.0
+    Ar = 0.0
+    ztick = zz + 0.5d0*(dxmin-dx)
+    do it=1,nticks
+      ! left
+      rs = SQRT( (xx + 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx + 0.5d0*dx)**2 + (yy - 0.5d0*dx)**2 )
+      Al= Al + rc * dnfw**two3rd
 
-    Al= exp(-rltick*r_scale)
-    Ar= exp(-rrtick*r_scale)
+      ! right
+      rs = SQRT( (xx + 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx + 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 )
+      Ar= Ar + rc * dnfw**two3rd
+
+      ! advance in z direction
+      ztick=ztick + dxmin
+    end do
 
     q(i,nvar+1)=Bscale * (Ar-Al)
 
+    ! B right
     ! Y direction
-    rltick = SQRT( (xx - 0.5*dx)**2 + (yy + 0.5*dx)**2 )
-    rrtick = SQRT( (xx + 0.5*dx)**2 + (yy + 0.5*dx)**2 )
+    Al = 0.0
+    Ar = 0.0
+    ztick = zz + 0.5d0*(dxmin-dx)
+    do it=1,nticks
+      ! left
+      rs = SQRT( (xx - 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx - 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 )
+      Al= Al + rc * dnfw**two3rd
 
-    Al= exp(-rltick*r_scale)
-    Ar= exp(-rrtick*r_scale)
+      ! right
+      rs = SQRT( (xx + 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 + ztick**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
+      dnfw=MIN(dmax,dnfw)
+      rc = SQRT( (xx + 0.5d0*dx)**2 + (yy + 0.5d0*dx)**2 )
+      Ar= Ar + rc * dnfw**two3rd
+
+      ! advance in z direction
+      ztick=ztick + dxmin
+    end do
 
     q(i,nvar+2)=Bscale * (Al-Ar)
 
+    ! B right
     ! Z direction
     q(i,nvar+3)=0.0
   end do
@@ -569,7 +622,7 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
   real(dp)::B_0                              ! Default B-strength
   real(dp)::xx,yy,zz
   integer::i,it,nticks
-  real(dp)::dxmin,zfl,zceil,rtick,x_edge,y_edge
+  real(dp)::dxmin,zfl,zceil,rc,rs,x_edge,y_edge
   real(dp),dimension(1:2,1:2,1:2)::A_mag     ! x/y,left/right,up/down
   real(dp)::dmax,dnfw
 
@@ -595,17 +648,20 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
     x_edge = xx + 0.5*(dxmin-dx)
     y_edge = yy - 0.5*dx
     do it=1,nticks
+      rc = SQRT( x_edge**2 + y_edge**2 )
+
       ! floor
-      rtick = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(1,1,1) = A_mag(1,1,1) - zfl * dnfw**two3rd * y_edge
+      
+      A_mag(1,1,1) = A_mag(1,1,1) - zfl * dnfw**two3rd * y_edge / rc
 
       ! ceiling
-      rtick = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(1,1,2) = A_mag(1,1,2) - zceil * dnfw**two3rd * y_edge
+      A_mag(1,1,2) = A_mag(1,1,2) - zceil * dnfw**two3rd * y_edge / rc
 
       ! advance along x
       x_edge=x_edge + dxmin
@@ -615,17 +671,19 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
     x_edge = xx + 0.5*(dxmin-dx)
     y_edge = yy + 0.5*dx
     do it=1,nticks
+      rc = SQRT( x_edge**2 + y_edge**2 )
+
       ! floor
-      rtick = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(1,2,1) = A_mag(1,2,1) - zfl * dnfw**two3rd * y_edge
+      A_mag(1,2,1) = A_mag(1,2,1) - zfl * dnfw**two3rd * y_edge / rc
 
       ! ceiling
-      rtick = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(1,2,2) = A_mag(1,2,2) - zceil * dnfw**two3rd * y_edge
+      A_mag(1,2,2) = A_mag(1,2,2) - zceil * dnfw**two3rd * y_edge / rc
 
       ! advance along x
       x_edge=x_edge + dxmin
@@ -635,17 +693,19 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
     x_edge = xx - 0.5*dx
     y_edge = yy + 0.5*(dxmin-dx)
     do it=1,nticks
+      rc = SQRT( x_edge**2 + y_edge**2 )
+
       ! floor
-      rtick = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(2,1,1) = A_mag(2,1,1) + zfl * dnfw**two3rd * x_edge
+      A_mag(2,1,1) = A_mag(2,1,1) + zfl * dnfw**two3rd * x_edge / rc
 
       ! ceiling
-      rtick = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(2,1,2) = A_mag(2,1,2) + zceil * dnfw**two3rd * x_edge
+      A_mag(2,1,2) = A_mag(2,1,2) + zceil * dnfw**two3rd * x_edge / rc
 
       ! advance along y
       y_edge=y_edge + dxmin
@@ -655,17 +715,19 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
     x_edge = xx + 0.5*dx
     y_edge = yy + 0.5*(dxmin-dx)
     do it=1,nticks
+      rc = SQRT( x_edge**2 + y_edge**2 )
+
       ! floor
-      rtick = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(2,2,1) = A_mag(2,2,1) + zfl * dnfw**two3rd * x_edge
+      A_mag(2,2,1) = A_mag(2,2,1) + zfl * dnfw**two3rd * x_edge / rc
 
       ! ceiling
-      rtick = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
-      dnfw=1d0/rtick/(1d0+rtick)**2
+      rs = SQRT( x_edge**2 + y_edge**2 + zceil**2 )
+      dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      A_mag(2,2,2) = A_mag(2,2,2) + zceil * dnfw**two3rd * x_edge
+      A_mag(2,2,2) = A_mag(2,2,2) + zceil * dnfw**two3rd * x_edge / rc
 
       ! advance along y
       y_edge=y_edge + dxmin
