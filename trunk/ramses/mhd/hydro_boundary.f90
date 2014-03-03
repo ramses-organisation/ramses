@@ -88,10 +88,10 @@ subroutine make_boundary_hydro(ilevel)
      ! For magnetic field, we have only free boundary amd imposed boundary
      if(boundary_dir==1)alt(1:8)=-(/2,1,2,1,2,1,2,1/)
      if(boundary_dir==2)alt(1:8)=+(/1,2,1,2,1,2,1,2/)
-     if(boundary_dir==3)alt(1:8)=-(/1,1,2,2,1,1,2,2/)
-     if(boundary_dir==4)alt(1:8)=+(/2,2,1,1,2,2,1,1/)
-     if(boundary_dir==5)alt(1:8)=-(/1,1,1,1,2,2,2,2/)
-     if(boundary_dir==6)alt(1:8)=+(/2,2,2,2,1,1,1,1/)
+     if(boundary_dir==3)alt(1:8)=-(/2,2,1,1,2,2,1,1/)
+     if(boundary_dir==4)alt(1:8)=+(/1,1,2,2,1,1,2,2/)
+     if(boundary_dir==5)alt(1:8)=-(/2,2,2,2,1,1,1,1/)
+     if(boundary_dir==6)alt(1:8)=+(/1,1,1,1,2,2,2,2/)
 
      ! Velocity sign switch for reflexive boundary conditions
      gs=(/1,1,1/)
