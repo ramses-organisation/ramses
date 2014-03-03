@@ -84,6 +84,8 @@ program part2map
   read(10,'("unit_t      =",E23.15)')unit_t
   read(10,*)
 
+  if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
+
   read(10,'("ordering type=",A80)'),ordering
   write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
@@ -106,9 +108,11 @@ program part2map
      allocate(density(npart))
      do j=1,npart
         read(1,rec=j+1)density(j)
-        if(mod(j,10000).eq.0)write(*,*)j,density(j)
+!        if(mod(j,10000).eq.0)write(*,*)j,density(j)
      end do
      close(1)
+     write(*,*)'Min Max density'
+     write(*,*)minval(density),maxval(density)
   endif
 
   !-----------------------
@@ -370,10 +374,18 @@ program part2map
                 &   m(i)<mmax )
            
            if(nstar>0)then
-              if(age(i).eq.0.0d0.and.id(i)>0)then
-                 npart_actual=npart_actual+1
+              if(star)then
+                 if(age(i).ne.0.0d0.and.id(i)>0)then
+                    npart_actual=npart_actual+1
+                 else
+                    ok_part=.false.
+                 endif
               else
-                 ok_part=.false.
+                 if(age(i).eq.0.0d0.and.id(i)>0)then
+                    npart_actual=npart_actual+1
+                 else
+                    ok_part=.false.
+                 endif
               endif
            else
               npart_actual=npart_actual+1
@@ -409,7 +421,7 @@ program part2map
                             & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
                        time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
                     else
-                       time=age(i)*unit_t/(365.*24.*3600.*1d9)
+                       time=(time_simu-age(i))*unit_t/(365.*24.*3600.*1d9)
                     endif
                     if(time>0.01)then
                        weight=(time/0.01)**(-0.7)
@@ -480,10 +492,10 @@ program part2map
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
   if(do_density.or.periodic)then
-     allocate(toto(nx,ny))
+     allocate(toto(0:nx-1,0:ny-1))
      toto=map(0:nx-1,0:ny-1)
   else
-     allocate(toto(nx+1,ny+1))
+     allocate(toto(0:nx,0:ny))
      toto=map(0:nx,0:ny)
   endif
   ! Binary format (to be read by ramses utilities) 

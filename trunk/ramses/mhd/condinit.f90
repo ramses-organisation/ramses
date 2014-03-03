@@ -54,7 +54,7 @@ subroutine condinit(x,u,dx,nn)
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
   ! passive scalars
-#if NDIM > 8
+#if NVAR > 8
   do ivar=9,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do

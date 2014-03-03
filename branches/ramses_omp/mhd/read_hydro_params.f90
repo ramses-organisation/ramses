@@ -37,9 +37,10 @@ subroutine read_hydro_params(nml_ok)
        & ,d_bound,u_bound,v_bound,w_bound,p_bound &
        & ,A_bound,B_bound,C_bound
   namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
-       & ,t_star,n_star,T2_star,g_star,del_star,eps_star &
-       & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w &
-       & ,J21,a_spec,z_ave,z_reion,eta_mag
+       & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
+       & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc &
+       & ,J21,a_spec,z_ave,z_reion,eta_mag,n_sink,bondi,delayed_cooling &
+       & ,self_shielding,smbh,agn,rsink_max,msink_max
 
   ! Read namelist file
   rewind(1)
@@ -242,6 +243,17 @@ subroutine read_hydro_params(nml_ok)
   do i=1,levelmin-1
      jeans_refine(i)=-1.0
   end do
+
+  !-----------------------------------
+  ! Sort out passive variable indices
+  !-----------------------------------
+  imetal=9
+  idelay=imetal
+  if(metal)idelay=imetal+1
+  ixion=idelay
+  if(delayed_cooling)ixion=idelay+1
+  ichem=ixion
+  if(aton)ichem=ixion+1
 
 end subroutine read_hydro_params
 

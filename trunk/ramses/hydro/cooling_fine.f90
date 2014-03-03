@@ -331,7 +331,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Update delayed cooling switch
      if(delayed_cooling)then
-        t_blast=20d0*1d6*(365.*24.*3600.)
+        t_blast=t_diss*1d6*(365.*24.*3600.)
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
            uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor

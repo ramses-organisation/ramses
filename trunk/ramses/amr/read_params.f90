@@ -12,6 +12,7 @@ subroutine read_params
   !--------------------------------------------------
   integer::i,narg,iargc,ierr,levelmax
   character(LEN=80)::infile
+  character(LEN=80)::cmdarg
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
   real(kind=8)::delta_tout=0,tend=0
@@ -85,8 +86,9 @@ subroutine read_params
   ! Read namelist filename from command line argument
   narg = iargc()
   IF(narg .LT. 1)THEN
-     write(*,*)'You should type: ramses3d input.nml'
+     write(*,*)'You should type: ramses3d input.nml [nrestart]'
      write(*,*)'File input.nml should contain a parameter namelist'
+     write(*,*)'nrestart is optional'
      call clean_stop
   END IF
   CALL getarg(1,infile)
@@ -122,6 +124,19 @@ subroutine read_params
   rewind(1)
   read(1,NML=poisson_params,END=81)
 81 continue
+
+  !-------------------------------------------------
+  ! Read optional nrestart command-line argument
+  !-------------------------------------------------
+  if (myid==1 .and. narg == 2) then
+    CALL getarg(2,cmdarg)
+    read(cmdarg,*) nrestart
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
+
   !-------------------------------------------------
   ! Compute time step for outputs
   !-------------------------------------------------

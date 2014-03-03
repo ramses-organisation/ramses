@@ -19,6 +19,7 @@ class FortranFile(file):
 		data = numpy.fromfile(self, dtype=mytype, count=n1)
 		n2 = numpy.fromfile(self, dtype=mint32, count=1)[0]/nbytes
 
+
 		if(n1 != n2):
 			raise IOError("Error reading FORTRAN binary record")
 

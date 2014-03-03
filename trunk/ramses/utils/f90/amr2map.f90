@@ -485,6 +485,12 @@ program amr2map
               case (8) !T/mu map
                  map = var(:,ind,5)*(scale_l/scale_t)**2/var(:,ind,1)/1.38d-16*1.66d-24
                  do_max=.true.
+              case (9)
+                 if(do_max)then
+                    map = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
+                 else
+                    map = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
+                 endif
               end select
               ! Store data map
               do i=1,ngrida

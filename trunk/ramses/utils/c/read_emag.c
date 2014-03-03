@@ -1,4 +1,4 @@
-// parse_log
+// read_emag
 //=============================================================================
 // Author: Michael Rieder (2013) rieder@physik.uzh.ch
 //
@@ -15,10 +15,6 @@
 
 const char *	input_filename = 0;
 const int	max_line_length = 128;
-double		tscale=0.470430312423675E+15;
-double		lscale=0.308567758128200E+22;
-double		dscale=0.677025430198932E-22;
-double		boxlen=0.400000000000000E+03;
 
 // function declarations
 
@@ -83,12 +79,6 @@ void read_logfile( FILE *logfile )
 			aexp_pos = strstr( line_buffer, aexp_string );
 			aexp = atof( aexp_pos + strlen(aexp_string) );
 
-			// divide emag by box volume
-			emag = emag / ( boxlen*boxlen*boxlen );
-			// scale t and B
-			time = time * tscale * 3.1689e-8 * 1e-9;
-			emag = emag * dscale * (lscale/tscale)*(lscale/tscale) / 4 * 3.14159265358979323846;
-
 			// output t - a - e values
 			printf( "%f %f %e\n", time, aexp, emag );
 		}
@@ -116,27 +106,12 @@ void parse_args( int argc, char *argv[] )
 {
 	int i;
 
-	if ( argc < 2 )
+	if ( argc < 2 ) {
 		printf( "Usage: %s filename\n", argv[0] );
+	}
 
 	for (i=1;i<argc;i++) {
-		if ( !strcmp(argv[i],"-t") ) {
-			i++;
-			sscanf( argv[i], "%lf", &tscale);
-		}
-		else if ( !strcmp(argv[i],"-l") ) {
-			i++;
-			sscanf( argv[i], "%lf", &lscale);
-		}
-		else if ( !strcmp(argv[i],"-d") ) {
-			i++;
-			sscanf( argv[i], "%lf", &dscale);
-		}
-		else if ( !strcmp(argv[i],"-b") ) {
-			i++;
-			sscanf( argv[i], "%lf", &boxlen);
-		}
-		else if ( argv[i][0] == '-' ) {
+		if ( argv[i][0] == '-' ) {
 			printf( "unrecognized command: %s\n", argv[i] );
 		}
 		else input_filename = argv[i];

@@ -1,6 +1,7 @@
 program poshalo
   implicit none
   integer::ncpu,ndim,npart,i,j,icpu,ipos,nstar,ngroup
+  integer::idummy
   integer::ncpu2,npart2,ndim2,id_group
   integer,dimension(:),allocatable::group_id,n_group
   real(kind=8),dimension(:),allocatable::xref_group,yref_group,zref_group
@@ -20,17 +21,33 @@ program poshalo
 
   ! Reading groups
   file_groupe_in=TRIM(directory)//'.tag'
+
+#ifdef DIR
+  open(unit=15,file=trim(file_groupe_in),form='unformatted',status='old',access='direct',recl=1)
+  read(15,rec=1)npart
+  read(15,rec=2)ngroup
+#else
   Open(15,file=trim(file_groupe_in),FORM='UNFORMATTED')
-  Read(15)npart, ngroup
+  Read(15)npart,ngroup
+#endif
   Write(*,*)'npart=',npart
   Write(*,*)'ngroup=',ngroup
+
   allocate(group_id(1:npart))
   allocate(n_group(1:ngroup),m_group(1:ngroup),mpure_group(1:ngroup))
   allocate(flag_group(1:ngroup))
   allocate(xref_group(1:ngroup),yref_group(1:ngroup),zref_group(1:ngroup))
   allocate(x_group(1:ngroup),y_group(1:ngroup),z_group(1:ngroup))
   allocate(u_group(1:ngroup),v_group(1:ngroup),w_group(1:ngroup))
+
+#ifdef DIR
+  do j=1,npart
+     read(15,rec=j+2)group_id(j)
+     if(mod(j,1000000).eq.0)write(*,*)j,group_id(j)
+  end do
+#else
   Read(15)(group_id(j),j=1,npart)
+#endif
   Close(15)
   x_group=0.0
   y_group=0.0
@@ -172,10 +189,10 @@ program poshalo
           & .and.z_group(i).gt.zmin.and.z_group(i).lt.zmax)then
         rvir=(m_group(i)/200./(4./3.*3.1415926))**(1./3.)
         contamine=(m_group(i)-mpure_group(i))/m_group(i)
-        if(i<=10)write(*,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)')&
+        if(i<=10)write(*,'(I6,A,I8,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)')&
              & i,' ',n_group(i),' ',m_group(i),' ',contamine,' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
              & u_group(i),' ',v_group(i),' ',w_group(i)
-                write(18,'(I5,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)') &
+                write(18,'(I6,A,I8,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)') &
              & i,' ',n_group(i),' ',m_group(i),' ',contamine,' ',x_group(i),' ',y_group(i),' ',z_group(i),' ', &
              & u_group(i),' ',v_group(i),' ',w_group(i)
      endif

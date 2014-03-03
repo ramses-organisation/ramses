@@ -12,16 +12,17 @@ program histo_main
   integer::nlevelmaxs,nlevel,iout
   integer::ind,ipos,ngrida,ngridh,ilevela,ilevelh
   integer::ngridmax,nstep_coarse,icpu,ncpu_read
-  integer::nhx,nhy,ihx,ihy,ivar1,ivar2
+  integer::nhx=0,nhy=0,ihx,ihy,ivar1,ivar2
   real::gamma,smallr,smallc,gammah
   real::boxlen,boxlen2
   real::t,aexp,hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
   real::omega_m2,omega_l2,omega_k2,omega_b2
-
+  real::tpoly=0d0, npoly=1.0
+  
   integer::nx_sample=0,ny_sample=0,nz_sample=0
-  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
+  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin
@@ -33,8 +34,8 @@ program histo_main
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::dymin,dymax,tymin,tymax
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
-  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz,dxx,dyy
-  real(KIND=8),dimension(:,:),allocatable::x,xg,histo
+  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz,dxx,dyy,dd,dt
+  real(KIND=8),dimension(:,:),allocatable::x,xg,histo,im
   real(KIND=8)::dmin=0.0,dmax=0.0,tmin=0.0,tmax=0.0
   real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,mmm
   real(KIND=8),dimension(:,:,:),allocatable::var
@@ -95,8 +96,8 @@ program histo_main
   tymin=log10(tmin)
   tymax=log10(tmax)
 
-  write(*,*)dymin,dymax
-  write(*,*)tymin,tymax
+  write(*,*)nhx,dymin,dymax
+  write(*,*)nhy,tymin,tymax
 
   allocate(histo(nhx,nhy))
   histo=0.0d0
@@ -432,8 +433,13 @@ program histo_main
                       & x(i,2)>yymin.and.x(i,2)<yymax.and. &
                       & x(i,3)>zzmin.and.x(i,3)<zzmax
                  if(ok_cell)then
-                    xx=log10(rho(i)/1.66d-24*0.76)
-                    yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24)
+                    if (gcc==0)then
+                       xx=log10(rho(i)/1.66d-24*0.76)
+                    else
+                       xx=log10(rho(i))
+                    end if
+                    yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24 &
+                         & -tpoly*(rho(i)/1.66d-24*0.76/npoly))
                     dxx=(xx-dymin)/(dymax-dymin)*dble(nhx)
                     dyy=(yy-tymin)/(tymax-tymin)*dble(nhy)
                     ihx=int(dxx)
@@ -466,15 +472,32 @@ program histo_main
   write(*,*)'Total mass=',total_mass
 
   ! Output file
-  nomfich=TRIM(outfich)
-  write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
-  open(unit=10,file=nomfich,form='unformatted')
-  write(10)nhx,nhy
-  write(10)real(histo/total_mass)
-  write(10)dymin,dymax
-  write(10)tymin,tymax
-  close(10)
+  if (filetype=='bin')then 
+     nomfich=TRIM(outfich)
+     write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
+     open(unit=10,file=nomfich,form='unformatted')
+     write(10)nhx,nhy
+     write(10)real(histo/total_mass)
+     write(10)dymin,dymax
+     write(10)tymin,tymax
+     close(10)
+  end if
 
+  if (filetype=='ascii')then 
+     nomfich=TRIM(outfich)
+     write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
+     open(unit=10,file=nomfich,form='formatted')
+     dd=(dymax-dymin)/nhx
+     dt=(tymax-tymin)/nhy
+     do i=1,nhx
+        do j=1,nhy
+           write(10,*)dymin+i*dd,tymin+j*dt,histo(i,j)/total_mass
+        end do
+        write(10,*) " "
+     end do
+     close(10)
+  end if
+  
   
 contains
  
@@ -498,6 +521,7 @@ contains
        print *, '            [-tma T_max  ] '
        print *, '            [-nx  nx_rho ] '
        print *, '            [-ny  ny_T   ] '
+       print *, '            [-fil ascii or bin  ] '
        print *, 'ex: histo -inp output_00001 -out map.dat'
        stop
     end if
@@ -540,6 +564,14 @@ contains
           read (arg,*) zmax
        case ('-lma')
           read (arg,*) lmax
+       case ('-tpo')
+          read (arg,*) tpoly
+       case ('-npo')
+          read (arg,*) npoly
+       case ('-fil')
+          read (arg,*) filetype
+       case ('-gcc') ! if set to one, density output in g/cc
+          read (arg,*) gcc
        case default
           print '("unknown option ",a2," ignored")', opt
 

@@ -22,7 +22,7 @@ subroutine read_hydro_params(nml_ok)
        & ,d_region,u_region,v_region,w_region,p_region &
        & ,A_region,B_region,C_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
-       & ,niter_riemann,slope_type &
+       & ,niter_riemann,slope_type,slope_mag_type &
        & ,pressure_fix,beta_fix,scheme,riemann,riemann2d
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
@@ -30,7 +30,7 @@ subroutine read_hydro_params(nml_ok)
        & ,err_grad_A,err_grad_B,err_grad_C,err_grad_B2 &
        & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
        & ,floor_A,floor_B,floor_C,floor_B2 &
-       & ,interpol_var,interpol_type
+       & ,interpol_var,interpol_type,interpol_mag_type
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
@@ -40,7 +40,7 @@ subroutine read_hydro_params(nml_ok)
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc &
        & ,J21,a_spec,z_ave,z_reion,eta_mag,n_sink,bondi,delayed_cooling &
-       & ,self_shielding,smbh,agn,rsink_max,msink_max,B_ave
+       & ,self_shielding,smbh,agn,rsink_max,msink_max,B_ave,t_diss
 
   ! Read namelist file
   rewind(1)
@@ -254,6 +254,16 @@ subroutine read_hydro_params(nml_ok)
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+
+  !-----------------------------------
+  ! Set magnetic slope limiters
+  !-----------------------------------
+  if (slope_mag_type == -1) then
+    slope_mag_type = slope_type
+  endif
+  if (interpol_mag_type == -1) then
+    interpol_mag_type = interpol_type
+  endif
 
 end subroutine read_hydro_params
 

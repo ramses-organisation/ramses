@@ -37,6 +37,14 @@ subroutine courant_fine(ilevel)
   dx=0.5D0**ilevel*scale
   vol=dx**ndim
 
+  if (scheme .eq. 'induction') then
+     CALL velocity_fine(ilevel)
+     do ivar=1,nvar+3
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call make_boundary_hydro(ilevel)
+  endif
+ 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector

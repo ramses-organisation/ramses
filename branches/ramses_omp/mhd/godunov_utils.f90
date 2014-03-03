@@ -156,6 +156,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
      ud(k,5) = (gamma-one)*(ud(k,5)-ekind(k)-emagd(k))
   end do  
   ! Passive scalars
+#if NVAR > 8
   do idim = 9,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
@@ -163,6 +164,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
         ud(k,idim) = ud(k,idim)/ud(k,1)
      end do
   end do
+#endif
 
   ! Compute errors
   if(err_grad_d >= 0.)then
@@ -579,6 +581,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   fgdnv(6) = Bo*uo-A*vo
   fgdnv(7) = ro*uo*wo-A*Co
   fgdnv(8) = Co*uo-A*wo
+#if NVAR > 8
   do ivar = 9,nvar
      if(fgdnv(1)>0)then
         fgdnv(ivar) = fgdnv(1)*qleft (ivar)
@@ -586,6 +589,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
         fgdnv(ivar) = fgdnv(1)*qright(ivar)
      endif
   end do
+#endif
 
 END SUBROUTINE hlld
 !###########################################################
@@ -623,9 +627,11 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   cvar(6) = B
   cvar(7) = d*w
   cvar(8) = C
+#if NVAR > 8
   do ivar = 9,nvar
      cvar(ivar) = d*qvar(ivar)
   end do
+#endif
 
   ! Compute fluxes
   ff(1) = d*u
@@ -636,9 +642,11 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   ff(6) = B*u-A*v
   ff(7) = d*u*w-A*C
   ff(8) = C*u-A*w
+#if NVAR > 8
   do ivar = 9,nvar
      ff(ivar) = d*u*qvar(ivar)
   end do
+#endif
 
 END SUBROUTINE find_mhd_flux 
 !###########################################################
@@ -920,6 +928,7 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   fmean(6) = half * fluxby
   fmean(7) = half * fluxmz
   fmean(8) = half * fluxbz
+#if NVAR > 8
   DO n=9,nvar
      if(fmean(1)>0)then
         fmean(n)=qleft (n)*fmean(1)
@@ -927,6 +936,8 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
         fmean(n)=qright(n)*fmean(1)
      endif
   END DO
+#endif
+
 END SUBROUTINE athena_roe
 !###########################################################
 !###########################################################

@@ -2,11 +2,11 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine thermal_feedback(ilevel)
+subroutine thermal_feedback(ilevel,icount)
   use pm_commons
   use amr_commons
   implicit none
-  integer::ilevel
+  integer::ilevel,icount
   !------------------------------------------------------------------------
   ! This routine computes the thermal energy, the kinetic energy and 
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
@@ -21,6 +21,7 @@ subroutine thermal_feedback(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  if(icount==2)return
 
   ! Gather star particles only.
 
@@ -58,12 +59,12 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
               ! Select only star particles
               if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig   
@@ -97,6 +98,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use random
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -107,8 +109,12 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! uold.
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc
+  real(kind=8)::RandNum
+  real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
-  real(dp)::dx,dx_loc,scale,vol_loc,birth_time
+  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig
+  real(dp)::sigma_d,delta_x,tau_factor,rad_factor
+  real(dp)::dx,dx_loc,scale,vol_loc,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
   ! Grid based arrays
@@ -125,12 +131,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -145,12 +145,33 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
+  dx_min=(0.5D0**nlevelmax)*scale
+  vol_min=dx_min**ndim
+
+  ! Minimum star particle mass
+  if(m_star < 0d0)then
+     mstar=n_star/(scale_nH*aexp**3)*vol_min
+  else
+     mstar=m_star*mass_sph
+  endif
+
+  ! Compute stochastic boost to account for target GMC mass
+  SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
-  t0=10.*1d6*(365.*24.*3600.)/scale_t
+  if(use_proper_time)then
+     t0=10.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+     t0=10.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   ! Type II supernova specific energy from cgs to code units
   ESN=1d51/(10.*2d33)/scale_v**2
+
+  ! Life time radiation specific energy from cgs to code units
+  ERAD=1d53/(10.*2d33)/scale_v**2
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -187,13 +208,12 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   error=.false.
   do idim=1,ndim
      do j=1,np
-        if(x(j,idim)<=0.0D0.or.x(j,idim)>=6.0D0)error=.true.
+        if(x(j,idim)<=2.0D0.or.x(j,idim)>=4.0D0)error=.true.
      end do
   end do
   if(error)then
      write(*,*)'problem in sn2'
      write(*,*)ilevel,ng,np
-     stop
   end if
 
   ! NGP at level ilevel
@@ -243,16 +263,29 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end if
   end do
 
-  ! Compute individual time steps                                               
-  do j=1,np
-     if(ok(j))then
-        if(levelp(ind_part(j))>=ilevel)then
-           dteff(j)=dtnew(levelp(ind_part(j)))
-        else
+  ! Compute individual time steps
+  ! WARNING: the time step is always the coarser level time step
+  ! since we do not have feedback for icount=2
+  if(ilevel==levelmin)then
+     do j=1,np
+        if(ok(j))then
            dteff(j)=dtold(levelp(ind_part(j)))
         end if
-     endif
-  end do
+     end do
+  else
+     do j=1,np
+        if(ok(j))then
+           dteff(j)=dtold(levelp(ind_part(j))-1)
+        end if
+     end do
+  endif
+  if(use_proper_time)then
+     do j=1,np
+        if(ok(j))then
+           dteff(j)=dteff(j)*aexp**2
+        end if
+     end do
+  endif
 
   ! Reset ejected mass, metallicity, thermal energy
   do j=1,np
@@ -269,7 +302,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         if(ok(j))then
            birth_time=tp(ind_part(j))
            ! Make sure that we don't count feedback twice
-           if(birth_time.lt.(t-t0).and.birth_time.ge.(t-t0-dteff(j)))then
+           if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
               ! Stellar mass loss
               mejecta=eta_sn*mp(ind_part(j))
               mloss(j)=mloss(j)+mejecta/vol_loc
@@ -282,14 +315,46 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               endif
               ! Reduce star particle mass
               mp(ind_part(j))=mp(ind_part(j))-mejecta
+              ! Boost SNII energy and depopulate accordingly
+              if(SN_BOOST>1d0)then
+                 call ranf(localseed,RandNum)
+                 if(RandNum<1d0/SN_BOOST)then
+                    mloss(j)=SN_BOOST*mloss(j)
+                    mzloss(j)=SN_BOOST*mzloss(j)
+                    ethermal(j)=SN_BOOST*ethermal(j)
+                 else
+                    mloss(j)=0d0
+                    mzloss(j)=0d0
+                    ethermal(j)=0d0
+                 endif
+              endif
            endif
         end if
      end do
   endif
 
   ! Update hydro variables due to feedback
+
+  ! For IR radiation trapping,
+  ! we use the cell resolution to estimate the column density of gas
+  delta_x=200*3d18
+  if(metal)then
+     tau_factor=kappa_IR*delta_x*scale_d/0.02
+  else
+     tau_factor=kappa_IR*delta_x*scale_d*z_ave
+  endif
+  rad_factor=ERAD/ESN
   do j=1,np
      if(ok(j))then
+
+        ! Infrared photon trapping boost
+        if(metal)then
+           tauIR=tau_factor*max(uold(indp(j),imetal),smallr)
+        else
+           tauIR=tau_factor*max(uold(indp(j),1),smallr)
+        endif
+        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
+        
         ! Specific kinetic energy of the star
         ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
              &          +vp(ind_part(j),2)**2 &
@@ -299,13 +364,26 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         uold(indp(j),2)=uold(indp(j),2)+mloss(j)*vp(ind_part(j),1)
         uold(indp(j),3)=uold(indp(j),3)+mloss(j)*vp(ind_part(j),2)
         uold(indp(j),4)=uold(indp(j),4)+mloss(j)*vp(ind_part(j),3)
-        uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+        uold(indp(j),5)=uold(indp(j),5)+mloss(j)*ekinetic(j)+ &
+             & ethermal(j)*(1d0+RAD_BOOST)
+        
      endif
   end do
+
+  ! Add metals
   if(metal)then
      do j=1,np
         if(ok(j))then
            uold(indp(j),imetal)=uold(indp(j),imetal)+mzloss(j)
+        endif
+     end do
+  endif
+
+  ! Add delayed cooling switch variable
+  if(delayed_cooling)then
+     do j=1,np
+        if(ok(j))then
+           uold(indp(j),idelay)=uold(indp(j),idelay)+mloss(j)
         endif
      end do
   endif
@@ -340,12 +418,6 @@ subroutine kinetic_feedback
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
   integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar
   integer::nx_loc
@@ -539,12 +611,6 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   integer::ilevel,ncache,nSN,j,iSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,dr_SN,d,u,v,w,ek,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -666,9 +732,11 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   call MPI_ALLREDUCE(vol_gas,vol_gas_all,nSN  ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(dq     ,dq_all     ,nSN*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(u2Blast,u2Blast_all,nSN*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(ekBlast,ekBlast_all,nSN  ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   vol_gas=vol_gas_all
   dq     =dq_all
   u2Blast=u2Blast_all
+  ekBlast=ekBlast_all
 #endif
   do iSN=1,nSN
      if(vol_gas(iSN)>0d0)then
@@ -706,12 +774,6 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#ifdef SOLVERhydro
-  integer ::imetal=6
-#endif
-#ifdef SOLVERmhd
-  integer ::imetal=9
-#endif
   real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN
   real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v

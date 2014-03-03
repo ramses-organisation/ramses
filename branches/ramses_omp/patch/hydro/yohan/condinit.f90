@@ -69,7 +69,7 @@ subroutine condinit(x,u,dx,nn)
      q(i,3)=+vrot/rr*rx
      q(i,4)=0.0
      q(i,5)=fgas*pnfw
-     if(metal)q(i,6)=0.0
+     if(metal)q(i,6)=z_ave*0.02
   enddo
 
   ! Convert primitive to conservative variables

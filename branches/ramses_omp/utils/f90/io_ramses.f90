@@ -53,7 +53,7 @@ contains
   integer::nlevelmaxs,nlevel,iout
   integer::ind,ipos,ngrida,ngridh,ilevela,ilevelh
   integer::ngridmax,nstep_coarse,icpu,ncpu_read
-  integer::nhx,nhy,ihx,ihy,ivar1,ivar2
+  integer::nhx,nhy,ihx,ihy,ivar1,ivar2,itop
   real::gamma,smallr,smallc,gammah
   real::boxlen,boxlen2
   real::t,aexp,hexp,t2,aexp2,hexp2
@@ -295,7 +295,7 @@ contains
 
      ! Compute total number of grids
      ngridtot=0
-     do j=1,ncpu
+     do j=1,ncpu+nboundary
         do ilevel=1,nlevelmax
            ngridtot=ngridtot+ngridfile(j,ilevel)
         end do
@@ -374,7 +374,8 @@ contains
                  end do
               end do
               istart=istart+ngridfile(j,ilevel)
-              deallocate(xdp,idp)
+              deallocate(xdp)
+              deallocate(idp)
            end if
         end do
      end do
@@ -389,10 +390,11 @@ contains
 
      do i=ifirst,ilast
         indcell=ind_sort_cell(i)
-        xx=xcell(indcell)
-        yy=ycell(indcell)
-        zz=zcell(indcell)
-        igrid=sontop(1)
+        xx=xcell(indcell)+xbound(1)
+        yy=ycell(indcell)+xbound(2)
+        zz=zcell(indcell)+xbound(3)
+        itop=1+(nx/2)+(ny/2)*nx+(nz/2)*nx*ny
+        igrid=sontop(itop)
         do ilevel=1,nlevelmax
            ii=1; jj=1; kk=1
            if(xx<xg(igrid,1))ii=0
@@ -409,7 +411,9 @@ contains
      end do
 
      ifirst=ilast+1
-     deallocate(xg,son,var)
+     deallocate(xg)
+     deallocate(var)
+     deallocate(son)
   end do
   ! End loop over cpu
   

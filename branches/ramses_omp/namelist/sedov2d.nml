@@ -9,7 +9,7 @@ nremap=10
 
 &AMR_PARAMS 
 levelmin=4
-levelmax=8
+levelmax=10
 ngridmax=100000
 boxlen=1.0
 /
@@ -40,7 +40,7 @@ p_region=1e-5,0.4
 
 &OUTPUT_PARAMS
 noutput=1
-tout=0.1
+tout=1.0
 /
 
 &HYDRO_PARAMS

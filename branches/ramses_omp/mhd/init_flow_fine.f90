@@ -359,12 +359,14 @@ subroutine init_flow_fine(ilevel)
               end do
            end do
            ! Compute passive variable density
-           do ivar=ndim+6,nvar
+#if NVAR > 8
+           do ivar=9,nvar
               do i=1,ngrid
                  rr=uold(ind_cell(i),1)
                  uold(ind_cell(i),ivar)=rr*uold(ind_cell(i),ivar)
               end do
            end do
+#endif
         end do
         ! End loop over cells
         
@@ -447,9 +449,11 @@ subroutine region_condinit(x,q,dx,nn)
   q(1:nn,nvar+1)=0.0d0
   q(1:nn,nvar+2)=0.0d0
   q(1:nn,nvar+3)=0.0d0
+#if NVAR > 8
   do ivar=9,nvar
      q(1:nn,ivar)=0.0d0
   end do
+#endif
 
   ! Loop over initial conditions regions
   do k=1,nregion

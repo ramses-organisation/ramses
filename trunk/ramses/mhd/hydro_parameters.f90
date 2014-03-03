@@ -64,6 +64,7 @@ module hydro_parameters
   ! Hydro solver parameters
   integer ::niter_riemann=10
   integer ::slope_type=1
+  integer ::slope_mag_type=-1
   real(dp)::gamma=1.4d0
   real(dp)::courant_factor=0.5d0
   real(dp)::smallc=1.d-10
@@ -76,6 +77,7 @@ module hydro_parameters
   ! Interpolation parameters
   integer ::interpol_var=0
   integer ::interpol_type=1
+  integer ::interpol_mag_type=-1
 
   ! Passive variables index
   integer::imetal=9

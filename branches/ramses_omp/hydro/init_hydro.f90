@@ -1,6 +1,9 @@
 subroutine init_hydro
   use amr_commons
   use hydro_commons
+#ifdef RT      
+  use rt_parameters,only: convert_birth_times
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -45,12 +48,29 @@ subroutine init_hydro
      read(ilun)nlevelmax2
      read(ilun)nboundary2
      read(ilun)gamma2
-     if(nvar2.ne.nvar)then
+     if(.not.(neq_chem.or.rt) .and. nvar2.ne.nvar)then
         write(*,*)'File hydro.tmp is not compatible'
         write(*,*)'Found   =',nvar2
         write(*,*)'Expected=',nvar
         call clean_stop
      end if
+#ifdef RT
+     if((neq_chem.or.rt).and.nvar2.lt.nvar)then ! OK to add ionization fraction vars
+        ! Convert birth times for RT postprocessing:
+        if(rt.and.static) convert_birth_times=.true.
+        if(myid==1) write(*,*)'File hydro.tmp is not compatible'
+        if(myid==1) write(*,*)'Found nvar2  =',nvar2
+        if(myid==1) write(*,*)'Expected=',nvar
+        if(myid==1) write(*,*)'..so only reading first ',nvar2, &
+                  'variables and setting the rest to zero'
+     end if
+     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables 
+        if(myid==1) write(*,*)'File hydro.tmp is not compatible'
+        if(myid==1) write(*,*)'Found   =',nvar2
+        if(myid==1) write(*,*)'Expected=',nvar
+        call clean_stop
+     end if
+#endif
      do ilevel=1,nlevelmax2
         do ibound=1,nboundary+ncpu
            if(ibound<=ncpu)then
@@ -80,7 +100,11 @@ subroutine init_hydro
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
                  ! Loop over conservative variables
+#ifndef RT
                  do ivar=1,nvar
+#else
+                 do ivar=1,min(nvar,nvar2)
+#endif
                     read(ilun)xx
                     if(ivar==1)then
                        do i=1,ncache
@@ -93,14 +117,29 @@ subroutine init_hydro
                     else if(ivar==ndim+2)then
                        do i=1,ncache
                           xx(i)=xx(i)/(gamma-1d0)
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
+                          if (uold(ind_grid(i)+iskip,1)>0.)then                          
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
 #if NDIM>1
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
 #endif
 #if NDIM>2
-                          xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
+                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
 #endif
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)
+                             else if(uold(ind_grid(i)+iskip,2) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#if NDIM>1
+                             else if(uold(ind_grid(i)+iskip,3) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#endif
+#if NDIM>2
+                             else if(uold(ind_grid(i)+iskip,4) /= 0.)then 
+                                write(*,*)'Problem in init_hydro with zero or negative density'
+                                call clean_stop
+#endif
+                             end if
+                             uold(ind_grid(i)+iskip,ivar)=xx(i)
                        end do
                     else
                        do i=1,ncache

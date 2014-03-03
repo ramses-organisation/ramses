@@ -39,6 +39,9 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::xp       ! Positions
   real(dp),allocatable,dimension(:,:)::vp       ! Velocities
   real(dp),allocatable,dimension(:)  ::mp       ! Masses
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+  real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
+#endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list

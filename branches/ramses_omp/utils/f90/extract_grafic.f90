@@ -26,7 +26,7 @@ program extract_grafic
   !  f90 extract_grafic.f90 -o ~/bin/extract_grafic
   !---------------------------------------------------------------------
   implicit none
-  integer::xc1,xc2,xc3,i1,i2,i3,np1,np2,np3,iargc,narg
+  integer::xc1,xc2,xc3,i1,i2,i3,np1,np2,np3,iargc,narg,nfiles
   integer::np1_cube,np2_cube,np3_cube
   integer::min_x,max_x,min_y,max_y,min_z,max_z
   integer::i,j,k,i_file
@@ -34,6 +34,7 @@ program extract_grafic
   real,dimension(:,:),allocatable::f,f_cube
   character*80::input,output
   character*80,dimension(14)::filename 
+  logical::cosmo_ics=.false.
 
   narg = iargc()
   IF(narg .NE. 2)THEN
@@ -54,21 +55,44 @@ program extract_grafic
      stop
   endif
 
-  !  COMPUTE FILES TO OPEN AND TO WRITE 
-  filename(1) =TRIM(input)//'/ic_deltab'
-  filename(2) =TRIM(input)//'/ic_velcx'
-  filename(3) =TRIM(input)//'/ic_velcy'
-  filename(4) =TRIM(input)//'/ic_velcz'
-  filename(5) =TRIM(input)//'/ic_velbx'
-  filename(6) =TRIM(input)//'/ic_velby'
-  filename(7) =TRIM(input)//'/ic_velbz'
-  filename(8) =TRIM(output)//'/ic_deltab'
-  filename(9) =TRIM(output)//'/ic_velcx'
-  filename(10)=TRIM(output)//'/ic_velcy'
-  filename(11)=TRIM(output)//'/ic_velcz'
-  filename(12)=TRIM(output)//'/ic_velbx'
-  filename(13)=TRIM(output)//'/ic_velby'
-  filename(14)=TRIM(output)//'/ic_velbz'
+
+  !check wether its cosmoligical ics or not 
+  INQUIRE(FILE=TRIM(input)//'/ic_deltab', EXIST=cosmo_ics)
+  if(cosmo_ics)then
+     write(*,*)'looking for ic_deltab, ic_velcx,...'
+     ! READING INPUT FILES   
+     filename(1) =TRIM(input)//'/ic_deltab'
+     filename(2) =TRIM(input)//'/ic_velcx'
+     filename(3) =TRIM(input)//'/ic_velcy'
+     filename(4) =TRIM(input)//'/ic_velcz'
+     filename(5) =TRIM(input)//'/ic_velbx'
+     filename(6) =TRIM(input)//'/ic_velby'
+     filename(7) =TRIM(input)//'/ic_velbz'
+     filename(8) =TRIM(output)//'/ic_deltab'
+     filename(9) =TRIM(output)//'/ic_velcx'
+     filename(10)=TRIM(output)//'/ic_velcy'
+     filename(11)=TRIM(output)//'/ic_velcz'
+     filename(12)=TRIM(output)//'/ic_velbx'
+     filename(13)=TRIM(output)//'/ic_velby'
+     filename(14)=TRIM(output)//'/ic_velbz'
+  else
+     write(*,*)'looking for ic_d, ic_u,...'
+  ! READING INPUT FILES 
+     filename(1) =TRIM(input)//'/ic_d'
+     filename(2) =TRIM(input)//'/ic_u'
+     filename(3) =TRIM(input)//'/ic_v'
+     filename(4) =TRIM(input)//'/ic_w'
+     filename(5) =TRIM(input)//'/ic_p'
+     filename(6) =''
+     filename(7) =''
+     filename(8) =TRIM(output)//'/ic_d'
+     filename(9) =TRIM(output)//'/ic_u'
+     filename(10)=TRIM(output)//'/ic_v'
+     filename(11)=TRIM(output)//'/ic_w'
+     filename(12)=TRIM(output)//'/ic_p'
+     filename(13)=''
+     filename(14)=''
+  end if
 
   open(11,file=filename(1),form='unformatted')
   read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
@@ -99,8 +123,9 @@ program extract_grafic
   allocate(f(np1,np2))
   allocate(f_cube(np1_cube,np2_cube))
   
-!  do i_file=1,7
-  do i_file=1,4
+  nfiles=5
+  if(cosmo_ics)nfiles=4
+  do i_file=1,nfiles
 
      write(*,*)'Reading input file '//TRIM(filename(i_file))
      open(11,file=filename(i_file),form='unformatted')

@@ -75,7 +75,7 @@ subroutine compute_clump_properties(ntest)
      peak_nr=flag2(icellp(ipart)) 
 
      if (peak_nr /=0 ) then
-        
+
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index

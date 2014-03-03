@@ -38,7 +38,7 @@ subroutine read_hydro_params(nml_ok)
        & ,J21,a_spec,z_ave,z_reion,n_sink,ind_rsink,bondi,delayed_cooling &
        & ,self_shielding,smbh,agn,rsink_max,msink_max &
        & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,merge_stars &
-       & ,larson_lifetime,flux_accretion,l_feedback
+       & ,larson_lifetime,flux_accretion,l_feedback,t_diss
 
   ! Read namelist file
   rewind(1)

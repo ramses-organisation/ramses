@@ -181,7 +181,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
         if(.not. exist_nbor(i))then
            nbuffer=nbuffer+1
            ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
-           igrid     (nbuffer)=son(nbors_father_cells(i,14))
+           igrid     (nbuffer)=son(nbors_father_cells(i,ind_father))
         end if
      end do
 

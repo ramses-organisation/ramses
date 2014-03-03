@@ -109,6 +109,9 @@ module amr_commons
      real(kind=8),dimension(:,:),pointer::u
      integer     ,dimension(:,:),pointer::fp
      real(kind=8),dimension(:,:),pointer::up
+#ifdef ATON
+     real(kind=8),dimension(:,:),pointer::u_radiation
+#endif
   end type communicator
 
   ! Active grid, emission and reception communicators
@@ -121,7 +124,12 @@ module amr_commons
   CHARACTER(LEN=20)::type_hydro  ='hydro'
   CHARACTER(LEN=20)::type_accel  ='accel'
   CHARACTER(LEN=20)::type_flag   ='flag'
-  
+
+  ! Units specified by the user in the UNITS_PARAMS namelist for non-cosmo runs.
+  ! These values shouldn't be used directly. Instead call units() in amr/units.f90.
+  real(dp)::units_density=1.0  ! [g/cm^3]
+  real(dp)::units_time=1.0     ! [seconds]
+  real(dp)::units_length=1.0   ! [cm]
 
 end module amr_commons
 
@@ -145,7 +153,7 @@ subroutine init_openmp
 !$omp master
   omp_nthreads = omp_get_num_threads()
 !$omp end master
-! NOTE: not sure the omp standard guarantees persistent numbring of threads across parallel regions, even without nested parallelism, although most implementations use  a fixed numbering for threads
+! NOTE: not sure the omp standard guarantees persistent numbering of threads across parallel regions, even without nested parallelism, although most implementations use  a fixed numbering for threads
   omp_mythread = omp_get_thread_num() 
 
   call omp_set_nested(.false.) ! make sure no nested parallelism is enabled, since some

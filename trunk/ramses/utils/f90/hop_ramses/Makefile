@@ -22,10 +22,28 @@ DEFS = -DDIFFERENT_MASSES
 
 ###############
 
-default:	hop regroup
+default:	hop regroup poshalo evol isol
 
 clean:
-	rm -f hop.o hop_input.o kd.o smooth.o regroup.o slice.o
+	rm -f hop.o hop_input.o kd.o smooth.o regroup.o slice.o poshalo.o
+
+isol: halo_isolation.o
+	g++ halo_isolation.o -o isol
+
+halo_isolation.o: halo_isolation.cc
+	g++ -c halo_isolation.cc
+
+evol: halo_evolution.o
+	ifort -assume buffered_io -cpp -DDIR halo_evolution.o -o evol
+
+halo_evolution.o : halo_evolution.f90
+	ifort -assume buffered_io -cpp -DDIR -c halo_evolution.f90
+
+poshalo: poshalo.o
+	ifort -assume buffered_io -cpp -DDIR poshalo.o -o poshalo
+
+poshalo.o: poshalo.f90
+	ifort -assume buffered_io -cpp -DDIR -c poshalo.f90
 
 hop: hop.o kd.o smooth.o hop_input.o
 	$(CC) $(CFLAGS) -o hop hop.o kd.o smooth.o hop_input.o $(LIBS)

@@ -1826,40 +1826,38 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-  if(slope_type==0)then
-     dq=zero
-     dbf=zero
-     return
-  end if
-
 #if NDIM==1
-  do n = 1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              if(slope_type==1.or.slope_type==2)then  ! minmod or average
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-              else
-                 write(*,*)'Unknown slope type'
-                 stop
-              end if
-           end do
-        end do
-     end do     
-  end do
+  if(slope_type==0)then
+    dq=zero
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+    do n = 1, nvar
+       do k = klo, khi
+          do j = jlo, jhi
+             do i = ilo, ihi
+                do l = 1, ngrid
+                   dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                   drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                   dcen = half*(dlft+drgt)/slope_type
+                   dsgn = sign(one, dcen)
+                   slop = min(abs(dlft),abs(drgt))
+                   dlim = slop
+                   if((dlft*drgt)<=zero)dlim=zero
+                   dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                end do
+             end do
+          end do
+       end do     
+    end do
+  else
+     write(*,*)'Unknown slope type'
+     stop
+  end if
 #endif
 
-#if NDIM==2              
-  if(slope_type==1.or.slope_type==2)then  ! minmod or average
+#if NDIM==2   
+  if(slope_type==0)then
+    dq=zero           
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1934,44 +1932,53 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
      stop
   endif
   ! 1D transverse TVD slopes for face-centered magnetic fields
-  ! Bx along direction Y 
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi+1 ! WARNING HERE
-           do l = 1, ngrid
-              dlft = slope_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
-              drgt = slope_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
-              dcen = half*(dlft+drgt)/slope_type
-              dsgn = sign(one, dcen)
-              slop = min(abs(dlft),abs(drgt))
-              dlim = slop
-              if((dlft*drgt)<=zero)dlim=zero
-              dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
-           end do
-        enddo
-     end do
-  end do
-  ! By along direction X
-  do k = klo, khi
-     do j = jlo, jhi+1 ! WARNING HERE
-        do i = ilo, ihi
-           do l = 1, ngrid
-              dlft = slope_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
-              drgt = slope_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
-              dcen = half*(dlft+drgt)/slope_type
-              dsgn = sign(one, dcen)
-              slop = min(abs(dlft),abs(drgt))
-              dlim = slop
-              if((dlft*drgt)<=zero)dlim=zero
-              dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
-           end do
-        enddo
-     end do
-  end do
+  ! Bx along direction Y
+  if (slope_mag_type==0) then
+    dbf=zero
+  else if (slope_mag_type==1 .or. slope_mag_type==2) then
+    do k = klo, khi
+       do j = jlo, jhi
+          do i = ilo, ihi+1 ! WARNING HERE
+             do l = 1, ngrid
+                dlft = slope_mag_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
+                drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
+                dcen = half*(dlft+drgt)/slope_mag_type
+                dsgn = sign(one, dcen)
+                slop = min(abs(dlft),abs(drgt))
+                dlim = slop
+                if((dlft*drgt)<=zero)dlim=zero
+                dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
+             end do
+          enddo
+       end do
+    end do
+    ! By along direction X
+    do k = klo, khi
+       do j = jlo, jhi+1 ! WARNING HERE
+          do i = ilo, ihi
+             do l = 1, ngrid
+                dlft = slope_mag_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
+                drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
+                dcen = half*(dlft+drgt)/slope_mag_type
+                dsgn = sign(one, dcen)
+                slop = min(abs(dlft),abs(drgt))
+                dlim = slop
+                if((dlft*drgt)<=zero)dlim=zero
+                dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
+             end do
+          enddo
+       end do
+    end do
+  else
+     write(*,*)'Unknown mag. slope type'
+     stop
+  endif
 #endif
 
 #if NDIM==3
-  if(slope_type==1.or.slope_type==2)then  ! minmod or average
+  if(slope_type==0)then
+    dq=zero
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -2082,10 +2089,14 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
      write(*,*)'Unknown slope type'
      stop
   endif     
+
   ! 2D transverse TVD slopes for face-centered magnetic fields
-  ! Bx along direction Y and Z
-  xslope_type=MIN(slope_type,2)
-  if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+  xslope_type=MIN(slope_mag_type,2)
+
+  if(xslope_type==0)then
+    dbf=zero
+  else if(xslope_type==1.or.xslope_type==2)then  ! minmod or average
+     ! Bx along direction Y and Z
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi+1 ! WARNING HERE
@@ -2114,9 +2125,8 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
            end do
         end do
      end do
-  endif
-  ! By along direction X and Z
-  if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+
+     ! By along direction X and Z
      do k = klo, khi
         do j = jlo, jhi+1 ! WARNING HERE
            do i = ilo, ihi
@@ -2145,9 +2155,8 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
            end do
         end do
      end do
-  endif
-  ! Bz along direction X and Y
-  if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+
+     ! Bz along direction X and Y
      do k = klo, khi+1 ! WARNING HERE
         do j = jlo, jhi
            do i = ilo, ihi

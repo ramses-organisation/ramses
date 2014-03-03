@@ -11,7 +11,7 @@
 !                       finest(AMR)level     coarse(MG)levels
 !     -----------------------------------------------------------------
 !     potential            phi            active_mg(myid,ilevel)%u(:,1)
-!     physical RHS         rho            active_mg(myid,ilevel)%u(:,2)
+!     physical RHS        ./poiss rho            active_mg(myid,ilevel)%u(:,2)
 !     residual             f(:,1)         active_mg(myid,ilevel)%u(:,3)
 !     BC-modified RHS      f(:,2)                  N/A
 !     mask                 f(:,3)         active_mg(myid,ilevel)%u(:,4)
@@ -40,7 +40,7 @@ subroutine multigrid_fine(ilevel)
 
    integer  :: ifine, i, iter, info, icpu
    real(kind=8) :: res_norm2, i_res_norm2, i_res_norm2_tot, res_norm2_tot
-   real(kind=8) :: err, last_err, cgt1, cgt2
+   real(kind=8) :: err, last_err
 
    logical :: allmasked, allmasked_tot
 
@@ -48,7 +48,6 @@ subroutine multigrid_fine(ilevel)
    if(numbtot(1,ilevel)==0)return
 
    if(verbose) print '(A,I2)','Entering fine multigrid at level ',ilevel
-
 
    ! ---------------------------------------------------------------------
    ! Prepare first guess, mask and BCs at finest level
@@ -213,6 +212,7 @@ subroutine multigrid_fine(ilevel)
 
          ! Multigrid-solve the upper level
          call recursive_multigrid_coarse(ilevel-1, safe_mode(ilevel))
+
          ! Interpolate coarse solution and correct fine solution
          call interpolate_and_correct_fine(ilevel)
          call make_virtual_fine_dp(phi(1),ilevel)   ! Communicate phi
@@ -220,9 +220,6 @@ subroutine multigrid_fine(ilevel)
 
       ! Post-smoothing
       do i=1,ngs_fine
-#ifndef WITHOUTMPI
-         cgt1=mpi_wtime()
-#endif
          call gauss_seidel_mg_fine(ilevel,.true. )  ! Red step
          call make_virtual_fine_dp(phi(1),ilevel)   ! Communicate phi
          call gauss_seidel_mg_fine(ilevel,.false.)  ! Black step
@@ -368,6 +365,9 @@ end subroutine recursive_multigrid_coarse
 ! ########################################################################
 ! ########################################################################
 
+! ------------------------------------------------------------------------
+! Multigrid communicator building
+! ------------------------------------------------------------------------
 subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    use amr_commons
    use poisson_commons

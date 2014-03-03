@@ -161,6 +161,7 @@ subroutine rho_fine(ilevel,icount)
 #endif
   if(nboundary==0)then
      rho_tot=multipole(1)/scale**ndim
+     if(debug)write(*,*)'rho_average=',rho_tot
   else
      rho_tot=0d0
   endif
@@ -216,6 +217,7 @@ subroutine rho_from_current_level(ilevel)
   ! level ilevel (boundary particles).
   ! Arrays flag1 and flag2 are used as temporary work space.
   !------------------------------------------------------------------
+
   integer::igrid,jgrid,ipart,jpart,idim,icpu,notok
   integer::i,ig,ip,npart1,ngrid_act,pos_cell,icol,ind_cell,nx_loc
   real(dp)::dx,scale
@@ -229,10 +231,6 @@ subroutine rho_from_current_level(ilevel)
   integer, dimension(:), pointer:: igrid_ptr
   integer, dimension(:,:),allocatable::index_col,index_partgrid_col
   integer, dimension(1:twotondim)::n_color,n_colorp
-
-
-integer ipmax,nn  
-
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -931,7 +929,7 @@ subroutine cic_from_multipole(ilevel)
            ! Gather nvector grids
            ngrid=MIN(nvector,n_color(ind)-igrid+1)
            do i=1,ngrid
-              ind_grid(i)=index_fine(igrid+1-1,ind)
+              ind_grid(i)=index_fine(igrid+i-1,ind)
            end do
            call cic_cell(ind_grid,ngrid,ilevel)
         end do
