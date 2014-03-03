@@ -1045,9 +1045,10 @@ subroutine compute_ncloud_sink
   use amr_commons, only:dp
   use pm_commons, only:ir_cloud,ncloud_sink
   real(dp)::xx,yy,zz,rr
-  integer::ii,jj,kk
+  integer::ii,jj,kk,counti
   ! Compute number of cloud particles
   ncloud_sink=0
+  counti=0.
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)/2.0
      do jj=-2*ir_cloud,2*ir_cloud
@@ -1056,9 +1057,11 @@ subroutine compute_ncloud_sink
            xx=dble(ii)/2.0
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+           if(rr<=dble(ir_cloud/2.))counti=counti+1
         end do
      end do
   end do
+  print*,'ncloud_sink=',myid,ncloud_sink,counti
 
 end subroutine compute_ncloud_sink
 
