@@ -124,6 +124,7 @@ module amr_parameters
   real(dp)::z_reion=8.5D0     ! Reionization redshift
   real(dp)::T2_start          ! Starting gas temperature
   real(dp)::t_delay=1.0D1     ! Feedback time delay in Myr
+  real(dp)::t_diss =20.0D0    ! Dissipation timescale for feedback
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
