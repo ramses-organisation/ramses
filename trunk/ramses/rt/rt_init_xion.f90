@@ -48,7 +48,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   integer,dimension(1:nvector),save::ind_cell, ind_leaf
   real(dp)::nH, T2, ekk, x, mu
-  real(dp),dimension(3)::phI_rates       ! Photoionization rates [s-1]
+  real(dp),dimension(4)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(6)::nSpec           !          Species abundances
 !-------------------------------------------------------------------------
   ! Conversion factor from user units to cgs units
