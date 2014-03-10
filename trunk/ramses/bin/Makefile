@@ -2,13 +2,13 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NVECTOR = 64
-NDIM = 3
+NVECTOR = 32
+NDIM = 1
 NPRE = 8
-NVAR = 7
+NVAR = 5
 SOLVER = hydro
-PATCH = ../patch/hydro/yohan
-EXEC = dwarf
+PATCH = 
+EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
