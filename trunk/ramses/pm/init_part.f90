@@ -102,15 +102,11 @@ subroutine init_part
      acc_lum=0.
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
-     allocate(delta_l_tot(1:nsinkmax,1:3))
-     delta_l_tot=0.
      allocate(level_sink(1:nsinkmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
      allocate(total_volume(1:nsinkmax))
      allocate(wden(1:nsinkmax))
-     allocate(lnor(1:nsinkmax))
-     allocate(lnor_new(1:nsinkmax))
      allocate(wmom(1:nsinkmax,1:ndim))
      allocate(weth(1:nsinkmax))
      allocate(wvol(1:nsinkmax))
@@ -168,7 +164,7 @@ subroutine init_part
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   if (sink)then
-     protostar_seedmass=0.00043*2.d33/(scale_d*scale_l**3)
+     sink_seedmass=sink_seedmass*2.d33/(scale_d*scale_l**3)
      d_sink=n_sink/scale_nH
   end if
   !--------------------
@@ -898,7 +894,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              level_sink(nsink)=levelmin
+              level_sink(nsink)=0
            end do
 102        continue
            close(10)
@@ -1046,12 +1042,12 @@ end subroutine load_gadget
 !################################################################
 subroutine compute_ncloud_sink
   use amr_commons, only:dp
-  use pm_commons, only:ir_cloud,ncloud_sink
+  use pm_commons, only:ir_cloud,ir_cloud_massive,ncloud_sink,ncloud_sink_massive
   real(dp)::xx,yy,zz,rr
   integer::ii,jj,kk,counti
   ! Compute number of cloud particles
   ncloud_sink=0
-  counti=0.
+  ncloud_sink_massive=0
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)/2.0
      do jj=-2*ir_cloud,2*ir_cloud
@@ -1060,11 +1056,10 @@ subroutine compute_ncloud_sink
            xx=dble(ii)/2.0
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
-           if(rr<=dble(ir_cloud/2.))counti=counti+1
+           if(rr<=dble(ir_cloud_massive))ncloud_sink_massive=ncloud_sink_massive+1
         end do
      end do
   end do
-  print*,'ncloud_sink=',myid,ncloud_sink,counti
 
 end subroutine compute_ncloud_sink
 

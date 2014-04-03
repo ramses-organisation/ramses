@@ -194,12 +194,6 @@ subroutine create_part_from_sink
      ntot_sink_cpu(icpu)=ntot_sink_cpu(icpu-1)+ntot_sink_all(icpu)
   end do
 #endif
-  if(myid==1)then
-     if(ntot_all.gt.0)then
-        write(*,'(" sinks to be created= ",I6," Tot =",I8)')&
-             & ntot_all,nsink
-     endif
-  end if
 
   ! Starting identity number
   if(myid==1)then
@@ -689,7 +683,7 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   !-----------------------------------------------------------------------
 
   integer::j,isink,ii,jj,kk,nx_loc
-  real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax
+  real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax,rmass
   integer ,dimension(1:nvector)::ind_cloud,grid_index
   logical ,dimension(1:nvector)::ok_true=.true.
 
@@ -702,8 +696,9 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   dx_min=scale*0.5D0**nlevelmax/aexp
 
   rmax=dble(ir_cloud)*dx_min
+  rmass=dble(ir_cloud_massive)*dx_min
   xx=0.0; yy=0.0;zz=0.0
-
+  
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)*dx_min/2.0
      do jj=-2*ir_cloud,2*ir_cloud
@@ -718,8 +713,8 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
                  isink=-idp(ind_part(j))
                  idp(ind_cloud(j))=-isink
                  levelp(ind_cloud(j))=levelmin
-                 if (rr<=rmax/2.)then
-                    mp(ind_cloud(j))=msink(isink)/925.
+                 if (rr<=rmass)then
+                    mp(ind_cloud(j))=msink(isink)/dble(ncloud_sink_massive)
                  else
                     mp(ind_cloud(j))=0.
                  end if
@@ -738,7 +733,7 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   ! Reduce sink particle mass
   do j=1,np
      isink=-idp(ind_part(j))
-     mp(ind_part(j))=msink(isink)/2019.
+     mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
      vp(ind_part(j),1)=vsink(isink,1)
      vp(ind_part(j),2)=vsink(isink,2)
      vp(ind_part(j),3)=vsink(isink,3)
@@ -932,13 +927,14 @@ subroutine bondi_hoyle(ilevel)
         ! Compute sink radius for weighting the cloud particles in bondi average
         r2sink(isink)=(factG*msink(isink)/(v2sink(isink)+c2sink(isink)))**2
         !enforce dx_min/4 < "scale_radius" < 2*dx_min
-!        r2k(isink)=min(max(r2sink(isink),(dx_min/4.0)**2),(ir_cloud*dx_min/2.)**2)
+        !Krumholz
+        !r2k(isink)=min(max(r2sink(isink),(dx_min/4.0)**2),(ir_cloud*dx_min/2.)**2)
         r2k(isink)=(ir_cloud*dx_min/2.)**2
      endif
   end do
 
   ! Gather sink and cloud particles.
-  wden=0d0; wvol=0d0; weth=0d0; wmom=0d0; lnor=0d0
+  wden=0d0; wvol=0d0; weth=0d0; wmom=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -1008,7 +1004,6 @@ subroutine bondi_hoyle(ilevel)
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(wden,wden_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wvol,wvol_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-     call MPI_ALLREDUCE(lnor,lnor_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(weth,weth_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wmom,wmom_new,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(divs,divs_tot,nsink,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -1018,14 +1013,11 @@ subroutine bondi_hoyle(ilevel)
      weth_new=weth
      wmom_new=wmom
      divs_tot=divs
-     lnor_new=lnor
 #endif
   endif
   do isink=1,nsink
      weighted_density(isink,ilevel)=wden_new(isink)
      weighted_volume(isink,ilevel)=wvol_new(isink)
-     rho_rz2_tot(isink,ilevel)=lnor_new(isink)
-!     if(myid==1)print*,'rho_rz2_tot(isink,ilevel)',ilevel,rho_rz2_tot(isink,ilevel)
      weighted_momentum(isink,ilevel,1:ndim)=wmom_new(isink,1:ndim)
      weighted_ethermal(isink,ilevel)=weth_new(isink)
      divsink(isink,ilevel)=divs_tot(isink)
@@ -1186,7 +1178,7 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::d,u,v=0d0,w=0d0,e
-  real(dp)::dx,scale,weight,r2,l_weight,dx_min
+  real(dp)::dx,scale,weight,r2,dx_min
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -1204,9 +1196,6 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim)::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
-  real(dp),dimension(1:3)::r_rel,lcrossr,ls
-  real(dp)::l_abs,r_abs,rz
-  
   do j=1,np
      xtest(j,1:3)=xp(ind_part(j),1:3)
   end do
@@ -1490,29 +1479,12 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         weight=exp(-r2/r2k(isink))
      end if
 
-
-     r_rel(1:3)=xp(ind_part(j),1:3)-xsink(isink,1:3)
-     ls=lsink(isink,1:3)
-     l_abs=sum(ls(1:3)**2)**0.5
-     r_abs=sum(r_rel(1:3)**2)**0.5
-     lcrossr=cross(ls(1:3),r_rel(1:3))
-     rz=sum(lcrossr(1:3)**2)**0.5/(tiny(0.d0)+l_abs)
-
-     !weight for the angular momentum feedback
-     d=uold(cell_index(j),1)
-     if (bondi)then
-        l_weight=rz**2*d
-     else
-        l_weight=rz**2*min(d_sink,d)
-     end if
-
      wden(isink)=wden(isink)+weight*dgas(j)
      wmom(isink,1)=wmom(isink,1)+weight*ugas(j)
      wmom(isink,2)=wmom(isink,2)+weight*vgas(j)
      wmom(isink,3)=wmom(isink,3)+weight*wgas(j)
      weth(isink)=weth(isink)+weight*egas(j)
      wvol(isink)=wvol(isink)+weight
-     lnor(isink)=lnor(isink)+l_weight
   end do
 
 end subroutine bondi_average
@@ -1536,10 +1508,10 @@ subroutine grow_sink(ilevel,on_creation)
   ! particles are collected
   ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,info,i
+  integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink,lev,nx_loc
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  real(dp)::delta_l_tot_abs,delta_l_max,scale,dx_min,vol_min,density,volume,ethermal,c2
+  real(dp)::scale,dx_min,vol_min
   real(dp),dimension(1:ndim)::old_loc,old_vel
 
   if(numbtot(1,ilevel)==0)return
@@ -1554,16 +1526,6 @@ subroutine grow_sink(ilevel,on_creation)
 
   ! Compute sink accretion rates
   if (bondi .and. .not. on_creation)call compute_accretion_rate(.false.)
-  
-  if (on_creation)then 
-     delta_l_tot(1:nsink,1:3)=0.
-  else
-     if (l_feedback)then
-        delta_l_tot(1:nsink,1:3)=0.9*lsink(1:nsink,1:3)
-     else
-        delta_l_tot(1:nsink,1:3)=0.
-     endif
-  endif
   
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
@@ -1703,14 +1665,14 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! for nvector particles.
   !-----------------------------------------------------------------------
 
-  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz,dummy
+  integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz,ii,jj,kk
   real(dp)::r2,v2,d,e,d_floor,density,norm
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
   real(dp),dimension(1:nvar)::z
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,dx_min,scale,vol_loc,weight,acc_mass,temp,d_jeans,l_weight,c2,ethermal
+  real(dp)::dx,dx_loc,dx_min,scale,vol_loc,weight,acc_mass,temp,d_jeans,c2,ethermal
   logical::error
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::x0
@@ -1719,17 +1681,18 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector,1:ndim)::x,xcell
+  real(dp),dimension(1:nvector,1:ndim)::x
   integer ,dimension(1:nvector,1:ndim)::id,igd,icd
-  integer ,dimension(1:nvector)::igrid,icell,indp,kg,cc
-  real(dp),dimension(1:3)::skip_loc,xx,vv
+  integer ,dimension(1:nvector)::igrid,icell,indp,kg
+  real(dp),dimension(1:3)::skip_loc,xx,vv,xpoint
   real(dp),dimension(1:twotondim,1:3)::xc
 
 
-  real(dp),dimension(1:3)::delta_l,delta_p,r_rel,lcrossr,p_acc,p_rel,p_rel_rad,p_rel_acc
-  real(dp)::l_abs,r_abs,rz,l_norm,delta_l_abs,delta_p_abs,v_frac,mgas,boundness
+  real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc
+  real(dp)::r_abs,mgas,boundness
   real(dp),dimension(1:3)::r_rel_s,v_rel_s
-  real(dp)::e_spec,l_spec,r_min
+  real(dp)::e_spec,l_spec2,r_min,count_points
+  real(dp)::vel_max
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -1945,63 +1908,78 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         isink=-idp(ind_part(j))
         
 
-        if (flux_accretion)then
-           weight=1.
-        else
-           r2=0d0
-           do idim=1,ndim
-              r2=r2+(xp(ind_part(j),idim)-xsink(isink,idim))**2
-           end do
-           weight=exp(-r2/r2k(isink))
-        end if
-
         r_rel(1:3)=xx(1:3)-xsink(isink,1:3) 
         r_abs=sum(r_rel(1:3)**2)**0.5      
         p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
         p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
 
-        ! Loop over level: sink cloud can overlap several levels
-        density=0.d0
-        norm=0.d0
-        l_norm=0.d0
-        ethermal=0d0
-        do i=levelmin,nlevelmax
-           density=density+weighted_density(isink,i)
-           norm=norm+weighted_volume(isink,i)
-           l_norm=l_norm+rho_rz2_tot(isink,i)
-           ethermal=ethermal+weighted_ethermal(isink,i)
-        end do
-        density=density/norm
-        ethermal=ethermal/(density*norm+tiny(0.0_dp))
-!        c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)
-        c2=MAX((gamma-1.0)*ethermal,smallc**2)
+
+
+        if (new_born_all(isink)==0)then 
+           
+           if (flux_accretion)then
+              weight=1.
+           else
+              r2=0d0
+              do idim=1,ndim
+                 r2=r2+(xp(ind_part(j),idim)-xsink(isink,idim))**2
+              end do
+              weight=exp(-r2/r2k(isink))
+           end if
+           
+           ! Loop over level: sink cloud can overlap several levels
+           density=0.d0
+           norm=0.d0
+           ethermal=0d0
+           do i=levelmin,nlevelmax
+              density=density+weighted_density(isink,i)
+              norm=norm+weighted_volume(isink,i)
+              ethermal=ethermal+weighted_ethermal(isink,i)
+           end do
+           density=density/norm
+           ethermal=ethermal/(density*norm+tiny(0.0_dp))
+           !        c2=MAX(gamma*(gamma-1.0)*ethermal,smallc**2)a
+           c2=MAX((gamma-1.0)*ethermal,smallc**2)
         
-        mgas=(ir_cloud**3*4./3.*3.14*vol_loc*density)
-        boundness=0.
-        do i=1,3
-           boundness=boundness+(vv(i)-vsink(isink,i))**2
-        end do
-        boundness=boundness**0.5 - (msink(isink)+mgas)/r_abs
-
-
-
-        r_rel_s=xp(ind_part(j),1:3)-xsink(isink,1:3)
-        v_rel_s=vv(1:3)-vsink(isink,1:3)
-        l_spec=sum(cross(r_rel_s,v_rel_s)**2)**0.5
-        e_spec=0.5*sum(v_rel_s(1:3)**2)-(msink(isink)+mgas)/(sum(r_rel_s(1:3)**2)**0.5+tiny(0.0_dp))
-        r_min=-1.*(msink(isink)+mgas)/(2.*e_spec)*(1.-(1.+(2*l_spec*e_spec)/((msink(isink)+mgas)**2))**0.5)
-
+           mgas=(ir_cloud**3*4./3.*3.14*vol_loc*density)
+           
+           boundness=0.
+           do i=1,3
+              boundness=boundness+(vv(i)-vsink(isink,i))**2
+           end do
+           boundness=boundness**0.5 - (msink(isink)+mgas)/r_abs
+           
+           
+           count_points=0.
+           do ii=1,8
+              do jj=1,8
+                 do kk=1,8
+                    xpoint(1)=xx(1)+((ii-0.5)*0.125-0.5)*dx_min
+                    xpoint(2)=xx(2)+((jj-0.5)*0.125-0.5)*dx_min
+                    xpoint(3)=xx(3)+((kk-0.5)*0.125-0.5)*dx_min
+                    r_rel_s=xpoint(1:3)-xsink(isink,1:3)
+                    v_rel_s=vv(1:3)-vsink(isink,1:3)
+                    l_spec2=sum(cross(r_rel_s,v_rel_s)**2)
+                    e_spec=0.5*sum(v_rel_s(1:3)**2)-(msink(isink)+mgas)/(sum(r_rel_s(1:3)**2)**0.5+tiny(0.0_dp))
+                    r_min=-1.*(msink(isink)+mgas)/(2.*e_spec)*(1.-(1.+(2.*l_spec2*e_spec)/((msink(isink)+mgas)**2))**0.5)
+                    if (r_min/dx_min<0.25 .and. e_spec<0.)count_points=count_points+1.
+                 end do
+              end do
+           end do
+           count_points=count_points/(8.**3)
+           
+        end if
 
 
 !        ! Density floor 
         !no density floor necessary since timestep is reduced
-!        d_floor=0.25*density
+        d_floor=0.25*density
 
         if (new_born_all(isink)==2)then
            acc_mass=0.
         else if (new_born_all(isink)==1)then
-           acc_mass=protostar_seedmass/ncloud_sink
-           acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),0.001*d*vol_loc)
+           acc_mass=sink_seedmass/ncloud_sink
+           acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
         else           
            if (bondi)then 
               ! Compute accreted mass with cloud weighting and density weighting
@@ -2009,9 +1987,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm*d/density
               else
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm
-                 if (e_spec>0 .or. r_min>0.25*dx_min)acc_mass=0.
+!                 acc_mass=acc_mass*count_points
+!                 if (e_spec>0 .or. r_min>0.25*dx_min)acc_mass=0.
+                 !use floor
+                 acc_mass=min(acc_mass,(d-d_floor)*vol_loc)
               end if
-              ! Cannot accrete more than the density floor
+              ! No neg accretion rates
               acc_mass=max(acc_mass,0.0_dp)    
 
            else
@@ -2024,12 +2005,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  d_floor=d_jeans
               endif
               !check if bound to sink and approaching
-!              print*,boundness
-              if (boundness<0. .and. sum(r_rel(1:3)*p_rel(1:3))<0.)then
+!              print*,boundness!
+!              if (boundness<0. .and. sum(r_rel(1:3)*p_rel(1:3))<0.)then
                  acc_mass=max((d-d_floor)*vol_loc*0.0625,0.d0)
-              else
-                 acc_mass=0.
-              end if
+!              else
+!                 acc_mass=0.
+!              end if
            end if
         end if
 
@@ -2052,6 +2033,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         !new gas velocity
         vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)
 
+        ! Maximum relative velocity
+        vel_max=10. ! in km/sec
+        vel_max=vel_max*1d5/scale_v
+        if ((sum(vv(1:3)**2)**0.5)>vel_max)then
+           print*,'very high velocity detected at: ',xx(1:3),sum(vv(1:3)**2)**0.5/vel_max
+        end if
         !add accreted properties
         msink_new(isink)=msink_new(isink)+acc_mass
         delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
@@ -2062,8 +2049,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         ! Remove accreted mass
         d=d-acc_mass/vol_loc
         if (d<0.)then 
-           write(*,*),'I accreted too much and created a neg density :-('
-           write(*,*),d,acc_mass/vol_loc,d_floor,new_born_all(isink)
+           write(*,*),'neg density detected :-( at location'
+           write(*,*),xx(1:3)
         end if
 
 
@@ -2112,7 +2099,7 @@ subroutine compute_accretion_rate(write_sinks)
   integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period,fa_fact,lambda
-  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,t_ff,rho_inf
+  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsink)::dMEDoverdt,dMBHoverdt,divergence
 
@@ -2163,14 +2150,6 @@ subroutine compute_accretion_rate(write_sinks)
         mgas=density*4./3.*3.14*(ir_cloud*dx_min)**3
 
 
-
-
-        if (mgas>0.)then
-           t_ff=3.14/2.*(4.*dx_min)**1.5 *1./ ((2.*factG*(msink(isink)+mgas))**0.5)
-        else
-           t_ff=huge(0.0_dp)
-        end if
-
         if (smbh)then
            r2=(factG*msink(isink)/(c2+v2))**2
            ! Correct the Bondi radius to limit the accretion to the free fall rate        
@@ -2183,13 +2162,16 @@ subroutine compute_accretion_rate(write_sinks)
 
         rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))
 
+!        Krumholz
+!        rho_inf=density/(bondi_alpha(1.2*dx_min/r2**0.5))
+
 
         ! Compute Bondi-Hoyle accretion rate in code units
         boost=1.0
         if(star)boost=max((density/d_star)**2,1.0_dp)
         !use other values for lambda depending on the EOS..
         lambda=1.12
-        dMBHoverdt(isink)=rho_inf*r2*sqrt(lambda**2 * c2+v2)
+        dMBHoverdt(isink)=4*3.1415926*rho_inf*r2*sqrt(lambda**2 * c2+v2)
 
         ! Compute Eddington accretion rate in code units
         dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
@@ -3209,7 +3191,7 @@ subroutine true_max(x,y,z,ilevel)
 
   integer::k,j,i,nx_loc
   integer,dimension(1:nvector)::cell_index,cell_lev
-  real(dp)::det,dx,dx_loc,scale,disp_length,disp_max
+  real(dp)::det,dx,dx_loc,scale,disp_max
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
   real(dp),dimension(1:nvector,1:ndim)::xtest
   real(dp),dimension(1:ndim)::gradient,displacement
@@ -3286,18 +3268,16 @@ subroutine true_max(x,y,z,ilevel)
   displacement=0.
   do i=1,3
      do j=1,3
-        displacement(i)=displacement(i)-minor(i,j)/(det+1.e10*tiny(0.d0))*gradient(j)
+        displacement(i)=displacement(i)-minor(i,j)/(det+1.d10*tiny(0.d0))*gradient(j)
      end do
   end do
 
-  disp_length=(displacement(1)**2+displacement(2)**2+displacement(3)**2)**0.5
+  !clipping the displacement in order to keep max in the cell
   disp_max=maxval(abs(displacement(1:3)))
-
-  if (disp_max > dx_loc)then
-     write(*,*)'displacement to true maximum bigger than dx= ',dx_loc,' -> shortened.'
-     displacement(1)=displacement(1)/disp_max*dx_loc
-     displacement(2)=displacement(2)/disp_max*dx_loc
-     displacement(3)=displacement(3)/disp_max*dx_loc
+  if (disp_max > dx_loc*0.5)then
+     displacement(1)=displacement(1)/disp_max*dx_loc*0.5
+     displacement(2)=displacement(2)/disp_max*dx_loc*0.5
+     displacement(3)=displacement(3)/disp_max*dx_loc*0.5
   end if
 
   x=x+displacement(1)
@@ -3526,8 +3506,7 @@ subroutine upd_cloud(ind_part,np)
   do j=1,np
      isink=-idp(ind_part(j))
      if(isink>0 .and. mp(ind_part(j))>0.)then
-!        mp(ind_part(j))=msink(isink)/dble(ncloud_sink)
-        mp(ind_part(j))=msink(isink)/925.
+        mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
      endif
   end do
 
@@ -3667,7 +3646,7 @@ subroutine merge_star_sink
      end if
   end do
 
-  if (myid==1)write(*,*)'merged ',mergers,' sinks'
+  if (myid==1 .and. mergers>0)write(*,*)'merged ',mergers,' sinks'
 
   i=1
   do while (mergers>0)
@@ -3718,9 +3697,9 @@ subroutine divergence_sink(ind_part,divs,np)
   integer,dimension(1:nvector)::ind_part
   real(dp),dimension(1:nsink)::divs
 
-  !-----------------------------------------------------------------------
-  ! this routine computes the divergence of rho*v and for nvector particles
-  !-----------------------------------------------------------------------
+  !--------------------------------------------------------------------------------
+  ! this routine computes the divergence of rho*(v-vsink) and for nvector particles
+  !--------------------------------------------------------------------------------
 
   integer::i,j,nx_loc,isink,divdim,ilevel,idim
   real(dp)::dx,scale,dx_min,one_over_dx_min

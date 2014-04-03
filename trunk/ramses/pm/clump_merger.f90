@@ -156,15 +156,14 @@ subroutine compute_clump_properties(ntest)
 #endif
   !clean some wannabe peaks (due to MPI)
   do j=1,npeaks_tot
-     do i=1,ndim
-        if(max_dens(j)<max_dens_tot(j))then
-           peak_pos(j,i)=0.d0
-        else
-           x(1:3)=peak_pos(j,1:3)
-           call true_max(x(1),x(2),x(3),nlevelmax)
-           peak_pos(j,1:3)=x(1:3)
-        end if
-     end do
+     if(max_dens(j)<max_dens_tot(j))then
+        peak_pos(j,1:3)=0.d0
+     else
+        x(1:3)=peak_pos(j,1:3)
+        call true_max(x(1),x(2),x(3),nlevelmax)
+        peak_pos(j,1:3)=x(1:3)
+     end if
+     call MPI_BARRIER(MPI_COMM_WORLD,info)
   end do
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(peak_pos,peak_pos_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
@@ -411,7 +410,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
      if (relevance_tot(j)>0.)then
         !compute eigenvalues and eigenvectors of Icl_d_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
-        abs_err=1.d-8*Icl_tot(j)**2+1.d-40
+        abs_err=1.d-6*Icl_tot(j)**2
         call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
 
@@ -1235,8 +1234,8 @@ subroutine jacobi(A,x,err2)
      end do
   end do
 
+  !return if already diagonal "enough"
   if (b2 <= err2) then
-     if (myid==1)write(*,*), 'returning. maybe err2 too small? ',err2
      return
   endif
 
