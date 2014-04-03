@@ -40,17 +40,22 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 #F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
+# --- MPI, gfortran DEBUG syntax ------------------------------ 
+#F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall
+#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)    
+
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
 #FFLAGS = -Mpreprocess $(DEFINES)
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90
-#FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
+#FFLAGS = -cpp -fast $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
-#FFLAGS = -O3 -g -cpp -fbacktrace -fcheck=bounds -ffree-line-length-none $(DEFINES) #-DRT #-DNOSYSTEM
+#FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
+
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
@@ -76,7 +81,7 @@ LIBS = $(LIBMPI)
 VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o clfind_commons.o gadgetreadfile.o
+MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o clfind_commons.o gadgetreadfile.o 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o output_amr.o flag_utils.o physical_boundaries.o virtual_boundaries.o refine_utils.o nbors_utils.o hilbert.o load_balance.o title.o sort.o cooling_fine.o units.o light_cone.o movie.o
 # Particle-Mesh objects
 PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o sink_particle.o feedback.o clump_finder.o clump_merger.o flag_formation_sites.o heapsort_index.o
