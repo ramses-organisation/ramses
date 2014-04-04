@@ -6,11 +6,13 @@ NVECTOR = 64
 NDIM = 3
 NPRE = 8
 NVAR = 6
+NGROUPS = 4
+NIONS = 4
 SOLVER = hydro
 PATCH =
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 #############################################################################
 # Fortran compiler options and directives
 
