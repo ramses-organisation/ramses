@@ -693,7 +693,7 @@ subroutine merge_clumps(ntest)
   !---------------------------------------------------------------------------
 
   integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
-  integer::peak,next_peak
+  integer::peak,next_peak,current
   real(dp)::value_iij,zero=0.
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
   integer,dimension(1:npeaks_tot)::old_peak,ind_sort
@@ -773,19 +773,42 @@ subroutine merge_clumps(ntest)
            min_dens_tot(ii)=0.
            clump_mass_tot(ii)=0.
            
-           ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
-           do j=1,npeaks_tot
-              if (merge_to>0)then
-                 value_iij=get_value(ii,j,sparse_saddle_dens)
+           ! ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
+           ! do j=1,npeaks_tot
+           !    if (merge_to>0)then
+           !       value_iij=get_value(ii,j,sparse_saddle_dens)
+           !       if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+           !          call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+           !          call set_value(j,merge_to,value_iij,sparse_saddle_dens)
+           !       end if
+           !       call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+           !    end if
+           !    call set_value(ii,j,zero,sparse_saddle_dens)
+           !    call set_value(j,ii,zero,sparse_saddle_dens)
+           ! end do
+
+
+           ! Update saddle point array V2
+           if (merge_to>0)then
+              current=sparse_saddle_dens%first(ii) ! first element of line ii
+              do while(current>0) ! walk the line
+                 j=sparse_saddle_dens%col(current) ! column index on line ii
+                 value_iij=sparse_saddle_dens%val(current) ! value of the matrix
                  if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
                     call set_value(merge_to,j,value_iij,sparse_saddle_dens)
                     call set_value(j,merge_to,value_iij,sparse_saddle_dens)
                  end if
                  call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
-              end if
-              call set_value(ii,j,zero,sparse_saddle_dens)
-              call set_value(j,ii,zero,sparse_saddle_dens)
-           end do
+                 call set_value(ii,j,zero,sparse_saddle_dens)
+                 call set_value(j,ii,zero,sparse_saddle_dens)
+                 current=sparse_saddle_dens%next(current)
+              end do
+           end if
+
+
+
+
+
            
            ! Update saddle_max value
            if (merge_to>0)then
@@ -858,10 +881,28 @@ subroutine merge_clumps(ntest)
            clump_mass_tot(ii)=0.
         end if
         
-        ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
-        do j=1,npeaks_tot
-           if (merge_to>0)then
-              value_iij=get_value(ii,j,sparse_saddle_dens)
+        ! ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
+        ! do j=1,npeaks_tot
+        !    if (merge_to>0)then
+        !       value_iij=get_value(ii,j,sparse_saddle_dens)
+        !       if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+        !          call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+        !          call set_value(j,merge_to,value_iij,sparse_saddle_dens)
+        !       end if
+        !       call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+        !       call set_value(ii,j,zero,sparse_saddle_dens)
+        !       call set_value(j,ii,zero,sparse_saddle_dens)
+        !    end if
+        ! end do
+        
+
+
+        ! Update saddle point array V2
+        if (merge_to>0)then
+           current=sparse_saddle_dens%first(ii) ! first element of line ii
+           do while(current>0) ! walk the line
+              j=sparse_saddle_dens%col(current) ! column index on line ii
+              value_iij=sparse_saddle_dens%val(current) ! value of the matrix
               if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
                  call set_value(merge_to,j,value_iij,sparse_saddle_dens)
                  call set_value(j,merge_to,value_iij,sparse_saddle_dens)
@@ -869,9 +910,16 @@ subroutine merge_clumps(ntest)
               call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
               call set_value(ii,j,zero,sparse_saddle_dens)
               call set_value(j,ii,zero,sparse_saddle_dens)
-           end if
-        end do
-        
+              current=sparse_saddle_dens%next(current)
+           end do
+        end if
+
+
+
+
+
+
+
         ! Update saddle_max value
         if (merge_to>0)then
 #ifndef WITHOUTMPI

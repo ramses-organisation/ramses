@@ -22,11 +22,11 @@ contains
   subroutine sparse_initialize(m,n,mat)
     type(sparse_mat)::mat 
     integer::m !size of the array
-    allocate(mat%val(1:100000))
+    allocate(mat%val(1:1000000))
     mat%val=0.
-    allocate(mat%next(1:100000))
+    allocate(mat%next(1:1000000))
     mat%next=0
-    allocate(mat%col(0:100000))
+    allocate(mat%col(0:1000000))
     mat%col=0
     mat%col(0)=huge(1)
     allocate(mat%first(1:m))
@@ -57,6 +57,12 @@ contains
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     integer::current,save_next
 
+
+    if(mat%used.eq.1000000)then
+       write(*,*)'Maximum size reached',mat%used
+       call clean_stop
+    endif
+
     ! update maximum and its location
     if (new_value>mat%maxval(i))then
        mat%maxval(i)=new_value
@@ -69,22 +75,26 @@ contains
 
     ! if corresponding line is empty
     if (mat%first(i)==0) then
-       mat%used=mat%used+1
-       mat%first(i)=mat%used
-       mat%val(mat%used)=new_value
-       mat%col(mat%used)=j
-       mat%next(mat%used)=0
+       if(new_value.NE.0.)then
+          mat%used=mat%used+1
+          mat%first(i)=mat%used
+          mat%val(mat%used)=new_value
+          mat%col(mat%used)=j
+          mat%next(mat%used)=0
+       end if
        return
     end if
 
     ! if element needs to be added to start of the list
     if (mat%col(mat%first(i))>j) then
-       mat%used=mat%used+1
-       save_next=mat%first(i)
-       mat%first(i)=mat%used
-       mat%val(mat%used)=new_value
-       mat%col(mat%used)=j
-       mat%next(mat%used)=save_next
+       if(new_value.NE.0.)then
+          mat%used=mat%used+1
+          save_next=mat%first(i)
+          mat%first(i)=mat%used
+          mat%val(mat%used)=new_value
+          mat%col(mat%used)=j
+          mat%next(mat%used)=save_next
+       endif
        return
     end if
 
@@ -110,22 +120,26 @@ contains
     
     !next points to zero -> add to the end
     if ( mat%next(current) == 0)then
-       mat%used=mat%used+1
-       mat%next(current)=mat%used
-       mat%next(mat%used)=0
-       mat%col(mat%used)=j
-       mat%val(mat%used)=new_value       
+       if(new_value.NE.0.)then
+          mat%used=mat%used+1
+          mat%next(current)=mat%used
+          mat%next(mat%used)=0
+          mat%col(mat%used)=j
+          mat%val(mat%used)=new_value       
+       endif
        return
     end if
 
     !next points not to zero -> link in between
     if ( mat%next(current) > 0)then
-       mat%used=mat%used+1
-       save_next=mat%next(current)
-       mat%next(current)=mat%used
-       mat%next(mat%used)=save_next
-       mat%col(mat%used)=j
-       mat%val(mat%used)=new_value
+       if(new_value.NE.0.)then
+          mat%used=mat%used+1
+          save_next=mat%next(current)
+          mat%next(current)=mat%used
+          mat%next(mat%used)=save_next
+          mat%col(mat%used)=j
+          mat%val(mat%used)=new_value
+       endif
        return
     end if
     
