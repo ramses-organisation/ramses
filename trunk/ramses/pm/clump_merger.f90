@@ -692,7 +692,7 @@ subroutine merge_clumps(ntest)
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
+  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host,ilevel
   integer::peak,next_peak,current
   real(dp)::value_iij,zero=0.
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
@@ -997,6 +997,9 @@ subroutine merge_clumps(ntest)
      if (flag2(icellp(ipart))>0)flag2(icellp(ipart))=new_peak(flag2(icellp(ipart)))
   end do
 
+  do ilevel=nlevelmax,levelmin,-1
+     call make_virtual_fine_int(flag2(1),ilevel)
+  end do
 
 end subroutine merge_clumps
 !################################################################                 
