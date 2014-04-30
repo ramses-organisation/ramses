@@ -1,8 +1,8 @@
-// read_emag
+// read_energies
 //=============================================================================
-// Author: Michael Rieder (2013) rieder@physik.uzh.ch
+// Author: Michael Rieder (2014) rieder@physik.uzh.ch
 //
-// parse log for emag
+// parse log file for energy outputs
 //=============================================================================
 
 #include <stdio.h>
@@ -51,6 +51,25 @@ int main( int argc, char *argv[] )
 void read_logfile( FILE *logfile )
 {
 	char line_buffer[max_line_length];
+	// Main step
+	const char * mainstep_string = "Main step=";
+	char * mainstep_pos;
+	// econs
+	const char * econs_string = "econs=";
+	char * econs_pos;
+	double	econs;
+	// epot
+	const char * epot_string = "epot=";
+	char * epot_pos;
+	double	epot;
+	// ekin
+	const char * ekin_string = "ekin=";
+	char * ekin_pos;
+	double	ekin;
+	// eint
+	const char * eint_string = "eint=";
+	char * eint_pos;
+	double	eint;
 	// emag
 	const char * emag_string = "emag=";
 	char * emag_pos;
@@ -66,12 +85,32 @@ void read_logfile( FILE *logfile )
 
 	// read new line
 	while( fgets( line_buffer, max_line_length, logfile ) ) {
-		emag_pos = strstr( line_buffer, emag_string );
-		if ( emag_pos ) {
-			emag = atof( emag_pos + strlen(emag_string) );
+		mainstep_pos = strstr( line_buffer, mainstep_string );
+		if ( mainstep_pos ) {
+			// econs
+			econs_pos = strstr( line_buffer, econs_string );
+			econs = atof( econs_pos + strlen(econs_string) );
+			// epot
+			epot_pos = strstr( line_buffer, epot_string );
+			epot = atof( epot_pos + strlen(epot_string) );
+			// ekin
+			ekin_pos = strstr( line_buffer, ekin_string );
+			ekin = atof( ekin_pos + strlen(ekin_string) );
+			// eint
+			eint_pos = strstr( line_buffer, eint_string );
+			eint = atof( eint_pos + strlen(eint_string) );
 
 			// read next line
 			fgets( line_buffer, max_line_length, logfile );
+			// try emag
+			emag_pos = strstr( line_buffer, emag_string );
+			if ( emag_pos ) {
+				emag = atof( emag_pos + strlen(emag_string) );
+				// read next line (time and aexp)
+				fgets( line_buffer, max_line_length, logfile );
+			}
+			else emag = 0.0;
+
 			// time
 			time_pos = strstr( line_buffer, time_string );
 			time = atof( time_pos + strlen(time_string) );
@@ -80,7 +119,7 @@ void read_logfile( FILE *logfile )
 			aexp = atof( aexp_pos + strlen(aexp_string) );
 
 			// output t - a - e values
-			printf( "%f %f %e\n", time, aexp, emag );
+			printf( "%f %f %e %e %e %e %e\n", time, aexp, econs, epot, ekin, eint, emag );
 		}
 	}
 }
