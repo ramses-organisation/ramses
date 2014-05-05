@@ -812,6 +812,11 @@ subroutine init_part
               if(cc(i)==myid)then
 #endif
                  ipart=ipart+1
+                 if(ipart>npartmax)then
+                    write(*,*)'Maximum number of particles incorrect'
+                    write(*,*)'npartmax should be greater than',ipart
+                    call clean_stop
+                 endif
                  xp(ipart,1:3)=xx(i,1:3)
                  vp(ipart,1:3)=vv(i,1:3)
                  mp(ipart)    =mm(i)
