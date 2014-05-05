@@ -1,4 +1,4 @@
- module rt_cooling_module
+module rt_cooling_module
   use amr_commons,only:myid  
   use cooling_module,only:X, Y
   use rt_parameters
@@ -281,10 +281,10 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   real(dp):: nH, nHe, Zsolar, dt_rec, dt, a_exp
   logical::dt_ok, c_switch!-----------------------------------------------
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
-  real(dp):: mu, TK, ne, neInit, Hrate, q, betaH2
+  real(dp):: mu, TK, ne, neInit, Hrate, q, betaH2, ndust
   real(dp):: xHI=0d0, xHeI=0d0, xHeII=0d0, xHeIII=0d0
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
-  real(dp),dimension(nGroups):: recRad, phI, dust
+  real(dp),dimension(nGroups):: recRad, phI, signcdust
   real(dp)::metal_tot,metal_prime
   real(dp)::xH2!sln, tmp, change later maybe
   integer::i, nc, loopcnt, code
@@ -300,7 +300,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   ! nN(3) == nN(ixHeII)  == nHeI          ! nI(3) == nI(ixHeII)  == nHeII
   ! nN(4) == nN(ixHeIII) == nHeII         ! nI(4) == nI(ixHeIII) == nHeIII
   xHI = 1d0-dU(iUxHII)                    !     Need in case of .not. isH2
-  xH2=0d0                                 !                       This too
+  xH2 = 0d0                               !                       This too
   if(isH2) xHI = dU(iUxHI)
   ! xHII   = dU(iUxHII) (always exists)
   if(isHe) xHeII = dU(iUxHeII)
@@ -344,9 +344,10 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
                 recRad(spec2group(i)) + alpha(i) * nI(i) * ne
         enddo
      endif !if non-OTSA
-     dust(:)=2.0d-21 ! Dust absorption cross-sections cm^2	 
+     signcdust(:)=2.0d-21*rt_c_cgs ! Dust absorption cross-sections cm^2 times c
+     ndust=Zsolar*nH
      do i=1,nGroups      ! ------------------------------------ Absorbtion
-        phI(i) = SUM(nN(:)*signc(i,:))!+dust(i)*Zsolar*rt_c_cgs*nH
+        phI(i) = SUM(nN(:)*signc(i,:)) + ndust*signcdust(i)
      end do
 
      do i=1,nGroups      ! ---------------------- Do the update of N and F
@@ -388,11 +389,15 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      Crate=compCoolrate(TK, ne, nH, nN, nI, a_exp, dCdT2, RT_OTSA)!Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
      metal_tot=0.d0 ; metal_prime=0.d0                     ! Metal cooling
-     if(metal) call rt_cmp_metals(U(1),nH,mu,metal_tot,metal_prime,a_exp)
+     call rt_cmp_metals(U(1),nH,mu,metal_tot,metal_prime,a_exp)
 
      X_nHkb= X/(1.5 * nH * kB)                     ! Multiplication factor   
      rate  = X_nHkb*(Hrate - Crate - Zsolar*metal_tot)
      dRate = -X_nHkb*(dCdT2 + Zsolar*metal_prime)              ! dRate/dT2
+     if(rt_isTconst)then
+        rate=0.
+        dRate=0.
+     endif
      dUU   = ABS(MAX(T2_min_fix, U(1)+rate*dt)-U(1)) ! 1st order dt constr
      dU(1) = MAX(T2_min_fix, U(1)+rate*dt/(1.-dRate*dt))    ! New T2 value
      dUU   = MAX(dUU, ABS(dU(1)-U(1))) / (U(1)+U_FM(1)) / U_FRAC(1)
@@ -401,6 +406,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      endif
      fracMax=MAX(fracMax,dUU)
      TK=dU(1)*mu
+     if(rt_isTconst)TK=rt_TConst
   endif ! if(c_switch and cooling)
 
   ! HYDROGEN UPDATE*******************************************************
@@ -543,7 +549,17 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   endif
   fracMax=MAX(fracMax,dUU)
 
-  if(rt_isTconst) dU(1)=rt_Tconst/mu
+  ! compute new mu
+  if(rt_isTconst)then 
+     xHI = 1d0-dU(iUxHII)
+     if(isH2) xHI = dU(iUxHI)
+     xHeII=0.
+     xHeIII=0.
+     if(isHe) xHeII = dU(iUxHeII)
+     if(isHe) xHeIII = dU(iUxHeIII)
+     mu= 1./(X*(0.5+0.5*xHI+1.5*dU(iUxHII)) + 0.25*Y*(1.+xHeII+2.*xHeIII))
+     dU(1)=rt_Tconst/mu
+  endif
 
   ! Check if we are safe to use a bigger timestep in next iteration:
   dU=dU-U
@@ -634,79 +650,94 @@ END SUBROUTINE display_coolinfo
 
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu)
+SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
 
-! Compute chemical equilibrium abundances of e, HI, HII, HeI, HeII, HeIII
-! r_rad_spec => photoionization rates [s-1] for HI, HeI, HeII
+! Compute chemical equilibrium abundances of e, H2, HI, HII, HeI, HeII, HeIII
+! r_rad_spec => photoionization rates [s-1] for H2, HI, HeI, HeII
 !------------------------------------------------------------------------
   implicit none
-  real(dp),intent(in)::TK, nH
+  real(dp),intent(in)::TK, nH, Zsol
   real(dp),intent(out)::nTot, mu
   real(dp),dimension(nIons),intent(in)::t_rad_spec
-  real(dp),dimension(1:6),intent(out)::nSpec!------------------------
-  real(dp)::xx, yy
-  real(dp)::n_HI, n_HII, n_HEI, n_HEII, n_HEIII, n_E
-  real(dp)::t_rad_HI,  t_rad_HEI,  t_rad_HEII
-  real(dp)::t_rec_HI,  t_rec_HEI,  t_rec_HEII
-  real(dp)::t_ion_HI,  t_ion_HEI,  t_ion_HEII
-  real(dp)::t_ion2_HI, t_ion2_HEI, t_ion2_HEII
-  real(dp)::x1, err_nE
-  !integer,parameter::HI=1, HeI=2, HeII=3
+  real(dp),dimension(1:7),intent(out)::nSpec!------------------------
+  real(dp)::nHe
+  real(dp)::n_H2, n_HI, n_HII, n_HEI, n_HEII, n_HEIII, n_E, n_E_min
+  real(dp)::g_H2,  g_HI,    g_HEI,  g_HEII  ! Photoionisation/dissociation
+  real(dp)::a_H2,  a_HI,    a_HEI,  a_HEII  ! Recombination
+  real(dp)::b_H2,  b_HI,    b_HEI,  b_HEII  ! Collisional ionisation
+  real(dp)::C_HII, D_H2,    f_HII,  f_H2    ! Creation and destruction
+  real(dp)::D_HEI, C_HEIII, f_HeI,  f_HeIII ! Creation and destruction
+  real(dp)::err_nE, err_nH2, n_H2_old
 !-------------------------------------------------------------------------
-  xx=(1.-Y)
-  yy=Y/(1.-Y)/4.
-  
-  t_rad_HI   = t_rad_spec(ixHII)               !      Photoionization [s-1]
-  if(isHe) t_rad_HEI  = t_rad_spec(ixHeII)
-  if(isHe) t_rad_HEII = t_rad_spec(ixHeIII)
-
-  if(rt_OTSA) then                           !    Recombination [cm3 s-1]
-     t_rec_HI   = comp_AlphaB_HII(TK)        
-     t_rec_HEI  = comp_AlphaB_HeII(TK)
-     t_rec_HEII = comp_AlphaB_HeIII(TK)
-  else 
-     t_rec_HI   = comp_AlphaA_HII(TK)        
-     t_rec_HEI  = comp_AlphaA_HeII(TK)
-     t_rec_HEII = comp_AlphaA_HeIII(TK)
+  if(isHe) nHe = Y/(1.-Y)/4.*nH
+  if(isH2) g_H2 = t_rad_spec(ixHI)             !   Photodissociation [s-1]
+  g_HI   = t_rad_spec(ixHII)                   !     Photoionization [s-1]
+  if(isHe) g_HEI  = t_rad_spec(ixHeII)
+  if(isHe) g_HEII = t_rad_spec(ixHeIII)
+  if(isH2) a_H2 = comp_Alpha_H2(TK, Zsol)     ! HI recombination [cm3 s-1]
+  if(rt_OTSA) then                             !   Recombination [cm3 s-1]
+     a_HI   = comp_AlphaB_HII(TK)
+     a_HEI  = comp_AlphaB_HeII(TK)
+     a_HEII = comp_AlphaB_HeIII(TK)
+  else
+     a_HI   = comp_AlphaA_HII(TK)
+     a_HEI  = comp_AlphaA_HeII(TK)
+     a_HEII = comp_AlphaA_HeIII(TK)
   endif
+  b_H2 = comp_Beta_H2HI(TK)                 ! Coll. dissociation [cm3 s-1]
+  b_HI = comp_Beta_HI(TK)                     ! Coll. ionization [cm3 s-1]
+  if(isHe) b_HEI  = comp_Beta_HeI(TK)
+  if(isHe) b_HEII = comp_Beta_HeII(TK)
 
-  t_ion_HI   = comp_Beta_HI(TK)               ! Coll. ionization [cm3 s-1]
-  t_ion_HEI  = comp_Beta_HeI(TK)
-  t_ion_HEII = comp_Beta_HeII(TK)
-  n_E = nH        
-  err_nE = 1.
-  
-  do while(err_nE > 1.d-8)
-     t_ion2_HI   = t_ion_HI   + t_rad_HI  /MAX(n_E,1e-15*nH)  ! [cm3 s-1]
-     t_ion2_HEI  = t_ion_HEI  + t_rad_HEI /MAX(n_E,1e-15*nH)
-     t_ion2_HEII = t_ion_HEII + t_rad_HEII/MAX(n_E,1e-15*nH)
-     
-     n_HI  = t_rec_HI/(t_ion2_HI+t_rec_HI)*nH
-     n_HII = t_ion2_HI/(t_ion2_HI+t_rec_HI)*nH
-     
-     x1=(                                                                &
-          t_rec_HEII*t_rec_HEI                                           &
-          +t_ion2_HEI*t_rec_HEII                                         &
-          +t_ion2_HEII*t_ion2_HEI)                               ! cm6 s-2
-     
-     n_HEIII = yy*t_ion2_HEII*t_ion2_HEI/x1*nH
-     n_HEII  = yy*t_ion2_HEI *t_rec_HEII/x1*nH
-     n_HEI   = yy*t_rec_HEII *t_rec_HEI /x1*nH
-     
+  n_E = nH     ; n_H2 = 0d0    ; n_H2_old = nH/2d0
+  n_HeI=0d0    ; n_HeII=0d0    ; n_HeIII=0d0
+  err_nE = 1d0 ; err_nH2=0d0     ! err_nH2 initialisation in case of no H2
+  do while(err_nE > 1d-8 .or. err_nH2 > 1d-8)
+
+     n_E_min = MAX(n_E,1e-15*nH)
+     C_HII = b_HI * n_E_min + g_HI                  !   HII creation (s-1)
+     f_HII = C_HII / a_HI / n_E_min                 ! Cre/Destr [unitless]
+     f_H2 = 0d0
+     if(isH2) then
+        !D_H2  = 2d0*(b_H2 * nH  + g_H2)             !      H2 destr. (s-1)
+        D_H2  = b_H2 * nH  + g_H2             !      H2 destr. (s-1)
+        f_H2  = a_H2*nH / D_H2                      ! Cre/Destr [unitless]
+        n_H2  = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
+     endif ! if(isH2)
+     n_HI  = nH / (1d0 + f_HII + 2d0*f_H2)
+     n_HII = nH / (1d0 + 1d0/f_HII + 2d0*f_H2/f_HII)
+
+     if(isHe) then
+        D_HeI   = b_HEI*n_E_min  + g_HEI           !  HeI destr. (s-1)
+        C_HeIII = b_HEII*n_E_min + g_HEII          !  HeIII cre. (s-1)
+        f_HeI   = D_HeI / a_HeI / n_E_min          !  Destr/Cre [unitless]
+        f_HeIII = a_HeII * n_E_min / C_HeIII       !  Destr/Cre [unitless]
+
+        n_HEI   = nHe / (1d0 + f_HeI + f_HeI/f_HeIII)
+        n_HEII  = nHe / (1d0 + 1d0/f_HeI + 1d0/f_HeIII)
+        n_HEIII = nHe / (1d0 + f_HeIII + f_HeIII/f_HeI)
+     endif ! if(isHe)
+
      err_nE = ABS((n_E - (n_HII + n_HEII + 2.*n_HEIII))/nH)
      n_E = 0.5*n_E+0.5*(n_HII + n_HEII + 2.*n_HEIII)
-     
+
+     if(isH2) then
+        err_nH2 = ABS((n_H2_old - n_H2)/nH)
+        n_H2_old = n_H2
+     endif
+
   end do
-    
-  nTOT     = n_E+n_HI+n_HII+n_HEI+n_HEII+n_HEIII
-  mu       = nH/xx/nTOT
+
+  nTOT     = n_E+n_H2+n_HI+n_HII+n_HEI+n_HEII+n_HEIII
+  mu       = nH/(1.-Y)/nTOT
   nSpec(1) = n_E
-  nSpec(2) = n_HI
-  nSpec(3) = n_HII
-  nSpec(4) = n_HEI
-  nSpec(5) = n_HEII
-  nSpec(6) = n_HEIII
-  
+  nSpec(2) = n_H2
+  nSpec(3) = n_HI
+  nSpec(4) = n_HII
+  nSpec(5) = n_HEI
+  nSpec(6) = n_HEII
+  nSpec(7) = n_HEIII
+
 END SUBROUTINE cmp_chem_eq
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -747,7 +778,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   real(dp) ::cool_tot,heat_tot, mu_dp
   real(dp) ::diff
   integer::niter
-  real(dp) :: n_spec(1:6)
+  real(dp) :: n_spec(1:7)
   real(dp),dimension(1:nvector, n_U)::U=0.
   real(dp),dimension(1:nvector,nGroups)::dNpdt=0., dFpdt=0.
   real(dp),dimension(1:nvector)::nH=0., Zsolar=0.
@@ -759,13 +790,13 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
 
   mu_dp=mu
   call cmp_Equilibrium_Abundances(                                       &
-                 T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
+                 T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, Zsolar)
   ! Initialize cell state
-  U(1,1)=T2_com                                         !      Temperature
-  U(1,iUxHII)=n_Spec(3)/(nH_com/aexp**3)                !   HII   fraction
-  if(isHe) U(1,iUxHeII)=n_Spec(5)/(nH_com/aexp**3)      !   HeII  fraction
-  if(isHe) U(1,iUxHeIII)=n_Spec(6)/(nH_com/aexp**3)     !   HeIII fraction
-  if(isH2) U(1,iUxHI)=1.0d0-U(1,iUxHII)  ! HI frac, assume no h2 initially
+  U(1,1)=T2_com                                         !   Temperature
+  if(isH2) U(1,iUxHI)=n_Spec(3)/(nH_com/aexp**3)        !   HI frac
+  U(1,iUxHII)=n_Spec(4)/(nH_com/aexp**3)                !   HII   fraction
+  if(isHe) U(1,iUxHeII)=n_Spec(6)/(nH_com/aexp**3)      !   HeII  fraction
+  if(isHe) U(1,iUxHeIII)=n_Spec(7)/(nH_com/aexp**3)     !   HeIII fraction
   U(1,iNp0:)=0.                              ! Photon densities and fluxes
 
   do while (aexp < aend)

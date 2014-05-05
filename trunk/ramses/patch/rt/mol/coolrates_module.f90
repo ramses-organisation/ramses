@@ -18,7 +18,9 @@ ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
   real(dp),intent(in)::T,Z
   real(dp)::comp_Alpha_H2, lambda
 !-------------------------------------------------------------------------
-  comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5) + 8.0d-19*((T/1000.0)**0.88)
+  comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5)/ &
+       & (1.0+0.4*(T/100.)**0.5+0.2*(T/100.)+0.08*(T/100.)**2) !&
+!       & + 8.0d-19*((T/1000.0)**0.88)
 END FUNCTION comp_Alpha_H2
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
