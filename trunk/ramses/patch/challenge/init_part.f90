@@ -53,7 +53,9 @@ subroutine init_part
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
+  integer,parameter::tagg=1108
+  integer::dummy_io
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -167,9 +169,26 @@ subroutine init_part
 
      ilun=2*ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/part_'//TRIM(nchar)//'.out'
+     
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/part_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/part_'//TRIM(nchar)//'.out'
+     endif
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+     
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tagg,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
 
      open(unit=ilun,file=fileloc,form='unformatted')
      rewind(ilun)
@@ -265,6 +284,19 @@ subroutine init_part
         end if
      endif
      close(ilun)
+     
+     ! Send the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tagg, &
+                & MPI_COMM_WORLD,info)
+        end if
+     endif
+#endif
+     
+
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
@@ -428,6 +460,16 @@ subroutine init_part
                                
               if(multiple)then
                  ilun=myid+10
+                 ! Wait for the token
+#ifndef WITHOUTMPI
+                 if(IOGROUPSIZE>0) then
+                    if (mod(myid-1,IOGROUPSIZE)/=0) then
+                       call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                            & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+                    end if
+                 endif
+#endif
+
                  open(ilun,file=filename,form='unformatted')
                  rewind ilun
                  read(ilun) ! skip first line
@@ -441,6 +483,18 @@ subroutine init_part
                     endif
                  end do
                  close(ilun)
+
+                 ! Send the token
+#ifndef WITHOUTMPI
+                 if(IOGROUPSIZE>0) then
+                    if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                       dummy_io=1
+                       call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                            & MPI_COMM_WORLD,info)
+                    end if
+                 endif
+#endif
+                 
               else
                  if(myid==1)then
                     open(10,file=filename,form='unformatted')
@@ -812,11 +866,6 @@ subroutine init_part
               if(cc(i)==myid)then
 #endif
                  ipart=ipart+1
-                 if(ipart>npartmax)then
-                    write(*,*)'Maximum number of particles incorrect'
-                    write(*,*)'npartmax should be greater than',ipart
-                    call clean_stop
-                 endif
                  xp(ipart,1:3)=xx(i,1:3)
                  vp(ipart,1:3)=vv(i,1:3)
                  mp(ipart)    =mm(i)
@@ -870,8 +919,20 @@ subroutine init_part
         else
            filename='ic_sink'
         end if
-        INQUIRE(FILE=filename, EXIST=ic_sink)
+
         if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+
+        ! Wait for the token
+#ifndef WITHOUTMPI
+        if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
+
+        INQUIRE(FILE=filename, EXIST=ic_sink)
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -895,6 +956,19 @@ subroutine init_part
            end do
 102        continue
            close(10)
+
+           ! Send the token
+#ifndef WITHOUTMPI
+           if(IOGROUPSIZE>0) then
+              if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                 dummy_io=1
+                 call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                      & MPI_COMM_WORLD,info)
+              end if
+           endif
+#endif
+
+
         end if
         nindsink=MAXVAL(idsink) ! Reset max index
         if (myid==1.and.nsink==0)write(*,*)'File ic_sink not found: starting without sink particles!'
