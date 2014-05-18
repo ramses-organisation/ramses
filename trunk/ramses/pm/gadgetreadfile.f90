@@ -60,8 +60,12 @@ CONTAINS
           WRITE(fileno,'(".",1i1.1)')ifile
        ELSE IF (ifile.LT.100)THEN
           WRITE(fileno,'(".",1i2.2)')ifile
+       ELSE IF (ifile.LT.1000)THEN
+          WRITE(fileno,'(".",1i2.3)')ifile
+       ELSE IF (ifile.LT.10000)THEN
+          WRITE(fileno,'(".",1i2.4)')ifile
        ELSE
-          WRITE(fileno,'(".",1i3.3)')ifile
+          WRITE(fileno,'(".",1i3.5)')ifile
        END IF
        filename = TRIM(basename) // fileno
        INQUIRE(file=filename, exist=ok)
@@ -99,7 +103,11 @@ CONTAINS
     TYPE (gadgetheadertype) :: header
 ! Particle data
     REAL, DIMENSION(3,*) :: pos,vel
+#ifndef LONGINT
     INTEGER*4, DIMENSION(*) :: id
+#else
+    INTEGER*8, DIMENSION(*) :: id
+#endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=4) :: fileno
@@ -111,8 +119,12 @@ CONTAINS
        WRITE(fileno,'(".",1i1.1)')ifile
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
+    ELSE IF (ifile.LT.1000)THEN
+       WRITE(fileno,'(".",1i2.3)')ifile
+    ELSE IF (ifile.LT.10000)THEN
+       WRITE(fileno,'(".",1i2.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i3.3)')ifile
+       WRITE(fileno,'(".",1i3.5)')ifile
     END IF
 
     filename = TRIM(basename) // fileno
@@ -155,7 +167,11 @@ CONTAINS
     TYPE (gadgetheadertype) :: header
 ! Particle data
     REAL, DIMENSION(3,*) :: pos,vel
+#ifndef LONGINT
     INTEGER*4, DIMENSION(*) :: id
+#else
+    INTEGER*8, DIMENSION(*) :: id
+#endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=4) :: fileno
@@ -168,8 +184,12 @@ CONTAINS
        WRITE(fileno,'(".",1i1.1)')ifile
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
+    ELSE IF (ifile.LT.1000)THEN
+       WRITE(fileno,'(".",1i2.3)')ifile
+    ELSE IF (ifile.LT.10000)THEN
+       WRITE(fileno,'(".",1i2.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i3.3)')ifile
+       WRITE(fileno,'(".",1i3.5)')ifile
     END IF
 
     filename = TRIM(basename) // fileno

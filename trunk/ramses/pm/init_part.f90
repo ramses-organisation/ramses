@@ -963,7 +963,7 @@ subroutine load_gadget
   integer::ifile
   real(dp),dimension(1:nvector,1:3)::xx_dp
   real, dimension(:, :), allocatable:: pos, vel
-  integer, dimension(:), allocatable:: ids
+  integer(i8b), dimension(:), allocatable:: ids  
   integer::nparticles, arraysize
   integer::i, icpu, ipart, info, np, start
   integer ,dimension(1:ncpu)::npart_cpu,npart_all
