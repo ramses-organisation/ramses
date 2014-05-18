@@ -50,7 +50,7 @@ CONTAINS
     logical, INTENT(OUT)::ok
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=4) :: fileno
+    CHARACTER(LEN=6) :: fileno
 
     filename = TRIM(basename)
     INQUIRE(file=filename, exist=ok)
@@ -110,7 +110,7 @@ CONTAINS
 #endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=4) :: fileno
+    CHARACTER(LEN=6) :: fileno
     INTEGER :: np
     logical::ok
 
@@ -174,7 +174,7 @@ CONTAINS
 #endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=4) :: fileno
+    CHARACTER(LEN=6) :: fileno
     INTEGER :: np
     logical::ok
 
