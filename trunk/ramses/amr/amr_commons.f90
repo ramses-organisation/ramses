@@ -104,7 +104,7 @@ module amr_commons
      integer     ,dimension(:)  ,pointer::igrid
      integer     ,dimension(:,:),pointer::f
      real(kind=8),dimension(:,:),pointer::u
-     integer     ,dimension(:,:),pointer::fp
+     integer(i8b),dimension(:,:),pointer::fp
      real(kind=8),dimension(:,:),pointer::up
 #ifdef ATON
      real(kind=8),dimension(:,:),pointer::u_radiation

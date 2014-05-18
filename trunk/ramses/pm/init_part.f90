@@ -26,9 +26,10 @@ subroutine init_part
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
-  integer ,dimension(1:ncpu)::npart_cpu,npart_all
+  integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
-  integer ,allocatable,dimension(:)::isp
+  integer,allocatable,dimension(:)::isp
+  integer(i8b),allocatable,dimension(:)::isp8
 
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
@@ -203,10 +204,12 @@ subroutine init_part
      mp(1:npart2)=xdp
      deallocate(xdp)
      ! Read identity
-     allocate(isp(1:npart2))
-     read(ilun)isp
-     idp(1:npart2)=isp
+     allocate(isp8(1:npart2))
+     read(ilun)isp8
+     idp(1:npart2)=isp8
+     deallocate(isp8)
      ! Read level
+     allocate(isp(1:npart2))
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
@@ -746,7 +749,11 @@ subroutine init_part
         npart_cpu=0; npart_all=0
         npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
+#ifndef LONGINT
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+        call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
         npart_cpu(1)=npart_all(1)
 #endif
         do icpu=2,ncpu
@@ -837,7 +844,11 @@ subroutine init_part
         npart_cpu=0; npart_all=0
         npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
+#ifndef LONGINT
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+        call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
         npart_cpu(1)=npart_all(1)
 #endif
         do icpu=2,ncpu
@@ -1021,7 +1032,11 @@ subroutine load_gadget
   npart_cpu=0; npart_all=0
   npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
+#ifndef LONGINT
   call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
   npart_cpu(1)=npart_all(1)
 #endif
   do icpu=2,ncpu

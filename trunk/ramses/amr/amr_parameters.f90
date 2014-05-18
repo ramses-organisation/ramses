@@ -19,6 +19,14 @@ module amr_parameters
   integer,parameter::MAXOUT=1000
   integer,parameter::MAXLEVEL=100
   
+  ! Define integer types (for particle IDs mostly)
+  integer,parameter::i4b=4
+#ifndef LONGINT
+  integer,parameter::i8b=4  ! default long int are short int
+#else
+  integer,parameter::i8b=8  ! long int are long int
+#endif
+
   ! Number of dimensions
 #ifndef NDIM
   integer,parameter::ndim=1

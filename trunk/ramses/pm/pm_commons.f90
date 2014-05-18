@@ -45,7 +45,7 @@ module pm_commons
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list
   integer ,allocatable,dimension(:)  ::levelp   ! Current level of particle
-  integer ,allocatable,dimension(:)  ::idp      ! Identity of particle
+  integer(i8b),allocatable,dimension(:)::idp    ! Identity of particle
   ! Tree related arrays
   integer ,allocatable,dimension(:)  ::headp    ! Head particle in grid
   integer ,allocatable,dimension(:)  ::tailp    ! Tail particle in grid
