@@ -61,11 +61,11 @@ CONTAINS
        ELSE IF (ifile.LT.100)THEN
           WRITE(fileno,'(".",1i2.2)')ifile
        ELSE IF (ifile.LT.1000)THEN
-          WRITE(fileno,'(".",1i2.3)')ifile
+          WRITE(fileno,'(".",1i3.3)')ifile
        ELSE IF (ifile.LT.10000)THEN
-          WRITE(fileno,'(".",1i2.4)')ifile
+          WRITE(fileno,'(".",1i4.4)')ifile
        ELSE
-          WRITE(fileno,'(".",1i3.5)')ifile
+          WRITE(fileno,'(".",1i5.5)')ifile
        END IF
        filename = TRIM(basename) // fileno
        INQUIRE(file=filename, exist=ok)
@@ -120,11 +120,11 @@ CONTAINS
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
     ELSE IF (ifile.LT.1000)THEN
-       WRITE(fileno,'(".",1i2.3)')ifile
+       WRITE(fileno,'(".",1i3.3)')ifile
     ELSE IF (ifile.LT.10000)THEN
-       WRITE(fileno,'(".",1i2.4)')ifile
+       WRITE(fileno,'(".",1i4.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i3.5)')ifile
+       WRITE(fileno,'(".",1i5.5)')ifile
     END IF
 
     filename = TRIM(basename) // fileno
@@ -185,11 +185,11 @@ CONTAINS
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
     ELSE IF (ifile.LT.1000)THEN
-       WRITE(fileno,'(".",1i2.3)')ifile
+       WRITE(fileno,'(".",1i3.3)')ifile
     ELSE IF (ifile.LT.10000)THEN
-       WRITE(fileno,'(".",1i2.4)')ifile
+       WRITE(fileno,'(".",1i4.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i3.5)')ifile
+       WRITE(fileno,'(".",1i5.5)')ifile
     END IF
 
     filename = TRIM(basename) // fileno
