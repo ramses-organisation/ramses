@@ -70,9 +70,9 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   ! Do initialization
   U_MIN(iT)       = 0.1                  !                        T2 floor
   U_FRAC(iT)      = 0.1                  !    Max fractional change per dt
-  U_FM(iT)  = 0.1                        !  Min at which to consider frac.
+  U_FM(iT)        = 0.1                  !  Min at which to consider frac.
 
-  U_MIN(ix0:ix1)  = 1d-20                  !     Ionization fraction floor
+  U_MIN(ix0:ix1)  = 1d-20                !     Ionization fraction floor
   U_FRAC(ix0:ix1) = 0.1    
   U_FM(ix0:ix1)  = 1d-6 
 
@@ -345,7 +345,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         enddo
      endif !if non-OTSA
      signcdust(:)=2.0d-21*rt_c_cgs ! Dust absorption cross-sections cm^2 times c
-     ndust=Zsolar*nH
+     ndust=Zsolar*nH*(xHI+2.0*xH2) ! No dust in ionized hydrogen
      do i=1,nGroups      ! ------------------------------------ Absorbtion
         phI(i) = SUM(nN(:)*signc(i,:)) + ndust*signcdust(i)
      end do
@@ -699,8 +699,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      f_HII = C_HII / a_HI / n_E_min                 ! Cre/Destr [unitless]
      f_H2 = 0d0
      if(isH2) then
-        !D_H2  = 2d0*(b_H2 * nH  + g_H2)             !      H2 destr. (s-1)
-        D_H2  = b_H2 * nH  + g_H2             !      H2 destr. (s-1)
+        D_H2  = b_H2 * nH  + g_H2                   !      H2 destr. (s-1)
         f_H2  = a_H2*nH / D_H2                      ! Cre/Destr [unitless]
         n_H2  = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
      endif ! if(isH2)
