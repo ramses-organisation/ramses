@@ -8,8 +8,9 @@ subroutine backup_part(filename)
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
   real(dp),allocatable,dimension(:)::xdp
-  integer ,allocatable,dimension(:)::ii
-  integer ,allocatable,dimension(:)::ll
+  integer,allocatable,dimension(:)::ii
+  integer(i8b),allocatable,dimension(:)::ii8
+  integer,allocatable,dimension(:)::ll
 
   if(verbose)write(*,*)'Entering backup_part'
   
@@ -62,16 +63,16 @@ subroutine backup_part(filename)
   write(ilun)xdp
   deallocate(xdp)
   ! Write identity
-  allocate(ii(1:npart))
+  allocate(ii8(1:npart))
   ipart=0
   do i=1,npartmax
      if(levelp(i)>0)then
         ipart=ipart+1
-        ii(ipart)=idp(i)
+        ii8(ipart)=idp(i)
      end if
   end do
-  write(ilun)ii
-  deallocate(ii)
+  write(ilun)ii8
+  deallocate(ii8)
   ! Write level
   allocate(ll(1:npart))
   ipart=0
@@ -235,7 +236,6 @@ end subroutine output_sink
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 subroutine output_sink_csv(filename)
   use amr_commons
   use pm_commons

@@ -416,7 +416,7 @@ subroutine savegadget(filename)
   character(LEN=80)::filename
   TYPE (gadgetheadertype) :: header
   real,allocatable,dimension(:,:)::pos, vel
-  integer,allocatable,dimension(:)::ids
+  integer(i8b),allocatable,dimension(:)::ids
   integer::i, idim, ipart
   real:: gadgetvfact
   integer::npart_tot, info
