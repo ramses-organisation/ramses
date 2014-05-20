@@ -158,7 +158,7 @@ subroutine clump_finder(create_output)
   
   ! Compute peak-patch mass etc. and output these properties before merging 
   call compute_clump_properties(ntest) 
-  if (clinfo)call write_clump_properties(.false.)
+!  if (clinfo)call write_clump_properties(.false.)
 
 
   !-------------------------------------------------------------------------------

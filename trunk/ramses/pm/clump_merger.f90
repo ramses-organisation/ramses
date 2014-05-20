@@ -408,7 +408,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
 
   do j=npeaks_tot,1,-1
      if (relevance_tot(j)>0.)then
-        !compute eigenvalues and eigenvectors of Icl_d_3by3_tot
+        !compute eigenvalues and eigenvectors of Icl_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
         abs_err=1.d-6*Icl_tot(j)**2
         call jacobi(a,eigenv,abs_err)

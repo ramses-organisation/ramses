@@ -75,7 +75,7 @@ subroutine compute_clump_properties(ntest)
      peak_nr=flag2(icellp(ipart)) 
 
      if (peak_nr /=0 ) then
-        
+
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
@@ -159,15 +159,14 @@ subroutine compute_clump_properties(ntest)
 #endif
   !clean some wannabe peaks (due to MPI)
   do j=1,npeaks_tot
-     do i=1,ndim
-        if(max_dens(j)<max_dens_tot(j))then
-           peak_pos(j,i)=0.d0
-        else
-           x(1:3)=peak_pos(j,1:3)
-           call true_max(x(1),x(2),x(3),nlevelmax)
-           peak_pos(j,1:3)=x(1:3)
-        end if
-     end do
+     if(max_dens(j)<max_dens_tot(j))then
+        peak_pos(j,1:3)=0.d0
+     else
+        x(1:3)=peak_pos(j,1:3)
+        call true_max(x(1),x(2),x(3),nlevelmax)
+        peak_pos(j,1:3)=x(1:3)
+     end if
+     call MPI_BARRIER(MPI_COMM_WORLD,info)
   end do
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(peak_pos,peak_pos_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
@@ -226,7 +225,6 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
   !  first, get minimum potential on saddle surface
   call get_phi_ref(ntest)
   call check_minmatch
-
 
   !initialize arrays
   e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0
@@ -309,8 +307,6 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
         rrel=xcell(1:3)-center_of_mass_tot(peak_nr,1:3)
         vrel=vd(1:3)/d-v_cl(1:3)
         frel=f(icellp(ipart),1:3)-clump_force_tot(peak_nr,1:3)
-
-        
 
         do i=1,ndim
            ! size relative to center of mass
@@ -419,7 +415,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
      if (relevance_tot(j)>0.)then
         !compute eigenvalues and eigenvectors of Icl_d_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
-        abs_err=1.d-8*Icl_tot(j)**2+1.d-40
+        abs_err=1.d-6*Icl_tot(j)**2
         call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
 
@@ -448,17 +444,21 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
         peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms+v_bulk2)*0.5+tiny(0.d0))
 
         !compute other checks (currently not needed for sink formation)
-        isodens_check(j)=scale*e_bind_iso_tot(j)/(tiny(0.d0)+2*e_kin_iso_tot(j)+2*e_therm_iso_tot(j))
-        clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
+!        isodens_check(j)=e_bind_tot(j)/(tiny(0.d0)+e_kin_tot(j)+e_therm_tot(j))
+        clump_check(j)=e_bind_tot(j)/(tiny(0.d0)+e_kin_int_tot(j)+2*e_thermal_tot(j))
+
         
         !update the all_bound property
         all_bound=all_bound.and.(isodens_check(j)>1.)
 
+        !tweak
+!        Icl_dd_tot(j)=abs(Icl_d_tot(j))/Icl_dd_tot(j)-Icl_tot(j)/abs(Icl_d_tot(j))
+
      endif
   end do
-  
+
   !write to the log file some information that could be of interest for debugging etc.
-  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then
+  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then 
      write(*,'(135A)')'==================================================================================================='
      write(*,'(135A)')'Cl_N      t1[y]       t2[y]       t3[y]  |I_d|/I_dd[y]  tidal_Fg    Psurf       e_kin       e_therm'
      write(*,'(135A)')'==================================================================================================='
@@ -467,7 +467,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
            write(*,'(I4,2X,8(E9.2E2,3X))'),j&
                 ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
                 ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
-                ,grav_term_tot(j),-1.*Psurf_tot(j)&
+                ,e_bind_tot(j),-1.*Psurf_tot(j)&
                 ,e_kin_int_tot(j),e_thermal_tot(j)
         end if
      end do
@@ -564,7 +564,7 @@ subroutine write_clump_properties(to_file)
            
            if (relevance_tot(jj) > 0)then
               if(clinfo .and. (to_file .eqv. .false.))then
-                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),5(X,E11.3E2))')&
+                 write(ilun,'(I6,X,I10,3(X,F11.5),3(X,F11.5),X,F13.5,3(X,E12.3E2),4(X,E11.3E2),X,I3)')&
                       jj&
                       ,n_cells_tot(jj)&
                       ,peak_pos_tot(jj,1)&
@@ -580,8 +580,8 @@ subroutine write_clump_properties(to_file)
                       ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
                       ,clump_vol_tot(jj)*(scale_l/1.496d13)**3&
                       ,relevance_tot(jj)&
-                      ,isodens_check(jj)&
-                      ,clump_check(jj)
+                      ,clump_check(jj)&
+                      ,minmatch_tot(jj)
                  
                  rel_mass=rel_mass+clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33
                  n_rel=n_rel+1
@@ -634,11 +634,6 @@ subroutine saddlepoint_search(ntest)
   integer::ipart,ip,ilevel,next_level
   integer::i,j,info,dummyint
   integer,dimension(1:nvector)::ind_cell
-  real(dp),allocatable,dimension(:)::temp,temp_tot
-
-  ! saddle array for 1 cpu
-  allocate(saddle_dens(1:npeaks_tot,1:npeaks_tot))
-  saddle_dens=0.
 
   ! loop 'testparts', pass the information of nvector parts to neighborsearch 
   ip=0
@@ -656,34 +651,26 @@ subroutine saddlepoint_search(ntest)
   end do
   if (ip>0)call neighborsearch(ind_cell,ip,dummyint,ilevel,4)
 
-  ! share the results among MPI domains (communicate line by line in case of big arrays) 
-#ifndef WITHOUTMPI
-  allocate(temp(1:npeaks_tot),temp_tot(1:npeaks_tot))
-    do i=1,npeaks_tot
-     temp(1:npeaks_tot)=saddle_dens(1:npeaks_tot,i)
-     temp_tot=0.d0
-     call MPI_ALLREDUCE(temp,temp_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info) 
-     saddle_dens_tot(1:npeaks_tot,i)=temp_tot(1:npeaks_tot)
-  end do
-  deallocate(temp,temp_tot)
-#endif
-#ifdef WITHOUTMPI
-  saddle_dens_tot=saddle_dens
-#endif
-
-  ! check symmetry 
+  ! ! check symmetry 
   if (debug)then
      do i=1,npeaks_tot
         do j=1,i
-           if(saddle_dens_tot(i,j)/=saddle_dens_tot(j,i).and.myid==1)then 
-              write(*,*),'Alert! asymmetric saddle point array!',i,j,saddle_dens_tot(i,j),saddle_dens_tot(j,i)
+           if(get_value(i,j,sparse_saddle_dens)/=get_value(j,i,sparse_saddle_dens))then 
+              write(*,*),'Alert! asymmetric saddle point array!',i,j,get_value(i,j,sparse_saddle_dens),get_value(j,i,sparse_saddle_dens),'myid= ',myid
            endif
         end do
      end do
   end if
 
   ! compute saddle_max value and relevance
-  saddle_max_tot=maxval(saddle_dens_tot,dim=1)
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(sparse_saddle_dens%maxval,saddle_max_tot,npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  saddle_max_tot=sparse_saddle_dens%maxval
+#endif
+  
+
   do i=1,npeaks_tot
      if (saddle_max_tot(i)>0.)then
         relevance_tot(i)=max_dens_tot(i)/saddle_max_tot(i)
@@ -692,9 +679,6 @@ subroutine saddlepoint_search(ntest)
      end if
   end do
   
-  !from here only saddle_dens_tot is used
-  deallocate(saddle_dens)
-
 end subroutine saddlepoint_search
 !#########################################################################
 !#########################################################################
@@ -705,19 +689,22 @@ subroutine merge_clumps(ntest)
   use clfind_commons
   implicit none
   integer::ntest
-
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif  
   !---------------------------------------------------------------------------
   ! This routine merges the irrelevant clumps 
   ! -clumps are sorted by ascending max density
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::j,i,ii,merge_count,final_peak,merge_to,ipart
-  integer::peak,next_peak
-  real(dp)::max_val
+  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host,ilevel
+  integer::peak,next_peak,current
+  real(dp)::value_iij,zero=0.
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,d0
   integer,dimension(1:npeaks_tot)::old_peak,ind_sort
   real(dp),dimension(1:npeaks_tot)::peakd
+  real(dp),dimension(1:2)::max_loc_input,max_loc_output
 
   if (verbose)write(*,*)'Now merging clumps'
 
@@ -734,31 +721,33 @@ subroutine merge_clumps(ntest)
   end do
   call quick_sort_dp(peakd,ind_sort,npeaks_tot) 
 
-
   if (smbh .eqv. .false.) then
      do i=1,npeaks_tot
         ii=ind_sort(i)
         new_peak(ii)=ii
-        
+
         ! If the relevance is below the threshold -> merge
         if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>.5) then
            
-           ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
-           merge_to=0; max_val=0.
-           do j=1,npeaks_tot
-              if (saddle_dens_tot(ii,j)>max_val)then
-                 merge_to=j
-                 max_val=saddle_dens_tot(ii,j)
-              end if
-           end do
+           !find highest saddle point index and merge to this index
+           merge_to=sparse_saddle_dens%maxloc(ii)
+#ifndef WITHOUTMPI
+           !find maximum saddle host cpu using MPI_MAXLOC. MPI_MAXLOC needs weird datatype...
+           max_loc_input(1)=sparse_saddle_dens%maxval(ii)
+           max_loc_input(2)=1._dp*myid
+           call MPI_ALLREDUCE(max_loc_input,max_loc_output,1,MPI_2DOUBLE_PRECISION,MPI_MAXLOC,MPI_COMM_WORLD,info)
+           saddle_max_host=int(max_loc_output(2))
+           !communicate merge_to from cpu which hosts maximum saddle value to others
+           call MPI_Bcast(merge_to,1,MPI_INTEGER,saddle_max_host-1,MPI_COMM_WORLD,info) !F***! mpi starts to count at 0 !
+#endif
            
            ! Store new peak index
            new_peak(ii)=merge_to
-           if(clinfo .and. myid==1)then
-!              if(merge_to>0)then
-              write(*,*)'clump ',ii,'merged to ',merge_to
- !             endif
-           endif
+!           if(clinfo .and. myid==1)then
+              ! if(merge_to>0)then
+!              write(*,*)'clump ',ii,'merged to ',merge_to
+              ! endif
+!           endif
            
            ! Update clump properties
            if (merge_to>0)then
@@ -791,27 +780,51 @@ subroutine merge_clumps(ntest)
            min_dens_tot(ii)=0.
            clump_mass_tot(ii)=0.
            
-           ! Update saddle point array
-           do j=1,npeaks_tot
-              if (merge_to>0)then
-                 if(saddle_dens_tot(ii,j)>saddle_dens_tot(merge_to,j))then
-                    saddle_dens_tot(merge_to,j)=saddle_dens_tot(ii,j)
-                    saddle_dens_tot(j,merge_to)=saddle_dens_tot(ii,j)
+           ! ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
+           ! do j=1,npeaks_tot
+           !    if (merge_to>0)then
+           !       value_iij=get_value(ii,j,sparse_saddle_dens)
+           !       if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+           !          call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+           !          call set_value(j,merge_to,value_iij,sparse_saddle_dens)
+           !       end if
+           !       call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+           !    end if
+           !    call set_value(ii,j,zero,sparse_saddle_dens)
+           !    call set_value(j,ii,zero,sparse_saddle_dens)
+           ! end do
+
+
+           ! Update saddle point array V2
+           if (merge_to>0)then
+              current=sparse_saddle_dens%first(ii) ! first element of line ii
+              do while(current>0) ! walk the line
+                 j=sparse_saddle_dens%col(current) ! column index on line ii
+                 value_iij=sparse_saddle_dens%val(current) ! value of the matrix
+                 if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+                    call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+                    call set_value(j,merge_to,value_iij,sparse_saddle_dens)
                  end if
-                 saddle_dens_tot(merge_to,merge_to)=0.
-              end if
-              saddle_dens_tot(ii,j)=0.        
-              saddle_dens_tot(j,ii)=0.
-           end do
+                 call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+                 call set_value(ii,j,zero,sparse_saddle_dens)
+                 call set_value(j,ii,zero,sparse_saddle_dens)
+                 current=sparse_saddle_dens%next(current)
+              end do
+           end if
+
+
+
+
+
            
            ! Update saddle_max value
            if (merge_to>0)then
-              saddle_max_tot(merge_to)=0
-              do j=1,npeaks_tot
-                 if (saddle_dens_tot(merge_to,j)>saddle_max_tot(merge_to))then
-                    saddle_max_tot(merge_to)=saddle_dens_tot(merge_to,j)
-                 end if
-              end do
+#ifndef WITHOUTMPI
+              call MPI_ALLREDUCE(sparse_saddle_dens%maxval(merge_to),saddle_max_tot(merge_to),1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+              saddle_max_tot(merge_to)=sparse_saddle_dens%maxval(merge_to)
+#endif
            end if
            
            ! Update relevance of clumps
@@ -830,16 +843,18 @@ subroutine merge_clumps(ntest)
      do i=1,npeaks_tot
         ii=ind_sort(i)
         new_peak(ii)=ii
-        
-        ! Go through the ii-th line in the saddle point array to find the neighbor to merge to
-        merge_to=0; max_val=0.
-        do j=1,npeaks_tot
-           if (saddle_dens_tot(ii,j)>max_val)then
-              merge_to=j
-              max_val=saddle_dens_tot(ii,j)
-           end if
-        end do
-        
+
+        !find highest saddle point index and merge to this index
+        merge_to=sparse_saddle_dens%maxloc(ii)
+#ifndef WITHOUTMPI
+        !find maximum saddle host cpu using MPI_MAXLOC. MPI_MAXLOC needs weird datatype...
+        max_loc_input(1)=sparse_saddle_dens%maxval(ii)
+        max_loc_input(2)=1._dp*myid
+        call MPI_ALLREDUCE(max_loc_input,max_loc_output,1,MPI_2DOUBLE_PRECISION,MPI_MAXLOC,MPI_COMM_WORLD,info)
+        saddle_max_host=int(max_loc_output(2))
+        !communicate merge_to from cpu which hosts maximum saddle value to others
+        call MPI_Bcast(merge_to,1,MPI_INTEGER,saddle_max_host-1,MPI_COMM_WORLD,info) !F***! mpi starts to count at 0 !
+#endif        
         ! Store new peak index
         if(merge_to>0)new_peak(ii)=merge_to
         if(verbose .and. myid==1)then
@@ -874,28 +889,55 @@ subroutine merge_clumps(ntest)
            clump_mass_tot(ii)=0.
         end if
         
-        ! Update saddle point array
-        do j=1,npeaks_tot
-           if (merge_to>0)then
-              if(saddle_dens_tot(ii,j)>saddle_dens_tot(merge_to,j))then
-                 saddle_dens_tot(merge_to,j)=saddle_dens_tot(ii,j)
-                 saddle_dens_tot(j,merge_to)=saddle_dens_tot(ii,j)
-              end if
-              saddle_dens_tot(merge_to,merge_to)=0.
-              saddle_dens_tot(ii,j)=0.
-              saddle_dens_tot(j,ii)=0.
-           end if
-        end do
+        ! ! Update saddle point array (sparse version ineffiecient - maybe write routine to do that in sparse.f90)
+        ! do j=1,npeaks_tot
+        !    if (merge_to>0)then
+        !       value_iij=get_value(ii,j,sparse_saddle_dens)
+        !       if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+        !          call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+        !          call set_value(j,merge_to,value_iij,sparse_saddle_dens)
+        !       end if
+        !       call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+        !       call set_value(ii,j,zero,sparse_saddle_dens)
+        !       call set_value(j,ii,zero,sparse_saddle_dens)
+        !    end if
+        ! end do
         
-        ! Update saddle_max value
+
+
+        ! Update saddle point array V2
         if (merge_to>0)then
-           saddle_max_tot(merge_to)=0
-           do j=1,npeaks_tot
-              if (saddle_dens_tot(merge_to,j)>saddle_max_tot(merge_to))then
-                 saddle_max_tot(merge_to)=saddle_dens_tot(merge_to,j)
+           current=sparse_saddle_dens%first(ii) ! first element of line ii
+           do while(current>0) ! walk the line
+              j=sparse_saddle_dens%col(current) ! column index on line ii
+              value_iij=sparse_saddle_dens%val(current) ! value of the matrix
+              if(value_iij>get_value(merge_to,j,sparse_saddle_dens))then
+                 call set_value(merge_to,j,value_iij,sparse_saddle_dens)
+                 call set_value(j,merge_to,value_iij,sparse_saddle_dens)
               end if
+              call set_value(merge_to,merge_to,zero,sparse_saddle_dens)
+              call set_value(ii,j,zero,sparse_saddle_dens)
+              call set_value(j,ii,zero,sparse_saddle_dens)
+              current=sparse_saddle_dens%next(current)
            end do
         end if
+
+
+
+
+
+
+
+        ! Update saddle_max value
+        if (merge_to>0)then
+#ifndef WITHOUTMPI
+           call MPI_ALLREDUCE(sparse_saddle_dens%maxval(merge_to),saddle_max_tot(merge_to),1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+           saddle_max_tot(merge_to)=sparse_saddle_dens%maxval(merge_to)     
+#endif
+        end if
+
         
         ! Update relevance of clumps
         if (merge_to>0)then
@@ -949,8 +991,8 @@ subroutine merge_clumps(ntest)
            clump_mass_tot(ii)=0.
            ! Update saddle point array
            do j=1,npeaks_tot
-              saddle_dens_tot(ii,j)=0.
-              saddle_dens_tot(j,ii)=0.
+              call set_value(ii,j,zero,sparse_saddle_dens)
+              call set_value(j,ii,zero,sparse_saddle_dens)
            end do
            relevance_tot(ii)=0.        
         end if
@@ -963,6 +1005,9 @@ subroutine merge_clumps(ntest)
      if (flag2(icellp(ipart))>0)flag2(icellp(ipart))=new_peak(flag2(icellp(ipart)))
   end do
 
+  do ilevel=nlevelmax,levelmin,-1
+     call make_virtual_fine_int(flag2(1),ilevel)
+  end do
 
 end subroutine merge_clumps
 !################################################################                 
@@ -972,6 +1017,7 @@ end subroutine merge_clumps
 subroutine allocate_peak_patch_arrays
   use amr_commons, ONLY:ndim,dp
   use clfind_commons
+  use sparse_matrix
   implicit none
   real(dp)::zero=0.
 
@@ -991,14 +1037,13 @@ subroutine allocate_peak_patch_arrays
   allocate(clump_vol_tot(1:npeaks_tot))
   allocate(saddle_max_tot(1:npeaks_tot))
   allocate(relevance_tot(1:npeaks_tot))
-  allocate(saddle_dens_tot(1:npeaks_tot,1:npeaks_tot))
+  call sparse_initialize(npeaks_tot,npeaks_tot,sparse_saddle_dens)
   allocate(clump_momentum_tot(1:npeaks_tot,1:ndim))
   allocate(e_kin_int_tot(npeaks_tot))
   allocate(e_bind_tot(npeaks_tot))
   allocate(e_thermal_tot(npeaks_tot))
   allocate(phi_min_tot(npeaks_tot))
   allocate(phi_max_tot(npeaks_tot))
-  allocate(minmatch_tot(npeaks_tot))
   allocate(new_peak(npeaks_tot))
   allocate(phi_ref(npeaks_tot))
   allocate(phi_ref_tot(npeaks_tot))
@@ -1020,10 +1065,10 @@ subroutine allocate_peak_patch_arrays
   allocate(Icl_dd_tot(npeaks_tot))
   allocate(Icl_d_3by3_tot(npeaks_tot,1:3,1:3))  
   allocate(Icl_3by3_tot(npeaks_tot,1:3,1:3))  
-
+  allocate(minmatch_tot(npeaks_tot))
   !initialize all peak based arrays
   n_cells_tot=0
-  saddle_max_tot=0.
+  saddle_max_tot=0. 
   relevance_tot=1.
   clump_size_tot=0.
   min_dens_tot=huge(zero)
@@ -1036,14 +1081,12 @@ subroutine allocate_peak_patch_arrays
   center_of_mass_tot=0.
   clump_force_tot=0.
   second_moments=0.; second_moments_tot=0.
-  saddle_dens_tot=0.
   clump_momentum_tot=0.
   e_kin_int_tot=0.
   e_bind_tot=0.
   e_thermal_tot=0.
   phi_min_tot=0.
   phi_max_tot=0.
-  minmatch_tot=1
   new_peak=0
   phi_ref=huge(zero)
   Psurf=0.;Psurf_tot=0.
@@ -1051,6 +1094,7 @@ subroutine allocate_peak_patch_arrays
   isodens_check=-1.;  clump_check=-1.; peak_check=-1.; 
   contracting=.false.
   Icl_tot=0.; Icl_d_tot=0.; Icl_dd_tot=0.; Icl_d_3by3_tot=0.; Icl_3by3_tot=0.
+  minmatch_tot=1.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################                 
@@ -1060,6 +1104,7 @@ end subroutine allocate_peak_patch_arrays
 subroutine deallocate_all
   use clfind_commons
   use amr_commons, only:smbh
+  use sparse_matrix
   implicit none
 
   deallocate(n_cells_tot)
@@ -1075,14 +1120,13 @@ subroutine deallocate_all
   deallocate(clump_vol_tot)
   deallocate(saddle_max_tot)
   deallocate(relevance_tot)
-  deallocate(saddle_dens_tot)
+  call sparse_kill(sparse_saddle_dens)
   deallocate(clump_momentum_tot)
   deallocate(e_kin_int_tot)
   deallocate(e_bind_tot,grav_term_tot)
   deallocate(e_thermal_tot)
   deallocate(phi_min_tot)
   deallocate(phi_max_tot)
-  deallocate(minmatch_tot)
   deallocate(new_peak)
   deallocate(phi_ref,phi_ref_tot)
   deallocate(Psurf,Psurf_tot)
@@ -1093,6 +1137,7 @@ subroutine deallocate_all
   deallocate(contracting)
   deallocate(Icl_dd_tot,Icl_d_tot,Icl_tot,Icl_d_3by3_tot,Icl_3by3_tot)
   if (.not. smbh)deallocate(clump_mass_tot4)
+  deallocate(minmatch_tot)
 
 end subroutine deallocate_all
 !################################################################                 
@@ -1253,8 +1298,8 @@ subroutine jacobi(A,x,err2)
      end do
   end do
 
+  !return if already diagonal "enough"
   if (b2 <= err2) then
-     if (myid==1)write(*,*), 'returning. maybe err2 too small? ',err2
      return
   endif
 
@@ -1348,15 +1393,6 @@ subroutine write_clump_map(ntest)
   end do
   close(20)
 end subroutine write_clump_map
-
-
-
-
-
-
-
-
-
 !################################################################
 !################################################################
 !################################################################
@@ -1377,9 +1413,9 @@ subroutine check_minmatch
   ! Furthermore, the minimum potential is stored for every peak.  
   !---------------------------------------------------------------
   integer::k1,j1,i1,jj,info
-  integer,dimension(1:nvector)::cell_index,cell_levl,ind_cell,lev_cell,cc
+  integer,dimension(1:nvector)::cell_index,cell_lev,ind_cell,cc
   real(dp),dimension(1:nvector,1:3)::pos,xtest
-  real(kind=8)::dx,dx_loc,scale,vol_loc,phim
+  real(dp)::dx,dx_loc,scale,vol_loc,phim,phim_tot
   integer::nx_loc
 
   integer,dimension(1:npeaks_tot)::minmatch
@@ -1394,32 +1430,43 @@ subroutine check_minmatch
 
  do jj=1,npeaks_tot
      if (relevance_tot(jj)>0)then
+        phim=huge(0._dp)
         pos(1,1:3)=peak_pos_tot(jj,1:3)
         call cmp_cpumap(pos,cc,1)
         if(cc(1) == myid) then
-           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           call get_cell_index(cell_index,cell_lev,pos,nlevelmax,1)
            phim=phi(cell_index(1))
+        end if
 
-           ! Check for neighbors                                                                                                                                  
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(phim,phim_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+        phim_tot=phim
+#endif
 
-           ! one cell offset                                                                                                                                      
-           do k1=-1,1
-              do j1=-1,1
-                 do i1=-1,1
+        
+        do k1=-ir_cloud,ir_cloud
+           do j1=-ir_cloud,ir_cloud
+              do i1=-ir_cloud,ir_cloud
+                 if ((k1**2.+j1**2.+i1**2.)<= (dble(ir_cloud)**2.))then
                     xtest(1,1)=pos(1,1)+i1*dx_loc
                     xtest(1,2)=pos(1,2)+j1*dx_loc
                     xtest(1,3)=pos(1,3)+k1*dx_loc
-                    call get_cell_index(ind_cell,lev_cell,xtest,nlevelmax,1)
                     call cmp_cpumap(xtest,cc,1)
-                    if (.not.(k1==0 .and. j1==0 .and. i1==0))then
-                       if(phi(ind_cell(1)) < 1.000000001*phim)then
-                          minmatch(jj)=0
+                    if (cc(1) == myid) then
+                       call get_cell_index(ind_cell,cell_lev,xtest,nlevelmax,1)
+                       if (.not.(k1==0 .and. j1==0 .and. i1==0))then
+                          if(phi(ind_cell(1)) < phim_tot)then
+                             minmatch(jj)=0
+                          end if
                        end if
                     end if
-                 end do
+                 end if
               end do
            end do
-        end if
+        end do
+        
      end if
   end do
 
