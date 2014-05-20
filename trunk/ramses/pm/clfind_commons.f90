@@ -35,7 +35,7 @@ module clfind_commons
   ! Test particles properties
   real(dp),allocatable,dimension(:)::denp ! Density of the cell containing a test particle. Davide: used by the clump finder.
   integer,allocatable,dimension(:)::iglobalp,icellp,levp,testp_sort ! Used to sort test particles by density  
-  integer,allocatable,dimension(:)::n_cells_tot,minmatch_tot,new_peak
+  integer,allocatable,dimension(:)::n_cells_tot,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all ! Tells whether there is already a sink in a clump.
   integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
 
