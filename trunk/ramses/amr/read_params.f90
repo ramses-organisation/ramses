@@ -24,7 +24,7 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton,nbody_sink
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &

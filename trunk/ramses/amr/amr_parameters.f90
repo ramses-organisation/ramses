@@ -46,6 +46,7 @@ module amr_parameters
   logical::cosmo   =.false.   ! Cosmology activated
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
+  logical::nbody_sink= .true. ! Sinks are integrated by direct force calculation
   logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
@@ -153,6 +154,7 @@ module amr_parameters
   logical ::merge_stars=.false. ! Merge young star formation sink particles (first larson cores)
   logical ::flux_accretion=.false.
   logical ::l_feedback=.true.
+
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors

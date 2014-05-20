@@ -20,12 +20,13 @@ subroutine newdt_fine(ilevel)
   ! 5- if there's sinks, enforce acc_rate*dt < mgas 
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart
-  integer::npart1,ip,info
+  integer::igrid,jgrid,ipart,jpart,nx_loc
+  integer::npart1,ip,info,isink
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
   real(dp)::aton_time_step,dt_aton,dt_rt
+  real(dp)::dx_min,dx,scale
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -112,10 +113,15 @@ subroutine newdt_fine(ilevel)
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
      !issue here: what if sink lives not a levelmax? timestep can be too big!
-     if(sink .and. ilevel==nlevelmax) then
+     if(sink .and. ilevel==nlevelmax .and. nsink>0) then
         call compute_accretion_rate(.false.)
-!        if (myid==1)print*,dt_sink/dtnew(ilevel)
-        dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+        if (nbody_sink)then
+           do isink=1,nsink
+              tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
+              dt_sink=min(dt_sink,tff*courant_factor)
+           end do
+           dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+        end if
      end if
 
   end if

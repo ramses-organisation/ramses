@@ -602,6 +602,15 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            end if
         end do
      endif
+     !guarantee to refine sinks to nlevelmax 
+     !by setting particle number density above m_refine(ilevel)
+     if (nbody_sink)then
+        do j=1,np
+           if(idp(ind_part(j))<0.)then
+              phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
+           end if
+        end do
+     end if
 
   end do
 

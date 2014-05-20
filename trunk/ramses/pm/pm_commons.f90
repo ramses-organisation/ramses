@@ -32,8 +32,9 @@ module pm_commons
   integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
-  real(dp)::sink_seedmass=5.4d-4 !initial mass sinks are created with in bondi or flux accretion regime
+  real(dp)::sink_seedmass=5.4d-4,ssoft !initial mass sinks are created with in bondi or flux accretion regime
   real(dp)::dt_sink !maximum timestep allowed by the sink
+  
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions

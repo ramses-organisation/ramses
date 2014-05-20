@@ -57,7 +57,8 @@ subroutine synchro_fine(ilevel)
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   
-  if(sink)then
+  !sink cloud particles are used to average the grav. acceleration
+  if(sink .and. (.not. nbody_sink))then
      if(nsink>0)then
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
