@@ -517,7 +517,7 @@ subroutine merge_sink(ilevel)
                  ind_grid_part(ip)=ig   
               endif
               if(ip==nvector)then
-                 call kill_sink(ind_part,ind_grid_part,ip)
+                 call kill_sink(ind_grid,ind_part,ind_grid_part,ip)
                  ip=0
                  ig=0
               end if
@@ -530,7 +530,7 @@ subroutine merge_sink(ilevel)
      end do
 
      ! End loop over grids
-     if(ip>0)call kill_sink(ind_part,ind_grid_part,ip)
+     if(ip>0)call kill_sink(ind_grid,ind_part,ind_grid_part,ip)
   end do 
   ! End loop over cpus
 
@@ -541,21 +541,27 @@ end subroutine merge_sink
 !################################################################
 !################################################################
 !################################################################
-subroutine kill_sink(ind_part,ind_grid_part,np)
+subroutine kill_sink(ind_grid,ind_part,ind_grid_part,np)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
   integer::np
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine merge_sink
   ! It removes sink particles that are part of a FOF group.
   !-----------------------------------------------------------------------
+  integer,dimension(1:nvector)::grid_index
   integer::j,isink,isink_new
 
   ! Particle-based arrays
   logical ,dimension(1:nvector)::ok
+
+  do j=1,np
+     grid_index(j)=ind_grid(ind_grid_part(j))
+  end do
+
 
   do j=1,np
      isink=-idp(ind_part(j))
@@ -574,7 +580,7 @@ subroutine kill_sink(ind_part,ind_grid_part,np)
   end do
 
   ! Remove particles from parent linked list
-  call remove_list(ind_part,ind_grid_part,ok,np)
+  call remove_list(ind_part,grid_index,ok,np)
   call add_free_cond(ind_part,ok,np)
 
 end subroutine kill_sink
@@ -674,20 +680,20 @@ subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
   use hydro_commons
   implicit none
   integer::np,ilevel
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
-  integer,dimension(1:nvector)::ind_grid
+  integer,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
 
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine create_cloud. It produces 
   ! the next nvector particles
   !-----------------------------------------------------------------------
-
   integer::j,isink,ii,jj,kk,nx_loc
   real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax,rmass
   integer ,dimension(1:nvector)::ind_cloud,grid_index
   logical ,dimension(1:nvector)::ok_true=.true.
 
-  grid_index(1:np)=ind_grid(ind_grid_part(1:np))
+  do j=1,np
+     grid_index(j)=ind_grid(ind_grid_part(j))
+  end do
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**ilevel
@@ -807,7 +813,7 @@ subroutine kill_entire_cloud(ilevel)
                  ind_grid_part(ip)=ig   
               endif
               if(ip==nvector)then
-                 call rm_entire_cloud(ind_part,ind_grid_part,ip)
+                 call rm_entire_cloud(ind_grid,ind_part,ind_grid_part,ip)
                  ip=0
                  ig=0
               end if
@@ -815,12 +821,10 @@ subroutine kill_entire_cloud(ilevel)
            end do
            ! End loop over particles
         end if
-        
         igrid=next(igrid)   ! Go to next grid
-     end do
-     
+     end do     
      ! End loop over grids
-     if(ip>0)call rm_entire_cloud(ind_part,ind_grid_part,ip)
+     if(ip>0)call rm_entire_cloud(ind_grid,ind_part,ind_grid_part,ip)
   end do
 
 111 format('   Entering kill_cloud for level ',I2)
@@ -830,21 +834,27 @@ end subroutine kill_entire_cloud
 !################################################################
 !################################################################
 !################################################################
-subroutine rm_entire_cloud(ind_part,ind_grid_part,np)
+subroutine rm_entire_cloud(ind_grid,ind_part,ind_grid_part,np)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
   integer::np
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
   !-----------------------------------------------------------------------
   ! This routine is called by subroutine kill_cloud. It kills the next
   ! nvector particles
   !-----------------------------------------------------------------------
+  integer,dimension(1:nvector)::grid_index
+  integer::j
   logical,dimension(1:nvector)::ok=.true.
 
+  do j=1,np
+     grid_index(j)=ind_grid(ind_grid_part(j))
+  end do
+
   ! Remove particles from parent linked list
-  call remove_list(ind_part,ind_grid_part,ok,np)
+  call remove_list(ind_part,grid_index,ok,np)
   call add_free_cond(ind_part,ok,np)
 
 end subroutine rm_entire_cloud
@@ -1704,6 +1714,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
+  ! Density threshold for sink particle formation 
+  d_sink=n_sink/scale_nH 
+  if(cosmo)d_sink=d_sink/aexp**3  
+  
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -2055,9 +2069,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
 
 
-
-
-
         !convert back to conservative variables
         v2=(vv(1)**2+vv(2)**2+vv(3)**2)
 #ifdef SOLVERmhd
@@ -2121,6 +2132,10 @@ subroutine compute_accretion_rate(write_sinks)
   vel_max=10. ! in km/sec
   vel_max=vel_max*1d5/scale_v
   
+  ! Density threshold for sink particle creation
+  d_sink=n_sink/scale_nH
+  if(cosmo)d_sink=d_sink/aexp**3
+
   divergence=0.
   if(bondi)then
      ! Compute sink particle accretion rate
@@ -2892,6 +2907,10 @@ subroutine make_sink_from_clump(ilevel)
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
+  ! Density threshold for sink particle creation
+  d_sink=n_sink/scale_nH
+  if(cosmo)d_sink=d_sink/aexp**3
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 

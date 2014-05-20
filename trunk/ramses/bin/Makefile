@@ -2,20 +2,11 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-<<<<<<< HEAD
 NVECTOR = 128
 NDIM = 3
 NPRE = 8
 NVAR = 5
 SOLVER = hydro
-#PATCH = /home/itp/ableuler/data/init_cond/nice_disk/very_isolated_inflow
-#PATCH = /home/itp/ableuler/data/init_cond/nice_disk/cleanup
-#PATCH = /home/ics/ableuler/temp_init_cond/subsonic/
-PATCH = /home/ics/ableuler/temp_init_cond/0.166/
-#PATCH = /home/itp/ableuler/data/init_cond/nice_disk/even_more_stable
-#PATCH = /home/itp/ableuler/data/init_cond/rot_be_sphere/
-#PATCH = /home/itp/ableuler/reprams/mypatch/feedback/:/home/itp/ableuler/data/init_cond/ellipse100/
-
 EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
