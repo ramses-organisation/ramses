@@ -13,7 +13,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
   real(dp),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
   real(dp),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
-  real(dp),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new,lnor,lnor_new
+  real(dp),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
   real(dp),allocatable,dimension(:,:)::divsink,divsink_new
   real(dp),allocatable,dimension(:)::total_volume
   real(dp),allocatable,dimension(:,:)::wmom,wmom_new
@@ -21,7 +21,7 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
   real(dp),allocatable,dimension(:,:,:)::vsnew,vsold
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
-  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all,delta_l_tot !sink angular momentum
+  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all!sink angular momentum
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
@@ -30,9 +30,10 @@ module pm_commons
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
   logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
   integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
-  integer::ncloud_sink
+  integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
-  real(dp)::protostar_seedmass
+  real(dp)::sink_seedmass=5.4d-4 !initial mass sinks are created with in bondi or flux accretion regime
+  real(dp)::dt_sink !maximum timestep allowed by the sink
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions

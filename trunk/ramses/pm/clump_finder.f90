@@ -50,7 +50,7 @@ subroutine clump_finder(create_output)
   end do
   ntest_all=ntest_cpu(ncpu)
   if(myid==1)then
-     if(ntest_all.gt.0)then
+     if(ntest_all.gt.0 .and. clinfo)then
         write(*,'(" Total number of test particles=",I10)')ntest_all
      endif
   end if
@@ -108,7 +108,7 @@ subroutine clump_finder(create_output)
 #ifdef WITHOUTMPI
   npeaks_tot=npeaks
 #endif
-  if (myid==1.and.npeaks_tot>0)write(*,'(" Total number of density peaks found=",I6)')npeaks_tot
+  if (myid==1.and.npeaks_tot>0 .and. clinfo)write(*,'(" Total number of density peaks found=",I6)')npeaks_tot
 
   !----------------------------------------------------------------------------
   ! Determine peak-ids positions for each cpu
@@ -150,7 +150,7 @@ subroutine clump_finder(create_output)
      call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nmove=nmove_all
 #endif   
-     if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove   
+     if(myid==1 .and. clinfo)write(*,*)"istep=",istep,"nmove=",nmove   
   end do
 
   ! Allocate peak-patch property arrays
@@ -189,7 +189,7 @@ subroutine clump_finder(create_output)
      
      !for sink formation, in star formation case, intersection of 4cell ball and clump is considered
      if ((.not. smbh) .and. sink .and. (.not. create_output))then
-        if(myid==1) print*,'now trimming clumps'
+        if(myid==1 .and. clinfo) print*,'now trimming clumps'
         call trim_clumps(ntest)
         call compute_clump_properties(ntest)
      end if

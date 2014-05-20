@@ -17,6 +17,7 @@ subroutine newdt_fine(ilevel)
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp 
   ! 4- maximum step time for ATON
+  ! 5- if there's sinks, enforce acc_rate*dt < mgas 
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -95,7 +96,7 @@ subroutine newdt_fine(ilevel)
         ! End loop over grids
         if(ip>0)call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
      end if
-     
+
      ! Minimize time step over all cpus
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(dt_loc,dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
@@ -109,7 +110,14 @@ subroutine newdt_fine(ilevel)
 #endif
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
-     
+
+     !issue here: what if sink lives not a levelmax? timestep can be too big!
+     if(sink .and. ilevel==nlevelmax) then
+        call compute_accretion_rate(.false.)
+!        if (myid==1)print*,dt_sink/dtnew(ilevel)
+        dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+     end if
+
   end if
 
   if(hydro)call courant_fine(ilevel)

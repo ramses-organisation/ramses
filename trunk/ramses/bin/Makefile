@@ -2,13 +2,12 @@
 # If you have problems with this makefile, contact Romain.Teyssier@cea.fr
 #############################################################################
 # Compilation time parameters
-NVECTOR = 64
+NVECTOR = 128
 NDIM = 3
 NPRE = 8
-NVAR = 7
+NVAR = 5
 SOLVER = hydro
-PATCH =
-EXEC = 
+EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
@@ -37,11 +36,11 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSO
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g 
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
 # --- MPI, gfortran DEBUG syntax ------------------------------ 
-#F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall                                                                                     
+#F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall
 #FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)    
 
 # --- MPI, pgf90 syntax ------------------------------
