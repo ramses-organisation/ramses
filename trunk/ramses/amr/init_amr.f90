@@ -188,6 +188,7 @@ subroutine init_amr
   end do
   ! Allocate lookup array for multigrid fine
   if(poisson) allocate(lookup_mg(1:ngridmax))
+  lookup_mg=0
 
   ! Allocate physical boundary for each level
   allocate(headb   (1:MAXBOUND,1:nlevelmax))
