@@ -388,6 +388,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,1)+emfx(i,2,1,1))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar2)=unew(ind_buffer1,ivar2)+dflux
@@ -405,6 +406,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,3)+emfx(i,2,1,3))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar6)=unew(ind_buffer1,ivar6)-dflux
@@ -422,6 +424,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,3)+emfx(i,2,3,3))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar5)=unew(ind_buffer1,ivar5)-dflux
@@ -439,6 +442,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,1)+emfx(i,2,3,1))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar3)=unew(ind_buffer1,ivar3)+dflux
@@ -460,6 +464,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,1)+emfy(i,1,2,1))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar1)=unew(ind_buffer1,ivar1)-dflux
@@ -477,6 +482,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,3)+emfy(i,1,2,3))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar6)=unew(ind_buffer1,ivar6)+dflux
@@ -494,6 +500,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,3)+emfy(i,3,2,3))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)+dflux
@@ -511,6 +518,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,1)+emfy(i,3,2,1))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar3)=unew(ind_buffer1,ivar3)-dflux
@@ -532,6 +540,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,1,1)+emfz(i,1,1,2))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar1)=unew(ind_buffer1,ivar1)+dflux
@@ -549,6 +558,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,3,1)+emfz(i,1,3,2))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar5)=unew(ind_buffer1,ivar5)-dflux
@@ -566,6 +576,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,3,1)+emfz(i,3,3,2))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)-dflux
@@ -583,6 +594,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
+     if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,1,1)+emfz(i,3,1,2))*0.25*weight*dtdiff/dx_loc
      unew(ind_buffer1,ivar2)=unew(ind_buffer1,ivar2)+dflux
