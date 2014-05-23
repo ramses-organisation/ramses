@@ -419,11 +419,21 @@ subroutine savegadget(filename)
   integer(i8b),allocatable,dimension(:)::ids
   integer::i, idim, ipart
   real:: gadgetvfact
-  integer::npart_tot, info
+  integer::info
+#ifndef LONGINT
+  integer::npart_tot, npart_loc
+#else
+  integer(i8b)::npart_tot, npart_loc
+#endif
   real, parameter:: RHOcrit = 2.7755d11
 
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  npart_loc=npart
+#ifndef LONGINT
+  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))

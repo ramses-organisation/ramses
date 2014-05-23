@@ -16,7 +16,11 @@ MODULE gadgetreadfilemod
      REAL*8 :: redshift
      INTEGER*4 :: flag_sfr
      INTEGER*4 :: flag_feedback
+#ifndef LONGINT
      INTEGER*4, DIMENSION(6) :: nparttotal
+#else
+     INTEGER*8, DIMENSION(6) :: nparttotal
+#endif
      INTEGER*4 :: flag_cooling
      INTEGER*4 :: numfiles
      REAL*8 :: boxsize

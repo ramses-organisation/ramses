@@ -966,7 +966,7 @@ subroutine load_gadget
   integer(i8b), dimension(:), allocatable:: ids  
   integer::nparticles, arraysize
   integer::i, icpu, ipart, info, np, start
-  integer ,dimension(1:ncpu)::npart_cpu,npart_all
+  integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
   integer ,dimension(1:nvector)::cc
   integer :: clock_start, clock_end, clock_rate
@@ -1042,7 +1042,7 @@ subroutine load_gadget
   do icpu=2,ncpu
      npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
   end do
-  write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
+  write(*,*)'npart=',npart,'/',npartmax
 
 end subroutine load_gadget
 
