@@ -434,6 +434,8 @@ subroutine savegadget(filename)
 #else
   call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
+#else
+  npart_tot=npart
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
