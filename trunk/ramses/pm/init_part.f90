@@ -963,6 +963,8 @@ subroutine load_gadget
   integer::ifile
   real(dp),dimension(1:nvector,1:3)::xx_dp
   real, dimension(:, :), allocatable:: pos, vel
+  real(dp)::massparticles
+  integer(kind=8)::allparticles
   integer(i8b), dimension(:), allocatable:: ids  
   integer::nparticles, arraysize
   integer::i, icpu, ipart, info, np, start
@@ -983,6 +985,9 @@ subroutine load_gadget
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
      gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+     allparticles=int(gadgetheader%nparttotal(2),kind=8) &
+          & +int(gadgetheader%totalhighword(2),kind=8)*4294967296 !2^32
+     massparticles=1d0/dble(allparticles)
      do ifile=0,numfiles-1
         call gadgetreadheader(filename, ifile, gadgetheader, ok)
         nparticles = gadgetheader%npart(2)
@@ -1010,10 +1015,10 @@ subroutine load_gadget
                  call clean_stop
               end if
               xp(ipart,1:3)=xx_dp(1,1:3)
-              vp(ipart,1)=vel(1, i) * gadgetvfact
-              vp(ipart,2)=vel(2, i) * gadgetvfact
-              vp(ipart,3)=vel(3, i) * gadgetvfact
-              mp(ipart)    = 1.d0/gadgetheader%nparttotal(2)
+              vp(ipart,1)  =vel(1, i) * gadgetvfact
+              vp(ipart,2)  =vel(2, i) * gadgetvfact
+              vp(ipart,3)  =vel(3, i) * gadgetvfact
+              mp(ipart)    = massparticles
               levelp(ipart)=levelmin
               idp(ipart)   =ids(i)
 #ifndef WITHOUTMPI

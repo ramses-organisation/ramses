@@ -47,7 +47,7 @@ module amr_commons
   integer,allocatable,dimension(:,:)::headl
   integer,allocatable,dimension(:,:)::taill
   integer,allocatable,dimension(:,:)::numbl
-  integer,allocatable,dimension(:,:)::numbtot
+  integer(i8b),allocatable,dimension(:,:)::numbtot
 
   ! Pointers for each level boundary linked list
   integer,allocatable,dimension(:,:)::headb
