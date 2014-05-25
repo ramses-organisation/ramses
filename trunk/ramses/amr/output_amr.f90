@@ -364,7 +364,8 @@ subroutine output_header(filename)
   call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #else
   tmp_long=npart
-  call MPI_ALLREDUCE(tmp_long,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)#endif
+  call MPI_ALLREDUCE(tmp_long,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
 #endif
 #ifdef WITHOUTMPI
   npart_tot=npart
