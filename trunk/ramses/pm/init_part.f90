@@ -985,8 +985,12 @@ subroutine load_gadget
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
      gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+#ifndef LONGINT
+     allparticles=int(gadgetheader%nparttotal(2),kind=8)
+#else
      allparticles=int(gadgetheader%nparttotal(2),kind=8) &
           & +int(gadgetheader%totalhighword(2),kind=8)*4294967296 !2^32
+#endif
      massparticles=1d0/dble(allparticles)
      do ifile=0,numfiles-1
         call gadgetreadheader(filename, ifile, gadgetheader, ok)
