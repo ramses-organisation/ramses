@@ -41,7 +41,11 @@ CONTAINS
 !
 ! Read and return the gadget file header for the specified file
 !
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
     IMPLICIT NONE
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN):: ifile
@@ -50,7 +54,9 @@ CONTAINS
     logical, INTENT(OUT)::ok
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=6) :: fileno
+    CHARACTER(LEN=4) :: fileno
+    integer,parameter::tag=1103
+    integer::dummy_io,info
 
     filename = TRIM(basename)
     INQUIRE(file=filename, exist=ok)
@@ -60,12 +66,8 @@ CONTAINS
           WRITE(fileno,'(".",1i1.1)')ifile
        ELSE IF (ifile.LT.100)THEN
           WRITE(fileno,'(".",1i2.2)')ifile
-       ELSE IF (ifile.LT.1000)THEN
-          WRITE(fileno,'(".",1i3.3)')ifile
-       ELSE IF (ifile.LT.10000)THEN
-          WRITE(fileno,'(".",1i4.4)')ifile
        ELSE
-          WRITE(fileno,'(".",1i5.5)')ifile
+          WRITE(fileno,'(".",1i3.3)')ifile
        END IF
        filename = TRIM(basename) // fileno
        INQUIRE(file=filename, exist=ok)
@@ -74,7 +76,17 @@ CONTAINS
           RETURN
        end if
     end if
-       
+
+    ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
+
     OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')
     ! Byte swapping doesn't work if you just do READ(1)header
     READ(1)header%npart,header%mass,header%time,header%redshift, &
@@ -85,6 +97,17 @@ CONTAINS
          header%flag_entropy_instead_u, header%flag_doubleprecision, &
          header%flag_ic_info, header%lpt_scalingfactor
     CLOSE(1)
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info)
+       end if
+    endif
+#endif
+
 
   END SUBROUTINE gadgetreadheader
 
@@ -95,7 +118,11 @@ CONTAINS
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
     IMPLICIT NONE
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN) :: ifile
@@ -103,28 +130,22 @@ CONTAINS
     TYPE (gadgetheadertype) :: header
 ! Particle data
     REAL, DIMENSION(3,*) :: pos,vel
-#ifndef LONGINT
     INTEGER*4, DIMENSION(*) :: id
-#else
-    INTEGER*8, DIMENSION(*) :: id
-#endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=6) :: fileno
+    CHARACTER(LEN=4) :: fileno
     INTEGER :: np
     logical::ok
+    integer,parameter::tag=1104
+    integer::dummy_io,info
 
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
-    ELSE IF (ifile.LT.1000)THEN
-       WRITE(fileno,'(".",1i3.3)')ifile
-    ELSE IF (ifile.LT.10000)THEN
-       WRITE(fileno,'(".",1i4.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i5.5)')ifile
+       WRITE(fileno,'(".",1i3.3)')ifile
     END IF
 
     filename = TRIM(basename) // fileno
@@ -135,6 +156,17 @@ CONTAINS
         write(*,*) 'No file '//filename
         RETURN
     end if
+    
+    ! Wait for the token (this token might be moved to init_part for best performance)
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
+
     OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')
     ! Byte swapping doesn't appear to work if you just do READ(1)header
     READ(1)header%npart,header%mass,header%time,header%redshift, &
@@ -149,17 +181,33 @@ CONTAINS
     READ(1)vel(1:3,1:np)
     READ(1)id(1:np)
     CLOSE(1)
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info)
+       end if
+    endif
+#endif
+    
 
   END SUBROUTINE gadgetreadfile
 
 ! ---------------------------------------------------------------------------
 
   SUBROUTINE gadgetwritefile(basename,ifile,header,pos,vel,id)
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
 !
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
     IMPLICIT NONE
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
+
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN) :: ifile
@@ -167,32 +215,35 @@ CONTAINS
     TYPE (gadgetheadertype) :: header
 ! Particle data
     REAL, DIMENSION(3,*) :: pos,vel
-#ifndef LONGINT
     INTEGER*4, DIMENSION(*) :: id
-#else
-    INTEGER*8, DIMENSION(*) :: id
-#endif
 ! Internal variables
     CHARACTER(LEN=256) :: filename
-    CHARACTER(LEN=6) :: fileno
+    CHARACTER(LEN=4) :: fileno
     INTEGER :: np
     logical::ok
-
+    integer,parameter::tag=1105
+    integer::dummy_io,info
 
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile
     ELSE IF (ifile.LT.100)THEN
        WRITE(fileno,'(".",1i2.2)')ifile
-    ELSE IF (ifile.LT.1000)THEN
-       WRITE(fileno,'(".",1i3.3)')ifile
-    ELSE IF (ifile.LT.10000)THEN
-       WRITE(fileno,'(".",1i4.4)')ifile
     ELSE
-       WRITE(fileno,'(".",1i5.5)')ifile
+       WRITE(fileno,'(".",1i3.3)')ifile
     END IF
 
     filename = TRIM(basename) // fileno
+
+    ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
 
     OPEN(unit=1,file=filename,status='unknown',action='write',form='unformatted')
     WRITE(1)header%npart,header%mass,header%time,header%redshift, &
@@ -208,6 +259,18 @@ CONTAINS
     WRITE(1)id(1:np)
 
     CLOSE(1)
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info)
+       end if
+    endif
+#endif
+
+
     END SUBROUTINE gadgetwritefile
 END MODULE gadgetreadfilemod
 

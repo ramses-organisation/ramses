@@ -2,7 +2,6 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
-
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -27,10 +26,9 @@ subroutine init_part
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
-  integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
+  integer ,dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
-  integer,allocatable,dimension(:)::isp
-  integer(i8b),allocatable,dimension(:)::isp8
+  integer ,allocatable,dimension(:)::isp
 
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
@@ -55,7 +53,9 @@ subroutine init_part
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
+  integer,parameter::tagg=1108
+  integer::dummy_io
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -148,7 +148,6 @@ subroutine init_part
      allocate(c2sink_all(1:nsinkmax))
      allocate(weighted_density(1:nsinkmax,1:nlevelmax))
      allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
-     allocate(rho_rz2_tot(1:nsinkmax,1:nlevelmax))
      allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
      allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
      allocate(oksink_new(1:nsinkmax))
@@ -163,11 +162,6 @@ subroutine init_part
      allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
   endif
 
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  if (sink)then
-     sink_seedmass=sink_seedmass*2.d33/(scale_d*scale_l**3)
-     d_sink=n_sink/scale_nH
-  end if
   !--------------------
   ! Read part.tmp file
   !--------------------
@@ -175,9 +169,26 @@ subroutine init_part
 
      ilun=2*ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/part_'//TRIM(nchar)//'.out'
+     
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/part_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/part_'//TRIM(nchar)//'.out'
+     endif
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+     
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tagg,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
 
      open(unit=ilun,file=fileloc,form='unformatted')
      rewind(ilun)
@@ -211,12 +222,10 @@ subroutine init_part
      mp(1:npart2)=xdp
      deallocate(xdp)
      ! Read identity
-     allocate(isp8(1:npart2))
-     read(ilun)isp8
-     idp(1:npart2)=isp8
-     deallocate(isp8)
-     ! Read level
      allocate(isp(1:npart2))
+     read(ilun)isp
+     idp(1:npart2)=isp
+     ! Read level
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
@@ -275,20 +284,32 @@ subroutine init_part
         end if
      endif
      close(ilun)
+     
+     ! Send the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tagg, &
+                & MPI_COMM_WORLD,info)
+        end if
+     endif
+#endif
+     
+
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
      !allow for ncloud_sink to change at restart
-     if (sink)call compute_ncloud_sink
+     call compute_ncloud_sink
 
 
-
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      if(sink .and. ir_feedback)then
         do i=1,nsink
            acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
-     
   else     
 
      filetype_loc=filetype
@@ -439,6 +460,16 @@ subroutine init_part
                                
               if(multiple)then
                  ilun=myid+10
+                 ! Wait for the token
+#ifndef WITHOUTMPI
+                 if(IOGROUPSIZE>0) then
+                    if (mod(myid-1,IOGROUPSIZE)/=0) then
+                       call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                            & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+                    end if
+                 endif
+#endif
+
                  open(ilun,file=filename,form='unformatted')
                  rewind ilun
                  read(ilun) ! skip first line
@@ -452,6 +483,18 @@ subroutine init_part
                     endif
                  end do
                  close(ilun)
+
+                 ! Send the token
+#ifndef WITHOUTMPI
+                 if(IOGROUPSIZE>0) then
+                    if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                       dummy_io=1
+                       call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                            & MPI_COMM_WORLD,info)
+                    end if
+                 endif
+#endif
+                 
               else
                  if(myid==1)then
                     open(10,file=filename,form='unformatted')
@@ -757,11 +800,7 @@ subroutine init_part
         npart_cpu=0; npart_all=0
         npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
-#ifndef LONGINT
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-        call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
         npart_cpu(1)=npart_all(1)
 #endif
         do icpu=2,ncpu
@@ -827,11 +866,6 @@ subroutine init_part
               if(cc(i)==myid)then
 #endif
                  ipart=ipart+1
-                 if(ipart>npartmax)then
-                    write(*,*)'Maximum number of particles incorrect'
-                    write(*,*)'npartmax should be greater than',ipart
-                    call clean_stop
-                 endif
                  xp(ipart,1:3)=xx(i,1:3)
                  vp(ipart,1:3)=vv(i,1:3)
                  mp(ipart)    =mm(i)
@@ -852,11 +886,7 @@ subroutine init_part
         npart_cpu=0; npart_all=0
         npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
-#ifndef LONGINT
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-        call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
         npart_cpu(1)=npart_all(1)
 #endif
         do icpu=2,ncpu
@@ -889,8 +919,20 @@ subroutine init_part
         else
            filename='ic_sink'
         end if
-        INQUIRE(FILE=filename, EXIST=ic_sink)
+
         if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+
+        ! Wait for the token
+#ifndef WITHOUTMPI
+        if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
+
+        INQUIRE(FILE=filename, EXIST=ic_sink)
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -910,10 +952,23 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              level_sink(nsink)=0
+              level_sink(nsink)=levelmin
            end do
 102        continue
            close(10)
+
+           ! Send the token
+#ifndef WITHOUTMPI
+           if(IOGROUPSIZE>0) then
+              if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                 dummy_io=1
+                 call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                      & MPI_COMM_WORLD,info)
+              end if
+           endif
+#endif
+
+
         end if
         nindsink=MAXVAL(idsink) ! Reset max index
         if (myid==1.and.nsink==0)write(*,*)'File ic_sink not found: starting without sink particles!'
@@ -971,12 +1026,10 @@ subroutine load_gadget
   integer::ifile
   real(dp),dimension(1:nvector,1:3)::xx_dp
   real, dimension(:, :), allocatable:: pos, vel
-  real(dp)::massparticles
-  integer(kind=8)::allparticles
-  integer(i8b), dimension(:), allocatable:: ids  
+  integer, dimension(:), allocatable:: ids
   integer::nparticles, arraysize
   integer::i, icpu, ipart, info, np, start
-  integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
+  integer ,dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
   integer ,dimension(1:nvector)::cc
   integer :: clock_start, clock_end, clock_rate
@@ -993,13 +1046,6 @@ subroutine load_gadget
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
      gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
-#ifndef LONGINT
-     allparticles=int(gadgetheader%nparttotal(2),kind=8)
-#else
-     allparticles=int(gadgetheader%nparttotal(2),kind=8) &
-          & +int(gadgetheader%totalhighword(2),kind=8)*4294967296 !2^32
-#endif
-     massparticles=1d0/dble(allparticles)
      do ifile=0,numfiles-1
         call gadgetreadheader(filename, ifile, gadgetheader, ok)
         nparticles = gadgetheader%npart(2)
@@ -1027,10 +1073,10 @@ subroutine load_gadget
                  call clean_stop
               end if
               xp(ipart,1:3)=xx_dp(1,1:3)
-              vp(ipart,1)  =vel(1, i) * gadgetvfact
-              vp(ipart,2)  =vel(2, i) * gadgetvfact
-              vp(ipart,3)  =vel(3, i) * gadgetvfact
-              mp(ipart)    = massparticles
+              vp(ipart,1)=vel(1, i) * gadgetvfact
+              vp(ipart,2)=vel(2, i) * gadgetvfact
+              vp(ipart,3)=vel(3, i) * gadgetvfact
+              mp(ipart)    = 1.d0/gadgetheader%nparttotal(2)
               levelp(ipart)=levelmin
               idp(ipart)   =ids(i)
 #ifndef WITHOUTMPI
@@ -1049,17 +1095,13 @@ subroutine load_gadget
   npart_cpu=0; npart_all=0
   npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
-#ifndef LONGINT
   call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-  call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
   npart_cpu(1)=npart_all(1)
 #endif
   do icpu=2,ncpu
      npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
   end do
-  write(*,*)'npart=',npart,'/',npartmax
+  write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
 
 end subroutine load_gadget
 
@@ -1071,12 +1113,11 @@ end subroutine load_gadget
 !################################################################
 subroutine compute_ncloud_sink
   use amr_commons, only:dp
-  use pm_commons, only:ir_cloud,ir_cloud_massive,ncloud_sink,ncloud_sink_massive
+  use pm_commons, only:ir_cloud,ncloud_sink
   real(dp)::xx,yy,zz,rr
-  integer::ii,jj,kk,counti
+  integer::ii,jj,kk
   ! Compute number of cloud particles
   ncloud_sink=0
-  ncloud_sink_massive=0
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)/2.0
      do jj=-2*ir_cloud,2*ir_cloud
@@ -1085,7 +1126,6 @@ subroutine compute_ncloud_sink
            xx=dble(ii)/2.0
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
-           if(rr<=dble(ir_cloud_massive))ncloud_sink_massive=ncloud_sink_massive+1
         end do
      end do
   end do

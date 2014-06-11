@@ -19,14 +19,6 @@ module amr_parameters
   integer,parameter::MAXOUT=1000
   integer,parameter::MAXLEVEL=100
   
-  ! Define integer types (for particle IDs mostly)
-  integer,parameter::i4b=4
-#ifndef LONGINT
-  integer,parameter::i8b=4  ! default long int are short int
-#else
-  integer,parameter::i8b=8  ! long int are long int
-#endif
-
   ! Number of dimensions
 #ifndef NDIM
   integer,parameter::ndim=1
@@ -111,8 +103,7 @@ module amr_parameters
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
   real(dp)::texp   =0.0D0     ! Current proper time
-  real(dp)::n_sink =1D30      ! Sink particle density threshold in H/c
-  real(dp)::d_sink            ! Sink particle density threshold in user units
+  real(dp)::n_sink =1D30      ! Sink particle density threshold in H/cc
   real(dp)::m_star =-1.0      ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
@@ -160,7 +151,6 @@ module amr_parameters
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
   logical ::merge_stars=.false. ! Merge young star formation sink particles (first larson cores)
   logical ::flux_accretion=.false.
-  logical ::l_feedback=.true.
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
@@ -230,5 +220,15 @@ module amr_parameters
   integer ,dimension(1:MAXBOUND)    ::jbound_max=0
   integer ,dimension(1:MAXBOUND)    ::kbound_min=0
   integer ,dimension(1:MAXBOUND)    ::kbound_max=0
+
+
+  !Number of processes sharing one token
+  !Only one process can write at a time in an I/O group
+  integer::IOGROUPSIZE=0           ! Main snapshot
+  integer::IOGROUPSIZECONE=0       ! Lightcone
+  integer::IOGROUPSIZEREP=0        ! Subfolder size
+  logical::withoutmkdir=.false.    !If true mkdir should be done before the run
+  logical::print_when_io=.false.   !If true print when IO
+  logical::synchro_when_io=.false. !If true synchronize when IO
 
 end module amr_parameters

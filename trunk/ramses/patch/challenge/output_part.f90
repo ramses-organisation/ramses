@@ -2,18 +2,31 @@ subroutine backup_part(filename)
   use amr_commons
   use pm_commons
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
   character(LEN=80)::filename
 
   integer::i,idim,ilun,ipart
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
   real(dp),allocatable,dimension(:)::xdp
-  integer,allocatable,dimension(:)::ii
-  integer(i8b),allocatable,dimension(:)::ii8
-  integer,allocatable,dimension(:)::ll
+  integer ,allocatable,dimension(:)::ii
+  integer ,allocatable,dimension(:)::ll
+  integer,parameter::tag=1115
+  integer::dummy_io,info
 
   if(verbose)write(*,*)'Entering backup_part'
-  
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     end if
+  endif
+#endif
+
   ilun=2*ncpu+myid+10
 
   call title(myid,nchar)
@@ -63,16 +76,16 @@ subroutine backup_part(filename)
   write(ilun)xdp
   deallocate(xdp)
   ! Write identity
-  allocate(ii8(1:npart))
+  allocate(ii(1:npart))
   ipart=0
   do i=1,npartmax
      if(levelp(i)>0)then
         ipart=ipart+1
-        ii8(ipart)=idp(i)
+        ii(ipart)=idp(i)
      end if
   end do
-  write(ilun)ii8
-  deallocate(ii8)
+  write(ilun)ii
+  deallocate(ii)
   ! Write level
   allocate(ll(1:npart))
   ipart=0
@@ -180,6 +193,19 @@ subroutine backup_part(filename)
 
   close(ilun)
 
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info)
+     end if
+  endif
+#endif
+  
+ 
+
 end subroutine backup_part
 
 subroutine output_sink(filename)
@@ -236,6 +262,7 @@ end subroutine output_sink
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 subroutine output_sink_csv(filename)
   use amr_commons
   use pm_commons
@@ -267,7 +294,7 @@ subroutine output_sink_csv(filename)
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,11(A1,ES20.10))')idsink(isink),',',msink(isink),',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),',',t-tsink(isink)
+     write(ilun,'(I10,8(A1,ES20.10))')idsink(isink),',',msink(isink)*scale_m/2d33,',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),',',t-tsink(isink)
   end do
 
   close(ilun)

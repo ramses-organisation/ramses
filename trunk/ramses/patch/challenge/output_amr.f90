@@ -11,8 +11,8 @@ subroutine dump_all
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif  
-  character(LEN=5)::nchar
-  character(LEN=80)::filename,filedir,filecmd
+  character(LEN=5)::nchar,ncharcpu
+  character(LEN=80)::filename,filedir,filedirini,filecmd
   integer::i,itest,info
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
@@ -25,19 +25,109 @@ subroutine dump_all
   if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
   output_done=.true.
 
+  if(IOGROUPSIZEREP>0)call title(((myid-1)/IOGROUPSIZE)+1,ncharcpu)
+
   if(ndim>1)then
-     filedir='output_'//TRIM(nchar)//'/'
+     if(IOGROUPSIZEREP>0) then
+        filedirini='output_'//TRIM(nchar)//'/'
+        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+     else
+        filedir='output_'//TRIM(nchar)//'/'
+     endif
+
      filecmd='mkdir -p '//TRIM(filedir)
+
+     if (.not.withoutmkdir) then 
 #ifdef NOSYSTEM
-     call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+        call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
+        call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
 #else
-     call system(filecmd)
+        call system(TRIM(filecmd))
 #endif
+     endif
+
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     if(myid==1.and.print_when_io) write(*,*)'Start backup header'
      filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
      call output_header(filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif     
+     if(myid==1.and.print_when_io) write(*,*)'End backup header'
+             
+     if(myid==1.and.print_when_io) write(*,*)'Start backup amr'
+     filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
+     call backup_amr(filename)
+     if(myid==1.and.print_when_io) write(*,*)'End backup amr'
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+
+     if(hydro)then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup hydro'
+        filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
+        call backup_hydro(filename)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup hydro'
+
+     end if
+#ifdef RT
+     if(rt.or.neq_chem)then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
+        filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
+        call rt_backup_hydro(filename)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup hydro'
+     endif
+#endif
+     if(pic)then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup part'
+        filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
+        call backup_part(filename)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup part'
+     end if
+     if(poisson)then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup poisson'
+        filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
+        call backup_poisson(filename)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup poisson'
+     end if
+#ifdef ATON
+     if(aton)then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup rad'
+        filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
+        call backup_radiation(filename)
+        filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
+        call store_radiation(filename)        
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup rad'
+     end if
+#endif
+     if (gadget_output) then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup gadget format'
+        filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
+        call savegadget(filename)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
+     end if
+     
+     if(myid==1.and.print_when_io) write(*,*)'Start backup info etc.'
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
@@ -52,38 +142,11 @@ subroutine dump_all
            call output_sink_csv(filename)
         endif
      endif
-     filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
-     call backup_amr(filename)
-     if(hydro)then
-        filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
-        call backup_hydro(filename)
-     end if
-#ifdef RT
-     if(rt.or.neq_chem)then
-        filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
-        call rt_backup_hydro(filename)
-     endif
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-     if(pic)then
-        filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
-        call backup_part(filename)
-     end if
-     if(poisson)then
-        filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
-        call backup_poisson(filename)
-     end if
-#ifdef ATON
-     if(aton)then
-        filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
-        call backup_radiation(filename)
-        filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
-        call store_radiation(filename)
-     end if
-#endif
-     if (gadget_output) then
-        filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
-        call savegadget(filename)
-     end if
+     if(myid==1.and.print_when_io) write(*,*)'End backup info etc.'
+
   end if
 
 end subroutine dump_all
@@ -96,6 +159,9 @@ subroutine backup_amr(filename)
   use hydro_commons
   use pm_commons
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   character(LEN=80)::filename
 
   integer::nx_loc,ny_loc,nz_loc,ilun
@@ -108,6 +174,8 @@ subroutine backup_amr(filename)
   character(LEN=5)::nchar
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::scale
+  integer,parameter::tag=1113
+  integer::dummy_io,info
 
   if(verbose)write(*,*)'Entering backup_amr'
 
@@ -131,6 +199,17 @@ subroutine backup_amr(filename)
   ilun=myid+10
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
+
+  ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+        end if
+     endif
+#endif
+
   open(unit=ilun,file=fileloc,form='unformatted')
   ! Write grid variables
   write(ilun)ncpu
@@ -260,6 +339,17 @@ subroutine backup_amr(filename)
   end do
   close(ilun)
   
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info)
+     end if
+  endif
+#endif
+  
 end subroutine backup_amr
 !#########################################################################
 !#########################################################################
@@ -352,20 +442,14 @@ subroutine output_header(filename)
 #endif
   character(LEN=80)::filename
 
-  integer::info,ilun
-  integer(i8b)::tmp_long,npart_tot
+  integer::info,npart_tot,ilun
   character(LEN=80)::fileloc
 
   if(verbose)write(*,*)'Entering output_header'
 
   ! Compute total number of particles
 #ifndef WITHOUTMPI
-#ifndef LONGINT
   call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-  tmp_long=npart
-  call MPI_ALLREDUCE(tmp_long,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
 #endif
 #ifdef WITHOUTMPI
   npart_tot=npart
@@ -422,22 +506,14 @@ subroutine savegadget(filename)
   character(LEN=80)::filename
   TYPE (gadgetheadertype) :: header
   real,allocatable,dimension(:,:)::pos, vel
-  integer(i8b),allocatable,dimension(:)::ids
+  integer,allocatable,dimension(:)::ids
   integer::i, idim, ipart
   real:: gadgetvfact
-  integer::info
-  integer(i8b)::npart_tot, npart_loc
+  integer::npart_tot, info
   real, parameter:: RHOcrit = 2.7755d11
 
 #ifndef WITHOUTMPI
-  npart_loc=npart
-#ifndef LONGINT
-  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#else
-  npart_tot=npart
+  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
@@ -451,11 +527,7 @@ subroutine savegadget(filename)
   header%redshift = 1.d0/aexp-1.d0
   header%flag_sfr = 0
   header%nparttotal = 0
-#ifndef LONGINT
   header%nparttotal(2) = npart_tot
-#else
-  header%nparttotal(2) = MOD(npart_tot,4294967296)
-#endif
   header%flag_cooling = 0
   header%numfiles = ncpu
   header%boxsize = boxlen_ini
@@ -465,11 +537,6 @@ subroutine savegadget(filename)
   header%flag_stellarage = 0
   header%flag_metals = 0
   header%totalhighword = 0
-#ifndef LONGINT
-  header%totalhighword(2) = 0
-#else
-  header%totalhighword(2) = npart_tot/4294967296
-#endif
   header%flag_entropy_instead_u = 0
   header%flag_doubleprecision = 0
   header%flag_ic_info = 0
