@@ -167,6 +167,13 @@ subroutine init_part
   if (sink)then
      sink_seedmass=sink_seedmass*2.d33/(scale_d*scale_l**3)
      d_sink=n_sink/scale_nH
+
+     ! Compute softening length from minimum cell spacing
+     dx=0.5D0**nlevelmax
+     nx_loc=(icoarse_max-icoarse_min+1)
+     scale=boxlen/dble(nx_loc)
+     dx_min=dx*scale           
+     ssoft=sink_soft*dx_min                           
   end if
   !--------------------
   ! Read part.tmp file
@@ -289,6 +296,89 @@ subroutine init_part
         end do
      end if
      
+
+
+     if(sink)then
+        call compute_ncloud_sink
+        nx_loc=(icoarse_max-icoarse_min+1)
+        scale=boxlen/dble(nx_loc)
+        dx_min=scale*0.5D0**nlevelmax/aexp
+
+        if(TRIM(initfile(levelmin)).NE.' ')then
+           filename=TRIM(initfile(levelmin))//'/ic_sink_restart'
+        else
+           filename='ic_sink_restart'
+        end if
+        INQUIRE(FILE=filename, EXIST=ic_sink)
+        if (myid==1)write(*,*),'Looking for file ic_sink_restart: ',filename
+        if (ic_sink)then
+           open(10,file=filename,form='formatted')
+           eof=.false.
+           if (myid==1)write(*,*)'Caution, reading file ic_sink_restart'
+           do
+              read(10,*,end=103)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
+              nsink=nsink+1
+              idsink(nsink)=nsink
+              msink(nsink)=mm1
+              xsink(nsink,1)=xx1
+              xsink(nsink,2)=xx2
+              xsink(nsink,3)=xx3
+              vsink(nsink,1)=vv1
+              vsink(nsink,2)=vv2
+              vsink(nsink,3)=vv3
+              lsink(nsink,1)=ll1
+              lsink(nsink,2)=ll2
+              lsink(nsink,3)=ll3
+              tsink(nsink)=t
+              level_sink(nsink)=0
+           end do
+103        continue
+           close(10)
+        end if
+        nindsink=MAXVAL(idsink) ! Reset max index
+        if (myid==1.and.nsink>0.and.verbose)then
+           write(*,*),'sinks read from file ic_sink'
+           write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
+           write(*,*),'====================================================================================='
+           do isink=1,nsink
+              write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+                   vsink(isink,1:ndim),lsink(isink,1:ndim)
+           end do
+        end if
+
+        ! Loop over sinks
+        do isink=1,nsink
+           xs(1,1:ndim)=xsink(isink,1:ndim)
+           call cmp_cpumap(xs,cc,1)
+
+           ! Create central cloud particles (negative index)
+           if(cc(1).eq.myid)then
+              npart=npart+1
+              tp(npart)=1d-10
+              if (nbody_sink)then
+                 mp(npart)=0.
+              else
+                 mp(npart)=msink(isink)      ! Mass
+              end if
+              levelp(npart)=levelmin
+              idp(npart)=-isink          ! Identity
+              xp(npart,1)=xsink(isink,1) ! Position
+              xp(npart,2)=xsink(isink,2)
+              xp(npart,3)=xsink(isink,3)
+              vp(npart,1)=vsink(isink,1) ! Velocity
+              vp(npart,2)=vsink(isink,2)
+              vp(npart,3)=vsink(isink,3)
+           endif
+
+        end do
+
+     end if
+
+
+
+
+
+
   else     
 
      filetype_loc=filetype
@@ -891,6 +981,10 @@ subroutine init_part
         end if
         INQUIRE(FILE=filename, EXIST=ic_sink)
         if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+        if (.not. ic_sink)then 
+           filename='ic_sink'
+           INQUIRE(FILE=filename, EXIST=ic_sink)
+        end if
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -936,7 +1030,11 @@ subroutine init_part
            if(cc(1).eq.myid)then
               npart=npart+1
               tp(npart)=1d-10
-              mp(npart)=msink(isink)     ! Mass
+              if (nbody_sink)then
+                 mp(npart)=0.
+              else
+                 mp(npart)=msink(isink)      ! Mass
+              end if
               levelp(npart)=levelmin
               idp(npart)=-isink          ! Identity
               xp(npart,1)=xsink(isink,1) ! Position
@@ -1073,7 +1171,7 @@ subroutine compute_ncloud_sink
   use amr_commons, only:dp
   use pm_commons, only:ir_cloud,ir_cloud_massive,ncloud_sink,ncloud_sink_massive
   real(dp)::xx,yy,zz,rr
-  integer::ii,jj,kk,counti
+  integer::ii,jj,kk
   ! Compute number of cloud particles
   ncloud_sink=0
   ncloud_sink_massive=0

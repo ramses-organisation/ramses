@@ -642,8 +642,12 @@ subroutine saddlepoint_search(ntest)
      ilevel=levp(testp_sort(ipart)) ! level
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1)) !level of next particle
-     ind_cell(ip)=icellp(testp_sort(ipart))
-     if (flag2(ind_cell(ip))==0)print*,'alert neighborsearch',ind_cell(ip),myid,ilevel
+     if (flag2(ind_cell(ip))>0)then 
+        ind_cell(ip)=icellp(testp_sort(ipart))
+     else
+        ip=ip-1
+     end if
+!     if (flag2(ind_cell(ip))==0)print*,'alert neighborsearch',ind_cell(ip),myid,ilevel
      if(ip==nvector .or. next_level /= ilevel)then
         call neighborsearch(ind_cell,ip,dummyint,ilevel,4)
         ip=0
@@ -726,8 +730,8 @@ subroutine merge_clumps(ntest)
         ii=ind_sort(i)
         new_peak(ii)=ii
 
-        ! If the relevance is below the threshold -> merge
-        if (relevance_tot(ii)<relevance_threshold.and.relevance_tot(ii)>.5) then
+        ! If the relevance is below the threshold -> merge !!!!!!!!!!!!ATTENTION here!!!
+        if ((relevance_tot(ii)<relevance_threshold .or. n_cells_tot(ii)<200).and.relevance_tot(ii)>.5) then
            
            !find highest saddle point index and merge to this index
            merge_to=sparse_saddle_dens%maxloc(ii)
