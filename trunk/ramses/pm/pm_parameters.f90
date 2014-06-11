@@ -6,9 +6,9 @@ module pm_parameters
   integer::nsink=0                  ! Actual number of sinks
   integer::iseed=0                  ! Seed for stochastic star formation
   integer::nstar_tot=0              ! Total number of star particle
-  integer::ir_cloud=3               ! Radius of cloud region in unit of grid spacing
-  integer::ir_cloud_massive=2       ! Radius of massive cloud region in unit of grid spacing
-  real(dp)::sink_soft=1.5d0          ! Sink grav softening length in dx at levelmax
+  integer::ir_cloud=4               ! Radius of cloud region in unit of grid spacing
+  integer::ir_cloud_massive=3       ! Radius of massive cloud region in unit of grid spacing
+  real(dp)::sink_soft=2.d0          ! Sink grav softening length in dx at levelmax
                                     ! (only used for nbody_sink, should be <= 0.5*ir_cloud)
   real(dp)::mstar_tot=0             ! Total star mass
   real(dp)::mstar_lost=0            ! Missing star mass
