@@ -50,8 +50,13 @@ subroutine rho_fine(ilevel,icount)
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
         if(hydro)call multipole_fine(i)
+        ! Perform TSC using pseudo-particle
+#ifdef TSC
+        call tsc_from_multipole(i)
+#else
         ! Perform CIC using pseudo-particle
         call cic_from_multipole(i)
+#endif
         ! Update boundaries
         call make_virtual_reverse_dp(rho(1),i)
         call make_virtual_fine_dp   (rho(1),i)
@@ -268,7 +273,11 @@ subroutine rho_from_current_level(ilevel)
                  do i=1,ig
                     ind_cell(i)=father(ind_grid(i))
                  end do
+#ifdef TSC
+                 call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#else
                  call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#endif
                  ip=0
                  ig=0
               end if
@@ -292,7 +301,11 @@ subroutine rho_from_current_level(ilevel)
         do i=1,ig
            ind_cell(i)=father(ind_grid(i))
         end do
+#ifdef TSC
+        call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#else
         call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#endif
      end if
 
   end do
@@ -1090,6 +1103,685 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   ! End loop over grid cells
 
 end subroutine cic_cell
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
+  use amr_commons
+  use amr_parameters
+  use pm_commons
+  use poisson_commons
+  use hydro_commons, ONLY: mass_sph
+  implicit none
+  integer::ng,np,ilevel
+  integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the TSC scheme. Only cells that are in level ilevel
+  ! are updated by the input particle list.
+  !------------------------------------------------------------------
+
+  integer::j,ind,idim,nx_loc
+  real(dp)::dx,dx_loc,scale,vol_loc
+  ! Grid-based arrays
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  ! Particle-based arrays
+  logical ,dimension(1:nvector),save::ok,abandoned
+  real(dp),dimension(1:nvector),save::mmm
+  real(dp),dimension(1:nvector),save::ttt=0d0
+  real(dp),dimension(1:nvector),save::vol2
+  real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
+  integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+  real(dp),dimension(1:nvector,1:threetondim),save::vol
+  integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:3)::skip_loc
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+
+  ! Gather neighboring father cells (should be present at anytime!)
+  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+
+  ! Rescale particle position at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)/dx
+     end do
+  end do
+
+  ! Gather particle mass
+  do j=1,np
+     mmm(j)=mp(ind_part(j))
+  end do
+
+  if(ilevel==levelmin)then
+     do j=1,np
+        multipole(1)=multipole(1)+mp(ind_part(j))
+     end do
+     do idim=1,ndim
+        do j=1,np
+           multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+        end do
+     end do
+  end if
+
+  ! Gather particle birth epoch
+  if(star)then
+     do j=1,np
+        ttt(j)=tp(ind_part(j))
+     end do
+  endif
+
+  ! Check for illegal moves
+  abandoned(1:np)=.false.
+  do idim=1,ndim
+     do j=1,np
+        if(x(j,idim)<1.0D0.or.x(j,idim)>5.0D0) abandoned(j)=.true.
+     end do
+  end do
+
+  ! TSC at level ilevel; a particle contributes 
+  !     to three cells in each dimension
+  ! cl: position of leftmost cell centre
+  ! cc: position of central cell centre
+  ! cr: position of rightmost cell centre
+  ! wl: weighting function for leftmost cell
+  ! wc: weighting function for central cell
+  ! wr: weighting function for rightmost cell
+  do idim=1,ndim
+     do j=1,np
+        if(.not.abandoned(j)) then
+           cl(j,idim)=dble(int(x(j,idim)))-0.5D0
+           cc(j,idim)=dble(int(x(j,idim)))+0.5D0
+           cr(j,idim)=dble(int(x(j,idim)))+1.5D0
+           wl(j,idim)=0.50D0*(1.5D0-abs(x(j,idim)-cl(j,idim)))**2
+           wc(j,idim)=0.75D0-          (x(j,idim)-cc(j,idim)) **2
+           wr(j,idim)=0.50D0*(1.5D0-abs(x(j,idim)-cr(j,idim)))**2
+        end if
+     end do
+  end do
+
+  ! Compute cloud volumes
+  do j=1,np
+     if(.not.abandoned(j)) then
+        vol(j,1 )=wl(j,1)*wl(j,2)*wl(j,3)
+        vol(j,2 )=wc(j,1)*wl(j,2)*wl(j,3)
+        vol(j,3 )=wr(j,1)*wl(j,2)*wl(j,3)
+        vol(j,4 )=wl(j,1)*wc(j,2)*wl(j,3)
+        vol(j,5 )=wc(j,1)*wc(j,2)*wl(j,3)
+        vol(j,6 )=wr(j,1)*wc(j,2)*wl(j,3)
+        vol(j,7 )=wl(j,1)*wr(j,2)*wl(j,3)
+        vol(j,8 )=wc(j,1)*wr(j,2)*wl(j,3)
+        vol(j,9 )=wr(j,1)*wr(j,2)*wl(j,3)
+        vol(j,10)=wl(j,1)*wl(j,2)*wc(j,3)
+        vol(j,11)=wc(j,1)*wl(j,2)*wc(j,3)
+        vol(j,12)=wr(j,1)*wl(j,2)*wc(j,3)
+        vol(j,13)=wl(j,1)*wc(j,2)*wc(j,3)
+        vol(j,14)=wc(j,1)*wc(j,2)*wc(j,3)
+        vol(j,15)=wr(j,1)*wc(j,2)*wc(j,3)
+        vol(j,16)=wl(j,1)*wr(j,2)*wc(j,3)
+        vol(j,17)=wc(j,1)*wr(j,2)*wc(j,3)
+        vol(j,18)=wr(j,1)*wr(j,2)*wc(j,3)
+        vol(j,19)=wl(j,1)*wl(j,2)*wr(j,3)
+        vol(j,20)=wc(j,1)*wl(j,2)*wr(j,3)
+        vol(j,21)=wr(j,1)*wl(j,2)*wr(j,3)
+        vol(j,22)=wl(j,1)*wc(j,2)*wr(j,3)
+        vol(j,23)=wc(j,1)*wc(j,2)*wr(j,3)
+        vol(j,24)=wr(j,1)*wc(j,2)*wr(j,3)
+        vol(j,25)=wl(j,1)*wr(j,2)*wr(j,3)
+        vol(j,26)=wc(j,1)*wr(j,2)*wr(j,3)
+        vol(j,27)=wr(j,1)*wr(j,2)*wr(j,3)
+     end if
+  end do
+        
+  ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        if(.not.abandoned(j)) then
+           igl(j,idim)=(int(cl(j,idim)))/2
+           igc(j,idim)=(int(cc(j,idim)))/2
+           igr(j,idim)=(int(cr(j,idim)))/2
+        end if
+     end do
+  end do
+  do j=1,np
+     if(.not.abandoned(j)) then
+        kg(j,1 )=1+igl(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,2 )=1+igc(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,3 )=1+igr(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,4 )=1+igl(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,5 )=1+igc(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,6 )=1+igr(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,7 )=1+igl(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,8 )=1+igc(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,9 )=1+igr(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,10)=1+igl(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,11)=1+igc(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,12)=1+igr(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,13)=1+igl(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,14)=1+igc(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,15)=1+igr(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,16)=1+igl(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,17)=1+igc(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,18)=1+igr(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,19)=1+igl(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,20)=1+igc(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,21)=1+igr(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,22)=1+igl(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,23)=1+igc(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,24)=1+igr(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,25)=1+igl(j,1)+3*igr(j,2)+9*igr(j,3)
+        kg(j,26)=1+igc(j,1)+3*igr(j,2)+9*igr(j,3)
+        kg(j,27)=1+igr(j,1)+3*igr(j,2)+9*igr(j,3)
+     end if
+  end do
+  do ind=1,threetondim
+     do j=1,np
+        igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
+     end do
+  end do
+
+  ! Compute parent cell position
+  do idim=1,ndim
+     do j=1,np
+        if(.not.abandoned(j)) then
+           icl(j,idim)=int(cl(j,idim))-2*igl(j,idim)
+           icc(j,idim)=int(cc(j,idim))-2*igc(j,idim)
+           icr(j,idim)=int(cr(j,idim))-2*igr(j,idim)
+        end if
+     end do
+  end do
+  do j=1,np
+     if(.not.abandoned(j)) then
+        icell(j,1 )=1+icl(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,2 )=1+icc(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,3 )=1+icr(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,4 )=1+icl(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,5 )=1+icc(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,6 )=1+icr(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,7 )=1+icl(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,8 )=1+icc(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,9 )=1+icr(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,10)=1+icl(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,11)=1+icc(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,12)=1+icr(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,13)=1+icl(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,14)=1+icc(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,15)=1+icr(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,16)=1+icl(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,17)=1+icc(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,18)=1+icr(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,19)=1+icl(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,20)=1+icc(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,21)=1+icr(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,22)=1+icl(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,23)=1+icc(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,24)=1+icr(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,25)=1+icl(j,1)+2*icr(j,2)+4*icr(j,3)
+        icell(j,26)=1+icc(j,1)+2*icr(j,2)+4*icr(j,3)
+        icell(j,27)=1+icr(j,1)+2*icr(j,2)+4*icr(j,3)
+     end if
+  end do
+
+  ! Compute parent cell adress
+  do ind=1,threetondim
+     do j=1,np
+        if(.not.abandoned(j)) then
+           indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+        end if
+     end do
+  end do
+
+  ! Update mass density and number density fields
+  do ind=1,threetondim
+
+     do j=1,np
+        if(.not.abandoned(j)) then
+           ok(j)=igrid(j,ind)>0
+        end if
+     end do
+
+     do j=1,np
+        if(.not.abandoned(j)) then
+           vol2(j)=mmm(j)*vol(j,ind)/vol_loc
+        end if
+     end do
+
+     if(cic_levelmax==0.or.ilevel<=cic_levelmax) then
+        do j=1,np
+           if(ok(j).and.(.not.abandoned(j))) then
+              rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
+           end if
+        end do
+     else if(ilevel>cic_levelmax) then
+        do j=1,np
+           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+              rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
+           end if
+        end do
+     endif
+
+     if(ilevel==cic_levelmax)then
+        do j=1,np
+           if(ok(j).and.(ttt(j)==0d0).and.(.not.abandoned(j)))then
+              rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
+           end if
+        end do
+     endif
+
+     do j=1,np
+        if(.not.abandoned(j)) then
+           vol2(j)=vol(j,ind)
+        end if
+     end do
+
+     ! Remove test particles for static runs
+     if(static) then
+        do j=1,np
+           if(.not.abandoned(j)) then
+              ok(j)=ok(j).and.(mmm(j)>0.0)
+           end if
+        end do
+     endif
+
+     ! Remove massive dark matter particle
+     if(mass_cut_refine>0.0) then
+        do j=1,np
+           if(ttt(j)==0d0.and.(.not.abandoned(j))) then
+              ok(j)=ok(j).and.mmm(j)<mass_cut_refine
+           endif
+        end do
+     endif
+
+     ! For low mass baryon particles
+     if(star) then
+        do j=1,np
+           if(ttt(j).ne.0.0.and.(.not.abandoned(j))) then
+              vol2(j)=vol2(j)*mmm(j)/mass_sph
+           endif
+        end do
+     endif
+
+     if(cic_levelmax==0.or.ilevel<cic_levelmax) then
+        do j=1,np
+           if(ok(j).and.(.not.abandoned(j))) then
+              phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
+           end if
+        end do
+     else if(ilevel>=cic_levelmax) then
+        do j=1,np
+           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+              phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
+           end if
+        end do
+     endif
+
+  end do
+
+end subroutine tsc_amr
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine tsc_from_multipole(ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  logical::multigrid
+  !-------------------------------------------------------------------
+  ! This routine compute array rho (source term for Poisson equation)
+  ! by first reseting array rho to zero, then 
+  ! by affecting the gas density to leaf cells, and finally
+  ! by performing a restriction operation for split cells.
+  ! For pure particle runs, the restriction is not necessary and the
+  ! routine only set rho to zero. On the other hand, for the Multigrid
+  ! solver, the restriction is necessary in any case.
+  !-------------------------------------------------------------------
+  integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
+  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer,dimension(1:nvector),save::ind_grid
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Initialize density field to zero
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+        end do
+     end do
+  end do
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        rho(active(ilevel)%igrid(i)+iskip)=0.0D0
+     end do
+  end do
+  ! Reset rho in physical boundaries
+  do ibound=1,nboundary
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,boundary(ibound,ilevel)%ngrid
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+        end do
+     end do
+  end do
+  
+  if(hydro)then
+     ! Perform a restriction over split cells (ilevel+1)
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ! Gather nvector grids
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+        call tsc_cell(ind_grid,ngrid,ilevel)
+     end do
+  end if
+
+111 format('   Entering tsc_from_multipole for level',i2)
+
+end subroutine tsc_from_multipole
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine tsc_cell(ind_grid,ngrid,ilevel)
+  use amr_commons
+  use poisson_commons
+  use hydro_commons, ONLY: unew
+  implicit none
+  integer::ngrid,ilevel
+  integer,dimension(1:nvector)::ind_grid
+  !
+  !
+  integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
+  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector),save::new_rho
+  ! Particle-based arrays
+  logical ,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector),save::mmm,ttt
+  real(dp),dimension(1:nvector),save::vol2
+  real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
+  integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+  real(dp),dimension(1:nvector,1:threetondim),save::vol
+  integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:3)::skip_loc
+  real(kind=8)::dx,dx_loc,scale,vol_loc
+  logical::error
+ 
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  np=ngrid
+
+  ! Compute father cell index
+  do i=1,ngrid
+     ind_cell(i)=father(ind_grid(i))
+  end do
+
+  ! Gather 3x3x3 neighboring parent cells
+  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+
+  ! Loop over grid cells
+  do ind_son=1,twotondim
+     iskip_son=ncoarse+(ind_son-1)*ngridmax
+
+     ! Compute pseudo particle (centre of mass) position
+     do idim=1,ndim
+        do j=1,np
+           ind_cell_son=iskip_son+ind_grid(j)
+           x(j,idim)=unew(ind_cell_son,idim+1)/unew(ind_cell_son,1)
+        end do
+     end do
+     
+     ! Compute total multipole
+     if(ilevel==levelmin)then
+        do idim=1,ndim+1
+           do j=1,np
+              ind_cell_son=iskip_son+ind_grid(j)
+              multipole(idim)=multipole(idim)+unew(ind_cell_son,idim)
+           end do
+        end do
+     endif
+
+     ! Rescale particle position at level ilevel
+     do idim=1,ndim
+        do j=1,np
+           x(j,idim)=x(j,idim)/scale+skip_loc(idim)
+        end do
+     end do
+     do idim=1,ndim
+        do j=1,np
+           x(j,idim)=x(j,idim)-(xg(ind_grid(j),idim)-3d0*dx)
+        end do
+     end do
+     do idim=1,ndim
+        do j=1,np
+           x(j,idim)=x(j,idim)/dx
+        end do
+     end do
+     
+     ! Gather particle mass
+     do j=1,np
+        ind_cell_son=iskip_son+ind_grid(j)
+        mmm(j)=unew(ind_cell_son,1)
+     end do
+     
+     ! TSC at level ilevel; a particle contributes 
+     !     to three cells in each dimension
+     ! cl: position of leftmost cell centre
+     ! cc: position of central cell centre
+     ! cr: position of rightmost cell centre
+     ! wl: weighting function for leftmost cell
+     ! wc: weighting function for central cell
+     ! wr: weighting function for rightmost cell
+     do idim=1,ndim
+        do j=1,np
+           cl(j,idim)=dble(int(x(j,idim)))-0.5D0
+           cc(j,idim)=dble(int(x(j,idim)))+0.5D0
+           cr(j,idim)=dble(int(x(j,idim)))+1.5D0
+           wl(j,idim)=0.50D0*(1.5D0-abs(x(j,idim)-cl(j,idim)))**2
+           wc(j,idim)=0.75D0-          (x(j,idim)-cc(j,idim)) **2
+           wr(j,idim)=0.50D0*(1.5D0-abs(x(j,idim)-cr(j,idim)))**2
+        end do
+     end do
+     
+     ! Check for illegal moves
+     error=.false.
+     do idim=1,ndim
+        do j=1,np
+           if(x(j,idim)<1.0D0.or.x(j,idim)>5.0D0)error=.true.
+        end do
+     end do
+     if(error)then
+        write(*,*)'problem in tsc_cell'
+        do idim=1,ndim
+           do j=1,np
+              if(x(j,idim)<1.0D0.or.x(j,idim)>5.0D0)then
+                 write(*,*)x(j,1:ndim)
+              endif
+           end do
+        end do
+        stop
+     end if
+
+     ! Compute cloud volumes
+     do j=1,np
+        vol(j,1 )=wl(j,1)*wl(j,2)*wl(j,3)
+        vol(j,2 )=wc(j,1)*wl(j,2)*wl(j,3)
+        vol(j,3 )=wr(j,1)*wl(j,2)*wl(j,3)
+        vol(j,4 )=wl(j,1)*wc(j,2)*wl(j,3)
+        vol(j,5 )=wc(j,1)*wc(j,2)*wl(j,3)
+        vol(j,6 )=wr(j,1)*wc(j,2)*wl(j,3)
+        vol(j,7 )=wl(j,1)*wr(j,2)*wl(j,3)
+        vol(j,8 )=wc(j,1)*wr(j,2)*wl(j,3)
+        vol(j,9 )=wr(j,1)*wr(j,2)*wl(j,3)
+        vol(j,10)=wl(j,1)*wl(j,2)*wc(j,3)
+        vol(j,11)=wc(j,1)*wl(j,2)*wc(j,3)
+        vol(j,12)=wr(j,1)*wl(j,2)*wc(j,3)
+        vol(j,13)=wl(j,1)*wc(j,2)*wc(j,3)
+        vol(j,14)=wc(j,1)*wc(j,2)*wc(j,3)
+        vol(j,15)=wr(j,1)*wc(j,2)*wc(j,3)
+        vol(j,16)=wl(j,1)*wr(j,2)*wc(j,3)
+        vol(j,17)=wc(j,1)*wr(j,2)*wc(j,3)
+        vol(j,18)=wr(j,1)*wr(j,2)*wc(j,3)
+        vol(j,19)=wl(j,1)*wl(j,2)*wr(j,3)
+        vol(j,20)=wc(j,1)*wl(j,2)*wr(j,3)
+        vol(j,21)=wr(j,1)*wl(j,2)*wr(j,3)
+        vol(j,22)=wl(j,1)*wc(j,2)*wr(j,3)
+        vol(j,23)=wc(j,1)*wc(j,2)*wr(j,3)
+        vol(j,24)=wr(j,1)*wc(j,2)*wr(j,3)
+        vol(j,25)=wl(j,1)*wr(j,2)*wr(j,3)
+        vol(j,26)=wc(j,1)*wr(j,2)*wr(j,3)
+        vol(j,27)=wr(j,1)*wr(j,2)*wr(j,3)
+     end do
+
+     ! Compute parent grids
+     do idim=1,ndim
+        do j=1,np
+           igl(j,idim)=(int(cl(j,idim)))/2
+           igc(j,idim)=(int(cc(j,idim)))/2
+           igr(j,idim)=(int(cr(j,idim)))/2
+        end do
+     end do
+     do j=1,np
+        kg(j,1 )=1+igl(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,2 )=1+igc(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,3 )=1+igr(j,1)+3*igl(j,2)+9*igl(j,3)
+        kg(j,4 )=1+igl(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,5 )=1+igc(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,6 )=1+igr(j,1)+3*igc(j,2)+9*igl(j,3)
+        kg(j,7 )=1+igl(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,8 )=1+igc(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,9 )=1+igr(j,1)+3*igr(j,2)+9*igl(j,3)
+        kg(j,10)=1+igl(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,11)=1+igc(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,12)=1+igr(j,1)+3*igl(j,2)+9*igc(j,3)
+        kg(j,13)=1+igl(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,14)=1+igc(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,15)=1+igr(j,1)+3*igc(j,2)+9*igc(j,3)
+        kg(j,16)=1+igl(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,17)=1+igc(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,18)=1+igr(j,1)+3*igr(j,2)+9*igc(j,3)
+        kg(j,19)=1+igl(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,20)=1+igc(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,21)=1+igr(j,1)+3*igl(j,2)+9*igr(j,3)
+        kg(j,22)=1+igl(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,23)=1+igc(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,24)=1+igr(j,1)+3*igc(j,2)+9*igr(j,3)
+        kg(j,25)=1+igl(j,1)+3*igr(j,2)+9*igr(j,3)
+        kg(j,26)=1+igc(j,1)+3*igr(j,2)+9*igr(j,3)
+        kg(j,27)=1+igr(j,1)+3*igr(j,2)+9*igr(j,3)
+     end do
+     do ind=1,threetondim
+        do j=1,np
+           igrid(j,ind)=son(nbors_father_cells(j,kg(j,ind)))
+        end do
+     end do
+     
+ ! Compute parent cell position
+     do idim=1,ndim
+        do j=1,np
+           icl(j,idim)=int(cl(j,idim))-2*igl(j,idim)
+           icc(j,idim)=int(cc(j,idim))-2*igc(j,idim)
+           icr(j,idim)=int(cr(j,idim))-2*igr(j,idim)
+        end do
+     end do
+     do j=1,np
+        icell(j,1 )=1+icl(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,2 )=1+icc(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,3 )=1+icr(j,1)+2*icl(j,2)+4*icl(j,3)
+        icell(j,4 )=1+icl(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,5 )=1+icc(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,6 )=1+icr(j,1)+2*icc(j,2)+4*icl(j,3)
+        icell(j,7 )=1+icl(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,8 )=1+icc(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,9 )=1+icr(j,1)+2*icr(j,2)+4*icl(j,3)
+        icell(j,10)=1+icl(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,11)=1+icc(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,12)=1+icr(j,1)+2*icl(j,2)+4*icc(j,3)
+        icell(j,13)=1+icl(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,14)=1+icc(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,15)=1+icr(j,1)+2*icc(j,2)+4*icc(j,3)
+        icell(j,16)=1+icl(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,17)=1+icc(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,18)=1+icr(j,1)+2*icr(j,2)+4*icc(j,3)
+        icell(j,19)=1+icl(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,20)=1+icc(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,21)=1+icr(j,1)+2*icl(j,2)+4*icr(j,3)
+        icell(j,22)=1+icl(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,23)=1+icc(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,24)=1+icr(j,1)+2*icc(j,2)+4*icr(j,3)
+        icell(j,25)=1+icl(j,1)+2*icr(j,2)+4*icr(j,3)
+        icell(j,26)=1+icc(j,1)+2*icr(j,2)+4*icr(j,3)
+        icell(j,27)=1+icr(j,1)+2*icr(j,2)+4*icr(j,3)
+     end do
+     
+     ! Compute parent cell adress
+     do ind=1,threetondim
+        do j=1,np
+           indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+        end do
+     end do
+    
+     ! Update mass density and number density fields
+     do ind=1,twotondim
+        do j=1,np
+           ok(j)=igrid(j,ind)>0
+        end do
+        do j=1,np
+           vol2(j)=mmm(j)*vol(j,ind)/vol_loc
+        end do        
+        do j=1,np
+           if(ok(j))then
+              rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
+           end if
+        end do
+     end do
+     
+  end do
+  ! End loop over grid cells
+
+end subroutine tsc_cell
 !###########################################################
 !###########################################################
 !###########################################################
