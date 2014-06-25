@@ -462,7 +462,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   rstarl=rl*(SL-ul)/(SL-ustar)
   estar =rl*(SL-ul)*(SL-ustar)-A**2
   el    =rl*(SL-ul)*(SL-ul   )-A**2
-  if(estar==0)then
+  if(abs(estar)<1e-4*A**2)then
      vstarl=vl
      Bstarl=Bl
      wstarl=wl
@@ -483,7 +483,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   rstarr=rr*(SR-ur)/(SR-ustar)
   estar =rr*(SR-ur)*(SR-ustar)-A**2
   er    =rr*(SR-ur)*(SR-ur   )-A**2
-  if(estar==0)then
+  if(abs(estar)<1e-4*A**2)then
      vstarr=vr
      Bstarr=Br
      wstarr=wr
