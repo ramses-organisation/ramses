@@ -115,13 +115,13 @@ subroutine newdt_fine(ilevel)
      !issue here: what if sink lives not a levelmax? timestep can be too big!
      if(sink .and. ilevel==nlevelmax .and. nsink>0) then
         call compute_accretion_rate(.false.)
-        if (nbody_sink)then
-           do isink=1,nsink
+        do isink=1,nsink
+           if(direct_force_sink(isink))then
               tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
               dt_sink=min(dt_sink,tff*courant_factor)
-           end do
-           dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
-        end if
+           end if
+        end do
+        dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
      end if
 
   end if

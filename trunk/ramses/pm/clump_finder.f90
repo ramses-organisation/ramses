@@ -257,7 +257,7 @@ subroutine count_test_particle(ilevel,ntot,nskip,action)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Clump density threshold from H/cc to code units
-  d0 = density_threshold/scale_nH
+  d0 = density_threshold
   if(cosmo)d0=d0/aexp**3
 
   ! Loop over grids
@@ -701,20 +701,47 @@ subroutine read_clumpfind_params()
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
+
+  namelist/clumpfind_params/n_clfind,rho_clfind,relevance_threshold,mass_threshold,merge_unbound,clinfo
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
   
-  !--------------------------------------------------                           
-  ! Namelist definitions                                                        
-  !--------------------------------------------------                           
-
-  namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold,merge_unbound,clinfo
-
   ! Read namelist file 
   rewind(1)
-  read(1,NML=clumpfind_params,END=101)
-  goto 102
-101 write(*,*)' You need to set up namelist &CLUMPFIND_PARAMS in parameter file'
-  call clean_stop
-102 rewind(1)
+  read(1,NML=clumpfind_params,END=121)
+  goto 122
+121 if(myid==1)write(*,*)'You did not set up namelist &CLUMPFIND_PARAMS in parameter file.'
+  if (.not. sink)then 
+     if(myid==1)write(*,*)'That block should a least contain a density '
+     if(myid==1)write(*,*)'threshold n_clfind [parts/cc] or rho_clfind [g/cc]!'
+     if(myid==1)write(*,*)'aborting...'
+     call clean_stop
+  end if
+
+122 rewind(1)
+
+
+  if (rho_clfind>0. .and. n_clfind >0.)then   ! too much information...
+     if(myid==1)write(*,*)'you set up the clumpfinder threshold in both, H/cc and g/cc, decide!'
+     if(myid==1)write(*,*)'aborting...'
+     call clean_stop
+  else if (rho_clfind<0. .and. n_clfind <0.)then  !not enough information
+     if (sink)then
+        density_threshold=d_sink/10.
+        if(myid==1)write(*,*)'You did not specify a threshold for the clump finder. '
+        if(myid==1)write(*,*)'Setting it to sink threshold / 10. !'
+     else
+        if(myid==1)write(*,*)'The &CLUMPFIND_PARAMS block should a least contain '
+        if(myid==1)write(*,*)'a density threshold n_clfind [parts/cc] or rho_clfind [g/cc]!'
+        if(myid==1)write(*,*)'aborting...'
+        call clean_stop
+     end if
+  else if (n_clfind>0.)then
+     density_threshold=n_clfind/scale_nH
+  else if(rho_clfind>0.)then
+     density_threshold=rho_clfind/scale_d
+  end if
 
 end subroutine read_clumpfind_params
 !#########################################################################

@@ -28,12 +28,12 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
-  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
+  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink
   integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
-  real(dp)::sink_seedmass=5.4d-4,ssoft !initial mass sinks are created with in bondi or flux accretion regime
-  real(dp)::dt_sink !maximum timestep allowed by the sink
+  real(dp)::ssoft                  !sink softening lenght in code units
+  real(dp)::dt_sink                !maximum timestep allowed by the sink
   
 
   ! Particles related arrays
@@ -62,7 +62,7 @@ module pm_commons
   contains
   function cross(a,b)
     use amr_parameters, only:dp
-    real(dp),dimension(1:3),intent(in)::a,b
+    real(dp),dimension(1:3)::a,b
     real(dp),dimension(1:3)::cross
     !computes the cross product c= a x b
     cross(1)=a(2)*b(3)-a(3)*b(2)

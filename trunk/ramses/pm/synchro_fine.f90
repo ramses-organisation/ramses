@@ -58,7 +58,7 @@ subroutine synchro_fine(ilevel)
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   
   !sink cloud particles are used to average the grav. acceleration
-  if(sink .and. (.not. nbody_sink))then
+  if(sink)then
      if(nsink>0)then
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -67,7 +67,9 @@ subroutine synchro_fine(ilevel)
 #endif
      endif
      do isink=1,nsink
-        fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
+        if (.not. direct_force_sink(isink))then 
+           fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
+        end if
      end do
   endif
   
@@ -354,7 +356,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do idim=1,ndim
         do j=1,np
            isink=-idp(ind_part(j))
-           if(isink>0)then
+           if(isink>0 .and. (.not. direct_force_sink(isink)))then
               fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
            endif
         end do

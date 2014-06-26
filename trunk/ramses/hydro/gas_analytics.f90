@@ -279,21 +279,15 @@ subroutine read_gas_analytics_params()
   use hydro_commons
 
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
-  !-------------------------------------------------- 
-  ! Namelist definitions                              
-  !-------------------------------------------------- 
   namelist/gas_analytics_params/nbins,ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
-  ! Read namelist file                                                                         
+
   rewind(1)
-  read(1,NML=gas_analytics_params,END=101)
-  goto 102
-101 if(myid==1)write(*,*)' You did not setup &GAS_ANALYTICS_PARAMS in parameter file. Defaults will be used...'
+  read(1,NML=gas_analytics_params,END=131)
+  goto 132
+131 if(myid==1)write(*,*)' You did not setup &GAS_ANALYTICS_PARAMS in parameter file. Defaults will be used...'
   ana_xmi=0.d0; ana_ymi=0.d0; ana_zmi=0.d0
   ana_xma=1.d0; ana_yma=1.d0; ana_zma=1.d0
   nbins=1000
-102 rewind(1)
+132 rewind(1)
 end subroutine read_gas_analytics_params

@@ -602,15 +602,17 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            end if
         end do
      endif
-     !guarantee to refine sinks to nlevelmax 
+!!     !guarantee to refine direct force sinks to nlevelmax 
+     !guarantee to refine all sinks to nlevelmax 
      !by setting particle number density above m_refine(ilevel)
-     if (nbody_sink)then
-        do j=1,np
-           if(idp(ind_part(j))<0.)then
+     !can be used in combination with a very high value for mass_sph 
+     do j=1,np
+        if(idp(ind_part(j))<0.)then
+!!           if (direct_force_sink(-1*idp(ind_part(j))))then 
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
-           end if
-        end do
-     end if
+ !!          end if
+        end if
+     end do
 
   end do
 

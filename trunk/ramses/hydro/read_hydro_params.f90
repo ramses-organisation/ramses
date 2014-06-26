@@ -32,13 +32,12 @@ subroutine read_hydro_params(nml_ok)
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
        & ,d_bound,u_bound,v_bound,w_bound,p_bound
-  namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
+  namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
-       & ,J21,a_spec,z_ave,z_reion,n_sink,ind_rsink,bondi,delayed_cooling &
+       & ,J21,a_spec,z_ave,z_reion,n_sink,ind_rsink,delayed_cooling &
        & ,self_shielding,smbh,agn,rsink_max,msink_max &
-       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,merge_stars &
-       & ,larson_lifetime,flux_accretion,t_diss,l_feedback
+       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss
 
   ! Read namelist file
   rewind(1)
@@ -214,6 +213,7 @@ subroutine read_hydro_params(nml_ok)
         end if
      end do
   end if
+
   nboundary=nboundary_true
   if(simple_boundary.and.nboundary==0)then
      simple_boundary=.false.
@@ -258,6 +258,7 @@ subroutine read_hydro_params(nml_ok)
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+
 
 end subroutine read_hydro_params
 

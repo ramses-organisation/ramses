@@ -4,10 +4,13 @@ module clfind_commons
 
   integer::nparts,nparts_tot,npeaks,npeaks_tot
   real(dp)::tot_mass
-  real(dp)::relevance_threshold=1.5
-  real(dp)::density_threshold=0.
-  real(dp)::mass_threshold=0.
-  logical::merge_unbound=.false.,clinfo=.false.
+  real(dp)::relevance_threshold=2.0
+  real(dp)::density_threshold=0.d0
+  real(dp)::rho_clfind=-1.d0
+  real(dp)::n_clfind=-1.d0
+  real(dp)::mass_threshold=0.d0
+  logical::merge_unbound=.false.
+  logical::clinfo=.false.
 
 
   ! Big array for saddlepoint values

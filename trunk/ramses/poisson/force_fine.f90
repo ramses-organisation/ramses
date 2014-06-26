@@ -125,7 +125,7 @@ subroutine force_fine(ilevel,icount)
      end do
      ! End loop over grids
      
-     if (sink .and. nbody_sink)then
+     if (sink)then
         call f_gas_sink(ilevel)
      end if
      

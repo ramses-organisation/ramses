@@ -211,7 +211,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(hydro)then
 
         ! Compute Bondi-Hoyle accretion parameters
-        if(sink)call bondi_hoyle(ilevel)
+        if(sink)call collect_acczone_avg(ilevel)
 
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))

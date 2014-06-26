@@ -46,7 +46,6 @@ module amr_parameters
   logical::cosmo   =.false.   ! Cosmology activated
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
-  logical::nbody_sink= .true. ! Sinks are integrated by direct force calculation
   logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
@@ -104,7 +103,8 @@ module amr_parameters
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
   real(dp)::texp   =0.0D0     ! Current proper time
-  real(dp)::n_sink =1D30      ! Sink particle density threshold in H/c
+  real(dp)::n_sink = -1.d0      ! Sink particle density threshold in H/cc
+  real(dp)::rho_sink = -1.D0  ! Sink particle density threshold in g/cc
   real(dp)::d_sink            ! Sink particle density threshold in user units
   real(dp)::m_star =-1.0      ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
@@ -135,7 +135,7 @@ module amr_parameters
   real(dp)::kappa_IR=0d0      ! IR dust opacity
   real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
   real(dp)::ir_eff=0.75       ! efficiency of the IR feedback (only when ir_feedback=.true.)
-  real(dp)::larson_lifetime=5000! lifetime of first larson core in years
+
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
@@ -144,16 +144,12 @@ module amr_parameters
   logical ::neq_chem=.false.  ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
   logical ::metal=.false.
-  logical ::bondi=.false.      ! Activate Bondi accretion onto sink particle 
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
   logical ::agn=.false.
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
-  logical ::merge_stars=.false. ! Merge young star formation sink particles (first larson cores)
-  logical ::flux_accretion=.false.
-  logical ::l_feedback=.true.
 
 
   ! Output times

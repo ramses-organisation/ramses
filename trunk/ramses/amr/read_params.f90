@@ -24,11 +24,11 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton,nbody_sink
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
-       & ,npartmax,nparttot,nsinkmax,nexpand,boxlen
+       & ,npartmax,nparttot,nexpand,boxlen
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
@@ -215,6 +215,14 @@ subroutine read_params
   call rt_read_hydro_params(nml_ok)
 #endif
 
+
+  if (sink)then
+     call read_sink_params
+     if ((.not. clumpfind) .and. myid==1)then
+        write(*,*)'Sinks need the clumpfinder. Seting clumpfind to .true.!'
+     end if
+     clumpfind=.true.
+  end if
   if (clumpfind)call read_clumpfind_params
   if (gas_analytics)call read_gas_analytics_params
 

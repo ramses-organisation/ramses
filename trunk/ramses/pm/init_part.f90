@@ -55,6 +55,8 @@ subroutine init_part
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar
+  logical,dimension(1:nsinkmax)::dir_sink
+  dir_sink=.false.
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -159,13 +161,16 @@ subroutine init_part
      allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+     allocate(direct_force_sink(1:nsinkmax))
      allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
   endif
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   if (sink)then
-     sink_seedmass=sink_seedmass*2.d33/(scale_d*scale_l**3)
-     d_sink=n_sink/scale_nH
+     sink_seedmass=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
+
+     !convert msink_direct in code units
+     msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
 
      ! Compute softening length from minimum cell spacing
      dx=0.5D0**nlevelmax
@@ -352,7 +357,10 @@ subroutine init_part
            if(cc(1).eq.myid)then
               npart=npart+1
               tp(npart)=1d-10
-              if (nbody_sink)then
+              !check wheter isink is going to be a direct force sink 
+              dir_sink(isink)=(msink(isink) .ge. msink_direct)
+
+              if (dir_sink(isink))then
                  mp(npart)=0.
               else
                  mp(npart)=msink(isink)      ! Mass
@@ -369,11 +377,14 @@ subroutine init_part
 
         end do
 
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+        direct_force_sink(1:nsink)=dir_sink(1:nsink)
+#endif
+
      end if
-
-
-
-
 
 
   else     
@@ -1014,7 +1025,9 @@ subroutine init_part
            if(cc(1).eq.myid)then
               npart=npart+1
               tp(npart)=1d-10
-              if (nbody_sink)then
+              !check wheter isink is going to be a direct force sink
+              dir_sink(isink)=(msink(isink) .ge. msink_direct)
+              if (dir_sink(isink))then
                  mp(npart)=0.
               else
                  mp(npart)=msink(isink)      ! Mass
@@ -1031,6 +1044,13 @@ subroutine init_part
 
         end do
 
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+        direct_force_sink(1:nsink)=dir_sink(1:nsink)
+#endif
+        
      end if
   end if
 

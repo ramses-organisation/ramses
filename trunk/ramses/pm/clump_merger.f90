@@ -163,7 +163,9 @@ subroutine compute_clump_properties(ntest)
         call true_max(x(1),x(2),x(3),nlevelmax)
         peak_pos(j,1:3)=x(1:3)
      end if
+#ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
   end do
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(peak_pos,peak_pos_tot,3*npeaks_tot,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
@@ -188,6 +190,7 @@ end subroutine compute_clump_properties
 !################################################################
 subroutine compute_clump_properties_round2(ntest,all_bound)
   use amr_commons
+  use pm_commons
   use hydro_commons, ONLY:uold,gamma
   use poisson_commons, ONLY:phi,f
   use clfind_commons
@@ -207,9 +210,9 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
   integer::ipart,ilevel,info,i,peak_nr,j,ii,jj
   integer::grid,nx_loc,ix,iy,iz,ind
   real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p,v_rms
-  real(dp)::t_larson1,cont_speed=0.
+  real(dp)::t_larson1,cont_speed
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,cty
-  real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
+  real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1,A2,A3
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -218,6 +221,8 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
   real(dp),dimension(1:npeaks_tot,1:3)::clump_size,bulk_momentum,contractions
   real(dp),dimension(1:npeaks_tot,1:3,1:3)::Icl_d_3by3,Icl_3by3
   real(dp),dimension(1:3,1:3)::eigenv,a
+
+  cont_speed=0.
 
   !  first, get minimum potential on saddle surface
   call get_phi_ref(ntest)
@@ -233,12 +238,12 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
 
   ! Conversion factor from user units to cgs units                                             
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  d0 = density_threshold/scale_nH;
+  d0 = density_threshold
   if(cosmo)d0=d0/aexp**3
   !lifetime of first larson core in code units                                                  
   cty=scale_t/(365.25*24.*3600.)
-  t_larson1=larson_lifetime/cty
-  if (merge_stars)cont_speed=-1./t_larson1
+  t_larson1=merging_timescale/cty
+  if (merging_scheme == 'timescale')cont_speed=-1./t_larson1
 
 
 
@@ -550,7 +555,7 @@ subroutine write_clump_properties(to_file)
         end do
         
      else
-        if(clinfo .and. (to_file .eqv. .false.))write(ilun,'(135A)')' Cl_N #leaf-cells peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU]'//&
+        if(clinfo .or. to_file)write(ilun,'(135A)')' Cl_N #leaf-cells peak_x [uu] peak_y [uu] peak_z [uu] size_x [AU]'//&
              ' size_y [AU] size_z [AU]  |v|_CM [u.u.]  rho- [H/cc]  rho+ [H/cc] rho_av[H/cc] M_cl[M_sol] V_cl [AU^3]    rel.   '//&
              ' peak_check  clump_check '
         do j=npeaks_tot,1,-1
@@ -704,7 +709,7 @@ subroutine merge_clumps(ntest)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  d0 = density_threshold/scale_nH;
+  d0 = density_threshold
   if(cosmo)d0=d0/aexp**3
 
 
