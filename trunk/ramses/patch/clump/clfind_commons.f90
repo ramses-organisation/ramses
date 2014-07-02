@@ -12,6 +12,7 @@ module clfind_commons
   real(dp)::saddle_threshold=-1
   real(dp)::mass_threshold=0.
   logical::merge_unbound=.false.,clinfo=.false.
+  logical::first_pass
 
   ! Peak communicator arrays
   integer,allocatable,dimension(:)::peak_send_cnt,peak_send_oft
