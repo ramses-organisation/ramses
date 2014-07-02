@@ -836,6 +836,7 @@ subroutine build_peak_communicator
 
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
+  integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
 
   npeak_alltoall=0
@@ -843,7 +844,8 @@ subroutine build_peak_communicator
      call get_local_peak_cpu(ipeak,icpu)
      npeak_alltoall(myid,icpu)=npeak_alltoall(myid,icpu)+1
   end do
-  call MPI_ALLREDUCE(npeak_alltoall,npeak_alltoall,ncpu*ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npeak_alltoall,npeak_alltoall_tot,ncpu*ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  npeak_alltoall=npeak_alltoall_tot
 !!$  if(myid==1)then
 !!$     write(*,'(129(I3,1X))')0,(j,j=1,ncpu)
 !!$     do icpu=1,ncpu
