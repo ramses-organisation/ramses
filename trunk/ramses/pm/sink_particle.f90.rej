@@ -1,0 +1,92 @@
+--- sink_particle.f90
++++ sink_particle.f90
+@@ -6,7 +6,7 @@
+   use amr_commons
+   use pm_commons
+   use hydro_commons
+-  use clfind_commons, ONLY: clump_mass4
++  use clfind_commons
+   implicit none
+ #ifndef WITHOUTMPI
+   include 'mpif.h'
+@@ -23,7 +23,7 @@
+   ! -Accretion routine is called
+   !----------------------------------------------------------------------------
+ 
+-  integer::ilevel,ivar,nsink_old
++  integer::ilevel,ivar,nsink_old,ntest
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+ 
+   if(verbose)write(*,*)' Entering create_sink'
+@@ -46,14 +46,41 @@
+   ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ 
+-  ! Use the clump finder, identify possible sink formation sites
+-  call clump_finder(.false.)
++  ! Run the clump finder,(produce no output, keep clump arrays allocated
++  ! to loop over the ntest cells above threshold)
++  call clump_finder(.false.,.true.,ntest)
++
++  ! trim clumps down to R_accretion ball around peaks 
++  call trim_clumps(ntest)
++
++  ! compute simple additive quantities and means (1st moments)
++  call compute_clump_properties(uold(1,1),ntest)
++
++  ! compute quantities relative to mean (2nd moments)
++  call compute_clump_properties_round2(uold(1,1),ntest,.false.)
++
++  ! apply all checks and flag cells for sink formation
++  call flag_formation_sites
+ 
+   ! Create new sink particles if relevant
+   do ilevel=levelmin,nlevelmax
+      call make_sink_from_clump(ilevel)
+   end do
+-  if (smbh)deallocate(clump_mass4)
++
++
++  ! Deallocate clump finder arrays
++  deallocate(npeaks_per_cpu)
++  deallocate(ipeak_start)
++  if (ntest>0)then
++     deallocate(icellp)
++     deallocate(levp)
++     deallocate(testp_sort)
++     deallocate(imaxp)
++  endif
++  call deallocate_all
++    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
++
+   
+   !merge sinks - for star formation runs
+   if (merge_stars .and. .not. smbh)call merge_star_sink
+@@ -1633,7 +1660,7 @@
+ #endif
+   real(dp),dimension(1:nvar)::z
+   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+-  real(dp)::dx,dx_loc,scale,vol_loc,weight,acc_mass,d_sink,temp,d_jeans
++  real(dp)::dx,dx_loc,scale,vol_loc,weight,acc_mass,temp,d_jeans
+   logical::error
+   ! Grid based arrays
+   real(dp),dimension(1:nvector,1:ndim)::x0
+@@ -1955,7 +1982,7 @@
+ 
+   integer::i,nx_loc,isink
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+-  real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period,d_sink,fa_fact
++  real(dp)::factG,d_star,boost,vel_max,l_abs,rot_period,fa_fact
+   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,t_ff
+   real(dp),dimension(1:3)::velocity
+   real(dp),dimension(1:nsink)::dMEDoverdt,dMBHoverdt,divergence
+@@ -2660,7 +2687,7 @@
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+   real(dp)::d,u,v,w,e,factG,delta_d,v2,fourpi,threepi2,tff,tsal
+   real(dp)::msink_max2,rsink_max2,rmax,rmax2
+-  real(dp)::d_thres,d_sink,birth_epoch
++  real(dp)::d_thres,birth_epoch
+   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+   real(dp),dimension(1:nvar)::z
+   real(dp),dimension(1:3)::skip_loc,x
