@@ -267,7 +267,7 @@ subroutine merge_clumps(ntest,action)
   integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
   integer::peak,next_peak,current,isearch,nmove,nmove_all,ipeak,jpeak,iter
   integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
-  integer::jmerge,ilev
+  integer::jmerge,ilev,global_peak_id
   real(dp)::value_iij,zero=0.,relevance_peak,dens_max
   real(dp)::mass_threshold_sm,mass_threshold_uu
   integer,dimension(1:npeaks_max)::alive,ind_sort
@@ -374,10 +374,15 @@ subroutine merge_clumps(ntest,action)
 
      ! Transfer matrix elements of merged peaks to surviving peaks
      ! Create new local duplicated peaks and update communicator
-     do ipeak=1,npeaks
+     do ipeak=1,hfree-1
         if(alive(ipeak)>0)then
            merge_to=new_peak(ipeak)
-           if(merge_to.NE.(ipeak_start(myid)+ipeak))then
+           if(ipeak.LE.npeaks)then
+              global_peak_id=ipeak_start(myid)+ipeak
+           else
+              global_peak_id=gkey(ipeak)
+           endif
+           if(merge_to.NE.global_peak_id)then
               call get_local_peak_id(merge_to,jpeak)
               current=sparse_saddle_dens%first(ipeak) ! first element of line ipeak
               do while(current>0) ! walk the line
@@ -1010,8 +1015,8 @@ subroutine virtual_saddle_max
         sparse_saddle_dens%maxval(ipeak)=dp_peak_recv_buf(j)
         sparse_saddle_dens%maxloc(ipeak)=int_peak_recv_buf(j)
         call get_local_peak_id(int_peak_recv_buf(j),jpeak)
-        call set_value(ipeak,jpeak,av_dens(j),sparse_saddle_dens)
-        call set_value(jpeak,ipeak,av_dens(j),sparse_saddle_dens)
+        call set_value(ipeak,jpeak,dp_peak_recv_buf(j),sparse_saddle_dens)
+        call set_value(jpeak,ipeak,dp_peak_recv_buf(j),sparse_saddle_dens)
      endif
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
