@@ -384,29 +384,8 @@ subroutine merge_clumps(ntest,action)
 
      ! Transfer matrix elements of merged peaks to surviving peaks
      ! Create new local duplicated peaks and update communicator
-     do ipeak=1,npeaks
-        if(alive(ipeak)>0)then
-           merge_to=new_peak(ipeak)
-           if(merge_to.NE.(ipeak_start(myid)+ipeak))then
-              call get_local_peak_id(merge_to,jpeak)
-              current=sparse_saddle_dens%first(ipeak) ! first element of line ipeak
-              do while(current>0) ! walk the line
-                 j=sparse_saddle_dens%col(current)
-                 value_iij=sparse_saddle_dens%val(current) ! value of the matrix
-                 ! Copy the value of density only if larger
-                 if(value_iij>get_value(jpeak,j,sparse_saddle_dens))then
-                    call set_value(jpeak,j,value_iij,sparse_saddle_dens)
-                    call set_value(j,jpeak,value_iij,sparse_saddle_dens)
-                 end if
-                 current=sparse_saddle_dens%next(current)
-              end do
-              call set_value(jpeak,jpeak,zero,sparse_saddle_dens)
-           end if
-        endif
-     end do
-     call build_peak_communicator
 
-     do ipeak=npeaks+1,hfree-1
+     do ipeak=1,hfree-1
         if(alive(ipeak)>0)then
            merge_to=new_peak(ipeak)
            !           if(merge_to.NE.(ipeak_start(myid)+ipeak))then
@@ -1043,11 +1022,6 @@ subroutine virtual_saddle_max
      if(sparse_saddle_dens%maxval(ipeak)<dp_peak_recv_buf(j))then
         sparse_saddle_dens%maxval(ipeak)=dp_peak_recv_buf(j)
         sparse_saddle_dens%maxloc(ipeak)=int_peak_recv_buf(j)
-        call get_local_peak_id(int_peak_recv_buf(j),jpeak)
-        
-        ! WHAT IS GOING ON HERE? av_dens(j)?
-!        call set_value(ipeak,jpeak,av_dens(j),sparse_saddle_dens)
-!        call set_value(jpeak,ipeak,av_dens(j),sparse_saddle_dens)
      endif
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
