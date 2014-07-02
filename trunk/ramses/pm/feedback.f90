@@ -338,7 +338,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      else
         tauIR=tau_factor*max(unew(indp(j),1),smallr)
      endif
-     RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
+     if(unew(indp(j),1)*scale_nH > 10.)then
+        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
+     else
+        RAD_BOOST=0.0
+     endif
      
      ! Specific kinetic energy of the star
      ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &

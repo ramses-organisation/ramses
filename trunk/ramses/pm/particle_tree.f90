@@ -736,9 +736,15 @@ subroutine virtual_tree_fine(ilevel)
      if(ncache>0)then
         buf_count=ncache*3
         countrecv=countrecv+1
+#ifndef LONGINT
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
              & MPI_INTEGER,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
+        call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
+             & MPI_INTEGER8,icpu-1,&
+             & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
         buf_count=ncache*particle_data_width
         countrecv=countrecv+1
         call MPI_IRECV(emission(icpu,ilevel)%up,buf_count, &
@@ -754,9 +760,15 @@ subroutine virtual_tree_fine(ilevel)
      if(ncache>0)then
         buf_count=ncache*3
         countsend=countsend+1
+#ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
              & MPI_INTEGER,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
+        call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
+             & MPI_INTEGER8,icpu-1,&
+             & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
         buf_count=ncache*particle_data_width
         countsend=countsend+1
         call MPI_ISEND(reception(icpu,ilevel)%up,buf_count, &

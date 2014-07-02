@@ -352,14 +352,20 @@ subroutine output_header(filename)
 #endif
   character(LEN=80)::filename
 
-  integer::info,npart_tot,ilun
+  integer::info,ilun
+  integer(i8b)::tmp_long,npart_tot
   character(LEN=80)::fileloc
 
   if(verbose)write(*,*)'Entering output_header'
 
   ! Compute total number of particles
 #ifndef WITHOUTMPI
+#ifndef LONGINT
   call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  tmp_long=npart
+  call MPI_ALLREDUCE(tmp_long,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
 #endif
 #ifdef WITHOUTMPI
   npart_tot=npart
@@ -416,14 +422,22 @@ subroutine savegadget(filename)
   character(LEN=80)::filename
   TYPE (gadgetheadertype) :: header
   real,allocatable,dimension(:,:)::pos, vel
-  integer,allocatable,dimension(:)::ids
+  integer(i8b),allocatable,dimension(:)::ids
   integer::i, idim, ipart
   real:: gadgetvfact
-  integer::npart_tot, info
+  integer::info
+  integer(i8b)::npart_tot, npart_loc
   real, parameter:: RHOcrit = 2.7755d11
 
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  npart_loc=npart
+#ifndef LONGINT
+  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(npart_loc,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#else
+  npart_tot=npart
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
@@ -437,7 +451,11 @@ subroutine savegadget(filename)
   header%redshift = 1.d0/aexp-1.d0
   header%flag_sfr = 0
   header%nparttotal = 0
+#ifndef LONGINT
   header%nparttotal(2) = npart_tot
+#else
+  header%nparttotal(2) = MOD(npart_tot,4294967296)
+#endif
   header%flag_cooling = 0
   header%numfiles = ncpu
   header%boxsize = boxlen_ini
@@ -447,6 +465,11 @@ subroutine savegadget(filename)
   header%flag_stellarage = 0
   header%flag_metals = 0
   header%totalhighword = 0
+#ifndef LONGINT
+  header%totalhighword(2) = 0
+#else
+  header%totalhighword(2) = npart_tot/4294967296
+#endif
   header%flag_entropy_instead_u = 0
   header%flag_doubleprecision = 0
   header%flag_ic_info = 0

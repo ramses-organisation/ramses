@@ -47,7 +47,7 @@ module amr_commons
   integer,allocatable,dimension(:,:)::headl
   integer,allocatable,dimension(:,:)::taill
   integer,allocatable,dimension(:,:)::numbl
-  integer,allocatable,dimension(:,:)::numbtot
+  integer(i8b),allocatable,dimension(:,:)::numbtot
 
   ! Pointers for each level boundary linked list
   integer,allocatable,dimension(:,:)::headb
@@ -104,7 +104,7 @@ module amr_commons
      integer     ,dimension(:)  ,pointer::igrid
      integer     ,dimension(:,:),pointer::f
      real(kind=8),dimension(:,:),pointer::u
-     integer     ,dimension(:,:),pointer::fp
+     integer(i8b),dimension(:,:),pointer::fp
      real(kind=8),dimension(:,:),pointer::up
 #ifdef ATON
      real(kind=8),dimension(:,:),pointer::u_radiation

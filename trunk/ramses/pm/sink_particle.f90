@@ -6,7 +6,7 @@ subroutine create_sink
   use amr_commons
   use pm_commons
   use hydro_commons
-  use clfind_commons, ONLY: clump_mass_tot4
+  use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -23,8 +23,9 @@ subroutine create_sink
   ! -Accretion routine is called
   !----------------------------------------------------------------------------
 
-  integer::ilevel,ivar,isink
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  integer::ilevel,ivar,isink,ntest
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+
   if(verbose)write(*,*)' Entering create_sink'
 
   ! Conversion factor from user units to cgs units
@@ -37,20 +38,44 @@ subroutine create_sink
   
   ! Remove all particle clouds around old sinks (including the central one)
   call kill_entire_cloud(1) 
-
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
   ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+  ! Run the clump finder,(produce no output, keep clump arrays allocated
+  ! to loop over the ntest cells above threshold)
+  call clump_finder(.false.,.true.,ntest)
 
-  ! Use the clump finder, identify possible sink formation sites
-  call clump_finder(.false.)
-
+  ! trim clumps down to R_accretion ball around peaks 
+  call trim_clumps(ntest)
+  
+  ! compute simple additive quantities and means (1st moments)
+  call compute_clump_properties(uold(1,1),ntest)
+  
+  ! compute quantities relative to mean (2nd moments)
+  call compute_clump_properties_round2(uold(1,1),ntest,.false.)
+  
+  ! apply all checks and flag cells for sink formation
+  call flag_formation_sites
   ! Create new sink particles if relevant
   do ilevel=levelmin,nlevelmax
      call make_sink_from_clump(ilevel)
   end do
-  if (smbh)deallocate(clump_mass_tot4)
   
+  ! Deallocate clump finder arrays
+  deallocate(npeaks_per_cpu)
+  deallocate(ipeak_start)
+  if (ntest>0)then
+     deallocate(icellp)
+     deallocate(levp)
+     deallocate(testp_sort)
+     deallocate(imaxp)
+  endif
+  call deallocate_all
+  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   !merge sinks - for star formation runs
   if (merging_scheme == 'timescale')call merge_star_sink
   
@@ -2794,7 +2819,7 @@ subroutine make_sink_from_clump(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use clfind_commons, ONLY: clump_mass_tot4
+  use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -3029,17 +3054,17 @@ subroutine make_sink_from_clump(ilevel)
               d_thres=d_sink
 
               ! Mass of the new sink
-              if(smbh)then
-                 ! The SMBH/sink mass is the mass that will heat the gas to 10**7 K after creation
-                 fourpi=4.0d0*ACOS(-1.0d0)
-                 threepi2=3.0d0*ACOS(-1.0d0)**2
-                 if(cosmo)fourpi=1.5d0*omega_m*aexp
-                 tff=sqrt(threepi2/8./fourpi/(d+1d-30))
-                 tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
-                 msink_new(index_sink)=1.d-5/0.15*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
-                 delta_d=d-msink_new(index_sink)/vol_loc
-                 if(delta_d<0.)write(*,*)'sink production with negative mass'
-              else
+              ! if(smbh)then
+              !    ! The SMBH/sink mass is the mass that will heat the gas to 10**7 K after creation
+              !    fourpi=4.0d0*ACOS(-1.0d0)
+              !    threepi2=3.0d0*ACOS(-1.0d0)**2
+              !    if(cosmo)fourpi=1.5d0*omega_m*aexp
+              !    tff=sqrt(threepi2/8./fourpi/(d+1d-30))
+              !    tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
+              !    msink_new(index_sink)=1.d-5/0.15*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
+              !    delta_d=d-msink_new(index_sink)/vol_loc
+              !    if(delta_d<0.)write(*,*)'sink production with negative mass'
+              ! else
                  delta_d=d*0.000001!00001
                  if (d>0.)then
                     msink_new(index_sink)=delta_d*vol_loc
@@ -3047,7 +3072,7 @@ subroutine make_sink_from_clump(ilevel)
                     write(*,*)'sink production with negative mass'
                     call clean_stop
                  endif
-              end if
+!              end if
 
               delta_mass_new(index_sink)=msink_new(index_sink)
 
