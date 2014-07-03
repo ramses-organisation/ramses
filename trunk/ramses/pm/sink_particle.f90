@@ -52,6 +52,7 @@ subroutine create_sink
   
   ! compute simple additive quantities and means (1st moments)
   call compute_clump_properties(uold(1,1),ntest)
+  if (clinfo)call write_clump_properties(.false.)
   
   ! compute quantities relative to mean (2nd moments)
   call compute_clump_properties_round2(uold(1,1),ntest,.false.)
@@ -3947,7 +3948,7 @@ subroutine read_sink_params()
 #endif
   
 
-  real(dp)::dx_min,scale
+  real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud
@@ -4007,8 +4008,10 @@ subroutine read_sink_params()
      if (myid==1)write(*,*)'You chose sink merging on a timescale but did not provide the timescale'
      if (myid==1)write(*,*)'choosing 1000y as lifetime...'
      merging_timescale=1000.
+     cty=scale_t/(365.25*24.*3600.)
+     cont_speed=1./(merging_timescale/cty)
   end if
-
+  
 
 
 end subroutine read_sink_params

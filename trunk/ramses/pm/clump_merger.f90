@@ -29,8 +29,8 @@ subroutine compute_clump_properties(xx,ntest)
 
   min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
   n_cells=0; 
-  halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0
-  center_of_mass=0.d0; clump_force=0.d0 
+  halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
+  center_of_mass=0.d0; clump_velocity=0.d0; clump_force=0.d0 
   peak_pos=0.
 
   if(verbose)write(*,*)'Entering compute clump properties'
@@ -105,6 +105,15 @@ subroutine compute_clump_properties(xx,ntest)
 
         ! Clump volume
         clump_vol(peak_nr)=clump_vol(peak_nr)+vol
+        
+        ! center of mass location
+        center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
+
+        ! center of mass velocity
+        if (hydro)clump_velocity(peak_nr,1:3)=clump_velocity(peak_nr,1:3)+vol*uold(icellp(ipart),2:4)
+
+        ! average grav acceleration
+        clump_force(peak_nr,1:3)=clump_force(peak_nr,1:3)+vol*d*f(icellp(ipart),1:3)
 
      end if
   end do
@@ -127,6 +136,26 @@ subroutine compute_clump_properties(xx,ntest)
   do i=1,ndim
      call virtual_peak_dp(peak_pos(1,i),'sum')
   end do
+
+  do i=1,ndim
+     call virtual_peak_dp(center_of_mass(1,i),'sum')
+     call virtual_peak_dp(clump_velocity(1,i),'sum')
+     call virtual_peak_dp(clump_force(1,i),'sum')
+  end do
+  do ipeak=1,npeaks
+     if (relevance(ipeak)>0.)then
+        center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
+        clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
+        clump_force(ipeak,1:3)=clump_force(ipeak,1:3)/clump_mass(ipeak)
+     end if
+  end do
+  do i=1,ndim
+     call boundary_peak_dp(center_of_mass(1,i))
+     call boundary_peak_dp(clump_velocity(1,i))
+     call boundary_peak_dp(clump_force(1,i))
+  end do  
+
+
 #endif
   ! Initialize halo mass to clump mass
   halo_mass=clump_mass
@@ -497,7 +526,7 @@ subroutine merge_clumps(ntest,action)
            end if
            relevance(ipeak)=relevance_peak
         else
-           relevance(ipeak)=0        
+           relevance(ipeak)=0.
         endif
      end do
      
@@ -632,9 +661,8 @@ subroutine allocate_peak_patch_arrays(ntest)
   call sparse_initialize(npeaks_max,npeaks_max,sparse_saddle_dens)
 
   ! These arrays are not used by the clump finder
-  allocate(clump_momentum(1:npeaks_max,1:ndim))
+  allocate(clump_velocity(1:npeaks_max,1:ndim))
   allocate(clump_force(1:npeaks_max,1:ndim))
-  allocate(second_moments(1:npeaks_max,1:ndim,1:ndim)) 
   allocate(e_kin_int(npeaks_max))
   allocate(e_thermal(npeaks_max))
   allocate(Psurf(npeaks_max))
@@ -680,10 +708,9 @@ subroutine allocate_peak_patch_arrays(ntest)
   clump_mass=0.; clump_vol=0.; peak_pos=0.; center_of_mass=0.
 
   clump_force=0.
-  clump_momentum=0.
+  clump_velocity=0.
   e_kin_int=0.
   e_thermal=0.
-  Psurf=0.
   grav_term=0.d0
   clump_check=-1.
   contracting=.false.
@@ -718,8 +745,7 @@ subroutine deallocate_all
   call sparse_kill(sparse_saddle_dens)
 
   deallocate(clump_force)
-  deallocate(second_moments)
-  deallocate(clump_momentum)
+  deallocate(clump_velocity)
   deallocate(e_kin_int)
   deallocate(grav_term)
   deallocate(e_thermal)

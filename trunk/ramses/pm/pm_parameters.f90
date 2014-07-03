@@ -20,6 +20,7 @@ module pm_parameters
   character(LEN=15)::merging_scheme='none'   ! sink merging scheme. options: 'none,'timescale', 'FOF'
   real(dp)::merging_timescale=-1.d0          ! time during which sinks are considered for merging (only when 'timescale' is used), 
                                              ! used also as contraction timescale in creation
+  real(dp)::cont_speed=0.
   character(LEN=15)::accretion_scheme='flux' ! sink accretion scheme. options: 'flux', 'bondi', 'threshold'
   logical::use_acc_rate=.true.               ! Use an accretion rate or perform threshold_accretion  
   logical::flux_accretion=.true.

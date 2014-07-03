@@ -87,7 +87,7 @@ subroutine flag_formation_sites
   do j=npeaks,1,-1
      jj=ind_sort(j)
      ok=.true.
-     ok=ok.and.relevance(jj)>relevance_threshold
+     ok=ok.and.relevance(jj)>0.
      ok=ok.and.occupied(jj)==0
      ok=ok.and.max_dens(jj)>d_sink
      ok=ok.and.contracting(jj)
@@ -98,7 +98,7 @@ subroutine flag_formation_sites
         if (cc(1) .eq. myid)then
            call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
            flag2(cell_index(1))=jj
-           write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
+           write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
         end if
      end if
   end do
@@ -117,6 +117,7 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   use hydro_commons, ONLY:uold,gamma
   use poisson_commons, ONLY:phi,f
   use clfind_commons
+  use pm_commons, ONLY:cont_speed
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -131,9 +132,9 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   !----------------------------------------------------------------------------
 
   integer::ipart,ilevel,info,i,peak_nr,global_peak_id,j,ii,jj
-  integer::grid,nx_loc,ix,iy,iz,ind
-  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p,cty
-  real(dp)::t_larson1,cont_speed=0.
+  integer::grid,nx_loc,ix,iy,iz,ind,icpu
+  integer::dummy,dummy_tot
+  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc
@@ -148,7 +149,6 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   grav_term=0.d0; Icl_d=0.d0; Icl=0.; Icl_dd=0.
   Icl_3by3=0.;  Icl_d_3by3=0.
   contracting=.false.
-  cty=1.
 
   !------------------------------------------
   ! compute volume of a cell in a given level
@@ -179,9 +179,11 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   end do
   
 #ifndef WITHOUTMPI
-  call boundary_peak_dp(max_dens)
-  call boundary_peak_dp(clump_mass)
-  call boundary_peak_dp(peak_pos)
+  do i=1,ndim
+     call boundary_peak_dp(max_dens)
+     call boundary_peak_dp(clump_mass)
+     call boundary_peak_dp(peak_pos(1,i))
+  end do
 #endif
   !---------------------------------------------------------------------------
   ! loop over all test particles to collect information from the cells
@@ -208,12 +210,10 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
         ! Cell volume
         vol=volume(levp(ipart))                  
 
-        M=clump_mass(peak_nr)
-        v_cl(1:ndim)=clump_momentum(peak_nr,1:ndim)/M
         
         !properties of the cell relative to center of mass
         rrel=xcell(1:3)-center_of_mass(peak_nr,1:3)
-        vrel=vd(1:3)/d-v_cl(1:3)
+        vrel=vd(1:3)/d-clump_velocity(peak_nr,1:3)
         frel=f(icellp(ipart),1:3)-clump_force(peak_nr,1:3)
 
         do i=1,ndim
@@ -248,13 +248,18 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   ! a lot of MPI communication to collect the results from the different cpu's
   !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
-  call virtual_peak_dp(e_kin_int,'sum')
-  call virtual_peak_dp(clump_size,'sum')
-  call virtual_peak_dp(grav_term,'sum')
   call virtual_peak_dp(e_thermal,'sum')
+  call virtual_peak_dp(e_kin_int,'sum')
   call virtual_peak_dp(Icl,'sum')
-  call virtual_peak_dp(Icl_3by3,'sum')
-  call virtual_peak_dp(Icl_d_3by3,'sum')
+  call virtual_peak_dp(Icl_d,'sum')
+  call virtual_peak_dp(grav_term,'sum')
+  do i=1,ndim
+     call virtual_peak_dp(clump_size(1,i),'sum')     
+     do j=1,ndim
+        call virtual_peak_dp(Icl_3by3(1,i,j),'sum')
+        call virtual_peak_dp(Icl_d_3by3(1,i,j),'sum')
+     end do
+  end do
 #endif
 
   !second time derivative of I
@@ -268,9 +273,9 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
         !compute eigenvalues and eigenvectors of Icl_d_3by3
         a=Icl_3by3(j,1:3,1:3)
         abs_err=1.d-8*Icl(j)**2+1.d-40
-!        call jacobi(a,eigenv,abs_err)
+        call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
-
+        
         !compute the contractions along the eigenvectors of Icl
         contractions(j,1:3)=0._dp
         do ii=1,3
@@ -282,8 +287,8 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
         end do
 
         !Check wether clump is contracting fast enough along all axis
-        if (Icl(j)>0)then 
-           contracting(j)=.true.
+        contracting(j)=.true.
+        if (Icl(j)>0.)then !not just one cell...
            contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed 
@@ -298,22 +303,28 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   end do
 
   !write to the log file some information that could be of interest for debugging etc.
-  if(myid==1 .and. clinfo .and. .not. smbh .and. sink)then 
-     write(*,'(135A)')'==========================================================================================='
-     write(*,'(135A)')'Cl_N     t1[y]      t2[y]      t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
-     write(*,'(135A)')'==========================================================================================='
+  if(clinfo .and. (.not. smbh) .and. sink)then 
+     if (myid==ncpu)then
+        write(*,'(135A)')'==========================================================================================='
+        write(*,'(135A)')'Cl_N   t1[y]    t2[y]    t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
+        write(*,'(135A)')'==========================================================================================='
+     end if
+#ifndef WITHOUTMPI
+     call MPI_BARRIER(dummy,dummy_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-           write(*,'(I4,2X,8(E9.2E2,3X))'),j&
-                ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
-                ,abs(Icl_d(j))/Icl_dd(j)*cty&
-                ,grav_term(j),-1.*Psurf(j)&
-                ,e_kin_int(j),e_thermal(j)
+           write(*,'(I4,2X,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&
+                ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
+                ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
+                ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
+                      ,abs(Icl_d(j))/Icl_dd(j)&
+                      ,grav_term(j),-1.*Psurf(j)&
+                      ,e_kin_int(j),e_thermal(j)
         end if
      end do
-     write(*,'(135A)')'==========================================================================================='
   end if
-     
+  
 end subroutine compute_clump_properties_round2
 !#########################################################################
 !#########################################################################
@@ -566,11 +577,11 @@ subroutine surface_int(ind_cell,np,ilevel)
 
                  if (clump_nr(j)>0)then                    
                     r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc*0.5&
-                         -center_of_mass(clump_nr(j),1)
+                         -center_of_mass(loc_clump_nr(j),1)
                     r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5&
-                         -center_of_mass(clump_nr(j),2)
+                         -center_of_mass(loc_clump_nr(j),2)
                     r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5&
-                         -center_of_mass(clump_nr(j),3)
+                         -center_of_mass(loc_clump_nr(j),3)
                  endif                 
               end do
               
@@ -636,11 +647,11 @@ subroutine surface_int(ind_cell,np,ilevel)
                     
                     if (clump_nr(j)>0)then                       
                        r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0*0.5&
-                            -center_of_mass(clump_nr(j),1)
+                            -center_of_mass(loc_clump_nr(j),1)
                        r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0*0.5&
-                            -center_of_mass(clump_nr(j),2)
+                            -center_of_mass(loc_clump_nr(j),2)
                        r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0*0.5&
-                            -center_of_mass(clump_nr(j),3)
+                            -center_of_mass(loc_clump_nr(j),3)
                     endif
                  end do
                  call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)
