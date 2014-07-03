@@ -271,6 +271,11 @@ subroutine clump_finder(create_output)
      !------------------------------------------
      ! Output clumps properties to file
      !------------------------------------------
+     if(myid==1.and.clinfo)then
+        write(*,*)"Output status of peak memory."
+     endif
+     if(clinfo)call analyze_peak_memory
+     
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
