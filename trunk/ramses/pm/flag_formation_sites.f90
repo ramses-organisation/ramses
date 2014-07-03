@@ -86,95 +86,24 @@ subroutine flag_formation_sites
   call quick_sort_dp(peakd,ind_sort,npeaks)
   do j=npeaks,1,-1
      jj=ind_sort(j)
-     ! if (smbh)then
-     !    ok=.true.
-     !    ok=ok.and.relevance(jj)>0.
-     !    ok=ok.and.occupied_all(jj)==0
-     !    ok=ok.and.peak_check(jj)>1.
-     !    !ok=ok.and.ball4_check(jj)>1.
-     !    !ok=ok.and.isodens_check(jj)>1.
-     !    fourpi=4.0d0*ACOS(-1.0d0)
-     !    threepi2=3.0d0*ACOS(-1.0d0)**2
-     !    if(cosmo)fourpi=1.5d0*omega_m*aexp
-     !    tff=sqrt(threepi2/8./fourpi/(max_dens(jj)+1.0d-30))
-     !    acc_r=clump_mass4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
-     !    ok=ok.and.acc_r > 30.d0
-
-     !    if (ok .eqv. .true.)then
-     !       pos(1,1:3)=peak_pos(jj,1:3)
-     !       call cmp_cpumap(pos,cc,1)
-     !       if (cc(1) .eq. myid)then
-     !          call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-     !          ! Geometrical criterion 
-     !          if(ivar_refine>0)then
-     !             if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
-     !                flag2(cell_index(1))=jj
-     !                form(jj)=1
-     !                flag_form=1
-     !             end if
-     !          else
-     !             flag2(cell_index(1))=jj
-     !             form(jj)=1
-     !             flag_form=1
-     !          end if
-     !       end if
-     !    end if
-     ! else
-        ok=.true.
-        ok=ok.and.relevance(jj)>0.
-        ok=ok.and.occupied(jj)==0
-        ok=ok.and.max_dens(jj)>d_sink
-        ok=ok.and.contracting(jj)
-        ok=ok.and.Icl_dd(jj)<0.
-        if (ok)then
-           pos(1,1:3)=peak_pos(jj,1:3)
-           call cmp_cpumap(pos,cc,1)
-           if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-              flag2(cell_index(1))=jj
-              write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
-           end if
+     ok=.true.
+     ok=ok.and.relevance(jj)>relevance_threshold
+     ok=ok.and.occupied(jj)==0
+     ok=ok.and.max_dens(jj)>d_sink
+     ok=ok.and.contracting(jj)
+     ok=ok.and.Icl_dd(jj)<0.
+     if (ok)then
+        pos(1,1:3)=peak_pos(jj,1:3)
+        call cmp_cpumap(pos,cc,1)
+        if (cc(1) .eq. myid)then
+           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           flag2(cell_index(1))=jj
+           write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
         end if
-!     end if
+     end if
   end do
 
-  !for the smbh case, create some output for the new sinks
-
-! #ifndef WITHOUTMPI
-!   call MPI_ALLREDUCE(form,form_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
-!   call MPI_ALLREDUCE(flag_form,flag_form_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-! #endif
-! #ifdef WITHOUTMPI
-!   form_all=form
-!   flag_form_tot=flag_form
-! #endif
-
-!   if(myid == 1)then
-!      if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_av [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
-!      do j=npeaks_tot,1,-1
-!         jj=ind_sort(j)
-!         if(form_all(jj) == 1)write(*,'(I6,X,I10,16(1X,1PE14.7))')jj&
-!              ,n_cells(jj)&
-!              ,peak_pos(jj,1),peak_pos(jj,2),peak_pos(jj,3)&
-!              ,(5.*clump_size(jj,1)/clump_vol(jj))**0.5*scale_l &
-!              ,(5.*clump_size(jj,2)/clump_vol(jj))**0.5*scale_l &
-!              ,(5.*clump_size(jj,3)/clump_vol(jj))**0.5*scale_l &
-!              ,(clump_momentum(jj,1)**2+clump_momentum(jj,2)**2+ &
-!              clump_momentum(jj,3)**2)**0.5/clump_mass(jj)*scale_l/scale_t&
-!              ,min_dens(jj)*scale_nH,max_dens(jj)*scale_nH&
-!              ,clump_mass(jj)/clump_vol(jj)*scale_nH&
-!              ,clump_mass(jj)*scale_d*dble(scale_l)**3/1.98892d33&
-!              ,clump_vol(jj)*(scale_l)**3&
-!              ,relevance(jj)&
-!              ,peak_check(jj)&
-! !             ,ball4_check(jj)&
-!              ,isodens_check(jj)&
-!              ,clump_check(jj)
-!      end do
-!   end if
   deallocate(occupied)
-!  deallocate(form,form_all)
-
 
 
 end subroutine flag_formation_sites
@@ -375,7 +304,7 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
      write(*,'(135A)')'==========================================================================================='
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-           write(*,'(I4,2X,8(E8.2E2,3X))'),j&
+           write(*,'(I4,2X,8(E9.2E2,3X))'),j&
                 ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
                 ,abs(Icl_d(j))/Icl_dd(j)*cty&
                 ,grav_term(j),-1.*Psurf(j)&
@@ -560,6 +489,7 @@ subroutine surface_int(ind_cell,np,ilevel)
   integer::j,ind,nx_loc,i2,j2,k2,ix,iy,iz,idim,jdim,i3,j3,k3
   real(dp)::dx,dx_loc,scale,vol_loc
   integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,neigh_cl
+  integer ,dimension(1:nvector)::loc_clump_nr
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xtest,r
   real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_dot_n
@@ -600,6 +530,10 @@ subroutine surface_int(ind_cell,np,ilevel)
      end do
      ekk_cell(j)=ekk_cell(j)/uold(ind_cell(j),1)
      P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j))
+  end do
+
+  do j=1,np
+     if (clump_nr(j) .ne. 0)call get_local_peak_id(clump_nr(j),loc_clump_nr(j))
   end do
 
 
@@ -665,7 +599,7 @@ subroutine surface_int(ind_cell,np,ilevel)
                     end do
                     ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
                     P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
-                    Psurf(clump_nr(j))=Psurf(clump_nr(j))+r_dot_n(j)*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
+                    Psurf(loc_clump_nr(j))=Psurf(loc_clump_nr(j))+r_dot_n(j)*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
                  endif
               end do
            endif
@@ -737,7 +671,7 @@ subroutine surface_int(ind_cell,np,ilevel)
                        end do
                        ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
                        P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
-                       Psurf(clump_nr(j))=Psurf(clump_nr(j))+r_dot_n(j)*0.25*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
+                       Psurf(loc_clump_nr(j))=Psurf(loc_clump_nr(j))+r_dot_n(j)*0.25*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
                        if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
                     endif
                  end do                 

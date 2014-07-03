@@ -843,27 +843,33 @@ subroutine read_clumpfind_params()
 
 122 rewind(1)
 
-
-  if (rho_clfind>0. .and. n_clfind >0.)then   ! too much information...
-     if(myid==1)write(*,*)'you set up the clumpfinder threshold in both, H/cc and g/cc, decide!'
-     if(myid==1)write(*,*)'aborting...'
-     call clean_stop
-  else if (rho_clfind<0. .and. n_clfind <0.)then  !not enough information
-     if (sink)then
-        density_threshold=d_sink/10.
-        if(myid==1)write(*,*)'You did not specify a threshold for the clump finder. '
-        if(myid==1)write(*,*)'Setting it to sink threshold / 10. !'
-     else
-        if(myid==1)write(*,*)'The &CLUMPFIND_PARAMS block should a least contain '
-        if(myid==1)write(*,*)'a density threshold n_clfind [parts/cc] or rho_clfind [g/cc]!'
+  if (density_threshold>0.)then
+     if (rho_clfind>0. .or. n_clfind >0.)then     
+        if(myid==1)write(*,*)'you provided the density threshold in code units.'
+        if(myid==1)write(*,*)'Ignoring the input in physical units...'
+     end if
+  else
+     if (rho_clfind>0. .and. n_clfind >0.)then   ! too much information...
+        if(myid==1)write(*,*)'you set up the clumpfinder threshold in both, H/cc and g/cc, decide!'
         if(myid==1)write(*,*)'aborting...'
         call clean_stop
+     else if (rho_clfind<0. .and. n_clfind <0.)then  !not enough information
+        if (sink)then
+           density_threshold=d_sink/10.
+           if(myid==1)write(*,*)'You did not specify a threshold for the clump finder. '
+           if(myid==1)write(*,*)'Setting it to sink threshold / 10. !'
+        else
+           if(myid==1)write(*,*)'The &CLUMPFIND_PARAMS block should a least contain '
+           if(myid==1)write(*,*)'density_threshold [code units], n_clfind [parts/cc]'
+           if(myid==1)write(*,*)'or rho_clfind [g/cc]!'
+           if(myid==1)write(*,*)'aborting...'
+           call clean_stop
+        end if
+     else if (n_clfind>0.)then
+        density_threshold=n_clfind/scale_nH
+     else if(rho_clfind>0.)then
+        density_threshold=rho_clfind/scale_d
      end if
-  else if (n_clfind>0.)then
-     density_threshold=n_clfind/scale_nH
-  else if(rho_clfind>0.)then
-     density_threshold=rho_clfind/scale_d
   end if
-
 end subroutine read_clumpfind_params
 

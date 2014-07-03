@@ -8,8 +8,8 @@ module clfind_commons
   integer,allocatable,dimension(:)::ipeak_start
   real(dp)::tot_mass
   real(dp)::relevance_threshold=2.0
-  real(dp)::density_threshold=0.d0
-  real(dp)::saddle_threshold=-1
+  real(dp)::density_threshold=-1.0d0
+  real(dp)::saddle_threshold=-1.d0
   real(dp)::rho_clfind=-1.d0
   real(dp)::n_clfind=-1.d0
   real(dp)::mass_threshold=0.d0
@@ -33,20 +33,18 @@ module clfind_commons
   ! Peak-patch properties
   real(dp),allocatable,dimension(:,:)::clump_size,center_of_mass,clump_momentum,clump_force
   real(dp),allocatable,dimension(:,:,:)::second_moments,Icl_d_3by3,Icl_3by3
-  real(dp),allocatable,dimension(:)::min_dens,av_dens,phi_min
-  real(dp),allocatable,dimension(:)::max_dens,e_kin_int,e_bind,e_thermal
-  real(dp),allocatable,dimension(:)::halo_mass,clump_mass,clump_vol,clump_mass4
-  real(dp),allocatable,dimension(:,:)::peak_pos,bulk_momentum
+  real(dp),allocatable,dimension(:)::min_dens,av_dens
+  real(dp),allocatable,dimension(:)::max_dens,e_kin_int,e_thermal
+  real(dp),allocatable,dimension(:)::halo_mass,clump_mass,clump_vol
+  real(dp),allocatable,dimension(:,:)::peak_pos
   real(dp),allocatable,dimension(:)::saddle_max
   real(dp),allocatable,dimension(:)::relevance
-  real(dp),allocatable,dimension(:)::phi_ref
-  real(dp),allocatable,dimension(:)::Psurf,v_therm,v_rms,m4
-  real(dp),allocatable,dimension(:)::e_bind_iso,e_therm_iso,e_kin_iso,grav_term,clump_virial
-  real(dp),allocatable,dimension(:)::peak_check,ball4_check,isodens_check,clump_check
+  real(dp),allocatable,dimension(:)::Psurf
+  real(dp),allocatable,dimension(:)::grav_term
+  real(dp),allocatable,dimension(:)::clump_check
   real(dp),allocatable,dimension(:)::Icl,Icl_d,Icl_dd
-  integer,allocatable,dimension(:)::n_cells,lev_peak,minmatch,new_peak
+  integer,allocatable,dimension(:)::n_cells,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
-  integer,allocatable,dimension(:)::form,form_all
   logical,allocatable,dimension(:)::contracting
 
   ! Cell-above-the-threshold properties

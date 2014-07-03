@@ -635,21 +635,9 @@ subroutine allocate_peak_patch_arrays(ntest)
   allocate(clump_momentum(1:npeaks_max,1:ndim))
   allocate(clump_force(1:npeaks_max,1:ndim))
   allocate(second_moments(1:npeaks_max,1:ndim,1:ndim)) 
-!  allocate(clump_mass4(1:npeaks_max))
   allocate(e_kin_int(npeaks_max))
-!  allocate(e_bind(npeaks_max))
   allocate(e_thermal(npeaks_max))
-!  allocate(phi_min(npeaks_max))
-  allocate(minmatch(npeaks_max))
   allocate(Psurf(npeaks_max))
-!  allocate(v_therm(npeaks_max))
-!  allocate(m4(npeaks_max))
-!  allocate(bulk_momentum(1:npeaks_max,1:ndim))
-!  allocate(e_kin_iso(npeaks_max))
-!  allocate(e_bind_iso(npeaks_max))
-!  allocate(e_therm_iso(npeaks_max))
-!  allocate(peak_check(npeaks_max))
-!  allocate(isodens_check(npeaks_max))
   allocate(clump_check(npeaks_max))
   allocate(grav_term(npeaks_max))
   allocate(contracting(npeaks_max))
@@ -692,18 +680,12 @@ subroutine allocate_peak_patch_arrays(ntest)
   clump_mass=0.; clump_vol=0.; peak_pos=0.; center_of_mass=0.
 
   clump_force=0.
-!  second_moments=0.
   clump_momentum=0.
-!  clump_mass4=0.
   e_kin_int=0.
-  e_bind=0.
   e_thermal=0.
-  phi_min=0.
-  minmatch=1
-  phi_ref=huge(zero)
   Psurf=0.
   grav_term=0.d0
-  isodens_check=-1.;  clump_check=-1.; peak_check=-1.; 
+  clump_check=-1.
   contracting=.false.
   Icl=0.; Icl_d=0.; Icl_dd=0.; Icl_d_3by3=0.; Icl_3by3=0.
 
@@ -741,7 +723,6 @@ subroutine deallocate_all
   deallocate(e_kin_int)
   deallocate(grav_term)
   deallocate(e_thermal)
-  deallocate(minmatch)
   deallocate(Psurf)
   deallocate(clump_check)
   deallocate(contracting)
