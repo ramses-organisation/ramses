@@ -240,11 +240,6 @@ subroutine write_clump_properties(to_file)
           '        rho-               rho+               rho_av             mass_cl            relevance   '
   end if
 
-#ifndef WITHOUTMPI
-  call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-
-
   do j=npeaks,1,-1
      jj=ind_sort(j)
      if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then           
@@ -279,10 +274,6 @@ subroutine write_clump_properties(to_file)
      close(20)
   end if
 
-
-#ifndef WITHOUTMPI
-  call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
 
 end subroutine write_clump_properties
 !#########################################################################
