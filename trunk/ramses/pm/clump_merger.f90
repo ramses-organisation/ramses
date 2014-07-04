@@ -201,7 +201,7 @@ subroutine write_clump_properties(to_file)
   if(hydro)then
      particle_mass=mass_sph
   else
-     particle_mass=MINVAL(mp)
+     particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI  
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      particle_mass=particle_mass_tot  
@@ -677,6 +677,7 @@ subroutine allocate_peak_patch_arrays(ntest)
   nhash=prime(bit_length+1)
   allocate(hkey(1:nhash))
   hfree=npeaks+1
+  hcollision=0
   allocate(gkey(npeaks+1:npeaks_max))
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
@@ -771,6 +772,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
         local_peak_id=hfree
         gkey(hfree)=global_peak_id
         hfree=hfree+1
+        hcollision=hcollision+1
         if(hfree.eq.npeaks_max)then
            write(*,*)'Too many peaks'
            write(*,*)'Increase npeaks_max'
@@ -1149,3 +1151,54 @@ subroutine write_clump_map(ntest)
   end do
   close(20)
 end subroutine write_clump_map
+!################################################################
+!################################################################
+!################################################################
+subroutine analyze_peak_memory
+  use amr_commons
+  use clfind_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::icpu,info,i,j
+  integer,dimension(1:ncpu)::npeak_all,npeak_tot
+  integer,dimension(1:ncpu)::hfree_all,hfree_tot
+  integer,dimension(1:ncpu)::sparse_all,sparse_tot
+  integer,dimension(1:ncpu)::coll_all,coll_tot
+
+  npeak_all=0
+  npeak_all(myid)=npeaks
+  coll_all=0
+  coll_all(myid)=hcollision
+  hfree_all=0
+  hfree_all(myid)=hfree-npeaks
+  sparse_all=0
+  sparse_all(myid)=sparse_saddle_dens%used
+  call MPI_ALLREDUCE(npeak_all,npeak_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(coll_all,coll_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(hfree_all,hfree_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(sparse_all,sparse_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  if(myid==1)then
+     write(*,*)'peaks per cpu'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(npeak_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'ghost peaks per cpu'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(hfree_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'hash table collisions'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(coll_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'sparse matrix used'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(sparse_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+  end if
+end subroutine analyze_peak_memory
+!################################################################
+!################################################################
+!################################################################
+!################################################################

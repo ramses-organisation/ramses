@@ -27,7 +27,7 @@ module clfind_commons
   type(sparse_mat)::sparse_saddle_dens
 
   ! Hash table variables
-  integer::nhash,hfree
+  integer::nhash,hfree,hcollision
   integer,dimension(:),allocatable::gkey,nkey,hkey
 
   ! Peak-patch properties
