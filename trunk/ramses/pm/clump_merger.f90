@@ -143,11 +143,9 @@ subroutine compute_clump_properties(xx,ntest)
      call virtual_peak_dp(clump_force(1,i),'sum')
   end do
   do ipeak=1,npeaks
-     if (relevance(ipeak)>0.)then
-        center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
-        clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
-        clump_force(ipeak,1:3)=clump_force(ipeak,1:3)/clump_mass(ipeak)
-     end if
+     center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
+     clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
+     clump_force(ipeak,1:3)=clump_force(ipeak,1:3)/clump_mass(ipeak)
   end do
   do i=1,ndim
      call boundary_peak_dp(center_of_mass(1,i))
@@ -166,8 +164,9 @@ subroutine compute_clump_properties(xx,ntest)
   call MPI_ALLREDUCE(tot_mass,tot_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   tot_mass=tot_mass_tot
 #endif
+
   ! Compute further properties of the clumps
-  av_dens(1:npeaks)=clump_mass(1:npeaks)/(clump_vol(1:npeaks)+tiny(0.d0))
+  av_dens(1:npeaks)=clump_mass(1:npeaks)/clump_vol(1:npeaks)
 
 end subroutine compute_clump_properties
 !################################################################

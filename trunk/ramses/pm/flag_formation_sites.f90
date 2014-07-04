@@ -87,21 +87,104 @@ subroutine flag_formation_sites
   do j=npeaks,1,-1
      jj=ind_sort(j)
      ok=.true.
-     ok=ok.and.relevance(jj)>0.
-     ok=ok.and.occupied(jj)==0
-     ok=ok.and.max_dens(jj)>d_sink
-     ok=ok.and.contracting(jj)
-     ok=ok.and.Icl_dd(jj)<0.
-     if (ok)then
-        pos(1,1:3)=peak_pos(jj,1:3)
-        call cmp_cpumap(pos,cc,1)
-        if (cc(1) .eq. myid)then
-           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-           flag2(cell_index(1))=jj
-           write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
+     ! if (smbh)then
+     !    ok=ok.and.relevance_tot(jj)>0.
+     !    ok=ok.and.occupied_all(jj)==0
+     !    ok=ok.and.peak_check(jj)>1.
+     !    !ok=ok.and.ball4_check(jj)>1.
+     !    !ok=ok.and.isodens_check(jj)>1.
+     !    fourpi=4.0d0*ACOS(-1.0d0)
+     !    threepi2=3.0d0*ACOS(-1.0d0)**2
+     !    if(cosmo)fourpi=1.5d0*omega_m*aexp
+     !    tff=sqrt(threepi2/8./fourpi/(max_dens_tot(jj)+1.0d-30))
+     !    acc_r=clump_mass_tot4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
+     !    ok=ok.and.acc_r > 30.d0
+        
+     !    if (ok .eqv. .true.)then
+     !       pos(1,1:3)=peak_pos_tot(jj,1:3)
+     !       call cmp_cpumap(pos,cc,1)
+     !       if (cc(1) .eq. myid)then
+     !          call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+     !          ! Geometrical criterion 
+     !          if(ivar_refine>0)then
+     !             if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
+     !                flag2(cell_index(1))=jj
+     !                form(jj)=1
+     !                flag_form=1
+     !             end if
+     !          else
+     !             flag2(cell_index(1))=jj
+     !             form(jj)=1
+     !             flag_form=1
+     !          end if
+     !       end if
+     !    end if
+!     else
+        ok=ok.and.relevance(jj)>0.
+        ok=ok.and.occupied(jj)==0
+        ok=ok.and.max_dens(jj)>d_sink
+        ok=ok.and.contracting(jj)
+        ok=ok.and.Icl_dd(jj)<0.
+        if (ok)then
+           pos(1,1:3)=peak_pos(jj,1:3)
+           call cmp_cpumap(pos,cc,1)
+           if (cc(1) .eq. myid)then
+              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+              flag2(cell_index(1))=jj
+              write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
+           end if
         end if
-     end if
+ !    end if
   end do
+
+
+
+!   !for the smbh case, create some output for the new sinks
+
+! #ifndef WITHOUTMPI
+!   call MPI_ALLREDUCE(form,form_all,npeaks_tot,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+! #endif
+! #ifdef WITHOUTMPI
+!   form_all=form
+! #endif
+! #ifndef WITHOUTMPI
+!   call MPI_ALLREDUCE(flag_form,flag_form_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+! #endif
+! #ifdef WITHOUTMPI
+!   flag_form_tot=flag_form
+! #endif
+!   if(myid == 1)then
+!      if(flag_form_tot>0)write(*,'(135A)')'Cl_N #leaf-cells  peak_x [uu] peak_y [uu] peak_z [uu] size_x [cm] size_y [cm] size_z [cm] |v|_CM [u.u.] rho- [H/cc] rho+ [H/cc] rho_a
+! v [H/cc] M_cl [M_sol] V_cl [AU^3] rel.  peak_check   ball4_c\heck   isodens_check   clump_check '
+!      do j=npeaks_tot,1,-1
+!         jj=ind_sort(j)
+!         if(form_all(jj) == 1)write(*,'(I6,X,I10,16(1X,1PE14.7))')jj&
+!              ,n_cells_tot(jj)&
+!              ,peak_pos_tot(jj,1),peak_pos_tot(jj,2),peak_pos_tot(jj,3)&
+!              ,(5.*clump_size_tot(jj,1)/clump_vol_tot(jj))**0.5*scale_l &
+!              ,(5.*clump_size_tot(jj,2)/clump_vol_tot(jj))**0.5*scale_l &
+!              ,(5.*clump_size_tot(jj,3)/clump_vol_tot(jj))**0.5*scale_l &
+!              ,(clump_momentum_tot(jj,1)**2+clump_momentum_tot(jj,2)**2+ &
+!              clump_momentum_tot(jj,3)**2)**0.5/clump_mass_tot(jj)*scale_l/scale_t&
+!              ,min_dens_tot(jj)*scale_nH,max_dens_tot(jj)*scale_nH&
+!              ,clump_mass_tot(jj)/clump_vol_tot(jj)*scale_nH&
+!              ,clump_mass_tot(jj)*scale_d*dble(scale_l)**3/1.98892d33&
+!              ,clump_vol_tot(jj)*(scale_l)**3&
+!              ,relevance_tot(jj)&
+!              ,peak_check(jj)&
+! !             ,ball4_check(jj)&
+!              ,isodens_check(jj)&
+!              ,clump_check(jj)
+!      end do
+!   end if
+!   deallocate(form,form_all)
+
+
+
+
+
+
+
 
   deallocate(occupied)
 

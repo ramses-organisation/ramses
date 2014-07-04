@@ -46,6 +46,7 @@ module clfind_commons
   integer,allocatable,dimension(:)::n_cells,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
   logical,allocatable,dimension(:)::contracting
+!  integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
 
   ! Cell-above-the-threshold properties
   real(dp),allocatable,dimension(:)::denp ! Density of the cells

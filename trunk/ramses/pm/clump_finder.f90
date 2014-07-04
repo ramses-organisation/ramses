@@ -164,12 +164,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   !----------------------------------------------------------------------
   nmove=0
   nskip=peak_nr
-!  if(npeaks>0)then
-     ! Compute the size of the peak-based arrays
-  npeaks_max=4+npeaks+16*maxval(npeaks_per_cpu_tot)
+  ! Compute the size of the peak-based arrays
+  npeaks_max=MAX(4*maxval(npeaks_per_cpu_tot),1000)
   allocate(max_dens(npeaks_max))
   max_dens=0.
- ! endif
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0)then  ! case 2: flag peaks
@@ -277,8 +275,8 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      endif
      if(clinfo)call analyze_peak_memory
      if(create_output)then
+        if(clinfo)call write_clump_properties(.false.)
         if(myid==1)write(*,*)"Outputing clump properties to disc."
-        call write_clump_properties(.false.)
         call write_clump_properties(.true.)
      endif
      

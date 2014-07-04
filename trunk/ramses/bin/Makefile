@@ -7,7 +7,6 @@ NDIM = 3
 NPRE = 8
 NVAR = 5
 SOLVER = hydro
-PATCH = 
 EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
