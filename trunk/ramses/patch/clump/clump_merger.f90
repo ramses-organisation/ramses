@@ -203,18 +203,22 @@ subroutine write_clump_properties(to_file)
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      open(unit=ilun,file=fileloc,form='formatted')
-     call title(ifout-1,nchar)
-     fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
-     call title(myid,nchar)
-     fileloc=TRIM(fileloc)//TRIM(nchar)
-     open(unit=ilun2,file=fileloc,form='formatted')
+     if(saddle_threshold>0)then
+        call title(ifout-1,nchar)
+        fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
+        call title(myid,nchar)
+        fileloc=TRIM(fileloc)//TRIM(nchar)
+        open(unit=ilun2,file=fileloc,form='formatted')
+     endif
   end if
   
   write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
        '        rho-               rho+               rho_av             mass_cl            relevance   '
 
-  write(ilun2,'(135A)')'   index  peak_x             peak_y             peak_z     '//&
-       '        rho+               mass      '
+  if(saddle_threshold>0)then
+     write(ilun2,'(135A)')'   index  peak_x             peak_y             peak_z     '//&
+          '        rho+               mass      '
+  endif
 
   do j=npeaks,1,-1
      jj=ind_sort(j)
@@ -235,14 +239,16 @@ subroutine write_clump_properties(to_file)
         rel_mass=rel_mass+clump_mass(jj)
         n_rel=n_rel+1
      end if
-     if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-        write(ilun,'(I8,5(X,1PE18.9E2))')&
-             jj+ipeak_start(myid)&
-             ,peak_pos(jj,1)&
-             ,peak_pos(jj,2)&
-             ,peak_pos(jj,3)&
-             ,max_dens(jj)&
-             ,clump_mass(jj)
+     if(saddle_threshold>0)then
+        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+           write(ilun,'(I8,5(X,1PE18.9E2))')&
+                jj+ipeak_start(myid)&
+                ,peak_pos(jj,1)&
+                ,peak_pos(jj,2)&
+                ,peak_pos(jj,3)&
+                ,max_dens(jj)&
+                ,clump_mass(jj)
+        endif
      endif
   end do
 #ifndef WITHOUTMPI  
@@ -257,7 +263,9 @@ subroutine write_clump_properties(to_file)
   endif
   if (to_file)then
      close(ilun)
-     close(ilun2)
+     if(saddle_threshold>0)then
+        close(ilun2)
+     endif
   end if
 
 #ifndef WITHOUTMPI
