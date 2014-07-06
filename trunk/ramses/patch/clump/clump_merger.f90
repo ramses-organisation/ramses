@@ -160,7 +160,7 @@ subroutine write_clump_properties(to_file)
   ! this routine writes the clump properties to screen and to file
   !---------------------------------------------------------------------------
 
-  integer::i,j,jj,ilun,n_rel,n_rel_tot,info,nx_loc
+  integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,info,nx_loc
   real(dp)::rel_mass,rel_mass_tot,scale,particle_mass,particle_mass_tot
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
@@ -188,8 +188,10 @@ subroutine write_clump_properties(to_file)
 
   If(to_file)then
      ilun=20
+     ilun2=22
   else 
      ilun=6
+     ilun2=6
   end if
 
   ! print results in descending order to screen/file
@@ -200,11 +202,19 @@ subroutine write_clump_properties(to_file)
      fileloc=TRIM('output_'//TRIM(nchar)//'/clump_'//TRIM(nchar)//'.txt')
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     open(unit=20,file=fileloc,form='formatted')
+     open(unit=ilun,file=fileloc,form='formatted')
+     call title(ifout-1,nchar)
+     fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
+     call title(myid,nchar)
+     fileloc=TRIM(fileloc)//TRIM(nchar)
+     open(unit=ilun2,file=fileloc,form='formatted')
   end if
   
   write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
        '        rho-               rho+               rho_av             mass_cl            relevance   '
+
+  write(ilun2,'(135A)')'   index  peak_x             peak_y             peak_z     '//&
+       '        rho+               mass      '
 
   do j=npeaks,1,-1
      jj=ind_sort(j)
@@ -225,6 +235,15 @@ subroutine write_clump_properties(to_file)
         rel_mass=rel_mass+clump_mass(jj)
         n_rel=n_rel+1
      end if
+     if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+        write(ilun,'(I8,5(X,1PE18.9E2))')&
+             jj+ipeak_start(myid)&
+             ,peak_pos(jj,1)&
+             ,peak_pos(jj,2)&
+             ,peak_pos(jj,3)&
+             ,max_dens(jj)&
+             ,clump_mass(jj)
+     endif
   end do
 #ifndef WITHOUTMPI  
   call MPI_ALLREDUCE(n_rel,n_rel_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
@@ -237,7 +256,8 @@ subroutine write_clump_properties(to_file)
      if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
   endif
   if (to_file)then
-     close(20)
+     close(ilun)
+     close(ilun2)
   end if
 
 #ifndef WITHOUTMPI
