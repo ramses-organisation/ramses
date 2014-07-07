@@ -392,9 +392,6 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
         write(*,'(135A)')'Cl_N   t1[y]    t2[y]    t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
         write(*,'(135A)')'==========================================================================================='
      end if
-#ifndef WITHOUTMPI
-     call MPI_BARRIER(dummy,dummy_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
            write(*,'(I4,2X,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&

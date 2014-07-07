@@ -52,7 +52,6 @@ subroutine create_sink
   
   ! compute simple additive quantities and means (1st moments)
   call compute_clump_properties(uold(1,1),ntest)
-  if (clinfo)call write_clump_properties(.false.)
   
   ! compute quantities relative to mean (2nd moments)
   call compute_clump_properties_round2(uold(1,1),ntest,.false.)

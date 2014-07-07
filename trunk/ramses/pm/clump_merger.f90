@@ -399,6 +399,7 @@ subroutine merge_clumps(ntest,action)
            endif
         end do
         ! Update boundary conditions for new_peak array
+        call build_peak_communicator
         call boundary_peak_int(new_peak)
         iter=iter+1
 #ifndef WITHOUTMPI
