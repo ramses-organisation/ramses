@@ -399,7 +399,6 @@ subroutine merge_clumps(ntest,action)
            endif
         end do
         ! Update boundary conditions for new_peak array
-        call build_peak_communicator
         call boundary_peak_int(new_peak)
         iter=iter+1
 #ifndef WITHOUTMPI
@@ -1029,6 +1028,7 @@ subroutine virtual_saddle_max
      if(sparse_saddle_dens%maxval(ipeak)<dp_peak_recv_buf(j))then
         sparse_saddle_dens%maxval(ipeak)=dp_peak_recv_buf(j)
         sparse_saddle_dens%maxloc(ipeak)=int_peak_recv_buf(j)
+        call get_local_peak_id(int_peak_recv_buf(j),jpeak)
      endif
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
