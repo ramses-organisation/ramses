@@ -160,7 +160,7 @@ subroutine write_clump_properties(to_file)
   ! this routine writes the clump properties to screen and to file
   !---------------------------------------------------------------------------
 
-  integer::i,j,jj,ilun,n_rel,n_rel_tot,info,nx_loc
+  integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,info,nx_loc
   real(dp)::rel_mass,rel_mass_tot,scale,particle_mass,particle_mass_tot
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
@@ -172,7 +172,7 @@ subroutine write_clump_properties(to_file)
   if(hydro)then
      particle_mass=mass_sph
   else
-     particle_mass=MINVAL(mp)
+     particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI  
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      particle_mass=particle_mass_tot  
@@ -188,8 +188,10 @@ subroutine write_clump_properties(to_file)
 
   If(to_file)then
      ilun=20
+     ilun2=22
   else 
      ilun=6
+     ilun2=6
   end if
 
   ! print results in descending order to screen/file
@@ -200,11 +202,23 @@ subroutine write_clump_properties(to_file)
      fileloc=TRIM('output_'//TRIM(nchar)//'/clump_'//TRIM(nchar)//'.txt')
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     open(unit=20,file=fileloc,form='formatted')
+     open(unit=ilun,file=fileloc,form='formatted')
+     if(saddle_threshold>0)then
+        call title(ifout-1,nchar)
+        fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
+        call title(myid,nchar)
+        fileloc=TRIM(fileloc)//TRIM(nchar)
+        open(unit=ilun2,file=fileloc,form='formatted')
+     endif
   end if
   
   write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
        '        rho-               rho+               rho_av             mass_cl            relevance   '
+
+  if(saddle_threshold>0)then
+     write(ilun2,'(135A)')'   index  peak_x             peak_y             peak_z     '//&
+          '        rho+               mass      '
+  endif
 
   do j=npeaks,1,-1
      jj=ind_sort(j)
@@ -225,6 +239,17 @@ subroutine write_clump_properties(to_file)
         rel_mass=rel_mass+clump_mass(jj)
         n_rel=n_rel+1
      end if
+     if(saddle_threshold>0)then
+        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+           write(ilun,'(I8,5(X,1PE18.9E2))')&
+                jj+ipeak_start(myid)&
+                ,peak_pos(jj,1)&
+                ,peak_pos(jj,2)&
+                ,peak_pos(jj,3)&
+                ,max_dens(jj)&
+                ,clump_mass(jj)
+        endif
+     endif
   end do
 #ifndef WITHOUTMPI  
   call MPI_ALLREDUCE(n_rel,n_rel_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
@@ -237,7 +262,10 @@ subroutine write_clump_properties(to_file)
      if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
   endif
   if (to_file)then
-     close(20)
+     close(ilun)
+     if(saddle_threshold>0)then
+        close(ilun2)
+     endif
   end if
 
 #ifndef WITHOUTMPI
@@ -267,7 +295,7 @@ subroutine merge_clumps(ntest,action)
   integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
   integer::peak,next_peak,current,isearch,nmove,nmove_all,ipeak,jpeak,iter
   integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
-  integer::jmerge,ilev
+  integer::jmerge,ilev,global_peak_id
   real(dp)::value_iij,zero=0.,relevance_peak,dens_max
   real(dp)::mass_threshold_sm,mass_threshold_uu
   integer,dimension(1:npeaks_max)::alive,ind_sort
@@ -374,10 +402,15 @@ subroutine merge_clumps(ntest,action)
 
      ! Transfer matrix elements of merged peaks to surviving peaks
      ! Create new local duplicated peaks and update communicator
-     do ipeak=1,npeaks
+     do ipeak=1,hfree-1
         if(alive(ipeak)>0)then
            merge_to=new_peak(ipeak)
-           if(merge_to.NE.(ipeak_start(myid)+ipeak))then
+           if(ipeak.LE.npeaks)then
+              global_peak_id=ipeak_start(myid)+ipeak
+           else
+              global_peak_id=gkey(ipeak)
+           endif
+           if(merge_to.NE.global_peak_id)then
               call get_local_peak_id(merge_to,jpeak)
               current=sparse_saddle_dens%first(ipeak) ! first element of line ipeak
               do while(current>0) ! walk the line
@@ -657,6 +690,7 @@ subroutine allocate_peak_patch_arrays(ntest)
   nhash=prime(bit_length+1)
   allocate(hkey(1:nhash))
   hfree=npeaks+1
+  hcollision=0
   allocate(gkey(npeaks+1:npeaks_max))
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
@@ -780,6 +814,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
            local_peak_id=hfree
            gkey(hfree)=global_peak_id
            hfree=hfree+1
+           hcollision=hcollision+1
            if(hfree.eq.npeaks_max)then
               write(*,*)'Too many peaks'
               write(*,*)'Increase npeaks_max'
@@ -817,6 +852,55 @@ subroutine get_local_peak_cpu(local_peak_id,peak_cpu)
   end if
 
 end subroutine get_local_peak_cpu
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine analyze_peak_memory
+  use amr_commons
+  use clfind_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+
+  integer::icpu,info,i,j
+  integer,dimension(1:ncpu)::npeak_all,npeak_tot
+  integer,dimension(1:ncpu)::hfree_all,hfree_tot
+  integer,dimension(1:ncpu)::sparse_all,sparse_tot
+  integer,dimension(1:ncpu)::coll_all,coll_tot
+
+  npeak_all=0
+  npeak_all(myid)=npeaks
+  coll_all=0
+  coll_all(myid)=hcollision
+  hfree_all=0
+  hfree_all(myid)=hfree-npeaks
+  sparse_all=0
+  sparse_all(myid)=sparse_saddle_dens%used
+  call MPI_ALLREDUCE(npeak_all,npeak_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(coll_all,coll_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(hfree_all,hfree_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(sparse_all,sparse_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  if(myid==1)then
+     write(*,*)'peaks per cpu'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(npeak_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'ghost peaks per cpu'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(hfree_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'hash table collisions'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(coll_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+     write(*,*)'sparse matrix used'
+     do i=0,ncpu-1,10
+        write(*,'(256(I8,1X))')(sparse_tot(j),j=i+1,min(i+10,ncpu))
+     end do
+  end if
+end subroutine analyze_peak_memory
 !################################################################
 !################################################################
 !################################################################
@@ -1012,8 +1096,6 @@ subroutine virtual_saddle_max
         sparse_saddle_dens%maxval(ipeak)=dp_peak_recv_buf(j)
         sparse_saddle_dens%maxloc(ipeak)=int_peak_recv_buf(j)
         call get_local_peak_id(int_peak_recv_buf(j),jpeak)
-        call set_value(ipeak,jpeak,av_dens(j),sparse_saddle_dens)
-        call set_value(jpeak,ipeak,av_dens(j),sparse_saddle_dens)
      endif
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
