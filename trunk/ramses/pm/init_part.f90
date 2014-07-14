@@ -80,6 +80,8 @@ subroutine init_part
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
+     allocate(weightp(npartmax))
+     weightp=0.0
      if(metal)then
         allocate(zp(npartmax))
         zp=0.0
@@ -163,6 +165,7 @@ subroutine init_part
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
      allocate(direct_force_sink(1:nsinkmax))
      allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
+     allocate(bondi_switch(1:nsinkmax))
   endif
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

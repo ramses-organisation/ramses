@@ -327,6 +327,10 @@ recursive subroutine amr_step(ilevel,icount)
         if (.not. cosmo)then
            call make_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
+           ! assuming all sink cloud parts sit on levelmax 
+           ! it's better to compute the accretion_rate based on
+           ! the updated values
+           call collect_acczone_avg(ilevel)
         end if
         call grow_sink(ilevel,.false.)
      end if
