@@ -62,7 +62,7 @@ subroutine create_sink
   do ilevel=levelmin,nlevelmax
      call make_sink_from_clump(ilevel)
   end do
-  
+
   ! Deallocate clump finder arrays
   deallocate(npeaks_per_cpu)
   deallocate(ipeak_start)
@@ -2010,7 +2010,13 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
 
         if(nol_accretion)then
-           p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
+           ! for accretion from very low density cells
+           ! do accrete angular momentum (to prevent negative densities...)
+           if (d < 1.d-5*d_sink)then
+              p_rel_acc=p_rel*acc_mass/(d*vol_loc)
+           else
+              p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
+           end if
         else
            p_rel_acc=p_rel*acc_mass/(d*vol_loc)
         end if
@@ -2039,11 +2045,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            write(*,*),indp(j),myid
            write(*,*),'====================================================='
         end if
+        
+        ! accrete
         d=d-acc_mass/vol_loc
-
-
-
-
 
         !convert back to conservative variables
         v2=(vv(1)**2+vv(2)**2+vv(3)**2)
@@ -2184,7 +2188,7 @@ subroutine compute_accretion_rate(write_sinks)
         dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
         
         !compute maximum timestep allowed by sink
-        dt_sink=min(dt_sink,0.25*mgas/(dMsink_overdt(isink)+tiny(0.d0)))
+        dt_sink=min(dt_sink,0.5*mgas/(dMsink_overdt(isink)+tiny(0.d0)))
      end do
   end if
 
@@ -2289,13 +2293,11 @@ subroutine print_sink_properties(dMBHoverdt,dMEDoverdt)
         do i=nsink,1,-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
-           write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,3(2X,E11.3),2X,L3)')&
+           write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,3(2X,E11.3))')&
                 idsink(isink),msink(isink)*scale_m/1.9891d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
                 acc_rate(isink)*scale_m/1.9891d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.9d33,&
-                (t-tsink(isink))*scale_t/(3600*24*365.25),&
-                bondi_switch(isink)
-           
+                (t-tsink(isink))*scale_t/(3600*24*365.25)
         end do
         write(*,'(" ======================================================================================================================== ")')
      endif
@@ -3900,8 +3902,6 @@ subroutine f_gas_sink(ilevel)
   !collect sink acceleration from cpus
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-!     fsink_new=fsink_all
-!     call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
 #else
      fsink_all=fsink_new
 #endif

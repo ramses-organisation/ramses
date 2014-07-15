@@ -112,7 +112,7 @@ subroutine newdt_fine(ilevel)
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-     !issue here: what if sink lives not a levelmax? timestep can be too big!
+     ! possible issue here: what if sink lives not a levelmax? timestep can be too big?
      if(sink .and. ilevel==nlevelmax .and. nsink>0) then
         call compute_accretion_rate(.false.)
         do isink=1,nsink
@@ -121,6 +121,7 @@ subroutine newdt_fine(ilevel)
               dt_sink=min(dt_sink,tff*courant_factor)
            end if
         end do
+!        if (myid==1)print*,ilevel,'dt',dt_sink/dtnew(ilevel)
         dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
      end if
 
