@@ -123,8 +123,6 @@ recursive subroutine amr_step(ilevel,icount)
 
         call dump_all
 
-        if(gas_analytics) call gas_ana
-
         ! Run the clumpfinder, (produce output, don't keep arrays alive on output
         ! ntest cells above threshold)
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.,ntest)

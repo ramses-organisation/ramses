@@ -127,16 +127,16 @@ subroutine init_hydro
 #endif
                              else if(uold(ind_grid(i)+iskip,2) /= 0.)then 
                                 write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
+                                call clean_stop
 #if NDIM>1
                              else if(uold(ind_grid(i)+iskip,3) /= 0.)then 
                                 write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
+                                call clean_stop
 #endif
 #if NDIM>2
                              else if(uold(ind_grid(i)+iskip,4) /= 0.)then 
                                 write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
+                                call clean_stop
 #endif
                              end if
                              uold(ind_grid(i)+iskip,ivar)=xx(i)

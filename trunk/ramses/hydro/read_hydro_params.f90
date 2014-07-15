@@ -213,7 +213,6 @@ subroutine read_hydro_params(nml_ok)
         end if
      end do
   end if
-
   nboundary=nboundary_true
   if(simple_boundary.and.nboundary==0)then
      simple_boundary=.false.
@@ -258,7 +257,6 @@ subroutine read_hydro_params(nml_ok)
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
-
 
 end subroutine read_hydro_params
 
