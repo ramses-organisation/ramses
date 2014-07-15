@@ -21,17 +21,20 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
   real(dp),allocatable,dimension(:,:,:)::vsnew,vsold
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
-  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all !sink angular momentum
+  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all!sink angular momentum
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
-  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal
+  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
-  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
+  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink,bondi_switch
   integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
-  integer::ncloud_sink
+  integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
+  real(dp)::ssoft                  !sink softening lenght in code units
+  real(dp)::dt_sink                !maximum timestep allowed by the sink
+  
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions
@@ -41,6 +44,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
+  real(dp),allocatable,dimension(:)  ::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list
@@ -54,4 +58,17 @@ module pm_commons
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
+
+
+  contains
+  function cross(a,b)
+    use amr_parameters, only:dp
+    real(dp),dimension(1:3)::a,b
+    real(dp),dimension(1:3)::cross
+    !computes the cross product c= a x b
+    cross(1)=a(2)*b(3)-a(3)*b(2)
+    cross(2)=a(3)*b(1)-a(1)*b(3)
+    cross(3)=a(1)*b(2)-a(2)*b(1)
+  end function cross
+  
 end module pm_commons

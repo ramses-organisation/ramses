@@ -17,7 +17,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Each routine is called using a specific order, don't change it,   !
   ! unless you check all consequences first                           !
   !-------------------------------------------------------------------!
-  integer::i,idim,ivar
+  integer::i,idim,ivar,ntest
   logical::ok_defrag
   logical,save::first_step=.true.
 
@@ -125,8 +125,9 @@ recursive subroutine amr_step(ilevel,icount)
 
         if(gas_analytics) call gas_ana
 
-        ! Run the clumpfinder
-        if(clumpfind .and. ndim==3) call clump_finder(.true.)
+        ! Run the clumpfinder, (produce output, don't keep arrays alive on output
+        ! ntest cells above threshold)
+        if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.,ntest)
 
         ! Dump lightcone
         if(lightcone) call output_cone()
@@ -211,7 +212,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(hydro)then
 
         ! Compute Bondi-Hoyle accretion parameters
-        if(sink.and.bondi)call bondi_hoyle(ilevel)
+        if(sink)call collect_acczone_avg(ilevel)
 
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
@@ -321,7 +322,19 @@ recursive subroutine amr_step(ilevel,icount)
      call set_uold(ilevel)
 
      ! Density threshold or Bondi accretion onto sink particle
-     if(sink)call grow_sink(ilevel)
+     if(sink)then
+        !this is a trick to temporarily solve the issue with sink accretion 
+        !from ghost zones. Only an option for simulations without dark matter.
+        if (.not. cosmo)then
+           call make_tree_fine(ilevel)
+           call virtual_tree_fine(ilevel)
+           ! assuming all sink cloud parts sit on levelmax 
+           ! it's better to compute the accretion_rate based on
+           ! the updated values
+           call collect_acczone_avg(ilevel)
+        end if
+        call grow_sink(ilevel,.false.)
+     end if
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
