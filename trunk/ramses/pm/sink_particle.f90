@@ -1564,7 +1564,7 @@ subroutine grow_sink(ilevel,on_creation)
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
-
+#if NDIM==3
 
   ! Compute sink accretion rates
   if (use_acc_rate .and. (.not. on_creation))call compute_accretion_rate(.false.)
@@ -1685,7 +1685,7 @@ subroutine grow_sink(ilevel,on_creation)
   end do
 
   
-
+#endif
 111 format('   Entering grow_sink for level ',I2)
 
 end subroutine grow_sink
