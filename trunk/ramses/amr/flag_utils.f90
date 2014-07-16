@@ -343,7 +343,7 @@ subroutine userflag_fine(ilevel)
   
   ! Prevent from refining too much relative to available sink mass res.      
   ! This translates into a constant physical res., except at very high z.    
-  if(sink)then
+  if(sink .and. cosmo)then
      ! Finest cell size                                                      
      dx_min=(0.5D0**nlevelmax)*scale
      vol_min=dx_min**ndim

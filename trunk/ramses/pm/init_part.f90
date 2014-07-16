@@ -2,6 +2,7 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
+
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -55,6 +56,8 @@ subroutine init_part
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar
+  logical,dimension(1:nsinkmax)::dir_sink
+  dir_sink=.false.
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -78,6 +81,8 @@ subroutine init_part
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
+     allocate(weightp(npartmax))
+     weightp=0.0
      if(metal)then
         allocate(zp(npartmax))
         zp=0.0
@@ -147,6 +152,7 @@ subroutine init_part
      allocate(c2sink_all(1:nsinkmax))
      allocate(weighted_density(1:nsinkmax,1:nlevelmax))
      allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
+     allocate(rho_rz2_tot(1:nsinkmax,1:nlevelmax))
      allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
      allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
      allocate(oksink_new(1:nsinkmax))
@@ -158,9 +164,25 @@ subroutine init_part
      allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+     allocate(direct_force_sink(1:nsinkmax))
      allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
+     allocate(bondi_switch(1:nsinkmax))
   endif
 
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  if (sink)then
+     sink_seedmass=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
+
+     !convert msink_direct in code units
+     msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
+
+     ! Compute softening length from minimum cell spacing
+     dx=0.5D0**nlevelmax
+     nx_loc=(icoarse_max-icoarse_min+1)
+     scale=boxlen/dble(nx_loc)
+     dx_min=dx*scale           
+     ssoft=sink_soft*dx_min                           
+  end if
   !--------------------
   ! Read part.tmp file
   !--------------------
@@ -272,15 +294,105 @@ subroutine init_part
      npart=npart2
 
      !allow for ncloud_sink to change at restart
-     call compute_ncloud_sink
+     if (sink)call compute_ncloud_sink
 
 
-     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
      if(sink .and. ir_feedback)then
         do i=1,nsink
            acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
+     
+
+
+     if(sink)then
+        call compute_ncloud_sink
+        nx_loc=(icoarse_max-icoarse_min+1)
+        scale=boxlen/dble(nx_loc)
+        dx_min=scale*0.5D0**nlevelmax/aexp
+
+        if(TRIM(initfile(levelmin)).NE.' ')then
+           filename=TRIM(initfile(levelmin))//'/ic_sink_restart'
+        else
+           filename='ic_sink_restart'
+        end if
+        INQUIRE(FILE=filename, EXIST=ic_sink)
+        if (myid==1)write(*,*),'Looking for file ic_sink_restart: ',filename
+        if (ic_sink)then
+           open(10,file=filename,form='formatted')
+           eof=.false.
+           if (myid==1)write(*,*)'Caution, reading file ic_sink_restart'
+           do
+              read(10,*,end=103)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
+              nsink=nsink+1
+              idsink(nsink)=nsink
+              msink(nsink)=mm1
+              xsink(nsink,1)=xx1
+              xsink(nsink,2)=xx2
+              xsink(nsink,3)=xx3
+              vsink(nsink,1)=vv1
+              vsink(nsink,2)=vv2
+              vsink(nsink,3)=vv3
+              lsink(nsink,1)=ll1
+              lsink(nsink,2)=ll2
+              lsink(nsink,3)=ll3
+              tsink(nsink)=t
+              level_sink(nsink)=0
+           end do
+103        continue
+           close(10)
+        end if
+        nindsink=MAXVAL(idsink) ! Reset max index
+        if (myid==1.and.nsink>0.and.verbose)then
+           write(*,*),'sinks read from file ic_sink'
+           write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
+           write(*,*),'====================================================================================='
+           do isink=1,nsink
+              write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+                   vsink(isink,1:ndim),lsink(isink,1:ndim)
+           end do
+        end if
+
+        ! Loop over sinks
+        do isink=1,nsink
+           xs(1,1:ndim)=xsink(isink,1:ndim)
+           call cmp_cpumap(xs,cc,1)
+
+           ! Create central cloud particles (negative index)
+           if(cc(1).eq.myid)then
+              npart=npart+1
+              tp(npart)=1d-10
+              !check wheter isink is going to be a direct force sink 
+              dir_sink(isink)=(msink(isink) .ge. msink_direct)
+
+              if (dir_sink(isink))then
+                 mp(npart)=0.
+              else
+                 mp(npart)=msink(isink)      ! Mass
+              end if
+              levelp(npart)=levelmin
+              idp(npart)=-isink          ! Identity
+              xp(npart,1)=xsink(isink,1) ! Position
+              xp(npart,2)=xsink(isink,2)
+              xp(npart,3)=xsink(isink,3)
+              vp(npart,1)=vsink(isink,1) ! Velocity
+              vp(npart,2)=vsink(isink,2)
+              vp(npart,3)=vsink(isink,3)
+           endif
+
+        end do
+
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+        direct_force_sink(1:nsink)=dir_sink(1:nsink)
+#endif
+
+     end if
+
+
   else     
 
      filetype_loc=filetype
@@ -883,6 +995,10 @@ subroutine init_part
         end if
         INQUIRE(FILE=filename, EXIST=ic_sink)
         if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+        if (.not. ic_sink)then 
+           filename='ic_sink'
+           INQUIRE(FILE=filename, EXIST=ic_sink)
+        end if
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -902,7 +1018,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              level_sink(nsink)=levelmin
+              level_sink(nsink)=0
            end do
 102        continue
            close(10)
@@ -928,7 +1044,13 @@ subroutine init_part
            if(cc(1).eq.myid)then
               npart=npart+1
               tp(npart)=1d-10
-              mp(npart)=msink(isink)     ! Mass
+              !check wheter isink is going to be a direct force sink
+              dir_sink(isink)=(msink(isink) .ge. msink_direct)
+              if (dir_sink(isink))then
+                 mp(npart)=0.
+              else
+                 mp(npart)=msink(isink)      ! Mass
+              end if
               levelp(npart)=levelmin
               idp(npart)=-isink          ! Identity
               xp(npart,1)=xsink(isink,1) ! Position
@@ -941,6 +1063,13 @@ subroutine init_part
 
         end do
 
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+        direct_force_sink(1:nsink)=dir_sink(1:nsink)
+#endif
+        
      end if
   end if
 
@@ -1063,11 +1192,12 @@ end subroutine load_gadget
 !################################################################
 subroutine compute_ncloud_sink
   use amr_commons, only:dp
-  use pm_commons, only:ir_cloud,ncloud_sink
+  use pm_commons, only:ir_cloud,ir_cloud_massive,ncloud_sink,ncloud_sink_massive
   real(dp)::xx,yy,zz,rr
   integer::ii,jj,kk
   ! Compute number of cloud particles
   ncloud_sink=0
+  ncloud_sink_massive=0
   do kk=-2*ir_cloud,2*ir_cloud
      zz=dble(kk)/2.0
      do jj=-2*ir_cloud,2*ir_cloud
@@ -1076,6 +1206,7 @@ subroutine compute_ncloud_sink
            xx=dble(ii)/2.0
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
+           if(rr<=dble(ir_cloud_massive))ncloud_sink_massive=ncloud_sink_massive+1
         end do
      end do
   end do

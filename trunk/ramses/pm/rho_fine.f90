@@ -52,7 +52,12 @@ subroutine rho_fine(ilevel,icount)
         if(hydro)call multipole_fine(i)
         ! Perform TSC using pseudo-particle
 #ifdef TSC
-        call tsc_from_multipole(i)
+        if (ndim==3)then
+           call tsc_from_multipole(i)
+        else
+           write(*,*)'TSC not supported for ndim neq 3'
+           call clean_stop
+        end if
 #else
         ! Perform CIC using pseudo-particle
         call cic_from_multipole(i)
@@ -616,8 +621,29 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      endif
 
-  end do
+     ! guarantee to refine direct force sinks to nlevelmax (cosmo)
+     ! guarantee to refine all sinks to nlevelmax (not cosmo)
+     ! by setting particle number density above m_refine(ilevel)
+     ! can be used in combination with a very high value for mass_sph 
 
+     if (.not. cosmo)then
+        do j=1,np
+           if(idp(ind_part(j))<0.)then
+              phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
+           end if
+        end do
+     end if
+     if (cosmo)then
+        do j=1,np
+           if(idp(ind_part(j))<0.)then
+              if (direct_force_sink(-1*idp(ind_part(j))))then                     
+                 phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
+              end if
+           end if
+        end do
+     end if
+  end do
+  
 end subroutine cic_amr
 !###########################################################
 !###########################################################
@@ -1139,6 +1165,13 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
+  if (ndim .ne. 3)then
+     write(*,*)'TSC not supported for ndim neq 3'
+     call clean_stop
+  end if
+
+#if NDIM==3
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1438,7 +1471,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      endif
 
   end do
-
+#endif
 end subroutine tsc_amr
 !###########################################################
 !###########################################################
@@ -1466,6 +1499,8 @@ subroutine tsc_from_multipole(ilevel)
   integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
   integer ::idim,nleaf,ix,iy,iz,igrid
   integer,dimension(1:nvector),save::ind_grid
+
+#if NDIM==3
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1507,7 +1542,7 @@ subroutine tsc_from_multipole(ilevel)
         call tsc_cell(ind_grid,ngrid,ilevel)
      end do
   end if
-
+#endif
 111 format('   Entering tsc_from_multipole for level',i2)
 
 end subroutine tsc_from_multipole
@@ -1540,7 +1575,9 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
- 
+
+#if NDIM==3 
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1780,7 +1817,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      
   end do
   ! End loop over grid cells
-
+#endif
 end subroutine tsc_cell
 !###########################################################
 !###########################################################
