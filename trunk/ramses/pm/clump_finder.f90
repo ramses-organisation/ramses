@@ -1,4 +1,4 @@
-subroutine clump_finder(create_output,keep_alive,ntest)
+subroutine clump_finder(create_output,keep_alive)
   use amr_commons
   use poisson_commons, ONLY:phi,rho
   use clfind_commons
@@ -8,7 +8,6 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   include 'mpif.h'
 #endif
   logical::create_output,keep_alive
-  integer::ntest
 
   !----------------------------------------------------------------------------
   ! Description of clump_finder:
@@ -25,7 +24,7 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   ! Andreas Bleuler & Davide Martizzi & Romain Teyssier
   !----------------------------------------------------------------------------
 
-  integer::itest,istep,nskip,ilevel,info,icpu,nmove,nmove_all,nzero,nzero_all
+  integer::istep,nskip,ilevel,info,icpu,nmove,nmove_all,nzero,nzero_all
   integer::i,j,ntest_all,peak_nr
   integer,dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
@@ -58,10 +57,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   ntest=0
   do ilevel=levelmin,nlevelmax
      if(ivar_clump==0)then ! action 1: count and flag
-        call count_test_particle(rho(1),ilevel,ntest,0,1) 
+        call count_test_particle(rho(1),ilevel,0,1) 
      else
         if(hydro)then      ! action 1: count and flag
-           call count_test_particle(uold(1,ivar_clump),ilevel,ntest,0,1)
+           call count_test_particle(uold(1,ivar_clump),ilevel,0,1)
         endif
      end if
   end do
@@ -88,14 +87,13 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
      denp=0.d0; levp=0; imaxp=0; icellp=0
   endif
-  itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
      if(ivar_clump==0)then
-        call count_test_particle(rho(1),ilevel,itest,nskip,2)
+        call count_test_particle(rho(1),ilevel,nskip,2)
      else
         if(hydro)then
-           call count_test_particle(uold(1,ivar_clump),ilevel,itest,nskip,2)
+           call count_test_particle(uold(1,ivar_clump),ilevel,nskip,2)
         endif
      endif
   end do
@@ -122,10 +120,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   npeaks=0; nmove=0; nzero=0
   if(ntest>0)then
      if(ivar_clump==0)then  ! case 1: count peaks
-        call scan_for_peaks(rho(1),ntest,npeaks,nzero,1)
+        call scan_for_peaks(rho(1),npeaks,nzero,1)
      else
         if(hydro)then       ! case 1: count peaks
-           call scan_for_peaks(uold(1,ivar_clump),ntest,npeaks,nzero,1)
+           call scan_for_peaks(uold(1,ivar_clump),npeaks,nzero,1)
         endif
      endif
   endif
@@ -171,10 +169,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0)then  ! case 2: flag peaks
-        call scan_for_peaks(rho(1),ntest,nskip,nzero,2)
+        call scan_for_peaks(rho(1),nskip,nzero,2)
      else
         if(hydro)then       ! case 2: flag peaks
-           call scan_for_peaks(uold(1,ivar_clump),ntest,nskip,nzero,2)
+           call scan_for_peaks(uold(1,ivar_clump),nskip,nzero,2)
         endif
      endif
   endif
@@ -199,10 +197,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      nskip=peak_nr
      if(ntest>0)then
         if(ivar_clump==0)then
-           call scan_for_peaks(rho(1),ntest,nmove,nzero,3)
+           call scan_for_peaks(rho(1),nmove,nzero,3)
         else
            if(hydro)then
-              call scan_for_peaks(uold(1,ivar_clump),ntest,nmove,nzero,3)
+              call scan_for_peaks(uold(1,ivar_clump),nmove,nzero,3)
            endif
         endif
      endif
@@ -222,7 +220,7 @@ subroutine clump_finder(create_output,keep_alive,ntest)
   !------------------------------------
   ! Allocate peak-patch property arrays
   !------------------------------------
-  call allocate_peak_patch_arrays(ntest)
+  call allocate_peak_patch_arrays
   call build_peak_communicator
 
   if(npeaks_tot > 0)then
@@ -230,10 +228,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      ! Compute the saddle point density matrix
      !------------------------------------------
      if(ivar_clump==0)then
-        call saddlepoint_search(rho(1),ntest) 
+        call saddlepoint_search(rho(1)) 
      else
         if(hydro)then
-           call saddlepoint_search(uold(1,ivar_clump),ntest)
+           call saddlepoint_search(uold(1,ivar_clump))
         endif
      endif
      call build_peak_communicator
@@ -242,7 +240,7 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      ! Merge irrelevant peaks
      !------------------------------------------
      if(myid==1.and.clinfo)write(*,*)"Now merging irrelevant peaks."
-     call merge_clumps(ntest,'relevance')
+     call merge_clumps('relevance')
      do ilevel=nlevelmax,levelmin,-1
         call make_virtual_fine_int(flag2(1),ilevel)
      end do
@@ -252,10 +250,10 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      !------------------------------------------
      if(myid==1.and.clinfo)write(*,*)"Computing relevant clump properties."
      if(ivar_clump==0)then
-        call compute_clump_properties(rho(1),ntest)
+        call compute_clump_properties(rho(1))
      else
         if(hydro)then
-           call compute_clump_properties(uold(1,ivar_clump),ntest)
+           call compute_clump_properties(uold(1,ivar_clump))
         endif
      endif
      
@@ -264,7 +262,7 @@ subroutine clump_finder(create_output,keep_alive,ntest)
      !------------------------------------------
      if(saddle_threshold>0)then
         if(myid==1.and.clinfo)write(*,*)"Now merging peaks into halos."
-        call merge_clumps(ntest,'saddleden')
+        call merge_clumps('saddleden')
      endif
 
      !------------------------------------------
@@ -300,14 +298,14 @@ end subroutine clump_finder
 !################################################################
 !################################################################
 !################################################################
-subroutine count_test_particle(xx,ilevel,ntot,nskip,action)
+subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,ntot,nskip,action
+  integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
   !----------------------------------------------------------------------
@@ -318,10 +316,12 @@ subroutine count_test_particle(xx,ilevel,ntot,nskip,action)
   ! xx is on input the array containing the density field
   !----------------------------------------------------------------------
 
-  integer ::ncache,ngrid
+  integer ::ncache,ngrid,itest
   integer ::igrid,ind,i,iskip
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   logical ,dimension(1:nvector)::ok
+
+  itest=0
 
   if(numbtot(1,ilevel)==0) return
 
@@ -357,17 +357,17 @@ subroutine count_test_particle(xx,ilevel,ntot,nskip,action)
               flag2(ind_cell(i))=0
               if(ok(i))then
                  flag2(ind_cell(i))=1 
-                 ntot=ntot+1
+                 ntest=ntest+1
               endif
            end do
         case(2) !create 'testparticles'
            do i=1,ngrid
               if (ok(i))then
-                 ntot=ntot+1                    ! Local test particle index
-                 levp(ntot)=ilevel              ! Level
-                 flag2(ind_cell(i))=ntot+nskip  ! Initialize flag2 to GLOBAL test particle index
-                 icellp(ntot)=ind_cell(i)       ! Local cell index
-                 denp(ntot)=xx(ind_cell(i)) ! Save density values here!
+                 itest=itest+1                   ! Local 'test particle' index
+                 levp(itest)=ilevel              ! Level
+                 flag2(ind_cell(i))=itest+nskip  ! Initialize flag2 to GLOBAL test particle index
+                 icellp(itest)=ind_cell(i)       ! Local cell index
+                 denp(itest)=xx(ind_cell(i))     ! Save density values here!
               end if
            end do
         end select
@@ -379,14 +379,14 @@ end subroutine count_test_particle
 !################################################################
 !################################################################
 !################################################################
-subroutine scan_for_peaks(xx,npartt,n,nzero,action)
+subroutine scan_for_peaks(xx,n,nzero,action)
   use amr_commons
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h' 
 #endif
-  integer::npartt,n,nzero,action
+  integer::n,nzero,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
   ! vectorization of the neighborsearch for the action cases
@@ -404,12 +404,12 @@ subroutine scan_for_peaks(xx,npartt,n,nzero,action)
   if(.not. first_pass)then
      select case (action)
      case (1)   ! Count peaks  
-        do ipart=1,npartt
+        do ipart=1,ntest
            jpart=testp_sort(ipart)
            if(imaxp(jpart).EQ.-1)n=n+1
         end do
      case (2)   ! Initialize flag2 to peak global index
-        do ipart=1,npartt
+        do ipart=1,ntest
            jpart=testp_sort(ipart)
            if(imaxp(jpart).EQ.-1)then
               n=n+1
@@ -418,7 +418,7 @@ subroutine scan_for_peaks(xx,npartt,n,nzero,action)
            endif
         end do
      case (3) ! Propagate flag2
-        do ipart=1,npartt
+        do ipart=1,ntest
            jpart=testp_sort(ipart)
            if(imaxp(jpart).NE.-1)then
               if(flag2(icellp(jpart)).ne.flag2(imaxp(jpart)))n=n+1
@@ -431,11 +431,11 @@ subroutine scan_for_peaks(xx,npartt,n,nzero,action)
   endif
 
   ip=0
-  do ipart=1,npartt
+  do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart)) ! level
      next_level=0 !level of next particle
-     if(ipart<npartt)next_level=levp(testp_sort(ipart+1))
+     if(ipart<ntest)next_level=levp(testp_sort(ipart+1))
      ind_cell(ip)=icellp(testp_sort(ipart))
      ind_part(ip)=testp_sort(ipart)
      if(ip==nvector .or. next_level /= ilevel)then
@@ -460,14 +460,13 @@ end subroutine scan_for_peaks
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine saddlepoint_search(xx,ntest)
+subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ntest
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks**2 sized array of saddlepoint densities

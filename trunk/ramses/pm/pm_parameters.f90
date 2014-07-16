@@ -1,6 +1,6 @@
 module pm_parameters
   use amr_parameters, ONLY: dp
-  integer,parameter::nsinkmax=20000 ! Maximum number of sinks
+  integer::nsinkmax=20000           ! Maximum number of sinks
   integer::npartmax=0               ! Maximum number of particles
   integer::npart=0                  ! Actual number of particles
   integer::nsink=0                  ! Actual number of sinks

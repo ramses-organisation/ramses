@@ -23,7 +23,7 @@ subroutine create_sink
   ! -Accretion routine is called
   !----------------------------------------------------------------------------
 
-  integer::ilevel,ivar,isink,ntest
+  integer::ilevel,ivar,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
   if(verbose)write(*,*)' Entering create_sink'
@@ -43,18 +43,17 @@ subroutine create_sink
   ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   
-  ! Run the clump finder,(produce no output, keep clump arrays allocated
-  ! to loop over the ntest cells above threshold)
-  call clump_finder(.false.,.true.,ntest)
+  ! Run the clump finder,(produce no output, keep clump arrays allocated)
+  call clump_finder(.false.,.true.)
 
   ! trim clumps down to R_accretion ball around peaks 
-  call trim_clumps(ntest)
+  call trim_clumps
   
   ! compute simple additive quantities and means (1st moments)
-  call compute_clump_properties(uold(1,1),ntest)
+  call compute_clump_properties(uold(1,1))
   
   ! compute quantities relative to mean (2nd moments)
-  call compute_clump_properties_round2(uold(1,1),ntest,.false.)
+  call compute_clump_properties_round2(uold(1,1),.false.)
   
   ! apply all checks and flag cells for sink formation
   call flag_formation_sites
@@ -2866,7 +2865,7 @@ subroutine make_sink_from_clump(ilevel)
   logical ::ok_free
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::d,u,v,w,e,factG,delta_d,v2,fourpi,threepi2,tff,tsal
-  real(dp)::msink_max2,rsink_max2,rmax,rmax2
+  real(dp)::rmax,rmax2
   real(dp)::d_thres,birth_epoch
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp),dimension(1:nvar)::z
@@ -2885,14 +2884,6 @@ subroutine make_sink_from_clump(ilevel)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3
 
-  ! Minimum radius to create a new sink from any other
-  rsink_max=10.0 ! in kpc
-  rsink_max2=(rsink_max*3.08d21/scale_l)**2
-
-  ! Maximum value for the initial sink mass
-  msink_max=1d5 ! in Msol
-  msink_max2=msink_max*2d33/scale_m
-  
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
@@ -2996,7 +2987,7 @@ subroutine make_sink_from_clump(ilevel)
   if(.not. ok_free .and. myid==1)then
      write(*,*)'global list of sink particles is too long'
      write(*,*)'New sink particles',ntot_all
-     write(*,*)'Increase nsinkmax (hardcoded)'
+     write(*,*)'Increase nsinkmax'
 #ifndef WITHOUTMPI
      call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #endif
@@ -3987,7 +3978,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
 

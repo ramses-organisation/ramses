@@ -1,4 +1,4 @@
-subroutine compute_clump_properties(xx,ntest)
+subroutine compute_clump_properties(xx)
   use amr_commons
   use hydro_commons, ONLY:uold
   use clfind_commons
@@ -7,7 +7,6 @@ subroutine compute_clump_properties(xx,ntest)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ntest
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------------
   ! this subroutine performs a loop over all cells above the threshold and 
@@ -308,11 +307,10 @@ end subroutine write_clump_properties
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine merge_clumps(ntest,action)
+subroutine merge_clumps(action)
   use amr_commons
   use clfind_commons
   implicit none
-  integer::ntest
   character(len=9)::action
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -652,12 +650,11 @@ end subroutine get_max
 !################################################################ 
 !################################################################   
 !################################################################     
-subroutine allocate_peak_patch_arrays(ntest)
+subroutine allocate_peak_patch_arrays
   use amr_commons, ONLY:ndim,dp
   use clfind_commons
   use sparse_matrix
   implicit none
-  integer::ntest
 
   real(dp)::zero=0.
   integer::bit_length,ncode,ipart,peak_nr
@@ -1135,11 +1132,10 @@ end subroutine boundary_peak_dp
 !################################################################
 !################################################################
 !################################################################
-subroutine write_clump_map(ntest)
+subroutine write_clump_map
   use amr_commons
   use clfind_commons
   implicit none
-  integer::ntest
 
   !---------------------------------------------------------------------------
   ! This routine writes a csv-file of cell center coordinates and clump number

@@ -195,7 +195,7 @@ end subroutine flag_formation_sites
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_clump_properties_round2(xx,ntest,all_bound)
+subroutine compute_clump_properties_round2(xx,all_bound)
   use amr_commons
   use hydro_commons, ONLY:uold,gamma
   use poisson_commons, ONLY:phi,f
@@ -206,7 +206,6 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   include 'mpif.h'
 #endif
   logical::all_bound
-  integer::ntest
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects 
@@ -225,7 +224,7 @@ subroutine compute_clump_properties_round2(xx,ntest,all_bound)
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
 
-  call surface_pressure(ntest)
+  call surface_pressure
   
   !initialize arrays
   e_kin_int=0.d0; clump_size=0.d0; e_thermal=0.d0
@@ -410,12 +409,11 @@ end subroutine compute_clump_properties_round2
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine trim_clumps(ntest)
+subroutine trim_clumps
   use amr_commons
   use clfind_commons
   use pm_commons, only:ir_cloud
   implicit none
-  integer::ntest
 
   !---------------------------------------------------------------------------
   ! this routine trims the clumps down to the intersection of the clump with 
@@ -778,7 +776,7 @@ end subroutine surface_int
 !################################################################ 
 !################################################################                 
 !################################################################     
-subroutine surface_pressure(ntest)
+subroutine surface_pressure
   use amr_commons
   use hydro_commons
   use pm_commons
@@ -788,7 +786,6 @@ subroutine surface_pressure(ntest)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ntest
 
   !---------------------------------------------------------------
   ! This loop is also used to compute the surface pressure term.

@@ -17,7 +17,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Each routine is called using a specific order, don't change it,   !
   ! unless you check all consequences first                           !
   !-------------------------------------------------------------------!
-  integer::i,idim,ivar,ntest
+  integer::i,idim,ivar
   logical::ok_defrag
   logical,save::first_step=.true.
 
@@ -123,9 +123,8 @@ recursive subroutine amr_step(ilevel,icount)
 
         call dump_all
 
-        ! Run the clumpfinder, (produce output, don't keep arrays alive on output
-        ! ntest cells above threshold)
-        if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.,ntest)
+        ! Run the clumpfinder, (produce output, don't keep arrays alive on output)
+        if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 
         ! Dump lightcone
         if(lightcone) call output_cone()
