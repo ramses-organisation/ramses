@@ -1,4 +1,4 @@
-subroutine compute_clump_properties(xx,ntest)
+subroutine compute_clump_properties(xx)
   use amr_commons
   use hydro_commons, ONLY:uold
   use clfind_commons
@@ -7,7 +7,6 @@ subroutine compute_clump_properties(xx,ntest)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ntest
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------------
   ! this subroutine performs a loop over all cells above the threshold and 
@@ -308,11 +307,10 @@ end subroutine write_clump_properties
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine merge_clumps(ntest,action)
+subroutine merge_clumps(action)
   use amr_commons
   use clfind_commons
   implicit none
-  integer::ntest
   character(len=9)::action
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -375,6 +373,8 @@ subroutine merge_clumps(ntest,action)
      do i=1,hfree-1
         call get_max(i,sparse_saddle_dens)
      end do
+
+#ifndef WITHOUTMPI
      ! Create new local duplicated peaks and update communicator
      call virtual_saddle_max
      call build_peak_communicator
@@ -384,6 +384,7 @@ subroutine merge_clumps(ntest,action)
      call boundary_peak_int(sparse_saddle_dens%maxloc)
      call boundary_peak_dp(max_dens)
      call boundary_peak_int(new_peak)
+#endif     
           
      ! Merge peaks 
      nmove=npeaks_tot
@@ -649,12 +650,11 @@ end subroutine get_max
 !################################################################ 
 !################################################################   
 !################################################################     
-subroutine allocate_peak_patch_arrays(ntest)
+subroutine allocate_peak_patch_arrays
   use amr_commons, ONLY:ndim,dp
   use clfind_commons
   use sparse_matrix
   implicit none
-  integer::ntest
 
   real(dp)::zero=0.
   integer::bit_length,ncode,ipart,peak_nr
@@ -873,7 +873,7 @@ subroutine build_peak_communicator
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
-
+#ifndef WITHOUTMPI
   npeak_alltoall=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
@@ -916,7 +916,7 @@ subroutine build_peak_communicator
   end do
   call MPI_ALLTOALLV(peak_send_buf,peak_send_cnt,peak_send_oft,MPI_INTEGER, &
        &             peak_recv_buf,peak_recv_cnt,peak_recv_oft,MPI_INTEGER,MPI_COMM_WORLD,info)
-
+#endif
 end subroutine build_peak_communicator
 !################################################################
 !################################################################
@@ -935,7 +935,7 @@ subroutine virtual_peak_int(xx,action)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-
+#ifndef WITHOUTMPI
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -964,7 +964,7 @@ subroutine virtual_peak_int(xx,action)
      end do
   end select
   deallocate(int_peak_send_buf,int_peak_recv_buf)
-
+#endif  
 end subroutine virtual_peak_int
 !################################################################
 !################################################################
@@ -984,6 +984,7 @@ subroutine virtual_peak_dp(xx,action)
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
 
+#ifndef WITHOUTMPI
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -1012,7 +1013,7 @@ subroutine virtual_peak_dp(xx,action)
      end do
   end select
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
-
+#endif
 end subroutine virtual_peak_dp
 !################################################################
 !################################################################
@@ -1031,6 +1032,7 @@ subroutine virtual_saddle_max
   integer::ipeak,icpu,info,j,jpeak
   integer,dimension(1:ncpu)::ipeak_alltoall
 
+#ifndef WITHOUTMPI
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   allocate(dp_peak_send_buf(1:peak_send_tot))
@@ -1056,7 +1058,7 @@ subroutine virtual_saddle_max
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
   deallocate(int_peak_send_buf,int_peak_recv_buf)
-
+#endif
 end subroutine virtual_saddle_max
 !################################################################
 !################################################################
@@ -1074,7 +1076,7 @@ subroutine boundary_peak_int(xx)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-
+#ifndef WITHOUTMPI
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1090,7 +1092,7 @@ subroutine boundary_peak_int(xx)
      xx(ipeak)=int_peak_send_buf(peak_send_oft(icpu)+ipeak_alltoall(icpu))
   end do
   deallocate(int_peak_send_buf,int_peak_recv_buf)
-
+#endif  
 end subroutine boundary_peak_int
 !################################################################
 !################################################################
@@ -1108,7 +1110,7 @@ subroutine boundary_peak_dp(xx)
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-
+#ifndef WITHOUTMPI
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1124,17 +1126,16 @@ subroutine boundary_peak_dp(xx)
      xx(ipeak)=dp_peak_send_buf(peak_send_oft(icpu)+ipeak_alltoall(icpu))
   end do
   deallocate(dp_peak_send_buf,dp_peak_recv_buf)
-
+#endif
 end subroutine boundary_peak_dp
 !################################################################
 !################################################################
 !################################################################
 !################################################################
-subroutine write_clump_map(ntest)
+subroutine write_clump_map
   use amr_commons
   use clfind_commons
   implicit none
-  integer::ntest
 
   !---------------------------------------------------------------------------
   ! This routine writes a csv-file of cell center coordinates and clump number
@@ -1204,10 +1205,17 @@ subroutine analyze_peak_memory
   hfree_all(myid)=hfree-npeaks
   sparse_all=0
   sparse_all(myid)=sparse_saddle_dens%used
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(npeak_all,npeak_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(coll_all,coll_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(hfree_all,hfree_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(sparse_all,sparse_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  npeak_tot=npeak_all
+  coll_tot=coll_all
+  hfree_tot=hfree_all
+  sparse_tot=sparse_all
+#endif
   if(myid==1)then
      write(*,*)'peaks per cpu'
      do i=0,ncpu-1,10

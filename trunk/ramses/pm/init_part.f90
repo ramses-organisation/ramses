@@ -81,8 +81,10 @@ subroutine init_part
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
-     allocate(weightp(npartmax))
-     weightp=0.0
+     if (sink)then
+        allocate(weightp(npartmax))
+        weightp=0.0
+     end if
      if(metal)then
         allocate(zp(npartmax))
         zp=0.0

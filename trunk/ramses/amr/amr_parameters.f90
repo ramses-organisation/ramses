@@ -60,7 +60,6 @@ module amr_parameters
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
-  logical::gas_analytics=.false.  ! Turn on a routine that outputs some gas-related data at every output
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
 
   ! Mesh parameters
@@ -138,8 +137,6 @@ module amr_parameters
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
-  real(dp)::rsink_max=10      ! Sink isolation criterion in kpc
-  real(dp)::msink_max=1d5     ! Maximum seed mass in solar masses
   real(dp)::kappa_IR=0d0      ! IR dust opacity
   real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
   real(dp)::ir_eff=0.75       ! efficiency of the IR feedback (only when ir_feedback=.true.)

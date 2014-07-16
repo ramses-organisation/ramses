@@ -23,7 +23,7 @@ subroutine read_params
   ! Namelist definitions
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
-       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,gas_analytics &
+       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
@@ -224,7 +224,6 @@ subroutine read_params
      clumpfind=.true.
   end if
   if (clumpfind)call read_clumpfind_params
-  if (gas_analytics)call read_gas_analytics_params
 
   close(1)
 
