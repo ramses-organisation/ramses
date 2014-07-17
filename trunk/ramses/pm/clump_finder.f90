@@ -87,6 +87,7 @@ subroutine clump_finder(create_output,keep_alive)
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
      denp=0.d0; levp=0; imaxp=0; icellp=0
   endif
+  itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
      if(ivar_clump==0)then
@@ -316,12 +317,11 @@ subroutine count_test_particle(xx,ilevel,nskip,action)
   ! xx is on input the array containing the density field
   !----------------------------------------------------------------------
 
-  integer ::ncache,ngrid,itest
+  integer ::ncache,ngrid
   integer ::igrid,ind,i,iskip
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   logical ,dimension(1:nvector)::ok
 
-  itest=0
 
   if(numbtot(1,ilevel)==0) return
 
