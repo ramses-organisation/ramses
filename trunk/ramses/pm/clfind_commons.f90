@@ -2,7 +2,7 @@ module clfind_commons
   use amr_commons, ONLY: qdp,dp
   use sparse_matrix
 
-  integer::ntest                                     !number of cells above threshold per CPU
+  integer::ntest,itest                                    !number of cells above threshold per CPU
   integer::ivar_clump=1
   integer::npeaks,npeaks_tot,npeaks_max
   integer,allocatable,dimension(:)::npeaks_per_cpu
