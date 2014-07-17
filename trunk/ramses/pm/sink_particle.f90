@@ -1729,7 +1729,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
 
 
-  real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc
+  real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan
   real(dp)::r_abs,mgas,boundness
   real(dp),dimension(1:3)::r_rel_s,v_rel_s
   real(dp)::e_spec,l_spec2,r_min,count_points
@@ -1972,22 +1972,23 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         ! on sink creation, preexisting sinks
         if (new_born_all(isink)==2)then 
            acc_mass=0.
-
-        ! on sink creation, new sinks
+           
+           ! on sink creation, new sinks
         else if (new_born_all(isink)==1)then
            acc_mass=sink_seedmass/ncloud_sink
            acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
-
-        ! on normal accretion
+           
+           ! on normal accretion
+           
         else           
            if (use_acc_rate)then 
-
+              
               ! Compute accreted mass using density weighting
               acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm*d/density
-
+              
               ! No neg accretion rates
               acc_mass=max(acc_mass,0.0_dp)    
-
+              
            else
               ! User defined density threshold
               d_floor=d_sink           
@@ -2001,30 +2002,28 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               acc_mass=max((d-d_floor)*vol_loc*0.0625,0.d0)
            end if
         end if
-
-        !accrete momentum due to relative motion
+        
+        ! momentum in relative motion
         r_rel(1:3)=xx(1:3)-xsink(isink,1:3) 
         r_abs=sum(r_rel(1:3)**2)**0.5      
         p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
         p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
+        p_rel_tan=p_rel-p_rel_rad
 
         if(nol_accretion)then
            ! for accretion from very low density cells
            ! do accrete angular momentum (to prevent negative densities...)
-           if (d < 1.d-5*d_sink)then
-              p_rel_acc=p_rel*acc_mass/(d*vol_loc)
-           else
-              p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
-           end if
+           !           if (d < 1.d-5*d_sink)then
+           !              p_rel_acc=p_rel*acc_mass/(d*vol_loc)
+           !           else
+           p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
+           !           end if
         else
            p_rel_acc=p_rel*acc_mass/(d*vol_loc)
         end if
 
         !total accreted momentum 
         p_acc=p_rel_acc+vsink(isink,1:3)*acc_mass
-
-        !new gas velocity
-        vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)
 
         !add accreted properties
         msink_new(isink)=msink_new(isink)+acc_mass
@@ -2033,7 +2032,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
         lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
-        ! Remove accreted mass
+        ! Check for density after accretion
         if (acc_mass/vol_loc>d)then 
            write(*,*),'====================================================='
            write(*,*),'neg density detected :-( at location'
@@ -2044,27 +2043,53 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            write(*,*),indp(j),myid
            write(*,*),'====================================================='
         end if
-        
-        ! accrete
-        d=d-acc_mass/vol_loc
 
-        !convert back to conservative variables
-        v2=(vv(1)**2+vv(2)**2+vv(3)**2)
+
+        
+        if (new_born_all(isink)==1)then
+           ! accrete
+           d=d-acc_mass/vol_loc
+           !new gas velocity
+           vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)                    
+           !convert back to conservative variables
+           v2=(vv(1)**2+vv(2)**2+vv(3)**2)
 #ifdef SOLVERmhd
-        e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+           e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
 #endif
-        e=e+0.5d0*v2
-        uold(indp(j),1)=d
-        uold(indp(j),2)=d*vv(1)
-        uold(indp(j),3)=d*vv(2)
-        uold(indp(j),4)=d*vv(3)
-        uold(indp(j),5)=d*e
-        do ivar=imetal,nvar
-           uold(indp(j),ivar)=d*z(ivar)
-        end do
+           e=e+0.5d0*v2
+           uold(indp(j),1)=d
+           uold(indp(j),2)=d*vv(1)
+           uold(indp(j),3)=d*vv(2)
+           uold(indp(j),4)=d*vv(3)
+           uold(indp(j),5)=d*e
+           do ivar=imetal,nvar
+              uold(indp(j),ivar)=d*z(ivar)
+           end do           
+        end if
+
+
+
+        if (new_born_all(isink)==0)then
+           ! modify unew variables
+           unew(indp(j),1)=unew(indp(j),1)-acc_mass/vol_loc
+           unew(indp(j),2:5)=unew(indp(j),2:5)-uold(indp(j),2:5)*acc_mass/(d*vol_loc)
+           do ivar=imetal,nvar
+              unew(indp(j),ivar)=unew(indp(j),ivar)-uold(indp(j),ivar)*acc_mass/(d*vol_loc)
+           end do
+           
+           ! put the tangential momentum back into the gas
+           if(nol_accretion)then
+              unew(indp(j),2:4)=unew(indp(j),2:4)+acc_mass/(d*vol_loc)*p_rel_tan(1:3)/vol_loc
+              unew(indp(j),5)=unew(indp(j),5)+acc_mass/(d*vol_loc)*sum(p_rel_tan(1:3)*uold(indp(j),2:4)/d)
+           end if
+        end if
+
+           
+ 
+
      endif
   end do
-
+  
 #endif
 end subroutine accrete_sink
 !################################################################
