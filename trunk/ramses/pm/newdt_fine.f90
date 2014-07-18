@@ -27,9 +27,12 @@ subroutine newdt_fine(ilevel)
   real(dp)::tff,fourpi,threepi2
   real(dp)::aton_time_step,dt_aton,dt_rt
   real(dp)::dx_min,dx,scale
+  logical::activate_acc_control
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+
+  activate_acc_control=.false.
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
@@ -113,16 +116,21 @@ subroutine newdt_fine(ilevel)
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
      ! possible issue here: what if sink lives not a levelmax? timestep can be too big?
-     if(sink .and. ilevel==nlevelmax .and. nsink>0) then
-        call compute_accretion_rate(.false.)
-        do isink=1,nsink
+     if(sink .and. nsink>0) then
+        !timestep due to sink grav acc
+        do isink=1,nsink              
            if(direct_force_sink(isink))then
               tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
-              dt_sink=min(dt_sink,tff*courant_factor)
+              dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
            end if
+           if (level_sink(isink,ilevel))activate_acc_control=.true.           
         end do
-!        if (myid==1)print*,ilevel,'dt',dt_sink/dtnew(ilevel)
-        dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+
+        call compute_accretion_rate(.false.)
+        if (activate_acc_control)then
+           if (myid==1)print*,ilevel,'dt',dt_sink/dtnew(ilevel)
+           dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+        end if
      end if
 
   end if

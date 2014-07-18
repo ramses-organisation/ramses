@@ -11,7 +11,8 @@ subroutine backup_part(filename)
   integer,allocatable,dimension(:)::ii
   integer(i8b),allocatable,dimension(:)::ii8
   integer,allocatable,dimension(:)::ll
-
+  logical,allocatable,dimension(:)::nb
+  
   if(verbose)write(*,*)'Entering backup_part'
   
   ilun=2*ncpu+myid+10
@@ -169,12 +170,19 @@ subroutine backup_part(filename)
            ii(i)=idsink(i)
         end do
         write(ilun)ii ! Write sink index
-        do i=1,nsink
-           ii(i)=level_sink(i)
-        end do
-        write(ilun)ii ! Write sink level
+!        do i=1,nsink
+!           ii(i)=level_sink(i)
+!        end do
+!        write(ilun)ii ! Write sink level
         deallocate(ii)
-        write(ilun)ncloud_sink ! Write ncloud
+        write(ilun)ncloud_sink   ! Write ncloud
+        allocate(nb(1:nsink))
+        do i=1,nsink
+           nb(i)=new_born(i)
+        end do
+        write(ilun)nb ! Write level at which sinks where integrated
+        deallocate(nb)
+        write(ilun)sinkint_level ! Write level at which sinks where integrated
      endif
   endif
 
