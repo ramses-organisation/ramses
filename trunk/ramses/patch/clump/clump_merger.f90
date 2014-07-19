@@ -516,7 +516,7 @@ subroutine merge_clumps(ntest,action)
            end if
            relevance(ipeak)=relevance_peak
         else
-           relevance(ipeak)=0        
+           relevance(ipeak)=0.
         endif
      end do
      
@@ -594,7 +594,7 @@ subroutine get_max(i,mat)
   type(sparse_mat)::mat 
   integer::i
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! get maximum in line by walking the linked list
+  ! get maximum in i-th line by walking the linked list
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   integer::current,icol
   

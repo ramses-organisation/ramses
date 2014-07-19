@@ -274,7 +274,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
      if(clinfo)call analyze_peak_memory
      if(create_output)then
-        if(clinfo)call write_clump_properties(.false.)
+        if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
      endif
