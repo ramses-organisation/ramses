@@ -430,7 +430,7 @@ subroutine merge_clumps(action)
         call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
         nmove=nmove_all
 #endif
-        if(myid==1)write(*,*)'niter=',iter,'nmove=',nmove
+        if(myid==1.and.clinfo)write(*,*)'niter=',iter,'nmove=',nmove
      end do
 
      ! Transfer matrix elements of merged peaks to surviving peaks
@@ -497,7 +497,7 @@ subroutine merge_clumps(action)
      call MPI_ALLREDUCE(nsurvive,nsurvive_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nsurvive=nsurvive_all
 #endif
-     if(myid==1)write(*,*)'level=',idepth,'nmove=',nzero,'survived=',nsurvive
+     if(myid==1.and.clinfo)write(*,*)'level=',idepth,'nmove=',nzero,'survived=',nsurvive
      idepth=idepth+1
      
   end do
