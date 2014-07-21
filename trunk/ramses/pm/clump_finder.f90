@@ -144,7 +144,7 @@ subroutine clump_finder(create_output,keep_alive)
 #ifdef WITHOUTMPI
   npeaks_tot=npeaks
 #endif
-  if (myid==1.and.npeaks_tot>0.and.clinfo) &
+  if (myid==1.and.npeaks_tot>0) &
        & write(*,'(" Total number of density peaks found=",I10)')npeaks_tot
   
   !----------------------------------------------------------------------
@@ -189,7 +189,7 @@ subroutine clump_finder(create_output,keep_alive)
   ! - nmove is number of peak id's passed along
   ! - done when nmove=0 (for single core, only one sweep is necessary)
   !---------------------------------------------------------------------
-  if (myid==1.and.ntest_all>0.and.clinfo)write(*,*)'Finding peak patches'
+  if (myid==1.and.ntest_all>0)write(*,*)'Finding peak patches'
   nmove=1
   istep=0
   do while (nmove.gt.0)
@@ -274,7 +274,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
      if(clinfo)call analyze_peak_memory
      if(create_output)then
-        if(clinfo)call write_clump_properties(.false.)
+        if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
      endif
