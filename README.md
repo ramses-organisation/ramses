@@ -8,9 +8,13 @@ Ramses is an open source code to model astrophysical systems, featuring self-gra
 radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree. 
 [ramses](https://bitbucket.org/rteyssie/ramses) is written in  Fortran 90 and is making intensive use of the Message 
 Passing Interface (MPI) library.
+
 You can also go to the user's guide [here][1].
+
 You can also go to the automatic test page [here][2].
+
 You can also go to the code web site [here][3].
+
 Download the code by cloning the git repository using 
 ```
 $ git clone https://bitbucket.org/rteyssie/ramses
