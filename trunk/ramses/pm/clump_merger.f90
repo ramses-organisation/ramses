@@ -385,6 +385,7 @@ subroutine merge_clumps(action)
      call boundary_peak_int(sparse_saddle_dens%maxloc)
      call boundary_peak_dp(max_dens)
      call boundary_peak_int(new_peak)
+     call boundary_peak_int(alive)
 #endif     
           
      ! Merge peaks 
@@ -516,6 +517,7 @@ subroutine merge_clumps(action)
   call boundary_peak_int(sparse_saddle_dens%maxloc)
   call boundary_peak_dp(max_dens)
   call boundary_peak_int(new_peak)
+  call boundary_peak_int(alive)
   
   ! Count surviving peaks
   nsurvive=0
