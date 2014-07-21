@@ -895,9 +895,12 @@ subroutine collect_acczone_avg(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-
   action='count'
   call count_clouds(ilevel,action)
+
+  call make_virtual_reverse_int(flag2(1),ilevel)
+  call make_virtual_fine_int(flag2(1),ilevel)
+
   action='weight'
   call count_clouds(ilevel,action)
   
@@ -1506,20 +1509,6 @@ subroutine bondi_average(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   do j=1,np
      isink=-idp(ind_part(j))
-     ! if (flux_accretion)then
-     !    if (flag2(indp(j))>8)then
-     !       weight=8./(flag2(indp(j)))
-     !    else           
-     !       weight=1.
-     !    end if
-     ! else
-     !    r2=0d0
-     !    do idim=1,ndim
-     !       r2=r2+(xp(ind_part(j),idim)-xsink(isink,idim))**2
-     !    end do
-     !    weight=exp(-r2/r2k(isink))
-     ! end if
-     ! weightp(ind_part(j))=weight
      weight=weightp(ind_part(j))
      wden(isink)=wden(isink)+weight*dgas(j)
      wmom(isink,1)=wmom(isink,1)+weight*ugas(j)
@@ -1573,7 +1562,7 @@ subroutine grow_sink(ilevel,on_creation)
 #if NDIM==3
 
   ! Compute sink accretion rates
-  if (use_acc_rate .and. (.not. on_creation))call compute_accretion_rate(.false.)
+  if (.not. on_creation)call compute_accretion_rate(.false.)
   
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
@@ -1715,7 +1704,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   !-----------------------------------------------------------------------
 
   integer::i,j,idim,nx_loc,isink,ivar,ind,ix,iy,iz,ii,jj,kk
-  real(dp)::r2,v2,d,e,d_floor,density,norm
+  real(dp)::r2,v2,d,e,d_floor,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -1738,7 +1727,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
 
   real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan
-  real(dp)::r_abs,mgas,boundness
+  real(dp)::r_abs,boundness
   real(dp),dimension(1:3)::r_rel_s,v_rel_s
   real(dp)::e_spec,l_spec2,r_min,count_points
 
@@ -1967,35 +1956,23 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               acc_mass=0.         
            end if
         else           
-           ! regular accretion
-           if (use_acc_rate)then 
-              ! if (flux_accretion)then
-              !    weight=1.
-              ! else
-              !    r2=0d0
-              !    do idim=1,ndim
-              !       r2=r2+(xp(ind_part(j),idim)-xsink(isink,idim))**2
-              !    end do
-              !    weight=exp(-r2/r2k(isink))
-              ! end if
-              weight=weightp(ind_part(j))
-              ! Loop over level: sink cloud can overlap several levels
-              density=0.d0
-              norm=0.d0
-              do i=levelmin,nlevelmax
-                 density=density+weighted_density(isink,i)
-                 norm=norm+weighted_volume(isink,i)
-              end do
-              density=density/norm
 
-              
-              ! Compute accreted mass using density weighting
-              acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/norm*d/density
-              
-              ! No neg accretion rates
-              acc_mass=max(acc_mass,0.0_dp)    
-              
-           else
+           ! regular accretion
+           weight=weightp(ind_part(j))
+           
+           ! Loop over level: sink cloud can overlap several levels
+           density=0.d0
+           volume=0.d0
+           do i=levelmin,nlevelmax
+              density=density+weighted_density(isink,i)
+              volume=volume+weighted_volume(isink,i)
+           end do
+           density=density/(volume+tiny(0._dp))
+           
+           ! Compute accreted mass using density weighting
+           acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+           
+           if (threshold_accretion)then
               ! User defined density threshold
               d_floor=d_sink           
               ! Jeans length related density threshold  
@@ -2004,9 +1981,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  d_jeans=temp*3.1415926/(4.0*dx_loc)**2/factG
                  d_floor=d_jeans
               endif
-              ! accrete only half of the gas
-              acc_mass=max((d-d_floor)*vol_loc*0.0625,0.d0)
+              acc_mass=c_acc*weight*(d-d_floor)
            end if
+           ! No neg accretion
+           acc_mass=max(acc_mass,0.0_dp)               
         end if
         
         ! momentum in relative motion
@@ -2019,8 +1997,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         nolacc=nol_accretion
         ! for accretion from very low density cells
         ! do accrete angular momentum (to prevent negative densities...)
-        if (d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
-
+        if (.not. on_creation)then
+           if(d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
+        end if
+           
         if(nolacc)then
            p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
         else
@@ -2043,13 +2023,13 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            write(*,*),'neg density detected :-( at location'
            write(*,*),xx(1:3)
            write(*,*),'due to',isink,acc_mass/vol_loc,d/d_sink,density/d_sink
-           write(*,*),(sum(((xx(1:3)-xsink(isink,1:3))/dx_min)**2))**0.5
            write(*,*),indp(j),myid
            write(*,*),nolacc
            do i=1,nsink
               print*,i,' distance ',sum((xx(1:3)-xsink(i,1:3))**2)**0.5/dx_min
            end do
            write(*,*),'====================================================='
+           call clean_stop
         end if
 
 
@@ -2120,12 +2100,11 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMBHoverdt
 
+  dt_acc=huge(0._dp)
+
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
-
-  !initialize time step constraint
-  dt_sink=huge(0.d0)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -2140,25 +2119,24 @@ subroutine compute_accretion_rate(write_sinks)
   vel_max=vel_max*1d5/scale_v
   
   ! Compute sink particle accretion rate by averaging contributions from all levels
-  if(use_acc_rate)then
-     do isink=1,nsink
-        density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
-        divergence=0.d0
-        do i=levelmin,nlevelmax
-           density=density+weighted_density(isink,i)
-           ethermal=ethermal+weighted_ethermal(isink,i)
-           velocity(1:3)=velocity(1:3)+weighted_momentum(isink,i,1:3)
-           volume=volume+weighted_volume(isink,i)
-           divergence=divergence+divsink(isink,i)
-        end do
-        density=density/(volume+tiny(0.0_dp))
-        if (density==0.)print*,'sink',isink,'got lost'
+!  if(use_acc_rate)then
+  do isink=1,nsink
+     density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
+     divergence=0.d0
+     do i=levelmin,nlevelmax
+        density=density+weighted_density(isink,i)
+        ethermal=ethermal+weighted_ethermal(isink,i)
+        velocity(1:3)=velocity(1:3)+weighted_momentum(isink,i,1:3)
+        volume=volume+weighted_volume(isink,i)
+        divergence=divergence+divsink(isink,i)
+     end do
+     mgas=density
+     density=density/(volume+tiny(0.0_dp))
+     if (density>0)then
         velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
         ethermal=ethermal/(density*volume+tiny(0.0_dp))
-        total_volume(isink)=volume
         c2=MAX((gamma-1.0)*ethermal,smallc**2)
         v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
-        mgas=density*4./3.*3.14*(ir_cloud*dx_min)**3
 
         !Bondi radius
         if (smbh)then
@@ -2197,7 +2175,7 @@ subroutine compute_accretion_rate(write_sinks)
         if (flux_accretion)then
            !average divergence over all cloud particles and multiply by cloud volume
            dMsink_overdt(isink)=-1.*divergence/ncloud_sink*4./3.*3.14*(ir_cloud*dx_min)**3
-          
+
            !correct for some small factor to keep density close to threshold
            fa_fact=(log10(density)-log10(d_sink))*0.1+1.
            dMsink_overdt(isink)=dMsink_overdt(isink)*fa_fact
@@ -2208,14 +2186,15 @@ subroutine compute_accretion_rate(write_sinks)
               bondi_switch(isink)=.true.
            end if
         end if
-           
+
         !make sure, accretion rate is positive
         dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
-        
+
         !compute maximum timestep allowed by sink
-        dt_sink=min(dt_sink,c_sink*mgas/(dMsink_overdt(isink)+tiny(0.d0)))
-     end do
-  end if
+        if (.not. threshold_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink)+tiny(0.d0))
+     end if
+  end do
+ 
 
   if (write_sinks)call print_sink_properties(dMBHoverdt,dMEDoverdt)
   
@@ -4005,7 +3984,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_sink
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
 
@@ -4030,6 +4009,11 @@ subroutine read_sink_params()
   if (accretion_scheme =='bondi')then
      use_acc_rate=.true.
      flux_accretion=.false.
+  end if
+  if (accretion_scheme =='threshold_accretion')then
+     use_acc_rate=.false.
+     flux_accretion=.false.
+     threshold_accretion=.true.
   end if
 
 
@@ -4067,11 +4051,11 @@ subroutine read_sink_params()
   end if
   
   ! nol_accretion requires a somewhat smaller timestep per default
-  if(c_sink < 0.)then
+  if(c_acc < 0.)then
      if (nol_accretion)then
-        c_sink=0.25
+        c_acc=0.25
      else
-        c_sink=0.75
+        c_acc=0.75
      end if
   end if
 
@@ -4192,46 +4176,64 @@ subroutine count_clouds_np(ind_part,np,action,ilevel)
   !--------------------------------------------------------------------------------
   ! 
   !--------------------------------------------------------------------------------
-
+  
   integer::i,nx_loc,isink,divdim,idim
-  real(dp)::dx,scale,dx_min,one_over_dx_min,weight,r2
+  real(dp)::dx,scale,dx_min,one_over_dx_min,weight,r2,parts_per_cell,vol_min
   real(dp),dimension(1:nvector,1:ndim)::xleft,xright,xpart
   integer,dimension(1:nvector)::clevl,cind_right,cind_left,cind_part
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::ok
-
-  ilevel=nlevelmax
+  
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_min=(0.5D0**nlevelmax)*scale
+  vol_min=dx_min**ndim
+  
+  
   do idim=1,ndim
      do i=1,np
         xpart(i,idim)=xp(ind_part(i),idim)
      enddo
   end do
   call get_cell_index(cind_part,clevl,xpart,nlevelmax,np)
-
+  
   if (action=='count')then
      do i=1,np
-        flag2(cind_part(i))=flag2(cind_part(i))+1
+        flag2(cind_part(i))=flag2(cind_part(i))
      end do
   end if
-
+  
   if (action=='weight')then
      do i=1,np
         isink=-idp(ind_part(i))
-        if (flux_accretion)then
-           if (flag2(cind_part(i))>8)then
-              weight=8./flag2(cind_part(i))
-           else           
-              weight=1.
-           end if
-        else
-           r2=0d0
-           do idim=1,ndim
-              r2=r2+(xp(ind_part(i),idim)-xsink(isink,idim))**2
-           end do
-           weight=exp(-r2/r2k(isink))
+        parts_per_cell=8*8.**(nlevelmax-clevl(i))
+        !        if (flux_accretion)then
+        if (flag2(cind_part(i))>parts_per_cell)then
+           weight=parts_per_cell/flag2(cind_part(i))
+        else           
+           weight=1.
         end if
+        weight=weight*vol_min/8.
+        !        else ! weight for bondi accretion kernel
+        !           r2=0d0
+        !           do idim=1,ndim
+        !              r2=r2+(xp(ind_part(i),idim)-xsink(isink,idim))**2
+        !           end do
+        !           weight=exp(-r2/r2k(isink))
+        !        end if
+
+        
         weightp(ind_part(i))=weight     
      end do
-  end if
 
+     if(threshold_accretion)then
+        do i=1,np
+           if(uold(cind_part(i),1)<d_sink)then
+              weightp(ind_part(i))=0.
+           end if
+        end do
+     end if
+     
+  end if
+  
 end subroutine count_clouds_np

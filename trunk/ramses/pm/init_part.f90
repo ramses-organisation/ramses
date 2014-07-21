@@ -107,12 +107,12 @@ subroutine init_part
      acc_rate=0.
      allocate(acc_lum(1:nsinkmax))
      acc_lum=0.
+     allocate(dt_acc(1:nsinkmax))
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
      allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
-     allocate(total_volume(1:nsinkmax))
      allocate(wden(1:nsinkmax))
      allocate(wmom(1:nsinkmax,1:ndim))
      allocate(weth(1:nsinkmax))
