@@ -13,19 +13,19 @@
 ############################################################################
 
 # The source directory:
-SRC="/path/to/your/directory";
+SRC="/home/ics/teyssier";
 
 # Test frequency: (YY:MM:DD:hh:mm:ss)
 TEST_FREQ="00:00:01:00:00:00";
 
 # Test time offset: (YY:MM:DD:hh:mm:ss)
-TEST_OFFS="00:00:00:03:00:00";
+TEST_OFFS="00:00:00:15:54:00";
 
 # Wiki file
 WIKIFILE="AutoTests.md";
 
 # Log file
-LOGFILE="ramses_daily_test.log";
+LOGFILE="daily_test.log";
 
 # Upload to wiki?
 UPDATEWIKI=true;
@@ -33,11 +33,11 @@ UPDATEWIKI=true;
 # Set up variables
 hline="============================================================";
 
-RAMSESDIR="${SRC}/ramses/trunk/ramses/patch/rhd/test_suite";
-WIKIDIR="${SRC}/wiki";
+RAMSESDIR="${SRC}/ramses/trunk/ramses/patch/test_suite";
+WIKIDIR="${SRC}/ramses/wiki";
 WIKISTOREDIR="daily_tests";
 LOGFILE="${SRC}/${LOGFILE}";
-COMMIT_URL="https://bitbucket.org/rteyssie/ramses");
+COMMIT_URL="https://bitbucket.org/rteyssie/ramses/commits/";
 
 pause=100;
 
@@ -121,6 +121,8 @@ while true ; do
 
     if [ $TIMENOW -ge $TNEXTBACKUP ]; then
 
+        echo "Performing test run at $(date):";
+
         echo "Performing test run at $(date):" >> $LOGFILE;
 
         # Todays date for file name:
@@ -149,7 +151,7 @@ while true ; do
         commit=$(git rev-parse HEAD);
 
         # Run ramses test suite
-        ./run_test_suite.sh -f -p 6 >> $LOGFILE;
+        ./run_test_suite.sh -y >> $LOGFILE;
         
         # Go to wiki directory
         cd "${WIKIDIR}/${WIKISTOREDIR}";
