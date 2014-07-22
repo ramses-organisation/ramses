@@ -7,6 +7,11 @@ module hydro_parameters
 #else
   integer,parameter::nvar=NVAR
 #endif
+#ifndef NENER
+  integer,parameter::nener=0
+#else
+  integer,parameter::nener=NENER
+#endif
   ! Size of hydro kernel
   integer,parameter::iu1=-1
   integer,parameter::iu2=+4
@@ -57,6 +62,7 @@ module hydro_parameters
   integer ::niter_riemann=10
   integer ::slope_type=1
   real(dp)::gamma=1.4d0
+  real(dp),dimension(1:512)::gamma2=1.33333333334d0
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
   real(dp)::smallc=1.d-10
