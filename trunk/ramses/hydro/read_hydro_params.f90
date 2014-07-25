@@ -19,9 +19,13 @@ subroutine read_hydro_params(nml_ok)
   namelist/init_params/filetype,initfile,multiple,nregion,region_type &
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
+#if NENER>0
+       & ,prad_region &
+#endif
        & ,d_region,u_region,v_region,w_region,p_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
+       & ,gamma_rad &
        & ,pressure_fix,beta_fix,scheme,riemann
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
@@ -85,6 +89,17 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
+
+  !--------------------------------------------------
+  ! Check for non-thermal energies
+  !--------------------------------------------------
+#if NENER>0
+  if(nvar<(ndim+2+nener))then
+     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= ndim+2+nener'
+     if(myid==1)write(*,*)'Modify NENER and recompile'
+     nml_ok=.false.
+  endif
+#endif
 
   !--------------------------------------------------
   ! Check ind_rsink
@@ -250,13 +265,14 @@ subroutine read_hydro_params(nml_ok)
   !-----------------------------------
   ! Sort out passive variable indices
   !-----------------------------------
-  imetal=ndim+3
+  imetal=nener+ndim+3
   idelay=imetal
   if(metal)idelay=imetal+1
   ixion=idelay
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+  ! Last variable is ichem
 
 end subroutine read_hydro_params
 

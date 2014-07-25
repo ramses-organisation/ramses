@@ -5,11 +5,12 @@
 NVECTOR = 32
 NDIM = 1
 NPRE = 8
-NVAR = 5
+NVAR = 3
+NENER = 0
 SOLVER = hydro
 PATCH = 
 EXEC = ramses
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 
