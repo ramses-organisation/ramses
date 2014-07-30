@@ -154,19 +154,22 @@ subroutine make_boundary_hydro(ilevel)
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
               end do
-              ! Enforce hydrostatic equilibrium
-              ! for constant gravity vector only
-              if(poisson.and.gravity_type==1)then
-                 ivar=ndim+2
-                 do i=1,ngrid
-                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
-                 end do
-                 do i=1,ngrid
-                    uold(ind_cell(i),ivar)=uu(i,ivar)+ &
-                         & uold(ind_cell_ref(i),1)*gravity_params(gdim)* &
-                         & dx_loc*alt(ind)/(gamma-1.0d0)
-                 end do
-              end if
+              ! This option has been disactivated 
+              ! because it does not work in general
+              ! Only for highly subsonic flows
+!!$              ! Enforce hydrostatic equilibrium
+!!$              ! for constant gravity vector only
+!!$              if(poisson.and.gravity_type==1)then
+!!$                 ivar=ndim+2
+!!$                 do i=1,ngrid
+!!$                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+!!$                 end do
+!!$                 do i=1,ngrid
+!!$                    uold(ind_cell(i),ivar)=uu(i,ivar)+ &
+!!$                         & uold(ind_cell_ref(i),1)*gravity_params(gdim)* &
+!!$                         & dx_loc*alt(ind)/(gamma-1.0d0)
+!!$                 end do
+!!$              end if
               
               ! Imposed boundary conditions
            else

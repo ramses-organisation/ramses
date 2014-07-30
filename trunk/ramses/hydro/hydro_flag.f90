@@ -179,7 +179,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   ! user-defined physical criterion for refinement.
   ! P. Hennebelle 03/11/2005
   !-------------------------------------------------
-  integer::i,indi
+  integer::i,indi,irad
   real(dp)::lamb_jeans,tail_pix,pi,n_jeans
   real(dp)::dens,tempe,emag,etherm,factG
   pi = twopi / 2.
@@ -199,6 +199,11 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
 #endif
 #if NDIM > 2
      etherm = etherm - 0.5d0*uold(indi,4)**2/dens
+#endif
+#if NENER>0
+     do irad=1,nener
+        etherm=etherm-uold(indi,ndim+2+irad)
+     end do
 #endif
      ! the temperature
      tempe =  etherm / dens * (gamma -1.0)

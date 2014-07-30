@@ -69,12 +69,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar,irad
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant,Fpnew,Npnew
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err
 #ifdef RT
   real(dp)::scale_Np,scale_Fp
   logical,dimension(1:nvector),save::cooling_on=.true.
@@ -149,7 +149,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      endif
 
-     ! Compute pressure
+     ! Compute thermal pressure
      do i=1,nleaf
         T2(i)=uold(ind_leaf(i),ndim+2)
      end do
@@ -162,7 +162,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      end do
      do i=1,nleaf
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i))
+        err(i)=0.0d0
+     end do
+#if NENER>0
+     do irad=1,nener
+        do i=1,nleaf
+           err(i)=err(i)+uold(ind_leaf(i),ndim+2+irad)
+        end do
+     end do
+#endif
+     do i=1,nleaf
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
@@ -307,7 +317,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute minimal total energy from polytrope
      do i=1,nleaf
-        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i)
+        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i) + err(i)
      end do
 
      ! Update total fluid energy

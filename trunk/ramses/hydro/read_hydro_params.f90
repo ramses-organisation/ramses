@@ -19,9 +19,13 @@ subroutine read_hydro_params(nml_ok)
   namelist/init_params/filetype,initfile,multiple,nregion,region_type &
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
+#if NENER>0
+       & ,prad_region &
+#endif
        & ,d_region,u_region,v_region,w_region,p_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
+       & ,gamma_rad &
        & ,pressure_fix,beta_fix,scheme,riemann
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
@@ -32,13 +36,12 @@ subroutine read_hydro_params(nml_ok)
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
        & ,d_bound,u_bound,v_bound,w_bound,p_bound
-  namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
+  namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
-       & ,J21,a_spec,z_ave,z_reion,n_sink,ind_rsink,bondi,delayed_cooling &
-       & ,self_shielding,smbh,agn,rsink_max,msink_max &
-       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,merge_stars &
-       & ,larson_lifetime,flux_accretion,t_diss
+       & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling &
+       & ,self_shielding,smbh,agn &
+       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss
 
   ! Read namelist file
   rewind(1)
@@ -86,6 +89,17 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
+
+  !--------------------------------------------------
+  ! Check for non-thermal energies
+  !--------------------------------------------------
+#if NENER>0
+  if(nvar<(ndim+2+nener))then
+     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= ndim+2+nener'
+     if(myid==1)write(*,*)'Modify NENER and recompile'
+     nml_ok=.false.
+  endif
+#endif
 
   !--------------------------------------------------
   ! Check ind_rsink
@@ -251,13 +265,14 @@ subroutine read_hydro_params(nml_ok)
   !-----------------------------------
   ! Sort out passive variable indices
   !-----------------------------------
-  imetal=ndim+3
+  imetal=nener+ndim+3
   idelay=imetal
   if(metal)idelay=imetal+1
   ixion=idelay
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+  ! Last variable is ichem
 
 end subroutine read_hydro_params
 

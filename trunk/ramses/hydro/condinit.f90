@@ -51,11 +51,19 @@ subroutine condinit(x,u,dx,nn)
 #if NDIM>2
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5*q(1:nn,1)*q(1:nn,4)**2
 #endif
-  ! pressure -> total fluid energy
+  ! thermal pressure -> total fluid energy
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+q(1:nn,ndim+2)/(gamma-1.0d0)
-#if NVAR > NDIM + 2
+#if NENER>0
+  ! radiative pressure -> radiative energy
+  ! radiative energy -> total fluid energy
+  do ivar=1,nener
+     u(1:nn,ndim+2+ivar)=q(1:nn,ndim+2+ivar)/(gamma_rad(ivar)-1.0d0)
+     u(1:nn,ndim+2)=u(1:nn,ndim+2)+u(1:nn,ndim+2+ivar)
+  enddo
+#endif
+#if NVAR>NDIM+2+NENER
   ! passive scalars
-  do ivar=ndim+3,nvar
+  do ivar=ndim+3+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
 #endif

@@ -82,82 +82,99 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,i,idim,ind_son,iskip_son
+  integer ::ivar,irad,i,idim,ind_son,iskip_son
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
-  real(dp),dimension(1:nvector),save::getx,ekin
+  real(dp),dimension(1:nvector),save::getx,ekin,erad
 
   ! Get child oct index
   do i=1,ncell
      igrid_son(i)=son(ind_cell(i))
   end do
 
+  !-------------------------------
+  ! Average conservative variables
+  !-------------------------------
   ! Loop over variables
   do ivar=1,nvar     
 
-     if(interpol_var==1.and.ivar==2+ndim)then
-
-        ! Average internal energy
-        getx(1:ncell)=0.0d0
-        do ind_son=1,twotondim
-           iskip_son=ncoarse+(ind_son-1)*ngridmax
-           do i=1,ncell
-              ind_cell_son(i)=iskip_son+igrid_son(i)
-           end do
-           ! Compute child kinetic energy
-           ekin(1:ncell)=0.0d0
-           do idim=1,ndim
-              do i=1,ncell
-                 ekin(i)=ekin(i)+0.5d0*uold(ind_cell_son(i),1+idim)**2 &
-                      &               /uold(ind_cell_son(i),1)
-              end do
-           end do
-           ! Compute child internal energy
-           do i=1,ncell
-              ekin(i)=uold(ind_cell_son(i),ivar)-ekin(i)
-           end do
-           ! Update average
-           do i=1,ncell
-              getx(i)=getx(i)+ekin(i)
-           end do
-        end do
-        
-        ! Compute new kinetic energy
-        ekin(1:ncell)=0.0d0
-        do idim=1,ndim
-           do i=1,ncell
-              ekin(i)=ekin(i)+0.5d0*uold(ind_cell(i),1+idim)**2 &
-                   &               /uold(ind_cell(i),1)
-           end do
-        end do
-
-        ! Scatter result to cells
+     getx(1:ncell)=0.0d0
+     do ind_son=1,twotondim
+        iskip_son=ncoarse+(ind_son-1)*ngridmax
         do i=1,ncell
-           uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)+ekin(i)
+           ind_cell_son(i)=iskip_son+igrid_son(i)
         end do
-
-     else
-
-        ! Average conservative variable
-        getx(1:ncell)=0.0d0
-        do ind_son=1,twotondim
-           iskip_son=ncoarse+(ind_son-1)*ngridmax
-           do i=1,ncell
-              ind_cell_son(i)=iskip_son+igrid_son(i)
-           end do
-           do i=1,ncell
-              getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
-           end do
-        end do
-        
-        ! Scatter result to cells
+        ! Update average
         do i=1,ncell
-           uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
+           getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
         end do
-     end if
+     end do
+     
+     ! Scatter result to cells
+     do i=1,ncell
+        uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
+     end do
 
   end do
   ! End loop over variables
 
+  !------------------------------------------------
+  ! Average internal energy instead of total energy
+  !------------------------------------------------
+  if(interpol_var==1)then
+
+     getx(1:ncell)=0.0d0
+     do ind_son=1,twotondim
+        iskip_son=ncoarse+(ind_son-1)*ngridmax
+        do i=1,ncell
+           ind_cell_son(i)=iskip_son+igrid_son(i)
+        end do
+        ! Compute child kinetic energy
+        ekin(1:ncell)=0.0d0
+        do idim=1,ndim
+           do i=1,ncell
+              ekin(i)=ekin(i)+0.5d0*uold(ind_cell_son(i),1+idim)**2 &
+                   &               /uold(ind_cell_son(i),1)
+           end do
+        end do
+        ! Compute child radiative energy
+        erad(1:ncell)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,ncell
+              erad(i)=erad(i)+uold(ind_cell_son(i),ndim+2+irad)
+           end do
+        end do
+#endif
+        ! Update average
+        do i=1,ncell
+           getx(i)=getx(i)+uold(ind_cell_son(i),ndim+2)-ekin(i)-erad(i)
+        end do
+     end do
+     
+     ! Compute new kinetic energy
+     ekin(1:ncell)=0.0d0
+     do idim=1,ndim
+        do i=1,ncell
+           ekin(i)=ekin(i)+0.5d0*uold(ind_cell(i),1+idim)**2 &
+                &               /uold(ind_cell(i),1)
+        end do
+     end do
+     ! Compute new radiative energy
+     erad(1:ncell)=0.0d0
+#if NENER>0
+     do irad=1,nener
+        do i=1,ncell
+           erad(i)=erad(i)+uold(ind_cell(i),ndim+2+irad)
+        end do
+     end do
+#endif
+
+     ! Scatter result to cells
+     do i=1,ncell
+        uold(ind_cell(i),ndim+2)=getx(i)/dble(twotondim)+ekin(i)+erad(i)
+     end do
+
+  end if
 
 end subroutine upl
 !###########################################################
@@ -184,12 +201,13 @@ subroutine interpol_hydro(u1,u2,nn)
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation with unlimited Central slope
   !----------------------------------------------------------
-  integer::i,j,ivar,idim,ind,ix,iy,iz
+  integer::i,j,ivar,irad,idim,ind,ix,iy,iz
 
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
   real(dp),dimension(1:nvector),save::ekin
+  real(dp),dimension(1:nvector),save::erad
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -210,8 +228,16 @@ subroutine interpol_hydro(u1,u2,nn)
               ekin(i)=ekin(i)+0.5d0*u1(i,j,idim+1)**2/(u1(i,j,1)+smallr)
            end do
         end do
+        erad(1:nn)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,nn
+              erad(i)=erad(i)+u1(i,j,ndim+2+irad)
+           end do
+        end do
+#endif
         do i=1,nn
-           u1(i,j,ndim+2)=u1(i,j,ndim+2)-ekin(i)
+           u1(i,j,ndim+2)=u1(i,j,ndim+2)-ekin(i)-erad(i)
         end do
      end do
   end if
@@ -256,8 +282,16 @@ subroutine interpol_hydro(u1,u2,nn)
               ekin(i)=ekin(i)+0.5d0*u2(i,ind,idim+1)**2/(u2(i,ind,1)+smallr)
            end do
         end do
+        erad(1:nn)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,nn
+              erad(i)=erad(i)+u2(i,ind,ndim+2+irad)
+           end do
+        end do
+#endif
         do i=1,nn
-           u2(i,ind,ndim+2)=u2(i,ind,ndim+2)+ekin(i)
+           u2(i,ind,ndim+2)=u2(i,ind,ndim+2)+ekin(i)+erad(i)
         end do
      end do
   end if

@@ -10,13 +10,16 @@ subroutine write_screen
   !
   integer::igrid,jgrid,ind,icpu,info
   integer::i,icell,ncell,ilevel,ncache
-  integer::icellmin,nx_loc
+  integer::icellmin,nx_loc,irad
   real(dp)::dx,scale,smallp,ddd,ppp
 
   integer     ,dimension(:),allocatable::ind_grid,ind_cell,ind_sort,ll,ll_all
   real(kind=8),dimension(:),allocatable::rr,et,ei,dd,uu,mm,gg,dtot
   real(kind=8),dimension(:),allocatable::rr_all,et_all,ei_all
   real(kind=8),dimension(:),allocatable::dd_all,uu_all,mm_all,gg_all,dtot_all
+#if NENER>0
+  real(kind=8),dimension(:,:),allocatable::prad_all,prad
+#endif
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
 
@@ -84,6 +87,10 @@ subroutine write_screen
   ei=0.0D0; uu=0.0D0; gg=0.0D0; ll=0
   rr_all=0.0D0; mm_all=0.0D0; dd_all=0.0D0; dtot_all=0.0D0; et_all=0.0D0
   ei_all=0.0D0; uu_all=0.0D0; gg_all=0.0D0; ll_all=0
+#if NENER>0
+  allocate(prad(1:ncell,1:nener),prad_all(1:ncell,1:nener))
+  prad=0.0D0; prad_all=0.0D0
+#endif
 
   icell=iskip(myid)
   do ilevel=1,nlevelmax
@@ -127,6 +134,12 @@ subroutine write_screen
                     et(icell)=uold(ind_cell(i),3)
                     ei(icell)=et(icell)/dd(icell)-0.5d0*uu(icell)**2
                     ei(icell)=ei(icell)*dd(icell)
+#if NENER>0
+                    do irad=1,nener
+                       ei(icell)=ei(icell)-uold(ind_cell(i),3+irad)
+                       prad(icell,irad)=(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),3+irad)
+                    end do
+#endif
                  end if
               end do
            end do
@@ -163,15 +176,27 @@ subroutine write_screen
   call MPI_ALLREDUCE(rr,rr_all,ncell,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   rr=rr_all; mm=mm_all; dd=dd_all; dtot=dtot_all; et=et_all
   ei=ei_all; uu=uu_all; gg=gg_all; ll=ll_all
+#if NENER>0
+  call MPI_ALLREDUCE(prad,prad_all,ncell*nener,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  prad=prad_all
+#endif
 #endif
 
   if(myid==1)then
      write(*,*)'================================================'
+#if NENER>0
+     if(poisson)then
+        write(*,*)'lev      x           d          u          Pnt      P        rho       f'
+     else
+        write(*,*)'lev      x           d          u          Pnt      P'
+     endif
+#else
      if(poisson)then
         write(*,*)'lev      x           d          u          P        rho       f'
      else
         write(*,*)'lev      x           d          u          P'
      endif
+#endif
      ! Sort radius
      allocate(ind_sort(1:ncell))
      call quick_sort(rr,ind_sort,ncell)
@@ -192,6 +217,10 @@ subroutine write_screen
              & (rr(i)-dble(icoarse_min))*scale, &
              & ddd , &
              & uu(ind_sort(i)), &
+#if NENER>0
+             & prad(ind_sort(i),1), &
+
+#endif
              & ppp, &
              & dtot(ind_sort(i)),  &
              & gg(ind_sort(i))
@@ -201,6 +230,10 @@ subroutine write_screen
              & (rr(i)-dble(icoarse_min))*scale, &
              & ddd , &
              & uu(ind_sort(i)), &
+#if NENER>0
+             & prad(ind_sort(i),1), &
+
+#endif
              & ppp
         endif
      end do
@@ -211,7 +244,9 @@ subroutine write_screen
   ! Deallocate local arrays
   deallocate(mm,rr,dd,dtot,et,ei,uu,ll,gg)
   deallocate(mm_all,rr_all,dd_all,dtot_all,et_all,ei_all,uu_all,ll_all,gg_all)
-
+#if ENER>0
+  deallocate(prad,prad_all)
+#endif
   end if
  
 #ifndef WITHOUTMPI

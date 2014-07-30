@@ -96,6 +96,13 @@ subroutine courant_fine(ilevel)
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol
            end do
         end do
+#if NENER>0
+        do ivar=1,nener
+           do i=1,nleaf
+              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
+           end do
+        end do
+#endif
         
         ! Compute CFL time-step
         if(nleaf>0)then

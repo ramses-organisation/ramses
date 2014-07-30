@@ -216,7 +216,7 @@ subroutine write_clump_properties(to_file)
        '        rho-               rho+               rho_av             mass_cl            relevance   '
 
   if(saddle_threshold>0)then
-     write(ilun2,'(135A)')'   index  peak_x             peak_y             peak_z     '//&
+     write(ilun2,'(135A)')'   index    peak_x             peak_y             peak_z     '//&
           '        rho+               mass      '
   endif
 
@@ -241,7 +241,7 @@ subroutine write_clump_properties(to_file)
      end if
      if(saddle_threshold>0)then
         if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-           write(ilun,'(I8,5(X,1PE18.9E2))')&
+           write(ilun2,'(I8,5(X,1PE18.9E2))')&
                 jj+ipeak_start(myid)&
                 ,peak_pos(jj,1)&
                 ,peak_pos(jj,2)&
@@ -516,7 +516,7 @@ subroutine merge_clumps(ntest,action)
            end if
            relevance(ipeak)=relevance_peak
         else
-           relevance(ipeak)=0        
+           relevance(ipeak)=0.
         endif
      end do
      
@@ -594,7 +594,7 @@ subroutine get_max(i,mat)
   type(sparse_mat)::mat 
   integer::i
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ! get maximum in line by walking the linked list
+  ! get maximum in i-th line by walking the linked list
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   integer::current,icol
   
