@@ -1970,7 +1970,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            density=density/(volume+tiny(0._dp))
            
            ! Compute accreted mass using density weighting
-           acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+           acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/(volume+tiny(0._dp))*d/(density+tiny(0._dp))
            
            if (threshold_accretion)then
               ! User defined density threshold
@@ -1997,9 +1997,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         nolacc=nol_accretion
         ! for accretion from very low density cells
         ! do accrete angular momentum (to prevent negative densities...)
-        if (.not. on_creation)then
-           if(d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
-        end if
+!        if (.not. on_creation)then
+!           if(d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
+!        end if
            
         if(nolacc)then
            p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)

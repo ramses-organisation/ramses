@@ -31,6 +31,7 @@ subroutine newdt_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+  threepi2=3.0d0*ACOS(-1.0d0)**2
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
@@ -39,7 +40,6 @@ subroutine newdt_fine(ilevel)
   dtnew(ilevel)=boxlen/smallc
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*ACOS(-1.0d0)
-     threepi2=3.0d0*ACOS(-1.0d0)**2
      if(cosmo)fourpi=1.5d0*omega_m*aexp
      tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)

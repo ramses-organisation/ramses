@@ -344,7 +344,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=t
-              new_born(isink)=.true.
+              new_born(nsink)=.true.
            end do
 103        continue
            close(10)
@@ -1024,7 +1024,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              new_born(isink)=.true.
+              new_born(nsink)=.true.
            end do
 102        continue
            close(10)
