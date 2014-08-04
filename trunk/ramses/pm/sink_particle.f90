@@ -1912,7 +1912,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   do j=1,np
      if(ok(j))then
 
-        if (ilevel<nlevelmax)write(*,*),'trying to accrete from cell which is not at levelmax...'
+!        if (ilevel<nlevelmax)write(*,*),'trying to accrete from cell which is not at levelmax...'
 
         ! Get cell center positions
         xx(1)=(x0(ind_grid_part(j),1)+3.0D0*dx+xc(icell(j),1)-skip_loc(1))*scale
@@ -2035,7 +2035,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
         
         if (on_creation)then
-           ! accrete
+           ! new born sinks accrete form uold
            d=d-acc_mass/vol_loc
            !new gas velocity
            vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)                    
@@ -2054,7 +2054,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               uold(indp(j),ivar)=d*z(ivar)
            end do           
         else
-           ! modify unew variables
+           ! regular accretion from unew
            unew(indp(j),1)=unew(indp(j),1)-acc_mass/vol_loc
            unew(indp(j),2:5)=unew(indp(j),2:5)-uold(indp(j),2:5)*acc_mass/(d*vol_loc)
            do ivar=imetal,nvar
@@ -3983,7 +3983,7 @@ subroutine read_sink_params()
 
   real(dp)::dx_min,scale,cty
   integer::nx_loc
-  namelist/sink_params/n_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
+  namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -4005,10 +4005,12 @@ subroutine read_sink_params()
   if (accretion_scheme =='flux')then
      use_acc_rate=.true.
      flux_accretion=.true.
+     threshold_accretion=.false.
   end if
   if (accretion_scheme =='bondi')then
      use_acc_rate=.true.
      flux_accretion=.false.
+     threshold_accretion=.false.
   end if
   if (accretion_scheme =='threshold_accretion')then
      use_acc_rate=.false.
@@ -4053,7 +4055,7 @@ subroutine read_sink_params()
   ! nol_accretion requires a somewhat smaller timestep per default
   if(c_acc < 0.)then
      if (nol_accretion)then
-        c_acc=0.25
+        c_acc=0.5
      else
         c_acc=0.75
      end if
