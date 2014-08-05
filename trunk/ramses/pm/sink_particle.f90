@@ -4025,12 +4025,16 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  if (rho_sink>0. .and. n_sink<0.)then
+  if (rho_sink<0. .and. n_sink<0. .and. d_sink>0.) then
+     if(myid==1)write(*,*)'Found d_sink! Assuming code units'
+  else if (rho_sink>0. .and. n_sink<0. .and. d_sink<0.)then
+     if(myid==1)write(*,*)'Found rho_sink! Assuming g/cc'
      d_sink=rho_sink/scale_d
-  else if (rho_sink<0. .and. n_sink>0.)then
+  else if (rho_sink<0. .and. n_sink>0. .and. d_sink<0.)then
+     if(myid==1)write(*,*)'Found n_sink! Assuming H/cc'
      d_sink=n_sink/scale_nH
-  else if (rho_sink>0. .and. n_sink>0.)then
-     if (myid==1)write(*,*)'Use n_sink [H/cc] OR rho_sink [g/cc]'
+  else if ((rho_sink>0. .and. n_sink>0.) .or. (rho_sink>0. .and. d_sink>0.) .or. (n_sink>0. .and. d_sink>0.))then
+     if (myid==1)write(*,*)'Use n_sink [H/cc] OR rho_sink [g/cc] OR d_sink [code_units]'
      call clean_stop
   else
      if(myid==1)write(*,*)'Setting sink threshold such that jeans length at '
