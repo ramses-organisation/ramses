@@ -3977,7 +3977,7 @@ subroutine read_sink_params()
 
   real(dp)::dx_min,scale,cty
   integer::nx_loc
-  namelist/sink_params/n_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
+  namelist/sink_params/n_sink,d_sink,rho_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
