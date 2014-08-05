@@ -103,10 +103,9 @@ subroutine init_part
      acc_lum=0.
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
-     allocate(level_sink(1:nsinkmax))
+     allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
-     allocate(total_volume(1:nsinkmax))
      allocate(wden(1:nsinkmax))
      allocate(wmom(1:nsinkmax,1:ndim))
      allocate(weth(1:nsinkmax))
@@ -135,8 +134,7 @@ subroutine init_part
      allocate(xsink_all(1:nsinkmax,1:ndim))
      allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
      sink_jump=0.d0
-     allocate(level_sink_all(1:nsinkmax))
-     allocate(level_sink_new(1:nsinkmax))
+     allocate(level_sink_new(1:nsinkmax,levelmin:nlevelmax))
      allocate(dMsink_overdt(1:nsinkmax))
      allocate(r2sink(1:nsinkmax))
      allocate(r2k(1:nsinkmax))
@@ -259,8 +257,8 @@ subroutine init_part
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index
            idsink(1:nsink)=isp
-           read(ilun)isp ! Read sink level
-           level_sink(1:nsink)=isp
+!           read(ilun)isp ! Read sink level
+!           level_sink(1:nsink)=isp
            nindsink=MAXVAL(idsink) ! Reset max index
            deallocate(isp)
            read(ilun)ncloud_sink
@@ -1060,7 +1058,6 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              level_sink(nsink)=levelmin
            end do
 102        continue
            close(10)
