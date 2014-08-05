@@ -60,7 +60,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   integer::i,idim,neul=ndim+2,nndim=ndim
   real(dp),dimension(1:nvector),save::pp
 
-  ! Compute internal + magnetic energy
+  ! Compute internal + magnetic + radiative energy
   do i=1,ncell
      pp(i)=uold(ind_cell(i),neul)
   end do

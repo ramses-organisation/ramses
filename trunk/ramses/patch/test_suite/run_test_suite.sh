@@ -287,11 +287,6 @@ for ((i=0;i<$ntests;i++)); do
    # Run tests
    cd ${TEST_DIRECTORY}/${testdir[n]};
    $DELETE_RESULTS;
-   if $VERBOSE ; then
-      ./prepare-${testname[n]}.sh;
-   else
-      { ./prepare-${testname[n]}.sh >> $LOGFILE; } 2>> $LOGFILE;
-   fi
    RUN_TEST="${RUN_TEST_BASE}${ndim[n]}d ${testlist[n]}";
    echo "Running test";
    echo "Running test" >> $LOGFILE;

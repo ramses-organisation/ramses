@@ -8,7 +8,7 @@ subroutine init_hydro
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
+  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar,irad
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
@@ -99,12 +99,9 @@ subroutine init_hydro
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
-                 ! Loop over conservative variables
-#ifndef RT
-                 do ivar=1,nvar
-#else
-                 do ivar=1,min(nvar,nvar2)
-#endif
+
+                 ! Read density and velocities --> density and momenta
+                 do ivar=1,ndim+1
                     read(ilun)xx
                     if(ivar==1)then
                        do i=1,ncache
@@ -114,39 +111,45 @@ subroutine init_hydro
                        do i=1,ncache
                           uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
                        end do
-                    else if(ivar==ndim+2)then
-                       do i=1,ncache
-                          xx(i)=xx(i)/(gamma-1d0)
-                          if (uold(ind_grid(i)+iskip,1)>0.)then                          
-                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
-#if NDIM>1
-                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
-#endif
-#if NDIM>2
-                             xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
-#endif
-                             else if(uold(ind_grid(i)+iskip,2) /= 0.)then 
-                                write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
-#if NDIM>1
-                             else if(uold(ind_grid(i)+iskip,3) /= 0.)then 
-                                write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
-#endif
-#if NDIM>2
-                             else if(uold(ind_grid(i)+iskip,4) /= 0.)then 
-                                write(*,*)'Problem in init_hydro with zero or negative density'
-!                                call clean_stop
-#endif
-                             end if
-                             uold(ind_grid(i)+iskip,ivar)=xx(i)
-                       end do
-                    else
-                       do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
-                       end do
                     endif
                  end do
+
+#if NENER>0
+                 ! Read non-thermal pressures --> non-thermal energies
+                 do ivar=ndim+3,ndim+2+nener
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-ndim-2)-1d0)
+                    end do
+                 end do
+#endif
+                 ! Read thermal pressure --> total fluid energy
+                 read(ilun)xx
+                 do i=1,ncache
+                    xx(i)=xx(i)/(gamma-1d0)
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
+#if NDIM>1
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
+#endif
+#if NDIM>2
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
+#endif
+#if NENER>0
+                    do irad=1,nener
+                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,ndim+2+irad)
+                    end do
+#endif
+                    uold(ind_grid(i)+iskip,ndim+2)=xx(i)
+                 end do
+#if NVAR>NDIM+2+NENER
+                 ! Read passive scalars
+                 do ivar=ndim+3+nener,nvar
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                    end do
+                 end do
+#endif
               end do
               deallocate(ind_grid,xx)
            end if

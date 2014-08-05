@@ -2,8 +2,13 @@ module hydro_parameters
   use amr_parameters
 
   ! Number of independant variables
+#ifndef NENER
+  integer,parameter::nener=0
+#else
+  integer,parameter::nener=NENER
+#endif
 #ifndef NVAR
-  integer,parameter::nvar=ndim+2
+  integer,parameter::nvar=ndim+2+nener
 #else
   integer,parameter::nvar=NVAR
 #endif
@@ -50,13 +55,17 @@ module hydro_parameters
   real(dp),dimension(1:MAXREGION)::v_region=0.
   real(dp),dimension(1:MAXREGION)::w_region=0.
   real(dp),dimension(1:MAXREGION)::p_region=0.
-#if NVAR > NDIM+2
-  real(dp),dimension(1:MAXREGION,1:NVAR-NDIM-2)::var_region=0.0
+#if NENER>0
+  real(dp),dimension(1:MAXREGION,1:NENER)::prad_region=0.0
+#endif
+#if NVAR > NDIM+2+NENER
+  real(dp),dimension(1:MAXREGION,1:NVAR-NDIM-2-NENER)::var_region=0.0
 #endif
   ! Hydro solver parameters
   integer ::niter_riemann=10
   integer ::slope_type=1
   real(dp)::gamma=1.4d0
+  real(dp),dimension(1:512)::gamma_rad=1.33333333334d0
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
   real(dp)::smallc=1.d-10

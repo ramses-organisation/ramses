@@ -13,19 +13,19 @@
 ############################################################################
 
 # The source directory:
-SRC="/path/to/your/directory";
+SRC="/home/ics/teyssier";
 
 # Test frequency: (YY:MM:DD:hh:mm:ss)
 TEST_FREQ="00:00:01:00:00:00";
 
 # Test time offset: (YY:MM:DD:hh:mm:ss)
-TEST_OFFS="00:00:00:03:00:00";
+TEST_OFFS="00:00:00:15:54:00";
 
 # Wiki file
-WIKIFILE="Home.md";
+WIKIFILE="AutoTests.md";
 
 # Log file
-LOGFILE="ramses_daily_test.log";
+LOGFILE="daily_test.log";
 
 # Upload to wiki?
 UPDATEWIKI=true;
@@ -33,10 +33,11 @@ UPDATEWIKI=true;
 # Set up variables
 hline="============================================================";
 
-RAMSESDIR="${SRC}/ramses_rhd/trunk/ramses/patch/rhd/test_suite";
-WIKIDIR="${SRC}/wiki";
+RAMSESDIR="${SRC}/ramses/trunk/ramses/patch/test_suite";
+WIKIDIR="${SRC}/ramses/wiki";
+WIKISTOREDIR="daily_tests";
 LOGFILE="${SRC}/${LOGFILE}";
-COMMIT_URL="https://bitbucket.org/bcommerc/ramses_rhd/commits/";
+COMMIT_URL="https://bitbucket.org/rteyssie/ramses/commits/";
 
 pause=100;
 
@@ -120,6 +121,8 @@ while true ; do
 
     if [ $TIMENOW -ge $TNEXTBACKUP ]; then
 
+        echo "Performing test run at $(date):";
+
         echo "Performing test run at $(date):" >> $LOGFILE;
 
         # Todays date for file name:
@@ -148,16 +151,18 @@ while true ; do
         commit=$(git rev-parse HEAD);
 
         # Run ramses test suite
-        ./run_test_suite.sh -f -p 6 >> $LOGFILE;
+        ./run_test_suite.sh >> $LOGFILE;
         
         # Go to wiki directory
-        cd ${WIKIDIR};
+        cd "${WIKIDIR}/${WIKISTOREDIR}";
         cp ${RAMSESDIR}/test_results.pdf ${DATE}.pdf;
         cp ${RAMSESDIR}/test_suite.log ${DATE}.log;
 
         if $UPDATEWIKI ; then
         
             # Update wiki page ================================================
+            cd ${WIKIDIR};
+            
             # Number of lines in file
             nlines=$(wc -l ${WIKIFILE} | cut -d ' ' -f 1);
             
@@ -234,7 +239,7 @@ while true ; do
             
             # Identify segment
             imonth=$(((($MONTHNOZERO - 1) % 4) + 1));
-            segment[$imonth]=" [pdf](${DATE}.pdf) [log](${DATE}.log) [${commit:0:7}](${URL}) ${image} ";
+            segment[$imonth]=" [pdf](${WIKISTOREDIR}/${DATE}.pdf) [log](${WIKISTOREDIR}/${DATE}.log) [${commit:0:7}](${URL}) ${image} ";
             
             newline="|";
             for ((i=0;i<5;i++)); do
@@ -251,7 +256,7 @@ while true ; do
             rm tempfile;
             
             # Upload results to bitbucket
-            git add ${WIKIFILE} ${DATE}.log ${DATE}.pdf >> $LOGFILE;
+            git add ${WIKIFILE} ${WIKISTOREDIR}/${DATE}.log ${WIKISTOREDIR}/${DATE}.pdf >> $LOGFILE;
             git commit -m "Test results for date: ${DATE}" >> $LOGFILE;
             git push origin master >> $LOGFILE;
             

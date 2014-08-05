@@ -189,11 +189,14 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   ! Local variables
   integer ::i, j, k, l, n
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, ip
+  integer ::ir, iu, ip, irad
   real(dp)::dtdx
   real(dp)::r, u, p, a
   real(dp)::drx, dux, dpx, dax
   real(dp)::sr0, su0, sp0, sa0
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, se0
+#endif
   
   dtdx = dt/dx
 
@@ -211,37 +214,63 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               r   =  q(l,i,j,k,ir)
               u   =  q(l,i,j,k,iu)
               p   =  q(l,i,j,k,ip)
-
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
+#endif
               ! TVD slopes in X direction
               drx = dq(l,i,j,k,ir,1)
               dux = dq(l,i,j,k,iu,1)
               dpx = dq(l,i,j,k,ip,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
               
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx - (dux)*r
-              su0 = -u*dux - (dpx)/r
               sp0 = -u*dpx - (dux)*gamma*p
+              su0 = -u*dux - (dpx)/r
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 se0(irad) = -u*dex(irad) &
+                      & - (dux)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Right state
               qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
               qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
               ! Left state
               qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
            end do
         end do
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NDIM + 2 + NENER
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = ndim+nener+3, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -282,12 +311,15 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   ! declare local variables
   integer ::i, j, k, l, n
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, ip
+  integer ::ir, iu, iv, ip, irad
   real(dp)::dtdx, dtdy
   real(dp)::r, u, v, p, a
   real(dp)::drx, dux, dvx, dpx, dax
   real(dp)::dry, duy, dvy, dpy, day
   real(dp)::sr0, su0, sv0, sp0, sa0
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
   
   dtdx = dt/dx
   dtdy = dt/dy
@@ -306,23 +338,46 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               u   =  q(l,i,j,k,iu)
               v   =  q(l,i,j,k,iv)
               p   =  q(l,i,j,k,ip)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
+#endif
 
               ! TVD slopes in all directions
               drx = dq(l,i,j,k,ir,1)
               dux = dq(l,i,j,k,iu,1)
               dvx = dq(l,i,j,k,iv,1)
               dpx = dq(l,i,j,k,ip,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
               
               dry = dq(l,i,j,k,ir,2)
               duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
               dpy = dq(l,i,j,k,ip,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = dq(l,i,j,k,ip+irad,2)
+              end do
+#endif
               
               ! source terms (with transverse derivatives)
               sr0 = -u*drx-v*dry - (dux+dvy)*r
+              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
               su0 = -u*dux-v*duy - (dpx    )/r
               sv0 = -u*dvx-v*dvy - (dpy    )/r
-              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 sv0 = sv0 - (dey(irad))/r
+                 se0(irad) = -u*dex(irad)-v*dey(irad) &
+                      & - (dux+dvy)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Right state at left interface
               qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
@@ -330,6 +385,11 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
               qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
               ! Left state at right interface
               qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
@@ -337,6 +397,11 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
               ! Top state at bottom interface
               qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
@@ -344,6 +409,11 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
               qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
 
               ! Bottom state at top interface
               qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
@@ -351,15 +421,20 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
               qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
 
            end do
         end do
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NDIM + 2 + NENER
   ! passive scalars
-  do n = ndim+3, nvar
+  do n = ndim+nener+3, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -405,13 +480,16 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   ! declare local variables
   integer ::i, j, k, l, n
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, iw, ip
+  integer ::ir, iu, iv, iw, ip, irad
   real(dp)::dtdx, dtdy, dtdz
   real(dp)::r, u, v, w, p, a
   real(dp)::drx, dux, dvx, dwx, dpx, dax
   real(dp)::dry, duy, dvy, dwy, dpy, day
   real(dp)::drz, duz, dvz, dwz, dpz, daz
   real(dp)::sr0, su0, sv0, sw0, sp0, sa0
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+#endif
   
   dtdx = dt/dx
   dtdy = dt/dy
@@ -432,6 +510,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               v   =  q(l,i,j,k,iv)
               w   =  q(l,i,j,k,iw)
               p   =  q(l,i,j,k,ip)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
+#endif
 
               ! TVD slopes in all 3 directions
               drx = dq(l,i,j,k,ir,1)
@@ -439,18 +522,33 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               dux = dq(l,i,j,k,iu,1)
               dvx = dq(l,i,j,k,iv,1)
               dwx = dq(l,i,j,k,iw,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
               
               dry = dq(l,i,j,k,ir,2)
               dpy = dq(l,i,j,k,ip,2)
               duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
               dwy = dq(l,i,j,k,iw,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = dq(l,i,j,k,ip+irad,2)
+              end do
+#endif
               
               drz = dq(l,i,j,k,ir,3)
               dpz = dq(l,i,j,k,ip,3)
               duz = dq(l,i,j,k,iu,3)
               dvz = dq(l,i,j,k,iv,3)
               dwz = dq(l,i,j,k,iw,3)
+#if NENER>0
+              do irad=1,nener
+                 dez(irad) = dq(l,i,j,k,ip+irad,3)
+              end do
+#endif
 
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
@@ -458,6 +556,15 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               su0 = -u*dux-v*duy-w*duz - (dpx        )/r
               sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
               sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 sv0 = sv0 - (dey(irad))/r
+                 sw0 = sw0 - (dez(irad))/r
+                 se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) & 
+                      & - (dux+dvy+dwz)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Right state at left interface
               qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
@@ -466,6 +573,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
               qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
               ! Left state at left interface
               qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
@@ -474,6 +586,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
               ! Top state at bottom interface
               qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
@@ -482,6 +599,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
               qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
 
               ! Bottom state at top interface
               qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
@@ -490,6 +612,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
               qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
 
               ! Back state at front interface
               qp(l,i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
@@ -498,6 +625,11 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
               qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,3) = e(irad) - half*dez(irad) + se0(irad)*dtdz*half
+              end do
+#endif
 
               ! Front state at back interface
               qm(l,i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
@@ -506,15 +638,20 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
               qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
               qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,3) = e(irad) + half*dez(irad) + se0(irad)*dtdz*half
+              end do
+#endif
 
            end do
         end do
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NDIM + 2 + NENER
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = ndim+nener+3, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -568,7 +705,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   ! local variables
   integer ::i, j, k, n, l, idim, xdim
   real(dp)::entho
-  real(dp),dimension(1:nvector,1:nvar),save::qleft,qright,qgdnv,fgdnv
+  real(dp),dimension(1:nvector,1:nvar),save::qleft,qright
+  real(dp),dimension(1:nvector,1:nvar+1),save::fgdnv
 
   entho=one/(gamma-one)
   xdim=ln-1
@@ -620,15 +758,15 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 #endif          
            ! Solve Riemann problem
            if(riemann.eq.'acoustic')then
-              call riemann_acoustic(qleft,qright,qgdnv,fgdnv,ngrid)
+              call riemann_acoustic(qleft,qright,fgdnv,ngrid)
            else if (riemann.eq.'exact')then
-              call riemann_approx  (qleft,qright,qgdnv,fgdnv,ngrid)
+              call riemann_approx  (qleft,qright,fgdnv,ngrid)
            else if (riemann.eq.'llf')then
-              call riemann_llf     (qleft,qright,qgdnv,fgdnv,ngrid)
+              call riemann_llf     (qleft,qright,fgdnv,ngrid)
            else if (riemann.eq.'hllc')then
-              call riemann_hllc    (qleft,qright,qgdnv,fgdnv,ngrid)
+              call riemann_hllc    (qleft,qright,fgdnv,ngrid)
            else if (riemann.eq.'hll')then
-              call riemann_hll     (qleft,qright,qgdnv,fgdnv,ngrid)
+              call riemann_hll     (qleft,qright,fgdnv,ngrid)
            else
               write(*,*)'unknown Riemann solver'
               stop
@@ -671,16 +809,13 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               end do
            end do
 #endif
-           ! Temporary Godunov states
+           ! Normal velocity
            do l = 1, ngrid
-              tmp(l,i,j,k,1) = qgdnv(l,2)   ! Normal velocity
+              tmp(l,i,j,k,1) = half*(qleft(l,2)+qright(l,2))
            end do
+           ! Internal energy flux
            do l = 1,ngrid
-              if(qgdnv(l,2)>zero)then       ! Internal energy flux
-                 tmp(l,i,j,k,2) = qleft (l,3)*qgdnv(l,2)*entho
-              else
-                 tmp(l,i,j,k,2) = qright(l,3)*qgdnv(l,2)*entho
-              end if
+              tmp(l,i,j,k,2) = fgdnv(l,nvar+1)
            end do
 
         end do
@@ -705,9 +840,9 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
 
-  integer ::i, j, k, l, n, idim
-  real(dp)::eint, smalle, dtxhalf, oneonrho
-  real(dp)::eken
+  integer ::i, j, k, l, n, idim, irad
+  real(dp)::eint, smalle, dtxhalf, oneoverrho
+  real(dp)::eken, erad
 
   smalle = smallc**2/gamma/(gamma-one)
   dtxhalf = dt*half
@@ -722,13 +857,13 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
               q(l,i,j,k,1) = max(uin(l,i,j,k,1),smallr)
 
               ! Compute velocities
-              oneonrho = 1.d0/q(l,i,j,k,1)
-              q(l,i,j,k,2) = uin(l,i,j,k,2)*oneonrho
+              oneoverrho = one/q(l,i,j,k,1)
+              q(l,i,j,k,2) = uin(l,i,j,k,2)*oneoverrho
 #if NDIM>1
-              q(l,i,j,k,3) = uin(l,i,j,k,3)*oneonrho
+              q(l,i,j,k,3) = uin(l,i,j,k,3)*oneoverrho
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = uin(l,i,j,k,4)*oneonrho
+              q(l,i,j,k,4) = uin(l,i,j,k,4)*oneoverrho
 #endif
 
               ! Compute specific kinetic energy
@@ -739,13 +874,26 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
 #if NDIM>2
               eken = eken + half*q(l,i,j,k,4)*q(l,i,j,k,4)
 #endif
-
-              ! Compute pressure
-              eint = MAX(uin(l,i,j,k,ndim+2)*oneonrho-eken,smalle)
-              q(l,i,j,k,ndim+2)=(gamma-one)*q(l,i,j,k,1)*eint
+              ! Compute non-thermal pressure
+              erad = zero
+#if NENER>0
+              do irad = 1,nener
+                 q(l,i,j,k,ndim+2+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,ndim+2+irad)
+                 erad = erad+uin(l,i,j,k,ndim+2+irad)*oneoverrho
+              enddo
+#endif
+              ! Compute thermal pressure
+              eint = MAX(uin(l,i,j,k,ndim+2)*oneoverrho-eken-erad,smalle)
+              q(l,i,j,k,ndim+2) = (gamma-one)*q(l,i,j,k,1)*eint
 
               ! Compute sound speed
-              c(l,i,j,k)=sqrt(gamma*q(l,i,j,k,ndim+2)*oneonrho)
+              c(l,i,j,k)=gamma*q(l,i,j,k,ndim+2)
+#if NENER>0
+              do irad=1,nener
+                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,ndim+2+irad)
+              enddo
+#endif
+              c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)
 
               ! Gravity predictor step
               q(l,i,j,k,2) = q(l,i,j,k,2) + gravin(l,i,j,k,1)*dtxhalf
@@ -761,15 +909,15 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NDIM + 2 + NENER
   ! Passive scalar
-  do n = ndim+3, nvar
+  do n = ndim+nener+3, nvar
      do k = ku1, ku2
         do j = ju1, ju2
            do i = iu1, iu2
               do l = 1, ngrid
-                 oneonrho = 1.d0/q(l,i,j,k,1)
-                 q(l,i,j,k,n) = uin(l,i,j,k,n)*oneonrho
+                 oneoverrho = one/q(l,i,j,k,1)
+                 q(l,i,j,k,n) = uin(l,i,j,k,n)*oneoverrho
               end do
            end do
         end do

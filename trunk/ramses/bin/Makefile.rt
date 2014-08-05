@@ -17,8 +17,8 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -D
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DRT -DWITHOUTMPI
+F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
+FFLAGS = -x f95-cpp-input $(DEFINES) -DRT -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -48,8 +48,8 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -D
 #FFLAGS = -Mpreprocess $(DEFINES)
 
 # --- MPI, ifort syntax ------------------------------
-F90 = mpif90
-FFLAGS = -fpp -fast  $(DEFINES) -DNOSYSTEM
+#F90 = mpif90
+#FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
