@@ -282,7 +282,12 @@ recursive subroutine amr_step(ilevel,icount)
   ! Add stellar radiation sources
   if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 #endif
-
+  
+  ! Density threshold or Bondi accretion onto sink particle                                                                                
+  if(sink)then
+     call grow_sink(ilevel,.false.)
+  end if
+  
   !---------------
   ! Move particles
   !---------------
@@ -318,20 +323,20 @@ recursive subroutine amr_step(ilevel,icount)
      ! Set uold equal to unew
      call set_uold(ilevel)
 
-     ! Density threshold or Bondi accretion onto sink particle
-     if(sink)then
-        !this is a trick to temporarily solve the issue with sink accretion 
-        !from ghost zones. Only an option for simulations without dark matter.
-        if (.not. cosmo)then
-           call make_tree_fine(ilevel)
-           call virtual_tree_fine(ilevel)
-           ! assuming all sink cloud parts sit on levelmax 
-           ! it's better to compute the accretion_rate based on
-           ! the updated values
-           call collect_acczone_avg(ilevel)
-        end if
-        call grow_sink(ilevel,.false.)
-     end if
+     ! ! Density threshold or Bondi accretion onto sink particle
+     ! if(sink)then
+     !    !this is a trick to temporarily solve the issue with sink accretion 
+     !    !from ghost zones. Only an option for simulations without dark matter.
+     !    if (.not. cosmo)then
+     !       call make_tree_fine(ilevel)
+     !       call virtual_tree_fine(ilevel)
+     !       ! assuming all sink cloud parts sit on levelmax 
+     !       ! it's better to compute the accretion_rate based on
+     !       ! the updated values
+     !       call collect_acczone_avg(ilevel)
+     !    end if
+     !    call grow_sink(ilevel,.false.)
+     ! end if
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
