@@ -15,7 +15,6 @@ module pm_commons
   real(dp),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
   real(dp),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
   real(dp),allocatable,dimension(:,:)::divsink,divsink_new
-  real(dp),allocatable,dimension(:)::total_volume
   real(dp),allocatable,dimension(:,:)::wmom,wmom_new
   real(dp),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
   real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
@@ -26,15 +25,17 @@ module pm_commons
   real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
+  real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
-  integer,allocatable,dimension(:)::level_sink,level_sink_new,level_sink_all
+  logical,allocatable,dimension(:,:)::level_sink,level_sink_new
   logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink,bondi_switch
-  integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn,new_born,new_born_all
+  logical,allocatable,dimension(:)::new_born,new_born_all,new_born_new
+  integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
-  real(dp)::ssoft                  !sink softening lenght in code units
-  real(dp)::dt_sink                !maximum timestep allowed by the sink
-  
+  integer::sinkint_level=0         ! maximum level currently active is where the global sink variables are updated
+  real(dp)::ssoft                  ! sink softening lenght in code units
+
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions

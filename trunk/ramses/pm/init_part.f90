@@ -31,7 +31,7 @@ subroutine init_part
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
-
+  logical,allocatable,dimension(:)::nb
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
   real(kind=8),dimension(1:nvector,1:3)::xx,vv,xs
@@ -107,12 +107,12 @@ subroutine init_part
      acc_rate=0.
      allocate(acc_lum(1:nsinkmax))
      acc_lum=0.
+     allocate(dt_acc(1:nsinkmax))
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
-     allocate(level_sink(1:nsinkmax))
+     allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
-     allocate(total_volume(1:nsinkmax))
      allocate(wden(1:nsinkmax))
      allocate(wmom(1:nsinkmax,1:ndim))
      allocate(weth(1:nsinkmax))
@@ -141,8 +141,7 @@ subroutine init_part
      allocate(xsink_all(1:nsinkmax,1:ndim))
      allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
      sink_jump=0.d0
-     allocate(level_sink_all(1:nsinkmax))
-     allocate(level_sink_new(1:nsinkmax))
+     allocate(level_sink_new(1:nsinkmax,levelmin:nlevelmax))
      allocate(dMsink_overdt(1:nsinkmax))
      allocate(r2sink(1:nsinkmax))
      allocate(r2k(1:nsinkmax))
@@ -167,7 +166,7 @@ subroutine init_part
      allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
      allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
      allocate(direct_force_sink(1:nsinkmax))
-     allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax))
+     allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
      allocate(bondi_switch(1:nsinkmax))
   endif
 
@@ -284,11 +283,16 @@ subroutine init_part
            allocate(isp(1:nsink))
            read(ilun)isp ! Read sink index
            idsink(1:nsink)=isp
-           read(ilun)isp ! Read sink level
-           level_sink(1:nsink)=isp
+!           read(ilun)isp ! Read sink level
+!           level_sink(1:nsink)=isp
            nindsink=MAXVAL(idsink) ! Reset max index
            deallocate(isp)
            read(ilun)ncloud_sink
+           allocate(nb(1:nsink))
+           read(ilun)nb ! Read newborn boolean
+           new_born(1:nsink)=nb
+           deallocate(nb)
+           read(ilun)sinkint_level
         end if
      endif
      close(ilun)
@@ -340,7 +344,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=t
-              level_sink(nsink)=0
+              new_born(nsink)=.true.
            end do
 103        continue
            close(10)
@@ -1020,7 +1024,7 @@ subroutine init_part
               lsink(nsink,2)=ll2
               lsink(nsink,3)=ll3
               tsink(nsink)=0.
-              level_sink(nsink)=0
+              new_born(nsink)=.true.
            end do
 102        continue
            close(10)

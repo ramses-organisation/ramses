@@ -110,9 +110,9 @@ module amr_parameters
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
   real(dp)::texp   =0.0D0     ! Current proper time
-  real(dp)::n_sink = -1.d0      ! Sink particle density threshold in H/cc
+  real(dp)::n_sink = -1.d0    ! Sink particle density threshold in H/cc
   real(dp)::rho_sink = -1.D0  ! Sink particle density threshold in g/cc
-  real(dp)::d_sink            ! Sink particle density threshold in user units
+  real(dp)::d_sink = -1.D0    ! Sink particle density threshold in user units
   real(dp)::m_star =-1.0      ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
