@@ -388,12 +388,13 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   if(clinfo .and. (.not. smbh) .and. sink)then 
      if (myid==ncpu)then
         write(*,'(135A)')'==========================================================================================='
-        write(*,'(135A)')'Cl_N   t1[y]    t2[y]    t3[y] |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
+        write(*,'(135A)')'Cl_N   N_cls   ax1 ax2 ax3  |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
         write(*,'(135A)')'==========================================================================================='
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-           write(*,'(I4,2X,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&
+           write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&
+                ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
                 ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
@@ -421,7 +422,7 @@ subroutine trim_clumps
   ! are removed from the clump by setting flag2 to 0.
   !---------------------------------------------------------------------------
 
-  integer::ipart,nx_loc,ind
+  integer::ipart,nx_loc,ind,ilevel,idim
   real(dp)::dx,scale,dx_loc,r2
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer ::ix,iy,iz,grid,peak_nr,glob_peak_nr
@@ -451,7 +452,9 @@ subroutine trim_clumps
   end do
 
 #ifndef WITHOUTMPI
-  call boundary_peak_dp(peak_pos)
+  do idim=1,ndim
+     call boundary_peak_dp(peak_pos(1,idim))
+  end do
 #endif
 
   !update flag 2
@@ -472,6 +475,12 @@ subroutine trim_clumps
         end if
      end if
   end do
+
+#ifndef WITHOUTMPI
+  do ilevel=levelmin,nlevelmax
+     call make_virtual_fine_int(flag2(1),ilevel)
+  end do
+#endif
 
 end subroutine trim_clumps
 !#########################################################################
