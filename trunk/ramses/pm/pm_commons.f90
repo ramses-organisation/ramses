@@ -26,6 +26,7 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink
+  real(dp),allocatable,dimension(:)::rho_sink_tff
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   logical,allocatable,dimension(:,:)::level_sink,level_sink_new
   logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink,bondi_switch

@@ -41,7 +41,11 @@ subroutine newdt_fine(ilevel)
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*ACOS(-1.0d0)
      if(cosmo)fourpi=1.5d0*omega_m*aexp
-     tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     if (sink)then
+        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
+     else
+        tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
   if(cosmo)then
@@ -118,14 +122,14 @@ subroutine newdt_fine(ilevel)
      if(sink .and. nsink>0) then
         call compute_accretion_rate(.false.)
         ! timestep due to sink grav acc
-        do isink=1,nsink              
-           if (level_sink(isink,ilevel))then
-              if(direct_force_sink(isink))then
-                 tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
-                 dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
-              end if
-           end if
-        end do
+!        do isink=1,nsink              
+!           if (level_sink(isink,ilevel))then
+!              if(direct_force_sink(isink))then
+!                 tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
+!                 dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
+!              end if
+!           end if
+!        end do
         ! timestep due to sink accretion
         dt_acc_min=huge(0._dp)
         do isink=1,nsink              

@@ -108,6 +108,7 @@ subroutine init_part
      allocate(acc_lum(1:nsinkmax))
      acc_lum=0.
      allocate(dt_acc(1:nsinkmax))
+     allocate(rho_sink_tff(levelmin:nlevelmax))
      allocate(lsink(1:nsinkmax,1:3))
      lsink=0.d0
      allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))

@@ -3728,6 +3728,7 @@ subroutine f_gas_sink(ilevel)
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim)::xx,ff
   real(dp),dimension(1:nvector)::d2,mcell
+  real(dp)::rho_tff,rho_tff_tot,d_min
 
   !  Cell spacing at that level
   dx=0.5D0**ilevel
@@ -3750,10 +3751,15 @@ subroutine f_gas_sink(ilevel)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
+  rho_tff=0.
+
   fsink_new=0.
   ! Loop over sinks 
   do isink=1,nsink
      if (direct_force_sink(isink))then
+
+        d_min=huge(0._dp)
+
         ! Loop over myid grids by vector sweeps
         ncache=active(ilevel)%ngrid
         do igrid=1,ncache,nvector
@@ -3795,6 +3801,11 @@ subroutine f_gas_sink(ilevel)
                  end do
               end do
 
+              !store minimum distance of cell in current level to isink
+              do i=1,ngrid
+                 d_min=min(d_min,d2(i))
+              end do
+
               !compute force onto gas cell due to sink
               do i=1,ngrid
                  ff(i,1:ndim)=mcell(i)*msink(isink)/(ssoft**2+d2(i))**1.5*ff(i,1:ndim)
@@ -3822,6 +3833,11 @@ subroutine f_gas_sink(ilevel)
               end do
            end do !end loop over cells
         end do !end loop over grids
+        
+        d_min=d_min**0.5
+        d_min=max(ssoft,d_min)
+        rho_tff=max(rho_tff,msink(isink)/(4./3.*4.13145*d_min**3))
+
      end if !end if direct force
   end do !end loop over sinks
 
@@ -3840,10 +3856,22 @@ subroutine f_gas_sink(ilevel)
   do idim=1,ndim
      call make_virtual_fine_dp(f(1,idim),ilevel)
   end do
+  
+  
+  !collect rho due to sinks for current level - used for timestep computation
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(rho_tff,rho_tff_tot,1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
+#else
+  rho_tff_tot=rho_tff
+#endif
+  rho_sink_tff(ilevel)=rho_tff_tot
+  
+  
+  
   if (ilevel==nlevelmax)call make_virtual_fine_dp(phi(1),ilevel)
   
 end subroutine f_gas_sink
-
+   
 !################################################################
 !################################################################
 !################################################################
