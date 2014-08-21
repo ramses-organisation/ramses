@@ -143,7 +143,7 @@ subroutine init_tree
   ! Sort particles down to levelmin
   do ilevel=1,levelmin-1
      call make_tree_fine(ilevel)
-     call virtual_tree_fine(ilevel)
+!     call virtual_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
