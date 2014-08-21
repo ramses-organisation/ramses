@@ -3,18 +3,16 @@ module pm_commons
   use pm_parameters
   use random
   ! Sink particle related arrays
-  real(dp),allocatable,dimension(:)::msink,r2sink,v2sink,c2sink,oksink_new,oksink_all
+  real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
-  real(dp),allocatable,dimension(:)::msink_new,msink_all,r2k,v2sink_new,c2sink_new
-  real(dp),allocatable,dimension(:)::v2sink_all,c2sink_all
+  real(dp),allocatable,dimension(:)::msink_new,msink_all
   real(dp),allocatable,dimension(:)::xmsink
   real(dp),allocatable,dimension(:)::dMsink_overdt
   real(dp),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
   real(dp),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
   real(dp),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
   real(dp),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
-  real(dp),allocatable,dimension(:)::wden,weth,wvol,wden_new,weth_new,wvol_new
-  real(dp),allocatable,dimension(:,:)::divsink,divsink_new
+  real(dp),allocatable,dimension(:)::wden,weth,wvol,wdiv,wden_new,weth_new,wvol_new,wdiv_new
   real(dp),allocatable,dimension(:,:)::wmom,wmom_new
   real(dp),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
   real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
@@ -23,7 +21,7 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all!sink angular momentum
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
-  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,rho_rz2_tot
+  real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,weighted_divergence
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink
   real(dp),allocatable,dimension(:)::rho_sink_tff
