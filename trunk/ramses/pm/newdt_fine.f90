@@ -23,7 +23,7 @@ subroutine newdt_fine(ilevel)
   integer::igrid,jgrid,ipart,jpart,nx_loc
   integer::npart1,ip,info,isink
   integer,dimension(1:nvector),save::ind_part
-  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
+  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all,dt_acc_min
   real(dp)::tff,fourpi,threepi2
   real(dp)::aton_time_step,dt_aton,dt_rt
   real(dp)::dx_min,dx,scale
@@ -41,7 +41,11 @@ subroutine newdt_fine(ilevel)
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*ACOS(-1.0d0)
      if(cosmo)fourpi=1.5d0*omega_m*aexp
-     tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     if (sink)then
+        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
+     else
+        tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
   if(cosmo)then
@@ -113,24 +117,33 @@ subroutine newdt_fine(ilevel)
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-     ! possible issue here: what if sink lives not a levelmax? timestep can be too big?
+
+     ! timestep restrictions due to sink
      if(sink .and. nsink>0) then
         call compute_accretion_rate(.false.)
-        !timestep due to sink grav acc
+        ! timestep due to sink grav acc
+!        do isink=1,nsink              
+!           if (level_sink(isink,ilevel))then
+!              if(direct_force_sink(isink))then
+!                 tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
+!                 dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
+!              end if
+!           end if
+!        end do
+        ! timestep due to sink accretion
+        dt_acc_min=huge(0._dp)
         do isink=1,nsink              
-           if (level_sink(isink,ilevel))then
-              if(direct_force_sink(isink))then
-                 tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
-                 dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
-              end if
-              if (myid==1 .and. dt_acc(isink)<dtnew(ilevel))print*,ilevel,isink,'dt_acc/dt',dt_acc(isink)/dtnew(ilevel)                        
-              dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc(isink))
+           if (level_sink(isink,ilevel))then           
+              dt_acc_min=MIN(dt_acc_min,dt_acc(isink))
            end if
         end do
+        if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
+           write(*,*),ilevel,'dt_acc/dt',dt_acc_min/dtnew(ilevel),ilevel
+        end if
+        dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
      end if
+
   end if
-
-
 
   if(hydro)call courant_fine(ilevel)
   

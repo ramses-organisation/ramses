@@ -127,6 +127,7 @@ subroutine init_hydro
                  read(ilun)xx
                  do i=1,ncache
                     xx(i)=xx(i)/(gamma-1d0)
+                    if (uold(ind_grid(i)+iskip,1)>0.)then
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
 #if NDIM>1
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
@@ -139,6 +140,9 @@ subroutine init_hydro
                        xx(i)=xx(i)+uold(ind_grid(i)+iskip,ndim+2+irad)
                     end do
 #endif
+                 else
+                    xx(i)=0.
+                 end if
                     uold(ind_grid(i)+iskip,ndim+2)=xx(i)
                  end do
 #if NVAR>NDIM+2+NENER
