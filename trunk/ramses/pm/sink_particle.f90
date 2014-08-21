@@ -3170,7 +3170,7 @@ subroutine f_gas_sink(ilevel)
 
               !compute sqrt(1/(ssoft**2+d2(i))) to save time
               do i=1,ngrid
-                 denom(i)=(ssoft**2+d2(i))**-1.5
+                 denom(i)=(ssoft**2+d2(i))**(-1.5)
               end do
 
               !compute gas acceleration due to sink
