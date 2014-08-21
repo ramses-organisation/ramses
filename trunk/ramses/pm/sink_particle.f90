@@ -1034,19 +1034,26 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! accretion zone is computed
   !-----------------------------------------------------------------------
 
-  integer::j,nx_loc,isink,divdim
+  integer::j,nx_loc,isink,divdim,idim
   real(dp)::d,u,v=0d0,w=0d0,e
   real(dp)::scale,weight,dx_min,one_over_dx_min
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
   real(dp),dimension(1:nvector)::egas,divpart
+  real(dp),dimension(1:nvector,1:ndim)::xpart
   integer ,dimension(1:nvector)::cind,cind_right,cind_left,cell_lev,clevl
   ! dummy variables
   real(dp),dimension(1:nvector,1:ndim)::xx
   logical,dimension(1:nvector)::ok
   
-  call  get_cell_index_for_particle(cind,xx,cell_lev,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+  do idim=1,ndim
+     do j=1,np
+        xpart(j,idim)=xp(ind_part(j),idim)
+     end do
+  end do
+
+  call get_cell_index_for_particle(cind,xx,cell_lev,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
   ! compute thermal energy
   do j=1,np
@@ -1081,19 +1088,19 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
      !use min cell spacing to obtain right position, get right cell index
      do j=1,np
-        xp(ind_part(j),divdim)=xp(ind_part(j),divdim)+dx_min
+        xpart(j,divdim)=xpart(j,divdim)+dx_min
      end do
-     call get_cell_index_for_particle(cind_right,xx,clevl,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+     call get_cell_index_for_particle(cind_right,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
      
      !use min cell spacing to obtain left position, get left cell index
      do j=1,np
-        xp(ind_part(j),divdim)=xp(ind_part(j),divdim)-2*dx_min
+        xpart(j,divdim)=xpart(j,divdim)-2*dx_min
      end do
-     call get_cell_index_for_particle(cind_left,xx,clevl,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+     call get_cell_index_for_particle(cind_left,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
      !back to original position
      do j=1,np
-        xp(ind_part(j),divdim)=xp(ind_part(j),divdim)+dx_min
+        xpart(j,divdim)=xpart(j,divdim)+dx_min
      end do
 
      !compute divergence of (rho*v - rho*vsink) in one go
@@ -1296,7 +1303,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! for nvector particles. Routine is not very efficient. Optimize if taking too long...
   !-----------------------------------------------------------------------
 
-  integer::i,j,nx_loc,isink,ivar
+  integer::i,j,nx_loc,isink,ivar,idim
   real(dp)::v2,d,e,d_floor,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -1305,7 +1312,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,dx_loc,dx_min,scale,vol_loc,weight,acc_mass,temp,d_jeans
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim)::xx
+  real(dp),dimension(1:nvector,1:ndim)::xx,xpart
   integer ,dimension(1:nvector)::cell_lev
   ! Particle based arrays
   logical,dimension(1:nvector)::ok
@@ -1321,9 +1328,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   
 #if NDIM==3
   
-  
-  
-
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
@@ -1336,7 +1340,14 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   vol_loc=dx_loc**ndim
   dx_min=scale*0.5D0**nlevelmax/aexp
 
-  call get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+
+  do idim=1,ndim
+     do j=1,np
+        xpart(j,idim)=xp(ind_part(j),idim)
+     end do
+  end do
+
+  call get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
   do j=1,np
      if(ok(j))then
@@ -3566,7 +3577,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
   end do
 
 !  call get_cell_index(cind_part,clevl,xpart,nlevelmax,np)
-  call get_cell_index_for_particle(cind_part,xx,clevl,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+  call get_cell_index_for_particle(cind_part,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
 !  do i=1,np
 !     if (cind_part(i).ne.cind_part2(i))print*,'oups at count clouds'
@@ -3616,15 +3627,16 @@ end subroutine count_clouds_np
 !################################################################
 !################################################################
 !################################################################
-subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_grid_part,ng,np,ilevel,ok)
+subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
   use amr_commons
   use pm_commons
   use hydro_commons
   implicit none
   integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid,indp,cell_lev
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
+  integer,dimension(1:nvector)::ind_grid,indp,cell_lev,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim)::xpart,xx
   logical,dimension(1:nvector)::ok
+
 
   !-----------------------------------------------------------------------
   ! This subroutine finds the leaf cell in which a particle sits 
@@ -3639,7 +3651,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
   integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
   ! Particle based arrays
 
-  real(dp),dimension(1:nvector,1:ndim)::x,xx
+  real(dp),dimension(1:nvector,1:ndim)::x
   integer ,dimension(1:nvector,1:ndim)::id,igd,icd,icd_fine
   integer ,dimension(1:nvector)::igrid,icell,kg,icell_fine
   real(dp),dimension(1:3)::skip_loc
@@ -3682,7 +3694,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
   ! Rescale position at level ilevel
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+        x(j,idim)=xpart(j,idim)/scale+skip_loc(idim)
      end do
   end do
   do idim=1,ndim
@@ -3704,10 +3716,9 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
            print*,'x: ',x(j,1:ndim)
            print*,'x0: ',x0(ind_grid_part(j),1:ndim)
            print*,'xg: ',xg(ind_grid(ind_grid_part(j)),1:ndim)
-           print*,'xp: ',xp(ind_part(j),1:ndim)
+           print*,'xp: ',xpart(j,1:ndim)
            print*,'skip_loc: ',skip_loc(1:ndim)
            print*,'scale: ',scale
-           print*,'ind_part: ',ind_part(j)
            call clean_stop
         end if
      end do
@@ -3755,7 +3766,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
         indp(j)=nbors_father_cells(ind_grid_part(j),kg(j))
         cell_lev(j)=ilevel-1
         xx(j,1:ndim)=(xg(ind_grid(ind_grid_part(j)),1:ndim)+(igd(j,1:ndim)-1.)*2.*dx-skip_loc(1:ndim))*scale
-        if (sum((xx(j,1:ndim)-xp(ind_part(j),1:ndim))**2)**0.5>1.000001*dx*3**0.5)print*,'oups at ilevel-1'
+        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*dx*3**0.5)print*,'oups at ilevel-1'
      end if
   end do
   
@@ -3805,11 +3816,11 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
 !           print*,'particle has escaped to ilevel+1'
            ok(j)=.false.
            cell_lev(j)=ilevel+1
-           icd_fine(1,1:ndim)=int(2*(xp(ind_part(j),1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
            call geticell(icell_fine,icd_fine,1)
            xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
-           if (sum((xx(j,1:ndim)-xp(ind_part(j),1:ndim))**2)**0.5>1.0000001*0.25*dx*3**0.5)then
+           if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.0000001*0.25*dx*3**0.5)then
               print*,icd_fine(1,1:ndim)
               print*,icell_fine(1)
               print*,'oups at ilevel+1'
@@ -3823,11 +3834,11 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
      if (ok(j))then
         xx(j,1:ndim)=(xg(igrid(j),1:ndim)+xc(icell(j),1:ndim)-skip_loc(1:ndim))*scale
         cell_lev(j)=ilevel
-        if (sum((xx(j,1:ndim)-xp(ind_part(j),1:ndim))**2)**0.5>1.000001*0.5*dx*3**0.5)then
+        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*0.5*dx*3**0.5)then
            print*,'oups at ilevel'        
-           print*,xp(ind_part(j),1:ndim)
+           print*,xpart(j,1:ndim)
            print*,xx(j,1:ndim)
-           print*,sum((xx(j,1:ndim)-xp(ind_part(j),1:ndim))**2)**0.5/dx
+           print*,sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5/dx
         end if
      end if
   end do

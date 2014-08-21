@@ -519,12 +519,12 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,dx_loc,scale,vol_loc
-  integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,ind_grid
+  integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,ind_grid,ind_grid_part
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xtest
+  real(dp),dimension(1:nvector,1:ndim)::xtest,xcc
   real(dp),dimension(1:nvector)::density_max
   real(dp),dimension(1:3)::skip_loc
-  logical ,dimension(1:nvector)::okpeak,ok
+  logical ,dimension(1:nvector)::okpeak,ok,okdummy
 
 #if NDIM==3
   ! Mesh spacing in that level
@@ -571,6 +571,11 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
   
+  do j=1,np
+     ind_grid_part(j)=j
+  end do
+     
+
   ! initialze logical array
   okpeak=.true.
 
@@ -588,7 +593,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
                  xtest(j,2)=(xg(ind_grid(j),2)+2*xc(indv(j),2)-skip_loc(2))*scale+(2*j1-1)*dx_loc
                  xtest(j,3)=(xg(ind_grid(j),3)+2*xc(indv(j),3)-skip_loc(3))*scale+(2*k1-1)*dx_loc
               end do
-              call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
+              call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
               do j=1,np 
                  ! check wether neighbor is in a leaf cell at the right level
                  if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1))ok(j)=.true.
@@ -614,7 +619,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
               xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
               xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
            end do
-           call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
+           call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
            do j=1,np
               ! check wether neighbor is in a leaf cell at the right level
               if(son(cell_index(j))==0.and.cell_levl(j)==ilevel)ok(j)=.true.
@@ -640,7 +645,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
                  xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
                  xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
               end do
-              call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)
+              call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
               do j=1,np
                  ! check wether neighbor is in a leaf cell at the right level
                  if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1))ok(j)=.true.
