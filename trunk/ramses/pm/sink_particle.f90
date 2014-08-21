@@ -96,7 +96,7 @@ subroutine create_sink
 !     call count_parts
 !     is it ok to do this??? solves problem
 !      change in init_tree too...?
-!     call virtual_tree_fine(ilevel)
+     call virtual_tree_fine(ilevel)
 !     call count_parts
      call kill_tree_fine(ilevel)
 !     call count_parts
