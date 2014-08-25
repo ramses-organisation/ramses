@@ -73,7 +73,7 @@ subroutine set_unew(ilevel)
            e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              e=e-uold(ind_cell,ndim+2+irad)
+              e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
            end do
 #endif          
            enew(active(ilevel)%igrid(i)+iskip)=e
