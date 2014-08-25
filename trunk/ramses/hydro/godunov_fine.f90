@@ -46,7 +46,7 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,irad,ind,icpu,iskip
   real(dp)::d,u,v,w,e
 
   if(numbtot(1,ilevel)==0)return
@@ -71,6 +71,11 @@ subroutine set_unew(ilevel)
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
            e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e=e-uold(ind_cell,ndim+2+irad)
+           end do
+#endif          
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
      end if
