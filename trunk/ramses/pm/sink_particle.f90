@@ -1536,10 +1536,14 @@ subroutine compute_accretion_rate(write_sinks)
   dx_min=scale*0.5D0**nlevelmax/aexp
   d_star=n_star/scale_nH
 
-  ! Maximum relative velocity
-  vel_max=10. ! in km/sec
-  vel_max=vel_max*1d5/scale_v
-  
+  if (smbh)then
+     ! Maximum relative velocity
+     vel_max=10. ! in km/sec
+     vel_max=vel_max*1d5/scale_v
+  else
+     vel_max=huge(0._dp)
+  end if
+
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
      density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
@@ -1558,7 +1562,7 @@ subroutine compute_accretion_rate(write_sinks)
         ethermal=ethermal/(density*volume+tiny(0.0_dp))
         c2=MAX((gamma-1.0)*ethermal,smallc**2)
         c2sink(isink)=c2
-        if (smbh)v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
+        v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
 
         !Bondi radius
         if (smbh)then
@@ -3805,7 +3809,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,ind_part,ind_gr
 !           print*,'particle has escaped to ilevel+1'
            ok(j)=.false.
            cell_lev(j)=ilevel+1
-           icd_fine(1,1:ndim)=int(2*(xp(ind_part(j),1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           icd_fine(1,1:ndim)=int(2*(xp(ind_part(j),1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx+skip_loc(1:ndim))/dx)
            call geticell(icell_fine,icd_fine,1)
            xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
