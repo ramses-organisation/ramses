@@ -3643,19 +3643,19 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
   !-----------------------------------------------------------------------
 
   integer::i,j,idim,nx_loc,ind,ix,iy,iz
-  real(dp)::dx,dx_loc,scale
+  real(dp)::dx,dx_loc,scale,one_over_dx,one_over_scale
   ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim)::x0
-  integer ,dimension(1:nvector)::ind_cell
-  integer ,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+  integer ,dimension(1:nvector),save::ind_cell
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
 
-  real(dp),dimension(1:nvector,1:ndim)::x
-  integer ,dimension(1:nvector,1:ndim)::id,igd,icd,icd_fine
-  integer ,dimension(1:nvector)::igrid,icell,kg,icell_fine
-  real(dp),dimension(1:3)::skip_loc
-  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:nvector,1:ndim),save::x
+  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd,icd_fine
+  integer ,dimension(1:nvector),save::igrid,icell,kg,icell_fine
+  real(dp),dimension(1:3),save::skip_loc
+  real(dp),dimension(1:twotondim,1:3),save::xc
  
 
   ! Mesh spacing in that level
@@ -3667,6 +3667,8 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
+  one_over_dx=1./dx
+  one_over_scale=1./scale
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim
@@ -3694,7 +3696,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
   ! Rescale position at level ilevel
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=xpart(j,idim)/scale+skip_loc(idim)
+        x(j,idim)=xpart(j,idim)*one_over_scale+skip_loc(idim)
      end do
   end do
   do idim=1,ndim
@@ -3704,7 +3706,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
   end do
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=x(j,idim)/dx
+        x(j,idim)=x(j,idim)*one_over_dx
      end do
   end do
 
@@ -3816,7 +3818,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
 !           print*,'particle has escaped to ilevel+1'
            ok(j)=.false.
            cell_lev(j)=ilevel+1
-           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)*one_over_scale+skip_loc(1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
            call geticell(icell_fine,icd_fine,1)
            xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
@@ -3834,12 +3836,12 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
      if (ok(j))then
         xx(j,1:ndim)=(xg(igrid(j),1:ndim)+xc(icell(j),1:ndim)-skip_loc(1:ndim))*scale
         cell_lev(j)=ilevel
-        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*0.5*dx*3**0.5)then
-           print*,'oups at ilevel'        
-           print*,xpart(j,1:ndim)
-           print*,xx(j,1:ndim)
-           print*,sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5/dx
-        end if
+        ! if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*0.5*dx*3**0.5)then
+        !    print*,'oups at ilevel'        
+        !    print*,xpart(j,1:ndim)
+        !    print*,xx(j,1:ndim)
+        !    print*,sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5/dx
+        ! end if
      end if
   end do
 

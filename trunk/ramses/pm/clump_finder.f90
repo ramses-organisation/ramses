@@ -519,12 +519,20 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,dx_loc,scale,vol_loc
-  integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,ind_grid,ind_grid_part
+  integer ,dimension(1:nvector)::clump_nr,indv,ind_grid,grid,ind_cell_coarse
+
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim)::xtest,xcc
+  integer ,dimension(1:99)::cell_index,cell_levl,test_levl
+  real(dp),dimension(1:99,1:ndim)::xtest,xrel
+  logical ,dimension(1:99)::ok
   real(dp),dimension(1:nvector)::density_max
   real(dp),dimension(1:3)::skip_loc
-  logical ,dimension(1:nvector)::okpeak,ok,okdummy
+  logical ,dimension(1:nvector)::okpeak,okdummy
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids 
+  integer::ntestpos,ntp,idim,ipos
+
+
 
 #if NDIM==3
   ! Mesh spacing in that level
@@ -570,37 +578,28 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
      ind_max(j)=ind_cell(j) !save cell index   
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
-  
-  do j=1,np
-     ind_grid_part(j)=j
-  end do
-     
 
-  ! initialze logical array
-  okpeak=.true.
+
+
+
+  ntestpos=3**ndim
+  if(ilevel>levelmin)ntestpos=ntestpos+2**ndim
+  if(ilevel<nlevelmax)ntestpos=ntestpos+4**ndim
 
   !================================
   ! generate neighbors level ilevel-1
   !================================
+  ntp=0
   if(ilevel>levelmin)then
-     ! Generate 2x2x2 neighboring cells at level ilevel-1
+     ! Generate 2x2x2  neighboring cells at level ilevel-1     
      do k1=k1min,k1max
         do j1=j1min,j1max
-           do i1=i1min,i1max
-              ok=.false.
-              do j=1,np
-                 xtest(j,1)=(xg(ind_grid(j),1)+2*xc(indv(j),1)-skip_loc(1))*scale+(2*i1-1)*dx_loc
-                 xtest(j,2)=(xg(ind_grid(j),2)+2*xc(indv(j),2)-skip_loc(2))*scale+(2*j1-1)*dx_loc
-                 xtest(j,3)=(xg(ind_grid(j),3)+2*xc(indv(j),3)-skip_loc(3))*scale+(2*k1-1)*dx_loc
-              end do
-              call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
-              do j=1,np 
-                 ! check wether neighbor is in a leaf cell at the right level
-                 if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1))ok(j)=.true.
-              end do     
-              ! check those neighbors
-              if (action<4)call peakcheck(xx(1),cell_index,okpeak,ok,density_max,ind_max,np)
-              if (action==4)call saddlecheck(xx(1),ind_cell,cell_index,clump_nr,ok,np)
+           do i1=i1min,i1max                                            
+              ntp=ntp+1
+              xrel(ntp,1)=(2*i1-1)*dx_loc
+              xrel(ntp,2)=(2*j1-1)*dx_loc
+              xrel(ntp,3)=(2*k1-1)*dx_loc
+              test_levl(ntp)=ilevel-1
            end do
         end do
      end do
@@ -613,24 +612,15 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
   do k2=k2min,k2max
      do j2=j2min,j2max
         do i2=i2min,i2max
-           ok=.false.
-           do j=1,np
-              xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc
-              xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
-              xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
-           end do
-           call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
-           do j=1,np
-              ! check wether neighbor is in a leaf cell at the right level
-              if(son(cell_index(j))==0.and.cell_levl(j)==ilevel)ok(j)=.true.
-           end do
-           ! check those neighbors
-           if (action<4)call peakcheck(xx(1),cell_index,okpeak,ok,density_max,ind_max,np)
-           if (action==4)call saddlecheck(xx(1),ind_cell,cell_index,clump_nr,ok,np)
+           ntp=ntp+1
+           xrel(ntp,1)=(i2-1)*dx_loc
+           xrel(ntp,2)=(j2-1)*dx_loc
+           xrel(ntp,3)=(k2-1)*dx_loc
+           test_levl(ntp)=ilevel
         end do
      end do
   end do
-
+  
   !===================================
   ! generate neighbors at level ilevel+1
   !====================================
@@ -639,24 +629,48 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
      do k3=k3min,k3max
         do j3=j3min,j3max
            do i3=i3min,i3max
-              ok=.false.
-              do j=1,np
-                 xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
-                 xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
-                 xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
-              end do
-              call get_cell_index_for_particle(cell_index,xcc,cell_levl,ind_grid,xtest,ind_grid_part,np,np,ilevel,okdummy)
-              do j=1,np
-                 ! check wether neighbor is in a leaf cell at the right level
-                 if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1))ok(j)=.true.
-              end do
-              ! check those neighbors
-              if (action<4)call peakcheck(xx(1),cell_index,okpeak,ok,density_max,ind_max,np)
-              if (action==4)call saddlecheck(xx(1),ind_cell,cell_index,clump_nr,ok,np)
+              ntp=ntp+1
+              xrel(ntp,1)=(i3-1.5)*dx_loc/2.0
+              xrel(ntp,2)=(j3-1.5)*dx_loc/2.0
+              xrel(ntp,3)=(k3-1.5)*dx_loc/2.0
+              test_levl(ntp)=ilevel+1
            end do
         end do
      end do
   endif
+
+
+
+  ! Gather 27 neighboring father cells (should be present anytime !)
+  do j=1,np
+     ind_cell_coarse(j)=father(ind_grid(j))
+  end do
+  call get3cubefather(ind_cell_coarse,nbors_father_cells,nbors_father_grids,np,ilevel)
+
+
+  ! initialze logical array
+  okpeak=.true.
+  
+  do j=1,np
+     ok=.false.
+     do idim=1,ndim
+        xtest(1:ntestpos,idim)=(xg(ind_grid(j),idim)+xc(indv(j),idim)-skip_loc(idim))*scale+xrel(1:ntestpos,idim)
+        if(ilevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
+     end do
+     grid(1)=ind_grid(j)
+     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
+     
+     do ipos=1,ntestpos
+        if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
+     end do
+     
+     ! check those neighbors
+     if (action<4)call peakcheck(xx(1),cell_index,okpeak(j),ok,density_max(j),ind_max(j),ntestpos)
+     if (action==4)call saddlecheck(xx(1),ind_cell(j),cell_index,clump_nr(j),ok,ntestpos)
+     
+  end do
+     
+
 
 
   !===================================
@@ -701,22 +715,23 @@ subroutine peakcheck(xx,cell_index,okpeak,ok,density_max,ind_max,np)
   !----------------------------------------------------------------------
   ! routine to check wether neighbor is denser or not
   !----------------------------------------------------------------------
-  logical,dimension(1:nvector)::ok,okpeak
-  integer,dimension(1:nvector)::cell_index,ind_max
-  real(dp),dimension(1:nvector)::density_max
+  logical,dimension(1:99)::ok
+  logical::okpeak
+  integer,dimension(1:99)::cell_index
+  integer::ind_max
+  real(dp)::density_max
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   integer::np,j
 
-  do j=1,np
-     !check if neighboring cell is denser
-     ok(j)=ok(j).and.xx(cell_index(j))>density_max(j)
-  end do
+
   do j=1,np
      if(ok(j))then !so if there is a denser neighbor
-        okpeak(j)=.false. !no peak
-        density_max(j)=xx(cell_index(j)) !change densest neighbor dens
-        ind_max(j)=cell_index(j) !change densest neighbor index
-     endif
+        if(xx(cell_index(j))>density_max)then           
+           okpeak=.false. !no peak
+           density_max=xx(cell_index(j)) !change densest neighbor dens
+           ind_max=cell_index(j) !change densest neighbor index
+        endif
+     end if
   end do
 
 end subroutine peakcheck
@@ -732,23 +747,23 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
   !----------------------------------------------------------------------
   ! routine to check wether neighbor is connected through new densest saddle
   !----------------------------------------------------------------------
-  logical,dimension(1:nvector)::ok
-  integer,dimension(1:nvector)::cell_index,clump_nr,ind_cell,neigh_cl
-  real(dp),dimension(1:nvector)::av_dens
+  logical,dimension(1:99)::ok
+  integer,dimension(1:99)::cell_index,neigh_cl
+  real(dp),dimension(1:99)::av_dens
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
-  integer::np,j,ipeak,jpeak
+  integer::np,j,ipeak,jpeak,clump_nr,ind_cell
 
   do j=1,np
      neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in 
   end do
   do j=1,np
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
-     ok(j)=ok(j).and. neigh_cl(j)/=clump_nr(j) !neighboring cell is in another clump
-     av_dens(j)=(xx(cell_index(j))+xx(ind_cell(j)))*0.5 !average density of cell and neighbor cell
+     ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
+     av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell
   end do
   do j=1,np
      if(ok(j))then ! if all criteria met, replace saddle density array value
-        call get_local_peak_id(clump_nr(j),ipeak)
+        call get_local_peak_id(clump_nr,ipeak)
         call get_local_peak_id(neigh_cl(j),jpeak)
         if (get_value(ipeak,jpeak,sparse_saddle_dens) < av_dens(j))then
            call set_value(ipeak,jpeak,av_dens(j),sparse_saddle_dens)
@@ -879,3 +894,189 @@ subroutine read_clumpfind_params()
   end if
 end subroutine read_clumpfind_params
 
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  implicit none
+  integer::ng,np,ilevel,ind_grid
+  integer,dimension(1:99)::indp,cell_lev
+  real(dp),dimension(1:99,1:ndim)::xpart
+  integer ,dimension(1:threetondim)::nbors_father_cells
+
+
+  !-----------------------------------------------------------------------
+  ! Very similar as get_cell_index_for_particle but optimized for the usage
+  ! inside neighborsearch.
+  !-----------------------------------------------------------------------
+
+  integer::i,j,idim,nx_loc,ind,ix,iy,iz
+  real(dp)::dx,dx_loc,scale,one_over_dx,one_over_scale
+  ! Grid based arrays
+  real(dp),dimension(1:ndim),save::x0
+  real(dp),dimension(1:99,1:ndim),save::x
+  integer ,dimension(1:99,1:ndim),save::id,igd,icd,icd_fine
+  integer ,dimension(1:99),save::igrid,icell,kg,icell_fine
+  real(dp),dimension(1:3),save::skip_loc
+  real(dp),dimension(1:twotondim,1:3),save::xc
+  logical,dimension(1:99),save::ok
+ 
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  one_over_dx=1./dx
+  one_over_scale=1./scale
+
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+
+  ! Lower left corner of 3x3x3 grid-cube
+  do idim=1,ndim
+        x0(idim)=xg(ind_grid,idim)-3.0D0*dx
+  end do
+
+  ! Rescale position at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=xpart(j,idim)*one_over_scale+skip_loc(idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)-x0(idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)*one_over_dx
+     end do
+  end do
+
+  ! NGP at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        id(j,idim)=int(x(j,idim))
+     end do
+  end do
+
+   ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        igd(j,idim)=id(j,idim)/2
+     end do
+  end do
+#if NDIM==1
+  do j=1,np
+     kg(j)=1+igd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     kg(j)=1+igd(j,1)+3*igd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+  end do
+#endif
+
+  do j=1,np
+     igrid(j)=son(nbors_father_cells(kg(j)))
+  end do
+
+  ! Check if particle has escaped to ilevel-1
+  ok(1:np)=.true.
+  do j=1,np
+     if (igrid(j)==0)then
+        ok(j)=.false.
+        indp(j)=nbors_father_cells(kg(j))
+        cell_lev(j)=ilevel-1
+     end if
+  end do
+  
+  ! Compute parent cell position
+  do idim=1,ndim
+     do j=1,np
+           icd(j,idim)=id(j,idim)-2*igd(j,idim)
+     end do
+  end do
+        
+  call geticell99(icell,icd,np)
+  
+  ! Compute parent cell adress
+  do j=1,np
+     if(ok(j))then
+        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     end if
+  end do
+
+  ! Check if particles have leaked into level ilevel+1
+  do j=1,np
+     if(ok(j))then
+        if (son(indp(j))>0)then
+           ok(j)=.false.
+           cell_lev(j)=ilevel+1
+!           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)*one_over_scale+skip_loc(1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           call geticell99(icell_fine,icd_fine,1)
+           indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
+        end if
+     endif
+  end do
+
+  !cell center positions for particles which sit in the level ilevel
+  do j=1,np
+     if (ok(j))then
+        cell_lev(j)=ilevel
+     end if
+  end do
+
+end subroutine get_cell_index_fast
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine geticell99(icell,icd,np)
+  use amr_parameters, only:ndim
+  integer::np
+  integer,dimension(1:99,1:ndim)::icd
+  integer,dimension(1:99)::icell
+  ! same as geticell but for input vector size of 99 instead of nvector
+  integer::j
+    
+#if NDIM==1
+  do j=1,np
+     icell(j)=1+icd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     icell(j)=1+icd(j,1)+2*icd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+  end do
+#endif
+  
+end subroutine geticell99
