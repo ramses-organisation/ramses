@@ -203,9 +203,9 @@ subroutine init_sink
         nindsink=nindsink+1
         idsink(nsink)=nindsink
         msink(nsink)=mm1
-        xsink(nsink,1)=xx1
-        xsink(nsink,2)=xx2
-        xsink(nsink,3)=xx3
+        xsink(nsink,1)=xx1+boxlen/2.0
+        xsink(nsink,2)=xx2+boxlen/2.0
+        xsink(nsink,3)=xx3+boxlen/2.0
         vsink(nsink,1)=vv1
         vsink(nsink,2)=vv2
         vsink(nsink,3)=vv3
