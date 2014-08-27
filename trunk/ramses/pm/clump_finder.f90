@@ -1035,8 +1035,9 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
         if (son(indp(j))>0)then
            ok(j)=.false.
            cell_lev(j)=ilevel+1
-!           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
-           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)*one_over_scale+skip_loc(1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           do idim=1,ndim
+              icd_fine(1,idim)=int(2*(x(j,idim)-int(x(j,idim))))
+           end do
            call geticell99(icell_fine,icd_fine,1)
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
         end if

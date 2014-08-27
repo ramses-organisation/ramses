@@ -3239,6 +3239,15 @@ subroutine read_sink_params()
      end if
   end if
 
+  !check for periodic boundary conditions
+  if (nx==1 .or. ny==1 .or. nz==1)then
+     if (msink_direct .ge. 0.)then
+        if(myid==1)print*, 'periodic boundaries are not supported in combination with '
+        if(myid==1)print*, 'direct force sinks.'
+        call clean_stop
+     end if
+  end if
+
   if(msink_direct<0.)then 
      msink_direct=huge(0._dp)
   else
@@ -3638,7 +3647,9 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
 !           print*,'particle has escaped to ilevel+1'
            ok(j)=.false.
            cell_lev(j)=ilevel+1
-           icd_fine(1,1:ndim)=int(2*(xpart(j,1:ndim)*one_over_scale+skip_loc(1:ndim)-xg(son(indp(j)),1:ndim)+0.5*dx)/dx)
+           do idim=1,ndim
+              icd_fine(1,idim)=int(2*(x(j,idim)-int(x(j,idim))))
+           end do
            call geticell(icell_fine,icd_fine,1)
            xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
