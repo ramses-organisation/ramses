@@ -1034,7 +1034,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! accretion zone is computed
   !-----------------------------------------------------------------------
 
-  integer::j,nx_loc,isink,divdim
+  integer::j,irad,nx_loc,isink,divdim
   real(dp)::d,u,v=0d0,w=0d0,e
   real(dp)::scale,weight,dx_min,one_over_dx_min
 #ifdef SOLVERmhd
@@ -1054,7 +1054,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      u=uold(cind(j),2)/d
      v=uold(cind(j),3)/d
      w=uold(cind(j),4)/d
-     e=uold(cind(j),5)/d
+     e=uold(cind(j),5)
 #ifdef SOLVERmhd
      bx1=uold(cind(j),6)
      by1=uold(cind(j),7)
@@ -1062,10 +1062,15 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      bx2=uold(cind(j),nvar+1)
      by2=uold(cind(j),nvar+2)
      bz2=uold(cind(j),nvar+3)
-     e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+     e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-     e=e-0.5*(u*u+v*v+w*w)
-     egas(j)=d*e     
+     e=e-0.5*d*(u*u+v*v+w*w)
+#if NENER>0
+     do irad=1,nener
+        e=e-uold(cind(j),5+irad)
+     end do
+#endif
+     egas(j)=e     
   end do
   
   
@@ -1296,7 +1301,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! for nvector particles. Routine is not very efficient. Optimize if taking too long...
   !-----------------------------------------------------------------------
 
-  integer::i,j,nx_loc,isink,ivar
+  integer::i,j,nx_loc,isink,ivar,irad
   real(dp)::v2,d,e,d_floor,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -1346,7 +1351,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         vv(1)=uold(indp(j),2)/d
         vv(2)=uold(indp(j),3)/d
         vv(3)=uold(indp(j),4)/d
-        e=uold(indp(j),5)/d
+        e=uold(indp(j),5)
 
 #ifdef SOLVERmhd
         bx1=uold(indp(j),6)
@@ -1355,10 +1360,16 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         bx2=uold(indp(j),nvar+1)
         by2=uold(indp(j),nvar+2)
         bz2=uold(indp(j),nvar+3)
-        e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+        e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
         v2=(vv(1)**2+vv(2)**2+vv(3)**2)
-        e=e-0.5d0*v2
+        e=e-0.5d0*d*v2
+#if NENER>0
+        do irad=1,nener
+           e=e-uold(indp(j),5+irad)
+        end do
+#endif
+        e=e/d
         do ivar=imetal,nvar
            z(ivar)=uold(indp(j),ivar)/d
         end do
@@ -1460,18 +1471,24 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            ! new born sinks accrete form uold
            d=d-acc_mass/vol_loc
            !new gas velocity
-           vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)                    
+           vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)
            !convert back to conservative variables
            v2=(vv(1)**2+vv(2)**2+vv(3)**2)
+           e=e*d
 #ifdef SOLVERmhd
-           e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+           e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-           e=e+0.5d0*v2
+           e=e+0.5d0*d*v2
+#if NENER>0
+           do irad=1,nener
+              e=e+uold(indp(j),5+irad)
+           end do
+#endif
            uold(indp(j),1)=d
            uold(indp(j),2)=d*vv(1)
            uold(indp(j),3)=d*vv(2)
            uold(indp(j),4)=d*vv(3)
-           uold(indp(j),5)=d*e
+           uold(indp(j),5)=e
            do ivar=imetal,nvar
               uold(indp(j),ivar)=d*z(ivar)
            end do           
@@ -1756,7 +1773,7 @@ subroutine agn_feedback
   !----------------------------------------------------------------------
 
   ! local constants
-  integer::info,isink,ilevel,ivar
+  integer::info,isink,ilevel,ivar,irad
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::scale,dx_min,vol_min,temp_blast
   real(dp)::T2_AGN,T2_min,T2_max,delta_mass_max
@@ -2289,7 +2306,7 @@ subroutine make_sink_from_clump(ilevel)
   ! The true RAMSES particle is NOT produced here...
   !----------------------------------------------------------------------
 
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot
+  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_sink,index_sink_tot
   integer ::igrid,ix,iy,iz,ind,i,iskip,isink,nx_loc
   integer ::ntot,ntot_all,info
   integer ,dimension(1:nvector)::ind_grid,ind_cell
@@ -2458,7 +2475,7 @@ subroutine make_sink_from_clump(ilevel)
               u=uold(ind_cell_new(i),2)/d
               v=uold(ind_cell_new(i),3)/d
               w=uold(ind_cell_new(i),4)/d
-              e=uold(ind_cell_new(i),5)/d
+              e=uold(ind_cell_new(i),5)
 #ifdef SOLVERmhd
               bx1=uold(ind_cell_new(i),6)
               by1=uold(ind_cell_new(i),7)
@@ -2466,10 +2483,16 @@ subroutine make_sink_from_clump(ilevel)
               bx2=uold(ind_cell_new(i),nvar+1)
               by2=uold(ind_cell_new(i),nvar+2)
               bz2=uold(ind_cell_new(i),nvar+3)
-              e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+              e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
               v2=(u**2+v**2+w**2)
-              e=e-0.5d0*v2
+              e=e-0.5d0*d*v2
+#if NENER>0
+              do irad=1,nener
+                 e=e-uold(ind_cell_new(i),5+irad)
+              end do
+#endif             
+              e=e/d
               do ivar=imetal,nvar
                  z(ivar)=uold(ind_cell_new(i),ivar)/d
               end do
@@ -2511,15 +2534,21 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Convert back to conservative variable                                             
               d=d-delta_d
+              e=e*d
 #ifdef SOLVERmhd
-              e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+              e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-              e=e+0.5d0*(u**2+v**2+w**2)
+              e=e+0.5d0*d*(u**2+v**2+w**2)
+#if NENER>0
+              do irad=1,nener
+                 e=e+uold(ind_cell_new(i),5+irad)
+              end do
+#endif              
               uold(ind_cell_new(i),1)=d
               uold(ind_cell_new(i),2)=d*u
               uold(ind_cell_new(i),3)=d*v
               uold(ind_cell_new(i),4)=d*w
-              uold(ind_cell_new(i),5)=d*e
+              uold(ind_cell_new(i),5)=e
               do ivar=imetal,nvar
                  uold(ind_cell_new(i),ivar)=d*z(ivar)
               end do

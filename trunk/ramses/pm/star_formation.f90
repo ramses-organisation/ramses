@@ -28,7 +28,7 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot
+  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot
   integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc
   integer ::ntot,ntot_all,info,nstar_corrected,ideb,ndeb
   logical ::ok_free,ok_all
@@ -136,7 +136,7 @@ subroutine star_formation(ilevel)
            u=uold(ind_cell(i),2)/d
            v=uold(ind_cell(i),3)/d
            w=uold(ind_cell(i),4)/d
-           e=uold(ind_cell(i),5)/d
+           e=uold(ind_cell(i),5)
 #ifdef SOLVERmhd
            bx1=uold(ind_cell(i),6)
            by1=uold(ind_cell(i),7)
@@ -144,14 +144,19 @@ subroutine star_formation(ilevel)
            bx2=uold(ind_cell(i),nvar+1)
            by2=uold(ind_cell(i),nvar+2)
            bz2=uold(ind_cell(i),nvar+3)
-           e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+           e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-           e=e-0.5d0*(u**2+v**2+w**2)
+           e=e-0.5d0*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e=e-uold(ind_cell(i),5+irad)
+           end do
+#endif
            uold(ind_cell(i),1)=d
            uold(ind_cell(i),2)=u
            uold(ind_cell(i),3)=v
            uold(ind_cell(i),4)=w
-           uold(ind_cell(i),5)=e
+           uold(ind_cell(i),5)=e/d
         end do
         do ivar=imetal,nvar
            do i=1,ngrid
@@ -427,7 +432,7 @@ subroutine star_formation(ilevel)
            u=uold(ind_cell(i),2)
            v=uold(ind_cell(i),3)
            w=uold(ind_cell(i),4)
-           e=uold(ind_cell(i),5)
+           e=uold(ind_cell(i),5)*d
 #ifdef SOLVERmhd
            bx1=uold(ind_cell(i),6)
            by1=uold(ind_cell(i),7)
@@ -435,14 +440,19 @@ subroutine star_formation(ilevel)
            bx2=uold(ind_cell(i),nvar+1)
            by2=uold(ind_cell(i),nvar+2)
            bz2=uold(ind_cell(i),nvar+3)
-           e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)/d
+           e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-           e=e+0.5d0*(u**2+v**2+w**2)
+           e=e+0.5d0*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e=e+uold(ind_cell(i),5+irad)
+           end do
+#endif
            uold(ind_cell(i),1)=d
            uold(ind_cell(i),2)=d*u
            uold(ind_cell(i),3)=d*v
            uold(ind_cell(i),4)=d*w
-           uold(ind_cell(i),5)=d*e
+           uold(ind_cell(i),5)=e
         end do
         do ivar=imetal,nvar
            do i=1,ngrid
