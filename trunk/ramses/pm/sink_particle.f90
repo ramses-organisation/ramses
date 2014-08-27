@@ -3210,6 +3210,12 @@ subroutine read_sink_params()
      end if
   end if
 
+  if(msink_direct<0.)then 
+     msink_direct=huge(0._dp)
+  else
+     !convert msink_direct in code units
+     msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
+  end if
 
 end subroutine read_sink_params
 !################################################################
