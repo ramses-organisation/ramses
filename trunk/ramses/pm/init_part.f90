@@ -21,6 +21,7 @@ subroutine init_part
   integer::ind,ix,iy,iz,ilun,info,icpu,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
+  integer::nsinkold
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
   real(dp)::scale,dx_loc,rr,rmax,dx_min
   integer::ncode,bit_length,temp
@@ -96,7 +97,6 @@ subroutine init_part
      allocate(tsink(1:nsinkmax))
      allocate(idsink(1:nsinkmax))
      idsink=0 ! Important: need to set idsink to zero
-     nindsink=MAXVAL(idsink) ! Reset max index
      allocate(xsink(1:nsinkmax,1:ndim))
      allocate(vsink(1:nsinkmax,1:ndim))
      allocate(vsold(1:nsinkmax,1:ndim,levelmin:nlevelmax))
@@ -198,6 +198,7 @@ subroutine init_part
      read(ilun)mstar_tot
      read(ilun)mstar_lost
      read(ilun)nsink
+     read(ilun)nindsink
      if(ncpu2.ne.ncpu.or.ndim2.ne.ndim.or.npart2.gt.npartmax)then
         write(*,*)'File part.tmp not compatible'
         write(*,*)'Found   =',ncpu2,ndim2,npart2
@@ -278,7 +279,6 @@ subroutine init_part
            idsink(1:nsink)=isp
 !           read(ilun)isp ! Read sink level
 !           level_sink(1:nsink)=isp
-           nindsink=MAXVAL(idsink) ! Reset max index
            deallocate(isp)
            read(ilun)ncloud_sink
            allocate(nb(1:nsink))
@@ -306,6 +306,7 @@ subroutine init_part
 
 
      if(sink)then
+        nsinkold=nsink
         call compute_ncloud_sink
         nx_loc=(icoarse_max-icoarse_min+1)
         scale=boxlen/dble(nx_loc)
@@ -318,6 +319,10 @@ subroutine init_part
         end if
         INQUIRE(FILE=filename, EXIST=ic_sink)
         if (myid==1)write(*,*),'Looking for file ic_sink_restart: ',filename
+        if (.not. ic_sink)then
+           filename='ic_sink'
+           INQUIRE(FILE=filename, EXIST=ic_sink)
+        end if        
         if (ic_sink)then
            open(10,file=filename,form='formatted')
            eof=.false.
@@ -325,7 +330,8 @@ subroutine init_part
            do
               read(10,*,end=103)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
               nsink=nsink+1
-              idsink(nsink)=nsink
+              nindsink=nindsink+1
+              idsink(nsink)=nindsink
               msink(nsink)=mm1
               xsink(nsink,1)=xx1
               xsink(nsink,2)=xx2
@@ -342,53 +348,18 @@ subroutine init_part
 103        continue
            close(10)
         end if
-        nindsink=MAXVAL(idsink) ! Reset max index
-        if (myid==1.and.nsink>0.and.verbose)then
-           write(*,*),'sinks read from file ic_sink'
+        if (myid==1.and.nsink-nsinkold>0)then
+           write(*,*),'sinks read from file ic_sink_restart'
            write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
            write(*,*),'====================================================================================='
-           do isink=1,nsink
+           do isink=nsinkold+1,nsink
               write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
                    vsink(isink,1:ndim),lsink(isink,1:ndim)
            end do
         end if
-
-        ! Loop over sinks
         do isink=1,nsink
-           xs(1,1:ndim)=xsink(isink,1:ndim)
-           call cmp_cpumap(xs,cc,1)
-
-           ! Create central cloud particles (negative index)
-           if(cc(1).eq.myid)then
-              npart=npart+1
-              tp(npart)=1d-10
-              !check wheter isink is going to be a direct force sink 
-              dir_sink(isink)=(msink(isink) .ge. msink_direct)
-
-              if (dir_sink(isink))then
-                 mp(npart)=0.
-              else
-                 mp(npart)=msink(isink)      ! Mass
-              end if
-              levelp(npart)=levelmin
-              idp(npart)=-isink          ! Identity
-              xp(npart,1)=xsink(isink,1) ! Position
-              xp(npart,2)=xsink(isink,2)
-              xp(npart,3)=xsink(isink,3)
-              vp(npart,1)=vsink(isink,1) ! Velocity
-              vp(npart,2)=vsink(isink,2)
-              vp(npart,3)=vsink(isink,3)
-           endif
-
+           direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
         end do
-
-#ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-        direct_force_sink(1:nsink)=dir_sink(1:nsink)
-#endif
-
      end if
 
 
@@ -987,6 +958,7 @@ subroutine init_part
         dx_min=scale*0.5D0**nlevelmax/aexp
 
         nsink=0
+        nindsink=0
         if(TRIM(initfile(levelmin)).NE.' ')then
            filename=TRIM(initfile(levelmin))//'/ic_sink'
         else
@@ -1005,7 +977,8 @@ subroutine init_part
            do
               read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
               nsink=nsink+1
-              idsink(nsink)=nsink
+              nindsink=nindsink+1
+              idsink(nsink)=nindsink
               msink(nsink)=mm1
               xsink(nsink,1)=xx1
               xsink(nsink,2)=xx2
@@ -1022,9 +995,8 @@ subroutine init_part
 102        continue
            close(10)
         end if
-        nindsink=MAXVAL(idsink) ! Reset max index
         if (myid==1.and.nsink==0)write(*,*)'File ic_sink not found: starting without sink particles!'
-        if (myid==1.and.nsink>0.and.verbose)then
+        if (myid==1.and.nsink>0)then
            write(*,*),'sinks read from file ic_sink'
            write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '
            write(*,*),'====================================================================================='
@@ -1033,42 +1005,9 @@ subroutine init_part
                    vsink(isink,1:ndim),lsink(isink,1:ndim)
            end do
         end if
-
-        ! Loop over sinks
         do isink=1,nsink
-           xs(1,1:ndim)=xsink(isink,1:ndim)
-           call cmp_cpumap(xs,cc,1)
-
-           ! Create central cloud particles (negative index)
-           if(cc(1).eq.myid)then
-              npart=npart+1
-              tp(npart)=1d-10
-              !check wheter isink is going to be a direct force sink
-              dir_sink(isink)=(msink(isink) .ge. msink_direct)
-              if (dir_sink(isink))then
-                 mp(npart)=0.
-              else
-                 mp(npart)=msink(isink)      ! Mass
-              end if
-              levelp(npart)=levelmin
-              idp(npart)=-isink          ! Identity
-              xp(npart,1)=xsink(isink,1) ! Position
-              xp(npart,2)=xsink(isink,2)
-              xp(npart,3)=xsink(isink,3)
-              vp(npart,1)=vsink(isink,1) ! Velocity
-              vp(npart,2)=vsink(isink,2)
-              vp(npart,3)=vsink(isink,3)
-           endif
-
+           direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
         end do
-
-#ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-        direct_force_sink(1:nsink)=dir_sink(1:nsink)
-#endif
-        
      end if
   end if
 

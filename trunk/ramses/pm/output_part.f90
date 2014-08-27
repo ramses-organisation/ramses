@@ -30,6 +30,7 @@ subroutine backup_part(filename)
   write(ilun)mstar_tot   
   write(ilun)mstar_lost
   write(ilun)nsink
+  write(ilun)nindsink
   ! Write position
   allocate(xdp(1:npart))
   do idim=1,ndim

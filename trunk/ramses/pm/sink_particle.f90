@@ -80,17 +80,21 @@ subroutine create_sink
   !merge sinks - for star formation runs
   if (merging_scheme == 'timescale')call merge_star_sink
   
-  ! Create only the central cloud particle for all sinks (old and new)
-  call create_part_from_sink
-  
   ! Merge sink using FOF - for smbh runs 
-  if (merging_scheme =='fof')call merge_sink(1)
+  if (merging_scheme =='fof')call merge_sink
+  
+  
+  
+  ! Create only the central cloud particle for all sinks (old and new)
+!  call create_part_from_sink
+  
 
   ! Create new particle clouds
-  call create_cloud(1)
+!  call create_cloud(1)
+
+  call create_cloud_from_sink
 
   ! Scatter particle to the grid
-  if (myid==1)print*,'doing something I am not sure about'
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
 !     call count_parts
@@ -143,7 +147,7 @@ end subroutine create_sink
 !################################################################
 !################################################################
 !################################################################
-subroutine create_part_from_sink
+subroutine create_cloud_from_sink
   use amr_commons
   use pm_commons
   use hydro_commons
@@ -153,81 +157,29 @@ subroutine create_part_from_sink
 #endif
 
   !----------------------------------------------------------------------
-  ! Description: This subroutine create true RAMSES particles from the list
-  ! of sink particles and stores them at level 1.
+  ! This routine creates the whole cloud of particles for one sink in one go, 
+  ! including the central one. Particles are produced in the right MPI domain
+  ! at level 1. Not very efficient...
+  ! replaces: 
+  !   - create_part_from_sink
+  !   - create_cloud
+  !   - mk_cloud
   !----------------------------------------------------------------------
 
-  integer ::i,icpu,index_sink,isink,indp
+  real(dp)::scale,dx_min,rr,rmax,rmass
+  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc
   integer ::ntot,ntot_all,info
   logical ::ok_free
-  real(dp),dimension(1:nvector,1:ndim)::xs
-  integer ,dimension(1:nvector)::ind_grid,ind_part,cc
+  real(dp),dimension(1:ndim)::xrel
+  real(dp),dimension(1:nvector,1:ndim)::xtest
+  integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
-  integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all 
-  logical, dimension(1:nsinkmax)::dir_sink
-  dir_sink=.false.
   ok_true=.true.
 
   if(numbtot(1,1)==0) return
-  if(verbose)write(*,*)' Entering create_part_from_sink'
+  if(verbose)write(*,*)' Entering create_cloud_from_sink'
 
 #if NDIM==3
-
-  ntot=0
-  ! Loop over sinks and count the ones on cpu
-  do isink=1,nsink
-     xs(1,1:ndim)=xsink(isink,1:ndim)
-     call cmp_cpumap(xs,cc,1)
-     if(cc(1).eq.myid)ntot=ntot+1
-  end do
-
-  !---------------------------------
-  ! Check for free particle memory
-  !--------------------------------
-  ok_free=(numbp_free-ntot*ncloud_sink)>=0
-#ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(numbp_free,numbp_free_tot,1,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-  numbp_free_tot=numbp_free
-#endif
-   if(.not. ok_free)then
-      write(*,*)'No more free memory for particles'
-      write(*,*)'New sink particles',ntot
-      write(*,*)'Increase npartmax'
-#ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#endif
-#ifdef WITHOUTMPI
-      stop
-#endif
-   end if
-   
-  !---------------------------------
-  ! Compute global sink statistics
-  !---------------------------------
-#ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(ntot,ntot_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-  ntot_all=ntot
-#endif
-#ifndef WITHOUTMPI
-  ntot_sink_cpu=0; ntot_sink_all=0
-  ntot_sink_cpu(myid)=ntot
-  call MPI_ALLREDUCE(ntot_sink_cpu,ntot_sink_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  ntot_sink_cpu(1)=ntot_sink_all(1)
-  do icpu=2,ncpu
-     ntot_sink_cpu(icpu)=ntot_sink_cpu(icpu-1)+ntot_sink_all(icpu)
-  end do
-#endif
-
-  ! Starting identity number
-  if(myid==1)then
-     index_sink=nsink-ntot_all
-  else
-     index_sink=nsink-ntot_all+ntot_sink_cpu(myid-1)
-  end if
 
   ! Level 1 linked list
   do icpu=1,ncpu
@@ -235,63 +187,58 @@ subroutine create_part_from_sink
         ind_grid(1)=headl(icpu,1)
      endif
   end do
+  
+  ! Mesh spacing in that level
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_min=scale*0.5D0**nlevelmax/aexp
 
-  !sort the sink according to mass
-  if(nsink>0)then
-     do i=1,nsink
-        xmsink(i)=msink(i)
-     end do
-     call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
-  endif
-
-  ! Loop over sinks
-  do i=nsink,1,-1
-     isink=idsink_sort(i)
-     xs(1,1:ndim)=xsink(isink,1:ndim)
-     call cmp_cpumap(xs,cc,1)
-
-     ! Create new particles
-     if(cc(1).eq.myid)then
-           index_sink=index_sink+1
-           ! Update linked list
-           call remove_free(ind_part,1)
-           call add_list(ind_part,ind_grid,ok_true,1)
-           indp=ind_part(1)
-           tp(indp)=tsink(isink)     ! Birth epoch
-           !check wheter isink is going to be a direct force sink
-           dir_sink(isink)=(msink(isink) .ge. msink_direct)
-           if (dir_sink(isink))then
-              mp(indp)=0.    ! Mass
-           else
-              mp(indp)=msink(isink)     ! Mass
+  rmax=dble(ir_cloud)*dx_min
+  rmass=dble(ir_cloud_massive)*dx_min
+  
+  do kk=-2*ir_cloud,2*ir_cloud
+     xrel(3)=dble(kk)*dx_min/2.0
+     do jj=-2*ir_cloud,2*ir_cloud
+        xrel(2)=dble(jj)*dx_min/2.0
+        do ii=-2*ir_cloud,2*ir_cloud
+           xrel(1)=dble(ii)*dx_min/2.0
+           rr=sqrt(sum(xrel**2))
+           if(rr<=rmax)then
+              do isink=1,nsink
+                 xtest(1,1:3)=xsink(isink,1:3)+xrel(1:3)
+                 call cmp_cpumap(xtest,cc,1)
+                 if(cc(1).eq.myid)then                    
+                    call remove_free(ind_cloud,1)
+                    call add_list(ind_cloud,ind_grid,ok_true,1)
+                    indp=ind_cloud(1)
+                    idp(indp)=-isink
+                    levelp(indp)=levelmin
+                    if (rr<=rmass .and. msink(isink)<msink_direct)then
+                       mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                    else
+                       mp(indp)=0.
+                    end if
+                    xp(indp,1:3)=xtest(1,1:3)
+                    vp(indp,1:3)=vsink(isink,1:3)
+                    tp(indp)=tsink(isink)     ! Birth epoch
+                 end if
+              end do
            end if
-           levelp(indp)=levelmin
-           idp(indp)=-isink          ! Identity
-           xp(indp,1)=xsink(isink,1) ! Position
-           xp(indp,2)=xsink(isink,2)
-           xp(indp,3)=xsink(isink,3)
-           vp(indp,1)=vsink(isink,1) ! Velocity
-           vp(indp,2)=vsink(isink,2)
-           vp(indp,3)=vsink(isink,3)
-        endif
-
+        end do
+     end do
   end do
   
-#ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(dir_sink,direct_force_sink,nsink,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
-#endif
-#ifdef WITHOUTMPI
-  direct_force_sink(1:nsink)=dir_sink(1:nsink)
-#endif
+  do isink=1,nsink
+     direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
+  end do
 
 #endif
-
-end subroutine create_part_from_sink
+end subroutine create_cloud_from_sink
 !################################################################
 !################################################################
 !################################################################
 !################################################################
-subroutine merge_sink(ilevel)
+subroutine merge_sink
   use pm_commons
   use amr_commons
   implicit none
@@ -320,7 +267,6 @@ subroutine merge_sink(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx_loc=0.5D0**ilevel
   xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -510,69 +456,69 @@ subroutine merge_sink(ilevel)
 
   deallocate(psink,gsink)
   
-  !-----------------------------------------------------
-  ! Remove sink particles that are part of a FOF group.
-  !-----------------------------------------------------
-  ! Loop over cpus
-  do icpu=1,ncpu
-     igrid=headl(icpu,ilevel)
-     ig=0
-     ip=0
-     ! Loop over grids
-     do jgrid=1,numbl(icpu,ilevel)
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        npart2=0
+  ! !-----------------------------------------------------
+  ! ! Remove sink particles that are part of a FOF group.
+  ! !-----------------------------------------------------
+  ! ! Loop over cpus
+  ! do icpu=1,ncpu
+  !    igrid=headl(icpu,ilevel)
+  !    ig=0
+  !    ip=0
+  !    ! Loop over grids
+  !    do jgrid=1,numbl(icpu,ilevel)
+  !       npart1=numbp(igrid)  ! Number of particles in the grid
+  !       npart2=0
         
-        ! Count sink particles
-        if(npart1>0)then
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle   <--- Very important !!!
-              next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
-                 npart2=npart2+1
-              endif
-              ipart=next_part  ! Go to next particle
-           end do
-        endif
+  !       ! Count sink particles
+  !       if(npart1>0)then
+  !          ipart=headp(igrid)
+  !          ! Loop over particles
+  !          do jpart=1,npart1
+  !             ! Save next particle   <--- Very important !!!
+  !             next_part=nextp(ipart)
+  !             if(idp(ipart).lt.0)then
+  !                npart2=npart2+1
+  !             endif
+  !             ipart=next_part  ! Go to next particle
+  !          end do
+  !       endif
         
-        ! Gather sink particles
-        if(npart2>0)then        
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle   <--- Very important !!!
-              next_part=nextp(ipart)
-              ! Select only sink particles
-              if(idp(ipart).lt.0)then
-                 if(ig==0)then
-                    ig=1
-                    ind_grid(ig)=igrid
-                 end if
-                 ip=ip+1
-                 ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
-              endif
-              if(ip==nvector)then
-                 call kill_sink(ind_part,ind_grid_part,ip)
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
+  !       ! Gather sink particles
+  !       if(npart2>0)then        
+  !          ig=ig+1
+  !          ind_grid(ig)=igrid
+  !          ipart=headp(igrid)
+  !          ! Loop over particles
+  !          do jpart=1,npart1
+  !             ! Save next particle   <--- Very important !!!
+  !             next_part=nextp(ipart)
+  !             ! Select only sink particles
+  !             if(idp(ipart).lt.0)then
+  !                if(ig==0)then
+  !                   ig=1
+  !                   ind_grid(ig)=igrid
+  !                end if
+  !                ip=ip+1
+  !                ind_part(ip)=ipart
+  !                ind_grid_part(ip)=ig   
+  !             endif
+  !             if(ip==nvector)then
+  !                call kill_sink(ind_part,ind_grid_part,ip)
+  !                ip=0
+  !                ig=0
+  !             end if
+  !             ipart=next_part  ! Go to next particle
+  !          end do
+  !          ! End loop over particles
+  !       end if
 
-        igrid=next(igrid)   ! Go to next grid
-     end do
+  !       igrid=next(igrid)   ! Go to next grid
+  !    end do
 
-     ! End loop over grids
-     if(ip>0)call kill_sink(ind_part,ind_grid_part,ip)
-  end do 
-  ! End loop over cpus
+  !    ! End loop over grids
+  !    if(ip>0)call kill_sink(ind_part,ind_grid_part,ip)
+  ! end do 
+  ! ! End loop over cpus
 
 111 format('   Entering merge_sink for level ',I2)
 
@@ -581,210 +527,43 @@ end subroutine merge_sink
 !################################################################
 !################################################################
 !################################################################
-subroutine kill_sink(ind_part,ind_grid_part,np)
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  implicit none
-  integer::np
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
-  !-----------------------------------------------------------------------
-  ! This routine is called by subroutine merge_sink
-  ! It removes sink particles that are part of a FOF group.
-  !-----------------------------------------------------------------------
-  integer::j,isink,isink_new
+! subroutine kill_sink(ind_part,ind_grid_part,np)
+!   use amr_commons
+!   use pm_commons
+!   use hydro_commons
+!   implicit none
+!   integer::np
+!   integer,dimension(1:nvector)::ind_grid_part,ind_part
+!   !-----------------------------------------------------------------------
+!   ! This routine is called by subroutine merge_sink
+!   ! It removes sink particles that are part of a FOF group.
+!   !-----------------------------------------------------------------------
+!   integer::j,isink,isink_new
 
-  ! Particle-based arrays
-  logical ,dimension(1:nvector)::ok
+!   ! Particle-based arrays
+!   logical ,dimension(1:nvector)::ok
 
-  do j=1,np
-     isink=-idp(ind_part(j))
-     ok(j)=(oksink_all(isink)==0)
-     if(.not. ok(j))then
-        isink_new=int(oksink_all(isink))
-        idp(ind_part(j))=-isink_new
-        mp(ind_part(j))=msink(isink_new)
-        xp(ind_part(j),1)=xsink(isink_new,1)
-        vp(ind_part(j),1)=vsink(isink_new,1)
-        xp(ind_part(j),2)=xsink(isink_new,2)
-        vp(ind_part(j),2)=vsink(isink_new,2)
-        xp(ind_part(j),3)=xsink(isink_new,3)
-        vp(ind_part(j),3)=vsink(isink_new,3)
-     endif
-  end do
+!   do j=1,np
+!      isink=-idp(ind_part(j))
+!      ok(j)=(oksink_all(isink)==0)
+!      if(.not. ok(j))then
+!         isink_new=int(oksink_all(isink))
+!         idp(ind_part(j))=-isink_new
+!         mp(ind_part(j))=msink(isink_new)
+!         xp(ind_part(j),1)=xsink(isink_new,1)
+!         vp(ind_part(j),1)=vsink(isink_new,1)
+!         xp(ind_part(j),2)=xsink(isink_new,2)
+!         vp(ind_part(j),2)=vsink(isink_new,2)
+!         xp(ind_part(j),3)=xsink(isink_new,3)
+!         vp(ind_part(j),3)=vsink(isink_new,3)
+!      endif
+!   end do
 
-  ! Remove particles from parent linked list
-  call remove_list(ind_part,ind_grid_part,ok,np)
-  call add_free_cond(ind_part,ok,np)
+!   ! Remove particles from parent linked list
+!   call remove_list(ind_part,ind_grid_part,ok,np)
+!   call add_free_cond(ind_part,ok,np)
 
-end subroutine kill_sink
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine create_cloud(ilevel)
-  use pm_commons
-  use amr_commons
-  implicit none
-
-  integer::ilevel
-  !------------------------------------------------------------------------
-  ! This routine creates a cloud of test particle around each sink particle.
-  ! Currently only one sink is sended to mk_cloud in order to preserve 
-  ! mass ordering within the cloud particles
-  !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2,icpu
-  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  ! Gather sink particles only.
-  ! Loop over cpus
-  do icpu=1,ncpu
-     igrid=headl(icpu,ilevel)
-     ig=0
-     ip=0
-     ! Loop over grids
-     do jgrid=1,numbl(icpu,ilevel)
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        npart2=0
-        
-        ! Count sink particles
-        if(npart1>0)then
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle   <--- Very important !!!
-              next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
-                 npart2=npart2+1
-              endif
-              ipart=next_part  ! Go to next particle
-           end do
-        endif
-        
-        ! Gather sink particles
-        if(npart2>0)then        
-           ig=ig+1
-           ind_grid(ig)=igrid
-           ipart=headp(igrid)
-           ! Loop over particles
-           do jpart=1,npart1
-              ! Save next particle   <--- Very important !!!
-              next_part=nextp(ipart)
-              ! Select only sink particles
-              if(idp(ipart).lt.0)then
-                 if(ig==0)then
-                    ig=1
-                    ind_grid(ig)=igrid
-                 end if
-                 ip=ip+1
-                 ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
-              endif
-              if(ip==nvector)then
-                 call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
-                 ip=0
-                 ig=0
-              end if
-              ipart=next_part  ! Go to next particle
-           end do
-           ! End loop over particles
-        end if
-        igrid=next(igrid)   ! Go to next grid
-     end do
-     
-     ! End loop over grids
-     if(ip>0)call mk_cloud(ind_grid,ind_part,ind_grid_part,ip,ilevel)
-  end do
-  ! End loop over cpus
-
-111 format('   Entering create_cloud for level ',I2)
-
-end subroutine create_cloud
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine mk_cloud(ind_grid,ind_part,ind_grid_part,np,ilevel)
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  implicit none
-  integer::np,ilevel
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
-  integer,dimension(1:nvector)::ind_grid
-
-  !-----------------------------------------------------------------------
-  ! This routine is called by subroutine create_cloud. It produces 
-  ! the next nvector particles
-  !-----------------------------------------------------------------------
-
-  integer::j,isink,ii,jj,kk,nx_loc
-  real(dp)::dx_loc,scale,dx_min,xx,yy,zz,rr,rmax,rmass
-  integer ,dimension(1:nvector)::ind_cloud,grid_index
-  logical ,dimension(1:nvector)::ok_true
-  ok_true=.true.
-
-  do j=1,np
-     grid_index(j)=ind_grid(ind_grid_part(j))
-  end do
-
-  ! Mesh spacing in that level
-  dx_loc=0.5D0**ilevel
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
-
-  rmax=dble(ir_cloud)*dx_min
-  rmass=dble(ir_cloud_massive)*dx_min
-  xx=0.0; yy=0.0;zz=0.0
-  
-  do kk=-2*ir_cloud,2*ir_cloud
-     zz=dble(kk)*dx_min/2.0
-     do jj=-2*ir_cloud,2*ir_cloud
-        yy=dble(jj)*dx_min/2.0
-        do ii=-2*ir_cloud,2*ir_cloud
-           xx=dble(ii)*dx_min/2.0
-           rr=sqrt(xx*xx+yy*yy+zz*zz)
-           if(rr>0.and.rr<=rmax)then
-              call remove_free(ind_cloud,np)
-              call add_list(ind_cloud,grid_index,ok_true,np)
-              do j=1,np
-                 isink=-idp(ind_part(j))
-                 idp(ind_cloud(j))=-isink
-                 levelp(ind_cloud(j))=levelmin
-                 if (rr<=rmass .and. (.not. direct_force_sink(isink)))then
-                    mp(ind_cloud(j))=msink(isink)/dble(ncloud_sink_massive)
-                 else
-                    mp(ind_cloud(j))=0.
-                 end if
-                 xp(ind_cloud(j),1)=xp(ind_part(j),1)+xx
-                 vp(ind_cloud(j),1)=vsink(isink,1)
-                 xp(ind_cloud(j),2)=xp(ind_part(j),2)+yy
-                 vp(ind_cloud(j),2)=vsink(isink,2)
-                 xp(ind_cloud(j),3)=xp(ind_part(j),3)+zz
-                 vp(ind_cloud(j),3)=vsink(isink,3)
-              end do
-           end if
-        end do
-     end do
-  end do
-
-  ! Reduce sink particle mass
-  do j=1,np
-     isink=-idp(ind_part(j))
-     if (.not. direct_force_sink(isink))then
-        mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
-     end if
-     vp(ind_part(j),1)=vsink(isink,1)
-     vp(ind_part(j),2)=vsink(isink,2)
-     vp(ind_part(j),3)=vsink(isink,3)
-  end do
-
-
-end subroutine mk_cloud
+! end subroutine kill_sink
 !################################################################
 !################################################################
 !################################################################
@@ -3404,10 +3183,12 @@ subroutine read_sink_params()
   end if  
   
   
-  if (merging_scheme == 'timescale' .and. merging_timescale<0.)then
-     if (myid==1)write(*,*)'You chose sink merging on a timescale but did not provide the timescale'
-     if (myid==1)write(*,*)'choosing 1000y as lifetime...'
-     merging_timescale=1000.
+  if (merging_scheme == 'timescale')then
+     if (merging_timescale<0.)then
+        if (myid==1)write(*,*)'You chose sink merging on a timescale but did not provide the timescale'
+        if (myid==1)write(*,*)'choosing 1000y as lifetime...'
+        merging_timescale=1000.
+     end if
      cty=scale_t/(365.25*24.*3600.)
      cont_speed=1./(merging_timescale/cty)
   end if
@@ -4009,3 +3790,7 @@ subroutine count_parts
    
    
 end subroutine count_parts
+!################################################################
+!################################################################
+!################################################################
+!################################################################
