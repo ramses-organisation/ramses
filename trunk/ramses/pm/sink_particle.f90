@@ -1220,7 +1220,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         ! for accretion from very low density cells
         ! do accrete angular momentum (to prevent negative densities...)
 !        if (.not. on_creation)then
-!           if(d < 1.d-2*d_sink .or. density < 1.d-2*d_sink)nolacc=.false.
+!           if(d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
 !        end if
            
         if(nolacc)then
@@ -3840,3 +3840,230 @@ end subroutine count_parts
 !################################################################
 !################################################################
 !################################################################
+subroutine cic_get_cells(indp,vol,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use poisson_commons
+  use hydro_commons, ONLY: mass_sph
+  implicit none
+  integer::ng,np,ilevel
+  integer ,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::indp
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme. Only cells that are in level ilevel
+  ! are updated by the input particle list.
+  !------------------------------------------------------------------
+  logical::error
+  integer::i,j,ind,idim,nx_loc
+  real(dp)::dx,dx_loc,scale,vol_loc
+  ! Grid-based arrays
+  integer ,dimension(1:nvector)::ind_cell
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  ! Particle-based arrays
+  logical ,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector),save::mmm
+  real(dp),dimension(1:nvector),save::ttt=0d0
+  real(dp),dimension(1:nvector),save::vol2
+  real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
+  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
+  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+  real(dp),dimension(1:3)::skip_loc
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+
+  ! Lower left corner of 3x3x3 grid-cube  do idim=1,ndim
+  do idim=1,ndim
+     do i=1,ng
+        x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+     end do
+  end do
+
+  do i=1,ng
+     ind_cell(i)=father(ind_grid(i))
+  end do
+  
+  ! Gather neighboring father cells (should be present anytime !)
+  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+
+  ! Rescale particle position at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
+     end do
+  end do
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=x(j,idim)/dx
+     end do
+  end do
+
+  ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
+  do idim=1,ndim
+     do j=1,np
+        dd(j,idim)=x(j,idim)+0.5D0
+        id(j,idim)=dd(j,idim)
+        dd(j,idim)=dd(j,idim)-id(j,idim)
+        dg(j,idim)=1.0D0-dd(j,idim)
+        ig(j,idim)=id(j,idim)-1
+     end do
+  end do
+
+  ! Compute cloud volumes
+#if NDIM==1
+  do j=1,np
+     vol(j,1)=dg(j,1)
+     vol(j,2)=dd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     vol(j,1)=dg(j,1)*dg(j,2)
+     vol(j,2)=dd(j,1)*dg(j,2)
+     vol(j,3)=dg(j,1)*dd(j,2)
+     vol(j,4)=dd(j,1)*dd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     vol(j,1)=dg(j,1)*dg(j,2)*dg(j,3)
+     vol(j,2)=dd(j,1)*dg(j,2)*dg(j,3)
+     vol(j,3)=dg(j,1)*dd(j,2)*dg(j,3)
+     vol(j,4)=dd(j,1)*dd(j,2)*dg(j,3)
+     vol(j,5)=dg(j,1)*dg(j,2)*dd(j,3)
+     vol(j,6)=dd(j,1)*dg(j,2)*dd(j,3)
+     vol(j,7)=dg(j,1)*dd(j,2)*dd(j,3)
+     vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
+  end do
+#endif
+        
+  ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        igg(j,idim)=ig(j,idim)/2
+        igd(j,idim)=id(j,idim)/2
+     end do
+  end do
+#if NDIM==1
+  do j=1,np
+     kg(j,1)=1+igg(j,1)
+     kg(j,2)=1+igd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     kg(j,1)=1+igg(j,1)+3*igg(j,2)
+     kg(j,2)=1+igd(j,1)+3*igg(j,2)
+     kg(j,3)=1+igg(j,1)+3*igd(j,2)
+     kg(j,4)=1+igd(j,1)+3*igd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
+     kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
+     kg(j,3)=1+igg(j,1)+3*igd(j,2)+9*igg(j,3)
+     kg(j,4)=1+igd(j,1)+3*igd(j,2)+9*igg(j,3)
+     kg(j,5)=1+igg(j,1)+3*igg(j,2)+9*igd(j,3)
+     kg(j,6)=1+igd(j,1)+3*igg(j,2)+9*igd(j,3)
+     kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
+     kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+  end do
+#endif
+  do ind=1,twotondim
+     do j=1,np
+        igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
+     end do
+  end do
+
+  ! Compute parent cell position
+  do idim=1,ndim
+     do j=1,np
+        icg(j,idim)=ig(j,idim)-2*igg(j,idim)
+        icd(j,idim)=id(j,idim)-2*igd(j,idim)
+     end do
+  end do
+#if NDIM==1
+  do j=1,np
+     icell(j,1)=1+icg(j,1)
+     icell(j,2)=1+icd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     icell(j,1)=1+icg(j,1)+2*icg(j,2)
+     icell(j,2)=1+icd(j,1)+2*icg(j,2)
+     icell(j,3)=1+icg(j,1)+2*icd(j,2)
+     icell(j,4)=1+icd(j,1)+2*icd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
+     icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
+     icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
+     icell(j,4)=1+icd(j,1)+2*icd(j,2)+4*icg(j,3)
+     icell(j,5)=1+icg(j,1)+2*icg(j,2)+4*icd(j,3)
+     icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
+     icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
+     icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+  end do
+#endif
+
+  ! Compute parent cell adress
+  do ind=1,twotondim
+     do j=1,np
+        indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+     end do
+  end do
+
+  ! Update mass density and number density fields
+  do ind=1,twotondim
+
+     do j=1,np
+        ok(j)=igrid(j,ind)>0
+     end do
+
+     do j=1,np
+        vol2(j)=mmm(j)*vol(j,ind)/vol_loc
+     end do
+
+     do j=1,np
+        if(ok(j))then
+           rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
+        end if
+     end do
+     
+     do j=1,np
+        vol2(j)=vol(j,ind)
+     end do
+
+
+
+
+
+     do j=1,np
+        if(ok(j))then
+           phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
+        end if
+     end do
+  end do
+
+end subroutine cic_get_cells
