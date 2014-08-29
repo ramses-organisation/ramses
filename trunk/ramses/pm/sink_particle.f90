@@ -3840,20 +3840,17 @@ end subroutine count_parts
 !################################################################
 !################################################################
 !################################################################
-subroutine cic_get_cells(indp,vol,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine cic_get_cells(indp,vol,ok,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
-  use poisson_commons
-  use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::indp
+  logical ,dimension(1:nvector)::ok
   !------------------------------------------------------------------
-  ! This routine computes the density field at level ilevel using
-  ! the CIC scheme. Only cells that are in level ilevel
-  ! are updated by the input particle list.
+  ! This routine returns the CIC cells and volumes for np particles.
   !------------------------------------------------------------------
   logical::error
   integer::i,j,ind,idim,nx_loc
@@ -3863,7 +3860,6 @@ subroutine cic_get_cells(indp,vol,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
-  logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::ttt=0d0
   real(dp),dimension(1:nvector),save::vol2
@@ -4040,30 +4036,56 @@ subroutine cic_get_cells(indp,vol,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         ok(j)=igrid(j,ind)>0
      end do
-
      do j=1,np
-        vol2(j)=mmm(j)*vol(j,ind)/vol_loc
+        ok(j)=ok(j).and.son(indp(j,ind))==0
      end do
 
-     do j=1,np
-        if(ok(j))then
-           rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
-        end if
-     end do
-     
-     do j=1,np
-        vol2(j)=vol(j,ind)
-     end do
-
-
-
-
-
-     do j=1,np
-        if(ok(j))then
-           phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
-        end if
-     end do
   end do
 
 end subroutine cic_get_cells
+
+
+
+subroutine cic_get_vals(fluid_var,ok,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use poisson_commons
+  use hydro_commons, ONLY: nvar,uold
+  implicit none
+  integer::ng,np,ilevel
+  integer ,dimension(1:nvector)::ind_grid,ind_grid_part,ind_part
+  real(dp) ,dimension(1:nvector,1:nvar)::fluid_var
+  logical ,dimension(1:nvector)::ok
+  !------------------------------------------------------------------
+  ! This routine returns the CIC cells and volumes for np particles.
+  !------------------------------------------------------------------
+  integer::i,j,ind,ivar
+
+  ! Particle-based arrays
+
+  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::indp
+
+  call cic_get_cells(indp,vol,ok,ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+
+  fluid_var(j,1:nvar)=0._dp
+
+  do ivar=1,nvar
+     do ind=1,twotondim
+        do j=1,np
+           if (ok(j))then
+              
+              fluid_var(j,ivar)=fluid_var(j,ivar)&
+                   +uold(indp(j,ind),ivar)*vol(j,ind)        
+              
+           end if
+        end do
+     end do
+  end do
+end subroutine cic_get_vals
+
+
+
