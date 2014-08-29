@@ -1426,7 +1426,7 @@ subroutine compute_accretion_rate(write_sinks)
         dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
 
         !compute maximum timestep allowed by sink
-        if (bondi_accretion .or. threshold_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink)+tiny(0.d0))
+        if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink)+tiny(0.d0))
      end if
   end do 
 
