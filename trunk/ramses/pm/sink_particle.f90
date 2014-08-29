@@ -3597,7 +3597,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
         indp(j)=nbors_father_cells(ind_grid_part(j),kg(j))
         cell_lev(j)=ilevel-1
         xx(j,1:ndim)=(xg(ind_grid(ind_grid_part(j)),1:ndim)+(igd(j,1:ndim)-1.)*2.*dx-skip_loc(1:ndim))*scale
-        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*dx*3**0.5)print*,'oups at ilevel-1'
+        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*dx_loc*3**0.5)print*,'oups at ilevel-1'
      end if
   end do
   
@@ -3653,7 +3653,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
            call geticell(icell_fine,icd_fine,1)
            xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
            indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
-           if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.0000001*0.25*dx*3**0.5)then
+           if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.0000001*0.25*dx_loc*3**0.5)then
               print*,icd_fine(1,1:ndim)
               print*,icell_fine(1)
               print*,'oups at ilevel+1'
@@ -3667,7 +3667,7 @@ subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_
      if (ok(j))then
         xx(j,1:ndim)=(xg(igrid(j),1:ndim)+xc(icell(j),1:ndim)-skip_loc(1:ndim))*scale
         cell_lev(j)=ilevel
-        ! if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*0.5*dx*3**0.5)then
+        ! if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*0.5*dx_loc*3**0.5)then
         !    print*,'oups at ilevel'        
         !    print*,xpart(j,1:ndim)
         !    print*,xx(j,1:ndim)
