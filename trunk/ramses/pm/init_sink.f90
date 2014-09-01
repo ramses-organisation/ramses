@@ -23,7 +23,7 @@ subroutine init_sink
 
 
   !allocate all sink related quantities...
-  allocate(weightp(npartmax))
+  allocate(weightp(1:npartmax,1:twotondim))
   weightp=0.0
   allocate(msink(1:nsinkmax))
   allocate(tsink(1:nsinkmax))
