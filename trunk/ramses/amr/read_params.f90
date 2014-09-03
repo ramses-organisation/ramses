@@ -214,16 +214,9 @@ subroutine read_params
 #ifdef RT
   call rt_read_hydro_params(nml_ok)
 #endif
+  if (sink)call read_sink_params
+  if (clumpfind .or. sink)call read_clumpfind_params
 
-
-  if (sink)then
-     call read_sink_params
-     if ((.not. clumpfind) .and. myid==1)then
-        write(*,*)'Sinks need the clumpfinder. Seting clumpfind to .true.!'
-     end if
-     clumpfind=.true.
-  end if
-  if (clumpfind)call read_clumpfind_params
 
   close(1)
 

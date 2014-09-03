@@ -117,17 +117,16 @@ subroutine output_sink(filename)
   !======================
   write(ilun,*)'Number of sink = ',nsink
 
-  write(ilun,'(" =============================================================================================================================== ")')
-  write(ilun,'(" Id     Mass(Msol)     x           y           z           vx        vy        vz     new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
-  write(ilun,'(" =============================================================================================================================== ")')
+  write(ilun,'(" ================================================================================================================================== ")')
+  write(ilun,'("        Id       Mass(Msol)             x                y                z               vx               vy               vz      ")')
+  write(ilun,'(" ================================================================================================================================== ")')
   
   do isink=1,nsink
      l_abs=max((lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5,1.d-50)
      rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs+tiny(0.d0))
-     write(ilun,'(I6,2X,F8.4,3(2X,F10.7),3(2X,F6.3),4X,L1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim), &
-          vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
+     write(ilun,'(I10,7(2X,E15.7))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim),vsink(isink,1:ndim)
   end do
-  write(ilun,'(" =============================================================================================================================== ")') 
+  write(ilun,'(" ================================================================================================================================== ")')
   close(ilun)
 
 end subroutine output_sink

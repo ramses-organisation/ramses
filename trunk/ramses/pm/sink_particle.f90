@@ -41,41 +41,47 @@ subroutine create_sink
   ! Remove all particle clouds around old sinks (including the central one)
   call kill_entire_cloud(1) 
   
-  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
-  ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
-  ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  if (create_sinks)then
+     
+     ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  
+     ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
+     ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+     
+     ! Run the clump finder,(produce no output, keep clump arrays allocated)
+     call clump_finder(.false.,.true.)
+     
+     ! trim clumps down to R_accretion ball around peaks 
+     call trim_clumps
+     
+     ! compute simple additive quantities and means (1st moments)
+     call compute_clump_properties(uold(1,1))
+     
+     ! compute quantities relative to mean (2nd moments)
+     call compute_clump_properties_round2(uold(1,1),.false.)
   
-  ! Run the clump finder,(produce no output, keep clump arrays allocated)
-  call clump_finder(.false.,.true.)
+     ! apply all checks and flag cells for sink formation
+     call flag_formation_sites
+     ! Create new sink particles if relevant
+     do ilevel=levelmin,nlevelmax
+        call make_sink_from_clump(ilevel)
+     end do
 
-  ! trim clumps down to R_accretion ball around peaks 
-  call trim_clumps
-  
-  ! compute simple additive quantities and means (1st moments)
-  call compute_clump_properties(uold(1,1))
-  
-  ! compute quantities relative to mean (2nd moments)
-  call compute_clump_properties_round2(uold(1,1),.false.)
-  
-  ! apply all checks and flag cells for sink formation
-  call flag_formation_sites
-  ! Create new sink particles if relevant
-  do ilevel=levelmin,nlevelmax
-     call make_sink_from_clump(ilevel)
-  end do
+     ! Deallocate clump finder arrays
+     deallocate(npeaks_per_cpu)
+     deallocate(ipeak_start)
+     if (ntest>0)then
+        deallocate(icellp)
+        deallocate(levp)
+        deallocate(testp_sort)
+        deallocate(imaxp)
+     endif
+     call deallocate_all
 
-  ! Deallocate clump finder arrays
-  deallocate(npeaks_per_cpu)
-  deallocate(ipeak_start)
-  if (ntest>0)then
-     deallocate(icellp)
-     deallocate(levp)
-     deallocate(testp_sort)
-     deallocate(imaxp)
-  endif
-  call deallocate_all
+
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  end if
 
   !merge sinks - for star formation runs
   if (merging_scheme == 'timescale')call merge_star_sink
@@ -846,26 +852,30 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! compute thermal energy
   do j=1,np
      d=fluid_var(j,1)
-     u=fluid_var(j,2)/d
-     v=fluid_var(j,3)/d
-     w=fluid_var(j,4)/d
-     e=fluid_var(j,5)
+     if(d>0.)then
+        u=fluid_var(j,2)/d
+        v=fluid_var(j,3)/d
+        w=fluid_var(j,4)/d
+        e=fluid_var(j,5)
 #ifdef SOLVERmhd
-     bx1=fluid_var(j,6)
-     by1=fluid_var(j,7)
-     bz1=fluid_var(j,8)
-     bx2=fluid_var(j,nvar+1)
-     by2=fluid_var(j,nvar+2)
-     bz2=fluid_var(j,nvar+3)
-     e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
+        bx1=fluid_var(j,6)
+        by1=fluid_var(j,7)
+        bz1=fluid_var(j,8)
+        bx2=fluid_var(j,nvar+1)
+        by2=fluid_var(j,nvar+2)
+        bz2=fluid_var(j,nvar+3)
+        e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
-     e=e-0.5*d*(u*u+v*v+w*w)
+        e=e-0.5*d*(u*u+v*v+w*w)
 #if NENER>0
-     do irad=1,nener
-        e=e-fluid_var(j,5+irad)
-     end do
+        do irad=1,nener
+           e=e-fluid_var(j,5+irad)
+        end do
 #endif
-     egas(j)=e     
+        egas(j)=e
+     else
+        egas(j)=0.
+     end if
   end do
   
   
@@ -1210,7 +1220,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
               if (flux_accretion .or. bondi_accretion)then              
                  ! Compute accreted mass using density weighting
-                 if (volume==0. .or. density==0.)print*,'something might be going wrong here...',weight,volume,density
+                 if (volume==0. .or. density==0.)print*,'something might be going wrong here...',weight,volume,density,ilevel
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/(volume+tiny(0._dp))*d/(density+tiny(0._dp))*vol(j,ind)
               end if
 
@@ -1392,7 +1402,8 @@ subroutine compute_accretion_rate(write_sinks)
         ethermal=ethermal/(density*volume+tiny(0.0_dp))
         c2=MAX((gamma-1.0)*ethermal,smallc**2)
         c2sink(isink)=c2
-        v2=min(SUM((velocity(1:3)-vsink(isink,1:3))**2),vel_max**2)
+        v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
+        if(smbh)v2=min(v2,vel_max**2)
 
         !Bondi radius
         if (smbh)then
@@ -1439,17 +1450,20 @@ subroutine compute_accretion_rate(write_sinks)
            dMsink_overdt(isink)=dMsink_overdt(isink)*fa_fact
 
            ! If accretion is subsonic (sonic radius smaller than accretion radius), use Bondi-rate instead.
-!           if ((0.5*msink(isink)/c2) < (ir_cloud*dx_min))then
-!              dMsink_overdt(isink)=dMBHoverdt(isink)
-!              bondi_switch(isink)=.true.
- !          end if
+           if ((0.5*msink(isink)/c2) < (ir_cloud*dx_min))then
+              dMsink_overdt(isink)=dMBHoverdt(isink)
+              bondi_switch(isink)=.true.
+           end if
         end if
 
         !make sure, accretion rate is positive
         dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
 
         !compute maximum timestep allowed by sink
-        if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink)+tiny(0.d0))
+        if (dMsink_overdt(isink)>0.)then
+           if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink))
+        end if
+           
      end if
   end do 
 
@@ -1549,19 +1563,19 @@ subroutine print_sink_properties(dMBHoverdt,dMEDoverdt)
         write(*,*)'Number of sink = ',nsink
         write(*,*)'Total mass in sink = ',sum(msink(1:nsink))*scale_m/1.9891d33
         write(*,*)'simulation time = ',t
-        write(*,'(" ======================================================================================================================== ")')
-        write(*,'("  Id     M[Msol]    x           y           z           vx       vy       vz     acc_rate[Msol/y] acc_lum[Lsol]    age   ")')
-        write(*,'(" ======================================================================================================================== ")')
+        write(*,'(" ================================================================================================================================================ ")')
+        write(*,'("   Id     M[Msol]          x             y             z            vx            vy            vz    acc_rate[Msol/y] acc_lum[Lsol]     age      ")')
+        write(*,'(" ================================================================================================================================================ ")')
         do i=nsink,1,-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
-           write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,3(2X,E11.3))')&
+           write(*,'(I5,10(2X,E12.5))')&
                 idsink(isink),msink(isink)*scale_m/1.9891d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
                 acc_rate(isink)*scale_m/1.9891d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.9d33,&
                 (t-tsink(isink))*scale_t/(3600*24*365.25)
         end do
-        write(*,'(" ======================================================================================================================== ")')
+        write(*,'(" ================================================================================================================================================ ")')
      endif
   endif
 end subroutine print_sink_properties
@@ -2857,7 +2871,7 @@ subroutine merge_star_sink
 
               acc_rate(isink)=acc_rate(isink)+msink(jsink)
               !acc_lum is recomputed anyway before its used
-              acc_lum(isink)=ir_eff*acc_rate(isink)/dtnew(levelmin)*msink(isink)/(5*6.955d10/scale_l)
+              if(ir_feedback)acc_lum(isink)=ir_eff*acc_rate(isink)/dtnew(levelmin)*msink(isink)/(5*6.955d10/scale_l)
 
               msink(jsink)=-10.
               tsink(isink)=min(tsink(isink),tsink(jsink))
@@ -2934,6 +2948,7 @@ subroutine f_gas_sink(ilevel)
   real(dp),dimension(1:nvector,1:ndim)::xx,ff
   real(dp),dimension(1:nvector)::d2,mcell,denom
   real(dp)::rho_tff,rho_tff_tot,d_min,one_over_msink,oneoverthree
+  logical,dimension(1:ndim)::period
 
   !  Cell spacing at that level
   dx=0.5D0**ilevel
@@ -2961,6 +2976,11 @@ subroutine f_gas_sink(ilevel)
   rho_tff=0.
 
   fsink_new=0.
+
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)
+
   ! Loop over sinks 
   do isink=1,nsink
      one_over_msink=1./msink(isink)
@@ -3002,11 +3022,21 @@ subroutine f_gas_sink(ilevel)
 
               !relative position and distance
               d2=0.d0
-              do idim=1,ndim        
-                 do i=1,ngrid
-                    ff(i,idim)=xsink(isink,idim)-xx(i,idim)
-                    d2(i)=d2(i)+ff(i,idim)**2
-                 end do
+              do idim=1,ndim    
+                 if (period(idim))then
+                    do i=1,ngrid    
+                       ! zero order Ewald sum
+                       ff(i,idim)=xsink(isink,idim)-xx(i,idim)
+                       if(ff(i,idim)>0.5*boxlen)ff(i,idim)=ff(i,idim)-boxlen
+                       if(ff(i,idim)<-0.5*boxlen)ff(i,idim)=ff(i,idim)+boxlen
+                       d2(i)=d2(i)+ff(i,idim)**2
+                    end do
+                 else
+                    do i=1,ngrid
+                       ff(i,idim)=xsink(isink,idim)-xx(i,idim)
+                       d2(i)=d2(i)+ff(i,idim)**2
+                    end do
+                 end if
               end do
 
               !store minimum distance of cell in current level to isink
@@ -3103,24 +3133,40 @@ subroutine f_sink_sink
   integer::isink,idim,jsink
   real(dp),allocatable,dimension(:)::d2
   real(dp),allocatable,dimension(:,:)::ff
+  logical,dimension(1:ndim)::period
 
   allocate(d2(1:nsink))
   allocate(ff(1:nsink,1:ndim))
   
 !  fsink=0.
-  
+
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)  
+
   do isink=1,nsink
      if (direct_force_sink(isink))then
         d2=0.d0
         ff=0.d0
         do idim=1,ndim
            !compute relative position and and distances
-           do jsink=1,nsink
-              if (direct_force_sink(jsink))then           
-                 ff(jsink,idim)=xsink(jsink,idim)-xsink(isink,idim)
-                 d2(jsink)=d2(jsink)+ff(jsink,idim)**2
-              end if
-           end do
+           if (period(idim))then
+              do jsink=1,nsink
+                 if (direct_force_sink(jsink))then           
+                    ff(jsink,idim)=xsink(jsink,idim)-xsink(isink,idim)
+                    if(ff(jsink,idim)>0.5*boxlen)ff(jsink,idim)=ff(jsink,idim)-boxlen
+                    if(ff(jsink,idim)<-0.5*boxlen)ff(jsink,idim)=ff(jsink,idim)+boxlen
+                    d2(jsink)=d2(jsink)+ff(jsink,idim)**2
+                 end if
+              end do
+           else
+              do jsink=1,nsink
+                 if (direct_force_sink(jsink))then           
+                    ff(jsink,idim)=xsink(jsink,idim)-xsink(isink,idim)
+                    d2(jsink)=d2(jsink)+ff(jsink,idim)**2
+                 end if
+              end do
+           end if
         end do
         !compute acceleration
         do jsink=1,nsink
@@ -3265,9 +3311,8 @@ subroutine read_sink_params()
   !check for periodic boundary conditions
   if (nx==1 .or. ny==1 .or. nz==1)then
      if (msink_direct .ge. 0.)then
-        if(myid==1)print*, 'periodic boundaries are not supported in combination with '
-        if(myid==1)print*, 'direct force sinks.'
-        call clean_stop
+        if(myid==1)print*, 'periodic boundaries in combination with '
+        if(myid==1)print*, 'direct force sinks are not treated accurately....'
      end if
   end if
 
@@ -3307,6 +3352,7 @@ subroutine count_clouds(ilevel,action)
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   
   if(numbtot(1,ilevel)==0)return
+
 
   if (action=='count')then
      ! Loop over cpus
@@ -3420,8 +3466,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
-  
-  
+
   do idim=1,ndim
      do i=1,np
         xpart(i,idim)=xp(ind_part(i),idim)
@@ -3473,7 +3518,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
            if (rho(cind_part(i,ind))>parts_per_cell)then
               weight=weight*parts_per_cell/rho(cind_part(i,ind))
            end if
-           weightp(ind_part(i),ind)=weight     
+           weightp(ind_part(i),ind)=weight
         end do
         
         if(threshold_accretion)then
@@ -4103,7 +4148,9 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
 
   do ind=1,twotondim
      do j=1,np
-        xx(j,1:ndim,ind)=(xg(igrid(j,ind),1:ndim)+xc(icell(j,ind),1:ndim)-skip_loc(1:ndim))*scale
+        if (ok(j,ind))then
+           xx(j,1:ndim,ind)=(xg(igrid(j,ind),1:ndim)+xc(icell(j,ind),1:ndim)-skip_loc(1:ndim))*scale
+        end if
      end do
   end do
   
@@ -4171,7 +4218,7 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   if (ilevel_only)then
      do ivar=1,nvar
         do j=1,np
-           fluid_var(j,ivar)=fluid_var(j,ivar)/vol_tot(j)
+           if (vol_tot(j)>0.)fluid_var(j,ivar)=fluid_var(j,ivar)/vol_tot(j)
         end do
      end do
   end if

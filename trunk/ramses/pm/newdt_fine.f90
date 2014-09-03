@@ -21,12 +21,13 @@ subroutine newdt_fine(ilevel)
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,nx_loc
-  integer::npart1,ip,info,isink
+  integer::npart1,ip,info,isink,ilev,levelmin_isink
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all,dt_acc_min
   real(dp)::tff,fourpi,threepi2
   real(dp)::aton_time_step,dt_aton,dt_rt
-  real(dp)::dx_min,dx,scale
+  real(dp)::dx_min,dx,scale,dt_fact
+  logical::highest_level
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -120,27 +121,39 @@ subroutine newdt_fine(ilevel)
 
      ! timestep restrictions due to sink
      if(sink .and. nsink>0) then
-        call compute_accretion_rate(.false.)
-        ! timestep due to sink grav acc
-!        do isink=1,nsink              
-!           if (level_sink(isink,ilevel))then
-!              if(direct_force_sink(isink))then
-!                 tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
-!                 dtnew(ilevel)=min(dtnew(ilevel),tff*courant_factor)
-!              end if
-!           end if
-!        end do
-        ! timestep due to sink accretion
-        dt_acc_min=huge(0._dp)
-        do isink=1,nsink              
-           if (level_sink(isink,ilevel))then           
-              dt_acc_min=MIN(dt_acc_min,dt_acc(isink))
-           end if
-        end do
-        if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
-           write(*,*),ilevel,'dt_acc/dt',dt_acc_min/dtnew(ilevel),ilevel
+        ! determine if on highest active level...
+        if (ilevel==nlevelmax)then
+           highest_level=.true.
+        else if (numbtot(1,ilevel+1)==0)then
+           highest_level=.true.
+        else 
+           highest_level=.false.
         end if
-        dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
+        
+        if (highest_level)then
+           call compute_accretion_rate(.false.)
+           ! timestep due to sink accretion
+           dt_acc_min=huge(0._dp)
+           do isink=1,nsink
+              
+              levelmin_isink=nlevelmax
+              do ilev=nlevelmax,levelmin,-1
+                 if (level_sink(isink,ilevel))levelmin_isink=ilev 
+              end do
+              
+              dt_fact=1.
+              do ilev=levelmin_isink,ilevel
+                 dt_fact=dt_fact*nsubcycle(ilev)
+              end do
+              
+              dt_acc_min=MIN(dt_acc_min,dt_acc(isink)/dt_fact)
+              
+           end do
+           if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
+              write(*,*),ilevel,'dt_acc/dt',dt_acc_min/dtnew(ilevel),ilevel
+           end if
+           dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
+        end if
      end if
 
   end if
