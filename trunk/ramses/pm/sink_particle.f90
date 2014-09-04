@@ -1221,7 +1221,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (flux_accretion .or. bondi_accretion)then              
                  ! Compute accreted mass using density weighting
                  if (volume==0. .or. density==0.)print*,'something might be going wrong here...',weight,volume,density,ilevel
-                 acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/(volume+tiny(0._dp))*d/(density+tiny(0._dp))*vol(j,ind)
+                 acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/(volume+tiny(0._dp))*d/(density+tiny(0._dp))
               end if
 
               if (threshold_accretion)then
