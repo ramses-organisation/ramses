@@ -496,6 +496,17 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,nvar+1)=A_region(k)
               q(i,nvar+2)=B_region(k)
               q(i,nvar+3)=C_region(k)
+#if NENER>0
+              do ivar=1,nener
+                 q(i,8+ivar)=prad_region(k,ivar)
+              enddo
+#endif
+#if NVAR>8+NENER
+              do ivar=9+nener,nvar
+                 q(i,ivar)=var_region(k,ivar-8-nener)
+              end do
+#endif
+ 
            end if
         end do
      end if
@@ -522,6 +533,16 @@ subroutine region_condinit(x,q,dx,nn)
            q(i,3)=q(i,3)+v_region(k)*r
            q(i,4)=q(i,4)+w_region(k)*r
            q(i,5)=q(i,5)+p_region(k)*r/vol
+#if NENER>0
+           do ivar=1,nener
+              q(i,8+ivar)=q(i,8+ivar)+prad_region(k,ivar)*r/vol
+           enddo
+#endif
+#if NVAR>8+NENER
+           do ivar=9+nener,nvar
+              q(i,ivar)=var_region(k,ivar-8-nener)
+           end do
+#endif
         end do
      end if
   end do

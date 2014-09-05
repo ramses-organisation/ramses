@@ -5,7 +5,7 @@ subroutine init_hydro
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
+  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar,irad
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
@@ -105,6 +105,16 @@ subroutine init_hydro
                        uold(ind_grid(i)+iskip,ivar)=xx(i)
                     end do
                  end do
+#if NENER>0
+                 ! Read non-thermal pressures --> non-thermal energies
+                 do ivar=9,8+nener
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-8)-1d0)
+                    end do
+                 end do
+#endif
+
                  read(ilun)xx ! Read pressure
                  do i=1,ncache
                     e=xx(i)/(gamma-1d0)
@@ -115,10 +125,16 @@ subroutine init_hydro
                     A=0.5*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))
                     B=0.5*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))
                     C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
+#if NENER>0
+                    do irad=1,nener
+                       e=e+uold(ind_grid(i)+iskip,8+irad)
+                    end do
+#endif
+
                     uold(ind_grid(i)+iskip,5)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
                  end do
-#if NVAR > 8
-                 do ivar=9,nvar ! Read passive scalars if any
+#if NVAR > 8+NENER
+                 do ivar=9+nener,nvar ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache
                        uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)

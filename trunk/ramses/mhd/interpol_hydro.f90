@@ -242,9 +242,9 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,i,idim,ind_son,iskip_son,ind,neul=5
+  integer ::ivar,i,idim,ind_son,iskip_son,ind,neul=5,irad
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
-  real(dp),dimension(1:nvector),save::getx,ekin,emag
+  real(dp),dimension(1:nvector),save::getx,ekin,emag,erad
   integer,dimension(1:6,1:4)::hhh
 
   ! Get child oct index
@@ -375,9 +375,19 @@ subroutine upl(ind_cell,ncell)
                    &                   uold(ind_cell_son(i),nvar+idim))**2
            end do
         end do
+        ! Compute child radiative energy
+        erad(1:ncell)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,ncell
+              erad(i)=erad(i)+uold(ind_cell_son(i),8+irad)
+           end do
+        end do
+#endif
+
         ! Update average
         do i=1,ncell
-           getx(i)=getx(i)+uold(ind_cell_son(i),neul)-ekin(i)-emag(i)
+           getx(i)=getx(i)+uold(ind_cell_son(i),neul)-ekin(i)-emag(i)-erad(i)
         end do
      end do
         
@@ -397,10 +407,19 @@ subroutine upl(ind_cell,ncell)
                 &                   uold(ind_cell(i),nvar+idim))**2
         end do
      end do
-     
+     ! Compute new radiative energy
+     erad(1:ncell)=0.0d0
+#if NENER>0
+     do irad=1,nener
+        do i=1,ncell
+           erad(i)=erad(i)+uold(ind_cell(i),8+irad)
+        end do
+     end do
+#endif
+
      ! Scatter result to cells
      do i=1,ncell
-        uold(ind_cell(i),neul)=getx(i)/dble(twotondim)+ekin(i)+emag(i)
+        uold(ind_cell(i),neul)=getx(i)/dble(twotondim)+ekin(i)+emag(i)+erad(i)
      end do
      
   endif
@@ -527,12 +546,12 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
+  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5,irad
 
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
-  real(dp),dimension(1:nvector),save::ekin,emag
+  real(dp),dimension(1:nvector),save::ekin,emag,erad
   real(dp),dimension(1:nvector,0:twondim  ,1:6),save::B1
   real(dp),dimension(1:nvector,1:twotondim,1:6),save::B2
 
@@ -561,8 +580,16 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
               emag(i)=emag(i)+0.125d0*(u1(i,j,idim+neul)+u1(i,j,idim+nvar))**2
            end do
         end do
+        erad(1:nn)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,nn
+              erad(i)=erad(i)+u1(i,j,8+irad)
+           end do
+        end do
+#endif
         do i=1,nn
-           u1(i,j,neul)=u1(i,j,neul)-ekin(i)-emag(i)
+           u1(i,j,neul)=u1(i,j,neul)-ekin(i)-emag(i)-erad(i)
         end do
      end do
   end if
@@ -663,8 +690,16 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
               emag(i)=emag(i)+0.125d0*(u2(i,ind,idim+neul)+u2(i,ind,idim+nvar))**2
            end do
         end do
-        do i=1,nn
-           u2(i,ind,neul)=u2(i,ind,neul)+ekin(i)+emag(i)
+        erad(1:nn)=0.0d0
+#if NENER>0
+        do irad=1,nener
+           do i=1,nn
+              erad(i)=erad(i)+u2(i,ind,8+irad)
+           end do
+        end do
+#endif
+       do i=1,nn
+           u2(i,ind,neul)=u2(i,ind,neul)+ekin(i)+emag(i)+erad(i)
         end do
      end do
   end if

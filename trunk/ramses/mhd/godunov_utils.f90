@@ -14,7 +14,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
   
   real(dp)::dtcell,smallp,cf,cc,bc,bn
-  integer::k,idim
+  integer::k,idim, irad
   
   smallp = smallr*smallc**2/gamma
 
@@ -39,12 +39,26 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
         uu(k,5) = uu(k,5)-half*uu(k,1)*uu(k,idim+1)**2-half*Bc**2
      end do
   end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        uu(k,5) = uu(k,5)-uu(k,8+irad)
+     end do
+  end do
+#endif
 
   ! Compute thermal sound speed
   do k = 1, ncell
      uu(k,5) = max((gamma-one)*uu(k,5),smallp)
      a2(k)=gamma*uu(k,5)/uu(k,1)
   end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        a2(k) = a2(k) + gamma_rad(irad)*(gamma_rad(irad)-1.0d0)*uu(k,8+irad)/uu(k,1)
+     end do
+  end do
+#endif  
 
   ! Compute maximum wave speed (fast magnetosonic)
   do k = 1, ncell
@@ -100,7 +114,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   use const
   implicit none
   ! dummy arguments
-  integer nn,ilevel
+  integer nn,ilevel,irad
   real(dp)::ug(1:nvector,1:nvar+3)
   real(dp)::um(1:nvector,1:nvar+3)
   real(dp)::ud(1:nvector,1:nvar+3)
@@ -150,14 +164,23 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
         emagd(k) = emagd(k) + half*(half*(ud(k,idim+5)+ud(k,idim+nvar)))**2
      end do
   end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, nn
+        eking(k) = eking(k) + ug(k,8+irad)
+        ekinm(k) = ekinm(k) + um(k,8+irad)
+        ekind(k) = ekind(k) + ud(k,8+irad)
+     end do
+  end do
+#endif
   do k = 1,nn
      ug(k,5) = (gamma-one)*(ug(k,5)-eking(k)-emagg(k))
      um(k,5) = (gamma-one)*(um(k,5)-ekinm(k)-emagm(k))
      ud(k,5) = (gamma-one)*(ud(k,5)-ekind(k)-emagd(k))
   end do  
   ! Passive scalars
-#if NVAR > 8
-  do idim = 9,nvar
+#if NVAR>8+NENER
+  do idim = 9+nener,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
         um(k,idim) = um(k,idim)/um(k,1)
@@ -288,10 +311,11 @@ SUBROUTINE upwind(qleft,qright,fgdnv,zero_flux)
   ! 1D Upwind Riemann solver
   IMPLICIT NONE  
   REAL(dp)::zero_flux
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fgdnv
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright
+  REAL(dp),DIMENSION(1:nvar+1)::fgdnv
 
-  REAL(dp),DIMENSION(1:nvar)::fleft,fright,fmean
-  REAL(dp),DIMENSION(1:nvar)::uleft,uright,udiff
+  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean
+  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
   REAL(dp):: vleft,vright,bx_mean
   INTEGER ::l
   
@@ -327,10 +351,10 @@ SUBROUTINE lax_friedrich(qleft,qright,fgdnv,zero_flux)
   ! 1D local Lax-Friedrich Riemann solver
   IMPLICIT NONE  
   REAL(dp)::zero_flux
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fgdnv
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright
 
-  REAL(dp),DIMENSION(1:nvar)::fleft,fright,fmean
-  REAL(dp),DIMENSION(1:nvar)::uleft,uright,udiff
+  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean,fgdnv
+  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
   REAL(dp):: vleft,vright,bx_mean
   INTEGER ::l
   
@@ -366,9 +390,9 @@ SUBROUTINE hll(qleft,qright,fgdnv)
   USE hydro_parameters
   ! 1D HLL Riemann solver
   IMPLICIT NONE  
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fgdnv
-  REAL(dp),DIMENSION(1:nvar)::fleft,fright
-  REAL(dp),DIMENSION(1:nvar)::uleft,uright,udiff
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright
+  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fgdnv
+  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
   REAL(dp):: vleft,vright,bx_mean,cfleft,cfright,SL,SR
   INTEGER ::l
   
@@ -397,11 +421,12 @@ END SUBROUTINE hll
 !###########################################################
 !###########################################################
 SUBROUTINE hlld(qleft,qright,fgdnv)
-  USE hydro_parameters, ONLY: nvar, gamma
+  USE hydro_parameters
   USE const
   ! HLLD Riemann solver (Miyoshi & Kusano, 2005, JCP, 208, 315)
   IMPLICIT NONE
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fgdnv
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright
+  REAL(dp),DIMENSION(1:nvar+1)::fgdnv
   REAL(dp)::SL,SR,SAL,SAR
   REAL(dp)::entho,A,sgnm
   REAL(dp)::rl,pl,ul,vl,wl,cl,ecinl,emagl,etotl,ptotl,vdotbl,bl,el
@@ -412,9 +437,13 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   REAL(dp)::sqrrstarr,etotstarr,etotstarstarr
   REAL(dp)::ustar,ptotstar,estar,vstarstar,wstarstar,bstarstar,cstarstar,vdotbstarstar
   REAL(dp)::ro,uo,vo,wo,bo,co,ptoto,etoto,vdotbo
+  REAL(dp)::einto,eintl,eintr,eintstarr,eintstarl
 
-  INTEGER ::ivar
-  
+  INTEGER ::ivar,irad
+#if NENER>0
+  REAL(dp),dimension(1:nener)::erado,eradl,eradr
+  REAL(dp),dimension(1:nener)::eradstarl,eradstarr
+#endif
   entho = one/(gamma-one)
 
   ! Enforce continuity of normal component
@@ -430,6 +459,14 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   etotl = Pl*entho+ecinl+emagl
   Ptotl = Pl + emagl
   vdotBl= ul*A+vl*Bl+wl*cl
+#if NENER>0
+  do irad = 1,nener
+     eradl(irad) = qleft(8+irad)/(gamma_rad(irad)-1.0d0)
+     etotl = etotl + eradl(irad)
+     Ptotl = Ptotl + qleft(8+irad)
+  end do
+#endif
+  eintl=Pl*entho
 
   ! Right variables
   rr=qright(1); Pr=qright(2); ur=qright(3)
@@ -439,7 +476,15 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   etotr = Pr*entho+ecinr+emagr
   Ptotr = Pr + emagr
   vdotBr= ur*A+vr*Br+wr*Cr
-
+#if NENER>0
+  do irad = 1,nener
+     eradr(irad) = qright(8+irad)/(gamma_rad(irad)-1.0d0)
+     etotr = etotr + eradr(irad)
+     Ptotr = Ptotr + qright(8+irad)
+  end do
+#endif
+  eintr=Pr*entho
+  
   ! Find the largest eigenvalues in the normal direction to the interface
   CALL find_speed_fast(qleft ,cfastl)
   CALL find_speed_fast(qright,cfastr)
@@ -462,6 +507,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   rstarl=rl*(SL-ul)/(SL-ustar)
   estar =rl*(SL-ul)*(SL-ustar)-A**2
   el    =rl*(SL-ul)*(SL-ul   )-A**2
+#if NENER>0
+  do irad = 1,nener
+     eradstarl(irad)=eradl(irad)*(SL-ul)/(SL-ustar)
+  end do
+#endif
+  eintstarl=eintl*(SL-ul)/(SL-ustar)
   if(abs(estar)<1e-4*A**2)then
      vstarl=vl
      Bstarl=Bl
@@ -483,6 +534,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   rstarr=rr*(SR-ur)/(SR-ustar)
   estar =rr*(SR-ur)*(SR-ustar)-A**2
   er    =rr*(SR-ur)*(SR-ur   )-A**2
+#if NENER>0
+  do irad = 1,nener
+     eradstarr(irad)=eradr(irad)*(SL-ul)/(SL-ustar)
+  end do
+#endif
+  eintstarr=eintr*(SL-ul)/(SL-ustar)
   if(abs(estar)<1e-4*A**2)then
      vstarr=vr
      Bstarr=Br
@@ -520,6 +577,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotl
      etoto=etotl
      vdotBo=vdotBl
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradl(irad)
+     end do
+#endif
+     einto=eintl
   else if(SAL>0d0)then
      ro=rstarl
      uo=ustar
@@ -530,6 +593,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotstar
      etoto=etotstarl
      vdotBo=vdotBstarl
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradstarl(irad)
+     end do
+#endif
+     einto=eintstarl
   else if(ustar>0d0)then
      ro=rstarl
      uo=ustar
@@ -540,6 +609,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotstar
      etoto=etotstarstarl
      vdotBo=vdotBstarstar
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradstarl(irad)
+     end do
+#endif
+     einto=eintstarl
   else if(SAR>0d0)then
      ro=rstarr
      uo=ustar
@@ -550,6 +625,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotstar
      etoto=etotstarstarr
      vdotBo=vdotBstarstar
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradstarr(irad)
+     end do
+#endif
+     einto=eintstarr
   else if (SR>0d0)then
      ro=rstarr
      uo=ustar
@@ -560,6 +641,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotstar
      etoto=etotstarr
      vdotBo=vdotBstarr
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradstarr(irad)
+     end do
+#endif
+     einto=eintstarr
   else
      ro=rr
      uo=ur
@@ -570,6 +657,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptoto=Ptotr
      etoto=etotr
      vdotBo=vdotBr
+#if NENER>0
+     do irad = 1,nener
+        erado(irad)=eradr(irad)
+     end do
+#endif
+     einto=eintr
   end if
 
   ! Compute the Godunov flux
@@ -581,8 +674,13 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   fgdnv(6) = Bo*uo-A*vo
   fgdnv(7) = ro*uo*wo-A*Co
   fgdnv(8) = Co*uo-A*wo
-#if NVAR > 8
-  do ivar = 9,nvar
+#if NENER>0
+  do irad = 1,nener
+     fgdnv(8+irad) = uo*erado(irad)
+  end do
+#endif
+#if NVAR>8+NENER
+  do ivar = 9+nener,nvar
      if(fgdnv(1)>0)then
         fgdnv(ivar) = fgdnv(1)*qleft (ivar)
      else
@@ -590,7 +688,8 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      endif
   end do
 #endif
-
+  !Thermal energy
+  fgdnv(nvar+1) = uo*einto
 END SUBROUTINE hlld
 !###########################################################
 !###########################################################
@@ -605,8 +704,9 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   !! Vtransverse1, Btransverse1, Vtransverse2, Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i , ivar, ib
-  REAL(dp),DIMENSION(1:nvar):: qvar, cvar, ff
+  INTEGER :: i , irad, ib, ivar
+  REAL(dp),DIMENSION(1:nvar  ):: qvar
+  REAL(dp),DIMENSION(1:nvar+1):: cvar,ff
   REAL(dp) :: ecin,emag,etot,d,u,v,w,A,B,C,P,Ptot,entho
 
   ! Local variables
@@ -617,6 +717,12 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   emag = half*(A*A+B*B+C*C)
   etot = P*entho+ecin+emag
   Ptot = P + emag
+#if NENER>0
+  do irad = 1,nener
+     etot    = etot + qvar(8+irad)/(gamma_rad(irad)-one)
+     Ptot    = Ptot + qvar(8+irad)
+  end do
+#endif
   
   ! Compute conservative variables
   cvar(1) = d
@@ -627,11 +733,18 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   cvar(6) = B
   cvar(7) = d*w
   cvar(8) = C
-#if NVAR > 8
-  do ivar = 9,nvar
+#if NENER>0
+  do irad = 1,nener
+     cvar(8+irad) = qvar(8+irad)/(gamma_rad(irad)-one)
+  end do
+#endif
+#if NVAR>8+NENER
+  do ivar = 9+nener,nvar
      cvar(ivar) = d*qvar(ivar)
   end do
 #endif
+  !Thermal energy
+  cvar(nvar+1)=P*entho
 
   ! Compute fluxes
   ff(1) = d*u
@@ -642,11 +755,18 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   ff(6) = B*u-A*v
   ff(7) = d*u*w-A*C
   ff(8) = C*u-A*w
-#if NVAR > 8
-  do ivar = 9,nvar
+#if NENER>0
+  do irad = 1,nener
+     ff(8+irad) = u*cvar(8+irad)
+  end do
+#endif
+#if NVAR>8+NENER
+  do ivar = 9+nener,nvar
      ff(ivar) = d*u*qvar(ivar)
   end do
 #endif
+  ! Thermal energy
+  ff(nvar+1)=P*entho*u
 
 END SUBROUTINE find_mhd_flux 
 !###########################################################
@@ -663,7 +783,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i ,ib, iv
+  INTEGER :: i ,ib, iv, irad
   REAL(dp),DIMENSION(1:nvar):: qvar  
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
@@ -672,6 +792,12 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   v=qvar(5); B=qvar(6); w=qvar(7); C=qvar(8)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
+#if NENER>0
+  do irad = 1,nener
+     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  end do
+#endif
+  
   d2 = half*(B2/d+c2)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf+abs(u)
@@ -690,7 +816,7 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i ,ib, iv
+  INTEGER :: i ,ib, iv, irad
   REAL(dp),DIMENSION(1:nvar):: qvar  
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
@@ -699,6 +825,11 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   v=qvar(5); B=qvar(6); w=qvar(7); C=qvar(8)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
+#if NENER>0
+  do irad = 1,nener
+     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  end do
+#endif
   d2 = half*(B2/d+c2)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf
@@ -737,8 +868,8 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   IMPLICIT NONE
 
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
-  REAL(dp),DIMENSION(1:nvar)::fleft,fright,fmean,qmean
-  REAL(dp),DIMENSION(1:nvar)::uleft,uright,udiff
+  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean,qmean
+  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
 
   REAL(dp), DIMENSION(7,7) :: lem, rem
   REAL(dp), DIMENSION(7)        :: lambda, lambdal, lambdar, a
@@ -929,7 +1060,7 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   fmean(6) = half * fluxby
   fmean(7) = half * fluxmz
   fmean(8) = half * fluxbz
-#if NVAR > 8
+#if NVAR>8
   DO n=9,nvar
      if(fmean(1)>0)then
         fmean(n)=qleft (n)*fmean(1)
@@ -951,7 +1082,8 @@ SUBROUTINE hydro_acoustic(qleft,qright,fgdnv)
   implicit none
 
   ! dummy arguments
-  real(dp),dimension(1:nvar)::qleft,qright,fgdnv,qgdnv,ugdnv
+  real(dp),dimension(1:nvar)::qleft,qright
+  real(dp),dimension(1:nvar+1)::fgdnv,qgdnv,ugdnv
 
   ! local variables
   integer::i,n
