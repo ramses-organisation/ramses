@@ -46,7 +46,7 @@ subroutine dump_all
            call output_cool(filename)
         end if
         if(sink)then
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.info'
            call output_sink(filename)
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
            call output_sink_csv(filename)
@@ -67,6 +67,10 @@ subroutine dump_all
      if(pic)then
         filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
         call backup_part(filename)
+        if(sink)then
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
+           call backup_sink(filename)
+        end if
      end if
      if(poisson)then
         filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
