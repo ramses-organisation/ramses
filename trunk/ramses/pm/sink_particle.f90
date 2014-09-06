@@ -26,8 +26,6 @@ subroutine create_sink
   integer::ilevel,ivar
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
-  if (.not. create_sinks)return
-
   if(verbose)write(*,*)' Entering create_sink'
 
   ! Conversion factor from user units to cgs units
@@ -2986,7 +2984,7 @@ subroutine f_gas_sink(ilevel)
      one_over_msink=1./msink(isink)
      if (direct_force_sink(isink))then
 
-        d_min=huge(0._dp)
+        d_min=boxlen
 
         ! Loop over myid grids by vector sweeps
         ncache=active(ilevel)%ngrid

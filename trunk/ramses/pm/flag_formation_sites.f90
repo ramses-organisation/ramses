@@ -57,7 +57,7 @@ subroutine flag_formation_sites
                 (xsink(j,3)-peak_pos(i,3))**2
            if (dist<(ir_cloud*dx_min)**2)then
               occupied(i)=1
-              if(myid==1 .and. clinfo)write(*,*)'blocked clump # ',i,' for sink production because of sink # ',idsink(j)
+              if(clinfo)write(*,*)'blocked clump # ',i,' for sink production because of sink # ',idsink(j)
            end if
         end do
      end do
