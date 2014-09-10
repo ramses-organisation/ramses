@@ -8,7 +8,7 @@ subroutine write_screen
   include 'mpif.h'
 #endif
   !
-  integer::igrid,jgrid,ind,icpu,info
+  integer::igrid,jgrid,ind,icpu,info,irad
   integer::i,icell,ncell,ilevel,ncache
   integer::icellmin,nx_loc
   real(dp)::dx,scale,smallp,ddd,ppp
@@ -20,6 +20,9 @@ subroutine write_screen
   real(kind=8),dimension(:),allocatable::dd_all,uu_all,vv_all,ww_all
   real(kind=8),dimension(:),allocatable::AA_all,BB_all,CC_all
   real(kind=8),dimension(:),allocatable::mm_all,gg_all,dtot_all
+#if NENER>0
+  real(kind=8),dimension(:,:),allocatable::prad_all,prad
+#endif
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
 
@@ -96,6 +99,10 @@ subroutine write_screen
   et_all=0.0D0; ei_all=0.0D0; ek_all=0.0D0; em_all=0.0D0
   uu_all=0.0D0; vv_all=0.0D0; ww_all=0.0D0; gg_all=0.0D0; ll_all=0
   AA_all=0.0D0; BB_all=0.0D0; CC_all=0.0D0
+#if NENER>0
+  allocate(prad(1:ncell,1:nener),prad_all(1:ncell,1:nener))
+  prad=0.0D0; prad_all=0.0D0
+#endif
 
   icell=iskip(myid)
   do ilevel=1,nlevelmax
@@ -145,6 +152,12 @@ subroutine write_screen
                     em(icell)=0.5d0*(AA(icell)**2+BB(icell)**2+CC(icell)**2)
                     ek(icell)=0.5d0*(uu(icell)**2+vv(icell)**2+ww(icell)**2)
                     ei(icell)=et(icell)-em(icell)-dd(icell)*ek(icell)
+#if NENER>0
+                    do irad=1,nener
+                       ei(icell)=ei(icell)-uold(ind_cell(i),8+irad)
+                       prad(icell,irad)=(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),8+irad)
+                    end do
+#endif
                  end if
               end do
            end do
@@ -191,11 +204,19 @@ subroutine write_screen
   uu=uu_all; vv=vv_all; ww=ww_all
   AA=AA_all; BB=BB_all; CC=CC_all
   gg=gg_all; ll=ll_all 
+#if NENER>0
+  call MPI_ALLREDUCE(prad,prad_all,ncell*nener,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  prad=prad_all
+#endif
 #endif
 
   if(myid==1)then
      write(*,116)'===================================================================================================='
+#if NENER>0
+     write(*,116)'lev      x           d          u          v           w          Pnt      P          A          B          C'
+#else
      write(*,116)'lev      x           d          u          v           w          P          A          B          C'
+#endif
      ! Sort radius
      allocate(ind_sort(1:ncell))
      call quick_sort(rr,ind_sort,ncell)
@@ -222,6 +243,10 @@ subroutine write_screen
              & uu(ind_sort(i)), &
              & vv(ind_sort(i)), &
              & ww(ind_sort(i)), &
+#if NENER>0
+             & prad(ind_sort(i),1), &
+
+#endif
              & ppp, &
              & AA(ind_sort(i)),  &
              & BB(ind_sort(i)),  &
@@ -237,6 +262,9 @@ subroutine write_screen
   deallocate(et_all,ei_all,em_all,ek_all)
   deallocate(uu_all,vv_all,ww_all,ll_all,gg_all)
   deallocate(AA_all,BB_all,CC_all)
+#if NENER>0
+  deallocate(prad,prad_all)
+#endif
 
   end if
  

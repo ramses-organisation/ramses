@@ -33,8 +33,11 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::u_bound=0.0d0
   real(dp),dimension(1:MAXBOUND)::v_bound=0.0d0
   real(dp),dimension(1:MAXBOUND)::w_bound=0.0d0
-#if NVAR > NDIM+2
-  real(dp),dimension(1:MAXBOUND,1:NVAR-NDIM-2)::var_bound=0.0
+#if NENER>0
+  real(dp),dimension(1:MAXBOUND,1:NENER)::prad_bound=0.0
+#endif
+#if NVAR>NDIM+2+NENER
+  real(dp),dimension(1:MAXBOUND,1:NVAR-NDIM-2-NENER)::var_bound=0.0
 #endif
   ! Refinement parameters for hydro
   real(dp)::err_grad_d=-1.0  ! Density gradient
@@ -44,7 +47,10 @@ module hydro_parameters
   real(dp)::floor_u=1.d-10   ! Velocity floor
   real(dp)::floor_p=1.d-10   ! Pressure floor
   real(dp)::mass_sph=0.0D0   ! mass_sph
-#if NVAR > NDIM+2
+#if NENER>0
+  real(dp),dimension(1:NENER)::err_grad_prad=-1.0
+#endif
+#if NVAR>NDIM+2+NENER
   real(dp),dimension(1:NVAR-NDIM-2)::err_grad_var=-1.0
 #endif
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1.0
@@ -58,7 +64,7 @@ module hydro_parameters
 #if NENER>0
   real(dp),dimension(1:MAXREGION,1:NENER)::prad_region=0.0
 #endif
-#if NVAR > NDIM+2+NENER
+#if NVAR>NDIM+2+NENER
   real(dp),dimension(1:MAXREGION,1:NVAR-NDIM-2-NENER)::var_region=0.0
 #endif
   ! Hydro solver parameters

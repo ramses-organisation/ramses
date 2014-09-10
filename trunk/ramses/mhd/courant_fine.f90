@@ -113,7 +113,14 @@ subroutine courant_fine(ilevel)
                    & -0.125d0*(uu(i,5+ivar)+uu(i,nvar+ivar))**2*vol
            end do
         end do
-        
+#if NENER>0
+        do ivar=1,nener
+           do i=1,nleaf
+              eint_loc=eint_loc-uu(i,8+ivar)*vol
+           end do
+        end do
+#endif
+   
         ! Compute CFL time-step
         if(nleaf>0)then
            call cmpdt(uu,gg,dx,dt_lev,nleaf)

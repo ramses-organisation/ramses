@@ -4,7 +4,7 @@ subroutine backup_hydro(filename)
   implicit none
   character(LEN=80)::filename
 
-  integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound
+  integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound,irad
   real(dp)::d,u,v,w,A,B,C,e
   integer,allocatable,dimension(:)::ind_grid
   real(dp),allocatable,dimension(:)::xdp
@@ -70,7 +70,16 @@ subroutine backup_hydro(filename)
                  end do
                  write(ilun)xdp
               end do
-              do i=1,ncache ! Write pressure
+#if NENER>0
+              ! Write non-thermal pressures
+              do ivar=9,8+nener
+                 do i=1,ncache
+                    xdp(i)=(gamma_rad(ivar-8)-1d0)*uold(ind_grid(i)+iskip,ivar)
+                 end do
+                 write(ilun)xdp
+              end do
+#endif
+              do i=1,ncache ! Write thermal pressure
                  d=uold(ind_grid(i)+iskip,1)
                  u=uold(ind_grid(i)+iskip,2)/d
                  v=uold(ind_grid(i)+iskip,3)/d
@@ -79,11 +88,16 @@ subroutine backup_hydro(filename)
                  B=0.5*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))
                  C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
                  e=uold(ind_grid(i)+iskip,5)-0.5*d*(u**2+v**2+w**2)-0.5*(A**2+B**2+C**2)
+#if NENER>0
+                 do irad=1,nener
+                    e=e-uold(ind_grid(i)+iskip,8+irad)
+                 end do
+#endif
                  xdp(i)=(gamma-1d0)*e
               end do
               write(ilun)xdp
-#if NVAR > 8
-              do ivar=9,nvar ! Write passive scalars if any
+#if NVAR > 8+NENER
+              do ivar=9+nener,nvar ! Write passive scalars if any
                  do i=1,ncache
                     xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
                  end do
