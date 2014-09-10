@@ -889,7 +889,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
      !use min cell spacing to obtain right position, get right cell index
      do j=1,np
-        xpart(j,divdim)=xpart(j,divdim)+dx_min
+        xpart(j,divdim)=xpart(j,divdim)+0.5*dx_min
      end do
  !    call get_cell_index_for_particle(cind_right,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
@@ -897,7 +897,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
      !use min cell spacing to obtain left position, get left cell index
      do j=1,np
-        xpart(j,divdim)=xpart(j,divdim)-2*dx_min
+        xpart(j,divdim)=xpart(j,divdim)-dx_min
      end do
 !     call get_cell_index_for_particle(cind_left,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
 
@@ -905,14 +905,14 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
      !back to original position
      do j=1,np
-        xpart(j,divdim)=xpart(j,divdim)+dx_min
+        xpart(j,divdim)=xpart(j,divdim)+0.5*dx_min
      end do
 
      !compute divergence of (rho*v - rho*vsink) in one go
      do j=1,np
         isink=-idp(ind_part(j))
         divpart(j)=divpart(j)+(fluid_var_right(j,divdim+1)-fluid_var_right(j,1)*vsink(isink,divdim)-&
-             fluid_var_left(j,divdim+1)+fluid_var_left(j,1)*vsink(isink,divdim))*one_over_dx_min*0.5        
+             fluid_var_left(j,divdim+1)+fluid_var_left(j,1)*vsink(isink,divdim))*one_over_dx_min
         !        divpart(j)=divpart(j)+(uold(cind_right(j),divdim+1)-uold(cind_right(j),1)*vsink(isink,divdim)-&
 !             uold(cind_left(j),divdim+1)+uold(cind_left(j),1)*vsink(isink,divdim))*one_over_dx_min*0.5        
      end do
@@ -4003,6 +4003,19 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      end do
   end do
 
+  do idim=1,ndim
+     do j=1,np
+        if (x(j,idim)<0.5 .or. x(j,idim)>5.5)then
+           print*,'particle outside allowed boundary for cic_get_cell'
+           print*,x(j,1:ndim)
+           if (x(j,idim)<0. .or. x(j,idim)>6.)then
+              print*,'particle outside allowed 3by3by3 grid cube'
+           end if
+           call clean_stop
+        end if
+     end do
+  end do
+  
   ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
   do idim=1,ndim
      do j=1,np
@@ -4129,20 +4142,19 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   end do
 #endif
 
-  ! Compute parent cell adress
+
   do ind=1,twotondim
      do j=1,np
-        indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+        if (ok(j,ind))then
+           ! Compute parent cell adress for cells in ilevel or ilevel+1
+           indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+           ! Check if particles have leaked into level ilevel+1
+           ! if so, set ok to false, but read values from split cell
+           ok(j,ind)=(son(indp(j,ind))==0)
+        end if
      end do
   end do
 
-  ! Check if particles have leaked into level ilevel+1
-  ! if so, set ok to false, but read values from split cell
-  do ind=1,twotondim
-     do j=1,np
-        ok(j,ind)=ok(j,ind).and.(son(indp(j,ind))==0)
-     end do
-  end do
 
   do ind=1,twotondim
      do j=1,np
