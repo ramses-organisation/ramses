@@ -37,6 +37,10 @@ subroutine flag_formation_sites
 
   if (smbh)then 
      !block clumps that contain a sink for formation
+
+     ! possible issue here: are all peaks that have some cells in the domain of myid 
+     ! present in the virtual clump boundary of myid?
+
      do j=1,nsink
         pos(1,1:3)=xsink(j,1:3)
         call cmp_cpumap(pos,cc,1)
@@ -57,7 +61,7 @@ subroutine flag_formation_sites
                 (xsink(j,3)-peak_pos(i,3))**2
            if (dist<(ir_cloud*dx_min)**2)then
               occupied(i)=1
-              if(clinfo)write(*,*)'blocked clump # ',i,' for sink production because of sink # ',idsink(j)
+              if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
            end if
         end do
      end do
