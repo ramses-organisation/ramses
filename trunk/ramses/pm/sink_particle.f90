@@ -131,7 +131,6 @@ subroutine create_sink
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end do
   end if
-
   ! Update the cloud particle properties at levelmin
   call update_cloud(levelmin)
 
@@ -171,13 +170,15 @@ subroutine create_cloud_from_sink
   !----------------------------------------------------------------------
 
   real(dp)::scale,dx_min,rr,rmax,rmass
-  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc
+  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc,idim
   integer ::ntot,ntot_all,info
   logical ::ok_free
   real(dp),dimension(1:ndim)::xrel
   real(dp),dimension(1:nvector,1:ndim)::xtest
   integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
+  logical,dimension(1:ndim)::period
+
   ok_true=.true.
 
   if(numbtot(1,1)==0) return
@@ -191,6 +192,10 @@ subroutine create_cloud_from_sink
         ind_grid(1)=headl(icpu,1)
      endif
   end do
+
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)
   
   ! Mesh spacing in that level
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -210,6 +215,10 @@ subroutine create_cloud_from_sink
            if(rr<=rmax)then
               do isink=1,nsink
                  xtest(1,1:3)=xsink(isink,1:3)+xrel(1:3)
+                 do idim=1,ndim
+                    if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
+                    if (period(idim) .and. xtest(1,idim)<0.)xtest(1,idim)=xtest(1,idim)+boxlen
+                 end do
                  call cmp_cpumap(xtest,cc,1)
                  if(cc(1).eq.myid)then                    
                     call remove_free(ind_cloud,1)
@@ -1134,10 +1143,15 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan
   real(dp)::r_abs
   logical::nolacc
+  logical,dimension(1:ndim)::period
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)
+
 #if NDIM==3
   
   ! Gravitational constant
@@ -1240,6 +1254,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            end if
 
            ! momentum in relative motion
+           r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
+           do idim=1,ndim
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5)xx(j,idim,ind)=xx(j,idim,ind)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*-0.5)xx(j,idim,ind)=xx(j,idim,ind)-boxlen
+           end do
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            r_abs=sum(r_rel(1:3)**2)**0.5      
            p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
