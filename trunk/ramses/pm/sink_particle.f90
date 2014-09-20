@@ -1215,7 +1215,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (new_born(isink))then
                  ! on sink creation, new sinks
                  acc_mass=vol(j,ind)*sink_seedmass/ncloud_sink
-                 acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
+                 acc_mass=max(min(acc_mass,0.05*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
               else
                  ! on sink creation, preexisting sinks
                  acc_mass=0.         
@@ -1284,7 +1284,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            !add accreted properties
            msink_new(isink)=msink_new(isink)+acc_mass
            delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
-           xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*xx(j,1:3,ind)
+           xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*(xsink(isink,1:3)+r_rel(1:3))
            vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
@@ -1479,6 +1479,8 @@ subroutine compute_accretion_rate(write_sinks)
         !compute maximum timestep allowed by sink
         if (dMsink_overdt(isink)>0.)then
            if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink))
+           !make sure that sink doesnt accrete more than its own mass within one timestep 
+           dt_acc(isink)=min(dt_acc(isink),(c_acc*msink(isink)/(dMsink_overdt(isink))))
         end if
            
      end if
@@ -3217,7 +3219,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
