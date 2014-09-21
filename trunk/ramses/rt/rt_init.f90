@@ -47,7 +47,7 @@ SUBROUTINE rt_init
   ! until needed.
   if(rt .and. .not.rt_otsa) rt_advect=.true.                              
   if(rt .and. rt_nsource .gt. 0) rt_advect=.true.                         
-  if(rt .and. rt_nregion .gt. 0) rt_advect=.true.                         
+  if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
@@ -225,6 +225,13 @@ SUBROUTINE read_rt_groups(nml_ok)
   rewind(1)
   read(1,NML=rt_groups,END=101)
 101 continue              ! no harm if no rt namelist
+
+  if(minval(group_egy) .le. 0d0 .and. myid==1) then
+     print*,'========================================================='
+     print*,'WARNING! Some photon groups have zero or negative energy!'
+     print*,'This could have unwanted effects, so be careful!!!'
+     print*,'========================================================='
+  endif
 
   call updateRTGroups_CoolConstants
   call write_group_props(.false.,6)
