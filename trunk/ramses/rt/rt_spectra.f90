@@ -259,7 +259,7 @@ SUBROUTINE init_SED_table()
   integer::i,ia,iz,ip,ii,dum
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
-  real(kind=8)::dlgA, pL0, pL1, tmp, minAge
+  real(kind=8)::dlgA, pL0, pL1, tmp
   integer::locid,ncpu,ierr
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
 !-------------------------------------------------------------------------
@@ -364,7 +364,6 @@ SUBROUTINE init_SED_table()
      ! Now the SED properties are in tbl...just need to rebin it, to get !
      ! even log-intervals between bins for fast interpolation.           !
      dlgA = SED_dlgA ; SED_dlgZ = -SED_nz
-     ages(1)=minAge     ! Bc zero age impossible for logarithmic rebinning
      call rebin_log(dlgA, dble(SED_dlgZ)                                 &
           , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), zs, nv        &
           , reb_tbl, SED_nA, SED_nZ, rebAges, SED_Zeds)
@@ -435,6 +434,7 @@ SUBROUTINE update_SED_group_props()
   sum_egy_cpu = 0d0 ! photon energies for all stars belonging to  
   sum_csn_cpu = 0d0 ! 'this' cpu
   sum_cse_cpu = 0d0
+  nstars=0
   do i=1,npartmax
      if(levelp(i).le.0 .or. idp(i).eq.0 .or. tp(i).eq.0.)                &
         cycle ! not a star
