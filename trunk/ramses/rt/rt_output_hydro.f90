@@ -172,7 +172,7 @@ SUBROUTINE write_group_props(update,lun)
 901 format ('  groupL0  [eV] =', 20f12.3)
 902 format ('  groupL1  [eV] =', 20f12.3)
 903 format ('  spec2group    =', 20I12)
-904 format ('  egy      [eV] =', 20f12.3)
+904 format ('  egy      [eV] =', 1pe12.3)
 905 format ('  csn    [cm^2] =', 20(1pe12.3))
 906 format ('  cse    [cm^2] =', 20(1pe12.3))
 907 format ('  ---Group',I2)
@@ -189,7 +189,7 @@ SUBROUTINE output_rt_stats
   use rt_parameters
   implicit none
   integer*8:: max_all, tot_all, cells_all,loopCodes_tot
-  integer*8:: loopCodes_all(4)
+  integer*8:: loopCodes_all(20)
   integer::info
   real(dp)::step_nPhot_all, step_nStar_all, step_mStar_all
   real(dp)::scale_l, scale_t, scale_d, scale_v, scale_nh, scale_T2
@@ -218,15 +218,15 @@ SUBROUTINE output_rt_stats
         write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt_advect
         loopCodes_tot = SUM(loopCodes)
         if(loopCodes_tot .gt. 0) then
-           write(*, 112) dble(loopCodes)/dble(loopCodes_tot)
+           write(*, 112) dble(loopCodes(1:7))/dble(loopCodes_tot)
         else
-           write(*, 112) dble(loopCodes)
+           write(*, 112) dble(loopCodes(1:7))
         endif
      endif
      max_cool_loopcnt=0; tot_cool_loopcnt=0; n_cool_cells=0; loopCodes(:)=0
   endif ! output_coolstats
 111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt_adv=',L)
-112 format(' Subcycling codes [Np, T, xH, xHe]% = ', 4(f7.3, ''))
+112 format(' Subcycling codes [Np, Fp, T, Npd, Td, xH, xHe]% = ', 7(f7.3, ''))
 
   ! Stellar rt feedback statistics:
   if(showSEDstats .and. rt_star) then
