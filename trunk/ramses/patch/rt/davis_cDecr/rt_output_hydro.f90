@@ -126,7 +126,7 @@ SUBROUTINE output_rtInfo(filename)
   ! Write physical parameters
   write(ilun,'("unit_np     =",E23.15)')scale_np
   write(ilun,'("unit_pf     =",E23.15)')scale_pf
-  write(ilun,'("rt_c_frac   =",E23.15)')rt_c_fraction
+  write(ilun,'("rt_c_frac   =",E23.15)')rt_c_cgs/c_cgs   ! Decreasing light speed patch
   write(ilun,*)
 
   ! Write polytropic parameters
