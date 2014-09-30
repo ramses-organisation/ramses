@@ -152,7 +152,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS        &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
-       & ,convert_birth_times, rt_metal_cooling                          &
+       & ,convert_birth_times                                            &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
