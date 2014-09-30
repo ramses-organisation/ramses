@@ -31,7 +31,7 @@ module rt_cooling_module
          , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
-         , rt_isoPress, rt_T_rad, rt_vc, rt_metal_cooling, a_r
+         , rt_isoPress, rt_T_rad, rt_vc, a_r
 
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux, 
@@ -52,7 +52,6 @@ module rt_cooling_module
   logical::isHe=.true.
   logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
   real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
-  logical::rt_metal_cooling=.true.     ! Use metal cooling?              
   logical::rt_isIR=.false.             ! Using IR scattering on dust?    
   logical::rt_isIRtrap=.false.         ! IR trapping in passive scalar?  
   logical::is_kIR_T=.false.            ! k_IR propto T^2?               
@@ -111,7 +110,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   Np_FRAC = 0.2    
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
-  Fp_FRAC = 0.2                          !           Fp update restriction    
+  Fp_FRAC = 0.5 !0.2                          !           Fp update restriction    
 
   if(myid==1) write(*,*) 'IR group index has been set to ',iIR        
 
@@ -150,6 +149,7 @@ SUBROUTINE update_UVrates
   if(.not. rt_UV_hom) RETURN
   
   call inp_UV_rates_table(1./aexp - 1., UVrates)
+  if(myid==1) write(*,*) 'UV heating: ',UVrates(:,2)
 
 END SUBROUTINE update_UVrates
 
@@ -396,7 +396,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      do i=1,nGroups         ! ------------------- Do the update of N and F
         dNp(i)= MAX(smallNp,                                              &
                    (dt*(recRad(i)+dNpdt(i))+dNp(i)) / (1.d0+dt*phAbs(i)))
-        do j=i,nDim
+        do j=1,nDim
            dFp(i,j) = (dt*dFpdt(i,j)+dFp(i,j))/(1.d0+dt*(phAbs(i)+phSc(i)))
         end do
         call reduce_flux(dFp(i,:),dNp(i)*rt_c_cgs)
@@ -439,7 +439,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
   !(ii) UPDATE TEMPERATURE ***********************************************
   if(c_switch .and. cooling .and. .not. rt_T_rad) then
      Hrate=0.                               !  Heating rate [erg cm-3 s-1]
-     if(rt .and. rt_advect) then                                                          
+     if(rt .and. rt_advect) then
         do i=1,nGroups                                     !  Photoheating
            Hrate = Hrate + dNp(i) * SUM(nN(:) * PHrate(i,:))
         end do                                                            
@@ -450,7 +450,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
                          ,a_exp, dCdT2, RT_OTSA)                !  Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
      metal_tot=0.d0 ; metal_prime=0.d0                     ! Metal cooling
-     if(metal .and. rt_metal_cooling)                                    &
+     if(Zsolar .gt. 0d0) &
           call rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,a_exp)      
      X_nHkb= X/(1.5 * nH * kB)                     ! Multiplication factor   
      rate  = X_nHkb*(Hrate - Crate - Zsolar*metal_tot)
