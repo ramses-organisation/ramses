@@ -23,7 +23,7 @@ subroutine init_sink
 
 
   !allocate all sink related quantities...
-  allocate(weightp(npartmax))
+  allocate(weightp(1:npartmax,1:twotondim))
   weightp=0.0
   allocate(msink(1:nsinkmax))
   allocate(tsink(1:nsinkmax))
@@ -220,10 +220,10 @@ subroutine init_sink
   end if
   if (myid==1.and.nsink-nsinkold>0)then
      write(*,*),'sinks read from file '//filename
-     write(*,*),'   id    m       x       y       z       vx      vy      vz      lx      ly      lz  '  
-     write(*,*),'====================================================================================='
+     write(*,'("   Id           M             x             y             z            vx            vy            vz            lx            ly            lz       ")')
+     write(*,'("======================================================================================================================================================")')
      do isink=nsinkold+1,nsink                                                                           
-        write(*,'(I6,X,F7.3,3(X,F7.3),3(X,F7.3),3(X,F7.3))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+        write(*,'(I8,2X,10(2X,E12.5))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
              vsink(isink,1:ndim),lsink(isink,1:ndim)
      end do
   end if

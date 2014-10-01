@@ -43,7 +43,7 @@ subroutine flag_formation_sites
         if (cc(1) .eq. myid)then
            call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
            if (flag2(cell_index(1))>0)then
-              occupied(flag2(cell_index(1)))=1
+              occupied(flag2(cell_index(1))-ipeak_start(myid))=1
               if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',flag2(cell_index(1)),' for sink production because of sink # ',idsink(j)
            end if
         end if
@@ -57,15 +57,15 @@ subroutine flag_formation_sites
                 (xsink(j,3)-peak_pos(i,3))**2
            if (dist<(ir_cloud*dx_min)**2)then
               occupied(i)=1
-              if(myid==1 .and. clinfo)write(*,*)'blocked clump # ',i,' for sink production because of sink # ',idsink(j)
+              if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
            end if
         end do
      end do
   end if
 
-
 #ifndef WITHOUTMPI
   call virtual_peak_int(occupied,'max')
+  call boundary_peak_int(occupied)
 #endif
 
 
@@ -351,26 +351,25 @@ subroutine compute_clump_properties_round2(xx,all_bound)
 
   do j=npeaks,1,-1
      if (relevance(j)>0.)then
-
-        !compute eigenvalues and eigenvectors of Icl_d_3by3
-        a=Icl_3by3(j,1:3,1:3)
-        abs_err=1.d-8*Icl(j)**2+1.d-40
-        call jacobi(a,eigenv,abs_err)
-        A1=a(1,1); A2=a(2,2); A3=a(3,3)
-        
-        !compute the contractions along the eigenvectors of Icl
-        contractions(j,1:3)=0._dp
-        do ii=1,3
-           do jj=1,3
-              contractions(j,1)=contractions(j,1)+Icl_d_3by3(j,ii,jj)*eigenv(1,ii)*eigenv(1,jj)
-              contractions(j,2)=contractions(j,2)+Icl_d_3by3(j,ii,jj)*eigenv(2,ii)*eigenv(2,jj)
-              contractions(j,3)=contractions(j,3)+Icl_d_3by3(j,ii,jj)*eigenv(3,ii)*eigenv(3,jj)
-           end do
-        end do
-
-        !Check wether clump is contracting fast enough along all axis
         contracting(j)=.true.
-        if (Icl(j)>0.)then !not just one cell...
+        if (n_cells(j)>1)then !not just one cell...        
+           !compute eigenvalues and eigenvectors of Icl_d_3by3
+           a=Icl_3by3(j,1:3,1:3)
+           abs_err=1.d-8*Icl(j)**2+1.d-40
+           call jacobi(a,eigenv,abs_err)        
+           A1=a(1,1); A2=a(2,2); A3=a(3,3)
+           
+           !compute the contractions along the eigenvectors of Icl
+           contractions(j,1:3)=0._dp
+           do ii=1,3
+              do jj=1,3
+                 contractions(j,1)=contractions(j,1)+Icl_d_3by3(j,ii,jj)*eigenv(1,ii)*eigenv(1,jj)
+                 contractions(j,2)=contractions(j,2)+Icl_d_3by3(j,ii,jj)*eigenv(2,ii)*eigenv(2,jj)
+                 contractions(j,3)=contractions(j,3)+Icl_d_3by3(j,ii,jj)*eigenv(3,ii)*eigenv(3,jj)
+              end do
+           end do
+           
+           !Check wether clump is contracting fast enough along all axis                      
            contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed 
@@ -505,7 +504,7 @@ subroutine jacobi(A,x,err2)
 
   integer::n
   integer::i,j,k
-  real(dp)::b2, bar
+  real(dp)::b2, bar,dummy
   real(dp)::beta, coeff, c, s, cs, sc
   
   n=3
@@ -535,8 +534,9 @@ subroutine jacobi(A,x,err2)
      do i=1,n-1
         do j=i+1,n
            if (A(j,i)**2 <= bar) cycle  ! do not touch small elements
+           dummy=b2
            b2 = b2 - 2.0*A(j,i)**2
-           bar = 0.5*b2/9.
+           bar = max(0.5*b2/9.,0.) !deal with weird optimized arithmetics...
            ! calculate coefficient c and s for Givens matrix
            beta = (A(j,j)-A(i,i))/(2.0*A(j,i))
            coeff = 0.5*beta*(1.0+beta**2)**(-0.5)

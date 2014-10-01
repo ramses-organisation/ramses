@@ -44,7 +44,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
-  real(dp),allocatable,dimension(:)  ::weightp  ! weight of cloud parts for sink accretion only
+  real(dp),allocatable,dimension(:,:)  ::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list
