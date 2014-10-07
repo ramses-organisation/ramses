@@ -54,10 +54,14 @@ subroutine rt_init_hydro
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
      fileloc='output_'//TRIM(nchar)//'/rt_'//TRIM(nchar)//'.out'
-     inquire(file=fileloc, exist=ok)
-     if(.not.ok.and.static) return ! May be post-processing of normal RAMSES
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+     inquire(file=fileloc, exist=ok)
+     if(.not.ok.and.static) then
+        if(myid==1) write(*,*) &
+             'Could not read RT output, but continuing in case of postprocessing.'
+        return ! May be post-processing of normal RAMSES
+     endif
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nrtvar2

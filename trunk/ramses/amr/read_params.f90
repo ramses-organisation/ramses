@@ -32,10 +32,10 @@ subroutine read_params
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
-  namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
+  namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov,tendmov,aendmov
+       & ,imovout,imov,tendmov,aendmov,proj_axis
 
   ! MPI initialization
 #ifndef WITHOUTMPI

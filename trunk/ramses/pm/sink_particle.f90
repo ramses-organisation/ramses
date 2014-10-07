@@ -1297,21 +1297,21 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
            ! Check for neg density inside sink accretion radius
-!           if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
-              ! write(*,*),'====================================================='
-              ! write(*,*),'DANGER of neg density :-( at location'
-              ! write(*,*),xx(j,1:3,ind)
-              ! write(*,*),'due to',isink
-              ! write(*,*),acc_mass/vol_loc,d/d_sink,density/d_sink
-              ! write(*,*),indp(j,ind),myid
-              ! write(*,*),'nol_accretion: ',nolacc
-              ! do i=1,nsink
-              !    write(*,*),i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
-              ! end do
-              ! write(*,*),'try to decrease c_acc in SINK_PARAMS'
-              ! write(*,*),'====================================================='
-              ! !           call clean_stop
-!           end if
+           ! if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
+           !    write(*,*)'====================================================='
+           !    write(*,*)'DANGER of neg density :-( at location'
+           !    write(*,*)xx(j,1:3,ind)
+           !    write(*,*)'due to',isink
+           !    write(*,*)acc_mass/vol_loc,d/d_sink,density/d_sink
+           !    write(*,*)indp(j,ind),myid
+           !    write(*,*)'nol_accretion: ',nolacc
+           !    do i=1,nsink
+           !       write(*,*)i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
+           !    end do
+           !    write(*,*)'try to decrease c_acc in SINK_PARAMS'
+           !    write(*,*)'====================================================='
+           !    !           call clean_stop
+           ! end if
 
 
            if (on_creation)then
@@ -2745,7 +2745,7 @@ subroutine update_cloud(ilevel)
   if (myid==1.and.verbose)then
      write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,*)'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
   end if
 
@@ -3513,8 +3513,8 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
 
 !  do i=1,np
 !     if (clevl(i) .ne. ilevel)then 
-!        write(*,*),'particle outside its level'
-!        write(*,*),'this should not happen'
+!        write(*,*)'particle outside its level'
+!        write(*,*)'this should not happen'
 !     end if
 !  end do
 

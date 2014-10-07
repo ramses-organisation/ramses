@@ -1,8 +1,21 @@
 ! RT pressure patch:
-! Momentum from absorbed directional photons (Fp) is put into gas 
-! momentum. This momentum energy is returned from solve_cooling via the 
-! last nGroup entries in the U-vector, and added to the gas momentum in
-! cooling_fine.
+! Photon momentum is put into gas momentum. 
+! =If rt_isIR=.true., then infrared multiscattering radiation is included.
+!  The IR cross sections are set with rt_kIR_sc and rt_kIR_abs, but
+!  unless the dust temperature evolution is to be included, only use 
+!  rt_kIR_sc.
+! =If rt_k_IRabs > 0, then dust cooling/heating by IR is included.
+! =If rt_kIR_T is set, the IR cross sections are dependant on T
+! =If rt_Trad is set, we use T=Tr, where Tr is the radiation temperature.
+! =If rt_isoPress=.true., then a cN is used for the radiation pressure
+!  of groups other than IR, to include unresolved flux around sources. 
+!  Otherwise F is used.
+! =If rt_isOpt=.true., then optical radiation is included, which is
+!  reprocessed into IR (using cross section rt_kOpt)
+! =UV reprocessing into IR can also be included with rt_kUV.
+! =rt_isIRtrap=.true. activates trapping of IR radiation in optically
+!  thick regions. This is useful if those regions are badly (or not)
+!  resolved.
 ! ------------------------------------------------------------------------
 
 module rt_cooling_module
@@ -15,60 +28,47 @@ module rt_cooling_module
   private   ! default
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
-         , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi, n_U, iNpU, iFpU  &
-         , signc, sigec, PHrate, UVrates                                 &
-         , iP0, iP1, iPtot, rt_isoPress                                  & !RTpress
-         , rt_isIR, rt_isOpt, rt_kIR, rt_kOpt                            & !RTpress
-         , iRTisoPressVar                                                  !RTpress
+         , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
+         , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
+         , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
+         , rt_isoPress, rt_T_rad, rt_vc, a_r
 
-  ! U= (T2, xHII, xHeII, xHeIII, Np_1, ..., Np_n, Fp_1, ..., Fp_n
-  !    ,P_1, ..., P_n, Ptot ), 
-  ! where n=nGroups.
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux, 
-  ! P = directional momentum injection per photon group, 
-  ! Ptot = Total momentum injection magnitude over all groups, including
-  !        'isotropic' injection.
 
-  logical::isHe=.true.
   real(dp),parameter::rhoc      = 1.88000d-29    !  Crit. density [g cm-3]
   real(dp),parameter::mH        = 1.66000d-24    !         H atom mass [g]
   real(dp),parameter::kB        = 1.38062d-16    ! Boltzm.const. [erg K-1]
+  real(dp),parameter::a_r       = 7.5657d-15   ! Rad.const. [erg cm-3 K-4]
   real(dp),parameter::mu_mol    = 1.2195D0
   real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
   real(dp),parameter::twopi     = 6.2831853d0    !            Two times pi
 
-  integer,parameter::n_U=1+nIons+3*nGroups+1     !  # vars in state vector  !RTpress
-  integer,parameter::iT=1                            !       Indexes in U
-  integer,parameter::ix0=2, ix1=1+nIons              !            --
-  integer,parameter::iNp0=2+nIons                    !            --
-  integer,parameter::iNp1=1+nIons+nGroups            !            --
-  integer,parameter::iFp0=2+nIons+nGroups            !            --
-  integer,parameter::iFp1=1+nIons+2*nGroups          !            --
-  integer,parameter::iP0=2+nIons+2*nGroups           !            --        !RTpress
-  integer,parameter::iP1=1+nIons+3*nGroups           !            --        !RTpress
-  integer,parameter::iPtot=iP1+1    ! Total momentum inj. (incl isotropic)  !RTpress
-  integer,dimension(nGroups)::iNpU,iFpU              !       See set_model
-  real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
+  real(dp)::T_min, T_frac, x_min, x_frac, Np_min, Np_frac, Fp_min, Fp_frac
 
-  integer,parameter::iGroupIR=1                      !      IR group index  !RTpress
-  integer::iGroupOpt=1                               ! Optical group index  !RTpress
-  integer::iRTisoPressVar=1                          ! Isop. pscalar index  !RTpress
-  logical::rt_isoPress=.false.         ! Isotr. photon mom -> P_nt?         !RTpress
-  logical::rt_isIR                     ! Using IR scattering on dust?       !RTpress
-  logical::rt_isOpt                    ! Using Optical scattering on dust?  !RTpress
-  real(dp)::rt_kIR=1d3                 ! IR vs dust opacity                 !RTpress
-  real(dp)::rt_kOpt=8d2                ! Optical vs dust opacity            !RTpress
-
+  integer,parameter::iIR=1                           !      IR group index
+  integer::iIRtrapVar=1                              ! IRtrap pscalar index
+  ! Namelist parameters:
+  logical::isHe=.true.
+  logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
+  real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
+  logical::rt_isIR=.false.             ! Using IR scattering on dust?    
+  logical::rt_isIRtrap=.false.         ! IR trapping in passive scalar?  
+  logical::is_kIR_T=.false.            ! k_IR propto T^2?               
+  logical::rt_T_rad=.false.            ! Use T_gas = T_rad
+  logical::rt_vc=.false.               ! (semi-) relativistic RT
+  real(dp),dimension(nGroups)::kappaAbs! Dust absorption opacity    
+  real(dp),dimension(nGroups)::kappaSc ! Dust scattering opacity    
+  
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
-  real(dp),dimension(nGroups,nIons)::signc, sigec, PHrate
+  real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
 
   real(dp),dimension(nIons, 2)::UVrates     !UV backgr. heating/ion. rates
 
 CONTAINS 
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
+SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
      zreioniz_in, correct_cooling, realistic_ne, h, omegab, omega0,      &
      omegaL, astart_sim, T2_sim)
 ! Initialize cooling. All these parameters are unused at the moment and
@@ -96,29 +96,23 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in,  &
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
+  if(myid==1 .and. rt_isIRtrap) write(*,*) &
+       '=========IR trapping is turned ON=============='
   ! do initialization
   isHe=.true. ; if(Y .le. 0.) isHe=.false.
-  U_MIN(iT)       = 0.1                  !                      Minimum T2
-  U_FRAC(iT)      = 0.1            
+  T_MIN           = 0.1                  !                      Minimum T2
+  T_FRAC          = 0.1            
 
-  U_MIN(ix0:ix1)  = 1.d-6                !    Minimum ionization fractions
-  U_FRAC(ix0:ix1) = 0.1    
+  x_MIN           = 1.d-6                !    Minimum ionization fractions
+  x_FRAC          = 0.1    
 
-  U_MIN(iNp0:iNp1) = 1.d-13              !            Photon density floor
-  U_FRAC(iNp0:iNp1) = 0.2    
+  Np_MIN = 1.d-13                        !            Photon density floor
+  Np_FRAC = 0.2    
 
-  U_MIN(iFp0:iFp1)  = 1D-13*rt_c_cgs     !           Minimum photon fluxes
-  U_FRAC(iFp0:iFp1) = 0.2                !           Fp update restriction    
-  U_FRAC(iP0:iP1) = 1.d6                 !    No direct restr. on P update   !RTpress
-  U_FRAC(iPtot) = 1.d6                   !    No direct restr. on P update   !RTpress
+  Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
+  Fp_FRAC = 0.5 !0.2                          !           Fp update restriction    
 
-  if (rt_isIR)  iGroupOpt=2              ! Group index for optical photons   !RTpress
-
-  ! Set up indexes of photon densities and fluxes in U:
-  do ig=0,nGroups-1
-     iNpU(ig+1)=iNp0+ig
-     iFpU(ig+1)=iFp0+ig
-  enddo
+  if(myid==1) write(*,*) 'IR group index has been set to ',iIR        
 
   ! Might also put in here filling in of tables of cooling rates, to 
   ! ease the computational load.
@@ -155,33 +149,26 @@ SUBROUTINE update_UVrates
   if(.not. rt_UV_hom) RETURN
   
   call inp_UV_rates_table(1./aexp - 1., UVrates)
+  if(myid==1) write(*,*) 'UV heating: ',UVrates(:,2)
 
-  !if(myid==1) then
-  !   write(*,*) 'The UV rates have changed to:'
-  !   do i=1,nIons
-  !      write(*,910) UVrates(i,:)
-  !   enddo
-  !zendif
-910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
 END SUBROUTINE update_UVrates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
-                          , dt, a_exp, nCell)
+SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
+                           ,nH, c_switch, Zsolar, dt, a_exp, nCell)
 ! Semi-implicitly solve for new temperature, ionization states, 
-! photon density and flux in a number of cells.
-! parameters: 
-! U      <=>  Initial cell states: (T/mu [K], xHII, xHeII, xHeIII 
-!             ,Np_i [cm-3], Fp_i [cm-2 s-1], dP [g cm-2 s-1]              !RTpress
-!             ,dPtot [[g cm-2 s-1]]).                                     !RTpress
-!             dP_i is impact in gas momentum from each photon group,      !RTpress
-!             in the direction of the group flux (momentum transfer).     !RTpress
-!             dPtot is the total mom. injection (incl. isotropic photons) !RTpress
+! photon density/flux, and gas velocity in a number of cells.
+! Parameters: 
+! T2     <=> T/mu [K] 
+! xion   <=> NION ionization fractions 
+! Np     <=> NGROUPS photon number densities [cm-3]
+! Fp     <=> NGROUPS * ndim photon number fluxes [cm-2 s-1]
+! p_gas  <=> ndim gas momentum densities [cm s-1 g cm-3]
 ! dNpdt   =>  Op split increment in photon densities during dt
 ! dFpdt   =>  Op split increment in photon flux magnitudes during dt
+! nH      =>  Hydrogen number densities [cm-3]  
 ! c_switch=>  Cooling switch (1 for cool/heat, 0 for no cool/heat)
 ! Zsolar  =>  Cell metallicities [solar fraction]
-! nH      =>  Hydrogen number densities [cm-3]  
 ! dt      =>  Timestep size             [s]
 ! a_exp   =>  Cosmic expansion
 ! nCell   =>  Number of cells (length of all the above vectors)
@@ -190,40 +177,47 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
 !-------------------------------------------------------------------------
   use amr_commons
   implicit none  
-  real(dp),dimension(1:nvector, n_U):: U
-  real(dp),dimension(1:nvector, nGroups)::dNpdt,dFpdt
+  real(dp),dimension(1:nvector):: T2
+  real(dp),dimension(1:nvector, nIons):: xion
+  real(dp),dimension(1:nvector, nGroups):: Np, dNpdt
+  real(dp),dimension(1:nvector, nGroups, ndim):: Fp, dFpdt
+  real(dp),dimension(1:nvector, ndim):: p_gas
   real(dp),dimension(1:nvector):: nH, Zsolar
-  logical,dimension(1:nvector)::c_switch
+  logical,dimension(1:nvector):: c_switch
   real(dp)::dt, a_exp
   integer::ncell !--------------------------------------------------------
-  real(dp),dimension(1:nvector):: tLeft, ddt, nHe
+  real(dp),dimension(1:nvector):: tLeft, ddt
   logical:: dt_ok
   real(dp)::dt_rec
-  real(dp),dimension(n_U):: dU
-  integer::i, ia,  nAct, nAct_next, loopcnt, code
+  real(dp):: dT2
+  real(dp),dimension(nIons):: dXion
+  real(dp),dimension(nGroups):: dNp
+  real(dp),dimension(nGroups, ndim):: dFp
+  real(dp),dimension(ndim):: dp_gas
+  integer::i, ia, ig,  nAct, nAct_next, loopcnt, code
   integer,dimension(1:nvector):: indAct              ! Active cell indexes
 !-------------------------------------------------------------------------
   tleft(1:ncell) = dt                !       Time left in dt for each cell
   ddt(1:ncell) = dt                  ! First guess at sub-timestep lengths
-  nHe(1:ncell)=0.25*nH(1:ncell)*Y/X  !         Helium density in each cell
 
   do i=1,ncell
      indact(i) = i                   !      Set up indexes of active cells
      ! Ensure all state vars are legal:
-     U(i,1) = MAX(U(i,1), T2_min_fix)
-     U(i,2) = MIN(MAX(U(i,2), U_MIN(2)),1.d0)
-     U(i,3) = MIN(MAX(U(i,3), U_MIN(3)),1.d0)
-     U(i,4) = MIN(MAX(U(i,4), U_MIN(4)),1.d0)
-     U(i,iNp0:iNp1)= MAX(smallNp, U(i,iNp0:iNp1))
-     if(U(i,3)+U(i,4) .gt. 1.d0) then
-        if(U(i,3) .gt. U(i,4)) then
-           U(i,3)=1.d0-U(i,4)
+     T2(i) = MAX(T2(i), T2_min_fix)
+     xion(i,1:nIons) = MIN(MAX(xion(i,1:nIons), x_MIN),1.d0)
+     if(xion(i,2)+xion(i,3) .gt. 1.d0) then
+        if(xion(i,2) .gt. xion(i,3)) then
+           xion(i,2)=1.d0-xion(i,3)
         else
-           U(i,4)=1.d0-U(i,3)
+           xion(i,3)=1.d0-xion(i,2)
         endif
      endif
-     U(i,iP0:iP1)= 0.d0         ! Initialize momentum transfer to gas to 0 !RTpress
-     U(i,iPtot)= 0.d0           ! Init total momentum transfer to gas to 0 !RTpress
+     if(rt) then
+        do ig=1,ngroups
+           Np(i,ig) = MAX(smallNp, Np(i,ig))
+           call reduce_flux(Fp(i,ig,:),Np(i,ig)*rt_c_cgs)
+        end do
+     endif
   end do
 
   ! Loop until all cells have tleft=0
@@ -235,28 +229,42 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
      nAct_next=0                     ! Active cells for the next iteration
      do ia=1,nAct                             ! Loop over the active cells
         i = indAct(ia)                        !                 Cell index
-        call cool_step(U(i,:), dNpdt(i,:), dFpdt(i,:), ddt(i), nH(i)     &
-                     ,nHe(i), Zsolar(i), a_exp, dt_ok, dt_rec            &
-                     ,c_switch(i), dU, i, loopcnt, code)
-        if(.not. dt_ok) then  
+        call cool_step(T2(i), xion(i,:), Np(i,:), Fp(i,:,:), p_gas(i,:)  &
+                      ,dT2,   dXion(:),  dNp(:),  dFp(:,:),  dp_gas(:)   &
+                      ,dNpdt(i,:), dFpdt(i,:,:), nH(i), c_switch(i)      &
+                      ,Zsolar(i),  ddt(i), a_exp, dt_ok, dt_rec, code    )
+        if(loopcnt .gt. 10000) then
+           call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
+                            ,ddt(i), nH(i), T2(i),  xion(i,:),  Np(i,:)  &
+                            ,Fp(i,:,:),  p_gas(i,:)                      &
+                            ,dT2, dXion, dNp, dFp, dp_gas, code)
+        endif
+        !if(myid==1 .and. i==1) then 
+        !   print*,dt_ok,code,T2(i),Np(i,1),Fp(i,1,:)
+        !endif
+        if(.not. dt_ok) then
            ddt(i)=ddt(i)/2.                    ! Try again with smaller dt 
            nAct_next=nAct_next+1 ; indAct(nAct_next) = i
            loopCodes(code) = loopCodes(code)+1
            cycle 
         endif
-        U(i,:) = U(i,:) + dU         !  Update U (advance the time by ddt)
+        ! Update the cell state (advance the time by ddt):
+        T2(i)     = T2(i) + dT2
+        xion(i,:) = xion(i,:) + dXion(:)
+        if(nGroups .gt. 0) then 
+           Np(i,:)   = Np(i,:) + dNp(:)
+           Fp(i,:,:) = Fp(i,:,:) + dFp(:,:)
+        endif
+        p_gas(i,:)   = p_gas(i,:) + dp_gas(:)
+
         tleft(i)=tleft(i)-ddt(i)
         if(tleft(i) .gt. 0.) then           ! Not finished with this cell
            nAct_next=nAct_next+1 ; indAct(nAct_next) = i
         else if(tleft(i) .lt. 0.) then        ! Overshot by abs(tleft(i))
-           U(i,:)  = U(i,:)  + tleft(i)/ddt(i) * dU
-           ddt(i)  = ddt(i)  + tleft(i)
+           print*,'In rt_solve_cooling: tleft < 0  !!'
+           stop
         endif
-        ddt(i)=dt_rec              ! Use the recommended dt from cool_step        
-        !if(loopcnt .gt. 10000) &
-        if(loopcnt .gt. 100000) &
-             call display_CoolInfo(.true., loopcnt, i, dt-tleft(i), dt,  & 
-                                ddt(i),nH(i), U(i,:), dU, code)
+        ddt(i)=min(dt_rec,tleft(i))    ! Use recommended dt from cool_step
      end do ! end loop over active cells
      nAct=nAct_next
   end do ! end iterative loop
@@ -266,70 +274,102 @@ END SUBROUTINE rt_solve_cooling
 
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &  
-                     ,dt_ok  ,dt_rec, c_switch, dU, nc, loopcnt, code)
-! Compute change dU in state-vector U for a cell in timestep dt, or 
-! return a recommendation for new timestep-length if dt proves too large.
-! U       =>  cell state (cgs)
-! dNpdt   =>  per sec increment in photon densities
-! dFpdt   =>  per sec increment in photon flux magnitudes
-! dt      =>  timestep length (s)
-! nH      =>  cell hydrogen number density (cgs)
-! nHe     =>  cell helium number density (cgs)
-! Zsolar  =>  Cell metallicity (fraction of solar)
-! a_exp   =>  Cosmic expansion factor
+SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
+                    ,dp_gas, dNpdt, dFpdt, nH, c_switch, Zsolar, dt      &
+                    ,a_exp, dt_ok, dt_rec, code)
+! Compute change in cell state in timestep dt, or return a recommendation 
+! for new timestep-length if dt proves too large.
+! T2      => T/mu [K]                                 --- dT2 is new value
+! xion    => NION ionization fractions                --- dXion is new
+! Np      => NGROUPS photon number densities [cm-3]   --- dNp is new value
+! Fp      => NGROUPS * ndim photon fluxes [cm-2 s-1]  --- dFp is new value 
+! p_gas   => ndim gas momenta [cm s-1 g cm-3]         --- dp_gas is new
+! dNpdt   =>  Op split increment in photon densities during dt
+! dFpdt   =>  Op split increment in photon flux magnitudes during dt
+! nH      =>  Hydrogen number densities [cm-3]  
+! c_switch=>  Cooling switch (1 for cool/heat, 0 for no cool/heat)
+! Zsolar  =>  Cell metallicities [solar fraction]
+! dt      =>  Timestep size [s]
+! a_exp   =>  Cosmic expansion
 ! dt_ok   <=  .f. if timestep constraints were broken, .t. otherwise
 ! dt_rec  <=  Recommended timesteps for next iteration
-! c_switch=>  Cooling switch (1=on, 0=off)
-! dU      <=  Change in U during timestep
-! nc       =>  Id of cell (for debug purposes)
-! loopcnt  =>  Number of iteration for cell (for debug)
 ! code    <= Error code in cool step, if dt_ok=.f.
+!
+! The original values, T2, xion etc, must stay unchanged, while dT2, xion
+! etc contain the new values (the difference at the end of the routine).
 !-------------------------------------------------------------------------
   use UV_module, ONLY: iUVvars_cool, UV_Nphot_cgs
   use amr_commons
   use const
   implicit none  
-  real(dp),dimension(n_U):: U, dU
-  real(dp),dimension(nGroups):: dNpdt, dFpdt
-  real(dp):: nH, nHe, Zsolar, dt_rec, dt, a_exp
+  real(dp):: T2, dT2
+  real(dp),dimension(nIons):: xion, dXion
+  real(dp),dimension(nGroups):: Np, dNp, dNpdt
+  real(dp),dimension(nGroups, nDim):: Fp, dFp, dFpdt
+  real(dp),dimension(nDim):: p_gas, dp_gas, dmom
+  real(dp):: nH, Zsolar, dt, a_exp, dt_rec
+  real(dp),dimension(nDim):: u_gas ! Gas velocity
   logical::dt_ok, c_switch!-----------------------------------------------
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
-  real(dp):: xHeI, mu, TK, ne, neInit, Hrate, dAlpha, dBeta, s, jac, q
-  real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
-  real(dp),dimension(nGroups):: recRad, phAbs, phSc                         !RTpress
-  real(dp):: rho                                                            !RTpress
+  real(dp):: dUU, fracMax
+  real(dp):: xHeI, mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta, s, jac,q
+  real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, cr, de, photoRate
   real(dp)::metal_tot,metal_prime
-  integer::i, nc, loopcnt, code
+  integer::i,j,code
+  real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs, dustSc        
+  real(dp),dimension(nGroups),save:: kAbs_loc,kSc_loc
+  real(dp):: rho
+  real(dp):: TR, C_v, E_rad, dE_T, fluxMag
 !-------------------------------------------------------------------------
   dt_ok=.false.
+  nHe=0.25*nH*Y/X  !         Helium number density
   ! Insert UV background emitted and propagated from void regions:
   if(rt_isDiffuseUVsrc .and. nH .le. rt_UVsrc_nHmax)                     &
-                      U(iUVvars_cool) = max(U(iUVvars_cool), UV_Nphot_cgs)
-  dU=U ! U contains the original values, dU the updated ones
-  ! xHI = MAX(1.-dU(2),0.) ; xHII = dU(2) ; xHeII=dU(3) ; xHeIII=dU(4)
-  xHeI=MAX(1.-dU(3)-dU(4),0.d0)
+                Np(iUVvars_cool-4) = max(Np(iUVvars_cool-4), UV_Nphot_cgs)
+  ! U contains the original values, dU the updated ones:
+  dT2=T2 ; dXion=xion ; dNp=Np ; dFp=Fp ; dp_gas=p_gas
+  ! xHI = MAX(1.-xion(1),0.) ; xHII = xion(1)
+  ! xHeII=xion(2) ; xHeIII=xion(3)
+  xHeI=MAX(1.-xion(2)-xion(3),0.d0)
   ! nN='neutral' species (pre-ionized), nI=their ionized counterparts
-  nN(1)  = nH * (1.d0-dU(2))                                     !     nHI
+  nN(1)  = nH * (1.d0-xion(1))                                   !     nHI
   nN(2)  = nHe*xHeI                                              !    nHeI
-  nN(3)  = nHe*dU(3)                                             !   nHeII
-  nI(1)  = nH *dU(2)                                             !    nHII
+  nN(3)  = nHe*xion(2)                                           !   nHeII
+  nI(1)  = nH *xion(1)                                           !    nHII
   nI(2)  = nN(3)                                                 !   nHeII
-  nI(3)  = nHe*dU(4)                                             !  nHeIII
-  mu= 1./(X*(1.+dU(2)) + 0.25*Y*(1.+dU(3)+2.*dU(4)))   
-  TK = U(1) * mu                                            !  Temperature
+  nI(3)  = nHe*xion(3)                                           !  nHeIII
+  mu= 1./(X*(1.+xion(1)) + 0.25*Y*(1.+xion(2)+2.*xion(3)))   
+  if(is_kIR_T) mu=2.33
+  TK = dT2 * mu                                        !  Temperature
   if(rt_isTconst) TK=rt_Tconst                         !  Force constant T
-  ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4))                    !  Electron density
+  ne= nH*xion(1)+nHE*(xion(2)+2.*xion(3))              !  Electron density
   neInit=ne
-  rho = nH / X * mH                                                        !RTpress
+  fracMax=0d0    ! Max. fractional update, to check if dt can be increased
+
+  rho = nH / X * mH
+  kAbs_loc = kappaAbs
+  kSc_loc  = kappaSc
+  if(is_kIR_T) then ! k_IR depends on T
+     ! Special stuff for Krumholz/Davis experiment
+     if(rt_T_rad) then  ! Use radiation temperature for kappa
+        E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
+        TR = max(T2_min_fix,(E_rad*rt_c_cgs/c_cgs/a_r)**0.25)
+        dT2 = TR/mu ;   TK = TR
+     endif
+     kAbs_loc(iIR) = kappaAbs(iIR) * (TK/10d0)**2
+     kSc_loc(iIR)  = kappaSc(iIR)  * (TK/10d0)**2
+  endif
+  ! Set dust absorption and scattering rates [s-1]:
+  dustAbs(:)  = kAbs_loc(:) *rho*Zsolar*rt_c_cgs
+  dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar*rt_c_cgs
 
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
-  if(rt) then 
-     ! Must have this line if restriction on the Fp frac change:
-     U(iFp0:iFp1) = MAX(0D0,MIN(U(iFp0:iFp1), U(iNp0:iNp1)*rt_c_cgs))      !RTpress
+  if(rt .and. rt_advect) then 
      recRad(1:nGroups)=0. ; phAbs(1:nGroups)=0.              
-     ! Scattering rate; reduce the photon flux, but not photon density:    !RTpress
-     phSc(1:nGroups)=0.                                                    !RTpress
+     ! Scattering rate; reduce the photon flux, but not photon density:
+     phSc(1:nGroups)=0.
+
+     ! EMISSION FROM GAS
      if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
         ! alpha(2) A-B becomes negative around 1K, hence the max
@@ -341,66 +381,67 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
                 recRad(spec2group(i)) + alpha(i) * nI(i) * ne
         enddo
      endif
-     do i=1,nGroups      ! ------------------------------------ Absorbtion
+
+     ! ABSORPTION/SCATTERING OF PHOTONS BY GAS
+     do i=1,nGroups      ! --------------------------Ionization absorbtion
         phAbs(i) = SUM(nN(:)*signc(i,:)) ! s-1
      end do
-
-     ! IR and optical depletion by dust absorption:                         !RTpress
-     if(rt_isIR) then !IR scattering on dust                                !RTpress
-        phAbs(iGroupIR)=phAbs(iGroupIR) + 0.001*rho*Zsolar*rt_kIR*rt_c_cgs  !RTpress
-        phSc(iGroupIR)= phSc(iGroupIR) + 0.999*rho*Zsolar*rt_kIR*rt_c_cgs   !RTpress
-     endif                                                                  !RTpress
-     if(rt_isOpt) & ! Always deplete these photons, since they go into IR   !RTpress
-          phAbs(iGroupOpt)= phAbs(iGroupOpt) + rho*Zsolar*rt_kOpt*rt_c_cgs  !RTpress
-
-     do i=1,nGroups         ! ------------------- Do the update of N and F
-        dU(iNpU(i))= MAX(smallNp,                                        &
-             (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i))) / (1.d0+dt*phAbs(i)))
-        dU(iFpU(i)) = MAX(0d0, &
-                (dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*(phAbs(i)+phSc(i))))    !RTpress
-        ! Check the photon flux: Too large relative to available photons? 
-        q = dU(iFpU(i)) / (rt_c_cgs*dU(iNpU(i)))
-        if(q .gt. 1.d0) then           ! Normalize flux if it is too large
-           dU(iFpU(i))=dU(iFpU(i))/q
-        endif
-        ! ----------------------------------------------------------------  !RTpress
-        ! Momentum transfer from photons to gas:                            !RTpress
-        dU(iP0+i-1) = dU(iP0+i-1) + dU(iFpu(i))/rt_c_cgs * dt            &  !RTpress
-            * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs          !RTpress
-        ! Total momentum, including isotropic component:                    !RTpress
-        dU(iPtot)   = dU(iPtot)   + dU(iNpu(i))          * dt            &  !RTpress
-            * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs          !RTpress
-        ! ----------------------------------------------------------------  !RTpress
+     ! IR, optical and UV depletion by dust absorption: ------------------
+     if(rt_isIR) & !IR scattering/abs on dust (abs after T update)        
+        phSc(iIR)  = phSc(iIR) + dustSc(iIR)                        
+     do i=iIR+1,nGroups ! Deplete these photons, since they go into IR 
+        phAbs(i) = phAbs(i) + dustAbs(i)                  
      end do
 
-     ! Opt->IR; Add absorbed Opt energy to the pool of IR photons:          !RTpress
-     ! Use DE_IR = - DE_Opt => DN_IR = -DN_Opt * egy_Opt / egy_IR           !RTpress
-     if(rt_isIR .and. rt_isOpt) then                                        !RTpress
-        dU(iNpU(iGroupIR)) = dU(iNpU(iGroupIR))                          &  !RTpress
-             + dU(iNpU(iGroupOpt)) * phAbs(iGroupOpt) * dt               &  !RTpress
-             * group_egy(iGroupOpt) / group_egy(iGroupIR)                   !RTpress
-        dU(iNpU(iGroupIR)) = MAX(smallNp, dU(iNpU(iGroupIR)))               !RTpress
-     endif                                                                  !RTpress
-     ! -------------------------------------------------------------------  !RTpress
-     dUU=MAXVAL(                                                         &
-        ABS((dU(iNp0:iNp1)-U(iNp0:iNp1))/(U(iNp0:iNp1)+U_MIN(iNp0:iNp1)))&
-        /U_FRAC(iNp0:iNp1) )                                             
+     do i=1,nGroups         ! ------------------- Do the update of N and F
+        dNp(i)= MAX(smallNp,                                              &
+                   (dt*(recRad(i)+dNpdt(i))+dNp(i)) / (1.d0+dt*phAbs(i)))
+        do j=1,nDim
+           dFp(i,j) = (dt*dFpdt(i,j)+dFp(i,j))/(1.d0+dt*(phAbs(i)+phSc(i)))
+        end do
+        call reduce_flux(dFp(i,:),dNp(i)*rt_c_cgs)
+        ! ----------------------------------------------------------------
+        ! Momentum transfer from photons to gas:                          
+        dmom(:)=0d0                                                       
+        if(rt_isoPress .and. .not. (rt_isIR .and. i==iIR)) then 
+           ! rt_isoPress: assume f=1, where f is reduced flux.
+           fluxMag=sqrt(sum(dFp(i,:)))
+           if(fluxMag .gt. 0d0)                                          &
+                dmom(:) = dmom(:) + dNp(i) * dFp(i,:)/fluxMag * dt       &
+                    * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs    
+        else ! Use the actual photon flux vector:
+           dmom(:) = dmom(:) + dFp(i,:)/rt_c_cgs * dt                    &
+                * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs    
+        endif                                                             
+        ! ----------------------------------------------------------------
+     end do
+     dp_gas = p_gas + dmom * rt_pressBoost           ! update gas momentum
+     dUU=MAXVAL(ABS((dNp-Np)/(Np+Np_MIN))/Np_FRAC)
      if(dUU .gt. 1.) then                                 
-       code=1 ;   dU=dU-U; RETURN                             ! dt too big
+        code=1 ;   RETURN                                     ! dt too big
      endif
-     !dUU=MAXVAL(                                                         &  !RTpress
-     !   ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&  !RTpress
-     !   /U_FRAC(iFp0:iFp1) )                                                !RTpress
-     !if(dUU .gt. 1.) then                                                   !RTpress
-     !  code=1 ;   dU=dU-U; RETURN                             ! dt too big  !RTpress
-     !endif                                                                  !RTpress
-  endif
+     fracMax=MAX(fracMax,dUU) ! To check if timestep size can be increased
+     dUU=MAXVAL( abs(dFp-Fp) / (abs(Fp)+Fp_MIN)) / Fp_FRAC
+     if(dUU .gt. 1.) then                                                 
+        code=2 ;   RETURN                                     ! dt too big
+     endif
+     fracMax=MAX(fracMax,DUU)
+
+     ! Add absorbed UV/optical energy to IR:------------------------------  
+     if(rt_isIR) then   
+        do i=iIR+1,nGroups
+           dNp(iIR) = dNp(iIR) + dustAbs(i) * dt                         &
+                               * dNp(i) * group_egy(i) / group_egy(iIR)  
+        end do
+     endif                                                                
+     ! -------------------------------------------------------------------
+  endif !if(rt)
   !(ii) UPDATE TEMPERATURE ***********************************************
-  if(c_switch .and. cooling) then
+  if(c_switch .and. cooling .and. .not. rt_T_rad) then
      Hrate=0.                               !  Heating rate [erg cm-3 s-1]
-     if(rt) then                                                          
+     if(rt .and. rt_advect) then
         do i=1,nGroups                                     !  Photoheating
-           Hrate = Hrate + dU(iNpU(i)) * SUM(nN(:) * PHrate(i,:))
+           Hrate = Hrate + dNp(i) * SUM(nN(:) * PHrate(i,:))
         end do                                                            
      endif                                                                
      if(rt_UV_hom .and. nH .lt. rt_UV_nHSS)                              &
@@ -409,20 +450,49 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
                          ,a_exp, dCdT2, RT_OTSA)                !  Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
      metal_tot=0.d0 ; metal_prime=0.d0                     ! Metal cooling
-     if(metal) call rt_cmp_metals(U(1),nH,mu,metal_tot,metal_prime,a_exp)
-
+     if(Zsolar .gt. 0d0) &
+          call rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,a_exp)      
      X_nHkb= X/(1.5 * nH * kB)                     ! Multiplication factor   
      rate  = X_nHkb*(Hrate - Crate - Zsolar*metal_tot)
-     dRate = -X_nHkb*(dCdT2 - Zsolar*metal_prime)              ! dRate/dT2
-     dUU   = ABS(MAX(T2_min_fix, U(1)+rate*dt)-U(1)) ! 1st order dt constr
-     dU(1) = MAX(T2_min_fix, U(1)+rate*dt/(1.-dRate*dt))    ! New T2 value 
-     dUU   = MAX(dUU, ABS(dU(1)-U(1))) / (U(1)+U_MIN(1)) / U_FRAC(1)
+     dRate = -X_nHkb*(dCdT2 + Zsolar*metal_prime)              ! dRate/dT2
+     dUU   = ABS(MAX(T2_min_fix, T2+rate*dt)-T2)     ! 1st order dt constr
+     dT2   = MAX(T2_min_fix, T2+rate*dt/(1.-dRate*dt))      ! New T2 value 
+     dUU   = MAX(dUU, ABS(dT2-T2)) / (T2+T_MIN) / T_FRAC
      if(dUU .gt. 1.) then                                       ! 10% rule
-        code=2 ; dU=dU-U; RETURN
+        code=3 ; RETURN
      endif
-     if(.not. rt_isTconst) TK=dU(1)*mu
+     fracMax=MAX(fracMax,dUU)
+     TK=dT2*mu
   endif
-  if(rt_isTconst) dU(1)=rt_Tconst
+
+  if(rt_isIR .and. (kAbs_loc(iIR) .gt. 0d0) .and. .not. rt_T_rad) then
+     ! Delta (Cv T) = ( c_red/lambda E - c/lambda a T^4) 
+     !              / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
+     C_v = rho*kb/mh/mu/(gamma-1d0)                                  
+     E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
+     dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
+          / (1d0/kAbs_loc(iIR)/rho/dt + 4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
+     dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
+     dNp(iIR) = dNp(iIR) - dE_T / group_egy(iIR) / ev_to_erg
+
+     dT2 = max(T2_min_fix,dT2)                                   
+     dNp(iIR) = max(dNp(iIR), smallNp)                 
+     dUU=ABS(dNp(iIR)-Np(iIR))/(Np(iIR)+Np_MIN)/Np_FRAC
+     if(dUU .gt. 1.) then                    ! 10% rule for photon density
+       code=4 ;   RETURN                          
+     endif                                                               
+     fracMax=MAX(fracMax,dUU)                                           
+                                                                       
+     dUU   = ABS(dT2-T2) / (T2+T_MIN) / T_FRAC                         
+     if(dUU .gt. 1.) then                                ! 10% rule for T2
+        code=5 ; RETURN                                                  
+     endif                                                                
+     fracMax=MAX(fracMax,dUU)                                             
+     TK=dT2*mu                                                          
+                                                                        
+     call reduce_flux(dFp(iIR,:),dNp(iIR)*rt_c_cgs)           
+  endif       
+
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
   if(rt_OTSA .or. .not. rt_advect) then           !    Recombination rates
@@ -435,27 +505,28 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   beta(1) = comp_Beta_HI(TK)                      !  Coll. ionization rate
   dBeta   = comp_dBeta_dT_HI(TK)
   cr = beta(1) * ne                               !               Creation
-  if(rt) cr = cr + SUM(signc(:,1)*dU(iNp0:iNp1))  !                   [s-1]
+  if(rt) cr = cr + SUM(signc(:,1)*dNp)            !                  [s-1]
   if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) cr = cr + UVrates(1,1) 
   de = alpha(1) * ne                              !            Destruction
   
   ! Not Anninos, but more stable (this IS neccessary, as the one-cell    !
-  ! tests oscillate wildly in the Anninos method):                       ! 
-  S  = cr*(1.-U(2))-de*U(2)
-  dUU= ABS(MIN(MAX(U(2)+dt*S, U_MIN(2)), 1.)-dU(2))
-  jac=(1.-dU(2))*(beta(1)*nH-ne*TK*mu*X*dBeta) &           !  jac=dS/dxHII
-       - cr - de - dU(2) * (alpha(1)*nH-ne*TK*mu*X*dAlpha) !   More stable
-  dU(2) = U(2) + dt*(cr*(1.-U(2))-de*U(2))/(1.-dt*jac)     !
-  dU(2) = MIN(MAX(dU(2), U_MIN(2)),1.d0)
-  dUU   = MAX(dUU, ABS(dU(2)-U(2))) / (U(2)+U_MIN(2)) / U_FRAC(2)
+  ! tests oscillate wildly in the Anninos method):                       !
+  S  = cr*(1.-dXion(1))-de*dXion(1)
+  dUU= ABS(MIN(MAX(dXion(1)+dt*S, x_MIN), 1.)-dXion(1))
+  jac=(1.-dXion(1))*(beta(1)*nH-ne*TK*mu*X*dBeta) &          !jac=dS/dxHII
+       - cr - de - dXion(1) * (alpha(1)*nH-ne*TK*mu*X*dAlpha)! more Stable
+  dXion(1) = xion(1) + dt*(cr*(1.-xion(1))-de*xion(1))/(1.-dt*jac)
+  dXion(1) = MIN(MAX(dXion(1), x_MIN),1.d0)
+  dUU   = MAX(dUU, ABS(dXion(1)-xion(1))) / (xion(1)+x_MIN) / x_FRAC
   if(dUU .gt. 1.) then
-     code=3 ; dU=dU-U; RETURN
+     code=6 ; RETURN
   endif
+  fracMax=MAX(fracMax,dUU)
   !End a more stable and accurate integration-----------------------------
   if(isHe) then
-     ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4)) ! Update ne because of changed xhii 
-     mu= 1./(X*(1.+dU(2)) + 0.25*Y*(1.+dU(3)+2.*dU(4)))  
-     if(.not. rt_isTconst) TK=dU(1)*mu !  Update TK because of changed  mu
+     ne= nH*dXion(1)+nHE*(dXion(2)+2.*dXion(3))  ! Upd. bc of changed xhii 
+     mu= 1./(X*(1.+dXion(1)) + 0.25*Y*(1.+dXion(2)+2.*dXion(3)))  
+     if(.not. rt_isTconst) TK=dT2*mu   !  Update TK because of changed  mu
 
      !(iv) UPDATE xHeI ***************************************************
      if(rt_OTSA .or. .not. rt_advect) then
@@ -468,56 +539,58 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      beta(2) = comp_Beta_HeI(TK)
      beta(3) = comp_Beta_HeII(TK)
      ! Creation = recombination of HeII and electrons
-     cr = alpha(2) * ne * dU(3)
+     cr = alpha(2) * ne * dXion(2)
      ! Destruction = collisional ionization+photoionization of HeI
      de = beta(2) * ne
-     if(rt) de = de + SUM(signc(:,2)*dU(iNp0:iNp1))
+     if(rt) de = de + SUM(signc(:,2)*dNp)
      if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) de = de + UVrates(2,1)
      xHeI = (cr*dt+xHeI)/(1.+de*dt)                          !  The update
      xHeI = MIN(MAX(xHeI, 0.),1.)
 
      !(v) UPDATE xHeII ***************************************************
      ! Creation = coll.- and photo-ionization of HI + rec. of HeIII
-     cr = de * xHeI + alpha(3) * ne * dU(4)
+     cr = de * xHeI + alpha(3) * ne * dXion(3)
      ! Destruction = rec. of HeII + coll.- and photo-ionization of HeII
      photoRate=0.
-     if(rt) photoRate = SUM(signc(:,3)*dU(iNp0:iNp1))
+     if(rt) photoRate = SUM(signc(:,3)*dNp)
      if(rt_UV_hom .and. nH.lt.rt_UV_nHSS) photoRate=photoRate+UVrates(3,1)
      de = (alpha(2) + beta(3)) * ne + photoRate
-     dU(3) = (cr*dt+dU(3))/(1.+de*dt)                        !  The update
-     dU(3) = MIN(MAX(dU(3), U_MIN(3)),1.)
+     dXion(2) = (cr*dt+dXion(2))/(1.+de*dt)                  !  The update
+     dXion(2) = MIN(MAX(dXion(2), x_MIN),1.)
 
      !(vii) UPDATE xHeIII ************************************************
      ! Creation = coll.- and photo-ionization of HeII
-     cr = (beta(3) * ne + photoRate) * dU(3)               !  xHeII is new
+     cr = (beta(3) * ne + photoRate) * dXion(2)            !  xHeII is new
      ! Destruction = rec. of HeIII and e
      de = alpha(3) * ne
-     dU(4) = (cr*dt+dU(4))/(1.+de*dt)                        !  The update
-     dU(4) = MIN(MAX(dU(4), U_MIN(4)),1.)
+     dXion(3) = (cr*dt+dXion(3))/(1.+de*dt)                  !  The update
+     dXion(3) = MIN(MAX(dXion(3), x_MIN),1.)
 
      !(viii) ATOMIC CONSERVATION OF He ***********************************
-     if(xHeI .ge. dU(4)) then      !   Either HeI or HeII is most abundant 
-        if(xHeI .le. dU(3)) dU(3) = 1.-xHeI-dU(4) !  HeII is most abundant
+     if(xHeI .ge. dXion(3)) then   !   Either HeI or HeII is most abundant 
+        if(xHeI .le. dXion(2)) dXion(2) = 1.-xHeI-dXion(3) !  HeII most ab
      else                          ! Either HeII or HeIII is most abundant 
-        if(dU(3) .le. dU(4)) then
-           dU(4) = 1. - xHeI-dU(3)                                !  HeIII
+        if(dXion(2) .le. dXion(3)) then
+           dXion(3) = 1. - xHeI-dXion(2)                          !  HeIII
         else
-           dU(3) = 1. - xHeI-dU(4)                                 !  HeII
+           dXion(2) = 1. - xHeI-dXion(3)                          !   HeII
         endif
      endif
   endif
 
-  ne = nH*dU(2)+nHe*(dU(3)+2.*dU(4))
-  dUU=ABS((ne-neInit)) / (neInit+U_MIN(2)) / U_FRAC(2)
+  ne = nH*dXion(1)+nHe*(dXion(2)+2.*dXion(3))
+  dUU=ABS((ne-neInit)) / (neInit+x_MIN) / x_FRAC
   if(dUU .gt. 1.) then
-     !print *,'e OVERSTEP ', loopcnt
-     code=4 ; dU=dU-U; RETURN
+     code=7 ; RETURN
   endif
+  fracMax=MAX(fracMax,dUU)
 
+  if(rt_isTconst) dT2=rt_Tconst/mu
+
+  dT2 = dT2-T2 ; dXion = dXion-xion ; dNp = dNp-Np ; dFp = dFp-Fp
+  dp_gas = dp_gas-p_gas ! Now the dUs are really changes, not new values
   !(ix) Check if we are safe to use a bigger timestep in next iteration:
-  dU=dU-U    
-  dUU=MAXVAL(ABS((dU)/(U+U_MIN))/U_FRAC)
-  if(dUU .lt. 0.5) then
+  if(fracMax .lt. 0.5) then
      dt_rec=dt*2.
   else
      dt_rec=dt
@@ -528,60 +601,32 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
 END SUBROUTINE cool_step
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE display_U_change(U_old, U_new, nH, loopcnt, code)
-
-! Print cooling information to standard output.
-!------------------------------------------------------------------------
-  use amr_commons
-  use rt_parameters
-  real(dp),dimension(n_U):: U_old, U_new
-  real(dp)::nH, nHe, ne_old, ne_new
-  integer::i, loopcnt, code
-!------------------------------------------------------------------------
-  nHe=0.5*nH*Y/X
-  ne_old= nH*U_old(2)+nHE*(U_old(3)+2.*U_old(4))       ! electron density
-  ne_new= nH*U_new(2)+nHE*(U_new(3)+2.*U_new(4))       ! electron density
-  print *,'U: var------------old-----------new------------dU--'
-  write(*,777)'T',      U_old(1), U_new(1), abs((U_new(1)-U_old(1))/U_old(1))
-  write(*,888)'xHII',   U_old(2), U_new(2), abs((U_new(2)-U_old(2))/U_old(2))
-  write(*,888)'xHeII',  U_old(3), U_new(3), abs((U_new(3)-U_old(3))/U_old(3))
-  write(*,888)'xHeIII', U_old(4), U_new(4), abs((U_new(4)-U_old(4))/U_old(4))
-  write(*,777)'ne',     ne_old,   ne_new,   abs((ne_new-ne_old)/ne_old)
-  write(*,999), loopcnt, code, nH, nHe
-  do i=0,nGroups-1
-     write(*,777)'Np',  U_old(iNp0+i), U_new(iNp0+i), &
-          abs((U_new(iNp0+i)-U_old(iNp0+i))/U_old(iNp0+i))
-  enddo
-  print *,'  -------------------------------------------------'
-
-777 format('  ', A6, '   ', 1pe11.3, '   ', 1pe11.3, '   ',  1pe11.3)
-888 format('  ', A6, '   ', F11.6,   '   ', F11.6,   '   ',  F11.6)
-999 format('     lcnt=',I6, '        code=', I2, '        nH=', 1pe11.3,&
-           '        nHe=', 1pe11.3)
-    !999 format('     nH=', 1pe11.3, '        nHe=', 1pe11.3)
-END SUBROUTINE display_U_change
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH,   &
-                            U, dU, code)
-
+SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
+                            ,T2,  xion,  Np,  Fp,  p_gas                &
+                            ,dT2, dXion, dNp, dFp, dp_gas, code)
 ! Print cooling information to standard output, and maybe stop execution.
 !------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
+  real(dp),dimension(nIons):: xion, dXion
+  real(dp),dimension(nGroups):: Np, dNp
+  real(dp),dimension(nGroups, nDim):: Fp, dFp
+  real(dp),dimension(nDim):: p_gas, dp_gas
+  real(dp)::T2, dT2, dtDone, dt, ddt, nH
   logical::stopRun
   integer::loopcnt,i, code
-  real(dp)::dtDone, dt, ddt, nH
-  real(dp),dimension(n_U):: U, dU
 !------------------------------------------------------------------------
   if(stopRun) write(*, 111) loopcnt
   if(.true.) then
      write(*,900) loopcnt, myid, code, i, dtDone, dt, ddt, rt_c_cgs, nH
-     write(*,901) U
-     write(*,902) dU
-     write(*,903) dU/ddt
-     write(*,904) abs(dU)/(U+U_MIN)
+     write(*,901) T2,      xion,      Np,      Fp,      p_gas
+     write(*,902) dT2,     dXion,     dNp,     dFp,     dp_gas
+     write(*,903) dT2/ddt, dXion/ddt, dNp/ddt, dFp/ddt, dp_gas/ddt
+     write(*,904) abs(dT2)/(T2+T_MIN), abs(dxion)/(xion+x_MIN),           &
+                  abs(dNp)/(Np+Np_MIN), abs(dFp)/(Fp+Fp_MIN)
   endif
+  print*,loopcodes
+  print*,group_egy(:)
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
      STOP
@@ -597,7 +642,6 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH,   &
 903 format ('  dU/dt  =', 20(1pe12.3))
 904 format ('  dU/U % =', 20(1pe12.3))
 END SUBROUTINE display_coolinfo
-
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu)
@@ -706,17 +750,17 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   implicit none
   real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,J0min_in,ne,dasura
   logical :: if_write_result
-  real(dp)::aexp,daexp,dt_cool,coeff
-  real(dp)::T2_com,T2_old,T2,T2_left,T2_right,err_T2
-  real(dp)::nH_com  
+  real(dp)::aexp,daexp,dt_cool,coeff,T2_com, nH_com  
   real(dp),dimension(nIons)::pHI_rates=0., h_rad_spec=0.
   real(kind=8) ::mu
-  real(dp) ::cool_tot,heat_tot, mu_dp
-  real(dp) ::diff
+  real(dp) ::cool_tot,heat_tot, mu_dp,diff
   integer::niter
   real(dp) :: n_spec(1:6)
-  real(dp),dimension(1:nvector, n_U)::U=0.
-  real(dp),dimension(1:nvector,nGroups)::dNpdt=0., dFpdt=0.
+  real(dp),dimension(1:nvector):: T2
+  real(dp),dimension(1:nvector, nIons):: xion
+  real(dp),dimension(1:nvector, nGroups):: Np, dNpdt
+  real(dp),dimension(1:nvector, nGroups, ndim):: Fp, dFpdt
+  real(dp),dimension(1:nvector, ndim):: p_gas
   real(dp),dimension(1:nvector)::nH=0., Zsolar=0.
   logical,dimension(1:nvector)::c_switch=.true.
 !-------------------------------------------------------------------------
@@ -728,12 +772,13 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   call cmp_Equilibrium_Abundances(                                       &
                  T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
   ! Initialize cell state
-  U(1,1)=T2_com                                         !      Temperature
-  U(1,2)=n_Spec(3)/(nH_com/aexp**3)                     !   HII   fraction
-  U(1,3)=n_Spec(5)/(nH_com/aexp**3)                     !   HeII  fraction
-  U(1,4)=n_Spec(6)/(nH_com/aexp**3)                     !   HeIII fraction
-  U(1,iNp0:)=0.                              ! Photon densities and fluxes
-
+  T2(1)=T2_com                                          !      Temperature
+  xion(1,1)=n_Spec(3)/(nH_com/aexp**3)                  !   HII   fraction
+  xion(1,2)=n_Spec(5)/(nH_com/aexp**3)                  !   HeII  fraction
+  xion(1,3)=n_Spec(6)/(nH_com/aexp**3)                  !   HeIII fraction
+  p_gas(1,:)=0.
+  Np(1,:)=0. ; Fp(1,:,:)=0.                  ! Photon densities and fluxes
+  dNpdt(1,:)=0. ; dFpdt(1,:,:)=0.                              
   do while (aexp < aend)
      if(rt_UV_hom) call inp_UV_rates_table(1./aexp - 1., UVrates)
 
@@ -742,16 +787,16 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
              / (aexp*100.*h*3.2408608e-20)                               &
              / HsurH0(1.0/dble(aexp)-1.,omega0,omegaL,1.-omega0-omegaL)
      
-     nH(1)  = nH_com/aexp**3
-     U(1,1) = U(1,1)/aexp**2
-     call rt_solve_cooling(U,dNpdt,dFpdt,nH,c_switch,Zsolar,dt_cool,aexp,1)
-
-     U(1,1)=U(1,1)*aexp**2
+     nH(1) = nH_com/aexp**3
+     T2(1) = T2(1)/aexp**2
+     call rt_solve_cooling(T2,xion,Np,Fp,p_gas,dNpdt,dFpdt,nH,c_switch   &
+                           ,Zsolar,dt_cool,aexp,1)
+     T2(1)=T2(1)*aexp**2
      aexp = aexp + daexp
      if (if_write_result) write(*,'(4(1pe10.3))')                        &
                               aexp,nH(1),T2_com*mu/aexp**2,n_spec(1)/nH(1)
   end do
-  T2end=U(1,1)/(aexp-daexp)**2
+  T2end=T2(1)/(aexp-daexp)**2
   ne=(n_spec(3)+(n_spec(5)+2.*n_spec(6))*0.25*Y/X)
 end subroutine rt_evol_single_cell
 
@@ -897,31 +942,6 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
 
 end subroutine rt_cmp_metals
 
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ELEMENTAL FUNCTION getCollLyaEmi(TK, nHI, n_e)
-
-! Calculate excitational Lyman alpha emissivity of cell, in erg/s/cc.
-! All in arguments are in cgs.
-!-------------------------------------------------------------------------
-  real(dp),intent(in)::TK, nHI, n_e
-  real(dp)::getCollLyaEmi
-!-------------------------------------------------------------------------
-  getCollLyaEmi = nHI * n_e * comp_collExrate_HI(TK) * 2.1790d-11
-END FUNCTION getCollLyaEmi
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ELEMENTAL FUNCTION getRecLyaEmi(TK, nHII, n_e)
-
-! Calculate recombinative Lyman alpha emissivity of cell, in erg/s/cc.
-! All in arguments are in cgs.
-!-------------------------------------------------------------------------
-  real(dp),intent(in)::TK, nHII, n_e
-  real(dp)::getRecLyaEmi
-  real(dp),parameter::f=0.68d0
-!-------------------------------------------------------------------------
-  getRecLyaEmi = f * nHII * n_e * comp_AlphaB_HII(TK) *  2.1790d-11
-END FUNCTION getRecLyaEmi
-
 END MODULE rt_cooling_module
 
 !************************************************************************
@@ -944,3 +964,16 @@ SUBROUTINE updateRTGroups_CoolConstants()
      end do
   end do
 END SUBROUTINE updateRTGroups_CoolConstants
+
+!************************************************************************
+SUBROUTINE reduce_flux(Fp, cNp)
+! Make sure the reduced photon flux is less than one
+!------------------------------------------------------------------------
+  use rt_parameters
+  implicit none
+  real(dp),dimension(ndim):: Fp
+  real(dp):: cNp, fred
+!------------------------------------------------------------------------
+  fred = sqrt(sum(Fp**2))/cNp
+  if(fred .gt. 1.d0) Fp = Fp/fred
+END SUBROUTINE reduce_flux

@@ -172,7 +172,7 @@ subroutine init_sink
         filename='ic_sink_restart'
      end if
      INQUIRE(FILE=filename, EXIST=ic_sink)
-     if (myid==1)write(*,*),'Looking for file ic_sink_restart: ',filename
+     if (myid==1)write(*,*)'Looking for file ic_sink_restart: ',filename
      if (.not. ic_sink)then
         filename='ic_sink'
         INQUIRE(FILE=filename, EXIST=ic_sink)
@@ -187,7 +187,7 @@ subroutine init_sink
         filename='ic_sink'
      end if
      INQUIRE(FILE=filename, EXIST=ic_sink)
-     if (myid==1)write(*,*),'Looking for file ic_sink: ',filename
+     if (myid==1)write(*,*)'Looking for file ic_sink: ',filename
      if (.not. ic_sink)then
         filename='ic_sink'
         INQUIRE(FILE=filename, EXIST=ic_sink)
@@ -219,11 +219,11 @@ subroutine init_sink
      close(10)
   end if
   if (myid==1.and.nsink-nsinkold>0)then
-     write(*,*),'sinks read from file '//filename
+     write(*,*)'sinks read from file '//filename
      write(*,'("   Id           M             x             y             z            vx            vy            vz            lx            ly            lz       ")')
      write(*,'("======================================================================================================================================================")')
      do isink=nsinkold+1,nsink                                                                           
-        write(*,'(I8,2X,10(2X,E12.5))'),idsink(isink),msink(isink),xsink(isink,1:ndim),&
+        write(*,'(I8,2X,10(2X,E12.5))')idsink(isink),msink(isink),xsink(isink,1:ndim),&
              vsink(isink,1:ndim),lsink(isink,1:ndim)
      end do
   end if
