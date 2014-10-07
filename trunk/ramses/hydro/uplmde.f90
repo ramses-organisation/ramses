@@ -750,7 +750,7 @@ end subroutine cmpdivu
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine consup(uin,flux,div,dt,ngrid)
+subroutine consup(uin,flux,div,dt,ngrid,dif_mask)
   use amr_parameters
   use hydro_parameters
   use const
@@ -761,6 +761,9 @@ subroutine consup(uin,flux,div,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin 
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::div 
+
+  integer,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::dif_mask
+  
 
   integer:: i, j, k, l, n
   real(dp)::factor
@@ -793,7 +796,7 @@ subroutine consup(uin,flux,div,dt,ngrid)
               end do
               do l = 1, ngrid
                  flux(l,i,j,k,n,1) = flux(l,i,j,k,n,1) + &
-                      &  dt*div1(l)*(uin(l,i,j,k,n) - uin(l,i-1,j,k,n))
+                      &  dt*div1(l)*(uin(l,i,j,k,n)*dif_mask(l,i,j,k) - uin(l,i-1,j,k,n)*dif_mask(l,i-1,j,k))
               end do
 
            end do
@@ -818,7 +821,7 @@ subroutine consup(uin,flux,div,dt,ngrid)
               end do
               do l = 1, ngrid
                  flux(l,i,j,k,n,2) = flux(l,i,j,k,n,2) + &
-                      &  dt*div1(l)*(uin(l,i,j,k,n) - uin(l,i,j-1,k,n))
+                      &  dt*div1(l)*(uin(l,i,j,k,n)*dif_mask(l,i,j,k) - uin(l,i,j-1,k,n)*dif_mask(l,i,j-1,k))
               end do
            end do
         end do
@@ -838,7 +841,7 @@ subroutine consup(uin,flux,div,dt,ngrid)
               end do
               do l = 1, ngrid
                  flux(l,i,j,k,n,3) = flux(l,i,j,k,n,3) + &
-                      &  dt*div1(l)*(uin(l,i,j,k,n) - uin(l,i,j,k-1,n))
+                      &  dt*div1(l)*(uin(l,i,j,k,n)*dif_mask(l,i,j,k) - uin(l,i,j,k-1,n)*dif_mask(l,i,j,k-1))
               end do
            end do
         end do

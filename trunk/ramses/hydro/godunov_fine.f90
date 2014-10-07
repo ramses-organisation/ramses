@@ -445,19 +445,23 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector,1:twotondim       ),save::nbors_father_grids
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
+  integer,dimension(1:nvector,0:twondim  ),save::dif_mask_coarse
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
+  integer,dimension(1:nvector,1:twotondim),save::dif_mask_interpol
   real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0d0
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0d0
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
+  integer ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::dif_mask
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
 
+
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
 
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
+  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer,ind
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
@@ -524,10 +528,19 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            do ivar=1,nvar
               do i=1,nbuffer
                  u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
+                 if(difmag_switch(ibuffer_father(i,j)))then
+                    dif_mask_coarse(i,j)=1
+                 else
+                    dif_mask_coarse(i,j)=0
+                 end if
               end do
            end do
         end do
         call interpol_hydro(u1,u2,nbuffer)
+        !straight injection of dif_mask for the time being
+        do ind=1,twotondim
+           dif_mask_interpol(1:nbuffer,ind)=dif_mask_coarse(1:nbuffer,0)
+        end do
      endif
 
      ! Loop over 2x2x2 cells
@@ -550,9 +563,15 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do ivar=1,nvar
            do i=1,nexist
               uloc(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
+              if (difmag_switch(ind_cell(i)))then
+                 dif_mask(ind_exist(i),i3,j3,k3)=1
+              else
+                 dif_mask(ind_exist(i),i3,j3,k3)=0
+              end if
            end do
            do i=1,nbuffer
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+              dif_mask(ind_nexist(i),i3,j3,k3)=dif_mask_interpol(i,ind_son)
            end do
         end do
         
@@ -590,7 +609,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache,dif_mask)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface    

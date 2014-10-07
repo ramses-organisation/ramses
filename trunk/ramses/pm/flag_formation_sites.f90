@@ -415,14 +415,14 @@ subroutine compute_clump_properties_round2(xx,all_bound)
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-           write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&
-                ,n_cells(j)&
-                ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
-                ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
-                ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
-                      ,abs(Icl_d(j))/Icl_dd(j)&
-                      ,grav_term(j),-1.*Psurf(j)&
-                      ,e_kin_int(j),e_thermal(j)
+            write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))')j+ipeak_start(myid)&
+                 ,n_cells(j)&
+                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
+                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
+                 ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
+                       ,abs(Icl_d(j))/Icl_dd(j)&
+                       ,grav_term(j),-1.*Psurf(j)&
+                       ,e_kin_int(j),e_thermal(j)
         end if
      end do
   end if
