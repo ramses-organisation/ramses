@@ -64,18 +64,16 @@ subroutine init_part
 
   !!! Patch DICE
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  integer::ngas, nhalo, nstars, skip
-  integer::kpart, lpart, mpart, block
-  integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
+  integer::ngas, nhalo, nstars
+  integer::skip, block
+  integer::kpart, lpart, mpart
   integer, dimension(nvector):: ids
-  real(kind=8)::RandNum
+  real,dimension(1:3,1:nvector):: pos, vel
+  real,dimension(nvector):: mass, metals, ages, etherm
+  real(kind=8),dimension(1:nvector)::tt,zz
   real(dp)::mgas_tot
-  real, dimension(1:3,1:nvector):: pos, vel
-  real, dimension(nvector):: mass, metals, ages, etherm
-  real:: flt
+  real::flt
   logical::eob
-  real(kind=8),dimension(1:nvector)::tt
-  real(kind=8),dimension(1:nvector)::zz
   TYPE(gadgetheadertype) :: header
   !!! Patch DICE
 
@@ -758,12 +756,12 @@ subroutine init_part
         end do
         if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
 
-
+     !!! DICE
      case ('dice')
-     !!! Patch DICE
         ! Conversion factor from user units to cgs units
         call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-        scale_m=scale_d*scale_l**3
+        scale_m = scale_d*scale_l**3
+        ! Reading header of the Gadget1 file
         if(TRIM(initfile(levelmin)).NE.' ')then
             filename=TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
             if(myid==1)then
@@ -779,26 +777,26 @@ subroutine init_part
                 header%flag_ic_info, header%lpt_scalingfactor
                 rewind(1)
                 close(1)
-                ngas  = header%npart(1)
-                nhalo = header%npart(2)
-                npart = sum(header%npart)
+                ngas      = header%npart(1)
+                nhalo     = header%npart(2)
+                nstar_tot = sum(header%npart(3:5))
+                npart     = sum(header%npart)
                 write(*,*)"Found ",npart," particles"
                 write(*,*)"----> ",header%npart(1)," gas particles"
                 write(*,*)"----> ",header%npart(2)," halo particles"
                 write(*,*)"----> ",header%npart(3)," disk particles"
                 write(*,*)"----> ",header%npart(4)," bulge particles"
                 write(*,*)"----> ",header%npart(5)," stars particles"
-                nstar_tot = sum(header%npart(3:5))
                 OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access="stream")
             endif
 #ifndef WITHOUTMPI
               call MPI_BCAST(nstar_tot,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
 #endif
-            eob=.false.
-            ipart=0
-            kpart=0
-            lpart=0
-            mpart=0
+            eob      = .false.
+            ipart    = 0
+            kpart    = 0
+            lpart    = 0
+            mpart    = 0
             mgas_tot = 0.
             do while(.not.eob)
               xx=0.
@@ -827,17 +825,20 @@ subroutine init_part
                   if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo))) then
                     read(1,POS=1+sizeof(header)+sizeof(flt)*(mpart-1)+17*sizeof(skip)+(9*npart+2*ngas)*sizeof(flt)) ages(jpart)
                   endif
-                  xx1 = pos(1,jpart)*3.085677581282D21/scale_l
-                  xx2 = pos(2,jpart)*3.085677581282D21/scale_l
-                  xx3 = pos(3,jpart)*3.085677581282D21/scale_l
-                  vv1 = vel(1,jpart)*1D5/scale_v
-                  vv2 = vel(2,jpart)*1D5/scale_v
-                  vv3 = vel(3,jpart)*1D5/scale_v
-                  xx(i,:) = (/xx1,xx2,xx3/)
-                  vv(i,:) = (/vv1,vv2,vv3/)
-                  ii(i)   = ids(jpart)
-                  mm(i)   = mass(jpart)*1D10*1.9891D33/scale_m
-                  if(metal) zz(i) = metals(jpart)
+                  ! Scaling to ramses code units
+                  xx1       = pos(1,jpart)*3.085677581282D21/scale_l
+                  xx2       = pos(2,jpart)*3.085677581282D21/scale_l
+                  xx3       = pos(3,jpart)*3.085677581282D21/scale_l
+                  vv1       = vel(1,jpart)*1D5/scale_v
+                  vv2       = vel(2,jpart)*1D5/scale_v
+                  vv3       = vel(3,jpart)*1D5/scale_v
+                  xx(i,:)   = (/xx1,xx2,xx3/)
+                  vv(i,:)   = (/vv1,vv2,vv3/)
+                  ii(i)     = ids(jpart)
+                  mm(i)     = mass(jpart)*1D10*1.9891D33/scale_m
+                  if(metal) then
+                    zz(i)   = metals(jpart)
+                  endif
                   if(kpart.gt.ngas+nhalo) then
                     tt(i)   = ages(jpart)*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
                   endif
@@ -867,45 +868,50 @@ subroutine init_part
 #endif
               do i=1,jpart
 #ifndef WITHOUTMPI
+                  ! Check the CPU map
                   if(cc(i)==myid)then
 #endif
                     ipart          = ipart+1
                     xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0
                     vp(ipart,1:3)  = vv(i,1:3)
+                    ! Flag gas particles with idp=1
                     if((lpart+i).gt.ngas)then
-                      idp(ipart) = ii(i)+1
+                      idp(ipart)   = ii(i)+1
                     else
-                      idp(ipart) = 1
+                      idp(ipart)   = 1
                     endif
                     mp(ipart)      = mm(i)
                     levelp(ipart)  = levelmin
                     tp(ipart)      = tt(i)
-                    if(metal) zp(ipart) = zz(i)
+                    if(metal) then
+                      zp(ipart)    = zz(i)
+                    endif
 #ifndef WITHOUTMPI
                   endif
 #endif
               enddo
-              lpart=lpart+jpart
+              lpart = lpart+jpart
             enddo
             if(myid==1)then
-              write(*,*) "Total gas mass -> ",mgas_tot
+              write(*,*) "DICE patch / Total gas mass -> ",mgas_tot
               close(1)
             endif
   
         end if 
-        npart=ipart
+        npart = ipart
         ! Compute total number of particle
-        npart_cpu=0; npart_all=0
-        npart_cpu(myid)=npart
+        npart_cpu       = 0
+        npart_all       = 0
+        npart_cpu(myid) = npart
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-        npart_cpu(1)=npart_all(1)
+        npart_cpu(1) = npart_all(1)
 #endif
         do icpu=2,ncpu
            npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
         end do
         if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
-        !!! Patch DICE
+        !!! DICE
 
      case ('gadget')
         call load_gadget

@@ -50,6 +50,8 @@ subroutine init_refine_2
   !--------------------------------------------------------------
   ! This routine builds additional refinements to the
   ! the initial AMR grid for filetype ne 'grafic'
+  ! DICE patch: It is ensured that all the particles are
+  ! transfered down to level 1 before initialising the grid
   !--------------------------------------------------------------
   use amr_commons
   use hydro_commons
@@ -65,7 +67,7 @@ subroutine init_refine_2
 
   do i=levelmin,nlevelmax+1
 
-     !!! Patch DICE
+     !!! DICE------
      do ilevel=levelmin-1,1,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo
@@ -76,11 +78,11 @@ subroutine init_refine_2
         call build_comm(ilevel)
         call make_virtual_fine_int(cpu_map(1),ilevel)
         call refine_fine(ilevel)
-        !!! Patch DICE
+        !!! DICE------
         if(pic)call make_tree_fine(ilevel)
         !!! ----------
         if(hydro)call init_flow_fine(ilevel)
-        !!! Patch DICE
+        !!! DICE------
         if(pic)then
            call kill_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
@@ -91,7 +93,7 @@ subroutine init_refine_2
 #endif
      end do
       
-     !!! Patch DICE
+     !!! DICE------
      do ilevel=nlevelmax-1,levelmin,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo

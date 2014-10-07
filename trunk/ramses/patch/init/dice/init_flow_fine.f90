@@ -1,16 +1,14 @@
 !========================================================================================
 !== Patch DICE
 !== Initial conditions to setup 1 or more galaxies computed from the DICE software
-!== Valentin Perret - August 2014
+!== Valentin Perret - October 2014
 !========================================================================================
-!==  Namelist settings: each variable is a list (one item per galaxy)
+!==  Namelist settings:
 !==
-!==	ic_file        : file in the IC directory that contains the particle data (see also init_part)
-!==
-!==  Global scalar:
-!== 	IG_rho      : density of the intergalactic medium
-!== 	IG_T2       : temperature of the intergalactic medium
-!== 	IG_metal    : metallicity of the intergalactic medium
+!==	ic_file     : Gadget1 file in the IC directory
+!== 	IG_rho      : Density of the intergalactic medium
+!== 	IG_T2       : Temperature of the intergalactic medium
+!== 	IG_metal    : Metallicity of the intergalactic medium
 !== 
 !========================================================================================
 
@@ -88,14 +86,14 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
-  ! DICE
-  logical,save:: init_dice_nml=.false.
+  !!! DICE
+  logical,save::init_dice_nml=.false.
   logical::nml_ok=.true.
   character(LEN=80)::infile
   logical::file_exists
   ! Namelist definitions
   namelist/dice_params/ ic_file, IG_rho, IG_T2, IG_metal
- 
+  !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -421,41 +419,40 @@ subroutine init_flow_fine(ilevel)
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
-
-
-  if (.not.init_dice_nml) then
-    ! Get the name of the namelist
-    call getarg(1,infile)
-    open(1,file=infile)
-    rewind(1)
-    ! Open namelist and read the dice_params data
-    read(1,NML=dice_params,END=106)
-    goto 107
-    106 if(myid==1)write(*,*)' You have to set up namelist &DICE_PARAMS in parameter file'
-    call clean_stop
-    107 continue
-    close(1)
-
-    ! Check for particle files
-    inquire(file=trim(initfile(levelmin))//'/'//trim(ic_file), exist=file_exists)
-    if(.NOT. file_exists) then
-      if(myid==1)write(*,*)"Error: ic_file ", trim(ic_file), " doesn't exist "
-      nml_ok=.false.
-    end if
-   
-    if(.not. nml_ok)then
-      if(myid==1)write(*,*)'Too many errors in the namelist'
-      if(myid==1)write(*,*)'Aborting...'
+    ! DICE: Reading the namelist datablock
+    if (.not.init_dice_nml) then
+      ! Get the name of the namelist
+      call getarg(1,infile)
+      open(1,file=infile)
+      rewind(1)
+      ! Open namelist and read the dice_params data
+      read(1,NML=dice_params,END=106)
+      goto 107
+      106 if(myid==1) write(*,*)' You have to set up namelist &DICE_PARAMS in parameter file'
       call clean_stop
+      107 continue
+      close(1)
+      ! Check for particle files
+      inquire(file=trim(initfile(levelmin))//'/'//trim(ic_file), exist=file_exists)
+      if(.NOT. file_exists) then
+        if(myid==1) write(*,*)"Error: ic_file ",trim(ic_file)," doesn't exist "
+        nml_ok=.false.
+      end if
+      if(.not. nml_ok)then
+        if(myid==1) write(*,*)'Too many errors in the DICE_PARAMS namelist'
+        if(myid==1) write(*,*)'Aborting...'
+        call clean_stop
+      end if
+      ! Data has been read and understood
+      init_dice_nml = .true.
+      if(debug.and.myid==1) write(*,*) "DICE_PARAMS has been read correctly"
     end if
-  
-    ! Data has been read and understood
-    init_dice_nml = .true.
-    if(myid==1) write(*,*) "DICE_PARAMS has been read correctly"
-  end if
-
+    ! Initialise uold with values from the DICE_PARAMS namelist
     call init_uold(ilevel)
+    ! Update the grid using the gas particles read from the Gadget1 file
+    ! NGP scheme is used
     call condinit_loc(ilevel)
+    ! Reverse update boundaries
     do ivar=1,nvar
         call make_virtual_reverse_dp(uold(1,ivar),ilevel)
     end do
@@ -640,12 +637,11 @@ subroutine init_uold(ilevel)
 end subroutine init_uold
 
 subroutine condinit_loc(ilevel)
-
   !================================================================
-  ! This routine generates initial conditions for RAMSES.
-  ! by using gas particles read from a Gadget1 IC file
+  ! This routine generates initial conditions for RAMSES
+  ! using gas particles read from a Gadget1 IC file.
+  ! It uses the NGP scheme of the thermal feedback routine
   !================================================================
-
   use dice_commons
   use pm_commons
   use amr_parameters
@@ -654,7 +650,6 @@ subroutine condinit_loc(ilevel)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
 
   integer::ilevel
   !------------------------------------------------------------------------
@@ -718,7 +713,7 @@ subroutine condinit_loc(ilevel)
                  ind_grid_part(ip)=ig   
               endif
               if(ip==nvector)then
-                 call init_gas(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 call init_gas_ngp(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
                  ip=0
                  ig=0
               end if
@@ -729,20 +724,20 @@ subroutine condinit_loc(ilevel)
         igrid=next(igrid)   ! Go to next grid
      end do
      ! End loop over grids
-     if(ip>0)call init_gas(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+     if(ip>0)call init_gas_ngp(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   end do 
   ! End loop over cpus
 
 #endif
 
-111 format('   Entering condinit for level ',I2)
+111 format('   Entering condinit_loc for level ',I2)
 
 end subroutine condinit_loc
 !==================================================================================
 !==================================================================================
 !==================================================================================
 
-subroutine init_gas(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
@@ -899,8 +894,6 @@ subroutine init_gas(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
        uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
      endif
   end do
-
-
 #endif
   
-end subroutine init_gas
+end subroutine init_gas_ngp

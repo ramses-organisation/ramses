@@ -1,4 +1,3 @@
-!!! Patch DICE
 subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   use amr_commons
   use hydro_commons
@@ -24,8 +23,8 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   if(cosmo) scale_t = aexp**2 / (h0*1d5/3.08d24)
 
   ! scale_l converts distance from user units into cm
-  ! scale_l = 1.0
-  scale_l       = kpc ! Unite de longueur : kpc
+  ! Length unit: kpc
+  scale_l       = kpc
   if(cosmo) scale_l = aexp * boxlen_ini * 3.08d24 / (h0/100)
 
   ! scale_v convert velocity in user units into cm/s
@@ -38,4 +37,3 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_nH = X/mH * scale_d
 
 end subroutine units
-!!! Patch DICE
