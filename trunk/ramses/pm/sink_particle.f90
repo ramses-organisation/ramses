@@ -3307,7 +3307,7 @@ subroutine read_sink_params()
         merging_timescale=1000.
      end if
      cty=scale_t/(365.25*24.*3600.)
-     cont_speed=1./(merging_timescale/cty)
+     cont_speed=-1./(merging_timescale/cty)
   end if
 
   ! a warging sign...
