@@ -131,7 +131,6 @@ subroutine create_sink
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end do
   end if
-
   ! Update the cloud particle properties at levelmin
   call update_cloud(levelmin)
 
@@ -171,13 +170,15 @@ subroutine create_cloud_from_sink
   !----------------------------------------------------------------------
 
   real(dp)::scale,dx_min,rr,rmax,rmass
-  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc
+  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc,idim
   integer ::ntot,ntot_all,info
   logical ::ok_free
   real(dp),dimension(1:ndim)::xrel
   real(dp),dimension(1:nvector,1:ndim)::xtest
   integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
+  logical,dimension(1:ndim)::period
+
   ok_true=.true.
 
   if(numbtot(1,1)==0) return
@@ -191,6 +192,10 @@ subroutine create_cloud_from_sink
         ind_grid(1)=headl(icpu,1)
      endif
   end do
+
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)
   
   ! Mesh spacing in that level
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -210,6 +215,10 @@ subroutine create_cloud_from_sink
            if(rr<=rmax)then
               do isink=1,nsink
                  xtest(1,1:3)=xsink(isink,1:3)+xrel(1:3)
+                 do idim=1,ndim
+                    if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
+                    if (period(idim) .and. xtest(1,idim)<0.)xtest(1,idim)=xtest(1,idim)+boxlen
+                 end do
                  call cmp_cpumap(xtest,cc,1)
                  if(cc(1).eq.myid)then                    
                     call remove_free(ind_cloud,1)
@@ -1134,10 +1143,15 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::r_rel,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan
   real(dp)::r_abs
   logical::nolacc
+  logical,dimension(1:ndim)::period
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
+  period(1)=(nx==1)
+  if(ndim>1)period(2)=(ny==1)
+  if(ndim>2)period(3)=(nz==1)
+
 #if NDIM==3
   
   ! Gravitational constant
@@ -1201,7 +1215,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (new_born(isink))then
                  ! on sink creation, new sinks
                  acc_mass=vol(j,ind)*sink_seedmass/ncloud_sink
-                 acc_mass=max(min(acc_mass,0.125*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
+                 acc_mass=max(min(acc_mass,0.05*(d-d_sink)*vol_loc),1.d-10*d*vol_loc)
               else
                  ! on sink creation, preexisting sinks
                  acc_mass=0.         
@@ -1241,6 +1255,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
            ! momentum in relative motion
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
+           do idim=1,ndim
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5)xx(j,idim,ind)=xx(j,idim,ind)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*-0.5)xx(j,idim,ind)=xx(j,idim,ind)+boxlen
+           end do
+           r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            r_abs=sum(r_rel(1:3)**2)**0.5      
            p_rel=d*vol_loc*(vv(1:3)-vsink(isink,1:3))
            p_rel_rad=sum(r_rel(1:3)*p_rel(1:3))*r_rel(1:3)/(r_abs**2+tiny(0.d0))
@@ -1265,24 +1284,24 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            !add accreted properties
            msink_new(isink)=msink_new(isink)+acc_mass
            delta_mass_new(isink)=delta_mass_new(isink)+acc_mass
-           xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*xx(j,1:3,ind)
+           xsink_new(isink,1:3)=xsink_new(isink,1:3)+acc_mass*(xsink(isink,1:3)+r_rel(1:3))
            vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
            ! Check for neg density inside sink accretion radius
            if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
-              write(*,*),'====================================================='
-              write(*,*),'DANGER of neg density :-( at location'
-              write(*,*),xx(j,1:3,ind)
-              write(*,*),'due to',isink
-              write(*,*),acc_mass/vol_loc,d/d_sink,density/d_sink
-              write(*,*),indp(j,ind),myid
-              write(*,*),'nol_accretion: ',nolacc
+              write(*,*)'====================================================='
+              write(*,*)'DANGER of neg density :-( at location'
+              write(*,*)xx(j,1:3,ind)
+              write(*,*)'due to',isink
+              write(*,*)acc_mass/vol_loc,d/d_sink,density/d_sink
+              write(*,*)indp(j,ind),myid
+              write(*,*)'nol_accretion: ',nolacc
               do i=1,nsink
-                 write(*,*),i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
+                 write(*,*)i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
               end do
-              write(*,*),'try to decrease c_acc in SINK_PARAMS'
-              write(*,*),'====================================================='
+              write(*,*)'try to decrease c_acc in SINK_PARAMS'
+              write(*,*)'====================================================='
               !           call clean_stop
            end if
 
@@ -1460,6 +1479,8 @@ subroutine compute_accretion_rate(write_sinks)
         !compute maximum timestep allowed by sink
         if (dMsink_overdt(isink)>0.)then
            if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/(dMsink_overdt(isink))
+           !make sure that sink doesnt accrete more than its own mass within one timestep 
+           dt_acc(isink)=min(dt_acc(isink),(c_acc*msink(isink)/(dMsink_overdt(isink))))
         end if
            
      end if
@@ -2716,7 +2737,7 @@ subroutine update_cloud(ilevel)
   if (myid==1.and.verbose)then
      write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        write(*,*),'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,*)'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
   end if
 
@@ -3198,7 +3219,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -3286,7 +3307,7 @@ subroutine read_sink_params()
         merging_timescale=1000.
      end if
      cty=scale_t/(365.25*24.*3600.)
-     cont_speed=1./(merging_timescale/cty)
+     cont_speed=-1./(merging_timescale/cty)
   end if
 
   ! a warging sign...
@@ -3484,8 +3505,8 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
 
 !  do i=1,np
 !     if (clevl(i) .ne. ilevel)then 
-!        write(*,*),'particle outside its level'
-!        write(*,*),'this should not happen'
+!        write(*,*)'particle outside its level'
+!        write(*,*)'this should not happen'
 !     end if
 !  end do
 

@@ -154,8 +154,7 @@ subroutine newdt_fine(ilevel)
               
            end do
            if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
-              write(*,*),ilevel,'dt_acc/dt',dt_acc_min/dtnew(ilevel),limiting_sink,&
-                   limiting_dt_fact
+              write(*,'(A10,2X,F10.6,2X,A20,2X,I10)')'dt_acc/dt',dt_acc_min/dtnew(ilevel),'limited by sink:',limiting_sink
            end if
            dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
         end if
