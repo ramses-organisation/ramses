@@ -44,7 +44,7 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   ccc(:,8)=(/27,26,24,23,18,17,15,14/)
 
   if (icount .ne. 1 .and. icount .ne. 2)then
-     write(*,*), 'icount has bad value'
+     write(*,*)'icount has bad value'
      call clean_stop
   endif
 
@@ -71,7 +71,7 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
         do i=1,ncell
            indice=nbors_father_cells(i,ind_father)
            if (indice==0) then 
-              write(*,*),'no all neighbors present in interpol_phi...'
+              write(*,*)'no all neighbors present in interpol_phi...'
               add=coeff*(phi(ind_cell(i))+(phi(ind_cell(i))-phi_old(ind_cell(i)))*tfrac)
               !               add=coeff*(-3d0/8d0*dx**2*boxlen*rho(ind_cell(i))+phi(ind_cell(i)))
            else

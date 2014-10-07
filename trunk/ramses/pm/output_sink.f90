@@ -11,6 +11,8 @@ subroutine backup_sink(filename)
   integer,allocatable,dimension(:)::ii
   logical,allocatable,dimension(:)::nb
 
+  if(.not. sink) return
+
   if(verbose)write(*,*)'Entering backup_sink'
 
   ilun=4*ncpu+myid+10

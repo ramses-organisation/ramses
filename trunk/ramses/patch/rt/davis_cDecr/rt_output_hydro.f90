@@ -126,7 +126,7 @@ SUBROUTINE output_rtInfo(filename)
   ! Write physical parameters
   write(ilun,'("unit_np     =",E23.15)')scale_np
   write(ilun,'("unit_pf     =",E23.15)')scale_pf
-  write(ilun,'("rt_c_frac   =",E23.15)')rt_c_fraction
+  write(ilun,'("rt_c_frac   =",E23.15)')rt_c_cgs/c_cgs   ! Decreasing light speed patch
   write(ilun,*)
 
   ! Write polytropic parameters
@@ -208,7 +208,7 @@ SUBROUTINE output_rt_stats
           MPI_INTEGER,          MPI_SUM, MPI_COMM_WORLD, info)
      call MPI_ALLREDUCE(max_cool_loopcnt,     max_all,       1, &
           MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
-     call MPI_ALLREDUCE(loopCodes,            loopCodes_all, 20, &
+     call MPI_ALLREDUCE(loopCodes,            loopCodes_all, 4, &
           MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
      n_cool_cells     = cells_all ; tot_cool_loopcnt = tot_all
      max_cool_loopcnt = max_all   ; loopCodes        = loopCodes_all

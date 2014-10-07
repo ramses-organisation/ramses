@@ -33,7 +33,7 @@ module rt_cooling_module
   integer,dimension(nGroups)::iNpU,iFpU              !       See set_model
   real(dp),dimension(n_U)::U_MIN, U_frac             !       See set_model
 
-  ! Cooling constants, updated on SED and c change [cm3 s-1],[erg cm3 s-1]
+  ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
 
   real(dp),dimension(nIons, 2)::UVrates     !UV backgr. heating/ion. rates
@@ -64,7 +64,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   use UV_module
   real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
-  integer  :: Nmodel, correct_cooling, realistic_ne, ip
+  integer  :: Nmodel, correct_cooling, realistic_ne, ig
   real(kind=8) :: astart=0.0001, aend, dasura, T2end, mu, ne
 !-------------------------------------------------------------------------
   ! do initialization
@@ -72,19 +72,19 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   U_MIN(iT)       = 0.1                  !                      Minimum T2
   U_FRAC(iT)      = 0.1            
 
-  U_MIN(ix0:ix1)  = 1.d-6                !    Minimum ionization fractions
+  U_MIN(ix0:ix1)  = 1.d-6                !       Ionization fraction floor
   U_FRAC(ix0:ix1) = 0.1    
 
-  U_MIN(iNp0:iNp1) = 1.d-13              !        Minimum photon densities
+  U_MIN(iNp0:iNp1) = 1.d-13              !            Photon density floor
   U_FRAC(iNp0:iNp1) = 0.2    
 
-  U_MIN(iFp0:iFp1)  = 1d-50              !  For timestepping on ph. fluxes
-  U_FRAC(iFp0:iFp1) = 1.d6               !   No direct restr. on Fp update    
+  U_MIN(iFp0:iFp1)  = 1D-13*rt_c_cgs     !           Minimum photon fluxes
+  U_FRAC(iFp0:iFp1) = 0.2                !           Fp update restriction    
 
   ! Set up indexes of photon densities and fluxes in U:
-  do ip=0,nGroups-1
-     iNpU(ip+1)=iNp0+ip
-     iFpU(ip+1)=iFp0+ip
+  do ig=0,nGroups-1
+     iNpU(ig+1)=iNp0+ig
+     iFpU(ig+1)=iFp0+ig
   enddo
 
   ! Might also put in here filling in of tables of cooling rates, to 
@@ -196,6 +196,10 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
      nAct_next=0                     ! Active cells for the next iteration
      do ia=1,nAct                             ! Loop over the active cells
         i = indAct(ia)                        !                 Cell index
+        !if(loopcnt .gt. 10000) &
+        if(loopcnt .gt. 100000) &
+             call display_CoolInfo(.true., loopcnt, i, dt-tleft(i), dt,  & 
+                                ddt(i),nH(i), U(i,:), dU, code)
         call cool_step(U(i,:), dNpdt(i,:), dFpdt(i,:), ddt(i), nH(i)     &
                      ,nHe(i), Zsolar(i), a_exp, dt_ok, dt_rec            &
                      ,c_switch(i), dU, i, loopcnt, code)
@@ -214,10 +218,6 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
            ddt(i)  = ddt(i)  + tleft(i)
         endif
         ddt(i)=dt_rec              ! Use the recommended dt from cool_step        
-        !if(loopcnt .gt. 10000) &
-        if(loopcnt .gt. 100000) &
-             call display_CoolInfo(.true., loopcnt, i, dt-tleft(i), dt,  & 
-                                ddt(i),nH(i), U(i,:), dU, code)
      end do ! end loop over active cells
      nAct=nAct_next
   end do ! end iterative loop
@@ -261,6 +261,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   real(dp),dimension(nGroups):: recRad, phI
   real(dp)::metal_tot,metal_prime
   integer::i, nc, loopcnt, code
+  real(dp):: fracMax
 !-------------------------------------------------------------------------
   dt_ok=.false.
   ! Insert UV background emitted and propagated from void regions:
@@ -281,9 +282,12 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   if(rt_isTconst) TK=rt_Tconst                         !  Force constant T
   ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4))                    !  Electron density
   neInit=ne
- 
+  fracMax=0d0    ! Max. fractional update, to check if dt can be increased
+
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
+     ! Must have this line if restriction on the Fp frac change:
+     U(iFp0:iFp1) = MAX(0D0,MIN(U(iFp0:iFp1), U(iNp0:iNp1)*rt_c_cgs))
      recRad(1:nGroups)=0. ; phI(1:nGroups)=0.              
      if(.not. rt_OTSA .and. rt_advect) then ! ------------- Rec. radiation
         alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
@@ -291,28 +295,22 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
         alpha(2) = MAX(0.d0,comp_AlphaA_HeII(TK)-comp_AlphaB_HeII(TK))
         alpha(3) = comp_AlphaA_HeIII(TK) - comp_AlphaB_HeIII(TK)
         do i=1,nIons
-           if(spec2group(i) .gt. 0)   & ! Contribution of ion -> ph. group
+           if(spec2group(i) .gt. 0)   &     ! Contribution of ion -> group
                 recRad(spec2group(i)) = &
                 recRad(spec2group(i)) + alpha(i) * nI(i) * ne
         enddo
      endif
-     do i=1,nGroups      ! ------------------------------------ Absorbtion
-        phI(i) = SUM(nN(:)*signc(i,:))
+     do i=1,nGroups      ! --------------------------Ionization absorbtion
+        phI(i) = SUM(nN(:)*signc(i,:)) ! s-1
      end do
-     do i=1,nGroups      ! ---------------------- Do the update of N and F
+
+     do i=1,nGroups         ! ------------------- Do the update of N and F
         dU(iNpU(i))= MAX(smallNp,                                        &
                    (dt*(recRad(i)+dNpdt(i))+dU(iNpU(i)))/(1.d0+dt*phI(i)))
         dU(iFpU(i)) = MAX(0d0,(dt*dFpdt(i)+dU(iFpu(i)))/(1.d0+dt*phI(i)))
         ! Check the flux: Too large relative to available photons? 
         q = dU(iFpU(i)) / (rt_c_cgs*dU(iNpU(i)))
         if(q .gt. 1.d0) then           ! Normalize flux if it is too large
-!rom           if(.not. rt_smooth)                                           &
-!rom                print *,'Normalizing flux in solve_cooling(), q=',q
-           !print*,'q=',q
-           !print*,'cN=',rt_c_cgs*dU(iNpU(i)),rt_c_cgs*U(iNpU(i))
-           !print*,'Fp=',dU(iFpU(i)),U(iFpU(i))
-           !print*,'recRad=',recRad(i)
-           !print*,'***************************************'
            dU(iFpU(i))=dU(iFpU(i))/q
         endif
      end do
@@ -322,32 +320,41 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      if(dUU .gt. 1.) then                                 
        code=1 ;   dU=dU-U; RETURN                             ! dt too big
      endif
-  endif
+     fracMax=MAX(fracMax,DUU)                                             
+     dUU=MAXVAL(                                                         &
+        ABS((dU(iFp0:iFp1)-U(iFp0:iFp1))/(U(iFp0:iFp1)+U_MIN(iFp0:iFp1)))&
+        /U_FRAC(iFp0:iFp1) )                                              
+     if(dUU .gt. 1.) then                                                 
+       code=1 ;   dU=dU-U; RETURN                             ! dt too big
+     endif                                                                
+     fracMax=MAX(fracMax,DUU)                                             
+  endif !if(rt)
   !(ii) UPDATE TEMPERATURE ***********************************************
   if(c_switch .and. cooling) then
      Hrate=0.                               !  Heating rate [erg cm-3 s-1]
      if(rt) then
         do i=1,nGroups                                     !  Photoheating
            Hrate = Hrate + dU(iNpU(i)) * SUM(nN(:) * PHrate(i,:))
-        end do
-     endif
+        end do                                                            
+     endif                                                                
      if(rt_UV_hom .and. nH .lt. rt_UV_nHSS)                              &
           Hrate = Hrate + SUM(nN(:) * UVrates(:,2))
      Crate = compCoolrate(TK, ne, nN(1), nI(1), nN(2), nN(3), nI(3)      &
                          ,a_exp, dCdT2, RT_OTSA)                !  Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
      metal_tot=0.d0 ; metal_prime=0.d0                     ! Metal cooling
-     if(metal) call rt_cmp_metals(U(1),nH,mu,metal_tot,metal_prime,a_exp)
-
+     if(Zsolar .gt. 0d0) &
+          call rt_cmp_metals(U(1),nH,mu,metal_tot,metal_prime,a_exp)
      X_nHkb= X/(1.5 * nH * kB)                     ! Multiplication factor   
      rate  = X_nHkb*(Hrate - Crate - Zsolar*metal_tot)
      dRate = -X_nHkb*(dCdT2 + Zsolar*metal_prime)              ! dRate/dT2
      dUU   = ABS(MAX(T2_min_fix, U(1)+rate*dt)-U(1)) ! 1st order dt constr
-     dU(1) = MAX(T2_min_fix, U(1)+rate*dt/(1.-dRate*dt))    ! New T2 value 
+     dU(1) = MAX(T2_min_fix, U(1)+rate*dt/(1.-dRate*dt))    ! New T2 value
      dUU   = MAX(dUU, ABS(dU(1)-U(1))) / (U(1)+U_MIN(1)) / U_FRAC(1)
      if(dUU .gt. 1.) then                                       ! 10% rule
         code=2 ; dU=dU-U; RETURN
      endif
+     fracMax=MAX(fracMax,dUU)
      TK=dU(1)*mu
   endif
   !(iii) UPDATE xHII******************************************************
@@ -378,6 +385,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   if(dUU .gt. 1.) then
      code=3 ; dU=dU-U; RETURN
   endif
+  fracMax=MAX(fracMax,dUU)
   !End a more stable and accurate integration-----------------------------
   if(isHe) then
      ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4)) ! Update ne because of changed xhii 
@@ -440,13 +448,13 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      !print *,'e OVERSTEP ', loopcnt
      code=4 ; dU=dU-U; RETURN
   endif
+  fracMax=MAX(fracMax,dUU)
 
   if(rt_isTconst) dU(1)=rt_Tconst/mu
 
   !(ix) Check if we are safe to use a bigger timestep in next iteration:
-  dU=dU-U    
-  dUU=MAXVAL(ABS((dU)/(U+U_MIN))/U_FRAC)
-  if(dUU .lt. 0.5) then
+  dU=dU-U
+  if(fracMax .lt. 0.5) then
      dt_rec=dt*2.
   else
      dt_rec=dt
@@ -476,7 +484,7 @@ SUBROUTINE display_U_change(U_old, U_new, nH, loopcnt, code)
   write(*,888)'xHeII',  U_old(3), U_new(3), abs((U_new(3)-U_old(3))/U_old(3))
   write(*,888)'xHeIII', U_old(4), U_new(4), abs((U_new(4)-U_old(4))/U_old(4))
   write(*,777)'ne',     ne_old,   ne_new,   abs((ne_new-ne_old)/ne_old)
-  write(*,999), loopcnt, code, nH, nHe
+  write(*,999) loopcnt, code, nH, nHe
   do i=0,nGroups-1
      write(*,777)'Np',  U_old(iNp0+i), U_new(iNp0+i), &
           abs((U_new(iNp0+i)-U_old(iNp0+i))/U_old(iNp0+i))
@@ -513,7 +521,7 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH,   &
   endif
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-     call clean_stop
+     STOP
   endif
 
 111 format(' Stopping because of large number of timestesps in', &

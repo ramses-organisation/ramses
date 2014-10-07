@@ -19,7 +19,7 @@ SRC="/home/ics/teyssier";
 TEST_FREQ="00:00:01:00:00:00";
 
 # Test time offset: (YY:MM:DD:hh:mm:ss)
-TEST_OFFS="00:00:00:15:54:00";
+TEST_OFFS="00:00:00:03:00:00";
 
 # Wiki file
 WIKIFILE="AutoTests.md";
@@ -180,7 +180,7 @@ while true ; do
             if [ ${#monthcheck} -eq 0 ] ; then
                 # Generate new month group
                 m=$((($MONTHNOZERO - 1) / 4));
-                monthlist="|";
+                monthlist="||";
                 monthhead="[//]: # (";
                 for ((i=0;i<4;i++)); do
                    j=$(($m * 4 + $i));
