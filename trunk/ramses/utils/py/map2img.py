@@ -5,7 +5,6 @@ import numpy
 import pylab
 import os
 from matplotlib import pyplot as plt
-from PIL import Image
 import fortranfile
 from optparse import OptionParser
 
