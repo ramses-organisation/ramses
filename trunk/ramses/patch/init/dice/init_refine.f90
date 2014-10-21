@@ -73,7 +73,7 @@ subroutine init_refine_2
      enddo
      !!! ----------
      call refine_coarse
-     if(myid==1) write(*,*) "Level ",i,"->Loading GAS"
+     if(myid==1) write(*,*) "Level ",i
      do ilevel=1,nlevelmax
         call build_comm(ilevel)
         call make_virtual_fine_int(cpu_map(1),ilevel)
@@ -144,7 +144,22 @@ subroutine init_refine_2
      call flag_coarse
 
   end do
-  call remove_gas_particles
+  !!! DICE------
+  do ilevel=levelmin-1,1,-1
+    if(pic)call merge_tree_fine(ilevel)
+  enddo  
+  call kill_gas_part(1)
+  do ilevel=1,nlevelmax
+     if(pic)then
+        call make_tree_fine(ilevel)
+        call kill_tree_fine(ilevel)
+        call virtual_tree_fine(ilevel)
+     endif
+  end do
+  do ilevel=nlevelmax,levelmin,-1
+     call merge_tree_fine(ilevel)
+  end do
+  !!! ----------
 
 #ifdef RT
   if(rt_is_init_xion .and. rt_nregion .eq. 0) then
@@ -161,45 +176,40 @@ end subroutine init_refine_2
 !################################################################
 !################################################################
 !################################################################
-subroutine remove_gas_particles
-  use amr_commons
+subroutine kill_gas_part(ilevel)
   use pm_commons
+  use amr_commons
   implicit none
+  integer::ilevel
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  integer::ngas_tot_all
-  integer,dimension(1:ncpu)::ngas_icpu_all
+  integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
 #endif
-  !----------------------------------------------------------------------
-  ! This subroutine removes the gas particles initially present in the gadget1 DICE output
-  ! Valentin Perret
-  !----------------------------------------------------------------------
-  ! local constants
-  integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
-  integer::ngas,ngas_loc,ngas_tot,info,igas,ilevel,ivar
-  integer,dimension(1:ncpu)::ngas_icpu
-  real(dp)::vol_min,nISM,nCOM,d0
-  integer,dimension(:),allocatable::ind_part,ind_grid
-  logical,dimension(:),allocatable::ok_free
-  integer,dimension(:),allocatable::indgas
+  !--------------------------------------------------------
+  ! This subroutine removes the gas particles 
+  ! initially present in the gadget1 DICE output
+  !--------------------------------------------------------
+  integer::igrid,jgrid,ipart,jpart,next_part
+  integer::ig,ip,npart1,npart2,icpu,info
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  logical,dimension(1:nvector)::ok=.true.
+  integer::npart_all
 
-  if(.not. hydro)return
-  if(ndim.ne.3)return
+  npart_cpu = 0
+  npart_all = 0
 
-  if(verbose)write(*,*)'Entering remove_gas_particles'
-  !------------------------------------------------------
-  ! Gather gas particles
-  !------------------------------------------------------
-  ngas_loc=0
-  ! Loop over levels
-  do icpu=1,ncpu
+  if(numbtot(1,ilevel)==0)return
+  ! Gather gas particles.
   ! Loop over cpus
-     igrid=headl(icpu,levelmin)
+  do icpu=1,ncpu
+     igrid=headl(icpu,ilevel)
+     ig=0
+     ip=0
      ! Loop over grids
-     do jgrid=1,numbl(icpu,levelmin)
+     do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        npart2=0
-        ! Count old enough GMC particles
+        npart2=0        
+        ! Count gas particles
         if(npart1>0)then
            ipart=headp(igrid)
            ! Loop over particles
@@ -210,81 +220,63 @@ subroutine remove_gas_particles
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
-            end do
-        endif
-        ngas_loc=ngas_loc+npart2   ! Add gase to the total
-        igrid=next(igrid)   ! Go to next grid
-     end do
-  end do
-  ! End loop over levels
-  ngas_icpu=0
-  ngas_icpu(myid)=ngas_loc
-#ifndef WITHOUTMPI
-  ! Give an array of number of gas on each cpu available to all cpus
-  call MPI_ALLREDUCE(ngas_icpu,ngas_icpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  ngas_icpu=ngas_icpu_all
-#endif
-
-  ngas_tot=sum(ngas_icpu(1:ncpu))
-
-  if (ngas_tot .eq. 0) return
-  
-  if(myid==1)then
-     write(*,*)'-----------------------------------------------'
-     write(*,*)'Number of gas particles to delete=',ngas_tot
-     write(*,*)'-----------------------------------------------'
-  endif
-
-  ! Allocate arrays for particles index and parent grid
-  if(ngas_loc>0)then
-     allocate(ind_part(1:ngas_loc),ind_grid(1:ngas_loc),ok_free(1:ngas_loc))
-  endif
-
-  !------------------------------------------------------
-  ! Flag the index of gas particles to be removed
-  !------------------------------------------------------
-  if(myid==1)then
-     igas=0
-  else
-     igas=sum(ngas_icpu(1:myid-1))
-  endif
-  ! Loop over levels
-  ip=0
-  do icpu=1,ncpu
-     igrid=headl(icpu,levelmin)
-     ! Loop over grids
-     do jgrid=1,numbl(icpu,levelmin)
-        npart1=numbp(igrid)  ! Number of particles in the grid
-        ! Count old enough star particles that have not exploded
-        if(npart1>0)then
+           end do
+           npart_cpu(myid)=npart_cpu(myid)+npart2
+        endif        
+        ! Gather gas particles
+        if(npart2>0)then        
+           ig=ig+1
+           ind_grid(ig)=igrid
            ipart=headp(igrid)
            ! Loop over particles
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
+              ! Select only gas particles
               if(idp(ipart).eq.1)then
-                 igas=igas+1
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
                  ip=ip+1
-                 ind_grid(ip)=igrid
                  ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig   
               endif
+              if(ip==nvector)then
+                 call remove_list(ind_part,ind_grid_part,ok,ip)
+                 call add_free_cond(ind_part,ok,ip)
+                 ip=0
+                 ig=0
+              end if
               ipart=next_part  ! Go to next particle
            end do
-        endif
+           ! End loop over particles
+        end if
+        
         igrid=next(igrid)   ! Go to next grid
      end do
-  end do 
-  ! End loop over levels
+     
+     ! End loop over grids
+     if(ip>0)then
+        call remove_list(ind_part,ind_grid_part,ok,ip)
+        call add_free_cond(ind_part,ok,ip)
+     end if
+  end do
 
-  ! Remove gas particle
-  if(ngas_loc>0)then
-     ok_free=.true.
-     call remove_list(ind_part,ind_grid,ok_free,ngas_loc)
-     call add_free_cond(ind_part,ok_free,ngas_loc)
-     deallocate(ind_part,ind_grid,ok_free)
+#ifndef WITHOUTMPI
+  ! Give an array of number of gas on each cpu available to all cpus
+  call MPI_ALLREDUCE(npart_cpu,npart_cpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+  npart_all=sum(npart_cpu_all(1:ncpu))
+  if(myid==1)then
+     write(*,*)'-----------------------------------------------'
+     write(*,*)'Number of gas particles deleted=',npart_all
+     write(*,*)'-----------------------------------------------'
   endif
   do ipart=1,npart
     idp(ipart) = idp(ipart)-1
   enddo
 
+111 format('   Entering kill_gas_part for level ',I2)
+!---------------------------------------------
 end subroutine
