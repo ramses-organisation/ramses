@@ -392,7 +392,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-           write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))'),j+ipeak_start(myid)&
+           write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
