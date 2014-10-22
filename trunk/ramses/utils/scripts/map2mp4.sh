@@ -23,7 +23,7 @@ if [ "$#" -ne 4 ]; then
   printf "Usage: ./map2mp4.sh <dir> <kind> <step> <proj_index>, where:\n<kind>: dens, temp, metal\n <dir>"
 else
   echo "Preparing pngs..."
-  eval "../py/map2img.py -s $step -c RdBu_r -l True -p $proj -d ${path}${dir} -k $kind -m 1e4 -M 1e8"
+  eval "./map2img.py -s $step -c bone -l True -p $proj -d ${path}${dir} -k $kind" # -m 1e4 -M 1e8"
   echo "Creating the movie: ${path}${dir}$kind$proj.mp4"
   eval "ffmpeg -loglevel quiet -i ${path}${dir}movie${proj}/pngs/${kind}_%05d.png -y -vcodec libx264 -vpre slow -crf 10 -r 25 ${path}${dir}$kind$proj.mp4"
   echo "Cleaning up!"

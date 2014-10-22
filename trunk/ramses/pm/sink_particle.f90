@@ -2642,16 +2642,18 @@ subroutine update_sink(ilevel)
 
      if(smbh)then
         fdrag(isink,1:ndim)=0.d0
-        ! Compute the drag force exerted by the gas on the sink particle 
-        vrel(1:ndim)=vsnew(isink,1:ndim,ilevel)-velc(isink,1:ndim)
-        vnorm_rel=sqrt( vrel(1)**2 + vrel(2)**2 + vrel(3)**2 )
-        mach=vnorm_rel/sqrt(c2sink(isink))
-        alpha=max((densc(isink)/d_star)**2,1d0)
-        factor=alpha*fudge*densc(isink)*msink(isink)/c2sink(isink) / vnorm_rel
-        if(mach.le.0.950d0)factor=factor/mach**2*(0.5d0*log((1d0+mach)/(1d0-mach))-mach)
-        if(mach.ge.1.007d0)factor=factor/mach**2*(0.5d0*log(mach**2-1d0)+3.2d0)
-        factor=MIN(factor,2.0d0/(dtnew(ilevel)+dteff))
-        fdrag(isink,1:ndim)=-factor*vrel(1:ndim)
+        if(sink_drag)then
+          ! Compute the drag force exerted by the gas on the sink particle 
+          vrel(1:ndim)=vsnew(isink,1:ndim,ilevel)-velc(isink,1:ndim)
+          vnorm_rel=sqrt( vrel(1)**2 + vrel(2)**2 + vrel(3)**2 )
+          mach=vnorm_rel/sqrt(c2sink(isink))
+          alpha=max((densc(isink)/d_star)**2,1d0)
+          factor=alpha*fudge*densc(isink)*msink(isink)/c2sink(isink) / vnorm_rel
+          if(mach.le.0.950d0)factor=factor/mach**2*(0.5d0*log((1d0+mach)/(1d0-mach))-mach)
+          if(mach.ge.1.007d0)factor=factor/mach**2*(0.5d0*log(mach**2-1d0)+3.2d0)
+          factor=MIN(factor,2.0d0/(dtnew(ilevel)+dteff))
+          fdrag(isink,1:ndim)=-factor*vrel(1:ndim)
+        endif
         ! Compute new sink velocity due to the drag
         vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fdrag(isink,1:ndim)+vsink(isink,1:ndim)
         ! save the velocity
