@@ -5,10 +5,10 @@
 NVECTOR = 32
 NDIM = 3
 NPRE = 8
-NVAR = 7
+NVAR = 8
 NENER = 0
 SOLVER = hydro
-PATCH = ../patch/hydro/my_own_halo 
+PATCH = ../patch/hydro/my_own_halo/ 
 EXEC = ramses
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
 #############################################################################
