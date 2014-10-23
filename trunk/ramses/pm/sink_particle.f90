@@ -1272,7 +1272,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)xx(j,idim,ind)=xx(j,idim,ind)-boxlen
-              if (period(idim) .and. r_rel(idim)<boxlen*-0.5)xx(j,idim,ind)=xx(j,idim,ind)+boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))xx(j,idim,ind)=xx(j,idim,ind)+boxlen
            end do
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            r_abs=sum(r_rel(1:3)**2)**0.5      

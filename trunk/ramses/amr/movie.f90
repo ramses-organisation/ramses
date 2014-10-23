@@ -16,7 +16,7 @@ subroutine output_frame()
 
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, moviefile
-  character(len=100) :: moviefile1,moviefile2,moviefile3
+  character(len=100) :: moviefile1,moviefile2,moviefile3,moviefile4
   
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
@@ -84,7 +84,12 @@ subroutine output_frame()
   moviefile1 = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefile2 = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
   moviefile3 = trim(moviedir)//'metal_'//trim(istep_str)//'.map'
+  moviefile4 = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
 
+  if(sink)then
+    if(myid==1) call output_sink_csv(moviefile4)
+  endif
+  write(*,*) "Just wrote sink info and should proceed"
   if(levelmax_frame==0)then
      nlevelmax_frame=nlevelmax
   else

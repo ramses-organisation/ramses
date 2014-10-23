@@ -39,8 +39,8 @@ tout=1.0
 &HYDRO_PARAMS
 gamma=1.4
 courant_factor=0.8
-slope_type=3
-scheme='plmde'
+slope_type=2
+scheme='muscl'
 /
 
 &REFINE_PARAMS 
