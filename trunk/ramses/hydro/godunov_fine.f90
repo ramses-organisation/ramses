@@ -528,7 +528,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            do ivar=1,nvar
               do i=1,nbuffer
                  u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-                 if(difmag_switch(ibuffer_father(i,j)))then
+                 if(difmag_switch(ibuffer_father(i,j))==1)then
                     dif_mask_coarse(i,j)=1
                  else
                     dif_mask_coarse(i,j)=0
@@ -563,7 +563,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do ivar=1,nvar
            do i=1,nexist
               uloc(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
-              if (difmag_switch(ind_cell(i)))then
+              if (difmag_switch(ind_cell(i))==1)then
                  dif_mask(ind_exist(i),i3,j3,k3)=1
               else
                  dif_mask(ind_exist(i),i3,j3,k3)=0

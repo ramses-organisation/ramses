@@ -668,7 +668,7 @@ subroutine collect_acczone_avg(ilevel)
   use pm_commons
   use amr_commons
   use poisson_commons
-  use hydro_commons,only:difmag_switch
+  use hydro_commons,only:difmag_switch,uold
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -734,7 +734,8 @@ subroutine collect_acczone_avg(ilevel)
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
            ind_cell=iskip+igrid
-           difmag_switch(ind_cell)=.false.
+           difmag_switch(ind_cell)=0
+           if (uold(ind_cell,1)<0.)difmag_switch(ind_cell)=1
         end do
 
         npart1=numbp(igrid)  ! Number of particles in the grid
@@ -816,6 +817,12 @@ subroutine collect_acczone_avg(ilevel)
      weighted_ethermal(isink,ilevel)=weth_new(isink)
      weighted_divergence(isink,ilevel)=wdiv_new(isink)
   end do
+
+
+#ifndef WITHOUTMPI
+  call make_virtual_fine_int(difmag_switch(1),ilevel)
+#endif
+  
 
 111 format('   Entering collect_acczone_avg for level ',I2)
 
@@ -4265,7 +4272,7 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   if (ilevel_only)then
      do ind=1,twotondim
         do j=1,np
-           difmag_switch(indp(j,ind))=.true.
+           difmag_switch(indp(j,ind))=1
         end do
      end do
   end if

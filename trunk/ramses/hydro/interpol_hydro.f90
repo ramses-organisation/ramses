@@ -119,7 +119,7 @@ subroutine upl(ind_cell,ncell)
 
   ! 
   do i=1,ncell
-     difmag_switch(ind_cell(i))=.false.
+     difmag_switch(ind_cell(i))=0
   end do
   do ind_son=1,twotondim
      iskip_son=ncoarse+(ind_son-1)*ngridmax
@@ -128,8 +128,8 @@ subroutine upl(ind_cell,ncell)
      end do
      
      do i=1,ncell
-        if (difmag_switch(ind_cell_son(i)) .and. son(ind_cell_son(i))==0)then
-           difmag_switch(ind_cell(i))=.true.
+        if (difmag_switch(ind_cell_son(i))==1 .and. son(ind_cell_son(i))==0)then
+           difmag_switch(ind_cell(i))=1
         end if
      end do
   end do

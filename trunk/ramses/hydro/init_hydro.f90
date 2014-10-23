@@ -27,7 +27,7 @@ subroutine init_hydro
   allocate(unew(1:ncell,1:nvar))
   uold=0.0d0; unew=0.0d0
   allocate(difmag_switch(1:ncell))
-  difmag_switch=.false.
+  difmag_switch=0
   if(pressure_fix)then
      allocate(divu(1:ncell))
      allocate(enew(1:ncell))

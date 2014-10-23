@@ -444,6 +444,7 @@ subroutine merge_clumps(action)
 
 #ifndef WITHOUTMPI
      ! Create new local duplicated peaks and update communicator
+     call build_peak_communicator
      call virtual_saddle_max
      call build_peak_communicator
 
@@ -637,10 +638,12 @@ subroutine merge_clumps(action)
      
      ! Update flag2 field
      do ipart=1,ntest
-        call get_local_peak_id(flag2(icellp(ipart)),ipeak)
-        merge_to=new_peak(ipeak)
-        call get_local_peak_id(merge_to,jpeak)
-        flag2(icellp(ipart))=merge_to
+        if (flag2(icellp(ipart))>0)then
+           call get_local_peak_id(flag2(icellp(ipart)),ipeak)
+           merge_to=new_peak(ipeak)
+           call get_local_peak_id(merge_to,jpeak)
+           flag2(icellp(ipart))=merge_to
+        end if
      end do
      call build_peak_communicator
 
@@ -725,6 +728,7 @@ end subroutine get_max
 subroutine allocate_peak_patch_arrays
   use amr_commons, ONLY:ndim,dp
   use clfind_commons
+  use hydro_commons, only:uold
   use sparse_matrix
   implicit none
 
@@ -782,12 +786,24 @@ subroutine allocate_peak_patch_arrays
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
   
+  ! do ind=1,twotondim
+  !    iz=(ind-1)/4
+  !    iy=(ind-1-4*iz)/2
+  !    ix=(ind-1-2*iy-4*iz)
+  !    xc(ind,1)=(dble(ix)-0.5D0)
+  !    xc(ind,2)=(dble(iy)-0.5D0)
+  !    xc(ind,3)=(dble(iz)-0.5D0)
+  ! end do
+
+
   !------------------------------------------------
   ! Initialize the hash table with interior patches
   !------------------------------------------------
   do ipart=1,ntest
      peak_nr=flag2(icellp(ipart)) ! global peak id
-     call get_local_peak_id(peak_nr,ipeak)
+     if (peak_nr>0)then
+        call get_local_peak_id(peak_nr,ipeak)
+     end if
   end do
 
   !---------------------------------
