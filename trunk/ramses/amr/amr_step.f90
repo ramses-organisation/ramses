@@ -105,7 +105,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------
   ! Update sink cloud particle properties
   !-----------------
-  if(sink)call update_cloud(ilevel,.false.)
+  if(sink)call update_cloud(ilevel)
 
   !-----------------
   ! Particle leakage

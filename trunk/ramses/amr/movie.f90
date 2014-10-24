@@ -43,26 +43,31 @@ subroutine output_frame()
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
   integer::i,ig,ip,npart1
   integer::nalloc1,nalloc2
-  integer::proj_ind,l
+  integer::proj_ind,l,nh_temp,nw_temp
+  real(kind=4)::ratio
 
   integer,dimension(1:nvector),save::ind_part
   logical::opened
 
   character(len=1)::temp_string
+
+  nh_temp = nh_frame
+  nw_temp = nw_frame
+
   
 !  proj_axis=trim(proj_axis)
 
  do proj_ind=1,LEN(trim(proj_axis)) 
   opened=.false.
+
+  !inh_temp = nh_frame
+  !nw_temp = nw_frame
     
 #if NDIM > 1
 
   ! Update counter
   if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
   if(imov>imovout)return
-
-  ! Determine the filename, dir, etc
-  if(myid==1)write(*,*)'Computing and dumping movie frame'
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
@@ -89,7 +94,7 @@ subroutine output_frame()
   if(sink)then
     if(myid==1) call output_sink_csv(moviefile4)
   endif
-  write(*,*) "Just wrote sink info and should proceed"
+  
   if(levelmax_frame==0)then
      nlevelmax_frame=nlevelmax
   else
@@ -129,6 +134,16 @@ subroutine output_frame()
     delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
     dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
     delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+  endif
+
+  ratio = delx/dely
+  if(ratio.gt.1)then
+    nw_frame=nh_temp*ratio
+  else
+    nh_frame=nw_temp/ratio
+  endif
+  if(myid.eq.1)then
+    write(*,*)'RATIO',ratio,nw_frame,nh_frame
   endif
 
   ! Compute frame boundaries
@@ -375,6 +390,9 @@ subroutine output_frame()
 
   deallocate(data_frame)
 #endif
+
+  nw_frame = nw_temp
+  nh_frame = nh_temp
  enddo
 end subroutine output_frame
 

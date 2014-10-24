@@ -22,13 +22,13 @@ def main():
 	parser.add_option("-M","--max",  dest="max", metavar="VALUE", \
 			help='max value', default=None)
 	parser.add_option("-d","--dir", dest="dir", \
-			help='map directory', default="/zbox/user/biernack/halo08/movie/")
-	parser.add_option("-i","--iter", dest="iter", \
-			help="iterator index", default=2)
+			help='map directory', default=None)
 	parser.add_option("-p","--proj", dest="proj", \
 			help="proj_nd", default=2)
 	parser.add_option("-s","--step", dest="step", \
 			help="framing step", default=5)
+	parser.add_option("-z","--zero", dest="zero", \
+			help="Starting frame", default=0, type=int)
 	parser.add_option('-k','--kind', dest="kind", \
 			help="kind of plot [temp, dens, metal]", default='dens')	
 	parser.add_option('-a','--autorange',dest='autorange', action='store_true', \
@@ -41,8 +41,19 @@ def main():
 
 	
 	proj_ind = int(opts.proj)-1
-	namelist = opts.dir + 'halo.nml'
-	nmlf = open(namelist)
+	
+	# Searching for namelist
+	for file in os.listdir(opts.dir):
+		if file.endswith(".nml"):
+			namelist = opts.dir + file
+	try:
+		nmlf = open(namelist)
+	except IOError:
+		print "No namelist found! Aborting!"
+		sys.exit()
+	
+
+	sink_flag = False
 	# Loading parameters from the namelist
         for i, line in enumerate(nmlf):
 		if line.split('=')[0] == 'xcentre_frame':
@@ -61,6 +72,9 @@ def main():
 			proj_axis = line.split('=')[1]
 		if line.split('=')[0] == 'imovout':
 			max_iter = int(line.split('=')[1])
+		if (line.split('=')[0] == 'sink' and line.split('=')[1] == '.true.'):
+			sink_flag = True
+			
 	
 	print 'Projection axis: %s' % (proj_axis[proj_ind+1])
 	
@@ -72,7 +86,7 @@ def main():
 	pbar = ProgressBar(widgets=widgets, maxval = max_iter+1).start()
 	
 	# Looping over movie snapshots
-	for i in xrange(int(opts.step),max_iter+1,int(opts.step)):
+	for i in xrange(opts.zero+int(opts.step),max_iter+1,int(opts.step)):
 
 		infile = "%smovie%d/%s_%05d.map" % (opts.dir, int(opts.proj), opts.kind, i)		
 	
@@ -84,20 +98,22 @@ def main():
 				time = float(line.split()[2])
 			if j> 18:
 				break	
-		try:
-			sinkf = open("%smovie%d/sink_%05d.txt" % (opts.dir, int(opts.proj), i))
-			sink = sinkf.readline().split(',')
-			sink_x = float(sink[2])/float(boxlen)
-			sink_y = float(sink[3])/float(boxlen)
-			sink_z = float(sink[4])/float(boxlen)
-			#print sink_x, sink_y, sink_z
-		except IOError:
-			print "No sink file" 
+		if sink_flag:
+			try:
+				sinkf = open("%smovie%d/sink_%05d.txt" % (opts.dir, int(opts.proj), i))
+				sink = sinkf.readline().split(',')
+				sink_x = float(sink[2])/float(boxlen)
+				sink_y = float(sink[3])/float(boxlen)
+				sink_z = float(sink[4])/float(boxlen)
+				#print sink_x, sink_y, sink_z
+			except IOError:
+				print "No sink file" 
+
 	
 		if(opts.outfile==None):
 			if not os.path.exists("%smovie%d/pngs/" % (opts.dir, int(opts.proj))):
     				os.makedirs("%smovie%d/pngs/" % (opts.dir, int(opts.proj)))
-			outfile="%smovie%d/pngs/%s_%05d.png" % (opts.dir, int(opts.proj), opts.kind, i/int(opts.step))
+			outfile="%smovie%d/pngs/%s_%05d.png" % (opts.dir, int(opts.proj), opts.kind, i/int(opts.step)-opts.zero)
 		else:
 			outfile=opts.outfile
 		
@@ -156,7 +172,7 @@ def main():
 		dat = dat.reshape(ny,nx)
 	
 		# Plotting
-		fig = plt.figure(figsize=(8,8),frameon=False)
+		fig = plt.figure(figsize=(8,8*ny/nx),frameon=False)
 		
 		ax = fig.add_subplot(1,1,1)
 		ax.set_axis_off()
@@ -165,22 +181,23 @@ def main():
 				vmin = plotmin, vmax = plotmax)
 
 		# Plotting sink
-		if axis == 'x':
-			ax.plot((sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*nx/2+nx/2,\
-				(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
-				marker='+',c='r',mew=1,ms=6)
-		elif axis == 'y':
-			ax.plot((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
-				(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
-				marker='+',c='r',mew=1,ms=6)
-		else:
-			ax.plot((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
-				(sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*ny/2+ny/2,\
-				marker='+',c='r',mew=1,ms=6)
+		if sink_flag:
+			if axis == 'x':
+				ax.plot((sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*nx/2+nx/2,\
+					(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
+					marker='+',c='r',mew=1,ms=6)
+			elif axis == 'y':
+				ax.plot((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
+					(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
+					marker='+',c='r',mew=1,ms=6)
+			else:
+				ax.plot((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
+					(sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*ny/2+ny/2,\
+					marker='+',c='r',mew=1,ms=6)
 
 		plt.axis('off') # removes axis
-		plt.xlim(0,ny) # trims image to borders
-		plt.ylim(0,nx)
+		plt.xlim(0,nx) # trims image to borders
+		plt.ylim(0,ny)
 		# corrects window extent
 		extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 		plt.savefig(outfile,bbox_inches=extent,dpi=100)
@@ -189,7 +206,6 @@ def main():
 		pbar.update(i) # updates progressbar
 
 	pbar.finish()
-		
 
 if __name__ == '__main__':
 	main()
