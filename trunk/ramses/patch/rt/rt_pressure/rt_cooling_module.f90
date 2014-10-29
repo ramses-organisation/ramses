@@ -41,7 +41,7 @@ module rt_cooling_module
   real(dp),parameter::kB        = 1.38062d-16    ! Boltzm.const. [erg K-1]
   real(dp),parameter::a_r       = 7.5657d-15   ! Rad.const. [erg cm-3 K-4]
   real(dp),parameter::mu_mol    = 1.2195D0
-  real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
+  real(dp),parameter::T2_min_fix= 0.43           !     Min temperature [K]
   real(dp),parameter::twopi     = 6.2831853d0    !            Two times pi
 
   real(dp)::T_min, T_frac, x_min, x_frac, Np_min, Np_frac, Fp_min, Fp_frac
@@ -54,7 +54,7 @@ module rt_cooling_module
   real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
   logical::rt_isIR=.false.             ! Using IR scattering on dust?    
   logical::rt_isIRtrap=.false.         ! IR trapping in passive scalar?  
-  logical::is_kIR_T=.false.            ! k_IR propto T^2?               
+  logical::is_kIR_T=.true.            ! k_IR propto T^2?               
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
   real(dp),dimension(nGroups)::kappaAbs! Dust absorption opacity    
@@ -233,7 +233,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
                       ,dT2,   dXion(:),  dNp(:),  dFp(:,:),  dp_gas(:)   &
                       ,dNpdt(i,:), dFpdt(i,:,:), nH(i), c_switch(i)      &
                       ,Zsolar(i),  ddt(i), a_exp, dt_ok, dt_rec, code    )
-        if(loopcnt .gt. 10000) then
+        if(loopcnt .gt. 100000) then
            call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
                             ,ddt(i), nH(i), T2(i),  xion(i,:),  Np(i,:)  &
                             ,Fp(i,:,:),  p_gas(i,:)                      &
@@ -356,8 +356,8 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         TR = max(T2_min_fix,(E_rad*rt_c_cgs/c_cgs/a_r)**0.25)
         dT2 = TR/mu ;   TK = TR
      endif
-     kAbs_loc(iIR) = kappaAbs(iIR) * (TK/10d0)**2
-     kSc_loc(iIR)  = kappaSc(iIR)  * (TK/10d0)**2
+     kAbs_loc(iIR) = kappaAbs(iIR) * (max(TK,100.)/10d0)**2
+     kSc_loc(iIR)  = kappaSc(iIR)  * (max(TK,100.)/10d0)**2
   endif
   ! Set dust absorption and scattering rates [s-1]:
   dustAbs(:)  = kAbs_loc(:) *rho*Zsolar*rt_c_cgs
@@ -463,6 +463,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      endif
      fracMax=MAX(fracMax,dUU)
      TK=dT2*mu
+     print*,'was here'
   endif
 
   if(rt_isIR .and. (kAbs_loc(iIR) .gt. 0d0) .and. .not. rt_T_rad) then
@@ -470,6 +471,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      !              / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
      C_v = rho*kb/mh/mu/(gamma-1d0)                                  
      E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
+
      dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
           / (1d0/kAbs_loc(iIR)/rho/dt + 4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
      dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
@@ -634,7 +636,7 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
 
 111 format(' Stopping because of large number of timestesps in', &
            ' rt_solve_cooling (', I6, ')')
-900 format (I3, '  myid=', I2, ' code=', I2, ' i=', I5, ' t=', 1pe12.3,  xs&
+900 format (I10, '  myid=', I2, ' code=', I2, ' i=', I5, ' t=', 1pe12.3,  xs&
             '/', 1pe12.3, ' ddt=', 1pe12.3, ' c=', 1pe12.3, &
             ' nH=', 1pe12.3)
 901 format ('  U      =', 20(1pe12.3))
