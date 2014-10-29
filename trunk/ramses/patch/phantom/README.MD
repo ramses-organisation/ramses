@@ -26,7 +26,7 @@ The patch requires `NDIM=3`.
 
 ### Units
 
-Because the POR patch makes use of the _poisson_ part, you must choose the units such that `G=1` in these units, because the Poisson solver requires this.
+Because the POR patch makes use of the _poisson_ part, you must choose the units such that `G=1` in these units. This is a requirement of the RAMSES Poisson solver.
 
 I.e., in the _units.f90_ file, make sure that
 
