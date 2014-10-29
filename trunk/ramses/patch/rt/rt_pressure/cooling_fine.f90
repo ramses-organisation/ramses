@@ -1,10 +1,3 @@
-! RT pressure patch:
-! Momentum from directional photons (Fp) absorbed by gas is put into gas 
-! momentum. 
-! This momentum is returned from solve_cooling
-! via the last nGroup entries in the U-vector, and added to the gas 
-! momentum in cooling_fine.
-! ------------------------------------------------------------------------
 subroutine cooling_fine(ilevel)
   use amr_commons
   use hydro_commons
@@ -69,37 +62,42 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
   use rt_parameters
   use rt_hydro_commons
-  use rt_cooling_module, only: n_U,iNpU,iFpU, rt_solve_cooling,iP0,iP1   &
-       ,iPtot,rt_isoPress,iRTisoPressVar                                    !RTpress
+  use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
+       ,rt_pressBoost,iIRtrapVar,kappaSc,a_r,is_kIR_T,rt_vc
 #endif
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ii,ig,ig0,ig1
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
+  integer::ii,ig,iNp,il,irad
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
-  real(dp)::polytropic_constant,Fpnew,Npnew
+  real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+  real(kind=8),dimension(1:nvector),save::nH,delta_T2,ekk,ekk_new,err
 #ifdef RT
-  real(dp)::scale_Np,scale_Fp
-  real(dp)::fmag                                                            !RTpress
-  real(dp),dimension(ndim)::fuVec  ! flux unit vector                       !RTpress
-  real(kind=8),dimension(1:nvector),save::eTherm                            !RTpress
+  real(dp)::scale_Np,scale_Fp,work
+  real(dp)::fmag,Npc,fred,Npnew, kScIR, EIR, TR
+  real(dp),dimension(1:ndim)::Fpnew,FIR,mom_IR
   logical,dimension(1:nvector),save::cooling_on=.true.
-  real(dp),dimension(1:nvector,n_U),save::U,U_old
-  real(dp),dimension(1:nvector,nGroups),save::Fp, Fp_precool
-  real(dp),dimension(1:nvector,nGroups),save::dNpdt=0., dFpdt=0.
+  real(dp),dimension(1:nvector),save:: T2,T2_old
+  real(dp),dimension(1:nvector, nIons),save:: xion
+  real(dp),dimension(1:nvector, nGroups),save:: Np, Np_boost=0d0, dNpdt=0d0
+  real(dp),dimension(1:nvector, nGroups, ndim),save:: Fp, Fp_boost, dFpdt
+  real(dp),dimension(1:nvector, ndim),save:: p_gas, u_gas
 #endif
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
-  real(kind=8)::dx_div_6                                                    !RTpress
+  real(kind=8)::dx_div_6, f_trap, NIRtot, NIRtrap, unit_tau, tau, Np2Ep
+  real(kind=8)::EIR_trapped
+  real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
+  real(dp),dimension(nDim):: flux 
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -107,7 +105,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  dx_div_6 = dx_loc / 6d0                                                   !RTpress
+  dx_div_6 = dx_loc / 6d0
   vol_loc=dx_loc**ndim
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -128,6 +126,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
           & (twopi)*6.67e-8*scale_d*(scale_t/scale_l)**2
   endif
 
+#ifdef RT
+  if(rt_isIRtrap) then
+     ! For conversion from photon number density to photon energy density:
+     Np2Ep = scale_Np * group_egy(iIR) * ev_to_erg                       &
+          * rt_c_cgs/c_cgs * rt_pressBoost / scale_d / scale_v**2
+  endif
+#endif
+
   ! Loop over cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -145,11 +151,22 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      if(nleaf.eq.0)cycle
 
+     ! Joki flooring density:
+     do i=1,nleaf
+        uold(ind_leaf(i),1) = max(uold(ind_leaf(i),1),smallr)
+     end do
+
      ! Compute rho
      do i=1,nleaf
         nH(i)=MAX(uold(ind_leaf(i),1),smallr)
      end do
-     
+
+     do i=1,nleaf
+        p_gas(i,:) = uold(ind_leaf(i),2:ndim+1) * scale_d * scale_v
+        u_gas(i,:) = uold(ind_leaf(i),2:ndim+1) &
+                     /uold(ind_leaf(i),1) * scale_v
+     end do
+
      ! Compute metallicity in solar units
      if(metal)then
         do i=1,nleaf
@@ -161,10 +178,44 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      endif
 
-     ! Compute pressure
-     do i=1,nleaf
-        T2(i)=uold(ind_leaf(i),ndim+2)
-     end do
+#ifdef RT
+     if(rt_isIRtrap) then  ! Gather also trapped photons for solve_cooling
+        iNp=iGroups(iIR)
+        do i=1,nleaf
+           il=ind_leaf(i)
+           rtuold(il,iNp) = rtuold(il,iNp) + uold(il,iIRtrapVar)/Np2Ep
+           if(rt_smooth) &
+                rtunew(il,iNp)= rtunew(il,iNp) + uold(il,iIRtrapVar)/Np2Ep
+        end do
+     endif
+
+     if(rt_vc) then         !   Add/remove work of radiation on gas. Eq A6.
+        iNp=iGroups(iIR)
+        do i=1,nleaf 
+           il=ind_leaf(i)
+           NIRtot = rtuold(il,iNp)
+           kScIR  = kappaSc(iIR)  
+           if(is_kIR_T) then                      !       k_IR depends on T
+              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
+              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
+              kScIR  = kappaSc(iIR)  * (TR/10d0)**2
+           endif
+           kScIR = kScIR*scale_d*scale_l
+           flux = rtuold(il,iNp+1:iNp+ndim)
+           work = scale_v/c_cgs * kScIR * sum(uold(il,2:ndim+1)*flux) &
+                * Zsolar(i) * dtnew(ilevel)       ! Eq A6
+           
+           uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
+                + work * group_egy(iIR) &
+                * ev_to_erg / scale_d / scale_v**2 / scale_l**3
+           
+           rtuold(il,iNp) = rtuold(il,iNp) - work !Remove from rad density
+           rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
+           call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
+        enddo
+     endif
+#endif
+        
      do i=1,nleaf
         ekk(i)=0.0d0
      end do
@@ -173,15 +224,32 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
         end do
      end do
+     do i=1,nleaf ! Prevent negative T!!!
+        uold(ind_leaf(i),ndim+2) = max(uold(ind_leaf(i),ndim+2), ekk(i))
+     end do
+     ! Compute thermal pressure
      do i=1,nleaf
-        eTherm(i)=max(T2(i)-ekk(i),T2_min_fix*nH(i)/scale_T2)    !RTpress
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i))
+        T2(i)=uold(ind_leaf(i),ndim+2)
+     end do
+     do i=1,nleaf
+        err(i)=0.0d0
+     end do
+#if NENER>0
+     do irad=1,nener
+        do i=1,nleaf
+           err(i)=err(i)+uold(ind_leaf(i),ndim+2+irad)
+        end do
+     end do
+#endif
+     do i=1,nleaf
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
      do i=1,nleaf
         T2(i)=T2(i)/nH(i)*scale_T2
      end do
+
      ! Compute nH in H/cc
      do i=1,nleaf
         nH(i)=nH(i)*scale_nH
@@ -233,43 +301,32 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
 #ifdef RT
      if(neq_chem) then
-        ! Get gas thermal temperature
-        do i=1,nleaf
-           U(i,1) = T2(i)
-        end do
         ! Get the ionization fractions
         do ii=0,nIons-1
            do i=1,nleaf
-              U(i,2+ii) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
+              xion(i,1+ii) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
            end do
         end do
-     
+
         ! Get photon densities and flux magnitudes
         do ig=1,nGroups
+           iNp=iGroups(ig)
            do i=1,nleaf
-              U(i,iNpU(ig)) = scale_Np * rtuold(ind_leaf(i),iGroups(ig))
-              U(i,iFpU(ig)) = scale_Fp &
-                   * sqrt(sum((rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim))**2))
+              il=ind_leaf(i)
+              Np(i,ig)        = scale_Np * rtuold(il,iNp)
+              Fp(i,ig,1:ndim) = scale_Fp * rtuold(il,iNp+1:iNp+ndim)
            enddo
            if(rt_smooth) then                           ! Smooth RT update
               do i=1,nleaf !Calc addition per sec to Np, Fp for current dt
-                 Npnew = scale_Np * rtunew(ind_leaf(i),iGroups(ig))
-                 Fpnew = scale_Fp &
-                      * sqrt(sum((rtunew(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim))**2))
-                 dNpdt(i,ig) = (Npnew - U(i,iNpU(ig))) / dtcool
-                 dFpdt(i,ig) = (Fpnew - U(i,iFpU(ig))) / dtcool ! Change in magnitude
-                 ! Update flux vector to get the right direction
-                 rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim) = &
-                      rtunew(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)
-                 Fp_precool(i,ig)=Fpnew           ! For update after solve_cooling
-              end do
-           else
-              do i=1,nleaf
-                 Fp_precool(i,ig)=U(i,iFpU(ig)) ! For update after solve_cooling
+                 il=ind_leaf(i)
+                 Npnew = scale_Np * rtunew(il,iNp)
+                 Fpnew = scale_Fp * rtunew(il,iNp+1:iNp+ndim)
+                 dNpdt(i,ig)   = (Npnew - Np(i,ig)) / dtcool
+                 dFpdt(i,ig,:) = (Fpnew - Fp(i,ig,:)) / dtcool
               end do
            end if
         end do
-        
+
         if(cooling .and. delayed_cooling) then
            cooling_on(1:nleaf)=.true.
            do i=1,nleaf
@@ -279,6 +336,23 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end if
         if(isothermal)cooling_on(1:nleaf)=.false.
      endif
+     
+     if(rt_vc) then ! Do the Lorentz boost. Eqs A4 an A5.
+        do i=1,nleaf
+           do ig=1,nGroups
+              Npc=Np(i,ig)*rt_c_cgs
+              call cmp_Eddington_tensor(Npc,Fp(i,ig,:),tEdd)
+              Np_boost(i,ig) = - 2d0/c_cgs/rt_c_cgs * sum(u_gas(i,:)*Fp(i,ig,:))
+              do idim=1,ndim
+                 Fp_boost(i,ig,idim) =  &
+                      -u_gas(i,idim)*Np(i,ig) * rt_c_cgs/c_cgs &
+                      -sum(u_gas(i,:)*tEdd(idim,:))*Np(i,ig)*rt_c_cgs/c_cgs
+              end do
+           end do
+           Np(i,:)   = Np(i,:) + Np_boost(i,:)
+           Fp(i,:,:) = Fp(i,:,:) + Fp_boost(i,:,:)
+        end do
+     endif
 #endif
 
      ! Compute net cooling at constant nH
@@ -287,11 +361,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 #ifdef RT
      if(neq_chem) then
-        U_old=U                                                                   
-        call rt_solve_cooling(U, dNpdt, dFpdt, nH, cooling_on, Zsolar, dtcool, aexp, nleaf)
-        do i=1,nleaf
-           delta_T2(i) = U(i,1) - T2(i)
-        end do
+        T2_old(1:nleaf) = T2(1:nleaf)
+        call rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt, nH &
+                             ,cooling_on, Zsolar, dtcool, aexp, nleaf)
+        delta_T2(1:nleaf) = T2(1:nleaf) - T2_old(1:nleaf)
      endif
 #endif
 
@@ -300,68 +373,40 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i) = nH(i)/scale_nH
      end do
 
-     ! --------------------                                                 !RTpress
-     ! Method:                                                              !RTpress
-     ! We update the kinetic energy in Uold(5) after updating the gas       !RTpress 
-     ! momentum, so that gas which gets a decreased momentum also gets a    !RTpress
-     ! corresponding decrease in kinetic energy. Note that in UV emitting   !RTpress
-     ! cells, where the photon density is large but the photon flux is      !RTpress
-     ! zero, there is no momentum transfer and all the energy of absorbed   !RTpress
-     ! photons optionally goes into a non-thermal pressure term.            !RTpress
-     ! I'm making the assumption that during photoionization, the whole     !RTpress
-     ! energy of the photon is transferred into gas momentum, i.e. for each !RTpress
-     ! ionization event, dp_gas = e_photon/c, where c is the (non-reduced)  !RTpress
-     ! lightspeed.                                                          !RTpress
-     ! ---                                                                  !RTpress
-     ! Etherm=E-Ekin (before solve_cooling, as before)                      !RTpress
-     ! Etherm->Etherm_new (solve_cooling, as before)                        !RTpress
-     ! p=p+dp_photons (update momentum according to photon impacts)         !RTpress
-     ! Ekin_new from p  (this is also new)                                  !RTpress
-     ! E_new=Etherm_new+Ekin_new (slightly changed from before)             !RTpress
-     ! -------------------------------------------------------------------  !RTpress
-     ! Add to gas momentum, in the direction of the photon flux             !RTpress
-     ! Convert the injected momenta to code units:                          !RTpress
-     U(1:nleaf,iP0:iP1)= U(1:nleaf,iP0:iP1)/scale_d/scale_v                 !RTpress
-     do ig=1,nGroups                                                        !RTpress
-        ig0=iGroups(ig)+1 ; ig1=iGroups(ig)+ndim                            !RTpress
-        do i=1,nleaf                                                        !RTpress
-           fmag=sqrt(sum((rtuold(ind_leaf(i),ig0:ig1))**2)) !Flux magnitude !RTpress
-           if(fmag .gt. 0.d0) then                                          !RTpress
-              ! Photon flux unit direction vector                           !RTpress
-              fuVec=rtuold(ind_leaf(i),ig0:ig1)/fmag                        !RTpress
-              ! Update cell momentum                                        !RTpress
-              uold(ind_leaf(i),2:1+ndim) =                               &  !RTpress
-                   uold(ind_leaf(i),2:1+ndim) + fuVec*U(i,iP0+ig-1)         !RTpress
-           endif                                                            !RTpress
-        end do                                                              !RTpress
-     end do                                                                 !RTpress
-     ! Energy update =====================================================  !RTpress
-     ! Calculate NEW pressure from updated momentum                         !RTpress
-     ekk(1:nleaf) = 0.0d0                                                   !RTpress
-     do idim=1,ndim                                                         !RTpress
-        ekk(1:nleaf) = ekk(1:nleaf) &                                       !RTpress
-                      +0.5*uold(ind_leaf(1:nleaf),idim+1)**2/nH(1:nleaf)    !RTpress
-     end do                                                                 !RTpress
-     ! Update the pressure variable with the new kinetic energy:            !RTpress
-     uold(ind_leaf(1:nleaf),ndim+2)=ekk(1:nleaf)+eTherm(1:nleaf)            !RTpress
-                                                                            !RTpress
-     ! Use the isotropic photon pressure in a separate variable:            !RTpress
-     if(rt_isoPress) uold(ind_leaf(1:nleaf),iRTisoPressVar)=0d0             !RTpress
-     if(rt_isoPress .and. rt_advect) then                                   !RTpress
-        U(1:nleaf,iPtot)= U(1:nleaf,iPtot)/scale_d/scale_v                  !RTpress
-        ! Subtract the directional momentum impact:                         !RTpress
-        do ig=1,nGroups                                                     !RTpress
-           U(1:nleaf,iPtot) = U(1:nleaf,iPtot) - U(1:nleaf,iP0+ig-1)        !RTpress
-        end do                                                              !RTpress
-        ! Make sure the remaining isotropic pressure isn't negative         !RTpress
-        do i=1,nleaf                                                        !RTpress
-           U(i,iPtot) = max(U(i,iPtot), 0d0)                                !RTpress
-        end do                                                              !RTpress
-        ! And set (multiply by vol, dx^3 and div by 6*area, 6dx^2):         !RTpress
-        uold(ind_leaf(1:nleaf),iRTisoPressVar) = &                          !RTpress
-             U(1:nleaf,iPtot) / dtnew(ilevel) * dx_div_6 * nH(1:nleaf)      !RTpress
-     endif                                                                  !RTpress
-     ! End energy update =================================================  !RTpress
+#ifdef RT
+     if(.not. static) then
+        ! Update gas momentum and kinetic energy:
+        do i=1,nleaf
+           uold(ind_leaf(i),2:1+ndim) = p_gas(i,:) /scale_d /scale_v
+        end do
+        ! Energy update ==================================================
+        ! Calculate NEW pressure from updated momentum
+        ekk_new(1:nleaf) = 0d0
+        do i=1,nleaf
+           do idim=1,ndim
+              ekk_new(i) = ekk_new(i)                 &
+                   +0.5*uold(ind_leaf(i),idim+1)**2   &
+                   /MAX(uold(ind_leaf(i),1),smallr)    
+           end do
+        end do
+        do i=1,nleaf                                   
+           ! Update the pressure variable with the new kinetic energy:
+           uold(ind_leaf(i),ndim+2) = uold(ind_leaf(i),ndim+2)           &
+                                    - ekk(i) + ekk_new(i)
+        end do
+        do i=1,nleaf                                   
+           ekk(i)=ekk_new(i)
+        end do
+     
+        if(rt_vc) then ! Photon work: subtract from the IR ONLY radiation
+           do i=1,nleaf                                   
+              Np(i,iIR) = Np(i,iIR) + (ekk(i) - ekk_new(i))              &
+                   /scale_d/scale_v**2 / group_egy(iIR) / ev_to_erg
+           end do
+        endif
+        ! End energy update ==============================================
+     endif ! if(.not. static)
+#endif
 
      ! Compute net energy sink
      if(cooling.or.neq_chem)then
@@ -381,14 +426,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute minimal total energy from polytrope
      do i=1,nleaf
-        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i)
+        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i) + err(i)
      end do
 
      ! Update total fluid energy
      do i=1,nleaf
         T2(i) = uold(ind_leaf(i),ndim+2)
      end do
-     if(cooling.or.neq_chem)then 
+     if(cooling.or.neq_chem)then
         do i=1,nleaf
            T2(i) = T2(i)+delta_T2(i)
         end do
@@ -397,9 +442,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         do i=1,nleaf
            uold(ind_leaf(i),ndim+2) = T2min(i)
         end do
-     else       
-        do i=1,nleaf                                                     
-           uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))                
+     else
+        do i=1,nleaf
+           uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))
         end do
      endif
 
@@ -417,7 +462,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Update ionization fraction
         do ii=0,nIons-1
            do i=1,nleaf
-              uold(ind_leaf(i),iIons+ii) = U(i,2+ii)*nH(i)
+              uold(ind_leaf(i),iIons+ii) = xion(i,1+ii)*nH(i)
            end do
         end do
      endif
@@ -425,15 +470,49 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Update photon densities and flux magnitudes
         do ig=1,nGroups
            do i=1,nleaf
-              rtuold(ind_leaf(i),iGroups(ig)) = U(i,iNpU(ig)) /scale_Np
-              if(Fp_precool(i,ig) .gt. 0.d0)then
-                 rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)  &
-                      & =U(i,iFpU(ig))/Fp_precool(i,ig)        &
-                      & *rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)
-              endif
+              rtuold(ind_leaf(i),iGroups(ig)) = (Np(i,ig)-Np_boost(i,ig)) /scale_Np
+              rtuold(ind_leaf(i),iGroups(ig)) = &
+                   max(rtuold(ind_leaf(i),iGroups(ig)),smallNp)
+              rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)         &
+                               = (Fp(i,ig,1:ndim)-Fp_boost(i,ig,1:ndim)) /scale_Fp
            enddo
         end do
      endif
+
+     ! Split IR photons into trapped and freeflowing
+     if(rt_isIRtrap) then
+        if(nener .le. 0) then
+           print*,'Trying to store E_trapped pressure, but NERAD too small!!'
+           STOP
+        endif
+        iNp=iGroups(iIR)
+        unit_tau = 1.5d0 * dx_loc * scale_d * scale_l
+        do i=1,nleaf                                                    
+           il=ind_leaf(i)                                               
+           NIRtot =max(rtuold(il,iNp),smallNp)      ! Total photon density
+           kScIR  = kappaSc(iIR)                                          
+           if(is_kIR_T) then                        !    k_IR depends on T
+              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
+              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
+              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+           endif                                                        
+           tau=nH(i) * Zsolar(i) * unit_tau * kScIR                    
+           f_trap = exp(-1d0/tau)            ! Frac. of trapped IR photons
+           f_trap = min(max(f_trap, 0d0), 1d0)                             
+           ! Update freeflowing photon density, trapped photon density,
+           ! and total energy density:
+           rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
+           EIR_trapped = f_trap * NIRtot * Np2Ep    ! Trapped phot density
+           ! Update total energy due to change in trapped photon energy:
+           uold(il,ndim+2)=uold(il,ndim+2)-uold(il,iIRtrapVar)+EIR_trapped
+           ! Update the trapped photon energy:
+           uold(il,iIRtrapVar) = EIR_trapped
+
+           call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
+        end do ! i=1,nleaf                                                 
+
+     endif  !rt_isIRtrap     
+
 #endif
 
   end do
@@ -441,5 +520,41 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
 end subroutine coolfine1
 
-
-
+!************************************************************************
+subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
+  
+! Compute Eddington tensor for given radiation variables
+! Npc     => Photon number density times light speed
+! Fp     => Photon number flux
+! T_Edd  <= Returned Eddington tensor
+!------------------------------------------------------------------------
+  use amr_commons
+  implicit none
+  real(dp)::Npc
+  real(dp),dimension(1:ndim)::Fp ,u
+  real(dp),dimension(1:ndim,1:ndim)::T_Edd 
+  real(dp)::iterm,oterm,Np_c_sq,Fp_sq,fred_sq,chi
+  integer::p,q
+!------------------------------------------------------------------------
+  if(Npc .le. 0.d0) then
+     write(*,*)'negative photon density in cmp_Eddington_tensor. -EXITING-'
+     call clean_stop
+  endif
+  T_Edd(:,:) = 0.d0   
+  Np_c_sq = Npc**2        
+  Fp_sq = sum(Fp**2)              !  Sq. photon flux magnitude
+  u(:) = 0.d0                           !           Flux unit vector
+  if(Fp_sq .gt. 0.d0) u(:) = Fp/sqrt(Fp_sq)  
+  fred_sq = Fp_sq/Np_c_sq           !      Reduced flux, squared
+  chi = max(4.d0-3.d0*fred_sq, 0.d0)   !           Eddington factor
+  chi = (3.d0+ 4.d0*fred_sq)/(5.d0 + 2.d0*sqrt(chi))
+  iterm = (1.d0-chi)/2.d0               !    Identity term in tensor
+  oterm = (3.d0*chi-1.d0)/2.d0          !         Outer product term
+  do p = 1, ndim
+     do q = 1, ndim
+        T_Edd(p,q) = oterm * u(p) * u(q)
+     enddo
+     T_Edd(p,p) = T_Edd(p,p) + iterm
+  enddo
+  
+end subroutine cmp_Eddington_tensor

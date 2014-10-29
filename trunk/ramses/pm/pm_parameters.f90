@@ -17,16 +17,21 @@ module pm_parameters
   real(dp)::sink_soft=2.d0                   ! Sink grav softening length in dx at levelmax for "direct force" sinks
   real(dp)::msink_direct=-1.d0               ! mass above which sinks are treated as "direct force" objectfs
 
+  logical::create_sinks=.false.              ! turn formation of new sinks on
+
   character(LEN=15)::merging_scheme='none'   ! sink merging scheme. options: 'none,'timescale', 'FOF'
   real(dp)::merging_timescale=-1.d0          ! time during which sinks are considered for merging (only when 'timescale' is used), 
                                              ! used also as contraction timescale in creation
   real(dp)::cont_speed=0.
-  character(LEN=15)::accretion_scheme='flux' ! sink accretion scheme. options: 'flux', 'bondi', 'threshold'
-  logical::use_acc_rate=.true.               ! Use an accretion rate or perform threshold_accretion  
-  logical::flux_accretion=.true.
-  logical::bondi=.false.
+
+  character(LEN=15)::accretion_scheme='none' ! sink accretion scheme. options: 'none', 'flux', 'bondi', 'threshold'
+  logical::flux_accretion=.false.
+  logical::threshold_accretion=.false.
+  logical::bondi_accretion=.false.
+
   logical::nol_accretion=.true.              ! Leave angular momentum in the gas at accretion
   real(dp)::sink_seedmass=5.4d-4             ! Initial mass sinks are created with in bondi or flux accretion case (in solar masses)
-  
+  real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
+                                             ! gives fration of available gas that can be accreted in one timestep.
 
 end module pm_parameters

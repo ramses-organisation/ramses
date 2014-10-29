@@ -158,7 +158,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use poisson_commons
   use cooling_module, ONLY: twopi
   implicit none
-  integer::ncell,ilevel
+  integer::ncell,ilevel,irad
   integer,dimension(1:nvector)::ind_cell
   logical,dimension(1:nvector)::ok
   !-------------------------------------------------
@@ -189,6 +189,11 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
      emag = emag / 8.d0
      etherm = (etherm - emag) 
+#if NENER>0
+     do irad=1,nener
+        etherm=etherm-uold(indi,8+irad)
+     end do
+#endif
      ! the temperature
      tempe =  etherm / dens * (gamma -1.0)
      ! prevent numerical crash due to negative temperature

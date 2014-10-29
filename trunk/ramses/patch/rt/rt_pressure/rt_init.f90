@@ -1,4 +1,4 @@
-!*************************************************************************
+!RTpress!*************************************************************************
 SUBROUTINE rt_init
 
 !  Initialize everything for radiative transfer
@@ -7,7 +7,7 @@ SUBROUTINE rt_init
   use hydro_commons
   use rt_hydro_commons
   use rt_flux_module
-  use rt_cooling_module, only: update_UVrates,rt_isoPress,iRTisoPressVar    !RTpress
+  use rt_cooling_module,only:update_UVrates,rt_isIRtrap,iIRtrapVar          !RTpress
   use rt_parameters
   use SED_module
   use UV_module
@@ -17,17 +17,15 @@ SUBROUTINE rt_init
   if(verbose)write(*,*)'Entering init_rt'
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
-  if(rt_isoPress) then                                                      !RTpress
-     nvar_count = nvar_count+1                                              !RTpress
-     iRTisoPressVar = nvar_count                                            !RTpress
-  endif
+  if(rt_isIRtrap) &                                                         !RTpress
+     iIRtrapVar = ndim+3 ! Trapped rad. stored in nonthermal pressure var   !RTpress
   iIons=nvar_count+1         !       Starting index of xhii, xheii, xheiii
   nvar_count = nvar_count+3  !                                # hydro vars
 
-  if(nvar_count .ne. nvar) then 
+  if(nvar_count .gt. nvar) then 
      if(myid==1) then 
         write(*,*) 'rt_init(): Something wrong with NVAR.'
-        write(*,*) 'Should have NVAR=2+ndim+1*metal+1*dcool+1*aton+nIons'
+        write(*,*) 'Should have NVAR=2+ndim+1*metal+1*dcool+1*aton+IRtrap+nIons'
         write(*,*) 'Have NVAR=',nvar
         write(*,*) 'Should have NVAR=',nvar_count
         write(*,*) 'STOPPING!'
@@ -35,19 +33,15 @@ SUBROUTINE rt_init
      call clean_stop
   endif
 
-  if(.not. rt) then                                                         !RTpress
-     if(myid==1) then                                                       !RTpress
-        write(*,*) 'Running non-rt simulations is incompatible '            !RTpress
-        write(*,*) 'with this patch (rt_pressure) '                         !RTpress
-        write(*,*) 'You should set rt=.true. '                              !RTpress
-        write(*,*) 'STOPPING!'                                              !RTpress
-     endif                                                                  !RTpress
-     call clean_stop                                                        !RTpress
-  endif                                                                     !RTpress
-
-  if(rt_isoPress) then                                                      !RTpress
-     uold(:,iRTisoPressVar)=0d0                                             !RTpress
-  endif                                                                     !RTpress
+  !if(.not. rt) then                                                         !RTpress
+  !   if(myid==1) then                                                       !RTpress
+  !      write(*,*) 'Running non-rt simulations is incompatible '            !RTpress
+  !      write(*,*) 'with this patch (rt_pressure) '                         !RTpress
+  !      write(*,*) 'You should set rt=.true. '                              !RTpress
+  !      write(*,*) 'STOPPING!'                                              !RTpress
+  !   endif                                                                  !RTpress
+  !   call clean_stop                                                        !RTpress
+  !endif                                                                     !RTpress
 
   if(rt_star .or. sedprops_update .ge. 0) &
      call init_SED_table    ! init stellar energy distribution properties
@@ -174,9 +168,9 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       ! RT pressure patch                                               &  !RTpress
-       & ,rt_isIR, rt_isOpt, rt_kIR, rt_kOpt                             &  !RTpress
-       & ,rt_isoPress                                                       !RTpress
+       ! RT pressure patch                                               &
+       & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
+       & ,rt_isoPress, rt_isIRtrap
 
   ! Read namelist file
   rewind(1)
@@ -203,16 +197,16 @@ SUBROUTINE read_rt_groups(nml_ok)
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
+  use rt_cooling_module
   use SED_module
   implicit none
   logical::nml_ok
   integer::i
 !------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
-       & , groupL0, groupL1
+       & , groupL0, groupL1, kappaAbs, kappaSc
   if(myid==1) then
-     write(*,'(" Working with ",I2," photon groups and  " &
-          ,I2, " ion species")')nGroups,nIons
+     write(*,'(" Working with ",I2," photon groups and  " ,I2, " ion species")')nGroups,nIons
      write(*,*) ''
   endif
    
@@ -248,6 +242,13 @@ SUBROUTINE read_rt_groups(nml_ok)
   rewind(1)
   read(1,NML=rt_groups,END=101)
 101 continue              ! no harm if no rt namelist
+
+  if(minval(group_egy) .le. 0d0 .and. myid==1) then
+     print*,'========================================================='
+     print*,'WARNING! Some photon groups have zero or negative energy!'
+     print*,'This could have unwanted effects, so be careful!!!'
+     print*,'========================================================='
+  endif
 
   call updateRTGroups_CoolConstants
   call write_group_props(.false.,6)
@@ -374,7 +375,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
   real(dp),dimension(1:nvector,1:ndim)::x
   integer::i,k,group_ind
   real(dp)::vol,r,xn,yn,zn,en
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp, fred
 !------------------------------------------------------------------------
   ! Initialize everything to zero
   !  uu=0.0d0
@@ -411,22 +412,22 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            end if
            ! If cell lies within region, inject value
            if(r<1.0)then
-              uu(i,group_ind) = uu(i,group_ind)+rt_n_source(k)/scale_Np
+              uu(i,group_ind) = rt_n_source(k)/rt_c_cgs/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
-              uu(i,group_ind+1) = uu(i,group_ind+1)                      &
-                       + rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+1) =                                       &
+                        rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
 #if NDIM>1 
-              uu(i,group_ind+2) = uu(i,group_ind+2)                      &
-                       + rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+2) =                                       &
+                        rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
 #if NDIM>2
-              uu(i,group_ind+3) = uu(i,group_ind+3)                      &
-                       + rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
+              uu(i,group_ind+3) =                                       &
+                        rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif
            end if
         end do
      end if
-     
+          
      ! For "point" regions only:
      if(rt_source_type(k) .eq. 'point')then
         ! Volume elements

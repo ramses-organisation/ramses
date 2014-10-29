@@ -20,9 +20,15 @@ subroutine read_hydro_params(nml_ok)
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
        & ,d_region,u_region,v_region,w_region,p_region &
+#if NENER>0
+       & ,prad_region &
+#endif
        & ,A_region,B_region,C_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,slope_mag_type &
+#if NENER>0
+       & ,gamma_rad &
+#endif
        & ,pressure_fix,beta_fix,scheme,riemann,riemann2d
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
@@ -91,6 +97,17 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
+
+  !--------------------------------------------------
+  ! Check for non-thermal energies
+  !--------------------------------------------------
+#if NENER>0
+  if(nvar<(8+nener))then
+     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= ndim+2+nener'
+     if(myid==1)write(*,*)'Modify NENER and recompile'
+     nml_ok=.false.
+  endif
+#endif
 
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions
@@ -247,7 +264,7 @@ subroutine read_hydro_params(nml_ok)
   !-----------------------------------
   ! Sort out passive variable indices
   !-----------------------------------
-  imetal=9
+  imetal=9+nener
   idelay=imetal
   if(metal)idelay=imetal+1
   ixion=idelay

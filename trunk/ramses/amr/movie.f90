@@ -16,7 +16,7 @@ subroutine output_frame()
 
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, moviefile
-  character(len=100) :: moviefile1,moviefile2,moviefile3
+  character(len=100) :: moviefile1,moviefile2,moviefile3,moviefile4
   
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
@@ -43,25 +43,38 @@ subroutine output_frame()
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
   integer::i,ig,ip,npart1
   integer::nalloc1,nalloc2
+  integer::proj_ind,l,nh_temp,nw_temp
+  real(kind=4)::ratio
 
   integer,dimension(1:nvector),save::ind_part
   logical::opened
-  opened=.false.
+
+  character(len=1)::temp_string
+
+  nh_temp = nh_frame
+  nw_temp = nw_frame
+
   
+!  proj_axis=trim(proj_axis)
+
+ do proj_ind=1,LEN(trim(proj_axis)) 
+  opened=.false.
+
+  !inh_temp = nh_frame
+  !nw_temp = nw_frame
+    
 #if NDIM > 1
 
   ! Update counter
-  imov=imov+1
+  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
   if(imov>imovout)return
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
-  ! Determine the filename, dir, etc
-  if(myid==1)write(*,*)'Computing and dumping movie frame'
-
   call title(imov, istep_str)
-  moviedir = 'movie/'
+  write(temp_string,'(I1)') proj_ind
+  moviedir = 'movie'//trim(temp_string)//'/'
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(myid==1) write(*,*) "Writing frame ", istep_str
 #ifdef NOSYSTEM
@@ -76,7 +89,12 @@ subroutine output_frame()
   moviefile1 = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefile2 = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
   moviefile3 = trim(moviedir)//'metal_'//trim(istep_str)//'.map'
+  moviefile4 = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
 
+  if(sink)then
+    if(myid==1) call output_sink_csv(moviefile4)
+  endif
+  
   if(levelmax_frame==0)then
      nlevelmax_frame=nlevelmax
   else
@@ -94,13 +112,47 @@ subroutine output_frame()
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
+
+  if(proj_axis(proj_ind:proj_ind).eq.'x')then
+    xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
+    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
+    zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
+    delx=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+  elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
+    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
+    zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
+    delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+  else
+    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
+    ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
+    zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
+    delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+  endif
+
+  ratio = delx/dely
+  if(ratio.gt.1)then
+    nw_frame=nh_temp*ratio
+  else
+    nh_frame=nw_temp/ratio
+  endif
+  if(myid.eq.1)then
+    write(*,*)'RATIO',ratio,nw_frame,nh_frame
+  endif
+
   ! Compute frame boundaries
-  xcen=xcentre_frame(1)+xcentre_frame(2)*aexp+xcentre_frame(3)*aexp**2+xcentre_frame(4)*aexp**3
-  ycen=ycentre_frame(1)+ycentre_frame(2)*aexp+ycentre_frame(3)*aexp**2+ycentre_frame(4)*aexp**3
-  zcen=zcentre_frame(1)+zcentre_frame(2)*aexp+zcentre_frame(3)*aexp**2+zcentre_frame(4)*aexp**3
-  delx=deltax_frame(1)+deltax_frame(2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
-  dely=deltay_frame(1)+deltay_frame(2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
-  delz=deltaz_frame(1)+deltaz_frame(2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+!   xcen=xcentre_frame(1)+xcentre_frame(2)*aexp+xcentre_frame(3)*aexp**2+xcentre_frame(4)*aexp**3
+!   ycen=ycentre_frame(1)+ycentre_frame(2)*aexp+ycentre_frame(3)*aexp**2+ycentre_frame(4)*aexp**3
+!   zcen=zcentre_frame(1)+zcentre_frame(2)*aexp+zcentre_frame(3)*aexp**2+zcentre_frame(4)*aexp**3
+!   delx=deltax_frame(1)+deltax_frame(2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+!   dely=deltay_frame(1)+deltay_frame(2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+!   delz=deltaz_frame(1)+deltaz_frame(2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
   xleft_frame=xcen-delx/2.
   xright_frame=xcen+delx/2.
   yleft_frame=ycen-dely/2.
@@ -109,10 +161,10 @@ subroutine output_frame()
   zright_frame=zcen+delz/2.
   
   ! Allocate image
-  allocate(data_frame(1:nx_frame,1:ny_frame,1:4))
+  allocate(data_frame(1:nw_frame,1:nh_frame,1:4))
   data_frame=0d0
-  dx_frame=delx/dble(nx_frame)
-  dy_frame=dely/dble(ny_frame)
+  dx_frame=delx/dble(nw_frame)
+  dy_frame=dely/dble(nh_frame)
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax_frame
@@ -167,13 +219,33 @@ subroutine output_frame()
            do i=1,ngrid
               if(ok(i))then
                  ! Check if the cell intersect the domain
-                 xleft=xx(i,1)-dx_loc/2.
-                 xright=xx(i,1)+dx_loc/2.
-                 yleft=xx(i,2)-dx_loc/2.
-                 yright=xx(i,2)+dx_loc/2.
+                 if(proj_axis(proj_ind:proj_ind).eq.'x')then
+                   xleft=xx(i,2)-dx_loc/2.
+                   xright=xx(i,2)+dx_loc/2.
+                   yleft=xx(i,3)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yright=xx(i,3)+dx_loc/2.
+                 elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+                   xleft=xx(i,1)-dx_loc/2.
+                   xright=xx(i,1)+dx_loc/2.
+                   yleft=xx(i,3)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yright=xx(i,3)+dx_loc/2.
+                 else
+                   xleft=xx(i,1)-dx_loc/2.
+                   xright=xx(i,1)+dx_loc/2.
+                   yleft=xx(i,2)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yright=xx(i,2)+dx_loc/2.
+                 endif
 #if NDIM>2                 
-                 zleft=xx(i,3)-dx_loc/2.
-                 zright=xx(i,3)+dx_loc/2.
+                 if(proj_axis(proj_ind:proj_ind).eq.'x')then
+                   zleft=xx(i,1)-dx_loc/2.
+                   zright=xx(i,1)+dx_loc/2.
+                 elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+                   zleft=xx(i,2)-dx_loc/2.
+                   zright=xx(i,2)+dx_loc/2.
+                 else
+                   zleft=xx(i,3)-dx_loc/2.
+                   zright=xx(i,3)+dx_loc/2.
+                 endif
                  if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
                       & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
                       & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
@@ -183,21 +255,21 @@ subroutine output_frame()
 #endif
                  ! Compute map indices for the cell
                  if(xleft>xleft_frame)then
-                    imin=min(int((xleft-xleft_frame)/dx_frame)+1,nx_frame)
+                    imin=min(int((xleft-xleft_frame)/dx_frame)+1,nw_frame)
                  else
                     imin=1
                  endif
-                 imax=min(int((xright-xleft_frame)/dx_frame)+1,nx_frame)
+                 imax=min(int((xright-xleft_frame)/dx_frame)+1,nw_frame)
                  if(yleft>yleft_frame)then
-                    jmin=min(int((yleft-yleft_frame)/dy_frame)+1,ny_frame)
+                    jmin=min(int((yleft-yleft_frame)/dy_frame)+1,nh_frame) ! change
                  else
                     jmin=1
                  endif
-                 jmax=min(int((yright-yleft_frame)/dy_frame)+1,ny_frame)
+                 jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
                  
                  ! Fill up map with projected mass
 #if NDIM>2                 
-                 dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft)
+                 dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft) ! change
 #endif
                  do ii=imin,imax
                     xxleft=xleft_frame+dble(ii-1)*dx_frame
@@ -243,8 +315,8 @@ subroutine output_frame()
   ! End loop over levels
 
   ! Convert into mass weighted
-!  do ii=1,nx_frame
-!     do jj=1,ny_frame
+!  do ii=1,nw_frame
+!     do jj=1,nh_frame
 !        data_frame(ii,jj,2)=data_frame(ii,jj,2)/data_frame(ii,jj,1)
 !        data_frame(ii,jj,3)=data_frame(ii,jj,3)/data_frame(ii,jj,1)
 !        if(metal)then
@@ -253,14 +325,14 @@ subroutine output_frame()
 !     end do
 !  end do
 #ifndef WITHOUTMPI
-  allocate(data_frame_all(1:nx_frame,1:ny_frame,1:4))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nx_frame*ny_frame*4,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,1:4))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*4,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   data_frame=data_frame_all
   deallocate(data_frame_all)
 #endif
   ! Convert into mass weighted                                                                                                         
-  do ii=1,nx_frame
-     do jj=1,ny_frame
+  do ii=1,nw_frame
+     do jj=1,nh_frame
         data_frame(ii,jj,2)=data_frame(ii,jj,2)/data_frame(ii,jj,1)
         data_frame(ii,jj,3)=data_frame(ii,jj,3)/data_frame(ii,jj,1)
         if(metal)then
@@ -273,7 +345,7 @@ subroutine output_frame()
 
   if(myid==1)then
      ilun=10
-     allocate(data_single(1:nx_frame,1:ny_frame))
+     allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
      open(ilun,file=TRIM(moviefile1),form='unformatted')
      data_single=data_frame(:,:,2)
@@ -283,7 +355,7 @@ subroutine output_frame()
      else
         write(ilun)aexp,delx,dely,delz
      endif
-     write(ilun)nx_frame,ny_frame
+     write(ilun)nw_frame,nh_frame
      write(ilun)data_single
      close(ilun)
      ! Output mass weighted temperature
@@ -296,7 +368,7 @@ subroutine output_frame()
      else
         write(ilun)aexp,delx,dely,delz
      endif
-     write(ilun)nx_frame,ny_frame
+     write(ilun)nw_frame,nh_frame
      write(ilun)data_single
      close(ilun)
      ! Output mass weighted metal fraction
@@ -309,7 +381,7 @@ subroutine output_frame()
         else
            write(ilun)aexp,delx,dely,delz
         endif
-        write(ilun)nx_frame,ny_frame
+        write(ilun)nw_frame,nh_frame
         write(ilun)data_single
         close(ilun)
      endif
@@ -319,7 +391,17 @@ subroutine output_frame()
   deallocate(data_frame)
 #endif
 
+  nw_frame = nw_temp
+  nh_frame = nh_temp
+ enddo
 end subroutine output_frame
 
+
+character(len=20) function str(k)
+!   "Convert an integer to string."
+    integer, intent(in) :: k
+    write (str, *) k
+    str = adjustl(str)
+end function str
 
 

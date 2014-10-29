@@ -53,9 +53,17 @@ subroutine condinit(x,u,dx,nn)
   u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,8)+q(1:nn,nvar+3))**2
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
+#if NENER>0
+  ! radiative pressure -> radiative energy
+  ! radiative energy -> total fluid energy
+  do ivar=1,nener
+     u(1:nn,8+ivar)=q(1:nn,8+ivar)/(gamma_rad(ivar)-1.0d0)
+     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+ivar)
+  enddo
+#endif
+#if NVAR>8+NENER
   ! passive scalars
-#if NVAR > 8
-  do ivar=9,nvar
+  do ivar=9+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
 #endif

@@ -60,7 +60,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use radiation_commons, ONLY: Erad
 #endif
 #ifdef RT
-  use rt_parameters, only: nGroups, iGroup
+  use rt_parameters, only: nGroups, iGroups
   use rt_hydro_commons
   use rt_cooling_module, only: n_U,iNpU,iFpU,rt_solve_cooling
 #endif
@@ -69,12 +69,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,ivar,irad
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant,Fpnew,Npnew
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err
   real(kind=8),dimension(1:nvector),save::emag
 #ifdef RT
   real(dp)::scale_Np,scale_Fp
@@ -171,7 +171,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      end do
      do i=1,nleaf
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-emag(i))
+        err(i)=0.0d0
+     end do
+#if NENER>0
+     do irad=1,nener
+        do i=1,nleaf
+           err(i)=err(i)+uold(ind_leaf(i),8+irad)
+        end do
+     end do
+#endif
+     do i=1,nleaf
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-emag(i)-err(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
@@ -316,7 +326,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute minimal total energy from polytrope
      do i=1,nleaf
-        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i) + emag(i)
+        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i) + emag(i) + err(i)
      end do
 
      ! Update total fluid energy

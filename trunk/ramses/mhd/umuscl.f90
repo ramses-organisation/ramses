@@ -256,14 +256,17 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
 
   ! declare local variables
-  INTEGER ::i, j, k, l, n
+  INTEGER ::i, j, k, l, n, irad
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
   REAL(dp)::dtdx
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
   REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
-  
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, se0
+#endif
+ 
   dtdx = dt/dx
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -285,6 +288,11 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               A = q(l,i,j,k,iA)
               B = q(l,i,j,k,iB)
               C = q(l,i,j,k,iC)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,iC+irad)
+              end do
+#endif
 
               ! TVD slopes in X direction
               drx = half*dq(l,i,j,k,ir,1)
@@ -294,6 +302,11 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               dpx = half*dq(l,i,j,k,ip,1)
               dBx = half*dq(l,i,j,k,iB,1)
               dCx = half*dq(l,i,j,k,iC,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+              end do
+#endif
 
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx-r*dux
@@ -305,6 +318,13 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               sp0 = -u*dpx-gamma*p*dux
               sB0 = -u*dBx+A*dvx-B*dux
               sC0 = -u*dCx+A*dwx-C*dux
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 se0(irad) = -u*dex(irad) &
+                      & - (dux)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Cell-centered predicted states
               r = r + sr0*dtdx
@@ -314,6 +334,11 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               p = p + sp0*dtdx
               B = B + sB0*dtdx
               C = C + sC0*dtdx
+#if NENER>0
+              do irad=1,nener
+                 e(irad)=e(irad)+se0(irad)*dtdx
+              end do
+#endif
 
               ! Right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
@@ -325,6 +350,11 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
               qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+              end do
+#endif
 
               ! Left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
@@ -336,14 +366,19 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
               qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+              end do
+#endif
            END DO
         END DO
      END DO
   END DO
   
   ! passive scalars
-#if NVAR > 8
-  DO n = 9, nvar
+#if NVAR>8+NENER
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -393,7 +428,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 
   ! Declare local variables
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
-  INTEGER ::i, j, k, l, n
+  INTEGER ::i, j, k, l, n, irad
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
   REAL(dp)::dtdx, dtdy, smallp
@@ -405,7 +440,10 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   REAL(dp)::AL, AR, BL, BR
   REAL(dp)::dALy, dARy, dBLx, dBRx
   REAL(DP)::sAL0, sAR0, sBL0, sBR0
-  
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
+
   dtdx = dt/dx
   dtdy = dt/dy
   smallp = smallr*smallc**2/gamma
@@ -443,6 +481,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               A =    q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
               C =    q(l,i,j,k,iC)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,iC+irad)
+              end do
+#endif
 
               ! Face centered variables
               AL =  bf(l,i  ,j  ,k,1)
@@ -458,6 +501,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               dpx = half * dq(l,i,j,k,ip,1)
               dBx = half * dq(l,i,j,k,iB,1)
               dCx = half * dq(l,i,j,k,iC,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+              end do
+#endif
 
               ! Cell centered TVD slopes in Y direction
               dry = half * dq(l,i,j,k,ir,2)
@@ -467,6 +515,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               dpy = half * dq(l,i,j,k,ip,2)
               dAy = half * dq(l,i,j,k,iA,2)
               dCy = half * dq(l,i,j,k,iC,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = half*dq(l,i,j,k,iC+irad,2)
+              end do
+#endif
 
               ! Face centered TVD slopes in transverse direction
               dALy = half * dbf(l,i  ,j  ,k,1,1)
@@ -500,6 +553,14 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               endif
               sp0 = (-u*dpx-dux*gamma*p)*dtdx + (-v*dpy-dvy*gamma*p)*dtdy
               sC0 = (-u*dCx-C*dux+A*dwx)*dtdx + (-v*dCy-C*dvy+B*dwy)*dtdy
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r*dtdx
+                 sv0 = sv0 - (dey(irad))/r*dtdy
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy &
+                      & - (dux*dtdx+dvy*dtdy)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Cell-centered predicted states
               r = r + sr0
@@ -510,6 +571,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               C = C + sC0
               A = 0.5*(AL+AR)
               B = 0.5*(BL+BR)
+#if NENER>0
+              do irad=1,nener
+                 e(irad)=e(irad)+se0(irad)
+              end do
+#endif
 
               ! Face averaged right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
@@ -522,6 +588,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iC,1) = C - dCx
               qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+              end do
+#endif
 
               ! Face averaged left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
@@ -534,6 +605,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iC,1) = C + dCx
               qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+              end do
+#endif
 
               ! Face averaged top state at bottom interface
               qp(l,i,j,k,ir,2) = r - dry
@@ -546,6 +622,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iC,2) = C - dCy
               qp(l,i,j,k,ir,2) = MAX(smallr, qp(l,i,j,k,ir,2))
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad) 
+              end do
+#endif
 
               ! Face averaged bottom state at top interface
               qm(l,i,j,k,ir,2) = r + dry
@@ -558,6 +639,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iC,2) = C + dCy
               qm(l,i,j,k,ir,2) = MAX(smallr, qm(l,i,j,k,ir,2))
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad) 
+              end do
+#endif
 
               ! Edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,3) = r + (+drx+dry)
@@ -570,6 +656,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qRT(l,i,j,k,iB,3) = BR+ (+dBRx   )
               qRT(l,i,j,k,ir,3) = MAX(smallr, qRT(l,i,j,k,ir,3))
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
+              end do
+#endif
 
               ! Edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,3) = r + (+drx-dry)
@@ -582,6 +673,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qRB(l,i,j,k,iB,3) = BL+ (+dBLx   )
               qRB(l,i,j,k,ir,3) = MAX(smallr, qRB(l,i,j,k,ir,3))
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
+              end do
+#endif
 
               ! Edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,3) = r + (-drx+dry)
@@ -594,6 +690,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qLT(l,i,j,k,iB,3) = BR+ (-dBRx   )
               qLT(l,i,j,k,ir,3) = MAX(smallr, qLT(l,i,j,k,ir,3))
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
+              end do
+#endif
 
               ! Edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,3) = r + (-drx-dry)
@@ -606,15 +707,20 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qLB(l,i,j,k,iB,3) = BL+ (-dBLx   )
               qLB(l,i,j,k,ir,3) = MAX(smallr, qLB(l,i,j,k,ir,3))
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
+              end do
+#endif
 
            END DO
         END DO
      END DO
   END DO
 
-#if NVAR > 8
+#if NVAR>8+NENER
   ! Passive scalars
-  DO n = 9, nvar
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -670,7 +776,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ey
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
 
-  INTEGER ::i, j, k, l, n
+  INTEGER ::i, j, k, l, n, irad
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
   REAL(dp)::dtdx, dtdy, dtdz, smallp
@@ -687,6 +793,9 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
   REAL(dp)::dCLx, dCRx, dCLy, dCRy
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
+#if NENER>0
+  real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+#endif
   
   dtdx = dt/dx
   dtdy = dt/dy
@@ -738,6 +847,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               A =    q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
               C =    q(l,i,j,k,iC)            
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,iC+irad)
+              end do
+#endif
 
               ! Face centered variables
               AL =  bf(l,i  ,j  ,k  ,1)
@@ -755,6 +869,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               dpx = half * dq(l,i,j,k,ip,1)
               dBx = half * dq(l,i,j,k,iB,1)
               dCx = half * dq(l,i,j,k,iC,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+              end do
+#endif
 
               dry = half * dq(l,i,j,k,ir,2)
               duy = half * dq(l,i,j,k,iu,2)
@@ -763,6 +882,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               dpy = half * dq(l,i,j,k,ip,2)
               dAy = half * dq(l,i,j,k,iA,2)
               dCy = half * dq(l,i,j,k,iC,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = half*dq(l,i,j,k,iC+irad,2)
+              end do
+#endif
 
               drz = half * dq(l,i,j,k,ir,3)
               duz = half * dq(l,i,j,k,iu,3)
@@ -771,6 +895,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               dpz = half * dq(l,i,j,k,ip,3)
               dAz = half * dq(l,i,j,k,iA,3)
               dBz = half * dq(l,i,j,k,iB,3)
+#if NENER>0
+              do irad=1,nener
+                 dez(irad) = half*dq(l,i,j,k,iC+irad,3)
+              end do
+#endif
 
               ! Face centered TVD slopes in transverse directions
               dALy = half * dbf(l,i  ,j  ,k  ,1,1)
@@ -827,6 +956,15 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy + (-w*dwz-(dpz+A*dAz+B*dBz)/r)*dtdz 
               endif
               sp0 = (-u*dpx-dux*gamma*p)*dtdx + (-v*dpy-dvy*gamma*p)*dtdy + (-w*dpz-dwz*gamma*p)*dtdz
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - ((dex(irad))/r)*dtdx
+                 sv0 = sv0 - ((dey(irad))/r)*dtdy
+                 sw0 = sw0 - ((dez(irad))/r)*dtdz
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz & 
+                      & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
               ! Cell-centered predicted states
               r = r + sr0
@@ -837,6 +975,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               A = 0.5*(AL+AR)
               B = 0.5*(BL+BR)
               C = 0.5*(CL+CR)
+#if NENER>0
+              do irad=1,nener
+                 e(irad)=e(irad)+se0(irad)
+              end do
+#endif
 
               ! Face averaged right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
@@ -849,6 +992,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,1) = C - dCx
               qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+              end do
+#endif
 
               ! Face averaged left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
@@ -861,6 +1009,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,1) = C + dCx
               qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+              end do
+#endif
 
               ! Face averaged top state at bottom interface
               qp(l,i,j,k,ir,2) = r - dry
@@ -873,6 +1026,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,2) = C - dCy
               qp(l,i,j,k,ir,2) = MAX(smallr, qp(l,i,j,k,ir,2))
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad) 
+              end do
+#endif
 
               ! Face averaged bottom state at top interface
               qm(l,i,j,k,ir,2) = r + dry
@@ -885,6 +1043,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,2) = C + dCy
               qm(l,i,j,k,ir,2) = MAX(smallr, qm(l,i,j,k,ir,2))
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad) 
+              end do
+#endif
 
               ! Face averaged front state at back interface
               qp(l,i,j,k,ir,3) = r - drz
@@ -897,6 +1060,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,3) = CL
               qp(l,i,j,k,ir,3) = MAX(smallr, qp(l,i,j,k,ir,3))
               qp(l,i,j,k,ip,3) = MAX(smallp, qp(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,3) = e(irad) - dez(irad) 
+              end do
+#endif
 
               ! Face averaged back state at front interface
               qm(l,i,j,k,ir,3) = r + drz
@@ -909,6 +1077,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,3) = CR
               qm(l,i,j,k,ir,3) = MAX(smallr, qm(l,i,j,k,ir,3))
               qm(l,i,j,k,ip,3) = MAX(smallp, qm(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,3) = e(irad) + dez(irad) 
+              end do
+#endif
 
               ! X-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,1) = r + (+dry+drz)
@@ -921,6 +1094,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,1) = CR+ (+dCRy   )
               qRT(l,i,j,k,ir,1) = MAX(smallr, qRT(l,i,j,k,ir,1))
               qRT(l,i,j,k,ip,1) = MAX(smallp, qRT(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qRT(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)+dez(irad))
+              end do
+#endif
 
               ! X-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,1) = r + (+dry-drz)
@@ -933,6 +1111,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,1) = CL+ (+dCLy   )
               qRB(l,i,j,k,ir,1) = MAX(smallr, qRB(l,i,j,k,ir,1))
               qRB(l,i,j,k,ip,1) = MAX(smallp, qRB(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qRB(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)-dez(irad))
+              end do
+#endif
 
               ! X-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,1) = r + (-dry+drz)
@@ -945,6 +1128,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,1) = CR+ (-dCRy   )
               qLT(l,i,j,k,ir,1) = MAX(smallr, qLT(l,i,j,k,ir,1))
               qLT(l,i,j,k,ip,1) = MAX(smallp, qLT(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qLT(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)+dez(irad))
+              end do
+#endif
 
               ! X-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,1) = r + (-dry-drz)
@@ -957,6 +1145,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,1) = CL+ (-dCLy   )
               qLB(l,i,j,k,ir,1) = MAX(smallr, qLB(l,i,j,k,ir,1))
               qLB(l,i,j,k,ip,1) = MAX(smallp, qLB(l,i,j,k,ip,1))
+#if NENER>0
+              do irad=1,nener
+                 qLB(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)-dez(irad))
+              end do
+#endif
 
               ! Y-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,2) = r + (+drx+drz)
@@ -969,6 +1162,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,2) = CR+ (+dCRx   )
               qRT(l,i,j,k,ir,2) = MAX(smallr, qRT(l,i,j,k,ir,2))
               qRT(l,i,j,k,ip,2) = MAX(smallp, qRT(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qRT(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)+dez(irad))
+              end do
+#endif
 
               ! Y-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,2) = r + (+drx-drz)
@@ -981,6 +1179,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,2) = CL+ (+dCLx   )
               qRB(l,i,j,k,ir,2) = MAX(smallr, qRB(l,i,j,k,ir,2))
               qRB(l,i,j,k,ip,2) = MAX(smallp, qRB(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qRB(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)-dez(irad))
+              end do
+#endif
 
               ! Y-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,2) = r + (-drx+drz)
@@ -993,6 +1196,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,2) = CR+ (-dCRx   )
               qLT(l,i,j,k,ir,2) = MAX(smallr, qLT(l,i,j,k,ir,2))
               qLT(l,i,j,k,ip,2) = MAX(smallp, qLT(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qLT(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)+dez(irad))
+              end do
+#endif
 
               ! Y-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,2) = r + (-drx-drz)
@@ -1005,6 +1213,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,2) = CL+ (-dCLx   )
               qLB(l,i,j,k,ir,2) = MAX(smallr, qLB(l,i,j,k,ir,2))
               qLB(l,i,j,k,ip,2) = MAX(smallp, qLB(l,i,j,k,ip,2))
+#if NENER>0
+              do irad=1,nener
+                 qLB(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)-dez(irad))
+              end do
+#endif
 
               ! Z-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,3) = r + (+drx+dry)
@@ -1017,6 +1230,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
               qRT(l,i,j,k,ir,3) = MAX(smallr, qRT(l,i,j,k,ir,3))
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
+              end do
+#endif
 
               ! Z-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,3) = r + (+drx-dry)
@@ -1029,6 +1247,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
               qRB(l,i,j,k,ir,3) = MAX(smallr, qRB(l,i,j,k,ir,3))
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
+              end do
+#endif
 
               ! Z-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,3) = r + (-drx+dry)
@@ -1041,6 +1264,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
               qLT(l,i,j,k,ir,3) = MAX(smallr, qLT(l,i,j,k,ir,3))
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
+              end do
+#endif
 
               ! Z-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,3) = r + (-drx-dry)
@@ -1053,15 +1281,20 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
               qLB(l,i,j,k,ir,3) = MAX(smallr, qLB(l,i,j,k,ir,3))
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
+#if NENER>0
+              do irad=1,nener
+                 qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
+              end do
+#endif
 
            END DO
         END DO
      END DO
   END DO
 
-#if NVAR > 8
+#if NVAR>8+NENER
   ! Passive scalars
-  DO n = 9, nvar
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -1115,7 +1348,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   
   ! local variables
   integer ::i, j, k, n, l, idim, xdim
-  real(dp),dimension(1:nvar)::qleft,qright,fgdnv
+  real(dp),dimension(1:nvar)::qleft,qright
+  real(dp),dimension(1:nvar+1)::fgdnv
   REAL(dp)::zero_flux, bn_mean, entho
 
   xdim=ln-1
@@ -1150,7 +1384,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qright(8) = qp(l,i,j,k,bt2,xdim) ! Tangential magnetic field 2
 
               ! Other advected quantities
-#if NVAR > 8
+#if NVAR>8
               do n = 9, nvar
                  qleft (n) = qm(l,i,j,k,n,xdim)
                  qright(n) = qp(l,i,j,k,n,xdim)    
@@ -1191,7 +1425,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               flx(l,i,j,k,bt2) = fgdnv(8)  ! Transverse magnetic field 2
 
               ! Other advected quantities
-#if NVAR > 8
+#if NVAR>8
               do n = 9, nvar
                  flx(l,i,j,k,n) = fgdnv(n)
               end do
@@ -1199,11 +1433,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ! Normal velocity estimate
               tmp(l,i,j,k,1) = half*(qleft(3)+qright(3))
               ! Internal energy flux
-              if(fgdnv(1)>zero)then
-                 tmp(l,i,j,k,2) = qleft (2)/qleft (1)*entho*fgdnv(1)
-              else
-                 tmp(l,i,j,k,2) = qright(2)/qright(1)*entho*fgdnv(1)
-              end if
+              tmp(l,i,j,k,2) = fgdnv(nvar+1)
 
            end do
         end do
@@ -1244,7 +1474,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
 
   ! local variables
-  INTEGER ::i, j, k, n, l, idim, xdim, m
+  INTEGER ::i, j, k, n, l, idim, xdim, m, irad
   REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
   REAL(dp),DIMENSION(1:nvar)::qleft,qright,fmean_x,fmean_y,qtmp
   REAL(dp) :: ELL,ERL,ELR,ERR,SL,SR,SB,ST,SAL,SAR,SAT,SAB
@@ -1331,6 +1561,18 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,8) = qLB(l,i,j,k,bor,xdim)
            END DO
 
+#if NENER>0
+           ! Non-thermal energies
+           do irad = 1,nener
+              DO l = 1, ngrid
+                 qLL (l,8+irad) = qRT(l,i,j,k,8+irad,xdim)
+                 qRL (l,8+irad) = qLT(l,i,j,k,8+irad,xdim)
+                 qLR (l,8+irad) = qRB(l,i,j,k,8+irad,xdim)
+                 qRR (l,8+irad) = qLB(l,i,j,k,8+irad,xdim)
+              END DO
+           end do
+#endif
+
            ! Compute final fluxes
             DO l = 1, ngrid 
 
@@ -1347,33 +1589,81 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   rLR=qLR(l,1); pLR=qLR(l,2); uLR=qLR(l,3); vLR=qLR(l,4); ALR=qLR(l,6); BLR=qLR(l,7) ; CLR=qLR(l,8) 
                   rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8) 
                   rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8) 
+#if NENER>0
+                  do irad = 1,nener
+                     pLL = pLL + qLL(l,8+irad)
+                     pLR = pLR + qLR(l,8+irad)
+                     pRL = pRL + qRL(l,8+irad)
+                     pRR = pRR + qRR(l,8+irad)
+                  end do
+#endif
 
                   ! Compute 4 fast magnetosonic velocity relative to x direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastRRx)
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
                   call find_speed_fast(qtmp,cfastRRy)
 
                   SL=min(uLL,uLR,uRL,uRR)-max(cfastLLx,cfastLRx,cfastRLx,cfastRRx)
@@ -1472,29 +1762,69 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   ! Compute 4 fast magnetosonic velocity relative to x direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
                   vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
                   vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
                   vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
                   vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx)
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
                   vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
                   vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
                   vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
                   vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy)
 
                   SL=min(min(vLLx,vLRx,VRLx,vRRx)-max(cLLx,cLRx,cRLx,cRRx),zero)
@@ -1583,6 +1913,15 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qleft (8) = half*(qLL(l,8)+qLR(l,8))
                   qright(8) = half*(qRR(l,8)+qRL(l,8))
                   
+
+#if NENER>0
+                  !non-thermal energies
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qLR(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qRL(l,8+irad))
+                  end do
+#endif
+                  
                   zero_flux = 0.0
                   SELECT CASE (riemann2d)
                   CASE ('roe')
@@ -1629,6 +1968,14 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qleft (8) = half*(qLL(l,8)+qRL(l,8))
                   qright(8) = half*(qRR(l,8)+qLR(l,8))
                   
+#if NENER>0
+                  !non-thermal energies
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qRL(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qLR(l,8+irad))
+                  end do
+#endif
+
                   zero_flux = 0.
                   SELECT CASE (riemann2d)
                   CASE ('roe')
@@ -1672,9 +2019,9 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf  
 
-  integer ::i, j, k, l, n, idim
+  integer ::i, j, k, l, n, idim, irad
   real(dp)::eint, smalle, smallp, etot
-  real(dp),dimension(1:nvector),save::eken,emag
+  real(dp),dimension(1:nvector),save::eken,emag,erad
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma
@@ -1761,9 +2108,20 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
               emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
            end do
 
+           ! Compute non-thermal pressure
+           erad = zero
+#if NENER>0
+           do irad = 1,nener
+              do l = 1, ngrid
+                 q(l,i,j,k,8+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,8+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,8+irad)
+              end do
+           enddo
+#endif
+           
            ! Compute thermal pressure through EOS
            do l = 1, ngrid
-              etot = uin(l,i,j,k,5) - emag(l)
+              etot = uin(l,i,j,k,5) - emag(l) -erad(l)
               eint = etot/uin(l,i,j,k,1)-eken(l)
               q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
            end do
@@ -1780,8 +2138,8 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   end do
 
   ! Passive scalar
-#if NVAR > 8
-  do n = 9, nvar
+#if NVAR>8+NENER
+  do n = 9+nener, nvar
      do k = ku1, ku2
         do j = ju1, ju2
            do i = iu1, iu2

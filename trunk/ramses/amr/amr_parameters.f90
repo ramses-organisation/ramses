@@ -110,9 +110,9 @@ module amr_parameters
   real(dp)::aexp   =1.0D0     ! Current expansion factor
   real(dp)::hexp   =0.0D0     ! Current Hubble parameter
   real(dp)::texp   =0.0D0     ! Current proper time
-  real(dp)::n_sink = -1.d0      ! Sink particle density threshold in H/cc
+  real(dp)::n_sink = -1.d0    ! Sink particle density threshold in H/cc
   real(dp)::rho_sink = -1.D0  ! Sink particle density threshold in g/cc
-  real(dp)::d_sink            ! Sink particle density threshold in user units
+  real(dp)::d_sink = -1.D0    ! Sink particle density threshold in user units
   real(dp)::m_star =-1.0      ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1D0     ! Star formation density threshold in H/cc
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
@@ -153,6 +153,7 @@ module amr_parameters
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
   logical ::agn=.false.
+  logical ::sink_drag=.true.  ! Gas dragging sink
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
@@ -167,16 +168,17 @@ module amr_parameters
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
-  integer::nx_frame=512
-  integer::ny_frame=512
+  integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
+  integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0
   integer::ivar_frame=1
-  real(kind=8),dimension(1:4)::xcentre_frame=0d0
-  real(kind=8),dimension(1:4)::ycentre_frame=0d0
-  real(kind=8),dimension(1:4)::zcentre_frame=0d0
-  real(kind=8),dimension(1:4)::deltax_frame=0d0
-  real(kind=8),dimension(1:4)::deltay_frame=0d0
-  real(kind=8),dimension(1:4)::deltaz_frame=0d0
+  real(kind=8),dimension(1:20)::xcentre_frame=0d0
+  real(kind=8),dimension(1:20)::ycentre_frame=0d0
+  real(kind=8),dimension(1:20)::zcentre_frame=0d0
+  real(kind=8),dimension(1:10)::deltax_frame=0d0
+  real(kind=8),dimension(1:10)::deltay_frame=0d0
+  real(kind=8),dimension(1:10)::deltaz_frame=0d0
+  character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
 
   ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1.0 ! Lagrangian threshold

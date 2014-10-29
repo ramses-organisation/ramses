@@ -46,7 +46,7 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,irad,ind,icpu,iskip
   real(dp)::d,u,v,w,e
 
   if(numbtot(1,ilevel)==0)return
@@ -71,6 +71,11 @@ subroutine set_unew(ilevel)
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
            e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
+           end do
+#endif          
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
      end if
@@ -233,7 +238,6 @@ end subroutine add_gravity_source_terms
 subroutine add_pdv_source_terms(ilevel)
   use amr_commons
   use hydro_commons
-  use const
   implicit none
   integer::ilevel
   !---------------------------------------------------------
@@ -352,7 +356,7 @@ subroutine add_pdv_source_terms(ilevel)
 #endif
               ! Add -pdV term
               enew(ind_cell(i))=enew(ind_cell(i)) &
-                   & -(gamma-one)*eold*divu_loc(i)*dtnew(ilevel)
+                   & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
            end do
         end if
 
@@ -361,7 +365,7 @@ subroutine add_pdv_source_terms(ilevel)
            do i=1,ngrid
               ! Add -pdV term
               unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
-                & -(gamma_rad(irad)-one)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
+                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
            end do
         end do
 #endif
@@ -395,7 +399,7 @@ subroutine add_pdv_source_terms(ilevel)
 #endif
            ! Add pdV term
            enew(ind_cell1)=enew(ind_cell1) &
-                & +(gamma-one)*eold*divu(ind_cell1) ! Note: here divu=-div.u*dt
+                & +(gamma-1.0d0)*eold*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
      end do
   end if
@@ -407,7 +411,7 @@ subroutine add_pdv_source_terms(ilevel)
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
            unew(ind_cell1,ndim+2+irad)=unew(ind_cell1,ndim+2+irad) &
-                & +(gamma_rad(irad)-one)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
+                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
      end do
   end do

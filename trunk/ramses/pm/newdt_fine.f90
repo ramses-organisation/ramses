@@ -21,15 +21,18 @@ subroutine newdt_fine(ilevel)
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,nx_loc
-  integer::npart1,ip,info,isink
+  integer::npart1,ip,info,isink,ilev,levelmin_isink,limiting_sink
   integer,dimension(1:nvector),save::ind_part
-  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
+  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all,dt_acc_min
   real(dp)::tff,fourpi,threepi2
   real(dp)::aton_time_step,dt_aton,dt_rt
-  real(dp)::dx_min,dx,scale
+  real(dp)::dx_min,dx,scale,dt_fact,limiting_dt_fact
+  logical::highest_level
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+
+  threepi2=3.0d0*ACOS(-1.0d0)**2
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
@@ -38,9 +41,12 @@ subroutine newdt_fine(ilevel)
   dtnew(ilevel)=boxlen/smallc
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*ACOS(-1.0d0)
-     threepi2=3.0d0*ACOS(-1.0d0)**2
      if(cosmo)fourpi=1.5d0*omega_m*aexp
-     tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     if (sink)then
+        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
+     else
+        tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+     end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
   if(cosmo)then
@@ -112,17 +118,46 @@ subroutine newdt_fine(ilevel)
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-     ! possible issue here: what if sink lives not a levelmax? timestep can be too big?
-     if(sink .and. ilevel==nlevelmax .and. nsink>0) then
-        call compute_accretion_rate(.false.)
-        do isink=1,nsink
-           if(direct_force_sink(isink))then
-              tff=sqrt(threepi2/8./(3*msink(isink))*ssoft**3)
-              dt_sink=min(dt_sink,tff*courant_factor)
+
+     ! timestep restrictions due to sink
+     if(sink .and. nsink>0) then
+        ! determine if on highest active level...
+        if (ilevel==nlevelmax)then
+           highest_level=.true.
+        else if (numbtot(1,ilevel+1)==0)then
+           highest_level=.true.
+        else 
+           highest_level=.false.
+        end if
+        
+        if (highest_level)then
+           call compute_accretion_rate(.false.)
+           ! timestep due to sink accretion
+           dt_acc_min=huge(0._dp)
+           do isink=1,nsink
+              
+              levelmin_isink=nlevelmax
+              do ilev=nlevelmax,levelmin,-1
+                 if (level_sink(isink,ilev))levelmin_isink=ilev 
+              end do
+              
+              dt_fact=1.
+              do ilev=levelmin_isink,ilevel-1
+                 dt_fact=dt_fact*nsubcycle(ilev)
+              end do
+              
+              if (dt_acc(isink)/dt_fact<dt_acc_min)then
+                 dt_acc_min=dt_acc(isink)/dt_fact
+                 limiting_sink=isink
+                 limiting_dt_fact=dt_fact
+              end if
+              
+           end do
+           if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
+              write(*,'(A10,2X,F10.6,2X,A20,2X,I10)')'dt_acc/dt',dt_acc_min/dtnew(ilevel),'limited by sink:',limiting_sink
            end if
-        end do
-!        if (myid==1)print*,ilevel,'dt',dt_sink/dtnew(ilevel)
-        dtnew(ilevel)=MIN(dtnew(ilevel),dt_sink)
+           dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
+        end if
      end if
 
   end if

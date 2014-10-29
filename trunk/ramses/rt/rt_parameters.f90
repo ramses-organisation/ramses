@@ -133,7 +133,7 @@ module rt_parameters
   ! Cooling statistics: avg loop # per cell, maximum loop #, # of cooling calls-----------
   logical::rt_output_coolstats=.false.    ! Output cooling statistics                     !
   integer*8::tot_cool_loopcnt=0,max_cool_loopcnt=0,n_cool_cells=0
-  integer*8,dimension(4)::loopCodes=0
+  integer*8,dimension(20)::loopCodes=0
 
   ! SED statistics: Radiation emitted, total, last coarse step [#photons/10^50]-----------
   logical::showSEDstats=.true.

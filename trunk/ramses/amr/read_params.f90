@@ -32,10 +32,10 @@ subroutine read_params
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
-  namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
+  namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov,tendmov,aendmov
+       & ,imovout,imov,tendmov,aendmov,proj_axis
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -214,16 +214,9 @@ subroutine read_params
 #ifdef RT
   call rt_read_hydro_params(nml_ok)
 #endif
+  if (sink)call read_sink_params
+  if (clumpfind .or. sink)call read_clumpfind_params
 
-
-  if (sink)then
-     call read_sink_params
-     if ((.not. clumpfind) .and. myid==1)then
-        write(*,*)'Sinks need the clumpfinder. Seting clumpfind to .true.!'
-     end if
-     clumpfind=.true.
-  end if
-  if (clumpfind)call read_clumpfind_params
 
   close(1)
 
