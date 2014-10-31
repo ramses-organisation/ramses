@@ -5,11 +5,7 @@
 NVECTOR = 32
 NDIM = 1
 NPRE = 8
-<<<<<<< HEAD
-NVAR = 3
-=======
 NVAR = 5
->>>>>>> origin
 NENER = 0
 SOLVER = hydro
 PATCH = 
