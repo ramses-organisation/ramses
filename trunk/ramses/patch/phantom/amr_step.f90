@@ -3,6 +3,9 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  !~~~~~~~~~ begin ~~~~~~~~~
+  use mond_commons
+  !~~~~~~~~~~ end ~~~~~~~~~~
 #ifdef RT
   use rt_hydro_commons
   use SED_module
@@ -11,7 +14,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,icount
+  integer,intent(in)::ilevel,icount
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -23,7 +26,7 @@ recursive subroutine amr_step(ilevel,icount)
 
   if(numbtot(1,ilevel)==0)return
 
-  if(verbose)write(*,999)icount,ilevel
+  if(verbose) write(*,999)icount,ilevel
 
   !-------------------------------------------
   ! Make new refinements and update boundaries
@@ -65,11 +68,40 @@ recursive subroutine amr_step(ilevel,icount)
               end if
 #endif
               if(poisson)then
-                 call make_virtual_fine_dp(phi(1),i)
-                 do idim=1,ndim
-                    call make_virtual_fine_dp(f(1,idim),i)
-                 end do
-                 if(simple_boundary)call make_boundary_force(i)
+                 !~~~~~~~~~ begin ~~~~~~~~~
+                 if (mond) then
+                    ! Scatter Newtonian variables
+                    call make_virtual_fine_dp(phi_newton(1),i)
+                    do idim=1,ndim
+                       call make_virtual_fine_dp(f_newton(1,idim),i)
+                    end do
+                    ! Scatter MONDian variables
+                    call make_virtual_fine_dp(phi_mond(1),i)
+                    do idim=1,ndim
+                       call make_virtual_fine_dp(f_mond(1,idim),i)
+                    end do
+                 else
+                    ! Scatter only Newtonian variables (this is the original code)
+                    call make_virtual_fine_dp(phi(1),i)
+                    do idim=1,ndim
+                       call make_virtual_fine_dp(f(1,idim),i)
+                    end do
+                 endif
+                 !~~~~~~~~~~ end ~~~~~~~~~~
+                 if(simple_boundary) then
+                    !~~~~~~~~~ begin ~~~~~~~~~
+                    if (mond) then
+                       ! Make the boundary force for Newtonian *and* MONDian gravity
+                       call connect_Mond
+                       call make_boundary_force(i)
+                       call connect_Newton
+                       call make_boundary_force(i)
+                    else
+                       ! Original code
+                       call make_boundary_force(i)
+                    endif
+                    !~~~~~~~~~~ end ~~~~~~~~~~
+                 endif
               end if
            end if
 
@@ -140,11 +172,8 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output frame to movie dump (without synced levels)
   !----------------------------
   if(movie) then
-     if(imov.le.imovout)then ! ifort returns error for next statement if looking
-                             ! beyond what is allocated as an array amovout/tmovout
-        if(aexp>=amovout(imov).or.t>=tmovout(imov))then
-           call output_frame()
-        endif
+     if(aexp>=amovout(imov).or.t>=tmovout(imov))then
+        call output_frame()
      endif
   end if
 
@@ -164,7 +193,18 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------
   if(poisson)then
      !save old potential for time-extrapolation at level boundaries
-     call save_phi_old(ilevel)
+     !~~~~~~~~~ begin ~~~~~~~~~
+     if (mond) then
+        ! save also the MONDian potential
+        call connect_Mond
+        call save_phi_old(ilevel)
+        ! save the Newtonian potential
+        call connect_Newton
+        call save_phi_old(ilevel)
+     else
+        call save_phi_old(ilevel)
+     endif
+     !~~~~~~~~~~ end ~~~~~~~~~~
      call rho_fine(ilevel,icount)
   endif
 
@@ -185,10 +225,22 @@ recursive subroutine amr_step(ilevel,icount)
  
      ! Remove gravity source term with half time step and old force
      if(hydro)then
-        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+        !~~~~~~~~~ begin ~~~~~~~~~
+        ! The subroutine synchro_hydro_fine uses the force field f(:,:).
+        ! In the case of mond==true, connect the MOND arrays.
+        ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
+        if (mond) then
+           f => f_mond
+           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+           f => f_newton ! Change it back
+        else 
+           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+        endif
+        !~~~~~~~~~~ end ~~~~~~~~~~
      endif
      
-     ! Compute gravitational potential
+     ! Compute NEWTONIAN gravitational potential
+     ! +++ Assuming here that f=>f_newton, phi=>phi_newton, etc. (pls be careful!) +++
      if(ilevel>levelmin)then
         if(ilevel .ge. cg_levelmin) then
            call phi_fine_cg(ilevel,icount)
@@ -199,14 +251,88 @@ recursive subroutine amr_step(ilevel,icount)
         call multigrid_fine(levelmin,icount)
      end if
      !when there is no old potential...
-     if (nstep==0)call save_phi_old(ilevel)
+     if (nstep==0) then
+        !~~~~~~~~~ begin ~~~~~~~~~
+        ! Same as above: save also the MONDian potential
+        if (mond) then
+           call connect_Mond
+           call save_phi_old(ilevel)
+           call connect_Newton
+           call save_phi_old(ilevel)
+        else
+           call save_phi_old(ilevel)
+        endif
+        !~~~~~~~~~~ end ~~~~~~~~~~
+     endif
 
-     ! Compute gravitational acceleration
+     ! Compute the NEWTONIAN gravitational acceleration, grad(phi)
+     ! The routine force_fine computes: 
+     ! 1. the Newtonian force field, i.e. grad(phi_newton), thereby calling the routine make_boundary_phi
+     ! 2. the Newtonian virial from the computed Newtonian force field (e.g., Eq. 16 in Lueghausen et al., 2014)
+     ! 3. the maximum matter density, in this case from rho_newton [!!!]
      call force_fine(ilevel,icount)
+
+     ! ~~~~~~~~~~~~~~~~~~~~~~~~~~ begin ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     ! Next step: compute the Phantom Dark Matter density,
+     ! and solve the Poisson equation again
+     if (mond) then
+
+        ! Compute Phantom Dark Matter density
+        ! phi --> rho_mond
+        call compute_pdm_density(ilevel,icount)
+        ! rho_mond now contains the (baryonic+pdm) density
+
+        ! The mean effective total matter density (this is needed for the Poisson solver)
+        if (ilevel==levelmin) then
+           call compute_rho_mond_tot(ilevel,icount)
+        endif
+
+        ! Going to solve the Poisson equation, therefore rho=>rho_mond, phi=>phi_mond, etc.
+        ! I.e., associate the array pointers rho,phi,f with the Mondian arrays
+        call connect_Mond
+
+        ! Compute MONDian gravitational potential
+        ! from the baryonic + phantom dark matter density
+        ! rho_mond --> phi_mond
+        ! In analogy with the above Newtonian part
+        if(ilevel>levelmin)then
+           if(ilevel >= cg_levelmin) then    
+              call phi_fine_cg(ilevel,icount)
+           else
+              call multigrid_fine(ilevel,icount)
+           end if
+        else
+           call multigrid_fine(levelmin,icount) 
+        end if        
+        ! phi_mond now contains the MONDian potential, derived 
+        ! from the (baryonic+pdm) density distribution which is 
+        ! stored in rho_mond
+
+        ! Compute the MONDian gravitational acceleration, f_mond = grad(phi_mond)
+        ! The routine force_fine computes: 
+        ! 1. the MONDian force field, i.e. grad(phi_mond), thereby calling the routine make_boundary_phi
+        ! 2. the MONDian virial from the computed MONDian force field (e.g., Eq. 16 in Lueghausen et al., 2014)
+        ! 3. the maximum matter density, in this case from rho_mond, e.g. the total effective dynamical matter density [!!!]
+        call force_fine(ilevel,icount)
+
+        ! Re-associate the array pointer with the Newtonian arrays again
+        call connect_Newton
+
+     endif
+     ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~ end ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
      ! Synchronize remaining particles for gravity
      if(pic)then
-        call synchro_fine(ilevel)
+        !~~~~~~~~~ begin ~~~~~~~~~
+        ! In the case of MOND, apply the MONDian force field
+        if (mond) then
+           f => f_mond    ! MONDian force field
+           call synchro_fine(ilevel)
+           f => f_newton  ! Change back to the Newtonian force field
+        else
+           call synchro_fine(ilevel)
+        endif
+        !~~~~~~~~~~ end ~~~~~~~~~~
      end if
 
      if(hydro)then
@@ -215,7 +341,18 @@ recursive subroutine amr_step(ilevel,icount)
         if(sink)call collect_acczone_avg(ilevel)
 
         ! Add gravity source term with half time step and new force
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        !~~~~~~~~~ begin ~~~~~~~~~
+        ! The subroutine synchro_hydro_fine uses the force field f(:,:).
+        ! In the case of mond==true, connect the MOND arrays.
+        ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
+        if (mond) then
+           f => f_mond    ! MONDian force field
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           f => f_newton  ! Change it back
+        else 
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        endif
+        !~~~~~~~~~~ end ~~~~~~~~~~
 
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -242,7 +379,12 @@ recursive subroutine amr_step(ilevel,icount)
   !----------------------
   ! Compute new time step
   !----------------------
+  
+  ! Note: the routine newdt_fine uses, amongst other criteria, the free-fall time
+  ! to determine the minimum time step. This has been computed in the routine 
+  ! force_fine from the effective MONDian matter density, rho_mond (if MOND is enabled).
   call newdt_fine(ilevel)
+  
   if(ilevel>levelmin)then
      dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
   end if
@@ -295,7 +437,15 @@ recursive subroutine amr_step(ilevel,icount)
   ! Move particles
   !---------------
   if(pic)then
-     call move_fine(ilevel) ! Only remaining particles
+     !~~~~~~~~~ begin ~~~~~~~~~
+     if (mond) then
+        f => f_mond    ! MONDian force field
+        call move_fine(ilevel) ! Only remaining particles
+        f => f_newton  ! Change back to the Newtonian force field
+     else
+        call move_fine(ilevel) ! Only remaining particles
+     endif
+     !~~~~~~~~~~ end ~~~~~~~~~~
   end if
 
   !-----------
@@ -303,8 +453,16 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------
   if(hydro)then
 
-     ! Hyperbolic solver
-     call godunov_fine(ilevel)
+     ! Hyperbolic solver     
+     !~~~~~~~~~ begin ~~~~~~~~~
+     if (mond) then
+        f => f_mond    ! Use the MONDian force field to solve the Euler equations
+        call godunov_fine(ilevel)
+        f => f_newton  ! Change back to the Newtonian force field
+     else
+        call godunov_fine(ilevel)
+     endif
+     !~~~~~~~~~~ end ~~~~~~~~~~
 
      ! Reverse update boundaries
 #ifdef SOLVERmhd
@@ -343,7 +501,20 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+     if (poisson) then
+        !~~~~~~~~~ begin ~~~~~~~~~
+        ! The subroutine synchro_hydro_fine uses the force field f(:,:).
+        ! In the case of mond==true, connect the MOND arrays.
+        ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
+        if (mond) then
+           f => f_mond
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           f => f_newton ! Change it back
+        else 
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        endif
+        !~~~~~~~~~~ end ~~~~~~~~~~
+     endif
 
      ! Restriction operator
      call upload_fine(ilevel)
@@ -466,7 +637,3 @@ recursive subroutine amr_step(ilevel,icount)
 999 format(' Entering amr_step',i1,' for level',i2)
 
 end subroutine amr_step
-
-
-
-

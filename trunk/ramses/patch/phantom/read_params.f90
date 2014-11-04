@@ -1,5 +1,6 @@
 subroutine read_params
   use amr_commons
+  use mond_parameters
   use pm_parameters
   use poisson_parameters
   use hydro_parameters
@@ -22,20 +23,28 @@ subroutine read_params
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
+
+  !~~~~~~~~~ begin ~~~~~~~~~
+  ! Added the "mond" parameter
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton &
+       & ,mond
+  !~~~~~~~~~~ end ~~~~~~~~~~
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen
+  !~~~~~~~~~ begin ~~~~~~~~~
+  ! Added the "a0" parameter
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
-       & ,cg_levelmin,cic_levelmax
+       & ,cg_levelmin,cic_levelmax,a0,a0_ms2
+  !~~~~~~~~~~ end ~~~~~~~~~~
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars
+       & ,imovout,imov,tendmov,aendmov,proj_axis
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -51,20 +60,46 @@ subroutine read_params
   !--------------------------------------------------
   ! Advertise RAMSES
   !--------------------------------------------------
+
+  !~~~~~~~~~ begin ~~~~~~~~~
+  ! Advertise also the QUMOND patch to ensure the user
+  ! is aware of the fact that this executable has been
+  ! patched
+  !
   if(myid==1)then
-  write(*,*)'_/_/_/       _/_/     _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
-  write(*,*)'_/    _/    _/  _/    _/_/_/_/   _/    _/  _/         _/    _/ '
-  write(*,*)'_/    _/   _/    _/   _/ _/ _/   _/        _/         _/       '
-  write(*,*)'_/_/_/     _/_/_/_/   _/    _/     _/_/    _/_/_/       _/_/   '
-  write(*,*)'_/    _/   _/    _/   _/    _/         _/  _/               _/ '
-  write(*,*)'_/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ '
-  write(*,*)'_/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
-  write(*,*)'                        Version 3.0                            '
-  write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP)           '
-  write(*,*)'                     (c) CEA 1999-2007                         '
-  write(*,*)' '
+     write(*,*)''
+     write(*,*)'                    ~  The Phantom of  ~                        '
+     write(*,*)''
+     write(*,*)'_/_/_/         .-.     _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
+     write(*,*)'_/    _/     _/ ..\    _/_/_/_/   _/    _/  _/         _/    _/ '
+     write(*,*)'_/    _/    ( \  v/__  _/ _/ _/   _/        _/         _/       '
+     write(*,*)'_/_/_/       \     \   _/    _/     _/_/    _/_/_/       _/_/   '
+     write(*,*)'_/    _/     /     |   _/    _/         _/  _/               _/ '
+     write(*,*)'_/    _/  __/       \  _/    _/   _/    _/  _/         _/    _/ '
+     write(*,*)'_/    _/ (   _._.-._/  _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
+     write(*,*)'          `-`                                        '
+     write(*,*)'                     RAMSES  Version 3               '
+     write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP) '
+     write(*,*)'                     (c) CEA 1999-2007               '
+     write(*,*)'                                                     '     
+     write(*,*)'                  with  MONDifications by            '
+     write(*,*)'                 F. Lueghausen  (Uni Bonn)           '
+     write(*,*)'                                                     '
+     !
+     !~~~~~~~~~~ end ~~~~~~~~~~
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
+  
+
+!~~~~~~~~~ begin ~~~~~~~~~
+! Ensure NDIM=3, otherwise throw an error msg and stop
+#ifndef NDIM==3
+  if (mond) then
+    write(*,'(" ERROR: The QUMOND Poisson solver requires NDIM=3")')
+    call clean_stop
+  endif
+#endif
+!~~~~~~~~~~ end ~~~~~~~~~~
 #ifdef SOLVERhydro
   write(*,'(" Using the hydro solver with nvar = ",I2)')nvar
   if(nvar<ndim+2)then
@@ -214,8 +249,8 @@ subroutine read_params
 #ifdef RT
   call rt_read_hydro_params(nml_ok)
 #endif
-  if (sink)call read_sink_params
-  if (clumpfind .or. sink)call read_clumpfind_params
+if (sink)call read_sink_params
+if (clumpfind .or. sink)call read_clumpfind_params
 
 
   close(1)

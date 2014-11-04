@@ -1257,7 +1257,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)xx(j,idim,ind)=xx(j,idim,ind)-boxlen
-              if (period(idim) .and. r_rel(idim)<boxlen*-0.5)xx(j,idim,ind)=xx(j,idim,ind)+boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))xx(j,idim,ind)=xx(j,idim,ind)+boxlen
            end do
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            r_abs=sum(r_rel(1:3)**2)**0.5      
@@ -1537,6 +1537,13 @@ contains
 
 
 end subroutine compute_accretion_rate
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine feedback_from_sink(ilevel)
+
+end subroutine feedback_from_sink
 !################################################################
 !################################################################
 !################################################################
@@ -2642,16 +2649,18 @@ subroutine update_sink(ilevel)
 
      if(smbh)then
         fdrag(isink,1:ndim)=0.d0
-        ! Compute the drag force exerted by the gas on the sink particle 
-        vrel(1:ndim)=vsnew(isink,1:ndim,ilevel)-velc(isink,1:ndim)
-        vnorm_rel=sqrt( vrel(1)**2 + vrel(2)**2 + vrel(3)**2 )
-        mach=vnorm_rel/sqrt(c2sink(isink))
-        alpha=max((densc(isink)/d_star)**2,1d0)
-        factor=alpha*fudge*densc(isink)*msink(isink)/c2sink(isink) / vnorm_rel
-        if(mach.le.0.950d0)factor=factor/mach**2*(0.5d0*log((1d0+mach)/(1d0-mach))-mach)
-        if(mach.ge.1.007d0)factor=factor/mach**2*(0.5d0*log(mach**2-1d0)+3.2d0)
-        factor=MIN(factor,2.0d0/(dtnew(ilevel)+dteff))
-        fdrag(isink,1:ndim)=-factor*vrel(1:ndim)
+        if(sink_drag)then
+          ! Compute the drag force exerted by the gas on the sink particle 
+          vrel(1:ndim)=vsnew(isink,1:ndim,ilevel)-velc(isink,1:ndim)
+          vnorm_rel=sqrt( vrel(1)**2 + vrel(2)**2 + vrel(3)**2 )
+          mach=vnorm_rel/sqrt(c2sink(isink))
+          alpha=max((densc(isink)/d_star)**2,1d0)
+          factor=alpha*fudge*densc(isink)*msink(isink)/c2sink(isink) / vnorm_rel
+          if(mach.le.0.950d0)factor=factor/mach**2*(0.5d0*log((1d0+mach)/(1d0-mach))-mach)
+          if(mach.ge.1.007d0)factor=factor/mach**2*(0.5d0*log(mach**2-1d0)+3.2d0)
+          factor=MIN(factor,2.0d0/(dtnew(ilevel)+dteff))
+          fdrag(isink,1:ndim)=-factor*vrel(1:ndim)
+        endif
         ! Compute new sink velocity due to the drag
         vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fdrag(isink,1:ndim)+vsink(isink,1:ndim)
         ! save the velocity
