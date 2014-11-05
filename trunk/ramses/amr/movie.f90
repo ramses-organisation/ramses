@@ -66,8 +66,6 @@ subroutine output_frame()
     
 #if NDIM > 1
 
-  ! Update counter
-  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
   if(imov>imovout)return
 
   ! Determine the filename, dir, etc
@@ -413,6 +411,8 @@ subroutine output_frame()
 
   deallocate(data_frame)
 #endif
+  ! Update counter
+  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
 
   nw_frame = nw_temp
   nh_frame = nh_temp
