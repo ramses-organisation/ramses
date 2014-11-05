@@ -228,7 +228,7 @@ while true ; do
             done
             
             # Generate image and commit string
-            failcheck=$(grep -i fail ${DATE}.log);
+            failcheck=$(grep -i fail ${WIKISTOREDIR}/${DATE}.log);
             faillength=${#failcheck};
             if [ $faillength -eq 0 ] ; then
                 image="![ok](ok.png)";
