@@ -66,8 +66,6 @@ subroutine output_frame()
     
 #if NDIM > 1
 
-  ! Update counter
-  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
   if(imov>imovout)return
 
   ! Determine the filename, dir, etc
@@ -227,6 +225,7 @@ subroutine output_frame()
            do i=1,ngrid
               if(ok(i))then
                  ! Check if the cell intersect the domain
+#if NDIM>2                 
                  if(proj_axis(proj_ind:proj_ind).eq.'x')then
                    xleft=xx(i,2)-dx_loc/2.
                    xright=xx(i,2)+dx_loc/2.
@@ -243,7 +242,7 @@ subroutine output_frame()
                    yleft=xx(i,2)-dx_loc/2.
                    yright=xx(i,2)+dx_loc/2.
                  endif
-#if NDIM>2                 
+                 
                  if(proj_axis(proj_ind:proj_ind).eq.'x')then
                    zleft=xx(i,1)-dx_loc/2.
                    zright=xx(i,1)+dx_loc/2.
@@ -258,6 +257,11 @@ subroutine output_frame()
                       & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
                       & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
 #else
+                 xleft=xx(i,1)-dx_loc/2.
+                 xright=xx(i,1)+dx_loc/2.
+                 yleft=xx(i,2)-dx_loc/2.
+                 yright=xx(i,2)+dx_loc/2.
+
                  if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
                       & yright.lt.yleft_frame.or.yleft.ge.yright_frame)cycle
 #endif
@@ -299,7 +303,7 @@ subroutine output_frame()
                          if(movie_vars(kk)) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                        end do
 
-                       if (movie_vars(0))then
+                       if (movie_vars(0).eq.1)then
                          !Get temperature
                          ekk=0.0d0
                          do idim=1,3
@@ -349,7 +353,7 @@ subroutine output_frame()
   do ii=1,nw_frame
     do jj=1,nh_frame
       do kk=0,NVAR
-        if(movie_vars(kk)) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
     end do
   end do
@@ -361,7 +365,7 @@ subroutine output_frame()
      allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
      do kk=0, NVAR
-       if (movie_vars(kk))then
+       if (movie_vars(kk).eq.1)then
          open(ilun,file=TRIM(moviefiles(kk)),form='unformatted')
          data_single=data_frame(:,:,kk)
          rewind(ilun)  
@@ -407,6 +411,8 @@ subroutine output_frame()
 
   deallocate(data_frame)
 #endif
+  ! Update counter
+  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
 
   nw_frame = nw_temp
   nh_frame = nh_temp
