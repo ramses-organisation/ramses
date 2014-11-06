@@ -1,7 +1,7 @@
 [1]: https://bitbucket.org/rteyssie/ramses/wiki/Content
 [2]: https://bitbucket.org/rteyssie/ramses/wiki/AutoTests
 [3]: http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html
-[4]: https://bytebucket.org/rteyssie/ramses/raw/e20d55d5c47269c5681d659aacd61ceb9c705b04/trunk/ramses/doc/ramses_ug.pdf
+[4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
 
 ## This is the [ramses](https://bitbucket.org/rteyssie/ramses) bitbucket repository.
 
