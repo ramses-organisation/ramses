@@ -1,6 +1,7 @@
 [1]: https://bitbucket.org/rteyssie/ramses/wiki/Content
 [2]: https://bitbucket.org/rteyssie/ramses/wiki/AutoTests
 [3]: http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html
+[4]: https://bytebucket.org/rteyssie/ramses/raw/e20d55d5c47269c5681d659aacd61ceb9c705b04/trunk/ramses/doc/ramses_ug.pdf
 
 ## This is the [ramses](https://bitbucket.org/rteyssie/ramses) bitbucket repository.
 
@@ -9,7 +10,7 @@ radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  techn
 [ramses](https://bitbucket.org/rteyssie/ramses) is written in  Fortran 90 and is making intensive use of the Message 
 Passing Interface (MPI) library.
 
-You can go to the user's guide [here][1].
+You can go to the user's guide in [PDF here][4] and in the [WIKI here][1].
 
 Check regularly the [automatic test page][2].
 
