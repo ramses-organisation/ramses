@@ -300,7 +300,7 @@ subroutine output_frame()
                        
                        data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
                        do kk=2,NVAR
-                         if(movie_vars(kk)) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
+                         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                        end do
 
                        if (movie_vars(0).eq.1)then
