@@ -60,8 +60,8 @@ subroutine read_params
   write(*,*)'_/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'                        Version 3.0                            '
-  write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP)           '
-  write(*,*)'                     (c) CEA 1999-2007                         '
+  write(*,*)'       written by Romain Teyssier (University of Zurich)       '
+  write(*,*)'               (c) CEA 1999-2007, UZH 2008-2014                '
   write(*,*)' '
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small

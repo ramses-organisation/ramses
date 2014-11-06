@@ -6,10 +6,11 @@
  _/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ 
  _/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  
                          Version 3.0                            
-        written by Romain Teyssier (CEA/DSM/DAPNIA/SAP)         
-                      (c) CEA 1999-2007                         
+        written by Romain Teyssier (University of Zurich)       
+                (c) CEA 1999-2007, UZH 2008-2014                
   
  Working with nproc =    1 for ndim = 1
+ Using the hydro solver with nvar =  5
   
  Building initial AMR grid
  Initial mesh structure
@@ -87,21 +88,21 @@
   4  9.68750E-01  1.250E-01  0.000E+00  1.000E-01
  ================================================
  Fine step=     0 t= 0.00000E+00 dt= 6.603E-04 a= 1.000E+00 mem= 3.2% 
- Fine step=     1 t= 6.60250E-04 dt= 4.453E-04 a= 1.000E+00 mem= 3.2% 
- Fine step=     2 t= 1.10552E-03 dt= 4.068E-04 a= 1.000E+00 mem= 3.3% 
- Fine step=     3 t= 1.51229E-03 dt= 3.860E-04 a= 1.000E+00 mem= 3.3% 
- Fine step=     4 t= 1.89832E-03 dt= 3.793E-04 a= 1.000E+00 mem= 3.5% 
- Fine step=     5 t= 2.27758E-03 dt= 3.673E-04 a= 1.000E+00 mem= 3.5% 
- Fine step=     6 t= 2.64492E-03 dt= 3.633E-04 a= 1.000E+00 mem= 3.6% 
- Fine step=     7 t= 3.00826E-03 dt= 3.614E-04 a= 1.000E+00 mem= 3.6% 
- Fine step=     8 t= 3.36967E-03 dt= 3.576E-04 a= 1.000E+00 mem= 3.7% 
- Fine step=     9 t= 3.72726E-03 dt= 3.574E-04 a= 1.000E+00 mem= 3.7% 
- Fine step=    10 t= 4.08462E-03 dt= 3.552E-04 a= 1.000E+00 mem= 3.8% 
- Fine step=    11 t= 4.43981E-03 dt= 3.523E-04 a= 1.000E+00 mem= 3.8% 
- Fine step=    12 t= 4.79211E-03 dt= 3.544E-04 a= 1.000E+00 mem= 3.9% 
- Fine step=    13 t= 5.14651E-03 dt= 3.500E-04 a= 1.000E+00 mem= 3.9% 
- Fine step=    14 t= 5.49649E-03 dt= 3.492E-04 a= 1.000E+00 mem= 4.0% 
- Fine step=    15 t= 5.84573E-03 dt= 3.500E-04 a= 1.000E+00 mem= 4.0% 
+ Fine step=     1 t= 6.60250E-04 dt= 4.420E-04 a= 1.000E+00 mem= 3.2% 
+ Fine step=     2 t= 1.10228E-03 dt= 4.072E-04 a= 1.000E+00 mem= 3.3% 
+ Fine step=     3 t= 1.50949E-03 dt= 3.717E-04 a= 1.000E+00 mem= 3.3% 
+ Fine step=     4 t= 1.88121E-03 dt= 3.662E-04 a= 1.000E+00 mem= 3.5% 
+ Fine step=     5 t= 2.24744E-03 dt= 3.569E-04 a= 1.000E+00 mem= 3.5% 
+ Fine step=     6 t= 2.60437E-03 dt= 3.527E-04 a= 1.000E+00 mem= 3.6% 
+ Fine step=     7 t= 2.95710E-03 dt= 3.564E-04 a= 1.000E+00 mem= 3.6% 
+ Fine step=     8 t= 3.31347E-03 dt= 3.479E-04 a= 1.000E+00 mem= 3.7% 
+ Fine step=     9 t= 3.66142E-03 dt= 3.494E-04 a= 1.000E+00 mem= 3.7% 
+ Fine step=    10 t= 4.01078E-03 dt= 3.495E-04 a= 1.000E+00 mem= 3.8% 
+ Fine step=    11 t= 4.36031E-03 dt= 3.456E-04 a= 1.000E+00 mem= 3.8% 
+ Fine step=    12 t= 4.70596E-03 dt= 3.485E-04 a= 1.000E+00 mem= 3.9% 
+ Fine step=    13 t= 5.05445E-03 dt= 3.474E-04 a= 1.000E+00 mem= 3.9% 
+ Fine step=    14 t= 5.40181E-03 dt= 3.477E-04 a= 1.000E+00 mem= 4.0% 
+ Fine step=    15 t= 5.74947E-03 dt= 3.476E-04 a= 1.000E+00 mem= 4.0% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -114,22 +115,22 @@
  Level  9 has         11 grids (      11,      11,      11,)
  Level 10 has         14 grids (      14,      14,      14,)
  Main step=     1 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    16 t= 6.19568E-03 dt= 3.477E-04 a= 1.000E+00 mem= 4.4% 
- Fine step=    17 t= 6.54334E-03 dt= 3.495E-04 a= 1.000E+00 mem= 4.4% 
- Fine step=    18 t= 6.89280E-03 dt= 3.481E-04 a= 1.000E+00 mem= 4.4% 
- Fine step=    19 t= 7.24094E-03 dt= 3.478E-04 a= 1.000E+00 mem= 4.4% 
- Fine step=    20 t= 7.58872E-03 dt= 3.491E-04 a= 1.000E+00 mem= 4.6% 
- Fine step=    21 t= 7.93780E-03 dt= 3.480E-04 a= 1.000E+00 mem= 4.6% 
- Fine step=    22 t= 8.28584E-03 dt= 3.494E-04 a= 1.000E+00 mem= 4.6% 
- Fine step=    23 t= 8.63519E-03 dt= 3.489E-04 a= 1.000E+00 mem= 4.6% 
- Fine step=    24 t= 8.98409E-03 dt= 3.493E-04 a= 1.000E+00 mem= 4.8% 
- Fine step=    25 t= 9.33335E-03 dt= 3.500E-04 a= 1.000E+00 mem= 4.8% 
- Fine step=    26 t= 9.68335E-03 dt= 3.503E-04 a= 1.000E+00 mem= 4.8% 
- Fine step=    27 t= 1.00336E-02 dt= 3.512E-04 a= 1.000E+00 mem= 4.8% 
- Fine step=    28 t= 1.03848E-02 dt= 3.511E-04 a= 1.000E+00 mem= 4.9% 
- Fine step=    29 t= 1.07359E-02 dt= 3.521E-04 a= 1.000E+00 mem= 4.9% 
- Fine step=    30 t= 1.10880E-02 dt= 3.524E-04 a= 1.000E+00 mem= 5.0% 
- Fine step=    31 t= 1.14403E-02 dt= 3.525E-04 a= 1.000E+00 mem= 5.0% 
+ Fine step=    16 t= 6.09704E-03 dt= 3.484E-04 a= 1.000E+00 mem= 4.4% 
+ Fine step=    17 t= 6.44543E-03 dt= 3.489E-04 a= 1.000E+00 mem= 4.4% 
+ Fine step=    18 t= 6.79431E-03 dt= 3.499E-04 a= 1.000E+00 mem= 4.4% 
+ Fine step=    19 t= 7.14422E-03 dt= 3.506E-04 a= 1.000E+00 mem= 4.4% 
+ Fine step=    20 t= 7.49479E-03 dt= 3.505E-04 a= 1.000E+00 mem= 4.6% 
+ Fine step=    21 t= 7.84528E-03 dt= 3.512E-04 a= 1.000E+00 mem= 4.6% 
+ Fine step=    22 t= 8.19649E-03 dt= 3.523E-04 a= 1.000E+00 mem= 4.6% 
+ Fine step=    23 t= 8.54875E-03 dt= 3.524E-04 a= 1.000E+00 mem= 4.6% 
+ Fine step=    24 t= 8.90119E-03 dt= 3.530E-04 a= 1.000E+00 mem= 4.8% 
+ Fine step=    25 t= 9.25418E-03 dt= 3.533E-04 a= 1.000E+00 mem= 4.8% 
+ Fine step=    26 t= 9.60749E-03 dt= 3.533E-04 a= 1.000E+00 mem= 4.8% 
+ Fine step=    27 t= 9.96083E-03 dt= 3.534E-04 a= 1.000E+00 mem= 4.8% 
+ Fine step=    28 t= 1.03143E-02 dt= 3.535E-04 a= 1.000E+00 mem= 4.9% 
+ Fine step=    29 t= 1.06677E-02 dt= 3.535E-04 a= 1.000E+00 mem= 4.9% 
+ Fine step=    30 t= 1.10213E-02 dt= 3.536E-04 a= 1.000E+00 mem= 5.0% 
+ Fine step=    31 t= 1.13749E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.0% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -140,24 +141,24 @@
  Level  7 has         11 grids (      11,      11,      11,)
  Level  8 has         13 grids (      13,      13,      13,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         22 grids (      22,      22,      22,)
- Main step=     2 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    32 t= 1.17928E-02 dt= 3.526E-04 a= 1.000E+00 mem= 5.2% 
- Fine step=    33 t= 1.21454E-02 dt= 3.527E-04 a= 1.000E+00 mem= 5.2% 
- Fine step=    34 t= 1.24981E-02 dt= 3.527E-04 a= 1.000E+00 mem= 5.3% 
- Fine step=    35 t= 1.28508E-02 dt= 3.528E-04 a= 1.000E+00 mem= 5.3% 
- Fine step=    36 t= 1.32036E-02 dt= 3.529E-04 a= 1.000E+00 mem= 5.4% 
- Fine step=    37 t= 1.35565E-02 dt= 3.529E-04 a= 1.000E+00 mem= 5.4% 
- Fine step=    38 t= 1.39094E-02 dt= 3.530E-04 a= 1.000E+00 mem= 5.4% 
- Fine step=    39 t= 1.42625E-02 dt= 3.531E-04 a= 1.000E+00 mem= 5.4% 
- Fine step=    40 t= 1.46156E-02 dt= 3.532E-04 a= 1.000E+00 mem= 5.5% 
- Fine step=    41 t= 1.49688E-02 dt= 3.533E-04 a= 1.000E+00 mem= 5.5% 
- Fine step=    42 t= 1.53221E-02 dt= 3.534E-04 a= 1.000E+00 mem= 5.5% 
- Fine step=    43 t= 1.56755E-02 dt= 3.535E-04 a= 1.000E+00 mem= 5.5% 
- Fine step=    44 t= 1.60290E-02 dt= 3.536E-04 a= 1.000E+00 mem= 5.6% 
- Fine step=    45 t= 1.63826E-02 dt= 3.536E-04 a= 1.000E+00 mem= 5.6% 
- Fine step=    46 t= 1.67362E-02 dt= 3.537E-04 a= 1.000E+00 mem= 5.6% 
- Fine step=    47 t= 1.70899E-02 dt= 3.537E-04 a= 1.000E+00 mem= 5.6% 
+ Level 10 has         21 grids (      21,      21,      21,)
+ Main step=     2 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=    32 t= 1.17288E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.2% 
+ Fine step=    33 t= 1.20826E-02 dt= 3.538E-04 a= 1.000E+00 mem= 5.2% 
+ Fine step=    34 t= 1.24364E-02 dt= 3.538E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    35 t= 1.27903E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    36 t= 1.31442E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    37 t= 1.34981E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    38 t= 1.38522E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    39 t= 1.42062E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.3% 
+ Fine step=    40 t= 1.45602E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.5% 
+ Fine step=    41 t= 1.49142E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.5% 
+ Fine step=    42 t= 1.52683E-02 dt= 3.542E-04 a= 1.000E+00 mem= 5.5% 
+ Fine step=    43 t= 1.56224E-02 dt= 3.542E-04 a= 1.000E+00 mem= 5.5% 
+ Fine step=    44 t= 1.59766E-02 dt= 3.543E-04 a= 1.000E+00 mem= 5.6% 
+ Fine step=    45 t= 1.63309E-02 dt= 3.543E-04 a= 1.000E+00 mem= 5.6% 
+ Fine step=    46 t= 1.66852E-02 dt= 3.543E-04 a= 1.000E+00 mem= 5.6% 
+ Fine step=    47 t= 1.70395E-02 dt= 3.544E-04 a= 1.000E+00 mem= 5.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -168,24 +169,24 @@
  Level  7 has         11 grids (      11,      11,      11,)
  Level  8 has         14 grids (      14,      14,      14,)
  Level  9 has         19 grids (      19,      19,      19,)
- Level 10 has         26 grids (      26,      26,      26,)
- Main step=     3 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    48 t= 1.74436E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.6% 
- Fine step=    49 t= 1.77975E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.6% 
- Fine step=    50 t= 1.81514E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.7% 
- Fine step=    51 t= 1.85053E-02 dt= 3.539E-04 a= 1.000E+00 mem= 5.7% 
- Fine step=    52 t= 1.88593E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.8% 
- Fine step=    53 t= 1.92132E-02 dt= 3.540E-04 a= 1.000E+00 mem= 5.8% 
- Fine step=    54 t= 1.95673E-02 dt= 3.541E-04 a= 1.000E+00 mem= 5.9% 
- Fine step=    55 t= 1.99214E-02 dt= 3.542E-04 a= 1.000E+00 mem= 5.9% 
- Fine step=    56 t= 2.02756E-02 dt= 3.542E-04 a= 1.000E+00 mem= 6.0% 
- Fine step=    57 t= 2.06297E-02 dt= 3.542E-04 a= 1.000E+00 mem= 6.0% 
- Fine step=    58 t= 2.09839E-02 dt= 3.542E-04 a= 1.000E+00 mem= 6.0% 
- Fine step=    59 t= 2.13382E-02 dt= 3.543E-04 a= 1.000E+00 mem= 6.0% 
- Fine step=    60 t= 2.16925E-02 dt= 3.544E-04 a= 1.000E+00 mem= 6.1% 
- Fine step=    61 t= 2.20468E-02 dt= 3.544E-04 a= 1.000E+00 mem= 6.1% 
- Fine step=    62 t= 2.24012E-02 dt= 3.544E-04 a= 1.000E+00 mem= 6.1% 
- Fine step=    63 t= 2.27556E-02 dt= 3.544E-04 a= 1.000E+00 mem= 6.1% 
+ Level 10 has         25 grids (      25,      25,      25,)
+ Main step=     3 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=    48 t= 1.73938E-02 dt= 3.544E-04 a= 1.000E+00 mem= 5.6% 
+ Fine step=    49 t= 1.77483E-02 dt= 3.544E-04 a= 1.000E+00 mem= 5.6% 
+ Fine step=    50 t= 1.81027E-02 dt= 3.545E-04 a= 1.000E+00 mem= 5.7% 
+ Fine step=    51 t= 1.84572E-02 dt= 3.545E-04 a= 1.000E+00 mem= 5.7% 
+ Fine step=    52 t= 1.88118E-02 dt= 3.546E-04 a= 1.000E+00 mem= 5.8% 
+ Fine step=    53 t= 1.91663E-02 dt= 3.546E-04 a= 1.000E+00 mem= 5.8% 
+ Fine step=    54 t= 1.95209E-02 dt= 3.547E-04 a= 1.000E+00 mem= 5.8% 
+ Fine step=    55 t= 1.98756E-02 dt= 3.547E-04 a= 1.000E+00 mem= 5.8% 
+ Fine step=    56 t= 2.02303E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.0% 
+ Fine step=    57 t= 2.05850E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.0% 
+ Fine step=    58 t= 2.09397E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.0% 
+ Fine step=    59 t= 2.12944E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.0% 
+ Fine step=    60 t= 2.16491E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.1% 
+ Fine step=    61 t= 2.20038E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.1% 
+ Fine step=    62 t= 2.23586E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.1% 
+ Fine step=    63 t= 2.27133E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.1% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -197,23 +198,23 @@
  Level  8 has         16 grids (      16,      16,      16,)
  Level  9 has         24 grids (      24,      24,      24,)
  Level 10 has         28 grids (      28,      28,      28,)
- Main step=     4 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    64 t= 2.31100E-02 dt= 3.544E-04 a= 1.000E+00 mem= 6.3% 
- Fine step=    65 t= 2.34645E-02 dt= 3.545E-04 a= 1.000E+00 mem= 6.3% 
- Fine step=    66 t= 2.38190E-02 dt= 3.545E-04 a= 1.000E+00 mem= 6.3% 
- Fine step=    67 t= 2.41735E-02 dt= 3.545E-04 a= 1.000E+00 mem= 6.3% 
- Fine step=    68 t= 2.45280E-02 dt= 3.545E-04 a= 1.000E+00 mem= 6.4% 
- Fine step=    69 t= 2.48826E-02 dt= 3.546E-04 a= 1.000E+00 mem= 6.4% 
- Fine step=    70 t= 2.52371E-02 dt= 3.546E-04 a= 1.000E+00 mem= 6.4% 
- Fine step=    71 t= 2.55917E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.4% 
- Fine step=    72 t= 2.59464E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=    73 t= 2.63010E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=    74 t= 2.66557E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=    75 t= 2.70104E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=    76 t= 2.73651E-02 dt= 3.547E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=    77 t= 2.77198E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=    78 t= 2.80746E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=    79 t= 2.84293E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.7% 
+ Main step=     4 mcons= 1.97E-16 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=    64 t= 2.30681E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.2% 
+ Fine step=    65 t= 2.34228E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.2% 
+ Fine step=    66 t= 2.37777E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.3% 
+ Fine step=    67 t= 2.41325E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.3% 
+ Fine step=    68 t= 2.44873E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=    69 t= 2.48422E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=    70 t= 2.51971E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=    71 t= 2.55520E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=    72 t= 2.59069E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=    73 t= 2.62619E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=    74 t= 2.66169E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=    75 t= 2.69719E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=    76 t= 2.73268E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=    77 t= 2.76819E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=    78 t= 2.80369E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=    79 t= 2.83919E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -221,27 +222,27 @@
  Level  4 has          8 grids (       8,       8,       8,)
  Level  5 has         10 grids (      10,      10,      10,)
  Level  6 has         11 grids (      11,      11,      11,)
- Level  7 has         14 grids (      14,      14,      14,)
- Level  8 has         19 grids (      19,      19,      19,)
- Level  9 has         29 grids (      29,      29,      29,)
- Level 10 has         33 grids (      33,      33,      33,)
+ Level  7 has         13 grids (      13,      13,      13,)
+ Level  8 has         18 grids (      18,      18,      18,)
+ Level  9 has         28 grids (      28,      28,      28,)
+ Level 10 has         31 grids (      31,      31,      31,)
  Main step=     5 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    80 t= 2.87841E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    81 t= 2.91388E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    82 t= 2.94936E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    83 t= 2.98485E-02 dt= 3.548E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    84 t= 3.02033E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    85 t= 3.05582E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    86 t= 3.09130E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    87 t= 3.12679E-02 dt= 3.549E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    88 t= 3.16228E-02 dt= 3.549E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    89 t= 3.19777E-02 dt= 3.549E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    90 t= 3.23327E-02 dt= 3.549E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    91 t= 3.26876E-02 dt= 3.549E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    92 t= 3.30425E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    93 t= 3.33975E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=    94 t= 3.37525E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=    95 t= 3.41075E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=    80 t= 2.87469E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.7% 
+ Fine step=    81 t= 2.91019E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.7% 
+ Fine step=    82 t= 2.94570E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.7% 
+ Fine step=    83 t= 2.98120E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.7% 
+ Fine step=    84 t= 3.01671E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=    85 t= 3.05222E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=    86 t= 3.08773E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=    87 t= 3.12324E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=    88 t= 3.15876E-02 dt= 3.552E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=    89 t= 3.19428E-02 dt= 3.552E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=    90 t= 3.22979E-02 dt= 3.552E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=    91 t= 3.26531E-02 dt= 3.552E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=    92 t= 3.30083E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=    93 t= 3.33635E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=    94 t= 3.37187E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=    95 t= 3.40739E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -251,25 +252,25 @@
  Level  6 has         12 grids (      12,      12,      12,)
  Level  7 has         15 grids (      15,      15,      15,)
  Level  8 has         21 grids (      21,      21,      21,)
- Level  9 has         30 grids (      30,      30,      30,)
+ Level  9 has         31 grids (      31,      31,      31,)
  Level 10 has         34 grids (      34,      34,      34,)
- Main step=     6 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=    96 t= 3.44625E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=    97 t= 3.48176E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=    98 t= 3.51726E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=    99 t= 3.55276E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   100 t= 3.58827E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   101 t= 3.62378E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   102 t= 3.65929E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   103 t= 3.69479E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   104 t= 3.73030E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   105 t= 3.76582E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   106 t= 3.80133E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   107 t= 3.83684E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   108 t= 3.87236E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   109 t= 3.90787E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   110 t= 3.94339E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   111 t= 3.97890E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.1% 
+ Main step=     6 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=    96 t= 3.44291E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=    97 t= 3.47843E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=    98 t= 3.51395E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=    99 t= 3.54948E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   100 t= 3.58500E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   101 t= 3.62052E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   102 t= 3.65605E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   103 t= 3.69158E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   104 t= 3.72711E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   105 t= 3.76264E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   106 t= 3.79817E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   107 t= 3.83371E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   108 t= 3.86925E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   109 t= 3.90479E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   110 t= 3.94033E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   111 t= 3.97586E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -279,25 +280,25 @@
  Level  6 has         13 grids (      13,      13,      13,)
  Level  7 has         16 grids (      16,      16,      16,)
  Level  8 has         22 grids (      22,      22,      22,)
- Level  9 has         33 grids (      33,      33,      33,)
- Level 10 has         28 grids (      28,      28,      28,)
- Main step=     7 mcons=-1.97E-16 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   112 t= 4.01442E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   113 t= 4.04994E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   114 t= 4.08546E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   115 t= 4.12098E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   116 t= 4.15650E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   117 t= 4.19202E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   118 t= 4.22755E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   119 t= 4.26307E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   120 t= 4.29859E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   121 t= 4.33412E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   122 t= 4.36964E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   123 t= 4.40517E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   124 t= 4.44070E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   125 t= 4.47623E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   126 t= 4.51176E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   127 t= 4.54729E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.7% 
+ Level  9 has         31 grids (      31,      31,      31,)
+ Level 10 has         29 grids (      29,      29,      29,)
+ Main step=     7 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   112 t= 4.01141E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   113 t= 4.04695E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   114 t= 4.08249E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   115 t= 4.11803E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   116 t= 4.15357E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   117 t= 4.18911E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   118 t= 4.22466E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=   119 t= 4.26020E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=   120 t= 4.29575E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   121 t= 4.33129E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   122 t= 4.36684E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   123 t= 4.40239E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   124 t= 4.43794E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   125 t= 4.47349E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   126 t= 4.50904E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.4% 
+ Fine step=   127 t= 4.54459E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.4% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -308,24 +309,24 @@
  Level  7 has         16 grids (      16,      16,      16,)
  Level  8 has         24 grids (      24,      24,      24,)
  Level  9 has         31 grids (      31,      31,      31,)
- Level 10 has         12 grids (      12,      12,      12,)
- Main step=     8 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   128 t= 4.58282E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.5% 
- Fine step=   129 t= 4.61835E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.5% 
- Fine step=   130 t= 4.65388E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.5% 
- Fine step=   131 t= 4.68942E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.5% 
- Fine step=   132 t= 4.72495E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   133 t= 4.76048E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   134 t= 4.79602E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   135 t= 4.83156E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.6% 
- Fine step=   136 t= 4.86709E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   137 t= 4.90263E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   138 t= 4.93817E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   139 t= 4.97371E-02 dt= 3.553E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   140 t= 5.00924E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   141 t= 5.04478E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   142 t= 5.08032E-02 dt= 3.551E-04 a= 1.000E+00 mem= 6.7% 
- Fine step=   143 t= 5.11583E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.7% 
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=     8 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   128 t= 4.58014E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   129 t= 4.61570E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   130 t= 4.65124E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   131 t= 4.68680E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   132 t= 4.72235E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   133 t= 4.75790E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   134 t= 4.79345E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   135 t= 4.82900E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   136 t= 4.86455E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   137 t= 4.90010E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   138 t= 4.93565E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   139 t= 4.97120E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.5% 
+ Fine step=   140 t= 5.00676E-02 dt= 3.554E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   141 t= 5.04230E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   142 t= 5.07786E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.6% 
+ Fine step=   143 t= 5.11342E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -336,24 +337,24 @@
  Level  7 has         18 grids (      18,      18,      18,)
  Level  8 has         27 grids (      27,      27,      27,)
  Level  9 has         34 grids (      34,      34,      34,)
- Level 10 has         12 grids (      12,      12,      12,)
- Main step=     9 mcons= 0.00E+00 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   144 t= 5.15138E-02 dt= 3.552E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   145 t= 5.18690E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   146 t= 5.22240E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   147 t= 5.25794E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   148 t= 5.29344E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   149 t= 5.32895E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   150 t= 5.36450E-02 dt= 3.550E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   151 t= 5.40000E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   152 t= 5.43555E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   153 t= 5.47107E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   154 t= 5.50657E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   155 t= 5.54212E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   156 t= 5.57763E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   157 t= 5.61314E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   158 t= 5.64869E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   159 t= 5.68420E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=     9 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   144 t= 5.14898E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   145 t= 5.18453E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   146 t= 5.22009E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   147 t= 5.25566E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   148 t= 5.29122E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=   149 t= 5.32678E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=   150 t= 5.36234E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=   151 t= 5.39790E-02 dt= 3.555E-04 a= 1.000E+00 mem= 6.8% 
+ Fine step=   152 t= 5.43345E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   153 t= 5.46901E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   154 t= 5.50457E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   155 t= 5.54014E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   156 t= 5.57570E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   157 t= 5.61127E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   158 t= 5.64683E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   159 t= 5.68240E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -363,25 +364,25 @@
  Level  6 has         14 grids (      14,      14,      14,)
  Level  7 has         19 grids (      19,      19,      19,)
  Level  8 has         28 grids (      28,      28,      28,)
- Level  9 has         35 grids (      35,      35,      35,)
- Level 10 has         12 grids (      12,      12,      12,)
- Main step=    10 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   160 t= 5.71975E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   161 t= 5.75531E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   162 t= 5.79085E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   163 t= 5.82641E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   164 t= 5.86197E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   165 t= 5.89753E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   166 t= 5.93309E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   167 t= 5.96865E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   168 t= 6.00421E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   169 t= 6.03977E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   170 t= 6.07534E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   171 t= 6.11090E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   172 t= 6.14647E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   173 t= 6.18204E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   174 t= 6.21760E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   175 t= 6.25317E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Level  9 has         33 grids (      33,      33,      33,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    10 mcons= 1.97E-16 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   160 t= 5.71796E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   161 t= 5.75353E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   162 t= 5.78909E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   163 t= 5.82464E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   164 t= 5.86021E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   165 t= 5.89577E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   166 t= 5.93133E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   167 t= 5.96690E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   168 t= 6.00247E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   169 t= 6.03803E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   170 t= 6.07360E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   171 t= 6.10917E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   172 t= 6.14473E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   173 t= 6.18030E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   174 t= 6.21585E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   175 t= 6.25142E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -390,26 +391,26 @@
  Level  5 has         11 grids (      11,      11,      11,)
  Level  6 has         14 grids (      14,      14,      14,)
  Level  7 has         19 grids (      19,      19,      19,)
- Level  8 has         29 grids (      29,      29,      29,)
- Level  9 has         36 grids (      36,      36,      36,)
- Level 10 has         12 grids (      12,      12,      12,)
- Main step=    11 mcons= 1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   176 t= 6.28874E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   177 t= 6.32431E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   178 t= 6.35988E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   179 t= 6.39545E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   180 t= 6.43103E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   181 t= 6.46660E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   182 t= 6.50217E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   183 t= 6.53775E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   184 t= 6.57332E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   185 t= 6.60890E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   186 t= 6.64447E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   187 t= 6.68005E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   188 t= 6.71562E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   189 t= 6.75120E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   190 t= 6.78677E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   191 t= 6.82235E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Level  8 has         30 grids (      30,      30,      30,)
+ Level  9 has         37 grids (      37,      37,      37,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    11 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   176 t= 6.28699E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   177 t= 6.32254E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   178 t= 6.35811E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   179 t= 6.39368E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   180 t= 6.42925E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   181 t= 6.46482E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   182 t= 6.50039E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   183 t= 6.53596E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   184 t= 6.57153E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   185 t= 6.60709E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   186 t= 6.64266E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   187 t= 6.67822E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   188 t= 6.71376E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   189 t= 6.74934E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   190 t= 6.78491E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   191 t= 6.82049E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -421,23 +422,23 @@
  Level  8 has         30 grids (      30,      30,      30,)
  Level  9 has         36 grids (      36,      36,      36,)
  Level 10 has         12 grids (      12,      12,      12,)
- Main step=    12 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   192 t= 6.85792E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   193 t= 6.89347E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   194 t= 6.92905E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   195 t= 6.96460E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   196 t= 7.00015E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   197 t= 7.03573E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   198 t= 7.07127E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   199 t= 7.10685E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   200 t= 7.14242E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   201 t= 7.17795E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   202 t= 7.21353E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   203 t= 7.24907E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   204 t= 7.28458E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   205 t= 7.32016E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   206 t= 7.35567E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   207 t= 7.39119E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Main step=    12 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   192 t= 6.85606E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   193 t= 6.89164E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   194 t= 6.92722E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   195 t= 6.96278E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   196 t= 6.99835E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   197 t= 7.03392E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   198 t= 7.06948E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   199 t= 7.10503E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   200 t= 7.14060E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   201 t= 7.17618E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   202 t= 7.21175E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   203 t= 7.24733E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   204 t= 7.28291E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   205 t= 7.31848E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   206 t= 7.35405E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   207 t= 7.38963E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -447,25 +448,25 @@
  Level  6 has         16 grids (      16,      16,      16,)
  Level  7 has         22 grids (      22,      22,      22,)
  Level  8 has         32 grids (      32,      32,      32,)
- Level  9 has         38 grids (      38,      38,      38,)
- Level 10 has         12 grids (      12,      12,      12,)
- Main step=    13 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   208 t= 7.42675E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   209 t= 7.46226E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   210 t= 7.49781E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   211 t= 7.53334E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   212 t= 7.56884E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   213 t= 7.60440E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   214 t= 7.63990E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   215 t= 7.67540E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   216 t= 7.71095E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   217 t= 7.74645E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   218 t= 7.78198E-02 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   219 t= 7.81752E-02 dt= 3.552E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   220 t= 7.85305E-02 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   221 t= 7.88862E-02 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   222 t= 7.92417E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   223 t= 7.95972E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Level  9 has         37 grids (      37,      37,      37,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    13 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   208 t= 7.42520E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   209 t= 7.46076E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   210 t= 7.49632E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   211 t= 7.53189E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   212 t= 7.56747E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   213 t= 7.60304E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   214 t= 7.63861E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   215 t= 7.67419E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   216 t= 7.70977E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   217 t= 7.74535E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   218 t= 7.78093E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   219 t= 7.81650E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   220 t= 7.85207E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   221 t= 7.88763E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   222 t= 7.92321E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   223 t= 7.95878E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -475,25 +476,25 @@
  Level  6 has         16 grids (      16,      16,      16,)
  Level  7 has         22 grids (      22,      22,      22,)
  Level  8 has         33 grids (      33,      33,      33,)
- Level  9 has         36 grids (      36,      36,      36,)
- Level 10 has         15 grids (      15,      15,      15,)
- Main step=    14 mcons= 0.00E+00 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   224 t= 7.99529E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   225 t= 8.03084E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   226 t= 8.06640E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   227 t= 8.10199E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   228 t= 8.13755E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   229 t= 8.17314E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   230 t= 8.20873E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   231 t= 8.24431E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   232 t= 8.27990E-02 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   233 t= 8.31549E-02 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   234 t= 8.35108E-02 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   235 t= 8.38667E-02 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   236 t= 8.42226E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   237 t= 8.45786E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   238 t= 8.49345E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   239 t= 8.52904E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
+ Level  9 has         38 grids (      38,      38,      38,)
+ Level 10 has         13 grids (      13,      13,      13,)
+ Main step=    14 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   224 t= 7.99433E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   225 t= 8.02991E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   226 t= 8.06550E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   227 t= 8.10108E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   228 t= 8.13666E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   229 t= 8.17224E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   230 t= 8.20783E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   231 t= 8.24339E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   232 t= 8.27896E-02 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   233 t= 8.31454E-02 dt= 3.556E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   234 t= 8.35010E-02 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   235 t= 8.38565E-02 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   236 t= 8.42122E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   237 t= 8.45681E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   238 t= 8.49239E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   239 t= 8.52798E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -503,25 +504,25 @@
  Level  6 has         16 grids (      16,      16,      16,)
  Level  7 has         24 grids (      24,      24,      24,)
  Level  8 has         33 grids (      33,      33,      33,)
- Level  9 has         27 grids (      27,      27,      27,)
- Level 10 has         15 grids (      15,      15,      15,)
- Main step=    15 mcons=-1.97E-16 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   240 t= 8.56463E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   241 t= 8.60022E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   242 t= 8.63580E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   243 t= 8.67140E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   244 t= 8.70699E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   245 t= 8.74258E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   246 t= 8.77817E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   247 t= 8.81377E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   248 t= 8.84935E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   249 t= 8.88495E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   250 t= 8.92053E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   251 t= 8.95610E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   252 t= 8.99170E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   253 t= 9.02726E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   254 t= 9.06283E-02 dt= 3.560E-04 a= 1.000E+00 mem= 6.9% 
- Fine step=   255 t= 9.09842E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Level  9 has         25 grids (      25,      25,      25,)
+ Level 10 has         14 grids (      14,      14,      14,)
+ Main step=    15 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   240 t= 8.56356E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   241 t= 8.59915E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   242 t= 8.63471E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   243 t= 8.67028E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   244 t= 8.70586E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   245 t= 8.74142E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   246 t= 8.77697E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   247 t= 8.81255E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   248 t= 8.84813E-02 dt= 3.558E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   249 t= 8.88371E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   250 t= 8.91929E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   251 t= 8.95488E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   252 t= 8.99047E-02 dt= 3.557E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   253 t= 9.02604E-02 dt= 3.557E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   254 t= 9.06161E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   255 t= 9.09720E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -531,25 +532,25 @@
  Level  6 has         17 grids (      17,      17,      17,)
  Level  7 has         25 grids (      25,      25,      25,)
  Level  8 has         34 grids (      34,      34,      34,)
- Level  9 has         17 grids (      17,      17,      17,)
+ Level  9 has         16 grids (      16,      16,      16,)
  Level 10 has         13 grids (      13,      13,      13,)
- Main step=    16 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   256 t= 9.13398E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   257 t= 9.16958E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   258 t= 9.20516E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   259 t= 9.24071E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   260 t= 9.27631E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   261 t= 9.31187E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   262 t= 9.34740E-02 dt= 3.560E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   263 t= 9.38300E-02 dt= 3.554E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   264 t= 9.41854E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   265 t= 9.45406E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   266 t= 9.48965E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   267 t= 9.52517E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   268 t= 9.56072E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   269 t= 9.59628E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   270 t= 9.63179E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   271 t= 9.66738E-02 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
+ Main step=    16 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   256 t= 9.13276E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   257 t= 9.16832E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   258 t= 9.20390E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   259 t= 9.23948E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   260 t= 9.27504E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   261 t= 9.31063E-02 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   262 t= 9.34622E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   263 t= 9.38181E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   264 t= 9.41740E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   265 t= 9.45299E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   266 t= 9.48858E-02 dt= 3.557E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   267 t= 9.52414E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   268 t= 9.55970E-02 dt= 3.558E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   269 t= 9.59529E-02 dt= 3.557E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   270 t= 9.63086E-02 dt= 3.556E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   271 t= 9.66641E-02 dt= 3.558E-04 a= 1.000E+00 mem= 6.9% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -560,24 +561,24 @@
  Level  7 has         25 grids (      25,      25,      25,)
  Level  8 has         35 grids (      35,      35,      35,)
  Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
+ Level 10 has         11 grids (      11,      11,      11,)
  Main step=    17 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   272 t= 9.70290E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   273 t= 9.73839E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   274 t= 9.77396E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   275 t= 9.80946E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   276 t= 9.84497E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   277 t= 9.88051E-02 dt= 3.550E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   278 t= 9.91602E-02 dt= 3.555E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   279 t= 9.95157E-02 dt= 3.553E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   280 t= 9.98710E-02 dt= 3.551E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   281 t= 1.00226E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.1% 
- Fine step=   282 t= 1.00582E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   283 t= 1.00937E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   284 t= 1.01292E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   285 t= 1.01648E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   286 t= 1.02003E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
- Fine step=   287 t= 1.02359E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   272 t= 9.70200E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   273 t= 9.73759E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   274 t= 9.77318E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   275 t= 9.80877E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   276 t= 9.84436E-02 dt= 3.559E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   277 t= 9.87995E-02 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   278 t= 9.91552E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   279 t= 9.95108E-02 dt= 3.558E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   280 t= 9.98667E-02 dt= 3.556E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   281 t= 1.00222E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   282 t= 1.00578E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   283 t= 1.00934E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   284 t= 1.01289E-01 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   285 t= 1.01645E-01 dt= 3.559E-04 a= 1.000E+00 mem= 6.9% 
+ Fine step=   286 t= 1.02001E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
+ Fine step=   287 t= 1.02357E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.0% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -588,24 +589,24 @@
  Level  7 has         27 grids (      27,      27,      27,)
  Level  8 has         34 grids (      34,      34,      34,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         12 grids (      12,      12,      12,)
+ Level 10 has         11 grids (      11,      11,      11,)
  Main step=    18 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   288 t= 1.02714E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   289 t= 1.03070E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   290 t= 1.03426E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   291 t= 1.03782E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   292 t= 1.04137E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   293 t= 1.04493E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   294 t= 1.04849E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   295 t= 1.05205E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   296 t= 1.05561E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   297 t= 1.05917E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   298 t= 1.06273E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   299 t= 1.06629E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   300 t= 1.06985E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   301 t= 1.07341E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   302 t= 1.07697E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   303 t= 1.08053E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   288 t= 1.02713E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   289 t= 1.03069E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   290 t= 1.03424E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   291 t= 1.03780E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   292 t= 1.04136E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   293 t= 1.04491E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   294 t= 1.04847E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   295 t= 1.05203E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   296 t= 1.05559E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   297 t= 1.05915E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   298 t= 1.06271E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   299 t= 1.06627E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   300 t= 1.06982E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   301 t= 1.07338E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   302 t= 1.07694E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   303 t= 1.08050E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -614,26 +615,26 @@
  Level  5 has         13 grids (      13,      13,      13,)
  Level  6 has         18 grids (      18,      18,      18,)
  Level  7 has         27 grids (      27,      27,      27,)
- Level  8 has         35 grids (      35,      35,      35,)
- Level  9 has         16 grids (      16,      16,      16,)
+ Level  8 has         36 grids (      36,      36,      36,)
+ Level  9 has         15 grids (      15,      15,      15,)
  Level 10 has         12 grids (      12,      12,      12,)
  Main step=    19 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   304 t= 1.08409E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   305 t= 1.08765E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   306 t= 1.09121E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   307 t= 1.09477E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   308 t= 1.09833E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   309 t= 1.10189E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   310 t= 1.10545E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   311 t= 1.10901E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   312 t= 1.11257E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   313 t= 1.11613E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   314 t= 1.11968E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   315 t= 1.12325E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   316 t= 1.12681E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   317 t= 1.13036E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   318 t= 1.13392E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   319 t= 1.13748E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   304 t= 1.08405E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   305 t= 1.08761E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   306 t= 1.09117E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   307 t= 1.09473E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   308 t= 1.09828E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   309 t= 1.10184E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   310 t= 1.10540E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   311 t= 1.10896E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   312 t= 1.11252E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   313 t= 1.11608E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   314 t= 1.11964E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   315 t= 1.12319E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   316 t= 1.12675E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   317 t= 1.13031E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   318 t= 1.13386E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   319 t= 1.13742E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -642,26 +643,26 @@
  Level  5 has         14 grids (      14,      14,      14,)
  Level  6 has         19 grids (      19,      19,      19,)
  Level  7 has         28 grids (      28,      28,      28,)
- Level  8 has         36 grids (      36,      36,      36,)
+ Level  8 has         37 grids (      37,      37,      37,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    20 mcons=-1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   320 t= 1.14104E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   321 t= 1.14460E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   322 t= 1.14815E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   323 t= 1.15171E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   324 t= 1.15527E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   325 t= 1.15882E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   326 t= 1.16238E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   327 t= 1.16594E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   328 t= 1.16949E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   329 t= 1.17305E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   330 t= 1.17660E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   331 t= 1.18015E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   332 t= 1.18371E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   333 t= 1.18726E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   334 t= 1.19081E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   335 t= 1.19437E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.5% 
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    20 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   320 t= 1.14098E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   321 t= 1.14454E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   322 t= 1.14810E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   323 t= 1.15166E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   324 t= 1.15522E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   325 t= 1.15878E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   326 t= 1.16233E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   327 t= 1.16589E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   328 t= 1.16945E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   329 t= 1.17300E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   330 t= 1.17656E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   331 t= 1.18012E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   332 t= 1.18368E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   333 t= 1.18724E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   334 t= 1.19080E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   335 t= 1.19436E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -670,26 +671,26 @@
  Level  5 has         14 grids (      14,      14,      14,)
  Level  6 has         19 grids (      19,      19,      19,)
  Level  7 has         30 grids (      30,      30,      30,)
- Level  8 has         37 grids (      37,      37,      37,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    21 mcons=-1.97E-16 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   336 t= 1.19792E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   337 t= 1.20147E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   338 t= 1.20502E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   339 t= 1.20857E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   340 t= 1.21213E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   341 t= 1.21568E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   342 t= 1.21923E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   343 t= 1.22279E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   344 t= 1.22634E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   345 t= 1.22989E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   346 t= 1.23345E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   347 t= 1.23700E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   348 t= 1.24056E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   349 t= 1.24411E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   350 t= 1.24767E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   351 t= 1.25123E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Level  8 has         36 grids (      36,      36,      36,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    21 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   336 t= 1.19792E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   337 t= 1.20147E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   338 t= 1.20503E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   339 t= 1.20859E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   340 t= 1.21214E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   341 t= 1.21570E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   342 t= 1.21926E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   343 t= 1.22282E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   344 t= 1.22638E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   345 t= 1.22994E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   346 t= 1.23350E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   347 t= 1.23705E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   348 t= 1.24061E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   349 t= 1.24417E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   350 t= 1.24773E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   351 t= 1.25128E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -699,25 +700,25 @@
  Level  6 has         19 grids (      19,      19,      19,)
  Level  7 has         29 grids (      29,      29,      29,)
  Level  8 has         37 grids (      37,      37,      37,)
- Level  9 has         17 grids (      17,      17,      17,)
+ Level  9 has         16 grids (      16,      16,      16,)
  Level 10 has         12 grids (      12,      12,      12,)
- Main step=    22 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   352 t= 1.25478E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   353 t= 1.25834E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   354 t= 1.26190E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   355 t= 1.26546E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   356 t= 1.26901E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   357 t= 1.27257E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   358 t= 1.27613E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   359 t= 1.27969E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   360 t= 1.28325E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   361 t= 1.28681E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   362 t= 1.29037E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   363 t= 1.29393E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   364 t= 1.29749E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   365 t= 1.30105E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   366 t= 1.30461E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   367 t= 1.30817E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Main step=    22 mcons= 1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   352 t= 1.25484E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   353 t= 1.25840E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   354 t= 1.26196E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   355 t= 1.26551E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   356 t= 1.26907E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   357 t= 1.27263E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   358 t= 1.27619E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   359 t= 1.27975E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   360 t= 1.28331E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   361 t= 1.28687E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   362 t= 1.29043E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   363 t= 1.29398E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   364 t= 1.29754E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   365 t= 1.30110E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   366 t= 1.30465E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   367 t= 1.30821E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -728,24 +729,24 @@
  Level  7 has         31 grids (      31,      31,      31,)
  Level  8 has         38 grids (      38,      38,      38,)
  Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    23 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   368 t= 1.31173E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   369 t= 1.31529E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   370 t= 1.31885E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   371 t= 1.32241E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   372 t= 1.32597E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   373 t= 1.32953E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   374 t= 1.33309E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   375 t= 1.33665E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   376 t= 1.34021E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   377 t= 1.34377E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   378 t= 1.34733E-01 dt= 3.562E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   379 t= 1.35089E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   380 t= 1.35445E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   381 t= 1.35800E-01 dt= 3.562E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   382 t= 1.36156E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   383 t= 1.36512E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    23 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   368 t= 1.31177E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   369 t= 1.31533E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   370 t= 1.31889E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   371 t= 1.32245E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   372 t= 1.32601E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   373 t= 1.32957E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   374 t= 1.33313E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   375 t= 1.33668E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   376 t= 1.34024E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   377 t= 1.34379E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   378 t= 1.34735E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   379 t= 1.35091E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   380 t= 1.35447E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   381 t= 1.35803E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   382 t= 1.36159E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   383 t= 1.36515E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -754,26 +755,26 @@
  Level  5 has         15 grids (      15,      15,      15,)
  Level  6 has         21 grids (      21,      21,      21,)
  Level  7 has         32 grids (      32,      32,      32,)
- Level  8 has         39 grids (      39,      39,      39,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    24 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   384 t= 1.36867E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   385 t= 1.37223E-01 dt= 3.554E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   386 t= 1.37579E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   387 t= 1.37934E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   388 t= 1.38290E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   389 t= 1.38645E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   390 t= 1.39001E-01 dt= 3.553E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   391 t= 1.39357E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   392 t= 1.39712E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   393 t= 1.40068E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   394 t= 1.40423E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   395 t= 1.40778E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   396 t= 1.41133E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   397 t= 1.41488E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   398 t= 1.41844E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   399 t= 1.42199E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.0% 
+ Level  8 has         38 grids (      38,      38,      38,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    24 mcons= 0.00E+00 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.37E+00
+ Fine step=   384 t= 1.36871E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   385 t= 1.37227E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   386 t= 1.37582E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   387 t= 1.37938E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   388 t= 1.38294E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   389 t= 1.38649E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   390 t= 1.39005E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   391 t= 1.39361E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   392 t= 1.39717E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   393 t= 1.40073E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   394 t= 1.40429E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   395 t= 1.40785E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   396 t= 1.41141E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   397 t= 1.41496E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   398 t= 1.41852E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   399 t= 1.42208E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -783,25 +784,25 @@
  Level  6 has         21 grids (      21,      21,      21,)
  Level  7 has         31 grids (      31,      31,      31,)
  Level  8 has         39 grids (      39,      39,      39,)
- Level  9 has         17 grids (      17,      17,      17,)
+ Level  9 has         16 grids (      16,      16,      16,)
  Level 10 has         13 grids (      13,      13,      13,)
- Main step=    25 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   400 t= 1.42554E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   401 t= 1.42910E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   402 t= 1.43265E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   403 t= 1.43620E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   404 t= 1.43975E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   405 t= 1.44330E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   406 t= 1.44686E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   407 t= 1.45041E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.9% 
- Fine step=   408 t= 1.45397E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   409 t= 1.45753E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   410 t= 1.46108E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   411 t= 1.46464E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   412 t= 1.46820E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   413 t= 1.47175E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   414 t= 1.47531E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   415 t= 1.47887E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
+ Main step=    25 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   400 t= 1.42564E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   401 t= 1.42919E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   402 t= 1.43275E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   403 t= 1.43631E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   404 t= 1.43987E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   405 t= 1.44343E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   406 t= 1.44699E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   407 t= 1.45055E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   408 t= 1.45411E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   409 t= 1.45766E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   410 t= 1.46122E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   411 t= 1.46478E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   412 t= 1.46833E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   413 t= 1.47189E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   414 t= 1.47545E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
+ Fine step=   415 t= 1.47901E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.9% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -810,26 +811,26 @@
  Level  5 has         15 grids (      15,      15,      15,)
  Level  6 has         22 grids (      22,      22,      22,)
  Level  7 has         33 grids (      33,      33,      33,)
- Level  8 has         39 grids (      39,      39,      39,)
+ Level  8 has         40 grids (      40,      40,      40,)
  Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    26 mcons=-1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   416 t= 1.48243E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   417 t= 1.48599E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   418 t= 1.48955E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   419 t= 1.49311E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   420 t= 1.49667E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   421 t= 1.50023E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   422 t= 1.50379E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   423 t= 1.50735E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   424 t= 1.51091E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   425 t= 1.51447E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   426 t= 1.51803E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   427 t= 1.52159E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   428 t= 1.52515E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   429 t= 1.52871E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   430 t= 1.53227E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   431 t= 1.53583E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.1% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    26 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   416 t= 1.48257E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   417 t= 1.48613E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   418 t= 1.48969E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   419 t= 1.49325E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   420 t= 1.49680E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   421 t= 1.50036E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   422 t= 1.50392E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   423 t= 1.50747E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   424 t= 1.51103E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   425 t= 1.51459E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   426 t= 1.51815E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   427 t= 1.52171E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   428 t= 1.52527E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   429 t= 1.52883E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   430 t= 1.53239E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   431 t= 1.53594E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -839,109 +840,53 @@
  Level  6 has         22 grids (      22,      22,      22,)
  Level  7 has         34 grids (      34,      34,      34,)
  Level  8 has         40 grids (      40,      40,      40,)
+ Level  9 has         16 grids (      16,      16,      16,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    27 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   432 t= 1.53950E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   433 t= 1.54306E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   434 t= 1.54661E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   435 t= 1.55017E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   436 t= 1.55373E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   437 t= 1.55729E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   438 t= 1.56085E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   439 t= 1.56441E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   440 t= 1.56797E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   441 t= 1.57153E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   442 t= 1.57509E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   443 t= 1.57865E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
+ Fine step=   444 t= 1.58220E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   445 t= 1.58576E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   446 t= 1.58932E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   447 t= 1.59287E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.2% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         15 grids (      15,      15,      15,)
+ Level  6 has         23 grids (      23,      23,      23,)
+ Level  7 has         34 grids (      34,      34,      34,)
+ Level  8 has         43 grids (      43,      43,      43,)
  Level  9 has         17 grids (      17,      17,      17,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    27 mcons= 1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   432 t= 1.53939E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.3% 
- Fine step=   433 t= 1.54295E-01 dt= 3.562E-04 a= 1.000E+00 mem= 8.3% 
- Fine step=   434 t= 1.54651E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.3% 
- Fine step=   435 t= 1.55007E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.3% 
- Fine step=   436 t= 1.55363E-01 dt= 3.562E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   437 t= 1.55719E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   438 t= 1.56075E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   439 t= 1.56430E-01 dt= 3.562E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   440 t= 1.56786E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   441 t= 1.57142E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   442 t= 1.57498E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   443 t= 1.57854E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   444 t= 1.58209E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   445 t= 1.58565E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   446 t= 1.58921E-01 dt= 3.553E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   447 t= 1.59276E-01 dt= 3.561E-04 a= 1.000E+00 mem= 8.2% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         15 grids (      15,      15,      15,)
- Level  6 has         22 grids (      22,      22,      22,)
- Level  7 has         33 grids (      33,      33,      33,)
- Level  8 has         37 grids (      37,      37,      37,)
- Level  9 has         16 grids (      16,      16,      16,)
  Level 10 has         12 grids (      12,      12,      12,)
- Main step=    28 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   448 t= 1.59632E-01 dt= 3.554E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   449 t= 1.59988E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   450 t= 1.60343E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   451 t= 1.60699E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.0% 
- Fine step=   452 t= 1.61054E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   453 t= 1.61409E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   454 t= 1.61765E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   455 t= 1.62120E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   456 t= 1.62476E-01 dt= 3.554E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   457 t= 1.62831E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   458 t= 1.63186E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   459 t= 1.63542E-01 dt= 3.551E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   460 t= 1.63897E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   461 t= 1.64252E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   462 t= 1.64607E-01 dt= 3.550E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   463 t= 1.64962E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.1% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         15 grids (      15,      15,      15,)
- Level  6 has         23 grids (      23,      23,      23,)
- Level  7 has         34 grids (      34,      34,      34,)
- Level  8 has         36 grids (      36,      36,      36,)
- Level  9 has         18 grids (      18,      18,      18,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    29 mcons= 1.97E-16 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   464 t= 1.65318E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   465 t= 1.65673E-01 dt= 3.552E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   466 t= 1.66028E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   467 t= 1.66384E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   468 t= 1.66740E-01 dt= 3.554E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   469 t= 1.67095E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.2% 
- Fine step=   470 t= 1.67451E-01 dt= 3.554E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   471 t= 1.67806E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.1% 
- Fine step=   472 t= 1.68162E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   473 t= 1.68518E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   474 t= 1.68873E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   475 t= 1.69229E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   476 t= 1.69585E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   477 t= 1.69941E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   478 t= 1.70297E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   479 t= 1.70653E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         15 grids (      15,      15,      15,)
- Level  6 has         23 grids (      23,      23,      23,)
- Level  7 has         34 grids (      34,      34,      34,)
- Level  8 has         27 grids (      27,      27,      27,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    30 mcons= 1.97E-16 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   480 t= 1.71009E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   481 t= 1.71365E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   482 t= 1.71721E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   483 t= 1.72077E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   484 t= 1.72433E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   485 t= 1.72789E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   486 t= 1.73145E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   487 t= 1.73501E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   488 t= 1.73856E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   489 t= 1.74213E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   490 t= 1.74569E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   491 t= 1.74925E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   492 t= 1.75281E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   493 t= 1.75637E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   494 t= 1.75993E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   495 t= 1.76349E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Main step=    28 mcons=-1.97E-16 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   448 t= 1.59643E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   449 t= 1.59999E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   450 t= 1.60355E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   451 t= 1.60711E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   452 t= 1.61067E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   453 t= 1.61423E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   454 t= 1.61779E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   455 t= 1.62135E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   456 t= 1.62490E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   457 t= 1.62846E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.4% 
+ Fine step=   458 t= 1.63202E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   459 t= 1.63557E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   460 t= 1.63913E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   461 t= 1.64269E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   462 t= 1.64625E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   463 t= 1.64981E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -950,82 +895,82 @@
  Level  5 has         15 grids (      15,      15,      15,)
  Level  6 has         24 grids (      24,      24,      24,)
  Level  7 has         34 grids (      34,      34,      34,)
- Level  8 has         24 grids (      24,      24,      24,)
+ Level  8 has         36 grids (      36,      36,      36,)
+ Level  9 has         18 grids (      18,      18,      18,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    29 mcons=-1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   464 t= 1.65337E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   465 t= 1.65693E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   466 t= 1.66049E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   467 t= 1.66404E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.2% 
+ Fine step=   468 t= 1.66760E-01 dt= 3.556E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   469 t= 1.67116E-01 dt= 3.555E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   470 t= 1.67471E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   471 t= 1.67827E-01 dt= 3.559E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   472 t= 1.68183E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   473 t= 1.68539E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   474 t= 1.68895E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   475 t= 1.69251E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   476 t= 1.69607E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   477 t= 1.69963E-01 dt= 3.558E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   478 t= 1.70318E-01 dt= 3.560E-04 a= 1.000E+00 mem= 8.0% 
+ Fine step=   479 t= 1.70674E-01 dt= 3.557E-04 a= 1.000E+00 mem= 8.0% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         15 grids (      15,      15,      15,)
+ Level  6 has         23 grids (      23,      23,      23,)
+ Level  7 has         33 grids (      33,      33,      33,)
+ Level  8 has         31 grids (      31,      31,      31,)
  Level  9 has         17 grids (      17,      17,      17,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    31 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   496 t= 1.76705E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   497 t= 1.77060E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   498 t= 1.77417E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   499 t= 1.77772E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   500 t= 1.78128E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   501 t= 1.78484E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   502 t= 1.78840E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   503 t= 1.79196E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   504 t= 1.79552E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   505 t= 1.79907E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   506 t= 1.80263E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   507 t= 1.80619E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   508 t= 1.80975E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   509 t= 1.81331E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   510 t= 1.81686E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   511 t= 1.82041E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    30 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   480 t= 1.71030E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   481 t= 1.71386E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   482 t= 1.71741E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   483 t= 1.72097E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   484 t= 1.72453E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   485 t= 1.72809E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
+ Fine step=   486 t= 1.73165E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   487 t= 1.73521E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   488 t= 1.73877E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   489 t= 1.74233E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   490 t= 1.74589E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   491 t= 1.74944E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   492 t= 1.75300E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   493 t= 1.75656E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   494 t= 1.76012E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   495 t= 1.76367E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
  Level  3 has          4 grids (       4,       4,       4,)
  Level  4 has          8 grids (       8,       8,       8,)
  Level  5 has         15 grids (      15,      15,      15,)
- Level  6 has         25 grids (      25,      25,      25,)
- Level  7 has         34 grids (      34,      34,      34,)
- Level  8 has         18 grids (      18,      18,      18,)
- Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    32 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   512 t= 1.82397E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   513 t= 1.82753E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   514 t= 1.83108E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   515 t= 1.83464E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   516 t= 1.83819E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   517 t= 1.84175E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   518 t= 1.84530E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   519 t= 1.84885E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   520 t= 1.85241E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   521 t= 1.85596E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   522 t= 1.85951E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   523 t= 1.86307E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   524 t= 1.86662E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   525 t= 1.87017E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   526 t= 1.87372E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   527 t= 1.87727E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         15 grids (      15,      15,      15,)
- Level  6 has         25 grids (      25,      25,      25,)
- Level  7 has         36 grids (      36,      36,      36,)
- Level  8 has         17 grids (      17,      17,      17,)
+ Level  6 has         24 grids (      24,      24,      24,)
+ Level  7 has         35 grids (      35,      35,      35,)
+ Level  8 has         22 grids (      22,      22,      22,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    33 mcons= 1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   528 t= 1.88083E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   529 t= 1.88438E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   530 t= 1.88793E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   531 t= 1.89149E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   532 t= 1.89504E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   533 t= 1.89860E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   534 t= 1.90216E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   535 t= 1.90571E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   536 t= 1.90927E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   537 t= 1.91283E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   538 t= 1.91638E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   539 t= 1.91994E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   540 t= 1.92350E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   541 t= 1.92706E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   542 t= 1.93062E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   543 t= 1.93418E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    31 mcons=-1.97E-16 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   496 t= 1.76723E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   497 t= 1.77079E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   498 t= 1.77435E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   499 t= 1.77791E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   500 t= 1.78147E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   501 t= 1.78503E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   502 t= 1.78859E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   503 t= 1.79214E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   504 t= 1.79570E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   505 t= 1.79926E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   506 t= 1.80281E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   507 t= 1.80637E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   508 t= 1.80993E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   509 t= 1.81349E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   510 t= 1.81705E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   511 t= 1.82061E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -1035,25 +980,81 @@
  Level  6 has         25 grids (      25,      25,      25,)
  Level  7 has         35 grids (      35,      35,      35,)
  Level  8 has         18 grids (      18,      18,      18,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    32 mcons= 1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   512 t= 1.82417E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   513 t= 1.82773E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   514 t= 1.83129E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   515 t= 1.83485E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   516 t= 1.83840E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   517 t= 1.84196E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   518 t= 1.84552E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   519 t= 1.84907E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   520 t= 1.85263E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   521 t= 1.85619E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   522 t= 1.85975E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   523 t= 1.86331E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   524 t= 1.86687E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   525 t= 1.87043E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   526 t= 1.87399E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   527 t= 1.87755E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         15 grids (      15,      15,      15,)
+ Level  6 has         25 grids (      25,      25,      25,)
+ Level  7 has         35 grids (      35,      35,      35,)
+ Level  8 has         17 grids (      17,      17,      17,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    33 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   528 t= 1.88110E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   529 t= 1.88466E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.1% 
+ Fine step=   530 t= 1.88822E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   531 t= 1.89177E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   532 t= 1.89533E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   533 t= 1.89889E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   534 t= 1.90245E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   535 t= 1.90601E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   536 t= 1.90957E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   537 t= 1.91313E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   538 t= 1.91669E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   539 t= 1.92025E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   540 t= 1.92381E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   541 t= 1.92736E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   542 t= 1.93092E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   543 t= 1.93448E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.3% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         15 grids (      15,      15,      15,)
+ Level  6 has         25 grids (      25,      25,      25,)
+ Level  7 has         35 grids (      35,      35,      35,)
+ Level  8 has         17 grids (      17,      17,      17,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         14 grids (      14,      14,      14,)
- Main step=    34 mcons= 1.97E-16 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   544 t= 1.93774E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   545 t= 1.94130E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   546 t= 1.94485E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   547 t= 1.94841E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   548 t= 1.95198E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   549 t= 1.95553E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   550 t= 1.95910E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   551 t= 1.96266E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   552 t= 1.96622E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   553 t= 1.96978E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   554 t= 1.97334E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   555 t= 1.97690E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   556 t= 1.98046E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   557 t= 1.98402E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   558 t= 1.98757E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.2% 
- Fine step=   559 t= 1.99114E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    34 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   544 t= 1.93804E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   545 t= 1.94159E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   546 t= 1.94516E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   547 t= 1.94872E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   548 t= 1.95228E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   549 t= 1.95583E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   550 t= 1.95939E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   551 t= 1.96295E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   552 t= 1.96651E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   553 t= 1.97006E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   554 t= 1.97362E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   555 t= 1.97718E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   556 t= 1.98074E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   557 t= 1.98430E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   558 t= 1.98786E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   559 t= 1.99142E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -1064,136 +1065,24 @@
  Level  7 has         35 grids (      35,      35,      35,)
  Level  8 has         18 grids (      18,      18,      18,)
  Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    35 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   560 t= 1.99469E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   561 t= 1.99825E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   562 t= 2.00182E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   563 t= 2.00537E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.4% 
- Fine step=   564 t= 2.00893E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   565 t= 2.01249E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   566 t= 2.01605E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   567 t= 2.01961E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   568 t= 2.02317E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   569 t= 2.02672E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   570 t= 2.03028E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   571 t= 2.03384E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   572 t= 2.03740E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   573 t= 2.04095E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   574 t= 2.04451E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
- Fine step=   575 t= 2.04807E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.3% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         16 grids (      16,      16,      16,)
- Level  6 has         27 grids (      27,      27,      27,)
- Level  7 has         37 grids (      37,      37,      37,)
- Level  8 has         17 grids (      17,      17,      17,)
- Level  9 has         17 grids (      17,      17,      17,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    36 mcons= 0.00E+00 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   576 t= 2.05162E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   577 t= 2.05517E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   578 t= 2.05873E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   579 t= 2.06229E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   580 t= 2.06584E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   581 t= 2.06939E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   582 t= 2.07294E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   583 t= 2.07650E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   584 t= 2.08005E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   585 t= 2.08360E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   586 t= 2.08716E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   587 t= 2.09071E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   588 t= 2.09426E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   589 t= 2.09781E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   590 t= 2.10136E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   591 t= 2.10492E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         16 grids (      16,      16,      16,)
- Level  6 has         27 grids (      27,      27,      27,)
- Level  7 has         35 grids (      35,      35,      35,)
- Level  8 has         17 grids (      17,      17,      17,)
- Level  9 has         15 grids (      15,      15,      15,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    37 mcons= 0.00E+00 econs=-1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   592 t= 2.10847E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   593 t= 2.11202E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   594 t= 2.11558E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   595 t= 2.11914E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   596 t= 2.12269E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   597 t= 2.12625E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   598 t= 2.12980E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   599 t= 2.13336E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   600 t= 2.13692E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   601 t= 2.14048E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   602 t= 2.14404E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   603 t= 2.14760E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   604 t= 2.15115E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   605 t= 2.15471E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   606 t= 2.15827E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
- Fine step=   607 t= 2.16183E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         16 grids (      16,      16,      16,)
- Level  6 has         27 grids (      27,      27,      27,)
- Level  7 has         37 grids (      37,      37,      37,)
- Level  8 has         18 grids (      18,      18,      18,)
- Level  9 has         17 grids (      17,      17,      17,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    38 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   608 t= 2.16539E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   609 t= 2.16895E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   610 t= 2.17251E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   611 t= 2.17607E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   612 t= 2.17963E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   613 t= 2.18319E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   614 t= 2.18675E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   615 t= 2.19031E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   616 t= 2.19387E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   617 t= 2.19743E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   618 t= 2.20099E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   619 t= 2.20455E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   620 t= 2.20811E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   621 t= 2.21167E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   622 t= 2.21523E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   623 t= 2.21879E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
- Mesh structure
- Level  1 has          1 grids (       1,       1,       1,)
- Level  2 has          2 grids (       2,       2,       2,)
- Level  3 has          4 grids (       4,       4,       4,)
- Level  4 has          8 grids (       8,       8,       8,)
- Level  5 has         16 grids (      16,      16,      16,)
- Level  6 has         27 grids (      27,      27,      27,)
- Level  7 has         37 grids (      37,      37,      37,)
- Level  8 has         18 grids (      18,      18,      18,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    39 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   624 t= 2.22235E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   625 t= 2.22591E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   626 t= 2.22947E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   627 t= 2.23303E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   628 t= 2.23659E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   629 t= 2.24014E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   630 t= 2.24370E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   631 t= 2.24726E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   632 t= 2.25081E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   633 t= 2.25437E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   634 t= 2.25793E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   635 t= 2.26148E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   636 t= 2.26504E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   637 t= 2.26860E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   638 t= 2.27215E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   639 t= 2.27571E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.7% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    35 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   560 t= 1.99498E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   561 t= 1.99853E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   562 t= 2.00209E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   563 t= 2.00565E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.3% 
+ Fine step=   564 t= 2.00920E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   565 t= 2.01276E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   566 t= 2.01632E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   567 t= 2.01988E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   568 t= 2.02344E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   569 t= 2.02700E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   570 t= 2.03056E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   571 t= 2.03412E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   572 t= 2.03768E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   573 t= 2.04124E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   574 t= 2.04479E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.2% 
+ Fine step=   575 t= 2.04835E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.2% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -1204,24 +1093,136 @@
  Level  7 has         36 grids (      36,      36,      36,)
  Level  8 has         17 grids (      17,      17,      17,)
  Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    40 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   640 t= 2.27926E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   641 t= 2.28281E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   642 t= 2.28636E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   643 t= 2.28991E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   644 t= 2.29347E-01 dt= 3.552E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   645 t= 2.29702E-01 dt= 3.550E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   646 t= 2.30057E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   647 t= 2.30413E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   648 t= 2.30768E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   649 t= 2.31123E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   650 t= 2.31479E-01 dt= 3.551E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   651 t= 2.31834E-01 dt= 3.554E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   652 t= 2.32189E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   653 t= 2.32545E-01 dt= 3.553E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   654 t= 2.32900E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
- Fine step=   655 t= 2.33256E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    36 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   576 t= 2.05191E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   577 t= 2.05547E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   578 t= 2.05902E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   579 t= 2.06258E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   580 t= 2.06614E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   581 t= 2.06970E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   582 t= 2.07326E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   583 t= 2.07682E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   584 t= 2.08038E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   585 t= 2.08394E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   586 t= 2.08750E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   587 t= 2.09106E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   588 t= 2.09461E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   589 t= 2.09817E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   590 t= 2.10172E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   591 t= 2.10528E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         16 grids (      16,      16,      16,)
+ Level  6 has         27 grids (      27,      27,      27,)
+ Level  7 has         36 grids (      36,      36,      36,)
+ Level  8 has         16 grids (      16,      16,      16,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    37 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   592 t= 2.10884E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   593 t= 2.11240E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   594 t= 2.11596E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   595 t= 2.11953E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   596 t= 2.12308E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   597 t= 2.12664E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   598 t= 2.13020E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   599 t= 2.13376E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   600 t= 2.13731E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   601 t= 2.14087E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   602 t= 2.14443E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   603 t= 2.14798E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   604 t= 2.15154E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   605 t= 2.15511E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   606 t= 2.15867E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   607 t= 2.16222E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         16 grids (      16,      16,      16,)
+ Level  6 has         27 grids (      27,      27,      27,)
+ Level  7 has         37 grids (      37,      37,      37,)
+ Level  8 has         18 grids (      18,      18,      18,)
+ Level  9 has         16 grids (      16,      16,      16,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    38 mcons= 0.00E+00 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   608 t= 2.16578E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   609 t= 2.16934E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   610 t= 2.17290E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   611 t= 2.17646E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   612 t= 2.18001E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   613 t= 2.18357E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   614 t= 2.18713E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   615 t= 2.19069E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   616 t= 2.19425E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   617 t= 2.19781E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   618 t= 2.20137E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   619 t= 2.20493E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   620 t= 2.20849E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   621 t= 2.21205E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   622 t= 2.21560E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   623 t= 2.21916E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         16 grids (      16,      16,      16,)
+ Level  6 has         27 grids (      27,      27,      27,)
+ Level  7 has         36 grids (      36,      36,      36,)
+ Level  8 has         18 grids (      18,      18,      18,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    39 mcons=-1.97E-16 econs= 0.00E+00 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   624 t= 2.22272E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   625 t= 2.22627E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   626 t= 2.22983E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   627 t= 2.23339E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   628 t= 2.23695E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   629 t= 2.24051E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   630 t= 2.24407E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   631 t= 2.24763E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   632 t= 2.25119E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   633 t= 2.25475E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   634 t= 2.25831E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   635 t= 2.26186E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   636 t= 2.26542E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   637 t= 2.26898E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   638 t= 2.27254E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   639 t= 2.27609E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Mesh structure
+ Level  1 has          1 grids (       1,       1,       1,)
+ Level  2 has          2 grids (       2,       2,       2,)
+ Level  3 has          4 grids (       4,       4,       4,)
+ Level  4 has          8 grids (       8,       8,       8,)
+ Level  5 has         16 grids (      16,      16,      16,)
+ Level  6 has         27 grids (      27,      27,      27,)
+ Level  7 has         36 grids (      36,      36,      36,)
+ Level  8 has         16 grids (      16,      16,      16,)
+ Level  9 has         16 grids (      16,      16,      16,)
+ Level 10 has         12 grids (      12,      12,      12,)
+ Main step=    40 mcons= 0.00E+00 econs= 8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   640 t= 2.27965E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   641 t= 2.28322E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   642 t= 2.28678E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   643 t= 2.29033E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   644 t= 2.29389E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   645 t= 2.29745E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   646 t= 2.30101E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   647 t= 2.30456E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.4% 
+ Fine step=   648 t= 2.30812E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   649 t= 2.31168E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   650 t= 2.31524E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   651 t= 2.31880E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   652 t= 2.32236E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   653 t= 2.32592E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   654 t= 2.32948E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   655 t= 2.33304E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -1231,25 +1232,25 @@
  Level  6 has         28 grids (      28,      28,      28,)
  Level  7 has         37 grids (      37,      37,      37,)
  Level  8 has         17 grids (      17,      17,      17,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
- Main step=    41 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   656 t= 2.33611E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   657 t= 2.33967E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   658 t= 2.34323E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   659 t= 2.34678E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   660 t= 2.35034E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   661 t= 2.35390E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   662 t= 2.35745E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   663 t= 2.36101E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   664 t= 2.36457E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   665 t= 2.36813E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   666 t= 2.37169E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   667 t= 2.37525E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   668 t= 2.37881E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   669 t= 2.38237E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   670 t= 2.38593E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   671 t= 2.38949E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         11 grids (      11,      11,      11,)
+ Main step=    41 mcons=-1.97E-16 econs= 1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   656 t= 2.33660E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   657 t= 2.34015E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   658 t= 2.34371E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   659 t= 2.34727E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   660 t= 2.35083E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   661 t= 2.35438E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   662 t= 2.35794E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   663 t= 2.36150E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   664 t= 2.36506E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   665 t= 2.36862E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   666 t= 2.37218E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   667 t= 2.37575E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   668 t= 2.37930E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   669 t= 2.38286E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   670 t= 2.38642E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.5% 
+ Fine step=   671 t= 2.38997E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.5% 
  Mesh structure
  Level  1 has          1 grids (       1,       1,       1,)
  Level  2 has          2 grids (       2,       2,       2,)
@@ -1257,164 +1258,163 @@
  Level  4 has          8 grids (       8,       8,       8,)
  Level  5 has         16 grids (      16,      16,      16,)
  Level  6 has         28 grids (      28,      28,      28,)
- Level  7 has         38 grids (      38,      38,      38,)
+ Level  7 has         37 grids (      37,      37,      37,)
  Level  8 has         18 grids (      18,      18,      18,)
- Level  9 has         16 grids (      16,      16,      16,)
- Level 10 has         13 grids (      13,      13,      13,)
+ Level  9 has         15 grids (      15,      15,      15,)
+ Level 10 has         12 grids (      12,      12,      12,)
  Main step=    42 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   672 t= 2.39305E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   673 t= 2.39661E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   674 t= 2.40017E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   675 t= 2.40373E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   676 t= 2.40729E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   677 t= 2.41085E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   678 t= 2.41441E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   679 t= 2.41797E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   680 t= 2.42153E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   681 t= 2.42509E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   682 t= 2.42865E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   683 t= 2.43222E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
- Fine step=   684 t= 2.43577E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   685 t= 2.43933E-01 dt= 3.562E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   686 t= 2.44289E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.8% 
- Fine step=   687 t= 2.44645E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.8% 
- Output   143 cells
+ Fine step=   672 t= 2.39353E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   673 t= 2.39709E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   674 t= 2.40065E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   675 t= 2.40421E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   676 t= 2.40777E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   677 t= 2.41133E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   678 t= 2.41489E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   679 t= 2.41845E-01 dt= 3.557E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   680 t= 2.42200E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   681 t= 2.42556E-01 dt= 3.556E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   682 t= 2.42912E-01 dt= 3.555E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   683 t= 2.43268E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   684 t= 2.43623E-01 dt= 3.559E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   685 t= 2.43979E-01 dt= 3.558E-04 a= 1.000E+00 mem= 7.7% 
+ Fine step=   686 t= 2.44335E-01 dt= 3.560E-04 a= 1.000E+00 mem= 7.6% 
+ Fine step=   687 t= 2.44691E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
+ Output   142 cells
  ================================================
  lev      x           d          u          P
   5  1.56250E-02  1.000E+00  0.000E+00  1.000E+00
   5  4.68750E-02  1.000E+00  0.000E+00  1.000E+00
   5  7.81250E-02  1.000E+00  0.000E+00  1.000E+00
-  5  1.09375E-01  1.000E+00  1.896E-09  1.000E+00
-  6  1.32812E-01  1.000E+00  2.536E-08  1.000E+00
-  6  1.48438E-01  1.000E+00  3.349E-07  1.000E+00
-  6  1.64062E-01  1.000E+00  4.373E-06  1.000E+00
-  6  1.79688E-01  1.000E+00  5.197E-05  9.999E-01
-  6  1.95312E-01  9.995E-01  6.318E-04  9.993E-01
-  7  2.07031E-01  9.945E-01  6.518E-03  9.923E-01
-  7  2.14844E-01  9.822E-01  2.119E-02  9.752E-01
-  7  2.22656E-01  9.645E-01  4.266E-02  9.507E-01
-  7  2.30469E-01  9.441E-01  6.777E-02  9.226E-01
-  7  2.38281E-01  9.226E-01  9.458E-02  8.934E-01
-  7  2.46094E-01  9.012E-01  1.218E-01  8.646E-01
-  7  2.53906E-01  8.803E-01  1.489E-01  8.366E-01
-  7  2.61719E-01  8.600E-01  1.758E-01  8.097E-01
-  7  2.69531E-01  8.403E-01  2.024E-01  7.838E-01
-  7  2.77344E-01  8.209E-01  2.290E-01  7.587E-01
-  7  2.85156E-01  8.020E-01  2.555E-01  7.343E-01
-  7  2.92969E-01  7.834E-01  2.820E-01  7.105E-01
-  7  3.00781E-01  7.651E-01  3.085E-01  6.875E-01
-  7  3.08594E-01  7.473E-01  3.349E-01  6.651E-01
-  7  3.16406E-01  7.297E-01  3.614E-01  6.434E-01
-  7  3.24219E-01  7.125E-01  3.878E-01  6.222E-01
-  7  3.32031E-01  6.957E-01  4.142E-01  6.017E-01
-  7  3.39844E-01  6.791E-01  4.407E-01  5.818E-01
-  7  3.47656E-01  6.629E-01  4.672E-01  5.623E-01
-  7  3.55469E-01  6.469E-01  4.937E-01  5.435E-01
-  7  3.63281E-01  6.313E-01  5.202E-01  5.252E-01
-  7  3.71094E-01  6.160E-01  5.466E-01  5.074E-01
-  7  3.78906E-01  6.009E-01  5.731E-01  4.901E-01
-  7  3.86719E-01  5.862E-01  5.996E-01  4.734E-01
-  7  3.94531E-01  5.718E-01  6.260E-01  4.572E-01
-  7  4.02344E-01  5.576E-01  6.524E-01  4.414E-01
-  7  4.10156E-01  5.438E-01  6.788E-01  4.262E-01
-  7  4.17969E-01  5.302E-01  7.053E-01  4.113E-01
-  7  4.25781E-01  5.168E-01  7.318E-01  3.969E-01
-  7  4.33594E-01  5.035E-01  7.587E-01  3.827E-01
-  7  4.41406E-01  4.904E-01  7.859E-01  3.687E-01
-  7  4.49219E-01  4.774E-01  8.134E-01  3.551E-01
-  7  4.57031E-01  4.647E-01  8.408E-01  3.420E-01
-  7  4.64844E-01  4.527E-01  8.671E-01  3.297E-01
+  5  1.09375E-01  1.000E+00  1.564E-09  1.000E+00
+  6  1.32812E-01  1.000E+00  2.112E-08  1.000E+00
+  6  1.48438E-01  1.000E+00  2.817E-07  1.000E+00
+  6  1.64062E-01  1.000E+00  3.695E-06  1.000E+00
+  6  1.79688E-01  1.000E+00  4.410E-05  9.999E-01
+  6  1.95312E-01  9.995E-01  5.333E-04  9.994E-01
+  7  2.07031E-01  9.952E-01  5.670E-03  9.933E-01
+  7  2.14844E-01  9.832E-01  2.000E-02  9.766E-01
+  7  2.22656E-01  9.652E-01  4.180E-02  9.516E-01
+  7  2.30469E-01  9.442E-01  6.758E-02  9.228E-01
+  7  2.38281E-01  9.223E-01  9.498E-02  8.930E-01
+  7  2.46094E-01  9.007E-01  1.225E-01  8.639E-01
+  7  2.53906E-01  8.799E-01  1.496E-01  8.360E-01
+  7  2.61719E-01  8.597E-01  1.763E-01  8.093E-01
+  7  2.69531E-01  8.400E-01  2.028E-01  7.835E-01
+  7  2.77344E-01  8.207E-01  2.293E-01  7.583E-01
+  7  2.85156E-01  8.017E-01  2.559E-01  7.339E-01
+  7  2.92969E-01  7.831E-01  2.825E-01  7.101E-01
+  7  3.00781E-01  7.648E-01  3.090E-01  6.870E-01
+  7  3.08594E-01  7.469E-01  3.355E-01  6.646E-01
+  7  3.16406E-01  7.293E-01  3.620E-01  6.429E-01
+  7  3.24219E-01  7.121E-01  3.885E-01  6.217E-01
+  7  3.32031E-01  6.953E-01  4.149E-01  6.012E-01
+  7  3.39844E-01  6.787E-01  4.413E-01  5.813E-01
+  7  3.47656E-01  6.625E-01  4.678E-01  5.619E-01
+  7  3.55469E-01  6.466E-01  4.943E-01  5.431E-01
+  7  3.63281E-01  6.309E-01  5.208E-01  5.248E-01
+  7  3.71094E-01  6.156E-01  5.472E-01  5.070E-01
+  7  3.78906E-01  6.006E-01  5.736E-01  4.898E-01
+  7  3.86719E-01  5.859E-01  6.000E-01  4.731E-01
+  7  3.94531E-01  5.715E-01  6.264E-01  4.569E-01
+  7  4.02344E-01  5.574E-01  6.527E-01  4.412E-01
+  7  4.10156E-01  5.436E-01  6.791E-01  4.260E-01
+  7  4.17969E-01  5.301E-01  7.053E-01  4.112E-01
+  7  4.25781E-01  5.169E-01  7.316E-01  3.970E-01
+  7  4.33594E-01  5.039E-01  7.578E-01  3.831E-01
+  7  4.41406E-01  4.913E-01  7.840E-01  3.697E-01
+  7  4.49219E-01  4.788E-01  8.103E-01  3.566E-01
+  7  4.57031E-01  4.664E-01  8.370E-01  3.438E-01
+  7  4.64844E-01  4.541E-01  8.640E-01  3.312E-01
   7  4.72656E-01  4.422E-01  8.909E-01  3.190E-01
-  7  4.80469E-01  4.337E-01  9.101E-01  3.105E-01
-  7  4.88281E-01  4.282E-01  9.229E-01  3.051E-01
-  7  4.96094E-01  4.262E-01  9.278E-01  3.030E-01
-  6  5.07812E-01  4.260E-01  9.281E-01  3.028E-01
-  6  5.23438E-01  4.261E-01  9.279E-01  3.029E-01
-  6  5.39062E-01  4.262E-01  9.275E-01  3.030E-01
-  6  5.54688E-01  4.263E-01  9.273E-01  3.031E-01
-  6  5.70312E-01  4.263E-01  9.273E-01  3.031E-01
-  6  5.85938E-01  4.263E-01  9.274E-01  3.031E-01
+  7  4.80469E-01  4.320E-01  9.142E-01  3.088E-01
+  7  4.88281E-01  4.266E-01  9.267E-01  3.034E-01
+  7  4.96094E-01  4.258E-01  9.287E-01  3.026E-01
+  6  5.07812E-01  4.262E-01  9.276E-01  3.030E-01
+  6  5.23438E-01  4.263E-01  9.274E-01  3.031E-01
+  6  5.39062E-01  4.263E-01  9.274E-01  3.031E-01
+  6  5.54688E-01  4.263E-01  9.274E-01  3.031E-01
+  5  5.78125E-01  4.263E-01  9.273E-01  3.031E-01
   6  6.01562E-01  4.263E-01  9.274E-01  3.031E-01
   6  6.17188E-01  4.263E-01  9.275E-01  3.031E-01
-  6  6.32812E-01  4.264E-01  9.275E-01  3.031E-01
-  6  6.48438E-01  4.264E-01  9.275E-01  3.031E-01
-  7  6.60156E-01  4.264E-01  9.275E-01  3.031E-01
-  7  6.67969E-01  4.264E-01  9.275E-01  3.031E-01
-  7  6.75781E-01  4.264E-01  9.275E-01  3.031E-01
-  7  6.83594E-01  4.264E-01  9.275E-01  3.031E-01
-  8  6.89453E-01  4.262E-01  9.274E-01  3.031E-01
-  8  6.93359E-01  4.261E-01  9.274E-01  3.031E-01
-  8  6.97266E-01  4.260E-01  9.274E-01  3.031E-01
-  8  7.01172E-01  4.259E-01  9.274E-01  3.031E-01
-  8  7.05078E-01  4.261E-01  9.274E-01  3.031E-01
-  8  7.08984E-01  4.275E-01  9.274E-01  3.031E-01
-  9  7.11914E-01  4.292E-01  9.274E-01  3.031E-01
-  9  7.13867E-01  4.304E-01  9.274E-01  3.031E-01
-  9  7.15820E-01  4.313E-01  9.274E-01  3.031E-01
-  9  7.17773E-01  4.318E-01  9.274E-01  3.031E-01
- 10  7.19238E-01  4.317E-01  9.274E-01  3.031E-01
- 10  7.20215E-01  4.298E-01  9.274E-01  3.031E-01
- 10  7.21191E-01  4.236E-01  9.274E-01  3.031E-01
- 10  7.22168E-01  4.134E-01  9.274E-01  3.031E-01
- 10  7.23145E-01  4.002E-01  9.274E-01  3.031E-01
- 10  7.24121E-01  3.848E-01  9.274E-01  3.031E-01
- 10  7.25098E-01  3.680E-01  9.274E-01  3.031E-01
- 10  7.26074E-01  3.509E-01  9.274E-01  3.031E-01
- 10  7.27051E-01  3.342E-01  9.274E-01  3.031E-01
- 10  7.28027E-01  3.187E-01  9.274E-01  3.031E-01
- 10  7.29004E-01  3.050E-01  9.274E-01  3.031E-01
- 10  7.29980E-01  2.933E-01  9.274E-01  3.031E-01
- 10  7.30957E-01  2.840E-01  9.274E-01  3.031E-01
- 10  7.31934E-01  2.768E-01  9.274E-01  3.031E-01
- 10  7.32910E-01  2.718E-01  9.274E-01  3.031E-01
- 10  7.33887E-01  2.684E-01  9.274E-01  3.031E-01
-  9  7.35352E-01  2.662E-01  9.274E-01  3.031E-01
-  9  7.37305E-01  2.654E-01  9.274E-01  3.031E-01
-  9  7.39258E-01  2.652E-01  9.274E-01  3.031E-01
-  9  7.41211E-01  2.652E-01  9.274E-01  3.031E-01
-  8  7.44141E-01  2.652E-01  9.274E-01  3.031E-01
-  8  7.48047E-01  2.652E-01  9.274E-01  3.031E-01
-  8  7.51953E-01  2.653E-01  9.274E-01  3.031E-01
-  8  7.55859E-01  2.654E-01  9.274E-01  3.031E-01
-  7  7.61719E-01  2.655E-01  9.273E-01  3.031E-01
-  7  7.69531E-01  2.655E-01  9.273E-01  3.031E-01
-  7  7.77344E-01  2.656E-01  9.273E-01  3.031E-01
-  7  7.85156E-01  2.656E-01  9.273E-01  3.031E-01
-  7  7.92969E-01  2.656E-01  9.274E-01  3.031E-01
+  6  6.32812E-01  4.263E-01  9.275E-01  3.031E-01
+  6  6.48438E-01  4.263E-01  9.275E-01  3.031E-01
+  7  6.60156E-01  4.263E-01  9.275E-01  3.031E-01
+  7  6.67969E-01  4.263E-01  9.275E-01  3.031E-01
+  7  6.75781E-01  4.263E-01  9.275E-01  3.031E-01
+  7  6.83594E-01  4.263E-01  9.275E-01  3.031E-01
+  7  6.91406E-01  4.263E-01  9.274E-01  3.031E-01
+  8  6.97266E-01  4.263E-01  9.274E-01  3.031E-01
+  8  7.01172E-01  4.263E-01  9.274E-01  3.031E-01
+  8  7.05078E-01  4.263E-01  9.274E-01  3.031E-01
+  8  7.08984E-01  4.263E-01  9.274E-01  3.031E-01
+  9  7.11914E-01  4.263E-01  9.274E-01  3.031E-01
+  9  7.13867E-01  4.263E-01  9.274E-01  3.031E-01
+  9  7.15820E-01  4.263E-01  9.274E-01  3.031E-01
+  9  7.17773E-01  4.263E-01  9.274E-01  3.031E-01
+  9  7.19727E-01  4.262E-01  9.274E-01  3.031E-01
+ 10  7.21191E-01  4.256E-01  9.274E-01  3.031E-01
+ 10  7.22168E-01  4.236E-01  9.274E-01  3.031E-01
+ 10  7.23145E-01  4.177E-01  9.274E-01  3.031E-01
+ 10  7.24121E-01  4.070E-01  9.274E-01  3.031E-01
+ 10  7.25098E-01  3.912E-01  9.274E-01  3.031E-01
+ 10  7.26074E-01  3.709E-01  9.274E-01  3.031E-01
+ 10  7.27051E-01  3.472E-01  9.274E-01  3.031E-01
+ 10  7.28027E-01  3.223E-01  9.274E-01  3.031E-01
+ 10  7.29004E-01  2.988E-01  9.274E-01  3.031E-01
+ 10  7.29980E-01  2.797E-01  9.274E-01  3.031E-01
+ 10  7.30957E-01  2.680E-01  9.274E-01  3.031E-01
+ 10  7.31934E-01  2.650E-01  9.274E-01  3.031E-01
+ 10  7.32910E-01  2.647E-01  9.274E-01  3.031E-01
+ 10  7.33887E-01  2.647E-01  9.274E-01  3.031E-01
+  9  7.35352E-01  2.647E-01  9.274E-01  3.031E-01
+  9  7.37305E-01  2.647E-01  9.274E-01  3.031E-01
+  9  7.39258E-01  2.649E-01  9.274E-01  3.031E-01
+  9  7.41211E-01  2.651E-01  9.274E-01  3.031E-01
+  8  7.44141E-01  2.654E-01  9.274E-01  3.031E-01
+  8  7.48047E-01  2.655E-01  9.274E-01  3.031E-01
+  8  7.51953E-01  2.655E-01  9.274E-01  3.031E-01
+  8  7.55859E-01  2.655E-01  9.274E-01  3.031E-01
+  7  7.61719E-01  2.655E-01  9.274E-01  3.031E-01
+  7  7.69531E-01  2.655E-01  9.274E-01  3.031E-01
+  7  7.77344E-01  2.655E-01  9.274E-01  3.031E-01
+  7  7.85156E-01  2.655E-01  9.274E-01  3.031E-01
+  7  7.92969E-01  2.655E-01  9.274E-01  3.031E-01
   6  8.04688E-01  2.656E-01  9.274E-01  3.031E-01
   6  8.20312E-01  2.656E-01  9.275E-01  3.031E-01
   6  8.35938E-01  2.656E-01  9.275E-01  3.031E-01
   6  8.51562E-01  2.656E-01  9.275E-01  3.031E-01
   7  8.63281E-01  2.656E-01  9.275E-01  3.031E-01
-  7  8.71094E-01  2.656E-01  9.274E-01  3.031E-01
+  7  8.71094E-01  2.656E-01  9.275E-01  3.031E-01
   7  8.78906E-01  2.656E-01  9.274E-01  3.031E-01
-  7  8.86719E-01  2.655E-01  9.273E-01  3.031E-01
-  8  8.92578E-01  2.655E-01  9.273E-01  3.031E-01
-  8  8.96484E-01  2.655E-01  9.274E-01  3.031E-01
+  7  8.86719E-01  2.655E-01  9.274E-01  3.031E-01
+  8  8.92578E-01  2.656E-01  9.273E-01  3.031E-01
+  8  8.96484E-01  2.656E-01  9.273E-01  3.031E-01
   8  9.00391E-01  2.655E-01  9.274E-01  3.031E-01
-  8  9.04297E-01  2.657E-01  9.274E-01  3.031E-01
-  8  9.08203E-01  2.658E-01  9.274E-01  3.031E-01
+  8  9.04297E-01  2.655E-01  9.275E-01  3.030E-01
+  8  9.08203E-01  2.656E-01  9.272E-01  3.031E-01
   8  9.12109E-01  2.655E-01  9.274E-01  3.031E-01
-  9  9.15039E-01  2.650E-01  9.273E-01  3.031E-01
-  9  9.16992E-01  2.649E-01  9.273E-01  3.031E-01
-  9  9.18945E-01  2.650E-01  9.274E-01  3.031E-01
-  9  9.20898E-01  2.655E-01  9.274E-01  3.031E-01
-  9  9.22852E-01  2.660E-01  9.272E-01  3.031E-01
- 10  9.24316E-01  2.663E-01  9.274E-01  3.031E-01
- 10  9.25293E-01  2.662E-01  9.271E-01  3.032E-01
- 10  9.26270E-01  2.664E-01  9.276E-01  3.033E-01
- 10  9.27246E-01  2.658E-01  9.293E-01  3.037E-01
- 10  9.28223E-01  2.628E-01  9.108E-01  3.027E-01
- 10  9.29199E-01  2.144E-01  6.340E-01  2.302E-01
- 10  9.30176E-01  1.323E-01  6.787E-02  1.090E-01
- 10  9.31152E-01  1.251E-01  4.331E-04  1.001E-01
- 10  9.32129E-01  1.250E-01  2.527E-06  1.000E-01
- 10  9.33105E-01  1.250E-01  1.521E-08  1.000E-01
-  9  9.34570E-01  1.250E-01  2.138E-10  1.000E-01
+  9  9.15039E-01  2.656E-01  9.271E-01  3.032E-01
+  9  9.16992E-01  2.656E-01  9.271E-01  3.032E-01
+  9  9.18945E-01  2.655E-01  9.277E-01  3.030E-01
+  9  9.20898E-01  2.655E-01  9.279E-01  3.029E-01
+  9  9.22852E-01  2.655E-01  9.275E-01  3.031E-01
+ 10  9.24316E-01  2.660E-01  9.252E-01  3.039E-01
+ 10  9.25293E-01  2.652E-01  9.292E-01  3.025E-01
+ 10  9.26270E-01  2.658E-01  9.269E-01  3.035E-01
+ 10  9.27246E-01  2.661E-01  9.273E-01  3.039E-01
+ 10  9.28223E-01  2.653E-01  9.241E-01  3.029E-01
+ 10  9.29199E-01  2.219E-01  7.119E-01  2.357E-01
+ 10  9.30176E-01  1.336E-01  8.022E-02  1.102E-01
+ 10  9.31152E-01  1.251E-01  5.182E-04  1.001E-01
+ 10  9.32129E-01  1.250E-01  2.959E-06  1.000E-01
+ 10  9.33105E-01  1.250E-01  1.771E-08  1.000E-01
+ 10  9.34082E-01  1.250E-01  3.769E-10  1.000E-01
+ 10  9.35059E-01  1.250E-01  1.268E-10  1.000E-01
   9  9.36523E-01  1.250E-01  0.000E+00  1.000E-01
   9  9.38477E-01  1.250E-01  0.000E+00  1.000E-01
   9  9.40430E-01  1.250E-01  0.000E+00  1.000E-01
-  8  9.43359E-01  1.250E-01  0.000E+00  1.000E-01
+  9  9.42383E-01  1.250E-01  0.000E+00  1.000E-01
+  9  9.44336E-01  1.250E-01  0.000E+00  1.000E-01
   8  9.47266E-01  1.250E-01  0.000E+00  1.000E-01
   8  9.51172E-01  1.250E-01  0.000E+00  1.000E-01
   8  9.55078E-01  1.250E-01  0.000E+00  1.000E-01
@@ -1431,11 +1431,11 @@
  Level  3 has          4 grids (       4,       4,       4,)
  Level  4 has          8 grids (       8,       8,       8,)
  Level  5 has         16 grids (      16,      16,      16,)
- Level  6 has         28 grids (      28,      28,      28,)
+ Level  6 has         27 grids (      27,      27,      27,)
  Level  7 has         37 grids (      37,      37,      37,)
- Level  8 has         18 grids (      18,      18,      18,)
- Level  9 has         15 grids (      15,      15,      15,)
+ Level  8 has         17 grids (      17,      17,      17,)
+ Level  9 has         16 grids (      16,      16,      16,)
  Level 10 has         13 grids (      13,      13,      13,)
- Main step=    43 mcons= 0.00E+00 econs=-8.07E-17 epot= 0.00E+00 ekin= 1.38E+00
- Fine step=   688 t= 2.45001E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.8% 
+ Main step=    43 mcons=-1.97E-16 econs= 1.61E-16 epot= 0.00E+00 ekin= 1.38E+00
+ Fine step=   688 t= 2.45047E-01 dt= 3.561E-04 a= 1.000E+00 mem= 7.6% 
  Run completed
