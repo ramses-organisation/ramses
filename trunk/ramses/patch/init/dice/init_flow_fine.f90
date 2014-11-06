@@ -612,9 +612,9 @@ subroutine init_uold(ilevel)
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
            if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH
-           if(ivar.eq.5) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2
+           if(ivar.eq.5) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
            if(metal) then
-             if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_metal
+             if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
            endif
         end do
      end do

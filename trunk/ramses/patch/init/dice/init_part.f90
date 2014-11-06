@@ -67,9 +67,9 @@ subroutine init_part
   integer::ngas, nhalo, nstars
   integer::skip, block
   integer::kpart, lpart, mpart
-  integer, dimension(nvector):: ids
-  real,dimension(1:3,1:nvector):: pos, vel
-  real,dimension(nvector):: mass, metals, ages, etherm
+  integer:: ids
+  real,dimension(1:3):: pos, vel
+  real:: mass, metals, ages, etherm
   real(kind=8),dimension(1:nvector)::tt,zz
   real(dp)::mgas_tot
   real::flt
@@ -807,45 +807,56 @@ subroutine init_part
               zz=0.
               if(myid==1)then
                 jpart=0
-                do i=1,nvector
-                  jpart=jpart+1
+                i=1
+                !do i=1,nvector
+                do while (1)
                   kpart=kpart+1
                   if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo))) mpart=mpart+1
                   ! Reading Gadget1 file line-by-line
-                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+3*sizeof(skip)) pos(1:3,jpart)
-                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+5*sizeof(skip)+3*npart*sizeof(flt)) vel(1:3,jpart)
-                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+7*sizeof(skip)+6*npart*sizeof(flt)) ids(jpart)
-                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+9*sizeof(skip)+7*npart*sizeof(flt)) mass(jpart)
+                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+3*sizeof(skip)) pos(1:3)
+                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+5*sizeof(skip)+3*npart*sizeof(flt)) vel(1:3)
+                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+7*sizeof(skip)+6*npart*sizeof(flt)) ids
+                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+9*sizeof(skip)+7*npart*sizeof(flt)) mass
                   if(kpart.le.ngas) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+11*sizeof(skip)+8*npart*sizeof(flt)) etherm(jpart)
+                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+11*sizeof(skip)+8*npart*sizeof(flt)) etherm
                   endif
                   if(metal) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+15*sizeof(skip)+(8*npart+2*ngas)*sizeof(flt)) metals(jpart)
+                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+15*sizeof(skip)+(8*npart+2*ngas)*sizeof(flt)) metals
                   endif
                   if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo))) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(mpart-1)+17*sizeof(skip)+(9*npart+2*ngas)*sizeof(flt)) ages(jpart)
+                    read(1,POS=1+sizeof(header)+sizeof(flt)*(mpart-1)+17*sizeof(skip)+(9*npart+2*ngas)*sizeof(flt)) ages
                   endif
                   ! Scaling to ramses code units
-                  xx1       = pos(1,jpart)*3.085677581282D21/scale_l
-                  xx2       = pos(2,jpart)*3.085677581282D21/scale_l
-                  xx3       = pos(3,jpart)*3.085677581282D21/scale_l
-                  vv1       = vel(1,jpart)*1D5/scale_v
-                  vv2       = vel(2,jpart)*1D5/scale_v
-                  vv3       = vel(3,jpart)*1D5/scale_v
-                  xx(i,:)   = (/xx1,xx2,xx3/)
-                  vv(i,:)   = (/vv1,vv2,vv3/)
-                  ii(i)     = ids(jpart)
-                  mm(i)     = mass(jpart)*1D10*1.9891D33/scale_m
+                  pos       = pos*3.085677581282D21/scale_l
+                  ! Checking if the particle is inside the simulation box
+                  if(pos(1).ge.(boxlen/2.0) .or. pos(1).le.(-boxlen/2.0)) go to 10
+                  if(pos(2).ge.(boxlen/2.0) .or. pos(2).le.(-boxlen/2.0)) go to 10
+                  if(pos(3).ge.(boxlen/2.0) .or. pos(3).le.(-boxlen/2.0)) go to 10
+                  jpart=jpart+1
+                  lpart=lpart+1
+                  vel       = vel*1D5/scale_v
+                  xx(i,:)   = pos
+                  vv(i,:)   = vel
+                  if(kpart.gt.ngas)then
+                    ii(i)   = ids+1
+                  else
+                    ii(i)   = 1
+                  endif
+                  mm(i)     = mass*1D10*1.9891D33/scale_m
                   if(metal) then
-                    zz(i)   = metals(jpart)
+                    zz(i)   = metals
                   endif
                   if(kpart.gt.ngas+nhalo) then
-                    tt(i)   = ages(jpart)*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+                    tt(i)   = ages*1D6*(365.*24.*3600.)/(scale_t/aexp**2)
                   endif
                   if(kpart.le.ngas) then
-                    tt(i)   = etherm(jpart)*mu_mol*(1D5/scale_v)**2
+                    tt(i)   = etherm*mu_mol*(1D5/scale_v)**2
                   endif
                   if(kpart.le.ngas) mgas_tot = mgas_tot+mm(i)
+                  ! Vector sweep
+                  if(i.ge.nvector) exit
+                  i=i+1
+                  10 continue
                   ! Check the End Of Block
                   if(kpart.ge.npart)then
                     eob=.true.
@@ -874,12 +885,7 @@ subroutine init_part
                     ipart          = ipart+1
                     xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0
                     vp(ipart,1:3)  = vv(i,1:3)
-                    ! Flag gas particles with idp=1
-                    if((lpart+i).gt.ngas)then
-                      idp(ipart)   = ii(i)+1
-                    else
-                      idp(ipart)   = 1
-                    endif
+                    idp(ipart)     = ii(i)
                     mp(ipart)      = mm(i)
                     levelp(ipart)  = levelmin
                     tp(ipart)      = tt(i)
@@ -890,9 +896,9 @@ subroutine init_part
                   endif
 #endif
               enddo
-              lpart = lpart+jpart
             enddo
             if(myid==1)then
+              write(*,*) "----> ",lpart," particles in AMR grid "
               write(*,*) "DICE patch / Total gas mass -> ",mgas_tot
               close(1)
             endif
