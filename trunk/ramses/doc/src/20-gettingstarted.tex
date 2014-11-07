@@ -7,23 +7,18 @@ installation.
 
 \subsection{Obtaining the package}
 
-The package can be downloaded from the web site
-\url{http://www-dapnia.cea.fr/Projets/COAST} in the \emph{Codes}
-section. You will get a tar ball named \cmd{ramses.tar.gz}. The first
-thing to do is to un-tar the archive on your preferred computer's home
-directory.
+The package can be downloaded from the Bitbucket repository
+\url{https://bitbucket.org/rteyssie/ramses} using the command
+\begin{Prompt}
+git clone https://bitbucket.org/rteyssie/ramses
+\end{Prompt}
+You will get a clone of the git repository, with a directory named \dir{trunk/ramses/}.
+In this directory, you will find the following directory list:
 
 \begin{Prompt}
-\$ gunzip ramses.tar.gz | tar xvf
+README    aton/     doc/      mhd/      pario/    pm/       rt/
+amr/      bin/      hydro/    namelist/ patch/    poisson/  utils/
 \end{Prompt}
-
-This will create a new directory named \dir{ramses/}. In this directory,
-you will find the following directory list
-
-%TODO Update dir list
-\begin{Verbatim}
-amr/  bin/  doc/  hydro/  mhd/  namelist/  patch/  pm/  poisson/  utils/
-\end{Verbatim}
 
 Each directory contains a set of files with a given common purpose. For
 example, \dir{amr/} contains all F90 routines dealing with the AMR grid
@@ -40,13 +35,13 @@ and \cflag{FFLAGS}. Several examples corresponding to different Fortran
 compilers are given. The default values are:
 
 \begin{Prompt}
-F90=pgf90
-FFLAGS=-Mpreprocess -DWITHOUTMPI -DNDIM=$(NDIM) -DSOLVER=$(SOLVER)
+F90 = gfortran
+FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 \end{Prompt}
 
 The first variable is obviously the command used to invoke the Fortran
-compiler. In this case, this is the Portland Group compiler. The second
-variable contains Fortran flags and preprocessor directives. The first
+compiler. In this case, this is the GNU Fortran compiler. The second
+variable contains Fortran flags and preprocessor directives. The last
 directive, \cmd{-D}\cflag{WITHOUTMPI}, when used, switches off all MPI
 routines. On the other hand, if you don't use this directive, the code
 must be linked to the MPI library. We will discuss this point later.
@@ -62,8 +57,9 @@ The first variable, \cflag{NDIM}, sets the dimensionality of the
 problem. The default value is for 1D, plan-parallel flows. Allowed
 values are 1, 2 and 3. The second directive defines the solver, which in
 the current release of RAMSES can be \solver{hydro} or \solver{mhd}.
-Other solvers are currently under development, such as \solver{rad},
-\solver{diff} and so on.
+Other solvers are currently under development, such as a relativistic
+solver \solver{rhd}, or a multifluid solver 
+\solver{multimat} and so on.
 
 There are 3 other preprocessor directives that can be use in RAMSES:
 \cmd{-D\cflag{NVAR}=\cflag{NDIM}+2}, useful to set more variables in the
@@ -71,7 +67,7 @@ hydro solver, \cmd{-D\cflag{NPRE}=8}, to set the number of bytes used
 for real numbers. \cmd{\cflag{NPRE}=8} corresponds to double precision
 arithmetic and \cmd{NPRE=4} to single precision. This option is useful
 to save memory during memory intensive runs. Finally, you can use
-\cmd{-D\cflag{NVECTOR}=500} to set the size of the vector sweeps for
+\cmd{-D\cflag{NVECTOR}=64} to set the size of the vector sweeps for
 computationally intensive operations.
 
 To compile RAMSES, execute:
