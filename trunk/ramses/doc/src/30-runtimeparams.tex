@@ -271,13 +271,13 @@ Besides the regular RAMSES outputs it is possible to produce snapshot projection
    \nmlentry{xcentre\_frame}=0.0\\
    \nmlentry{ycentre\_frame}=0.0\\
    \nmlentry{zcentre\_frame}=0.0}}
-  & Real arrays & Sets centre of the box used for projection. E.g. if the box size is 20x20x20, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=10.,0.,0.,0.} and the same for \texttt{y} and \texttt{z}. Arguments 2-4 are reserved for cosmological simulations and expansion of the coordinates.
+  & Real arrays & Sets centre of the box used for projection. E.g. if the box size is 20x20x20, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=10.,0.,0.,0.} and the same for \texttt{y} and \texttt{z}. Arguments 2-4 are used to set up a time-dependent camera trajectory (using a spline).
 \\\midrule
    \nmlparbox{\cmd{%
    \nmlentry{deltax\_frame}=0.0\\
    \nmlentry{deltay\_frame}=0.0\\
    \nmlentry{deltaz\_frame}=0.0}}
-  & Real arrays & Sets length of the side of the box used for projection. E.g. if the projection box size should be 5x5x5, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=5.,0.} and the same for \texttt{y} and \texttt{z}. Argument 2 is reserved for cosmological simulations and expansion of the coordinates.
+  & Real arrays & Sets length of the side of the box used for projection. E.g. if the projection box size should be 5x5x5, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=5.,0.} and the same for \texttt{y} and \texttt{z}. Argument 2-4 are used to set up a time-dependent camera field-of-view (using a spline).
 \\\midrule
    \cmd{\nmlentry{proj\_axis}='z'} & Character LEN=5 & Defines projection axis ($x$,$y$ or $z$) for the snapshot; up to 5 projections (and thus movies) are allowed. The same projection can be specified multiple times.
 \\\midrule
