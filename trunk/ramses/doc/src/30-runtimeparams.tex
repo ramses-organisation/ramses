@@ -1,0 +1,628 @@
+\clearpage
+\section{Runtime Parameters}
+
+The RAMSES parameter file is based on the Fortran namelist syntax. The
+Sod test parameter file is shown below, as it should appear if you edit
+it.
+
+\logfile{\fullnmlfilename}
+
+This parameter file is organized in namelist blocks. Each block starts
+with \cmd{\&BLOCK\_NAME} and ends with the character ``\cmd{/}''. Within
+each block, you can specify parameter values using standard Fortran
+namelist syntax. There are currently 9 different parameter blocks
+implemented in RAMSES.
+
+\begin{warning}
+4 parameter blocks are mandatory and must always be present in the
+parameter file. These are \nmlblock{\&RUN\_PARAMS},
+\nmlblock{\&AMR\_PARAMS}, \nmlblock{\&OUTPUT\_PARAMS} and
+\nmlblock{\&INIT\_PARAMS}.
+\end{warning}
+
+The 5 other blocks are optional. They must be present in the file only
+if they are relevant to the current run. These are
+\nmlblock{\&BOUNDARY\_PARAMS}, \nmlblock{\&HYDRO\_PARAMS},
+\nmlblock{\&PHYSICS\_PARAMS}, \nmlblock{\&POISSON\_PARAMS} and finally
+\nmlblock{\&REFINE\_PARAMS}. We now describe each parameter block in
+more detail.
+
+\clearpage
+\subsection{Global parameters}
+
+This block, called \nmlblock{\&RUN\_PARAMS}, contains the run global
+control parameters. These parameters are now briefly described. More
+thorough explanations will be given in dedicated sections.
+
+\begin{nmltable}
+   \cmd{\nmlentry{cosmo}=.false.} & Logical &
+   Activate cosmological ``super-comoving coordinates'' system and
+   expansion factor computing.
+\\\midrule
+   \cmd{\nmlentry{pic}=.false.} & Logical &
+   Activate Particle-In-Cell solver
+\\\midrule
+   \cmd{\nmlentry{poisson}=.false.} & Logical &
+   Activate Poisson solver.
+\\\midrule
+   \cmd{\nmlentry{hydro}=.false.} & Logical &
+   Activate hydrodynamics or MHD solver.
+\\\midrule
+   \cmd{\nmlentry{verbose}=.false} & Logical &
+   Activate verbose mode
+\\\midrule
+   \cmd{\nmlentry{nrestart}=0} & Integer &
+   Output file number from which the code loads backup data and resumes
+the simulation. The default value, zero, is for a fresh start from the
+beginning. You should use the same number of processors than the one
+used during the previous run.
+\\\midrule
+   \cmd{\nmlentry{nstepmax}=1000000} & Integer &
+   Maximum number of coarse time steps.
+\\\midrule
+   \cmd{\nmlentry{ncontrol}=1} & Integer &
+   Frequency of screen output for Control Lines (to standard output)
+into the Log File).
+\\\midrule
+   \cmd{\nmlentry{nremap}=0} & Integer &
+   Frequency of calls, in units of coarse time steps, for the load
+balancing routine, for MPI runs only, the default value, zero, meaning
+``never''. 
+\\\midrule
+   \cmd{\nmlentry{ordering}='hilbert'} & Character LEN=128 &
+   Cell ordering method used in the domain decomposition of the grid
+among the processors, for MPI runs only. Possible values are
+\nmlentry{hilbert}, \nmlentry{planar} and \nmlentry{angular}.
+   % TODO : BISECTION?
+\\\midrule
+   \cmd{\nmlentry{nsubcycle}=2,2,2,2,2,} & Integer array &
+   Number of fine level sub-cycling steps within one coarse level time step.
+Each value corresponds to a given level of refinement, starting from the coarse
+grid defined by \nmlentry{levelmin}, up to the finest level defined by
+\nmlentry{levelmax}. For example, \cmd{nsubcycle(1)=1} means that
+\cmd{levelmin} and \cmd{levelmin+1} are synchronized.  To enforce single time
+stepping for the whole AMR hierarchy, you need to set
+\cmd{nsubcycle=1,1,1,1,1,}
+\end{nmltable}
+
+
+\clearpage
+\subsection{AMR grid}
+
+This set of parameters, called \nmlblock{\&AMR\_PARAMS}, controls the
+AMR grid global properties. Parameters specifying the refinement
+strategy are described in the \nmlblock{\&REFINE\_PARAMS} block, which is
+used only if \nmlentry{levelmax}\cmd{>}\nmlentry{levelmin}.
+
+\begin{nmltable}
+   \cmd{\nmlentry{levelmin}=1} & Integer &
+   Minimum level of refinement. This parameter sets the size of the
+coarse (or base) grid by $n_x = 2^{\mathtt{levelmin}}$
+\\\midrule
+   \cmd{\nmlentry{levelmax}=1} & Integer &
+   Maximum level of refinement. If \cmd{\mbox{levelmax}=levelmin}, this
+corresponds to a standard cartesian grid.
+\\\midrule
+   \cmd{\nmlentry{ngridmax}=0} & Integer &
+   Maximum number of grids (or octs) that can be allocated during the
+run \emph{within each MPI process}.
+\\\midrule
+   \cmd{\nmlentry{ngridtot}=0} & Integer &
+   Maximum number of grids (or octs) that can be allocated during the
+run \emph{for all MPI processes}. One has in this case
+\cmd{ngridmax=ngridtot/ncpu}.
+\\\midrule
+   \cmd{\nmlentry{npartmax}=0} & Integer &
+   Maximum number of particles that can be allocated during the run
+\emph{within each MPI process}.
+\\\midrule
+   \cmd{\nmlentry{nparttot}=0} & Integer &
+   Maximum number of particles that can be allocated during the run
+\emph{for all MPI processes}. Obviously, one has in this case
+\cmd{\mbox{npartmax}=nparttot/ncpu}.
+\\\midrule
+   \cmd{\nmlentry{nexpand}=1} & Integer &
+   Number of mesh expansions (mesh smoothing).
+\\\midrule
+   \cmd{\nmlentry{boxlen}=1.0} & Real &
+   Box size in user units
+\end{nmltable}
+
+
+\clearpage
+\subsection{Initial conditions}
+
+This namelist block, called \nmlblock{\&INIT\_PARAMS}, is used to set up
+the initial conditions.
+
+\begin{nmltable}
+   \cmd{\nmlentry{nregion}=1} & Integer &
+   Number of independent regions in the computational box used to set up
+   initial flow variables.
+\\\midrule
+   \cmd{\nmlentry{region\_type}='square'} & Character LEN=10 array &
+   Geometry defining each region. \cmd{square} defines a generalized
+ellipsoidal shape, while \cmd{point} defines a delta function in the
+flow.
+\\\midrule
+   \nmlparbox{ \cmd{%
+   \nmlentry{x\_center}=0.0\\
+   \nmlentry{y\_center}=0.0\\
+   \nmlentry{z\_center}=0.0}}
+   &
+   Real arrays
+   &
+   Coordinates of the center of each region.
+\\\midrule
+   \nmlparbox{\cmd{%
+   \nmlentry{length\_x}=0.0\\
+   \nmlentry{length\_y}=0.0\\
+   \nmlentry{length\_z}=0.0}}
+   &
+   Real arrays
+   &
+   Size in all directions of each region.
+\\\midrule
+   \cmd{\nmlentry{exp\_region}=2.0}
+   &
+   Real array
+   &
+   Exponent defining the norm used to compute distances for the
+generalized ellipsoid.
+   \cmd{exp\_region=2} corresponds to a spheroid,
+   \cmd{exp\_region=1} to a diamond shape, \cmd{exp\_region>=10} to a
+perfect square.
+\\\midrule
+   \nmlparbox{\cmd{%
+   \nmlentry{d\_region}=0.0\\
+   \nmlentry{u\_region}=0.0\\
+   \nmlentry{v\_region}=0.0\\
+   \nmlentry{w\_region}=0.0\\
+   \nmlentry{p\_region}=0.0}}
+   &
+   Real arrays
+   &
+   Flow variables in each region (density, velocities and pressure). For
+\cmd{point} regions, these variables are used to defined extensive
+quantities (mass, velocity and specific pressure).
+\\\midrule
+   \cmd{\nmlentry{filetype}='ascii'}
+   &
+   Character LEN=20
+   &
+   Type of initial conditions file for particles. Possible choices are
+\cmd{'ascii'} or \cmd{'grafic'}.
+\\\midrule
+   \cmd{\nmlentry{aexp\_ini}=10.0}
+   &
+   Real
+   &
+   This parameter sets the starting expansion factor for cosmology runs
+only. Default value is read in the IC file (\cmd{'grafic'} or
+\cmd{'ascii'}).
+\\\midrule
+   \cmd{\nmlentry{multiple}=.false.}
+   &
+   Logical
+   &
+   If \cmd{.true.}, each processor reads its own IC file (\cmd{'grafic'}
+or \cmd{'ascii'}). For parallel runs only.
+\\\midrule
+   \cmd{\nmlentry{initfile}=' '}
+   &
+   Character LEN=80 array
+   &
+   Directory where IC files are stored. See section \ref{sec:cosmo_init}
+for details.
+\end{nmltable}
+
+
+\clearpage
+\subsection{Output parameters}
+
+This namelist block, called \nmlblock{\&OUTPUT\_PARAMS}, is used to set
+up the frequency and properties of data output to disk.
+
+\begin{nmltable}
+   \cmd{\nmlentry{noutput}=1} & Integer &
+   Number of specified output time. At least one output time should be
+given, corresponding to the end of the simulation. 
+\\\midrule
+   \cmd{\nmlentry{tout}=0.0,0.0,0.0,} & Real array &
+   Value of specified output time.
+\\\midrule
+   \cmd{\nmlentry{aout}=1.1,1.1,1.1,} & Real array &
+   Value of specified output expansion factor (for cosmology runs only).
+\cmd{aout=1.0} means ``present epoch'' or ``zero redshift''.
+\\\midrule
+   \cmd{\nmlentry{foutput}=1000000} & Integer &
+   Frequency of additional outputs in units of coarse time steps.
+\cmd{foutput=1} means one output at each time step. Specified outputs
+(see above) will not be superceded by this parameter.
+\end{nmltable}
+
+\clearpage
+\subsection{Movies}
+
+Besides the regular RAMSES outputs it is possible to produce snapshot projections of chosen variables, which can be then further used to produce movies/animations. The namelist that controls behaviour of snapshots is called \nmlblock{\&MOVIE\_PARAMS}.
+
+
+\begin{nmltable}
+   \cmd{\nmlentry{movie}=.false.} & Logical &
+   Turns movie routine on/off.
+\\\midrule
+   \cmd{\nmlentry{tendmov}=0.0} & Real &
+   The time of last snapshot.
+\\\midrule
+   \cmd{\nmlentry{imovout}=0} & Integer &
+   Total number of snapshots.
+\\\midrule
+   \cmd{\nmlentry{imov}=1} & Integer &
+   Number of the first snapshot.
+\\\midrule
+   \cmd{\nmlentry{nw\_frame}=512} & Integer &
+   Width of frame map.
+\\\midrule
+   \cmd{\nmlentry{nh\_frame}=512} & Integer &
+   Height of frame map.
+\\\midrule
+   \cmd{\nmlentry{levelmax\_frame}=0} & Integer & Maximum level of refinement used during production of projection.\\\midrule
+   \nmlparbox{\cmd{%
+   \nmlentry{xcentre\_frame}=0.0\\
+   \nmlentry{ycentre\_frame}=0.0\\
+   \nmlentry{zcentre\_frame}=0.0}}
+  & Real arrays & Sets centre of the box used for projection. E.g. if the box size is 20x20x20, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=10.,0.,0.,0.} and the same for \texttt{y} and \texttt{z}. Arguments 2-4 are used to set up a time-dependent camera trajectory (using a spline).
+\\\midrule
+   \nmlparbox{\cmd{%
+   \nmlentry{deltax\_frame}=0.0\\
+   \nmlentry{deltay\_frame}=0.0\\
+   \nmlentry{deltaz\_frame}=0.0}}
+  & Real arrays & Sets length of the side of the box used for projection. E.g. if the projection box size should be 5x5x5, then for single projection it should be specified as follows to get the full box projection: \texttt{xcentre\_frame=5.,0.} and the same for \texttt{y} and \texttt{z}. Argument 2-4 are used to set up a time-dependent camera field-of-view (using a spline).
+\\\midrule
+   \cmd{\nmlentry{proj\_axis}='z'} & Character LEN=5 & Defines projection axis ($x$,$y$ or $z$) for the snapshot; up to 5 projections (and thus movies) are allowed. The same projection can be specified multiple times.
+\\\midrule
+   \cmd{\nmlentry{movie\_vars}=0} & Integer array & 
+   \nmlparbox{
+Specifies which variables are going to be projected (with density weighting). The array must have length of \texttt{NVAR}+1. The encoding is as follows (names of saved variables in \textsc{small caps}):\\
+   \cmd{\nmlentry{0}}: \textsc{temp}erature,\\
+   \cmd{\nmlentry{1}}: \textsc{dens}ity,\\
+   \cmd{\nmlentry{2}}: \textsc{vx},\\
+   \cmd{\nmlentry{3}}: \textsc{vy},\\
+   \cmd{\nmlentry{4}}: \textsc{vz},\\
+   \cmd{\nmlentry{5}}: \textsc{pres}sure,\\
+   \cmd{\nmlentry{6}}: \textsc{metal}licity,\\
+   \cmd{\nmlentry{7...}}: \textsc{var7}...
+   }
+
+
+\end{nmltable}
+
+
+\clearpage
+\subsection{Boundary conditions}
+
+This namelist block, called \nmlblock{\&BOUNDARY\_PARAMS}, is used to set up
+boundary conditions on the current simulation. If this namelist block is
+absent, periodic boundary conditions are assumed. Setting up other types of
+boundary conditions in RAMSES is quite complex. The reader is invited to read
+the corresponding section. The default setting, corresponding to a periodic box
+should be sufficient in most cases. The strategy to set up boundary conditions
+is based on using ``ghost regions'' outside the computational domain, where
+flow variables are carefully specified in order to mimic the effect of the
+chosen type of boundary. Note that \emph{the order in which boundary regions
+are specified in the namelist is very important}, especially for reflexive or
+zero gradient boundaries. See section \ref{sec:bc} for more information on
+setting up such boundary conditions. Specific examples can be found in the
+\dir{namelist/} directory of the package.
+
+\begin{nmltable}
+   \cmd{\nmlentry{nboundary}=1} & Integer &
+   Number of ghost regions used to specify the boundary conditions. 
+\\\midrule
+   \cmd{\nmlentry{bound\_type}=0,0,0,} & Integer array &
+   \nmlparbox{
+   Type of boundary conditions to apply in the corresponding ghost region.
+   Possible values are:\\
+   \cmd{bound\_type=0}: periodic,\\
+   \cmd{bound\_type=1}: reflexive,\\
+   \cmd{bound\_type=2}: outflow (zero gradients),\\
+   \cmd{bound\_type=3}: inflow (user specified).
+   }
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{d\_bound}=0.0} \\
+      \cmd{\nmlentry{u\_bound}=0.0} \\
+      \cmd{\nmlentry{v\_bound}=0.0} \\
+      \cmd{\nmlentry{w\_bound}=0.0} \\
+      \cmd{\nmlentry{p\_bound}=0.0}
+   }
+   &
+   Real arrays
+   &
+   Flow variables in each ghost region (density, velocities and
+pressure).  They are used only for inflow boundary conditions. 
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{ibound\_min}=0} \\
+      \cmd{\nmlentry{jbound\_min}=0} \\
+      \cmd{\nmlentry{kbound\_min}=0}
+   }
+   &
+   Integer arrays
+   &
+   Coordinates of the lower, left, bottom corner of each boundary
+region.  Each coordinate lies between $-1$ and $+1$ in each direction (see
+figure \vref{fig:bc}).
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{ibound\_max}=0} \\
+      \cmd{\nmlentry{jbound\_max}=0} \\
+      \cmd{\nmlentry{kbound\_max}=0}
+   }
+   &
+   Integer arrays
+   &
+   Likewise, for the upper, right and upper corner of each boundary
+region. 
+\end{nmltable}
+
+
+\clearpage
+\subsection{Hydrodynamics solver}
+
+This namelist is called \nmlblock{\&HYDRO\_PARAMS}, and is used to
+specify runtime parameters for the Godunov solver. These parameters are
+quite standard in computational fluid dynamics. We briefly describe them
+now.
+
+\begin{nmltable}
+   \cmd{\nmlentry{gamma}=1.4} & Real &
+   Adiabatic exponent for the perfect gas EOS. 
+\\\midrule
+   \cmd{\nmlentry{courant\_factor}=0.5} & Real &
+   CFL number for time step control (less than 1).
+\\\midrule
+   \cmd{\nmlentry{smallr}=1d-10} & Real &
+   Minimum density to prevent floating exceptions. 
+\\\midrule
+   \cmd{\nmlentry{smallc}=1d-10} & Real &
+   Minimum sound speed to prevent floating exceptions. 
+\\\midrule
+   \cmd{\nmlentry{riemann}='llf'} & Character LEN=20 &
+   Name of the desired Riemann solver. Possible choices are
+   \cmd{'\rsolver{exact}'}, \cmd{'\rsolver{acoustic}'}, \cmd{'\rsolver{llf}'},
+   \cmd{'\rsolver{hll}'} or \cmd{'\rsolver{hllc}'} for the hydro solver and
+   \cmd{'\rsolver{llf}'}, \cmd{'\rsolver{hll}'}, \cmd{'\rsolver{roe}'},
+   \cmd{'\rsolver{hlld}'}, \cmd{'\rsolver{upwind}'} and \cmd{'\rsolver{hydro}'}
+   for the MHD solver.
+\\\midrule
+   \cmd{\nmlentry{riemann2d}='llf'} & Character LEN=20 &
+   Name of the desired 2D Riemann solver for the induction equation (MHD
+   only). Possible choices are \cmd{'upwind'}, \cmd{'llf'}, \cmd{'roe'}, \cmd{'hll'},
+   and \cmd{'hlld'}.
+\\\midrule
+   \cmd{\nmlentry{niter\_riemann}=10} & Integer &
+   Maximum number of iterations used in the exact Riemann solver.
+\\\midrule
+   \cmd{\nmlentry{slope\_type}=1} & Integer &
+   \nmlparbox{
+   Type of slope limiter used in the Godunov scheme for the piecewise
+   linear reconstruction: \\
+      \cmd{slope\_type=0}: First order scheme, \\
+      \cmd{slope\_type=1}: MinMod limiter, \\
+      \cmd{slope\_type=2}: MonCen limiter. \\
+      \cmd{slope\_type=3}: Multi-dimensional MonCen limiter. \\
+   In 1D runs only, it is also possible to choose: \\
+      \cmd{slope\_type=4}: Superbee limiter \\
+      \cmd{slope\_type=5}: Ultrabee limiter
+   } 
+\\\midrule
+   \cmd{\nmlentry{pressure\_fix}=.false.} & Logical &
+   Activate hybrid scheme (conservative or primitive) for high-Mach
+   flows. Useful to prevent negative temperatures. 
+\end{nmltable}
+
+
+\clearpage
+\subsection{Physical parameters}
+
+This namelist, called \nmlblock{\&PHYSICS\_PARAMS}, is used to specify
+physical quantities used in cosmological applications (cooling, star
+formation and supernovae feedback). We briefly describe them now. 
+
+\begin{nmltable}
+   \cmd{\nmlentry{cooling}=.false.} & Logical &
+   Activate the cooling and/or heating source term in the energy
+equation.
+\\\midrule
+   \cmd{\nmlentry{metal}=.false.} & Logical &
+   Activate metal enrichment, advection and cooling. \ In this case,
+the preprocessor directive \mbox{\cmd{-D\cflag{NVAR}=6}} should be added in the
+Makefile before the compilation. 
+\\\midrule
+   \cmd{\nmlentry{haardt\_madau}=.false.} & Logical &
+   Use the UV background model of Haardt and Madau. Default value
+\cmd{.false.} corresponds to a simple analytical model with parameters
+\cmd{J21} and \cmd{a\_spec}. 
+\\\midrule
+   \cmd{\nmlentry{J21}=0.0} & Real &
+   Normalization for the UV flux of the simple background model. Default
+means ``no UV''. 
+\\\midrule
+   \cmd{\nmlentry{a\_spec}=1.0} & Real &
+   Slope for the spectrum of the simple background model. Default value
+corresponds to a standard ``quasars + OB stars'' spectrum.
+\\\midrule
+   \cmd{\nmlentry{z\_ave}=0.0} & Real &
+   Average metallicity used in the cooling function, in case
+\cmd{metal=.false.} 
+\\\midrule
+   \cmd{\nmlentry{t\_star}=0.0 } & Real &
+   Star formation time scale in Gyr. Default value of zero means no star
+formation. 
+\\\midrule
+   \cmd{\nmlentry{n\_star}=0.1, \nmlentry{del\_star}=200.0 }
+   &
+   Real
+   &
+   Typical interstellar medium physical density or comoving
+overdensity, used as star formation density threshold and as EOS density
+scale. 
+\\\midrule
+   \cmd{\nmlentry{T2\_star}=0.0, \nmlentry{g\_star}=1.6 }
+   &
+   Real
+   &
+   Typical interstellar medium polytropic EOS parameters.
+\\\midrule
+   \cmd{\nmlentry{eta\_sn}=0.0, \nmlentry{yield}=0.1 }
+   &
+   Real
+   &
+   Mass fraction of newly formed stars that explode into supernovae.
+Default value of zero means no supernovae feedback.
+\end{nmltable}
+
+
+\clearpage
+\subsection{Poisson solver}
+
+This namelist, \nmlblock{\&POISSON\_PARAMS}, is used to specify runtime
+parameters for the Poisson solver. It is used only if
+\cmd{\nmlentry{poisson}=.true.} or \cmd{\nmlentry{pic}=.true.}
+
+Two different Poisson solvers are available in RAMSES: conjugate gradient (CG)
+and multigrid (MG). Unlike the CG solver, MG has an initialization overhead cost (at
+every call of the solver), but is much more efficient on very big levels with
+few ``holes''. The multigrid solver is therefore used for all coarse levels.
+
+In addition, MG can be used on refined levels in conjuction with CG. The parameter
+\nmlentry{cg\_levelmin} selects the Poisson solver as follows:
+\begin{itemize}
+\item Coarse levels are solved with MG
+\item Refined levels with $l < \cmd{cg\_levelmin}$ are solved with MG
+\item Refined levels with $l \geq \cmd{cg\_levelmin}$ are solved with CG
+\end{itemize}
+
+\begin{nmltable}
+   \cmd{\nmlentry{gravity\_type}=0} & Integer &
+   \nmlparbox{
+      Type of gravity force. Possible choices are: \\
+      \cmd{gravity\_type=0}: self-gravity (Poisson solver) \\
+      \cmd{gravity\_type>0}: analytical gravity vector \\
+      \cmd{gravity\_type<0}: self-gravity plus
+      additional analytical density profile
+   }
+\\\midrule
+   \cmd{\nmlentry{epsilon}=1d-4} & Real &
+   Stopping criterion for the iterative Poisson solver: residual 2-norm
+should be lower than \cmd{epsilon} times the right hand side 2-norm. 
+   % TODO : update?
+\\\midrule
+   \cmd{\nmlentry{gravity\_params}=0.0, 0.0, 0.0, 0.0,}
+   &
+   Real array
+   &
+   Parameters used to define the analytical gravity field (routine
+\cmd{gravana.f90}) or the analytical mass density field (routine
+\cmd{rho\_ana.f90}).
+\\\midrule
+   \cmd{\nmlentry{cg\_levelmin}=999} & Integer &
+   Minimum level from which the Conjugate Gradient solver is used in place
+of the Multigrid solver.
+\end{nmltable}
+
+
+\clearpage
+\subsection{Refinement strategy}
+
+This namelist, \nmlblock{\&REFINE\_PARAMS}, is used to specify
+refinement parameters controlling the AMR grid generation and evolution
+during the course of the run. It is used only if
+\nmlentry{levelmax} \cmd{>} \nmlentry{levelmin}.
+
+\begin{nmltable}
+   \cmd{\nmlentry{mass\_sph}=0.0} & Real &
+   Quasi-Lagrangian strategy: \cmd{mass\_sph} is used to set a typical
+mass scale. For cosmo runs, its value is set automatically.
+\\\midrule
+   \cmd{\nmlentry{m\_refine}=-1.,-1.,-1., } & Real array &
+   Quasi-Lagrangian strategy: each level is refined if the baryons mass
+in a cell exceeds \cmd{m\_refine(ilevel)*mass\_sph}, or if the number of
+dark matter particles exceeds \cmd{m\_refine(ilevel)}, whatever the mass
+is.
+\\\midrule
+   \cmd{\nmlentry{jeans\_refine}=-1.,-1.,} & Real array &
+   Jeans refinement strategy: each level is refined if the cell size
+exceeds the local Jeans length divided by \cmd{jeans\_refine(ilevel)}.
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{floor\_d}=1d-10},\\
+      \cmd{\nmlentry{floor\_u}=1d-10},\\
+      \cmd{\nmlentry{floor\_p}=1d-10}
+   }
+   &
+   Real
+   &
+   Discontinuity-based strategy: density, velocity and pressure floor
+below which gradients are ignored.
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{err\_grad\_d}=-1.0}, \\
+      \cmd{\nmlentry{err\_grad\_u}=-1.0}, \\
+      \cmd{\nmlentry{err\_grad\_p}=-1.0}
+   }
+   &
+   Real
+   &
+   Discontinuity-based strategy: density, velocity and pressure relative
+variations above which a cell is refined.
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{x\_refine}=0.0,0.0,0.0,}
+      \cmd{\nmlentry{y\_refine}=0.0,0.0,0.0,}
+      \cmd{\nmlentry{z\_refine}=0.0,0.0,0.0,}
+   }
+   &
+   Real arrays
+   &
+   Geometry-based strategy: center of the refined region at each level
+of the AMR grid. 
+\\\midrule
+   \nmlparbox{
+      \cmd{\nmlentry{r\_refine}=1d10,1d10,} \\
+      \cmd{\nmlentry{a\_refine}=1.0,1.0,} \\
+      \cmd{\nmlentry{b\_refine}=1.0,1.0,} \\
+      \cmd{\nmlentry{exp\_refine}=2.0,2.0,}
+   }
+   &
+   Real arrays
+   &
+   Geometry-based strategy: size and shape of the refined region at each
+level.
+\\\midrule
+   \cmd{\nmlentry{interpol\_var}=0}
+   &
+   Integer 
+   &
+   \nmlparbox{
+      Variables used to perform interpolation (prolongation) and averaging
+      (restriction). \\
+      \cmd{interpol\_type=0}: conservatives ($\rho$, $\rho u$, $\rho E$) \\
+      \cmd{interpol\_type=1}: primitives ($\rho$, $\rho u$, $\rho \epsilon$)
+   }
+\\\midrule
+   \cmd{\nmlentry{interpol\_type}=1}
+   &
+   Integer 
+   &
+   \nmlparbox{
+      Type of slope limiter used in the interpolation scheme for newly refined
+      cells. \\
+      \cmd{interpol\_type=0}: Straight injection (1\textsuperscript{st} order) \\
+      \cmd{interpol\_type=1}: MinMod limiter, \\
+      \cmd{interpol\_type=2}: MonCen limiter.
+   }
+\end{nmltable}
+
+

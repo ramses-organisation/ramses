@@ -1,0 +1,61 @@
+% Custom commands
+\newcommand{\fixedfont}[1]{\textbf{\texttt{#1}}}
+% Unindexed command (shell cmd, etc)
+\newcommand{\cmd}[1]{\fixedfont{#1}}
+
+% Indexed commands
+\newcommand{\cflag}[1]{\index{makefile options and flags!\fixedfont{#1} option}\fixedfont{#1}}
+\newcommand{\nmlblock}[1]{\index{namelist blocks!\fixedfont{#1} block}\fixedfont{#1}}
+\newcommand{\nmlentry}[1]{\index{namelist parameters \& log entries!\fixedfont{#1}}\fixedfont{#1}}
+\newcommand{\logentry}[1]{\index{namelist parameters \& log entries!\fixedfont{#1} log entry}\fixedfont{#1}}
+\newcommand{\util}[1]{\index{utilities \& directories!\fixedfont{#1} utility}\fixedfont{#1}}
+\newcommand{\pkg}[1]{\index{utilities \& directories!\fixedfont{#1} package}\fixedfont{#1}}
+\newcommand{\dir}[1]{\index{utilities \& directories!\fixedfont{#1} directory}\fixedfont{#1}}
+\newcommand{\solver}[1]{\index{solvers!\fixedfont{#1} solver}\fixedfont{#1}}
+\newcommand{\rsolver}[1]{\index{solvers!\fixedfont{#1} Riemann solver}\fixedfont{#1}}
+
+% Array macros
+\newcommand{\dblrule}{\hrule \vspace{1pt} \hrule height 0.8pt \relax}
+\newcommand{\nmlparbox}[1]{\parbox{\linewidth}{\vspace{1mm}{#1}\vspace{1mm}}}
+
+% Custom environments
+\newenvironment{warning}%
+   {  \begin{flushright}
+	  \sffamily
+      \begin{minipage}{16cm}
+      \begin{tabular}{p{1.5cm}|p{12cm}}%
+         { \vspace{-3mm} \includegraphics[width=1.5cm]{./img/warning.pdf} } & } %
+   {  \end{tabular}%
+      \end{minipage}%
+      \end{flushright} }
+
+
+\newenvironment{nmltable}%
+   {  \begin{center}
+         \begin{small}
+            \begin{tabular}[l]{m{0.3\textwidth}m{0.15\textwidth}m{0.45\textwidth}}%
+               \toprule %
+               \sffamily\bfseries \nmlparbox{Variable name, syntax\\and default value} & %
+               \sffamily\bfseries Fortran type & %
+               \sffamily\bfseries Description %
+               \\ \toprule } %
+   {           \\\bottomrule%
+            \end{tabular}%
+         \end{small}
+      \end{center} }
+
+\newcommand{\logfile}[2][1]{
+   \VerbatimInput[
+      frame=leftline,
+      numbersep=2mm,
+      stepnumber=1,
+      numbers=left,
+      firstnumber=#1,
+      rulecolor={\color[rgb]{0.7,0.7,0.7}} ] {#2} }
+
+\DefineVerbatimEnvironment%
+   {Prompt}{Verbatim}
+   {frame=single,
+    numbers=none,
+    rulecolor=\color[rgb]{0.7,0.7,0.7},
+    commandchars=\\\{\} }
