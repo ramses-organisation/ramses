@@ -10,13 +10,13 @@ module pm_parameters
   real(dp)::mstar_lost=0            ! Missing star mass
 
 
-  !more sink related parameters, can all be set in namelist file
+  ! More sink related parameters, can all be set in namelist file
 
   integer::ir_cloud=4                        ! Radius of cloud region in unit of grid spacing (i.e. the ACCRETION RADIUS)
   integer::ir_cloud_massive=3                ! Radius of massive cloud region in unit of grid spacing for PM sinks
   real(dp)::sink_soft=2.d0                   ! Sink grav softening length in dx at levelmax for "direct force" sinks
   real(dp)::msink_direct=-1.d0               ! mass above which sinks are treated as "direct force" objectfs
-
+  
   logical::create_sinks=.false.              ! turn formation of new sinks on
 
   character(LEN=15)::merging_scheme='none'   ! sink merging scheme. options: 'none,'timescale', 'FOF'
@@ -29,6 +29,7 @@ module pm_parameters
   logical::threshold_accretion=.false.
   logical::bondi_accretion=.false.
 
+  logical::sink_refine=.false.               ! Fully refine on sink particles
   logical::nol_accretion=.true.              ! Leave angular momentum in the gas at accretion
   real(dp)::sink_seedmass=5.4d-4             ! Initial mass sinks are created with in bondi or flux accretion case (in solar masses)
   real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
