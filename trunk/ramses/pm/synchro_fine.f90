@@ -357,14 +357,10 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            isink=-idp(ind_part(j))
            if(isink>0) then 
-                if(direct_force_sink(isink))then
-                        fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
-                endif
+              if(.not. direct_force_sink(isink))then
+                 fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
+              endif
            endif
-           
-           !if(isink>0 .and. (.not. direct_force_sink(isink)))then
-           !   fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
-           !endif
         end do
      end do
   end if
