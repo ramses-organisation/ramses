@@ -163,6 +163,9 @@ while true ; do
             # Update wiki page ================================================
             cd ${WIKIDIR};
             
+            # Pull latest wiki ================================================
+	    git pull;
+
             # Number of lines in file
             nlines=$(wc -l ${WIKIFILE} | cut -d ' ' -f 1);
             

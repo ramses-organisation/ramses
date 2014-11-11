@@ -2606,8 +2606,6 @@ subroutine update_sink(ilevel)
 
   do isink=1,nsink
      ! sum force contributions from all levels and gather 
-!     if (.not. direct_force_sink(isink))fsink(isink,1:ndim)=0.
-
      do lev=levelmin,nlevelmax
         fsink(isink,1:ndim)=fsink(isink,1:ndim)+fsink_partial(isink,1:ndim,lev)
      end do
@@ -2975,7 +2973,7 @@ subroutine f_gas_sink(ilevel)
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim)::xx,ff
   real(dp),dimension(1:nvector)::d2,mcell,denom
-  real(dp)::rho_tff,rho_tff_tot,d_min,one_over_msink,oneoverthree
+  real(dp)::rho_tff,rho_tff_tot,d_min
   logical,dimension(1:ndim)::period
 
   !  Cell spacing at that level
@@ -2988,8 +2986,6 @@ subroutine f_gas_sink(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
-
-  oneoverthree=1._dp/3._dp
 
   ! Set position of cell centers relative to grid centre
   do ind=1,twotondim
@@ -3011,7 +3007,6 @@ subroutine f_gas_sink(ilevel)
 
   ! Loop over sinks 
   do isink=1,nsink
-     one_over_msink=1./msink(isink)
      if (direct_force_sink(isink))then
 
         d_min=boxlen
@@ -3031,24 +3026,24 @@ subroutine f_gas_sink(ilevel)
                  ind_cell(i)=iskip+ind_grid(i)
               end do
 
-              !check if cell is refined
+              ! Check if cell is refined
               do i=1,ngrid
                  ok(i)=son(ind_cell(i))==0
               end do
 
-              !gas mass in cell
+              ! Gas and dark matter mass in cell
               do i=1,ngrid
                  mcell(i)=rho(ind_cell(i))*vol_loc
               end do
 
-              !Cell center
+              ! Cell center
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=(xg(ind_grid(i),idim)+xc(ind,idim)-skip_loc(idim))*scale
                  end do
               end do
 
-              !relative position and distance
+              ! Relative position and distance
               d2=0.d0
               do idim=1,ndim    
                  if (period(idim))then
@@ -3067,39 +3062,30 @@ subroutine f_gas_sink(ilevel)
                  end if
               end do
 
-              !store minimum distance of cell in current level to isink
+              ! Store minimum distance of cell in current level to isink
               do i=1,ngrid
                  d_min=min(d_min,d2(i))
               end do
 
-              !compute sqrt(1/(ssoft**2+d2(i))) to save time
+              ! Compute sqrt(1/(ssoft**2+d2(i))) to save time
               do i=1,ngrid
                  denom(i)=(ssoft**2+d2(i))**(-1.5)
               end do
 
-              !compute gas acceleration due to sink
+              ! Compute gas acceleration due to sink
               do i=1,ngrid
-                 ff(i,1:ndim)=msink(isink)*denom(i)*ff(i,1:ndim)
+                 ff(i,1:ndim)=denom(i)*ff(i,1:ndim)
               end do
 
-              !add gas acceleration due to sink
+              ! Add gas acceleration due to sink
               do i=1,ngrid
-                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+ff(i,1:ndim)
+                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+msink(isink)*ff(i,1:ndim)
               end do
 
-              !change maximum level potential due to sink (correct for BOXLEN???)
-              !coution: this is wrong if the potential is used as boudary condition for finer levels, 
-              !therefore this is only done at levelmax. Keep in mind that phi is therefore only correct at that level
-              if (ilevel==nlevelmax)then
-                 do i=1,ngrid
-                    phi(ind_cell(i))=phi(ind_cell(i))-msink(isink)*denom(i)**oneoverthree
-                 end do
-              end if
-
-              !add sink acceleration due to gas
+              ! Add sink acceleration due to gas
               do i=1,ngrid
-                 if (ok(i))then
-                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-ff(i,1:ndim)*one_over_msink*mcell(i)
+                 if(ok(i))then
+                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-mcell(i)*ff(i,1:ndim)
                  end if
               end do
            end do !end loop over cells
