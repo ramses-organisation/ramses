@@ -2605,7 +2605,7 @@ subroutine update_sink(ilevel)
      
      if(smbh) then
         do lev=levelmin,nlevelmax
-           densc(isink)=densc(isink)+weighted_density(isink,lev)*weighted_volume(isink,lev)
+           densc(isink)=densc(isink)+weighted_density(isink,lev)
            velc(isink,1:ndim)=velc(isink,1:ndim)+weighted_momentum(isink,lev,1:ndim)
            volc(isink)=volc(isink)+weighted_volume(isink,lev)
         end do
