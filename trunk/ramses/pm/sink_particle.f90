@@ -1425,8 +1425,6 @@ subroutine compute_accretion_rate(write_sinks)
         !Bondi radius
         if (smbh)then
            r2=(factG*msink(isink)/(c2+v2))**2
-           ! Correct the Bondi radius to limit the accretion to the free fall rate        
-           !r2=min(r2,(4.d0*dx_min)**2)  unnecessary when using bondi alpha
         else 
            ! for star formation case add gas mass to the sink mass for young sink particles
            r2=(factG*(msink(isink)+mgas)/(c2+v2))**2
@@ -1434,9 +1432,6 @@ subroutine compute_accretion_rate(write_sinks)
 
         ! extrapolate to rho_inf
         rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))
-        ! Krumholz:
-        ! rho_inf=density/(bondi_alpha(1.2*dx_min/r2**0.5))
-
 
         ! Compute Bondi-Hoyle accretion rate in code units
         boost=1.0
@@ -1451,9 +1446,7 @@ subroutine compute_accretion_rate(write_sinks)
            dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
         end if
 
-
         if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
-
 
         !accretion rate is based on mass flux onto the sink, bondirate is used for subsonic accretion
         if (flux_accretion)then
@@ -1489,9 +1482,6 @@ subroutine compute_accretion_rate(write_sinks)
   if (write_sinks)then 
      call print_sink_properties(dMBHoverdt,dMEDoverdt)
   end if
-  !acc_rate=0. !taken away because accretion rate must not be set to 0 before dump_all! now in amr_step just after dump_all
-  
-
 
 contains
   ! Routine to return alpha, defined as rho/rho_inf, for a critical
@@ -2615,7 +2605,7 @@ subroutine update_sink(ilevel)
      
      if(smbh) then
         do lev=levelmin,nlevelmax
-           densc(isink)=densc(isink)+weighted_density(isink,lev)*weighted_volume(isink,lev)
+           densc(isink)=densc(isink)+weighted_density(isink,lev)
            velc(isink,1:ndim)=velc(isink,1:ndim)+weighted_momentum(isink,lev,1:ndim)
            volc(isink)=volc(isink)+weighted_volume(isink,lev)
         end do
