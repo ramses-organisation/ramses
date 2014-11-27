@@ -15,14 +15,14 @@ subroutine output_frame()
   integer,parameter::tag=100
 
   character(len=5) :: istep_str
-  character(len=100) :: moviedir, moviecmd, moviefile
-  character(len=100) :: moviefile1,moviefile2,moviefile3,moviefile4
+  character(len=100) :: moviedir, moviecmd, infofile, sinkfile
+  character(len=100),dimension(0:NVAR) :: moviefiles
   
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
-  integer::imin,imax,jmin,jmax,ii,jj
+  integer::imin,imax,jmin,jmax,ii,jj,kk,ll
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,dummy
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::xcen,ycen,zcen,delx,dely,delz
   real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame
@@ -37,6 +37,7 @@ subroutine output_frame()
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xx
   real(kind=8),dimension(:,:,:),allocatable::data_frame,data_frame_all
+  real(kind=8),dimension(:,:),allocatable::dens,dens_all
   real(kind=4),dimension(:,:),allocatable::data_single
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi,temp,ekk
@@ -65,8 +66,6 @@ subroutine output_frame()
     
 #if NDIM > 1
 
-  ! Update counter
-  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
   if(imov>imovout)return
 
   ! Determine the filename, dir, etc
@@ -83,16 +82,24 @@ subroutine output_frame()
   if(myid==1)call system(moviecmd)
 #endif
 
-  moviefile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
-  if(myid==1)call output_info(moviefile)
-
-  moviefile1 = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
-  moviefile2 = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
-  moviefile3 = trim(moviedir)//'metal_'//trim(istep_str)//'.map'
-  moviefile4 = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
-
+  infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
+  if(myid==1)call output_info(infofile)
+  
+  moviefiles(0) = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
+  moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
+  moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
+  moviefiles(3) = trim(moviedir)//'vy_'//trim(istep_str)//'.map'
+  moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
+  moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
+  moviefiles(6) = trim(moviedir)//'metal_'//trim(istep_str)//'.map'
+  do ll=7,NVAR
+    write(dummy,'(I3.1)') ll
+    moviefiles(ll) = trim(moviedir)//'var'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
+  end do
+  
   if(sink)then
-    if(myid==1) call output_sink_csv(moviefile4)
+    sinkfile = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
+    if(myid==1) call output_sink_csv(sinkfile)
   endif
   
   if(levelmax_frame==0)then
@@ -142,9 +149,6 @@ subroutine output_frame()
   else
     nh_frame=nw_temp/ratio
   endif
-  if(myid.eq.1)then
-    write(*,*)'RATIO',ratio,nw_frame,nh_frame
-  endif
 
   ! Compute frame boundaries
 !   xcen=xcentre_frame(1)+xcentre_frame(2)*aexp+xcentre_frame(3)*aexp**2+xcentre_frame(4)*aexp**3
@@ -161,8 +165,10 @@ subroutine output_frame()
   zright_frame=zcen+delz/2.
   
   ! Allocate image
-  allocate(data_frame(1:nw_frame,1:nh_frame,1:4))
+  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR))
+  allocate(dens(1:nw_frame,1:nh_frame))
   data_frame=0d0
+  dens=0d0
   dx_frame=delx/dble(nw_frame)
   dy_frame=dely/dble(nh_frame)
 
@@ -219,23 +225,24 @@ subroutine output_frame()
            do i=1,ngrid
               if(ok(i))then
                  ! Check if the cell intersect the domain
+#if NDIM>2                 
                  if(proj_axis(proj_ind:proj_ind).eq.'x')then
                    xleft=xx(i,2)-dx_loc/2.
                    xright=xx(i,2)+dx_loc/2.
-                   yleft=xx(i,3)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yleft=xx(i,3)-dx_loc/2.
                    yright=xx(i,3)+dx_loc/2.
                  elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
                    xleft=xx(i,1)-dx_loc/2.
                    xright=xx(i,1)+dx_loc/2.
-                   yleft=xx(i,3)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yleft=xx(i,3)-dx_loc/2.
                    yright=xx(i,3)+dx_loc/2.
                  else
                    xleft=xx(i,1)-dx_loc/2.
                    xright=xx(i,1)+dx_loc/2.
-                   yleft=xx(i,2)-dx_loc/2. ! switch xx(i,2) to xx(i,3) and below for y<->z
+                   yleft=xx(i,2)-dx_loc/2.
                    yright=xx(i,2)+dx_loc/2.
                  endif
-#if NDIM>2                 
+                 
                  if(proj_axis(proj_ind:proj_ind).eq.'x')then
                    zleft=xx(i,1)-dx_loc/2.
                    zright=xx(i,1)+dx_loc/2.
@@ -250,6 +257,11 @@ subroutine output_frame()
                       & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
                       & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
 #else
+                 xleft=xx(i,1)-dx_loc/2.
+                 xright=xx(i,1)+dx_loc/2.
+                 yleft=xx(i,2)-dx_loc/2.
+                 yright=xx(i,2)+dx_loc/2.
+
                  if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
                       & yright.lt.yleft_frame.or.yleft.ge.yright_frame)cycle
 #endif
@@ -284,22 +296,25 @@ subroutine output_frame()
 #if NDIM>2                 
                        dvol=dvol*dz_cell
 #endif
-                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)
-                       data_frame(ii,jj,2)=data_frame(ii,jj,2)+dvol*uold(ind_cell(i),1)**2
+                       dens(ii,jj)=dens(ii,jj)+dvol*uold(ind_cell(i),1)
+                       
+                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
+                       do kk=2,NVAR
+                         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
+                       end do
 
-                       !Get temperature
-                       ekk=0.0d0
-                       do idim=1,3
-                          ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
-                       enddo
-                       temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
-                       temp=temp/uold(ind_cell(i),1)*scale_T2 !temperature in K
+                       if (movie_vars(0).eq.1)then
+                         !Get temperature
+                         ekk=0.0d0
+                         do idim=1,3
+                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
+                         enddo
+                         temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
+                         temp=temp/uold(ind_cell(i),1)*scale_T2 !temperature in K
 
-                       data_frame(ii,jj,3)=data_frame(ii,jj,3)+dvol*uold(ind_cell(i),1)*temp !mass weighted temperature
+                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*uold(ind_cell(i),1)*temp !mass weighted temperature
+                       end if
 
-                       if(metal)then
-                       data_frame(ii,jj,4)=data_frame(ii,jj,4)+dvol*uold(ind_cell(i),6)
-                       endif
                     end do
                  end do
               end if
@@ -325,83 +340,82 @@ subroutine output_frame()
 !     end do
 !  end do
 #ifndef WITHOUTMPI
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,1:4))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*4,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR))
+  allocate(dens_all(1:nw_frame,1:nh_frame))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dens,dens_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   data_frame=data_frame_all
+  dens=dens_all
   deallocate(data_frame_all)
+  deallocate(dens_all)
 #endif
   ! Convert into mass weighted                                                                                                         
   do ii=1,nw_frame
-     do jj=1,nh_frame
-        data_frame(ii,jj,2)=data_frame(ii,jj,2)/data_frame(ii,jj,1)
-        data_frame(ii,jj,3)=data_frame(ii,jj,3)/data_frame(ii,jj,1)
-        if(metal)then
-        data_frame(ii,jj,4)=data_frame(ii,jj,4)/data_frame(ii,jj,1)
-        endif
-     end do
+    do jj=1,nh_frame
+      do kk=0,NVAR
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
+      end do
+    end do
   end do
-
+  deallocate(dens)
 !     write(*,*) 'testing1', data_frame(100,100,1),data_frame(100,100,2)
 
   if(myid==1)then
      ilun=10
      allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
-     open(ilun,file=TRIM(moviefile1),form='unformatted')
-     data_single=data_frame(:,:,2)
-     rewind(ilun)  
-     if(tendmov>0)then
-        write(ilun)t,delx,dely,delz
-     else
-        write(ilun)aexp,delx,dely,delz
-     endif
-     write(ilun)nw_frame,nh_frame
-     write(ilun)data_single
-     close(ilun)
-     ! Output mass weighted temperature
-     open(ilun,file=TRIM(moviefile2),form='unformatted')
-     data_single=data_frame(:,:,3)
-!     write(*,*) 'testing', data_single(100,100)
-     rewind(ilun)  
-     if(tendmov>0)then
-        write(ilun)t,delx,dely,delz
-     else
-        write(ilun)aexp,delx,dely,delz
-     endif
-     write(ilun)nw_frame,nh_frame
-     write(ilun)data_single
-     close(ilun)
-     ! Output mass weighted metal fraction
-     if(metal)then
-        open(ilun,file=TRIM(moviefile3),form='unformatted')
-        data_single=data_frame(:,:,4)
-        rewind(ilun)  
-        if(tendmov>0)then
-           write(ilun)t,delx,dely,delz
-        else
-           write(ilun)aexp,delx,dely,delz
-        endif
-        write(ilun)nw_frame,nh_frame
-        write(ilun)data_single
-        close(ilun)
-     endif
+     do kk=0, NVAR
+       if (movie_vars(kk).eq.1)then
+         open(ilun,file=TRIM(moviefiles(kk)),form='unformatted')
+         data_single=data_frame(:,:,kk)
+         rewind(ilun)  
+         if(tendmov>0)then
+            write(ilun)t,delx,dely,delz
+         else
+            write(ilun)aexp,delx,dely,delz
+         endif
+         write(ilun)nw_frame,nh_frame
+         write(ilun)data_single
+         close(ilun)
+       end if
+     end do
+!     ! Output mass weighted temperature
+!     open(ilun,file=TRIM(moviefiles(0)),form='unformatted')
+!     data_single=data_frame(:,:,0)
+!!     write(*,*) 'testing', data_single(100,100)
+!     rewind(ilun)  
+!     if(tendmov>0)then
+!        write(ilun)t,delx,dely,delz
+!     else
+!        write(ilun)aexp,delx,dely,delz
+!     endif
+!     write(ilun)nw_frame,nh_frame
+!     write(ilun)data_single
+!     close(ilun)
+!     ! Output mass weighted metal fraction
+!     if(metal)then
+!        open(ilun,file=TRIM(moviefiles(6)),form='unformatted')
+!        data_single=data_frame(:,:,6)
+!        rewind(ilun)  
+!        if(tendmov>0)then
+!           write(ilun)t,delx,dely,delz
+!        else
+!           write(ilun)aexp,delx,dely,delz
+!        endif
+!        write(ilun)nw_frame,nh_frame
+!        write(ilun)data_single
+!        close(ilun)
+!     endif
      deallocate(data_single)
   endif
 
   deallocate(data_frame)
 #endif
+  ! Update counter
+  if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
 
   nw_frame = nw_temp
   nh_frame = nh_temp
  enddo
 end subroutine output_frame
-
-
-character(len=20) function str(k)
-!   "Convert an integer to string."
-    integer, intent(in) :: k
-    write (str, *) k
-    str = adjustl(str)
-end function str
-
 

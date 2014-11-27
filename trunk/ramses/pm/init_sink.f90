@@ -77,10 +77,15 @@ subroutine init_sink
   allocate(dMsink_overdt(1:nsinkmax))
   allocate(c2sink(1:nsinkmax))
   allocate(weighted_density(1:nsinkmax,1:nlevelmax))
+  weighted_density = 0.d0
   allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
+  weighted_volume = 0.d0
   allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
+  weighted_ethermal = 0.d0
   allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
+  weighted_momentum = 0.d0
   allocate(weighted_divergence(1:nsinkmax,1:nlevelmax))
+  weighted_divergence = 0.d0
   allocate(oksink_new(1:nsinkmax))
   allocate(oksink_all(1:nsinkmax))
   allocate(idsink_sort(1:nsinkmax))
@@ -174,7 +179,7 @@ subroutine init_sink
      INQUIRE(FILE=filename, EXIST=ic_sink)
      if (myid==1)write(*,*)'Looking for file ic_sink_restart: ',filename
      if (.not. ic_sink)then
-        filename='ic_sink'
+        filename='ic_sink_restart'
         INQUIRE(FILE=filename, EXIST=ic_sink)
      end if
   else
