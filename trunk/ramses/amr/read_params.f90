@@ -32,10 +32,10 @@ subroutine read_params
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
-  namelist/movie_params/levelmax_frame,nx_frame,ny_frame,ivar_frame &
+  namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov,tendmov,aendmov
+       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -60,8 +60,8 @@ subroutine read_params
   write(*,*)'_/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'                        Version 3.0                            '
-  write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP)           '
-  write(*,*)'                     (c) CEA 1999-2007                         '
+  write(*,*)'       written by Romain Teyssier (University of Zurich)       '
+  write(*,*)'               (c) CEA 1999-2007, UZH 2008-2014                '
   write(*,*)' '
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small

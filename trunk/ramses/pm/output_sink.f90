@@ -11,6 +11,8 @@ subroutine backup_sink(filename)
   integer,allocatable,dimension(:)::ii
   logical,allocatable,dimension(:)::nb
 
+  if(.not. sink) return
+
   if(verbose)write(*,*)'Entering backup_sink'
 
   ilun=4*ncpu+myid+10
@@ -166,7 +168,11 @@ subroutine output_sink_csv(filename)
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,11(A1,ES20.10))')idsink(isink),',',msink(isink),',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),',',t-tsink(isink)
+     write(ilun,'(I10,11(A1,ES20.10))')idsink(isink),',',msink(isink),&
+          ',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),&
+          ',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),&
+          ',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),&
+          ',',t-tsink(isink)
   end do
 
   close(ilun)

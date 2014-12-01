@@ -153,6 +153,7 @@ module amr_parameters
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
   logical ::agn=.false.
+  logical ::sink_drag=.true.  ! Gas dragging sink
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
@@ -167,16 +168,18 @@ module amr_parameters
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
-  integer::nx_frame=512
-  integer::ny_frame=512
+  integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
+  integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0
   integer::ivar_frame=1
-  real(kind=8),dimension(1:4)::xcentre_frame=0d0
-  real(kind=8),dimension(1:4)::ycentre_frame=0d0
-  real(kind=8),dimension(1:4)::zcentre_frame=0d0
-  real(kind=8),dimension(1:4)::deltax_frame=0d0
-  real(kind=8),dimension(1:4)::deltay_frame=0d0
-  real(kind=8),dimension(1:4)::deltaz_frame=0d0
+  real(kind=8),dimension(1:20)::xcentre_frame=0d0
+  real(kind=8),dimension(1:20)::ycentre_frame=0d0
+  real(kind=8),dimension(1:20)::zcentre_frame=0d0
+  real(kind=8),dimension(1:10)::deltax_frame=0d0
+  real(kind=8),dimension(1:10)::deltay_frame=0d0
+  real(kind=8),dimension(1:10)::deltaz_frame=0d0
+  character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
+  integer,dimension(0:NVAR)::movie_vars=0
 
   ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1.0 ! Lagrangian threshold
@@ -190,6 +193,7 @@ module amr_parameters
   real(dp)::var_cut_refine=-1.0 ! Threshold for variable-based refinement
   real(dp)::mass_cut_refine=-1.0 ! Mass threshold for particle-based refinement
   integer::ivar_refine=-1 ! Variable index for refinement
+  logical::sink_refine=.false. ! Fully refine on sink particles
 
   ! Initial condition files for each level
   logical::multiple=.false.

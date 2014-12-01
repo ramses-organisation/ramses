@@ -129,23 +129,23 @@ program amr2prof
   write(*,*)'ncell=',ncell
   icell=0
   if(logscale)then
-     do while (icell<ncell)
-        logrmax=log10(rmax)
-        logrmin=log10(rmin)
-        call ranf(localseed,xx)
-        call ranf(localseed,yy)
-        call ranf(localseed,zz)
-        logr=logrmin+(logrmax-logrmin)*xx
-        costheta=2.*(yy-0.5)
-        sintheta=sqrt(1.-costheta**2)
-        cosphi=cos(zz*2.*!DPI)
-        sinphi=sin(zz*2.*!DPI)
-        rr=10.**logr
-        icell=icell+1
-        x(icell)=xcen+r*cosphi*sintheta
-        y(icell)=ycen+r*sinphi*sintheta
-        z(icell)=zcen+r*costheta
-     end do
+!!$     do while (icell<ncell)
+!!$        logrmax=log10(rmax)
+!!$        logrmin=log10(rmin)
+!!$        call ranf(localseed,xx)
+!!$        call ranf(localseed,yy)
+!!$        call ranf(localseed,zz)
+!!$        logr=logrmin+(logrmax-logrmin)*xx
+!!$        costheta=2.*(yy-0.5)
+!!$        sintheta=sqrt(1.-costheta**2)
+!!$        cosphi=cos(zz*2.*DPI)
+!!$        sinphi=sin(zz*2.*DPI)
+!!$        rr=10.**logr
+!!$        icell=icell+1
+!!$        x(icell)=xcen+r*cosphi*sintheta
+!!$        y(icell)=ycen+r*sinphi*sintheta
+!!$        z(icell)=zcen+r*costheta
+!!$     end do
   else
      do while (icell<ncell)
         call ranf(localseed,xx)

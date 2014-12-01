@@ -621,24 +621,14 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      endif
 
-     ! guarantee to refine direct force sinks to nlevelmax (cosmo)
-     ! guarantee to refine all sinks to nlevelmax (not cosmo)
+     ! Always refine sinks to the maximum level
      ! by setting particle number density above m_refine(ilevel)
-     ! can be used in combination with a very high value for mass_sph 
-
-     if (.not. cosmo)then
+     if(sink_refine)then
         do j=1,np
            if(idp(ind_part(j))<0.)then
+              ! if (direct_force_sink(-1*idp(ind_part(j))))then                     
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
-           end if
-        end do
-     end if
-     if (cosmo)then
-        do j=1,np
-           if(idp(ind_part(j))<0.)then
-              if (direct_force_sink(-1*idp(ind_part(j))))then                     
-                 phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
-              end if
+              ! endif
            end if
         end do
      end if
