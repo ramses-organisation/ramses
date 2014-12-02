@@ -79,12 +79,12 @@ module mond_commons
   !    Constants that will be initiliazed
   !    in the subroutine init_mond
   !-----------------------------------------------
-  real(dp) :: a0_i   		      ! inverse of a0
+  real(dp) :: a0_i            ! inverse of a0
   real(dp) :: FOUR_PI_G
 
   ! Used in compute_pdm_density_at_levelmin
-  integer,dimension(1:2,1:3)    ::ref_nbpg	 ! Projects neighbor parent grid (nbpg): (orientation,dim) |--> 1..6
-  integer,dimension(1:2,1:2,1:3)::ref_nbc	 ! Projects neighbor cell (nbc): (row,orientation,dim) |--> 1..12
+  integer,dimension(1:2,1:3)    ::ref_nbpg    ! Projects neighbor parent grid (nbpg): (orientation,dim) |--> 1..6
+  integer,dimension(1:2,1:2,1:3)::ref_nbc    ! Projects neighbor cell (nbc): (row,orientation,dim) |--> 1..12
   integer,dimension(0:12,1:8)   ::ggg,hhh
 
   ! Used in compute_pdm_density_at_fine_levels
@@ -144,7 +144,7 @@ subroutine init_mond
    use mond_commons
    use poisson_commons
    implicit none
-   integer :: i,j,k,ncell
+   integer :: i,j,ncell
 
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -550,9 +550,9 @@ subroutine compute_rho_mond_tot(ilevel)
   implicit none
 
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp)::dx,dx3
+  real(dp)::dx
   integer::ix,iy,iz
-  integer::i,istart,ncache,ind,ilevel,igrid,icell,idim,info,count,count_all
+  integer::i,istart,ncache,ind,ilevel,igrid,info,count,count_all
   integer,allocatable,dimension(:)::ind_grid
   real(dp)::rmt,rmt_all
   integer,dimension(1:twotondim) :: iskip
@@ -686,7 +686,7 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
 
   integer::igrid,ngrid,ncache,i,n,child,iskip,idim
 
-  integer ,save,dimension(1:nvector)      ::ind_grid,ind_cell,ind_cell_father,ig,ih,nbor_grid,nbor_cell
+  integer ,save,dimension(1:nvector)      ::ind_grid,ind_cell,ig,ih,nbor_grid,nbor_cell
   integer ,save,dimension(1:nvector,0:6)  ::nbor_father_cell,nbor_father_grid
   integer ,save,dimension(1:nvector,0:12) ::cell
   real(dp),save,dimension(1:nvector,0:12) ::p
@@ -694,7 +694,6 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
   real(dp),save,dimension(1:nvector) :: &
          cx1, cy1, cz1, cx2, cy2, cz2, &
          nux1, nuy1, nuz1, nux2, nuy2, nuz2, &
-         nux1_2, nuy1_2, nuz1_2, nux2_2, nuy2_2, nuz2_2, &
          gx1, gx2, gy1, gy2, gz1, gz2
   real(dp) :: dx    ! grid step size
   real(dp) :: h_i   ! inverse grid step size
@@ -869,7 +868,7 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
              call get_nu(nuz2(i), nuz2(i))  ! nu(x) at point B_z
 
              ! Finally: rho_mond = rho + rho_ph
-             rho_mond(ind_cell(i)) = rho(ind_cell(i))    &
+             rho_mond(ind_cell(i)) = rho_newton(ind_cell(i))    &
                   + (  nux2(i)*gx2(i) - nux1(i)*gx1(i) + &
                        nuy2(i)*gy2(i) - nuy1(i)*gy1(i) + &
                        nuz2(i)*gz2(i) - nuz1(i)*gz1(i) ) *(h_i/boxlen)/FOUR_PI_G
