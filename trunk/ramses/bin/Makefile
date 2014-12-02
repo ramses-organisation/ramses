@@ -10,7 +10,11 @@ NENER = 0
 SOLVER = hydro
 PATCH = 
 EXEC = ramses
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
+#############################################################################
+GITHASH = $(shell git rev-list --max-count=1 HEAD)
+DATE = $(shell date)
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
+          -DSOLVER$(SOLVER) -DPATCH=\'$(PATCH)\' -DGITHASH=\'$(GITHASH)\' -DBUILDDATE=\'"$(DATE)"\'
 #############################################################################
 # Fortran compiler options and directives
 
