@@ -12,7 +12,11 @@ SOLVER = hydro
 PATCH =
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
-DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+#############################################################################
+GITHASH = $(shell git rev-list --max-count=1 HEAD)
+DATE = $(shell date)
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
+          -DSOLVER$(SOLVER) -DPATCH=\'$(PATCH)\' -DGITHASH=\'$(GITHASH)\' -DBUILDDATE=\'"$(DATE)"\' $(ATON_FLAGS)
 #############################################################################
 # Fortran compiler options and directives
 
