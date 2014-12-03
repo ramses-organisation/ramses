@@ -1,5 +1,5 @@
 #############################################################################
-# If you have problems with this makefile, contact Romain.Teyssier@cea.fr
+# If you have problems with this makefile, contact Romain.Teyssier@gmail.com
 #############################################################################
 # Compilation time parameters
 NVECTOR = 32
@@ -8,7 +8,7 @@ NPRE = 8
 NVAR = 5
 NENER = 0
 SOLVER = hydro
-PATCH = 
+PATCH =  
 EXEC = ramses
 #############################################################################
 GITHASH = $(shell git rev-list --max-count=1 HEAD)
@@ -88,7 +88,7 @@ VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 # All objects
 MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o \
          poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
-         clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o
+         clfind_commons.o gadgetreadfile.o
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o \
          output_amr.o flag_utils.o physical_boundaries.o virtual_boundaries.o refine_utils.o nbors_utils.o \
@@ -110,18 +110,25 @@ AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
 ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o rad_backup.o ../aton/atonlib/libaton.a
 #############################################################################
-ramses:	$(MODOBJ) $(AMRLIB) ramses.o
+ramses:	$(MODOBJ) $(AMRLIB) ramses.o link_sources
 	$(F90) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
-	rm write_makefile.f90
-	rm write_patch.f90
-ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
+	ld -r -b binary -o $(EXEC)$(NDIM)d make_patch $(EXEC)$(NDIM)d 
+	rm make_patch
+ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o link_sources
 	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
-	rm write_makefile.f90
-	rm write_patch.f90
-write_makefile.f90:
-	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
-write_patch.f90:
-	../utils/scripts/cr_write_patch.sh $(PATCH)
+	ld -r -b binary -o $(EXEC)$(NDIM)d make_patch $(EXEC)$(NDIM)d 
+	rm make_patch
+link_sources:
+ifdef PATCH
+	cat $(MAKEFILE_LIST) > make_patch
+	cat $(PATCH)/* >> make_patch
+else
+	cat $(MAKEFILE_LIST) > make_patch
+endif 
+extract_make_patch:
+	gcc -o get_make_patch ../utils/c/get_make_patch.c $(EXEC)$(NDIM)d
+	./get_make_patch > make_patch
+	rm get_make_patch
 #############################################################################
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
