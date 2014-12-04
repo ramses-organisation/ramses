@@ -89,13 +89,22 @@ subroutine output_frame()
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
   moviefiles(3) = trim(moviedir)//'vy_'//trim(istep_str)//'.map'
+#if NDIM>2
   moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
+#endif
+#if NDIM==2
+  moviefiles(4) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
+#endif
+#if NDIM>2
   moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
+#endif
+#if NVAR>5
   moviefiles(6) = trim(moviedir)//'metal_'//trim(istep_str)//'.map'
   do ll=7,NVAR
     write(dummy,'(I3.1)') ll
     moviefiles(ll) = trim(moviedir)//'var'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
-  end do
+ end do
+#endif
   
   if(sink)then
     sinkfile = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
