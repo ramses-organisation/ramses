@@ -67,6 +67,15 @@ subroutine dump_all
         END DO
         CLOSE(10)
         CLOSE(11)
+        ! Copy compilation details to output directory
+        filename=TRIM(filedir)//'compilation.txt'
+        OPEN(UNIT=11, FILE=filename, STATUS='new')
+        write(11,'(" compile date = ",A)')TRIM(builddate)
+        write(11,'(" patch dir    = ",A)')TRIM(patchdir)
+        write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
+        write(11,'(" local branch = ",A)')TRIM(gitbranch)
+        write(11,'(" last commit  = ",A)')TRIM(githash)
+        CLOSE(11)
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
      call backup_amr(filename)
