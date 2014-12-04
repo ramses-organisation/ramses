@@ -2,6 +2,7 @@
 [2]: https://bitbucket.org/rteyssie/ramses/wiki/AutoTests
 [3]: http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html
 [4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
+[5]: https://bitbucket.org/vperret/dice
 
 ## This is the [ramses](https://bitbucket.org/rteyssie/ramses) bitbucket repository.
 
@@ -21,3 +22,5 @@ Download the code by cloning the git repository using
 $ git clone https://bitbucket.org/rteyssie/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
+
+To generate idealised initial conditions of galaxies, check out the [DICE][5] code.
