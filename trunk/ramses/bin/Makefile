@@ -11,10 +11,12 @@ SOLVER = hydro
 PATCH = 
 EXEC = ramses
 #############################################################################
-GITHASH = $(shell git rev-list --max-count=1 HEAD)
-DATE = $(shell date)
+GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+GITHASH = $(shell git rev-parse HEAD)
+GITREPO = $(shell git config --get remote.origin.url)
+BUILDDATE = $(shell date)
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER) -DPATCH=\'$(PATCH)\' -DGITHASH=\'$(GITHASH)\' -DBUILDDATE=\'"$(DATE)"\'
+          -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 
@@ -115,8 +117,12 @@ ramses:	$(MODOBJ) $(AMRLIB) ramses.o
 ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
 #############################################################################
+read_params.o: FORCE
+	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' -DGITHASH=\'$(GITHASH)\' \
+-DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/read_params.f90 -o $@
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
+FORCE:
 #############################################################################
 clean :
 	rm *.o *.$(MOD)
