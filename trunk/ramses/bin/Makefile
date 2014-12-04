@@ -1,5 +1,5 @@
 #############################################################################
-# If you have problems with this makefile, contact Romain.Teyssier@cea.fr
+# If you have problems with this makefile, contact Romain.Teyssier@gmail.com
 #############################################################################
 # Compilation time parameters
 NVECTOR = 32
