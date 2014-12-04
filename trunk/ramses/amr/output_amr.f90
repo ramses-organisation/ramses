@@ -37,11 +37,17 @@ subroutine dump_all
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     ! Output header: must be called by each process !
      filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
      call output_header(filename)
+     ! Only master process
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
+        filename=TRIM(filedir)//'makefile.txt'
+        call output_makefile(filename)
+        filename=TRIM(filedir)//'patches.txt'
+        call output_patch(filename)
         if(cooling)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
