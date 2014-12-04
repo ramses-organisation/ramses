@@ -17,10 +17,9 @@ Check regularly the [automatic test page][2].
 
 Visit the code web site [here][3].
 
-Generate idealised initial conditions for galaxies with [DICE][5].
-
 Download the code by cloning the git repository using 
 ```
 $ git clone https://bitbucket.org/rteyssie/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
+To generate idealised initial conditions for galaxies, check out the [DICE][5] code.
