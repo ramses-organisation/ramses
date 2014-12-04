@@ -23,4 +23,4 @@ $ git clone https://bitbucket.org/rteyssie/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 
-To generate idealised initial conditions for galaxies, check out the [DICE][5] code.
+To generate idealised initial conditions of galaxies, check out the [DICE][5] code.
