@@ -103,6 +103,7 @@ subroutine read_params
   !-------------------------------------------------
   ! Read the namelist
   !-------------------------------------------------
+  namelist_file=TRIM(infile)
   INQUIRE(file=infile,exist=nml_ok)
   if(.not. nml_ok)then
      if(myid==1)then
