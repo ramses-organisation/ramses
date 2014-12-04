@@ -11,10 +11,12 @@ SOLVER = hydro
 PATCH = 
 EXEC = ramses
 #############################################################################
-GITHASH = $(shell git rev-list --max-count=1 HEAD)
-DATE = $(shell date)
+GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+GITHASH = $(shell git rev-parse HEAD)
+GITREPO = $(shell git config --get remote.origin.url)
+BUILDDATE = $(shell date)
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER) -DPATCH=\'$(PATCH)\' -DGITHASH=\'$(GITHASH)\' -DBUILDDATE=\'"$(DATE)"\'
+          -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 
@@ -88,7 +90,7 @@ VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 # All objects
 MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o \
          poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
-         clfind_commons.o gadgetreadfile.o
+         clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o \
          output_amr.o flag_utils.o physical_boundaries.o virtual_boundaries.o refine_utils.o nbors_utils.o \
@@ -115,8 +117,18 @@ ramses:	$(MODOBJ) $(AMRLIB) ramses.o
 ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
 #############################################################################
+read_params.o: FORCE
+	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' -DGITHASH=\'$(GITHASH)\' \
+-DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/read_params.f90 -o $@		
+write_makefile.o: FORCE
+	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
+	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
+write_patch.o: FORCE
+	../utils/scripts/cr_write_patch.sh $(PATCH)
+	$(F90) $(FFLAGS) -c write_patch.f90 -o $@
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
+FORCE:
 #############################################################################
 clean :
 	rm *.o *.$(MOD)

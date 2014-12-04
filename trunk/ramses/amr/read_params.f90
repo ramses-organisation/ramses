@@ -81,9 +81,19 @@ subroutine read_params
      call clean_stop
   endif
 #endif
-  write(*,'(" Code compiled at ",A)')BUILDDATE
-  write(*,'(" git commit = ",A)')GITHASH
-  write(*,'(" with patch = ",A)')PATCH
+
+  builddate = BUILDDATE
+  patchdir  = PATCH
+  gitrepo   = GITREPO
+  gitbranch = GITBRANCH
+  githash   = GITHASH
+
+  write(*,*)' '
+  write(*,'(" compile date = ",A)')TRIM(builddate)
+  write(*,'(" patch dir    = ",A)')TRIM(patchdir)
+  write(*,'(" remote repo  = ",A)')TRIM(gitrepo)
+  write(*,'(" local branch = ",A)')TRIM(gitbranch)
+  write(*,'(" last commit  = ",A)')TRIM(githash)
   write(*,*)' '
 
   ! Read namelist filename from command line argument

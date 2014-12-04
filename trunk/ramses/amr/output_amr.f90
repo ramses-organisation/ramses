@@ -10,10 +10,11 @@ subroutine dump_all
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
+#endif
+  character::nml_char
   character(LEN=5)::nchar
   character(LEN=80)::filename,filedir,filecmd
-  integer::i,itest,info
+  integer::i,itest,info,irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -36,11 +37,17 @@ subroutine dump_all
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     ! Output header: must be called by each process !
      filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
      call output_header(filename)
+     ! Only master process
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
+        filename=TRIM(filedir)//'makefile.txt'
+        call output_makefile(filename)
+        filename=TRIM(filedir)//'patches.txt'
+        call output_patch(filename)
         if(cooling)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
@@ -51,6 +58,30 @@ subroutine dump_all
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
            call output_sink_csv(filename)
         endif
+        ! Copy namelist file to output directory
+        filename=TRIM(filedir)//'namelist.txt'
+        OPEN(UNIT=10, FILE=namelist_file, ACCESS='DIRECT', STATUS='OLD', &
+             & ACTION='READ',  IOSTAT=IERR, RECL=1)
+        OPEN(UNIT=11, FILE=filename, ACCESS='DIRECT', STATUS='REPLACE', &
+             & ACTION='WRITE', IOSTAT=IERR, RECL=1)
+        IREC = 1
+        DO
+           READ(UNIT=10, REC=IREC, IOSTAT=IERR)nml_char
+           IF (IERR.NE.0) EXIT
+           WRITE(UNIT=11, REC=IREC)nml_char
+           IREC = IREC + 1
+        END DO
+        CLOSE(10)
+        CLOSE(11)
+        ! Copy compilation details to output directory
+        filename=TRIM(filedir)//'compilation.txt'
+        OPEN(UNIT=11, FILE=filename, STATUS='new')
+        write(11,'(" compile date = ",A)')TRIM(builddate)
+        write(11,'(" patch dir    = ",A)')TRIM(patchdir)
+        write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
+        write(11,'(" local branch = ",A)')TRIM(gitbranch)
+        write(11,'(" last commit  = ",A)')TRIM(githash)
+        CLOSE(11)
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
      call backup_amr(filename)
