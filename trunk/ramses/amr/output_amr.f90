@@ -41,10 +41,6 @@ subroutine dump_all
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
-        filename=TRIM(filedir)//'Makefile_'//TRIM(nchar)
-        call output_makefile(filename)
-        filename=TRIM(filedir)//'patches_'//TRIM(nchar)//'.f90'
-        call output_patch(filename)
         if(cooling)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
