@@ -104,25 +104,10 @@ AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ) $(RTOBJ)
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
 ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o rad_backup.o ../aton/atonlib/libaton.a
 #############################################################################
-ramses:	$(MODOBJ) $(AMRLIB) ramses.o link_sources
+ramses:	$(MODOBJ) $(AMRLIB) ramses.o
 	$(F90) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
-	ld -r -b binary -o $(EXEC)$(NDIM)d make_patch $(EXEC)$(NDIM)d
-	rm make_patch
-ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o link_sources
+ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
-	ld -r -b binary -o $(EXEC)$(NDIM)d make_patch $(EXEC)$(NDIM)d
-	rm make_patch
-link_sources:
-ifdef PATCH
-	cat $(MAKEFILE_LIST) > make_patch
-	cat $(PATCH)/* >> make_patch
-else
-	cat $(MAKEFILE_LIST) > make_patch
-endif
-extract_make_patch:
-	gcc -o get_make_patch ../utils/c/get_make_patch.c $(EXEC)$(NDIM)d
-	./get_make_patch > make_patch
-	rm get_make_patch
 #############################################################################
 %.o:%.f90
 	$(F90) $(FFLAGS) -c $^ -o $@
