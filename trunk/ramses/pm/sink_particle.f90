@@ -1149,9 +1149,13 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
+#endif
+#if NDIM>2
   if(ndim>2)period(3)=(nz==1)
-
+#endif
+  
 #if NDIM==3
   
   ! Gravitational constant
@@ -2992,9 +2996,13 @@ subroutine f_gas_sink(ilevel)
   fsink_new=0.
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
+#endif
+#if NDIM>2
   if(ndim>2)period(3)=(nz==1)
-
+#endif
+  
   ! Loop over sinks 
   do isink=1,nsink
      if (direct_force_sink(isink))then
@@ -3145,9 +3153,13 @@ subroutine f_sink_sink
 !  fsink=0.
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
+#endif
+#if NDIM>2
   if(ndim>2)period(3)=(nz==1)  
-
+#endif
+  
   do isink=1,nsink
      if (direct_force_sink(isink))then
         d2=0.d0
@@ -3956,7 +3968,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:ndim)::xc
 
-
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -3973,10 +3984,13 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      iy=(ind-1-4*iz)/2
      ix=(ind-1-2*iy-4*iz)
      xc(ind,1)=(dble(ix)-0.5D0)*dx
+#if NDIM>1
      xc(ind,2)=(dble(iy)-0.5D0)*dx
+#endif
+#if NDIM>2
      xc(ind,3)=(dble(iz)-0.5D0)*dx
+#endif
   end do
-
 
   ! Lower left corner of 3x3x3 grid-cube  do idim=1,ndim
   do idim=1,ndim
