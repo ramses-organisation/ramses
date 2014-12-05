@@ -75,7 +75,7 @@ subroutine dump_all
         CLOSE(11)
         ! Copy compilation details to output directory
         filename=TRIM(filedir)//'compilation.txt'
-        OPEN(UNIT=11, FILE=filename, STATUS='new')
+        OPEN(UNIT=11, FILE=filename, STATUS='replace')
         write(11,'(" compile date = ",A)')TRIM(builddate)
         write(11,'(" patch dir    = ",A)')TRIM(patchdir)
         write(11,'(" remote repo  = ",A)')TRIM(gitrepo)

@@ -23,14 +23,13 @@ EOF
 
 cat << EOF > .test_before.f90
 subroutine output_makefile(filename)
+  
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   integer::ilun
-
-  ilun=myid+10
-
+  
   fileloc=TRIM(filename)
-  open(unit=ilun,file=fileloc,form='formatted')
+  open(newunit=ilun,file=fileloc,form='formatted')
 EOF
 
 cat .test_before.f90 .test_middle.f90 .test_after.f90 > write_makefile.f90
