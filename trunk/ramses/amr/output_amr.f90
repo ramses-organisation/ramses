@@ -75,7 +75,7 @@ subroutine dump_all
         CLOSE(11)
         ! Copy compilation details to output directory
         filename=TRIM(filedir)//'compilation.txt'
-        OPEN(UNIT=11, FILE=filename, STATUS='new')
+        OPEN(UNIT=11, FILE=filename, FORM='formatted')
         write(11,'(" compile date = ",A)')TRIM(builddate)
         write(11,'(" patch dir    = ",A)')TRIM(patchdir)
         write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
@@ -315,7 +315,7 @@ subroutine output_info(filename)
 
   if(verbose)write(*,*)'Entering output_info'
 
-  ilun=myid+10
+  ilun=11
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
