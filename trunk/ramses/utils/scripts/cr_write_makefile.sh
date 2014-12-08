@@ -27,7 +27,7 @@ subroutine output_makefile(filename)
   character(LEN=80)::fileloc
   integer::ilun
 
-  ilun=myid+10
+  ilun=11
 
   fileloc=TRIM(filename)
   open(unit=ilun,file=fileloc,form='formatted')

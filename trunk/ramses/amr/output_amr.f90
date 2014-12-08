@@ -37,11 +37,17 @@ subroutine dump_all
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
+     ! Output header: must be called by each process !
      filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
      call output_header(filename)
+     ! Only master process
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
+        filename=TRIM(filedir)//'makefile.txt'
+        call output_makefile(filename)
+        filename=TRIM(filedir)//'patches.txt'
+        call output_patch(filename)
         if(cooling)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
@@ -66,6 +72,15 @@ subroutine dump_all
            IREC = IREC + 1
         END DO
         CLOSE(10)
+        CLOSE(11)
+        ! Copy compilation details to output directory
+        filename=TRIM(filedir)//'compilation.txt'
+        OPEN(UNIT=11, FILE=filename, FORM='formatted')
+        write(11,'(" compile date = ",A)')TRIM(builddate)
+        write(11,'(" patch dir    = ",A)')TRIM(patchdir)
+        write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
+        write(11,'(" local branch = ",A)')TRIM(gitbranch)
+        write(11,'(" last commit  = ",A)')TRIM(githash)
         CLOSE(11)
      endif
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
@@ -300,7 +315,7 @@ subroutine output_info(filename)
 
   if(verbose)write(*,*)'Entering output_info'
 
-  ilun=myid+10
+  ilun=11
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
