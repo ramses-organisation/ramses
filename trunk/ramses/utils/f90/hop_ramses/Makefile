@@ -2,6 +2,7 @@
 #
 # 1) Compiler choice:
 CC = gcc
+FC = gfortran -ffree-line-length-none -cpp
 
 # 2) Compiler flags: optimization, debugging, profiling, etc.
 # For debugging:
@@ -34,16 +35,16 @@ halo_isolation.o: halo_isolation.cc
 	g++ -c halo_isolation.cc
 
 evol: halo_evolution.o
-	ifort -assume buffered_io -cpp -DDIR halo_evolution.o -o evol
+	$(FC) halo_evolution.o -o evol
 
 halo_evolution.o : halo_evolution.f90
-	ifort -assume buffered_io -cpp -DDIR -c halo_evolution.f90
+	$(FC) -c halo_evolution.f90
 
 poshalo: poshalo.o
-	ifort -assume buffered_io -cpp -DDIR poshalo.o -o poshalo
+	$(FC) poshalo.o -o poshalo
 
 poshalo.o: poshalo.f90
-	ifort -assume buffered_io -cpp -DDIR -c poshalo.f90
+	$(FC) -c poshalo.f90
 
 hop: hop.o kd.o smooth.o hop_input.o
 	$(CC) $(CFLAGS) -o hop hop.o kd.o smooth.o hop_input.o $(LIBS)
