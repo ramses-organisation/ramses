@@ -32,7 +32,7 @@ program part2map
   logical::ok,ok_part,periodic=.false.,star=.false.,ageweight=.false.,do_density=.false.
   integer::impi,ndom,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-  real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  real(KIND=8),dimension(1:8)::bounding,bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax
   real(kind=8)::xx,yy,zz
   real(kind=8),dimension(:),allocatable::bound_key
@@ -255,7 +255,8 @@ program part2map
      
      do i=1,ndom
         if(bit_length>0)then
-           call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
+           call hilbert3d(idom(i),jdom(i),kdom(i),bounding(1),bit_length,1)
+           order_min=bounding(1)
         else
            order_min=0.0d0
         endif
