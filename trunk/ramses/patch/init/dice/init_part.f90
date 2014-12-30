@@ -791,7 +791,6 @@ subroutine init_part
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) blck_size
                   if(stat /= 0) exit
-                  write(*,*) blck_size
                   ! Saving data block positions
                   if(blck_cnt .eq. 1) head_blck = jump_blck+sizeof(blck_size)
                   if(blck_cnt .eq. 2) pos_blck = jump_blck+sizeof(blck_size)
