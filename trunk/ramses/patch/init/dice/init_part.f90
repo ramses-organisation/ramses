@@ -65,11 +65,13 @@ subroutine init_part
   !!! Patch DICE
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::ngas, nhalo, nstars
-  integer::skip, block
+  integer::dummy, blck_size, jump_blck, blck_cnt, stat
+  character(LEN=4)::blck_name
+  integer::head_blck,pos_blck,vel_blck,id_blck,mass_blck,u_blck,metal_blck,age_blck
   integer::kpart, lpart, mpart
-  integer:: ids
-  real,dimension(1:3):: pos, vel
-  real:: mass, metals, ages, etherm
+  integer, dimension(nvector):: ids
+  real,dimension(1:3,1:nvector):: pos, vel
+  real,dimension(nvector):: mass, metals, ages, etherm
   real(kind=8),dimension(1:nvector)::tt,zz
   real(dp)::mgas_tot
   real::flt
@@ -766,28 +768,92 @@ subroutine init_part
             filename=TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
             if(myid==1)then
               write(*,*) "Opening -> ",filename
-              OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')  
+              if((ic_format.ne.'Gadget1').and.(ic_format.ne.'Gadget2')) then
+                write(*,*) 'Specify a valid IC file format [ic_format=Gadget1/Gadget2]'
+                call clean_stop
+              endif
+              OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access="stream")
+              ! Init block address
+              head_blck  = -1
+              pos_blck   = -1
+              vel_blck   = -1
+              id_blck    = -1
+              mass_blck  = -1
+              u_blck     = -1
+              metal_blck = -1
+              age_blck   = -1
+
+              if(ic_format .eq. 'Gadget1') then
+                ! Init block counter
+                jump_blck = 1
+                blck_cnt = 1
+                do while(1)
+                  ! Reading data block header
+                  read(1,POS=jump_blck,iostat=stat) blck_size
+                  if(stat /= 0) exit
+                  ! Saving data block positions
+                  if(blck_cnt .eq. 1) head_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 2) pos_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 3) vel_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 4) id_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 5) mass_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 6) u_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 7) metal_blck = jump_blck+sizeof(blck_size)
+                  if(blck_cnt .eq. 8) age_blck = jump_blck+sizeof(blck_size)
+                  jump_blck = jump_blck+blck_size+2*sizeof(dummy)
+                  blck_cnt = blck_cnt+1
+                enddo
+              endif
+              if(ic_format .eq. 'Gadget2') then
+                ! Init block counter
+                jump_blck = 1
+                do while(1)
+                  ! Reading data block header
+                  read(1,POS=jump_blck,iostat=stat) dummy
+                  if(stat /= 0) exit
+                  read(1,POS=jump_blck+sizeof(dummy),iostat=stat) blck_name
+                  if(stat /= 0) exit
+                  read(1,POS=jump_blck+sizeof(dummy)+sizeof(blck_name),iostat=stat) dummy
+                  if(stat /= 0) exit
+                  read(1,POS=jump_blck+2*sizeof(dummy)+sizeof(blck_name),iostat=stat) dummy
+                  if(stat /= 0) exit
+                  read(1,POS=jump_blck+3*sizeof(dummy)+sizeof(blck_name),iostat=stat) blck_size
+                  if(stat /= 0) exit
+                  ! Saving data block positions
+                  if(blck_name .eq. "HEAD") head_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "POS ") pos_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "VEL ") vel_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "ID  ") id_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "MASS") mass_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "U   ") u_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "Z   ") metal_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  if(blck_name .eq. "AGE ") age_blck = jump_blck+sizeof(blck_name)+4*sizeof(dummy)
+                  jump_blck = jump_blck+blck_size+sizeof(blck_name)+5*sizeof(dummy)
+                enddo
+              endif
+              if((head_blck.eq.-1).or.(pos_blck.eq.-1).or.(vel_blck.eq.-1).or.(mass_blck.eq.-1)) then
+                write(*,*) 'Gadget file does not contain handful data'
+                call clean_stop
+              endif
               ! Byte swapping doesn't appear to work if you just do READ(1)header
-              READ(1)header%npart,header%mass,header%time,header%redshift, &
+              READ(1,POS=head_blck) header%npart,header%mass,header%time,header%redshift, &
                 header%flag_sfr,header%flag_feedback,header%nparttotal, &
                 header%flag_cooling,header%numfiles,header%boxsize, &
                 header%omega0,header%omegalambda,header%hubbleparam, &
                 header%flag_stellarage,header%flag_metals,header%totalhighword, &
                 header%flag_entropy_instead_u, header%flag_doubleprecision, &
                 header%flag_ic_info, header%lpt_scalingfactor
-                rewind(1)
-                close(1)
-                ngas      = header%npart(1)
-                nhalo     = header%npart(2)
-                nstar_tot = sum(header%npart(3:5))
-                npart     = sum(header%npart)
-                write(*,*)"Found ",npart," particles"
-                write(*,*)"----> ",header%npart(1)," gas particles"
-                write(*,*)"----> ",header%npart(2)," halo particles"
-                write(*,*)"----> ",header%npart(3)," disk particles"
-                write(*,*)"----> ",header%npart(4)," bulge particles"
-                write(*,*)"----> ",header%npart(5)," stars particles"
-                OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access="stream")
+ 
+              ngas      = header%npart(1)
+              nhalo     = header%npart(2)
+              nstar_tot = sum(header%npart(3:5))
+              npart     = sum(header%npart)
+              write(*,*)"Found ",npart," particles"
+              write(*,*)"----> ",header%npart(1)," gas particles"
+              write(*,*)"----> ",header%npart(2)," halo particles"
+              write(*,*)"----> ",header%npart(3)," disk particles"
+              write(*,*)"----> ",header%npart(4)," bulge particles"
+              write(*,*)"----> ",header%npart(5)," stars particles"
             endif
 #ifndef WITHOUTMPI
               call MPI_BCAST(nstar_tot,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
@@ -807,56 +873,51 @@ subroutine init_part
               zz=0.
               if(myid==1)then
                 jpart=0
-                i=1
-                !do i=1,nvector
-                do while (1)
+                do i=1,nvector
+                  jpart=jpart+1
                   kpart=kpart+1
                   if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo))) mpart=mpart+1
-                  ! Reading Gadget1 file line-by-line
-                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+3*sizeof(skip)) pos(1:3)
-                  read(1,POS=1+sizeof(header)+3*sizeof(flt)*(kpart-1)+5*sizeof(skip)+3*npart*sizeof(flt)) vel(1:3)
-                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+7*sizeof(skip)+6*npart*sizeof(flt)) ids
-                  read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+9*sizeof(skip)+7*npart*sizeof(flt)) mass
-                  if(kpart.le.ngas) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+11*sizeof(skip)+8*npart*sizeof(flt)) etherm
+                  ! Reading Gadget2 file line-by-line
+                  ! Mandatory data
+                  read(1,POS=pos_blck+3*sizeof(flt)*(kpart-1)) pos(1:3,jpart)
+                  read(1,POS=vel_blck+3*sizeof(flt)*(kpart-1)) vel(1:3,jpart)
+                  read(1,POS=mass_blck+sizeof(flt)*(kpart-1)) mass(jpart)
+                  ! Optional data
+                  if(id_blck.ne.-1) then
+                    read(1,POS=id_blck+sizeof(dummy)*(kpart-1)) ids(jpart)
+                  else
+                    ids(jpart) = (kpart-1)
                   endif
-                  if(metal) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(kpart-1)+15*sizeof(skip)+(8*npart+2*ngas)*sizeof(flt)) metals
+                  if((kpart.le.ngas).and.(u_blck.ne.-1)) then
+                    read(1,POS=u_blck+sizeof(flt)*(kpart-1)) etherm(jpart)
                   endif
-                  if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo))) then
-                    read(1,POS=1+sizeof(header)+sizeof(flt)*(mpart-1)+17*sizeof(skip)+(9*npart+2*ngas)*sizeof(flt)) ages
+                  if((metal).and.(metal_blck.ne.-1)) then
+                    read(1,POS=metal_blck+sizeof(flt)*(kpart-1)) metals(jpart)
+                  endif
+                  if((nstar_tot.gt.0).and.(kpart.gt.(ngas+nhalo)).and.(age_blck.ne.-1)) then
+                    read(1,POS=age_blck+sizeof(flt)*(mpart-1)) ages(jpart)
                   endif
                   ! Scaling to ramses code units
-                  pos       = pos*3.085677581282D21/scale_l
-                  ! Checking if the particle is inside the simulation box
-                  if(pos(1).ge.(boxlen/2.0) .or. pos(1).le.(-boxlen/2.0)) go to 10
-                  if(pos(2).ge.(boxlen/2.0) .or. pos(2).le.(-boxlen/2.0)) go to 10
-                  if(pos(3).ge.(boxlen/2.0) .or. pos(3).le.(-boxlen/2.0)) go to 10
-                  jpart=jpart+1
-                  lpart=lpart+1
-                  vel       = vel*1D5/scale_v
-                  xx(i,:)   = pos
-                  vv(i,:)   = vel
-                  if(kpart.gt.ngas)then
-                    ii(i)   = ids+1
-                  else
-                    ii(i)   = 1
+                  xx1       = pos(1,jpart)*3.085677581282D21/scale_l*ic_scale_pos
+                  xx2       = pos(2,jpart)*3.085677581282D21/scale_l*ic_scale_pos
+                  xx3       = pos(3,jpart)*3.085677581282D21/scale_l*ic_scale_pos
+                  vv1       = vel(1,jpart)*1D5/scale_v*ic_scale_vel
+                  vv2       = vel(2,jpart)*1D5/scale_v*ic_scale_vel
+                  vv3       = vel(3,jpart)*1D5/scale_v*ic_scale_vel
+                  xx(i,:)   = (/xx1,xx2,xx3/)
+                  vv(i,:)   = (/vv1,vv2,vv3/)
+                  ii(i)     = ids(jpart)
+                  mm(i)     = mass(jpart)*1D10*1.9891D33/scale_m*ic_scale_mass
+                  if(metal .and. metal_blck .ne. -1) then
+                    zz(i)   = metals(jpart)*ic_scale_metal
                   endif
-                  mm(i)     = mass*1D10*1.9891D33/scale_m
-                  if(metal) then
-                    zz(i)   = metals
-                  endif
-                  if(kpart.gt.ngas+nhalo) then
-                    tt(i)   = ages*1D6*(365.*24.*3600.)/(scale_t/aexp**2)
+                  if(kpart.gt.ngas+nhalo .and. age_blck .ne. -1) then
+                    tt(i)   = ages(jpart)*1d6*(365.*24.*3600.)/(scale_t/aexp**2)*ic_scale_age
                   endif
                   if(kpart.le.ngas) then
-                    tt(i)   = etherm*mu_mol*(1D5/scale_v)**2
+                    tt(i)   = etherm(jpart)*mu_mol*(1D5/scale_v)**2*ic_scale_u
                   endif
                   if(kpart.le.ngas) mgas_tot = mgas_tot+mm(i)
-                  ! Vector sweep
-                  if(i.ge.nvector) exit
-                  i=i+1
-                  10 continue
                   ! Check the End Of Block
                   if(kpart.ge.npart)then
                     eob=.true.
@@ -883,9 +944,14 @@ subroutine init_part
                   if(cc(i)==myid)then
 #endif
                     ipart          = ipart+1
-                    xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0
+                    xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0+ic_center(1:3)
                     vp(ipart,1:3)  = vv(i,1:3)
-                    idp(ipart)     = ii(i)
+                    ! Flag gas particles with idp=1
+                    if((lpart+i).gt.ngas)then
+                      idp(ipart)   = ii(i)+1
+                    else
+                      idp(ipart)   = 1
+                    endif
                     mp(ipart)      = mm(i)
                     levelp(ipart)  = levelmin
                     tp(ipart)      = tt(i)
@@ -896,10 +962,10 @@ subroutine init_part
                   endif
 #endif
               enddo
+              lpart = lpart+jpart
             enddo
             if(myid==1)then
-              write(*,*) "----> ",lpart," particles in AMR grid "
-              write(*,*) "DICE patch / Total gas mass -> ",mgas_tot
+              write(*,'(A,F8.3,A)') 'DICE patch / Total gas mass -> ',mgas_tot,'D10 Msol'
               close(1)
             endif
   
