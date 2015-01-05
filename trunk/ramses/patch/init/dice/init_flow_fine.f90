@@ -30,9 +30,21 @@ module dice_commons
   real(dp)::ic_scale_age   = 1.0
   real(dp)::ic_scale_metal = 1.0
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
+  character(len=4)::ic_head_name  = 'HEAD'
+  character(len=4)::ic_pos_name   = 'POS '
+  character(len=4)::ic_vel_name   = 'VEL '
+  character(len=4)::ic_id_name    = 'ID  '
+  character(len=4)::ic_mass_name  = 'MASS'
+  character(len=4)::ic_u_name     = 'U   '
+  character(len=4)::ic_metal_name = 'Z   '
+  character(len=4)::ic_age_name   = 'AGE '
+  ! Gadget units in cgs
+  real(dp)::gadget_scale_l = 3.085677581282D21
+  real(dp)::gadget_scale_v = 1.0D5
+  real(dp)::gadget_scale_m = 1.9891D43
+  real(dp)::gadget_scale_t = 1.0D6*365*24*3600
 
 end module dice_commons
-
 
 !################################################################
 !################################################################
@@ -100,6 +112,8 @@ subroutine init_flow_fine(ilevel)
   logical::file_exists
   ! Namelist definitions
   namelist/dice_params/ ic_file,ic_format,IG_rho,IG_T2,IG_metal &
+       & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
+       & ,ic_u_name,ic_metal_name,ic_age_name &
        & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
        & ,ic_scale_metal,ic_center
   !!! DICE 
