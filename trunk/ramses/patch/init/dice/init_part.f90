@@ -64,8 +64,8 @@ subroutine init_part
 
   !!! Patch DICE
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  integer::ngas, nhalo, nstars
-  integer::dummy, blck_size, jump_blck, blck_cnt, stat
+  integer::ngas,nhalo,nstars
+  integer::dummy,blck_size,jump_blck,blck_cnt,stat,ct_progress
   character(LEN=4)::blck_name
   integer::head_blck,pos_blck,vel_blck,id_blck,mass_blck,u_blck,metal_blck,age_blck
   integer::head_size,pos_size,vel_size,id_size,mass_size,u_size,metal_size,age_size
@@ -921,6 +921,7 @@ subroutine init_part
               write(*,*)"----> ",header%npart(3)," disk particles"
               write(*,*)"----> ",header%npart(4)," bulge particles"
               write(*,*)"----> ",header%npart(5)," stars particles"
+              write(*,'(A40)')"________________________________________"
             endif
 #ifndef WITHOUTMPI
               call MPI_BCAST(nstar_tot,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
@@ -931,6 +932,7 @@ subroutine init_part
             lpart    = 0
             mpart    = 0
             mgas_tot = 0.
+            ct_progress = 0
             do while(.not.eob)
               xx=0.
               vv=0.
@@ -1002,8 +1004,14 @@ subroutine init_part
                     tt(i)   = etherm(jpart)*mu_mol*(gadget_scale_v/scale_v)**2*ic_scale_u
                   endif
                   if(kpart.le.ngas) mgas_tot = mgas_tot+mm(i)
+                  if(kpart.gt.ct_progress*npart/40.) then
+                    write(*,'(A1)',advance='no') '-'
+                    ct_progress = ct_progress+1
+                  endif
                   ! Check the End Of Block
-                  if(kpart.ge.npart)then
+                  if(kpart.ge.npart) then
+                    write(*,*) ''
+                    write(*,*) 'File successfully loaded'
                     eob=.true.
                     exit
                   endif
