@@ -1059,7 +1059,7 @@ subroutine init_part
               lpart = lpart+jpart
             enddo
             if(myid==1)then
-              write(*,'(A,F10.3,A)') 'DICE patch / Total gas mass -> ',mgas_tot,'D10 Msol'
+              write(*,'(A,F10.3,A)') 'DICE patch / Total gas mass -> ',mgas_tot,'D9 Msol'
               close(1)
             endif
   
