@@ -29,7 +29,7 @@ program amr2map
   integer::nx_full,ny_full,lmin,nboundary,ngrid_current
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-  real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  real(KIND=8),dimension(1:8)::bounding,bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,xx,yy
@@ -231,7 +231,8 @@ program amr2map
      
      do i=1,ndom
         if(bit_length>0)then
-           call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
+           call hilbert3d(idom(i),jdom(i),kdom(i),bounding(1),bit_length,1)
+           order_min=bounding(1)
         else
            order_min=0.0d0
         endif
