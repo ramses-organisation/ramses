@@ -1005,12 +1005,11 @@ subroutine init_part
                   endif
                   if(kpart.le.ngas) mgas_tot = mgas_tot+mm(i)
                   if(kpart.gt.ct_progress*npart/40.) then
-                    write(*,'(A1)',advance='no') '-'
+                    write(*,'(A2,F5.1,A1)') '->',100.*ct_progress/40.,'%'
                     ct_progress = ct_progress+1
                   endif
                   ! Check the End Of Block
                   if(kpart.ge.npart) then
-                    write(*,*) ''
                     write(*,*) 'File successfully loaded'
                     eob=.true.
                     exit
