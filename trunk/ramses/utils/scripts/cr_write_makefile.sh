@@ -13,7 +13,7 @@ fi
 
 MAKEFILE=$1
 
-sed "s/\"/\"\"/g;s/^/  write(ilun,format)\"/;s/$/\"/" Makefile.mac > .test_middle.f90
+sed "s/\"/\"\"/g;s/^/  write(ilun,format)\"/;s/$/\"/" ${MAKEFILE} > .test_middle.f90
   
 cat << EOF > .test_after.f90
 
