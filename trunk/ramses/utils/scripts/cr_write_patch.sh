@@ -18,7 +18,7 @@ if [ $# == 0 ]
     done > .tmp_output.txt
 fi
 
-sed 's/\$/ /g' .tmp_output.txt | sed "s/\"/'/g" | cat -e | sed 's/\$/\"/' | sed 's/^/  write(ilun,*)"/' > .test_middle.f90
+sed 's/\$/ /g' .tmp_output.txt | sed "s/\"/'/g" | cat -e | sed 's/\$/\"/' | sed 's/^/  write(ilun,format)"/' > .test_middle.f90
   
 cat << EOF > .test_after.f90
   close(ilun)
@@ -29,11 +29,13 @@ cat << EOF > .test_before.f90
 subroutine output_patch(filename)
   character(LEN=80)::filename
   character(LEN=80)::fileloc
+  character(LEN=30)::format
   integer::ilun
 
   ilun=11
 
   fileloc=TRIM(filename)
+  format="(A)"
   open(unit=ilun,file=fileloc,form='formatted')
 EOF
 
