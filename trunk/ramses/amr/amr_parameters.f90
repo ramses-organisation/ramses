@@ -179,7 +179,11 @@ module amr_parameters
   real(kind=8),dimension(1:10)::deltay_frame=0d0
   real(kind=8),dimension(1:10)::deltaz_frame=0d0
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
+#ifdef SOLVERmhd
+  integer,dimension(0:NVAR+4)::movie_vars=0
+#else
   integer,dimension(0:NVAR)::movie_vars=0
+#endif
 
   ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1.0 ! Lagrangian threshold
