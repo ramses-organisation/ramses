@@ -333,7 +333,7 @@ subroutine output_frame()
 #else                       
                        do kk=2,NVAR
 #endif
-                         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),1)*uold(ind_cell(i),kk)
+                         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                        end do
 
                        if (movie_vars(0).eq.1)then
