@@ -29,7 +29,7 @@ module pm_parameters
   logical::threshold_accretion=.false.
   logical::bondi_accretion=.false.
 
-  logical::nol_accretion=.true.              ! Leave angular momentum in the gas at accretion
+  logical::nol_accretion=.false.              ! Leave angular momentum in the gas at accretion
   real(dp)::sink_seedmass=5.4d-4             ! Initial mass sinks are created with in bondi or flux accretion case (in solar masses)
   real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
                                              ! gives fration of available gas that can be accreted in one timestep.

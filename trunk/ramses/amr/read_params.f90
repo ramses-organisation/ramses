@@ -66,7 +66,7 @@ subroutine read_params
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
 #ifdef SOLVERhydro
-  write(*,'(" Using the hydro solver with nvar = ",I2)')nvar
+  write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
   if(nvar<ndim+2)then
      write(*,*)'You should have: nvar>=ndim+2'
      write(*,'(" Please recompile with -DNVAR=",I2)')ndim+2
@@ -74,14 +74,16 @@ subroutine read_params
   endif
 #endif
 #ifdef SOLVERmhd
-  write(*,'(" Using the mhd solver with nvar = ",I2)')nvar
+  write(*,'(" Using solver = mhd with nvar = ",I2)')nvar
   if(nvar<8)then
      write(*,*)'You should have: nvar>=8'
      write(*,'(" Please recompile with -DNVAR=8")')
      call clean_stop
   endif
 #endif
-  write(*,*)' '
+
+  ! Write information about git version
+  call write_gitinfo
 
   ! Read namelist filename from command line argument
   narg = iargc()
@@ -100,6 +102,7 @@ subroutine read_params
   !-------------------------------------------------
   ! Read the namelist
   !-------------------------------------------------
+  namelist_file=TRIM(infile)
   INQUIRE(file=infile,exist=nml_ok)
   if(.not. nml_ok)then
      if(myid==1)then
