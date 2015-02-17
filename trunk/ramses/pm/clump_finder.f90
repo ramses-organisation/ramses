@@ -39,7 +39,10 @@ subroutine clump_finder(create_output,keep_alive)
   if(ivar_clump==0)then
      do ilevel=levelmin,nlevelmax
         if(pic)call make_tree_fine(ilevel)
-        if(poisson)call rho_fine(ilevel,2)
+        if(poisson)then
+           call save_phi_old(ilevel)
+           call rho_fine(ilevel,2)
+        endif
         if(pic)then
            call kill_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
