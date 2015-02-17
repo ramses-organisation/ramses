@@ -49,9 +49,9 @@ def main():
 	parser.add_option('-c','--colormap',dest='cmap_str', metavar='CMAP', \
 	       help='matplotlib color map to use', default="jet")
 	parser.add_option('-b','--barlen',dest='barlen', metavar='VALUE', \
-	       help='length of the bar (specify unit!)', default=50)
+	       help='length of the bar (specify unit!)', default=5)
 	parser.add_option('-B','--barlen_unit',dest='barlen_unit', metavar='VALUE', \
-	       help='unit of the bar length [pc/kpc/Mpc]', default='pc')
+	       help='unit of the bar length [pc/kpc/Mpc]', default='kpc')
 	parser.add_option('-t','--time_unit',dest='time_unit', metavar='VALUE', \
 	       help='unit of time [Myr/Gyr]', default='Myr')
 
@@ -64,7 +64,7 @@ def main():
 	elif opts.barlen_unit == 'kpc':
 		scale_l = 1e3
 	elif opts.barlen_unit == 'Mpc':
-		scale_l = 1e3
+		scale_l = 1e6
 	else:
 		print "Wrong length unit!"
 		sys.exit()
@@ -124,7 +124,7 @@ def main():
 		progressbar_avail = True
 	except ImportError:
 		progressbar_avail = False
-  
+
 	if (int(opts.fmax) > 0):
 		max_iter=int(opts.fmax)
 	
@@ -256,8 +256,9 @@ def main():
 					marker='+',c='r',s=4*sink_m**2)
 
 		patches = []
-		rect = mpatches.Rectangle((nx/100,ny/100), opts.barlen*nx/(dx/boxlen*unit_l*3.24e-19/scale_l),10)
-		label([nx/100+opts.barlen*nx/(dx/boxlen*unit_l*3.24e-19/scale_l)/2,ny/100],"%d %s" % (opts.barlen, opts.barlen_unit))
+		barlen_px = opts.barlen*scale_l*nx/(float(boxlen)*unit_l*3.24e-19*deltax_frame/float(boxlen))
+		rect = mpatches.Rectangle((nx/20,ny/100), barlen_px, 10)
+		label([nx/20+barlen_px/2,ny/100],"%d %s" % (opts.barlen, opts.barlen_unit))
 		patches.append(rect)
 
 		plt.axis('off') # removes axis
