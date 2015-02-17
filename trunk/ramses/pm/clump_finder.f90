@@ -39,10 +39,7 @@ subroutine clump_finder(create_output,keep_alive)
   if(ivar_clump==0)then
      do ilevel=levelmin,nlevelmax
         if(pic)call make_tree_fine(ilevel)
-        if(poisson)then
-           call save_phi_old(ilevel)
-           call rho_fine(ilevel,2)
-        endif
+        if(poisson)call rho_only(ilevel)
         if(pic)then
            call kill_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
@@ -1084,3 +1081,103 @@ subroutine geticell99(icell,icd,np)
 #endif
   
 end subroutine geticell99
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine rho_only(ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme. Particles that are not entirely in
+  ! level ilevel contribute also to the level density field
+  ! (boundary particles) using buffer grids.
+  !------------------------------------------------------------------
+  integer::iskip,icpu,ind,i,info,nx_loc,ibound,idim
+  real(dp)::dx,scale,dx_loc
+
+  if(.not. poisson)return
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  !-------------------------------------------------------
+  ! Initialize rho to analytical and baryon density field
+  !-------------------------------------------------------
+  if(ilevel==levelmin)then
+     do i=nlevelmax,ilevel,-1
+        ! Compute mass multipole
+        if(hydro)call multipole_fine(i)
+        ! Perform TSC using pseudo-particle
+#ifdef TSC
+        if (ndim==3)then
+           call tsc_from_multipole(i)
+        else
+           write(*,*)'TSC not supported for ndim neq 3'
+           call clean_stop
+        end if
+#else
+        ! Perform CIC using pseudo-particle
+        call cic_from_multipole(i)
+#endif
+        ! Update boundaries
+        call make_virtual_reverse_dp(rho(1),i)
+        call make_virtual_fine_dp   (rho(1),i)
+     end do
+  end if
+
+  !-------------------------------------------------------
+  ! Initialize rho to zero in virtual boundaries
+  !-------------------------------------------------------
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+        end do
+     end do
+  end do
+
+  !---------------------------------------------------------
+  ! Compute particle contribution to density field
+  !---------------------------------------------------------
+  ! Compute density due to current level particles
+  if(pic)then
+     call rho_from_current_level(ilevel)
+  end if
+  ! Update boudaries
+  call make_virtual_reverse_dp(rho(1),ilevel)
+  call make_virtual_fine_dp   (rho(1),ilevel)
+
+  !----------------------------------------------------
+  ! Reset rho in physical boundaries
+  !----------------------------------------------------
+  do ibound=1,nboundary
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,boundary(ibound,ilevel)%ngrid
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+        end do
+     end do
+  end do
+
+111 format('   Entering rho_only for level ',I2)
+  
+end subroutine rho_only
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
