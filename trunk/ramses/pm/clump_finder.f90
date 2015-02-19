@@ -1156,7 +1156,7 @@ subroutine rho_only(ilevel)
   !---------------------------------------------------------
   ! Compute density due to current level particles
   if(pic)then
-     call rho_from_current_level(ilevel)
+     call rho_only_level(ilevel)
   end if
   ! Update boudaries
   call make_virtual_reverse_dp(rho(1),ilevel)
