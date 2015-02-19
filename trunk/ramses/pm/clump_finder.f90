@@ -1284,7 +1284,6 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
@@ -1303,7 +1302,6 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -1346,13 +1344,6 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do j=1,np
      mmm(j)=mp(ind_part(j))
   end do
-
-  ! Gather particle birth epoch
-  if(star)then
-     do j=1,np
-        ttt(j)=tp(ind_part(j))
-     end do
-  endif
 
   ! Check for illegal moves
   error=.false.
@@ -1492,7 +1483,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! Update mass density and number density fields
+  ! Update mass density field
   do ind=1,twotondim
      do j=1,np
         ok(j)=igrid(j,ind)>0
