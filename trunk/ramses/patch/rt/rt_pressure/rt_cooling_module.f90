@@ -233,7 +233,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
                       ,dT2,   dXion(:),  dNp(:),  dFp(:,:),  dp_gas(:)   &
                       ,dNpdt(i,:), dFpdt(i,:,:), nH(i), c_switch(i)      &
                       ,Zsolar(i),  ddt(i), a_exp, dt_ok, dt_rec, code    )
-        if(loopcnt .gt. 100000) then
+        if(loopcnt .gt. 100000.) then
            call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
                             ,ddt(i), nH(i), T2(i),  xion(i,:),  Np(i,:)  &
                             ,Fp(i,:,:),  p_gas(i,:)                      &
@@ -346,7 +346,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
   neInit=ne
   fracMax=0d0    ! Max. fractional update, to check if dt can be increased
 
-  rho = nH / X * mH
+  rho = nH * mH
   kAbs_loc = kappaAbs
   kSc_loc  = kappaSc
   if(is_kIR_T) then ! k_IR depends on T
@@ -356,8 +356,9 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         TR = max(T2_min_fix,(E_rad*rt_c_cgs/c_cgs/a_r)**0.25)
         dT2 = TR/mu ;   TK = TR
      endif
-     kAbs_loc(iIR) = kappaAbs(iIR) * (max(TK,100.)/10d0)**2
-     kSc_loc(iIR)  = kappaSc(iIR)  * (max(TK,100.)/10d0)**2
+     kAbs_loc(iIR) = kappaAbs(iIR) * (max(TK,100.)/10d0)**1.7
+     if(TK>100.)kAbs_loc(iIR) = kAbs_loc(iIR) * (TK/100.)**-0.3333
+     kSc_loc(iIR)  = kappaSc(iIR)  * (max(TK,100.)/10d0)**1.9
   endif
   ! Set dust absorption and scattering rates [s-1]:
   dustAbs(:)  = kAbs_loc(:) *rho*Zsolar*rt_c_cgs
@@ -463,7 +464,6 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      endif
      fracMax=MAX(fracMax,dUU)
      TK=dT2*mu
-     print*,'was here'
   endif
 
   if(rt_isIR .and. (kAbs_loc(iIR) .gt. 0d0) .and. .not. rt_T_rad) then
@@ -472,7 +472,8 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      C_v = rho*kb/mh/mu/(gamma-1d0)                                  
      E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
 
-     dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
+!     dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*(TK**4-10.**4)) & !! 10 K floor hardcoded by Andreass
+     dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*(TK**4)) & !! 10 K floor hardcoded by Andreass
           / (1d0/kAbs_loc(iIR)/rho/dt + 4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
      dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
      dNp(iIR) = dNp(iIR) - dE_T / group_egy(iIR) / ev_to_erg

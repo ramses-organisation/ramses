@@ -199,7 +199,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
               TR = min(TR,100.)
-              kScIR  = kappaSc(iIR)  * (TR/10d0)**2
+              kScIR  = kappaSc(iIR)  * (TR/10d0)**1.9
            endif
            kScIR = kScIR*scale_d*scale_l
            flux = rtuold(il,iNp+1:iNp+ndim)
@@ -496,7 +496,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
               TR = min(TR,100.)
-              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+              kScIR  = kappaSc(iIR) * (TR/10d0)**1.9               
            endif                                                        
            tau=nH(i) * Zsolar(i) * unit_tau * kScIR                    
            f_trap = exp(-1d0/tau)            ! Frac. of trapped IR photons
