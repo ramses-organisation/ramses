@@ -33,7 +33,7 @@ subroutine read_hydro_params(nml_ok)
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
        & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
        & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
-       & ,interpol_var,interpol_type
+       & ,interpol_var,interpol_type,sink_refine
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &

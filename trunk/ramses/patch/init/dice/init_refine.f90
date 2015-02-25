@@ -183,7 +183,6 @@ subroutine kill_gas_part(ilevel)
   integer::ilevel
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
 #endif
   !--------------------------------------------------------
   ! This subroutine removes the gas particles 
@@ -194,6 +193,7 @@ subroutine kill_gas_part(ilevel)
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   logical,dimension(1:nvector)::ok=.true.
   integer::npart_all
+  integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
 
   npart_cpu = 0
   npart_all = 0

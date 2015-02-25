@@ -14,9 +14,10 @@
 
 // structures
 typedef struct mapdata_s {
-	float *data;
 	int nx;
 	int ny;
+	double t;
+	float *data;
 } mapdata_t;
 
 // BMP file header needs 2-byte alignment
@@ -45,6 +46,21 @@ typedef struct bmp_infoheader_s {
 #define BI_RGB 0
 #pragma pack()
 
+#pragma pack(4)
+typedef struct map_header_s {
+	uint32_t hd1_start;
+	double time;
+	double dx;
+	double dy;
+	double dz;
+	uint32_t hd1_end;
+	uint32_t hd2_start;
+	uint32_t nw;
+	uint32_t nh;
+	uint32_t hd2_end;
+} map_header_t;
+#pragma pack()
+
 // global variables
 const char *input_filename=0;
 const char *output_filename=0;
@@ -68,20 +84,21 @@ float	max( float a, float b );
 int open_mapfile( const char *mapfilename, mapdata_t *mapdata )
 {
 	FILE	*fp;
-	uint32_t 	header[4];
+	map_header_t 	header;
 	int 	width, height, size;
 
 	fp = fopen( mapfilename, "rb");
 
 	if (fp){
-		fread( header, sizeof(header), 1, fp );
-		width = header[1];
-		height = header[2];
+		fread( &header, sizeof(header), 1, fp );
+		width = header.nw;
+		height = header.nh;
 		fread( &size, sizeof(size), 1, fp );
 		if (size == width*height*sizeof(float)) {
-			mapdata->data = malloc( size );
 			mapdata->nx = width;
 			mapdata->ny = height;
+			mapdata->t = header.time;
+			mapdata->data = malloc( size );
 			fread( mapdata->data, size, 1, fp );
 		}
 		else {
@@ -222,7 +239,8 @@ int main (int argc, char *argv[])
 	if ( open_mapfile( input_filename, &mapdata ) == EXIT_FAILURE )
 		return EXIT_FAILURE;
 
-	printf( "%s, %ix%i", input_filename, mapdata.nx, mapdata.ny );
+	printf( "%s, t=%f, %ix%i ", input_filename,
+													mapdata.t, mapdata.nx, mapdata.ny );
 	// save to bmp
 	ret = save_bmp( &mapdata, output_filename );
 

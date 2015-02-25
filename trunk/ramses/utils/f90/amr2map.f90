@@ -15,7 +15,8 @@ program amr2map
   integer::nhx,nhy,ihx,ihy,ivar1,ivar2
   real::gamma,smallr,smallc,gammah
   real::boxlen,boxlen2
-  real::t,aexp,hexp,t2,aexp2,hexp2
+  real(kind=8)::t,aexp
+  real::hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::omega_m2,omega_l2,omega_k2,omega_b2
   real::scale_l,scale_d,scale_t
@@ -28,7 +29,7 @@ program amr2map
   integer::nx_full,ny_full,lmin,nboundary,ngrid_current
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-  real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  real(KIND=8),dimension(1:8)::bounding,bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,xx,yy
@@ -121,7 +122,7 @@ program amr2map
   read(10,*)
 !  read(10,'("time        =",E23.15)')t
   read(10,'(A13,E23.15)')GMGM,t
-  read(10,*)
+  read(10,'(A13,E23.15)')GMGM,aexp
   read(10,*)
   read(10,*)
   read(10,*)
@@ -230,7 +231,8 @@ program amr2map
      
      do i=1,ndom
         if(bit_length>0)then
-           call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
+           call hilbert3d(idom(i),jdom(i),kdom(i),bounding(1),bit_length,1)
+           order_min=bounding(1)
         else
            order_min=0.0d0
         endif
@@ -604,6 +606,7 @@ program amr2map
   if (filetype=='bin')then
      open(unit=20,file=nomfich,form='unformatted')
      if(nx_sample==0)then
+        write(20)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(20)imax-imin+1,jmax-jmin+1
         allocate(toto(imax-imin+1,jmax-jmin+1))
         if(do_max)then
@@ -612,10 +615,9 @@ program amr2map
            toto=grid(lmax)%map(imin:imax,jmin:jmax)/grid(lmax)%rho(imin:imax,jmin:jmax)
         endif
         write(20)toto
-        write(20)xxmin,xxmax
-        write(20)yymin,yymax
      else
         if(ny_sample==0)ny_sample=nx_sample
+        write(20)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(20)nx_sample+1,ny_sample+1
         allocate(toto(0:nx_sample,0:ny_sample))
         do i=0,nx_sample
@@ -632,8 +634,6 @@ program amr2map
            end do
         end do
         write(20)toto
-        write(20)xxmin,xxmax
-        write(20)yymin,yymax
      endif
      close(20)
   endif
