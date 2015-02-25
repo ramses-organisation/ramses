@@ -203,7 +203,7 @@ subroutine compute_clump_properties(xx)
 
            do idim=1,ndim
               if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))>boxlen*0.5)xcell(idim)=xcell(idim)-boxlen
-              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))<boxlen*-0.5)xcell(idim)=xcell(idim)+boxlen
+              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))<boxlen*(-0.5))xcell(idim)=xcell(idim)+boxlen
            end do
 
            ! gas density

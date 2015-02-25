@@ -64,7 +64,7 @@ subroutine flag_formation_sites
            rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
            do idim=1,ndim
               if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-              if (period(idim) .and. rrel(idim)<boxlen*-0.5)rrel(idim)=rrel(idim)+boxlen
+              if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
            end do
            dist2=sum(rrel**2)
            if (dist2<(ir_cloud*dx_min)**2)then
@@ -316,7 +316,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
         rrel=xcell(1:3)-center_of_mass(peak_nr,1:3)
         do idim=1,ndim
            if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-           if (period(idim) .and. rrel(idim)<boxlen*-0.5)rrel(idim)=rrel(idim)+boxlen
+           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
         end do
         vrel=vd(1:3)/d-clump_velocity(peak_nr,1:3)
         frel=f(icellp(ipart),1:3)-clump_force(peak_nr,1:3)
@@ -498,7 +498,7 @@ subroutine trim_clumps
         rrel=xcell(1:ndim)-peak_pos(peak_nr,1:ndim)
         do idim=1,ndim
            if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-           if (period(idim) .and. rrel(idim)<boxlen*-0.5)rrel(idim)=rrel(idim)+boxlen
+           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
         end do
         r2=sum(rrel(1:ndim)**2)
         if (r2 > (ir_cloud*dx_loc)**2.)then        
@@ -705,19 +705,19 @@ subroutine surface_int(ind_cell,np,ilevel)
                          -center_of_mass(loc_clump_nr(j),1)
 
                     if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                    if (period(1) .and. r(j,1)<boxlen*-0.5)r(j,1)=r(j,1)+boxlen
+                    if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
 
                     r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5&
                          -center_of_mass(loc_clump_nr(j),2)
 
                     if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                    if (period(2) .and. r(j,2)<boxlen*-0.5)r(j,2)=r(j,2)+boxlen
+                    if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
 
                     r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5&
                          -center_of_mass(loc_clump_nr(j),3)
 
                     if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                    if (period(3) .and. r(j,3)<boxlen*-0.5)r(j,3)=r(j,3)+boxlen
+                    if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
 
                  endif                 
               end do
@@ -787,19 +787,19 @@ subroutine surface_int(ind_cell,np,ilevel)
                             -center_of_mass(loc_clump_nr(j),1)
                        
                        if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                       if (period(1) .and. r(j,1)<boxlen*-0.5)r(j,1)=r(j,1)+boxlen
+                       if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
                        
                        r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass(loc_clump_nr(j),2)
                        
                        if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                       if (period(2) .and. r(j,2)<boxlen*-0.5)r(j,2)=r(j,2)+boxlen
+                       if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
 
                        r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass(loc_clump_nr(j),3)
                        
                        if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                       if (period(3) .and. r(j,3)<boxlen*-0.5)r(j,3)=r(j,3)+boxlen
+                       if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
                        
                     endif
                  end do
