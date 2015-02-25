@@ -405,7 +405,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         dmom(:)=0d0                                                       
         if(rt_isoPress .and. .not. (rt_isIR .and. i==iIR)) then 
            ! rt_isoPress: assume f=1, where f is reduced flux.
-           fluxMag=sqrt(sum(dFp(i,:)))
+           fluxMag=sqrt(sum((dFp(i,:))**2))
            if(fluxMag .gt. 0d0)                                          &
                 dmom(:) = dmom(:) + dNp(i) * dFp(i,:)/fluxMag * dt       &
                     * (phAbs(i)+phSc(i))  * group_egy(i) * ev_to_erg/c_cgs    

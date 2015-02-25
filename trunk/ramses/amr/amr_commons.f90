@@ -23,6 +23,13 @@ module amr_commons
   real(dp)::rho_tot=0.0D0                       ! Mean density in the box
   real(dp)::t=0.0D0                             ! Time variable
 
+  ! executable identification
+  CHARACTER(LEN=80)::builddate,patchdir
+  CHARACTER(LEN=80)::gitrepo,gitbranch,githash
+
+  ! Save namelist filename
+  CHARACTER(LEN=80)::namelist_file
+
   ! MPI variables
   integer::ncpu,ndomain,myid,overload=1
 

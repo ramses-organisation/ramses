@@ -45,8 +45,6 @@ program output2tipsy_v2
   integer,dimension(:),allocatable::cpu_list
 
   integer::ndummy=64,ndummypart,nmin,nmax,nold,nnold,ndummyold
-  real(KIND=8),dimension(:,:),allocatable::xp
-  real(KIND=8),dimension(:,:),allocatable::varp
   integer::partcount,respart,denspartcount
   real(KIND=8)::dummy,partmass,volume,facdens=0.d0,averdens
   integer::delm=0,levelsel
@@ -326,8 +324,8 @@ program output2tipsy_v2
 
   if(typ=='all'.and.ndim==3) then
      call readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
-          lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,&
-          ndm_actual,nstar_actual,xpart,vpart,mpart,idpart,age,met)
+          & lmin,lmax,xmin,xmax,ymin,ymax,zmin,zmax,nmin,nmax,npart_actual,&
+          & ndm_actual,nstar_actual)!,xpart,vpart,mpart,idpart,age,met)
 
      mdm=1d30
      do i=1,npart_actual
@@ -336,8 +334,8 @@ program output2tipsy_v2
      mdm=mdm*omega_b/(omega_m-omega_b)
 
      call gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facdens,&
-          levelsel,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,&
-          partmass,averdens,xp,varp,denspartcount)
+          & levelsel,lmax,xmin,xmax,ymin,ymax,zmin,zmax,mdm,&
+          & partmass,averdens,xp,varp,denspartcount)
 
      nmin=1
      nmax=denspartcount

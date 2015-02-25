@@ -105,7 +105,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------
   ! Update sink cloud particle properties
   !-----------------
-  if(sink)call update_cloud(ilevel,.false.)
+  if(sink)call update_cloud(ilevel)
 
   !-----------------
   ! Particle leakage
@@ -140,8 +140,11 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output frame to movie dump (without synced levels)
   !----------------------------
   if(movie) then
-     if(aexp>=amovout(imov).or.t>=tmovout(imov))then
-        call output_frame()
+     if(imov.le.imovout)then ! ifort returns error for next statement if looking
+                             ! beyond what is allocated as an array amovout/tmovout
+        if(aexp>=amovout(imov).or.t>=tmovout(imov))then
+           call output_frame()
+        endif
      endif
   end if
 

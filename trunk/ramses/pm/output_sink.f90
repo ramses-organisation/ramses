@@ -80,6 +80,8 @@ subroutine backup_sink(filename)
      deallocate(nb)
      write(ilun)sinkint_level ! Write level at which sinks where integrated
   endif
+  close(ilun)
+
 end subroutine backup_sink
 
 
