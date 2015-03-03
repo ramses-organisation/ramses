@@ -29,7 +29,7 @@ subroutine flag_formation_sites
   if(ndim>1)period(2)=(ny==1)
 #endif
 #if NDIM>2
-  if(ndim>2)period(3)=(nz==1
+  if(ndim>2)period(3)=(nz==1)
 #endif
 
 
@@ -245,7 +245,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   if(ndim>1)period(2)=(ny==1)
 #endif
 #if NDIM>2
-  if(ndim>2)period(3)=(nz==1
+  if(ndim>2)period(3)=(nz==1)
 #endif
 
 #if NDIM==3
@@ -464,7 +464,7 @@ subroutine trim_clumps
   if(ndim>1)period(2)=(ny==1)
 #endif
 #if NDIM>2
-  if(ndim>2)period(3)=(nz==1
+  if(ndim>2)period(3)=(nz==1)
 #endif
 #if NDIM==3
   ! Conversion factor from user units to cgs units
@@ -641,7 +641,7 @@ subroutine surface_int(ind_cell,np,ilevel)
   if(ndim>1)period(2)=(ny==1)
 #endif
 #if NDIM>2
-  if(ndim>2)period(3)=(nz==1
+  if(ndim>2)period(3)=(nz==1)
 #endif
 
 #if NDIM==3
