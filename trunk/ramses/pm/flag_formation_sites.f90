@@ -13,7 +13,7 @@ subroutine flag_formation_sites
   !=============================================================================
 
   real(dp),dimension(1:nvector,1:3)::pos
-  real(dp),dimension(1:3)::rrel
+  real(dp),dimension(1:ndim)::rrel
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
   integer::j,jj,i,nx_loc,idim
   integer::flag_form,flag_form_tot,info
@@ -25,9 +25,12 @@ subroutine flag_formation_sites
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
-
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
 
   !gridspacing and physical scales
@@ -238,11 +241,14 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
-
-
+#if NDIM==3
   call surface_pressure
   
   !initialize arrays
@@ -427,7 +433,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
         end if
      end do
   end if
-  
+#endif
 end subroutine compute_clump_properties_round2
 !#########################################################################
 !#########################################################################
@@ -455,10 +461,13 @@ subroutine trim_clumps
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
-
-
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
+#if NDIM==3
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
@@ -513,7 +522,7 @@ subroutine trim_clumps
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
 #endif
-
+#endif
 end subroutine trim_clumps
 !#########################################################################
 !#########################################################################
@@ -629,8 +638,12 @@ subroutine surface_int(ind_cell,np,ilevel)
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
 #if NDIM==3
 
