@@ -730,13 +730,15 @@ subroutine collect_acczone_avg(ilevel)
      ip=0
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
-        ! initialize difmag_switch so zero for all cells in this level
-        do ind=1,twotondim
-           iskip=ncoarse+(ind-1)*ngridmax
-           ind_cell=iskip+igrid
-           difmag_switch(ind_cell)=0
-           if (uold(ind_cell,1)<0.)difmag_switch(ind_cell)=1
-        end do
+        if(diffuse_acczone)then
+           ! initialize difmag_switch so zero for all cells in this level
+           do ind=1,twotondim
+              iskip=ncoarse+(ind-1)*ngridmax
+              ind_cell=iskip+igrid
+              difmag_switch(ind_cell)=0
+              if (uold(ind_cell,1)<0.)difmag_switch(ind_cell)=1
+           end do
+        end if
 
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
@@ -818,11 +820,13 @@ subroutine collect_acczone_avg(ilevel)
      weighted_divergence(isink,ilevel)=wdiv_new(isink)
   end do
 
-
-#ifndef WITHOUTMPI
-  call make_virtual_fine_int(difmag_switch(1),ilevel)
-#endif
   
+#ifndef WITHOUTMPI
+  if(diffuse_acczone)then
+     call make_virtual_fine_int(difmag_switch(1),ilevel)
+  end if
+#endif
+
 
 111 format('   Entering collect_acczone_avg for level ',I2)
 
@@ -855,7 +859,11 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
   real(dp),dimension(1:nvector),save::egas,divpart
   real(dp),dimension(1:nvector,1:ndim),save::xpart
+#ifdef SOLVERmhd
+  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
+#else
   real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
+#endif
   integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   ! dummy variables
   real(dp),dimension(1:nvector,1:ndim)::xx
@@ -3231,7 +3239,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,diffuse_acczone
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -3352,6 +3360,10 @@ subroutine read_sink_params()
   else
      !convert msink_direct in code units
      msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
+  end if
+
+  if(diffuse_acczone .and. difmag <= 0.)then
+     if(myid==1)print*, 'a diffusive accretion zone needs a non-zero difmag parameter '
   end if
 
 end subroutine read_sink_params
@@ -4211,8 +4223,13 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   implicit none
   integer::ng,np,ilevel
   logical::ilevel_only
+
   integer ,dimension(1:nvector)::ind_grid,ind_grid_part
+#ifdef SOLVERmhd
+  real(dp) ,dimension(1:nvector,1:nvar+3)::fluid_var
+#else
   real(dp) ,dimension(1:nvector,1:nvar)::fluid_var
+#endif
   real(dp) ,dimension(1:nvector,1:ndim)::xpart
 
   !------------------------------------------------------------------
@@ -4268,12 +4285,14 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
      end do
   end if
   
-  if (ilevel_only)then
-     do ind=1,twotondim
-        do j=1,np
-           difmag_switch(indp(j,ind))=1
+  if(diffuse_acczone)then
+     if (ilevel_only)then
+        do ind=1,twotondim
+           do j=1,np
+              difmag_switch(indp(j,ind))=1
+           end do
         end do
-     end do
+     end if
   end if
 
 end subroutine cic_get_vals

@@ -763,13 +763,15 @@ subroutine consup(uin,flux,div,dt,ngrid,dif_mask)
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::div 
 
   integer,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::dif_mask
-  
 
   integer:: i, j, k, l, n
   real(dp)::factor
   real(dp),dimension(1:nvector),save:: div1
 
   factor=half**(ndim-1)
+
+  if(.not. diffuse_acczone)dif_mask=1
+
 
   ! Add diffusive flux where flow is compressing
   do n = 1, nvar

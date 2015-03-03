@@ -528,19 +528,29 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            do ivar=1,nvar
               do i=1,nbuffer
                  u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-                 if(difmag_switch(ibuffer_father(i,j))==1)then
-                    dif_mask_coarse(i,j)=1
-                 else
-                    dif_mask_coarse(i,j)=0
-                 end if
               end do
            end do
         end do
+        if(diffuse_acczone)then
+           do j=0,twondim
+              do ivar=1,nvar
+                 do i=1,nbuffer
+                    if(difmag_switch(ibuffer_father(i,j))==1)then
+                       dif_mask_coarse(i,j)=1
+                    else
+                       dif_mask_coarse(i,j)=0
+                    end if
+                 end do
+              end do
+           end do
+        end if
         call interpol_hydro(u1,u2,nbuffer)
-        !straight injection of dif_mask for the time being
-        do ind=1,twotondim
-           dif_mask_interpol(1:nbuffer,ind)=dif_mask_coarse(1:nbuffer,0)
-        end do
+        if(diffuse_acczone)then
+           !straight injection of dif_mask for the time being
+           do ind=1,twotondim
+              dif_mask_interpol(1:nbuffer,ind)=dif_mask_coarse(1:nbuffer,0)
+           end do
+        end if
      endif
 
      ! Loop over 2x2x2 cells
@@ -563,16 +573,22 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do ivar=1,nvar
            do i=1,nexist
               uloc(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
-              if (difmag_switch(ind_cell(i))==1)then
-                 dif_mask(ind_exist(i),i3,j3,k3)=1
-              else
-                 dif_mask(ind_exist(i),i3,j3,k3)=0
+              if(diffuse_acczone)then
+                 if (difmag_switch(ind_cell(i))==1)then
+                    dif_mask(ind_exist(i),i3,j3,k3)=1
+                 else
+                    dif_mask(ind_exist(i),i3,j3,k3)=0
+                 end if
               end if
            end do
            do i=1,nbuffer
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
-              dif_mask(ind_nexist(i),i3,j3,k3)=dif_mask_interpol(i,ind_son)
            end do
+           if(diffuse_acczone)then
+              do i=1,nbuffer
+                 dif_mask(ind_nexist(i),i3,j3,k3)=dif_mask_interpol(i,ind_son)
+              end do
+           end if
         end do
         
         ! Gather gravitational acceleration
