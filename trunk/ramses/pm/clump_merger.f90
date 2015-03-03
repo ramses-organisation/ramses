@@ -28,13 +28,20 @@ subroutine compute_clump_properties(xx)
   logical::periodic
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
   periodic=period(1)
+#if NDIM>1
   if(ndim>1)periodic=periodic.or.period(2)
+#endif
+#if NDIM>2
   if(ndim>2)periodic=periodic.or.period(3)
-
+#endif
   !peak-patch related arrays before sharing information with other cpus
 
   min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
@@ -184,7 +191,7 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
-  !for periodic boxes the center of mass can be meaningless at that stag
+  !for periodic boxes the center of mass can be meaningless at that stage
   ! -> recompute center of mass relative to peak position
   
   if(periodic)then

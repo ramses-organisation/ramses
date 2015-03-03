@@ -25,9 +25,12 @@ subroutine flag_formation_sites
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
-
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
 
   !gridspacing and physical scales
@@ -238,9 +241,12 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
-
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
 
   call surface_pressure
@@ -454,9 +460,12 @@ subroutine trim_clumps
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
-
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -628,8 +637,12 @@ subroutine surface_int(ind_cell,np,ilevel)
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
+#if NDIM>1
   if(ndim>1)period(2)=(ny==1)
-  if(ndim>2)period(3)=(nz==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1
+#endif
 
 #if NDIM==3
 
