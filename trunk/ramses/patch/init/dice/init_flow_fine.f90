@@ -29,6 +29,8 @@ module dice_commons
   real(dp)::ic_scale_u     = 1.0
   real(dp)::ic_scale_age   = 1.0
   real(dp)::ic_scale_metal = 1.0
+  integer::ic_ifout        = 1
+  integer::ic_nfile        = 1
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
   character(len=4)::ic_head_name  = 'HEAD'
   character(len=4)::ic_pos_name   = 'POS '
@@ -43,6 +45,8 @@ module dice_commons
   real(dp)::gadget_scale_v = 1.0D5
   real(dp)::gadget_scale_m = 1.9891D43
   real(dp)::gadget_scale_t = 1.0D6*365*24*3600
+
+  real(dp),allocatable,dimension(:)::up
 
 end module dice_commons
 
@@ -111,11 +115,11 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::infile
   logical::file_exists
   ! Namelist definitions
-  namelist/dice_params/ ic_file,ic_format,IG_rho,IG_T2,IG_metal &
+  namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
        & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center
+       & ,ic_scale_metal,ic_center,ic_ifout
   !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
@@ -470,11 +474,13 @@ subroutine init_flow_fine(ilevel)
       init_dice_nml = .true.
       if(debug.and.myid==1) write(*,*) "DICE_PARAMS has been read correctly"
     end if
+    ifout = ic_ifout
     ! Initialise uold with values from the DICE_PARAMS namelist
-    call init_uold(ilevel)
+    call reset_uold(ilevel)
     ! Update the grid using the gas particles read from the Gadget1 file
     ! NGP scheme is used
     call condinit_loc(ilevel)
+    call init_uold(ilevel)
     ! Reverse update boundaries
     do ivar=1,nvar
         call make_virtual_reverse_dp(uold(1,ivar),ilevel)
@@ -609,7 +615,7 @@ subroutine region_condinit(x,q,dx,nn)
   return
 end subroutine region_condinit
 
-subroutine init_uold(ilevel)
+subroutine reset_uold(ilevel)
   use amr_commons
   use hydro_commons
   use dice_commons
@@ -634,10 +640,58 @@ subroutine init_uold(ilevel)
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
-           if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH
-           if(ivar.eq.5) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
-           if(metal) then
-             if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
+        end do
+     end do
+  end do
+
+  ! Set uold to 0 for virtual boundary cells
+  do icpu=1,ncpu
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=1,nvar
+        do i=1,reception(icpu,ilevel)%ngrid
+           uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+        end do
+     end do
+  end do
+  end do
+
+111 format('   Entering init_uold for level ',i2)
+
+end subroutine reset_uold
+
+
+subroutine init_uold(ilevel)
+  use amr_commons
+  use hydro_commons
+  use dice_commons
+  implicit none
+  integer::ilevel
+  !--------------------------------------------------------------------------
+  ! This routine sets array unew to its initial value uold before calling
+  ! the hydro scheme. unew is set to zero in virtual boundaries.
+  !--------------------------------------------------------------------------
+  integer::i,ivar,irad,ind,icpu,iskip
+  real(dp)::d,u,v,w,e
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2, IS_cs2, IG_cs2
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Set uold to uold for myid cells
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=1,nvar
+        do i=1,active(ilevel)%ngrid
+           if(uold(active(ilevel)%igrid(i)+iskip,1).eq.0.) then
+              uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
+              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH
+              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
+              if(metal) then
+                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
+              endif
            endif
         end do
      end do
@@ -906,7 +960,7 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ! The temperature has been stored in the tp array
      ! to avoid the declaration of a new array
      ! and minimize MPI communications
-     ethermal(j)=tp(ind_part(j))
+     ethermal(j)=up(ind_part(j))
      ! Update hydro variable in NGP cell
      uold(indp(j),1)=uold(indp(j),1)+mp(ind_part(j))/vol_loc(j)
      uold(indp(j),2)=uold(indp(j),2)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),1)
