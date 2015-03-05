@@ -60,6 +60,7 @@ subroutine init_refine_2
 #endif
   use pm_commons
   use poisson_commons
+  use dice_commons
   implicit none
   integer::ilevel,i,ivar
 
@@ -73,7 +74,6 @@ subroutine init_refine_2
      enddo
      !!! ----------
      call refine_coarse
-     if(myid==1) write(*,*) "Level ",i
      do ilevel=1,nlevelmax
         call build_comm(ilevel)
         call make_virtual_fine_int(cpu_map(1),ilevel)
@@ -159,11 +159,13 @@ subroutine init_refine_2
   do ilevel=nlevelmax,levelmin,-1
      call merge_tree_fine(ilevel)
   end do
+  deallocate(up)
   !!! ----------
 
 #ifdef RT
   if(rt_is_init_xion .and. rt_nregion .eq. 0) then
-     if(myid==1) write(*,*) 'Initializing ionization states from T profile'
+     if(myid==1) write(*,*) 'Initializing ionization states from T
+profile'
      do ilevel=nlevelmax,1,-1
         call rt_init_xion(ilevel)
         call upload_fine(ilevel)
@@ -269,9 +271,9 @@ subroutine kill_gas_part(ilevel)
 #endif
   npart_all=sum(npart_cpu_all(1:ncpu))
   if(myid==1)then
-     write(*,*)'-----------------------------------------------'
+     write(*,'(A40)')"________________________________________"
      write(*,*)'Number of gas particles deleted=',npart_all
-     write(*,*)'-----------------------------------------------'
+     write(*,'(A40)')"________________________________________"
   endif
   do ipart=1,npart
     idp(ipart) = idp(ipart)-1
