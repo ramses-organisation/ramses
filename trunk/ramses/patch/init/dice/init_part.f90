@@ -1048,6 +1048,10 @@ subroutine init_part
                   if(cc(i)==myid)then
 #endif
                     ipart          = ipart+1
+                    if(ipart.gt.npartmax) then
+                       write(*,*) "Increase npartmax"
+                       call clean_stop
+                    endif
                     xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                     vp(ipart,1:3)  = vv(i,1:3)
                     ! Flag gas particles with idp=1
