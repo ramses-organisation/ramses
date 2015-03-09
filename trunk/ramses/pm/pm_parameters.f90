@@ -33,8 +33,5 @@ module pm_parameters
   real(dp)::sink_seedmass=5.4d-4             ! Initial mass sinks are created with in bondi or flux accretion case (in solar masses)
   real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
                                              ! gives fration of available gas that can be accreted in one timestep.
-  logical::diffuse_acczone=.false.           ! If set to true, the difmag parameter will only be activated inside the sink accretion zone.
-                                             ! This can help to prevent crashes because of negative densities, especially when
-                                             ! nol_accretion=.true.
 
 end module pm_parameters

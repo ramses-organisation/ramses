@@ -668,7 +668,7 @@ subroutine collect_acczone_avg(ilevel)
   use pm_commons
   use amr_commons
   use poisson_commons
-  use hydro_commons,only:difmag_switch,uold
+  use hydro_commons,only:difmag_switch,diffuse_acczone,uold
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -1458,6 +1458,7 @@ subroutine compute_accretion_rate(write_sinks)
         end if
 
         ! extrapolate to rho_inf
+        if(.not. r2>0)print*,myid,'r2 is zero',velocity(1:3),vsink(isink,1:3),(velocity(1:3)-vsink(isink,1:3))
         rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))
 
         ! Compute Bondi-Hoyle accretion rate in code units
@@ -3239,7 +3240,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,diffuse_acczone
+       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -3360,10 +3361,6 @@ subroutine read_sink_params()
   else
      !convert msink_direct in code units
      msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
-  end if
-
-  if(diffuse_acczone .and. difmag <= 0.)then
-     if(myid==1)print*, 'a diffusive accretion zone needs a non-zero difmag parameter '
   end if
 
 end subroutine read_sink_params
@@ -4219,7 +4216,7 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: nvar,uold,difmag_switch
+  use hydro_commons, ONLY: nvar,uold,difmag_switch,diffuse_acczone
   implicit none
   integer::ng,np,ilevel
   logical::ilevel_only
