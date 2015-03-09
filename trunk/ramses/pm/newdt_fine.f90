@@ -62,18 +62,19 @@ subroutine newdt_fine(ilevel)
      end if
   end if
 #endif
-
+  
 #ifdef RT
   ! Maximum time step for radiative transfer
   if(rt_advect)then
      call get_rt_courant_coarse(dt_rt)
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_rt/2.0**(ilevel-levelmin))
+     if(myid==1 .and. ilevel==nlevelmax)print*,'rt timestep = ',dt_rt/2.0**(ilevel-levelmin)
      if(static) RETURN
   endif
 #endif
-
+  
   if(pic) then
-
+     
      dt_all=dtnew(ilevel); dt_loc=dt_all
      ekin_all=0.0; ekin_loc=0.0
      
@@ -161,8 +162,13 @@ subroutine newdt_fine(ilevel)
      end if
 
   end if
+  
+  if(myid==1 .and. ilevel==nlevelmax)print*,'rt/particle timestep = ',dtnew(ilevel)
+
+
 
   if(hydro)call courant_fine(ilevel)
+  if(myid==1 .and. ilevel==nlevelmax)print*,'rt/particle/hydro timestep = ',dtnew(ilevel)
   
 111 format('   Entering newdt_fine for level ',I2)
 

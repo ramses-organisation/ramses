@@ -32,7 +32,7 @@ subroutine compute_clump_properties(xx)
   if(ndim>1)period(2)=(ny==1)
 #endif
 #if NDIM>2
-  if(ndim>2)period(3)=(nz==1
+  if(ndim>2)period(3)=(nz==1)
 #endif
 
   periodic=period(1)

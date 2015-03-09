@@ -74,6 +74,8 @@ module hydro_parameters
   real(dp),dimension(1:512)::gamma_rad=1.33333333334d0
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
+  logical::diffuse_acczone=.false.   ! If set to true, the difmag parameter will only be activated inside the sink accretion zone.
+                                     ! This can help to prevent crashes because of negative densities, especially when nol_accretion=.true.
   real(dp)::smallc=1.d-10
   real(dp)::smallr=1.d-10
   character(LEN=10)::scheme='muscl'

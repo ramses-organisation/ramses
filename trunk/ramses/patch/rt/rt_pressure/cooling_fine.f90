@@ -198,7 +198,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(is_kIR_T) then                      !       k_IR depends on T
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR)  * (TR/10d0)**2
+              TR = min(TR,100.)
+              kScIR  = kappaSc(iIR)  * (TR/10d0)**1.9
            endif
            kScIR = kScIR*scale_d*scale_l
            flux = rtuold(il,iNp+1:iNp+ndim)
@@ -289,10 +290,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! You can put your own polytrope EOS here
      !==========================================
 
-     if(cooling)then
+     if(cooling .or. neq_chem)then
         ! Compute thermal temperature by subtracting polytrope
         do i=1,nleaf
-           T2(i) = max(T2(i)-T2min(i),T2_min_fix)
+           T2(i) = max(T2(i)-T2min(i),T2_min_fix*0.01)
         end do
      endif
 
@@ -494,7 +495,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(is_kIR_T) then                        !    k_IR depends on T
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+              TR = min(TR,100.)
+              kScIR  = kappaSc(iIR) * (TR/10d0)**1.9               
            endif                                                        
            tau=nH(i) * Zsolar(i) * unit_tau * kScIR                    
            f_trap = exp(-1d0/tau)            ! Frac. of trapped IR photons

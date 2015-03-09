@@ -30,8 +30,8 @@ SUBROUTINE rt_init
      call clean_stop
   endif
 
-  if(rt_star .or. sedprops_update .ge. 0) &
-     call init_SED_table    ! init stellar energy distribution properties
+!  if(rt_star .or. sedprops_update .ge. 0) &
+!     call init_SED_table    ! init stellar energy distribution properties
 
   if(rt .and. .not. hydro) then
      if(myid==1) then
