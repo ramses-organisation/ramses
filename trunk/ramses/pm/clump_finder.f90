@@ -757,7 +757,6 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
      neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in 
   end do
   do j=1,np
-     ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
      ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
      av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell

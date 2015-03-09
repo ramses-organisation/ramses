@@ -668,7 +668,6 @@ subroutine collect_acczone_avg(ilevel)
   use pm_commons
   use amr_commons
   use poisson_commons
-  use hydro_commons,only:difmag_switch,diffuse_acczone,uold
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -687,7 +686,7 @@ subroutine collect_acczone_avg(ilevel)
   ! No gaussian accretion kernel is used anymore...
   !------------------------------------------------------------------------
 
-  integer::igrid,jgrid,ipart,jpart,next_part,info,ind,iskip,ind_cell
+  integer::igrid,jgrid,ipart,jpart,next_part,info,ind
   integer::ig,ip,npart1,npart2,icpu,nx_loc,isink
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::dx_loc,dx_min,scale,factG
@@ -730,16 +729,6 @@ subroutine collect_acczone_avg(ilevel)
      ip=0
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
-        if(diffuse_acczone)then
-           ! initialize difmag_switch so zero for all cells in this level
-           do ind=1,twotondim
-              iskip=ncoarse+(ind-1)*ngridmax
-              ind_cell=iskip+igrid
-              difmag_switch(ind_cell)=0
-              if (uold(ind_cell,1)<0.)difmag_switch(ind_cell)=1
-           end do
-        end if
-
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
         
@@ -820,14 +809,6 @@ subroutine collect_acczone_avg(ilevel)
      weighted_divergence(isink,ilevel)=wdiv_new(isink)
   end do
 
-  
-#ifndef WITHOUTMPI
-  if(diffuse_acczone)then
-     call make_virtual_fine_int(difmag_switch(1),ilevel)
-  end if
-#endif
-
-
 111 format('   Entering collect_acczone_avg for level ',I2)
 
 end subroutine collect_acczone_avg
@@ -859,11 +840,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
   real(dp),dimension(1:nvector),save::egas,divpart
   real(dp),dimension(1:nvector,1:ndim),save::xpart
-#ifdef SOLVERmhd
-  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
-#else
   real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
-#endif
   integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   ! dummy variables
   real(dp),dimension(1:nvector,1:ndim)::xx
@@ -1206,7 +1183,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   do ind=1,twotondim
      do j=1,np
         if(ok(j,ind))then
-
+           
            ! Convert uold to primitive variables
            d=uold(indp(j,ind),1)
            vv(1)=uold(indp(j,ind),2)/d
@@ -1295,10 +1272,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            nolacc=nol_accretion
            ! for accretion from very low density cells
            ! do accrete angular momentum (to prevent negative densities...)
-           if (.not. on_creation)then
-              if(d < 1.d-3*d_sink .or. density < 1.d-3*d_sink)nolacc=.false.
-           end if
-           
+           !        if (.not. on_creation)then
+           !           if(d < 1.d-4*d_sink .or. density < 1.d-4*d_sink)nolacc=.false.
+           !        end if
+
            if(nolacc)then
               p_rel_acc=p_rel_rad*acc_mass/(d*vol_loc)
            else
@@ -1316,21 +1293,21 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
            ! Check for neg density inside sink accretion radius
-           ! if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
-           !    write(*,*)'====================================================='
-           !    write(*,*)'DANGER of neg density :-( at location'
-           !    write(*,*)xx(j,1:3,ind)
-           !    write(*,*)'due to',isink
-           !    write(*,*)acc_mass/vol_loc,d/d_sink,density/d_sink
-           !    write(*,*)indp(j,ind),myid
-           !    write(*,*)'nol_accretion: ',nolacc
-           !    do i=1,nsink
-           !       write(*,*)i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
-           !    end do
-           !    write(*,*)'try to decrease c_acc in SINK_PARAMS'
-           !    write(*,*)'====================================================='
-           !    !           call clean_stop
-           ! end if
+           if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
+              write(*,*)'====================================================='
+              write(*,*)'DANGER of neg density :-( at location'
+              write(*,*)xx(j,1:3,ind)
+              write(*,*)'due to',isink
+              write(*,*)acc_mass/vol_loc,d/d_sink,density/d_sink
+              write(*,*)indp(j,ind),myid
+              write(*,*)'nol_accretion: ',nolacc
+              do i=1,nsink
+                 write(*,*)i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
+              end do
+              write(*,*)'try to decrease c_acc in SINK_PARAMS'
+              write(*,*)'====================================================='
+              !           call clean_stop
+           end if
 
 
            if (on_creation)then
@@ -1458,7 +1435,6 @@ subroutine compute_accretion_rate(write_sinks)
         end if
 
         ! extrapolate to rho_inf
-        if(.not. r2>0)print*,myid,'r2 is zero',velocity(1:3),vsink(isink,1:3),(velocity(1:3)-vsink(isink,1:3))
         rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))
 
         ! Compute Bondi-Hoyle accretion rate in code units
@@ -1490,7 +1466,7 @@ subroutine compute_accretion_rate(write_sinks)
            ! If accretion is subsonic (sonic radius smaller than accretion radius), use Bondi-rate instead.
            if ((0.5*msink(isink)/c2) < (ir_cloud*dx_min))then
               dMsink_overdt(isink)=dMBHoverdt(isink)
-!              bondi_switch(isink)=.true.
+              bondi_switch(isink)=.true.
            end if
         end if
 
@@ -4216,17 +4192,12 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: nvar,uold,difmag_switch,diffuse_acczone
+  use hydro_commons, ONLY: nvar,uold
   implicit none
   integer::ng,np,ilevel
   logical::ilevel_only
-
   integer ,dimension(1:nvector)::ind_grid,ind_grid_part
-#ifdef SOLVERmhd
-  real(dp) ,dimension(1:nvector,1:nvar+3)::fluid_var
-#else
   real(dp) ,dimension(1:nvector,1:nvar)::fluid_var
-#endif
   real(dp) ,dimension(1:nvector,1:ndim)::xpart
 
   !------------------------------------------------------------------
@@ -4282,15 +4253,6 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
      end do
   end if
   
-  if(diffuse_acczone)then
-     if (ilevel_only)then
-        do ind=1,twotondim
-           do j=1,np
-              difmag_switch(indp(j,ind))=1
-           end do
-        end do
-     end if
-  end if
 
 end subroutine cic_get_vals
 

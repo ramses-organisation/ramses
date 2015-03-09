@@ -117,25 +117,6 @@ subroutine upl(ind_cell,ncell)
   end do
   ! End loop over variables
 
-  if(diffuse_acczone)then
-     do i=1,ncell
-        difmag_switch(ind_cell(i))=0
-     end do
-     do ind_son=1,twotondim
-        iskip_son=ncoarse+(ind_son-1)*ngridmax
-        do i=1,ncell
-           ind_cell_son(i)=iskip_son+igrid_son(i)
-        end do
-        
-        do i=1,ncell
-           if (difmag_switch(ind_cell_son(i))==1 .and. son(ind_cell_son(i))==0)then
-              difmag_switch(ind_cell(i))=1
-           end if
-        end do
-     end do
-  end if
-  
-
   !------------------------------------------------
   ! Average internal energy instead of total energy
   !------------------------------------------------

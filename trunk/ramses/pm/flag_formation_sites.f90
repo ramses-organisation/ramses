@@ -13,26 +13,14 @@ subroutine flag_formation_sites
   !=============================================================================
 
   real(dp),dimension(1:nvector,1:3)::pos
-  real(dp),dimension(1:ndim)::rrel
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
-  integer::j,jj,i,nx_loc,idim
+  integer::j,jj,i,nx_loc
   integer::flag_form,flag_form_tot,info
   logical::ok
-  real(dp)::dx,dx_min,dist2,scale,tff,acc_r
+  real(dp)::dx,dx_min,dist,scale,tff,acc_r
   real(dp)::fourpi,threepi2
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
-  logical,dimension(1:ndim)::period
-
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-
-
   !gridspacing and physical scales
   dx=0.5D0**nlevelmax
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -64,13 +52,10 @@ subroutine flag_formation_sites
      !block peaks that are closer than R_accretion from existing sinks
      do j=1,nsink
         do i=1,npeaks
-           rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
-           do idim=1,ndim
-              if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-              if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
-           end do
-           dist2=sum(rrel**2)
-           if (dist2<(ir_cloud*dx_min)**2)then
+           dist=(xsink(j,1)-peak_pos(i,1))**2+&
+                (xsink(j,2)-peak_pos(i,2))**2+&
+                (xsink(j,3)-peak_pos(i,3))**2
+           if (dist<(ir_cloud*dx_min)**2)then
               occupied(i)=1
               if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
            end if
@@ -229,7 +214,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   !----------------------------------------------------------------------------
 
   integer::ipart,ilevel,info,i,peak_nr,global_peak_id,j,ii,jj
-  integer::grid,nx_loc,ix,iy,iz,ind,icpu,idim
+  integer::grid,nx_loc,ix,iy,iz,ind,icpu
   integer::dummy,dummy_tot
   real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
@@ -238,17 +223,7 @@ subroutine compute_clump_properties_round2(xx,all_bound)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
-  logical,dimension(1:ndim)::period
 
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-
-#if NDIM==3
   call surface_pressure
   
   !initialize arrays
@@ -320,10 +295,6 @@ subroutine compute_clump_properties_round2(xx,all_bound)
         
         !properties of the cell relative to center of mass
         rrel=xcell(1:3)-center_of_mass(peak_nr,1:3)
-        do idim=1,ndim
-           if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
-        end do
         vrel=vd(1:3)/d-clump_velocity(peak_nr,1:3)
         frel=f(icellp(ipart),1:3)-clump_force(peak_nr,1:3)
 
@@ -421,19 +392,18 @@ subroutine compute_clump_properties_round2(xx,all_bound)
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
-
            write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
                 ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
-                ,abs(Icl_d(j))/Icl_dd(j)&
-                ,grav_term(j),-1.*Psurf(j)&
-                ,e_kin_int(j),e_thermal(j)
+                      ,abs(Icl_d(j))/Icl_dd(j)&
+                      ,grav_term(j),-1.*Psurf(j)&
+                      ,e_kin_int(j),e_thermal(j)
         end if
      end do
   end if
-#endif
+  
 end subroutine compute_clump_properties_round2
 !#########################################################################
 !#########################################################################
@@ -456,18 +426,9 @@ subroutine trim_clumps
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer ::ix,iy,iz,grid,peak_nr,glob_peak_nr
 
-  real(dp),dimension(1:3)::skip_loc,xcell,rrel
+  real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
-  logical,dimension(1:ndim)::period
 
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-#if NDIM==3
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
@@ -504,12 +465,9 @@ subroutine trim_clumps
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-        rrel=xcell(1:ndim)-peak_pos(peak_nr,1:ndim)
-        do idim=1,ndim
-           if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
-        end do
-        r2=sum(rrel(1:ndim)**2)
+        r2=(peak_pos(peak_nr,1)-xcell(1))**2&
+             +(peak_pos(peak_nr,2)-xcell(2))**2&
+             +(peak_pos(peak_nr,3)-xcell(3))**2.
         if (r2 > (ir_cloud*dx_loc)**2.)then        
            !remove cell from clump
            flag2(icellp(ipart))=0
@@ -522,7 +480,7 @@ subroutine trim_clumps
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
 #endif
-#endif
+
 end subroutine trim_clumps
 !#########################################################################
 !#########################################################################
@@ -635,15 +593,6 @@ subroutine surface_int(ind_cell,np,ilevel)
   real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_dot_n
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
-  logical,dimension(1:ndim)::period
-
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
 
 #if NDIM==3
 
@@ -716,22 +665,10 @@ subroutine surface_int(ind_cell,np,ilevel)
                  if (clump_nr(j)>0)then                    
                     r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc*0.5&
                          -center_of_mass(loc_clump_nr(j),1)
-
-                    if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                    if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
-
                     r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5&
                          -center_of_mass(loc_clump_nr(j),2)
-
-                    if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                    if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
-
                     r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5&
                          -center_of_mass(loc_clump_nr(j),3)
-
-                    if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                    if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
-
                  endif                 
               end do
               
@@ -798,22 +735,10 @@ subroutine surface_int(ind_cell,np,ilevel)
                     if (clump_nr(j)>0)then                       
                        r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass(loc_clump_nr(j),1)
-                       
-                       if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                       if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
-                       
                        r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass(loc_clump_nr(j),2)
-                       
-                       if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                       if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
-
                        r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass(loc_clump_nr(j),3)
-                       
-                       if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                       if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
-                       
                     endif
                  end do
                  call get_cell_index(cell_index,cell_levl,xtest,ilevel+1,np)

@@ -24,7 +24,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
        & ,d_region,u_region,v_region,w_region,p_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
-       & ,niter_riemann,slope_type,difmag,diffuse_acczone &
+       & ,niter_riemann,slope_type,difmag &
 #if NENER>0
        & ,gamma_rad &
 #endif
@@ -275,20 +275,6 @@ subroutine read_hydro_params(nml_ok)
   ichem=ixion
   if(aton)ichem=ixion+1
   ! Last variable is ichem
-
-  !-----------------------------------
-  ! sanity check for some parameters
-  !-----------------------------------
-  if(diffuse_acczone .and. .not. sink)then
-     if(myid==1)print*, 'a diffusive accretion makes sense only for sink runs'
-     diffuse_acczone=.false.
-  end if
-  
-  if(diffuse_acczone .and. difmag <= 0.)then
-     if(myid==1)print*, 'a diffusive accretion zone needs a non-zero difmag parameter '
-     diffuse_acczone=.false.
-  end if
-  
 
 end subroutine read_hydro_params
 
