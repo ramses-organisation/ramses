@@ -1,3 +1,55 @@
+!========================================================================================
+!== Patch DICE
+!== Initial conditions to setup 1 or more galaxies computed from the DICE software
+!== Valentin Perret - October 2014
+!========================================================================================
+!==  Namelist settings:
+!==
+!==	ic_file     : Gadget1 file in the IC directory
+!== 	IG_rho      : Density of the intergalactic medium
+!== 	IG_T2       : Temperature of the intergalactic medium
+!== 	IG_metal    : Metallicity of the intergalactic medium
+!== 
+!========================================================================================
+
+
+module dice_commons
+  use amr_commons
+  use hydro_commons
+  
+  ! particle data
+  character(len=512)::ic_file, ic_format
+  ! misc  
+  real(dp)::IG_rho         = 1.0D-5
+  real(dp)::IG_T2          = 1.0D7
+  real(dp)::IG_metal       = 0.01
+  real(dp)::ic_scale_pos   = 1.0
+  real(dp)::ic_scale_vel   = 1.0
+  real(dp)::ic_scale_mass  = 1.0
+  real(dp)::ic_scale_u     = 1.0
+  real(dp)::ic_scale_age   = 1.0
+  real(dp)::ic_scale_metal = 1.0
+  integer::ic_ifout        = 1
+  integer::ic_nfile        = 1
+  real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
+  character(len=4)::ic_head_name  = 'HEAD'
+  character(len=4)::ic_pos_name   = 'POS '
+  character(len=4)::ic_vel_name   = 'VEL '
+  character(len=4)::ic_id_name    = 'ID  '
+  character(len=4)::ic_mass_name  = 'MASS'
+  character(len=4)::ic_u_name     = 'U   '
+  character(len=4)::ic_metal_name = 'Z   '
+  character(len=4)::ic_age_name   = 'AGE '
+  ! Gadget units in cgs
+  real(dp)::gadget_scale_l = 3.085677581282D21
+  real(dp)::gadget_scale_v = 1.0D5
+  real(dp)::gadget_scale_m = 1.9891D43
+  real(dp)::gadget_scale_t = 1.0D6*365*24*3600
+  real(dp),allocatable,dimension(:)::up
+  logical::dice_init       = .false.
+
+end module dice_commons
+
 !################################################################
 !################################################################
 !################################################################
@@ -67,37 +119,36 @@ subroutine init_refine_2
   if(filetype.eq.'grafic')return
 
   do i=levelmin,nlevelmax+1
-
-     !!! DICE------
+     ! DICE------
      do ilevel=levelmin-1,1,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo
-     !!! ----------
+     ! ----------
      call refine_coarse
      do ilevel=1,nlevelmax
         call build_comm(ilevel)
         call make_virtual_fine_int(cpu_map(1),ilevel)
         call refine_fine(ilevel)
-        !!! DICE------
+        ! DICE------
         if(pic)call make_tree_fine(ilevel)
-        !!! ----------
+        ! ----------
         if(hydro)call init_flow_fine(ilevel)
-        !!! DICE------
+        ! DICE------
         if(pic)then
            call kill_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
         endif
-        !!! ----------
+        ! ----------
 #ifdef RT
         if(rt)call rt_init_flow_fine(ilevel)
 #endif
      end do
       
-     !!! DICE------
+     ! DICE------
      do ilevel=nlevelmax-1,levelmin,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo
-     !!! ----------
+     ! ----------
      if(nremap>0)call load_balance
 
      do ilevel=levelmin,nlevelmax
@@ -144,7 +195,7 @@ subroutine init_refine_2
      call flag_coarse
 
   end do
-  !!! DICE------
+  ! DICE------
   do ilevel=levelmin-1,1,-1
     if(pic)call merge_tree_fine(ilevel)
   enddo  
@@ -160,12 +211,12 @@ subroutine init_refine_2
      call merge_tree_fine(ilevel)
   end do
   deallocate(up)
-  !!! ----------
+  dice_init=.false.
+  ! ----------
 
 #ifdef RT
   if(rt_is_init_xion .and. rt_nregion .eq. 0) then
-     if(myid==1) write(*,*) 'Initializing ionization states from T
-profile'
+     if(myid==1) write(*,*) 'Initializing ionization states from T profile'
      do ilevel=nlevelmax,1,-1
         call rt_init_xion(ilevel)
         call upload_fine(ilevel)
@@ -271,9 +322,9 @@ subroutine kill_gas_part(ilevel)
 #endif
   npart_all=sum(npart_cpu_all(1:ncpu))
   if(myid==1)then
-     write(*,'(A40)')"________________________________________"
-     write(*,*)'Number of gas particles deleted=',npart_all
-     write(*,'(A40)')"________________________________________"
+     write(*,'(A50)')"__________________________________________________"
+     write(*,'(A,I)')' Gas particles deleted ->',npart_all
+     write(*,'(A50)')"__________________________________________________"
   endif
   do ipart=1,npart
     idp(ipart) = idp(ipart)-1

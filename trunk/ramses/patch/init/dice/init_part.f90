@@ -99,7 +99,8 @@ subroutine init_part
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
+  allocate(up    (npartmax))
+  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0; up=0.
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
@@ -762,13 +763,14 @@ subroutine init_part
 
      !!! DICE
      case ('dice')
+        dice_init=.true.
         ! Conversion factor from user units to cgs units
         call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
         scale_m = scale_d*scale_l**3
-        allocate(up(npartmax))
         ! Reading header of the Gadget1 file
+        error=.false.
         do ifile=1,ic_nfile
-            write(ifile_str,*) ifile
+            write(ifile_str,*) ifile-1
             if(ic_nfile.eq.1) then
                filename=TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
             else
@@ -780,10 +782,10 @@ subroutine init_part
                call clean_stop
             endif
             if(myid==1)then
-              write(*,*) "Opening -> ",filename
+              write(*,'(A12,A)') " Opening -> ",filename
               if((ic_format.ne.'Gadget1').and.(ic_format.ne.'Gadget2')) then
                 write(*,*) 'Specify a valid IC file format [ic_format=Gadget1/Gadget2]'
-                call clean_stop
+                error=.true.
               endif
               OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access="stream")
               ! Init block address
@@ -844,6 +846,7 @@ subroutine init_part
               if(ic_format .eq. 'Gadget2') then
                 ! Init block counter
                 jump_blck = 1
+                write(*,'(A50)')"__________________________________________________"
                 do while(1)
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) dummy_int
@@ -857,7 +860,6 @@ subroutine init_part
                   read(1,POS=jump_blck+3*sizeof(dummy_int)+sizeof(blck_name),iostat=stat) blck_size
                   if(stat /= 0) exit
                   ! Saving data block positions
-                  write(*,'(A40)')"________________________________________"
                   if(blck_name .eq. ic_head_name) then
                     head_blck  = jump_blck+sizeof(blck_name)+4*sizeof(dummy_int)
                     head_size  = blck_size
@@ -903,11 +905,11 @@ subroutine init_part
               endif
               if((head_blck.eq.-1).or.(pos_blck.eq.-1).or.(vel_blck.eq.-1).or.(mass_blck.eq.-1)) then
                 write(*,*) 'Gadget file does not contain handful data'
-                call clean_stop
+                error=.true.
               endif
               if(head_size.ne.256) then
                 write(*,*) 'Gadget header is not 256 bytes'
-                call clean_stop
+                error=.true.
               endif
               ! Byte swapping doesn't appear to work if you just do READ(1)header
               READ(1,POS=head_blck) header%npart,header%mass,header%time,header%redshift, &
@@ -921,22 +923,23 @@ subroutine init_part
               nstar_tot = sum(header%npart(3:5))
               npart     = sum(header%npart)
 
-              write(*,'(A40)')"________________________________________"
+              write(*,'(A50)')"__________________________________________________"
               write(*,*)"Found ",npart," particles"
               write(*,*)"----> ",header%npart(1)," gas particles"
               write(*,*)"----> ",header%npart(2)," halo particles"
               write(*,*)"----> ",header%npart(3)," disk particles"
               write(*,*)"----> ",header%npart(4)," bulge particles"
               write(*,*)"----> ",header%npart(5)," stars particles"
-              write(*,'(A40)')"________________________________________"
+              write(*,'(A50)')"__________________________________________________"
               if((pos_size.ne.npart).or.(vel_size.ne.npart)) then
                 write(*,*) 'POS =',pos_size
                 write(*,*) 'VEL =',vel_size
                 write(*,*) 'Number of particles does not correspond to block sizes'
-                call clean_stop
+                error=.true.
               endif
 
             endif
+            if(error) call clean_stop
 #ifndef WITHOUTMPI
               call MPI_BCAST(nstar_tot,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
 #endif
@@ -954,6 +957,7 @@ subroutine init_part
               mm=0.
               tt=0.
               zz=0.
+              uu=0.
               if(myid==1)then
                 jpart=0
                 do i=1,nvector
@@ -1018,8 +1022,8 @@ subroutine init_part
                   if(kpart.le.header%npart(1)) mgas_tot = mgas_tot+mm(i)
                   ! Check the End Of Block
                   if(kpart.ge.npart) then
-                    write(*,*) 'File successfully loaded'
-                    write(*,'(A40)')"________________________________________"
+                    write(*,'(A,A7,A)') ' ',TRIM(ic_format),' file successfully loaded'
+                    write(*,'(A50)')"__________________________________________________"
                     eob=.true.
                     exit
                   endif
@@ -1033,6 +1037,7 @@ subroutine init_part
               call MPI_BCAST(mm,nvector    ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(zz,nvector    ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(tt,nvector    ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+              call MPI_BCAST(uu,nvector    ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(jpart,1       ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(header%npart,6,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
               call cmp_cpumap(xx,cc,jpart)
@@ -1059,6 +1064,7 @@ subroutine init_part
                     if(metal) then
                       zp(ipart)    = zz(i)
                     endif
+                    up(ipart)      = uu(i)
 #ifndef WITHOUTMPI
                   endif
 #endif
@@ -1066,7 +1072,8 @@ subroutine init_part
               lpart = lpart+jpart
             enddo
             if(myid==1)then
-               write(*,'(A,F10.3,A)') 'Gas mass in AMR grid -> ',mgas_tot,'D9 Msol'
+               write(*,'(A,F10.3,A)') ' Gas mass in AMR grid -> ',mgas_tot,'D9 Msol'
+               write(*,'(A50)')"__________________________________________________"
                close(1)
             endif
         enddo

@@ -1,54 +1,3 @@
-!========================================================================================
-!== Patch DICE
-!== Initial conditions to setup 1 or more galaxies computed from the DICE software
-!== Valentin Perret - October 2014
-!========================================================================================
-!==  Namelist settings:
-!==
-!==	ic_file     : Gadget1 file in the IC directory
-!== 	IG_rho      : Density of the intergalactic medium
-!== 	IG_T2       : Temperature of the intergalactic medium
-!== 	IG_metal    : Metallicity of the intergalactic medium
-!== 
-!========================================================================================
-
-
-module dice_commons
-  use amr_commons
-  use hydro_commons
-  
-  ! particle data
-  character(len=512)::ic_file, ic_format
-  ! misc  
-  real(dp)::IG_rho         = 1.0D-5
-  real(dp)::IG_T2          = 1.0D7
-  real(dp)::IG_metal       = 0.01
-  real(dp)::ic_scale_pos   = 1.0
-  real(dp)::ic_scale_vel   = 1.0
-  real(dp)::ic_scale_mass  = 1.0
-  real(dp)::ic_scale_u     = 1.0
-  real(dp)::ic_scale_age   = 1.0
-  real(dp)::ic_scale_metal = 1.0
-  integer::ic_ifout        = 1
-  integer::ic_nfile        = 1
-  real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
-  character(len=4)::ic_head_name  = 'HEAD'
-  character(len=4)::ic_pos_name   = 'POS '
-  character(len=4)::ic_vel_name   = 'VEL '
-  character(len=4)::ic_id_name    = 'ID  '
-  character(len=4)::ic_mass_name  = 'MASS'
-  character(len=4)::ic_u_name     = 'U   '
-  character(len=4)::ic_metal_name = 'Z   '
-  character(len=4)::ic_age_name   = 'AGE '
-  ! Gadget units in cgs
-  real(dp)::gadget_scale_l = 3.085677581282D21
-  real(dp)::gadget_scale_v = 1.0D5
-  real(dp)::gadget_scale_m = 1.9891D43
-  real(dp)::gadget_scale_t = 1.0D6*365*24*3600
-
-  real(dp),allocatable,dimension(:)::up
-
-end module dice_commons
 
 !################################################################
 !################################################################
@@ -480,10 +429,13 @@ subroutine init_flow_fine(ilevel)
     ! Update the grid using the gas particles read from the Gadget1 file
     ! NGP scheme is used
     call condinit_loc(ilevel)
-    call init_uold(ilevel)
     ! Reverse update boundaries
     do ivar=1,nvar
         call make_virtual_reverse_dp(uold(1,ivar),ilevel)
+    end do
+    call init_uold(ilevel)
+    do ivar=1,nvar
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
     end do
 
   end if
@@ -685,7 +637,7 @@ subroutine init_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           if(uold(active(ilevel)%igrid(i)+iskip,1).eq.0.) then
+           if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
               uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
               if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH
               if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
@@ -714,49 +666,43 @@ subroutine init_uold(ilevel)
 end subroutine init_uold
 
 subroutine condinit_loc(ilevel)
-  !================================================================
-  ! This routine generates initial conditions for RAMSES
-  ! using gas particles read from a Gadget1 IC file.
-  ! It uses the NGP scheme of the thermal feedback routine
-  !================================================================
-  use dice_commons
+  use amr_commons
   use pm_commons
-  use amr_parameters
-  use hydro_parameters
+  use hydro_commons
+  use poisson_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-
   integer::ilevel
-  !------------------------------------------------------------------------
-  ! This routine computes the thermal energy, the kinetic energy and 
-  ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
-  ! This routine is called every fine time step.
-  !------------------------------------------------------------------------
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal
-  integer::igrid,jgrid,ipart,jpart,next_part
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc
-  real(dp),dimension(1:3)::skip_loc
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  !------------------------------------------------------------------
+  ! This routine computes the initial density field at level ilevel using
+  ! the CIC scheme from particles that are not entirely in
+  ! level ilevel (boundary particles).
+  ! Arrays flag1 and flag2 are used as temporary work space.
+  !------------------------------------------------------------------
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,next_part
+  integer::i,ig,ip,npart1,npart2
+  real(dp)::dx
 
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+   
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! Gather star particles only.
-#if NDIM==3
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel 
+  
   ! Loop over cpus
   do icpu=1,ncpu
+     ! Loop over grids
      igrid=headl(icpu,ilevel)
      ig=0
-     ip=0
-     ! Loop over grids
+     ip=0   
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
-        
-        ! Count star particles
+
+        ! Count gas particles
         if(npart1>0)then
            ipart=headp(igrid)
            ! Loop over particles
@@ -769,43 +715,65 @@ subroutine condinit_loc(ilevel)
               ipart=next_part  ! Go to next particle
            end do
         endif
-        
+
         ! Gather star particles
         if(npart2>0)then        
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
+           
            ! Loop over particles
-           do jpart=1,npart1
+           do jpart=1,npart2
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              ! Select only star particles
-              if(idp(ipart).eq.1)then
+              if(idp(ipart).eq.1) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
-                 call init_gas_ngp(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 ! Lower left corner of 3x3x3 grid-cube
+                 do idim=1,ndim
+                    do i=1,ig
+                       x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+                    end do
+                 end do
+                 do i=1,ig
+                    ind_cell(i)=father(ind_grid(i))
+                 end do
+                 call init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
                  ip=0
                  ig=0
               end if
               ipart=next_part  ! Go to next particle
            end do
            ! End loop over particles
+           
         end if
+
         igrid=next(igrid)   ! Go to next grid
      end do
      ! End loop over grids
-     if(ip>0)call init_gas_ngp(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  end do 
-  ! End loop over cpus
 
-#endif
+     if(ip>0)then
+        ! Lower left corner of 3x3x3 grid-cube
+        do idim=1,ndim
+           do i=1,ig
+              x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+           end do
+        end do
+        do i=1,ig
+           ind_cell(i)=father(ind_grid(i))
+        end do
+        call init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+     end if
+
+  end do
+  ! End loop over cpus
 
 111 format('   Entering condinit_loc for level ',I2)
 
@@ -814,51 +782,41 @@ end subroutine condinit_loc
 !==================================================================================
 !==================================================================================
 
-subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
-  use random
   use dice_commons
+  use cooling_module
   implicit none
   integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
-  !-----------------------------------------------------------------------
-  ! This routine is called by subroutine feedback. Each stellar particle
-  ! dumps mass, momentum and energy in the nearest grid cell using array
-  ! unew.
-  !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc
-  real(kind=8)::RandNum
-  real(dp)::SN_BOOST,mstar,dx_min,vol_min
-  real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
-  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig
-  real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::dx,dx_loc,scale,birth_time,current_time
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  !------------------------------------------------------------------
+  ! This routine computes the initial density field at level ilevel using
+  ! the CIC scheme. Only cells that are in level ilevel
+  ! are updated by the input particle list.
+  !------------------------------------------------------------------
   logical::error
-  ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
+  integer::j,ind,idim,nx_loc
+  real(dp)::dx,dx_loc,scale
+  ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
-  logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mloss,mzloss,ethermal,ekinetic,dteff
-  real(dp),dimension(1:nvector),save::vol_loc
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  ! Particle-based arrays
+  logical ,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector,1:ndim),save::xx,dd,dg
+  integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
+  real(dp),dimension(1:nvector,1:twotondim),save::vol
+  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:nvector),save::ethermal,ekinetic
+  real(dp),dimension(1:nvector),save::vol_loc
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
-  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel
+  dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -867,110 +825,194 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc(1:nvector)=dx_loc**ndim
-  dx_min=(0.5D0**nlevelmax)*scale
-  vol_min=dx_min**ndim
 
-#if NDIM==3
-  ! Lower left corner of 3x3x3 grid-cube
-  do idim=1,ndim
-     do i=1,ng
-        x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
-     end do
-  end do
-
-  ! Gather 27 neighboring father cells (should be present anytime !)
-  do i=1,ng
-     ind_cell(i)=father(ind_grid(i))
-  end do
+  ! Gather neighboring father cells (should be present anytime !)
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
 
-  ! Rescale position at level ilevel
+  ! Rescale particle position at level ilevel
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+        xx(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
      end do
   end do
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
+        xx(j,idim)=xx(j,idim)-x0(ind_grid_part(j),idim)
      end do
   end do
   do idim=1,ndim
      do j=1,np
-        x(j,idim)=x(j,idim)/dx
-     end do
-  end do
-
-  ! NGP at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim)=x(j,idim)
+        xx(j,idim)=xx(j,idim)/dx
      end do
   end do
 
-   ! Compute parent grids
+  ! Check for illegal moves
+  error=.false.
   do idim=1,ndim
      do j=1,np
+        if(xx(j,idim)<0.5D0.or.xx(j,idim)>5.5D0)error=.true.
+     end do
+  end do
+  if(error)then
+     write(*,*)'problem in cic'
+     do idim=1,ndim
+        do j=1,np
+           if(xx(j,idim)<0.5D0.or.xx(j,idim)>5.5D0)then
+              write(*,*)xx(j,1:ndim)
+           endif
+        end do
+     end do
+     stop
+  end if
+
+  ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
+  do idim=1,ndim
+     do j=1,np
+        dd(j,idim)=xx(j,idim)+0.5D0
+        id(j,idim)=dd(j,idim)
+        dd(j,idim)=dd(j,idim)-id(j,idim)
+        dg(j,idim)=1.0D0-dd(j,idim)
+        ig(j,idim)=id(j,idim)-1
+     end do
+  end do
+
+  ! Compute cloud volumes
+#if NDIM==1
+  do j=1,np
+     vol(j,1)=dg(j,1)
+     vol(j,2)=dd(j,1)
+  end do
+#endif
+#if NDIM==2
+  do j=1,np
+     vol(j,1)=dg(j,1)*dg(j,2)
+     vol(j,2)=dd(j,1)*dg(j,2)
+     vol(j,3)=dg(j,1)*dd(j,2)
+     vol(j,4)=dd(j,1)*dd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     vol(j,1)=dg(j,1)*dg(j,2)*dg(j,3)
+     vol(j,2)=dd(j,1)*dg(j,2)*dg(j,3)
+     vol(j,3)=dg(j,1)*dd(j,2)*dg(j,3)
+     vol(j,4)=dd(j,1)*dd(j,2)*dg(j,3)
+     vol(j,5)=dg(j,1)*dg(j,2)*dd(j,3)
+     vol(j,6)=dd(j,1)*dg(j,2)*dd(j,3)
+     vol(j,7)=dg(j,1)*dd(j,2)*dd(j,3)
+     vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
+  end do
+#endif
+        
+  ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        igg(j,idim)=ig(j,idim)/2
         igd(j,idim)=id(j,idim)/2
      end do
   end do
+#if NDIM==1
   do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+     kg(j,1)=1+igg(j,1)
+     kg(j,2)=1+igd(j,1)
   end do
+#endif
+#if NDIM==2
   do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+     kg(j,1)=1+igg(j,1)+3*igg(j,2)
+     kg(j,2)=1+igd(j,1)+3*igg(j,2)
+     kg(j,3)=1+igg(j,1)+3*igd(j,2)
+     kg(j,4)=1+igd(j,1)+3*igd(j,2)
   end do
-
-  ! Check if particles are entirely in level ilevel
-  ok(1:np)=.true.
+#endif
+#if NDIM==3
   do j=1,np
-     ok(j)=ok(j).and.igrid(j)>0
+     kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
+     kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
+     kg(j,3)=1+igg(j,1)+3*igd(j,2)+9*igg(j,3)
+     kg(j,4)=1+igd(j,1)+3*igd(j,2)+9*igg(j,3)
+     kg(j,5)=1+igg(j,1)+3*igg(j,2)+9*igd(j,3)
+     kg(j,6)=1+igd(j,1)+3*igg(j,2)+9*igd(j,3)
+     kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
+     kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+  end do
+#endif
+  do ind=1,twotondim
+     do j=1,np
+        igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
+     end do
   end do
 
   ! Compute parent cell position
   do idim=1,ndim
      do j=1,np
-        if(ok(j))then
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
-        end if
+        icg(j,idim)=ig(j,idim)-2*igg(j,idim)
+        icd(j,idim)=id(j,idim)-2*igd(j,idim)
      end do
   end do
+#if NDIM==1
   do j=1,np
-     if(ok(j))then
-        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-     end if
-  end do
-
-  ! Compute parent cell adresses
-  do j=1,np
-     if(ok(j))then
-        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
-     else
-        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
-        vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
-     end if
-  end do
-
-  ! Update hydro variables due to feedback
-  do j=1,np
-     ! Specific kinetic energy of the star
-     ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
-          &          +vp(ind_part(j),2)**2 &
-          &          +vp(ind_part(j),3)**2)
-     ! The temperature has been stored in the tp array
-     ! to avoid the declaration of a new array
-     ! and minimize MPI communications
-     ethermal(j)=up(ind_part(j))
-     ! Update hydro variable in NGP cell
-     uold(indp(j),1)=uold(indp(j),1)+mp(ind_part(j))/vol_loc(j)
-     uold(indp(j),2)=uold(indp(j),2)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),1)
-     uold(indp(j),3)=uold(indp(j),3)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),2)
-     uold(indp(j),4)=uold(indp(j),4)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),3)
-     uold(indp(j),5)=uold(indp(j),5)+mp(ind_part(j))/vol_loc(j)*(ekinetic(j)+ethermal(j))
-     if(metal) then
-       uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
-     endif
+     icell(j,1)=1+icg(j,1)
+     icell(j,2)=1+icd(j,1)
   end do
 #endif
+#if NDIM==2
+  do j=1,np
+     icell(j,1)=1+icg(j,1)+2*icg(j,2)
+     icell(j,2)=1+icd(j,1)+2*icg(j,2)
+     icell(j,3)=1+icg(j,1)+2*icd(j,2)
+     icell(j,4)=1+icd(j,1)+2*icd(j,2)
+  end do
+#endif
+#if NDIM==3
+  do j=1,np
+     icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
+     icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
+     icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
+     icell(j,4)=1+icd(j,1)+2*icd(j,2)+4*icg(j,3)
+     icell(j,5)=1+icg(j,1)+2*icg(j,2)+4*icd(j,3)
+     icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
+     icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
+     icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+  end do
+#endif
+
+  ! Update mass density and number density fields
+  do ind=1,twotondim
+
+     ! Check if particles are entirely in level ilevel
+     do j=1,np
+        ok(j)=igrid(j,ind)>0
+     end do
+
+     ! Compute parent cell adress
+     do j=1,np
+        if(ok(j))then
+           indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
+        else
+           indp(j,ind) = nbors_father_cells(ind_grid_part(j),kg(j,ind))
+           vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+     end do
+
+     ! Update hydro variables
+     do j=1,np
+        if(ok(j)) then
+           ! Specific kinetic energy of the gas particle
+           ekinetic(j)=0d0
+           ethermal(j)=up(ind_part(j))
+           ! Update hydro variable in CIC cells
+           uold(indp(j,ind),1)=uold(indp(j,ind),1)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)
+           do idim=1,ndim
+              uold(indp(j,ind),idim+1)=uold(indp(j,ind),idim+1)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*vp(ind_part(j),idim)
+              ekinetic(j)=ekinetic(j)+0.5*vp(ind_part(j),idim)**2
+           end do
+           uold(indp(j,ind),ndim+2)=uold(indp(j,ind),ndim+2)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*(ekinetic(j)+ethermal(j))
+           if(metal) then
+             uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
+           endif
+        endif
+     end do
+  end do
   
-end subroutine init_gas_ngp
+end subroutine init_gas_cic
