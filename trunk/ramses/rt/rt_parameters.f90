@@ -38,7 +38,7 @@ module rt_parameters
   real(dp),parameter,dimension(nIons)::ionEvs=(/13.60d0, 24.59d0, 54.42d0/)
 
   ! RT_PARAMS namelist--------------------------------------------------------------------
-  logical::rt_advect=.true.           ! Advection of photons?                           !
+  logical::rt_advect=.false.           ! Advection of photons?                           !
   logical::rt_smooth=.false.           ! Smooth the discrete RT update of op. splitting  !
   real(dp)::rt_Tconst=-1               ! If pos. use this value for all T-depend. rates  !
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
