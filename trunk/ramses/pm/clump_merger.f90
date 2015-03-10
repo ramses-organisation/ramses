@@ -509,8 +509,10 @@ subroutine merge_clumps(action)
   do i=1,hfree-1
      call get_max(i,sparse_saddle_dens)
   end do
+#ifndef WITHOUTMPI
   call virtual_saddle_max
   call build_peak_communicator
+#endif
 
   ! Set up bounday values
   call boundary_peak_dp(sparse_saddle_dens%maxval)
