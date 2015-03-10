@@ -451,7 +451,6 @@ subroutine merge_clumps(action)
 
 #ifndef WITHOUTMPI
      ! Create new local duplicated peaks and update communicator
-     call build_peak_communicator
      call virtual_saddle_max
      call build_peak_communicator
 
