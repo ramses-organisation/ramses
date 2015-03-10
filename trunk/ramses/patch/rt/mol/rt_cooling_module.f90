@@ -113,10 +113,13 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   call update_rt_c
   call init_UV_background
 
-  if(nrestart==0 .and. cosmo)                                            &
-       call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
-                               ,omegaL,-1.0d0,T2end,mu,ne,.false.)
-  T2_sim=T2end
+  if(nrestart==0 .and. cosmo)then
+     call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
+          ,omegaL,-1.0d0,T2end,mu,ne,.false.)
+     T2_sim=T2end
+  else
+     T2_sim=0.0
+  endif
 
 END SUBROUTINE rt_set_model
 
@@ -701,7 +704,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      f_H2 = 0d0
      if(isH2) then
         D_H2  = b_H2 * nH  + g_H2                   !      H2 destr. (s-1)
-        f_H2  = a_H2*nH / D_H2                      ! Cre/Destr [unitless]
+        f_H2  = a_H2 * nH / D_H2                    ! Cre/Destr [unitless]
         n_H2  = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
      endif ! if(isH2)
      n_HI  = nH / (1d0 + f_HII + 2d0*f_H2)
