@@ -12,7 +12,7 @@ PATCH =
 EXEC = ramses
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
-GITHASH = $(shell git log --pretty=oneline --abbrev-commit --abbrev=8 -n 1)
+GITHASH = $(shell git log --pretty=oneline --abbrev-commit --abbrev=8 -n 1 | sed "s/'//g")
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date)
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
