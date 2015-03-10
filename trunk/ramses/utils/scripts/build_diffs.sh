@@ -21,11 +21,12 @@ cp hydro/*.f90 $tmp_dir
 cp pm/*.f90 $tmp_dir
 cp poisson/*.f90 $tmp_dir
 cp amr/*.f90 $tmp_dir
+cp rt/*.f90 $tmp_dir
 
 for file in `find $PATCHDIR -name "*.f90" -printf "%f\n"`
 do 
     echo $file
-    diff  $tmp_dir/$file $PATCHDIR$file > $PATCHDIR/$file"_diff"
+    diff -u  $tmp_dir/$file $PATCHDIR$file > $PATCHDIR/$file"_diff"
 done
 
 rm -r $tmp_dir
