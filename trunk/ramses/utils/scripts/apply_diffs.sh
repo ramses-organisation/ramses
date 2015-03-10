@@ -22,9 +22,9 @@ cp hydro/*.f90 $tmp_dir
 cp pm/*.f90 $tmp_dir
 cp poisson/*.f90 $tmp_dir
 cp amr/*.f90 $tmp_dir
+cp rt/*.f90 $tmp_dir
 
 wdir=`pwd`
-
 cd $tmp_dir
 
 for file in `find $wdir/$PATCHDIR -name "*.f90_diff" -printf "%f\n"`
@@ -34,6 +34,6 @@ do
     cp `echo $file | sed -e 's/_diff//g'` $wdir/$PATCHDIR
 done
 
+cp *.rej $wdir/$PATCHDIR/
 cd $wdir
-
 rm -r $tmp_dir
