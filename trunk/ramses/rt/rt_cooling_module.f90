@@ -103,10 +103,13 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   call update_rt_c
   call init_UV_background
 
-  if(nrestart==0 .and. cosmo)                                            &
-       call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
-                               ,omegaL,-1.0d0,T2end,mu,ne,.false.)
-  T2_sim=T2end
+  if(nrestart==0 .and. cosmo)then
+     call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
+          ,omegaL,-1.0d0,T2end,mu,ne,.false.)
+     T2_sim=T2end
+  else
+     T2_sim=0.0
+  endif
 
 END SUBROUTINE rt_set_model
 

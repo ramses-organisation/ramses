@@ -23,7 +23,25 @@ subroutine compute_clump_properties(xx)
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer::nx_loc,ind,ix,iy,iz
+  integer::nx_loc,ind,ix,iy,iz,idim
+  logical,dimension(1:ndim)::period
+  logical::periodic
+
+  period(1)=(nx==1)
+#if NDIM>1
+  if(ndim>1)period(2)=(ny==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1)
+#endif
+
+  periodic=period(1)
+#if NDIM>1
+  if(ndim>1)periodic=periodic.or.period(2)
+#endif
+#if NDIM>2
+  if(ndim>2)periodic=periodic.or.period(3)
+#endif
   !peak-patch related arrays before sharing information with other cpus
 
   min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
@@ -173,6 +191,62 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
+  !for periodic boxes the center of mass can be meaningless at that stage
+  ! -> recompute center of mass relative to peak position
+  
+  if(periodic)then
+     
+     center_of_mass=0.d0;
+     do ipart=1,ntest     
+        global_peak_id=flag2(icellp(ipart)) 
+        if (global_peak_id /=0 ) then
+           call get_local_peak_id(global_peak_id,peak_nr)
+           
+           ! Cell coordinates
+           ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+           grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
+           dx=0.5D0**levp(ipart)
+           xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+
+           do idim=1,ndim
+              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))>boxlen*0.5)xcell(idim)=xcell(idim)-boxlen
+              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))<boxlen*(-0.5))xcell(idim)=xcell(idim)+boxlen
+           end do
+
+           ! gas density
+           if(ivar_clump==0)then
+              d=xx(icellp(ipart))
+           endif
+           if(hydro)then
+              d=uold(icellp(ipart),1)
+           endif
+
+           ! Cell volume
+           vol=volume(levp(ipart))
+
+           ! center of mass location
+           center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
+
+        end if
+     end do
+
+     call build_peak_communicator
+     ! MPI communication to collect the results from the different cpus
+#ifndef WITHOUTMPI     
+     do i=1,ndim
+        call virtual_peak_dp(center_of_mass(1,i),'sum')
+     end do
+     do ipeak=1,npeaks
+        if (relevance(ipeak)>0.)then
+           center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
+        end if
+     end do
+     do i=1,ndim
+        call boundary_peak_dp(center_of_mass(1,i))
+     end do
+#endif
+
+  end if
 end subroutine compute_clump_properties
 !################################################################
 !################################################################
@@ -509,8 +583,10 @@ subroutine merge_clumps(action)
   do i=1,hfree-1
      call get_max(i,sparse_saddle_dens)
   end do
+#ifndef WITHOUTMPI
   call virtual_saddle_max
   call build_peak_communicator
+#endif
 
   ! Set up bounday values
   call boundary_peak_dp(sparse_saddle_dens%maxval)
@@ -570,10 +646,12 @@ subroutine merge_clumps(action)
      
      ! Update flag2 field
      do ipart=1,ntest
-        call get_local_peak_id(flag2(icellp(ipart)),ipeak)
-        merge_to=new_peak(ipeak)
-        call get_local_peak_id(merge_to,jpeak)
-        flag2(icellp(ipart))=merge_to
+        if (flag2(icellp(ipart))>0)then
+           call get_local_peak_id(flag2(icellp(ipart)),ipeak)
+           merge_to=new_peak(ipeak)
+           call get_local_peak_id(merge_to,jpeak)
+           flag2(icellp(ipart))=merge_to
+        end if
      end do
      call build_peak_communicator
 
@@ -715,12 +793,15 @@ subroutine allocate_peak_patch_arrays
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
   
+
   !------------------------------------------------
   ! Initialize the hash table with interior patches
   !------------------------------------------------
   do ipart=1,ntest
      peak_nr=flag2(icellp(ipart)) ! global peak id
-     call get_local_peak_id(peak_nr,ipeak)
+     if (peak_nr>0)then
+        call get_local_peak_id(peak_nr,ipeak)
+     end if
   end do
 
   !---------------------------------

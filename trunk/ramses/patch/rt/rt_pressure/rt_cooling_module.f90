@@ -57,8 +57,8 @@ module rt_cooling_module
   logical::is_kIR_T=.false.            ! k_IR propto T^2?               
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
-  real(dp),dimension(nGroups)::kappaAbs! Dust absorption opacity    
-  real(dp),dimension(nGroups)::kappaSc ! Dust scattering opacity    
+  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity    
+  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity    
   
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
@@ -393,8 +393,9 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         phAbs(i) = phAbs(i) + dustAbs(i)                  
      end do
 
+     dmom(:)=0d0
      do i=1,nGroups         ! ------------------- Do the update of N and F
-        dNp(i)= MAX(smallNp,                                              &
+        dNp(i)= MAX(smallNp,                                             &
                    (dt*(recRad(i)+dNpdt(i))+dNp(i)) / (1.d0+dt*phAbs(i)))
         do j=1,nDim
            dFp(i,j) = (dt*dFpdt(i,j)+dFp(i,j))/(1.d0+dt*(phAbs(i)+phSc(i)))
@@ -402,7 +403,6 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         call reduce_flux(dFp(i,:),dNp(i)*rt_c_cgs)
         ! ----------------------------------------------------------------
         ! Momentum transfer from photons to gas:                          
-        dmom(:)=0d0                                                       
         if(rt_isoPress .and. .not. (rt_isIR .and. i==iIR)) then 
            ! rt_isoPress: assume f=1, where f is reduced flux.
            fluxMag=sqrt(sum((dFp(i,:))**2))
@@ -415,7 +415,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         endif                                                             
         ! ----------------------------------------------------------------
      end do
-     dp_gas = p_gas + dmom * rt_pressBoost           ! update gas momentum
+     dp_gas = dp_gas + dmom * rt_pressBoost          ! update gas momentum
      dUU=MAXVAL(ABS((dNp-Np)/(Np+Np_MIN))/Np_FRAC)
      if(dUU .gt. 1.) then                                 
         code=1 ;   RETURN                                     ! dt too big

@@ -415,7 +415,7 @@ SUBROUTINE update_SED_group_props()
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer :: i, ip, ii, nstars, info
+  integer :: i, ip, ii, info
   real(dp),save,allocatable,dimension(:)::  L_star
   real(dp),save,allocatable,dimension(:,:)::csn_star, cse_star
   real(dp),save,allocatable,dimension(:)::  egy_star
@@ -447,7 +447,6 @@ SUBROUTINE update_SED_group_props()
      if(levelp(i).le.0 .or. idp(i).eq.0 .or. tp(i).eq.0.)                &
         cycle ! not a star
      ! particle exists and is a star
-     nstars = nstars + 1
      mass = mp(i)
      call getAgeGyr(tp(i), age)                         !     age = [Gyrs]
      if(metal) then
