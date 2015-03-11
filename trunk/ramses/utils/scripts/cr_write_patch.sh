@@ -11,10 +11,13 @@ if [ $# == 0 ]
     echo "no patches" > .tmp_output.txt
     echo " " >> .tmp_output.txt
     else
-    PATCHDIR=$1
-    for filename in ${PATCHDIR}/*.f90; do
-        echo "$filename"
-        cat "$filename"
+    PATCHDIRS=$1
+    PATCHDIRS=(${PATCHDIRS//:/ })
+    for PATCHDIR in "${PATCHDIRS[@]}"; do
+	for filename in ${PATCHDIR}/*.f90; do
+            echo "$filename" 
+            cat "$filename"
+	done 
     done > .tmp_output.txt
 fi
 
