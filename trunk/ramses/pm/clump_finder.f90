@@ -25,8 +25,9 @@ subroutine clump_finder(create_output,keep_alive)
   !----------------------------------------------------------------------------
 
   integer::istep,nskip,ilevel,info,icpu,nmove,nmove_all,nzero,nzero_all
-  integer::i,j,ntest_all,peak_nr
-  integer,dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
+  integer::i,j,peak_nr
+  integer(i8b)::ntest_all
+  integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
   logical::all_bound
 
@@ -67,7 +68,11 @@ subroutine clump_finder(create_output,keep_alive)
   ntest_cpu=0; ntest_cpu_all=0
   ntest_cpu(myid)=ntest
 #ifndef WITHOUTMPI
+#ifndef LONGINT
   call MPI_ALLREDUCE(ntest_cpu,ntest_cpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(ntest_cpu,ntest_cpu_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
   ntest_cpu(1)=ntest_cpu_all(1)
 #endif
   do icpu=2,ncpu
@@ -76,7 +81,7 @@ subroutine clump_finder(create_output,keep_alive)
   ntest_all=ntest_cpu(ncpu)
   if(myid==1)then
      if(ntest_all.gt.0.and.clinfo)then
-        write(*,'(" Total number of cells above threshold=",I10)')ntest_all
+        write(*,'(" Total number of cells above threshold=",I12)')ntest_all
      endif
   end if
 
@@ -757,6 +762,7 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
      neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in 
   end do
   do j=1,np
+     ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
      ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
      av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell

@@ -113,10 +113,13 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in, normfacJ0_in, &
   call update_rt_c
   call init_UV_background
 
-  if(nrestart==0 .and. cosmo)                                            &
-       call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
-                               ,omegaL,-1.0d0,T2end,mu,ne,.false.)
-  T2_sim=T2end
+  if(nrestart==0 .and. cosmo)then
+     call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
+          ,omegaL,-1.0d0,T2end,mu,ne,.false.)
+     T2_sim=T2end
+  else
+     T2_sim=0.0
+  endif
 
 END SUBROUTINE rt_set_model
 
@@ -282,11 +285,11 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   logical::dt_ok, c_switch!-----------------------------------------------
   real(dp),dimension(nIons),save:: alpha, beta, nN, nI
   real(dp):: mu, TK, ne, neInit, Hrate, q, betaH2, ndust
-  real(dp):: xHI=0d0, xHeI=0d0, xHeII=0d0, xHeIII=0d0
+  real(dp):: xH2=0d0, xHI=0d0, xHII=0d0
+  real(dp):: xHeI=0d0, xHeII=0d0, xHeIII=0d0
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
   real(dp),dimension(nGroups):: recRad, phI, signcdust
   real(dp)::metal_tot,metal_prime
-  real(dp)::xH2!sln, tmp, change later maybe
   integer::i, nc, loopcnt, code
   real(dp):: fracMax
 !-------------------------------------------------------------------------
@@ -299,14 +302,15 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   ! nN(2) == nN(ixHII)   == nHI           ! nI(2) == nI(ixHII)   == nHII
   ! nN(3) == nN(ixHeII)  == nHeI          ! nI(3) == nI(ixHeII)  == nHeII
   ! nN(4) == nN(ixHeIII) == nHeII         ! nI(4) == nI(ixHeIII) == nHeIII
-  xHI = 1d0-dU(iUxHII)                    !     Need in case of .not. isH2
-  xH2 = 0d0                               !                       This too
+  ! Hydrogen chemistry
+  xHII = dU(iUxHII)         ! always exists
+  xHI = 1d0-xHII            ! need in case of .not. isH2
   if(isH2) xHI = dU(iUxHI)
-  ! xHII   = dU(iUxHII) (always exists)
-  if(isHe) xHeII = dU(iUxHeII)
+  if(isH2) xH2 = MAX(1.-xHI-xHII,0.d0)/2.
+  ! Helium chemistry
   if(isHe) xHeIII = dU(iUxHeIII)
-  if(isHe) xHeI=MAX(1.-xHeII-xHeIII,0.d0)
-  if(isH2) xH2 =MAX(1.-xHI-dU(iUxHII),0.d0)/2.
+  If(isHe) xHeII = dU(iUxHeII)
+  if(isHe) xHeI = MAX(1.-xHeII-xHeIII,0.d0)
   ! nN='neutral' species (pre-ionized)
   if(isH2) nN(ixHI) = nH * xH2                       		 !     nH2
   nN(ixHII) = nH * xHI                                           !     nHI
@@ -700,7 +704,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      f_H2 = 0d0
      if(isH2) then
         D_H2  = b_H2 * nH  + g_H2                   !      H2 destr. (s-1)
-        f_H2  = a_H2*nH / D_H2                      ! Cre/Destr [unitless]
+        f_H2  = a_H2 * nH / D_H2                    ! Cre/Destr [unitless]
         n_H2  = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
      endif ! if(isH2)
      n_HI  = nH / (1d0 + f_HII + 2d0*f_H2)
