@@ -705,13 +705,13 @@ SUBROUTINE quick_sort(list,order,n)
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified by Alan Miller to include an associated integer array which gives
   ! the positions of the elements in the original order.
+  IMPLICIT NONE
 #ifdef LONGINT
   integer,parameter::i8b=8
 #else
   integer,parameter::i8b=4
 #endif
 
-  IMPLICIT NONE
   INTEGER :: n
   INTEGER(i8b), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
