@@ -426,15 +426,21 @@ subroutine init_flow_fine(ilevel)
     ifout = ic_ifout
     ! Initialise uold with values from the DICE_PARAMS namelist
     call reset_uold(ilevel)
+    do ivar=1,nvar
+        call make_virtual_reverse_dp(uold(1,ivar),ilevel)
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
+    end do
     ! Update the grid using the gas particles read from the Gadget1 file
     ! NGP scheme is used
     call condinit_loc(ilevel)
     ! Reverse update boundaries
     do ivar=1,nvar
         call make_virtual_reverse_dp(uold(1,ivar),ilevel)
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
     end do
     call init_uold(ilevel)
     do ivar=1,nvar
+        call make_virtual_reverse_dp(uold(1,ivar),ilevel)
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
     end do
 
