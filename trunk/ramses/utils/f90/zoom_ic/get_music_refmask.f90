@@ -5,6 +5,11 @@ program get_music_refmask
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
+#ifdef LONGINT
+  integer,parameter::i8b=8
+#else
+  integer,parameter::i8b=4
+#endif
   integer::ncpu,ndim,npart,ngrid,n,i,j,k,icpu,ipos,nstar,nstart,inull,ico
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel,ndark,ismooth
   integer::nx=0,ny=0,ix,iy,iz,ixp1,iyp1,idim,jdim,ncpu_read
@@ -24,11 +29,14 @@ program get_music_refmask
   real(KIND=8),dimension(:)  ,allocatable::temp
   real(KIND=8),dimension(:)  ,allocatable::bt
   real(KIND=8),dimension(:)  ,allocatable::tempx,tempy,tempz,tempvx,tempvy,tempvz,tempm,tempbt,tempr
-  integer ,allocatable,dimension(:)::tempid,temp2,indtempid
-  integer ,allocatable,dimension(:)::id
-  integer ,allocatable,dimension(:)::idpart,indidpart
+  integer(i8b),allocatable,dimension(:)::tempid
+  integer,allocatable,dimension(:)::temp2,indtempid
+  integer(i8b),allocatable,dimension(:)::id
+  integer(i8b)::maxid
+  integer(i8b),allocatable,dimension(:)::idpart
+  integer,allocatable,dimension(:)::indidpart
   integer::outputmode
-  real ,allocatable,dimension(:,:,:)::imark
+  real,allocatable,dimension(:,:,:)::imark
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering,format_grille
@@ -36,7 +44,7 @@ program get_music_refmask
   character(LEN=128)::nomfich,repository,filetype='bin',grafic
   character(LEN=128)::nomfich2,repository2, outputname
   logical::ok,ok_part,periodic=.false.,star=.false.,okerode=.false.
-  integer::impi,ndom,bit_length,maxdom,maxid,idd
+  integer::impi,ndom,bit_length,maxdom,idd
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax,vfact
@@ -236,6 +244,7 @@ program get_music_refmask
      read(1)
      read(1)
      allocate(temp(1:npart2))
+     allocate(tempid(1:npart2))
      allocate(temp2(1:npart2))
      ! Read positions
      read(1)temp
@@ -255,8 +264,8 @@ program get_music_refmask
      read(1)temp
      m(nstart:nstart+npart2-1)=temp 
      !Read identity
-     read(1)temp2
-     id(nstart:nstart+npart2-1)=temp2
+     read(1)tempid
+     id(nstart:nstart+npart2-1)=tempid
      !Read level
      read(1)temp2   
      if(nstar>0) then
@@ -267,6 +276,7 @@ program get_music_refmask
 ! ----------------------------
      nstart=nstart+npart2  !Fill up the next set
      deallocate(temp)
+     deallocate(tempid)
      deallocate(temp2)
   enddo
 
@@ -695,10 +705,15 @@ SUBROUTINE quick_sort(list,order,n)
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified by Alan Miller to include an associated integer array which gives
   ! the positions of the elements in the original order.
-  
   IMPLICIT NONE
+#ifdef LONGINT
+  integer,parameter::i8b=8
+#else
+  integer,parameter::i8b=4
+#endif
+
   INTEGER :: n
-  INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: list
+  INTEGER(i8b), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
   
   ! Local variable
@@ -718,7 +733,7 @@ CONTAINS
     
     !     Local variables
     INTEGER             :: i, j, itemp
-    INTEGER              :: reference, temp
+    INTEGER(i8b)        :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
     
     IF (right_end < left_end + max_simple_sort_size) THEN
@@ -768,7 +783,7 @@ CONTAINS
     
     !     Local variables
     INTEGER             :: i, j, itemp
-    INTEGER           :: temp
+    INTEGER(i8b)        :: temp
     
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
