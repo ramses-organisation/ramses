@@ -44,6 +44,8 @@ def main():
 			help="kind of plot [temp, dens, metal]", default='dens')	
 	parser.add_option('-a','--autorange',dest='autorange', action='store_true', \
 	       help='use automatic dynamic range (overrides min & max)', default=False)
+	parser.add_option('--clean_plot',dest='clean_plot', action='store_true', \
+	       help='do not annotate plot with bar and timestamp', default=False)
 	parser.add_option('--big-endian',dest='big_endian', action='store_true', \
 	       help='input binary data is stored as big endian', default=False)
 	parser.add_option('-c','--colormap',dest='cmap_str', metavar='CMAP', \
@@ -77,15 +79,9 @@ def main():
 		print "Wrong time unit!"
 		sys.exit()
 
-
-
-	
 	proj_ind = int(opts.proj)-1
 	
-	# Searching for namelist
-	for file in os.listdir(opts.dir):
-		if file.endswith(".nml"):
-			namelist = opts.dir + file
+	namelist = opts.dir + '/output_00001/namelist.txt'
 	try:
 		nmlf = open(namelist)
 	except IOError:
@@ -161,11 +157,15 @@ def main():
 			try:
 				with warnings.catch_warnings():
 					warnings.simplefilter("ignore")
-					sink_m,sink_x,sink_y,sink_z = numpy.loadtxt(sink_file, delimiter=',',usecols=(1,2,3,4),unpack=True)/float(boxlen)
+					sink_id, sink_m,sink_x,sink_y,sink_z = numpy.loadtxt(sink_file, delimiter=',',usecols=(0,1,2,3,4),unpack=True)/float(boxlen)
 					sink_m *= unit_m*float(boxlen)
 					sink_m = numpy.log10(sink_m)
+					sink_id *= float(boxlen)
 					plot_sinks = True
 			except ValueError:
+				#sink_x = 0.
+				#sink_y = 0.
+				#sink_z = 0.
 				plot_sinks = False
 			except IOError:
 				print "No sink file" 
@@ -200,7 +200,7 @@ def main():
 			plotmax = rawmax
 		else:
 			plotmax = float(opts.max)
-
+		
 		# Log scale?
 		if(opts.logscale):
 			dat = numpy.log10(dat)
@@ -208,7 +208,7 @@ def main():
 			rawmax = numpy.log10(rawmax)
 			plotmin = numpy.log10(plotmin)
 			plotmax = numpy.log10(plotmax)
-
+		
 		# Auto-adjust dynamic range?
 		if(opts.autorange):
 			# Overrides any provided bounds
@@ -221,60 +221,56 @@ def main():
 			plotmin = bins[clip_k]
 			plotmax = rawmax
 
-		#if(plotmax-plotmin>0):
-		#	dat = numpy.clip((dat-plotmin)/(plotmax-plotmin), 0.0, 1.0)
-		#else:
-		#	dat = 0.5*dat/plotmax
-    
 		axis = proj_axis[proj_ind+1]
 	
 		# Reshape data to 2d
 		dat = dat.reshape(ny,nx)
-	
+
 		# Plotting
-		fig = plt.figure(figsize=(8,8*ny/nx),frameon=False)
-		
-		ax = fig.add_subplot(1,1,1)
+		fig = plt.figure(frameon=False)
+		fig.set_size_inches(nx/100,ny/100)
+		ax = plt.Axes(fig, [0., 0., 1., 1.])
 		ax.set_axis_off()
 		fig.add_axes(ax)	
 		ax.imshow(dat, interpolation = 'nearest', cmap = opts.cmap_str,\
-				vmin = plotmin, vmax = plotmax)
-
+				vmin = plotmin, vmax = plotmax, aspect='auto')
+	
 		# Plotting sink
 		if (sink_flag and plot_sinks):
 			if axis == 'x':
 				ax.scatter((sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*nx/2+nx/2,\
 					(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
-					marker='+',c='r',s=4*sink_m**2)
+					marker='+',c='r',s=6*sink_m**2)
 			elif axis == 'y':
 				ax.scatter((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
 					(sink_z-zcentre_frame/boxlen)/(deltaz_frame/boxlen/2)*ny/2+ny/2,\
-					marker='+',c='r',s=4*sink_m**2)
+					marker='+',c='r',s=6*sink_m**2)
 			else:
 				ax.scatter((sink_x-xcentre_frame/boxlen)/(deltax_frame/boxlen/2)*nx/2+nx/2,\
 					(sink_y-ycentre_frame/boxlen)/(deltay_frame/boxlen/2)*ny/2+ny/2,\
-					marker='+',c='r',s=4*sink_m**2)
+					marker='+',c='r',s=6*sink_m**2)
 
-		patches = []
-		barlen_px = opts.barlen*scale_l*nx/(float(boxlen)*unit_l*3.24e-19*deltax_frame/float(boxlen))
-		rect = mpatches.Rectangle((nx/20,ny/100), barlen_px, 10)
-		label([nx/20+barlen_px/2,ny/100],"%d %s" % (opts.barlen, opts.barlen_unit))
-		patches.append(rect)
+		if not opts.clean_plot:
+			patches = []
+			barlen_px = opts.barlen*scale_l*nx/(float(boxlen)*unit_l*3.24e-19*deltax_frame/float(boxlen))
+			rect = mpatches.Rectangle((nx/20,ny/100), barlen_px, 10)
+			label([nx/20+barlen_px/2,ny/100],"%d %s" % (opts.barlen, opts.barlen_unit))
+			patches.append(rect)
+
+			ax.text(0.95, 0.95, '%.1f %s' % (time*unit_t/86400/365.25/scale_t, opts.time_unit),
+				        verticalalignment='bottom', horizontalalignment='right',
+				        transform=ax.transAxes,
+				        color='white', fontsize=14)
+			collection = PatchCollection(patches, facecolor='white')
+			ax.add_collection(collection)
 
 		plt.axis('off') # removes axis
 		plt.xlim(0,nx) # trims image to borders
 		plt.ylim(0,ny)
-		ax.text(0.95, 0.95, '%.1f %s' % (time*unit_t/86400/365.25/scale_t, opts.time_unit),
-				        verticalalignment='bottom', horizontalalignment='right',
-				        transform=ax.transAxes,
-				        color='white', fontsize=14)
-		collection = PatchCollection(patches, facecolor='white')
-		ax.add_collection(collection)
-
 
 		# corrects window extent
 		extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-		plt.savefig(outfile,bbox_inches=extent,dpi=100)
+		plt.savefig(outfile,dpi=100)
 		plt.close(fig)
 		
 		if progressbar_avail:
@@ -284,5 +280,6 @@ def main():
 		pbar.finish()
 	else:
 		print 'Finished!'
+
 if __name__ == '__main__':
 	main()
