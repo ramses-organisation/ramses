@@ -355,7 +355,7 @@ subroutine write_clump_properties(to_file)
                 ,peak_pos(jj,2)&
                 ,peak_pos(jj,3)&
                 ,max_dens(jj)&
-                ,clump_mass(jj)
+                ,halo_mass(jj)
         endif
      endif
   end do
