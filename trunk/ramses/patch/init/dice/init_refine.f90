@@ -47,6 +47,7 @@ module dice_commons
   real(dp)::gadget_scale_t = 1.0D6*365*24*3600
   real(dp),allocatable,dimension(:)::up
   logical::dice_init       = .false.
+  logical::amr_struct      = .false.
 
 end module dice_commons
 
