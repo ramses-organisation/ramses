@@ -351,6 +351,7 @@ subroutine write_clump_properties(to_file)
         if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
            write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
                 jj+ipeak_start(myid)&
+                ,n_cells_halo(jj)&
                 ,peak_pos(jj,1)&
                 ,peak_pos(jj,2)&
                 ,peak_pos(jj,3)&
