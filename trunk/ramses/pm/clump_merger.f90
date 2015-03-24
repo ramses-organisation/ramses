@@ -45,7 +45,7 @@ subroutine compute_clump_properties(xx)
   !peak-patch related arrays before sharing information with other cpus
 
   min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
-  n_cells=0; 
+  n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0; clump_force=0.d0 
   peak_pos=0.
@@ -323,7 +323,7 @@ subroutine write_clump_properties(to_file)
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
-        write(ilun2,'(135A)')'   index    peak_x             peak_y             peak_z     '//&
+        write(ilun2,'(135A)')'   index     ncell        peak_x             peak_y             peak_z     '//&
              '        rho+               mass      '
      endif
   end if
@@ -349,7 +349,7 @@ subroutine write_clump_properties(to_file)
      end if
      if(saddle_threshold>0)then
         if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-           write(ilun2,'(I10,5(X,1PE18.9E2))')&
+           write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
                 jj+ipeak_start(myid)&
                 ,peak_pos(jj,1)&
                 ,peak_pos(jj,2)&
@@ -678,15 +678,19 @@ subroutine merge_clumps(action)
 
      ! Compute halo masses
      halo_mass=0.0
+     n_cells_halo=0
      do ipeak=1,npeaks
         merge_to=ind_halo(ipeak)
         call get_local_peak_id(merge_to,jpeak)
         halo_mass(jpeak)=halo_mass(jpeak)+clump_mass(ipeak)
+        n_cells_halo(jpeak)=n_cells_halo(jpeak)+n_cells(ipeak)
      end do
      call build_peak_communicator
      call virtual_peak_dp(halo_mass,'sum')
      call boundary_peak_dp(halo_mass)
-     ! Assign halo mass to peak
+     call virtual_peak_int(n_cells_halo,'sum')
+     call boundary_peak_int(n_cells_halo)
+     ! Assign back halo mass to peak
      do ipeak=1,npeaks
         merge_to=ind_halo(ipeak)
         call get_local_peak_id(merge_to,jpeak)
@@ -747,6 +751,7 @@ subroutine allocate_peak_patch_arrays
   ! Allocate peak-patch_properties
   !-------------------------------
   allocate(n_cells(1:npeaks_max))
+  allocate(n_cells_halo(1:npeaks_max))
   allocate(lev_peak(1:npeaks_max))
   allocate(new_peak(npeaks_max))
   allocate(clump_size(1:npeaks_max,1:ndim))
@@ -807,7 +812,7 @@ subroutine allocate_peak_patch_arrays
   !---------------------------------
   ! Initialize all peak based arrays
   !---------------------------------
-  n_cells=0; lev_peak=0; new_peak=0; ind_halo=0
+  n_cells=0; n_cells_halo=0; lev_peak=0; new_peak=0; ind_halo=0
   saddle_max=0.; relevance=1.; clump_size=0.
   min_dens=huge(zero)
   av_dens=0.; halo_mass=0.
@@ -834,6 +839,7 @@ subroutine deallocate_all
   implicit none
 
   deallocate(n_cells)
+  deallocate(n_cells_halo)
   deallocate(lev_peak)
   deallocate(new_peak)
   deallocate(clump_size)
