@@ -10,7 +10,7 @@ ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
 
 ! Returns creation rate of h2 on dust [cm^3 s-1] (Draine and Bertoldi 1996)
 ! plus gas phase rate for low Z on H- assuming equilibrium abundances for H-
-! as explained in the Appendix of McKee and Krumolz (2012)
+! as explained in the Appendix of McKee and Krumholz (2012)
 ! T           => Temperature [K]
 ! Z           => Metallicity in Solar units
 !-------------------------------------------------------------------------
@@ -21,8 +21,8 @@ ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
 
   T2=T/1d2
   comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5)/ &
-       & (1.0+0.4*T2**0.5+0.2*T2+0.08*T2**2) !&
-!       & + 8.0d-19*((T/1000.0)**0.88)
+       & (1.0+0.4*T2**0.5+0.2*T2+0.08*T2**2) &
+       & + 8.0d-19*((T/1000.0)**0.88) ! Zero metallicity limit
 END FUNCTION comp_Alpha_H2
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

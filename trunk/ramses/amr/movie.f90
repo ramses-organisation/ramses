@@ -69,7 +69,7 @@ subroutine output_frame()
   !nw_temp = nw_frame
     
 #if NDIM > 1
-
+  if(imov<1)imov=1
   if(imov>imovout)return
 
   ! Determine the filename, dir, etc
@@ -123,6 +123,8 @@ subroutine output_frame()
   endif
   
   if(levelmax_frame==0)then
+     nlevelmax_frame=nlevelmax
+  else if (levelmax_frame.gt.nlevelmax)then
      nlevelmax_frame=nlevelmax
   else
      nlevelmax_frame=levelmax_frame

@@ -24,9 +24,10 @@ subroutine clump_finder(create_output,keep_alive)
   ! Andreas Bleuler & Davide Martizzi & Romain Teyssier
   !----------------------------------------------------------------------------
 
-  integer::istep,nskip,ilevel,info,icpu,nmove,nmove_all,nzero,nzero_all
-  integer::i,j,ntest_all,peak_nr
-  integer,dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
+  integer::istep,nskip,ilevel,info,icpu,nmove,nzero
+  integer::i,j,peak_nr
+  integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
+  integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
   logical::all_bound
 
@@ -67,7 +68,11 @@ subroutine clump_finder(create_output,keep_alive)
   ntest_cpu=0; ntest_cpu_all=0
   ntest_cpu(myid)=ntest
 #ifndef WITHOUTMPI
+#ifndef LONGINT
   call MPI_ALLREDUCE(ntest_cpu,ntest_cpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(ntest_cpu,ntest_cpu_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
   ntest_cpu(1)=ntest_cpu_all(1)
 #endif
   do icpu=2,ncpu
@@ -76,7 +81,7 @@ subroutine clump_finder(create_output,keep_alive)
   ntest_all=ntest_cpu(ncpu)
   if(myid==1)then
      if(ntest_all.gt.0.and.clinfo)then
-        write(*,'(" Total number of cells above threshold=",I10)')ntest_all
+        write(*,'(" Total number of cells above threshold=",I12)')ntest_all
      endif
   end if
 
@@ -118,7 +123,7 @@ subroutine clump_finder(create_output,keep_alive)
   !-----------------------------------------------------------------------
   ! Count number of density peaks and share info across processors 
   !-----------------------------------------------------------------------
-  npeaks=0; nmove=0; nzero=0
+  npeaks=0; nzero=0
   if(ntest>0)then
      if(ivar_clump==0)then  ! case 1: count peaks
         call scan_for_peaks(rho(1),npeaks,nzero,1)
@@ -161,7 +166,6 @@ subroutine clump_finder(create_output,keep_alive)
   ! Flag peaks with global peak id using flag2 array
   ! Compute peak density using max_dens array
   !----------------------------------------------------------------------
-  nmove=0
   nskip=peak_nr
   ! Compute the size of the peak-based arrays
   npeaks_max=MAX(4*maxval(npeaks_per_cpu_tot),1000)
@@ -187,12 +191,12 @@ subroutine clump_finder(create_output,keep_alive)
   ! - order cells in descending density
   ! - get peak id from densest neighbor
   ! - nmove is number of peak id's passed along
-  ! - done when nmove=0 (for single core, only one sweep is necessary)
+  ! - done when nmove_tot=0 (for single core, only one sweep is necessary)
   !---------------------------------------------------------------------
   if (myid==1.and.ntest_all>0)write(*,*)'Finding peak patches'
-  nmove=1
+  nmove_tot=1
   istep=0
-  do while (nmove.gt.0)
+  do while (nmove_tot.gt.0)
      nmove=0
      nzero=0
      nskip=peak_nr
@@ -209,13 +213,20 @@ subroutine clump_finder(create_output,keep_alive)
         call make_virtual_fine_int(flag2(1),ilevel)
      end do
      istep=istep+1
+     nmove_tot=nmove
+     nzero_tot=nzero
 #ifndef WITHOUTMPI 
-     call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-     nmove=nmove_all
-     call MPI_ALLREDUCE(nzero,nzero_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-     nzero=nzero_all
+#ifndef LONGINT
+     call MPI_ALLREDUCE(nmove_tot,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(nzero_tot,nzero_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+     call MPI_ALLREDUCE(nmove_tot,nmove_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(nzero_tot,nzero_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+     nmove_tot=nmove_all
+     nzero_tot=nzero_all
 #endif   
-     if(myid==1.and.ntest_all>0.and.clinfo)write(*,*)"istep=",istep,"nmove=",nmove
+     if(myid==1.and.ntest_all>0.and.clinfo)write(*,*)"istep=",istep,"nmove=",nmove_tot
   end do
 
   !------------------------------------
@@ -757,6 +768,7 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
      neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in 
   end do
   do j=1,np
+     ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
      ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
      av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell

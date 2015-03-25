@@ -23,11 +23,29 @@ subroutine compute_clump_properties(xx)
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer::nx_loc,ind,ix,iy,iz
+  integer::nx_loc,ind,ix,iy,iz,idim
+  logical,dimension(1:ndim)::period
+  logical::periodic
+
+  period(1)=(nx==1)
+#if NDIM>1
+  if(ndim>1)period(2)=(ny==1)
+#endif
+#if NDIM>2
+  if(ndim>2)period(3)=(nz==1)
+#endif
+
+  periodic=period(1)
+#if NDIM>1
+  if(ndim>1)periodic=periodic.or.period(2)
+#endif
+#if NDIM>2
+  if(ndim>2)periodic=periodic.or.period(3)
+#endif
   !peak-patch related arrays before sharing information with other cpus
 
   min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
-  n_cells=0; 
+  n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0; clump_force=0.d0 
   peak_pos=0.
@@ -173,6 +191,62 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
+  !for periodic boxes the center of mass can be meaningless at that stage
+  ! -> recompute center of mass relative to peak position
+  
+  if(periodic)then
+     
+     center_of_mass=0.d0;
+     do ipart=1,ntest     
+        global_peak_id=flag2(icellp(ipart)) 
+        if (global_peak_id /=0 ) then
+           call get_local_peak_id(global_peak_id,peak_nr)
+           
+           ! Cell coordinates
+           ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
+           grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
+           dx=0.5D0**levp(ipart)
+           xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+
+           do idim=1,ndim
+              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))>boxlen*0.5)xcell(idim)=xcell(idim)-boxlen
+              if (period(idim) .and. (xcell(idim)-peak_pos(peak_nr,idim))<boxlen*(-0.5))xcell(idim)=xcell(idim)+boxlen
+           end do
+
+           ! gas density
+           if(ivar_clump==0)then
+              d=xx(icellp(ipart))
+           endif
+           if(hydro)then
+              d=uold(icellp(ipart),1)
+           endif
+
+           ! Cell volume
+           vol=volume(levp(ipart))
+
+           ! center of mass location
+           center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
+
+        end if
+     end do
+
+     call build_peak_communicator
+     ! MPI communication to collect the results from the different cpus
+#ifndef WITHOUTMPI     
+     do i=1,ndim
+        call virtual_peak_dp(center_of_mass(1,i),'sum')
+     end do
+     do ipeak=1,npeaks
+        if (relevance(ipeak)>0.)then
+           center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
+        end if
+     end do
+     do i=1,ndim
+        call boundary_peak_dp(center_of_mass(1,i))
+     end do
+#endif
+
+  end if
 end subroutine compute_clump_properties
 !################################################################
 !################################################################
@@ -249,7 +323,7 @@ subroutine write_clump_properties(to_file)
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
-        write(ilun2,'(135A)')'   index    peak_x             peak_y             peak_z     '//&
+        write(ilun2,'(135A)')'   index     ncell        peak_x             peak_y             peak_z     '//&
              '        rho+               mass      '
      endif
   end if
@@ -275,13 +349,14 @@ subroutine write_clump_properties(to_file)
      end if
      if(saddle_threshold>0)then
         if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-           write(ilun2,'(I8,5(X,1PE18.9E2))')&
+           write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
                 jj+ipeak_start(myid)&
+                ,n_cells_halo(jj)&
                 ,peak_pos(jj,1)&
                 ,peak_pos(jj,2)&
                 ,peak_pos(jj,3)&
                 ,max_dens(jj)&
-                ,clump_mass(jj)
+                ,halo_mass(jj)
         endif
      endif
   end do
@@ -509,8 +584,10 @@ subroutine merge_clumps(action)
   do i=1,hfree-1
      call get_max(i,sparse_saddle_dens)
   end do
+#ifndef WITHOUTMPI
   call virtual_saddle_max
   call build_peak_communicator
+#endif
 
   ! Set up bounday values
   call boundary_peak_dp(sparse_saddle_dens%maxval)
@@ -570,10 +647,12 @@ subroutine merge_clumps(action)
      
      ! Update flag2 field
      do ipart=1,ntest
-        call get_local_peak_id(flag2(icellp(ipart)),ipeak)
-        merge_to=new_peak(ipeak)
-        call get_local_peak_id(merge_to,jpeak)
-        flag2(icellp(ipart))=merge_to
+        if (flag2(icellp(ipart))>0)then
+           call get_local_peak_id(flag2(icellp(ipart)),ipeak)
+           merge_to=new_peak(ipeak)
+           call get_local_peak_id(merge_to,jpeak)
+           flag2(icellp(ipart))=merge_to
+        end if
      end do
      call build_peak_communicator
 
@@ -600,15 +679,19 @@ subroutine merge_clumps(action)
 
      ! Compute halo masses
      halo_mass=0.0
+     n_cells_halo=0
      do ipeak=1,npeaks
         merge_to=ind_halo(ipeak)
         call get_local_peak_id(merge_to,jpeak)
         halo_mass(jpeak)=halo_mass(jpeak)+clump_mass(ipeak)
+        n_cells_halo(jpeak)=n_cells_halo(jpeak)+n_cells(ipeak)
      end do
      call build_peak_communicator
      call virtual_peak_dp(halo_mass,'sum')
      call boundary_peak_dp(halo_mass)
-     ! Assign halo mass to peak
+     call virtual_peak_int(n_cells_halo,'sum')
+     call boundary_peak_int(n_cells_halo)
+     ! Assign back halo mass to peak
      do ipeak=1,npeaks
         merge_to=ind_halo(ipeak)
         call get_local_peak_id(merge_to,jpeak)
@@ -669,6 +752,7 @@ subroutine allocate_peak_patch_arrays
   ! Allocate peak-patch_properties
   !-------------------------------
   allocate(n_cells(1:npeaks_max))
+  allocate(n_cells_halo(1:npeaks_max))
   allocate(lev_peak(1:npeaks_max))
   allocate(new_peak(npeaks_max))
   allocate(clump_size(1:npeaks_max,1:ndim))
@@ -715,18 +799,21 @@ subroutine allocate_peak_patch_arrays
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
   
+
   !------------------------------------------------
   ! Initialize the hash table with interior patches
   !------------------------------------------------
   do ipart=1,ntest
      peak_nr=flag2(icellp(ipart)) ! global peak id
-     call get_local_peak_id(peak_nr,ipeak)
+     if (peak_nr>0)then
+        call get_local_peak_id(peak_nr,ipeak)
+     end if
   end do
 
   !---------------------------------
   ! Initialize all peak based arrays
   !---------------------------------
-  n_cells=0; lev_peak=0; new_peak=0; ind_halo=0
+  n_cells=0; n_cells_halo=0; lev_peak=0; new_peak=0; ind_halo=0
   saddle_max=0.; relevance=1.; clump_size=0.
   min_dens=huge(zero)
   av_dens=0.; halo_mass=0.
@@ -753,6 +840,7 @@ subroutine deallocate_all
   implicit none
 
   deallocate(n_cells)
+  deallocate(n_cells_halo)
   deallocate(lev_peak)
   deallocate(new_peak)
   deallocate(clump_size)

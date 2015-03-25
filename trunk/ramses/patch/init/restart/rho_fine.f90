@@ -8,7 +8,7 @@ subroutine rho_fine(ilevel,icount)
   use hydro_commons
   use poisson_commons
   use cooling_module
-  use dice_commons
+  use restart_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -47,7 +47,7 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------
   ! Initialize rho to analytical and baryon density field
   !-------------------------------------------------------
-  if(dice_init.and.amr_struct) then
+  if(restart_init) then
     if(hydro)call multipole_from_current_level(ilevel)
     call cic_from_multipole(ilevel)
     ! Update boundaries
@@ -527,7 +527,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use dice_commons
+  use restart_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
@@ -753,7 +753,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      do j=1,np
         ok(j)=(igrid(j,ind)>0)
-        if(dice_init) ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
+        if(restart_init) ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
      end do
 
      do j=1,np

@@ -1,55 +1,22 @@
-!========================================================================================
-!== Patch DICE
-!== Initial conditions to setup 1 or more galaxies computed from the DICE software
-!== Valentin Perret - October 2014
-!========================================================================================
-!==  Namelist settings:
-!==
-!==	ic_file     : Gadget1 file in the IC directory
-!== 	IG_rho      : Density of the intergalactic medium
-!== 	IG_T2       : Temperature of the intergalactic medium
-!== 	IG_metal    : Metallicity of the intergalactic medium
-!== 
-!========================================================================================
-
-
-module dice_commons
+module restart_commons
   use amr_commons
   use hydro_commons
   
-  ! particle data
-  character(len=512)::ic_file, ic_format
   ! misc  
   real(dp)::IG_rho         = 1.0D-5
   real(dp)::IG_T2          = 1.0D7
   real(dp)::IG_metal       = 0.01
-  real(dp)::ic_scale_pos   = 1.0
-  real(dp)::ic_scale_vel   = 1.0
-  real(dp)::ic_scale_mass  = 1.0
-  real(dp)::ic_scale_u     = 1.0
-  real(dp)::ic_scale_age   = 1.0
-  real(dp)::ic_scale_metal = 1.0
-  integer::ic_ifout        = 1
-  integer::ic_nfile        = 1
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
-  character(len=4)::ic_head_name  = 'HEAD'
-  character(len=4)::ic_pos_name   = 'POS '
-  character(len=4)::ic_vel_name   = 'VEL '
-  character(len=4)::ic_id_name    = 'ID  '
-  character(len=4)::ic_mass_name  = 'MASS'
-  character(len=4)::ic_u_name     = 'U   '
-  character(len=4)::ic_metal_name = 'Z   '
-  character(len=4)::ic_age_name   = 'AGE '
-  ! Gadget units in cgs
-  real(dp)::gadget_scale_l = 3.085677581282D21
-  real(dp)::gadget_scale_v = 1.0D5
-  real(dp)::gadget_scale_m = 1.9891D43
-  real(dp)::gadget_scale_t = 1.0D6*365*24*3600
-  real(dp),allocatable,dimension(:)::up
-  logical::dice_init       = .false.
-  logical::amr_struct      = .false.
+  integer,dimension(0:100)::restart_vars=0
+  integer::nvar_min
+  logical::restart_init=.false.
+  real(dp),allocatable,dimension(:,:)::varp     ! Hydro variables for restart
+  real(dp)::restart_boxlen
+  real(dp)::restart_unit_t
+  real(dp)::restart_unit_l
+  real(dp)::restart_unit_d
 
-end module dice_commons
+end module restart_commons
 
 !################################################################
 !################################################################
@@ -58,6 +25,7 @@ end module dice_commons
 subroutine init_refine
   use amr_commons
   use pm_commons
+  use hydro_commons
   implicit none
   !-------------------------------------------
   ! This routine builds the initial AMR grid
@@ -103,53 +71,54 @@ subroutine init_refine_2
   !--------------------------------------------------------------
   ! This routine builds additional refinements to the
   ! the initial AMR grid for filetype ne 'grafic'
-  ! DICE patch: It is ensured that all the particles are
+  ! Restart patch: It is ensured that all the particles are
   ! transfered down to level 1 before initialising the grid
   !--------------------------------------------------------------
   use amr_commons
+  use restart_commons
   use hydro_commons
 #ifdef RT
   use rt_hydro_commons
 #endif
   use pm_commons
   use poisson_commons
-  use dice_commons
   implicit none
   integer::ilevel,i,ivar
 
   if(filetype.eq.'grafic')return
 
   do i=levelmin,nlevelmax+1
-     ! DICE------
+
+     ! Restart patch ------
      do ilevel=levelmin-1,1,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo
-     ! ----------
+     ! --------------------
      call refine_coarse
      do ilevel=1,nlevelmax
         call build_comm(ilevel)
         call make_virtual_fine_int(cpu_map(1),ilevel)
         call refine_fine(ilevel)
-        ! DICE------
+        ! Restart patch ------
         if(pic)call make_tree_fine(ilevel)
-        ! ----------
+        ! --------------------
         if(hydro)call init_flow_fine(ilevel)
-        ! DICE------
+        ! Restart patch ------
         if(pic)then
            call kill_tree_fine(ilevel)
            call virtual_tree_fine(ilevel)
         endif
-        ! ----------
+        ! --------------------
 #ifdef RT
         if(rt)call rt_init_flow_fine(ilevel)
 #endif
      end do
       
-     ! DICE------
+     ! Restart patch ------
      do ilevel=nlevelmax-1,levelmin,-1
         if(pic)call merge_tree_fine(ilevel)
      enddo
-     ! ----------
+     ! --------------------
      if(nremap>0)call load_balance
 
      do ilevel=levelmin,nlevelmax
@@ -196,7 +165,7 @@ subroutine init_refine_2
      call flag_coarse
 
   end do
-  ! DICE------
+  ! Restart patch ------
   do ilevel=levelmin-1,1,-1
     if(pic)call merge_tree_fine(ilevel)
   enddo  
@@ -211,9 +180,7 @@ subroutine init_refine_2
   do ilevel=nlevelmax,levelmin,-1
      call merge_tree_fine(ilevel)
   end do
-  deallocate(up)
-  dice_init=.false.
-  ! ----------
+  ! --------------------
 
 #ifdef RT
   if(rt_is_init_xion .and. rt_nregion .eq. 0) then
@@ -224,6 +191,9 @@ subroutine init_refine_2
      end do
   endif
 #endif  
+
+  deallocate(varp)
+  restart_init = .false.
 
 end subroutine init_refine_2
 !################################################################
@@ -240,7 +210,7 @@ subroutine kill_gas_part(ilevel)
 #endif
   !--------------------------------------------------------
   ! This subroutine removes the gas particles 
-  ! initially present in the gadget1 DICE output
+  ! converted from the AMR cells during the restart phase
   !--------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,info
@@ -324,7 +294,7 @@ subroutine kill_gas_part(ilevel)
   npart_all=sum(npart_cpu_all(1:ncpu))
   if(myid==1)then
      write(*,'(A50)')"__________________________________________________"
-     write(*,'(A,I)')' Gas particles deleted ->',npart_all
+     write(*,*)'Number of gas particles deleted=',npart_all
      write(*,'(A50)')"__________________________________________________"
   endif
   do ipart=1,npart
@@ -334,3 +304,6 @@ subroutine kill_gas_part(ilevel)
 111 format('   Entering kill_gas_part for level ',I2)
 !---------------------------------------------
 end subroutine
+
+
+
