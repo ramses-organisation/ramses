@@ -124,7 +124,7 @@ SUBROUTINE update_UVrates
   UVrates=0.
   if(.not. rt_UV_hom) RETURN
   
-  call inp_UV_rates_table(1./aexp - 1., UVrates)
+  call inp_UV_rates_table(1./aexp - 1., UVrates, .true.)
 
   !if(myid==1) then
   !   write(*,*) 'The UV rates have changed to:'
@@ -199,13 +199,12 @@ SUBROUTINE rt_solve_cooling(U, dNpdt, dFpdt, nH, c_switch, Zsolar        &
      nAct_next=0                     ! Active cells for the next iteration
      do ia=1,nAct                             ! Loop over the active cells
         i = indAct(ia)                        !                 Cell index
-        !if(loopcnt .gt. 10000) &
-        if(loopcnt .gt. 100000) &
-             call display_CoolInfo(.true., loopcnt, i, dt-tleft(i), dt,  & 
-                                ddt(i),nH(i), U(i,:), dU, code)
         call cool_step(U(i,:), dNpdt(i,:), dFpdt(i,:), ddt(i), nH(i)     &
                      ,nHe(i), Zsolar(i), a_exp, dt_ok, dt_rec            &
                      ,c_switch(i), dU, i, loopcnt, code)
+        if(loopcnt .gt. 100000) &
+             call display_CoolInfo(.true., loopcnt, i, dt-tleft(i), dt,  & 
+                                ddt(i),nH(i), U(i,:), dU, code)
         if(.not. dt_ok) then  
            ddt(i)=ddt(i)/2.                    ! Try again with smaller dt 
            nAct_next=nAct_next+1 ; indAct(nAct_next) = i
@@ -250,7 +249,6 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
 ! loopcnt  =>  Number of iteration for cell (for debug)
 ! code    <= Error code in cool step, if dt_ok=.f.
 !-------------------------------------------------------------------------
-  use UV_module, ONLY: iUVvars_cool, UV_Nphot_cgs
   use amr_commons
   use const
   implicit none  
@@ -262,14 +260,11 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   real(dp):: xHeI, mu, TK, ne, neInit, Hrate, dAlpha, dBeta, s, jac, q
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, dUU, cr, de, photoRate
   real(dp),dimension(nGroups):: recRad, phI
-  real(dp)::metal_tot,metal_prime
+  real(dp)::metal_tot,metal_prime, ss_factor
   integer::i, nc, loopcnt, code
   real(dp):: fracMax
 !-------------------------------------------------------------------------
   dt_ok=.false.
-  ! Insert UV background emitted and propagated from void regions:
-  if(rt_isDiffuseUVsrc .and. nH .le. rt_UVsrc_nHmax)                     &
-                      U(iUVvars_cool) = max(U(iUVvars_cool), UV_Nphot_cgs)
   dU=U ! U contains the original values, dU the updated ones
   ! xHI = MAX(1.-dU(2),0.) ; xHII = dU(2) ; xHeII=dU(3) ; xHeIII=dU(4)
   xHeI=MAX(1.-dU(3)-dU(4),0.d0)
@@ -286,6 +281,8 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   ne= nH*dU(2)+nHE*(dU(3)+2.*dU(4))                    !  Electron density
   neInit=ne
   fracMax=0d0    ! Max. fractional update, to check if dt can be increased
+  ss_factor=1d0  ! UV background self_shielding factor
+  if(self_shielding) ss_factor = exp(-nH/1d-2)
 
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt) then 
@@ -340,8 +337,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
            Hrate = Hrate + dU(iNpU(i)) * SUM(nN(:) * PHrate(i,:))
         end do                                                            
      endif                                                                
-     if(rt_UV_hom .and. nH .lt. rt_UV_nHSS)                              &
-          Hrate = Hrate + SUM(nN(:) * UVrates(:,2))
+     if(rt_UV_hom) Hrate = Hrate + SUM(nN(:) * UVrates(:,2)) * ss_factor
      Crate = compCoolrate(TK, ne, nN(1), nI(1), nN(2), nN(3), nI(3)      &
                          ,a_exp, dCdT2, RT_OTSA)                !  Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
@@ -373,7 +369,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
   dBeta   = comp_dBeta_dT_HI(TK)
   cr = beta(1) * ne                               !               Creation
   if(rt) cr = cr + SUM(signc(:,1)*dU(iNp0:iNp1))  !                   [s-1]
-  if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) cr = cr + UVrates(1,1) 
+  if(rt_UV_hom) cr = cr + UVrates(1,1) * ss_factor
   de = alpha(1) * ne                              !            Destruction
   
   ! Not Anninos, but more stable (this IS neccessary, as the one-cell    !
@@ -410,7 +406,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      ! Destruction = collisional ionization+photoionization of HeI
      de = beta(2) * ne
      if(rt) de = de + SUM(signc(:,2)*dU(iNp0:iNp1))
-     if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) de = de + UVrates(2,1)
+     if(rt_UV_hom) de = de + UVrates(2,1) * ss_factor
      xHeI = (cr*dt+xHeI)/(1.+de*dt)                          !  The update
      xHeI = MIN(MAX(xHeI, 0.),1.)
 
@@ -420,7 +416,7 @@ SUBROUTINE cool_step(U, dNpdt, dFpdt, dt, nH, nHe, Zsolar, a_exp         &
      ! Destruction = rec. of HeII + coll.- and photo-ionization of HeII
      photoRate=0.
      if(rt) photoRate = SUM(signc(:,3)*dU(iNp0:iNp1))
-     if(rt_UV_hom .and. nH.lt.rt_UV_nHSS) photoRate=photoRate+UVrates(3,1)
+     if(rt_UV_hom) photoRate = photoRate + UVrates(3,1) * ss_factor
      de = (alpha(2) + beta(3)) * ne + photoRate
      dU(3) = (cr*dt+dU(3))/(1.+de*dt)                        !  The update
      dU(3) = MIN(MAX(dU(3), U_MIN(3)),1.)
@@ -675,7 +671,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   U(1,iNp0:)=0.                              ! Photon densities and fluxes
 
   do while (aexp < aend)
-     if(rt_UV_hom) call inp_UV_rates_table(1./aexp - 1., UVrates)
+     if(rt_UV_hom) call inp_UV_rates_table(1./aexp - 1., UVrates, .true.)
 
      daexp = dasura*aexp
      dt_cool = daexp                                                     &
