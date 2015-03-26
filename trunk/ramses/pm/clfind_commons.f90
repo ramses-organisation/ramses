@@ -44,7 +44,7 @@ module clfind_commons
   real(dp),allocatable,dimension(:)::grav_term
   real(dp),allocatable,dimension(:)::clump_check
   real(dp),allocatable,dimension(:)::Icl,Icl_d,Icl_dd
-  integer,allocatable,dimension(:)::n_cells,lev_peak,new_peak
+  integer,allocatable,dimension(:)::n_cells,n_cells_halo,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
   logical,allocatable,dimension(:)::contracting
 !  integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
