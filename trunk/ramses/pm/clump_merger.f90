@@ -323,7 +323,7 @@ subroutine write_clump_properties(to_file)
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
-        write(ilun2,'(135A)')'   index     ncell        peak_x             peak_y             peak_z     '//&
+        write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
              '        rho+               mass      '
      endif
   end if
