@@ -152,7 +152,7 @@ subroutine compute_clump_properties(xx)
      endif
   end do
   do i=1,ndim
-     call virtual_peak_dp(peak_pos(1,i),'sum')
+     call virtual_peak_dp(peak_pos(1,i),'max')
   end do
 
   do i=1,ndim
