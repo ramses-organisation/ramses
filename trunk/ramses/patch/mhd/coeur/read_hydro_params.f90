@@ -9,7 +9,7 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Local variables  
   !--------------------------------------------------
-  integer::i,idim
+  integer::i,idim,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type
   real(dp)::scale,ek_bound,em_bound
 
@@ -19,27 +19,34 @@ subroutine read_hydro_params(nml_ok)
   namelist/init_params/filetype,initfile,multiple,nregion,region_type &
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
-       & ,d_region,u_region,v_region,w_region,p_region &
-       & ,A_region,B_region,C_region,alpha,beta,crit,delta_rho
+       & ,d_region,u_region,v_region,w_region,p_region,alpha,beta,crit,delta_rho &
+#if NENER>0
+       & ,prad_region &
+#endif
+       & ,A_region,B_region,C_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
-       & ,niter_riemann,slope_type &
-       & ,pressure_fix,nordlund_fix,scheme,riemann,riemann2d
+       & ,niter_riemann,slope_type,slope_mag_type &
+#if NENER>0
+       & ,gamma_rad &
+#endif
+       & ,pressure_fix,beta_fix,scheme,riemann,riemann2d
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
-       & ,a_refine,b_refine,exp_refine,jeans_refine &
+       & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
        & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
        & ,err_grad_A,err_grad_B,err_grad_C,err_grad_B2 &
-       & ,floor_d,floor_u,floor_p &
+       & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
        & ,floor_A,floor_B,floor_C,floor_B2 &
-       & ,interpol_var,interpol_type
+       & ,interpol_var,interpol_type,interpol_mag_type,sink_refine
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
        & ,d_bound,u_bound,v_bound,w_bound,p_bound &
        & ,A_bound,B_bound,C_bound
-  namelist/physics_params/cooling,haardt_madau,metal &
-       & ,t_star,n_star,T2_star,g_star,del_star &
-       & ,eta_sn,yield,f_w,ndebris,rbubble &
-       & ,J21,a_spec,z_ave
+  namelist/physics_params/cooling,haardt_madau,metal,isothermal &
+       & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
+       & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
+       & ,J21,a_spec,z_ave,z_reion,eta_mag,delayed_cooling &
+       & ,self_shielding,smbh,agn,B_ave,t_diss
 
   ! Read namelist file
   rewind(1)
@@ -76,6 +83,10 @@ subroutine read_hydro_params(nml_ok)
   if(t_star>0)then
      star=.true.
      pic=.true.
+  else if(eps_star>0)then
+     t_star=0.1635449*(n_star/0.1)**(-0.5)/eps_star
+     star=.true.
+     pic=.true.
   endif
 
   !--------------------------------------------------
@@ -86,6 +97,17 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
+
+  !--------------------------------------------------
+  ! Check for non-thermal energies
+  !--------------------------------------------------
+#if NENER>0
+  if(nvar<(8+nener))then
+     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= ndim+2+nener'
+     if(myid==1)write(*,*)'Modify NENER and recompile'
+     nml_ok=.false.
+  endif
+#endif
 
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions
@@ -104,6 +126,7 @@ subroutine read_hydro_params(nml_ok)
               icoarse_min=icoarse_min+1
               icoarse_max=icoarse_max+1
            end if
+           nboundary_true=nboundary_true+1
         end if
      end do
      do i=1,nboundary
@@ -113,6 +136,7 @@ subroutine read_hydro_params(nml_ok)
               jcoarse_min=jcoarse_min+1
               jcoarse_max=jcoarse_max+1
            end if
+           nboundary_true=nboundary_true+1
         end if
      end do
      do i=1,nboundary
@@ -122,6 +146,7 @@ subroutine read_hydro_params(nml_ok)
               kcoarse_min=kcoarse_min+1
               kcoarse_max=kcoarse_max+1
            end if
+           nboundary_true=nboundary_true+1
         end if
      end do
 
@@ -202,6 +227,10 @@ subroutine read_hydro_params(nml_ok)
         end if
      end do
   end if
+  nboundary=nboundary_true
+  if(simple_boundary.and.nboundary==0)then
+     simple_boundary=.false.
+  endif
 
   !--------------------------------------------------
   ! Compute boundary conservative variables
@@ -222,7 +251,6 @@ subroutine read_hydro_params(nml_ok)
      boundary_var(i,5)=ek_bound+em_bound+P_bound(i)/(gamma-1.0d0)
   end do
 
-
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -233,8 +261,26 @@ subroutine read_hydro_params(nml_ok)
      jeans_refine(i)=-1.0
   end do
 
+  !-----------------------------------
+  ! Sort out passive variable indices
+  !-----------------------------------
+  imetal=9+nener
+  idelay=imetal
+  if(metal)idelay=imetal+1
+  ixion=idelay
+  if(delayed_cooling)ixion=idelay+1
+  ichem=ixion
+  if(aton)ichem=ixion+1
 
-
+  !-----------------------------------
+  ! Set magnetic slope limiters
+  !-----------------------------------
+  if (slope_mag_type == -1) then
+    slope_mag_type = slope_type
+  endif
+  if (interpol_mag_type == -1) then
+    interpol_mag_type = interpol_type
+  endif
 
 end subroutine read_hydro_params
 
