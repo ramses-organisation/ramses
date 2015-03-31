@@ -167,8 +167,8 @@ subroutine set_uold(ilevel)
 #endif
            e_mag=0.5*(A**2+B**2+C**2)
            e_cons=uold(ind_cell,5)-e_kin-e_mag
-           e_prim=enew(ind_cell)*(1.0d0+fact* &
-                & divu(ind_cell))! Note: here divu=-div.u*dt
+           e_prim=enew(ind_cell)
+           ! Note: here divu=-div.u*dt
            div=abs(divu(ind_cell))*dx/dtnew(ilevel)
            ! Estimate of the local truncation errors
            e_trunc=beta_fix*d*max(div,3.0*hexp*dx)**2
