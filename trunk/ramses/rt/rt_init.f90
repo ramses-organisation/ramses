@@ -136,7 +136,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
        & ,SED_isEgy, rt_output_coolstats                                 &
-       & ,upload_equilibrium_x, X, Y, rt_is_init_xion, rt_UV_nhSS        &
+       & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
        & ,convert_birth_times                                            &
@@ -263,6 +263,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 !------------------------------------------------------------------------
+  call add_UV_background(ilevel,dt)
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
   if(rt_nsource .le. 0) return      ! no rt sources
   if(verbose)write(*,111)ilevel
@@ -336,6 +337,69 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 111 format('   Entering add_rt_sources for level ',I2)
 
 END SUBROUTINE add_rt_sources
+
+!************************************************************************
+SUBROUTINE add_UV_background(ilevel,dt)
+
+! Inject radiation from RT source regions (from the RT namelist). Since 
+! the light sources are continuously emitting radiation, this is called
+! continuously during code execution, rather than just during 
+! initialization.
+!
+! ilevel => amr level at which to inject the radiation
+! dt     => timestep for injection (since injected values are per time)
+!------------------------------------------------------------------------
+  use UV_module, ONLY: UV_Nphot_cgs, nUVgroups, iUVgroups
+  use amr_commons
+  use rt_parameters
+  use hydro_commons
+  use rt_hydro_commons
+  implicit none
+  integer::ilevel
+  real(dp)::dt
+  integer::i,igrid,ncache,iskip,ngrid,j
+  integer::ind,ivar,ind_group,ic,ig
+  integer ,dimension(1:nvector),save::ind_grid
+  real(dp),dimension(1:3)::skip_loc
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
+            ,scale_fp,efactor,nH
+!------------------------------------------------------------------------
+  if(numbtot(1,ilevel)==0)return     ! no grids at this level
+  if(.not. rt_isDiffuseUVsrc) return ! no propagated UV background
+  if(verbose)write(*,111)ilevel
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  call rt_units(scale_np, scale_fp)
+
+  ncache=active(ilevel)%ngrid
+  ! Loop over grids by vector sweeps
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     ! Loop over cells
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ic=iskip+ind_grid(i) ! cell index
+           ! Read the local gas density and inject the UV radiation
+           nH=unew(ic,1)*scale_nH
+           efactor = exp(-nH/rt_UVsrc_nHmax)
+           do j=1,nUVgroups
+              ig = iGroups(iUVgroups(j))
+              rtunew(ic,ig) = max(rtunew(ic,ig)                     &
+                                 ,UV_Nphot_cgs(j)/scale_np * efactor)
+           end do
+        end do
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+
+111 format('   Entering add_UV_background for level ',I2)
+
+END SUBROUTINE add_UV_background
 
 !************************************************************************
 SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)

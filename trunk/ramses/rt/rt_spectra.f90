@@ -1297,7 +1297,7 @@ MODULE UV_module
 
   PUBLIC nUVgroups, iUVvars_cool, UV_Nphot_cgs, init_UV_background       &
        , inp_UV_rates_table, inp_UV_groups_table, UV_minz, UV_maxz       &
-       , update_UVsrc
+       , update_UVsrc, iUVgroups
 
   PRIVATE   ! default
 
@@ -1459,8 +1459,8 @@ SUBROUTINE init_UV_background()
            end do
         end do
 #ifndef WITHOUTMPI
-        allocate(tbl2(UV_nz,1+2*nIons))
-        call MPI_ALLREDUCE(tbl,tbl2,UV_nz*(1+2*nIons),&
+        allocate(tbl2(UV_nz,2+2*nIons))
+        call MPI_ALLREDUCE(tbl,tbl2,UV_nz*(2+2*nIons),&
              MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
         tbl = tbl2
         deallocate(tbl2)
@@ -1478,35 +1478,60 @@ SUBROUTINE init_UV_background()
 END SUBROUTINE init_UV_background
 
 !*************************************************************************
-SUBROUTINE inp_UV_rates_table(z, ret)
+SUBROUTINE inp_UV_rates_table(z, ret, z_damp)
 ! Compute UV heating and ionization rates by interpolation from table.
 ! z     => Redshift
 ! ret  <=  [nIons,2] interpolated values of all UV rates.
 !          1=ionization rate [# s-1], 2=heating rate [erg s-1]
+! z_damp=> Optional. If set and true, the UV rates are expoenentially
+!          damped according to the difference z-z_reion (i.e. strong
+!          damping if z > z_reion, and a gradual decrease in the damping
+!          when z~z_reion).  
 !-------------------------------------------------------------------------
+  use amr_parameters
   real(dp), intent(in):: z
-  real(dp):: ret(nIons,2), dz0, dz1
+  real(dp):: ret(nIons,2), dz0, dz1, zr_factor
   integer:: iz0, iz1
+  logical, optional, intent (in) :: z_damp
 !-------------------------------------------------------------------------
   ret=0. ; if(z .gt. UV_maxz) RETURN
   call inp_1d(UV_zeds, UV_nz, z, iz0, iz1, dz0, dz1)
   ret = dz0*UV_rates_table(iz1, :, :) + dz1*UV_rates_table(iz0, :, :)
+  if (present(z_damp)) then
+     if (z_damp) then
+        zr_factor = 20d0*(z/z_reion)**6d0
+        ret = ret * 10d0**(-zr_factor )
+     endif
+  endif
 END SUBROUTINE inp_UV_rates_table
 
 !*************************************************************************
-SUBROUTINE inp_UV_groups_table(z, ret)
+SUBROUTINE inp_UV_groups_table(z, ret, z_damp)
 ! Compute UV properties by interpolation from table.
 ! z    => Redshift
 ! ret <=  [nGroups,1+2*nIons) interpolated values of all UV properties.
 !         1=ph. flux [#/cm2/s], 2*i=group_csn[cm-2], 1+2*i=group_egy [ev]
+! z_damp=> Optional. If set and true, the UV rates are expoenentially
+!          damped according to the difference z-z_reion (i.e. strong
+!          damping if z > z_reion, and a gradual decrease in the damping
+!          when z~z_reion).  
 !-------------------------------------------------------------------------
+  use amr_parameters
   real(dp), intent(in):: z
-  real(dp):: ret(nUVgroups,2+2*nIons), dz0, dz1
+  real(dp):: ret(nUVgroups,2+2*nIons), dz0, dz1, zr_factor
   integer:: iz0, iz1
+  logical, optional, intent (in) :: z_damp
 !-------------------------------------------------------------------------
   ret=0. ; if(z .gt. UV_maxz) RETURN
   call inp_1d(UV_zeds, UV_nz, z, iz0, iz1, dz0, dz1)
   ret = dz0 * UV_groups_table(iz1, :, :) + dz1 * UV_groups_table(iz0, :,:)
+  if (present(z_damp)) then
+     if (z_damp) then
+        ! Weaker damping than in the non-RT UV case:
+        zr_factor = 2d0*(z/z_reion)**6d0
+        ret = ret * exp(-zr_factor )
+     endif
+  endif
 END SUBROUTINE inp_UV_groups_table
 
 !*************************************************************************
@@ -1545,9 +1570,9 @@ SUBROUTINE update_UVsrc
 
   if(redshift .gt. UV_maxz) return ! UV background not turned on yet
 
-  call inp_UV_groups_table(redshift, UVprops)
+  call inp_UV_groups_table(redshift, UVprops, .true.)
   UV_fluxes_cgs(:)      = UVprops(:,1)
-  UV_Nphot_cgs          = UV_fluxes_CGS/rt_c_cgs
+  UV_Nphot_cgs          = UV_fluxes_cgs/rt_c_cgs
   group_egy(iUVgroups)  = UVprops(:,2)
   do i=1,nIons
      group_csn(iUVgroups,i)  = UVprops(:,1+2*i)
