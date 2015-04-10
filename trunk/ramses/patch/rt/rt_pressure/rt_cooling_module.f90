@@ -148,7 +148,7 @@ SUBROUTINE update_UVrates
   UVrates=0.
   if(.not. rt_UV_hom) RETURN
   
-  call inp_UV_rates_table(1./aexp - 1., UVrates)
+  call inp_UV_rates_table(1./aexp - 1., UVrates, .true.)
   if(myid==1) write(*,*) 'UV heating: ',UVrates(:,2)
 
 END SUBROUTINE update_UVrates
@@ -298,7 +298,6 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
 ! The original values, T2, xion etc, must stay unchanged, while dT2, xion
 ! etc contain the new values (the difference at the end of the routine).
 !-------------------------------------------------------------------------
-  use UV_module, ONLY: iUVvars_cool, UV_Nphot_cgs
   use amr_commons
   use const
   implicit none  
@@ -314,7 +313,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
   real(dp):: dUU, fracMax
   real(dp):: xHeI, mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta, s, jac,q
   real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, cr, de, photoRate
-  real(dp)::metal_tot,metal_prime
+  real(dp)::metal_tot,metal_prime, ss_factor
   integer::i,j,code
   real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs, dustSc        
   real(dp),dimension(nGroups),save:: kAbs_loc,kSc_loc
@@ -323,9 +322,6 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
 !-------------------------------------------------------------------------
   dt_ok=.false.
   nHe=0.25*nH*Y/X  !         Helium number density
-  ! Insert UV background emitted and propagated from void regions:
-  if(rt_isDiffuseUVsrc .and. nH .le. rt_UVsrc_nHmax)                     &
-                Np(iUVvars_cool-4) = max(Np(iUVvars_cool-4), UV_Nphot_cgs)
   ! U contains the original values, dU the updated ones:
   dT2=T2 ; dXion=xion ; dNp=Np ; dFp=Fp ; dp_gas=p_gas
   ! xHI = MAX(1.-xion(1),0.) ; xHII = xion(1)
@@ -345,23 +341,28 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
   ne= nH*xion(1)+nHE*(xion(2)+2.*xion(3))              !  Electron density
   neInit=ne
   fracMax=0d0    ! Max. fractional update, to check if dt can be increased
+  ss_factor=1d0  ! UV background self_shielding factor
+  if(self_shielding) ss_factor = exp(-nH/1d-2)
 
   rho = nH / X * mH
-  kAbs_loc = kappaAbs
-  kSc_loc  = kappaSc
-  if(is_kIR_T) then ! k_IR depends on T
-     ! Special stuff for Krumholz/Davis experiment
-     if(rt_T_rad) then  ! Use radiation temperature for kappa
-        E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
-        TR = max(T2_min_fix,(E_rad*rt_c_cgs/c_cgs/a_r)**0.25)
-        dT2 = TR/mu ;   TK = TR
+  ! Set dust opacities-----------------------------------------------------
+  if(rt .and. nGroups .gt. 0) then
+     kAbs_loc = kappaAbs
+     kSc_loc  = kappaSc
+     if(is_kIR_T) then ! k_IR depends on T
+        ! Special stuff for Krumholz/Davis experiment
+        if(rt_T_rad) then  ! Use radiation temperature for kappa
+           E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
+           TR = max(T2_min_fix,(E_rad*rt_c_cgs/c_cgs/a_r)**0.25)
+           dT2 = TR/mu ;   TK = TR
+        endif
+        kAbs_loc(iIR) = kappaAbs(iIR) * (TK/10d0)**2
+        kSc_loc(iIR)  = kappaSc(iIR)  * (TK/10d0)**2
      endif
-     kAbs_loc(iIR) = kappaAbs(iIR) * (TK/10d0)**2
-     kSc_loc(iIR)  = kappaSc(iIR)  * (TK/10d0)**2
+     ! Set dust absorption and scattering rates [s-1]:
+     dustAbs(:)  = kAbs_loc(:) *rho*Zsolar*rt_c_cgs
+     dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar*rt_c_cgs
   endif
-  ! Set dust absorption and scattering rates [s-1]:
-  dustAbs(:)  = kAbs_loc(:) *rho*Zsolar*rt_c_cgs
-  dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar*rt_c_cgs
 
   !(i) UPDATE PHOTON DENSITY AND FLUX ************************************
   if(rt .and. rt_advect) then 
@@ -444,8 +445,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
            Hrate = Hrate + dNp(i) * SUM(nN(:) * PHrate(i,:))
         end do                                                            
      endif                                                                
-     if(rt_UV_hom .and. nH .lt. rt_UV_nHSS)                              &
-          Hrate = Hrate + SUM(nN(:) * UVrates(:,2))
+     if(rt_UV_hom) Hrate = Hrate + SUM(nN(:) * UVrates(:,2)) * ss_factor
      Crate = compCoolrate(TK, ne, nN(1), nI(1), nN(2), nN(3), nI(3)      &
                          ,a_exp, dCdT2, RT_OTSA)                !  Cooling
      dCdT2 = dCdT2 * mu                             !  dC/dT2 = mu * dC/dT
@@ -465,33 +465,36 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      TK=dT2*mu
   endif
 
-  if(rt_isIR .and. (kAbs_loc(iIR) .gt. 0d0) .and. .not. rt_T_rad) then
-     ! Delta (Cv T) = ( c_red/lambda E - c/lambda a T^4) 
-     !              / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
-     C_v = rho*kb/mh/mu/(gamma-1d0)                                  
-     E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
-     dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
-          / (1d0/kAbs_loc(iIR)/rho/dt + 4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
-     dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
-     dNp(iIR) = dNp(iIR) - dE_T / group_egy(iIR) / ev_to_erg
-
-     dT2 = max(T2_min_fix,dT2)                                   
-     dNp(iIR) = max(dNp(iIR), smallNp)                 
-     dUU=ABS(dNp(iIR)-Np(iIR))/(Np(iIR)+Np_MIN)/Np_FRAC
-     if(dUU .gt. 1.) then                    ! 10% rule for photon density
-       code=4 ;   RETURN                          
-     endif                                                               
-     fracMax=MAX(fracMax,dUU)                                           
-                                                                       
-     dUU   = ABS(dT2-T2) / (T2+T_MIN) / T_FRAC                         
-     if(dUU .gt. 1.) then                                ! 10% rule for T2
-        code=5 ; RETURN                                                  
-     endif                                                                
-     fracMax=MAX(fracMax,dUU)                                             
-     TK=dT2*mu                                                          
+  if(rt_isIR) then
+     if(kAbs_loc(iIR) .gt. 0d0 .and. .not. rt_T_rad) then
+        ! Evolve IR-Dust equilibrium temperature--------------------------
+        ! Delta (Cv T)= ( c_red/lambda E - c/lambda a T^4) 
+        !             / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
+        C_v = rho*kb/mh/mu/(gamma-1d0)                                  
+        E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
+        dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
+             /(1d0/kAbs_loc(iIR)/rho/dt +4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
+        dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
+        dNp(iIR) = dNp(iIR) - dE_T / group_egy(iIR) / ev_to_erg
+        
+        dT2 = max(T2_min_fix,dT2)                                   
+        dNp(iIR) = max(dNp(iIR), smallNp)                 
+        dUU=ABS(dNp(iIR)-Np(iIR))/(Np(iIR)+Np_MIN)/Np_FRAC
+        if(dUU .gt. 1.) then                 ! 10% rule for photon density
+           code=4 ;   RETURN                          
+        endif
+        fracMax=MAX(fracMax,dUU)                                           
+        
+        dUU   = ABS(dT2-T2) / (T2+T_MIN) / T_FRAC                         
+        if(dUU .gt. 1.) then                             ! 10% rule for T2
+           code=5 ; RETURN                                                  
+        endif
+        fracMax=MAX(fracMax,dUU)                                             
+        TK=dT2*mu                                                          
                                                                         
-     call reduce_flux(dFp(iIR,:),dNp(iIR)*rt_c_cgs)           
-  endif       
+        call reduce_flux(dFp(iIR,:),dNp(iIR)*rt_c_cgs)           
+     endif
+  endif
 
   !(iii) UPDATE xHII******************************************************
   ! First recompute interaction rates since T is updated
@@ -506,7 +509,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
   dBeta   = comp_dBeta_dT_HI(TK)
   cr = beta(1) * ne                               !               Creation
   if(rt) cr = cr + SUM(signc(:,1)*dNp)            !                  [s-1]
-  if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) cr = cr + UVrates(1,1) 
+  if(rt_UV_hom) cr = cr + UVrates(1,1) * ss_factor
   de = alpha(1) * ne                              !            Destruction
   
   ! Not Anninos, but more stable (this IS neccessary, as the one-cell    !
@@ -543,7 +546,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      ! Destruction = collisional ionization+photoionization of HeI
      de = beta(2) * ne
      if(rt) de = de + SUM(signc(:,2)*dNp)
-     if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) de = de + UVrates(2,1)
+     if(rt_UV_hom) de = de + UVrates(2,1) * ss_factor
      xHeI = (cr*dt+xHeI)/(1.+de*dt)                          !  The update
      xHeI = MIN(MAX(xHeI, 0.),1.)
 
@@ -553,7 +556,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
      ! Destruction = rec. of HeII + coll.- and photo-ionization of HeII
      photoRate=0.
      if(rt) photoRate = SUM(signc(:,3)*dNp)
-     if(rt_UV_hom .and. nH.lt.rt_UV_nHSS) photoRate=photoRate+UVrates(3,1)
+     if(rt_UV_hom) photoRate = photoRate + UVrates(3,1) * ss_factor
      de = (alpha(2) + beta(3)) * ne + photoRate
      dXion(2) = (cr*dt+dXion(2))/(1.+de*dt)                  !  The update
      dXion(2) = MIN(MAX(dXion(2), x_MIN),1.)
@@ -780,7 +783,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL   &
   Np(1,:)=0. ; Fp(1,:,:)=0.                  ! Photon densities and fluxes
   dNpdt(1,:)=0. ; dFpdt(1,:,:)=0.                              
   do while (aexp < aend)
-     if(rt_UV_hom) call inp_UV_rates_table(1./aexp - 1., UVrates)
+     if(rt_UV_hom) call inp_UV_rates_table(1./aexp - 1., UVrates, .true.)
 
      daexp = dasura*aexp
      dt_cool = daexp                                                     &

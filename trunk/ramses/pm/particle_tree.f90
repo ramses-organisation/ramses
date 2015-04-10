@@ -325,8 +325,8 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if(i<0.or.i>2)then
               write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)
            endif
+        end do
      end do
-  end do
      stop
   end if
 

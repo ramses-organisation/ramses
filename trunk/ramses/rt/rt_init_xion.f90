@@ -123,7 +123,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, mu
+  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, mu, ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(6)::nSpec               !          Species abundances
 !-------------------------------------------------------------------------
@@ -154,9 +154,11 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   T2 = T2/nH*scale_T2                       !                T/mu [Kelvin]
   nH = nH*scale_nH                          !        Number density [H/cc]
 
-  if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) &  !   UV backgr. photoionization
-       phI_rates = phI_rates + UVrates(:,1)
-
+  ! UV background photoionization:
+  ss_factor = 1d0
+  if(self_shielding) ss_factor = exp(-nH/1d-2)
+  if(rt_UV_hom) phI_rates = phI_rates + UVrates(:,1) * ss_factor
+       
   call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec)
   xion(1)=nSpec(3)/(nSpec(2)+nSpec(3))                    !   HII fraction
   if(Y .gt. 0.d0 .and. nIons .ge. 3) then
