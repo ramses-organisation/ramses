@@ -57,11 +57,6 @@ subroutine output_frame()
 
   character(len=1)::temp_string
    
-
-  real(dp),dimension(1:ncpu)::mass_cpu,mass_cpu_all
-  integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
-
-
   nh_temp = nh_frame
   nw_temp = nw_frame
 
