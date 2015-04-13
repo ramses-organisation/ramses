@@ -395,7 +395,11 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar5)=unew(ind_buffer2,ivar5)+dflux
      unew(ind_buffer2,ivar6)=unew(ind_buffer2,ivar6)-dflux
      unew(ind_buffer3,ivar3)=unew(ind_buffer3,ivar3)-dflux
-  end do
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer1,ivar6)=unew(ind_buffer1,ivar6)+dflux*0.5
+        unew(ind_buffer3,ivar5)=unew(ind_buffer3,ivar5)-dflux*0.5
+     endif
+end do
 
   ! Update coarse By and Bz using fine EMFx on Y=0 and Z=1 grid edge
   ind_father1=1+(i1  )+3*(j1-1)+9*(k1  )
@@ -413,6 +417,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar3)=unew(ind_buffer2,ivar3)-dflux
      unew(ind_buffer2,ivar5)=unew(ind_buffer2,ivar5)-dflux
      unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer1,ivar5)=unew(ind_buffer1,ivar5)+dflux*0.5
+        unew(ind_buffer3,ivar3)=unew(ind_buffer3,ivar3)+dflux*0.5
+     endif
   end do
 
   ! Update coarse By and Bz using fine EMFx on Y=1 and Z=1 grid edge
@@ -431,6 +439,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar2)=unew(ind_buffer2,ivar2)-dflux
      unew(ind_buffer2,ivar3)=unew(ind_buffer2,ivar3)+dflux
      unew(ind_buffer3,ivar6)=unew(ind_buffer3,ivar6)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)+dflux*0.5
+        unew(ind_buffer1,ivar3)=unew(ind_buffer1,ivar3)-dflux*0.5
+     endif
   end do
 
   ! Update coarse By and Bz using fine EMFx on Y=1 and Z=0 grid edge
@@ -449,6 +461,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar6)=unew(ind_buffer2,ivar6)+dflux
      unew(ind_buffer2,ivar2)=unew(ind_buffer2,ivar2)+dflux
      unew(ind_buffer3,ivar5)=unew(ind_buffer3,ivar5)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar6)=unew(ind_buffer3,ivar6)-dflux*0.5
+        unew(ind_buffer1,ivar2)=unew(ind_buffer1,ivar2)-dflux*0.5
+     endif
   end do
 
   !--------------------------------------
@@ -471,6 +487,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar4)=unew(ind_buffer2,ivar4)-dflux
      unew(ind_buffer2,ivar6)=unew(ind_buffer2,ivar6)+dflux
      unew(ind_buffer3,ivar3)=unew(ind_buffer3,ivar3)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar4)=unew(ind_buffer3,ivar4)+dflux*0.5
+        unew(ind_buffer1,ivar6)=unew(ind_buffer1,ivar6)-dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and Bz using fine EMFy on X=0 and Z=1 grid edge
@@ -489,8 +509,12 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar3)=unew(ind_buffer2,ivar3)+dflux
      unew(ind_buffer2,ivar4)=unew(ind_buffer2,ivar4)+dflux
      unew(ind_buffer3,ivar1)=unew(ind_buffer3,ivar1)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar3)=unew(ind_buffer3,ivar3)-dflux*0.5
+        unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)-dflux*0.5
+     endif
   end do
-
+  
   ! Update coarse Bx and Bz using fine EMFy on X=1 and Z=1 grid edge
   ind_father1=1+(i1  )+3*(j1  )+9*(k1+1)
   ind_father2=1+(i1+1)+3*(j1  )+9*(k1+1)
@@ -507,6 +531,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar1)=unew(ind_buffer2,ivar1)+dflux
      unew(ind_buffer2,ivar3)=unew(ind_buffer2,ivar3)-dflux
      unew(ind_buffer3,ivar6)=unew(ind_buffer3,ivar6)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar1)=unew(ind_buffer3,ivar1)-dflux*0.5
+        unew(ind_buffer1,ivar3)=unew(ind_buffer1,ivar3)+dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and Bz using fine EMFx on X=1 and Z=0 grid edge
@@ -525,6 +553,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar6)=unew(ind_buffer2,ivar6)-dflux
      unew(ind_buffer2,ivar1)=unew(ind_buffer2,ivar1)-dflux
      unew(ind_buffer3,ivar4)=unew(ind_buffer3,ivar4)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar3)=unew(ind_buffer3,ivar6)+dflux*0.5
+        unew(ind_buffer1,ivar1)=unew(ind_buffer1,ivar1)+dflux*0.5
+     endif
   end do
 
   !--------------------------------------
@@ -547,6 +579,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar4)=unew(ind_buffer2,ivar4)+dflux
      unew(ind_buffer2,ivar5)=unew(ind_buffer2,ivar5)-dflux
      unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar4)=unew(ind_buffer3,ivar4)-dflux*0.5
+        unew(ind_buffer1,ivar5)=unew(ind_buffer1,ivar5)+dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=0 and Y=1 grid edge
@@ -565,6 +601,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar2)=unew(ind_buffer2,ivar2)-dflux
      unew(ind_buffer2,ivar4)=unew(ind_buffer2,ivar4)-dflux
      unew(ind_buffer3,ivar1)=unew(ind_buffer3,ivar1)-dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)+dflux*0.5
+        unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)+dflux*0.5
+     endif  
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=1 grid edge
@@ -583,6 +623,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar1)=unew(ind_buffer2,ivar1)-dflux
      unew(ind_buffer2,ivar2)=unew(ind_buffer2,ivar2)+dflux
      unew(ind_buffer3,ivar5)=unew(ind_buffer3,ivar5)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar1)=unew(ind_buffer3,ivar1)+dflux*0.5
+        unew(ind_buffer1,ivar2)=unew(ind_buffer1,ivar2)-dflux*0.5
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=0 grid edge
@@ -601,6 +645,10 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      unew(ind_buffer2,ivar5)=unew(ind_buffer2,ivar5)+dflux
      unew(ind_buffer2,ivar1)=unew(ind_buffer2,ivar1)+dflux
      unew(ind_buffer3,ivar4)=unew(ind_buffer3,ivar4)+dflux
+     if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+        unew(ind_buffer3,ivar5)=unew(ind_buffer3,ivar5)-dflux*0.5
+        unew(ind_buffer1,ivar1)=unew(ind_buffer1,ivar1)-dflux*0.5
+     endif
   end do
 
   endif
