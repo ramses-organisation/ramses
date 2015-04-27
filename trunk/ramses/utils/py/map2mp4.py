@@ -211,8 +211,9 @@ def main():
 			dat = load_map(opts,p,i)
 			if sink_flag:
 				plot_sinks, sink_id, sink_m, sink_pos = load_sink(opts,i)
-				sink_m = numpy.log10(sink_m*unit_m)
-				sink_pos = [x/boxlen for x in sink_pos]
+				if plot_sinks:
+					sink_m = numpy.log10(sink_m*unit_m)
+					sink_pos = [x/boxlen for x in sink_pos]
 		
 			infof = open("%s/movie%d/info_%05d.txt" % (opts.dir, int(opts.proj), i))
 			for j, line in enumerate(infof):
@@ -273,6 +274,12 @@ def main():
 				clip_k = chist.searchsorted(0.05)
 				plotmin = bins[clip_k]
 				plotmax = rawmax
+
+			#if(plotmax-plotmin>0):
+			#	dat = numpy.clip((dat-plotmin)/(plotmax-plotmin), 0.0, 1.0)
+			#else:
+			#	dat = 0.5*dat/plotmax
+			
 		
 			# Plotting
 			
@@ -291,17 +298,18 @@ def main():
 					vmin = plotmin, vmax = plotmax, aspect='auto')
 			
 			# Plotting sink
-			if (sink_flag and plot_sinks):
-				if axis == 'x':
-					w=1 # y
-					h=2	# z
-				elif axis == 'y':
-					w=0 # x
-					h=2 # z
-				else:
-					w=0	# x
-					h=1 # y
+			#if (sink_flag and plot_sinks):
+			if axis == 'x':
+				w=1 # y
+				h=2	# z
+			elif axis == 'y':
+				w=0 # x
+				h=2 # z
+			else:
+				w=0	# x
+				h=1 # y
 
+			if (sink_flag and plot_sinks):
 				ax.scatter((sink_pos[w]-frame_centre[w]/boxlen)/(frame_delta[w]/boxlen/2)*nx/2+nx/2,\
 						(sink_pos[h]-frame_centre[h]/boxlen)/(frame_delta[h]/boxlen/2)*ny/2+ny/2,\
 						marker='+',c='r',s=6*sink_m**2)
