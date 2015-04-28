@@ -34,7 +34,11 @@ subroutine cooling_fine(ilevel)
 
   if((cooling.and..not.neq_chem).and.ilevel==levelmin.and.cosmo)then
      if(myid==1)write(*,*)'Computing new cooling table'
+#ifdef grackle
+     ! Compute new cooling table at current aexp with grackle
+#else
      call set_table(dble(aexp))
+#endif
   endif
 #ifdef RT
   if(neq_chem.and.ilevel==levelmin) then
@@ -85,6 +89,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
+
+#ifdef grackle     
+  real(kind=8) gr_density(nvector), gr_energy(nvector), &
+  &     gr_x_velocity(nvector), gr_y_velocity(nvector), &
+  &     gr_z_velocity(nvector), gr_metal_density(nvector)
+  integer::iresult, solve_chemistry_table, gr_rank,comoving_coordinates=0
+  integer,dimension(1:3)::gr_dimension,gr_start,gr_end
+  real(dp)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0,gr_dt
+#endif
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -280,10 +293,54 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 #endif
 
+     ! grackle tabular cooling
+#ifdef grackle
+     gr_rank = 3
+     do i = 1, gr_rank
+        gr_dimension(i) = 1
+        gr_start(i) = 0
+        gr_end(i) = 0
+     enddo
+     gr_dimension(1) = nvector
+     gr_end(1) = nleaf - 1
+     ! set units
+     density_units=scale_d
+     length_units=scale_l
+     time_units=scale_t
+     velocity_units=scale_v
+     temperature_units=scale_T2
+     do i = 1, nleaf
+        gr_density(i) = uold(ind_leaf(i),1)
+        if(metal)then
+           gr_metal_density(i) = uold(ind_leaf(i),imetal)
+        else
+           gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
+        endif
+        gr_x_velocity(i) = uold(ind_leaf(i),2)/uold(ind_leaf(i),1)
+        gr_y_velocity(i) = uold(ind_leaf(i),3)/uold(ind_leaf(i),1)
+        gr_z_velocity(i) = uold(ind_leaf(i),4)/uold(ind_leaf(i),1)
+        gr_energy(i) = uold(ind_leaf(i),ndim+2)- ekk(i) 
+        gr_energy(i) = gr_energy(i)/uold(ind_leaf(i),1)
+	enddo
+
+     gr_dt = dtnew(ilevel)
+    
+     iresult = solve_chemistry_table(   &
+     &     comoving_coordinates,  &
+     &     density_units, length_units, &
+     &     time_units, velocity_units, &
+     &     a_units, a_value, gr_dt, &
+     &     gr_rank, gr_dimension, &
+     &     gr_start, gr_end, &
+     &     gr_density, gr_energy, &
+     &     gr_x_velocity, gr_y_velocity, gr_z_velocity, &
+     &     gr_metal_density)
+#else
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then
         call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
      endif
+#endif
 #ifdef RT
      if(neq_chem) then
         U_old=U
@@ -293,6 +350,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      endif
 #endif
+
+#ifdef grackle
+        do i=1,nleaf
+           uold(ind_leaf(i),ndim+2) = gr_energy(i)*uold(ind_leaf(i),1)+ekk(i)
+        end do
+#else
 
      ! Compute rho
      do i=1,nleaf
@@ -338,6 +401,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))
         end do
      endif
+
+#endif
 
      ! Update delayed cooling switch
      if(delayed_cooling)then
