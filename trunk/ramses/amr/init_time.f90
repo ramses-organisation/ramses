@@ -9,6 +9,20 @@ subroutine init_time
   implicit none
   integer::i,Nmodel
   real(kind=8)::T2_sim  
+#ifdef grackle
+  integer:: iresult, initialize_grackle, comoving_coordinates=0, use_grackle=1, &
+     &     with_radiative_cooling=1, primordial_chemistry=0, &
+     &     metal_cooling=1, UVbackground=1, h2_on_dust=0, &
+     &     cmb_temperature_floor=1 
+  real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+#ifdef gracklefile !Add -Dgracklefile='/path/to/gracklefile' to Makefile, else use default table in grackle directory 
+  character(len=256)::grackle_data_file=gracklefile
+#else
+  character(len=256)::grackle_data_file="../grackle/input/CloudyData_UVB=HM2012.h5" !assumes grackle directory is one directory up
+#endif
+
+#endif
 
   if(nrestart==0)then
      if(cosmo)then
@@ -59,6 +73,25 @@ subroutine init_time
   end if                                                                   
 
   ! Initialize cooling model
+
+#ifdef grackle
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  density_units=scale_d
+  length_units=scale_l
+  time_units=scale_t
+  velocity_units=scale_v
+  ! Initialize the Grackle data
+   iresult = initialize_grackle(         &
+     &     comoving_coordinates,         &
+     &     density_units, length_units,  &
+     &     time_units, velocity_units,   &
+     &     a_units, a_value,             &
+     &     use_grackle, with_radiative_cooling, &
+     &     TRIM(grackle_data_file),            &
+     &     primordial_chemistry, metal_cooling, &
+     &     UVbackground, h2_on_dust,     &
+     &     cmb_temperature_floor, gamma) 
+#else
   if(cooling.and..not.(neq_chem.or.rt))then
      if(myid==1)write(*,*)'Computing cooling model'
      Nmodel=-1
@@ -83,7 +116,7 @@ subroutine init_time
              & dble(1.0),T2_sim)
      endif
   end if
-
+#endif
 #ifdef RT
   if(neq_chem.or.rt) then
      if(myid==1)write(*,*)'Computing thermochemistry model'
