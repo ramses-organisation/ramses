@@ -232,6 +232,7 @@ subroutine init_cosmo
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
+  use dice_commons
 
   implicit none
   !------------------------------------------------------
@@ -356,6 +357,38 @@ subroutine init_cosmo
      xoff2(levelmin)=0
      xoff3(levelmin)=0
      dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+
+  CASE ('dice')
+     if (verbose) write(*,*)'Reading in gadget format from'//TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
+     call gadgetreadheader(TRIM(initfile(levelmin))//'/'//TRIM(ic_file), 0,gadgetheader, ok)
+     if(.not.ok) call clean_stop
+     !do i=1,6
+     !   if (i .ne. 2) then
+     !      if (gadgetheader%nparttotal(i) .ne. 0) then
+     !         write(*,*) 'Non DM particles present in bin ', i
+     !         call clean_stop
+     !      endif
+     !   endif
+     !enddo
+     if (gadgetheader%mass(2) == 0) then
+        write(*,*) 'Particles have different masses, not supported'
+        call clean_stop
+     endif
+     omega_m = gadgetheader%omega0
+     omega_l = gadgetheader%omegalambda
+     h0 = gadgetheader%hubbleparam * 100.d0
+     boxlen_ini = gadgetheader%boxsize/1e3
+     aexp = gadgetheader%time
+     aexp_ini = aexp
+     ! Compute SPH equivalent mass (initial gas mass resolution)
+     mass_sph=omega_b/omega_m*0.5d0**(ndim*levelmin)
+     nlevelmax_part = levelmin
+     astart(levelmin) = aexp
+     xoff1(levelmin)=0
+     xoff2(levelmin)=0
+     xoff3(levelmin)=0
+     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+
 
   CASE DEFAULT
      write(*,*) 'Unsupported input format '//filetype

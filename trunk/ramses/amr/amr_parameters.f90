@@ -153,7 +153,6 @@ module amr_parameters
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
   logical ::agn=.false.
-  logical ::sink_drag=.true.  ! Gas dragging sink
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
