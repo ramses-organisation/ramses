@@ -3,26 +3,26 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 32
-NDIM = 3
+NDIM = 1
 NPRE = 8
-NVAR = 7
+NVAR = 5
 NENER = 0
 SOLVER = hydro
-PATCH = ../patch/hydro/merger_grackle
-EXEC = ramsesgrackle
+PATCH = 
+EXEC = ramses
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER) -Dgrackle -Dgracklefile="'~/test.h5'"
+          -DSOLVER$(SOLVER)
 #############################################################################
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-#F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
-#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
+FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -62,8 +62,6 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -D
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
 #FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
-F90 = mpif90
-FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM
 
 
 # --- MPI, ifort syntax ------------------------------
@@ -78,7 +76,7 @@ FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = -L/home/ics/butler/grackle/src/clib -lgrackle -L/home/ics/butler/hdf5-1.8.2/hdf5/lib -lhdf5 -lz
+LIBMPI = 
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---
