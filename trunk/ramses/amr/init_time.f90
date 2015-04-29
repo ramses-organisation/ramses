@@ -16,8 +16,12 @@ subroutine init_time
      &     cmb_temperature_floor=1 
   real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+#ifdef gracklefile !Add -Dgracklefile='/path/to/gracklefile' to Makefile, else use default table in grackle directory 
+  character(len=256)::grackle_data_file=gracklefile
+#else
+  character(len=256)::grackle_data_file="../grackle/input/CloudyData_UVB=HM2012.h5" !assumes grackle directory is one directory up
+#endif
 
-  character(len=24)::grackle_data_file="/home/ics/butler/test.h5"
 #endif
 
   if(nrestart==0)then
@@ -83,7 +87,7 @@ subroutine init_time
      &     time_units, velocity_units,   &
      &     a_units, a_value,             &
      &     use_grackle, with_radiative_cooling, &
-     &     grackle_data_file,            &
+     &     TRIM(grackle_data_file),            &
      &     primordial_chemistry, metal_cooling, &
      &     UVbackground, h2_on_dust,     &
      &     cmb_temperature_floor, gamma) 

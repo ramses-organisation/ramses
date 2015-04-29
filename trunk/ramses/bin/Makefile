@@ -3,26 +3,26 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 32
-NDIM = 1
+NDIM = 3
 NPRE = 8
-NVAR = 5
+NVAR = 7
 NENER = 0
 SOLVER = hydro
-PATCH = 
-EXEC = ramses
+PATCH = ../patch/hydro/merger_grackle
+EXEC = ramsesgrackle
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER)
+          -DSOLVER$(SOLVER) -Dgrackle -Dgracklefile="'~/test.h5'"
 #############################################################################
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
-FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+#F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
+#FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -62,6 +62,8 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
 #FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
+F90 = mpif90
+FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM
 
 
 # --- MPI, ifort syntax ------------------------------
@@ -76,7 +78,7 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI = -L/home/ics/butler/grackle/src/clib -lgrackle -L/home/ics/butler/hdf5-1.8.2/hdf5/lib -lhdf5 -lz
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---
