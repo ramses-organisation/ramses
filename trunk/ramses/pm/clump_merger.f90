@@ -771,6 +771,7 @@ subroutine allocate_peak_patch_arrays
   ! These arrays are not used by the clump finder
   allocate(clump_velocity(1:npeaks_max,1:ndim))
   allocate(clump_force(1:npeaks_max,1:ndim))
+  allocate(clump_mass4(npeaks_max))
   allocate(e_kin_int(npeaks_max))
   allocate(e_thermal(npeaks_max))
   allocate(Psurf(npeaks_max))
@@ -858,6 +859,7 @@ subroutine deallocate_all
   call sparse_kill(sparse_saddle_dens)
 
   deallocate(clump_force)
+  deallocate(clump_mass4)
   deallocate(clump_velocity)
   deallocate(e_kin_int)
   deallocate(grav_term)
