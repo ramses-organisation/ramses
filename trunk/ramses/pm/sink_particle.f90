@@ -1634,7 +1634,7 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Mass of the new sink
               if(sink_seedmass>=0.0)then
-                 mseed_new(index_sink)=sink_seedmass
+                 mseed_new(index_sink)=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
               else
                  if(smbh)then
                     ! The SMBH/sink mass is the mass that will heat the gas to 10**7 K after creation
@@ -1879,15 +1879,16 @@ subroutine update_sink(ilevel)
 
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
 
-  fsink=0.
-  call f_sink_sink
-
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
+  ssoft=sink_soft*dx_min
+
+  fsink=0.
+  call f_sink_sink
 
   vsold(1:nsink,1:ndim,ilevel)=vsnew(1:nsink,1:ndim,ilevel)
   vsnew(1:nsink,1:ndim,ilevel)=vsink(1:nsink,1:ndim)
@@ -2245,6 +2246,7 @@ subroutine merge_smbh_sink
   dx_min=scale*0.5D0**nlevelmax/aexp
   rmax=dble(ir_cloud)*dx_min ! Linking length in physical units
   rmax2=rmax*rmax
+  ssoft=sink_soft*dx_min
 
   ! Gravitational constant
   factG=1d0
@@ -2271,8 +2273,6 @@ subroutine merge_smbh_sink
               if((msink(isink)+msink(jsink)).ge.mass_vel_check*mass_sph*m_refine(nlevelmax)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge=merge .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
-                 !!if(myid==1)write(*,*)'DB',idsink(isink),idsink(jsink),msink(isink),msink(jsink),rr,v1_v2
-                 !!if(merge.and.myid==1)write(*,*)'MASS VEL CHECK MERGER'
               end if
            end if
 
@@ -2360,7 +2360,7 @@ subroutine f_gas_sink(ilevel)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
   integer::info,nx_loc,idim
-  real(dp)::dx,dx_loc,scale,vol_loc
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
   
@@ -2381,6 +2381,8 @@ subroutine f_gas_sink(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
+  dx_min=scale*0.5D0**nlevelmax/aexp
+  ssoft=sink_soft*dx_min
 
   ! Set position of cell centers relative to grid centre
   do ind=1,twotondim
@@ -3661,3 +3663,5 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
      end do
   end if
   
+
+end subroutine cic_get_vals
