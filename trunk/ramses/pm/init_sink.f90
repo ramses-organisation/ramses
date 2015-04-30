@@ -12,7 +12,6 @@ subroutine init_sink
   integer::ilun,nx_loc
   integer::nsinkold
   real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
-  real(dp)::scale,dx_min
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
   logical,allocatable,dimension(:)::nb
@@ -107,13 +106,8 @@ subroutine init_sink
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  sink_seedmass=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
   ! Compute softening length from minimum cell spacing
   call compute_ncloud_sink  
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
-  ssoft=sink_soft*dx_min
 
   if(nrestart>0)then
      ilun=4*ncpu+myid+10

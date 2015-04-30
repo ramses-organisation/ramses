@@ -3661,8 +3661,3 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
      end do
   end if
   
-
-end subroutine cic_get_vals
-
-
-
