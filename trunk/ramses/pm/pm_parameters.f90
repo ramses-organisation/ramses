@@ -42,7 +42,5 @@ module pm_parameters
   real(dp)::alpha_drag_boost=1.0             ! Boost coefficient for drag
   real(dp)::acc_threshold_creation = 1.e20   ! Threshold for sink creation in smbh case; in Msun/yr
   real(dp)::mass_vel_check = -1.0            ! Threshold for velocity check in  merging, in unit of mass_sph; by default don't check
-  real(dp)::T2_AGN = 0.15*1d12               ! AGN temperature in Kelvin
-  real(dp)::T2_min = 1d7                     ! Minimum AGN blast temperature in Kelvin
 
 end module pm_parameters

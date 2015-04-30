@@ -775,7 +775,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::vv
 
   real(dp),dimension(1:3)::r_rel,x_acc,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener
+  real(dp)::r_abs,fbk_ener,T2_AGN
   logical,dimension(1:ndim)::period
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
@@ -805,6 +805,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   vol_loc=dx_loc**ndim
   dx_min=scale*0.5D0**nlevelmax/aexp
   vol_min=dx_min**ndim
+
+  T2_AGN=0.15*1d12/scale_T2
 
   do idim=1,ndim
      do j=1,np
@@ -1034,6 +1036,7 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
   real(dp)::T2_gas,delta_mass_min
+  real(dp)::T2_min,T2_AGN
 
   dt_acc=huge(0._dp)
 
@@ -1048,6 +1051,8 @@ subroutine compute_accretion_rate(write_sinks)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
   d_star=n_star/scale_nH
+  T2_min=1d7/scale_T2
+  T2_AGN=0.15*1d12/scale_T2
 
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
@@ -1436,6 +1441,7 @@ subroutine make_sink_from_clump(ilevel)
   real(dp),dimension(1:nvar)::z
   real(dp),dimension(1:3)::skip_loc,x,xcell,xpeak
   real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp)::T2_min,T2_AGN
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -1459,6 +1465,9 @@ subroutine make_sink_from_clump(ilevel)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  T2_min=1d7/scale_T2
+  T2_AGN=0.15*1d12/scale_T2
 
   ! Birth epoch as proper time
   if(use_proper_time)then
@@ -2610,7 +2619,7 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,&
        eddington_limit,sink_drag,alpha_acc_boost,alpha_drag_boost,acc_threshold_creation,mass_vel_check,&
-       clump_core,smbh_verbose,T2_min
+       clump_core,smbh_verbose
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  

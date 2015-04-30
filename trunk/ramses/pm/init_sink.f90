@@ -108,8 +108,6 @@ subroutine init_sink
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   sink_seedmass=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
-  T2_AGN=T2_AGN/scale_T2 ! Converting from Kelvin to code units
-  T2_min=T2_min/scale_T2 ! Converting from Kelvin to code units
   ! Compute softening length from minimum cell spacing
   call compute_ncloud_sink  
   nx_loc=(icoarse_max-icoarse_min+1)
