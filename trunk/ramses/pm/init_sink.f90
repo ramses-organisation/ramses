@@ -12,7 +12,6 @@ subroutine init_sink
   integer::ilun,nx_loc
   integer::nsinkold
   real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
-  real(dp)::scale,dx_min
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
   logical,allocatable,dimension(:)::nb
@@ -20,7 +19,6 @@ subroutine init_sink
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
-
 
   !allocate all sink related quantities...
   allocate(weightp(1:npartmax,1:twotondim))
@@ -57,6 +55,9 @@ subroutine init_sink
   allocate(wvol_new(1:nsinkmax))
   allocate(wdiv_new(1:nsinkmax))
   allocate(msink_new(1:nsinkmax))
+  allocate(mseed(1:nsinkmax))
+  allocate(mseed_new(1:nsinkmax))
+  allocate(mseed_all(1:nsinkmax))
   allocate(msink_all(1:nsinkmax))
   allocate(tsink_new(1:nsinkmax))
   allocate(tsink_all(1:nsinkmax))
@@ -75,6 +76,15 @@ subroutine init_sink
   sink_jump=0.d0
   allocate(level_sink_new(1:nsinkmax,levelmin:nlevelmax))
   allocate(dMsink_overdt(1:nsinkmax))
+  allocate(dMBHoverdt(1:nsinkmax))
+  allocate(eps_sink(1:nsinkmax))
+  eps_sink=0.d0
+  allocate(volume_gas(1:nsinkmax))
+  volume_gas=0.d0
+  allocate(vel_gas(1:nsinkmax,1:ndim))
+  vel_gas=0.d0
+  allocate(rho_gas(1:nsinkmax))
+  rho_gas=0.d0
   allocate(c2sink(1:nsinkmax))
   allocate(weighted_density(1:nsinkmax,1:nlevelmax))
   weighted_density = 0.d0
@@ -91,24 +101,13 @@ subroutine init_sink
   allocate(idsink_sort(1:nsinkmax))
   allocate(xmsink(1:nsinkmax))
   allocate(delta_mass_new(1:nsinkmax),delta_mass_all(1:nsinkmax))
-  allocate(vol_gas_agn(1:nsinkmax),mass_gas_agn(1:nsinkmax))
-  allocate(ind_blast_agn(1:nsinkmax),mass_blast_agn(1:nsinkmax),vol_blast_agn(1:nsinkmax))
-  allocate(p_agn(1:nsinkmax),vol_gas_agn_all(1:nsinkmax),mass_gas_agn_all(1:nsinkmax))
   allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
   allocate(direct_force_sink(1:nsinkmax))
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
-  allocate(bondi_switch(1:nsinkmax))
-
-
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  sink_seedmass=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
   ! Compute softening length from minimum cell spacing
   call compute_ncloud_sink  
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
-  ssoft=sink_soft*dx_min
 
   if(nrestart>0)then
      ilun=4*ncpu+myid+10
@@ -167,7 +166,6 @@ subroutine init_sink
      end if
 
   end if
-
 
   if (nrestart>0)then
      nsinkold=nsink  
