@@ -17,10 +17,10 @@ subroutine create_sink
   ! -remove all cloud particles, keep only global sink arrays
   ! -call clumpfinder for potential relevant peaks
   ! -flag peaks which are eligible for sink formation (flag 2)
-  ! -One true RAMSES particle is created 
-  ! -Sink cloud particles are created
-  ! -Cloud particles are scattered to grid
-  ! -Accretion routine is called (with on_creation=.true.)
+  ! -new sink particle are created 
+  ! -new cloud particles are created
+  ! -cloud particles are scattered to grid
+  ! -accretion routine is called (with on_creation=.true.)
   !----------------------------------------------------------------------------
 
   integer::ilevel,ivar
@@ -64,7 +64,7 @@ subroutine create_sink
 
      ! Deallocate clump finder arrays
      deallocate(npeaks_per_cpu)
-     deallocate(clump_mass4)!!
+     deallocate(clump_mass4)
      deallocate(ipeak_start)
      if (ntest>0)then
         deallocate(icellp)
@@ -76,7 +76,7 @@ subroutine create_sink
 
   end if
 
-  !merge sinks - for star formation runs
+  ! Merge sinks for star formation runs
   if (merging_scheme == 'timescale')call merge_star_sink
   
   ! Merge sink for smbh runs 
@@ -140,13 +140,12 @@ subroutine create_cloud_from_sink
 #endif
 
   !----------------------------------------------------------------------
-  ! This routine creates the whole cloud of particles for one sink in one go, 
-  ! including the central one. Particles are produced in the right MPI domain
-  ! at level 1. Not very efficient...
-  ! replaces: 
-  !   - create_part_from_sink
-  !   - create_cloud
-  !   - mk_cloud
+  ! This routine creates the whole cloud of particles for each sink, 
+  ! Particles are produced in the right MPI domain and inserted in the 
+  ! linked list at level 1. 
+  ! The cloud radius is dble(ir_cloud)*dx_min, where dx_min is 
+  ! the cell size at levelmax. For cosmo runs, the cloud radius is 
+  ! dx_min/aexp (therefore it is constant in *physical* units).
   !----------------------------------------------------------------------
 
   real(dp)::scale,dx_min,rr,rmax,rmass
@@ -606,7 +605,7 @@ subroutine grow_sink(ilevel,on_creation)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_min=(0.5D0**nlevelmax)*scale
+  dx_min=scale*(0.5D0**nlevelmax)/aexp
   vol_min=dx_min**ndim
 
 #if NDIM==3
