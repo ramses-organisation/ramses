@@ -2668,10 +2668,7 @@ subroutine read_sink_params()
   if (create_sinks .or. (accretion_scheme .ne. 'none'))then
 
      ! check for threshold  
-     if (n_sink<0. .and. cosmo)then
-        if(myid==1)write(*,*)'specify n_sink for a cosmological simulation'
-        call clean_stop
-     end if
+     if (.not. cosmo)then
 
      if (rho_sink<0. .and. n_sink<0. .and. d_sink>0.) then
         if(myid==1)write(*,*)'Found d_sink! Assuming code units'
@@ -2698,8 +2695,9 @@ subroutine read_sink_params()
            if(myid==1)write(*,*)'n_sink = ',d_sink*scale_nH
         end if
      end if
-  end if  
-  
+
+     endif
+  end if
   
   if (merging_scheme == 'timescale')then
      if (merging_timescale<0.)then

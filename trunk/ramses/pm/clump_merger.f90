@@ -96,9 +96,10 @@ subroutine compute_clump_properties(xx)
         ! gas density
         if(ivar_clump==0)then
            d=xx(icellp(ipart))
-        endif
-        if(hydro)then
-           d=uold(icellp(ipart),1)
+        else
+           if(hydro)then
+              d=uold(icellp(ipart),1)
+           endif
         endif
 
         ! Cell volume
@@ -216,9 +217,10 @@ subroutine compute_clump_properties(xx)
            ! gas density
            if(ivar_clump==0)then
               d=xx(icellp(ipart))
-           endif
-           if(hydro)then
-              d=uold(icellp(ipart),1)
+           else
+              if(hydro)then
+                 d=uold(icellp(ipart),1)
+              endif
            endif
 
            ! Cell volume
@@ -276,14 +278,16 @@ subroutine write_clump_properties(to_file)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  if(hydro)then
-     particle_mass=mass_sph
-  else
+  if(ivar_clump==0)then
      particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI  
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      particle_mass=particle_mass_tot  
 #endif
+  else
+     if(hydro)then
+        particle_mass=mass_sph
+     endif
   endif
 
   ! sort clumps by peak density in ascending order
