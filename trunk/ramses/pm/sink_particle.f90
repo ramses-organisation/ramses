@@ -610,8 +610,7 @@ subroutine grow_sink(ilevel,on_creation)
 #if NDIM==3
 
   ! Compute sink accretion rates
-  if ((.not. on_creation) .and. (.not. threshold_accretion))call compute_accretion_rate(.false.)
-  !if(agn) call average_AGN
+  call compute_accretion_rate(.false.)
 
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
