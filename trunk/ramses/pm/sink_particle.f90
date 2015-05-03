@@ -64,7 +64,6 @@ subroutine create_sink
 
      ! Deallocate clump finder arrays
      deallocate(npeaks_per_cpu)
-     deallocate(clump_mass4)
      deallocate(ipeak_start)
      if (ntest>0)then
         deallocate(icellp)
