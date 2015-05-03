@@ -64,7 +64,6 @@ subroutine create_sink
 
      ! Deallocate clump finder arrays
      deallocate(npeaks_per_cpu)
-     deallocate(clump_mass4)
      deallocate(ipeak_start)
      if (ntest>0)then
         deallocate(icellp)
@@ -611,8 +610,7 @@ subroutine grow_sink(ilevel,on_creation)
 #if NDIM==3
 
   ! Compute sink accretion rates
-  if ((.not. on_creation) .and. (.not. threshold_accretion))call compute_accretion_rate(.false.)
-  !if(agn) call average_AGN
+  call compute_accretion_rate(.false.)
 
   ! Reset new sink variables
   msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
@@ -2668,10 +2666,7 @@ subroutine read_sink_params()
   if (create_sinks .or. (accretion_scheme .ne. 'none'))then
 
      ! check for threshold  
-     if (n_sink<0. .and. cosmo)then
-        if(myid==1)write(*,*)'specify n_sink for a cosmological simulation'
-        call clean_stop
-     end if
+     if (.not. cosmo)then
 
      if (rho_sink<0. .and. n_sink<0. .and. d_sink>0.) then
         if(myid==1)write(*,*)'Found d_sink! Assuming code units'
@@ -2698,8 +2693,9 @@ subroutine read_sink_params()
            if(myid==1)write(*,*)'n_sink = ',d_sink*scale_nH
         end if
      end if
-  end if  
-  
+
+     endif
+  end if
   
   if (merging_scheme == 'timescale')then
      if (merging_timescale<0.)then
