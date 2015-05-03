@@ -598,8 +598,20 @@ subroutine grow_sink(ilevel,on_creation)
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::scale,dx_min,vol_min
   real(dp),dimension(1:ndim)::old_loc,old_vel
+  logical::highest_level
 
   if(accretion_scheme=='none')return
+
+  ! Determine if on highest active level...
+  if (ilevel==nlevelmax)then
+     highest_level=.true.
+  else if (numbtot(1,ilevel+1)==0)then
+     highest_level=.true.
+  else
+     highest_level=.false.
+  end if
+  if (.not. highest_level)return
+
   if(verbose)write(*,111)ilevel
 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1136,7 +1148,7 @@ subroutine compute_accretion_rate(write_sinks)
            if(agn)then
 
               ! check whether we should have AGN feedback
-              ok_blast_agn(1:nsink)=.false.
+              ok_blast_agn(isink)=.false.
               T2_gas=ethermal
               delta_mass_min = mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
@@ -1157,7 +1169,7 @@ subroutine compute_accretion_rate(write_sinks)
            end if
         end if
      end if
-  end do 
+  end do
   
   if (write_sinks)then 
      call print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
