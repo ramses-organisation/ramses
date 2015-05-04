@@ -6,12 +6,12 @@ module pm_commons
   real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)::msink_new,msink_all
+  real(dp),allocatable,dimension(:)::mseed,mseed_new,mseed_all
   real(dp),allocatable,dimension(:)::xmsink
-  real(dp),allocatable,dimension(:)::dMsink_overdt
+  real(dp),allocatable,dimension(:)::dMsink_overdt,dMBHoverdt
+  real(dp),allocatable,dimension(:)::rho_gas,volume_gas,eps_sink
+  real(dp),allocatable,dimension(:,:)::vel_gas
   real(dp),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
-  real(dp),allocatable,dimension(:)::vol_gas_agn,mass_gas_agn
-  real(dp),allocatable,dimension(:)::mass_blast_agn,vol_blast_agn,p_agn
-  real(dp),allocatable,dimension(:)::vol_gas_agn_all,mass_gas_agn_all
   real(dp),allocatable,dimension(:)::wden,weth,wvol,wdiv,wden_new,weth_new,wvol_new,wdiv_new
   real(dp),allocatable,dimension(:,:)::wmom,wmom_new
   real(dp),allocatable,dimension(:,:)::vsink,vsink_new,vsink_all
@@ -27,9 +27,9 @@ module pm_commons
   real(dp),allocatable,dimension(:)::rho_sink_tff
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
   logical,allocatable,dimension(:,:)::level_sink,level_sink_new
-  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink,bondi_switch
+  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink
   logical,allocatable,dimension(:)::new_born,new_born_all,new_born_new
-  integer,allocatable,dimension(:)::idsink_sort,ind_blast_agn
+  integer,allocatable,dimension(:)::idsink_sort
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
   integer::sinkint_level=0         ! maximum level currently active is where the global sink variables are updated
@@ -44,7 +44,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
-  real(dp),allocatable,dimension(:,:)  ::weightp  ! weight of cloud parts for sink accretion only
+  real(dp),allocatable,dimension(:,:)::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list

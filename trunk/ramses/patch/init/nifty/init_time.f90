@@ -376,6 +376,7 @@ subroutine init_cosmo
      endif
      omega_m = gadgetheader%omega0
      omega_l = gadgetheader%omegalambda
+     if(hydro)omega_b=0.0469388
      h0 = gadgetheader%hubbleparam * 100.d0
      boxlen_ini = gadgetheader%boxsize/1e3
      aexp = gadgetheader%time

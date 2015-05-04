@@ -802,7 +802,7 @@ subroutine init_part
                 ! Init block counter
                 jump_blck = 1
                 blck_cnt = 1
-                do while(1)
+                do while (.true.)
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) blck_size
                   if(stat /= 0) exit
@@ -847,7 +847,7 @@ subroutine init_part
                 ! Init block counter
                 jump_blck = 1
                 write(*,'(A50)')'__________________________________________________'
-                do while(1)
+                do while (.true.)
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) dummy_int
                   if(stat /= 0) exit
@@ -1062,7 +1062,7 @@ subroutine init_part
 #endif
                     ipart          = ipart+1
                     if(ipart.gt.npartmax) then
-                       write(*,'(A,I,A,I,A)') 'Increase npartmax [',kpart,'/',npart,']'
+                       write(*,*) 'Increase npartmax [',kpart,'/',npart,']'
                        call clean_stop
                     endif
                     xp(ipart,1:3)  = xx(i,1:3)
@@ -1089,9 +1089,9 @@ subroutine init_part
               lpart = lpart+jpart
             enddo
             if(myid==1)then
-               write(*,'(A,E)') ' Gas   mass in AMR grid -> ',mgas_tot
-               write(*,'(A,E)') ' Total mass in AMR grid -> ',m_tot
-               write(*,'(A,E)') ' mass_sph               -> ',mass_sph
+               write(*,*) ' Gas   mass in AMR grid -> ',mgas_tot
+               write(*,*) ' Total mass in AMR grid -> ',m_tot
+               write(*,*) ' mass_sph               -> ',mass_sph
                write(*,'(A50)')'__________________________________________________'
                close(1)
             endif

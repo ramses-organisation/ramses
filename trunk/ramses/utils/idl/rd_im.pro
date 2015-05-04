@@ -48,8 +48,10 @@ if not keyword_set(file) then return
 
 if keyword_set(verbose) then print,'Reading file ',trim(file)
 nx=0L & ny=0L
+t=0d0 & dx=0d0 & dy=0d0 & dz=0d0
 openr,1,file,/f77_unformatted,swap_endian=swap
 readu,1,t,dx,dy,dz
+print,t,dx,dy,dz
 readu,1,nx,ny
 image=fltarr(nx,ny)
 readu,1,image

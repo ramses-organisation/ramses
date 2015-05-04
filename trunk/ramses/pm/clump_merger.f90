@@ -96,9 +96,10 @@ subroutine compute_clump_properties(xx)
         ! gas density
         if(ivar_clump==0)then
            d=xx(icellp(ipart))
-        endif
-        if(hydro)then
-           d=uold(icellp(ipart),1)
+        else
+           if(hydro)then
+              d=uold(icellp(ipart),1)
+           endif
         endif
 
         ! Cell volume
@@ -216,9 +217,10 @@ subroutine compute_clump_properties(xx)
            ! gas density
            if(ivar_clump==0)then
               d=xx(icellp(ipart))
-           endif
-           if(hydro)then
-              d=uold(icellp(ipart),1)
+           else
+              if(hydro)then
+                 d=uold(icellp(ipart),1)
+              endif
            endif
 
            ! Cell volume
@@ -276,14 +278,16 @@ subroutine write_clump_properties(to_file)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  if(hydro)then
-     particle_mass=mass_sph
-  else
+  if(ivar_clump==0)then
      particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI  
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      particle_mass=particle_mass_tot  
 #endif
+  else
+     if(hydro)then
+        particle_mass=mass_sph
+     endif
   endif
 
   ! sort clumps by peak density in ascending order
@@ -771,6 +775,7 @@ subroutine allocate_peak_patch_arrays
   ! These arrays are not used by the clump finder
   allocate(clump_velocity(1:npeaks_max,1:ndim))
   allocate(clump_force(1:npeaks_max,1:ndim))
+  allocate(clump_mass4(npeaks_max))
   allocate(e_kin_int(npeaks_max))
   allocate(e_thermal(npeaks_max))
   allocate(Psurf(npeaks_max))
@@ -858,6 +863,7 @@ subroutine deallocate_all
   call sparse_kill(sparse_saddle_dens)
 
   deallocate(clump_force)
+  deallocate(clump_mass4)
   deallocate(clump_velocity)
   deallocate(e_kin_int)
   deallocate(grav_term)

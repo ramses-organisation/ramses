@@ -287,7 +287,7 @@ subroutine kill_gas_part(ilevel)
   npart_all=sum(npart_cpu_all(1:ncpu))
   if(myid==1)then
      write(*,'(A50)')'__________________________________________________'
-     write(*,'(A,I)')' Gas particles deleted ->',npart_all
+     write(*,*)' Gas particles deleted ->',npart_all
      write(*,'(A50)')'__________________________________________________'
   endif
   do ipart=1,npart
