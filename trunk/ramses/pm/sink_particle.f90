@@ -1163,9 +1163,8 @@ subroutine compute_accretion_rate(write_sinks)
               endif
 
               ! make sure that sink doesnt blast more than the gas internal energy within one timestep
-              if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.delta_mass_min))then
-                 dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*T2_gas/(dMsink_overdt(isink)*T2_AGN)))
-              end if
+!              dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*(T2_gas+T2_min)/(dMsink_overdt(isink)*T2_AGN)))
+
            end if
         end if
      end if
