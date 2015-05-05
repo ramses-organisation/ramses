@@ -868,7 +868,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               Mred=msink(isink)*(rho_gas(isink)*volume_gas(isink))/(msink(isink)+(rho_gas(isink)*volume_gas(isink)))
               delta_M(isink)=Mred*Macc/(Mred+Macc)
            end if
-           delta_M(isink)=min(delta_M(isink),msink(isink)*2*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5))
+           delta_M(isink)=min(delta_M(isink),msink(isink)*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5))
            
            ! Compute sink average density
            weight=weightp(ind_part(j),ind)
