@@ -868,7 +868,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               Mred=msink(isink)*(rho_gas(isink)*volume_gas(isink))/(msink(isink)+(rho_gas(isink)*volume_gas(isink)))
               delta_M(isink)=Mred*Macc/(Mred+Macc)
            end if
-           delta_M(isink)=min(delta_M(isink),msink(isink)*2*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5))
+           delta_M(isink)=min(delta_M(isink),msink(isink)*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5))
            
            ! Compute sink average density
            weight=weightp(ind_part(j),ind)
@@ -1154,7 +1154,7 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(myid==1.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+              if(verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
                 write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
@@ -1163,9 +1163,8 @@ subroutine compute_accretion_rate(write_sinks)
               endif
 
               ! make sure that sink doesnt blast more than the gas internal energy within one timestep
-              if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.delta_mass_min))then
-                 dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*T2_gas/(dMsink_overdt(isink)*T2_AGN)))
-              end if
+!              dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*(T2_gas+T2_min)/(dMsink_overdt(isink)*T2_AGN)))
+
            end if
         end if
      end if

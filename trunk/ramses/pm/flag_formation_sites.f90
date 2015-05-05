@@ -61,7 +61,7 @@ subroutine flag_formation_sites
            if(global_peak_id.NE.0)then
               call get_local_peak_id(global_peak_id,local_peak_id)
               occupied(local_peak_id)=1
-              write(*,"('CPU # ',I5,' blocked clump # ',I6,' for sink production because of sink # ',I6)")myid,global_peak_id,idsink(j)
+              if(verbose)write(*,"('CPU # ',I5,' blocked clump # ',I6,' for sink production because of sink # ',I6)")myid,global_peak_id,idsink(j)
            endif
         end if
      end do
@@ -96,7 +96,7 @@ subroutine flag_formation_sites
            merge_to=ind_halo(i)
            call get_local_peak_id(merge_to,local_halo_id)
            occupied(local_halo_id)=1
-           write(*,"('CPU # ',I5,' blocked halo # ',I6,' for sink production because of clump # ',I6)")myid,merge_to,i+ipeak_start(myid)
+           if(verbose)write(*,"('CPU # ',I5,' blocked halo # ',I6,' for sink production because of clump # ',I6)")myid,merge_to,i+ipeak_start(myid)
         endif
      enddo
 #ifndef WITHOUTMPI
