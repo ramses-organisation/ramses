@@ -784,7 +784,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::vv
 
   real(dp),dimension(1:3)::r_rel,x_acc,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener,T2_AGN
+  real(dp)::r_abs,fbk_ener,T2_AGN,T2_max
   logical,dimension(1:ndim)::period
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
@@ -815,7 +815,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   dx_min=scale*0.5D0**nlevelmax/aexp
   vol_min=dx_min**ndim
 
-  T2_AGN=0.15*1d12/scale_T2
+  T2_AGN=1d12/scale_T2
+  T2_max=1d9/scale_T2
 
   do idim=1,ndim
      do j=1,np
@@ -888,7 +889,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (flux_accretion .or. bondi_accretion)then              
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
-                 fbk_ener=delta_mass(isink)*T2_AGN*weight/volume*d/density
+                 fbk_ener=min(delta_mass(isink)*T2_AGN*weight/volume*d/density,T2_max*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -1061,7 +1062,7 @@ subroutine compute_accretion_rate(write_sinks)
   dx_min=scale*0.5D0**nlevelmax/aexp
   d_star=n_star/scale_nH
   T2_min=1d7/scale_T2
-  T2_AGN=0.15*1d12/scale_T2
+  T2_AGN=1.0*1d12/scale_T2
 
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
@@ -1475,7 +1476,7 @@ subroutine make_sink_from_clump(ilevel)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   T2_min=1d7/scale_T2
-  T2_AGN=0.15*1d12/scale_T2
+  T2_AGN=1.0*1d12/scale_T2
 
   ! Birth epoch as proper time
   if(use_proper_time)then
@@ -1652,7 +1653,7 @@ subroutine make_sink_from_clump(ilevel)
                     tff=sqrt(threepi2/8./fourpi/max(d,smallr))
                     tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
                     mclump=clump_mass4(flag2(ind_cell_new(i)))
-                    mseed_new(index_sink)=min(1.d-5/0.15*mclump*tsal/tff,mclump/2.0)
+                    mseed_new(index_sink)=min(1.d-5/1.0*mclump*tsal/tff,mclump/2.0)
                  end if
                  
                  if(smbh.and.agn)then
@@ -2269,9 +2270,9 @@ subroutine merge_smbh_sink
         do jsink=isink+1,nsink
            
            ! spacing check
-           rr=(xsink(isink,1)-xsink(jsink,1))**2&
-                +(xsink(isink,2)-xsink(jsink,2))**2&
-                +(xsink(isink,3)-xsink(jsink,3))**2
+           rr=     (xsink(isink,1)-xsink(jsink,1))**2&
+                & +(xsink(isink,2)-xsink(jsink,2))**2&
+                & +(xsink(isink,3)-xsink(jsink,3))**2
            
            merge=rr<4*ssoft**2
            merge=merge .and. msink(jsink)>0
