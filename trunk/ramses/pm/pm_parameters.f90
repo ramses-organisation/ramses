@@ -43,6 +43,7 @@ module pm_parameters
   real(dp)::mass_vel_check = -1.0            ! Threshold for velocity check in  merging, in unit of mass_sph; by default don't check
 
   real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast
+  real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast
   real(dp)::T2_AGN=0.15*1.d12                ! AGN blast temperature
 
 end module pm_parameters

@@ -887,7 +887,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (flux_accretion .or. bondi_accretion)then              
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
-                 fbk_ener=delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density
+                 fbk_ener=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -1154,7 +1154,7 @@ subroutine compute_accretion_rate(write_sinks)
                 write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                    & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
+                    & ,((delta_mass(isink)*T2_AGN/scale_T2+mgas*T2_gas) &
                     & /(delta_mass(isink)+mgas))
               endif
 
@@ -1645,7 +1645,7 @@ subroutine make_sink_from_clump(ilevel)
                     tff=sqrt(threepi2/8./fourpi/max(d,smallr))
                     tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
                     mclump=clump_mass4(flag2(ind_cell_new(i)))
-                    mseed_new(index_sink)=min(1.d-5/0.15*mclump*tsal/tff,mclump/2.0)
+                    mseed_new(index_sink)=min(1.d-5/1.0*mclump*tsal/tff,mclump/2.0)
                  end if
                  
                  if(smbh.and.agn)then
@@ -2262,9 +2262,9 @@ subroutine merge_smbh_sink
         do jsink=isink+1,nsink
            
            ! spacing check
-           rr=(xsink(isink,1)-xsink(jsink,1))**2&
-                +(xsink(isink,2)-xsink(jsink,2))**2&
-                +(xsink(isink,3)-xsink(jsink,3))**2
+           rr=     (xsink(isink,1)-xsink(jsink,1))**2&
+                & +(xsink(isink,2)-xsink(jsink,2))**2&
+                & +(xsink(isink,3)-xsink(jsink,3))**2
            
            merge=rr<4*ssoft**2
            merge=merge .and. msink(jsink)>0
@@ -2622,7 +2622,7 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,&
        eddington_limit,sink_drag,alpha_acc_boost,acc_threshold_creation,mass_vel_check,&
-       clump_core,smbh_verbose,T2_min,T2_AGN
+       clump_core,smbh_verbose,T2_min,T2_max,T2_AGN
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
