@@ -18,7 +18,7 @@ subroutine make_boundary_hydro(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
-  real(dp)::switch,dx,dx_loc,scale
+  real(dp)::switch,dx,dx_loc,scale,ekin,d,v
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
@@ -146,6 +146,16 @@ subroutine make_boundary_hydro(ilevel)
                     uu(i,ivar)=uold(ind_cell_ref(i),ivar)
                  end do
               end do
+              ! Remove kinetic energy
+              do i=1,ngrid
+                 ekin = 0d0
+                 d    = uu(i,1)
+                 do idim=1,ndim
+                    v = uu(i,idim+1)
+                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
+                 end do
+                 uu(i,ndim+2) = uu(i,ndim+2)-ekin
+              end do
               ! Scatter to boundary region
               do ivar=1,nvar
                  switch=1
@@ -153,6 +163,27 @@ subroutine make_boundary_hydro(ilevel)
                  do i=1,ngrid
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
+              end do
+              ivar = gdim+1
+              if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
+                 end do
+              endif
+              if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
+                 end do
+              endif
+              ! Add kinetic energy
+              do i=1,ngrid
+                 ekin = 0d0
+                 d    = uold(ind_cell(i),1)
+                 do idim=1,ndim
+                    v = uold(ind_cell(i),idim+1)
+                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
+                 end do
+                 uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
               end do
               ! This option has been disactivated 
               ! because it does not work in general
