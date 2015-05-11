@@ -44,6 +44,6 @@ module pm_parameters
 
   real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast
   real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast
-  real(dp)::T2_AGN=0.15*1.d12                ! AGN blast temperature
+  real(dp)::T2_AGN=1.d12                     ! AGN blast temperature
 
 end module pm_parameters
