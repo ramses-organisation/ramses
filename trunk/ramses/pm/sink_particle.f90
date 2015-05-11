@@ -784,7 +784,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::vv
 
   real(dp),dimension(1:3)::r_rel,x_acc,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener,T2_AGN,T2_max
+  real(dp)::r_abs,fbk_ener
   logical,dimension(1:ndim)::period
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
@@ -814,9 +814,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   vol_loc=dx_loc**ndim
   dx_min=scale*0.5D0**nlevelmax/aexp
   vol_min=dx_min**ndim
-
-  T2_AGN=1d12/scale_T2
-  T2_max=1d9/scale_T2
 
   do idim=1,ndim
      do j=1,np
@@ -864,6 +861,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            isink=-idp(ind_part(j))        
  
            ! Drag force based on virtual accretion
+           Macc=0.d0; Mred=0.d0; delta_M(isink)=0.d0
            if (sink_drag)then
               Macc=max((dMBHoverdt(isink)-dMsink_overdt(isink))*dtnew(ilevel),0.d0)
               Mred=msink(isink)*(rho_gas(isink)*volume_gas(isink))/(msink(isink)+(rho_gas(isink)*volume_gas(isink)))
@@ -889,7 +887,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (flux_accretion .or. bondi_accretion)then              
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
-                 fbk_ener=min(delta_mass(isink)*T2_AGN*weight/volume*d/density,T2_max*weight*d)
+                 fbk_ener=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -1046,7 +1044,6 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
   real(dp)::T2_gas,delta_mass_min
-  real(dp)::T2_min,T2_AGN
 
   dt_acc=huge(0._dp)
 
@@ -1061,8 +1058,6 @@ subroutine compute_accretion_rate(write_sinks)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
   d_star=n_star/scale_nH
-  T2_min=1d7/scale_T2
-  T2_AGN=1.0*1d12/scale_T2
 
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
@@ -1150,7 +1145,7 @@ subroutine compute_accretion_rate(write_sinks)
 
               ! check whether we should have AGN feedback
               ok_blast_agn(isink)=.false.
-              T2_gas=ethermal
+              T2_gas=ethermal*scale_T2 ! in Kelvin
               delta_mass_min = mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
@@ -1159,13 +1154,14 @@ subroutine compute_accretion_rate(write_sinks)
                 write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                    & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
-                    & /(delta_mass(isink)+mgas))*scale_T2
+                    & ,((delta_mass(isink)*T2_AGN/scale_T2+mgas*T2_gas) &
+                    & /(delta_mass(isink)+mgas))
               endif
 
               ! make sure that sink doesnt blast more than the gas internal energy within one timestep
-!              dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*(T2_gas+T2_min)/(dMsink_overdt(isink)*T2_AGN)))
-
+!              if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.delta_mass_min))then
+!                 dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*T2_gas/(dMsink_overdt(isink)*T2_AGN)))
+!              end if
            end if
         end if
      end if
@@ -1257,7 +1253,7 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
         end do
         write(*,'(" ============================================================================================")')
         if(smbh_verbose)then
-          write(*,'(" Id     rho(H/cc)  rho_inf(H/cc) Mgas(Msol) cs(km/s) vgas(km/s)  vsink(km/s) rBondi(pc)")')
+          write(*,'(" Id     rho(H/cc)  rho_inf(H/cc) Mgas(Msol) cs(km/s) rBondi(pc)")')
           write(*,'(" vgas(km/s):  x   y   z     vsink(km/s):  x   y   z")')
           write(*,'(" ============================================================================================")')
           do i=nsink,max(nsink-10,1),-1
@@ -1450,7 +1446,6 @@ subroutine make_sink_from_clump(ilevel)
   real(dp),dimension(1:nvar)::z
   real(dp),dimension(1:3)::skip_loc,x,xcell,xpeak
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp)::T2_min,T2_AGN
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -1474,9 +1469,6 @@ subroutine make_sink_from_clump(ilevel)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  T2_min=1d7/scale_T2
-  T2_AGN=1.0*1d12/scale_T2
 
   ! Birth epoch as proper time
   if(use_proper_time)then
@@ -2629,8 +2621,8 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,&
-       eddington_limit,sink_drag,alpha_acc_boost,alpha_drag_boost,acc_threshold_creation,mass_vel_check,&
-       clump_core,smbh_verbose
+       eddington_limit,sink_drag,alpha_acc_boost,acc_threshold_creation,mass_vel_check,&
+       clump_core,smbh_verbose,T2_min,T2_max,T2_AGN
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
