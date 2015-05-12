@@ -39,8 +39,11 @@ module pm_parameters
   logical::clump_core=.false.                ! Trims the clump (for star formation)
   logical::smbh_verbose=.false.              ! Controls print verbosity for the SMBH case
   real(dp)::alpha_acc_boost=1.0              ! Boost coefficient for accretion
-  real(dp)::alpha_drag_boost=1.0             ! Boost coefficient for drag
   real(dp)::acc_threshold_creation = 1.e20   ! Threshold for sink creation in smbh case; in Msun/yr
   real(dp)::mass_vel_check = -1.0            ! Threshold for velocity check in  merging, in unit of mass_sph; by default don't check
+
+  real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast
+  real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast
+  real(dp)::T2_AGN=1.d12                     ! AGN blast temperature
 
 end module pm_parameters

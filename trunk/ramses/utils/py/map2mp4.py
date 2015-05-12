@@ -145,10 +145,8 @@ def main():
 	    help='length of the bar (specify unit!)', default=5)
 	parser.add_option('-B','--barlen_unit',dest='barlen_unit', metavar='VALUE', \
 	    help='unit of the bar length [pc/kpc/Mpc]', default='kpc')
-	parser.add_option('-t','--time_unit',dest='time_unit', metavar='VALUE', \
-	    help='unit of time [Myr/Gyr]', default='Myr')
 	parser.add_option('-g','--geometry',dest='geometry', metavar='VALUE', \
-	    help=' [montage geometry (x,y)]', default=(1,1))
+	    help=' [montage geometry (x,y)]', default="1 1")
 	parser.add_option("-o","--output",  dest="outfile", metavar="FILE", \
 			help='output image file [default: <map_file>.png]', default=None)
 
@@ -164,17 +162,12 @@ def main():
 		scale_l = 1e3
 	elif opts.barlen_unit == 'Mpc':
 		scale_l = 1e6
+	elif opts.barlen_unit == 'AU':
+		scale_l = 1./206264.806
 	else:
 		print "Wrong length unit!"
 		sys.exit()
 
-	if opts.time_unit == 'Myr':
-		scale_t = 1e6
-	elif opts.time_unit == 'Gyr':
-		scale_t = 1e9
-	else:
-		print "Wrong time unit!"
-		sys.exit()
 
 	proj_ind = int(proj_list[0])-1
 	sink_flag = False
@@ -323,8 +316,22 @@ def main():
 									transform=ax.transAxes,
 									color='white', fontsize=14)
 				patches.append(rect)
+				
+				t = time*unit_t/86400/365.25 # time in years
+				if t > 1e3:
+					scale_t = 1e3
+					t_unit = 'kyr'
+				elif t > 1e6:
+					scale_t = 1e6
+					t_unit = 'Myr'
+				elif t > 1e9:
+					scale_t = 1e9
+					t_unit = 'Gyr'
+				else:
+					scale_t = 1
+					t_unit = 'yr'
 
-				ax.text(0.95, 0.95, '%.1f %s' % (time*unit_t/86400/365.25/scale_t, opts.time_unit),
+				ax.text(0.95, 0.95, '%.1f %s' % (t/scale_t, t_unit),
 									verticalalignment='bottom', horizontalalignment='right',
 									transform=ax.transAxes,
 									color='white', fontsize=14)
