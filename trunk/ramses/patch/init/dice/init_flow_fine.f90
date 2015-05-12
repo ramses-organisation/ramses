@@ -574,14 +574,10 @@ subroutine reset_uold(ilevel)
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
-  ! This routine sets array unew to its initial value uold before calling
-  ! the hydro scheme. unew is set to zero in virtual boundaries.
+  ! This routine sets array uold to zero before calling
+  ! the hydro scheme. uold is set to zero in virtual boundaries as well.
   !--------------------------------------------------------------------------
   integer::i,ivar,irad,ind,icpu,iskip
-  real(dp)::d,u,v,w,e
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2, IS_cs2, IG_cs2
-
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -591,7 +587,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
+           uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0
         end do
      end do
   end do
@@ -632,15 +628,15 @@ subroutine init_uold(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! Set uold to uold for myid cells
+  ! Set uold to namelist values for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
+     do ivar=nvar,1,-1
         do i=1,active(ilevel)%ngrid
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
-              uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
-              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH
-              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
+              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0.
+              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = IG_rho/scale_nH
+              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
               if(metal) then
                 if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
               endif
