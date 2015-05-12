@@ -156,7 +156,11 @@ subroutine create_cloud_from_sink
   integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
   logical,dimension(1:ndim)::period
-
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  
   ok_true=.true.
 
   if(numbtot(1,1)==0) return
@@ -204,7 +208,7 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<msink_direct)then
+                    if (rr<=rmass .and. msink(isink)<msink_direct*1.9891d33/(scale_d*scale_l**3))then
                        mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
@@ -220,7 +224,7 @@ subroutine create_cloud_from_sink
   end do
   
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
+     direct_force_sink(isink)=(msink(isink) .ge. msink_direct*1.9891d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -1150,7 +1154,7 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+              if(smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
                 write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
@@ -2738,9 +2742,6 @@ subroutine read_sink_params()
 
   if(msink_direct<0.)then 
      msink_direct=huge(0._dp)
-  else
-     !convert msink_direct in code units
-     msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
   end if
 
 end subroutine read_sink_params
