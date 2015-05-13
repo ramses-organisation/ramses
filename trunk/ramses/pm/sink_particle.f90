@@ -2349,7 +2349,7 @@ subroutine f_gas_sink(ilevel)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
   integer::info,nx_loc,idim
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,factG
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
   
@@ -2359,6 +2359,10 @@ subroutine f_gas_sink(ilevel)
   real(dp),dimension(1:nvector)::d2,mcell,denom
   real(dp)::rho_tff,rho_tff_tot,d_min
   logical,dimension(1:ndim)::period
+
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   !  Cell spacing at that level
   dx=0.5D0**ilevel
@@ -2469,13 +2473,13 @@ subroutine f_gas_sink(ilevel)
 
               ! Add gas acceleration due to sink
               do i=1,ngrid
-                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+msink(isink)*ff(i,1:ndim)
+                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+factG*msink(isink)*ff(i,1:ndim)
               end do
 
               ! Add sink acceleration due to gas
               do i=1,ngrid
                  if(ok(i))then
-                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-mcell(i)*ff(i,1:ndim)
+                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-factG*mcell(i)*ff(i,1:ndim)
                  end if
               end do
            end do !end loop over cells
