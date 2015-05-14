@@ -171,7 +171,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      do idim=1,ndim
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
+           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),1)*(uold(ind_leaf(i),idim+1)/nH(i))**2
         end do
      end do
      do i=1,nleaf
@@ -285,7 +285,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         if(cooling .and. delayed_cooling) then
            cooling_on(1:nleaf)=.true.
            do i=1,nleaf
-              if(uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1) .gt. 1d-3) &
+              if(uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr) .gt. 1d-3) &
                    cooling_on(i)=.false.
            end do
         end if
@@ -310,17 +310,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      velocity_units=scale_v
      temperature_units=scale_T2
      do i = 1, nleaf
-        gr_density(i) = uold(ind_leaf(i),1)
+        gr_density(i) = max(uold(ind_leaf(i),1),smallr)
         if(metal)then
            gr_metal_density(i) = uold(ind_leaf(i),imetal)
         else
            gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
         endif
-        gr_x_velocity(i) = uold(ind_leaf(i),2)/uold(ind_leaf(i),1)
-        gr_y_velocity(i) = uold(ind_leaf(i),3)/uold(ind_leaf(i),1)
-        gr_z_velocity(i) = uold(ind_leaf(i),4)/uold(ind_leaf(i),1)
+        gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
+        gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
+        gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
         gr_energy(i) = uold(ind_leaf(i),ndim+2)- ekk(i) 
-        gr_energy(i) = gr_energy(i)/uold(ind_leaf(i),1)
+        gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
 	enddo
 
      gr_dt = dtnew(ilevel)
