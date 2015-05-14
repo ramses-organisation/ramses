@@ -179,10 +179,8 @@ subroutine make_boundary_hydro(ilevel)
 
               ! Scatter to boundary region
               do ivar=1,nvar
-                 switch=1
-                 if(ivar>1.and.ivar<ndim+2)switch=gs(ivar-1)
                  do i=1,ngrid
-                    uold(ind_cell(i),ivar)=uu(i,ivar)*switch
+                    uold(ind_cell(i),ivar)=uu(i,ivar)
                  end do
               end do
 
@@ -199,7 +197,7 @@ subroutine make_boundary_hydro(ilevel)
                  end do
               endif
 
-              ! Add kinetic energy
+              ! Add back kinetic energy
               do i=1,ngrid
                  ekin = 0d0
                  d    = max(uold(ind_cell(i),1),smallr)
