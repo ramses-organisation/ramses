@@ -318,10 +318,10 @@ def main():
 				patches.append(rect)
 				
 				t = time*unit_t/86400/365.25 # time in years
-				if t > 1e3:
+				if (t >= 1e3 and t < 1e6):
 					scale_t = 1e3
 					t_unit = 'kyr'
-				elif t > 1e6:
+				elif (t > 1e6 and t < 1e9):
 					scale_t = 1e6
 					t_unit = 'Myr'
 				elif t > 1e9:

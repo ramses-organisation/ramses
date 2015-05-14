@@ -156,7 +156,11 @@ subroutine create_cloud_from_sink
   integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
   logical,dimension(1:ndim)::period
-
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  
   ok_true=.true.
 
   if(numbtot(1,1)==0) return
@@ -204,7 +208,7 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<msink_direct)then
+                    if (rr<=rmass .and. msink(isink)<msink_direct*1.9891d33/(scale_d*scale_l**3))then
                        mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
@@ -220,7 +224,7 @@ subroutine create_cloud_from_sink
   end do
   
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
+     direct_force_sink(isink)=(msink(isink) .ge. msink_direct*1.9891d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -867,7 +871,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               Mred=msink(isink)*(rho_gas(isink)*volume_gas(isink))/(msink(isink)+(rho_gas(isink)*volume_gas(isink)))
               delta_M(isink)=Mred*Macc/(Mred+Macc)
            end if
-           delta_M(isink)=min(delta_M(isink),msink(isink)*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5))
+           delta_M(isink)=min(delta_M(isink),msink(isink)*dx_loc/(sum((xsink(isink,1:ndim)-xx(j,1:ndim,ind))**2)**0.5+tiny(0.d0)))
            
            ! Compute sink average density
            weight=weightp(ind_part(j),ind)
@@ -1150,7 +1154,7 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+              if(smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
                 write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
@@ -1865,28 +1869,12 @@ subroutine update_sink(ilevel)
 ! updated by summing the conributions from all levels.                      
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  real(dp)::dteff,vnorm_rel,mach,alpha,factor
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp)::dteff
   integer::lev,isink
-  integer::i,nx_loc
-  real(dp),dimension(1:ndim)::vrel,vcom
-  real(dp)::scale_m,boost,beta
-  real(dp)::factG=1,fa_fact,v_bondi
-  real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf,divergence
-  real(dp),dimension(1:3)::velocity
-
 
 #if NDIM==3
 
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
-
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**3d0
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
-  ssoft=sink_soft*dx_min
 
   fsink=0.
   call f_sink_sink
@@ -2361,7 +2349,7 @@ subroutine f_gas_sink(ilevel)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
   integer::info,nx_loc,idim
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,factG
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
   
@@ -2371,6 +2359,10 @@ subroutine f_gas_sink(ilevel)
   real(dp),dimension(1:nvector)::d2,mcell,denom
   real(dp)::rho_tff,rho_tff_tot,d_min
   logical,dimension(1:ndim)::period
+
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   !  Cell spacing at that level
   dx=0.5D0**ilevel
@@ -2481,13 +2473,13 @@ subroutine f_gas_sink(ilevel)
 
               ! Add gas acceleration due to sink
               do i=1,ngrid
-                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+msink(isink)*ff(i,1:ndim)
+                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+factG*msink(isink)*ff(i,1:ndim)
               end do
 
               ! Add sink acceleration due to gas
               do i=1,ngrid
                  if(ok(i))then
-                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-mcell(i)*ff(i,1:ndim)
+                    fsink_new(isink,1:ndim)=fsink_new(isink,1:ndim)-factG*mcell(i)*ff(i,1:ndim)
                  end if
               end do
            end do !end loop over cells
@@ -2550,10 +2542,15 @@ subroutine f_sink_sink
   real(dp),allocatable,dimension(:)::d2
   real(dp),allocatable,dimension(:,:)::ff
   logical,dimension(1:ndim)::period
+  real(dp)::factG
 
   allocate(d2(1:nsink))
   allocate(ff(1:nsink,1:ndim))
   
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
 !  fsink=0.
 
   period(1)=(nx==1)
@@ -2591,7 +2588,7 @@ subroutine f_sink_sink
         !compute acceleration
         do jsink=1,nsink
            if (direct_force_sink(jsink))then
-              ff(jsink,1:ndim)=msink(jsink)/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
+              ff(jsink,1:ndim)=factG*msink(jsink)/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
            end if
         end do
         do jsink=1,nsink           
@@ -2738,9 +2735,6 @@ subroutine read_sink_params()
 
   if(msink_direct<0.)then 
      msink_direct=huge(0._dp)
-  else
-     !convert msink_direct in code units
-     msink_direct=msink_direct*1.9891d33/(scale_d*scale_l**3)
   end if
 
 end subroutine read_sink_params
