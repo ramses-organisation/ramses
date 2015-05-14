@@ -149,10 +149,10 @@ subroutine make_boundary_hydro(ilevel)
               ! Remove kinetic energy
               do i=1,ngrid
                  ekin = 0d0
-                 d    = uu(i,1)
+                 d    = max(uu(i,1),smallr)
                  do idim=1,ndim
-                    v = uu(i,idim+1)
-                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
+                    v = uu(i,idim+1)/d
+                    ekin = ekin+0.5d0*uu(i,1)*v**2
                  end do
                  uu(i,ndim+2) = uu(i,ndim+2)-ekin
               end do
@@ -178,10 +178,10 @@ subroutine make_boundary_hydro(ilevel)
               ! Add kinetic energy
               do i=1,ngrid
                  ekin = 0d0
-                 d    = uold(ind_cell(i),1)
+                 d    = max(uold(ind_cell(i),1),smallr)
                  do idim=1,ndim
-                    v = uold(ind_cell(i),idim+1)
-                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
+                    v = uold(ind_cell(i),idim+1)/d
+                    ekin = ekin+0.5d0*uold(ind_cell(i),1)*v**2
                  end do
                  uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
               end do
