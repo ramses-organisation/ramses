@@ -65,12 +65,13 @@ subroutine set_unew(ilevel)
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
         end do
         do i=1,active(ilevel)%ngrid
-           d=uold(active(ilevel)%igrid(i)+iskip,1)
+           d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
            u=0.0; v=0.0; w=0.0
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
+           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2) &
+                & -0.5*uold(active(ilevel)%igrid(i)+iskip,1)*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
@@ -150,12 +151,12 @@ subroutine set_uold(ilevel)
         ! Correct total energy if internal energy is too small
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
-           d=uold(ind_cell,1)
+           d=max(uold(ind_cell,1),smallr)
            u=0.0; v=0.0; w=0.0
            if(ndim>0)u=uold(ind_cell,2)/d
            if(ndim>1)v=uold(ind_cell,3)/d
            if(ndim>2)w=uold(ind_cell,4)/d
-           e_kin=0.5*d*(u**2+v**2+w**2)
+           e_kin=0.5*uold(ind_cell,1)*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e_kin=e_kin+uold(ind_cell,ndim+2+irad)
@@ -202,28 +203,28 @@ subroutine add_gravity_source_terms(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
         ind_cell=active(ilevel)%igrid(i)+iskip
-        d=unew(ind_cell,1)
+        d=max(unew(ind_cell,1),smallr)
         u=0.0; v=0.0; w=0.0
         if(ndim>0)u=unew(ind_cell,2)/d
         if(ndim>1)v=unew(ind_cell,3)/d
         if(ndim>2)w=unew(ind_cell,4)/d
-        e_kin=0.5*d*(u**2+v**2+w**2)
+        e_kin=0.5*unew(ind_cell,1)*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,ndim+2)-e_kin
-        d_old=uold(ind_cell,1)
+        d_old=max(uold(ind_cell,1),smallr)
         fact=d_old/d*0.5*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
-           unew(ind_cell,2)=d*u
+           unew(ind_cell,2)=unew(ind_cell,1)*u
         endif
         if(ndim>1)then
            v=v+f(ind_cell,2)*fact
-           unew(ind_cell,3)=d*v
+           unew(ind_cell,3)=unew(ind_cell,1)*v
         end if
         if(ndim>2)then
            w=w+f(ind_cell,3)*fact
-           unew(ind_cell,4)=d*w
+           unew(ind_cell,4)=unew(ind_cell,1)*w
         endif
-        e_kin=0.5*d*(u**2+v**2+w**2)
+        e_kin=0.5*unew(ind_cell,1)*(u**2+v**2+w**2)
         unew(ind_cell,ndim+2)=e_prim+e_kin
      end do
   end do
@@ -309,10 +310,10 @@ subroutine add_pdv_source_terms(ilevel)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
               if(igridn(i,ig1)>0)then
-                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/uold(igridn(i,ig1)+ih1,1)
+                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
                  dx_g(i,idim) = dx_loc
               else
-                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/uold(ind_left(i,idim),1)
+                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
                  dx_g(i,idim) = dx_loc*1.5_dp
               end if
            enddo
@@ -320,10 +321,10 @@ subroutine add_pdv_source_terms(ilevel)
            ih2=ncoarse+(id2-1)*ngridmax
            do i=1,ngrid
               if(igridn(i,ig2)>0)then
-                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/uold(igridn(i,ig2)+ih2,1)
+                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
                  dx_d(i,idim)=dx_loc
               else 
-                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/uold(ind_right(i,idim),1)
+                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
                  dx_d(i,idim)=dx_loc*1.5_dp
               end if
            enddo
@@ -343,12 +344,12 @@ subroutine add_pdv_source_terms(ilevel)
         if(pressure_fix)then
            do i=1,ngrid
               ! Compute old thermal energy
-              d=uold(ind_cell(i),1)
+              d=max(uold(ind_cell(i),1),smallr)
               u=0.0; v=0.0; w=0.0
               if(ndim>0)u=uold(ind_cell(i),2)/d
               if(ndim>1)v=uold(ind_cell(i),3)/d
               if(ndim>2)w=uold(ind_cell(i),4)/d
-              eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
+              eold=uold(ind_cell(i),ndim+2)-0.5*uold(ind_cell(i),1)*(u**2+v**2+w**2)
 #if NENER>0
               do irad=1,nener
                  eold=eold-uold(ind_cell(i),ndim+2+irad)
@@ -386,12 +387,12 @@ subroutine add_pdv_source_terms(ilevel)
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
            ! Compute old thermal energy
-           d=uold(ind_cell1,1)
+           d=max(uold(ind_cell1,1),smallr)
            u=0.0; v=0.0; w=0.0
            if(ndim>0)u=uold(ind_cell1,2)/d
            if(ndim>1)v=uold(ind_cell1,3)/d
            if(ndim>2)w=uold(ind_cell1,4)/d
-           eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
+           eold=uold(ind_cell1,ndim+2)-0.5*uold(ind_cell1,1)*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               eold=eold-uold(ind_cell1,ndim+2+irad)

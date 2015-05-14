@@ -159,7 +159,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      do idim=1,3
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
+           ekk(i)=ekk(i)+0.5*(uold(ind_leaf(i),idim+1)/nH(i))**2*uold(ind_leaf(i),1)
         end do
      end do
      do i=1,nleaf
@@ -316,7 +316,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
            do i=1,nleaf
-              cooling_switch = uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
+              cooling_switch = uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr)
               if(cooling_switch > 1d-3)then
                  delta_T2(i) = MAX(delta_T2(i),real(0,kind=dp))
               endif
