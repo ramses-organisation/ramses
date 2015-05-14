@@ -65,12 +65,13 @@ subroutine set_unew(ilevel)
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
         end do
         do i=1,active(ilevel)%ngrid
-           d=uold(active(ilevel)%igrid(i)+iskip,1)
+           d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
            u=0.0; v=0.0; w=0.0
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
+           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2) &
+                & -0.5*uold(active(ilevel)%igrid(i)+iskip,1)*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
