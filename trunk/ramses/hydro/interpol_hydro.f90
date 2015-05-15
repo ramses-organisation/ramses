@@ -132,9 +132,8 @@ subroutine upl(ind_cell,ncell)
         ekin(1:ncell)=0.0d0
         do idim=1,ndim
            do i=1,ncell
-              ekin(i)=ekin(i)+0.5d0*(uold(ind_cell_son(i),1+idim) &
-                   &               /max(uold(ind_cell_son(i),1),smallr))**2 &
-                   &               *uold(ind_cell_son(i),1)
+              ekin(i)=ekin(i)+0.5d0*uold(ind_cell_son(i),1+idim)**2 &
+                   &               /max(uold(ind_cell_son(i),1),smallr)
            end do
         end do
         ! Compute child radiative energy
@@ -156,9 +155,8 @@ subroutine upl(ind_cell,ncell)
      ekin(1:ncell)=0.0d0
      do idim=1,ndim
         do i=1,ncell
-           ekin(i)=ekin(i)+0.5d0*(uold(ind_cell(i),1+idim) &
-                &               /max(uold(ind_cell(i),1),smallr))**2 &
-                &               *uold(ind_cell(i),1)
+           ekin(i)=ekin(i)+0.5d0*uold(ind_cell(i),1+idim)**2 &
+                &               /max(uold(ind_cell(i),1),smallr)
         end do
      end do
      ! Compute new radiative energy
@@ -234,7 +232,7 @@ subroutine interpol_hydro(u1,u2,nn)
         ekin(1:nn)=0.0d0
         do idim=1,ndim
            do i=1,nn
-              ekin(i)=ekin(i)+0.5d0*(u1(i,j,idim+1)/max(u1(i,j,1),smallr))**2*u1(i,j,1)
+              ekin(i)=ekin(i)+0.5d0*u1(i,j,idim+1)**2/max(u1(i,j,1),smallr)
            end do
         end do
         erad(1:nn)=0.0d0
@@ -339,7 +337,7 @@ subroutine interpol_hydro(u1,u2,nn)
         ekin(1:nn)=0.0d0
         do idim=1,ndim
            do i=1,nn
-              ekin(i)=ekin(i)+0.5d0*(u2(i,ind,idim+1)/max(u2(i,ind,1),smallr))**2*u2(i,ind,1)
+              ekin(i)=ekin(i)+0.5d0*u2(i,ind,idim+1)**2/max(u2(i,ind,1),smallr)
            end do
         end do
         erad(1:nn)=0.0d0

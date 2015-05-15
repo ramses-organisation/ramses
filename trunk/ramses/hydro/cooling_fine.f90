@@ -171,7 +171,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      do idim=1,ndim
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),1)*(uold(ind_leaf(i),idim+1)/nH(i))**2
+           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
         end do
      end do
      do i=1,nleaf
@@ -319,7 +319,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
         gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
         gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
-        gr_energy(i) = uold(ind_leaf(i),ndim+2)- ekk(i) 
+        gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i) 
         gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
 	enddo
 
@@ -353,7 +353,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
 #ifdef grackle
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = gr_energy(i)*uold(ind_leaf(i),1)+ekk(i)
+           uold(ind_leaf(i),ndim+2) = gr_energy(i)*max(uold(ind_leaf(i),1),smallr)+ekk(i)
         end do
 #else
 
@@ -370,7 +370,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
            do i=1,nleaf
-              cooling_switch = uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
+              cooling_switch = uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr)
               if(cooling_switch > 1d-3)then
                  delta_T2(i) = MAX(delta_T2(i),real(0,kind=dp))
               endif

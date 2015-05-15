@@ -70,8 +70,7 @@ subroutine set_unew(ilevel)
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2) &
-                & -0.5*uold(active(ilevel)%igrid(i)+iskip,1)*(u**2+v**2+w**2)
+           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
@@ -156,7 +155,7 @@ subroutine set_uold(ilevel)
            if(ndim>0)u=uold(ind_cell,2)/d
            if(ndim>1)v=uold(ind_cell,3)/d
            if(ndim>2)w=uold(ind_cell,4)/d
-           e_kin=0.5*uold(ind_cell,1)*(u**2+v**2+w**2)
+           e_kin=0.5*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e_kin=e_kin+uold(ind_cell,ndim+2+irad)
@@ -208,23 +207,23 @@ subroutine add_gravity_source_terms(ilevel)
         if(ndim>0)u=unew(ind_cell,2)/d
         if(ndim>1)v=unew(ind_cell,3)/d
         if(ndim>2)w=unew(ind_cell,4)/d
-        e_kin=0.5*unew(ind_cell,1)*(u**2+v**2+w**2)
+        e_kin=0.5*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,ndim+2)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
         fact=d_old/d*0.5*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
-           unew(ind_cell,2)=unew(ind_cell,1)*u
+           unew(ind_cell,2)=d*u
         endif
         if(ndim>1)then
            v=v+f(ind_cell,2)*fact
-           unew(ind_cell,3)=unew(ind_cell,1)*v
+           unew(ind_cell,3)=d*v
         end if
         if(ndim>2)then
            w=w+f(ind_cell,3)*fact
-           unew(ind_cell,4)=unew(ind_cell,1)*w
+           unew(ind_cell,4)=d*w
         endif
-        e_kin=0.5*unew(ind_cell,1)*(u**2+v**2+w**2)
+        e_kin=0.5*d*(u**2+v**2+w**2)
         unew(ind_cell,ndim+2)=e_prim+e_kin
      end do
   end do
@@ -349,7 +348,7 @@ subroutine add_pdv_source_terms(ilevel)
               if(ndim>0)u=uold(ind_cell(i),2)/d
               if(ndim>1)v=uold(ind_cell(i),3)/d
               if(ndim>2)w=uold(ind_cell(i),4)/d
-              eold=uold(ind_cell(i),ndim+2)-0.5*uold(ind_cell(i),1)*(u**2+v**2+w**2)
+              eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
               do irad=1,nener
                  eold=eold-uold(ind_cell(i),ndim+2+irad)
@@ -392,7 +391,7 @@ subroutine add_pdv_source_terms(ilevel)
            if(ndim>0)u=uold(ind_cell1,2)/d
            if(ndim>1)v=uold(ind_cell1,3)/d
            if(ndim>2)w=uold(ind_cell1,4)/d
-           eold=uold(ind_cell1,ndim+2)-0.5*uold(ind_cell1,1)*(u**2+v**2+w**2)
+           eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               eold=eold-uold(ind_cell1,ndim+2+irad)
