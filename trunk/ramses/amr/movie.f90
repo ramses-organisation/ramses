@@ -333,10 +333,10 @@ subroutine output_frame()
 #if NDIM>2                 
                        dvol=dvol*dz_cell
 #endif
-                       dens(ii,jj)=dens(ii,jj)+dvol*uold(ind_cell(i),1)
+                       dens(ii,jj)=dens(ii,jj)+dvol*max(uold(ind_cell(i),1),smallr)
                        vol(ii,jj)=vol(ii,jj)+dvol
                        
-                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
+                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1,smallr)**2
 #ifdef SOLVERmhd
                        do kk=2,NVAR+3
 #else                       
@@ -349,12 +349,12 @@ subroutine output_frame()
                          !Get temperature
                          ekk=0.0d0
                          do idim=1,3
-                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
+                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
                          enddo
                          temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
-                         temp=temp/uold(ind_cell(i),1)*scale_T2 !temperature in K
+                         temp=max(temp/max(uold(ind_cell(i),1),smallr),smallc**2)*scale_T2 !temperature in K
 
-                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*uold(ind_cell(i),1)*temp !mass weighted temperature
+                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*max(uold(ind_cell(i),1),smallr)*temp !mass weighted temperature
                        end if
 
 #ifdef SOLVERmhd
