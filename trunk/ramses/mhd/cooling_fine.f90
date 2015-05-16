@@ -159,7 +159,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      do idim=1,3
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5*(uold(ind_leaf(i),idim+1)/nH(i))**2*uold(ind_leaf(i),1)
+           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
         end do
      end do
      do i=1,nleaf
@@ -281,7 +281,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         if(cooling .and. delayed_cooling) then
            cooling_on(1:nleaf)=.true.
            do i=1,nleaf
-              if(uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1) .gt. 1d-3) &
+              if(uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr) .gt. 1d-3) &
                    cooling_on(i)=.false.
            end do
         end if

@@ -172,7 +172,7 @@ subroutine make_boundary_hydro(ilevel)
                  d    = max(uu(i,1),smallr)
                  do idim=1,ndim
                     v = uu(i,idim+1)/d
-                    ekin = ekin+0.5d0*uu(i,1)*v**2
+                    ekin = ekin+0.5d0*d*v**2
                  end do
                  uu(i,ndim+2) = uu(i,ndim+2)-ekin
               end do
@@ -203,7 +203,7 @@ subroutine make_boundary_hydro(ilevel)
                  d    = max(uold(ind_cell(i),1),smallr)
                  do idim=1,ndim
                     v = uold(ind_cell(i),idim+1)/d
-                    ekin = ekin+0.5d0*uold(ind_cell(i),1)*v**2
+                    ekin = ekin+0.5d0*d*v**2
                  end do
                  uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
               end do
