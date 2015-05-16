@@ -336,7 +336,7 @@ subroutine output_frame()
                        dens(ii,jj)=dens(ii,jj)+dvol*max(uold(ind_cell(i),1),smallr)
                        vol(ii,jj)=vol(ii,jj)+dvol
                        
-                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1,smallr)**2
+                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1),smallr)**2
 #ifdef SOLVERmhd
                        do kk=2,NVAR+3
 #else                       
