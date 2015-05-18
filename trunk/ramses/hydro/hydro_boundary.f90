@@ -137,8 +137,8 @@ subroutine make_boundary_hydro(ilevel)
               ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
            end do
 
-           ! Wall and free boundary conditions
-           if((boundary_type(ibound)/10).ne.2)then
+           ! Wall boundary conditions
+           if((boundary_type(ibound)/10).eq.0)then
               
               ! Gather reference hydro variables
               do ivar=1,nvar
@@ -146,16 +146,7 @@ subroutine make_boundary_hydro(ilevel)
                     uu(i,ivar)=uold(ind_cell_ref(i),ivar)
                  end do
               end do
-              ! Remove kinetic energy
-              do i=1,ngrid
-                 ekin = 0d0
-                 d    = uu(i,1)
-                 do idim=1,ndim
-                    v = uu(i,idim+1)
-                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
-                 end do
-                 uu(i,ndim+2) = uu(i,ndim+2)-ekin
-              end do
+
               ! Scatter to boundary region
               do ivar=1,nvar
                  switch=1
@@ -164,6 +155,36 @@ subroutine make_boundary_hydro(ilevel)
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
               end do
+
+           ! Free boundary conditions
+           else if((boundary_type(ibound)/10).eq.1)then
+              
+              ! Gather reference hydro variables
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+                 end do
+              end do
+
+              ! Remove kinetic energy
+              do i=1,ngrid
+                 ekin = 0d0
+                 d    = max(uu(i,1),smallr)
+                 do idim=1,ndim
+                    v = uu(i,idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
+                 end do
+                 uu(i,ndim+2) = uu(i,ndim+2)-ekin
+              end do
+
+              ! Scatter to boundary region
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar)=uu(i,ivar)
+                 end do
+              end do
+
+              ! Prevent inflow back into the box
               ivar = gdim+1
               if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
                  do i=1,ngrid
@@ -175,16 +196,18 @@ subroutine make_boundary_hydro(ilevel)
                     uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
                  end do
               endif
-              ! Add kinetic energy
+
+              ! Add back kinetic energy
               do i=1,ngrid
                  ekin = 0d0
-                 d    = uold(ind_cell(i),1)
+                 d    = max(uold(ind_cell(i),1),smallr)
                  do idim=1,ndim
-                    v = uold(ind_cell(i),idim+1)
-                    if(d.gt.0d0) ekin = ekin+0.5d0*d*(v/d)**2
+                    v = uold(ind_cell(i),idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
                  end do
                  uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
               end do
+
               ! This option has been disactivated 
               ! because it does not work in general
               ! Only for highly subsonic flows
@@ -202,7 +225,7 @@ subroutine make_boundary_hydro(ilevel)
 !!$                 end do
 !!$              end if
               
-              ! Imposed boundary conditions
+           ! Imposed boundary conditions
            else
               
               ! Compute cell center in code units

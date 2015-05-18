@@ -285,7 +285,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         if(cooling .and. delayed_cooling) then
            cooling_on(1:nleaf)=.true.
            do i=1,nleaf
-              if(uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1) .gt. 1d-3) &
+              if(uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr) .gt. 1d-3) &
                    cooling_on(i)=.false.
            end do
         end if
@@ -310,17 +310,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      velocity_units=scale_v
      temperature_units=scale_T2
      do i = 1, nleaf
-        gr_density(i) = uold(ind_leaf(i),1)
+        gr_density(i) = max(uold(ind_leaf(i),1),smallr)
         if(metal)then
            gr_metal_density(i) = uold(ind_leaf(i),imetal)
         else
            gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
         endif
-        gr_x_velocity(i) = uold(ind_leaf(i),2)/uold(ind_leaf(i),1)
-        gr_y_velocity(i) = uold(ind_leaf(i),3)/uold(ind_leaf(i),1)
-        gr_z_velocity(i) = uold(ind_leaf(i),4)/uold(ind_leaf(i),1)
-        gr_energy(i) = uold(ind_leaf(i),ndim+2)- ekk(i) 
-        gr_energy(i) = gr_energy(i)/uold(ind_leaf(i),1)
+        gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
+        gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
+        gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
+        gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i) 
+        gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
 	enddo
 
      gr_dt = dtnew(ilevel)
@@ -353,7 +353,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
 #ifdef grackle
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = gr_energy(i)*uold(ind_leaf(i),1)+ekk(i)
+           uold(ind_leaf(i),ndim+2) = gr_energy(i)*max(uold(ind_leaf(i),1),smallr)+ekk(i)
         end do
 #else
 
@@ -370,7 +370,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
            do i=1,nleaf
-              cooling_switch = uold(ind_leaf(i),idelay)/uold(ind_leaf(i),1)
+              cooling_switch = uold(ind_leaf(i),idelay)/max(uold(ind_leaf(i),1),smallr)
               if(cooling_switch > 1d-3)then
                  delta_T2(i) = MAX(delta_T2(i),real(0,kind=dp))
               endif
