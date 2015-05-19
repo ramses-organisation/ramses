@@ -396,7 +396,7 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 
         ! virial analysis volume terms
-        magnetic_support=magnetic_support+emag*vol
+        magnetic_support(peak_nr)  = magnetic_support(peak_nr) + vol*emag
         thermal_support(peak_nr)=thermal_support(peak_nr)+3*vol*p
         do i=1,3
            grav_term(peak_nr)    = grav_term(peak_nr) + frel(i)  * rrel(i) * vol*d
