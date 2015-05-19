@@ -48,7 +48,7 @@ subroutine compute_clump_properties(xx)
   n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0; clump_force=0.d0 
-  peak_pos=0.
+  peak_pos=0.d0
 
   if(verbose)write(*,*)'Entering compute clump properties'
   !------------------------------------------
@@ -114,6 +114,7 @@ subroutine compute_clump_properties(xx)
         ! Max density and peak location
         if(d>=max_dens(peak_nr))then
            max_dens(peak_nr)=d
+           ! Abuse av_dens as a "local max density" for now...
            av_dens(peak_nr)=d
            peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
         end if
@@ -194,9 +195,7 @@ subroutine compute_clump_properties(xx)
 
   !for periodic boxes the center of mass can be meaningless at that stage
   ! -> recompute center of mass relative to peak position
-  
   if(periodic)then
-     
      center_of_mass=0.d0;
      do ipart=1,ntest     
         global_peak_id=flag2(icellp(ipart)) 
@@ -401,7 +400,7 @@ subroutine merge_clumps(action)
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
+  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart
   integer::peak,next_peak,current,isearch,nmove,nmove_all,ipeak,jpeak,iter
   integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
   integer::jmerge,ilev,global_peak_id
@@ -768,7 +767,6 @@ subroutine allocate_peak_patch_arrays
   allocate(halo_mass(1:npeaks_max))
   allocate(clump_mass(1:npeaks_max))
   allocate(clump_vol(1:npeaks_max))
-  allocate(saddle_max(1:npeaks_max))
   allocate(relevance(1:npeaks_max))
   call sparse_initialize(npeaks_max,npeaks_max,sparse_saddle_dens)
 
@@ -776,13 +774,12 @@ subroutine allocate_peak_patch_arrays
   allocate(clump_velocity(1:npeaks_max,1:ndim))
   allocate(clump_force(1:npeaks_max,1:ndim))
   allocate(clump_mass4(npeaks_max))
-  allocate(e_kin_int(npeaks_max))
+  allocate(kinetic_support(npeaks_max))
   allocate(thermal_support(npeaks_max))
   allocate(magnetic_support(npeaks_max))
   allocate(Psurf(npeaks_max))
   allocate(MagPsurf(npeaks_max))
   allocate(MagTsurf(npeaks_max))
-  allocate(clump_check(npeaks_max))
   allocate(grav_term(npeaks_max))
   allocate(rad_term(npeaks_max))
   allocate(contracting(npeaks_max))
@@ -819,25 +816,11 @@ subroutine allocate_peak_patch_arrays
      end if
   end do
 
-  !---------------------------------
-  ! Initialize all peak based arrays
-  !---------------------------------
-  n_cells=0; n_cells_halo=0; lev_peak=0; new_peak=0; ind_halo=0
-  saddle_max=0.; relevance=1.; clump_size=0.
-  min_dens=huge(zero)
-  av_dens=0.; halo_mass=0.
-  clump_mass=0.; clump_vol=0.; peak_pos=0.; center_of_mass=0.
+  !------------------------------------------------
+  ! Initialize all peak based arrays for clump finder
+  !------------------------------------------------
+  lev_peak=0; new_peak=0; ind_halo=0; relevance=1.
 
-  clump_force=0.
-  clump_velocity=0.
-  e_kin_int=0.
-  thermal_support=0.
-  magnetic_support=0.
-  grav_term=0.d0
-  rad_term=0.d0
-  clump_check=-1.
-  contracting=.false.
-  Icl=0.; Icl_d=0.; Icl_dd=0.; Icl_d_3by3=0.; Icl_3by3=0.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
@@ -864,19 +847,15 @@ subroutine deallocate_all
   deallocate(halo_mass)
   deallocate(clump_mass)
   deallocate(clump_vol)
-  deallocate(saddle_max)
   deallocate(relevance)
   call sparse_kill(sparse_saddle_dens)
 
   deallocate(clump_force)
   deallocate(clump_mass4)
   deallocate(clump_velocity)
-  deallocate(e_kin_int)
-  deallocate(grav_term)
-  deallocate(rad_term)
-  deallocate(thermal_support,magnetic_support)
+  deallocate(grav_term,rad_term)
+  deallocate(thermal_support,kinetic_support,magnetic_support)
   deallocate(Psurf,MagPsurf,MagTsurf)
-  deallocate(clump_check)
   deallocate(contracting)
   deallocate(Icl_dd,Icl_d,Icl,Icl_d_3by3,Icl_3by3)
 

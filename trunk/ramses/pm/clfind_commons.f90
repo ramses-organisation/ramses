@@ -34,12 +34,11 @@ module clfind_commons
   ! Peak-patch properties
   real(dp),allocatable,dimension(:,:)::clump_size,center_of_mass,clump_velocity,clump_force
   real(dp),allocatable,dimension(:,:,:)::Icl_d_3by3,Icl_3by3
-  real(dp),allocatable,dimension(:)::min_dens,av_dens
-  real(dp),allocatable,dimension(:)::max_dens,e_kin_int,thermal_support,magnetic_support
+  real(dp),allocatable,dimension(:)::max_dens,min_dens,av_dens
+  real(dp),allocatable,dimension(:)::thermal_support,kinetic_support,magnetic_support
   real(dp),allocatable,dimension(:)::halo_mass,clump_mass,clump_vol
   real(dp),allocatable,dimension(:)::clump_mass4
   real(dp),allocatable,dimension(:,:)::peak_pos
-  real(dp),allocatable,dimension(:)::saddle_max
   real(dp),allocatable,dimension(:)::relevance
   real(dp),allocatable,dimension(:)::Psurf,MagPsurf,MagTsurf
   real(dp),allocatable,dimension(:)::grav_term, rad_term
