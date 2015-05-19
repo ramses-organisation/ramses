@@ -207,7 +207,7 @@ subroutine compute_clump_properties_round2(xx)
   real(dp)::d,vol,M,ekk,err,phi_rel,de,c_sound,d0,v_bulk2,p,T2,c_code
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
   real(dp),dimension(1:nlevelmax)::volume
-  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc,frad
+  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,fgrav,skip_loc,frad
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
@@ -336,7 +336,7 @@ subroutine compute_clump_properties_round2(xx)
            if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
         end do
         vrel=vd(1:3)/d-clump_velocity(peak_nr,1:3)
-        frel=f(icellp(ipart),1:3)-clump_force(peak_nr,1:3)
+        fgrav=f(icellp(ipart),1:3)
 
         do i=1,ndim
            ! size relative to center of mass
@@ -390,7 +390,7 @@ subroutine compute_clump_properties_round2(xx)
         thermal_support (peak_nr)  = thermal_support(peak_nr)  + 3*vol*p
         do i=1,3
            kinetic_support(peak_nr)= kinetic_support(peak_nr)  + vrel(i)**2         * vol*d
-           grav_term(peak_nr)      = grav_term(peak_nr)        + frel(i)  * rrel(i) * vol*d
+           grav_term(peak_nr)      = grav_term(peak_nr)        + fgrav(i) * rrel(i) * vol*d
            rad_term(peak_nr)       = rad_term(peak_nr)         + frad(i)  * rrel(i) * vol*d
         end do
         
@@ -428,8 +428,9 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 
   !second time derivative of I
-  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)-Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)+&
-       kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
+  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)+rad_term(1:npeaks)&
+       -Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)&
+       +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
   do j=npeaks,1,-1
      if (relevance(j)>0.)then
