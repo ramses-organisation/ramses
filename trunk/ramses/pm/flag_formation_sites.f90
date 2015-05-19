@@ -178,10 +178,17 @@ end subroutine flag_formation_sites
 !################################################################
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma
+  use hydro_commons, ONLY:uold,gamma,nvar,nener
   use poisson_commons, ONLY:phi,f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
+  use pm_parameters
+#ifdef RT
+  use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
+  use rt_hydro_commons, only:rtuold
+  use rt_cooling_module, only:kappaAbs,kappaSc
+#endif
+
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -195,15 +202,37 @@ subroutine compute_clump_properties_round2(xx)
 
   integer::ipart,ilevel,info,i,peak_nr,global_peak_id,j,ii,jj
   integer::grid,nx_loc,ix,iy,iz,ind,icpu,idim
-  integer::dummy,dummy_tot
-  real(dp)::d,vol,M,ekk,phi_rel,de,c_sound,d0,v_bulk2,p
+  integer::ig,iNp,irad
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2,scale_kappa,scale_Np,scale_Fp
+  real(dp)::d,vol,M,ekk,err,phi_rel,de,c_sound,d0,v_bulk2,p,T2,c_code
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
   real(dp),dimension(1:nlevelmax)::volume
-  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc
+  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,frel,skip_loc,frad
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
   logical,dimension(1:ndim)::period
+  real(dp)::emag,ev_to_uu,kappa
+#ifdef SOLVERmhd
+  real(dp),dimension(1:3)::B
+#endif
+#ifdef RT
+  real(dp),dimension(1:nGroups,1:ndim)::Fp
+  real(dp),dimension(1:nGroups)::Np2Ep_flux
+#endif
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+  ev_to_uu=ev_to_erg/(scale_d * scale_l**3 * scale_v**2)
+  do ig=1,nGroups
+     Np2Ep_flux(ig)=(scale_Fp * group_egy(ig) * ev_to_erg)/(scale_d * scale_v**3) 
+  end do
+  scale_kappa=(scale_d*scale_l)**-1.d0
+  c_code=c_cgs/scale_v
+#endif
 
   period(1)=(nx==1)
 #if NDIM>1
@@ -217,9 +246,15 @@ subroutine compute_clump_properties_round2(xx)
   call surface_pressure
   
   !initialize arrays
+<<<<<<< HEAD
   e_kin_int=0.d0; clump_size=0.d0; e_thermal=0.d0
   clump_mass4=0.d0
   grav_term=0.d0; Icl_d=0.d0; Icl=0.; Icl_dd=0.
+=======
+  e_kin_int=0.d0; clump_size=0.d0; thermal_support=0.d0; magnetic_support=0.d0 
+  grav_term=0.d0; rad_term=0.d0
+  Icl_d=0.d0; Icl=0.; Icl_dd=0.
+>>>>>>> f1ad97c... -add magnetic terms to virial analysis for sink creation
   Icl_3by3=0.;  Icl_d_3by3=0.
   contracting=.false.
 
@@ -279,6 +314,22 @@ subroutine compute_clump_properties_round2(xx)
            vd(i)=uold(icellp(ipart),i+1)
            xpeak(i)=peak_pos(peak_nr,i)
         end do
+
+        ! get RT fluxes
+#ifdef RT
+        do ig=1,nGroups
+           iNp=iGroups(ig)
+           Fp(ig,1:ndim) = rtuold(icellp(ipart),iNp+1:iNp+ndim)* Np2Ep_flux(ig)
+        end do
+#endif
+
+
+#ifdef SOLVERmhd
+        ! cell averaged magnetic fields
+        do i=1,ndim
+           B(i)=0.5d0*(uold(icellp(ipart),5+i)+uold(icellp(ipart),nvar+i))
+        end do
+#endif
      
         ! Cell volume
         vol=volume(levp(ipart))                  
@@ -311,31 +362,77 @@ subroutine compute_clump_properties_round2(xx)
         do i=1,3 
            ekk=ekk+0.5*vd(i)**2/d                          
         end do
-        p=(de-ekk)*(gamma-1)
-        e_thermal(peak_nr)=e_thermal(peak_nr)+1.5*vol*p
+        
+        ! non-themal energy 
+        err=0.d0
+#if NENER>0
+        do irad=1,nener
+           err=err+uold(icellp(ipart),ndim+2+irad)
+        end do
+#endif
 
-        !terms for virial theorem analysis
+        ! magnetic energy
+        emag=0.d0
+#ifdef SOLVERmhd
+        do i=1,3 
+           emag=emag+0.5d0*(B(i))**2
+        end do
+#endif
+        ! thermal pressure and temperature
+        p=(de-ekk-emag-err)*(gamma-1)
+        T2=p/d*scale_T2
+
+        ! add radiation pressure by trapped photons
+        p=p+err/3.d0
+        
+#ifdef RT
+        ! compute radiative acceleration by streaming photons
+        frad=0.d0
+        do ig=1,nGroups
+           kappa=kappaSc(ig)/scale_kappa
+           frad(1:ndim)  = frad(1:ndim) +  Fp(ig,1:ndim) * kappa / c_code
+        end do
+
+#endif
+
+        ! virial analysis volume terms
+        magnetic_support=magnetic_support+emag*vol
+        thermal_support(peak_nr)=thermal_support(peak_nr)+3*vol*p
         do i=1,3
-           grav_term(peak_nr) = grav_term(peak_nr) + frel(i) * rrel(i) * vol*d
-           Icl_d(peak_nr)     = Icl_d(peak_nr)     + vrel(i) * rrel(i) * vol*d
-           Icl(peak_nr)       = Icl(peak_nr)       + rrel(i) * rrel(i) * vol*d
+           grav_term(peak_nr)    = grav_term(peak_nr) + frel(i)  * rrel(i) * vol*d
+#ifdef RT
+           rad_term(peak_nr)     = rad_term(peak_nr)  + frad(i)  * rrel(i) * vol*d
+#endif
+        end do
+        
+        ! time derivatives of the moment of inertia
+        do i=1,3
+           Icl_d(peak_nr)        = Icl_d(peak_nr)     + vrel(i)  * rrel(i) * vol*d
+           Icl(peak_nr)          = Icl(peak_nr)       + rrel(i)  * rrel(i) * vol*d
            do j=1,3
               Icl_d_3by3(peak_nr,i,j)=  Icl_d_3by3(peak_nr,i,j)   + ( vrel(j) * rrel(i)  +  vrel(i) * rrel(j) )   * vol*d
               Icl_3by3(peak_nr,i,j)  =  Icl_3by3(peak_nr,i,j)     +   rrel(j) * rrel(i)                           * vol*d
            end do
         end do
+
      end if
   end do
   !---------------------------------------------------------------------------
   ! a lot of MPI communication to collect the results from the different cpu's
   !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
+<<<<<<< HEAD
   call virtual_peak_dp(clump_mass4,'sum')
   call virtual_peak_dp(e_thermal,'sum')
+=======
+  call virtual_peak_dp(thermal_support,'sum')
+  call virtual_peak_dp(magnetic_support,'sum')
+>>>>>>> f1ad97c... -add magnetic terms to virial analysis for sink creation
   call virtual_peak_dp(e_kin_int,'sum')
   call virtual_peak_dp(Icl,'sum')
   call virtual_peak_dp(Icl_d,'sum')
   call virtual_peak_dp(grav_term,'sum')
+  call virtual_peak_dp(rad_term,'sum')
   do i=1,ndim
      call virtual_peak_dp(clump_size(1,i),'sum')     
      do j=1,ndim
@@ -346,7 +443,8 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 
   !second time derivative of I
-  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)-Psurf(1:npeaks)+2*e_kin_int(1:npeaks)+2*e_thermal(1:npeaks))
+  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)-Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)+&
+       2*e_kin_int(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
   do j=npeaks,1,-1
      if (relevance(j)>0.)then
@@ -374,7 +472,7 @@ subroutine compute_clump_properties_round2(xx)
            contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed 
         end if
         
-        clump_check(j)=(-1.*grav_term(j)+Psurf(j))/(tiny(0.d0)+2*e_kin_int(j)+2*e_thermal(j))
+        clump_check(j)=(-1.*grav_term(j)+Psurf(j))/(tiny(0.d0)+2*e_kin_int(j)+thermal_support(j)+rad_term(j))
         
      endif
   end do
@@ -382,21 +480,23 @@ subroutine compute_clump_properties_round2(xx)
   !write to the log file some information that could be of interest for debugging etc.
   if(clinfo .and. (.not. smbh) .and. sink)then 
      if (myid==ncpu)then
-        write(*,'(135A)')'==========================================================================================='
-        write(*,'(135A)')'Cl_N   N_cls   ax1 ax2 ax3  |I_d|/I_dd[y] tidal_Fg   Psurf      e_kin      e_therm'
-        write(*,'(135A)')'==========================================================================================='
+        write(*,'(135A)')'======================================================================================================================================'
+        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
+        write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
 
-           write(*,'(I4,2X,I8,2x,3(L2,2X),5(E9.2E2,3X))')j+ipeak_start(myid)&
+           write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
                 ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
-                ,abs(Icl_d(j))/Icl_dd(j)&
-                ,grav_term(j),-1.*Psurf(j)&
-                ,e_kin_int(j),e_thermal(j)
+                ,(Icl_dd(j)<0)&
+                ,grav_term(j),Psurf(j)&
+                ,MagPsurf(j),MagTsurf(j)&
+                ,2*e_kin_int(j),thermal_support(j),magnetic_support(j)&
+                ,rad_term(j)
         end if
      end do
   end if
@@ -579,8 +679,8 @@ end subroutine jacobi
 !#########################################################################
 subroutine surface_int(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: center_of_mass,Psurf
-  use hydro_commons, ONLY: uold,gamma
+  use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
+  use hydro_commons, ONLY: uold,gamma,nvar,nener
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_cell
@@ -599,10 +699,13 @@ subroutine surface_int(ind_cell,np,ilevel)
   integer ,dimension(1:nvector)::loc_clump_nr
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xtest,r
-  real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_dot_n
+  real(dp),dimension(1:nvector)::ekk_cell,ekk_neigh,P_cell,P_neigh,r_dot_n,err_cell
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
   logical,dimension(1:ndim)::period
+  real(dp),dimension(1:nvector)::B_dot_n,B_dot_r,B2
+  real(dp),dimension(1:nvector,1:3)::B
+  integer::irad
 
   period(1)=(nx==1)
 #if NDIM>1
@@ -635,7 +738,9 @@ subroutine surface_int(ind_cell,np,ilevel)
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
   
-  ekk_cell=0.; P_neigh=0; P_cell=0
+  ekk_cell=0.d0; P_neigh=0.d0; P_cell=0.d0; 
+  B=0d0; err_cell=0.d0
+
   ! some preliminary action...
   do j=1,np
      indv(j)=(ind_cell(j)-ncoarse-1)/ngridmax+1 ! cell position in grid
@@ -645,15 +750,20 @@ subroutine surface_int(ind_cell,np,ilevel)
         ekk_cell(j)=ekk_cell(j)+0.5*uold(ind_cell(j),jdim+1)**2
      end do
      ekk_cell(j)=ekk_cell(j)/uold(ind_cell(j),1)
-     P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j))
-  end do
+     ! non-themal energy                                                                                                                                                   
 
+#if NENER>0
+     do irad=1,nener
+        err_cell(j)=err_cell(j)+uold(ind_cell(j),ndim+2+irad)
+     end do
+#endif
+     P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j))
+  end do
+  
   do j=1,np
      if (clump_nr(j) .ne. 0)call get_local_peak_id(clump_nr(j),loc_clump_nr(j))
   end do
-
-
-  
+ 
   !================================
   ! generate neighbors at level ilevel (and ilevel -1)
   !================================
@@ -664,18 +774,18 @@ subroutine surface_int(ind_cell,np,ilevel)
            if((k2-1.)**2+(j2-1.)**2+(i2-1.)**2==1)then !check whether common face exists 
               
               !construct outward facing normal vector
-              n=0.
-              if (k2==0)n(3)=-1.
-              if (k2==2)n(3)=1.
-              if (j2==0)n(2)=-1.
-              if (j2==2)n(2)=1.
-              if (i2==0)n(1)=-1.
-              if (i2==2)n(1)=1.
+              n=0.d0
+              if (k2==0)n(3)=-1.d0
+              if (k2==2)n(3)=1.d0
+              if (j2==0)n(2)=-1.d0
+              if (j2==2)n(2)=1.d0
+              if (i2==0)n(1)=-1.d0
+              if (i2==2)n(1)=1.d0
               if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong lenght'
               
               
-              r=0.
-              do j=1,np                 
+              r=0.d0
+              do j=1,np
                  xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc
                  xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
                  xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
@@ -701,23 +811,99 @@ subroutine surface_int(ind_cell,np,ilevel)
 
                  endif                 
               end do
-              
+             
               call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
+
               do j=1,np           
                  ok(j)=(son(cell_index(j))==0)
               end do
+
               do j=1,np
                  neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
                  ok(j)=ok(j).and. neigh_cl(j)/=clump_nr(j) !neighboring cell is in another clump
                  ok(j)=ok(j).and. 0/=clump_nr(j) !clump number is not zero
               end do
-              
-              r_dot_n=0.
+
+              r_dot_n=0.d0
               do j=1,np
                  do idim=1,3
                     r_dot_n(j)=r_dot_n(j)+n(idim)*r(j,idim)
                  end do
               end do
+
+#ifdef SOLVERmhd
+              ! compute B field at the face (all components)
+              if (n(3) == (-1.d0))then
+                 do j=1,np
+                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                    B(j,3)=0.5d0*(uold(ind_cell(j),8)+uold(cell_index(j),nvar+3))
+                 end do
+              else if (n(3) == 1.d0)then
+                 do j=1,np
+                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                    B(j,3)=0.5d0*(uold(ind_cell(j),nvar+3)+uold(cell_index(j),8))
+                 end do
+              else if (n(2) == (-1.d0))then
+                 do j=1,np
+                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                    B(j,2)=0.5d0*(uold(ind_cell(j),7)+uold(cell_index(j),nvar+2))
+                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                 end do
+              else if (n(2) == 1.d0)then
+                 do j=1,np
+                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                    B(j,2)=0.5d0*(uold(ind_cell(j),nvar+2)+uold(cell_index(j),7))
+                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                 end do
+              else if (n(1) == (-1.d0))then
+                 do j=1,np
+                    B(j,1)=0.5d0*(uold(ind_cell(j),6)+uold(cell_index(j),nvar+1))
+                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
+                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                 end do
+              else if (n(1) == 1.d0)then
+                 do j=1,np
+                    B(j,1)=0.5d0*(uold(ind_cell(j),nvar+1)+uold(cell_index(j),6))
+                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
+                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                 end do
+              end if
+
+              B_dot_n=0.d0
+              do j=1,np
+                 do idim=1,3
+                    B_dot_n(j)=B_dot_n(j)+B(j,idim)*n(idim)
+                 end do
+              end do
+
+              B_dot_r=0.d0
+              do j=1,np
+                 do idim=1,3
+                    B_dot_r(j)=B_dot_r(j)+B(j,idim)*r(j,idim)
+                 end do
+              end do
+
+              B2=0.d0
+              do j=1,np
+                 do idim=1,3
+                    B2(j)=B2(j)+B(j,idim)**2
+                 end do
+              end do
+#endif
               
               ekk_neigh=0.
               do j=1,np
@@ -727,7 +913,13 @@ subroutine surface_int(ind_cell,np,ilevel)
                     end do
                     ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
                     P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
-                    Psurf(loc_clump_nr(j))=Psurf(loc_clump_nr(j))+r_dot_n(j)*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
+
+                    ! add to the actual terms for the virial analysis
+                    Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh(j)+P_cell(j))* r_dot_n(j) * dx_loc**2
+#ifdef SOLVERmhd
+                    MagPsurf(loc_clump_nr(j)) = MagPsurf(loc_clump_nr(j)) + 0.5d0*B2(j)                 * r_dot_n(j) * dx_loc**2
+                    MagTsurf(loc_clump_nr(j)) = MagTsurf(loc_clump_nr(j)) + B_dot_r(j)                  * B_dot_n(j) * dx_loc**2
+#endif
                  endif
               end do
            endif
@@ -747,15 +939,15 @@ subroutine surface_int(ind_cell,np,ilevel)
               if((k3-1.5)**2+(j3-1.5)**2+(i3-1.5)**2==2.75)then !check whether common face exists
 
                  n=0.
-                 if (k3==0)n(3)=-1. 
-                 if (k3==3)n(3)=1.
-                 if (j3==0)n(2)=-1. 
-                 if (j3==3)n(2)=1.
-                 if (i3==0)n(1)=-1. 
-                 if (i3==3)n(1)=1.
+                 if (k3==0)n(3)=-1.d0 
+                 if (k3==3)n(3)=1.d0
+                 if (j3==0)n(2)=-1.d0 
+                 if (j3==3)n(2)=1.d0
+                 if (i3==0)n(1)=-1.d0 
+                 if (i3==3)n(1)=1.d0
                  if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong lenght'
 
-                 r=0.
+                 r=0.d0
                  do j=1,np 
 
                     xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
@@ -795,15 +987,88 @@ subroutine surface_int(ind_cell,np,ilevel)
                     neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
                     ok(j)=ok(j).and. neigh_cl(j)/=clump_nr(j) !neighboring cell is in another clump
                     ok(j)=ok(j).and. 0/=clump_nr(j) !clump number is not zero 
-                 end do
-                 
-                 r_dot_n=0.
+                 end do                 
+
+                 r_dot_n=0.d0
                  do j=1,np
                     do idim=1,3
                        r_dot_n(j)=r_dot_n(j)+n(idim)*r(j,idim)
                     end do
                  end do
 
+#ifdef SOLVERmhd
+                 ! compute B field at the face (all components)
+                 if (n(3) == (-1.d0))then
+                    do j=1,np
+                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                       B(j,3)=0.5d0*(uold(ind_cell(j),8)+uold(cell_index(j),nvar+3))
+                    end do
+                 else if (n(3) == 1.d0)then
+                    do j=1,np
+                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                       B(j,3)=0.5d0*(uold(ind_cell(j),nvar+3)+uold(cell_index(j),8))
+                    end do
+                 else if (n(2) == (-1.d0))then
+                    do j=1,np
+                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                       B(j,2)=0.5d0*(uold(ind_cell(j),7)+uold(cell_index(j),nvar+2))
+                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                    end do
+                 else if (n(2) == 1.d0)then
+                    do j=1,np
+                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                       B(j,2)=0.5d0*(uold(ind_cell(j),nvar+2)+uold(cell_index(j),7))
+                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                    end do
+                 else if (n(1) == (-1.d0))then
+                    do j=1,np
+                       B(j,1)=0.5d0*(uold(ind_cell(j),6)+uold(cell_index(j),nvar+1))
+                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
+                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                    end do
+                 else if (n(1) == 1.d0)then
+                    do j=1,np
+                       B(j,1)=0.5d0*(uold(ind_cell(j),nvar+1)+uold(cell_index(j),6))
+                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
+                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                    end do
+                 end if
+
+                 B_dot_n=0.d0
+                 do j=1,np
+                    do idim=1,3
+                       B_dot_n(j)=B_dot_n(j)+B(j,idim)*n(idim)
+                    end do
+                 end do
+
+                 B_dot_r=0.d0
+                 do j=1,np
+                    do idim=1,3
+                       B_dot_r(j)=B_dot_r(j)+B(j,idim)*r(j,idim)
+                    end do
+                 end do
+
+                 B2=0.d0
+                 do j=1,np
+                    do idim=1,3
+                       B2(j)=B2(j)+B(j,idim)**2
+                    end do
+                 end do
+#endif
                  do j=1,np
                     if (ok(j))then
                        do jdim=1,ndim
@@ -811,8 +1076,14 @@ subroutine surface_int(ind_cell,np,ilevel)
                        end do
                        ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
                        P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
-                       Psurf(loc_clump_nr(j))=Psurf(loc_clump_nr(j))+r_dot_n(j)*0.25*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
-                       if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
+
+                       ! add to the actual terms for the virial analysis
+                       Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh(j)+P_cell(j))* r_dot_n(j) * 0.25d0 * dx_loc**2
+                       ! if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
+#ifdef SOLVERmhd
+                       MagPsurf(loc_clump_nr(j)) = MagPsurf(loc_clump_nr(j)) + 0.5d0*B2(j)                 * r_dot_n(j) * 0.25d0 * dx_loc**2
+                       MagTsurf(loc_clump_nr(j)) = MagTsurf(loc_clump_nr(j)) + B_dot_r(j)                  * B_dot_n(j) * 0.25d0 * dx_loc**2
+#endif                       
                     endif
                  end do                 
               endif
@@ -846,7 +1117,8 @@ subroutine surface_pressure
   integer::ipart,ip,ilevel,next_level
   integer,dimension(1:nvector)::ind_cell
 
-  Psurf=0.
+  Psurf=0.d0; MagPsurf=0.d0; MagTsurf=0.d0
+
   ! loop 'testparts', pass the information of nvector parts to neighborsearch 
   ip=0
   do ipart=1,ntest
@@ -867,6 +1139,8 @@ subroutine surface_pressure
    
 #ifndef WITHOUTMPI     
   call virtual_peak_dp(Psurf,'sum')
+  call virtual_peak_dp(MagPsurf,'sum')
+  call virtual_peak_dp(MagTsurf,'sum')
 #endif
 
 end subroutine surface_pressure

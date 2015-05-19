@@ -777,10 +777,14 @@ subroutine allocate_peak_patch_arrays
   allocate(clump_force(1:npeaks_max,1:ndim))
   allocate(clump_mass4(npeaks_max))
   allocate(e_kin_int(npeaks_max))
-  allocate(e_thermal(npeaks_max))
+  allocate(thermal_support(npeaks_max))
+  allocate(magnetic_support(npeaks_max))
   allocate(Psurf(npeaks_max))
+  allocate(MagPsurf(npeaks_max))
+  allocate(MagTsurf(npeaks_max))
   allocate(clump_check(npeaks_max))
   allocate(grav_term(npeaks_max))
+  allocate(rad_term(npeaks_max))
   allocate(contracting(npeaks_max))
   allocate(Icl(npeaks_max))
   allocate(Icl_d(npeaks_max))
@@ -827,8 +831,10 @@ subroutine allocate_peak_patch_arrays
   clump_force=0.
   clump_velocity=0.
   e_kin_int=0.
-  e_thermal=0.
+  thermal_support=0.
+  magnetic_support=0.
   grav_term=0.d0
+  rad_term=0.d0
   clump_check=-1.
   contracting=.false.
   Icl=0.; Icl_d=0.; Icl_dd=0.; Icl_d_3by3=0.; Icl_3by3=0.
@@ -867,8 +873,9 @@ subroutine deallocate_all
   deallocate(clump_velocity)
   deallocate(e_kin_int)
   deallocate(grav_term)
-  deallocate(e_thermal)
-  deallocate(Psurf)
+  deallocate(rad_term)
+  deallocate(thermal_support,magnetic_support)
+  deallocate(Psurf,MagPsurf,MagTsurf)
   deallocate(clump_check)
   deallocate(contracting)
   deallocate(Icl_dd,Icl_d,Icl,Icl_d_3by3,Icl_3by3)
