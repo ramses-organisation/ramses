@@ -410,19 +410,10 @@ subroutine compute_clump_properties_round2(xx)
   ! a lot of MPI communication to collect the results from the different cpu's
   !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
-<<<<<<< HEAD
-  call virtual_peak_dp(clump_mass4,'sum')
-  call virtual_peak_dp(e_thermal,'sum')
-=======
   call virtual_peak_dp(thermal_support,'sum')
   call virtual_peak_dp(kinetic_support,'sum')
   call virtual_peak_dp(magnetic_support,'sum')
-<<<<<<< HEAD
->>>>>>> f1ad97c... -add magnetic terms to virial analysis for sink creation
-  call virtual_peak_dp(e_kin_int,'sum')
-=======
   call virtual_peak_dp(clump_mass4,'sum')
->>>>>>> 1b5e021... Cleanup:
   call virtual_peak_dp(Icl,'sum')
   call virtual_peak_dp(Icl_d,'sum')
   call virtual_peak_dp(grav_term,'sum')
