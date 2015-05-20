@@ -735,12 +735,14 @@ subroutine peakcheck(xx,cell_index,okpeak,ok,density_max,ind_max,np)
   integer::np,j
 
 
-  do j=1,np
-     if(ok(j))then !so if there is a denser neighbor
-        if(xx(cell_index(j))>density_max)then           
-           okpeak=.false. !no peak
-           density_max=xx(cell_index(j)) !change densest neighbor dens
-           ind_max=cell_index(j) !change densest neighbor index
+  do j=1,np           
+     ! only consider leaf-cells at correct level                   
+     if(ok(j))then    
+        ! if cell is denser than densest neighbor
+        if(xx(cell_index(j))>density_max)then  
+           okpeak=.false.                 ! cell is no peak
+           density_max=xx(cell_index(j))  ! change densest neighbor dens
+           ind_max=cell_index(j)          ! change densest neighbor index
         endif
      end if
   end do
