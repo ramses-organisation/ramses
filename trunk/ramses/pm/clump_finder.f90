@@ -32,7 +32,6 @@ subroutine clump_finder(create_output,keep_alive)
   logical::all_bound
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
-  first_pass=.true.
 
   !---------------------------------------------------------------
   ! Compute rho from gas density or dark matter particles
@@ -123,13 +122,13 @@ subroutine clump_finder(create_output,keep_alive)
   !-----------------------------------------------------------------------
   ! Count number of density peaks and share info across processors 
   !-----------------------------------------------------------------------
-  npeaks=0; nzero=0
+  npeaks=0
   if(ntest>0)then
      if(ivar_clump==0)then  ! case 1: count peaks
-        call scan_for_peaks(rho(1),npeaks,nzero,1)
+        call count_peaks(rho(1),npeaks)
      else
         if(hydro)then       ! case 1: count peaks
-           call scan_for_peaks(uold(1,ivar_clump),npeaks,nzero,1)
+           call count_peaks(uold(1,ivar_clump),npeaks)
         endif
      endif
   endif
@@ -160,24 +159,26 @@ subroutine clump_finder(create_output,keep_alive)
   do icpu=2,ncpu
      ipeak_start(icpu)=ipeak_start(icpu-1)+npeaks_per_cpu(icpu-1)
   end do
-  peak_nr=ipeak_start(myid)
+  nskip=ipeak_start(myid)
 
   !----------------------------------------------------------------------
   ! Flag peaks with global peak id using flag2 array
   ! Compute peak density using max_dens array
   !----------------------------------------------------------------------
-  nskip=peak_nr
+
   ! Compute the size of the peak-based arrays
   npeaks_max=MAX(4*maxval(npeaks_per_cpu_tot),1000)
   allocate(max_dens(npeaks_max))
-  max_dens=0.
+  allocate(peak_cell(npeaks_max))
+  allocate(peak_cell_level(npeaks_max))
+  max_dens=0.d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
-     if(ivar_clump==0)then  ! case 2: flag peaks
-        call scan_for_peaks(rho(1),nskip,nzero,2)
+     if(ivar_clump==0)then
+        call flag_peaks(rho(1),nskip)
      else
-        if(hydro)then       ! case 2: flag peaks
-           call scan_for_peaks(uold(1,ivar_clump),nskip,nzero,2)
+        if(hydro)then
+           call flag_peaks(uold(1,ivar_clump),nskip)
         endif
      endif
   endif
@@ -199,15 +200,8 @@ subroutine clump_finder(create_output,keep_alive)
   do while (nmove_tot.gt.0)
      nmove=0
      nzero=0
-     nskip=peak_nr
      if(ntest>0)then
-        if(ivar_clump==0)then
-           call scan_for_peaks(rho(1),nmove,nzero,3)
-        else
-           if(hydro)then
-              call scan_for_peaks(uold(1,ivar_clump),nmove,nzero,3)
-           endif
-        endif
+        call propagate_flag(nmove,nzero)
      endif
      do ilevel=nlevelmax,levelmin,-1
         call make_virtual_fine_int(flag2(1),ilevel)
@@ -390,67 +384,35 @@ end subroutine count_test_particle
 !################################################################
 !################################################################
 !################################################################
-subroutine scan_for_peaks(xx,n,nzero,action)
+subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h' 
 #endif
-  integer::n,nzero,action
+  integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
-  ! vectorization of the neighborsearch for the action cases
-  ! 1: count the peaks (no denser neighbor)
-  ! 2: count and flag peaks with global peak index number
-  ! 3: get global clump index from densest neighbor
+  ! Count the peaks (cell with no denser neighbor)
+  ! Store the index of the densest neighbor (can be the cell itself)
+  ! for later usage.
   !----------------------------------------------------------------------
   integer::ilevel,next_level,ipart,jpart,ip
   integer,dimension(1:nvector)::ind_part,ind_cell,ind_max
-!  logical,save::first_pass=.true. !potential problem here when clumpfinder is called multiple times?
-  !Deal with when running clump_finder for sinks...
-
-  ! shortcut neighborsearch when it has already been done before
-  ! by saving each cells densest neighbor in imaxp 
-  if(.not. first_pass)then
-     select case (action)
-     case (1)   ! Count peaks  
-        do ipart=1,ntest
-           jpart=testp_sort(ipart)
-           if(imaxp(jpart).EQ.-1)n=n+1
-        end do
-     case (2)   ! Initialize flag2 to peak global index
-        do ipart=1,ntest
-           jpart=testp_sort(ipart)
-           if(imaxp(jpart).EQ.-1)then
-              n=n+1
-              flag2(icellp(jpart))=n
-              max_dens(n-ipeak_start(myid))=xx(icellp(jpart))
-           endif
-        end do
-     case (3) ! Propagate flag2
-        do ipart=1,ntest
-           jpart=testp_sort(ipart)
-           if(imaxp(jpart).NE.-1)then
-              if(flag2(icellp(jpart)).ne.flag2(imaxp(jpart)))n=n+1
-              flag2(icellp(jpart))=flag2(imaxp(jpart))
-              if(flag2(icellp(jpart)).eq.0)nzero=nzero+1
-           endif
-        end do
-     end select
-     return
-  endif
-
+  
+  ! Group chunks of nvector cells (of the same level) and send them 
+  ! to the routine that constructs the neighboring cells
   ip=0
   do ipart=1,ntest
      ip=ip+1
-     ilevel=levp(testp_sort(ipart)) ! level
-     next_level=0 !level of next particle
+     ilevel=levp(testp_sort(ipart))  ! level
+     next_level=0                    ! level of next particle
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1))
      ind_cell(ip)=icellp(testp_sort(ipart))
      ind_part(ip)=testp_sort(ipart)
      if(ip==nvector .or. next_level /= ilevel)then
-        call neighborsearch(xx(1),ind_cell,ind_max,ip,n,nzero,ilevel,action)
+        call neighborsearch(xx(1),ind_cell,ind_max,ip,n,ilevel,1)
         do jpart=1,ip
            imaxp(ind_part(jpart))=ind_max(jpart)
         end do
@@ -458,15 +420,69 @@ subroutine scan_for_peaks(xx,n,nzero,action)
      endif
   end do
   if (ip>0)then
-     call neighborsearch(xx(1),ind_cell,ind_max,ip,n,nzero,ilevel,action)
+     call neighborsearch(xx(1),ind_cell,ind_max,ip,n,ilevel,1)
      do jpart=1,ip
         imaxp(ind_part(jpart))=ind_max(jpart)
      end do
   endif
 
-  first_pass=.false.
-
-end subroutine scan_for_peaks
+end subroutine count_peaks
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine flag_peaks(xx,ipeak)
+  use amr_commons
+  use clfind_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h' 
+#endif
+  integer::ipeak
+  real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
+  !----------------------------------------------------------------------
+  ! Flag (flag2 array) all cells that host a peak with the global peak id
+  !----------------------------------------------------------------------
+  integer::ipart,jpart
+  integer,dimension(1:nvector)::ind_part,ind_cell,ind_max
+  do ipart=1,ntest
+     jpart=testp_sort(ipart)
+     if(imaxp(jpart).EQ.-1)then
+        ipeak=ipeak+1
+        flag2(icellp(jpart))=ipeak
+        max_dens(ipeak-ipeak_start(myid))=xx(icellp(jpart))
+        peak_cell(ipeak-ipeak_start(myid))=icellp(jpart)
+        peak_cell_level(ipeak-ipeak_start(myid))=levp(jpart)
+     endif
+  end do
+end subroutine flag_peaks
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine propagate_flag(nmove,nzero)
+  use amr_commons
+  use clfind_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h' 
+#endif
+  integer::nmove,nzero
+  !----------------------------------------------------------------------
+  ! All cells above the threshold copy the flag2 value from their densest
+  ! neighbors. Because of MPI boundaries, flag2=0 can be passed around.
+  ! Once all flag2=0 values have disappiered (globally), we're done.
+  !----------------------------------------------------------------------
+  integer::ipart,jpart
+  do ipart=1,ntest
+     jpart=testp_sort(ipart)
+     if(imaxp(jpart).NE.-1)then
+        if(flag2(icellp(jpart)).ne.flag2(imaxp(jpart)))nmove=nmove+1
+        flag2(icellp(jpart))=flag2(imaxp(jpart))
+        if(flag2(icellp(jpart)).eq.0)nzero=nzero+1
+     endif
+  end do
+end subroutine propagate_flag
 !#########################################################################
 !#########################################################################
 !#########################################################################
@@ -487,7 +503,7 @@ subroutine saddlepoint_search(xx)
   ! neighboring cell) are connected by a new densest saddle.
   !---------------------------------------------------------------------------
   integer::ipart,ip,ilevel,next_level
-  integer::i,j,info,dummyint,dummyzero
+  integer::i,j,info,dummyint
   integer,dimension(1:nvector)::ind_cell,ind_max
 
   ip=0
@@ -498,22 +514,22 @@ subroutine saddlepoint_search(xx)
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1))
      ind_cell(ip)=icellp(testp_sort(ipart))
      if(ip==nvector .or. next_level /= ilevel)then
-        call neighborsearch(xx(1),ind_cell,ind_max,ip,dummyint,dummyzero,ilevel,4)
+        call neighborsearch(xx(1),ind_cell,ind_max,ip,dummyint,ilevel,4)
         ip=0
      endif
   end do
-  if (ip>0)call neighborsearch(xx(1),ind_cell,ind_max,ip,dummyint,dummyzero,ilevel,4)
+  if (ip>0)call neighborsearch(xx(1),ind_cell,ind_max,ip,dummyint,ilevel,4)
 
 end subroutine saddlepoint_search
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
+subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   use amr_commons
-  use clfind_commons,ONLY:max_dens,ipeak_start
+  use clfind_commons,ONLY:ipeak_start
   implicit none
-  integer::np,count,count_zero,ilevel,action
+  integer::np,count,ilevel,action
   integer,dimension(1:nvector)::ind_max,ind_cell
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
@@ -676,42 +692,21 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,count_zero,ilevel,action)
      end do
      
      ! check those neighbors
-     if (action<4)call peakcheck(xx(1),cell_index,okpeak(j),ok,density_max(j),ind_max(j),ntestpos)
+     if (action==1)call peakcheck(xx(1),cell_index,okpeak(j),ok,density_max(j),ind_max(j),ntestpos)
      if (action==4)call saddlecheck(xx(1),ind_cell(j),cell_index,clump_nr(j),ok,ntestpos)
      
   end do
      
-
-
-
-  !===================================
-  ! choose action for different cases
-  !====================================
-  select case (action)
-  case (1)   ! Count peaks  
+  ! Count peaks (only one action case left as case 2 and 3 are dealt with 
+  ! outside neighborsearch
+  if (action==1) then
      do j=1,np
         if(okpeak(j))then
            count=count+1
            ind_max(j)=-1
         endif
      end do  
-  case (2)   ! Initialize flag2 to peak global index
-     do j=1,np
-        if(okpeak(j))then 
-           count=count+1
-           ind_max(j)=-1
-           flag2(ind_cell(j))=count
-           max_dens(count-ipeak_start(myid))=xx(ind_cell(j))
-        end if
-     end do
-  case (3) ! Propagate flag2
-     do j=1,np
-        if(flag2(ind_cell(j)).ne.flag2(ind_max(j)))count=count+1
-        flag2(ind_cell(j))=flag2(ind_max(j))
-        if(flag2(ind_cell(j)).eq.0)count_zero=count_zero+1
-        if(okpeak(j))ind_max(j)=-1
-     end do
-  end select
+  end if
 
 #endif
 

@@ -13,7 +13,7 @@ subroutine compute_clump_properties(xx)
   ! collects the  relevant information. After some MPI communications,
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
-  integer::ipart,grid,info,i,j,peak_nr,ilevel,global_peak_id,ipeak
+  integer::ipart,grid,info,i,j,peak_nr,ilevel,global_peak_id,ipeak,plevel
   real(dp)::zero=0.
   !variables needed temporarily store cell properties
   real(dp)::d,vol
@@ -44,7 +44,7 @@ subroutine compute_clump_properties(xx)
 #endif
   !peak-patch related arrays before sharing information with other cpus
 
-  min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
+  min_dens=huge(zero);! max_dens=0.d0; av_dens=0d0
   n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0
@@ -112,12 +112,12 @@ subroutine compute_clump_properties(xx)
         min_dens(peak_nr)=min(d,min_dens(peak_nr))
 
         ! Max density and peak location
-        if(d>=max_dens(peak_nr))then
-           max_dens(peak_nr)=d
-           ! Abuse av_dens as a "local max density" for now...
-           av_dens(peak_nr)=d
-           peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
-        end if
+!        if(d>=max_dens(peak_nr))then
+!           max_dens(peak_nr)=d
+!           ! Abuse av_dens as a "local max density" for now...
+!           av_dens(peak_nr)=d
+!           peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
+!        end if
 
         ! Clump mass
         clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
@@ -134,42 +134,53 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
-  call build_peak_communicator
-  ! MPI communication to collect the results from the different cpus
-#ifndef WITHOUTMPI     
-  call virtual_peak_int(n_cells,'sum')
-  call virtual_peak_dp(min_dens,'min')
-  call virtual_peak_dp(max_dens,'max')
-  call virtual_peak_dp(clump_mass,'sum')
-  call virtual_peak_dp(clump_vol,'sum')
-  call boundary_peak_dp(max_dens)
-  ! Reset position for false local peaks
-  do ipeak=1,hfree-1
-     if(av_dens(ipeak)<max_dens(ipeak))then
-        peak_pos(ipeak,1:ndim)=0.d0 
-     endif
-  end do
-  do i=1,ndim
-     call virtual_peak_dp(peak_pos(1,i),'max')
+  !--------------------------------------------------------------------------
+  ! loop over local peaks and identify true peak positions
+  !--------------------------------------------------------------------------
+  do ipeak=1,npeaks
+     ! Peak cell coordinates
+     ind=(peak_cell(ipeak)-ncoarse-1)/ngridmax+1    ! cell position
+     grid=peak_cell(ipeak)-ncoarse-(ind-1)*ngridmax ! grid index
+     plevel=peak_cell_level(ipeak)
+     dx=0.5D0**plevel
+     xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+     write(*,'(A10,2(X,I8),4(X,F20.17))'),'before',myid,ipeak,xcell(1:3),dx
+     call true_max(xcell(1),xcell(2),xcell(3),plevel)     
+     write(*,'(A10,2(X,I8),4(X,F20.17))'),'after',myid,ipeak,xcell(1:3),dx
+     peak_pos(ipeak,1:3)=xcell(1:3)
   end do
 
+
+  call build_peak_communicator
+#ifndef WITHOUTMPI     
+  ! Collect results from all MPI domains
+  call virtual_peak_int(n_cells,'sum')
+  call virtual_peak_dp(min_dens,'min')
+  call virtual_peak_dp(clump_mass,'sum')
+  call virtual_peak_dp(clump_vol,'sum')
   do i=1,ndim
      call virtual_peak_dp(center_of_mass(1,i),'sum')
      call virtual_peak_dp(clump_velocity(1,i),'sum')
   end do
+#endif
+
   do ipeak=1,npeaks
      if (relevance(ipeak)>0.)then
         center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
         clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
      end if
   end do
+
+#ifndef WITHOUTMPI
+  ! Scatter results to all MPI domains
+  call boundary_peak_dp(max_dens)
   do i=1,ndim
+     call boundary_peak_dp(peak_pos(1,i),'sum')
      call boundary_peak_dp(center_of_mass(1,i))
      call boundary_peak_dp(clump_velocity(1,i))
   end do  
-
-
 #endif
+
   ! Initialize halo mass to clump mass
   halo_mass=clump_mass
   ! Calculate total mass above threshold
@@ -836,6 +847,7 @@ subroutine deallocate_all
   deallocate(min_dens)
   deallocate(av_dens)
   deallocate(max_dens)
+  deallocate(peak_cell, peak_cell_level)
   deallocate(ind_halo)
   deallocate(halo_mass)
   deallocate(clump_mass)

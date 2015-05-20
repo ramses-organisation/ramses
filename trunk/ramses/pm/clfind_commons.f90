@@ -16,7 +16,6 @@ module clfind_commons
   real(dp)::mass_threshold=0.d0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
-  logical::first_pass
 
   ! Peak communicator arrays
   integer,allocatable,dimension(:)::peak_send_cnt,peak_send_oft
@@ -44,6 +43,7 @@ module clfind_commons
   real(dp),allocatable,dimension(:)::grav_term, rad_term
   real(dp),allocatable,dimension(:)::clump_check
   real(dp),allocatable,dimension(:)::Icl,Icl_d,Icl_dd
+  integer,allocatable,dimension(:)::peak_cell,peak_cell_level
   integer,allocatable,dimension(:)::n_cells,n_cells_halo,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
   logical,allocatable,dimension(:)::contracting
