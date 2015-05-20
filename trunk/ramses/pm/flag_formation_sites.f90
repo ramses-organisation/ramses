@@ -864,56 +864,15 @@ subroutine surface_int_np(ind_cell,np,ilevel)
               end do
 
 #ifdef SOLVERmhd
-              ! compute B field at the face (all components)
-              if (n(3) == (-1.d0))then
-                 do j=1,np
-                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
-                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                    B(j,3)=0.5d0*(uold(ind_cell(j),8)+uold(cell_index(j),nvar+3))
-                 end do
-              else if (n(3) == 1.d0)then
-                 do j=1,np
-                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
-                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                    B(j,3)=0.5d0*(uold(ind_cell(j),nvar+3)+uold(cell_index(j),8))
-                 end do
-              else if (n(2) == (-1.d0))then
-                 do j=1,np
-                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                    B(j,2)=0.5d0*(uold(ind_cell(j),7)+uold(cell_index(j),nvar+2))
-                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                 end do
-              else if (n(2) == 1.d0)then
-                 do j=1,np
-                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                    B(j,2)=0.5d0*(uold(ind_cell(j),nvar+2)+uold(cell_index(j),7))
-                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                 end do
-              else if (n(1) == (-1.d0))then
-                 do j=1,np
-                    B(j,1)=0.5d0*(uold(ind_cell(j),6)+uold(cell_index(j),nvar+1))
-                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
-                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                 end do
-              else if (n(1) == 1.d0)then
-                 do j=1,np
-                    B(j,1)=0.5d0*(uold(ind_cell(j),nvar+1)+uold(cell_index(j),6))
-                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
-                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                 end do
-              end if
+              ! compute B field at the face by averaging the two cell_center values (all components)
+              do j=1,np
+                 B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                      uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                 B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                      uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                 B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                      uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+              end do
 
               B_dot_n=0.d0
               do idim=1,3
@@ -1029,56 +988,15 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                  end do
 
 #ifdef SOLVERmhd
-                 ! compute B field at the face (all components)
-                 if (n(3) == (-1.d0))then
-                    do j=1,np
-                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
-                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                       B(j,3)=0.5d0*(uold(ind_cell(j),8)+uold(cell_index(j),nvar+3))
-                    end do
-                 else if (n(3) == 1.d0)then
-                    do j=1,np
-                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
-                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                       B(j,3)=0.5d0*(uold(ind_cell(j),nvar+3)+uold(cell_index(j),8))
-                    end do
-                 else if (n(2) == (-1.d0))then
-                    do j=1,np
-                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                       B(j,2)=0.5d0*(uold(ind_cell(j),7)+uold(cell_index(j),nvar+2))
-                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                    end do
-                 else if (n(2) == 1.d0)then
-                    do j=1,np
-                       B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
-                            uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
-                       B(j,2)=0.5d0*(uold(ind_cell(j),nvar+2)+uold(cell_index(j),7))
-                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                    end do
-                 else if (n(1) == (-1.d0))then
-                    do j=1,np
-                       B(j,1)=0.5d0*(uold(ind_cell(j),6)+uold(cell_index(j),nvar+1))
-                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
-                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                    end do
-                 else if (n(1) == 1.d0)then
-                    do j=1,np
-                       B(j,1)=0.5d0*(uold(ind_cell(j),nvar+1)+uold(cell_index(j),6))
-                       B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + & 
-                            uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
-                       B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
-                            uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
-                    end do
-                 end if
+                 ! compute B field at the face by averaging the two cell_center values (all components)
+                 do j=1,np
+                    B(j,1)=0.25d0*(uold(ind_cell(j),6)+uold(ind_cell(j),nvar+1) + & 
+                         uold(cell_index(j),6)+uold(cell_index(j),nvar+1) )
+                    B(j,2)=0.25d0*(uold(ind_cell(j),7)+uold(ind_cell(j),nvar+2) + &
+                         uold(cell_index(j),7)+uold(cell_index(j),nvar+2) )
+                    B(j,3)=0.25d0*(uold(ind_cell(j),8)+uold(ind_cell(j),nvar+3) + &
+                         uold(cell_index(j),8)+uold(cell_index(j),nvar+3) )
+                 end do
 
                  B_dot_n=0.d0
                  do idim=1,3
