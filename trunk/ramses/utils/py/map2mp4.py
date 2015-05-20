@@ -4,11 +4,18 @@ import sys
 import numpy
 import os
 import warnings
+import fortranfile
+from argparse import ArgumentParser
+import subprocess
+import matplotlib
+# try to use agg backend as it allows to render movies without X11 connection                  
+try:
+	matplotlib.use('agg')
+except:
+	pass
 from matplotlib import pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
-import fortranfile
-from optparse import OptionParser
 import subprocess
 
 
@@ -16,10 +23,10 @@ def label(xy, text):
 	y = xy[1] + 15 # shift y-value for label so that it's below the artist
 	plt.text(xy[0], y, text, ha="center",  size=14, color='white')
 
-def load_map(opts,k,i):
-	kind = [item for item in opts.kind.split(' ')]
+def load_map(args,k,i):
+	kind = [item for item in args.kind.split(' ')]
 	# define map path
-	map_file = "%s/movie%d/%s_%05d.map" % (opts.dir, int(opts.proj), kind[k], i)
+	map_file = "%s/movie%d/%s_%05d.map" % (args.dir, int(args.proj), kind[k], i)
 		
 	# read image data
 	f = fortranfile.FortranFile(map_file)
@@ -30,11 +37,11 @@ def load_map(opts,k,i):
 
 	return dat
 
-def load_sink(opts,i):
+def load_sink(args,i):
 	# setting dummy values
 	sink_id, sink_m, sink_x, sink_y, sink_z = [-1 for a in xrange(5)]
 	# defnining sink path
-	sink_file = "%s/movie1/sink_%05d.txt" % (opts.dir, i)
+	sink_file = "%s/movie1/sink_%05d.txt" % (args.dir, i)
 	try:
 		with warnings.catch_warnings(): # load sink id, mass and position
 			warnings.simplefilter("ignore")
@@ -48,11 +55,11 @@ def load_sink(opts,i):
 	
 	return plot_sinks, sink_id, sink_m, [sink_x, sink_y, sink_z]
 
-def load_namelist_info(opts):
-	proj_list = [int(item) for item in opts.proj.split(' ')]
+def load_namelist_info(args):
+	proj_list = [int(item) for item in args.proj.split(' ')]
 	proj_ind = int(proj_list[0])-1
 
-	namelist = opts.dir + '/output_00001/namelist.txt'
+	namelist = args.dir + '/output_00001/namelist.txt'
 	try:
 		nmlf = open(namelist)
 	except IOError:
@@ -91,11 +98,11 @@ def load_namelist_info(opts):
 	return [xcentre_frame, ycentre_frame, zcentre_frame],[deltax_frame, deltay_frame, deltaz_frame], \
 			boxlen, proj_axis, nx, ny, max_iter, sink_flag
 
-def load_units(opts):
-	proj_list = [int(item) for item in opts.proj.split(' ')]
+def load_units(args):
+	proj_list = [int(item) for item in args.proj.split(' ')]
 	proj_ind = int(proj_list[0])-1
 
-	infof = open("%s/movie%d/info_00001.txt" % (opts.dir, proj_list[0]))
+	infof = open("%s/movie%d/info_00001.txt" % (args.dir, proj_list[0]))
 	for j, line in enumerate(infof):
 		if j == 15:
 			unit_l = float(line.split()[2])
@@ -113,56 +120,60 @@ def load_units(opts):
 def main():
 
 	# Parse command line arguments
-	parser = OptionParser()
+	parser = ArgumentParser()
 	parser.usage = "%prog [options] map_file"
-	parser.add_option('-l','--logscale',dest='logscale', action='store', \
+	parser.add_argument('-l','--logscale',dest='logscale', action='store', \
 	    help='use log color scaling', default=False)
-	parser.add_option("-m","--min",  dest="min", metavar="VALUE", \
+	parser.add_argument("-m","--min",  dest="min", metavar="VALUE", \
 			help='min value', default=None)
-	parser.add_option("-M","--max",  dest="max", metavar="VALUE", \
+	parser.add_argument("-M","--max",  dest="max", metavar="VALUE", \
 			help='max value', default=None)
-	parser.add_option("-f","--fmin",  dest="fmin", metavar="VALUE", \
+	parser.add_argument("-f","--fmin",  dest="fmin", metavar="VALUE", \
 			help='frame min value', default=0, type=int)
-	parser.add_option("-F","--fmax",  dest="fmax", metavar="VALUE", \
+	parser.add_argument("-F","--fmax",  dest="fmax", metavar="VALUE", \
 			help='frame max value', default=-1, type=int)
-	parser.add_option("-d","--dir", dest="dir", \
+	parser.add_argument("-d","--dir", dest="dir", \
 			help='map directory', default=os.environ['PWD'], metavar="VALUE")
-	parser.add_option("-p","--proj", dest="proj", default=1, \
+	parser.add_argument("-p","--proj", dest="proj", default=1, \
 			help="projection index")
-	parser.add_option("-s","--step", dest="step", \
+	parser.add_argument("-s","--step", dest="step", \
 			help="framing step", default=1, type=int)
-	parser.add_option('-k','--kind', dest="kind", \
+	parser.add_argument('-k','--kind', dest="kind", \
 			help="kind of plot [temp, dens, metal]", default='dens')	
-	parser.add_option('-a','--autorange',dest='autorange', action='store_true', \
+	parser.add_argument('-a','--autorange',dest='autorange', action='store_true', \
 	    help='use automatic dynamic range (overrides min & max)', default=False)
-	parser.add_option('--clean_plot',dest='clean_plot', action='store_true', \
+	parser.add_argument('--clean_plot',dest='clean_plot', action='store_true', \
 	    help='do not annotate plot with bar and timestamp', default=False)
-	parser.add_option('--big-endian',dest='big_endian', action='store_true', \
+	parser.add_argument('--big-endian',dest='big_endian', action='store_true', \
 	    help='input binary data is stored as big endian', default=False)
-	parser.add_option('-c','--colormap',dest='cmap_str', metavar='CMAP', \
+	parser.add_argument('-c','--colormap',dest='cmap_str', metavar='CMAP', \
 	    help='matplotlib color map to use', default="bone")
-	parser.add_option('-b','--barlen',dest='barlen', metavar='VALUE', \
-	    help='length of the bar (specify unit!)', default=5)
-	parser.add_option('-B','--barlen_unit',dest='barlen_unit', metavar='VALUE', \
-	    help='unit of the bar length [pc/kpc/Mpc]', default='kpc')
-	parser.add_option('-g','--geometry',dest='geometry', metavar='VALUE', \
-	    help=' [montage geometry (x,y)]', default="1 1")
-	parser.add_option("-o","--output",  dest="outfile", metavar="FILE", \
+	parser.add_argument('-b','--barlen',dest='barlen', metavar='VALUE', \
+	    help='length of the bar (specify unit!)', default=5, type=float)
+	parser.add_argument('-B','--barlen_unit',dest='barlen_unit', metavar='VALUE', \
+	    help='unit of the bar length [AU/pc/kpc/Mpc]', default='kpc')
+	parser.add_argument('-g','--geometry',dest='geometry', metavar='VALUE', \
+	    help=' [montage geometry "cols rows"]', default="1 1")
+	parser.add_argument("-o","--output",  dest="outfile", metavar="FILE", \
 			help='output image file [default: <map_file>.png]', default=None)
-
-	(opts,args) = parser.parse_args()
-
-	proj_list = [int(item) for item in opts.proj.split(' ')]
-	geo = [int(item) for item in opts.geometry.split(' ')]
-	kind = [item for item in opts.kind.split(' ')]
+	parser.add_argument("-D","--deflicker",  dest="deflicker", metavar="VALUE", \
+			help='deflickering the movie with averaging over n frames (default: 0 - no averaging)', default=0, type=int)
+	parser.add_argument('-C','--colorbar',dest='colorbar', action='store_true', \
+			help='add colorbar [default: True]', default=True)
 	
-	if opts.barlen_unit == 'pc':
+	args = parser.parse_args()
+
+	proj_list = [int(item) for item in args.proj.split(' ')]
+	geo = [int(item) for item in args.geometry.split(' ')]
+	kind = [item for item in args.kind.split(' ')]
+	
+	if args.barlen_unit == 'pc':
 		scale_l = 1e0
-	elif opts.barlen_unit == 'kpc':
+	elif args.barlen_unit == 'kpc':
 		scale_l = 1e3
-	elif opts.barlen_unit == 'Mpc':
+	elif args.barlen_unit == 'Mpc':
 		scale_l = 1e6
-	elif opts.barlen_unit == 'AU':
+	elif args.barlen_unit == 'AU':
 		scale_l = 1./206264.806
 	else:
 		print "Wrong length unit!"
@@ -172,12 +183,16 @@ def main():
 	proj_ind = int(proj_list[0])-1
 	sink_flag = False
 	
-	frame_centre, frame_delta, boxlen, proj_axis, nx, ny, max_iter, sink_flag = load_namelist_info(opts)
-	unit_l, unit_d, unit_t, unit_m = load_units(opts)
+	frame_centre, frame_delta, boxlen, proj_axis, nx, ny, max_iter, sink_flag = load_namelist_info(args)
+	unit_l, unit_d, unit_t, unit_m = load_units(args)
 
+	deflicker = args.deflicker
+	if deflicker > 0:
+		deflick_min = numpy.ones(deflicker)*numpy.nan
+		deflick_max = numpy.ones(deflicker)*numpy.nan
 	
-	if (int(opts.fmax) > 0):
-		max_iter=int(opts.fmax)
+	if (int(args.fmax) > 0):
+		max_iter=int(args.fmax)
 
 
 	# Progressbar imports/inits
@@ -195,20 +210,20 @@ def main():
 		print 'Working!'
         
 	# Looping over movie snapshots
-	for i in xrange(int(opts.fmin)+int(opts.step),max_iter+1,int(opts.step)):
+	for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
 		fig = plt.figure(frameon=False)
 		fig.set_size_inches(nx/100*geo[1],ny/100*geo[0])
 		for p in xrange(len(proj_list)):
-			opts.proj = proj_list[p]
-			axis = proj_axis[opts.proj]
-			dat = load_map(opts,p,i)
+			args.proj = proj_list[p]
+			axis = proj_axis[args.proj]
+			dat = load_map(args,p,i)
 			if sink_flag:
-				plot_sinks, sink_id, sink_m, sink_pos = load_sink(opts,i)
+				plot_sinks, sink_id, sink_m, sink_pos = load_sink(args,i)
 				if plot_sinks:
 					sink_m = numpy.log10(sink_m*unit_m)
 					sink_pos = [x/boxlen for x in sink_pos]
 		
-			infof = open("%s/movie%d/info_%05d.txt" % (opts.dir, int(opts.proj), i))
+			infof = open("%s/movie%d/info_%05d.txt" % (args.dir, int(args.proj), i))
 			for j, line in enumerate(infof):
 				if j == 8:
 					time = float(line.split()[2])
@@ -216,17 +231,22 @@ def main():
 					break
 			
 			dx_min=boxlen/2.**14
-			
-			if(opts.outfile==None):
-				if not os.path.exists("%s/pngs/" % (opts.dir)):
-							os.makedirs("%s/pngs/" % (opts.dir))
-				outfile="%s/pngs/%s_%05d.png" % (opts.dir, kind[p], i/int(opts.step)-int(opts.fmin))
+		
+			if kind[p] == 'dens':
+				dat *= unit_d	# in g/cc
+			if kind[p][0] == 'v':
+				dat *= (unit_l/unit_t)/1e5 # in km/s
+
+			if(args.outfile==None):
+				if not os.path.exists("%s/pngs/" % (args.dir)):
+							os.makedirs("%s/pngs/" % (args.dir))
+				outfile="%s/pngs/%s_%05d.png" % (args.dir, kind[p], i/int(args.step)-int(args.fmin))
 				if sum(geo)>2:
-					outfile="%s/pngs/multi_%05d.png" % (opts.dir, i/int(opts.step)-int(opts.fmin))
+					outfile="%s/pngs/multi_%05d.png" % (args.dir, i/int(args.step)-int(args.fmin))
 			else:
-				outfile=opts.outfile
+				outfile=args.outfile
 			
-			if(opts.logscale):
+			if(args.logscale):
 				dat = numpy.array(dat)
 				if(kind[p] == 'stars'):
 					dat += 1e-16
@@ -237,19 +257,27 @@ def main():
 			rawmax = numpy.amax(dat)
 
 			# Bounds
-			if opts.min==None:
+			if args.min == None:
 				plotmin = rawmin
+				if deflicker:
+					deflick_min[deflicker-1] = rawmin
+					plotmin = numpy.nanmean(deflick_min)
+					deflick_min = numpy.roll(deflick_min, -1)
 			else:
-				plotmin = float(opts.min)
+				plotmin = float(args.min)
 
-			if opts.max==None:
+			if args.max == None:
 				plotmax = rawmax
+				if deflicker:
+					deflick_max[deflicker-1] = rawmax
+					plotmax = numpy.nanmean(deflick_max)
+					deflick_max = numpy.roll(deflick_max, -1)
 			else:
-				plotmax = float(opts.max)
+				plotmax = float(args.max)
 			
 			# Log scale?
-			if(opts.logscale and (kind[p][0] != 'v')):
-			#if(opts.logscale and (kind[p][0] != 'v' and kind[p] != 'stars' and kind[p]  != 'dm')):
+			if(args.logscale and (kind[p][0] != 'v')): # never logscale for velocities
+			#if(args.logscale and (kind[p][0] != 'v' and kind[p] != 'stars' and kind[p]  != 'dm')):
 				dat = numpy.log10(dat)
 				rawmin = numpy.log10(rawmin)
 				rawmax = numpy.log10(rawmax)
@@ -257,7 +285,7 @@ def main():
 				plotmax = numpy.log10(plotmax)
 			
 			# Auto-adjust dynamic range?
-			if(opts.autorange):
+			if(args.autorange):
 				# Overrides any provided bounds
 				NBINS = 200
 				# Compute histogram
@@ -277,7 +305,6 @@ def main():
 			# Plotting
 			
 			ax = fig.add_subplot(geo[0],geo[1],p+1)
-			ax.set_axis_off()
 			ax.axis([0,nx,0,ny])
 			fig.add_axes(ax)
 
@@ -286,10 +313,19 @@ def main():
 			elif kind[p][0] == 'v':
 				cmap = 'RdBu_r'
 			else:
-				cmap=opts.cmap_str
-			ax.imshow(dat, interpolation = 'nearest', cmap = cmap,\
+				cmap=args.cmap_str
+			im = ax.imshow(dat, interpolation = 'nearest', cmap = cmap,\
 					vmin = plotmin, vmax = plotmax, aspect='auto')
-			
+			ax.tick_params(bottom='off', top='off', left='off', right='off') # removes ticks
+			ax.tick_params(labelbottom='off', labeltop='off', labelleft='off', labelright='off') # removes ticks
+			if args.colorbar:
+				cbaxes = fig.add_axes([1./geo[1]+p%geo[1]*1./geo[1]-0.05/geo[1],abs(p-geo[0]*geo[1]+1)/geo[1]*1./geo[0],0.05/geo[1],1./geo[0]])
+				cbar = plt.colorbar(im, cax=cbaxes)
+				bar_font_color = 'k'
+				if kind[p] == 'dens':
+					bar_font_color = 'r'
+				cbar.ax.tick_params(width=0,labeltop='on',labelcolor=bar_font_color,labelsize=8,pad=-25)
+
 			# Plotting sink
 			#if (sink_flag and plot_sinks):
 			if axis == 'x':
@@ -307,12 +343,12 @@ def main():
 						(sink_pos[h]-frame_centre[h]/boxlen)/(frame_delta[h]/boxlen/2)*ny/2+ny/2,\
 						marker='+',c='r',s=6*sink_m**2)
 
-			if not opts.clean_plot:
+			if not args.clean_plot:
 				patches = []
-				barlen_px = opts.barlen*scale_l*nx/(float(boxlen)*unit_l*3.24e-19*frame_delta[w]/float(boxlen))
-				rect = mpatches.Rectangle((0.5*nx,0.05*ny), barlen_px, 10)
-				ax.text(0.5+barlen_px/nx/2., 0.05+15./ny,"%d %s" % (opts.barlen, opts.barlen_unit),
-									verticalalignment='bottom', horizontalalignment='right',
+				barlen_px = args.barlen*scale_l*nx/(float(boxlen)*unit_l*3.24e-19*frame_delta[w]/float(boxlen))
+				rect = mpatches.Rectangle((0.025*nx,0.025*ny), barlen_px, 10)
+				ax.text(0.025+float(barlen_px/nx/2), 0.025+15./ny,"%d %s" % (args.barlen, args.barlen_unit),
+									verticalalignment='bottom', horizontalalignment='center',
 									transform=ax.transAxes,
 									color='white', fontsize=14)
 				patches.append(rect)
@@ -331,15 +367,13 @@ def main():
 					scale_t = 1
 					t_unit = 'yr'
 
-				ax.text(0.95, 0.95, '%.1f %s' % (t/scale_t, t_unit),
-									verticalalignment='bottom', horizontalalignment='right',
+				ax.text(0.05, 0.95, '%.1f %s' % (t/scale_t, t_unit),
+									verticalalignment='bottom', horizontalalignment='left',
 									transform=ax.transAxes,
 									color='white', fontsize=14)
 				collection = PatchCollection(patches, facecolor='white')
 				ax.add_collection(collection)
 		
-		plt.axis('off') # removes axis
-
 		# corrects window extent
 		plt.subplots_adjust(left=0., bottom=0., right=1., top=1., wspace=0., hspace=0.)
 		plt.savefig(outfile,dpi=100)
@@ -355,19 +389,16 @@ def main():
 	
 	# movie name for montage
 	if sum(geo) > 2:
-		frame = "{dir}/pngs/multi_%05d.png".format(dir=opts.dir)
-		mov = "{dir}/multi.mp4".format(dir=opts.dir)
+		frame = "{dir}/pngs/multi_%05d.png".format(dir=args.dir)
+		mov = "{dir}/multi.mp4".format(dir=args.dir)
 	else:
-		frame = "{dir}/pngs/{kind}_%05d.png".format(dir=opts.dir,kind=opts.kind)
-		mov = "{dir}/{kind}{proj}.mp4".format(dir=opts.dir, kind=opts.kind, proj=opts.proj)
+		frame = "{dir}/pngs/{kind}_%05d.png".format(dir=args.dir,kind=args.kind)
+		mov = "{dir}/{kind}{proj}.mp4".format(dir=args.dir, kind=args.kind, proj=args.proj)
 	
 	print 'Calling ffmpeg!'
 	subprocess.call("ffmpeg -loglevel quiet -i {input} -y -vcodec h264 -pix_fmt yuv420p  -r 25 -qp 15 {output}".format(input=frame, output=mov), shell=True)
 	print 'Movie created! Cleaning up!'
-	if sum(geo) > 2:
-		subprocess.call("rm {dir}/pngs -r".format(dir=opts.dir), shell=True)
-	else:
-		subprocess.call("rm {dir}/movie{proj}/pngs -r".format(dir=opts.dir, proj=opts.proj), shell=True)
+	subprocess.call("rm {dir}/pngs -r".format(dir=args.dir), shell=True)
 	subprocess.call("chmod a+r {mov}".format(mov=mov), shell=True)
 
 if __name__ == '__main__':
