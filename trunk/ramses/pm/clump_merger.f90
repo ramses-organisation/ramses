@@ -144,9 +144,7 @@ subroutine compute_clump_properties(xx)
      plevel=peak_cell_level(ipeak)
      dx=0.5D0**plevel
      xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-     write(*,'(A10,2(X,I8),4(X,F20.17))'),'before',myid,ipeak,xcell(1:3),dx
      call true_max(xcell(1),xcell(2),xcell(3),plevel)     
-     write(*,'(A10,2(X,I8),4(X,F20.17))'),'after',myid,ipeak,xcell(1:3),dx
      peak_pos(ipeak,1:3)=xcell(1:3)
   end do
 

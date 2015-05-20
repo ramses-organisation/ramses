@@ -1748,6 +1748,8 @@ subroutine true_max(x,y,z,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use clfind_commons, only:ivar_clump
+  use poisson_commons, only:rho
   implicit none
   real(dp)::x,y,z
   integer::ilevel
@@ -1785,8 +1787,13 @@ subroutine true_max(x,y,z,ilevel)
            xtest(1,3)=z+k*dx_loc
 #endif
            call get_cell_index(cell_index,cell_lev,xtest,ilevel,1)
-           cube3(i,j,k)=uold(cell_index(1),1)
-
+           if(ivar_clump==0)then
+              cube3(i,j,k)=rho(cell_index(1))              
+           else if(hydro)then
+              cube3(i,j,k)=uold(cell_index(1),1)
+           else
+              return   
+           end if
         end do
      end do
   end do
