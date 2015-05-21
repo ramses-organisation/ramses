@@ -121,45 +121,44 @@ def main():
 
 	# Parse command line arguments
 	parser = ArgumentParser()
-	parser.usage = "%prog [options] map_file"
-	parser.add_argument('-l','--logscale',dest='logscale', action='store', \
-	    help='use log color scaling', default=False)
+	parser.add_argument('-l','--logscale',dest='logscale', action='store', default=False, \
+	    help='use log color scaling [%(default)s]')
 	parser.add_argument("-m","--min",  dest="min", metavar="VALUE", \
 			help='min value', default=None)
 	parser.add_argument("-M","--max",  dest="max", metavar="VALUE", \
 			help='max value', default=None)
 	parser.add_argument("-f","--fmin",  dest="fmin", metavar="VALUE", \
-			help='frame min value', default=0, type=int)
+			help='frame min value [%(default)d]', default=0, type=int)
 	parser.add_argument("-F","--fmax",  dest="fmax", metavar="VALUE", \
-			help='frame max value', default=-1, type=int)
+			help='frame max value [%(default)d]', default=-1, type=int)
 	parser.add_argument("-d","--dir", dest="dir", \
-			help='map directory', default=os.environ['PWD'], metavar="VALUE")
+			help='map directory [current working dir]', default=os.environ['PWD'], metavar="VALUE")
 	parser.add_argument("-p","--proj", dest="proj", default=1, \
-			help="projection index")
+			help="projection index [%(default)d]")
 	parser.add_argument("-s","--step", dest="step", \
-			help="framing step", default=1, type=int)
+			help="framing step [%(default)d]", default=1, type=int)
 	parser.add_argument('-k','--kind', dest="kind", \
-			help="kind of plot [temp, dens, metal]", default='dens')	
+			help="kind of plot [%(default)s]", default='dens')	
 	parser.add_argument('-a','--autorange',dest='autorange', action='store_true', \
-	    help='use automatic dynamic range (overrides min & max)', default=False)
+	    help='use automatic dynamic range (overrides min & max) [%(default)s]', default=False)
 	parser.add_argument('--clean_plot',dest='clean_plot', action='store_true', \
-	    help='do not annotate plot with bar and timestamp', default=False)
+	    help='do not annotate plot with bar and timestamp [%(default)s]', default=False)
 	parser.add_argument('--big-endian',dest='big_endian', action='store_true', \
-	    help='input binary data is stored as big endian', default=False)
+	    help='input binary data is stored as big endian [%(default)s]', default=False)
 	parser.add_argument('-c','--colormap',dest='cmap_str', metavar='CMAP', \
-	    help='matplotlib color map to use', default="bone")
+	    help='matplotlib color map to use [%(default)s]', default="bone")
 	parser.add_argument('-b','--barlen',dest='barlen', metavar='VALUE', \
-	    help='length of the bar (specify unit!)', default=5, type=float)
+	    help='length of the bar (specify unit!) [%(default)d]', default=5, type=float)
 	parser.add_argument('-B','--barlen_unit',dest='barlen_unit', metavar='VALUE', \
-	    help='unit of the bar length [AU/pc/kpc/Mpc]', default='kpc')
+	    help='unit of the bar length (AU/pc/kpc/Mpc) [%(default)s]', default='kpc')
 	parser.add_argument('-g','--geometry',dest='geometry', metavar='VALUE', \
-	    help=' [montage geometry "cols rows"]', default="1 1")
+	    help='montage geometry "rows cols" [%(default)s]', default="1 1")
 	parser.add_argument("-o","--output",  dest="outfile", metavar="FILE", \
-			help='output image file [default: <map_file>.png]', default=None)
+			help='output image file [<map_file>.png]', default=None)
 	parser.add_argument("-D","--deflicker",  dest="deflicker", metavar="VALUE", \
-			help='deflickering the movie with averaging over n frames (default: 0 - no averaging)', default=0, type=int)
+			help='deflickering the movie with averaging over n frames [%(default)d - no averaging]', default=0, type=int)
 	parser.add_argument('-C','--colorbar',dest='colorbar', action='store_true', \
-			help='add colorbar [default: True]', default=True)
+			help='add colorbar [%(default)s]', default=True)
 	
 	args = parser.parse_args()
 
