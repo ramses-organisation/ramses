@@ -188,8 +188,8 @@ def main():
 
 	deflicker = args.deflicker
 	if deflicker > 0:
-		deflick_min = numpy.ones(deflicker)*numpy.nan
-		deflick_max = numpy.ones(deflicker)*numpy.nan
+		deflick_min = numpy.ones((len(proj_list),deflicker))*numpy.nan
+		deflick_max = numpy.ones((len(proj_list),deflicker))*numpy.nan
 	
 	if (int(args.fmax) > 0):
 		max_iter=int(args.fmax)
@@ -260,18 +260,18 @@ def main():
 			if args.min == None:
 				plotmin = rawmin
 				if deflicker:
-					deflick_min[deflicker-1] = rawmin
-					plotmin = numpy.nanmean(deflick_min)
-					deflick_min = numpy.roll(deflick_min, -1)
+					deflick_min[p][deflicker-1] = rawmin
+					plotmin = numpy.nanmean(deflick_min[p])
+					deflick_min[p] = numpy.roll(deflick_min[p], -1)
 			else:
 				plotmin = float(args.min)
 
 			if args.max == None:
 				plotmax = rawmax
 				if deflicker:
-					deflick_max[deflicker-1] = rawmax
-					plotmax = numpy.nanmean(deflick_max)
-					deflick_max = numpy.roll(deflick_max, -1)
+					deflick_max[p][deflicker-1] = rawmax
+					plotmax = numpy.nanmean(deflick_max[p])
+					deflick_max[p] = numpy.roll(deflick_max[p], -1)
 			else:
 				plotmax = float(args.max)
 			
