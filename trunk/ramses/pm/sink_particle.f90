@@ -1748,6 +1748,8 @@ subroutine true_max(x,y,z,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use clfind_commons, only:ivar_clump
+  use poisson_commons, only:rho
   implicit none
   real(dp)::x,y,z
   integer::ilevel
@@ -1757,7 +1759,7 @@ subroutine true_max(x,y,z,ilevel)
   ! the true maximum by expanding the density around the cell center to second order.
   !----------------------------------------------------------------------------
 
-  integer::k,j,i,nx_loc
+  integer::k,j,i,nx_loc,counter
   integer,dimension(1:nvector)::cell_index,cell_lev
   real(dp)::det,dx,dx_loc,scale,disp_max
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
@@ -1772,24 +1774,42 @@ subroutine true_max(x,y,z,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
 
-
+  counter=0
   do i=-1,1
      do j=-1,1
         do k=-1,1
-
-           xtest(1,1)=x+i*dx_loc
-#if NDIM>1
-           xtest(1,2)=y+j*dx_loc
-#endif
-#if NDIM>2
-           xtest(1,3)=z+k*dx_loc
-#endif
-           call get_cell_index(cell_index,cell_lev,xtest,ilevel,1)
-           cube3(i,j,k)=uold(cell_index(1),1)
-
+           counter=counter+1
+           xtest(counter,1)=x+i*dx_loc
+           xtest(counter,2)=y+j*dx_loc
+           xtest(counter,3)=z+k*dx_loc
         end do
      end do
   end do
+
+  call get_cell_index(cell_index,cell_lev,xtest,ilevel,counter)
+
+  counter=0
+  if(ivar_clump==0)then
+     do i=-1,1
+        do j=-1,1
+           do k=-1,1
+              counter=counter+1
+              cube3(i,j,k)=rho(cell_index(counter))
+           end do
+        end do
+     end do
+  else if(hydro)then
+     do i=-1,1
+        do j=-1,1
+           do k=-1,1
+              counter=counter+1
+              cube3(i,j,k)=uold(cell_index(counter),1)
+           end do
+        end do
+     end do
+  else
+     return   
+  end if
 
 ! compute gradient
   gradient(1)=0.5*(cube3(1,0,0)-cube3(-1,0,0))/dx_loc

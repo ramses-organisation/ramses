@@ -13,7 +13,7 @@ subroutine compute_clump_properties(xx)
   ! collects the  relevant information. After some MPI communications,
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
-  integer::ipart,grid,info,i,j,peak_nr,ilevel,global_peak_id,ipeak
+  integer::ipart,grid,info,i,j,peak_nr,ilevel,global_peak_id,ipeak,plevel
   real(dp)::zero=0.
   !variables needed temporarily store cell properties
   real(dp)::d,vol
@@ -44,11 +44,11 @@ subroutine compute_clump_properties(xx)
 #endif
   !peak-patch related arrays before sharing information with other cpus
 
-  min_dens=huge(zero); max_dens=0.d0; av_dens=0d0
+  min_dens=huge(zero);! max_dens=0.d0; av_dens=0d0
   n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
-  center_of_mass=0.d0; clump_velocity=0.d0; clump_force=0.d0 
-  peak_pos=0.
+  center_of_mass=0.d0; clump_velocity=0.d0
+  peak_pos=0.d0
 
   if(verbose)write(*,*)'Entering compute clump properties'
   !------------------------------------------
@@ -112,11 +112,12 @@ subroutine compute_clump_properties(xx)
         min_dens(peak_nr)=min(d,min_dens(peak_nr))
 
         ! Max density and peak location
-        if(d>=max_dens(peak_nr))then
-           max_dens(peak_nr)=d
-           av_dens(peak_nr)=d
-           peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
-        end if
+!        if(d>=max_dens(peak_nr))then
+!           max_dens(peak_nr)=d
+!           ! Abuse av_dens as a "local max density" for now...
+!           av_dens(peak_nr)=d
+!           peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
+!        end if
 
         ! Clump mass
         clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
@@ -130,51 +131,54 @@ subroutine compute_clump_properties(xx)
         ! center of mass velocity
         if (hydro)clump_velocity(peak_nr,1:3)=clump_velocity(peak_nr,1:3)+vol*uold(icellp(ipart),2:4)
 
-        ! average grav acceleration
-        clump_force(peak_nr,1:3)=clump_force(peak_nr,1:3)+vol*d*f(icellp(ipart),1:3)
-
      end if
   end do
 
-  call build_peak_communicator
-  ! MPI communication to collect the results from the different cpus
-#ifndef WITHOUTMPI     
-  call virtual_peak_int(n_cells,'sum')
-  call virtual_peak_dp(min_dens,'min')
-  call virtual_peak_dp(max_dens,'max')
-  call virtual_peak_dp(clump_mass,'sum')
-  call virtual_peak_dp(clump_vol,'sum')
-  call boundary_peak_dp(max_dens)
-  ! Reset position for false local peaks
-  do ipeak=1,hfree-1
-     if(av_dens(ipeak)<max_dens(ipeak))then
-        peak_pos(ipeak,1:ndim)=0.d0 
-     endif
-  end do
-  do i=1,ndim
-     call virtual_peak_dp(peak_pos(1,i),'sum')
+  !--------------------------------------------------------------------------
+  ! loop over local peaks and identify true peak positions
+  !--------------------------------------------------------------------------
+  do ipeak=1,npeaks
+     ! Peak cell coordinates
+     ind=(peak_cell(ipeak)-ncoarse-1)/ngridmax+1    ! cell position
+     grid=peak_cell(ipeak)-ncoarse-(ind-1)*ngridmax ! grid index
+     plevel=peak_cell_level(ipeak)
+     dx=0.5D0**plevel
+     xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
+     call true_max(xcell(1),xcell(2),xcell(3),plevel)     
+     peak_pos(ipeak,1:3)=xcell(1:3)
   end do
 
+
+  call build_peak_communicator
+#ifndef WITHOUTMPI     
+  ! Collect results from all MPI domains
+  call virtual_peak_int(n_cells,'sum')
+  call virtual_peak_dp(min_dens,'min')
+  call virtual_peak_dp(clump_mass,'sum')
+  call virtual_peak_dp(clump_vol,'sum')
   do i=1,ndim
      call virtual_peak_dp(center_of_mass(1,i),'sum')
      call virtual_peak_dp(clump_velocity(1,i),'sum')
-     call virtual_peak_dp(clump_force(1,i),'sum')
   end do
+#endif
+
   do ipeak=1,npeaks
      if (relevance(ipeak)>0.)then
         center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
         clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
-        clump_force(ipeak,1:3)=clump_force(ipeak,1:3)/clump_mass(ipeak)
      end if
   end do
+
+#ifndef WITHOUTMPI
+  ! Scatter results to all MPI domains
+  call boundary_peak_dp(max_dens)
   do i=1,ndim
+     call boundary_peak_dp(peak_pos(1,i),'sum')
      call boundary_peak_dp(center_of_mass(1,i))
      call boundary_peak_dp(clump_velocity(1,i))
-     call boundary_peak_dp(clump_force(1,i))
   end do  
-
-
 #endif
+
   ! Initialize halo mass to clump mass
   halo_mass=clump_mass
   ! Calculate total mass above threshold
@@ -194,9 +198,7 @@ subroutine compute_clump_properties(xx)
 
   !for periodic boxes the center of mass can be meaningless at that stage
   ! -> recompute center of mass relative to peak position
-  
   if(periodic)then
-     
      center_of_mass=0.d0;
      do ipart=1,ntest     
         global_peak_id=flag2(icellp(ipart)) 
@@ -401,7 +403,7 @@ subroutine merge_clumps(action)
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart,saddle_max_host
+  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart
   integer::peak,next_peak,current,isearch,nmove,nmove_all,ipeak,jpeak,iter
   integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
   integer::jmerge,ilev,global_peak_id
@@ -768,19 +770,20 @@ subroutine allocate_peak_patch_arrays
   allocate(halo_mass(1:npeaks_max))
   allocate(clump_mass(1:npeaks_max))
   allocate(clump_vol(1:npeaks_max))
-  allocate(saddle_max(1:npeaks_max))
   allocate(relevance(1:npeaks_max))
   call sparse_initialize(npeaks_max,npeaks_max,sparse_saddle_dens)
 
   ! These arrays are not used by the clump finder
   allocate(clump_velocity(1:npeaks_max,1:ndim))
-  allocate(clump_force(1:npeaks_max,1:ndim))
   allocate(clump_mass4(npeaks_max))
-  allocate(e_kin_int(npeaks_max))
-  allocate(e_thermal(npeaks_max))
+  allocate(kinetic_support(npeaks_max))
+  allocate(thermal_support(npeaks_max))
+  allocate(magnetic_support(npeaks_max))
   allocate(Psurf(npeaks_max))
-  allocate(clump_check(npeaks_max))
+  allocate(MagPsurf(npeaks_max))
+  allocate(MagTsurf(npeaks_max))
   allocate(grav_term(npeaks_max))
+  allocate(rad_term(npeaks_max))
   allocate(contracting(npeaks_max))
   allocate(Icl(npeaks_max))
   allocate(Icl_d(npeaks_max))
@@ -815,23 +818,11 @@ subroutine allocate_peak_patch_arrays
      end if
   end do
 
-  !---------------------------------
-  ! Initialize all peak based arrays
-  !---------------------------------
-  n_cells=0; n_cells_halo=0; lev_peak=0; new_peak=0; ind_halo=0
-  saddle_max=0.; relevance=1.; clump_size=0.
-  min_dens=huge(zero)
-  av_dens=0.; halo_mass=0.
-  clump_mass=0.; clump_vol=0.; peak_pos=0.; center_of_mass=0.
+  !------------------------------------------------
+  ! Initialize all peak based arrays for clump finder
+  !------------------------------------------------
+  lev_peak=0; new_peak=0; ind_halo=0; relevance=1.
 
-  clump_force=0.
-  clump_velocity=0.
-  e_kin_int=0.
-  e_thermal=0.
-  grav_term=0.d0
-  clump_check=-1.
-  contracting=.false.
-  Icl=0.; Icl_d=0.; Icl_dd=0.; Icl_d_3by3=0.; Icl_3by3=0.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
@@ -854,22 +845,19 @@ subroutine deallocate_all
   deallocate(min_dens)
   deallocate(av_dens)
   deallocate(max_dens)
+  deallocate(peak_cell, peak_cell_level)
   deallocate(ind_halo)
   deallocate(halo_mass)
   deallocate(clump_mass)
   deallocate(clump_vol)
-  deallocate(saddle_max)
   deallocate(relevance)
   call sparse_kill(sparse_saddle_dens)
 
-  deallocate(clump_force)
   deallocate(clump_mass4)
   deallocate(clump_velocity)
-  deallocate(e_kin_int)
-  deallocate(grav_term)
-  deallocate(e_thermal)
-  deallocate(Psurf)
-  deallocate(clump_check)
+  deallocate(grav_term,rad_term)
+  deallocate(thermal_support,kinetic_support,magnetic_support)
+  deallocate(Psurf,MagPsurf,MagTsurf)
   deallocate(contracting)
   deallocate(Icl_dd,Icl_d,Icl,Icl_d_3by3,Icl_3by3)
 
