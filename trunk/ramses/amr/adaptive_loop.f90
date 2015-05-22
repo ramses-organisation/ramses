@@ -31,8 +31,15 @@ subroutine adaptive_loop
   if(aton)call init_radiation        ! Initialize radiation variables
 #endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
+
+#ifdef grackle
+  if(cosmo)then
+     ! Compute cooling table at current aexp
+  endif
+#else  
   if(cooling.and..not.neq_chem) &
        call set_table(dble(aexp))    ! Initialize cooling look up table
+#endif
   if(pic)call init_part              ! Initialize particle variables
   if(pic)call init_tree              ! Initialize particle tree
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again

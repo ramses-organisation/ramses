@@ -16,7 +16,6 @@ module clfind_commons
   real(dp)::mass_threshold=0.d0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
-  logical::first_pass
 
   ! Peak communicator arrays
   integer,allocatable,dimension(:)::peak_send_cnt,peak_send_oft
@@ -32,18 +31,19 @@ module clfind_commons
   integer,dimension(:),allocatable::gkey,nkey,hkey
 
   ! Peak-patch properties
-  real(dp),allocatable,dimension(:,:)::clump_size,center_of_mass,clump_velocity,clump_force
+  real(dp),allocatable,dimension(:,:)::clump_size,center_of_mass,clump_velocity
   real(dp),allocatable,dimension(:,:,:)::Icl_d_3by3,Icl_3by3
-  real(dp),allocatable,dimension(:)::min_dens,av_dens
-  real(dp),allocatable,dimension(:)::max_dens,e_kin_int,e_thermal
+  real(dp),allocatable,dimension(:)::max_dens,min_dens,av_dens
+  real(dp),allocatable,dimension(:)::thermal_support,kinetic_support,magnetic_support
   real(dp),allocatable,dimension(:)::halo_mass,clump_mass,clump_vol
+  real(dp),allocatable,dimension(:)::clump_mass4
   real(dp),allocatable,dimension(:,:)::peak_pos
-  real(dp),allocatable,dimension(:)::saddle_max
   real(dp),allocatable,dimension(:)::relevance
-  real(dp),allocatable,dimension(:)::Psurf
-  real(dp),allocatable,dimension(:)::grav_term
+  real(dp),allocatable,dimension(:)::Psurf,MagPsurf,MagTsurf
+  real(dp),allocatable,dimension(:)::grav_term, rad_term
   real(dp),allocatable,dimension(:)::clump_check
   real(dp),allocatable,dimension(:)::Icl,Icl_d,Icl_dd
+  integer,allocatable,dimension(:)::peak_cell,peak_cell_level
   integer,allocatable,dimension(:)::n_cells,n_cells_halo,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
   logical,allocatable,dimension(:)::contracting

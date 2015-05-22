@@ -17,9 +17,9 @@ subroutine output_frame()
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, infofile, sinkfile
 #ifdef SOLVERmhd
-  character(len=100),dimension(0:NVAR+4) :: moviefiles
+  character(len=100),dimension(0:NVAR+6) :: moviefiles
 #else
-  character(len=100),dimension(0:NVAR) :: moviefiles
+  character(len=100),dimension(0:NVAR+2) :: moviefiles
 #endif
   
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
@@ -32,7 +32,8 @@ subroutine output_frame()
   real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame
   real(dp)::xleft,xright,yleft,yright,zleft,zright
   real(dp)::xxleft,xxright,yyleft,yyright,zzleft,zzright
-  real(dp)::dx_frame,dy_frame,dx,dx_loc
+  real(dp)::xpf,ypf,zpf
+  real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
   real(dp)::dx_cell,dy_cell,dz_cell,dvol
   real(kind=8)::cell_value
   integer ,dimension(1:nvector)::ind_grid,ind_cell
@@ -45,17 +46,17 @@ subroutine output_frame()
   real(kind=4),dimension(:,:),allocatable::data_single
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi,temp,ekk
-  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
-  integer::i,ig,ip,npart1
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel,next_part
+  integer::i,j,ig,ip,npart1
   integer::nalloc1,nalloc2
   integer::proj_ind,l,nh_temp,nw_temp
   real(kind=4)::ratio
 
-  integer,dimension(1:nvector),save::ind_part
+  integer,dimension(1:nvector),save::ind_part,ind_grid_part
   logical::opened
 
   character(len=1)::temp_string
-
+   
   nh_temp = nh_frame
   nw_temp = nw_frame
 
@@ -114,6 +115,11 @@ subroutine output_frame()
 #endif
 #ifdef SOLVERmhd
   moviefiles(NVAR+4) = trim(moviedir)//'pmag_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+5) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+6) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+#else
+  moviefiles(NVAR+1) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+2) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
 #endif
 
   ! sink filename
@@ -190,9 +196,9 @@ subroutine output_frame()
   
   ! Allocate image
 #ifdef SOLVERmhd
-  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+4))
+  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+6))
 #else
-  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR))
+  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+2))
 #endif
   allocate(dens(1:nw_frame,1:nh_frame))
   allocate(vol(1:nw_frame,1:nh_frame))
@@ -219,6 +225,7 @@ subroutine output_frame()
      end do
   
      dx_loc=dx*scale
+     dx_min=0.5D0**nlevelmax*scale
      ncache=active(ilevel)%ngrid
 
      ! Loop over grids by vector sweeps
@@ -326,10 +333,10 @@ subroutine output_frame()
 #if NDIM>2                 
                        dvol=dvol*dz_cell
 #endif
-                       dens(ii,jj)=dens(ii,jj)+dvol*uold(ind_cell(i),1)
+                       dens(ii,jj)=dens(ii,jj)+dvol*max(uold(ind_cell(i),1),smallr)
                        vol(ii,jj)=vol(ii,jj)+dvol
                        
-                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
+                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1),smallr)**2
 #ifdef SOLVERmhd
                        do kk=2,NVAR+3
 #else                       
@@ -342,12 +349,12 @@ subroutine output_frame()
                          !Get temperature
                          ekk=0.0d0
                          do idim=1,3
-                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
+                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
                          enddo
                          temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
-                         temp=temp/uold(ind_cell(i),1)*scale_T2 !temperature in K
+                         temp=max(temp/max(uold(ind_cell(i),1),smallr),smallc**2)*scale_T2 !temperature in K
 
-                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*uold(ind_cell(i),1)*temp !mass weighted temperature
+                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*max(uold(ind_cell(i),1),smallr)*temp !mass weighted temperature
                        end if
 
 #ifdef SOLVERmhd
@@ -368,9 +375,60 @@ subroutine output_frame()
 
      end do
      ! End loop over grids
-
   end do
   ! End loop over levels
+
+  ! Loop over particles
+  do j=1,npartmax
+#if NDIM>2                 
+     if(proj_axis(proj_ind:proj_ind).eq.'x')then
+       xpf  = xp(j,2)
+       ypf  = xp(j,3)
+     elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+       xpf  = xp(j,1)
+       ypf  = xp(j,3)
+     else
+       xpf  = xp(j,1)
+       ypf  = xp(j,2)
+     endif
+     
+     if(proj_axis(proj_ind:proj_ind).eq.'x')then
+       zpf  = xp(j,1)
+     elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+       zpf  = xp(j,2)
+     else
+       zpf  = xp(j,3)
+     endif
+     if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
+          & ypf.lt.yleft_frame.or.ypf.ge.yright_frame.or.&
+          & zpf.lt.zleft_frame.or.zpf.ge.zright_frame)cycle
+#else
+     xpf  = xp(j,1)
+     ypf  = xp(j,2)
+     
+     if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
+          & ypf.lt.yleft_frame.or.ypf.ge.yright_frame)cycle
+#endif
+     ! Compute map indices for the cell
+     ii = min(int((xpf-xleft_frame)/dx_frame)+1,nw_frame)
+     jj = min(int((ypf-yleft_frame)/dy_frame)+1,nh_frame)
+     
+     ! Fill up map with projected mass
+#ifdef SOLVERmhd
+     if(tp(j).eq.0.) then
+        data_frame(ii,jj,NVAR+5)=data_frame(ii,jj,NVAR+5)+mp(j)
+     else
+        data_frame(ii,jj,NVAR+6)=data_frame(ii,jj,NVAR+6)+mp(j)
+     endif
+#else
+     if(tp(j).eq.0.) then
+        data_frame(ii,jj,NVAR+1)=data_frame(ii,jj,NVAR+1)+mp(j)
+     else
+        data_frame(ii,jj,NVAR+2)=data_frame(ii,jj,NVAR+2)+mp(j)
+     endif
+#endif
+  end do
+  ! End loop over particles
 
   ! Convert into mass weighted
 !  do ii=1,nw_frame
@@ -384,11 +442,11 @@ subroutine output_frame()
 !  end do
 #ifndef WITHOUTMPI
 #ifdef SOLVERmhd
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+4))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+4+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+6))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+6+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+2))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+2+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
   allocate(dens_all(1:nw_frame,1:nh_frame))
   call MPI_ALLREDUCE(dens,dens_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -423,9 +481,9 @@ subroutine output_frame()
      allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
 #ifdef SOLVERmhd
-     do kk=0, NVAR+4
+     do kk=0, NVAR+6
 #else
-     do kk=0, NVAR
+     do kk=0, NVAR+2
 #endif
        if (movie_vars(kk).eq.1)then
          open(ilun,file=TRIM(moviefiles(kk)),form='unformatted')

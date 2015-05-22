@@ -211,9 +211,6 @@ recursive subroutine amr_step(ilevel,icount)
 
      if(hydro)then
 
-        ! Compute Bondi-Hoyle accretion parameters
-        if(sink)call collect_acczone_avg(ilevel)
-
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
@@ -230,6 +227,10 @@ recursive subroutine amr_step(ilevel,icount)
         end do
 #endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
+        
+        ! Compute Bondi-Hoyle accretion parameters
+        if(sink)call collect_acczone_avg(ilevel)
+
      end if
   end if
 
@@ -286,7 +287,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 #endif
   
-  ! Density threshold or Bondi accretion onto sink particle                                                                                
+  ! Density threshold or Bondi accretion onto sink particle
   if(sink)then
      call grow_sink(ilevel,.false.)
   end if

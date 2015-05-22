@@ -5,6 +5,7 @@
 subroutine init_tree
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -143,7 +144,7 @@ subroutine init_tree
   do ilevel=levelmin-1,1,-1
      call merge_tree_fine(ilevel)
   end do
-
+ 
   call kill_entire_cloud(1)
 
   call create_cloud_from_sink
@@ -325,8 +326,8 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if(i<0.or.i>2)then
               write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)
            endif
-        end do
      end do
+  end do
      stop
   end if
 
@@ -623,6 +624,7 @@ end subroutine merge_tree_fine
 subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -675,6 +677,8 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   particle_data_width=particle_data_width+1
 #endif
+  ! DICE patch / gas temperature
+  if(dice_init) particle_data_width=particle_data_width+1
   
   ! Allocate communication buffer in emission
   do icpu=1,ncpu
@@ -841,6 +845,7 @@ end subroutine virtual_tree_fine
 subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
   integer::np,ilevel,icpu
   integer,dimension(1:nvector)::ind_part,ind_com,ind_list
@@ -882,15 +887,22 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      do i=1,np
         reception(icpu,ilevel)%up(ind_com(i),current_property)=tp(ind_part(i))
      end do
+     current_property = current_property+1
      if(metal)then
         do i=1,np
-           reception(icpu,ilevel)%up(ind_com(i),current_property+1)=zp(ind_part(i))
+           reception(icpu,ilevel)%up(ind_com(i),current_property)=zp(ind_part(i))
         end do
+        current_property = current_property+1
      end if
   end if
 
-  ! following line is not strictly necessary, but in case one adds extra data later
-  current_property = current_property + 2 
+  ! DICE patch / gas temperature
+  if(dice_init) then
+     do i=1,np
+        reception(icpu,ilevel)%up(ind_com(i),current_property)=up(ind_part(i))
+     end do
+     current_property = current_property+1
+  endif
   
   ! Remove particles from parent linked list
   call remove_list(ind_part,ind_list,ok,np)
@@ -904,6 +916,7 @@ end subroutine fill_comm
 subroutine empty_comm(ind_com,np,ilevel,icpu)
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
   integer::np,icpu,ilevel
   integer,dimension(1:nvector)::ind_com
@@ -958,16 +971,22 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
      do i=1,np
         tp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
      end do
+     current_property = current_property+1
      if(metal)then
         do i=1,np
-           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property+1)
+           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
         end do
+        current_property = current_property+1
      end if
   end if
 
-  ! As with the gather routine, we leave this in case extra properties are
-  ! added later:
-  current_property = current_property+2
+  ! DICE patch / gas temperature
+  if(dice_init) then
+     do i=1,np
+       up(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+     end do
+     current_property = current_property+1
+  endif
 
 end subroutine empty_comm
 !################################################################

@@ -29,9 +29,21 @@ module pm_parameters
   logical::threshold_accretion=.false.
   logical::bondi_accretion=.false.
 
-  logical::nol_accretion=.false.              ! Leave angular momentum in the gas at accretion
-  real(dp)::sink_seedmass=5.4d-4             ! Initial mass sinks are created with in bondi or flux accretion case (in solar masses)
+  logical::nol_accretion=.false.             ! Leave angular momentum in the gas at accretion
+  real(dp)::sink_seedmass=0.0                ! Initial sink mass. If < 0, use the AGN feedback based recipe
   real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
                                              ! gives fration of available gas that can be accreted in one timestep.
+
+  logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
+  logical::sink_drag=.false.                 ! Gas dragging sink
+  logical::clump_core=.false.                ! Trims the clump (for star formation)
+  logical::smbh_verbose=.false.              ! Controls print verbosity for the SMBH case
+  real(dp)::alpha_acc_boost=1.0              ! Boost coefficient for accretion
+  real(dp)::acc_threshold_creation = 1.e20   ! Threshold for sink creation in smbh case; in Msun/yr
+  real(dp)::mass_vel_check = -1.0            ! Threshold for velocity check in  merging, in unit of mass_sph; by default don't check
+
+  real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast
+  real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast
+  real(dp)::T2_AGN=1.d12                     ! AGN blast temperature
 
 end module pm_parameters

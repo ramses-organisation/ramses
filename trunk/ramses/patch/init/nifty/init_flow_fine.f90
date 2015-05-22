@@ -1,4 +1,3 @@
-
 !################################################################
 !################################################################
 !################################################################
@@ -58,18 +57,6 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
-  !!! DICE
-  logical,save::init_dice_nml=.false.
-  logical::nml_ok=.true.
-  character(LEN=80)::infile
-  logical::file_exists
-  ! Namelist definitions
-  namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
-       & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
-       & ,ic_u_name,ic_metal_name,ic_age_name &
-       & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct
-  !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -395,34 +382,6 @@ subroutine init_flow_fine(ilevel)
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
-    ! DICE: Reading the namelist datablock
-    if (.not.init_dice_nml) then
-      ! Get the name of the namelist
-      call getarg(1,infile)
-      open(1,file=infile)
-      rewind(1)
-      ! Open namelist and read the dice_params data
-      read(1,NML=dice_params,END=106)
-      goto 107
-      106 if(myid==1) write(*,*)' You have to set up namelist &DICE_PARAMS in parameter file'
-      call clean_stop
-      107 continue
-      close(1)
-      ! Check for particle files
-      inquire(file=trim(initfile(levelmin))//'/'//trim(ic_file), exist=file_exists)
-      if(.NOT. file_exists) then
-        if(myid==1) write(*,*)"Error: ic_file ",trim(ic_file)," doesn't exist "
-        nml_ok=.false.
-      end if
-      if(.not. nml_ok)then
-        if(myid==1) write(*,*)'Too many errors in the DICE_PARAMS namelist'
-        if(myid==1) write(*,*)'Aborting...'
-        call clean_stop
-      end if
-      ! Data has been read and understood
-      init_dice_nml = .true.
-      if(debug.and.myid==1) write(*,*) "DICE_PARAMS has been read correctly"
-    end if
     ifout = ic_ifout
     ! Initialise uold with values from the DICE_PARAMS namelist
     call reset_uold(ilevel)
@@ -478,7 +437,7 @@ subroutine region_condinit(x,q,dx,nn)
   ! Loop over initial conditions regions
   do k=1,nregion
      
-     ! For "square" regions only:
+     ! For 'square' regions only:
      if(region_type(k) .eq. 'square')then
         ! Exponent of choosen norm
         en=exp_region(k)
@@ -492,7 +451,7 @@ subroutine region_condinit(x,q,dx,nn)
 #if NDIM>2
            zn=2.0d0*abs(x(i,3)-z_center(k))/length_z(k)
 #endif
-           ! Compute cell "radius" relative to region center
+           ! Compute cell 'radius' relative to region center
            if(exp_region(k)<10)then
               r=(xn**en+yn**en+zn**en)**(1.0/en)
            else
@@ -524,7 +483,7 @@ subroutine region_condinit(x,q,dx,nn)
         end do
      end if
      
-     ! For "point" regions only:
+     ! For 'point' regions only:
      if(region_type(k) .eq. 'point')then
         ! Volume elements
         vol=dx**ndim
@@ -574,10 +533,14 @@ subroutine reset_uold(ilevel)
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------
-  ! This routine sets array uold to zero before calling
-  ! the hydro scheme. uold is set to zero in virtual boundaries as well.
+  ! This routine sets array unew to its initial value uold before calling
+  ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
   integer::i,ivar,irad,ind,icpu,iskip
+  real(dp)::d,u,v,w,e
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2, IS_cs2, IG_cs2
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -587,7 +550,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0
+           uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
         end do
      end do
   end do
@@ -628,17 +591,17 @@ subroutine init_uold(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! Set uold to namelist values for myid cells
+  ! Set uold to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=nvar,1,-1
+     do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
-              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0.
-              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = IG_rho/scale_nH
-              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
+              uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
+              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho
+              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho*IG_T2/scale_T2/(gamma-1)
               if(metal) then
-                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
+                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho*IG_metal
               endif
            endif
         end do
@@ -1151,4 +1114,3 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
   
 end subroutine init_gas_ngp
-

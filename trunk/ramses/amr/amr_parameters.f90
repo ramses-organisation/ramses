@@ -153,7 +153,6 @@ module amr_parameters
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
   logical ::agn=.false.
-  logical ::sink_drag=.true.  ! Gas dragging sink
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
@@ -180,9 +179,9 @@ module amr_parameters
   real(kind=8),dimension(1:10)::deltaz_frame=0d0
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
 #ifdef SOLVERmhd
-  integer,dimension(0:NVAR+4)::movie_vars=0
+  integer,dimension(0:NVAR+6)::movie_vars=0
 #else
-  integer,dimension(0:NVAR)::movie_vars=0
+  integer,dimension(0:NVAR+2)::movie_vars=0
 #endif
 
   ! Refinement parameters for each level
