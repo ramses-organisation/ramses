@@ -473,7 +473,7 @@ SUBROUTINE cool_step(T2, xion, Np, Fp, p_gas, dT2, dXion, dNp, dFp       &
         C_v = rho*kb/mh/mu/(gamma-1d0)                                  
         E_rad = group_egy(iIR) * ev_to_erg * dNp(iIR)
         dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
-             /(1d0/kAbs_loc(iIR)/rho/dt +4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
+             /(1d0/kAbs_loc(iIR)/Zsolar/rho/dt +4d0*c_cgs/C_v*a_r*TK**3+rt_c_cgs)
         dT2 = dT2 + 1d0/mu * 1d0/C_v * dE_T
         dNp(iIR) = dNp(iIR) - dE_T / group_egy(iIR) / ev_to_erg
         
