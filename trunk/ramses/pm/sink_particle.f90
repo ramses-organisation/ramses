@@ -605,16 +605,17 @@ subroutine grow_sink(ilevel,on_creation)
   logical::highest_level
 
   if(accretion_scheme=='none')return
-
-  ! Determine if on highest active level...
-  if (ilevel==nlevelmax)then
-     highest_level=.true.
-  else if (numbtot(1,ilevel+1)==0)then
-     highest_level=.true.
-  else
-     highest_level=.false.
+  if(.not. on_creation)then
+     ! Determine if on highest active level...
+     if (ilevel==nlevelmax)then
+        highest_level=.true.
+     else if (numbtot(1,ilevel+1)==0)then
+        highest_level=.true.
+     else
+        highest_level=.false.
+     end if
+     if (.not. highest_level)return
   end if
-  if (.not. highest_level)return
 
   if(verbose)write(*,111)ilevel
 
@@ -1154,11 +1155,11 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
-                write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
+              if(myid==1.and.smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+                write(*,'("***BLAST***",I4,1X,4(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                    & ,((delta_mass(isink)*T2_AGN/scale_T2+mgas*T2_gas) &
+                    & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
                     & /(delta_mass(isink)+mgas))
               endif
 
@@ -1654,7 +1655,7 @@ subroutine make_sink_from_clump(ilevel)
                  
                  if(smbh.and.agn)then
                     mclump=clump_mass4(flag2(ind_cell_new(i)))
-                    mseed_new(index_sink)=T2_min/T2_AGN*mclump
+                    mseed_new(index_sink)=0.5*T2_min/T2_AGN*mclump
                  end if
               endif
 
@@ -2204,6 +2205,7 @@ subroutine merge_star_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2215,6 +2217,7 @@ subroutine merge_star_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
@@ -2325,6 +2328,7 @@ subroutine merge_smbh_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2337,6 +2341,7 @@ subroutine merge_smbh_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.

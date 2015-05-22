@@ -3,6 +3,7 @@ subroutine flag_formation_sites
   use pm_commons
   use clfind_commons
   use hydro_commons, only:uold
+  use hydro_parameters, only:smallr
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -65,23 +66,22 @@ subroutine flag_formation_sites
            endif
         end if
      end do
-  else
-     !block peaks that are closer than R_accretion from existing sinks
-     do j=1,nsink
-        do i=1,npeaks
-           rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
-           do idim=1,ndim
-              if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-              if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
-           end do
-           dist2=sum(rrel**2)
-           if (dist2<(ir_cloud*dx_min)**2)then
-              occupied(i)=1
-              if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
-           end if
-        end do
-     end do
   end if
+  !block peaks that are closer than R_accretion from existing sinks
+  do j=1,nsink
+     do i=1,npeaks
+        rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
+        do idim=1,ndim
+           if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
+           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
+        end do
+        dist2=sum(rrel**2)
+        if (dist2<(ir_cloud*dx_min/aexp)**2)then
+           occupied(i)=1
+           if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
+        end if
+     end do
+  end do
 #ifndef WITHOUTMPI
   ! This is required because new sink positions might bring new peaks into local memory in the smbh case
   call build_peak_communicator
@@ -127,6 +127,8 @@ subroutine flag_formation_sites
      if (smbh)then
         ok=ok.and.(ind_halo(jj).EQ.jj+ipeak_start(myid))
         ok=ok.and.relevance(jj)>relevance_threshold
+        if(cosmo)ok=ok.and.halo_mass(jj)>1.0d10*1.98892d33/(scale_d*(scale_l**3.0)) ! change 1.0d10 to parameter - halomass
+        ok=ok.and.max_dens(jj)>n_star/scale_nH ! forming SMBH if we can from stars too
         ok=ok.and.occupied(jj)==0
         fourpi=4.0d0*ACOS(-1.0d0)
         threepi2=3.0d0*ACOS(-1.0d0)**2
@@ -141,7 +143,7 @@ subroutine flag_formation_sites
               call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
               ! Geometrical criterion
               if(ivar_refine>0)then
-                 if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
+                 if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
                     flag2(cell_index(1))=jj
                     write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
                  end if
@@ -149,8 +151,8 @@ subroutine flag_formation_sites
                  flag2(cell_index(1))=jj
                  write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
               end if
-           end if
-        end if
+            end if
+         end if
      else
         ok=ok.and.relevance(jj)>0.
         ok=ok.and.occupied(jj)==0
