@@ -715,7 +715,7 @@ end subroutine surface_int
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
   use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
-  use hydro_commons, ONLY: uold,gamma,nvar,nener
+  use hydro_commons, ONLY: uold,gamma,nvar,nener,smallr
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_cell
