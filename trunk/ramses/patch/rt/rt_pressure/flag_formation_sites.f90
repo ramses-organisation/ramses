@@ -185,6 +185,11 @@ subroutine compute_clump_properties_round2(xx)
   use clfind_commons
   use pm_commons, ONLY:cont_speed
   use pm_parameters
+#ifdef RT
+  use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
+  use rt_hydro_commons, only:rtuold
+  use rt_cooling_module, only:kappaAbs,kappaSc
+#endif
 
   implicit none
 #ifndef WITHOUTMPI
@@ -213,9 +218,23 @@ subroutine compute_clump_properties_round2(xx)
 #ifdef SOLVERmhd
   real(dp),dimension(1:3)::B
 #endif
+#ifdef RT
+  real(dp),dimension(1:nGroups,1:ndim)::Fp
+  real(dp),dimension(1:nGroups)::Np2Ep_flux
+#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+  ev_to_uu=ev_to_erg/(scale_d * scale_l**3 * scale_v**2)
+  do ig=1,nGroups
+     Np2Ep_flux(ig)=(scale_Fp * group_egy(ig) * ev_to_erg)/(scale_d * scale_v**3) 
+  end do
+  scale_kappa=(scale_d*scale_l)**-1.d0
+  c_code=c_cgs/scale_v
+#endif
 
   period(1)=(nx==1)
 #if NDIM>1
@@ -230,7 +249,7 @@ subroutine compute_clump_properties_round2(xx)
   
   ! initialize arrays
   clump_size=0.d0; clump_mass4=0.d0
-  grav_term=0.d0
+  grav_term=0.d0; rad_term=0.d0 
   kinetic_support=0.d0; thermal_support=0.d0; magnetic_support=0.d0 
   Icl=0.d0; Icl_d=0.d0; Icl_dd=0.d0
   Icl_3by3=0.d0;  Icl_d_3by3=0.d0
@@ -293,6 +312,15 @@ subroutine compute_clump_properties_round2(xx)
            xpeak(i)=peak_pos(peak_nr,i)
         end do
 
+        ! get RT fluxes
+#ifdef RT
+        do ig=1,nGroups
+           iNp=iGroups(ig)
+           Fp(ig,1:ndim) = rtuold(icellp(ipart),iNp+1:iNp+ndim)* Np2Ep_flux(ig)
+        end do
+#endif
+
+
 #ifdef SOLVERmhd
         ! cell averaged magnetic fields
         do i=1,ndim
@@ -350,12 +378,22 @@ subroutine compute_clump_properties_round2(xx)
         ! add radiation pressure by trapped photons
         p=p+err/3.d0
         
+        ! compute radiative acceleration by streaming photons
+        frad=0.d0
+#ifdef RT
+        do ig=1,nGroups
+           kappa=kappaSc(ig)/scale_kappa
+           frad(1:ndim)  = frad(1:ndim) +  Fp(ig,1:ndim) * kappa / c_code
+        end do
+#endif
+
         ! virial analysis volume terms
         magnetic_support(peak_nr)  = magnetic_support(peak_nr) + vol*emag
         thermal_support (peak_nr)  = thermal_support(peak_nr)  + 3*vol*p
         do i=1,3
            kinetic_support(peak_nr)= kinetic_support(peak_nr)  + vrel(i)**2         * vol*d
            grav_term(peak_nr)      = grav_term(peak_nr)        + fgrav(i) * rrel(i) * vol*d
+           rad_term(peak_nr)       = rad_term(peak_nr)         + frad(i)  * rrel(i) * vol*d
         end do
         
         ! time derivatives of the moment of inertia
@@ -381,6 +419,7 @@ subroutine compute_clump_properties_round2(xx)
   call virtual_peak_dp(Icl,'sum')
   call virtual_peak_dp(Icl_d,'sum')
   call virtual_peak_dp(grav_term,'sum')
+  call virtual_peak_dp(rad_term,'sum')
   do i=1,ndim
      call virtual_peak_dp(clump_size(1,i),'sum')     
      do j=1,ndim
@@ -391,7 +430,7 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 
   !second time derivative of I
-  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)&
+  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)+rad_term(1:npeaks)&
        -Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)&
        +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
@@ -426,14 +465,14 @@ subroutine compute_clump_properties_round2(xx)
   !write to the log file some information that could be of interest for debugging etc.
   if(clinfo .and. (.not. smbh) .and. sink)then 
      if (myid==ncpu)then
-        write(*,'(135A)')'=========================================================================================================================='
-        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp'
-        write(*,'(135A)')'=========================================================================================================================='
+        write(*,'(135A)')'======================================================================================================================================'
+        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
+        write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
 
-           write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),7(E9.2E2,3X))')j+ipeak_start(myid)&
+           write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
@@ -441,7 +480,8 @@ subroutine compute_clump_properties_round2(xx)
                 ,(Icl_dd(j)<0)&
                 ,grav_term(j),Psurf(j)&
                 ,MagPsurf(j),MagTsurf(j)&
-                ,kinetic_support(j),thermal_support(j),magnetic_support(j)
+                ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
+                ,rad_term(j)
         end if
      end do
   end if
