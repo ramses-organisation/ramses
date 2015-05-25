@@ -180,7 +180,7 @@ end subroutine flag_formation_sites
 !################################################################
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma,nvar,nener
+  use hydro_commons, ONLY:uold,gamma,nvar,nener,smallr
   use poisson_commons, ONLY:phi,f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
@@ -715,7 +715,7 @@ end subroutine surface_int
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
   use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
-  use hydro_commons, ONLY: uold,gamma,nvar,nener
+  use hydro_commons, ONLY: uold,gamma,nvar,nener,smallr
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_cell
