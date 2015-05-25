@@ -594,7 +594,7 @@ subroutine init_uold(ilevel)
   ! Set uold to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
+     do ivar=nvar,1,-1
         do i=1,active(ilevel)%ngrid
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
               uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.
