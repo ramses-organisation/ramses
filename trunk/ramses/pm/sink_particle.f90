@@ -605,16 +605,17 @@ subroutine grow_sink(ilevel,on_creation)
   logical::highest_level
 
   if(accretion_scheme=='none')return
-
-  ! Determine if on highest active level...
-  if (ilevel==nlevelmax)then
-     highest_level=.true.
-  else if (numbtot(1,ilevel+1)==0)then
-     highest_level=.true.
-  else
-     highest_level=.false.
+  if(.not. on_creation)then
+     ! Determine if on highest active level...
+     if (ilevel==nlevelmax)then
+        highest_level=.true.
+     else if (numbtot(1,ilevel+1)==0)then
+        highest_level=.true.
+     else
+        highest_level=.false.
+     end if
+     if (.not. highest_level)return
   end if
-  if (.not. highest_level)return
 
   if(verbose)write(*,111)ilevel
 
@@ -834,7 +835,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         if(ok(j,ind))then
            
            ! Convert uold to primitive variables
-           d=uold(indp(j,ind),1)
+           d=max(uold(indp(j,ind),1),smallr)
            vv(1)=uold(indp(j,ind),2)/d
            vv(2)=uold(indp(j,ind),3)/d
            vv(3)=uold(indp(j,ind),4)/d
@@ -1154,11 +1155,11 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
-                write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
+              if(myid==1.and.smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+                write(*,'("***BLAST***",I4,1X,4(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                    & ,((delta_mass(isink)*T2_AGN/scale_T2+mgas*T2_gas) &
+                    & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
                     & /(delta_mass(isink)+mgas))
               endif
 
@@ -1605,7 +1606,7 @@ subroutine make_sink_from_clump(ilevel)
               index_sink_tot=index_sink_tot+1
 
               ! Convert uold to primitive variables
-              d=uold(ind_cell_new(i),1)
+              d=max(uold(ind_cell_new(i),1),smallr)
               u=uold(ind_cell_new(i),2)/d
               v=uold(ind_cell_new(i),3)/d
               w=uold(ind_cell_new(i),4)/d
@@ -1654,7 +1655,7 @@ subroutine make_sink_from_clump(ilevel)
                  
                  if(smbh.and.agn)then
                     mclump=clump_mass4(flag2(ind_cell_new(i)))
-                    mseed_new(index_sink)=T2_min/T2_AGN*mclump
+                    mseed_new(index_sink)=0.5*T2_min/T2_AGN*mclump
                  end if
               endif
 
@@ -1748,6 +1749,8 @@ subroutine true_max(x,y,z,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use clfind_commons, only:ivar_clump
+  use poisson_commons, only:rho
   implicit none
   real(dp)::x,y,z
   integer::ilevel
@@ -1757,7 +1760,7 @@ subroutine true_max(x,y,z,ilevel)
   ! the true maximum by expanding the density around the cell center to second order.
   !----------------------------------------------------------------------------
 
-  integer::k,j,i,nx_loc
+  integer::k,j,i,nx_loc,counter
   integer,dimension(1:nvector)::cell_index,cell_lev
   real(dp)::det,dx,dx_loc,scale,disp_max
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
@@ -1772,24 +1775,42 @@ subroutine true_max(x,y,z,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
 
-
+  counter=0
   do i=-1,1
      do j=-1,1
         do k=-1,1
-
-           xtest(1,1)=x+i*dx_loc
-#if NDIM>1
-           xtest(1,2)=y+j*dx_loc
-#endif
-#if NDIM>2
-           xtest(1,3)=z+k*dx_loc
-#endif
-           call get_cell_index(cell_index,cell_lev,xtest,ilevel,1)
-           cube3(i,j,k)=uold(cell_index(1),1)
-
+           counter=counter+1
+           xtest(counter,1)=x+i*dx_loc
+           xtest(counter,2)=y+j*dx_loc
+           xtest(counter,3)=z+k*dx_loc
         end do
      end do
   end do
+
+  call get_cell_index(cell_index,cell_lev,xtest,ilevel,counter)
+
+  counter=0
+  if(ivar_clump==0)then
+     do i=-1,1
+        do j=-1,1
+           do k=-1,1
+              counter=counter+1
+              cube3(i,j,k)=rho(cell_index(counter))
+           end do
+        end do
+     end do
+  else if(hydro)then
+     do i=-1,1
+        do j=-1,1
+           do k=-1,1
+              counter=counter+1
+              cube3(i,j,k)=uold(cell_index(counter),1)
+           end do
+        end do
+     end do
+  else
+     return   
+  end if
 
 ! compute gradient
   gradient(1)=0.5*(cube3(1,0,0)-cube3(-1,0,0))/dx_loc
@@ -2184,6 +2205,7 @@ subroutine merge_star_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2195,6 +2217,7 @@ subroutine merge_star_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
@@ -2305,6 +2328,7 @@ subroutine merge_smbh_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2317,6 +2341,7 @@ subroutine merge_smbh_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.

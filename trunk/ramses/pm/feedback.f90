@@ -323,8 +323,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Update hydro variables due to feedback
 
   ! For IR radiation trapping,
-  ! we use the cell resolution to estimate the column density of gas
-  delta_x=200*3d18
+  ! we use a fixed length to estimate the column density of gas
+  delta_x=200.*3d18
   if(metal)then
      tau_factor=kappa_IR*delta_x*scale_d/0.02
   else
@@ -334,14 +334,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
      ! Infrared photon trapping boost
      if(metal)then
-        tauIR=tau_factor*max(unew(indp(j),imetal),smallr)
+        tauIR=tau_factor*max(uold(indp(j),imetal),smallr)
      else
-        tauIR=tau_factor*max(unew(indp(j),1),smallr)
-     endif
-     if(unew(indp(j),1)*scale_nH > 10.)then
-        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
-     else
-        RAD_BOOST=0.0
+        tauIR=tau_factor*max(uold(indp(j),1),smallr)
      endif
      
      ! Specific kinetic energy of the star
