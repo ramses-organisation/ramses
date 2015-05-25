@@ -180,7 +180,7 @@ end subroutine flag_formation_sites
 !################################################################
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma,nvar,nener
+  use hydro_commons, ONLY:uold,gamma,nvar,nener,smallr
   use poisson_commons, ONLY:phi,f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
