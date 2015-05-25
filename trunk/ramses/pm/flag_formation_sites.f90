@@ -305,7 +305,7 @@ subroutine compute_clump_properties_round2(xx)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
 
         ! gas density and energydensity
-        d=uold(icellp(ipart),1)
+        d=max(uold(icellp(ipart),1),smallr)
         de=uold(icellp(ipart),ndim+2) 
         do i=1,ndim
            vd(i)=uold(icellp(ipart),i+1)
@@ -785,7 +785,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
      do jdim=1,ndim
         ekk_cell(j)=ekk_cell(j)+0.5*uold(ind_cell(j),jdim+1)**2
      end do
-     ekk_cell(j)=ekk_cell(j)/uold(ind_cell(j),1)
+     ekk_cell(j)=ekk_cell(j)/max(uold(ind_cell(j),1),smallr)
 #if NENER>0
      do irad=1,nener
         err_cell(j)=err_cell(j)+uold(ind_cell(j),ndim+2+irad)
@@ -904,7 +904,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                     do jdim=1,ndim
                        ekk_neigh(j)=ekk_neigh(j)+0.5*uold(cell_index(j),jdim+1)**2
                     end do
-                    ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
+                    ekk_neigh(j)=ekk_neigh(j)/max(uold(cell_index(j),1),smallr)
                     P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
 
                     ! add to the actual terms for the virial analysis
@@ -1026,7 +1026,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                        do jdim=1,ndim
                           ekk_neigh(j)=ekk_neigh(j)+0.5*uold(cell_index(j),jdim+1)**2
                        end do
-                       ekk_neigh(j)=ekk_neigh(j)/uold(cell_index(j),1)
+                       ekk_neigh(j)=ekk_neigh(j)/max(uold(cell_index(j),1),smallr)
                        P_neigh(j)=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh(j))
 
                        ! add to the actual terms for the virial analysis

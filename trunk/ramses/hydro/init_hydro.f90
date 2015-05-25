@@ -109,7 +109,7 @@ subroutine init_hydro
                        end do
                     else if(ivar>=2.and.ivar<=ndim+1)then
                        do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                        end do
                     endif
                  end do
@@ -128,12 +128,12 @@ subroutine init_hydro
                  do i=1,ncache
                     xx(i)=xx(i)/(gamma-1d0)
                     if (uold(ind_grid(i)+iskip,1)>0.)then
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #if NDIM>1
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
 #if NDIM>2
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
 #if NENER>0
                     do irad=1,nener
@@ -150,7 +150,7 @@ subroutine init_hydro
                  do ivar=ndim+3+nener,nvar
                     read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  end do
 #endif

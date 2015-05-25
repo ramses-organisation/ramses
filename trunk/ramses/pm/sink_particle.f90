@@ -835,7 +835,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         if(ok(j,ind))then
            
            ! Convert uold to primitive variables
-           d=uold(indp(j,ind),1)
+           d=max(uold(indp(j,ind),1),smallr)
            vv(1)=uold(indp(j,ind),2)/d
            vv(2)=uold(indp(j,ind),3)/d
            vv(3)=uold(indp(j,ind),4)/d
@@ -1606,7 +1606,7 @@ subroutine make_sink_from_clump(ilevel)
               index_sink_tot=index_sink_tot+1
 
               ! Convert uold to primitive variables
-              d=uold(ind_cell_new(i),1)
+              d=max(uold(ind_cell_new(i),1),smallr)
               u=uold(ind_cell_new(i),2)/d
               v=uold(ind_cell_new(i),3)/d
               w=uold(ind_cell_new(i),4)/d
