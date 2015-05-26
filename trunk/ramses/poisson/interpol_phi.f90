@@ -19,9 +19,6 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer::i,ind,indice,ind_average,ind_father
   real(dp)::dx,tfrac
-
-
-
   real(dp)::aa,bb,cc,dd,coeff,add
   integer,dimension(1:8,1:8)::ccc
   real(dp),dimension(1:8)::bbbb
@@ -33,7 +30,7 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   dd = 27.D0*aa
   bbbb(:)  =(/aa ,bb ,bb ,cc ,bb ,cc ,cc ,dd/)
 
-  !sampling positions in the 3x3x3 father cell cube
+  ! Sampling positions in the 3x3x3 father cell cube
   ccc(:,1)=(/1 ,2 ,4 ,5 ,10,11,13,14/)
   ccc(:,2)=(/3 ,2 ,6 ,5 ,12,11,15,14/)
   ccc(:,3)=(/7 ,8 ,4 ,5 ,16,17,13,14/)
@@ -48,9 +45,8 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
      call clean_stop
   endif
 
-  !compute fraction of timesteps for interpolation
+  ! Compute fraction of timesteps for interpolation
   if (dtold(ilevel-1)> 0)then
-     !tfrac=0.
      tfrac=1.0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
   else
      tfrac=0.
@@ -71,12 +67,11 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
         do i=1,ncell
            indice=nbors_father_cells(i,ind_father)
            if (indice==0) then 
-              write(*,*)'no all neighbors present in interpol_phi...'
               add=coeff*(phi(ind_cell(i))+(phi(ind_cell(i))-phi_old(ind_cell(i)))*tfrac)
-              !               add=coeff*(-3d0/8d0*dx**2*boxlen*rho(ind_cell(i))+phi(ind_cell(i)))
+              ! add=coeff*(-3d0/8d0*dx**2*boxlen*rho(ind_cell(i))+phi(ind_cell(i)))
            else
               add=coeff*(phi(indice)+(phi(indice)-phi_old(indice))*tfrac)
-              !               add=coeff*(-3d0/8d0*dx**2*boxlen*rho(indice)+phi(indice)) 
+              ! add=coeff*(-3d0/8d0*dx**2*boxlen*rho(indice)+phi(indice)) 
            endif
            phi_int(i,ind)=phi_int(i,ind)+add
         end do
