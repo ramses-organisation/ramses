@@ -1640,7 +1640,7 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Mass of the new sink
               if(sink_seedmass>=0.0)then
-                 mseed_new(index_sink)=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
+                 mseed_new(index_sink)=sink_seedmass*2d33/(scale_d*scale_l**3)
               else
                  if(smbh)then
                     ! The SMBH/sink mass is the mass that will heat the gas to 10**7 K after creation
@@ -2206,6 +2206,7 @@ subroutine merge_star_sink
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
            mseed(j)=mseed(j+1)
+           new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2218,6 +2219,7 @@ subroutine merge_star_sink
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
         mseed(nsink+1)=0.
+        new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
@@ -2329,6 +2331,7 @@ subroutine merge_smbh_sink
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
            mseed(j)=mseed(j+1)
+           new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2342,6 +2345,7 @@ subroutine merge_smbh_sink
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
         mseed(nsink+1)=0.
+        new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
