@@ -237,7 +237,9 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
      if(kk>0)then
         inbor=kkk(ind)
         do i=1,ng
-           ind_grid1(i)=son(nbor(ind_grid(i),inbor))
+           if(ind_grid(i)>0)then
+              ind_grid1(i)=son(nbor(ind_grid(i),inbor))
+           endif
         end do
      end if
 
@@ -248,7 +250,9 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
         if(jj>0)then
            inbor=jjj(ind)
            do i=1,ng
-              ind_grid2(i)=son(nbor(ind_grid1(i),inbor))
+              if(ind_grid1(i)>0)then
+                 ind_grid2(i)=son(nbor(ind_grid1(i),inbor))
+              endif
            end do
         end if
  
@@ -259,7 +263,9 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
            if(ii>0)then
               inbor=iii(ind)
               do i=1,ng
-                 ind_grid3(i)=son(nbor(ind_grid2(i),inbor))
+                 if(ind_grid2(i)>0)then
+                    ind_grid3(i)=son(nbor(ind_grid2(i),inbor))
+                 endif
               end do
            end if
 
@@ -283,7 +289,11 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
      icell=mmm(j,ind,ndim)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
-        nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
+        if(nbors_grids(i,igrid)>0)then
+           nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
+        else
+           nbors_father_cells(i,j)=0
+        endif
      end do
   end do
 
