@@ -474,7 +474,7 @@ def main():
 		mov = "{dir}/{kind}{proj}.mp4".format(dir=args.dir, kind=args.kind, proj=args.proj)
 	
 	print 'Calling ffmpeg!'
-	subprocess.call("~/scripts/ffmpeg -loglevel quiet -i {input} -y -vcodec h264 -pix_fmt yuv420p  -r 25 -qp 15 {output}".format(input=frame, output=mov), shell=True)
+	subprocess.call("ffmpeg -loglevel quiet -i {input} -y -vcodec h264 -pix_fmt yuv420p  -r 25 -qp 15 {output}".format(input=frame, output=mov), shell=True)
 	print 'Movie created! Cleaning up!'
 	subprocess.call("rm {dir}/pngs -r".format(dir=args.dir), shell=True)
 	subprocess.call("chmod a+r {mov}".format(mov=mov), shell=True)
