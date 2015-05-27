@@ -277,7 +277,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 
 		else:
 			w=0
-			h=2
+			h=1
 			for k in xrange(0,4):
 				frame_centre_w += xcentre_frame[k]*a**k
 				frame_centre_h += ycentre_frame[k]*a**k
