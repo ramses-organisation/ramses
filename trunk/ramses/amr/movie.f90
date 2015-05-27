@@ -146,9 +146,6 @@ subroutine output_frame()
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  if(deltax_frame(proj_ind*2-1)==0)deltax_frame(proj_ind*2-1)=boxlen
-  if(deltay_frame(proj_ind*2-1)==0)deltay_frame(proj_ind*2-1)=boxlen
-  if(deltaz_frame(proj_ind*2-1)==0)deltaz_frame(proj_ind*2-1)=boxlen
 
   if(proj_axis(proj_ind:proj_ind).eq.'x')then
     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
