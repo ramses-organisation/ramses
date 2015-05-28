@@ -248,7 +248,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Get the ionization fractions
         do ivar=0,nIons-1
            do i=1,nleaf
-              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/uold(ind_leaf(i),1)
+              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/max(uold(ind_leaf(i),1),smallr)
            end do
         end do
 

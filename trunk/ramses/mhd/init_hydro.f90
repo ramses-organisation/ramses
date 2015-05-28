@@ -89,7 +89,7 @@ subroutine init_hydro
                        end do
                     else  ! Read velocity field
                        do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                        end do
                     end if
                  end do
@@ -118,7 +118,7 @@ subroutine init_hydro
                  read(ilun)xx ! Read pressure
                  do i=1,ncache
                     e=xx(i)/(gamma-1d0)
-                    d=uold(ind_grid(i)+iskip,1)
+                    d=max(uold(ind_grid(i)+iskip,1),smallr)
                     u=uold(ind_grid(i)+iskip,2)/d
                     v=uold(ind_grid(i)+iskip,3)/d
                     w=uold(ind_grid(i)+iskip,4)/d
@@ -137,7 +137,7 @@ subroutine init_hydro
                  do ivar=9+nener,nvar ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  end do
 #endif
