@@ -15,7 +15,7 @@ program halo_evolution
   character(LEN=5)::nstring,ncharcpu,noutput
   character(LEN=80)::directory,file_groupe_in,hop_name
   character(LEN=128)::nomfich,repository
-  logical::ok  
+  logical::ok,first  
   integer::verbose=0
   
   !1. Specify Halo number in final output and mass threshold.
@@ -33,7 +33,7 @@ program halo_evolution
      print *,TRIM(nomfich)//' not found'
      stop
   endif
-  write(*,*)'Reading file '//TRIM(nomfich)
+  !write(*,*)'Reading file '//TRIM(nomfich)
 #ifdef DIR
   open(unit=15,file=trim(nomfich),form='unformatted',status='old',access='direct',recl=1)
   read(15,rec=1)npart
@@ -120,9 +120,9 @@ program halo_evolution
   Close(16)	
      
   !2.c Output
-  write(*,*)
-  write(*,*)"Working with output number ", noutput
-  write(*,'(A119)')'    #     aexp       frac     npart     mass    cont.frac      xc         yc         zc        uc         vc         wc' 
+  !write(*,*)
+  !write(*,*)"Working with output number ", noutput
+  !write(*,'(A119)')'    #     aexp       frac     npart     mass    cont.frac      xc         yc         zc        uc         vc         wc' 
   do i=1,ngroup
      if(group_id_4(i).EQ.halo_nr) then 
         sthres2=1.0
@@ -169,7 +169,7 @@ program halo_evolution
   end do
   
   allocate(id_new(1:npart3))
-  allocate(ind_new_1(1:npart3))	
+  allocate(ind_new_1(1:npart3)) 	
   id_group=0	 	
   npart=0
   npart4=0	
@@ -237,8 +237,8 @@ program halo_evolution
   do n=1,(outf-1)
      n_2=(outf-n)
      call title(n_2,noutput)
-     write(*,*)
-     write(*,*)"Working with output number ", noutput
+     !write(*,*)
+     !write(*,*)"Working with output number ", noutput
      nomfich=TRIM(hop_name)//TRIM(noutput)//'.tag'
      inquire(file=nomfich, exist=ok) ! verify input file 
      if ( .not. ok ) then
@@ -453,20 +453,23 @@ program halo_evolution
      !6. Output
      
      j=1     
+first=.true.
      do i=1,ngroup_2
         if(j<(n_list+1)) then
            if(list(j).EQ.0) then	
-              write(*,'(A119)')'    #     aexp       frac     npart     mass    cont.frac      xc         yc         zc        uc         vc         wc' 
+              !write(*,'(A119)')'    #     aexp       frac     npart     mass    cont.frac      xc         yc         zc        uc         vc         wc' 
               j=j+1 	
            end if
            if(group_id_4(i).EQ.list(j)) then 
               sthres2=REAL(npart_halo(j))/REAL(n_group(i))
-              if(sthres2>sthres1) then 	
+              if(sthres2>sthres1.and.first.eq..true.) then 	
                  write(*,'(I5,A,1E10.2,A,1E10.3,A,I7,A,1PE10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3,A,1E10.3)') & 
                       & group_id_4(i),' ', aexp,' ',sthres2,' ', n_group(i),' ', m_group(i),' ', contamine(i),' ', x_group(i),' ', &
                       & y_group(i),' ', z_group(i),' ', u_group(i),' ' , v_group(i),' ', w_group(i)	
+first=.false.
+exit
               end if
-              j=j+1	
+              j=j+1
            end if
         end if
      end do
@@ -495,7 +498,7 @@ program halo_evolution
   end do
   
   deallocate(id_new)
-  deallocate(ind_new_1)	
+  deallocate(ind_new_1)
   
 contains
   
