@@ -53,7 +53,7 @@ subroutine backup_hydro(filename)
                     end do
                  else ! Write velocity field
                     do i=1,ncache
-                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
+                       xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  endif
                  write(ilun)xdp
@@ -80,7 +80,7 @@ subroutine backup_hydro(filename)
               end do
 #endif
               do i=1,ncache ! Write thermal pressure
-                 d=uold(ind_grid(i)+iskip,1)
+                 d=max(uold(ind_grid(i)+iskip,1),smallr)
                  u=uold(ind_grid(i)+iskip,2)/d
                  v=uold(ind_grid(i)+iskip,3)/d
                  w=uold(ind_grid(i)+iskip,4)/d
@@ -99,7 +99,7 @@ subroutine backup_hydro(filename)
 #if NVAR > 8+NENER
               do ivar=9+nener,nvar ! Write passive scalars if any
                  do i=1,ncache
-                    xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
+                    xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)
                  end do
                  write(ilun)xdp
               end do

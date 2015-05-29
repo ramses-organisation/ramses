@@ -2284,12 +2284,11 @@ subroutine merge_smbh_sink
            
            ! escape velocity check
            if (mass_vel_check>0)then
-              if((msink(isink)+msink(jsink)).ge.mass_vel_check*mass_sph*m_refine(nlevelmax)) then
+              if((msink(isink)+msink(jsink)).ge.mass_vel_check*2d33/(scale_d*scale_l**3)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge=merge .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
               end if
            end if
-
 
            if (merge)then
               if (myid==1)write(*,*)'merged ', idsink(jsink),' to ',idsink(isink)
