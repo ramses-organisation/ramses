@@ -18,7 +18,8 @@ subroutine read_params
   real(kind=8)::delta_tout=0,tend=0
   real(kind=8)::delta_aout=0,aend=0
   logical::nml_ok
-
+  integer,parameter::tag=1134
+  integer::dummy_io,info2
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
@@ -81,6 +82,13 @@ subroutine read_params
      call clean_stop
   endif
 #endif
+  
+  !Write I/O group size information
+  if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
+  if(IOGROUPSIZE>0) write(*,*)'IOGROUPSIZE=',IOGROUPSIZE
+  if(IOGROUPSIZECONE>0) write(*,*)'IOGROUPSIZECONE=',IOGROUPSIZECONE
+  if(IOGROUPSIZEREP>0) write(*,*)'IOGROUPSIZEREP=',IOGROUPSIZEREP
+  if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
 
   ! Write information about git version
   call write_gitinfo
@@ -100,8 +108,33 @@ subroutine read_params
 #endif
 
   !-------------------------------------------------
+  ! Read optional nrestart command-line argument
+  !-------------------------------------------------
+  if (myid==1 .and. narg == 2) then
+     CALL getarg(2,cmdarg)
+     read(cmdarg,*) nrestart
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
+
+
+  !-------------------------------------------------
   ! Read the namelist
   !-------------------------------------------------
+
+  ! Wait for the token                                                                                                                                                                                
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
+
   namelist_file=TRIM(infile)
   INQUIRE(file=infile,exist=nml_ok)
   if(.not. nml_ok)then
@@ -128,17 +161,6 @@ subroutine read_params
   read(1,NML=poisson_params,END=81)
 81 continue
 
-  !-------------------------------------------------
-  ! Read optional nrestart command-line argument
-  !-------------------------------------------------
-  if (myid==1 .and. narg == 2) then
-    CALL getarg(2,cmdarg)
-    read(cmdarg,*) nrestart
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-#endif
 
   !-------------------------------------------------
   ! Compute time step for outputs
@@ -222,6 +244,19 @@ subroutine read_params
 
 
   close(1)
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
+
 
   !-----------------
   ! Max size checks
