@@ -394,6 +394,7 @@ subroutine write_clump_properties(to_file)
      if(saddle_threshold>0)then
         close(ilun2)
      endif
+  end if
 
      ! Send the token
 #ifndef WITHOUTMPI
@@ -417,7 +418,7 @@ subroutine write_clump_properties(to_file)
      if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
   endif
 
-  end if
+
 
 
 end subroutine write_clump_properties
