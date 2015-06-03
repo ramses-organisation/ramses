@@ -24,9 +24,11 @@ subroutine init_amr
   real(dp)::dx_loc,scale
   character(LEN=128)::ordering2
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
   real(dp),allocatable,dimension(:)::bxmin,bxmax
-
+  integer,parameter::tag=1100
+  integer::dummy_io,info2
+  
   if(verbose.and.myid==1)write(*,*)'Entering init_amr'
 
   ! Constants
@@ -242,9 +244,26 @@ subroutine init_amr
   ! Read amr file for a restart
   !----------------------------
   if(nrestart>0)then
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
      ilun=myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/amr_'//TRIM(nchar)//'.out'
+
+     if(IOGROUPSIZEREP>0)then 
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/amr_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/amr_'//TRIM(nchar)//'.out'
+     endif
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      inquire(file=fileloc, exist=ok)
@@ -463,6 +482,19 @@ subroutine init_amr
         end do
      end do
      close(ilun)
+
+     ! Send the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
+
 
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'amr.tmp read for processor ',myid

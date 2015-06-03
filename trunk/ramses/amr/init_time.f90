@@ -151,6 +151,9 @@ subroutine init_file
   use hydro_commons
   use pm_commons
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
   !------------------------------------------------------
   ! Read geometrical parameters in the initial condition files.
   ! Initial conditions are supposed to be made by 
@@ -160,14 +163,28 @@ subroutine init_file
   real(sp)::dxini0,xoff10,xoff20,xoff30,astart0,omega_m0,omega_l0,h00
   character(LEN=80)::filename
   logical::ok
-
+  integer,parameter::tag=1116
+  integer::dummy_io,info2
+  
   if(verbose)write(*,*)'Entering init_file'
 
   ! Reading initial conditions parameters only
+
+
   nlevelmax_part=levelmin-1
   do ilevel=levelmin,nlevelmax
      if(initfile(ilevel).ne.' ')then
         filename=TRIM(initfile(ilevel))//'/ic_d'
+
+        ! Wait for the token
+#ifndef WITHOUTMPI
+        if(IOGROUPSIZE>0) then
+           if (mod(myid-1,IOGROUPSIZE)/=0) then
+              call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                   & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+           end if
+        endif
+#endif
         INQUIRE(file=filename,exist=ok)
         if(.not.ok)then
            if(myid==1)then
@@ -182,6 +199,20 @@ subroutine init_file
              & ,xoff10,xoff20,xoff30 &
              & ,astart0,omega_m0,omega_l0,h00
         close(10)
+
+        ! Send the token
+#ifndef WITHOUTMPI
+        if(IOGROUPSIZE>0) then
+           if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+              dummy_io=1
+              call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                   & MPI_COMM_WORLD,info2)
+           end if
+        endif
+#endif
+        
+
+
         dxini(ilevel)=dxini0
         xoff1(ilevel)=xoff10
         xoff2(ilevel)=xoff20
@@ -189,6 +220,7 @@ subroutine init_file
         nlevelmax_part=nlevelmax_part+1
      endif
   end do
+
 
   ! Check compatibility with run parameters
   nx_loc=icoarse_max-icoarse_min+1
@@ -234,6 +266,9 @@ subroutine init_cosmo
   use gadgetreadfilemod
 
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
   ! in the initial condition files.
@@ -247,6 +282,8 @@ subroutine init_cosmo
   logical::ok
   TYPE(gadgetheadertype) :: gadgetheader 
   integer::i
+  integer,parameter::tag=1117
+  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -268,6 +305,18 @@ subroutine init_cosmo
            else
               filename=TRIM(initfile(ilevel))//'/ic_deltab'
            endif
+ 
+           ! Wait for the token          
+#ifndef WITHOUTMPI
+           if(IOGROUPSIZE>0) then
+              if (mod(myid-1,IOGROUPSIZE)/=0) then
+                 call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                      & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+              end if
+           endif
+#endif
+           
+
            INQUIRE(file=filename,exist=ok)
            if(.not.ok)then
               if(myid==1)then
@@ -282,6 +331,19 @@ subroutine init_cosmo
                 & ,xoff10,xoff20,xoff30 &
                 & ,astart0,omega_m0,omega_l0,h00
            close(10)
+
+           ! Send the token
+#ifndef WITHOUTMPI
+           if(IOGROUPSIZE>0) then
+              if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                 dummy_io=1
+                 call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                      & MPI_COMM_WORLD,info2)
+              end if
+           endif
+#endif
+
+
            dxini(ilevel)=dxini0
            xoff1(ilevel)=xoff10
            xoff2(ilevel)=xoff20

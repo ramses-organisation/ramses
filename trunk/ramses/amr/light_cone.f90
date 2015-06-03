@@ -11,8 +11,8 @@ subroutine output_cone()
 #include "mpif.h"
 #endif
   
-  integer::dummy_io,info
-  integer,parameter::tag=100
+  integer::info,dummy_io,info2
+  integer,parameter::tag=1118
 
   character(len=5) :: istep_str
   character(len=100) :: conedir, conecmd, conefile
@@ -62,8 +62,10 @@ subroutine output_cone()
   call title(nstep_coarse, istep_str)
   conedir = "cone_" // trim(istep_str) // "/"
   conecmd = "mkdir -p " // trim(conedir)
-  if (myid==1) call system(conecmd)
-
+  if(.not.withoutmkdir) then
+     if (myid==1) call system(conecmd)
+  endif
+  
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD, info)
 #endif
@@ -89,6 +91,17 @@ subroutine output_cone()
 
   allocate(tmparr(1:3, 1:nalloc2))
   ! ------------------------------------------------
+
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZECONE>0) then
+     if (mod(myid-1,IOGROUPSIZECONE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+
 
   ilevel=levelmin
   ! Loop over cpus
@@ -278,6 +291,19 @@ subroutine output_cone()
      write(ilun,*) aexp
      close(ilun)
   endif
+
+     ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZECONE>0) then
+     if(mod(myid,IOGROUPSIZECONE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
+
    if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_cone'
      write(*,*)'npart_out=',npart_out,'opened=',opened
