@@ -1290,6 +1290,9 @@ subroutine dump_mg_levels(ilevel,idout)
    use amr_commons
    use poisson_commons
    implicit none
+#ifndef WITHOUTMPI
+   include 'mpif.h'  
+#endif
    integer, intent(in) :: idout, ilevel
 
    character(len=24)  :: cfile
@@ -1297,11 +1300,24 @@ subroutine dump_mg_levels(ilevel,idout)
    character(len=5)   :: cout='00000'
 
    integer :: i, ngrids, igrid, icpu, idim
+   
+   integer,parameter::tag=1119
+   integer::dummy_io,info2
 
    write(ccpu,'(I5.5)') myid
    write(cout,'(I5.5)') idout
    cfile='multigrid_'//cout//'.out'//ccpu
-
+   
+   ! Wait for the token
+#ifndef WITHOUTMPI
+   if(IOGROUPSIZE>0) then
+      if (mod(myid-1,IOGROUPSIZE)/=0) then
+         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+              & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+      end if
+   endif
+#endif
+   
    open(unit=10,file=cfile,status='unknown',form='formatted')
 
    write(10,'(I1)') ndim
@@ -1335,6 +1351,18 @@ subroutine dump_mg_levels(ilevel,idout)
    end do
 
    close(10)
+
+        ! Send the token
+#ifndef WITHOUTMPI
+   if(IOGROUPSIZE>0) then
+      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+         dummy_io=1
+         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+              & MPI_COMM_WORLD,info2)
+      end if
+   endif
+#endif
+
 end subroutine dump_mg_levels
 
 ! ########################################################################
