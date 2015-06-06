@@ -15,7 +15,9 @@ subroutine init_hydro
   real(dp),dimension(:),allocatable::xx
   real(dp)::gamma2
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
+  integer,parameter::tag=1108
+  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_hydro'
   
@@ -38,9 +40,30 @@ subroutine init_hydro
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
+
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/hydro_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
+     endif
+
+
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+
+     ! Wait for the token                                                                                                                                                                    
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
+
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
@@ -160,6 +183,20 @@ subroutine init_hydro
         end do
      end do
      close(ilun)
+
+     ! Send the token                                                                                                                                                                        
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
+
+
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'hydro.tmp read for processor ',myid
      call MPI_BARRIER(MPI_COMM_WORLD,info)
