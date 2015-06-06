@@ -245,7 +245,7 @@ SUBROUTINE init_SED_table()
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,IOGROUPSIZE,ncpu
   use rt_parameters
   use spectrum_integrator_module
 #ifndef WITHOUTMPI
@@ -260,8 +260,11 @@ SUBROUTINE init_SED_table()
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp
-  integer::locid,ncpu,ierr
+  integer::locid,ncpu2,ierr
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
+  integer,parameter::tag=1132
+  integer::dummy_io,info2
+
 !-------------------------------------------------------------------------
   if(myid==1) &
         write(*,*) 'Stars are photon emitting, so initializing SED table'
@@ -290,6 +293,16 @@ SUBROUTINE init_SED_table()
      endif
      call clean_stop
   end if
+
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
 
   ! READ METALLICITY BINS-------------------------------------------------
   open(unit=10,file=fZs,status='old',form='formatted')
@@ -321,14 +334,27 @@ SUBROUTINE init_SED_table()
      end do
   end do
   close(10)
+
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+
   ! If MPI then share the SED integration between the cpus:
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
 #endif
 #ifdef WITHOUTMPI
   locid=0
-  ncpu=1
+  ncpu2=1
 #endif
 
   ! Perform SED integration of luminosity, csn and egy per (age,Z) bin----
@@ -337,7 +363,7 @@ SUBROUTINE init_SED_table()
      tbl=0.
      pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
      do iz = 1, nzs                                     ! Loop metallicity
-     do ia = locid+1,nAges,ncpu                                 ! Loop age
+     do ia = locid+1,nAges,ncpu2                                 ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         do ii = 1,nIons                                     ! Loop species
@@ -1337,7 +1363,7 @@ SUBROUTINE init_UV_background()
 ! d) wavelengths (increasing order) [Angstrom]
 ! e) fluxes per (redshift,wavelength) [photons cm-2 s-1 A-1 sr-1]
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,IOGROUPSIZE,ncpu
   use rt_parameters
   use SED_module
 #ifndef WITHOUTMPI
@@ -1347,9 +1373,12 @@ SUBROUTINE init_UV_background()
   real(kind=8),allocatable  :: Ls(:)            ! Wavelengths
   real(kind=8),allocatable  :: UV(:,:)          ! UV f(lambda,z)
   real(kind=8),allocatable  :: tbl(:,:), tbl2(:,:)
-  integer::i,ia,iz,ip,ii,dum,locid,ncpu,ierr
+  integer::i,ia,iz,ip,ii,dum,locid,ncpu2,ierr
   logical::ok
   real(kind=8)::da, dz, pL0,pL1
+  integer,parameter::tag=1133
+  integer::dummy_io,info2
+
 !-------------------------------------------------------------------------
   ! First check if there is any need for UV setup:
   if(rt_UVsrc_nHmax .le. 0d0 .and. .not. rt_UV_hom) return
@@ -1369,19 +1398,43 @@ SUBROUTINE init_UV_background()
      endif
      call clean_stop
   end if
+  
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+
   ! Read redshifts, wavelengths and spectra
   open(unit=10,file=TRIM(uv_file),status='old',form='unformatted')
   read(10) UV_nz ; allocate(UV_zeds(UV_nz)) ; read(10) UV_zeds(:)
   read(10) nLs   ; allocate(Ls(nLs))        ; read(10) Ls(:)
   allocate(UV(nLs,UV_nz))                   ; read(10) UV(:,:)
   close(10)
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
+  
   ! If mpi then share the UV integration between the cpus:
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
 #endif
 #ifdef WITHOUTMPI
-  locid=0 ; ncpu=1
+  locid=0 ; ncpu2=1
 #endif
 
   ! Shift the highest z in the table (10) to reionization epoch,
@@ -1396,7 +1449,7 @@ SUBROUTINE init_UV_background()
      allocate(tbl(UV_nz, 2))
      do ii = 1, nIons
         tbl=0.
-        do iz = locid+1,UV_nz,ncpu
+        do iz = locid+1,UV_nz,ncpu2
            tbl(iz,1)= getUV_Irate(Ls,UV(:,iz),nLs,ii)
            tbl(iz,2)= getUV_Hrate(Ls,UV(:,iz),nLs,ii)
         end do
@@ -1449,7 +1502,7 @@ SUBROUTINE init_UV_background()
         tbl=0.
         pL0 = groupL0(nSEDgroups+ip) !  Energy interval of photon group ip
         pL1 = groupL1(nSEDgroups+ip) !
-        do iz = locid+1,UV_nz,ncpu
+        do iz = locid+1,UV_nz,ncpu2
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0.d0) cycle     ! Can't integrate zero fluxes
            tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)

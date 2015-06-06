@@ -18,9 +18,11 @@ subroutine rt_init_hydro
   real(dp),dimension(:),allocatable::xx
   real(dp)::gamma2
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
   integer::nRTvar2=0
   logical::ok
+  integer,parameter::tag=1130
+  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_rt'
   !------------------------------------------------------
@@ -53,7 +55,17 @@ subroutine rt_init_hydro
 
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/rt_'//TRIM(nchar)//'.out'
+     
+
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/rt_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/rt_'//TRIM(nchar)//'.out'
+     endif
+
+
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      inquire(file=fileloc, exist=ok)
@@ -62,6 +74,18 @@ subroutine rt_init_hydro
              'Could not read RT output, but continuing in case of postprocessing.'
         return ! May be post-processing of normal RAMSES
      endif
+
+     
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nrtvar2
@@ -124,6 +148,18 @@ subroutine rt_init_hydro
         end do
      end do
      close(ilun)  
+
+     ! Send the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
 
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'rt.tmp read for processor ',myid
