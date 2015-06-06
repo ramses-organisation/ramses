@@ -55,7 +55,9 @@ subroutine rt_init_flow_fine(ilevel)
   logical::error,ok_file1,ok_file2,ok_file3,ok_file
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
-
+ integer,parameter::tag=1129
+ integer::dummy_io,info2
+  
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -155,6 +157,16 @@ subroutine rt_init_flow_fine(ilevel)
            ! Reading the existing file   
            if(myid==1)write(*,*)'Reading file '//TRIM(filename)
            if(multiple)then
+              ! Wait for the token
+#ifndef WITHOUTMPI
+              if(IOGROUPSIZE>0) then
+                 if (mod(myid-1,IOGROUPSIZE)/=0) then
+                    call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                         & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+                 end if
+              endif
+#endif
+
               ilun=ncpu+myid+10
               open(ilun,file=filename,form='unformatted')
               rewind ilun
@@ -167,6 +179,17 @@ subroutine rt_init_flow_fine(ilevel)
                  end if
               end do
               close(ilun)
+              ! Send the token
+#ifndef WITHOUTMPI
+              if(IOGROUPSIZE>0) then
+                 if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+                    dummy_io=1
+                    call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                         & MPI_COMM_WORLD,info2)
+                 end if
+              endif
+#endif
+
            else
               if(myid==1)then
                  open(10,file=filename,form='unformatted')
