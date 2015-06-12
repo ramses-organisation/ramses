@@ -108,19 +108,6 @@ subroutine read_params
 #endif
 
   !-------------------------------------------------
-  ! Read optional nrestart command-line argument
-  !-------------------------------------------------
-  if (myid==1 .and. narg == 2) then
-     CALL getarg(2,cmdarg)
-     read(cmdarg,*) nrestart
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-#endif
-
-
-  !-------------------------------------------------
   ! Read the namelist
   !-------------------------------------------------
 
@@ -161,6 +148,17 @@ subroutine read_params
   read(1,NML=poisson_params,END=81)
 81 continue
 
+  !-------------------------------------------------
+  ! Read optional nrestart command-line argument
+  !-------------------------------------------------
+  if (myid==1 .and. narg == 2) then
+     CALL getarg(2,cmdarg)
+     read(cmdarg,*) nrestart
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
 
   !-------------------------------------------------
   ! Compute time step for outputs
