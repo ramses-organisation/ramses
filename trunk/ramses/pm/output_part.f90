@@ -2,6 +2,9 @@ subroutine backup_part(filename)
   use amr_commons
   use pm_commons
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif 
   character(LEN=80)::filename
 
   integer::i,idim,ilun,ipart
@@ -12,9 +15,22 @@ subroutine backup_part(filename)
   integer(i8b),allocatable,dimension(:)::ii8
   integer,allocatable,dimension(:)::ll
   logical,allocatable,dimension(:)::nb
-  
+  integer,parameter::tag=1122
+  integer::dummy_io,info2
+
   if(verbose)write(*,*)'Entering backup_part'
   
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+
+
   ilun=2*ncpu+myid+10
 
   call title(myid,nchar)
@@ -125,6 +141,18 @@ subroutine backup_part(filename)
      deallocate(xdp)
   end if
   close(ilun)
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
 
 end subroutine backup_part
 

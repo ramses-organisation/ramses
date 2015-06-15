@@ -7,11 +7,13 @@ subroutine backup_poisson(filename)
 #endif
   character(LEN=80)::filename
 
-  integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound,info
+  integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound
   integer,allocatable,dimension(:)::ind_grid
   real(dp),allocatable,dimension(:)::xdp
   character(LEN=5)::nchar
   character(LEN=80)::fileloc
+  integer,parameter::tag=1123
+  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering backup_poisson'
 
@@ -19,6 +21,18 @@ subroutine backup_poisson(filename)
      
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
+
+ ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
+
   open(unit=ilun,file=fileloc,form='unformatted')
   write(ilun)ncpu
   write(ilun)ndim
@@ -64,6 +78,16 @@ subroutine backup_poisson(filename)
      end do
   end do
   close(ilun)
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
      
 end subroutine backup_poisson
 

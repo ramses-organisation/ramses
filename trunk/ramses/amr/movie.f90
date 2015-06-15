@@ -81,12 +81,14 @@ subroutine output_frame()
   moviedir = 'movie'//trim(temp_string)//'/'
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(myid==1) write(*,*) "Writing frame ", istep_str
+  if(.not.withoutmkdir) then 
 #ifdef NOSYSTEM
-  if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
 #else
-  if(myid==1)call system(moviecmd)
+     if(myid==1)call system(moviecmd)
 #endif
-
+  endif
+  
   infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
   if(myid==1)call output_info(infofile)
   
