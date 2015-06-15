@@ -10,13 +10,18 @@ SUBROUTINE rt_backup_hydro(filename)
   use rt_hydro_commons
   use rt_parameters
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   character(LEN=80)::filename,filedir,rt_filename
 
   integer::i,ivar,idim,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound
   integer,allocatable,dimension(:)::ind_grid
   real(dp),allocatable,dimension(:)::xdp
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::fileloc
+  integer,parameter::tag=1131
+  integer::dummy_io,info2
 !------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering backup_rt'
 
@@ -24,12 +29,27 @@ SUBROUTINE rt_backup_hydro(filename)
      
   if(myid==1)then
      call title(ifout-1,nchar)
-     filedir='output_'//TRIM(nchar)//'/'
+     if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+     else
+        filedir='output_'//TRIM(nchar)//'/'
+     endif
+     
      rt_filename=TRIM(filedir)//'info_rt_'//TRIM(nchar)//'.txt'
      call output_rtInfo(rt_filename)
   endif                                                           
   
   if(.not.rt)return
+ ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
 
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -82,7 +102,18 @@ SUBROUTINE rt_backup_hydro(filename)
      end do
   end do
   close(ilun)
-     
+  
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
 end subroutine rt_backup_hydro
 
 !************************************************************************

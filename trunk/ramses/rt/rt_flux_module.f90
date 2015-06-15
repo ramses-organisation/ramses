@@ -15,11 +15,17 @@ SUBROUTINE read_hll_eigenvalues()
 ! Read M1 eigenvalues for hll method from file 'hll_evals.list' 
 ! into              in the 3*4 flux tensor  
 !------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,IOGROUPSIZE,ncpu
   use rt_parameters,only:hll_evals_file
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   integer::i,j,ii,jj
   real(dp)::dummy
   logical::ok
+  integer,parameter::tag=1128
+  integer::dummy_io,info2
+
 !------------------------------------------------------------------------
   if(myid==1) write(*,*) 'Reading HLL eigenvalues from file'
   if(hll_evals_file.eq.'') &
@@ -34,6 +40,18 @@ SUBROUTINE read_hll_eigenvalues()
      endif
      call clean_stop
   end if
+  
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+  
+
   open(unit=10,file=TRIM(hll_evals_file),status='old',form='formatted')
   read(10,*)i
   !write(*,*)i
@@ -44,6 +62,19 @@ SUBROUTINE read_hll_eigenvalues()
      end do
   end do
   close(10)
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+
+
 END SUBROUTINE read_hll_eigenvalues
 
 !************************************************************************
