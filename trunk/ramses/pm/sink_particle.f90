@@ -209,7 +209,7 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<msink_direct*1.9891d33/(scale_d*scale_l**3))then
+                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))then
                        mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
@@ -225,7 +225,7 @@ subroutine create_cloud_from_sink
   end do
   
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct*1.9891d33/(scale_d*scale_l**3))
+     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -2678,7 +2678,7 @@ subroutine read_sink_params()
   real(dp)::dx_min,scale,cty
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,mass_sink_seed,&
+       ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,c_acc,create_sinks,mass_sink_seed,&
        eddington_limit,sink_drag,acc_sink_boost,mass_merger_vel_check_AGN,&
        clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -2780,14 +2780,14 @@ subroutine read_sink_params()
 
   !check for periodic boundary conditions
   if (nx==1 .or. ny==1 .or. nz==1)then
-     if (msink_direct .ge. 0.)then
+     if (mass_sink_direct_force .ge. 0.)then
         if(myid==1)print*, 'periodic boundaries in combination with '
         if(myid==1)print*, 'direct force sinks are not treated accurately....'
      end if
   end if
 
-  if(msink_direct<0.)then 
-     msink_direct=huge(0._dp)
+  if(mass_sink_direct_force<0.)then 
+     mass_sink_direct_force=huge(0._dp)
   end if
 
 end subroutine read_sink_params
