@@ -310,7 +310,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
 
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx-r*dux
-              if(scheme.ne.'induction')then
+              if(ischeme.ne.1)then
               su0 = -u*dux-(dpx+B*dBx+C*dCx)/r  
               sv0 = -u*dvx+(A*dBx)/r
               sw0 = -u*dwx+(A*dCx)/r
@@ -546,7 +546,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               
               ! Source terms (including transverse derivatives)
               sr0 = (-u*drx-dux*r)*dtdx + (-v*dry-dvy*r)*dtdy
-              if(scheme.ne.'induction')then
+              if(ischeme.ne.1)then
               su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy 
               sv0 = (-u*dvx+A*dBx/r)*dtdx + (-v*dvy-(dpy+A*dAy+C*dCy)/r)*dtdy
               sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy
@@ -950,7 +950,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               
               ! Source terms (including transverse derivatives)
               sr0 = (-u*drx-dux*r)*dtdx + (-v*dry-dvy*r)*dtdy + (-w*drz-dwz*r)*dtdz 
-              if(scheme.ne.'induction')then
+              if(ischeme.ne.1)then
               su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy + (-w*duz+C*dAz/r)*dtdz 
               sv0 = (-u*dvx+A*dBx/r)*dtdx + (-v*dvy-(dpy+A*dAy+C*dCy)/r)*dtdy + (-w*dvz+C*dBz/r)*dtdz
               sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy + (-w*dwz-(dpz+A*dAz+B*dBz)/r)*dtdz 
@@ -1392,19 +1392,19 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 #endif
               ! Solve 1D Riemann problem
               zero_flux = one
-              IF(scheme.NE.'induction')THEN
-              SELECT CASE (riemann)
-              CASE ('roe')
+              IF(ischeme.NE.1)THEN
+              SELECT CASE (iriemann)
+              CASE (1)
                  CALL athena_roe    (qleft,qright,fgdnv,zero_flux)
-              CASE ('llf')
+              CASE (0)
                  CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
-              CASE ('hll')
+              CASE (2)
                  CALL hll           (qleft,qright,fgdnv)
-              CASE ('hlld')
+              CASE (3)
                  CALL hlld          (qleft,qright,fgdnv)
-              CASE ('upwind')
+              CASE (4)
                  CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
-              CASE ('hydro')
+              CASE (5)
                  CALL hydro_acoustic(qleft,qright,fgdnv)
               CASE DEFAULT
                  write(*,*)'unknown riemann solver'
@@ -1582,7 +1582,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                ELR = qLR(l,3)*qLR(l,7) - qLR(l,4)*qLR(l,6)  
                ERR = qRR(l,3)*qRR(l,7) - qRR(l,4)*qRR(l,6) 
 
-               if(riemann2d=='hlld')then
+               if(iriemann2d==5)then
 
                   
                   rLL=qLL(l,1); pLL=qLL(l,2); uLL=qLL(l,3); vLL=qLL(l,4); ALL=qLL(l,6); BLL=qLL(l,7) ; CLL=qLL(l,8) 
@@ -1757,7 +1757,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   
                   emf(l,i,j,k) = E
 
-               else if(riemann2d=='hll')then
+               else if(iriemann2d==3)then
 
                   ! Compute 4 fast magnetosonic velocity relative to x direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
@@ -1836,7 +1836,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                        -ST*SB/(ST-SB)*(qRR(l,6)-qLL(l,6)) &
                        +SR*SL/(SR-SL)*(qRR(l,7)-qLL(l,7))
 
-               else if (riemann2d=='hlla')then
+               else if (iriemann2d==4)then
 
                   ! Compute 4 Alfven velocity relative to x direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
@@ -1923,12 +1923,12 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #endif
                   
                   zero_flux = 0.0
-                  SELECT CASE (riemann2d)
-                  CASE ('roe')
+                  SELECT CASE (iriemann2d)
+                  CASE (1)
                      CALL athena_roe   (qleft,qright,fmean_x,zero_flux)
-                  CASE ('llf')
+                  CASE (0)
                      CALL lax_friedrich(qleft,qright,fmean_x,zero_flux)
-                  CASE ('upwind')
+                  CASE (2)
                      CALL upwind       (qleft,qright,fmean_x,zero_flux)
                   CASE DEFAULT
                      write(*,*)'unknown 2D riemann solver'
@@ -1977,12 +1977,12 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #endif
 
                   zero_flux = 0.
-                  SELECT CASE (riemann2d)
-                  CASE ('roe')
+                  SELECT CASE (iriemann2d)
+                  CASE (1)
                      CALL athena_roe   (qleft,qright,fmean_y,zero_flux)
-                  CASE ('llf')
+                  CASE (0)
                      CALL lax_friedrich(qleft,qright,fmean_y,zero_flux)
-                  CASE ('upwind')
+                  CASE (2)
                      CALL upwind       (qleft,qright,fmean_y,zero_flux)
                   CASE DEFAULT
                      write(*,*)'unknown 2D riemann solver'

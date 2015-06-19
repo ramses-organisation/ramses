@@ -94,6 +94,7 @@ module amr_parameters
   integer::foutput=1000000    ! Frequency of outputs
   integer::output_mode=0      ! Output mode (for hires runs)
   logical::gadget_output=.false. ! Output in gadget format
+  logical::output_now=.false. ! write output next step
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5

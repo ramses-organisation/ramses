@@ -37,7 +37,7 @@ subroutine courant_fine(ilevel)
   dx=0.5D0**ilevel*scale
   vol=dx**ndim
 
-  if (scheme .eq. 'induction') then
+  if (ischeme .eq. 1) then
      CALL velocity_fine(ilevel)
      do ivar=1,nvar+3
         call make_virtual_fine_dp(uold(1,ivar),ilevel)

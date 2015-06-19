@@ -612,7 +612,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
-  if(scheme.eq.'induction')then
+  if(ischeme.eq.1)then
   !---------------------------------
   ! Reset all Euler variables fluxes
   !---------------------------------
