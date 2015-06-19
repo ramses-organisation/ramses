@@ -64,7 +64,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   do k = 1, ncell
      ctot(k)=zero
   end do
-  if(scheme.eq.'induction')then
+  if(ischeme.eq.1)then
      do idim = 1,ndim   ! WARNING: ndim instead of 3  
         do k = 1, ncell
            ctot(k)=ctot(k)+abs(uu(k,idim+1))
@@ -285,7 +285,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
      end do
   end if
 
-  if(scheme.eq.'induction')then
+  if(ischeme.eq.1)then
      if(m_refine(ilevel) >= 0.)then
         if(emag_tot==0.0)then
            emag_loc=1.5
