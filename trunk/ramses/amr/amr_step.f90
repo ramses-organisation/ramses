@@ -116,7 +116,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output results to files
   !------------------------
   if(ilevel==levelmin)then
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout))then
+     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now==.true.)then
         if(.not.ok_defrag)then
            call defrag
         endif
@@ -128,6 +128,10 @@ recursive subroutine amr_step(ilevel,icount)
 
         ! Dump lightcone
         if(lightcone) call output_cone()
+
+        if (output_now==.true.) then
+          output_now=.false.
+        endif
 
      endif
 
