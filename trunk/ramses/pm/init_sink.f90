@@ -289,7 +289,7 @@ subroutine init_sink
      end do
   end if
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
+     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force)
   end do  
 end subroutine init_sink
 !################################################################
