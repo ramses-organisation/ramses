@@ -248,9 +248,12 @@ subroutine ensure_ref_rules(ilevel)
      do ind=1,threetondim
         do i=1,ngrid
            ind_cell(i)=nbors_father_cells(i,ind)
+           if(ind_cell(i)==0)ok(i)=.false.
         end do
         do i=1,ngrid
-           if(son(ind_cell(i))==0)ok(i)=.false.
+           if(ind_cell(i)>0)then
+              if(son(ind_cell(i))==0)ok(i)=.false.
+           endif
         end do
      end do
      
