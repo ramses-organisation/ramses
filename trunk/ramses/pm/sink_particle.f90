@@ -832,8 +832,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   virt_acc_mass=0.d0; delta_M=0.d0
   sin_theta=sin(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
-  v_AGN=v_AGN*1e5 ! km/s->cm/s
-  v_max=v_max*1e5 ! km/s->cm/s
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
@@ -900,7 +898,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
                  fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
-                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density,v_max/scale_v*weight*d)
+                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
               end if
 
               if (threshold_accretion)then
