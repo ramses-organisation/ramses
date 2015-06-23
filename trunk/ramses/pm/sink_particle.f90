@@ -485,10 +485,12 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::scale,weight,dx_min,one_over_dx_min
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
+  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
+#else
+  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
 #endif
   real(dp),dimension(1:nvector),save::egas,divpart
   real(dp),dimension(1:nvector,1:ndim),save::xpart
-  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
   integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   
   do idim=1,ndim
