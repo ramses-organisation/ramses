@@ -1027,9 +1027,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                   if(feedback_scheme=='momentum')then
                      ! checking if particle is in cone
                      cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
-                     cone_dist=abs(sum(r_rel(1:3)*cone_dir(1:3)))
-                     orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
-                     if (orth_dist.le.cone_dist*sin_theta)then
+                     cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
+                     orth_dist=sqrt(sum(r_rel(1:3)-cone_dist*cone_dir(1:3))**2)
+                     if (orth_dist.le.abs(cone_dist)*sin_theta)then
                         unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
                         unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
                      end if
