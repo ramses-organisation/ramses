@@ -349,7 +349,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qp(l,i,j,k,iA,1) = A
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
-              qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
+              if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
@@ -365,7 +365,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,iA,1) = A
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
-              qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
+              if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
@@ -586,7 +586,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iA,1) = AL     
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
-              qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
+              if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -603,7 +603,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iA,1) = AR     
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
-              qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
+              if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -620,7 +620,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iA,2) = A - dAy
               qp(l,i,j,k,iB,2) = BL     
               qp(l,i,j,k,iC,2) = C - dCy
-              qp(l,i,j,k,ir,2) = MAX(smallr, qp(l,i,j,k,ir,2))
+              if (qp(l,i,j,k,ir,2)<smallr) qp(l,i,j,k,ir,2)=r
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -637,7 +637,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iA,2) = A + dAy
               qm(l,i,j,k,iB,2) = BR     
               qm(l,i,j,k,iC,2) = C + dCy
-              qm(l,i,j,k,ir,2) = MAX(smallr, qm(l,i,j,k,ir,2))
+              if (qm(l,i,j,k,ir,2)<smallr) qm(l,i,j,k,ir,2)=r
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -654,7 +654,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
               qRT(l,i,j,k,iA,3) = AR+ (   +dARy)
               qRT(l,i,j,k,iB,3) = BR+ (+dBRx   )
-              qRT(l,i,j,k,ir,3) = MAX(smallr, qRT(l,i,j,k,ir,3))
+              if (qRT(l,i,j,k,ir,3)<smallr) qRT(l,i,j,k,ir,3)=r
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -671,7 +671,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
               qRB(l,i,j,k,iA,3) = AR+ (   -dARy)
               qRB(l,i,j,k,iB,3) = BL+ (+dBLx   )
-              qRB(l,i,j,k,ir,3) = MAX(smallr, qRB(l,i,j,k,ir,3))
+              if (qRB(l,i,j,k,ir,3)<smallr) qRB(l,i,j,k,ir,3)=r
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -688,7 +688,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
               qLT(l,i,j,k,iA,3) = AL+ (   +dALy)
               qLT(l,i,j,k,iB,3) = BR+ (-dBRx   )
-              qLT(l,i,j,k,ir,3) = MAX(smallr, qLT(l,i,j,k,ir,3))
+              if (qLT(l,i,j,k,ir,3)<smallr) qLT(l,i,j,k,ir,3)=r
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -705,7 +705,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
               qLB(l,i,j,k,iA,3) = AL+ (   -dALy)
               qLB(l,i,j,k,iB,3) = BL+ (-dBLx   )
-              qLB(l,i,j,k,ir,3) = MAX(smallr, qLB(l,i,j,k,ir,3))
+              if (qLB(l,i,j,k,ir,3)<smallr) qLB(l,i,j,k,ir,3)=r
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -990,7 +990,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,1) = AL
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
-              qp(l,i,j,k,ir,1) = MAX(smallr, qp(l,i,j,k,ir,1))
+              if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1007,7 +1007,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,1) = AR
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
-              qm(l,i,j,k,ir,1) = MAX(smallr, qm(l,i,j,k,ir,1))
+              if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1024,7 +1024,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,2) = A - dAy
               qp(l,i,j,k,iB,2) = BL
               qp(l,i,j,k,iC,2) = C - dCy
-              qp(l,i,j,k,ir,2) = MAX(smallr, qp(l,i,j,k,ir,2))
+              if (qp(l,i,j,k,ir,2)<smallr) qp(l,i,j,k,ir,2)=r
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1041,7 +1041,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,2) = A + dAy
               qm(l,i,j,k,iB,2) = BR
               qm(l,i,j,k,iC,2) = C + dCy
-              qm(l,i,j,k,ir,2) = MAX(smallr, qm(l,i,j,k,ir,2))
+              if (qm(l,i,j,k,ir,2)<smallr) qm(l,i,j,k,ir,2)=r
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1058,7 +1058,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,3) = A - dAz
               qp(l,i,j,k,iB,3) = B - dBz
               qp(l,i,j,k,iC,3) = CL
-              qp(l,i,j,k,ir,3) = MAX(smallr, qp(l,i,j,k,ir,3))
+              if (qp(l,i,j,k,ir,3)<smallr) qp(l,i,j,k,ir,3)=r
               qp(l,i,j,k,ip,3) = MAX(smallp, qp(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1075,7 +1075,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,3) = A + dAz
               qm(l,i,j,k,iB,3) = B + dBz
               qm(l,i,j,k,iC,3) = CR
-              qm(l,i,j,k,ir,3) = MAX(smallr, qm(l,i,j,k,ir,3))
+              if (qm(l,i,j,k,ir,3)<smallr) qm(l,i,j,k,ir,3)=r
               qm(l,i,j,k,ip,3) = MAX(smallp, qm(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1092,7 +1092,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,1) = A + (+dAy+dAz)
               qRT(l,i,j,k,iB,1) = BR+ (   +dBRz)
               qRT(l,i,j,k,iC,1) = CR+ (+dCRy   )
-              qRT(l,i,j,k,ir,1) = MAX(smallr, qRT(l,i,j,k,ir,1))
+              if (qRT(l,i,j,k,ir,1)<smallr) qRT(l,i,j,k,ir,1)=r
               qRT(l,i,j,k,ip,1) = MAX(smallp, qRT(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1109,7 +1109,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,1) = A + (+dAy-dAz)
               qRB(l,i,j,k,iB,1) = BR+ (   -dBRz)
               qRB(l,i,j,k,iC,1) = CL+ (+dCLy   )
-              qRB(l,i,j,k,ir,1) = MAX(smallr, qRB(l,i,j,k,ir,1))
+              if (qRB(l,i,j,k,ir,1)<smallr) qRB(l,i,j,k,ir,1)=r
               qRB(l,i,j,k,ip,1) = MAX(smallp, qRB(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1126,7 +1126,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,1) = A + (-dAy+dAz)
               qLT(l,i,j,k,iB,1) = BL+ (   +dBLz)
               qLT(l,i,j,k,iC,1) = CR+ (-dCRy   )
-              qLT(l,i,j,k,ir,1) = MAX(smallr, qLT(l,i,j,k,ir,1))
+              if (qLT(l,i,j,k,ir,1)<smallr) qLT(l,i,j,k,ir,1)=r
               qLT(l,i,j,k,ip,1) = MAX(smallp, qLT(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1143,7 +1143,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,1) = A + (-dAy-dAz)
               qLB(l,i,j,k,iB,1) = BL+ (   -dBLz)
               qLB(l,i,j,k,iC,1) = CL+ (-dCLy   )
-              qLB(l,i,j,k,ir,1) = MAX(smallr, qLB(l,i,j,k,ir,1))
+              if (qLB(l,i,j,k,ir,1)<smallr) qLB(l,i,j,k,ir,1)=r
               qLB(l,i,j,k,ip,1) = MAX(smallp, qLB(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1160,7 +1160,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,2) = AR+ (   +dARz)
               qRT(l,i,j,k,iB,2) = B + (+dBx+dBz)
               qRT(l,i,j,k,iC,2) = CR+ (+dCRx   )
-              qRT(l,i,j,k,ir,2) = MAX(smallr, qRT(l,i,j,k,ir,2))
+              if (qRT(l,i,j,k,ir,2)<smallr) qRT(l,i,j,k,ir,2)=r
               qRT(l,i,j,k,ip,2) = MAX(smallp, qRT(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1177,7 +1177,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,2) = AR+ (   -dARz)
               qRB(l,i,j,k,iB,2) = B + (+dBx-dBz)
               qRB(l,i,j,k,iC,2) = CL+ (+dCLx   )
-              qRB(l,i,j,k,ir,2) = MAX(smallr, qRB(l,i,j,k,ir,2))
+              if (qRB(l,i,j,k,ir,2)<smallr) qRB(l,i,j,k,ir,2)=r
               qRB(l,i,j,k,ip,2) = MAX(smallp, qRB(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1194,7 +1194,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,2) = AL+ (   +dALz)
               qLT(l,i,j,k,iB,2) = B + (-dBx+dBz)
               qLT(l,i,j,k,iC,2) = CR+ (-dCRx   )
-              qLT(l,i,j,k,ir,2) = MAX(smallr, qLT(l,i,j,k,ir,2))
+              if (qLT(l,i,j,k,ir,2)<smallr) qLT(l,i,j,k,ir,2)=r
               qLT(l,i,j,k,ip,2) = MAX(smallp, qLT(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1211,7 +1211,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,2) = AL+ (   -dALz)
               qLB(l,i,j,k,iB,2) = B + (-dBx-dBz)
               qLB(l,i,j,k,iC,2) = CL+ (-dCLx   )
-              qLB(l,i,j,k,ir,2) = MAX(smallr, qLB(l,i,j,k,ir,2))
+              if (qLB(l,i,j,k,ir,2)<smallr) qLB(l,i,j,k,ir,2)=r
               qLB(l,i,j,k,ip,2) = MAX(smallp, qLB(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1228,7 +1228,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,3) = AR+ (   +dARy)
               qRT(l,i,j,k,iB,3) = BR+ (+dBRx   )
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
-              qRT(l,i,j,k,ir,3) = MAX(smallr, qRT(l,i,j,k,ir,3))
+              if (qRT(l,i,j,k,ir,3)<smallr) qRT(l,i,j,k,ir,3)=r
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1245,7 +1245,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,3) = AR+ (   -dARy)
               qRB(l,i,j,k,iB,3) = BL+ (+dBLx   )
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
-              qRB(l,i,j,k,ir,3) = MAX(smallr, qRB(l,i,j,k,ir,3))
+              if (qRB(l,i,j,k,ir,3)<smallr) qRB(l,i,j,k,ir,3)=r
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1262,7 +1262,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,3) = AL+ (   +dALy)
               qLT(l,i,j,k,iB,3) = BR+ (-dBRx   )
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
-              qLT(l,i,j,k,ir,3) = MAX(smallr, qLT(l,i,j,k,ir,3))
+              if (qLT(l,i,j,k,ir,3)<smallr) qLT(l,i,j,k,ir,3)=r
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1279,7 +1279,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,3) = AL+ (   -dALy)
               qLB(l,i,j,k,iB,3) = BL+ (-dBLx   )
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
-              qLB(l,i,j,k,ir,3) = MAX(smallr, qLB(l,i,j,k,ir,3))
+              if (qLB(l,i,j,k,ir,3)<smallr) qLB(l,i,j,k,ir,3)=r
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
