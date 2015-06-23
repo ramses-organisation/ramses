@@ -2090,9 +2090,9 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 
            ! Compute velocities
            do l = 1, ngrid
-              q(l,i,j,k,2) = uin(l,i,j,k,2)/uin(l,i,j,k,1)
-              q(l,i,j,k,3) = uin(l,i,j,k,3)/uin(l,i,j,k,1)
-              q(l,i,j,k,4) = uin(l,i,j,k,4)/uin(l,i,j,k,1)
+              q(l,i,j,k,2) = uin(l,i,j,k,2)/q(l,i,j,k,1)
+              q(l,i,j,k,3) = uin(l,i,j,k,3)/q(l,i,j,k,1)
+              q(l,i,j,k,4) = uin(l,i,j,k,4)/q(l,i,j,k,1)
            end do
 
            ! Compute cell centered magnetic field
@@ -2122,7 +2122,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            ! Compute thermal pressure through EOS
            do l = 1, ngrid
               etot = uin(l,i,j,k,5) - emag(l) -erad(l)
-              eint = etot/uin(l,i,j,k,1)-eken(l)
+              eint = etot/q(l,i,j,k,1)-eken(l)
               q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
            end do
 
@@ -2144,7 +2144,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
         do j = ju1, ju2
            do i = iu1, iu2
               do l = 1, ngrid
-                 q(l,i,j,k,n) = uin(l,i,j,k,n)/uin(l,i,j,k,1)
+                 q(l,i,j,k,n) = uin(l,i,j,k,n)/q(l,i,j,k,1)
               end do
            end do
         end do
