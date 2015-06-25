@@ -68,6 +68,10 @@ subroutine dump_all
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
+        if(hydro)then
+           filename=TRIM(filedir)//'hydro_file_descriptor.txt'
+           call file_descriptor_hydro(filename)
+        end if
         if(cooling)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
