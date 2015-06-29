@@ -173,7 +173,7 @@ subroutine compute_clump_properties(xx)
   ! Scatter results to all MPI domains
   call boundary_peak_dp(max_dens)
   do i=1,ndim
-     call boundary_peak_dp(peak_pos(1,i),'sum')
+     call boundary_peak_dp(peak_pos(1,i))
      call boundary_peak_dp(center_of_mass(1,i))
      call boundary_peak_dp(clump_velocity(1,i))
   end do  
