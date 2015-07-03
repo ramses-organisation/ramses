@@ -1381,7 +1381,7 @@ SUBROUTINE init_UV_background()
 
 !-------------------------------------------------------------------------
   ! First check if there is any need for UV setup:
-  if(rt_UVsrc_nHmax .le. 0d0 .and. .not. rt_UV_hom) return
+  if(rt_UVsrc_nHmax .le. 0d0 .and. .not. haardt_madau) return
 
   if(myid==1) print*,'Initializing UV background'
 
@@ -1443,7 +1443,7 @@ SUBROUTINE init_UV_background()
   UV_minz = UV_zeds(1) ; UV_maxz=UV_zeds(UV_nz)
   
   ! Non-propagated UV background -----------------------------------------
-  if(rt_UV_hom) then
+  if(haardt_madau) then
      if(myid==1) print*,'The UV background is homogeneous'
      allocate(UV_rates_table(UV_nz, nIons, 2))
      allocate(tbl(UV_nz, 2))
@@ -1477,7 +1477,7 @@ SUBROUTINE init_UV_background()
   ! Propagated UV background----------------------------------------------
   if(rt_UVsrc_nHmax .gt. 0.d0) then ! UV propagation from diffuse cells--
      if(myid==1) print*,'The UV background is propagated'
-     if(myid==1 .and. rt_UV_hom) then
+     if(myid==1 .and. haardt_madau) then
           print*,'ATT: UV background is BOTH homogeneous and propagated'
           print*,'  You likely don''t want this duplicated background...'
        endif
