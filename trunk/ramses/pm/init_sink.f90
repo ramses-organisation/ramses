@@ -18,7 +18,12 @@ subroutine init_sink
   logical::eof,ic_sink=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
+
+  integer,parameter::tag=1112,tag2=1113
+  integer::dummy_io,info2
+
+
 
   !allocate all sink related quantities...
   allocate(weightp(1:npartmax,1:twotondim))
@@ -112,9 +117,27 @@ subroutine init_sink
   if(nrestart>0)then
      ilun=4*ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.out'
+
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/sink_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.out'
+     endif
+
+     
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+
+     ! Wait for the token                                                                                                                                                                    
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
 
      open(unit=ilun,file=fileloc,form='unformatted')
      rewind(ilun)
@@ -156,6 +179,17 @@ subroutine init_sink
         read(ilun)sinkint_level
      end if
      close(ilun)
+     ! Send the token                                                                                                                                                                        
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
 
      call compute_ncloud_sink
 
@@ -198,6 +232,17 @@ subroutine init_sink
   end if
       
   if (ic_sink)then
+
+     ! Wait for the token                                                                                                                                                                    
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag2,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+     
      open(10,file=filename,form='formatted')                                                             
      eof=.false.                                                                                         
      do                                                                                                  
@@ -220,6 +265,19 @@ subroutine init_sink
      end do
 102  continue
      close(10)
+     ! Send the token                                                                                                                                                                        
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag2, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
+
+
   end if
   if (myid==1.and.nsink-nsinkold>0)then
      write(*,*)'sinks read from file '//filename
@@ -231,7 +289,7 @@ subroutine init_sink
      end do
   end if
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct)
+     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force)
   end do  
 end subroutine init_sink
 !################################################################

@@ -71,6 +71,61 @@ subroutine read_hydro_params(nml_ok)
   read(1,NML=physics_params,END=105)
 105 continue
 
+  !------------------------------------------------
+  ! set ischeme
+  !------------------------------------------------
+  SELECT CASE (scheme)
+  CASE ('muscl')
+    ischeme = 0
+  CASE ('induction')
+    ischeme = 1
+
+  CASE DEFAULT
+    write(*,*)'unknown scheme'
+    call clean_stop
+  END SELECT
+  !------------------------------------------------
+  ! set iriemann
+  !------------------------------------------------
+  SELECT CASE (riemann)
+  CASE ('llf')
+    iriemann = 0
+  CASE ('roe')
+    iriemann = 1
+  CASE ('hll')
+    iriemann = 2
+  CASE ('hlld')
+    iriemann = 3
+  CASE ('upwind')
+    iriemann = 4
+  CASE ('hydro')
+    iriemann = 5
+
+  CASE DEFAULT
+    write(*,*)'unknown riemann solver'
+    call clean_stop
+  END SELECT
+  !------------------------------------------------
+  ! set iriemann
+  !------------------------------------------------
+  SELECT CASE (riemann2d)
+  CASE ('llf')
+    iriemann2d = 0
+  CASE ('roe')
+    iriemann2d = 1
+  CASE ('upwind')
+    iriemann2d = 2
+  CASE ('hll')
+    iriemann2d = 3
+  CASE ('hlla')
+    iriemann2d = 4
+  CASE ('hlld')
+    iriemann2d = 5
+  CASE DEFAULT
+    write(*,*)'unknown 2D riemann solver'
+    call clean_stop
+  END SELECT
+
   !--------------------------------------------------
   ! Make sure virtual boundaries are expanded to 
   ! account for staggered mesh representation

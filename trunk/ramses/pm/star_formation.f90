@@ -198,7 +198,7 @@ subroutine star_formation(ilevel)
         ! Temperature criterion
         do i=1,ngrid
            T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
-           nH=uold(ind_cell(i),1)*scale_nH
+           nH=max(uold(ind_cell(i),1),smallr)*scale_nH
            T_poly=T2_star*(nH/nISM)**(g_star-1.0)
            T2=T2-T_poly
            if(T2>2e4)ok(i)=.false. 

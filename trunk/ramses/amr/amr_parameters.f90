@@ -94,6 +94,7 @@ module amr_parameters
   integer::foutput=1000000    ! Frequency of outputs
   integer::output_mode=0      ! Output mode (for hires runs)
   logical::gadget_output=.false. ! Output in gadget format
+  logical::output_now=.false. ! write output next step
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5
@@ -232,5 +233,16 @@ module amr_parameters
   integer ,dimension(1:MAXBOUND)    ::jbound_max=0
   integer ,dimension(1:MAXBOUND)    ::kbound_min=0
   integer ,dimension(1:MAXBOUND)    ::kbound_max=0
+
+  !Number of processes sharing one token
+  !Only one process can write at a time in an I/O group
+  integer::IOGROUPSIZE=0           ! Main snapshot
+  integer::IOGROUPSIZECONE=0       ! Lightcone
+  integer::IOGROUPSIZEREP=0        ! Subfolder size
+  logical::withoutmkdir=.false.    !If true mkdir should be done before the run
+  logical::print_when_io=.false.   !If true print when IO
+  logical::synchro_when_io=.false. !If true synchronize when IO
+
+
 
 end module amr_parameters

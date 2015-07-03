@@ -248,9 +248,12 @@ subroutine ensure_ref_rules(ilevel)
      do ind=1,threetondim
         do i=1,ngrid
            ind_cell(i)=nbors_father_cells(i,ind)
+           if(ind_cell(i)==0)ok(i)=.false.
         end do
         do i=1,ngrid
-           if(son(ind_cell(i))==0)ok(i)=.false.
+           if(ind_cell(i)>0)then
+              if(son(ind_cell(i))==0)ok(i)=.false.
+           endif
         end do
      end do
      
@@ -786,6 +789,8 @@ subroutine init_refmap_fine(ilevel)
   logical::error,ok_file1,ok_file2,ok_file
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
+  integer,parameter::tag=1103
+  integer::dummy_io,info2
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -876,6 +881,16 @@ subroutine init_refmap_fine(ilevel)
 
   if(myid==1)write(*,*)'Reading file '//TRIM(filename)
   if(multiple)then
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+     
      ilun=ncpu+myid+10
      open(ilun,file=filename,form='unformatted')
      rewind ilun
@@ -888,6 +903,18 @@ subroutine init_refmap_fine(ilevel)
         end if
      end do
      close(ilun)
+
+     ! Send the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
   else
      if(myid==1)then
         open(10,file=filename,form='unformatted')

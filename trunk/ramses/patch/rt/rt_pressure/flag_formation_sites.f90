@@ -4,7 +4,6 @@ subroutine flag_formation_sites
   use clfind_commons
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
-  use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -37,7 +36,7 @@ subroutine flag_formation_sites
   if(ndim>2)period(3)=(nz==1)
 #endif
 
-  ! Grid spacing and physical scales
+  !grid spacing and physical scales
   dx=0.5D0**nlevelmax
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
@@ -46,14 +45,14 @@ subroutine flag_formation_sites
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-  ! Loop over sinks and mark all clumps which are already occupied by a sink
+  ! loop over sinks and mark all clumps which are already occupied by a sink
   allocate(occupied(1:npeaks_max))
   occupied=0
   pos=0.0
   if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
 
   if (smbh)then 
-     ! Block clumps (halo done later) that contain a sink for formation
+     !block clumps that contain a sink for formation
      do j=1,nsink
         pos(1,1:3)=xsink(j,1:3)
         call cmp_cpumap(pos,cc,1)
@@ -68,7 +67,7 @@ subroutine flag_formation_sites
         end if
      end do
   end if
-  ! Block clumps (halo done later) that are closer than twice R_accretion from existing sinks
+  !block peaks that are closer than R_accretion from existing sinks
   do j=1,nsink
      do i=1,npeaks
         rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
@@ -77,7 +76,7 @@ subroutine flag_formation_sites
            if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
         end do
         dist2=sum(rrel**2)
-        if (dist2<(2.*ir_cloud*dx_min/aexp)**2)then
+        if (dist2<(ir_cloud*dx_min/aexp)**2)then
            occupied(i)=1
            if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
         end if
@@ -91,7 +90,7 @@ subroutine flag_formation_sites
 #endif
 
   if(smbh)then
-     ! Block halos that contain a blocked clump
+     ! block halos that contain a blocked clump
      do i=1,npeaks
         if(occupied(i)==1)then
            merge_to=ind_halo(i)
@@ -115,34 +114,34 @@ subroutine flag_formation_sites
   pos=0.0
   flag2=0
 
-  ! Sort clumps by peak density in ascending order
+  !sort clumps by peak density in ascending order
   do i=1,npeaks
      peakd(i)=max_dens(i)
      ind_sort(i)=i
   end do
   call quick_sort_dp(peakd,ind_sort,npeaks)
   
-  ! Compute and combine various sink formation criteria
   do j=npeaks,1,-1
      jj=ind_sort(j)
      ok=.true.
      if (smbh)then
-        ! Peak has to be a halo
         ok=ok.and.(ind_halo(jj).EQ.jj+ipeak_start(myid))
-        ! Halo must have no existing sink 
+        ok=ok.and.relevance(jj)>relevance_threshold
+        if(cosmo)ok=ok.and.halo_mass(jj)>1.0d10*1.98892d33/(scale_d*(scale_l**3.0)) ! change 1.0d10 to parameter - halomass
+        ok=ok.and.max_dens(jj)>n_star/scale_nH ! forming SMBH if we can from stars too
         ok=ok.and.occupied(jj)==0
-        ! Halo mass has to be larger than some threshold
-        ok=ok.and.halo_mass(jj)>mass_halo_AGN*2d33/(scale_d*scale_l**3.0)
-        ! 4-cell ball has to be larger than some threshold
-        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*2d33/(scale_d*scale_l**3.0)
-        ! Peak density has to be larger than star formation thresold
-        ok=ok.and.max_dens(jj)>n_star/scale_nH
+        fourpi=4.0d0*ACOS(-1.0d0)
+        threepi2=3.0d0*ACOS(-1.0d0)**2
+        if(cosmo)fourpi=1.5d0*omega_m*aexp
+        tff=sqrt(threepi2/8./fourpi/(max_dens(jj)+1.0d-30))
+        acc_r=clump_mass4(jj)*scale_d*(scale_l**3.0)*3600.0*24.0*365.0/1.98892d33/tff/scale_t
+        ok=ok.and.acc_r > acc_threshold_creation ! in Msun/yr
         if (ok .eqv. .true.)then
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
            if (cc(1) .eq. myid)then
               call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-              ! Allow sink formation only inside zoom region
+              ! Geometrical criterion
               if(ivar_refine>0)then
                  if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
                     flag2(cell_index(1))=jj
@@ -186,6 +185,11 @@ subroutine compute_clump_properties_round2(xx)
   use clfind_commons
   use pm_commons, ONLY:cont_speed
   use pm_parameters
+#ifdef RT
+  use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
+  use rt_hydro_commons, only:rtuold
+  use rt_cooling_module, only:kappaAbs,kappaSc
+#endif
 
   implicit none
 #ifndef WITHOUTMPI
@@ -214,9 +218,23 @@ subroutine compute_clump_properties_round2(xx)
 #ifdef SOLVERmhd
   real(dp),dimension(1:3)::B
 #endif
+#ifdef RT
+  real(dp),dimension(1:nGroups,1:ndim)::Fp
+  real(dp),dimension(1:nGroups)::Np2Ep_flux
+#endif
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+  ev_to_uu=ev_to_erg/(scale_d * scale_l**3 * scale_v**2)
+  do ig=1,nGroups
+     Np2Ep_flux(ig)=(scale_Fp * group_egy(ig) * ev_to_erg)/(scale_d * scale_v**3) 
+  end do
+  scale_kappa=(scale_d*scale_l)**-1.d0
+  c_code=c_cgs/scale_v
+#endif
 
   period(1)=(nx==1)
 #if NDIM>1
@@ -231,14 +249,14 @@ subroutine compute_clump_properties_round2(xx)
   
   ! initialize arrays
   clump_size=0.d0; clump_mass4=0.d0
-  grav_term=0.d0
+  grav_term=0.d0; rad_term=0.d0 
   kinetic_support=0.d0; thermal_support=0.d0; magnetic_support=0.d0 
   Icl=0.d0; Icl_d=0.d0; Icl_dd=0.d0
   Icl_3by3=0.d0;  Icl_d_3by3=0.d0
   contracting=.false.
 
   !------------------------------------------
-  ! Compute volume of a cell in a given level
+  ! compute volume of a cell in a given level
   !------------------------------------------
   do ilevel=1,nlevelmax
      ! Mesh spacing in that level
@@ -294,6 +312,15 @@ subroutine compute_clump_properties_round2(xx)
            xpeak(i)=peak_pos(peak_nr,i)
         end do
 
+        ! get RT fluxes
+#ifdef RT
+        do ig=1,nGroups
+           iNp=iGroups(ig)
+           Fp(ig,1:ndim) = rtuold(icellp(ipart),iNp+1:iNp+ndim)* Np2Ep_flux(ig)
+        end do
+#endif
+
+
 #ifdef SOLVERmhd
         ! cell averaged magnetic fields
         do i=1,ndim
@@ -319,8 +346,8 @@ subroutine compute_clump_properties_round2(xx)
         end do
 
         ! properties for regions close to peak (4 cells away)
-        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
-           clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
+        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.))then
+           clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol           
         endif
 
         ! thermal energy
@@ -351,12 +378,22 @@ subroutine compute_clump_properties_round2(xx)
         ! add radiation pressure by trapped photons
         p=p+err/3.d0
         
+        ! compute radiative acceleration by streaming photons
+        frad=0.d0
+#ifdef RT
+        do ig=1,nGroups
+           kappa=kappaSc(ig)/scale_kappa
+           frad(1:ndim)  = frad(1:ndim) +  Fp(ig,1:ndim) * kappa / c_code
+        end do
+#endif
+
         ! virial analysis volume terms
         magnetic_support(peak_nr)  = magnetic_support(peak_nr) + vol*emag
         thermal_support (peak_nr)  = thermal_support(peak_nr)  + 3*vol*p
         do i=1,3
            kinetic_support(peak_nr)= kinetic_support(peak_nr)  + vrel(i)**2         * vol*d
            grav_term(peak_nr)      = grav_term(peak_nr)        + fgrav(i) * rrel(i) * vol*d
+           rad_term(peak_nr)       = rad_term(peak_nr)         + frad(i)  * rrel(i) * vol*d
         end do
         
         ! time derivatives of the moment of inertia
@@ -382,6 +419,7 @@ subroutine compute_clump_properties_round2(xx)
   call virtual_peak_dp(Icl,'sum')
   call virtual_peak_dp(Icl_d,'sum')
   call virtual_peak_dp(grav_term,'sum')
+  call virtual_peak_dp(rad_term,'sum')
   do i=1,ndim
      call virtual_peak_dp(clump_size(1,i),'sum')     
      do j=1,ndim
@@ -392,7 +430,7 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 
   !second time derivative of I
-  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)&
+  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)+rad_term(1:npeaks)&
        -Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)&
        +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
@@ -427,14 +465,14 @@ subroutine compute_clump_properties_round2(xx)
   !write to the log file some information that could be of interest for debugging etc.
   if(clinfo .and. (.not. smbh) .and. sink)then 
      if (myid==ncpu)then
-        write(*,'(135A)')'=========================================================================================================================='
-        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp'
-        write(*,'(135A)')'=========================================================================================================================='
+        write(*,'(135A)')'======================================================================================================================================'
+        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
+        write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0.)then
 
-           write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),7(E9.2E2,3X))')j+ipeak_start(myid)&
+           write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
                 ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
                 ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
@@ -442,7 +480,8 @@ subroutine compute_clump_properties_round2(xx)
                 ,(Icl_dd(j)<0)&
                 ,grav_term(j),Psurf(j)&
                 ,MagPsurf(j),MagTsurf(j)&
-                ,kinetic_support(j),thermal_support(j),magnetic_support(j)
+                ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
+                ,rad_term(j)
         end if
      end do
   end if

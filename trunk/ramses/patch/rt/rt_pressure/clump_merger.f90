@@ -26,7 +26,7 @@ subroutine compute_clump_properties(xx)
   integer::nx_loc,ind,ix,iy,iz,idim
   logical,dimension(1:ndim)::period
   logical::periodic
-  
+
   period(1)=(nx==1)
 #if NDIM>1
   if(ndim>1)period(2)=(ny==1)
@@ -173,7 +173,7 @@ subroutine compute_clump_properties(xx)
   ! Scatter results to all MPI domains
   call boundary_peak_dp(max_dens)
   do i=1,ndim
-     call boundary_peak_dp(peak_pos(1,i))
+     call boundary_peak_dp(peak_pos(1,i),'sum')
      call boundary_peak_dp(center_of_mass(1,i))
      call boundary_peak_dp(clump_velocity(1,i))
   end do  
@@ -266,8 +266,7 @@ subroutine write_clump_properties(to_file)
   include 'mpif.h'
 #endif
   logical::to_file
-  integer,parameter::tag=1101
-  integer::dummy_io,info2
+
   !---------------------------------------------------------------------------
   ! this routine writes the clump properties to screen and to file
   !---------------------------------------------------------------------------
@@ -275,7 +274,7 @@ subroutine write_clump_properties(to_file)
   integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,info,nx_loc
   real(dp)::rel_mass,rel_mass_tot,scale,particle_mass,particle_mass_tot
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar,ncharcpu
+  character(LEN=5)::nchar
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
 
@@ -312,35 +311,14 @@ subroutine write_clump_properties(to_file)
   rel_mass=0.
   n_rel=0
   if (to_file .eqv. .true.) then
-     ! Wait for the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if (mod(myid-1,IOGROUPSIZE)/=0) then
-           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-        end if
-     endif
-#endif
      call title(ifout-1,nchar)
-
-     if(IOGROUPSIZEREP>0)then
-        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/clump_'//TRIM(nchar)//'.txt'
-     else
-        fileloc=TRIM('output_'//TRIM(nchar)//'/clump_'//TRIM(nchar)//'.txt')
-     endif
+     fileloc=TRIM('output_'//TRIM(nchar)//'/clump_'//TRIM(nchar)//'.txt')
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      open(unit=ilun,file=fileloc,form='formatted')
-     
      if(saddle_threshold>0)then
         call title(ifout-1,nchar)
-        if(IOGROUPSIZEREP>0)then
-           call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-           fileloc=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/halo_'//TRIM(nchar)//'.txt')
-        else
-           fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
-        endif
+        fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
         call title(myid,nchar)
         fileloc=TRIM(fileloc)//TRIM(nchar)
         open(unit=ilun2,file=fileloc,form='formatted')
@@ -388,25 +366,6 @@ subroutine write_clump_properties(to_file)
         endif
      endif
   end do
-
-  if (to_file)then
-     close(ilun)
-     if(saddle_threshold>0)then
-        close(ilun2)
-     endif
-  end if
-
-     ! Send the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-           dummy_io=1
-           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                & MPI_COMM_WORLD,info2)
-        end if
-     endif
-#endif
-
 #ifndef WITHOUTMPI  
   call MPI_ALLREDUCE(n_rel,n_rel_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   n_rel=n_rel_tot  
@@ -417,8 +376,12 @@ subroutine write_clump_properties(to_file)
      if(clinfo)write(*,'(A,1PE12.5)')' Total mass above threshold =',tot_mass
      if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
   endif
-
-
+  if (to_file)then
+     close(ilun)
+     if(saddle_threshold>0)then
+        close(ilun2)
+     endif
+  end if
 
 
 end subroutine write_clump_properties
@@ -820,6 +783,7 @@ subroutine allocate_peak_patch_arrays
   allocate(MagPsurf(npeaks_max))
   allocate(MagTsurf(npeaks_max))
   allocate(grav_term(npeaks_max))
+  allocate(rad_term(npeaks_max))
   allocate(contracting(npeaks_max))
   allocate(Icl(npeaks_max))
   allocate(Icl_d(npeaks_max))
@@ -891,7 +855,7 @@ subroutine deallocate_all
 
   deallocate(clump_mass4)
   deallocate(clump_velocity)
-  deallocate(grav_term)
+  deallocate(grav_term,rad_term)
   deallocate(thermal_support,kinetic_support,magnetic_support)
   deallocate(Psurf,MagPsurf,MagTsurf)
   deallocate(contracting)
@@ -1259,9 +1223,7 @@ subroutine write_clump_map
   use amr_commons
   use clfind_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
+
   !---------------------------------------------------------------------------
   ! This routine writes a csv-file of cell center coordinates and clump number
   ! for each cell which is in a clump. Makes only sense to be called when the 
@@ -1272,10 +1234,8 @@ subroutine write_clump_map
   real(dp)::scale,dx
   real(dp),dimension(1:3)::xcell,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  character(LEN=5)::myidstring,nchar,ncharcpu
-  integer,parameter::tag=1102
-  integer::dummy_io,info2
-  
+  character(LEN=5)::myidstring,nchar 
+
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
 
@@ -1289,24 +1249,10 @@ subroutine write_clump_map
   end do
 
   !prepare file output for peak map
-  ! Wait for the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if (mod(myid-1,IOGROUPSIZE)/=0) then
-           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-        end if
-     endif
-#endif
-   
   call title(ifout-1,nchar)
   call title(myid,myidstring)
-  if(IOGROUPSIZEREP>0)then
-     call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-     open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/clump_map.csv'//myidstring),form='formatted')
-  else
-     open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
-  endif
+  open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
+
   !loop parts
   do ipart=1,ntest     
      peak_nr=flag2(icellp(ipart)) 
@@ -1321,19 +1267,6 @@ subroutine write_clump_map
      end if
   end do
   close(20)
-
-  ! Send the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-           dummy_io=1
-           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                & MPI_COMM_WORLD,info2)
-        end if
-     endif
-#endif
- 
-
 end subroutine write_clump_map
 !################################################################
 !################################################################
@@ -1350,7 +1283,7 @@ subroutine analyze_peak_memory
   integer,dimension(1:ncpu)::hfree_all,hfree_tot
   integer,dimension(1:ncpu)::sparse_all,sparse_tot
   integer,dimension(1:ncpu)::coll_all,coll_tot
-  
+
   npeak_all=0
   npeak_all(myid)=npeaks
   coll_all=0

@@ -81,12 +81,14 @@ subroutine output_frame()
   moviedir = 'movie'//trim(temp_string)//'/'
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(myid==1) write(*,*) "Writing frame ", istep_str
+  if(.not.withoutmkdir) then 
 #ifdef NOSYSTEM
-  if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
 #else
-  if(myid==1)call system(moviecmd)
+     if(myid==1)call system(moviecmd)
 #endif
-
+  endif
+  
   infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
   if(myid==1)call output_info(infofile)
   
@@ -146,31 +148,28 @@ subroutine output_frame()
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  if(deltax_frame(proj_ind*2-1)==0)deltax_frame(proj_ind*2-1)=boxlen
-  if(deltay_frame(proj_ind*2-1)==0)deltay_frame(proj_ind*2-1)=boxlen
-  if(deltaz_frame(proj_ind*2-1)==0)deltaz_frame(proj_ind*2-1)=boxlen
 
   if(proj_axis(proj_ind:proj_ind).eq.'x')then
     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
     zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
-    delx=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
-    dely=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
-    delz=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+    delx=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp) !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp) !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp) !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
   elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
     zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
-    delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
-    dely=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
-    delz=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+    delx=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp) !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp) !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp) !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
   else
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
     ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
     zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
-    delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
-    dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
-    delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
+    delx=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp) !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
+    dely=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp) !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
+    delz=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp) !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
   endif
 
   ratio = delx/dely

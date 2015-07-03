@@ -201,13 +201,44 @@ subroutine writemem(usedmem)
 end subroutine writemem
 
 subroutine getmem(outmem)
+  use amr_commons,only:myid,IOGROUPSIZE,ncpu
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'  
+#endif
   real::outmem
   character(len=300) :: dir, dir2,  cmd, file
   integer::read_status
+  integer,parameter::tag=1134
+  integer::dummy_io,info2
+  integer::nmem,ind,j
+  
   file='/proc/self/stat'
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+
   open(unit=1,file=file,form='formatted')
   read(1,'(A300)',IOSTAT=read_status)dir
   close(1)
+
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+
+
   if (read_status < 0)then
      outmem=dble(0.)
      if (myid==1)write(*,*)'Problem in checking free memory'

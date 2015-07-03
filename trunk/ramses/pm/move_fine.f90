@@ -64,7 +64,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold
+  use hydro_commons, ONLY: uold,smallr
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -334,7 +334,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do ind=1,twotondim
         do idim=1,ndim
            do j=1,np
-              ff(j,idim)=ff(j,idim)+uold(indp(j,ind),idim+1)*vol(j,ind)
+              ff(j,idim)=ff(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
            end do
         end do
      end do

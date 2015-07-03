@@ -93,7 +93,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef grackle     
   real(kind=8) gr_density(nvector), gr_energy(nvector), &
   &     gr_x_velocity(nvector), gr_y_velocity(nvector), &
-  &     gr_z_velocity(nvector), gr_metal_density(nvector)
+  &     gr_z_velocity(nvector), gr_metal_density(nvector), & 
+  &     gr_poly(nvector), gr_floor(nvector)
   integer::iresult, solve_chemistry_table, gr_rank,comoving_coordinates=0
   integer,dimension(1:3)::gr_dimension,gr_start,gr_end
   real(dp)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0,gr_dt
@@ -235,7 +236,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(cooling)then
         ! Compute thermal temperature by substracting polytrope
         do i=1,nleaf
-           T2(i) = max(T2(i)-T2min(i),T2_min_fix)
+           T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),1d9)
         end do
      endif
 
@@ -252,7 +253,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Get the ionization fractions
         do ivar=0,nIons-1
            do i=1,nleaf
-              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/uold(ind_leaf(i),1)
+              U(i,2+ivar) = uold(ind_leaf(i),iIons+ivar)/max(uold(ind_leaf(i),1),smallr)
            end do
         end do
 
@@ -319,7 +320,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
         gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
         gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
-        gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i) 
+	gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+	gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+        gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
+	gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
         gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
 	enddo
 
@@ -352,9 +356,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 
 #ifdef grackle
-        do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = gr_energy(i)*max(uold(ind_leaf(i),1),smallr)+ekk(i)
-        end do
+     do i=1,nleaf
+        uold(ind_leaf(i),ndim+2) = gr_energy(i)*max(uold(ind_leaf(i),1),smallr)+ekk(i)+gr_poly(i)
+     end do
 #else
 
      ! Compute rho
@@ -362,10 +366,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         nH(i) = nH(i)/scale_nH
      end do
 
-     ! Compute net energy sink
+     ! Deal with cooling
      if(cooling.or.neq_chem)then
+        ! Compute net energy sink
         do i=1,nleaf
            delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
+        end do
+        ! Compute initial fluid internal energy
+        do i=1,nleaf
+           T2(i) = T2(i)*nH(i)/scale_T2/(gamma-1.0)
         end do
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
@@ -378,27 +387,26 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
      endif
 
-     ! Compute minimal total energy from polytrope
+     ! Compute polytrope internal energy
      do i=1,nleaf
-        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0) + ekk(i) + err(i)
+        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0)
      end do
 
-     ! Update total fluid energy
-     do i=1,nleaf
-        T2(i) = uold(ind_leaf(i),ndim+2)
-     end do
+     ! Update fluid internal energy
      if(cooling.or.neq_chem)then
         do i=1,nleaf
-           T2(i) = T2(i)+delta_T2(i)
+           T2(i) = T2(i) + delta_T2(i)
         end do
      endif
+
+     ! Update total fluid energy
      if(isothermal)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2min(i)
+           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i)
         end do
      else
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = max(T2(i),T2min(i))
+           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i)
         end do
      endif
 

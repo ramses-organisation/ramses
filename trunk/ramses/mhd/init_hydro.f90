@@ -13,7 +13,9 @@ subroutine init_hydro
   real(dp)::gamma2
   real(dp)::d,u,v,w,A,B,C,e
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
+  integer,parameter::tag=1108
+  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_hydro'
   
@@ -36,9 +38,23 @@ subroutine init_hydro
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
+     if(IOGROUPSIZEREP>0)then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/hydro_'//TRIM(nchar)//'.out'
+     else
+        fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
+     endif
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
+     ! Wait for the token                                                                                    
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
@@ -89,7 +105,7 @@ subroutine init_hydro
                        end do
                     else  ! Read velocity field
                        do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                        end do
                     end if
                  end do
@@ -118,7 +134,7 @@ subroutine init_hydro
                  read(ilun)xx ! Read pressure
                  do i=1,ncache
                     e=xx(i)/(gamma-1d0)
-                    d=uold(ind_grid(i)+iskip,1)
+                    d=max(uold(ind_grid(i)+iskip,1),smallr)
                     u=uold(ind_grid(i)+iskip,2)/d
                     v=uold(ind_grid(i)+iskip,3)/d
                     w=uold(ind_grid(i)+iskip,4)/d
@@ -137,7 +153,7 @@ subroutine init_hydro
                  do ivar=9+nener,nvar ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)*uold(ind_grid(i)+iskip,1)
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  end do
 #endif
@@ -147,6 +163,17 @@ subroutine init_hydro
         end do
      end do
      close(ilun)
+     ! Send the token                                                                                                                                  
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+           dummy_io=1
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+                & MPI_COMM_WORLD,info2)
+        end if
+     endif
+#endif
+
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'hydro.tmp read for processor ',myid
      call MPI_BARRIER(MPI_COMM_WORLD,info)

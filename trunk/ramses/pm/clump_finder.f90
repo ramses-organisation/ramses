@@ -873,12 +873,18 @@ subroutine read_clumpfind_params()
 
 122 rewind(1)
 
+
   if (density_threshold>0.)then
      if (rho_clfind>0. .or. n_clfind >0.)then     
         if(myid==1)write(*,*)'you provided the density threshold in code units.'
         if(myid==1)write(*,*)'Ignoring the input in physical units...'
      end if
   else
+     if (cosmo) then
+        if(myid==1)write(*,*)'For cosmological simulations you have to specify the'
+        if(myid==1)write(*,*)'clumpfinder density threshold in code units.'
+        call clean_stop
+     end if
      if (rho_clfind>0. .and. n_clfind >0.)then   ! too much information...
         if(myid==1)write(*,*)'you set up the clumpfinder threshold in both, H/cc and g/cc, decide!'
         if(myid==1)write(*,*)'aborting...'

@@ -75,12 +75,13 @@ subroutine create_sink
 
   end if
 
-  ! Merge sinks for star formation runs
-  if (merging_scheme == 'timescale')call merge_star_sink
-  
   ! Merge sink for smbh runs 
-  if (smbh)call merge_smbh_sink
-  
+  if (smbh)then
+    call merge_smbh_sink
+  else
+    call merge_star_sink
+  end if
+
   ! Create new cloud particles
   call create_cloud_from_sink
 
@@ -208,7 +209,7 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<msink_direct*1.9891d33/(scale_d*scale_l**3))then
+                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))then
                        mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
@@ -224,7 +225,7 @@ subroutine create_cloud_from_sink
   end do
   
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. msink_direct*1.9891d33/(scale_d*scale_l**3))
+     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -484,10 +485,12 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::scale,weight,dx_min,one_over_dx_min
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
+  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
+#else
+  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
 #endif
   real(dp),dimension(1:nvector),save::egas,divpart
   real(dp),dimension(1:nvector,1:ndim),save::xpart
-  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
   integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   
   do idim=1,ndim
@@ -605,16 +608,17 @@ subroutine grow_sink(ilevel,on_creation)
   logical::highest_level
 
   if(accretion_scheme=='none')return
-
-  ! Determine if on highest active level...
-  if (ilevel==nlevelmax)then
-     highest_level=.true.
-  else if (numbtot(1,ilevel+1)==0)then
-     highest_level=.true.
-  else
-     highest_level=.false.
+  if(.not. on_creation)then
+     ! Determine if on highest active level...
+     if (ilevel==nlevelmax)then
+        highest_level=.true.
+     else if (numbtot(1,ilevel+1)==0)then
+        highest_level=.true.
+     else
+        highest_level=.false.
+     end if
+     if (.not. highest_level)return
   end if
-  if (.not. highest_level)return
 
   if(verbose)write(*,111)ilevel
 
@@ -788,10 +792,13 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:3)::vv
 
   real(dp),dimension(1:3)::r_rel,x_acc,p_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener
+  real(dp)::r_abs,fbk_ener_AGN,fbk_mom_AGN
   logical,dimension(1:ndim)::period
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
+
+  real(dp)::sin_theta,cone_dist,orth_dist
+  real(dp),dimension(1:3)::cone_dir
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -826,6 +833,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   end do
 
   virt_acc_mass=0.d0; delta_M=0.d0
+  sin_theta=sin(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
@@ -834,7 +842,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         if(ok(j,ind))then
            
            ! Convert uold to primitive variables
-           d=uold(indp(j,ind),1)
+           d=max(uold(indp(j,ind),1),smallr)
            vv(1)=uold(indp(j,ind),2)/d
            vv(2)=uold(indp(j,ind),3)/d
            vv(3)=uold(indp(j,ind),4)/d
@@ -891,7 +899,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (flux_accretion .or. bondi_accretion)then              
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
-                 fbk_ener=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                 fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -1005,13 +1014,26 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               ! put the tangential momentum back into the gas
               if(nol_accretion)then
                  unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+acc_mass/(d*vol_loc)*p_rel_tan(1:3)/vol_loc
-                 unew(indp(j,ind),5)=unew(indp(j,ind),5)+acc_mass/(d*vol_loc)*sum(p_rel_tan(1:3)*uold(indp(j,ind),2:4)/d)
+                 unew(indp(j,ind),5)=unew(indp(j,ind),5)+acc_mass/(d*vol_loc)*sum(p_rel_tan(1:3)*vv(1:3))/vol_loc
               end if
               
               ! AGN feedback
               if(agn)then
                 if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
-                  unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener/vol_loc
+                  if(feedback_scheme=='energy')then
+                    unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
+                  end if
+                  
+                  if(feedback_scheme=='momentum')then
+                     ! checking if particle is in cone
+                     cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
+                     cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
+                     orth_dist=sqrt(sum(r_rel(1:3)-cone_dist*cone_dir(1:3))**2)
+                     if (orth_dist.le.abs(cone_dist)*sin_theta)then
+                        unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
+                        unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
+                     end if
+                  end if
                 end if
               end if
            end if
@@ -1085,10 +1107,10 @@ subroutine compute_accretion_rate(write_sinks)
         v_bondi=sqrt(c2+v2)
         
         ! Compute Bondi-Hoyle accretion rate in code units
-        if (star.and.alpha_acc_boost.lt.0.0)then
+        if (star.and.acc_sink_boost.lt.0.0)then
            boost=max((density/d_star)**2,1.0_dp)
         else
-           boost=abs(alpha_acc_boost)
+           boost=abs(acc_sink_boost)
         end if
         
         v_bondi=v_bondi*boost**(-1./3.)
@@ -1154,11 +1176,11 @@ subroutine compute_accretion_rate(write_sinks)
               if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
                 ok_blast_agn(isink)=.true.
               end if
-              if(smbh_verbose.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
-                write(*,'("***BLAST***",I4,1X,3(1PE12.5,1X))')isink &
+              if(myid==1.and.verbose_AGN.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
+                write(*,'("***BLAST***",I4,1X,4(1PE12.5,1X))')isink &
                     & ,msink(isink)*scale_d*scale_l**3/2d33 &  
                     & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                    & ,((delta_mass(isink)*T2_AGN/scale_T2+mgas*T2_gas) &
+                    & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
                     & /(delta_mass(isink)+mgas))
               endif
 
@@ -1256,7 +1278,7 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
                 & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33
         end do
         write(*,'(" ============================================================================================")')
-        if(smbh_verbose)then
+        if(verbose_AGN)then
           write(*,'(" Id     rho(H/cc)  rho_inf(H/cc) Mgas(Msol) cs(km/s) rBondi(pc)")')
           write(*,'(" vgas(km/s):  x   y   z     vsink(km/s):  x   y   z")')
           write(*,'(" ============================================================================================")')
@@ -1605,7 +1627,7 @@ subroutine make_sink_from_clump(ilevel)
               index_sink_tot=index_sink_tot+1
 
               ! Convert uold to primitive variables
-              d=uold(ind_cell_new(i),1)
+              d=max(uold(ind_cell_new(i),1),smallr)
               u=uold(ind_cell_new(i),2)/d
               v=uold(ind_cell_new(i),3)/d
               w=uold(ind_cell_new(i),4)/d
@@ -1638,8 +1660,8 @@ subroutine make_sink_from_clump(ilevel)
               call true_max(x(1),x(2),x(3),nlevelmax)
 
               ! Mass of the new sink
-              if(sink_seedmass>=0.0)then
-                 mseed_new(index_sink)=sink_seedmass*1.9891d33/(scale_d*scale_l**3)
+              if(mass_sink_seed>=0.0)then
+                 mseed_new(index_sink)=mass_sink_seed*2d33/(scale_d*scale_l**3)
               else
                  if(smbh)then
                     ! The SMBH/sink mass is the mass that will heat the gas to 10**7 K after creation
@@ -1654,7 +1676,7 @@ subroutine make_sink_from_clump(ilevel)
                  
                  if(smbh.and.agn)then
                     mclump=clump_mass4(flag2(ind_cell_new(i)))
-                    mseed_new(index_sink)=T2_min/T2_AGN*mclump
+                    mseed_new(index_sink)=0.5*T2_min/T2_AGN*mclump
                  end if
               endif
 
@@ -2134,6 +2156,7 @@ subroutine merge_star_sink
   real(dp)::dx_loc,scale,dx_min,rr,rmax2,rmax,mnew,t_larson1
   logical::iyoung,jyoung,merge
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp),dimension(1:3)::xcom,vcom,lcom
 
   if(nsink==0)return
 
@@ -2170,10 +2193,15 @@ subroutine merge_star_sink
               if (myid==1)write(*,*)'merged ', idsink(jsink),' to ',idsink(isink)
               mergers=mergers+1
               mnew=msink(isink)+msink(jsink)
+              ! COM
+              xcom(1:3)=(msink(isink)*xsink(isink,1:3)+msink(jsink)*xsink(jsink,1:3))/mnew
+              vcom(1:3)=(msink(isink)*vsink(isink,1:3)+msink(jsink)*vsink(jsink,1:3))/mnew
+              lcom(1:3)=msink(isink)*cross((xsink(isink,1:3)-xcom(1:3)),vsink(isink,1:3)-vcom(1:3))+ &
+                & msink(jsink)*cross((xsink(jsink,1:3)-xcom(1:3)),vsink(jsink,1:3)-vcom(1:3))
+
               xsink(isink,1:3)=(xsink(isink,1:3)*msink(isink)+xsink(jsink,1:3)*msink(jsink))/mnew
               vsink(isink,1:3)=(vsink(isink,1:3)*msink(isink)+vsink(jsink,1:3)*msink(jsink))/mnew
-              !wrong! Angular momentum is most likely dominated by last merger, change some day...
-              lsink(isink,1:3)=lsink(isink,1:3)+lsink(jsink,1:3)
+              lsink(isink,1:3)=lsink(isink,1:3)+lsink(jsink,1:3)+lcom(1:3)
               msink(isink)=mnew
 
               acc_rate(isink)=acc_rate(isink)+msink(jsink)
@@ -2204,6 +2232,8 @@ subroutine merge_star_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
+           new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2215,6 +2245,8 @@ subroutine merge_star_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
+        new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
@@ -2245,6 +2277,7 @@ subroutine merge_smbh_sink
   real(dp)::dx_loc,scale,dx_min,rr,rmax2,rmax,mnew,v1_v2,factG
   logical::merge
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp),dimension(1:3)::xcom,vcom,lcom
 
   if(nsink==0)return
 
@@ -2278,22 +2311,26 @@ subroutine merge_smbh_sink
            merge=merge .and. msink(jsink)>0
            
            ! escape velocity check
-           if (mass_vel_check>0)then
-              if((msink(isink)+msink(jsink)).ge.mass_vel_check*mass_sph*m_refine(nlevelmax)) then
+           if (mass_merger_vel_check_AGN>0)then
+              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check_AGN*2d33/(scale_d*scale_l**3)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge=merge .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
               end if
            end if
 
-
            if (merge)then
               if (myid==1)write(*,*)'merged ', idsink(jsink),' to ',idsink(isink)
               mergers=mergers+1
               mnew=msink(isink)+msink(jsink)
+              ! COM
+              xcom(1:3)=(msink(isink)*xsink(isink,1:3)+msink(jsink)*xsink(jsink,1:3))/mnew
+              vcom(1:3)=(msink(isink)*vsink(isink,1:3)+msink(jsink)*vsink(jsink,1:3))/mnew
+              lcom(1:3)=msink(isink)*cross((xsink(isink,1:3)-xcom(1:3)),vsink(isink,1:3)-vcom(1:3))+ &
+                & msink(jsink)*cross((xsink(jsink,1:3)-xcom(1:3)),vsink(jsink,1:3)-vcom(1:3))
+
               xsink(isink,1:3)=(xsink(isink,1:3)*msink(isink)+xsink(jsink,1:3)*msink(jsink))/mnew
               vsink(isink,1:3)=(vsink(isink,1:3)*msink(isink)+vsink(jsink,1:3)*msink(jsink))/mnew
-              !wrong! Angular momentum is most likely dominated by last merger, change some day...
-              lsink(isink,1:3)=lsink(isink,1:3)+lsink(jsink,1:3)
+              lsink(isink,1:3)=lsink(isink,1:3)+lsink(jsink,1:3)+lcom(1:3)
               msink(isink)=mnew
 
               acc_rate(isink)=acc_rate(isink)+acc_rate(jsink)
@@ -2325,6 +2362,8 @@ subroutine merge_smbh_sink
            vsink(j,1:3)=vsink(j+1,1:3)
            lsink(j,1:3)=lsink(j+1,1:3)
            msink(j)=msink(j+1)
+           mseed(j)=mseed(j+1)
+           new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            acc_rate(j)=acc_rate(j+1)
@@ -2337,6 +2376,8 @@ subroutine merge_smbh_sink
         vsink(nsink+1,1:3)=0.
         lsink(nsink+1,1:3)=0.
         msink(nsink+1)=0.
+        mseed(nsink+1)=0.
+        new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
         acc_rate(nsink+1)=0.
@@ -2636,10 +2677,10 @@ subroutine read_sink_params()
 
   real(dp)::dx_min,scale,cty
   integer::nx_loc
-  namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_scheme,merging_timescale,&
-       ir_cloud_massive,sink_soft,msink_direct,ir_cloud,nsinkmax,c_acc,create_sinks,sink_seedmass,&
-       eddington_limit,sink_drag,alpha_acc_boost,acc_threshold_creation,mass_vel_check,&
-       clump_core,smbh_verbose,T2_min,T2_max,T2_AGN
+  namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_timescale,&
+       ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,c_acc,create_sinks,mass_sink_seed,&
+       eddington_limit,sink_drag,acc_sink_boost,mass_merger_vel_check_AGN,&
+       clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -2718,7 +2759,7 @@ subroutine read_sink_params()
      endif
   end if
   
-  if (merging_scheme == 'timescale')then
+  if (.not.smbh)then
      if (merging_timescale<0.)then
         if (myid==1)write(*,*)'You chose sink merging on a timescale but did not provide the timescale'
         if (myid==1)write(*,*)'choosing 1000y as lifetime...'
@@ -2727,14 +2768,6 @@ subroutine read_sink_params()
      cty=scale_t/(365.25*24.*3600.)
      cont_speed=-1./(merging_timescale/cty)
   end if
-
-  ! a warging sign...
-  if (merging_scheme == 'fof' .and. (.not. smbh))then
-     write(*,*)'friend of friend merging has been developped for SMBH - experimental!!'
-  end if
-     
-  ! for smbh runs use friends of friends merging
-  if(smbh)merging_scheme='fof'
 
   ! nol_accretion requires a somewhat smaller timestep per default
   if(c_acc < 0.)then
@@ -2747,14 +2780,14 @@ subroutine read_sink_params()
 
   !check for periodic boundary conditions
   if (nx==1 .or. ny==1 .or. nz==1)then
-     if (msink_direct .ge. 0.)then
+     if (mass_sink_direct_force .ge. 0.)then
         if(myid==1)print*, 'periodic boundaries in combination with '
         if(myid==1)print*, 'direct force sinks are not treated accurately....'
      end if
   end if
 
-  if(msink_direct<0.)then 
-     msink_direct=huge(0._dp)
+  if(mass_sink_direct_force<0.)then 
+     mass_sink_direct_force=huge(0._dp)
   end if
 
 end subroutine read_sink_params
