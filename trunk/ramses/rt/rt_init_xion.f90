@@ -157,7 +157,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   ! UV background photoionization:
   ss_factor = 1d0
   if(self_shielding) ss_factor = exp(-nH/1d-2)
-  if(rt_UV_hom) phI_rates = phI_rates + UVrates(:,1) * ss_factor
+  if(haardt_madau) phI_rates = phI_rates + UVrates(:,1) * ss_factor
        
   call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec)
   xion(1)=nSpec(3)/(nSpec(2)+nSpec(3))                    !   HII fraction
