@@ -139,7 +139,7 @@ subroutine init_time
         call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
-             & dble(1.0),T2_sim)
+             & dble(aexp_ini),T2_sim)
      endif
   end if
 #endif
