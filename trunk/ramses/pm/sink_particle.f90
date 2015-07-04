@@ -797,7 +797,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
 
-  real(dp)::sin_theta,cone_dist,orth_dist
+  real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
 
   ! Conversion factor from user units to cgs units
@@ -833,7 +833,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   end do
 
   virt_acc_mass=0.d0; delta_M=0.d0
-  sin_theta=sin(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
+  tan_theta=tan(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
@@ -1028,8 +1028,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                      ! checking if particle is in cone
                      cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
                      cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
-                     orth_dist=sqrt(sum(r_rel(1:3)-cone_dist*cone_dir(1:3))**2)
-                     if (orth_dist.le.abs(cone_dist)*sin_theta)then
+                     orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
+                     if (orth_dist.le.abs(cone_dist)*tan_theta)then
                         unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
                         unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
                      end if
