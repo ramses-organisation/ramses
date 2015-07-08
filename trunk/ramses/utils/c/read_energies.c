@@ -1,6 +1,6 @@
 // read_energies
 //=============================================================================
-// Author: Michael Rieder (2014) rieder@physik.uzh.ch
+// Author: Michael Rieder (2015) rieder@physik.uzh.ch
 //
 // parse log file for energy outputs
 //=============================================================================
@@ -78,6 +78,10 @@ void read_logfile( FILE *logfile )
 	const char * time_string = "t=";
 	char * time_pos;
 	double	time;
+	// dt
+	const char * deltat_string = "dt=";
+	char * deltat_pos;
+	double	deltat;
 	// a
 	const char * aexp_string = "a=";
 	char * aexp_pos;
@@ -114,12 +118,16 @@ void read_logfile( FILE *logfile )
 			// time
 			time_pos = strstr( line_buffer, time_string );
 			time = atof( time_pos + strlen(time_string) );
+			// deltat
+			deltat_pos = strstr( line_buffer, deltat_string );
+			deltat = atof( deltat_pos + strlen(deltat_string) );
 			// aexp
 			aexp_pos = strstr( line_buffer, aexp_string );
 			aexp = atof( aexp_pos + strlen(aexp_string) );
 
 			// output t - a - e values
-			printf( "%f %f %e %e %e %e %e\n", time, aexp, econs, epot, ekin, eint, emag );
+			printf( "%f %f %e %e %e %e %e %e\n", time, aexp, deltat,
+						econs, epot, ekin, eint, emag );
 		}
 	}
 }

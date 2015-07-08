@@ -1,3 +1,64 @@
+subroutine file_descriptor_hydro(filename)
+  use amr_commons
+  use hydro_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+
+  character(LEN=80)::filename
+  character(LEN=80)::fileloc
+  integer::ivar,ilun
+
+  if(verbose)write(*,*)'Entering file_descriptor_hydro'
+
+  ilun=11
+
+  ! Open file
+  fileloc=TRIM(filename)
+  open(unit=ilun,file=fileloc,form='formatted')
+
+  ! Write run parameters
+  write(ilun,'("nvar        =",I11)')nvar+3
+  ivar=1
+  write(ilun,'("variable #",I2,": density")')ivar
+  ivar=2
+  write(ilun,'("variable #",I2,": velocity_x")')ivar
+  ivar=3
+  write(ilun,'("variable #",I2,": velocity_y")')ivar
+  ivar=4
+  write(ilun,'("variable #",I2,": velocity_z")')ivar
+  ivar=5
+  write(ilun,'("variable #",I2,": B_left_x")')ivar
+  ivar=6
+  write(ilun,'("variable #",I2,": B_left_y")')ivar
+  ivar=7
+  write(ilun,'("variable #",I2,": B_left_z")')ivar
+  ivar=8
+  write(ilun,'("variable #",I2,": B_right_x")')ivar
+  ivar=9
+  write(ilun,'("variable #",I2,": B_right_y")')ivar
+  ivar=10
+  write(ilun,'("variable #",I2,": B_right_z")')ivar
+#if NENER>0
+  ! Non-thermal pressures
+  do ivar=11,10+nener
+     write(ilun,'("variable #",I2,": non_thermal_pressure_",I1)')ivar,ivar-10
+  end do
+#endif
+  ivar=11+nener
+  write(ilun,'("variable #",I2,": thermal_pressure")')ivar
+#if NVAR>8+NENER
+  ! Passive scalars
+  do ivar=12+nener,nvar+3
+     write(ilun,'("variable #",I2,": passive_scalar_",I1)')ivar,ivar-11-nener
+  end do
+#endif
+
+  close(ilun)
+
+end subroutine file_descriptor_hydro
+
 subroutine backup_hydro(filename)
   use amr_commons
   use hydro_commons

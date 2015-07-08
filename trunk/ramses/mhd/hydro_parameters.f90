@@ -98,6 +98,9 @@ module hydro_parameters
   character(LEN=10)::scheme='muscl'
   character(LEN=10)::riemann='llf'
   character(LEN=10)::riemann2d='llf'
+  integer ::ischeme=0
+  integer ::iriemann=0
+  integer ::iriemann2d=0
 
   ! Interpolation parameters
   integer ::interpol_var=0

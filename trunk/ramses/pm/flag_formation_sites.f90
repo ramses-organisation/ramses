@@ -4,6 +4,7 @@ subroutine flag_formation_sites
   use clfind_commons
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
+  use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -131,9 +132,9 @@ subroutine flag_formation_sites
         ! Halo must have no existing sink 
         ok=ok.and.occupied(jj)==0
         ! Halo mass has to be larger than some threshold
-        if(cosmo)ok=ok.and.halo_mass(jj)>1.0d10*2d33/(scale_d*scale_l**3.0)
+        ok=ok.and.halo_mass(jj)>mass_halo_AGN*2d33/(scale_d*scale_l**3.0)
         ! 4-cell ball has to be larger than some threshold
-        if(cosmo)ok=ok.and.clump_mass4(jj)>1.0d10*2d33/(scale_d*scale_l**3.0)
+        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*2d33/(scale_d*scale_l**3.0)
         ! Peak density has to be larger than star formation thresold
         ok=ok.and.max_dens(jj)>n_star/scale_nH
         if (ok .eqv. .true.)then

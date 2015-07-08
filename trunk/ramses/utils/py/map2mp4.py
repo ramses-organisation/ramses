@@ -170,11 +170,14 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 		
 		if(args.logscale):
 			dat = numpy.array(dat)
-			if(kind[p] == 'stars'):
-				dat += 1e-16
+			if(kind[p] == 'stars' or kind[p] == 'dm'):
+				dat += 1e-12
 		# Reshape data to 2d
 		dat = dat.reshape(ny,nx)
-		dat_mean = numpy.mean(dat)
+
+		if (kind[p] == 'stars' or kind[p] == 'dm'): # PSF convolution
+			kernel = numpy.outer(signal.gaussian(100,3),signal.gaussian(100,1))
+			dat = signal.fftconvolve(dat, kernel, mode='same')
 
 		rawmin = numpy.amin(dat)
 		rawmax = numpy.amax(dat)
@@ -342,7 +345,7 @@ def main():
 	global deflick_max
 
 	# Parse command line arguments
-	parser = ArgumentParser()
+	parser = ArgumentParser(description="Script to create RAMSES movies")
 	parser.add_argument('-l','--logscale',dest='logscale', action='store', default=False, \
 	    help='use log color scaling [%(default)s]')
 	parser.add_argument("-m","--min",  dest="min", metavar="VALUE", \
@@ -355,8 +358,8 @@ def main():
 			help='frame max value [%(default)d]', default=-1, type=int)
 	parser.add_argument("-d","--dir", dest="dir", \
 			help='map directory [current working dir]', default=os.environ['PWD'], metavar="VALUE")
-	parser.add_argument("-p","--proj", dest="proj", default='1', \
-			help="projection index [%(default)d]")
+	parser.add_argument("-p","--proj", dest="proj", default='1', type=str, \
+			help="projection index [%(default)s]")
 	parser.add_argument("-s","--step", dest="step", \
 			help="framing step [%(default)d]", default=1, type=int)
 	parser.add_argument('-k','--kind', dest="kind", \

@@ -857,13 +857,13 @@ subroutine read_clumpfind_params()
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,merge_unbound
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
   ! Read namelist file 
   rewind(1)
   read(1,NML=clumpfind_params,END=121)
   goto 122
 121 if(myid==1)write(*,*)'You did not set up namelist &CLUMPFIND_PARAMS in parameter file.'
+
   if (.not. sink)then 
      if(myid==1)write(*,*)'That block should a least contain a density '
      if(myid==1)write(*,*)'threshold n_clfind [parts/cc] or rho_clfind [g/cc]!'
@@ -879,6 +879,12 @@ subroutine read_clumpfind_params()
         if(myid==1)write(*,*)'Ignoring the input in physical units...'
      end if
   else
+     if (cosmo) then
+        if(myid==1)write(*,*)'For cosmological simulations you have to specify the'
+        if(myid==1)write(*,*)'clumpfinder density threshold in code units.'
+        call clean_stop
+     end if
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      if (rho_clfind>0. .and. n_clfind >0.)then   ! too much information...
         if(myid==1)write(*,*)'you set up the clumpfinder threshold in both, H/cc and g/cc, decide!'
         if(myid==1)write(*,*)'aborting...'
