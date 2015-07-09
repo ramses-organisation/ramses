@@ -35,7 +35,7 @@ subroutine backup_poisson(filename)
 
   open(unit=ilun,file=fileloc,form='unformatted')
   write(ilun)ncpu
-  write(ilun)ndim
+  write(ilun)ndim+1
   write(ilun)nlevelmax
   write(ilun)nboundary
   do ilevel=1,nlevelmax
