@@ -67,7 +67,7 @@ SUBROUTINE rt_init
 
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
-  tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0
+  tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0
 END SUBROUTINE rt_init
 
 !*************************************************************************
