@@ -68,7 +68,7 @@ subroutine init_flow_fine(ilevel)
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
        & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct
+       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart
   !!! DICE 
 
   if(numbtot(1,ilevel)==0)return

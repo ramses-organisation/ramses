@@ -1237,6 +1237,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
   scale_msun = scale_d * scale_l**ndim / m_sun    
+  step_mStar = 0d0
 
   ! Lower left corners of parent grid
   do idim = 1, ndim
