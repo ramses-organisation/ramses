@@ -29,6 +29,7 @@ module dice_commons
   real(dp)::ic_scale_u     = 1.0
   real(dp)::ic_scale_age   = 1.0
   real(dp)::ic_scale_metal = 1.0
+  real(dp)::ic_t_restart   = 0.0D0
   integer::ic_ifout        = 1
   integer::ic_nfile        = 1
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
@@ -118,7 +119,10 @@ subroutine init_refine_2
   integer::ilevel,i,ivar
 
   if(filetype.eq.'grafic')return
-
+  if(myid==1.and.amr_struct) then
+     write(*,*) "Initial conditions with AMR data structure"
+     write(*,'(A50)')"__________________________________________________"
+  end if
   do i=levelmin,nlevelmax+1
      ! DICE------
      do ilevel=levelmin-1,1,-1
@@ -224,6 +228,8 @@ subroutine init_refine_2
      end do
   endif
 #endif  
+  ! DICE restart time
+  t=ic_t_restart
 
 end subroutine init_refine_2
 !################################################################
@@ -324,7 +330,7 @@ subroutine kill_gas_part(ilevel)
   npart_all=sum(npart_cpu_all(1:ncpu))
   if(myid==1)then
      write(*,'(A50)')"__________________________________________________"
-     write(*,'(A,I)')' Gas particles deleted ->',npart_all
+     write(*,'(A,I15)')' Gas particles deleted ->',npart_all
      write(*,'(A50)')"__________________________________________________"
   endif
   do ipart=1,npart
