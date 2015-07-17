@@ -1086,7 +1086,7 @@ subroutine init_part
                     up(ipart)      = uu(i)
                     maskp(ipart)   = 1.0
                     ! Add a gas particle outside the zoom region
-                    if((lpart+i).gt.sum(header%npart(1:3))) then
+                    if((lpart+i).gt.sum(header%npart(1:2))) then
                        ! Add a gas particle
                        xp(ipart+1,1:3) = xp(ipart,1:3)
                        vp(ipart+1,1:3) = vp(ipart,1:3)
