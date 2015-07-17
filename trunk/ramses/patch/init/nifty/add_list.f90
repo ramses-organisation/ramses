@@ -77,6 +77,7 @@ subroutine add_free(ind_part,np)
   if(dice_init) then
      do j=1,np
         up(ind_part(j))=0.0
+        maskp(ind_part(j))=0.0
      end do
   endif
 
@@ -152,6 +153,7 @@ subroutine add_free_cond(ind_part,ok,np)
      do j=1,np
         if(ok(j))then
            up(ind_part(j))=0.0
+           maskp(ind_part(j))=0.0
         endif
      end do
   endif
