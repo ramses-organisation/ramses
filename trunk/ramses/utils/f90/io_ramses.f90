@@ -244,10 +244,10 @@ contains
   do k=1,ncpu_read
      icpu=cpu_list(k)
      ilast=ifirst
-     do while(cpu_cell(ind_sort_cell(ilast)).eq.icpu)
+     do while(ilast<ncell .and. cpu_cell(ind_sort_cell(ilast)).eq.icpu)
         ilast=ilast+1
      end do
-     ilast=ilast-1
+     if (ilast<ncell) ilast=ilast-1
 
      call title(icpu,ncharcpu)
 

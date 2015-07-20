@@ -67,7 +67,7 @@ subroutine init_part
   integer::dummy_int,blck_size,jump_blck,blck_cnt,stat,ifile
   integer::head_blck,pos_blck,vel_blck,id_blck,mass_blck,u_blck,metal_blck,age_blck
   integer::head_size,pos_size,vel_size,id_size,mass_size,u_size,metal_size,age_size
-  integer::kpart,lpart,mpart,opart
+  integer::kpart,lpart,mpart,opart,gpart,ngas,nhalo
   integer, dimension(nvector)::ids
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp),dimension(1:nvector)::tt,zz,uu
@@ -802,7 +802,7 @@ subroutine init_part
                 ! Init block counter
                 jump_blck = 1
                 blck_cnt = 1
-                do while(1)
+                do while(.true.)
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) blck_size
                   if(stat /= 0) exit
@@ -847,7 +847,7 @@ subroutine init_part
                 ! Init block counter
                 jump_blck = 1
                 write(*,'(A50)')"__________________________________________________"
-                do while(1)
+                do while(.true.)
                   ! Reading data block header
                   read(1,POS=jump_blck,iostat=stat) dummy_int
                   if(stat /= 0) exit
@@ -922,6 +922,8 @@ subroutine init_part
  
               nstar_tot = sum(header%npart(3:5))
               npart     = sum(header%npart)
+              ngas      = header%npart(1)
+              nhalo     = header%npart(2)
 
               write(*,'(A50)')"__________________________________________________"
               write(*,*)"Found ",npart," particles"
@@ -933,6 +935,7 @@ subroutine init_part
               write(*,'(A50)')"__________________________________________________"
               if((pos_size.ne.npart).or.(vel_size.ne.npart)) then
                 write(*,*) 'POS =',pos_size
+                write(*,*) 'Z   =',metal_size
                 write(*,*) 'VEL =',vel_size
                 write(*,*) 'Number of particles does not correspond to block sizes'
                 error=.true.
@@ -948,6 +951,7 @@ subroutine init_part
             kpart    = 0
             lpart    = 0
             mpart    = 0
+            gpart    = 0
             opart    = 0
             mgas_tot = 0.
             do while(.not.eob)
@@ -969,6 +973,7 @@ subroutine init_part
                      if(kpart.gt.sum(header%npart(1:j)).and.kpart.le.sum(header%npart(1:j+1))) type_index = j+1
                   enddo
                   if((sum(header%npart(3:5)).gt.0).and.(kpart.gt.(header%npart(1)+header%npart(2)))) mpart=mpart+1
+                  if(type_index.ne.2) gpart=gpart+1
                   ! Reading Gadget2 file line-by-line
                   ! Mandatory data
                   read(1,POS=pos_blck+3*sizeof(dummy_real)*(kpart-1)) xx_sp(i,1:3)
@@ -993,6 +998,9 @@ subroutine init_part
                   if(metal) then
                     if((metal_blck.ne.-1).and.(metal_size.eq.npart)) then
                       read(1,POS=metal_blck+sizeof(dummy_real)*(kpart-1)) zz_sp(i)
+                    endif
+                    if((metal_blck.ne.-1).and.(metal_size.eq.ngas+nstar_tot)) then
+                      read(1,POS=metal_blck+sizeof(dummy_real)*(gpart-1)) zz_sp(i)
                     endif
                   endif
                   if(star) then
