@@ -126,8 +126,6 @@ subroutine read_hydro_params(nml_ok)
     call clean_stop
   END SELECT
 
-  write(*,*) ischeme,iriemann,iriemann2d
-
   !--------------------------------------------------
   ! Make sure virtual boundaries are expanded to 
   ! account for staggered mesh representation

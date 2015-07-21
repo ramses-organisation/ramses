@@ -79,10 +79,10 @@ subroutine init_poisson
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
-     if(ndim2.ne.ndim)then
+     if(ndim2.ne.ndim+1)then
         write(*,*)'File poisson.tmp is not compatible'
         write(*,*)'Found   =',ndim2
-        write(*,*)'Expected=',ndim
+        write(*,*)'Expected=',ndim+1
         call clean_stop
      end if
      do ilevel=1,nlevelmax2

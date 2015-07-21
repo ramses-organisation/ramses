@@ -100,6 +100,7 @@ subroutine init_part
   allocate(ptcl_phi(npartmax))
 #endif
   allocate(up    (npartmax))
+  allocate(maskp (npartmax))
   xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0; up=0.
   if(star.or.sink)then
      allocate(tp(npartmax))
@@ -928,11 +929,11 @@ subroutine init_part
 
               write(*,'(A50)')'__________________________________________________'
               write(*,*)'Found ',npart,' particles'
-              write(*,*)'----> ',header%npart(1),' gas particles'
-              write(*,*)'----> ',header%npart(2),' halo particles'
-              write(*,*)'----> ',header%npart(3),' disk particles'
-              write(*,*)'----> ',header%npart(4),' bulge particles'
-              write(*,*)'----> ',header%npart(5),' stars particles'
+              write(*,*)'----> ',header%npart(1),' type 0 particles'
+              write(*,*)'----> ',header%npart(2),' type 1 particles'
+              write(*,*)'----> ',header%npart(3),' type 2 particles'
+              write(*,*)'----> ',header%npart(4),' type 3 particles'
+              write(*,*)'----> ',header%npart(5),' type 4 particles'
               write(*,'(A50)')'__________________________________________________'
               if((pos_size.ne.npart).or.(vel_size.ne.npart)) then
                 write(*,*) 'POS =',pos_size
@@ -952,7 +953,8 @@ subroutine init_part
             lpart    = 0
             mpart    = 0
             opart    = 0
-            mgas_tot = 0.
+            mgas_tot = 0d0
+            m_tot    = 0d0
             do while(.not.eob)
               xx=0.
               vv=0.
@@ -1079,9 +1081,28 @@ subroutine init_part
                       tp(ipart)    = tt(i)
                     endif
                     if(metal) then
-                      zp(ipart)    = zz(i)
+                      zp(ipart)    = z_ave*0.02
                     endif
                     up(ipart)      = uu(i)
+                    maskp(ipart)   = 1.0
+                    ! Add a gas particle outside the zoom region
+                    if((lpart+i).gt.sum(header%npart(1:2))) then
+                       ! Add a gas particle
+                       xp(ipart+1,1:3) = xp(ipart,1:3)
+                       vp(ipart+1,1:3) = vp(ipart,1:3)
+                       idp(ipart+1)    = 1
+                       mp(ipart+1)     = mp(ipart)*(omega_b/omega_m)
+                       levelp(ipart+1) = levelmin
+                       up(ipart+1)     = T2_start/scale_T2
+                       maskp(ipart+1)  = 0.0
+                       if(metal) then
+                          zp(ipart+1)  = z_ave*0.02
+                       endif
+                       ! Remove mass from the DM particle
+                       mp(ipart) = mp(ipart)-mp(ipart+1)
+                       ! Update index
+                       ipart           = ipart+1
+                    endif
 #ifndef WITHOUTMPI
                   endif
 #endif

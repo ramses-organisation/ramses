@@ -106,7 +106,7 @@ subroutine rho_fine(ilevel,icount)
   ! Initialize "number density" field to baryon number density in array phi.
   !-------------------------------------------------------------------------
   if(m_refine(ilevel)>-1.0d0)then
-     d_scale=max(mass_sph/dx_loc**ndim,smallr)
+     d_scale=max(mass_sph/dx_loc**ndim,smallr) 
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         if(hydro)then
@@ -752,7 +752,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do ind=1,twotondim
 
      do j=1,np
-        ok(j)=(igrid(j,ind)>0)
+        ok(j)=igrid(j,ind)>0
         if(dice_init) ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
      end do
 
@@ -806,7 +806,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      if(star)then
         do j=1,np
            if(ttt(j).ne.0.0)then
-              vol2(j)=vol2(j)*mmm(j)/mass_sph
+              vol2(j)=vol2(j)*mmm(j)/mass_sph 
            endif
         end do
      endif
@@ -1258,7 +1258,6 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do j=1,np
            ind_cell_son=iskip_son+ind_grid(j)
-           if(unew(ind_cell_son,1)==0d0) write(*,*) 'unew=0!!'
            x(j,idim)=unew(ind_cell_son,idim+1)/unew(ind_cell_son,1)
         end do
      end do
