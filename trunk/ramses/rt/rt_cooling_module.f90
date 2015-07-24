@@ -87,10 +87,10 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   x_FRAC          = 0.1    
 
   Np_MIN = 1.d-13                        !            Photon density floor
-  Np_FRAC = 10000.    
+  Np_FRAC = 0.2    
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
-  Fp_FRAC = 10000.                       !           Fp update restriction
+  Fp_FRAC = 0.5
 
   if(myid==1) write(*,*) 'IR group index has been set to ',iIR        
 
