@@ -2,11 +2,6 @@ subroutine cooling_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
-#ifdef RT
-  use rt_parameters, only: rt_isDiffuseUVsrc
-  use rt_cooling_module, only: update_UVrates
-  use UV_module
-#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -40,14 +35,6 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #endif
   endif
-#ifdef RT
-  if(neq_chem.and.ilevel==levelmin) then
-     if(cosmo)call update_rt_c
-     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
-     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
-     if(ilevel==levelmin) call output_rt_stats
-  endif
-#endif
 
 111 format('   Entering cooling_fine for level',i2)
 

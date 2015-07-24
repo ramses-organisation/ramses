@@ -356,9 +356,9 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 
 #ifdef RT
-  ! here were the main RT calls
-  print*, 'calling rt_sub_step for ',ilevel,icount 
-  call rt_sub_step(ilevel)
+  ! here were do the main RT calls
+  print*, 'calling rt_step for ',ilevel,icount 
+  call rt_step(ilevel)
 #else
   if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
@@ -455,30 +455,37 @@ end subroutine amr_step
 
 
 
-subroutine rt_sub_step(ilevel)
+#ifdef RT
+!*************************************************************************
+subroutine rt_step(ilevel)
+
+!  Radiative transfer and chemistry step. Either do one step on ilevel,
+!  with radiation field updates in coarser level neighbours, or, if
+!  rt_nsubsteps>1, do many substeps in ilevel only, using Dirichlet
+!  boundary conditions for the level boundaries. 
+!-------------------------------------------------------------------------
   use amr_parameters, only: dp
   use amr_commons,    only: levelmin, dtnew, myid
-#ifdef RT
+  use rt_parameters, only: rt_isDiffuseUVsrc
+  use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
+  use UV_module
   use SED_module,     only: star_RT_feedback
-#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-#ifdef RT
   integer, intent(in) :: ilevel
   real(dp) :: dt_hydro, t_left, dt_rt
   integer  :: i_substep, ivar
-
-  dt_hydro = dtnew(ilevel)
+!-------------------------------------------------------------------------
+  dt_hydro = dtnew(ilevel)                   ! Store hydro timestep length
   t_left = dt_hydro
   
-
   i_substep = 0
-  do while (t_left > 0)
+  do while (t_left > 0)                      !                RT sub-cycle
      i_substep = i_substep + 1
      call get_rt_courant_coarse(dt_rt)
+     ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
 
      if (myid==1)print*,'dt_hydro: ',dt_hydro,'dt_rt: ',dtnew(ilevel), 'i_sub: ',i_substep &
@@ -488,9 +495,6 @@ subroutine rt_sub_step(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 
-     !---------------
-     ! Radiation step
-     !---------------
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
 
@@ -512,12 +516,19 @@ subroutine rt_sub_step(ilevel)
      if(simple_boundary)call rt_make_boundary_hydro(ilevel)
 
      t_left = t_left - dtnew(ilevel)
-  end do
-  dtnew(ilevel) = dt_hydro
+  end do                                   !          End RT subcycle loop
+  dtnew(ilevel) = dt_hydro                 ! Restore hydro timestep length
   
   ! Restriction operator to update coarser level split cells
   call rt_upload_fine(ilevel)
 
+  ! Regular updates and book-keeping:
+  if(ilevel==levelmin) then
+     if(cosmo)call update_rt_c
+     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
+     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
+     if(ilevel==levelmin) call output_rt_stats
+  endif
   
+end subroutine rt_step
 #endif
-end subroutine rt_sub_step
