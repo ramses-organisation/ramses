@@ -10,9 +10,11 @@ module rt_parameters
 
   real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
   real(dp),parameter::c_cgs=2.9979250d+10                  ! Actual lightspeed in [cm s-1]
+  real(dp),parameter::one_over_c_cgs=3.335640484668562d-11  ! save some computation
   real(dp)::rt_c_cgs=c_cgs                                     ! RT lightspeed in [cm s-1]
   real(dp),parameter::m_sun=1.9891d33               ! Solar mass [g], for SED calculations
   real(dp),parameter::eV_to_erg=1.6022d-12          !        eV to erg conversion constant
+  real(dp),parameter::eV_to_erg_over_c_cgs=5.344363184535971d-23
   real(dp), parameter:: Gyr2sec = 3.15569d+16       !       Gyr to sec conversion constant
   real(dp), parameter:: Myr2sec = 3.15569d+13       !       Myr to sec conversion constant
   real(dp), parameter:: sec2Gyr = 3.16888d-17       !       sec to Gyr conversion constant
