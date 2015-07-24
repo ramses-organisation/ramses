@@ -288,7 +288,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! Add stellar radiation sources
-  if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
 #endif
   
   ! Density threshold or Bondi accretion onto sink particle
@@ -356,32 +356,17 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 
 #ifdef RT
-  !---------------
-  ! Radiation step
-  !---------------
-  if(rt)then
-     ! Hyperbolic solver
-     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
-
-     call add_rt_sources(ilevel,dtnew(ilevel))
-
-     ! Reverse update boundaries
-     do ivar=1,nrtvar
-        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
-     end do
-
-     ! Set rtuold equal to rtunew
-     call rt_set_uold(ilevel)
-
-     ! Restriction operator
-     call rt_upload_fine(ilevel)
-  endif
+  ! here were the main RT calls
+  print*, 'calling rt_sub_step for ',ilevel,icount 
+  call rt_sub_step(ilevel)
+#else
+  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
   
   !-------------------------------
   ! Source term in leaf cells only
   !-------------------------------
-  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  
 
   !----------------------------------
   ! Star formation in leaf cells only
@@ -406,12 +391,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 #ifdef RT
-  if(rt)then
-     do ivar=1,nrtvar
-        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
-     end do
-     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
-  end if
+  ! Here was the RT boundary stuff
 #endif
 
 #ifdef SOLVERmhd
@@ -475,3 +455,69 @@ end subroutine amr_step
 
 
 
+subroutine rt_sub_step(ilevel)
+  use amr_parameters, only: dp
+  use amr_commons,    only: levelmin, dtnew, myid
+#ifdef RT
+  use rt_hydro_commons
+  use SED_module,     only: star_RT_feedback
+#endif
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+#ifdef RT
+  integer, intent(in) :: ilevel
+  real(dp) :: dt_hydro, t_left, dt_rt
+  integer  :: i_substep, ivar
+
+  dt_hydro = dtnew(ilevel)
+  t_left = dt_hydro
+  
+
+  i_substep = 0
+  do while (t_left > 0)
+     i_substep = i_substep + 1
+     call get_rt_courant_coarse(dt_rt)
+     dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+
+     if (myid==1)print*,'dt_hydro: ',dt_hydro,'dt_rt: ',dtnew(ilevel), 'i_sub: ',i_substep &
+          , 'level: ', ilevel
+         
+     if (i_substep > 1)call rt_set_unew(ilevel)
+
+     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
+     !---------------
+     ! Radiation step
+     !---------------
+     ! Hyperbolic solver
+     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
+
+     call add_rt_sources(ilevel,dtnew(ilevel))
+
+     ! Reverse update boundaries
+     do ivar=1,nrtvar
+        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
+     end do
+
+     ! Set rtuold equal to rtunew
+     call rt_set_uold(ilevel)
+
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+     
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+
+     t_left = t_left - dtnew(ilevel)
+  end do
+  dtnew(ilevel) = dt_hydro
+  
+  ! Restriction operator to update coarser level split cells
+  call rt_upload_fine(ilevel)
+
+  
+#endif
+end subroutine rt_sub_step
