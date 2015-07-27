@@ -171,38 +171,25 @@ subroutine output_sink_csv(filename)
   use amr_commons
   use pm_commons
   implicit none
-  character(LEN=80)::filename
+  character(LEN=80)::filename,fileloc
 
-  integer::i,idim,ipart,isink
-  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom
-  real(dp)::scale
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  character(LEN=80)::fileloc
-  character(LEN=5)::nchar
+  integer::ilun,icpu,isink
 
   if(verbose)write(*,*)'Entering output_sink_csv'
-
-  ilun=myid+10
-
-  ! Conversion factor from user units to cgs units 
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**3d0
-
-  if(verbose)write(*,*)'Entering output_sink'
 
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
-  open(unit=ilun,file=TRIM(fileloc),form='formatted',status='replace')
+  open(unit=ilun,file=TRIM(fileloc),form='formatted',status='replace', recl=500)
   !======================
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,11(A1,ES20.10))')idsink(isink),',',msink(isink),&
+     write(ilun,'(I10,12(A1,ES20.10))')idsink(isink),',',msink(isink),&
           ',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),&
           ',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),&
           ',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),&
-          ',',t-tsink(isink)
+          ',',t-tsink(isink),',',dMBHoverdt(isink)
   end do
 
   close(ilun)
