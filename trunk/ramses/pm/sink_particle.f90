@@ -833,7 +833,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   end do
 
   virt_acc_mass=0.d0; delta_M=0.d0
-  tan_theta=tan(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
+  ! geometry safety net
+  cone_opening = max(tiny(0.0),cone_opening)
+  cone_opening = min(cone_opening, 180.d0)
+  tan_theta=tan(3.1415926/180.*cone_opening/2) ! tangent of half of the opening angle
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
@@ -900,7 +903,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
                  fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
-                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
+                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -2683,7 +2686,7 @@ subroutine read_sink_params()
        clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
+  if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale = boxlen/dble(nx_loc)
