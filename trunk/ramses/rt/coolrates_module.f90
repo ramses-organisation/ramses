@@ -1,10 +1,118 @@
 MODULE coolrates_module
+  ! Add an init routine that tabulates cooling rates and reaction rates
+  ! Add a routine to interpolate the table and return those rates
+  ! Table.T
+  ! Use actual calculations if temperature is outside table boundaries.
+
   use amr_parameters,only:dp
   implicit none
+
+  !private   ! default
+
+  !public init_coolrates_table, get_AlphaA_HII
+
+  ! Default cooling rates table parameters
+  integer,parameter     :: nbinTK = 101
+  real(dp),parameter    :: TKmin  = 1d-2
+  real(dp),parameter    :: TKmax  = 1d+9
+  real(dp)              :: dlogTinv ! Inverse of the bin space (in K)
+  real(dp)              :: hTable, h2Table, h3Table   ! Interpol constants
+  
+  type coolrates_table
+     real(kind=8),dimension(:)    ,pointer::TK
+     real(kind=8),dimension(:)    ,pointer::alphaA_HII
+     real(kind=8),dimension(:)    ,pointer::alphaA_HII_prime
+  end type coolrates_table
+
+  type(coolrates_table)::table, table_mpi
   
 CONTAINS
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+SUBROUTINE init_coolrates_table
+
+! Initialise the cooling rates table.
+!-------------------------------------------------------------------------
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  real(kind=8):: TK
+  integer:: myid, ncpu, ierr
+  integer:: iTK
+  logical,save:: first=.true.
+!-------------------------------------------------------------------------
+#ifndef WITHOUTMPI
+  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
+#endif
+#ifdef WITHOUTMPI
+  myid=0
+  ncpu=1
+#endif
+
+  ! Allocate the tables --------------------------------------------------
+  if(.not.first)then
+     deallocate(table%TK)
+     deallocate(table%alphaA_HII)
+  else
+     first=.false.
+  endif
+
+  allocate(table%TK(1:nbinTK))
+  allocate(table%alphaA_HII(1:nbinTK))
+  allocate(table%alphaA_HII_prime(1:nbinTK))
+
+  ! Initialise the table temperature indexes -----------------------------
+  do iTK=1, nbinTK
+     table%TK(iTK) = log10(TKmin)    &
+                    + (dble(iTK)-1d0) / (dble(nbinTK)-1d0) &
+                    * (log10(TKmax)-log10(TKmin))
+  end do
+  dlogTinv = dble(nbinTK-1)/(table%TK(nbinTK)-table%TK(1)) ! (space)^-1
+  hTable = 1d0/dlogTinv                     !
+  h2Table = hTable*hTable                   ! Constants for table
+  h3Table = h2Table*hTable                  ! interpolation
+  
+  ! Initialise the table values ------------------------------------------
+  table%alphaA_HII = 0d0
+  table%alphaA_HII_prime = 0d0
+  do iTK = myid+1, nbinTK, ncpu ! Loop over TK and assign values
+  !do iTK=1, nbinTK
+     TK = 10d0**table%TK(iTK)
+     table%alphaA_HII(iTK) = log10(MAX(comp_AlphaA_HII(TK),1d-100))
+     table%alphaA_HII_prime(iTK) = log10(MAX(comp_dAlphaA_dT_HII(TK),1d-100))
+  end do ! end TK loop
+  
+  ! Distribute the complete table between cpus ---------------------------
+#ifndef WITHOUTMPI
+  allocate(table_mpi%alphaA_HII(1:nbinTK))
+  allocate(table_mpi%alphaA_HII_prime(1:nbinTK))
+
+  call MPI_ALLREDUCE(table%alphaA_HII,table_mpi%alphaA_HII               &
+       ,nbinTK,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  table%alphaA_HII = table_mpi%alphaA_HII
+  call MPI_ALLREDUCE(table%alphaA_HII_prime,table_mpi%alphaA_HII_prime   &
+       ,nbinTK,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
+  table%alphaA_HII_prime = table_mpi%alphaA_HII_prime
+
+  deallocate(table_mpi%alphaA_HII)
+  deallocate(table_mpi%alphaA_HII_prime)
+#endif
+
+  if(myid==0) print*,'Coolrates table initialised '
+  do iTK = 1,nbinTK
+     if(myid==0) print*,10d0**table%TK(iTK)     &
+          , 10d0**table%alphaA_HII(iTK)         &
+          , 10d0**table%alphaA_HII_prime(iTK)
+     !if(myid==1) print*,table%alphaA_HII
+  end do
+
+  !stop
+  
+END SUBROUTINE init_coolrates_table
+
+!PRIVATE XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ELEMENTAL FUNCTION comp_AlphaA_HII(T)
 
 ! Returns case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)
@@ -18,6 +126,72 @@ ELEMENTAL FUNCTION comp_AlphaA_HII(T)
   comp_AlphaA_HII =  1.269d-13 * lambda**1.503 &
                      / ( ( 1.d0+(lambda/0.522)**0.47 )**1.923 )
 END FUNCTION comp_AlphaA_HII
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+FUNCTION get_AlphaA_HII(T, useLastIndex, prime)
+
+! Returns TABULATED case A rec. coefficient [cm3 s-1] for HII
+! T            => Temperature [K]
+! useLastIndex => Use interpolation indexes from last coolrates call
+! prime        <= Temperature derivative of returned rate
+!-------------------------------------------------------------------------
+  implicit none
+  real(dp),intent(in)::T
+  logical, optional, intent (in) :: useLastIndex
+  real(dp),optional::prime
+  real(dp)::get_AlphaA_HII
+!-------------------------------------------------------------------------
+  get_AlphaA_HII = inp_coolrates_table(table%alphaA_HII                  &
+                          ,table%alphaA_HII_prime, T, useLastIndex, prime)
+END FUNCTION get_AlphaA_HII
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+FUNCTION inp_coolrates_table(rates, ratesPrime, T, useLastIndex, retPrime)
+! Returns TABULATED rate value from given table
+! rates        => Rates table to interpolate
+! ratesPrime   => Prime rates table to interpolate
+! T            => Temperature [K]
+! useLastIndex => Re-use table index and weights from last call to
+!                 this function.
+! retPrime     <= Temperature derivative of rate at T (optional).  
+!-------------------------------------------------------------------------
+  implicit none
+  real(dp),dimension(nbinTK)::rates, ratesPrime
+  real(dp),intent(in)::T
+  logical, optional, intent (in) :: useLastIndex
+  real(dp),optional::retPrime
+
+  real(dp)::inp_coolrates_table
+
+  integer,save:: iT = 1
+  real(dp),save:: facT, yy, yy2, yy3, fa, fb, fprimea, fprimeb
+  real(dp),save:: alpha, beta, gamma
+!-------------------------------------------------------------------------
+  if (.not. useLastIndex) then
+     ! Log of T, snapped to table:
+     facT = MIN( MAX( log10(T), table%TK(1) ), table%TK(nbinTK) )
+     ! Lower closest index in table:
+     iT = MIN(MAX(int((facT-table%TK(1))*dlogTinv)+1, 1), nbinTK-1) 
+     yy=facT-table%TK(iT)  ! Dist., in log(T), from T to lower table index
+     yy2=yy*yy             ! That distance squared
+     yy3=yy2*yy            ! ...and cubed
+  endif
+  
+  fa = rates(iT)                !
+  fb = rates(iT+1)              !  Values at neighbouring table
+  fprimea=ratesPrime(iT)       !  indexes
+  fprimeb=ratesPrime(iT+1)     !
+
+  ! Spline interpolation:
+  alpha = fprimea
+  beta = 3d0*(fb-fa)/h2Table-(2d0*fprimea+fprimeb)/hTable
+  gamma = (fprimea+fprimeb)/h2Table-2d0*(fb-fa)/h3Table
+  inp_coolrates_table = 10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+  if( present(retPrime) ) &
+       retPrime = inp_coolrates_table / T &
+                * (alpha+2d0*beta*yy+3d0*gamma*yy2)
+
+END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ELEMENTAL FUNCTION comp_dAlphaA_dT_HII(T)
