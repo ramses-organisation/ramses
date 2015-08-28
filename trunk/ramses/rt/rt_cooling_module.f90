@@ -69,6 +69,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 ! T2_sim (dble)      <=  Starting temperature in simulation?
 !-------------------------------------------------------------------------
   use UV_module
+  use coolrates_module,only: init_coolrates_tables
   real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
   integer  :: Nmodel, correct_cooling, realistic_ne, ig
@@ -109,8 +110,8 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   call update_rt_c
   call init_UV_background
-  call update_UVrates(astart_sim) ! In case of aexp_nocosmo
-  call init_coolrates_table
+  call update_UVrates(astart_sim)! In case of aexp_nocosmo
+  call init_coolrates_tables(astart_sim)
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
@@ -196,10 +197,15 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   one_over_Fp_FRAC = 1d0 / Fp_FRAC
   one_over_T_FRAC = 1d0 / T_FRAC
   one_over_x_FRAC = 1d0 / x_FRAC
-  group_egy_ratio(1:nGroups) = group_egy(1:nGroups) / group_egy(iIR)
-  group_egy_erg(1:nGroups) = group_egy(1:nGroups) * ev_to_erg
-  one_over_egy_IR_erg = 1.d0 / group_egy_erg(iIR) 
-  
+#if NGROUPS>0 
+  if(rt .and. nGroups .gt. 0) then 
+     group_egy_erg(1:nGroups) = group_egy(1:nGroups) * ev_to_erg
+     if(rt_isIR) then
+        group_egy_ratio(1:nGroups) = group_egy(1:nGroups) / group_egy(iIR)
+        one_over_egy_IR_erg = 1.d0 / group_egy_erg(iIR)
+     endif
+  endif
+#endif
   !-----------------------------------------------------------------------
   tleft(1:ncell) = dt                !       Time left in dt for each cell
   ddt(1:ncell) = dt                  ! First guess at sub-timestep lengths
@@ -220,7 +226,6 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
         do ig=1,ngroups
            Np(ig,i) = MAX(smallNp, Np(ig,i))
            call reduce_flux(Fp(:,ig,i),Np(ig,i)*rt_c_cgs)
-!           call reduce_flux(i,ig)
         end do
      endif
   end do
@@ -337,6 +342,7 @@ contains
     if(self_shielding) ss_factor = exp(-nH(icell)/1d-2)
 
     rho = nH(icell) / X * mH
+#if NGROUPS>0 
     ! Set dust opacities--------------------------------------------------
     if(rt .and. nGroups .gt. 0) then
        kAbs_loc = kappaAbs
@@ -364,11 +370,13 @@ contains
 
        ! EMISSION FROM GAS
        if(.not. rt_OTSA .and. rt_advect) then ! ----------- Rec. radiation
-!          alpha(1) = comp_AlphaA_HII(TK) - comp_AlphaB_HII(TK) 
-          alpha(1) = get_AlphaA_HII(TK,.false.) - comp_AlphaB_HII(TK) 
+          alpha(1) = inp_coolrates_table(tbl_alphaA_HII, TK) &
+                   - inp_coolrates_table(tbl_alphaB_HII, TK)
           ! alpha(2) A-B becomes negative around 1K, hence the max
-          alpha(2) = MAX(0.d0,comp_AlphaA_HeII(TK)-comp_AlphaB_HeII(TK))
-          alpha(3) = comp_AlphaA_HeIII(TK) - comp_AlphaB_HeIII(TK)
+          alpha(2) = MAX(0.d0,  inp_coolrates_table(tbl_alphaA_HeII, TK) &
+                              - inp_coolrates_table(tbl_alphaB_HeII, TK))
+          alpha(3) = inp_coolrates_table(tbl_alphaA_HeIII, TK) &
+                   - inp_coolrates_table(tbl_alphaB_HeIII, TK)
           do iion=1,nIons
              if(spec2group(iion) .gt. 0) &  ! Contribution of ion -> group
                   recRad(spec2group(iion)) = &
@@ -446,6 +454,7 @@ contains
        endif
        ! -----------------------------------------------------------------
     endif !if(rt)
+#endif
     !(ii) UPDATE TEMPERATURE *********************************************
     if(c_switch(icell) .and. cooling .and. .not. rt_T_rad) then
        Hrate=0.                             !  Heating rate [erg cm-3 s-1]
@@ -479,14 +488,15 @@ contains
        TK=dT2*mu
     endif
 
+#if NGROUPS>0 
     if(rt_isIR) then
        if(kAbs_loc(iIR) .gt. 0d0 .and. .not. rt_T_rad) then
           ! Evolve IR-Dust equilibrium temperature------------------------
           ! Delta (Cv T)= ( c_red/lambda E - c/lambda a T^4) 
           !           / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
-          one_over_C_v = mh*mu*(gamma-1d0) / (rho*kb)                                  
+          one_over_C_v = mh*mu*(gamma-1d0) / (rho*kb)
           E_rad = group_egy_erg(iIR) * dNp(iIR)
-          dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4) &
+          dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4)                    &
                /(1d0/(kAbs_loc(iIR) * Zsolar(icell) * rho * ddt(icell))  &
                +4d0*c_cgs * one_over_C_v *a_r*TK**3+rt_c_cgs)
           dT2 = dT2 + 1d0/mu * one_over_C_v * dE_T
@@ -511,19 +521,15 @@ contains
           call reduce_flux(dFp(:,iIR),dNp(iIR)*rt_c_cgs)           
        endif
     endif
-
+#endif
     !(iii) UPDATE xHII****************************************************
     ! First recompute interaction rates since T is updated
     if(rt_OTSA .or. .not. rt_advect) then           !  Recombination rates
-       alpha(1) = comp_AlphaB_HII(TK)
-       dalpha   = comp_dAlphaB_dT_HII(TK)
+       alpha(1) = inp_coolrates_table(tbl_alphaB_HII, TK, dalpha)
     else                               
-!       alpha(1) = comp_AlphaA_HII(TK)
-       alpha(1) = get_AlphaA_HII(TK,.true.)
-       dalpha   = comp_dAlphaA_dT_HII(TK)
+       alpha(1) = inp_coolrates_table(tbl_alphaA_HII, TK, dalpha)
     endif
-    beta(1) = comp_Beta_HI(TK)                    !  Coll. ionization rate
-    dBeta   = comp_dBeta_dT_HI(TK)
+    beta(1) = inp_coolrates_table(tbl_beta_HI, TK, dBeta) !  Coll-ion rate
     cr = beta(1) * ne                             !               Creation
     if(rt) cr = cr + SUM(signc(:,1)*dNp)          !                  [s-1]
     if(haardt_madau) cr = cr + UVrates(1,1) * ss_factor
@@ -553,14 +559,14 @@ contains
 
        !(iv) UPDATE xHeI *************************************************
        if(rt_OTSA .or. .not. rt_advect) then
-          alpha(2) = comp_AlphaB_HeII(TK)
-          alpha(3) = comp_AlphaB_HeIII(TK)
+          alpha(2) = inp_coolrates_table(tbl_alphaB_HeII, TK)
+          alpha(3) = inp_coolrates_table(tbl_alphaB_HeIII, TK)
        else                               
-          alpha(2) = comp_AlphaA_HeII(TK)
-          alpha(3) = comp_AlphaA_HeIII(TK)
+          alpha(2) = inp_coolrates_table(tbl_alphaA_HeII, TK)
+          alpha(3) = inp_coolrates_table(tbl_alphaA_HeIII, TK)
        endif
-       beta(2) = comp_Beta_HeI(TK)
-       beta(3) = comp_Beta_HeII(TK)
+       beta(2) =  inp_coolrates_table(tbl_beta_HeI, TK)
+       beta(3) = inp_coolrates_table(tbl_beta_HeII, TK)
        ! Creation = recombination of HeII and electrons
        cr = alpha(2) * ne * dXion(2)
        ! Destruction = collisional ionization+photoionization of HeI
@@ -698,19 +704,18 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu)
   t_rad_HEII = t_rad_spec(HeII)
 
   if(rt_OTSA) then                           !    Recombination [cm3 s-1]
-     t_rec_HI   = comp_AlphaB_HII(TK)        
-     t_rec_HEI  = comp_AlphaB_HeII(TK)
-     t_rec_HEII = comp_AlphaB_HeIII(TK)
+     t_rec_HI   = inp_coolrates_table(tbl_alphaB_HII, TK)
+     t_rec_HEI  = inp_coolrates_table(tbl_alphaB_HeII, TK)
+     t_rec_HEII = inp_coolrates_table(tbl_alphaB_HeIII, TK)
   else 
-!     t_rec_HI   = comp_AlphaA_HII(TK)        
-     t_rec_HI   = get_AlphaA_HII(TK,.true.)        
-     t_rec_HEI  = comp_AlphaA_HeII(TK)
-     t_rec_HEII = comp_AlphaA_HeIII(TK)
+     t_rec_HI   = inp_coolrates_table(tbl_alphaA_HII, TK)
+     t_rec_HEI  = inp_coolrates_table(tbl_alphaA_HeII, TK)
+     t_rec_HEII = inp_coolrates_table(tbl_alphaA_HeIII, TK)
   endif
 
-  t_ion_HI   = comp_Beta_HI(TK)               ! Coll. ionization [cm3 s-1]
-  t_ion_HEI  = comp_Beta_HeI(TK)
-  t_ion_HEII = comp_Beta_HeII(TK)
+  t_ion_HI   = inp_coolrates_table(tbl_beta_HI, TK) ! Coll. ion. [cm3 s-1]
+  t_ion_HEI  = inp_coolrates_table(tbl_beta_HeI, TK)
+  t_ion_HEII = inp_coolrates_table(tbl_beta_HeII, TK)
   
   n_E = nH        
   err_nE = 1.

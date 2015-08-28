@@ -5,6 +5,7 @@ subroutine cooling_fine(ilevel)
 #ifdef RT
   use rt_parameters, only: rt_isDiffuseUVsrc
   use rt_cooling_module, only: update_UVrates
+  use coolrates_module, only: update_coolrates_tables
   use UV_module
 #endif
   implicit none
@@ -45,6 +46,7 @@ subroutine cooling_fine(ilevel)
      if(cosmo)call update_rt_c
      if(cosmo .and. haardt_madau) call update_UVrates(aexp)
      if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
+     if(cosmo) call update_coolrates_tables(dble(aexp))
      if(ilevel==levelmin) call output_rt_stats
   endif
 #endif
@@ -140,11 +142,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   endif
 
 #ifdef RT
+#if NGROUP>0
   if(rt_isIRtrap) then
      ! For conversion from photon number density to photon energy density:
      Np2Ep = scale_Np * group_egy(iIR) * ev_to_erg                       &
           * rt_c_cgs/c_cgs * rt_pressBoost / scale_d / scale_v**2
   endif
+#endif
   ! Allow for high-z UV background in noncosmo sims:
   aexp_loc=aexp
   if(.not. cosmo .and. haardt_madau) aexp_loc = aexp_ini
@@ -195,6 +199,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                      /uold(ind_leaf(i),1) * scale_v
      end do
 
+#if NGROUP>0
      if(rt_isIRtrap) then  ! Gather also trapped photons for solve_cooling
         iNp=iGroups(iIR)
         do i=1,nleaf
@@ -230,6 +235,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
         enddo
      endif
+#endif
 #endif
         
      ! Compute thermal pressure
@@ -452,12 +458,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            ekk(i)=ekk_new(i)
         end do
      
+#if NGROUP>0 
         if(rt_vc) then ! Photon work: subtract from the IR ONLY radiation
            do i=1,nleaf                                   
               Np(iIR,i) = Np(iIR,i) + (ekk(i) - ekk_new(i))              &
                    /scale_d/scale_v**2 / group_egy(iIR) / ev_to_erg
            end do
         endif
+#endif
         ! End energy update ==============================================
      endif ! if(.not. static)
 #endif
@@ -537,6 +545,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            end do
         end do
      endif
+#if NGROUP>0 
      if(rt) then
         ! Update photon densities and flux magnitudes
         do ig=1,nGroups
@@ -583,7 +592,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do ! i=1,nleaf                                                 
 
      endif  !rt_isIRtrap     
-
+#endif
 #endif
 
   end do

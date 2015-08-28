@@ -203,6 +203,7 @@ SUBROUTINE read_rt_groups(nml_ok)
      rt = .false.
      return
   endif
+#if NGROUPS>0
   !   Use ionization energies for HI, HeI, HeII as default group intervals
   groupL0(1:min(nGroups,3))=ionEvs(1:min(nGroups,3))!Lower interval bounds
   groupL1(1:min(nGroups,2))=ionEvs(2:min(nGroups+1,3)) !      Upper bounds
@@ -212,6 +213,7 @@ SUBROUTINE read_rt_groups(nml_ok)
   group_csn(1,:)=(/3.007d-18, 0d0, 0d0/)   ! Avg photoion. c-section (cm2)
   group_cse(1,:)=(/2.781d-18, 0d0, 0d0/)   !     Weighted  c-section (cm2)
   group_egy(1)  =18.85                     !        Avg photon Energy (eV)
+#endif
 #if NGROUPS>1
   if(nGroups .ge. 2) group_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
   if(nGroups .ge. 2) group_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
