@@ -3,7 +3,7 @@ MODULE coolrates_module
   ! The temperature dependence is tabulated, because it is expensive to
   ! calculate on the fly.
   
-  ! Use actual calculations if temperature is outside table boundaries.
+  ! Extrapolate if temperature is above table boundaries.
 
   use amr_parameters,only:dp
   implicit none
@@ -14,7 +14,7 @@ MODULE coolrates_module
   !public init_coolrates_table
 
   ! Default cooling rates table parameters
-  integer,parameter     :: nbinT  = 101
+  integer,parameter     :: nbinT  = 1001
   real(dp),parameter    :: Tmin   = 1d-2
   real(dp),parameter    :: Tmax   = 1d+9
   real(dp)              :: dlogTinv ! Inverse of the bin space (in K)
@@ -451,12 +451,12 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
      alpha = (rates_table%rates(nbinT)-rates_table%rates(nbinT-1))        &
            / (T_lookup(nbinT)-T_lookup(nbinT-1))
      inp_coolrates_table = &
-          10d0**(rates_table%rates(nbinT) &
-                 + alpha * (facT - rates_table%rates(nbinT)))
+          10d0**(rates_table%rates(nbinT)                                 &
+          + alpha * (facT - T_lookup(nbinT)))
      if( present(retPrime) )                                              &
           retPrime = alpha * inp_coolrates_table / T
      return
-  endif
+  endif 
   
   fa = rates_table%rates(iT)   !
   fb = rates_table%rates(iT+1) !  Values at neighbouring table
@@ -471,7 +471,6 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   if( present(retPrime) )                                                &
        retPrime = inp_coolrates_table / T                                &
                                        * (alpha+2d0*beta*yy+3d0*gamma*yy2)
-
 END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
