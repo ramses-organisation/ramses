@@ -41,6 +41,7 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #endif
   endif
+<<<<<<< HEAD
 #ifdef RT
   if(neq_chem.and.ilevel==levelmin) then
      if(cosmo)call update_rt_c

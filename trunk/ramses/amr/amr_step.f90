@@ -288,7 +288,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! Add stellar radiation sources
-  if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
 #endif
   
   ! Density threshold or Bondi accretion onto sink particle
@@ -356,32 +356,17 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 
 #ifdef RT
-  !---------------
-  ! Radiation step
-  !---------------
-  if(rt)then
-     ! Hyperbolic solver
-     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
-
-     call add_rt_sources(ilevel,dtnew(ilevel))
-
-     ! Reverse update boundaries
-     do ivar=1,nrtvar
-        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
-     end do
-
-     ! Set rtuold equal to rtunew
-     call rt_set_uold(ilevel)
-
-     ! Restriction operator
-     call rt_upload_fine(ilevel)
-  endif
+  ! here were do the main RT calls
+  print*, 'calling rt_step for ',ilevel,icount 
+  call rt_step(ilevel)
+#else
+  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
   
   !-------------------------------
   ! Source term in leaf cells only
   !-------------------------------
-  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  
 
   !----------------------------------
   ! Star formation in leaf cells only
@@ -406,12 +391,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 #ifdef RT
-  if(rt)then
-     do ivar=1,nrtvar
-        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
-     end do
-     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
-  end if
+  ! Here was the RT boundary stuff
 #endif
 
 #ifdef SOLVERmhd
@@ -475,3 +455,80 @@ end subroutine amr_step
 
 
 
+#ifdef RT
+!*************************************************************************
+subroutine rt_step(ilevel)
+
+!  Radiative transfer and chemistry step. Either do one step on ilevel,
+!  with radiation field updates in coarser level neighbours, or, if
+!  rt_nsubsteps>1, do many substeps in ilevel only, using Dirichlet
+!  boundary conditions for the level boundaries. 
+!-------------------------------------------------------------------------
+  use amr_parameters, only: dp
+  use amr_commons,    only: levelmin, dtnew, myid
+  use rt_parameters, only: rt_isDiffuseUVsrc
+  use rt_cooling_module, only: update_UVrates
+  use rt_hydro_commons
+  use UV_module
+  use SED_module,     only: star_RT_feedback
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer, intent(in) :: ilevel
+  real(dp) :: dt_hydro, t_left, dt_rt
+  integer  :: i_substep, ivar
+!-------------------------------------------------------------------------
+  dt_hydro = dtnew(ilevel)                   ! Store hydro timestep length
+  t_left = dt_hydro
+  
+  i_substep = 0
+  do while (t_left > 0)                      !                RT sub-cycle
+     i_substep = i_substep + 1
+     call get_rt_courant_coarse(dt_rt)
+     ! Temporarily change timestep length to rt step:
+     dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+
+     if (myid==1)print*,'dt_hydro: ',dt_hydro,'dt_rt: ',dtnew(ilevel), 'i_sub: ',i_substep &
+          , 'level: ', ilevel
+         
+     if (i_substep > 1)call rt_set_unew(ilevel)
+
+     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
+     ! Hyperbolic solver
+     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
+
+     call add_rt_sources(ilevel,dtnew(ilevel))
+
+     ! Reverse update boundaries
+     do ivar=1,nrtvar
+        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
+     end do
+
+     ! Set rtuold equal to rtunew
+     call rt_set_uold(ilevel)
+
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+     
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+
+     t_left = t_left - dtnew(ilevel)
+  end do                                   !          End RT subcycle loop
+  dtnew(ilevel) = dt_hydro                 ! Restore hydro timestep length
+  
+  ! Restriction operator to update coarser level split cells
+  call rt_upload_fine(ilevel)
+
+  ! Regular updates and book-keeping:
+  if(ilevel==levelmin) then
+     if(cosmo)call update_rt_c
+     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
+     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
+     if(ilevel==levelmin) call output_rt_stats
+  endif
+  
+end subroutine rt_step
+#endif
