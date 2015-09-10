@@ -1152,11 +1152,13 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
            rtunew(indp(j),iGroups(ip)) &
                 = rtunew(indp(j),iGroups(ip))+part_NpInp(j,ip)
         end do
-     else                                                  ! ilevel-1 cell
-        do ip=1,nSEDgroups
-           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
-                + part_NpInp(j,ip) / vol_factor
-        end do
+     else! ilevel-1 cell
+        if (rt_nsubcycle == 1)then
+           do ip=1,nSEDgroups
+              rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
+                   + part_NpInp(j,ip) / vol_factor
+           end do
+        end if
      endif
      !begin debug
      !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
