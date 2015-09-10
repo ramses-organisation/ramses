@@ -578,6 +578,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   integer:: i, ig, ip, npart1, npart2, icpu
   integer,dimension(1:nvector),save:: ind_grid, ind_part, ind_grid_part
 !-------------------------------------------------------------------------
+#if NGROUPS > 0
   if(.not.rt_advect)RETURN
   if(nstar_tot .le. 0 ) return
   if(numbtot(1,ilevel)==0)return ! number of grids in the level
@@ -658,7 +659,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   ! End loop over cpus
 
 111 format('   Entering star_rt_feedback for level ',I2)
-
+#endif
 END SUBROUTINE star_RT_feedback
 
 !*************************************************************************
@@ -983,6 +984,7 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
   endif
 END SUBROUTINE getNPhotonsEmitted
 
+#if NGROUPS > 0
 !*************************************************************************
 SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
 
@@ -1150,11 +1152,13 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
            rtunew(indp(j),iGroups(ip)) &
                 = rtunew(indp(j),iGroups(ip))+part_NpInp(j,ip)
         end do
-     else                                                  ! ilevel-1 cell
-        do ip=1,nSEDgroups
-           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
-                + part_NpInp(j,ip) / vol_factor
-        end do
+     else! ilevel-1 cell
+        if (rt_nsubcycle == 1)then
+           do ip=1,nSEDgroups
+              rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
+                   + part_NpInp(j,ip) / vol_factor
+           end do
+        end if
      endif
      !begin debug
      !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
@@ -1293,7 +1297,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   end do
 
 END SUBROUTINE star_RT_vsweep_pp
-
+#endif
 END MODULE SED_module
 
 
