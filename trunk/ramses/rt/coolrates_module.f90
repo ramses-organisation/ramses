@@ -19,7 +19,7 @@ MODULE coolrates_module
   real(dp),parameter    :: Tmax   = 1d+9
   real(dp)              :: dlogTinv ! Inverse of the bin space (in K)
   real(dp)              :: hTable, h2Table, h3Table   ! Interpol constants
-  real(dp)              :: one_over_hTable, one_over_h2Table, three_over_h2Table, one_over_h3Table
+  real(dp)              :: one_over_hTable, one_over_h2Table, three_over_h2Table, two_over_h3Table
   
   real(dp),dimension(nbinT) :: T_lookup = 0d0 ! Lookup temperature in log K
 
