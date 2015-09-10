@@ -19,6 +19,7 @@ MODULE coolrates_module
   real(dp),parameter    :: Tmax   = 1d+9
   real(dp)              :: dlogTinv ! Inverse of the bin space (in K)
   real(dp)              :: hTable, h2Table, h3Table   ! Interpol constants
+  real(dp)              :: one_over_hTable, one_over_h2Table, three_over_h2Table, one_over_h3Table
   
   real(dp),dimension(nbinT) :: T_lookup = 0d0 ! Lookup temperature in log K
 
@@ -83,6 +84,11 @@ SUBROUTINE init_coolrates_tables(aexp)
   hTable = 1d0/dlogTinv                             !
   h2Table = hTable*hTable                           ! Constants for table
   h3Table = h2Table*hTable                          ! interpolation
+
+  one_over_hTable = 1.d0/hTable
+  one_over_h2Table = 1.d0/h2Table
+  three_over_h2Table = 3.d0/h2Table
+  two_over_h3Table = 2.d0/h3Table
   
   do iT = myid+1, nbinT, ncpu ! Loop over TK and assign values
      call comp_table_rates(iT,aexp)
@@ -468,8 +474,8 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
 
   ! Spline interpolation:
   alpha = fprimea
-  beta = 3d0*(fb-fa)/h2Table-(2d0*fprimea+fprimeb)/hTable
-  gamma = (fprimea+fprimeb)/h2Table-2d0*(fb-fa)/h3Table
+  beta =(fb-fa) * three_over_h2Table - (2d0*fprimea+fprimeb) * one_over_hTable
+  gamma = (fprimea+fprimeb) * one_over_h2Table - (fb-fa) * two_over_h3Table
   inp_coolrates_table = 10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
   if( present(retPrime) )                                                &
        retPrime = inp_coolrates_table / T                                &
