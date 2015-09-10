@@ -296,13 +296,6 @@ recursive subroutine amr_step(ilevel,icount)
      call grow_sink(ilevel,.false.)
   end if
   
-  !---------------
-  ! Move particles
-  !---------------
-  if(pic)then
-     call move_fine(ilevel) ! Only remaining particles
-  end if
-
   !-----------
   ! Hydro step
   !-----------
@@ -362,6 +355,13 @@ recursive subroutine amr_step(ilevel,icount)
 #else
   if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
+  
+  !---------------
+  ! Move particles
+  !---------------
+  if(pic)then
+     call move_fine(ilevel) ! Only remaining particles
+  end if
   
   !-------------------------------
   ! Source term in leaf cells only
@@ -474,6 +474,7 @@ subroutine rt_step(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+#endif
   integer, intent(in) :: ilevel
   real(dp) :: dt_hydro, t_left, dt_rt
   integer  :: i_substep, ivar
