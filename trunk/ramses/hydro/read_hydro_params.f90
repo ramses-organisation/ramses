@@ -43,7 +43,7 @@ subroutine read_hydro_params(nml_ok)
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling &
        & ,self_shielding,smbh,agn &
-       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss
+       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne
 
   ! Read namelist file
   rewind(1)

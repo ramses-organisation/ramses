@@ -160,10 +160,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=10.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=10.*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
      current_time=t
   endif
 
