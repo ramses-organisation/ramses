@@ -175,6 +175,7 @@ subroutine init_refine_2
      call merge_tree_fine(ilevel)
   end do
   deallocate(up)
+  deallocate(maskp)
   dice_init=.false.
   ! ----------
 

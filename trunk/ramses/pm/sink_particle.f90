@@ -797,7 +797,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
   real(dp),dimension(1:nsinkmax)::delta_M
 
-  real(dp)::sin_theta,cone_dist,orth_dist
+  real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
 
   ! Conversion factor from user units to cgs units
@@ -833,7 +833,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   end do
 
   virt_acc_mass=0.d0; delta_M=0.d0
-  sin_theta=sin(3.1415926/180.*cone_opening/2) ! sine of half of opening angle
+  ! geometry safety net
+  cone_opening = max(tiny(0.0),cone_opening)
+  cone_opening = min(cone_opening, 180.d0)
+  tan_theta=tan(3.1415926/180.*cone_opening/2) ! tangent of half of the opening angle
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
@@ -900,7 +903,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  acc_mass=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
                  virt_acc_mass=delta_M(isink)*weight/volume*d/density
                  fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
-                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
+                 fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
               end if
 
               if (threshold_accretion)then
@@ -1028,8 +1031,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                      ! checking if particle is in cone
                      cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
                      cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
-                     orth_dist=sqrt(sum(r_rel(1:3)-cone_dist*cone_dir(1:3))**2)
-                     if (orth_dist.le.abs(cone_dist)*sin_theta)then
+                     orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
+                     if (orth_dist.le.abs(cone_dist)*tan_theta)then
                         unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
                         unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
                      end if
@@ -2683,7 +2686,7 @@ subroutine read_sink_params()
        clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
+  if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale = boxlen/dble(nx_loc)
