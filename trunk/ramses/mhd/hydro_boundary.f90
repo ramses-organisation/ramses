@@ -19,7 +19,7 @@ subroutine make_boundary_hydro(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
-  real(dp)::switch,dx,dx_loc,scale,emag
+  real(dp)::switch,dx,dx_loc,scale,emag,ekin,d,v
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
@@ -144,7 +144,7 @@ subroutine make_boundary_hydro(ilevel)
         end do
 
         ! Wall and free boundary conditions
-        if((boundary_type(ibound)/10).ne.2)then
+        if((boundary_type(ibound)/10).eq.0)then
            
            ! Loop over cells
            do ind=1,twotondim
@@ -199,6 +199,90 @@ subroutine make_boundary_hydro(ilevel)
                       &        (uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))**2+ &
                       &        (uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))**2)
                  uold(ind_cell(i),5)=uold(ind_cell(i),5)+emag
+              end do
+
+           end do
+           ! End loop over cells
+
+        else if((boundary_type(ibound)/10).eq.1)then
+           
+           ! Loop over cells
+           do ind=1,twotondim
+              iskip=ncoarse+(ind-1)*ngridmax
+              do i=1,ngrid
+                 ind_cell(i)=iskip+ind_grid(i)
+              end do
+              
+              ! Gather neighboring reference cell
+              iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
+              do i=1,ngrid
+                 ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
+              end do
+              
+              ! Gather reference hydro variables
+              do ivar=1,nvar+3
+                 do i=1,ngrid
+                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+                 end do
+              end do
+              ! Remove magnetic and kinetic energy
+              do i=1,ngrid
+                 emag=0.125d0*((uu(i,6)+uu(i,nvar+1))**2+ &
+                      &        (uu(i,7)+uu(i,nvar+2))**2+ &
+                      &        (uu(i,8)+uu(i,nvar+3))**2)
+                 ekin = 0d0
+                 d    = max(uu(i,1),smallr)
+                 do idim=1,ndim
+                    v = uu(i,idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
+                 end do
+                 uu(i,5)=uu(i,5)-emag-ekin
+              end do
+
+              ! Scatter to boundary region
+              do ivar=1,nvar+3
+                 if(ivar.ne.(5+gdim).and.ivar.ne.(nvar+gdim))then
+                    do i=1,ngrid
+                       uold(ind_cell(i),ivar)=uu(i,ivar)
+                    end do
+                 endif
+                 if(ivar==(5+gdim))then
+                    do i=1,ngrid
+                       uold(ind_cell(i),5+gdim)=uu(i,5+gdim)+(uu(i,nvar+gdim)-uu(i,5+gdim))*alt(ind)
+                    end do
+                 endif
+                 if(ivar==(nvar+gdim))then
+                    do i=1,ngrid
+                       uold(ind_cell(i),nvar+gdim)=uu(i,nvar+gdim)+(uu(i,nvar+gdim)-uu(i,5+gdim))*alt(ind)
+                    end do
+                 endif
+              end do
+
+              ! Prevent inflow back into the box
+              ivar = gdim+1
+              if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
+                 end do
+              endif
+              if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
+                 end do
+              endif
+
+              ! Add back magnetic and kinetic energy
+              do i=1,ngrid
+                 emag=0.125d0*((uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))**2+ &
+                      &        (uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))**2+ &
+                      &        (uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))**2)
+                 ekin = 0d0
+                 d    = max(uold(ind_cell(i),1),smallr)
+                 do idim=1,ndim
+                    v = uold(ind_cell(i),idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
+                 end do
+                 uold(ind_cell(i),5)=uold(ind_cell(i),5)+emag+ekin
               end do
 
            end do
