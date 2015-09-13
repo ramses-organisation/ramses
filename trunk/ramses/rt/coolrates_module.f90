@@ -362,8 +362,11 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Dielectronic recombination cooling, from Black 1981
   f = 1.24d-13*T**(-1.5d0)*exp(-470000.d0/T)
   tbl_cr_die%rates(iT) = f*(1.D0+0.3d0*exp(-94000.d0/T))
-  tbl_cr_die%primes(iT) = (tbl_cr_die%rates(iT)*(564000.-1.5*T) &
-       - f*94000.) /T**2 * T/ tbl_cr_die%rates(iT)  ! Can fix/simplify w algebra
+  tbl_cr_die%primes(iT)=0d0
+  if(tbl_cr_die%rates(iT) .gt. 0d0) then
+     tbl_cr_die%primes(iT) = (tbl_cr_die%rates(iT)*(564000.-1.5*T) &
+          - f*94000.) /T**2 * T/ tbl_cr_die%rates(iT)  ! Can fix/simplify w algebra
+  endif
 
   call log_table(tbl_alphaA_HII, iT)
   call log_table(tbl_alphaA_HeII, iT) ; call log_table(tbl_alphaA_HeIII, iT)

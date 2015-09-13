@@ -6,6 +6,9 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   use rt_hydro_commons
   use SED_module
+  use UV_module
+  use coolrates_module, only: update_coolrates_tables
+  use rt_cooling_module, only: update_UVrates
 #endif
   implicit none
 #ifndef WITHOUTMPI
@@ -350,8 +353,22 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! here were do the main RT calls
-  print*, 'calling rt_step for ',ilevel,icount 
-  call rt_step(ilevel)
+  if(rt) then 
+     print*, 'calling rt_step for ',ilevel,icount 
+     call rt_step(ilevel)
+  else
+     ! Still need a chemistry call if RT is defined but not
+     ! actually doing radiative transfer (i.e. rt==false):
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
+  ! Regular updates and book-keeping:
+  if(ilevel==levelmin) then
+     if(cosmo) call update_rt_c
+     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
+     if(cosmo .and. rt_isDiffuseUVsrc) call update_UVsrc
+     if(cosmo) call update_coolrates_tables(dble(aexp))
+     if(ilevel==levelmin) call output_rt_stats
+  endif
 #else
   if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
@@ -494,11 +511,12 @@ subroutine rt_step(ilevel)
          
      if (i_substep > 1)call rt_set_unew(ilevel)
 
-     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+!     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
 
+     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
      call add_rt_sources(ilevel,dtnew(ilevel))
 
      ! Reverse update boundaries
@@ -522,14 +540,6 @@ subroutine rt_step(ilevel)
   
   ! Restriction operator to update coarser level split cells
   call rt_upload_fine(ilevel)
-
-  ! Regular updates and book-keeping:
-  if(ilevel==levelmin) then
-     if(cosmo)call update_rt_c
-     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
-     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
-     if(ilevel==levelmin) call output_rt_stats
-  endif
   
 end subroutine rt_step
 #endif

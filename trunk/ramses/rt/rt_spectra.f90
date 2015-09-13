@@ -1080,7 +1080,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      end do
   end do
 
-   ! NGP at level ilevel
+  ! NGP at level ilevel
   do idim=1,ndim
      do j=1,np
         id(j,idim) = x(j,idim) ! So id=0-5 is the cell (in the 
@@ -1123,6 +1123,33 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      end if
   end do
 
+  !!!!!! SUBCYCLING !!!!!!!!
+  if(rt_nsubcycle .gt. 1) then
+     ! Find all particles that have moved to a coarser level
+     ! and assign their injection to the closest cell in
+     ! the grid originally owning the particle.
+     
+     ! Compute parent cell position within ind_grid(ind_grid_part(j)):
+     do idim = 1, ndim
+        do j = 1, np
+           if( .not. ok(j) ) then
+              ! For each dim, if id=0,1,2 then icd=0,
+              !               if id=3,4,5 then icd=1
+              icd(j,idim) = id(j,idim)/3 ! 0 or 1
+           end if
+        end do
+     end do
+     do j = 1, np
+        if( .not. ok(j) ) then
+           icell(j) = 1 + icd(j,1) + 2*icd(j,2) + 4*icd(j,3) ! 1 to 8
+           ! Use the original owner grid:
+           igrid(j) = ind_grid(ind_grid_part(j))
+           ok(j) = .true. ! So never injecting into coarser level
+        end if
+     end do
+  endif
+  !!!!!! SUBCYCLING END !!!!!!!!
+
   ! Compute parent cell adress and particle radiation contribution
   do j = 1, np
      if(metal)z= max(zp(ind_part(j)), 10.d-5)      !      [m_metals/m_tot]
@@ -1152,13 +1179,13 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
            rtunew(indp(j),iGroups(ip)) &
                 = rtunew(indp(j),iGroups(ip))+part_NpInp(j,ip)
         end do
-     else! ilevel-1 cell
-        if (rt_nsubcycle == 1)then
+     else                                                  ! ilevel-1 cell
+!        if (rt_nsubcycle == 1)then
            do ip=1,nSEDgroups
-              rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
+              rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))  &
                    + part_NpInp(j,ip) / vol_factor
            end do
-        end if
+!        end if
      endif
      !begin debug
      !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
