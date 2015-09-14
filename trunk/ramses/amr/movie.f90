@@ -6,6 +6,10 @@ subroutine output_frame()
   use amr_commons
   use pm_commons
   use hydro_commons
+#ifdef RT
+  use rt_parameters
+  use rt_hydro_commons
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include "mpif.h"
@@ -21,7 +25,6 @@ subroutine output_frame()
 #else
   character(len=100),dimension(0:NVAR+2) :: moviefiles
 #endif
-  
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
   integer::imin,imax,jmin,jmax,ii,jj,kk,ll
@@ -56,7 +59,13 @@ subroutine output_frame()
   logical::opened
 
   character(len=1)::temp_string
-   
+
+#ifdef RT
+  character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
+  real(kind=8),dimension(:,:,:),allocatable::rt_data_frame,rt_data_frame_all
+#endif  
+
+  
   nh_temp = nh_frame
   nw_temp = nw_frame
 
@@ -122,6 +131,16 @@ subroutine output_frame()
 #else
   moviefiles(NVAR+1) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+2) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+#endif
+
+#ifdef RT
+  ! Can generate mass weighted averages of cN_i for each group i
+  if(rt) then
+     do ll=1,NGROUPS
+        write(dummy,'(I3.1)') ll
+        rt_moviefiles(ll) = trim(moviedir)//'Fp'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
+     end do
+  endif
 #endif
 
   ! sink filename
@@ -198,6 +217,12 @@ subroutine output_frame()
   allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+6))
 #else
   allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+2))
+#endif
+#ifdef RT
+  if(rt) then
+     allocate(rt_data_frame(1:nw_frame,1:nh_frame,1:NGROUPS))
+     rt_data_frame(:,:,:) = 0d0
+  endif
 #endif
   allocate(dens(1:nw_frame,1:nh_frame))
   allocate(vol(1:nw_frame,1:nh_frame))
@@ -344,6 +369,17 @@ subroutine output_frame()
                          if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                        end do
 
+#ifdef RT
+                       do kk=1,NGROUPS
+                          if(rt_movie_vars(kk).eq.1) then
+                             rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
+                                                     + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
+                                                            * max(uold(ind_cell(i),1),smallr) ! mass-weighted
+                          endif
+                       end do
+#endif
+
+                       
                        if (movie_vars(0).eq.1)then
                          !Get temperature
                          ekk=0.0d0
@@ -457,6 +493,17 @@ subroutine output_frame()
   deallocate(data_frame_all)
   deallocate(dens_all)
   deallocate(vol_all)
+#ifdef RT
+  if(rt) then
+     allocate(rt_data_frame_all(1:nw_frame,1:nh_frame,1:NGROUPS))
+     rt_data_frame_all(:,:,:)=0d0
+     call MPI_ALLREDUCE(rt_data_frame,rt_data_frame_all        &
+          ,nw_frame*nh_frame*NGROUPS,MPI_DOUBLE_PRECISION      &
+          ,MPI_SUM,MPI_COMM_WORLD,info)
+     rt_data_frame=rt_data_frame_all
+     deallocate(rt_data_frame_all)
+  endif
+#endif
 #endif
   ! Convert into mass weighted                                                                                                         
   do ii=1,nw_frame
@@ -470,6 +517,15 @@ subroutine output_frame()
 #ifdef SOLVERmhd
       if(movie_vars(NVAR+4).eq.1) data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)/vol(ii,jj)
 #endif
+#ifdef RT
+      if(rt) then
+         do kk=1,NGROUPS
+            if(rt_movie_vars(kk).eq.1) &
+                 rt_data_frame(ii,jj,kk)=rt_data_frame(ii,jj,kk)/dens(ii,jj)
+         end do
+      endif
+#endif
+
     end do
   end do
   deallocate(dens)
@@ -525,10 +581,35 @@ subroutine output_frame()
 !        write(ilun)data_single
 !        close(ilun)
 !     endif
+
+#ifdef RT
+      if(rt) then
+         do kk=1, NGROUPS
+            if (rt_movie_vars(kk).eq.1) then
+               open(ilun,file=TRIM(rt_moviefiles(kk)),form='unformatted')
+               data_single(:,:)=0.
+               data_single=rt_data_frame(:,:,kk)
+               rewind(ilun)  
+               if(tendmov>0)then
+                  write(ilun)t,delx,dely,delz
+               else
+                  write(ilun)aexp,delx,dely,delz
+               endif
+               write(ilun)nw_frame,nh_frame
+               write(ilun)data_single
+               close(ilun)
+            end if
+         end do
+      endif
+#endif
+     
      deallocate(data_single)
   endif
 
   deallocate(data_frame)
+#ifdef RT
+  if(rt) deallocate(rt_data_frame)
+#endif
 #endif
   ! Update counter
   if(proj_ind.eq.len(trim(proj_axis)))imov=imov+1
