@@ -353,8 +353,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! here were do the main RT calls
-  if(rt) then 
-     print*, 'calling rt_step for ',ilevel,icount 
+  if(rt .and. rt_advect) then  
      call rt_step(ilevel)
   else
      ! Still need a chemistry call if RT is defined but not
@@ -506,17 +505,14 @@ subroutine rt_step(ilevel)
      ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
 
-     if (myid==1)print*,'dt_hydro: ',dt_hydro,'dt_rt: ',dtnew(ilevel), 'i_sub: ',i_substep &
-          , 'level: ', ilevel
-         
-     if (i_substep > 1)call rt_set_unew(ilevel)
+     !if (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
+     if (i_substep > 1) call rt_set_unew(ilevel)
 
-!     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
 
-     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
      call add_rt_sources(ilevel,dtnew(ilevel))
 
      ! Reverse update boundaries
@@ -540,6 +536,11 @@ subroutine rt_step(ilevel)
   
   ! Restriction operator to update coarser level split cells
   call rt_upload_fine(ilevel)
+
+  if (myid==1 .and. rt_nsubcycle .gt. 1) write(*,901) ilevel, i_substep
+
+900 format (' dt_hydro=', 1pe12.3, ' dt_rt=', 1pe12.3, ' i_sub=', I5, ' level=', I5)
+901 format (' Performed level', I3, ' RT-step with ', I5, ' subcycles')
   
 end subroutine rt_step
 #endif

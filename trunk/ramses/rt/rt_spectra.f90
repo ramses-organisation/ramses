@@ -1123,7 +1123,6 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      end if
   end do
 
-  !!!!!! SUBCYCLING !!!!!!!!
   if(rt_nsubcycle .gt. 1) then
      ! Find all particles that have moved to a coarser level
      ! and assign their injection to the closest cell in
@@ -1148,7 +1147,6 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
         end if
      end do
   endif
-  !!!!!! SUBCYCLING END !!!!!!!!
 
   ! Compute parent cell adress and particle radiation contribution
   do j = 1, np

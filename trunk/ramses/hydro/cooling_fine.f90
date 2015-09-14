@@ -41,17 +41,6 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #endif
   endif
-!!! THIS STUFF NOW DONE IN RT_STEP
-!#ifdef RT
-!  if(neq_chem.and.ilevel==levelmin) then
-!     if(cosmo)call update_rt_c
-!     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
-!     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
-!     if(cosmo) call update_coolrates_tables(dble(aexp))
-!     if(ilevel==levelmin) call output_rt_stats
-!  endif
-!#endif
-!!!
   
 111 format('   Entering cooling_fine for level',i2)
 

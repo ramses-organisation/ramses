@@ -67,7 +67,8 @@ subroutine newdt_fine(ilevel)
   ! Maximum time step for radiative transfer
   if(rt_advect)then
      call get_rt_courant_coarse(dt_rt)
-     dtnew(ilevel)=MIN(dtnew(ilevel),dt_rt/2.0**(ilevel-levelmin)*rt_nsubcycle)
+     dtnew(ilevel) = 0.99999 * &
+          MIN(dtnew(ilevel), dt_rt/2.0**(ilevel-levelmin) * rt_nsubcycle)
      if(static) RETURN
   endif
 #endif
