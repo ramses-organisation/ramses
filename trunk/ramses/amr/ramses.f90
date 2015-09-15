@@ -20,7 +20,9 @@ subroutine set_signal_handler
   integer::istatus=-1
 
 #ifndef NOSYSTEM
+#ifndef CRAY
   call SIGNAL(10,output_signal,istatus)
+#endif
 #else
   call PXFSTRUCTCREATE("sigaction",jsigact,istatus)
   call PXFGETSUBHANDLE(output_signal,jhandle,istatus)

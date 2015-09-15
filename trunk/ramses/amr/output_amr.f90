@@ -64,10 +64,12 @@ subroutine dump_all
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
+#ifndef CRAY
         filename=TRIM(filedir)//'makefile.txt'
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
+#endif
         if(hydro)then
            filename=TRIM(filedir)//'hydro_file_descriptor.txt'
            call file_descriptor_hydro(filename)

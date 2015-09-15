@@ -22,7 +22,7 @@ MPI=yes
 # Use host OpenMP? [yes|no]
 OMP=no
 # Use OpenACC? [yes|no]
-ACC=no
+ACC=yes
 # compile the OpenACC version but without OpenACC [yes|no] (ONLY if ACC=yes)
 NEW=no
 

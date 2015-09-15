@@ -91,7 +91,9 @@ subroutine read_params
   if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
 
   ! Write information about git version
+#ifndef CRAY
   call write_gitinfo
+#endif
 
   ! Read namelist filename from command line argument
   narg = iargc()
