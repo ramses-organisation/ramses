@@ -15,13 +15,14 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -D
 NPROC=1 #number of MPI processes
 PROCN=1 #processes per node
 PROF=prof_1.out
+CRAY=yes
 
 # Use MPI? [yes|no]
 MPI=yes
 # Use host OpenMP? [yes|no]
 OMP=no
 # Use OpenACC? [yes|no]
-ACC=yes
+ACC=no
 # compile the OpenACC version but without OpenACC [yes|no] (ONLY if ACC=yes)
 NEW=no
 
@@ -119,6 +120,10 @@ endif
 
 ifeq ($(MPROFILING),yes)
   FFLAGS += -DMPROFILING
+endif
+
+ifeq ($(CRAY),yes)
+  FFLAGS += -DCRAY
 endif
 
 # optimizations, crayftn
