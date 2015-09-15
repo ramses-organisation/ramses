@@ -37,7 +37,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
-       & ,d_bound,u_bound,v_bound,w_bound,p_bound
+       & ,d_bound,u_bound,v_bound,w_bound,p_bound,no_inflow
   namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
