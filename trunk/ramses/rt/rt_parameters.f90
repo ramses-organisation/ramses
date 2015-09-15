@@ -143,5 +143,6 @@ module rt_parameters
   logical::inLastCoarseStep=.false.    ! .t. when doing last ilevel step in coarse step  !
   logical::doDump = .false.
 
+  integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 
 end module rt_parameters
