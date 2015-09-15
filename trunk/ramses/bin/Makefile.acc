@@ -1,0 +1,273 @@
+############################################################################
+# If you have problems with this makefile, contact Romain.Teyssier@cea.fr
+#############################################################################
+# Compilation time parameters
+NVECTOR = 10
+NDIM = 3
+NPRE = 8
+NVAR = 6
+NENER = 0
+SOLVER = hydro
+PATCH =
+EXEC = ramses
+ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
+DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+NPROC=1 #number of MPI processes
+PROCN=1 #processes per node
+PROF=prof_1.out
+
+# Use MPI? [yes|no]
+MPI=yes
+# Use host OpenMP? [yes|no]
+OMP=no
+# Use OpenACC? [yes|no]
+ACC=yes
+# compile the OpenACC version but without OpenACC [yes|no] (ONLY if ACC=yes)
+NEW=no
+
+# Manual Profiling(MPROF)? [yes|no]
+MPROFILING=no
+
+# deep copy? (derived data type copy - only for CRAY compiler for the moment - non standard feature)
+DCOPY=yes
+
+#File .lst
+LST = yes
+
+#Auto async ?
+AUTO_ASYNC=yes
+
+#Loop profile ? (requires ipa to be off)
+LOOPPROFILE=no
+
+#Fast addr?
+FASTADDR=yes
+
+# whole program optimization (cray only)
+# due to various cray bugs, this must be switched on at the moment. Otherwise
+# -O ipafrom ... entries are needed on various source files
+WP=no
+
+# use openacc optimized amr copy (not working correctly yet!)
+AMR_OPT_CPY=no
+
+#############################################################################
+# Fortran compiler options and directives
+
+F90 = ftn
+
+ifeq ($(PE_ENV),CRAY)
+ FFLAGS = -eF
+ ifeq ($(OMP),no)
+  FFLAGS += -h noomp
+ else
+  FFLAGS += -h omp
+ endif
+ ifeq ($(ACC),no)
+#  FFLAGS += -h noacc
+  FFLAGS += -x acc
+  NEW=no
+  ACC1=no
+  ACCPATCH=../
+ else
+  ACCPATH=../openacc
+  ifeq ($(NEW),yes)
+     FFLAGS += -x acc
+     DEFACC = -DUSE_ACC_VERSION
+     ACC1=no
+  else
+     FFLAGS += -h acc 
+     ifeq ($(DCOPY),yes)
+       FFLAGS += -h acc -hacc_model=deep_copy -DCRAYACC 
+     endif
+     ACC1=yes
+  endif
+  ifeq ($(AUTO_ASYNC),no)
+   FFLAGS += #-hacc_model=auto_async_none
+  endif
+  ifeq ($(FASTADDR),yes)
+   # Without the auto_async_none there are SYNC issues which
+   # affect the time of the subroutines in a strange way but
+   # not the total time of RAMSES
+   FFLAGS += -hacc_model=fast_addr:auto_async_none
+  endif
+ endif
+ ifeq ($(LST),yes)
+  FFLAGS += -rm
+ endif
+ ifeq ($(LOOPPROFILE),yes)
+  FFLAGS += -hprofile_generate -hpl=ramses.pl
+ endif
+ ifeq ($(WP),yes)
+  PLDIR=ramses_crayftn_info
+  WPFLAGS = -h wp -h pl=$(PLDIR)
+  FFLAGS += $(WPFLAGS)
+ endif
+endif
+
+ifeq ($(PE_ENV),INTEL)
+ FFLAGS = -fpp -DNOSYSTEM
+endif
+
+ifeq ($(AMR_OPT_CPY),yes)
+  FFLAGS += -DAMR_OPT_CPY
+endif
+
+ifeq ($(MPI),no)
+ FFLAGS += -DWITHOUTMPI
+endif
+
+ifeq ($(MPROFILING),yes)
+  FFLAGS += -DMPROFILING
+endif
+
+# optimizations, crayftn
+# note that for the moment, due to various compiler bugs, the option
+# -O scalar0 must be avoided, thus also -O0 because it sets -O scalar0
+
+#FFLAGS += -O2 -O fp0  -O vector0 -O cache3 -O ipa4
+##FFLAGS += -O2 -O fp2  -O vector2 -O cache3 -O ipa4
+FFLAGS += -O3
+
+#If debugging mode, else comment it out
+#FFLAGS += -g
+
+# debugging, crayftn
+#FFLAGS += -G0 -K trap=fp 
+
+# note that at the moment this causes an internal compiler error with Cray
+#FFLAGS += -G0 -K trap=fp -R bcps
+
+#FFLAGS += -DNVAR=$(NVAR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DSOLVER$(SOLVER) -DNVECTOR=$(NVECTOR) $(DEFACC)
+FFLAGS += $(DEFINES) $(DEFACC)
+
+#############################################################################
+MOD = mod
+#############################################################################
+# MPI librairies
+LIBMPI = 
+#LIBMPI = -lfmpi -lmpi -lelan
+
+# --- CUDA libraries, for Titane ---
+LIBCUDA = -L/opt/cuda/lib  -lm -lcuda -lcudart
+
+LIBS = $(LIBMPI)
+#############################################################################
+# Sources directories are searched in this exact order
+ifeq ($(ACC),no)
+   VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
+   IPAPATH = ../hydro
+else
+   VPATH = $(PATCH):$(ACCPATH)/$(SOLVER):$(ACCPATH)/hydro:$(ACCPATH)/pm:$(ACCPATH)/poisson:$(ACCPATH)/amr:../$(SOLVER)/ramsesacc:../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
+   IPAPATH = ../$(SOLVER)/ramsesacc
+endif
+
+#############################################################################
+# All objects
+# MODULES
+#MODOBJ1 = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o sparse_mat.o poisson_parameters.o poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o clfind_commons.o gadgetreadfile.o
+MODOBJ1 = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o \
+         poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
+         clfind_commons.o gadgetreadfile.o #write_makefile.o write_patch.o write_gitinfo.o
+MODACC = acc_parameters.o acc_commons.o device_memory.o poisson_commons_acc.o
+# AMR objects
+AMROBJ1 = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o output_amr.o flag_utils.o physical_boundaries.o virtual_boundaries.o refine_utils.o hilbert.o load_balance.o title.o units.o light_cone.o movie.o sort.o nbors_utils.o init_mprof.o 
+AMRACC = init_acc.o
+# Particle-Mesh objects
+PMOBJ1 = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o sink_particle.o feedback.o clump_finder.o clump_merger.o flag_formation_sites.o init_sink.o output_sink.o
+PMACC = 
+# Poisson solver objects
+POISSONOBJ1 = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o output_poisson.o
+POISSONACC =
+# Hydro objects
+HYDROOBJ1 = init_hydro.o write_screen.o output_hydro.o courant_fine.o godunov_fine.o condinit.o hydro_flag.o hydro_boundary.o boundana.o read_hydro_params.o synchro_hydro_fine.o umuscl.o uplmde.o interpol_hydro.o godunov_utils.o init_flow_fine.o cooling_fine.o
+HYDROACC = umuscl_acc.o uplmde_acc.o hydro_grid.o get_mem.o
+
+ifeq ($(ACC),no)
+MODOBJ = $(MODOBJ1) 
+AMROBJ = $(AMROBJ1) 
+PMOBJ = $(PMOBJ1) 
+POISSONOBJ = $(POISSONOBJ1) 
+HYDROOBJ = $(HYDROOBJ1) 
+else 
+MODOBJ = $(MODOBJ1) $(MODACC)
+AMROBJ = $(AMROBJ1) $(AMRACC)
+PMOBJ = $(PMOBJ1) $(PMACC)
+POISSONOBJ = $(POISSONOBJ1) $(POISSONACC)
+HYDROOBJ = $(HYDROOBJ1) $(HYDROACC)
+endif
+
+# All objects
+AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
+# ATON objects
+ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
+ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o rad_backup.o ../aton/atonlib/libaton.a
+#############################################################################
+
+all : movehere ramses movethere
+	
+movehere :
+#	-mv objACC$(ACC1)MPI$(MPI)/* .
+movethere:
+#	-mv *.o objACC$(ACC1)MPI$(MPI)/
+#	-mv *.lst objACC$(ACC1)MPI$(MPI)/
+#	-mv *.cub objACC$(ACC1)MPI$(MPI)/
+#	-mv *.ptx objACC$(ACC1)MPI$(MPI)/
+#	-mv *.ptx1 objACC$(ACC1)MPI$(MPI)/
+#	-mv *.mod objACC$(ACC1)MPI$(MPI)/
+ramses:	$(MODOBJ) $(AMRLIB) ramses.o
+	$(F90) -Mcuda=cc35 $(WPFLAGS) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d.MPI$(MPI).OMP$(OMP).ACC$(ACC1).NEW$(NEW) $(LIBS)
+ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
+	$(F90) $(WPFLAGS) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o -o $(EXEC)$(NDIM)d.MPI$(MPI).OMP$(OMP).ACC$(ACC1) $(LIBS) $(LIBCUDA)
+#############################################################################
+#%.o:%.f90
+#	$(F90) $(FFLAGS) -c $^ -o $@
+#############################################################################
+#############################################################################
+%.o:%.f90
+	$(F90) $(FFLAGS) -c $<
+
+umuscl_acc.o: umuscl_acc.f90 godunov_utils.f90
+	$(F90) $(FFLAGS) -c $< -O ipafrom=$(ACCPATH)/hydro/godunov_utils.f90 
+	
+ifeq ($(ACC1),yes)
+get_mem.o: get_mem.cu
+	nvcc -c -arch sm_35 $< -o $@
+else
+get_mem.o: get_mem.f90
+	$(F90) $(FFLAGS) -c $<
+endif
+	
+hydro_grid.o: hydro_grid.f90 sort.f90 nbors_utils.f90
+	$(F90) $(FFLAGS) -c $< -O ipafrom=$(ACCPATH)/hydro/godunov_fine.f90:$(ACCPATH)/amr/sort.f90:$(ACCPATH)/amr/nbors_utils.f90:$(ACCPATH)/hydro/interpol_hydro.f90
+
+cooling_fine.o: cooling_fine.f90 cooling_module.f90
+	$(F90) $(FFLAGS) -c $< -O ipafrom=$(ACCPATH)/hydro/cooling_module.f90
+
+boundary_potential.o: boundary_potential.f90 gravana.f90
+	$(F90) $(FFLAGS) -c $< -O ipafrom=$(ACCPATH)/poisson/gravana.f90
+
+# While simple_boundary is False, we do not need to inline. If true then possibly use
+# the routine directive in make_multipole_phi for call phi_ana()
+#phi_fine_cg.o: phi_fine_cg.f90 gravana.f90
+#	$(F90) $(FFLAGS) -c $< -O ipafrom=$(ACCPATH)/poisson/gravana.f90
+################################################################################################
+
+clean :
+	rm -f *.mod *.o *.lst *.cub *.ptx objACC$(ACC1)MPI$(MPI)/*.o objACC$(ACC1)MPI$(MPI)/*.lst objACC$(ACC1)MPI$(MPI)/*.cub objACC$(ACC1)MPI$(MPI)/*.ptx objACC$(ACC1)MPI$(MPI)/*.$(MOD)
+	rm -f $(EXEC)$(NDIM)d.MPI$(MPI).OMP$(OMP).ACC$(ACC1) $(EXEC)$(NDIM)d.MPI$(MPI).OMP$(OMP).ACC$(ACC1)+pat
+	rm -rf $(PLDIR)
+clean_acc:
+	rm -f objACC$(ACC1)MPI$(MPI)/godunov_fine.*
+	rm -f objACC$(ACC1)MPI$(MPI)/godunov_utils.*
+	rm -f objACC$(ACC1)MPI$(MPI)/umuscl_acc.*
+	rm -f objACC$(ACC1)MPI$(MPI)/adaptive_loop.*
+	rm -f objACC$(ACC1)MPI$(MPI)/amr_step.*
+	rm -f objACC$(ACC1)MPI$(MPI)/hydro_grid.*
+	rm -f objACC$(ACC1)MPI$(MPI)/acc_commons.*
+	rm -f objACC$(ACC1)MPI$(MPI)/acc_parameters.*
+	rm -f objACC$(ACC1)MPI$(MPI)/interpol_hydro.*
+	rm -f objACC$(ACC1)MPI$(MPI)/init_acc.*
+	rm -f objACC$(ACC1)MPI$(MPI)/nbors_utils.*
+	rm -f objACC$(ACC1)MPI$(MPI)/hilbert.*
+	rm -f objACC$(ACC1)MPI$(MPI)/uplmde_acc.*
