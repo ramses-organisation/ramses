@@ -420,8 +420,15 @@ SUBROUTINE log_table(table, iT)
   type(coolrates_table)::table
   integer::iT
   !---------------------------------------------------------------------
-  table%rates(iT) = log10(MAX(table%rates(iT),1d-99))
-  if( table%rates(iT) .le. -99 ) table%primes(iT)=0d0  
+
+  ! ANDREAS: Abuse this routine (instead of computing the logarithm of the rates, the
+  ! the primes are adapted to the non-log values by multiplying by log(10) * rate
+
+  !  table%rates(iT) = log10(MAX(table%rates(iT),1d-99))
+  !  if( table%rates(iT) .le. -99 ) table%primes(iT)=0d0
+
+  table%primes(iT) = table%primes(iT) * log(10d0) * table%rates(iT)
+  
 END SUBROUTINE log_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -476,7 +483,7 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   alpha = fprimea
   beta =(fb-fa) * three_over_h2Table - (2d0*fprimea+fprimeb) * one_over_hTable
   gamma = (fprimea+fprimeb) * one_over_h2Table - (fb-fa) * two_over_h3Table
-  inp_coolrates_table = 10d0**(fa+alpha*yy+beta*yy2+gamma*yy3)
+  inp_coolrates_table = fa+alpha*yy+beta*yy2+gamma*yy3
   if( present(retPrime) )                                                &
        retPrime = inp_coolrates_table / T                                &
                                        * (alpha+2d0*beta*yy+3d0*gamma*yy2)
