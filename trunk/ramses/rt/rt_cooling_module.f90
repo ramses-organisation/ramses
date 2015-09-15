@@ -433,8 +433,12 @@ contains
 
           if(rt_isoPress .and. .not. (rt_isIR .and. igroup==iIR)) then 
              ! rt_isoPress: assume f=1, where f is reduced flux.
-             fluxMag=sqrt(sum((dFp(:,igroup))**2)) + tiny(1._dp)
-             mom_fact = mom_fact * dNp(igroup) / fluxMag
+             fluxMag=sqrt(sum((dFp(:,igroup))**2))
+             if(fluxMag .gt. 0d0) then
+                mom_fact = mom_fact * dNp(igroup) / fluxMag
+             else
+                mom_fact = 0d0
+             endif
           else
              mom_fact = mom_fact * one_over_rt_c_cgs 
           end if

@@ -6,6 +6,9 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   use rt_hydro_commons
   use SED_module
+  use UV_module
+  use coolrates_module, only: update_coolrates_tables
+  use rt_cooling_module, only: update_UVrates
 #endif
   implicit none
 #ifndef WITHOUTMPI
@@ -350,8 +353,21 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! here were do the main RT calls
-  print*, 'calling rt_step for ',ilevel,icount 
-  call rt_step(ilevel)
+  if(rt .and. rt_advect) then  
+     call rt_step(ilevel)
+  else
+     ! Still need a chemistry call if RT is defined but not
+     ! actually doing radiative transfer (i.e. rt==false):
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
+  ! Regular updates and book-keeping:
+  if(ilevel==levelmin) then
+     if(cosmo) call update_rt_c
+     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
+     if(cosmo .and. rt_isDiffuseUVsrc) call update_UVsrc
+     if(cosmo) call update_coolrates_tables(dble(aexp))
+     if(ilevel==levelmin) call output_rt_stats
+  endif
 #else
   if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
@@ -489,10 +505,8 @@ subroutine rt_step(ilevel)
      ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
 
-     if (myid==1)print*,'dt_hydro: ',dt_hydro,'dt_rt: ',dtnew(ilevel), 'i_sub: ',i_substep &
-          , 'level: ', ilevel
-         
-     if (i_substep > 1)call rt_set_unew(ilevel)
+     !if (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
+     if (i_substep > 1) call rt_set_unew(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 
@@ -523,13 +537,10 @@ subroutine rt_step(ilevel)
   ! Restriction operator to update coarser level split cells
   call rt_upload_fine(ilevel)
 
-  ! Regular updates and book-keeping:
-  if(ilevel==levelmin) then
-     if(cosmo)call update_rt_c
-     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
-     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
-     if(ilevel==levelmin) call output_rt_stats
-  endif
+  if (myid==1 .and. rt_nsubcycle .gt. 1) write(*,901) ilevel, i_substep
+
+900 format (' dt_hydro=', 1pe12.3, ' dt_rt=', 1pe12.3, ' i_sub=', I5, ' level=', I5)
+901 format (' Performed level', I3, ' RT-step with ', I5, ' subcycles')
   
 end subroutine rt_step
 #endif
