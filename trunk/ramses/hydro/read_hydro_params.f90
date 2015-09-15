@@ -37,13 +37,13 @@ subroutine read_hydro_params(nml_ok)
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
-       & ,d_bound,u_bound,v_bound,w_bound,p_bound
+       & ,d_bound,u_bound,v_bound,w_bound,p_bound,no_inflow
   namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling &
        & ,self_shielding,smbh,agn &
-       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss
+       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne
 
   ! Read namelist file
   rewind(1)
