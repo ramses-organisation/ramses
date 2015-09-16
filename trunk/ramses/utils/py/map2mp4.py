@@ -20,6 +20,12 @@ from scipy import signal
 import multiprocessing as mp
 import time
 
+from numpy.polynomial.polynomial import polyfit
+
+def a2z(a):
+	z = 1./a-1.
+	return z
+
 def label(xy, text):
 	y = xy[1] + 15 # shift y-value for label so that it's below the artist
 	plt.text(xy[0], y, text, ha="center",  size=14, color='white')
@@ -59,8 +65,12 @@ def load_sink(args,i):
 def load_namelist_info(args):
 	proj_list = [int(item) for item in args.proj.split(' ')]
 	proj_ind = int(proj_list[0])-1
+	
+	if args.namelist == '':
+		namelist = args.dir + '/output_00002/namelist.txt'
+	else: # non-default namelist
+		namelist = args.namelist
 
-	namelist = args.dir + '/output_00002/namelist.txt'
 	try:
 		nmlf = open(namelist)
 	except IOError:
@@ -123,7 +133,7 @@ def load_units(i, args):
 
 	return unit_l, unit_d, unit_t, unit_m
 
-def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame, deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker):
+def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame, deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmin, cmax):
 
 	global deflick_min
 	global deflick_max
@@ -221,6 +231,16 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			plotmin = bins[clip_k]
 			plotmax = rawmax
 	
+		if args.poly > 0:
+			p_min = 0.
+			p_max = 0.
+			for d in xrange(args.poly+1):
+				p_min += cmin[p][d]*i**d
+				p_max += cmax[p][d]*i**d
+			
+			plotmin = p_min
+			plotmax = p_max
+		
 		if kind[p][0] == 'v':
 			plotmax=max(abs(rawmin),rawmax)
 			plotmin=-plotmax
@@ -244,9 +264,15 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 		if args.colorbar:
 			cbaxes = fig.add_axes([1./geo[1]+p%geo[1]*1./geo[1]-0.05/geo[1],abs(p-geo[0]*geo[1]+1)/geo[1]*1./geo[0],0.05/geo[1],1./geo[0]])
 			cbar = plt.colorbar(im, cax=cbaxes)
+			cbar.solids.set_rasterized(True)
 			bar_font_color = 'k'
 			if kind[p] == 'dens':
+				labels_color = 'w'
+				scolor = 'w'
 				bar_font_color = 'r'
+			if kind[p] == 'temp':
+				labels_color = 'k'
+				scolor = 'k'
 			cbar.ax.tick_params(width=0,labeltop='on',labelcolor=bar_font_color,labelsize=8,pad=-25)
 		
 		frame_centre_w = 0.0
@@ -291,7 +317,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 		if (sink_flag and plot_sinks):
 			ax.scatter((sink_pos[w]-frame_centre_w/boxlen)/(frame_delta_w/boxlen/2)*nx/2+nx/2,\
 				(sink_pos[h]-frame_centre_h/boxlen)/(frame_delta_h/boxlen/2)*ny/2+ny/2,\
-				marker='+',c='r',s=6*sink_m**2)
+				marker='o',c='k',s=10)
 
 		if not args.clean_plot:
 			patches = []
@@ -300,14 +326,14 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			ax.text(0.025+float(barlen_px/nx/2), 0.025+15./ny,"%d %s" % (args.barlen, args.barlen_unit),
 								verticalalignment='bottom', horizontalalignment='center',
 								transform=ax.transAxes,
-								color='white', fontsize=14)
+								color=labels_color, fontsize=18)
 			patches.append(rect)
 			
 			if cosmo:
 				ax.text(0.05, 0.95, 'a={a:.3f}'.format(a=a), # aexp instead of time
 								verticalalignment='bottom', horizontalalignment='left',
 								transform=ax.transAxes,
-								color='white', fontsize=14)
+								color=labels_color, fontsize=18)
 			else:
 				t *= unit_t/86400/365.25 # time in years
 				if (t >= 1e3 and t < 1e6):
@@ -326,9 +352,9 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 				ax.text(0.05, 0.95, '%.1f %s' % (t/scale_t, t_unit),
 								verticalalignment='bottom', horizontalalignment='left',
 								transform=ax.transAxes,
-								color='white', fontsize=14)
+								color=labels_color, fontsize=18)
 
-			collection = PatchCollection(patches, facecolor='white')
+			collection = PatchCollection(patches, facecolor=labels_color)
 			ax.add_collection(collection)
 	
 	# corrects window extent
@@ -338,6 +364,35 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 
 	return
 
+def fit_min_max(args,p,max_iter,proj_list,proj_axis):
+	mins = numpy.array([])
+	maxs = numpy.array([])
+	
+	kind = [item for item in args.kind.split(' ')]
+	
+	for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
+		args.proj = proj_list[p]
+		axis = proj_axis[args.proj]
+		dat = load_map(args,p,i)
+		unit_l, unit_d, unit_t, unit_m = load_units(i, args)
+
+		if kind[p] == 'dens':
+			dat *= unit_d	# in g/cc
+		if kind[p][0] == 'v':
+			dat *= (unit_l/unit_t)/1e5 # in km/s
+		
+		if args.logscale:
+			mins = numpy.append(mins,numpy.log10(numpy.amin(dat)))
+			maxs = numpy.append(maxs,numpy.log10(numpy.amax(dat)))
+		else:
+			mins = numpy.append(mins,numpy.amin(dat))
+			maxs = numpy.append(maxs,numpy.amax(dat))
+		
+	ii = range(int(args.fmin)+int(args.step),max_iter+1,int(args.step))
+	cmin = polyfit(ii,mins,args.poly)	
+	cmax = polyfit(ii,maxs,args.poly)
+
+	return p, cmin, cmax
 
 def main():
 
@@ -386,6 +441,11 @@ def main():
 			help='add colorbar [%(default)s]', default=True)
 	parser.add_argument('-n','--ncpu',dest='ncpu', metavar="VALUE", type=int,\
 			help='number of CPUs for multiprocessing [%(default)d]', default=1)
+	parser.add_argument('-P','--poly',dest='poly', metavar="VALUE", type=int,\
+			help='polynomial degree for fitting min and max, [off]', default=-1)
+	parser.add_argument('-N','--namelist',dest='namelist', metavar="VALUE", type=str,\
+			help='path to namelist, if empty take default [%(default)s]', default='')
+
 	
 	args = parser.parse_args()
 
@@ -408,25 +468,72 @@ def main():
 	proj_ind = int(proj_list[0])-1
 	sink_flag = False
 	
+	# load basic info once, instead of at each loop
 	xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame,\
 			boxlen, proj_axis, nx, ny, max_iter, sink_flag, cosmo = load_namelist_info(args)
 	
 	if (int(args.fmax) > 0):
 		max_iter=int(args.fmax)
 
-	deflicker = args.deflicker
-	if deflicker > 0:
-		deflick_min = numpy.ones((len(proj_list),deflicker))*numpy.nan
-		deflick_max = numpy.ones((len(proj_list),deflicker))*numpy.nan
-	
-	# Progressbar imports/inits
+
+	# Progressbar imports
 	try:
 		from widgets import Percentage, Bar, ETA
 		from progressbar import ProgressBar
 		progressbar_avail = True
 	except ImportError:
 		progressbar_avail = False
+
+
+	# remove flickering
+	deflicker = args.deflicker
+	if deflicker > 0:
+		deflick_min = numpy.ones((len(proj_list),deflicker))*numpy.nan
+		deflick_max = numpy.ones((len(proj_list),deflicker))*numpy.nan
 	
+	# for each projection fit mins and maxs with polynomial
+	cmins = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
+	cmaxs = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
+	
+	if args.poly > 0:
+		if args.ncpu > 1:
+			results = []
+			pool = mp.Pool(processes=min(args.ncpu,len(proj_list)))
+			
+			results = [pool.apply_async(fit_min_max, args=(args,p,max_iter,proj_list, proj_axis,)) for p in xrange(len(proj_list))]
+			pool.close()
+			pool.join()
+			output = [p.get() for p in results]
+			
+			for p in xrange(len(output)): # just for safety if executed not in order
+				for d in xrange(len(proj_list)):
+					if output[p][0] == d:
+						cmins[d]=output[p][1]
+						cmaxs[d]=output[p][2]
+			
+		elif args.ncpu == 1:
+			if progressbar_avail:
+				widgets = ['Working...', Percentage(), Bar(marker='='),ETA()]
+				pbar = ProgressBar(widgets=widgets, maxval = len(proj_list)).start()
+			else:
+				print 'Working!'
+
+			for d in xrange(len(proj_list)):
+				cmins[d], cmaxs[d] = fit_min_max(args,p,max_iter,proj_list, proj_axis)
+				if progressbar_avail:
+					pbar.update(d+1)
+			
+			if progressbar_avail:
+				pbar.finish()
+
+		else:
+			print 'Wrong number of CPUs! Exiting!'
+			sys.exit()
+
+		print 'Polynomial coefficients fitted!'
+
+
+	# creating images
 	if progressbar_avail:
 	  widgets = ['Working...', Percentage(), Bar(marker='#'),ETA()]
 	  pbar = ProgressBar(widgets=widgets, maxval = max_iter+1).start()
@@ -436,12 +543,11 @@ def main():
 	if not os.path.exists("%s/pngs/" % (args.dir)):
 		os.makedirs("%s/pngs/" % (args.dir))
 
-	# creating images
 	if args.ncpu > 1:
 		results = []
 		pool = mp.Pool(processes=args.ncpu)
 		for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
-			results.append(pool.apply_async(make_image, args=(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker,)))
+			results.append(pool.apply_async(make_image, args=(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmins, cmaxs,)))
 		while True:
 			inc_count = sum(1 for x in results if not x.ready())
 			if inc_count == 0:
@@ -456,7 +562,7 @@ def main():
 
 	elif args.ncpu == 1:
 		for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
-			make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker)
+			make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmins, cmaxs)
 			if progressbar_avail:
 				pbar.update(i)
 
