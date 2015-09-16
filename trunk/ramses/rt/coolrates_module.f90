@@ -466,8 +466,7 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   if(extrap) then ! TK is above upper table limit, so we extrapolate:
      alpha = (rates_table%rates(nbinT)-rates_table%rates(nbinT-1))        &
            / (T_lookup(nbinT)-T_lookup(nbinT-1))
-     inp_coolrates_table = &
-          10d0**(rates_table%rates(nbinT)                                 &
+     inp_coolrates_table = (rates_table%rates(nbinT)                      &
           + alpha * (facT - T_lookup(nbinT)))
      if( present(retPrime) )                                              &
           retPrime = alpha * inp_coolrates_table / T
