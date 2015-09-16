@@ -124,6 +124,10 @@ module amr_commons
   type(communicator),allocatable,dimension(:,:)::emission
   type(communicator),allocatable,dimension(:,:)::reception
 
+  ! OpenACC communication buffers
+  integer,allocatable,dimension(:,:)           ::nemisspe_acc,nrecpe_acc
+  integer,allocatable,dimension(:,:)           ::sum_nemisspe,sum_nrecpe
+
   ! Types for physical boundary conditions
   CHARACTER(LEN=20)::type_hydro  ='hydro'
   CHARACTER(LEN=20)::type_accel  ='accel'
@@ -134,6 +138,29 @@ module amr_commons
   real(dp)::units_density=1.0  ! [g/cm^3]
   real(dp)::units_time=1.0     ! [seconds]
   real(dp)::units_length=1.0   ! [cm]
+
+  ! Synchro_hydro_fine subroutine (reduce copies CPU <--> GPU)
+  integer,dimension(1:nvector),save::ind_grid_shfv,ind_cell_shfv
+  real(dp),dimension(1:nvector),save::pp_shfv
+
+  ! Some compilers may have issues with the reading and writing to many files.
+  ! So, this parameter is user-specified and tunes the bug -it is added to ilun-
+  integer::ilun_parameter = 500
+
+#ifdef MPROFILING
+  !MPROFILING optional
+  ! New parts of code (in branches/ramses_gpu)
+  real(dp)::acc_t_make_virtual_fine_dp,acc_t_make_virtual_reverse_dp, &
+& acc_t_set_unew,acc_t_set_uold,acc_t_add_gravity_source_terms,acc_t_synchro_hydro_fine, &
+& acc_t_make_boundary_phi,acc_t_make_boundary_mask,acc_t_force_fine,acc_t_save_phi_old, &
+& acc_t_restrict_mask_coarse_reverse,acc_t_cmp_residual_mg_coarse,acc_t_gauss_seidel_mg_coarse, &
+& acc_t_restrict_residual_coarse_reverse,acc_t_interpolate_and_correct_coarse, &
+& acc_t_set_scan_flag_coarse,acc_t_make_fine_mask,acc_t_make_fine_bc_rhs,acc_t_make_virtual_mg_dp, &
+& acc_t_make_reverse_mg_dp,acc_t_restrict_mask_fine_reverse,acc_t_cmp_residual_mg_fine, &
+& acc_t_gauss_seidel_mg_fine,acc_t_restrict_residual_fine_reverse,acc_t_interpolate_and_correct_fine,&
+& acc_t_set_scan_flag_fine,acc_t_make_initial_phi,acc_t_make_multipole_phi,acc_t_total_time, &
+& acc_t_amr_step,acc_t_godunov_fine,acc_t_add_pdv_source_terms,acc_t_multigrid_fine,acc_t_cmp_residual_norm2_fine
+#endif
 
 end module amr_commons
 

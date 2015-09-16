@@ -1,0 +1,2 @@
+interpol_hydro.f90: the OpenACC part implements an old versione of Ramses. It should be probably updated to the new version. Major refactoring work.
+cooling_fine.f90: must be fully reimplemented starting from the trunk version
