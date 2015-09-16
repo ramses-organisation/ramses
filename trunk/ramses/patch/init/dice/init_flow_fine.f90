@@ -68,7 +68,7 @@ subroutine init_flow_fine(ilevel)
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
        & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart
+       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart,ic_mag_ini
   !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
@@ -643,6 +643,14 @@ subroutine init_uold(ilevel)
            endif
         end do
      end do
+#ifdef SOLVERmhd
+     do ivar=1,3
+        do i=1,active(ilevel)%ngrid
+            uold(active(ilevel)%igrid(i)+iskip,5+ivar)    = ic_mag_ini(ivar)
+            uold(active(ilevel)%igrid(i)+iskip,nvar+ivar) = ic_mag_ini(ivar)
+        end do
+     end do
+#endif
   end do
 
   ! Set uold to 0 for virtual boundary cells
@@ -1013,6 +1021,14 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            if(metal) then
              uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
            endif
+#ifdef SOLVERmhd
+           uold(indp(j,ind),6)      = ic_mag_ini(1)
+           uold(indp(j,ind),7)      = ic_mag_ini(2)
+           uold(indp(j,ind),8)      = ic_mag_ini(3)
+           uold(indp(j,ind),nvar+1) = ic_mag_ini(1)
+           uold(indp(j,ind),nvar+2) = ic_mag_ini(2)
+           uold(indp(j,ind),nvar+3) = ic_mag_ini(3)
+#endif 
         endif
      end do
   end do
@@ -1148,6 +1164,14 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(metal) then
         uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
      endif
+#ifdef SOLVERmhd
+     uold(indp(j),6)      = ic_mag_ini(1)
+     uold(indp(j),7)      = ic_mag_ini(2)
+     uold(indp(j),8)      = ic_mag_ini(3)
+     uold(indp(j),nvar+1) = ic_mag_ini(1)
+     uold(indp(j),nvar+2) = ic_mag_ini(2)
+     uold(indp(j),nvar+3) = ic_mag_ini(3)
+#endif
   end do
   
 end subroutine init_gas_ngp

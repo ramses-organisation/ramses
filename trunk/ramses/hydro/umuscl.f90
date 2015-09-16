@@ -1037,6 +1037,27 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                        dq(l,i,j,k,n,1) = 0.0
                     end do
                  end if
+              else if(slope_type==7)then ! van Leer
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,1)=zero
+                    else
+                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+              else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one, dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
               else
                  write(*,*)'Unknown slope type'
                  stop
@@ -1113,6 +1134,66 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
 
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==7)then ! van Leer
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,1)=zero
+                    else
+                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       end if
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,2)=zero
+                    else
+                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one, dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
               end do
            end do
@@ -1272,6 +1353,87 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dq(l,i,j,k,n,2) = dlim*dfy
                     dq(l,i,j,k,n,3) = dlim*dfz
 
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==7)then ! van Leer
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,1)=zero
+                    else
+                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,2)=zero
+                    else
+                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+                 ! slopes in third coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
+                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,3)=zero
+                    else
+                       dq(l,i,j,k,n,3)=(2.0*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one, dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in third coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
+                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
                  end do
               end do
            end do
