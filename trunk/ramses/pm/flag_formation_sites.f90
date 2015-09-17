@@ -257,7 +257,7 @@ subroutine compute_clump_properties_round2(xx)
   contracting=.false.
 
   !------------------------------------------
-  ! compute volume of a cell in a given level
+  ! Compute volume of a cell in a given level
   !------------------------------------------
   do ilevel=1,nlevelmax
      ! Mesh spacing in that level
@@ -347,7 +347,7 @@ subroutine compute_clump_properties_round2(xx)
         end do
 
         ! properties for regions close to peak (4 cells away)
-        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.))then
+        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
            clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol           
         endif
 
