@@ -40,7 +40,7 @@ module clfind_commons
   real(dp),allocatable,dimension(:,:)::peak_pos
   real(dp),allocatable,dimension(:)::relevance
   real(dp),allocatable,dimension(:)::Psurf,MagPsurf,MagTsurf
-  real(dp),allocatable,dimension(:)::grav_term
+  real(dp),allocatable,dimension(:)::grav_term, rad_term
   real(dp),allocatable,dimension(:)::clump_check
   real(dp),allocatable,dimension(:)::Icl,Icl_d,Icl_dd
   integer,allocatable,dimension(:)::peak_cell,peak_cell_level

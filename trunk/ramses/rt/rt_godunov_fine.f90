@@ -389,6 +389,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   !----------------------------------------------------------------------
   ! Reset flux along direction at refined interface    
   !----------------------------------------------------------------------
+  if (rt_nsubcycle == 1)then
   do idim=1,ndim
      i0=0; j0=0; k0=0
      if(idim==1)i0=1
@@ -408,7 +409,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      end do
      end do
   end do
-
+  endif
   !--------------------------------------
   ! Conservative update at level ilevel
   !--------------------------------------
@@ -445,70 +446,72 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
-  ! Loop over dimensions
-  do idim=1,ndim
-     i0=0; j0=0; k0=0
-     if(idim==1)i0=1
-     if(idim==2)j0=1
-     if(idim==3)k0=1
-     
-     !----------------------
-     ! Left flux at boundary
-     !----------------------     
-     ! Check if grids sits near left boundary
-     ! and gather neighbor father cells index
-     nb_noneigh=0
-     do i=1,ncache
-        if (son(nbor(ind_grid(i),2*idim-1))==0) then
-           nb_noneigh = nb_noneigh + 1
-           ind_buffer(nb_noneigh) = nbor(ind_grid(i),2*idim-1)
-           ind_cell(nb_noneigh) = i
-        end if
-     end do
-     ! Conservative update of new state variables
-     do ivar=1,nrtvar
-        ! Loop over boundary cells
-        do k3=k3min,k3max-k0 ! 1 to 1 if dim=3, 1 to 2 otherwise
-        do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
-        do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
-           do i=1,nb_noneigh
-              rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                   & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
+  if (rt_nsubcycle == 1)then
+     ! Loop over dimensions
+     do idim=1,ndim
+        i0=0; j0=0; k0=0
+        if(idim==1)i0=1
+        if(idim==2)j0=1
+        if(idim==3)k0=1
+
+        !----------------------
+        ! Left flux at boundary
+        !----------------------     
+        ! Check if grids sits near left boundary
+        ! and gather neighbor father cells index
+        nb_noneigh=0
+        do i=1,ncache
+           if (son(nbor(ind_grid(i),2*idim-1))==0) then
+              nb_noneigh = nb_noneigh + 1
+              ind_buffer(nb_noneigh) = nbor(ind_grid(i),2*idim-1)
+              ind_cell(nb_noneigh) = i
+           end if
+        end do
+        ! Conservative update of new state variables
+        do ivar=1,nrtvar
+           ! Loop over boundary cells
+           do k3=k3min,k3max-k0 ! 1 to 1 if dim=3, 1 to 2 otherwise
+              do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
+                 do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
+                    do i=1,nb_noneigh
+                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
+                            & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
+                    end do
+                 end do
+              end do
            end do
         end do
+
+        !-----------------------
+        ! Right flux at boundary
+        !-----------------------     
+        ! Check if grids sits near right boundary
+        ! and gather neighbor father cells index
+        nb_noneigh=0
+        do i=1,ncache
+           if (son(nbor(ind_grid(i),2*idim))==0) then
+              nb_noneigh = nb_noneigh + 1
+              ind_buffer(nb_noneigh) = nbor(ind_grid(i),2*idim)
+              ind_cell(nb_noneigh) = i
+           end if
         end do
-        end do
-     end do
-     
-     !-----------------------
-     ! Right flux at boundary
-     !-----------------------     
-     ! Check if grids sits near right boundary
-     ! and gather neighbor father cells index
-     nb_noneigh=0
-     do i=1,ncache
-        if (son(nbor(ind_grid(i),2*idim))==0) then
-           nb_noneigh = nb_noneigh + 1
-           ind_buffer(nb_noneigh) = nbor(ind_grid(i),2*idim)
-           ind_cell(nb_noneigh) = i
-        end if
-     end do
-     ! Conservative update of new state variables
-     do ivar=1,nrtvar
-        ! Loop over boundary cells
-        do k3=k3min+k0,k3max
-        do j3=j3min+j0,j3max
-        do i3=i3min+i0,i3max
-           do i=1,nb_noneigh
-              rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                   & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
+        ! Conservative update of new state variables
+        do ivar=1,nrtvar
+           ! Loop over boundary cells
+           do k3=k3min+k0,k3max
+              do j3=j3min+j0,j3max
+                 do i3=i3min+i0,i3max
+                    do i=1,nb_noneigh
+                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
+                            & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
+                    end do
+                 end do
+              end do
            end do
         end do
-        end do
-        end do
+
      end do
-
-  end do
-  ! End loop over dimensions
-
+     ! End loop over dimensions
+  end if
+  ! End if-clause for rt-subcycling
 END SUBROUTINE rt_godfine1
