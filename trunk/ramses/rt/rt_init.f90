@@ -136,9 +136,9 @@ SUBROUTINE read_rt_params(nml_ok)
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
-       & ,rt_c_fraction, rt_otsa, sedprops_update, hll_evals_file        &
+       & ,rt_c_fraction, rt_nsubcycle, rt_otsa, sedprops_update          &
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
-       & ,SED_isEgy, rt_output_coolstats                                 &
+       & ,SED_isEgy, rt_output_coolstats, hll_evals_file                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
@@ -205,6 +205,7 @@ SUBROUTINE read_rt_groups(nml_ok)
      rt = .false.
      return
   endif
+#if NGROUPS>0
   !   Use ionization energies for HI, HeI, HeII as default group intervals
   groupL0(1:min(nGroups,3))=ionEvs(1:min(nGroups,3))!Lower interval bounds
   groupL1(1:min(nGroups,2))=ionEvs(2:min(nGroups+1,3)) !      Upper bounds
@@ -214,6 +215,7 @@ SUBROUTINE read_rt_groups(nml_ok)
   group_csn(1,:)=(/3.007d-18, 0d0, 0d0/)   ! Avg photoion. c-section (cm2)
   group_cse(1,:)=(/2.781d-18, 0d0, 0d0/)   !     Weighted  c-section (cm2)
   group_egy(1)  =18.85                     !        Avg photon Energy (eV)
+#endif
 #if NGROUPS>1
   if(nGroups .ge. 2) group_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
   if(nGroups .ge. 2) group_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
