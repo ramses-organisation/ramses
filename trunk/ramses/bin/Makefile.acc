@@ -36,7 +36,7 @@ DCOPY=yes
 LST = yes
 
 #Auto async ?
-AUTO_ASYNC=yes
+AUTO_ASYNC=no
 
 #Loop profile ? (requires ipa to be off)
 LOOPPROFILE=no
