@@ -147,8 +147,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output frame to movie dump (without synced levels)
   !----------------------------
   if(movie) then
-     if(imov.le.imovout)then ! ifort returns error for next statement if looking
-                             ! beyond what is allocated as an array amovout/tmovout
+     if(imov.le.imovout)then 
         if(aexp>=amovout(imov).or.t>=tmovout(imov))then
            call output_frame()
         endif
@@ -289,11 +288,6 @@ recursive subroutine amr_step(ilevel,icount)
   ! Thermal feedback from stars
   if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
 
-#ifdef RT
-  ! Add stellar radiation sources
-
-#endif
-  
   ! Density threshold or Bondi accretion onto sink particle
   if(sink)then
      call grow_sink(ilevel,.false.)
@@ -327,21 +321,6 @@ recursive subroutine amr_step(ilevel,icount)
      ! Set uold equal to unew
      call set_uold(ilevel)
 
-     ! ! Density threshold or Bondi accretion onto sink particle
-     ! if(sink)then
-     !    !this is a trick to temporarily solve the issue with sink accretion 
-     !    !from ghost zones. Only an option for simulations without dark matter.
-     !    if (.not. cosmo)then
-     !       call make_tree_fine(ilevel)
-     !       call virtual_tree_fine(ilevel)
-     !       ! assuming all sink cloud parts sit on levelmax 
-     !       ! it's better to compute the accretion_rate based on
-     !       ! the updated values
-     !       call collect_acczone_avg(ilevel)
-     !    end if
-     !    call grow_sink(ilevel,.false.)
-     ! end if
-
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
@@ -351,8 +330,11 @@ recursive subroutine amr_step(ilevel,icount)
 
   endif
 
+  
+  !---------------------
+  ! Do RT/Chemistry step
+  !---------------------
 #ifdef RT
-  ! here were do the main RT calls
   if(rt .and. rt_advect) then  
      call rt_step(ilevel)
   else
@@ -379,11 +361,6 @@ recursive subroutine amr_step(ilevel,icount)
      call move_fine(ilevel) ! Only remaining particles
   end if
   
-  !-------------------------------
-  ! Source term in leaf cells only
-  !-------------------------------
-  
-
   !----------------------------------
   ! Star formation in leaf cells only
   !----------------------------------
@@ -406,9 +383,6 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
-#ifdef RT
-  ! Here was the RT boundary stuff
-#endif
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
@@ -423,7 +397,6 @@ recursive subroutine amr_step(ilevel,icount)
   ! Compute refinement map
   !-----------------------
   if(.not.static) call flag_fine(ilevel,icount)
-
 
   !----------------------------
   ! Merge finer level particles
@@ -468,18 +441,13 @@ recursive subroutine amr_step(ilevel,icount)
 
 end subroutine amr_step
 
-
-
+!##########################################################################
+!##########################################################################
+!##########################################################################
+!##########################################################################
 
 #ifdef RT
-!*************************************************************************
 subroutine rt_step(ilevel)
-
-!  Radiative transfer and chemistry step. Either do one step on ilevel,
-!  with radiation field updates in coarser level neighbours, or, if
-!  rt_nsubsteps>1, do many substeps in ilevel only, using Dirichlet
-!  boundary conditions for the level boundaries. 
-!-------------------------------------------------------------------------
   use amr_parameters, only: dp
   use amr_commons,    only: levelmin, dtnew, myid
   use rt_parameters, only: rt_isDiffuseUVsrc
@@ -492,9 +460,17 @@ subroutine rt_step(ilevel)
   include 'mpif.h'
 #endif
   integer, intent(in) :: ilevel
+
+!--------------------------------------------------------------------------
+!  Radiative transfer and chemistry step. Either do one step on ilevel,
+!  with radiation field updates in coarser level neighbours, or, if
+!  rt_nsubsteps>1, do many substeps in ilevel only, using Dirichlet
+!  boundary conditions for the level boundaries. 
+!--------------------------------------------------------------------------
+
   real(dp) :: dt_hydro, t_left, dt_rt
   integer  :: i_substep, ivar
-!-------------------------------------------------------------------------
+
   dt_hydro = dtnew(ilevel)                   ! Store hydro timestep length
   t_left = dt_hydro
   
@@ -505,7 +481,7 @@ subroutine rt_step(ilevel)
      ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
 
-     !if (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
+     ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
      if (i_substep > 1) call rt_set_unew(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))

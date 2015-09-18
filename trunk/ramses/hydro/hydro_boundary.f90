@@ -185,16 +185,18 @@ subroutine make_boundary_hydro(ilevel)
               end do
 
               ! Prevent inflow back into the box
-              ivar = gdim+1
-              if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
-                 do i=1,ngrid
-                    uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
-                 end do
-              endif
-              if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
-                 do i=1,ngrid
-                    uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
-                 end do
+              if(no_inflow) then
+                 ivar = gdim+1
+                 if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
+                    do i=1,ngrid
+                       uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
+                    end do
+                 endif
+                 if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
+                    do i=1,ngrid
+                       uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
+                    end do
+                 endif
               endif
 
               ! Add back kinetic energy

@@ -135,6 +135,7 @@ module amr_parameters
   real(dp)::T2_start          ! Starting gas temperature
   real(dp)::t_delay=1.0D1     ! Feedback time delay in Myr
   real(dp)::t_diss =20.0D0    ! Dissipation timescale for feedback
+  real(dp)::t_sne =10.0D0     ! Supernova blast time
   real(dp)::J21    =0.0D0     ! UV flux at threshold in 10^21 units
   real(dp)::a_spec =1.0D0     ! Slope of the UV spectrum
   real(dp)::beta_fix=0.0D0    ! Pressure fix parameter
@@ -233,6 +234,7 @@ module amr_parameters
   integer ,dimension(1:MAXBOUND)    ::jbound_max=0
   integer ,dimension(1:MAXBOUND)    ::kbound_min=0
   integer ,dimension(1:MAXBOUND)    ::kbound_max=0
+  logical                           ::no_inflow=.false.
 
   !Number of processes sharing one token
   !Only one process can write at a time in an I/O group

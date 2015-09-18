@@ -32,6 +32,7 @@ module dice_commons
   real(dp)::ic_t_restart   = 0.0D0
   integer::ic_ifout        = 1
   integer::ic_nfile        = 1
+  real(dp),dimension(1:3)::ic_mag_ini= (/ 0.0, 0.0, 0.0 /)
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
   character(len=4)::ic_head_name  = 'HEAD'
   character(len=4)::ic_pos_name   = 'POS '
