@@ -474,6 +474,10 @@ def main():
 	
 	if (int(args.fmax) > 0):
 		max_iter=int(args.fmax)
+	else:
+		from glob import glob
+		args.fmin=min([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('./movie1/info_*.txt')])
+		max_iter=int(max([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('./movie1/info_*.txt')]))
 
 
 	# Progressbar imports
