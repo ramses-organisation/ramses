@@ -133,10 +133,7 @@ def load_units(i, args):
 
 	return unit_l, unit_d, unit_t, unit_m
 
-def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame, deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmin, cmax):
-
-	global deflick_min
-	global deflick_max
+def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame, deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, cmin, cmax):
 
 	fig = plt.figure(frameon=False)
 	fig.set_size_inches(nx/100*geo[1],ny/100*geo[0])
@@ -168,7 +165,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 	
 		if kind[p] == 'dens':
 			dat *= unit_d	# in g/cc
-		if kind[p][0] == 'v':
+		if kind[p] in ["vx","vy","vz"]:
 			dat *= (unit_l/unit_t)/1e5 # in km/s
 
 		if(args.outfile==None):
@@ -186,7 +183,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 		dat = dat.reshape(ny,nx)
 
 		if (kind[p] == 'stars' or kind[p] == 'dm'): # PSF convolution
-			kernel = numpy.outer(signal.gaussian(100,3),signal.gaussian(100,1))
+			kernel = numpy.outer(signal.gaussian(100,1),signal.gaussian(100,1))
 			dat = signal.fftconvolve(dat, kernel, mode='same')
 
 		rawmin = numpy.amin(dat)
@@ -195,24 +192,16 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 		# Bounds
 		if args.min == None:
 			plotmin = rawmin
-			if (deflicker and args.ncpu == 1):
-				deflick_min[p][deflicker-1] = rawmin
-				plotmin = numpy.nanmean(deflick_min[p])
-				deflick_min[p] = numpy.roll(deflick_min[p], -1)
 		else:
 			plotmin = float(args.min)
 
 		if args.max == None:
 			plotmax = rawmax
-			if (deflicker and args.ncpu == 1):
-				deflick_max[p][deflicker-1] = rawmax
-				plotmax = numpy.nanmean(deflick_max[p])
-				deflick_max[p] = numpy.roll(deflick_max[p], -1)
 		else:
 			plotmax = float(args.max)
 
 		# Log scale?
-		if(args.logscale and (kind[p][0] != 'v')): # never logscale for velocities
+		if(args.logscale and kind[p] not in ["vx","vy","vz"]): # never logscale for velocities
 			dat = numpy.log10(dat)
 			rawmin = numpy.log10(rawmin)
 			rawmax = numpy.log10(rawmax)
@@ -241,7 +230,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			plotmin = p_min
 			plotmax = p_max
 		
-		if kind[p][0] == 'v':
+		if kind[p] in ["vx","vy","vz"]:
 			plotmax=max(abs(rawmin),rawmax)
 			plotmin=-plotmax
 	
@@ -253,7 +242,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 
 		if kind[p] == 'temp':
 			cmap = 'jet'
-		elif kind[p][0] == 'v':
+		elif kind[p] in ["vx","vy","vz"]:
 			cmap = 'RdBu_r'
 		else:
 			cmap=args.cmap_str
@@ -266,6 +255,8 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			cbar = plt.colorbar(im, cax=cbaxes)
 			cbar.solids.set_rasterized(True)
 			bar_font_color = 'k'
+			labels_color = 'w'
+			scolor = 'w'
 			if kind[p] == 'dens':
 				labels_color = 'w'
 				scolor = 'w'
@@ -378,8 +369,10 @@ def fit_min_max(args,p,max_iter,proj_list,proj_axis):
 
 		if kind[p] == 'dens':
 			dat *= unit_d	# in g/cc
-		if kind[p][0] == 'v':
+		if kind[p] in ['vx','vy','vz']:
 			dat *= (unit_l/unit_t)/1e5 # in km/s
+		if kind[p] in ['stars','dm']:
+			dat += 1e-12
 		
 		if args.logscale:
 			mins = numpy.append(mins,numpy.log10(numpy.amin(dat)))
@@ -395,9 +388,6 @@ def fit_min_max(args,p,max_iter,proj_list,proj_axis):
 	return p, cmin, cmax
 
 def main():
-
-	global deflick_min
-	global deflick_max
 
 	# Parse command line arguments
 	parser = ArgumentParser(description="Script to create RAMSES movies")
@@ -435,8 +425,6 @@ def main():
 	    help='montage geometry "rows cols" [%(default)s]', default="1 1")
 	parser.add_argument("-o","--output",  dest="outfile", metavar="FILE", \
 			help='output image file [<map_file>.png]', default=None)
-	parser.add_argument("-D","--deflicker",  dest="deflicker", metavar="VALUE", \
-			help='deflickering the movie with averaging over n frames [%(default)d - no averaging]', default=0, type=int)
 	parser.add_argument('-C','--colorbar',dest='colorbar', type=bool, \
 			help='add colorbar [%(default)s]', default=True)
 	parser.add_argument('-n','--ncpu',dest='ncpu', metavar="VALUE", type=int,\
@@ -462,7 +450,7 @@ def main():
 	elif args.barlen_unit == 'AU':
 		scale_l = 1./206264.806
 	else:
-		print "Wrong length unit!"
+		print 'Wrong length unit!'
 		sys.exit()
 
 	proj_ind = int(proj_list[0])-1
@@ -476,8 +464,8 @@ def main():
 		max_iter=int(args.fmax)
 	else:
 		from glob import glob
-		args.fmin=min([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('./movie1/info_*.txt')])
-		max_iter=int(max([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('./movie1/info_*.txt')]))
+		args.fmin=min([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('%s/movie1/info_*.txt' % args.dir)])
+		max_iter=int(max([filter(lambda x: x.isdigit(), y.split('/')[-1]) for y in glob('%s/movie1/info_*.txt' % args.dir)]))
 
 
 	# Progressbar imports
@@ -489,12 +477,6 @@ def main():
 		progressbar_avail = False
 
 
-	# remove flickering
-	deflicker = args.deflicker
-	if deflicker > 0:
-		deflick_min = numpy.ones((len(proj_list),deflicker))*numpy.nan
-		deflick_max = numpy.ones((len(proj_list),deflicker))*numpy.nan
-	
 	# for each projection fit mins and maxs with polynomial
 	cmins = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
 	cmaxs = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
@@ -551,7 +533,7 @@ def main():
 		results = []
 		pool = mp.Pool(processes=args.ncpu)
 		for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
-			results.append(pool.apply_async(make_image, args=(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmins, cmaxs,)))
+			results.append(pool.apply_async(make_image, args=(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, cmins, cmaxs,)))
 		while True:
 			inc_count = sum(1 for x in results if not x.ready())
 			if inc_count == 0:
@@ -566,7 +548,7 @@ def main():
 
 	elif args.ncpu == 1:
 		for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
-			make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, deflicker, cmins, cmaxs)
+			make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre_frame, ycentre_frame, zcentre_frame,deltax_frame, deltay_frame, deltaz_frame, kind, geo, cosmo, scale_l, cmins, cmaxs)
 			if progressbar_avail:
 				pbar.update(i)
 
@@ -593,7 +575,5 @@ def main():
 	subprocess.call("chmod a+r {mov}".format(mov=mov), shell=True)
 
 if __name__ == '__main__':
-	deflick_min = []
-	deflick_max = []
 	main()
 
