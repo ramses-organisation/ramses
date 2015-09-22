@@ -1,3 +1,7 @@
+! Non-equlibrium (in H and He) cooling module for radiation-hydrodynamics.
+! For details, see Rosdahl et al. 2013, and Rosdahl & Teyssier 2015.
+! Joki Rosdahl, Andreas Bleuler, and Romain Teyssier, September 2015.
+
 module rt_cooling_module
   use amr_commons,only:myid  
   use cooling_module,only:X, Y
