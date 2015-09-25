@@ -392,12 +392,13 @@ subroutine getmem(outmem)
 #ifndef WITHOUTMPI
   include 'mpif.h'  
 #endif
-  real::outmem
+  real(kind=4)::outmem
   character(len=300) :: dir, dir2,  cmd, file
   integer::read_status
   integer,parameter::tag=1134
   integer::dummy_io,info2
   integer::nmem,ind,j
+  logical::file_exists
   
   file='/proc/self/stat'
 #ifndef WITHOUTMPI
@@ -409,9 +410,14 @@ subroutine getmem(outmem)
   endif
 #endif
 
-  open(unit=1,file=file,form='formatted')
-  read(1,'(A300)',IOSTAT=read_status)dir
-  close(1)
+  inquire(file=file, exist=file_exists)
+  if (file_exists) then
+     open(unit=1,file=file,form='formatted')
+     read(1,'(A300)',IOSTAT=read_status)dir
+     close(1)
+  else
+     read_status=-1000
+  endif
 
   ! Send the token
 #ifndef WITHOUTMPI
@@ -426,8 +432,8 @@ subroutine getmem(outmem)
 
 
   if (read_status < 0)then
-     outmem=dble(0.)
-     if (myid==1)write(*,*)'Problem in checking free memory'
+     outmem=0.
+     if (myid==1 .and. read_status .ne. -1000)write(*,*)'Problem in checking free memory'
   else
      ind=300
      j=0
@@ -440,7 +446,7 @@ subroutine getmem(outmem)
      ind=index(dir,' ')
      dir2=dir(1:ind)
      read(dir2,'(I12)')nmem
-     outmem=dble(nmem)
+     outmem=real(nmem,kind=4)
   end if
 
 end subroutine getmem
