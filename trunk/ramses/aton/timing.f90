@@ -40,7 +40,7 @@ subroutine timer_start(timer)
   type(timer_state)::timer
   integer::info
 
-  timer%start = MPI_WTIME(info)
+  timer%start = MPI_WTIME()
 end subroutine
 
 subroutine timer_stop(timer)
@@ -53,7 +53,7 @@ subroutine timer_stop(timer)
 
   if (timer%start.le.0.0) return
 
-  end = MPI_WTIME(info)
+  end = MPI_WTIME()
   timer%sum = timer%sum + end - timer%start
   timer%count = timer%count + 1
 end subroutine
