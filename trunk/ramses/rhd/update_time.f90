@@ -19,7 +19,7 @@ subroutine update_time(ilevel)
 
 #ifndef WITHOUTMPI
   if(myid==1)then
-     if(ttstart.eq.0.0)ttstart=MPI_WTIME(info)
+     if(ttstart.eq.0.0)ttstart=MPI_WTIME()
   endif
 #endif
 
@@ -99,7 +99,7 @@ subroutine update_time(ilevel)
         if(myid==1)then
            write(*,*)'Run completed'
 #ifndef WITHOUTMPI
-           ttend=MPI_WTIME(info)
+           ttend=MPI_WTIME()
            write(*,*)'Total elapsed time:',ttend-ttstart
 #endif
         endif

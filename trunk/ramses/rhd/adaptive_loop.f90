@@ -13,7 +13,7 @@ subroutine adaptive_loop
 
 
 #ifndef WITHOUTMPI
-  tt1=MPI_WTIME(info)
+  tt1=MPI_WTIME()
 #endif
 
   call init_amr                      ! Initialize AMR variables
@@ -27,7 +27,7 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again
 
 #ifndef WITHOUTMPI
-  tt2=MPI_WTIME(info)
+  tt2=MPI_WTIME()
   if(myid==1)write(*,*)'Time elapsed since startup:',tt2-tt1
 #endif
   
