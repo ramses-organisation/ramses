@@ -20,7 +20,7 @@ subroutine adaptive_loop
   real(kind=4)::real_mem,real_mem_tot
 
 #ifndef WITHOUTMPI
-  tt1=MPI_WTIME(info)
+  tt1=MPI_WTIME()
 #endif
 
   !~~~~~~~~~ begin ~~~~~~~~~
@@ -52,7 +52,7 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again
 
 #ifndef WITHOUTMPI
-  tt2=MPI_WTIME(info)
+  tt2=MPI_WTIME()
   if(myid==1)write(*,*)'Time elapsed since startup:',tt2-tt1
 #endif
 
@@ -70,7 +70,7 @@ subroutine adaptive_loop
   do ! Main time loop
 
 #ifndef WITHOUTMPI
-     tt1=MPI_WTIME(info)
+     tt1=MPI_WTIME()
 #endif
 
      if(verbose)write(*,*)'Entering amr_step_coarse'
@@ -202,7 +202,7 @@ subroutine adaptive_loop
      nstep_coarse=nstep_coarse+1
 
 #ifndef WITHOUTMPI
-     tt2=MPI_WTIME(info)
+     tt2=MPI_WTIME()
      if(mod(nstep_coarse,ncontrol)==0)then
         call getmem(real_mem)
         call MPI_ALLREDUCE(real_mem,real_mem_tot,1,MPI_REAL,MPI_MAX,MPI_COMM_WORLD,info)

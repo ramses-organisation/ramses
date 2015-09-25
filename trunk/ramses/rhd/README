@@ -1,0 +1,12 @@
+Relativistic extension of the RAMSES code developped by Astrid Lamberts (astrid.lamberts@gmail.com) and sebastien.fromang
+(sebastien.fromang@cea.fr).
+Most of the code is described in Lamberts+2013, A&! 560, A79
+As of Sept, 2015, the code includes
+-full 3D AMR, including refinement on Lorenz factor gradients (option grad_lor)
+-2 riemann solvers : HLL and HLLC (other solvers may be present in code but do not verify RHD)
+-2 second order methods : U-muscl scheme and PLM method
+-an equation of state taking into account relativistic kinetic theory of gasses (see Dubus, Lamberts, Fromang, 2015). Use option eos='TM'
+
+-the test suite has a few shock tubes and a blast wave and jet problem.
+
+-RHD requires 3 velocity fiels, even when the flow is 1D.
