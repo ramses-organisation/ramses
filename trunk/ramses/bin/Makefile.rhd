@@ -7,7 +7,7 @@ NDIM = 1
 NPRE = 8
 NVAR = 5
 NENER = 0
-SOLVER = hydro
+SOLVER = rhd
 PATCH = 
 EXEC = ramses
 #############################################################################
