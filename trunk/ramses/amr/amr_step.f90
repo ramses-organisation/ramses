@@ -487,7 +487,7 @@ end subroutine amr_step
 #ifdef RT
 subroutine rt_step(ilevel)
   use amr_parameters, only: dp
-  use amr_commons,    only: levelmin, dtnew, myid
+  use amr_commons,    only: levelmin, t, dtnew, myid
   use rt_parameters, only: rt_isDiffuseUVsrc
   use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
@@ -506,11 +506,14 @@ subroutine rt_step(ilevel)
 !  boundary conditions for the level boundaries. 
 !--------------------------------------------------------------------------
 
-  real(dp) :: dt_hydro, t_left, dt_rt
+  real(dp) :: dt_hydro, t_left, dt_rt, t_save
   integer  :: i_substep, ivar
 
   dt_hydro = dtnew(ilevel)                   ! Store hydro timestep length
   t_left = dt_hydro
+  ! We shift the time backwards one hydro-dt, to get evolution of stellar
+  ! ages within the hydro timestep, in the case of rt subcycling:
+  t_save=t ; t=t-t_left
   
   i_substep = 0
   do while (t_left > 0)                      !                RT sub-cycle
@@ -518,6 +521,7 @@ subroutine rt_step(ilevel)
      call get_rt_courant_coarse(dt_rt)
      ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+     t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
      if (i_substep > 1) call rt_set_unew(ilevel)
@@ -547,6 +551,7 @@ subroutine rt_step(ilevel)
      t_left = t_left - dtnew(ilevel)
   end do                                   !          End RT subcycle loop
   dtnew(ilevel) = dt_hydro                 ! Restore hydro timestep length
+  t = t_save       ! Restore original time (otherwise tiny roundoff error)
   
   ! Restriction operator to update coarser level split cells
   call rt_upload_fine(ilevel)
