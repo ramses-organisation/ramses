@@ -395,8 +395,9 @@ contains
        ! IR, optical and UV depletion by dust absorption: ----------------
        if(rt_isIR) & !IR scattering/abs on dust (abs after T update)        
             phSc(iIR)  = phSc(iIR) + dustSc(iIR)                        
-       do igroup=iIR+1,nGroups    ! Deplete photons, since they go into IR 
-          phAbs(igroup) = phAbs(igroup) + dustAbs(igroup)                  
+       do igroup=1,nGroups        ! Deplete photons, since they go into IR
+          if( .not. (rt_isIR .and. igroup.eq.iIR) ) &  ! IR done elsewhere
+               phAbs(igroup) = phAbs(igroup) + dustAbs(igroup)
        end do
 
        dmom(1:nDim)=0d0
