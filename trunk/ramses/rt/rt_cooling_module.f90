@@ -81,6 +81,8 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
+  if(myid==1 .and. rt_isIR) &
+       write(*,*) 'There is an IR group, with index ',iIR        
   if(myid==1 .and. rt_isIRtrap) write(*,*) &
        '=========IR trapping is turned ON=============='
   ! do initialization
@@ -96,11 +98,6 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
   Fp_FRAC = 0.5
-
-  if(myid==1) write(*,*) 'IR group index has been set to ',iIR        
-
-  ! Might also put in here filling in of tables of cooling rates, to 
-  ! ease the computational load.
 
   ! Calculate initial temperature
   if (astart_sim < astart) then
