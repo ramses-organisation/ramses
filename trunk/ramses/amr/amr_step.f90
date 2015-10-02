@@ -6,6 +6,9 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   use rt_hydro_commons
   use SED_module
+  use UV_module
+  use coolrates_module, only: update_coolrates_tables
+  use rt_cooling_module, only: update_UVrates
 #endif
   implicit none
 #ifndef WITHOUTMPI
@@ -28,6 +31,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------
   ! Make new refinements and update boundaries
   !-------------------------------------------
+                               call timer('refine','start')
   if(levelmin.lt.nlevelmax .and..not. static)then
      if(ilevel==levelmin.or.icount>1)then
         do i=ilevel,nlevelmax
@@ -84,6 +88,7 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------------
   ! Load balance
   !--------------------------
+                               call timer('loadbalance','start')
   ok_defrag=.false.
   if(levelmin.lt.nlevelmax)then
      if(ilevel==levelmin)then
@@ -105,11 +110,13 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------
   ! Update sink cloud particle properties
   !-----------------
+                               call timer('sinks','start')
   if(sink)call update_cloud(ilevel)
 
   !-----------------
   ! Particle leakage
   !-----------------
+                               call timer('particles','start')
   if(pic)call make_tree_fine(ilevel)
   
   !------------------------
@@ -117,6 +124,7 @@ recursive subroutine amr_step(ilevel,icount)
   !------------------------
   if(ilevel==levelmin)then
      if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now.EQV..true.)then
+                               call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
         endif
@@ -144,9 +152,9 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output frame to movie dump (without synced levels)
   !----------------------------
   if(movie) then
-     if(imov.le.imovout)then ! ifort returns error for next statement if looking
-                             ! beyond what is allocated as an array amovout/tmovout
+     if(imov.le.imovout)then 
         if(aexp>=amovout(imov).or.t>=tmovout(imov))then
+                               call timer('io','start')
            call output_frame()
         endif
      endif
@@ -159,6 +167,7 @@ recursive subroutine amr_step(ilevel,icount)
      !----------------------------------------------------
      ! Kinetic feedback from giant molecular clouds
      !----------------------------------------------------
+                               call timer('feedback','start')
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
 
   endif
@@ -167,6 +176,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Poisson source term
   !--------------------
   if(poisson)then
+                               call timer('poisson','start')
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
      call rho_fine(ilevel,icount)
@@ -177,6 +187,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------
   if(pic)then
      ! Remove particles to finer levels
+                               call timer('particles','start')
      call kill_tree_fine(ilevel)
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
@@ -186,6 +197,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Gravity update
   !---------------
   if(poisson)then
+                               call timer('poisson','start')
  
      ! Remove gravity source term with half time step and old force
      if(hydro)then
@@ -210,10 +222,12 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Synchronize remaining particles for gravity
      if(pic)then
+                               call timer('particles','start')
         call synchro_fine(ilevel)
      end if
 
      if(hydro)then
+                               call timer('poisson','start')
 
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
@@ -233,6 +247,7 @@ recursive subroutine amr_step(ilevel,icount)
         if(simple_boundary)call make_boundary_hydro(ilevel)
         
         ! Compute Bondi-Hoyle accretion parameters
+                               call timer('sinks','start')
         if(sink)call collect_acczone_avg(ilevel)
 
      end if
@@ -241,22 +256,26 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   ! Turn on RT in case of rt_stars and first stars just created:
   ! Update photon packages according to star particles
+                               call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
 #endif
 
   !----------------------
   ! Compute new time step
   !----------------------
+                               call timer('courant','start')
   call newdt_fine(ilevel)
   if(ilevel>levelmin)then
      dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
   end if
 
   ! Set unew equal to uold
+                               call timer('hydro - set unew','start')
   if(hydro)call set_unew(ilevel)
 
 #ifdef RT
   ! Set rtunew equal to rtuold
+                               call timer('radiative transfer','start')
   if(rt)call rt_set_unew(ilevel)
 #endif
 
@@ -284,34 +303,26 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   ! Thermal feedback from stars
+                               call timer('feedback','start')
   if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
 
-#ifdef RT
-  ! Add stellar radiation sources
-  if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
-#endif
-  
   ! Density threshold or Bondi accretion onto sink particle
   if(sink)then
+                               call timer('sinks','start')
      call grow_sink(ilevel,.false.)
   end if
   
-  !---------------
-  ! Move particles
-  !---------------
-  if(pic)then
-     call move_fine(ilevel) ! Only remaining particles
-  end if
-
   !-----------
   ! Hydro step
   !-----------
   if(hydro)then
 
      ! Hyperbolic solver
+                               call timer('hydro - godunov','start')
      call godunov_fine(ilevel)
 
      ! Reverse update boundaries
+                               call timer('hydro - rev ghostzones','start')
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
 #else
@@ -329,69 +340,69 @@ recursive subroutine amr_step(ilevel,icount)
      endif
 
      ! Set uold equal to unew
+                               call timer('hydro - set uold','start')
      call set_uold(ilevel)
-
-     ! ! Density threshold or Bondi accretion onto sink particle
-     ! if(sink)then
-     !    !this is a trick to temporarily solve the issue with sink accretion 
-     !    !from ghost zones. Only an option for simulations without dark matter.
-     !    if (.not. cosmo)then
-     !       call make_tree_fine(ilevel)
-     !       call virtual_tree_fine(ilevel)
-     !       ! assuming all sink cloud parts sit on levelmax 
-     !       ! it's better to compute the accretion_rate based on
-     !       ! the updated values
-     !       call collect_acczone_avg(ilevel)
-     !    end if
-     !    call grow_sink(ilevel,.false.)
-     ! end if
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step 
+                               call timer('poisson','start')
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator
+                               call timer('hydro upload fine','start')
      call upload_fine(ilevel)
 
   endif
 
+  
+  !---------------------
+  ! Do RT/Chemistry step
+  !---------------------
 #ifdef RT
-  !---------------
-  ! Radiation step
-  !---------------
-  if(rt)then
-     ! Hyperbolic solver
-     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
-
-     call add_rt_sources(ilevel,dtnew(ilevel))
-
-     ! Reverse update boundaries
-     do ivar=1,nrtvar
-        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
-     end do
-
-     ! Set rtuold equal to rtunew
-     call rt_set_uold(ilevel)
-
-     ! Restriction operator
-     call rt_upload_fine(ilevel)
+  if(rt .and. rt_advect) then  
+                               call timer('radiative transfer','start')
+     call rt_step(ilevel)
+  else
+     ! Still need a chemistry call if RT is defined but not
+     ! actually doing radiative transfer (i.e. rt==false):
+                               call timer('cooling','start')
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
   endif
+  ! Regular updates and book-keeping:
+  if(ilevel==levelmin) then
+                               call timer('radiative transfer','start')
+     if(cosmo) call update_rt_c
+     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
+     if(cosmo .and. rt_isDiffuseUVsrc) call update_UVsrc
+                               call timer('cooling','start')
+     if(cosmo) call update_coolrates_tables(dble(aexp))
+                               call timer('radiative transfer','start')
+     if(ilevel==levelmin) call output_rt_stats
+  endif
+#else
+                               call timer('cooling','start')
+  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
 #endif
   
-  !-------------------------------
-  ! Source term in leaf cells only
-  !-------------------------------
-  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
-
+  !---------------
+  ! Move particles
+  !---------------
+  if(pic)then
+                               call timer('particles','start')
+     call move_fine(ilevel) ! Only remaining particles
+  end if
+  
   !----------------------------------
   ! Star formation in leaf cells only
   !----------------------------------
+                               call timer('feedback','start')
   if(hydro.and.star)call star_formation(ilevel)
 
   !---------------------------------------
   ! Update physical and virtual boundaries
   !---------------------------------------
   if(hydro)then
+                               call timer('hydro - ghostzones','start')
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
 #else
@@ -405,19 +416,12 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
-#ifdef RT
-  if(rt)then
-     do ivar=1,nrtvar
-        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
-     end do
-     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
-  end if
-#endif
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
  if(hydro)then
      if(eta_mag>0d0.and.ilevel==levelmin)then
+                               call timer('hydro - diffusion','start')
         call diffusion
      endif
   end if
@@ -426,12 +430,13 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------------
   ! Compute refinement map
   !-----------------------
+                               call timer('flag','start')
   if(.not.static) call flag_fine(ilevel,icount)
-
 
   !----------------------------
   ! Merge finer level particles
   !----------------------------
+                               call timer('particles','start')
   if(pic)call merge_tree_fine(ilevel)
 
   !---------------
@@ -439,11 +444,13 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
 #ifdef ATON
   if(aton.and.ilevel==levelmin)then
+                               call timer('aton','start')
      call rad_step(dtnew(ilevel))
   endif
 #endif
 
   if(sink)then
+                               call timer('sinks','start')
      !-------------------------------
      ! Update coarser level sink velocity
      !-------------------------------
@@ -472,6 +479,87 @@ recursive subroutine amr_step(ilevel,icount)
 
 end subroutine amr_step
 
+!##########################################################################
+!##########################################################################
+!##########################################################################
+!##########################################################################
 
+#ifdef RT
+subroutine rt_step(ilevel)
+  use amr_parameters, only: dp
+  use amr_commons,    only: levelmin, t, dtnew, myid
+  use rt_parameters, only: rt_isDiffuseUVsrc
+  use rt_cooling_module, only: update_UVrates
+  use rt_hydro_commons
+  use UV_module
+  use SED_module,     only: star_RT_feedback
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer, intent(in) :: ilevel
 
+!--------------------------------------------------------------------------
+!  Radiative transfer and chemistry step. Either do one step on ilevel,
+!  with radiation field updates in coarser level neighbours, or, if
+!  rt_nsubsteps>1, do many substeps in ilevel only, using Dirichlet
+!  boundary conditions for the level boundaries. 
+!--------------------------------------------------------------------------
 
+  real(dp) :: dt_hydro, t_left, dt_rt, t_save
+  integer  :: i_substep, ivar
+
+  dt_hydro = dtnew(ilevel)                   ! Store hydro timestep length
+  t_left = dt_hydro
+  ! We shift the time backwards one hydro-dt, to get evolution of stellar
+  ! ages within the hydro timestep, in the case of rt subcycling:
+  t_save=t ; t=t-t_left
+  
+  i_substep = 0
+  do while (t_left > 0)                      !                RT sub-cycle
+     i_substep = i_substep + 1
+     call get_rt_courant_coarse(dt_rt)
+     ! Temporarily change timestep length to rt step:
+     dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+     t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
+
+     ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel    
+     if (i_substep > 1) call rt_set_unew(ilevel)
+
+     if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+
+     ! Hyperbolic solver
+     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
+
+     call add_rt_sources(ilevel,dtnew(ilevel))
+
+     ! Reverse update boundaries
+     do ivar=1,nrtvar
+        call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
+     end do
+
+     ! Set rtuold equal to rtunew
+     call rt_set_uold(ilevel)
+
+     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+     
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+
+     t_left = t_left - dtnew(ilevel)
+  end do                                   !          End RT subcycle loop
+  dtnew(ilevel) = dt_hydro                 ! Restore hydro timestep length
+  t = t_save       ! Restore original time (otherwise tiny roundoff error)
+  
+  ! Restriction operator to update coarser level split cells
+  call rt_upload_fine(ilevel)
+
+  if (myid==1 .and. rt_nsubcycle .gt. 1) write(*,901) ilevel, i_substep
+
+900 format (' dt_hydro=', 1pe12.3, ' dt_rt=', 1pe12.3, ' i_sub=', I5, ' level=', I5)
+901 format (' Performed level', I3, ' RT-step with ', I5, ' subcycles')
+  
+end subroutine rt_step
+#endif

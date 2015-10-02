@@ -855,7 +855,7 @@ subroutine read_clumpfind_params()
   namelist/clumpfind_params/ivar_clump,& 
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
-       & n_clfind,rho_clfind,merge_unbound
+       & n_clfind,rho_clfind
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
   
   ! Read namelist file 

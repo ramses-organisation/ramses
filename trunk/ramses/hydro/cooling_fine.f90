@@ -3,9 +3,10 @@ subroutine cooling_fine(ilevel)
   use hydro_commons
   use cooling_module
 #ifdef RT
-  use rt_parameters, only: rt_isDiffuseUVsrc
-  use rt_cooling_module, only: update_UVrates
-  use UV_module
+  !use rt_parameters, only: rt_isDiffuseUVsrc
+  !use rt_cooling_module, only: update_UVrates
+  !use coolrates_module, only: update_coolrates_tables
+  !use UV_module
 #endif
   implicit none
 #ifndef WITHOUTMPI
@@ -40,15 +41,7 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #endif
   endif
-#ifdef RT
-  if(neq_chem.and.ilevel==levelmin) then
-     if(cosmo)call update_rt_c
-     if(cosmo .and. haardt_madau) call update_UVrates(aexp)
-     if(cosmo .and. rt_isDiffuseUVsrc)call update_UVsrc
-     if(ilevel==levelmin) call output_rt_stats
-  endif
-#endif
-
+  
 111 format('   Entering cooling_fine for level',i2)
 
 end subroutine cooling_fine
@@ -83,17 +76,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
-
+  integer::irad
 #ifdef RT
-  integer::ii,ig,iNp,il,irad
+  integer::ii,ig,iNp,il
   real(kind=8),dimension(1:nvector),save:: ekk_new
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp)::scale_Np,scale_Fp,work,Npc,fred,Npnew, kScIR, EIR, TR
   real(dp),dimension(1:ndim)::Fpnew
-  real(dp),dimension(1:nvector, nIons),save:: xion
-  real(dp),dimension(1:nvector, nGroups),save:: Np, Np_boost=0d0, dNpdt=0d0
-  real(dp),dimension(1:nvector, nGroups, ndim),save:: Fp, Fp_boost, dFpdt
-  real(dp),dimension(1:nvector, ndim),save:: p_gas, u_gas
+  real(dp),dimension(nIons, 1:nvector),save:: xion
+  real(dp),dimension(nGroups, 1:nvector),save:: Np, Np_boost=0d0, dNpdt=0d0
+  real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost, dFpdt
+  real(dp),dimension(ndim, 1:nvector),save:: p_gas, u_gas
   real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux 
@@ -140,11 +133,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   endif
 
 #ifdef RT
+#if NGROUPS>0
   if(rt_isIRtrap) then
      ! For conversion from photon number density to photon energy density:
      Np2Ep = scale_Np * group_egy(iIR) * ev_to_erg                       &
           * rt_c_cgs/c_cgs * rt_pressBoost / scale_d / scale_v**2
   endif
+#endif
   ! Allow for high-z UV background in noncosmo sims:
   aexp_loc=aexp
   if(.not. cosmo .and. haardt_madau) aexp_loc = aexp_ini
@@ -190,11 +185,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      ! Initialise gas momentum and velocity for photon momentum abs.:
      do i=1,nleaf
-        p_gas(i,:) = uold(ind_leaf(i),2:ndim+1) * scale_d * scale_v
-        u_gas(i,:) = uold(ind_leaf(i),2:ndim+1) &
+        p_gas(:,i) = uold(ind_leaf(i),2:ndim+1) * scale_d * scale_v
+        u_gas(:,i) = uold(ind_leaf(i),2:ndim+1) &
                      /uold(ind_leaf(i),1) * scale_v
      end do
 
+#if NGROUPS>0
      if(rt_isIRtrap) then  ! Gather also trapped photons for solve_cooling
         iNp=iGroups(iIR)
         do i=1,nleaf
@@ -230,6 +226,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
         enddo
      endif
+#endif
 #endif
         
      ! Compute thermal pressure
@@ -317,7 +314,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Get the ionization fractions
         do ii=0,nIons-1
            do i=1,nleaf
-              xion(i,1+ii) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
+              xion(1+ii,i) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
            end do
         end do
 
@@ -326,16 +323,16 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            iNp=iGroups(ig)
            do i=1,nleaf
               il=ind_leaf(i)
-              Np(i,ig)        = scale_Np * rtuold(il,iNp)
-              Fp(i,ig,1:ndim) = scale_Fp * rtuold(il,iNp+1:iNp+ndim)
+              Np(ig,i)        = scale_Np * rtuold(il,iNp)
+              Fp(1:ndim, ig, i) = scale_Fp * rtuold(il,iNp+1:iNp+ndim)
            enddo
            if(rt_smooth) then                           ! Smooth RT update
               do i=1,nleaf !Calc addition per sec to Np, Fp for current dt
                  il=ind_leaf(i)
                  Npnew = scale_Np * rtunew(il,iNp)
                  Fpnew = scale_Fp * rtunew(il,iNp+1:iNp+ndim)
-                 dNpdt(i,ig)   = (Npnew - Np(i,ig)) / dtcool
-                 dFpdt(i,ig,:) = (Fpnew - Fp(i,ig,:)) / dtcool
+                 dNpdt(ig,i)   = (Npnew - Np(ig,i)) / dtcool
+                 dFpdt(:,ig,i) = (Fpnew - Fp(:,ig,i)) / dtcool
               end do
            end if
         end do
@@ -353,17 +350,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
         do i=1,nleaf
            do ig=1,nGroups
-              Npc=Np(i,ig)*rt_c_cgs
-              call cmp_Eddington_tensor(Npc,Fp(i,ig,:),tEdd)
-              Np_boost(i,ig) = - 2d0/c_cgs/rt_c_cgs * sum(u_gas(i,:)*Fp(i,ig,:))
+              Npc=Np(ig,i)*rt_c_cgs
+              call cmp_Eddington_tensor(Npc,Fp(:,ig,i),tEdd)
+              Np_boost(ig,i) = - 2d0/c_cgs/rt_c_cgs * sum(u_gas(:,i)*Fp(:,ig,i))
               do idim=1,ndim
-                 Fp_boost(i,ig,idim) =  &
-                      -u_gas(i,idim)*Np(i,ig) * rt_c_cgs/c_cgs &
-                      -sum(u_gas(i,:)*tEdd(idim,:))*Np(i,ig)*rt_c_cgs/c_cgs
+                 Fp_boost(idim,ig,i) =  &
+                      -u_gas(idim,i)*Np(ig,i) * rt_c_cgs/c_cgs &
+                      -sum(u_gas(:,i)*tEdd(idim,:))*Np(ig,i)*rt_c_cgs/c_cgs
               end do
            end do
-           Np(i,:)   = Np(i,:) + Np_boost(i,:)
-           Fp(i,:,:) = Fp(i,:,:) + Fp_boost(i,:,:)
+           Np(:,i)   = Np(:,i) + Np_boost(:,i)
+           Fp(:,:,i) = Fp(:,:,i) + Fp_boost(:,:,i)
         end do
      endif
 #endif
@@ -437,7 +434,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(.not. static) then
         ! Update gas momentum and kinetic energy:
         do i=1,nleaf
-           uold(ind_leaf(i),2:1+ndim) = p_gas(i,:) /scale_d /scale_v
+           uold(ind_leaf(i),2:1+ndim) = p_gas(:,i) /scale_d /scale_v
         end do
         ! Energy update ==================================================
         ! Calculate NEW pressure from updated momentum
@@ -457,12 +454,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            ekk(i)=ekk_new(i)
         end do
      
+#if NGROUPS>0 
         if(rt_vc) then ! Photon work: subtract from the IR ONLY radiation
            do i=1,nleaf                                   
-              Np(i,iIR) = Np(i,iIR) + (ekk(i) - ekk_new(i))              &
+              Np(iIR,i) = Np(iIR,i) + (ekk(i) - ekk_new(i))              &
                    /scale_d/scale_v**2 / group_egy(iIR) / ev_to_erg
            end do
         endif
+#endif
         ! End energy update ==============================================
      endif ! if(.not. static)
 #endif
@@ -530,19 +529,20 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Update ionization fraction
         do ii=0,nIons-1
            do i=1,nleaf
-              uold(ind_leaf(i),iIons+ii) = xion(i,1+ii)*nH(i)
+              uold(ind_leaf(i),iIons+ii) = xion(1+ii,i)*nH(i)
            end do
         end do
      endif
+#if NGROUPS>0 
      if(rt) then
         ! Update photon densities and flux magnitudes
         do ig=1,nGroups
            do i=1,nleaf
-              rtuold(ind_leaf(i),iGroups(ig)) = (Np(i,ig)-Np_boost(i,ig)) /scale_Np
+              rtuold(ind_leaf(i),iGroups(ig)) = (Np(ig,i)-Np_boost(ig,i)) /scale_Np
               rtuold(ind_leaf(i),iGroups(ig)) = &
                    max(rtuold(ind_leaf(i),iGroups(ig)),smallNp)
               rtuold(ind_leaf(i),iGroups(ig)+1:iGroups(ig)+ndim)         &
-                               = (Fp(i,ig,1:ndim)-Fp_boost(i,ig,1:ndim)) /scale_Fp
+                               = (Fp(1:ndim,ig,i)-Fp_boost(1:ndim,ig,i)) /scale_Fp
            enddo
         end do
      endif
@@ -580,7 +580,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do ! i=1,nleaf                                                 
 
      endif  !rt_isIRtrap     
-
+#endif
 #endif
 
   end do
