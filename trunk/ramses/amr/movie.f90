@@ -115,16 +115,18 @@ subroutine output_frame()
   moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
 #endif
 #if NVAR>5
-#ifdef SOLVERmhd
-  do ll=6,NVAR+3
-#else
   do ll=6,NVAR
-#endif
     write(dummy,'(I3.1)') ll
     moviefiles(ll) = trim(moviedir)//'var'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
  end do
 #endif
 #ifdef SOLVERmhd
+  moviefiles(6) = trim(moviedir)//'bxl_'//trim(istep_str)//'.map'
+  moviefiles(7) = trim(moviedir)//'byl_'//trim(istep_str)//'.map'
+  moviefiles(8) = trim(moviedir)//'bzl_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+1) = trim(moviedir)//'bxr_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+2) = trim(moviedir)//'byr_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+3) = trim(moviedir)//'bzr_'//trim(istep_str)//'.map'
   moviefiles(NVAR+4) = trim(moviedir)//'pmag_'//trim(istep_str)//'.map'
   moviefiles(NVAR+5) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+6) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
