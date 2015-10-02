@@ -12,7 +12,7 @@ module rt_cooling_module
   private   ! default
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
-         , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
+         , isHe, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
          , rt_isoPress, rt_T_rad, rt_vc, a_r
@@ -34,6 +34,7 @@ module rt_cooling_module
   integer::iIRtrapVar=1                          ! IRtrap passScalar index
   ! Namelist parameters:
   logical::isHe=.true.
+  logical::is_mu_H2=.false.
   logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
   real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
   logical::rt_isIR=.false.             ! Using IR scattering on dust?    
@@ -334,6 +335,7 @@ contains
     nI(3)  = nHe*dXion(3)                                        !  nHeIII
     mu= 1./(X*(1.+dXion(1)) + 0.25*Y*(1.+dXion(2)+2.*dXion(3)))   
     if(is_kIR_T) mu=2.33
+    if(is_mu_H2) mu=2.33
     TK = dT2 * mu                                           !  Temperature
     if(rt_isTconst) TK=rt_Tconst                       !  Force constant T
     ne= nH(icell)*dXion(1)+nHE*(dXion(2)+2.*dXion(3))  !  Electron density
@@ -561,6 +563,7 @@ contains
     if(isHe) then
        ne= nH(icell)*dXion(1)+nHE*(dXion(2)+2.*dXion(3)) ! Bc changed xhii
        mu= 1./(X*(1.+dXion(1)) + 0.25*Y*(1.+dXion(2)+2.*dXion(3)))  
+       if(is_mu_H2)mu=2.33
        if(.not. rt_isTconst) TK=dT2*mu !  Update TK because of changed  mu
 
        !(iv) UPDATE xHeI *************************************************
