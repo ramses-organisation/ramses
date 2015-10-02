@@ -508,14 +508,23 @@ subroutine output_frame()
   ! Convert into mass weighted                                                                                                         
   do ii=1,nw_frame
     do jj=1,nh_frame
-      do kk=0,NVAR
 #ifdef SOLVERmhd
-        if(kk==6.or.kk==7.or.kk==8) cycle
-#endif
+      do kk=0,5
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
-#ifdef SOLVERmhd
-      if(movie_vars(NVAR+4).eq.1) data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)/vol(ii,jj)
+      do kk=6,8
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
+      end do
+      do kk=9,NVAR
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
+      end do
+      do kk=NVAR+1,NVAR+4
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
+      end do
+#else
+      do kk=0,NVAR
+        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
+      end do
 #endif
 #ifdef RT
       if(rt) then
