@@ -12,7 +12,7 @@ module rt_cooling_module
   private   ! default
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
-         , isHe, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
+         , isHe, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi         &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
          , rt_isoPress, rt_T_rad, rt_vc, a_r
