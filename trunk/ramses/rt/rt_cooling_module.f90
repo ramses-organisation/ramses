@@ -998,7 +998,7 @@ FUNCTION getMu(xHII, xHeII, xHeIII, Tmu)
 !-------------------------------------------------------------------------
   getMu = 1./(X*(1.+xHII) + 0.25*Y*(1.+xHeII+2.*xHeIII))   
   if(is_kIR_T .or. is_mu_H2) &
-       getMu = getMu + exp(-Tmu/Tmu_dissoc) * (2.33-getMu)
+       getMu = getMu + exp(-1.d0*(Tmu/Tmu_dissoc)**2) * (2.33-getMu)
 END FUNCTION getMu
 
 
