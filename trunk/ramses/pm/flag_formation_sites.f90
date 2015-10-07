@@ -26,7 +26,6 @@ subroutine flag_formation_sites
   real(dp)::dx,dx_min,dist2,scale,tff,acc_r
   real(dp)::fourpi,threepi2
   real(dp),dimension(1:npeaks)::peakd
-  integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
@@ -115,16 +114,8 @@ subroutine flag_formation_sites
   pos=0.0
   flag2=0
 
-  ! Sort clumps by peak density in ascending order
-  do i=1,npeaks
-     peakd(i)=max_dens(i)
-     ind_sort(i)=i
-  end do
-  call quick_sort_dp(peakd,ind_sort,npeaks)
-  
   ! Compute and combine various sink formation criteria
-  do j=npeaks,1,-1
-     jj=ind_sort(j)
+  do jj=npeaks,1,-1
      ok=.true.
      if (smbh)then
         ! Peak has to be a halo
