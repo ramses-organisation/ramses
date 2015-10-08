@@ -17,7 +17,7 @@ subroutine flag_formation_sites
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(dp),dimension(1:nvector,1:3)::pos
   real(dp),dimension(1:ndim)::rrel
-  integer,dimension(1:nvector)::cell_index,cell_levl
+  integer,dimension(1:nvector)::cell_index,cell_levl,cc
   integer::j,jj,i,nx_loc,idim
   integer::flag_form,flag_form_tot,info
   integer::global_peak_id,local_peak_id
