@@ -79,14 +79,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err
+  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
 
 #ifdef RT
   integer::ii,ig,iNp,il,irad
-  real(kind=8),dimension(1:nvector),save:: ekk_new,T2_new
+  real(kind=8),dimension(1:nvector),save:: ekk_new
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp)::scale_Np,scale_Fp,work,Npc,fred,Npnew, kScIR, EIR, TR
   real(dp),dimension(1:ndim)::Fpnew
@@ -399,7 +399,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
 	gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
         gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
-	enddo
+     enddo
 
      gr_dt = dtnew(ilevel)
     
@@ -413,6 +413,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      &     gr_density, gr_energy, &
      &     gr_x_velocity, gr_y_velocity, gr_z_velocity, &
      &     gr_metal_density)
+
+     do i = 1, nleaf
+        T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0)
+     end do
+     delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
 #else
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then
@@ -462,12 +467,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif ! if(.not. static)
 #endif
 
-#ifdef grackle
-     do i=1,nleaf
-        uold(ind_leaf(i),ndim+2) = gr_energy(i)*max(uold(ind_leaf(i),1),smallr)+ekk(i)+gr_poly(i)
-     end do
-#else
-
      ! Compute rho
      do i=1,nleaf
         nH(i) = nH(i)/scale_nH
@@ -516,8 +515,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i)
         end do
      endif
-
-#endif
 
      ! Update delayed cooling switch
      if(delayed_cooling)then

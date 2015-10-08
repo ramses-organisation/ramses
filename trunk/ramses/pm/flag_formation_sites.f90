@@ -17,7 +17,7 @@ subroutine flag_formation_sites
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(dp),dimension(1:nvector,1:3)::pos
   real(dp),dimension(1:ndim)::rrel
-  integer,dimension(1:nvector)::cell_index,cell_levl,cc
+  integer,dimension(1:nvector)::cell_index,cell_levl
   integer::j,jj,i,nx_loc,idim
   integer::flag_form,flag_form_tot,info
   integer::global_peak_id,local_peak_id
@@ -26,7 +26,6 @@ subroutine flag_formation_sites
   real(dp)::dx,dx_min,dist2,scale,tff,acc_r
   real(dp)::fourpi,threepi2
   real(dp),dimension(1:npeaks)::peakd
-  integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
 
   period(1)=(nx==1)
@@ -115,16 +114,8 @@ subroutine flag_formation_sites
   pos=0.0
   flag2=0
 
-  ! Sort clumps by peak density in ascending order
-  do i=1,npeaks
-     peakd(i)=max_dens(i)
-     ind_sort(i)=i
-  end do
-  call quick_sort_dp(peakd,ind_sort,npeaks)
-  
   ! Compute and combine various sink formation criteria
-  do j=npeaks,1,-1
-     jj=ind_sort(j)
+  do jj=npeaks,1,-1
      ok=.true.
      if (smbh)then
         ! Peak has to be a halo
@@ -139,21 +130,18 @@ subroutine flag_formation_sites
         ok=ok.and.max_dens(jj)>n_star/scale_nH
         if (ok .eqv. .true.)then
            pos(1,1:3)=peak_pos(jj,1:3)
-           call cmp_cpumap(pos,cc,1)
-           if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-              ! Allow sink formation only inside zoom region
-              if(ivar_refine>0)then
-                 if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
-                    flag2(cell_index(1))=jj
-                    write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
-                 end if
-              else
+           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           ! Allow sink formation only inside zoom region
+           if(ivar_refine>0)then
+              if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
                  flag2(cell_index(1))=jj
                  write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
               end if
-            end if
-         end if
+           else
+              flag2(cell_index(1))=jj
+              write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
+           end if
+        end if
      else
         ok=ok.and.relevance(jj)>0.
         ok=ok.and.occupied(jj)==0
@@ -162,12 +150,9 @@ subroutine flag_formation_sites
         ok=ok.and.Icl_dd(jj)<0.
         if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
-           call cmp_cpumap(pos,cc,1)
-           if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-              flag2(cell_index(1))=jj
-              write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
-           end if
+           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           flag2(cell_index(1))=jj
+           write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
         end if
      end if
   end do

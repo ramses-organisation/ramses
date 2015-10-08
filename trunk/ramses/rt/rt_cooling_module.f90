@@ -1,3 +1,7 @@
+! Non-equlibrium (in H and He) cooling module for radiation-hydrodynamics.
+! For details, see Rosdahl et al. 2013, and Rosdahl & Teyssier 2015.
+! Joki Rosdahl, Andreas Bleuler, and Romain Teyssier, September 2015.
+
 module rt_cooling_module
   use amr_commons,only:myid  
   use cooling_module,only:X, Y
@@ -8,7 +12,7 @@ module rt_cooling_module
   private   ! default
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
-         , isHe, X, Y, rhoc, kB, mH, T2_min_fix, twopi                   &
+         , isHe, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi         &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
          , rt_isoPress, rt_T_rad, rt_vc, a_r
@@ -30,6 +34,7 @@ module rt_cooling_module
   integer::iIRtrapVar=1                          ! IRtrap passScalar index
   ! Namelist parameters:
   logical::isHe=.true.
+  logical::is_mu_H2=.false.
   logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
   real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
   logical::rt_isIR=.false.             ! Using IR scattering on dust?    
@@ -37,6 +42,7 @@ module rt_cooling_module
   logical::is_kIR_T=.false.            ! k_IR propto T^2?               
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
+  real(dp)::Tmu_dissoc=1d3             ! Dissociation temperature [K]
   real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity    
   real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity    
   
@@ -77,6 +83,8 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
+  if(myid==1 .and. rt_isIR) &
+       write(*,*) 'There is an IR group, with index ',iIR        
   if(myid==1 .and. rt_isIRtrap) write(*,*) &
        '=========IR trapping is turned ON=============='
   ! do initialization
@@ -92,11 +100,6 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
   Fp_FRAC = 0.5
-
-  if(myid==1) write(*,*) 'IR group index has been set to ',iIR        
-
-  ! Might also put in here filling in of tables of cooling rates, to 
-  ! ease the computational load.
 
   ! Calculate initial temperature
   if (astart_sim < astart) then
@@ -331,8 +334,7 @@ contains
     nI(1)  = nH(icell) *dXion(1)                                 !    nHII
     nI(2)  = nN(3)                                               !   nHeII
     nI(3)  = nHe*dXion(3)                                        !  nHeIII
-    mu= 1./(X*(1.+dXion(1)) + 0.25*Y*(1.+dXion(2)+2.*dXion(3)))   
-    if(is_kIR_T) mu=2.33
+    mu = getMu(dXion(1), dXion(2), dXion(3), dT2)
     TK = dT2 * mu                                           !  Temperature
     if(rt_isTconst) TK=rt_Tconst                       !  Force constant T
     ne= nH(icell)*dXion(1)+nHE*(dXion(2)+2.*dXion(3))  !  Electron density
@@ -391,8 +393,9 @@ contains
        ! IR, optical and UV depletion by dust absorption: ----------------
        if(rt_isIR) & !IR scattering/abs on dust (abs after T update)        
             phSc(iIR)  = phSc(iIR) + dustSc(iIR)                        
-       do igroup=iIR+1,nGroups    ! Deplete photons, since they go into IR 
-          phAbs(igroup) = phAbs(igroup) + dustAbs(igroup)                  
+       do igroup=1,nGroups        ! Deplete photons, since they go into IR
+          if( .not. (rt_isIR .and. igroup.eq.iIR) ) &  ! IR done elsewhere
+               phAbs(igroup) = phAbs(igroup) + dustAbs(igroup)
        end do
 
        dmom(1:nDim)=0d0
@@ -558,7 +561,7 @@ contains
     !End a more stable and accurate integration---------------------------
     if(isHe) then
        ne= nH(icell)*dXion(1)+nHE*(dXion(2)+2.*dXion(3)) ! Bc changed xhii
-       mu= 1./(X*(1.+dXion(1)) + 0.25*Y*(1.+dXion(2)+2.*dXion(3)))  
+       mu = getMu(dXion(1), dXion(2), dXion(3), dT2)
        if(.not. rt_isTconst) TK=dT2*mu !  Update TK because of changed  mu
 
        !(iv) UPDATE xHeI *************************************************
@@ -982,6 +985,23 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
 
 end subroutine rt_cmp_metals
 
+!*************************************************************************
+FUNCTION getMu(xHII, xHeII, xHeIII, Tmu)
+! Returns the mean particle mass, in units of the proton mass.
+! xHII, xHeII, xHeIII => Hydrogen and helium ionisation fractions
+! Tmu => T/mu in Kelvin  
+!-------------------------------------------------------------------------
+  implicit none
+  real(kind=8),intent(in) :: xHII, xHeII, xHeIII, Tmu
+  real(kind=8) :: mu
+  real(kind=8) :: getMu
+!-------------------------------------------------------------------------
+  getMu = 1./(X*(1.+xHII) + 0.25*Y*(1.+xHeII+2.*xHeIII))   
+  if(is_kIR_T .or. is_mu_H2) &
+       getMu = getMu + exp(-1.d0*(Tmu/Tmu_dissoc)**2) * (2.33-getMu)
+END FUNCTION getMu
+
+
 END MODULE rt_cooling_module
 
 !************************************************************************
@@ -1006,7 +1026,6 @@ SUBROUTINE updateRTGroups_CoolConstants()
 END SUBROUTINE updateRTGroups_CoolConstants
 
 !************************************************************************
-
 SUBROUTINE reduce_flux(Fp, cNp)
 ! Make sure the reduced photon flux is less than one
 !------------------------------------------------------------------------
@@ -1018,3 +1037,5 @@ SUBROUTINE reduce_flux(Fp, cNp)
   fred = sqrt(sum(Fp**2))/cNp
   if(fred .gt. 1.d0) Fp = Fp/fred
 END SUBROUTINE reduce_flux
+
+
