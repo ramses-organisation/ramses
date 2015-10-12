@@ -1882,10 +1882,10 @@ subroutine true_max(x,y,z,ilevel)
 
   !clipping the displacement in order to keep max in the cell
   disp_max=maxval(abs(displacement(1:3)))
-  if (disp_max > dx_loc*0.5)then
-     displacement(1)=displacement(1)/disp_max*dx_loc*0.5
-     displacement(2)=displacement(2)/disp_max*dx_loc*0.5
-     displacement(3)=displacement(3)/disp_max*dx_loc*0.5
+  if (disp_max > dx_loc*0.499999)then
+     displacement(1)=displacement(1)/disp_max*dx_loc*0.499999
+     displacement(2)=displacement(2)/disp_max*dx_loc*0.499999
+     displacement(3)=displacement(3)/disp_max*dx_loc*0.499999
   end if
 
   x=x+displacement(1)
