@@ -79,7 +79,7 @@ subroutine create_sink
   if (smbh)then
     call merge_smbh_sink
   else
-    call merge_star_sink
+     if(merging_timescale>0.d0)call merge_star_sink
   end if
 
   ! Create new cloud particles
@@ -2763,13 +2763,10 @@ subroutine read_sink_params()
   end if
   
   if (.not.smbh)then
-     if (merging_timescale<0.)then
-        if (myid==1)write(*,*)'You chose sink merging on a timescale but did not provide the timescale'
-        if (myid==1)write(*,*)'choosing 1000y as lifetime...'
-        merging_timescale=1000.
+     if (merging_timescale > 0.)then
+        cty=scale_t/(365.25*24.*3600.)
+        cont_speed=-1./(merging_timescale/cty)
      end if
-     cty=scale_t/(365.25*24.*3600.)
-     cont_speed=-1./(merging_timescale/cty)
   end if
 
   ! nol_accretion requires a somewhat smaller timestep per default
