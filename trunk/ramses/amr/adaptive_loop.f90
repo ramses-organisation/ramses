@@ -11,12 +11,13 @@ subroutine adaptive_loop
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,idim,ivar,info
-  real(kind=8)::tt1,tt2
+  integer(kind=8)::n_step
+  integer::ilevel,idim,ivar,info,tot_pt
+  real(kind=8)::tt1,tt2,muspt,muspt_this_step
   real(kind=4)::real_mem,real_mem_tot
 
 #ifndef WITHOUTMPI
-  tt1=MPI_WTIME(info)
+  tt1=MPI_WTIME()
 #endif
 
   call init_amr                      ! Initialize AMR variables
@@ -45,7 +46,9 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again
 
 #ifndef WITHOUTMPI
-  tt2=MPI_WTIME(info)
+  muspt=0.
+  tot_pt=-1
+  tt2=MPI_WTIME()
   if(myid==1)write(*,*)'Time elapsed since startup:',tt2-tt1
 #endif
 
@@ -61,9 +64,10 @@ subroutine adaptive_loop
   if(myid==1)write(*,*)'Starting time integration' 
 
   do ! Main time loop
+                               call timer('coarse levels','start')
 
 #ifndef WITHOUTMPI
-     tt1=MPI_WTIME(info)
+     tt1=MPI_WTIME()
 #endif
 
      if(verbose)write(*,*)'Entering amr_step_coarse'
@@ -116,6 +120,7 @@ subroutine adaptive_loop
 
      ! Call base level
      call amr_step(levelmin,1)
+                               call timer('coarse levels','start')
 
      if(levelmin.lt.nlevelmax .and..not. static)then
         do ilevel=levelmin-1,1,-1
@@ -165,12 +170,22 @@ subroutine adaptive_loop
      nstep_coarse=nstep_coarse+1
 
 #ifndef WITHOUTMPI
-     tt2=MPI_WTIME(info)
+     tt2=MPI_WTIME()
      if(mod(nstep_coarse,ncontrol)==0)then
         call getmem(real_mem)
         call MPI_ALLREDUCE(real_mem,real_mem_tot,1,MPI_REAL,MPI_MAX,MPI_COMM_WORLD,info)
         if(myid==1)then
-           write(*,*)'Time elapsed since last coarse step:',tt2-tt1
+           if (tot_pt==0) muspt=0. ! dont count first timestep
+           n_step = int(numbtot(1,levelmin),kind=8)*twotondim
+           do ilevel=levelmin+1,nlevelmax
+             n_step = n_step + int(numbtot(1,ilevel),kind=8)*product(nsubcycle(levelmin:ilevel-1))*(twotondim-1)
+           enddo
+           muspt_this_step = (tt2-tt1)*1e6/n_step*ncpu
+           muspt = muspt + muspt_this_step
+           tot_pt = tot_pt + 1
+           write(*,'(a,f8.2,a,f12.2,a,f12.2,a)')' Time elapsed since last coarse step:',tt2-tt1 &
+          ,' s',muspt_this_step,' mus/pt'  &
+          ,muspt / max(tot_pt,1), ' mus/pt (av)'
            call writemem(real_mem_tot)
         endif
      endif
