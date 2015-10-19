@@ -160,6 +160,8 @@ subroutine flag_formation_sites
         ok=ok.and.max_dens(jj)>d_sink
         ok=ok.and.contracting(jj)
         ok=ok.and.Icl_dd(jj)<0.
+        ! Avoid formation of sinks from gas which is only comressed by thermal pressure rather than gravity.
+        ok=ok.and.grav_term(jj) + kinetic_support(jj)<0.d0
         if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
