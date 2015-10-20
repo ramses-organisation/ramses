@@ -564,9 +564,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
               kScIR  = kappaSc(iIR) * (TR/10d0)**2               
            endif                                                        
-           tau=nH(i) * Zsolar(i) * unit_tau * kScIR                    
-           f_trap = exp(-1d0/tau)            ! Frac. of trapped IR photons
-           f_trap = min(max(f_trap, 0d0), 1d0)                             
+           tau = nH(i) * Zsolar(i) * unit_tau * kScIR                  
+           f_trap = 0d0             ! Fraction IR photons that are trapped
+           if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0) 
            ! Update freeflowing photon density, trapped photon density,
            ! and total energy density:
            rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
