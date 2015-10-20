@@ -372,13 +372,15 @@ subroutine output_frame()
                        end do
 
 #ifdef RT
-                       do kk=1,NGROUPS
-                          if(rt_movie_vars(kk).eq.1) then
-                             rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
-                                                     + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
-                                                            * max(uold(ind_cell(i),1),smallr) ! mass-weighted
-                          endif
-                       end do
+                       if(rt) then
+                          do kk=1,NGROUPS
+                             if(rt_movie_vars(kk).eq.1) then
+                                rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
+                                     + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
+                                            * max(uold(ind_cell(i),1),smallr) ! mass-weighted
+                             endif
+                          end do
+                       endif
 #endif
 
                        

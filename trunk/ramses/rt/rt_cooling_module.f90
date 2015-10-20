@@ -79,7 +79,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
   integer  :: Nmodel, correct_cooling, realistic_ne, ig
-  real(kind=8) :: astart=0.0001, aend, dasura, T2end, mu, ne
+  real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu, ne
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
