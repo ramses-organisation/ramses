@@ -18,13 +18,13 @@ GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER) $(ATON_FLAGS)
+          -DSOLVER$(SOLVER) $(ATON_FLAGS) -DRT
 #############################################################################
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
 F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
-FFLAGS = -x f95-cpp-input $(DEFINES) -DRT -DWITHOUTMPI
+FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
