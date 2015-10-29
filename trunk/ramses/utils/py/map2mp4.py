@@ -250,23 +250,19 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 				vmin = plotmin, vmax = plotmax, aspect='auto')
 		ax.tick_params(bottom='off', top='off', left='off', right='off') # removes ticks
 		ax.tick_params(labelbottom='off', labeltop='off', labelleft='off', labelright='off') # removes ticks
-
-		labels_color = 'w'
-		if kind[p] == 'dens':
-			labels_color = 'w'
-		if kind[p] == 'temp':
-			labels_color = 'k'
-
 		if args.colorbar:
 			cbaxes = fig.add_axes([1./geo[1]+p%geo[1]*1./geo[1]-0.05/geo[1],abs(p-geo[0]*geo[1]+1)/geo[1]*1./geo[0],0.05/geo[1],1./geo[0]])
 			cbar = plt.colorbar(im, cax=cbaxes)
 			cbar.solids.set_rasterized(True)
 			bar_font_color = 'k'
+			labels_color = 'w'
 			scolor = 'w'
 			if kind[p] == 'dens':
+				labels_color = 'w'
 				scolor = 'w'
 				bar_font_color = 'r'
 			if kind[p] == 'temp':
+				labels_color = 'k'
 				scolor = 'k'
 			cbar.ax.tick_params(width=0,labeltop='on',labelcolor=bar_font_color,labelsize=8,pad=-25)
 		
@@ -395,7 +391,7 @@ def main():
 
 	# Parse command line arguments
 	parser = ArgumentParser(description="Script to create RAMSES movies")
-	parser.add_argument('--nologscale',dest='logscale', action='store_false', default=True, \
+	parser.add_argument('-l','--logscale',dest='logscale', action='store', default=False, \
 	    help='use log color scaling [%(default)s]')
 	parser.add_argument("-m","--min",  dest="min", metavar="VALUE", \
 			help='min value', default=None)
@@ -429,7 +425,7 @@ def main():
 	    help='montage geometry "rows cols" [%(default)s]', default="1 1")
 	parser.add_argument("-o","--output",  dest="outfile", metavar="FILE", \
 			help='output image file [<map_file>.png]', default=None)
-	parser.add_argument('--nocolorbar',dest='colorbar', action='store_false', \
+	parser.add_argument('-C','--colorbar',dest='colorbar', type=bool, \
 			help='add colorbar [%(default)s]', default=True)
 	parser.add_argument('-n','--ncpu',dest='ncpu', metavar="VALUE", type=int,\
 			help='number of CPUs for multiprocessing [%(default)d]', default=1)
