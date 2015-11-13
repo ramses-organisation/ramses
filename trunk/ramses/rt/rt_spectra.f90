@@ -440,7 +440,7 @@ SUBROUTINE update_SED_group_props()
   real(dp),save,allocatable,dimension(:,:)::sum_csn_cpu,sum_csn_all
   real(dp),save,allocatable,dimension(:,:)::sum_cse_cpu,sum_cse_all
   real(dp),save,allocatable,dimension(:)::sum_egy_cpu,sum_egy_all
-  real(dp):: mass, age, Z
+  real(dp):: mass, age, Z, t_sne_Gyr
 !-------------------------------------------------------------------------
   if(.not. allocated(L_star)) then
      allocate(L_star(nSEDgroups)) 
@@ -460,12 +460,17 @@ SUBROUTINE update_SED_group_props()
   sum_egy_cpu = 0d0 ! photon energies for all stars belonging to  
   sum_csn_cpu = 0d0 ! 'this' cpu
   sum_cse_cpu = 0d0
+  t_sne_Gyr = t_sne / 1d3
   do i=1,npartmax
      if(levelp(i).le.0 .or. idp(i).eq.0 .or. tp(i).eq.0.)                &
         cycle ! not a star
      ! particle exists and is a star
      mass = mp(i)
      call getAgeGyr(tp(i), age)                         !     age = [Gyrs]
+     if(age.gt.t_sne_Gyr) then
+        ! Account for stellar mass loss - SED uses initial population mass
+        mass = mass / (1d0-eta_sn)
+     endif
      if(metal) then
         Z = max(zp(i), 10.d-5)                          ! [m_metals/m_tot]
      else
@@ -629,13 +634,8 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
                  ind_grid_part(ip) = ig ! points to grid a star is in  
               endif
               if(ip == nvector)then
-                 if(static) then
-                    call star_RT_vsweep_pp( &
-                         ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
-                 else
-                    call star_RT_vsweep( &
-                         ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
-                 endif
+                 call star_RT_vsweep( &
+                      ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
                  ip = 0
                  ig = 0
               end if
@@ -647,13 +647,8 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
      end do
      ! End loop over grids
      if(ip > 0) then
-        if(static) then
-           call star_RT_vsweep_pp( &
-                ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
-        else
-           call star_RT_vsweep( &
-                ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
-        endif
+        call star_RT_vsweep( &
+             ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
      endif
   end do 
   ! End loop over cpus
@@ -1031,7 +1026,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ! units and temporary quantities
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
-            , dt_loc_Gyr, scale_msun
+            , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
 !-------------------------------------------------------------------------
   if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
@@ -1052,6 +1047,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
   scale_msun = scale_d * scale_l**ndim / m_sun    
+  t_sne_Gyr = t_sne / 1d3
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
   do idim = 1, ndim
@@ -1155,7 +1151,12 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      ! Possibilities:     Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
      call getNPhotonsEmitted(age,dt_loc_Gyr,z,part_NpInp(j,1:nSEDgroups))
-     part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
+     mass = mp(ind_part(j))
+     if(age.gt.t_sne_Gyr) then
+        ! Account for stellar mass loss - SED uses initial population mass
+        mass = mass / (1d0-eta_sn)
+     endif
+     part_NpInp(j,:) = part_NpInp(j,:)*mass*scale_inp !#photons
 
      if(showSEDstats .and. nSEDgroups .gt. 0) then
         step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
@@ -1178,150 +1179,15 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
                 = rtunew(indp(j),iGroups(ip))+part_NpInp(j,ip)
         end do
      else                                                  ! ilevel-1 cell
-!        if (rt_nsubcycle == 1)then
-           do ip=1,nSEDgroups
-              rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))  &
-                   + part_NpInp(j,ip) / vol_factor
-           end do
-!        end if
+        do ip=1,nSEDgroups
+           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))  &
+                + part_NpInp(j,ip) / vol_factor
+        end do
      endif
-     !begin debug
-     !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
-     !        write(*,777),ilevel, myid, rtunew(indp(j),                   &
-     !           iGroups(1))*scale_np*rt_c_cgs, &
-     !             irad(j,1), irad(j,2),                                 &
-     !             mp(ind_part(j)),                                      &
-     !             mp(ind_part(j))*scale_d*scale_l**3/m_sun,             &
-     !             vol_loc*scale_l**3,                                   &
-     !             dt, scale_t,                                          &
-     !             ok(j)
-     !        print*,'*******************************'
-     !     endif
-     !end debug
-     !777 format('HERE:',I2, ' ', I2, 8(1pe11.3), L, ' AHA')
   end do
 
 END SUBROUTINE star_RT_vsweep
 
-!*************************************************************************
-SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
-                             dt, ilevel)
-! This routine is called by subroutine star_rt_feedback,
-! in the case of rt-post-processing. The difference from doing coupled 
-! RT is that in the post-processing case, the pointer from a grid to a 
-! particle is always true, so we can trust completely that 
-! ind_grid(ind_grid_part(j)) refers to the grid that particle ind_part(j)
-! resides in, and we don't need to bother searching for the particle's 
-! grid.  Each star particle dumps a number of photons into the nearest 
-! grid cell using array rtunew.
-!
-! ind_grid      =>  grid indexes in amr_commons (1 to ng)
-! ind_part      =>  star indexes in pm_commons(1 to np)
-! ind_grid_part =>  points from star to grid (ind_grid) it resides in
-! ng            =>  number of grids
-! np            =>  number of stars
-! dt            =>  timestep length in code units
-! ilevel        =>  amr level at which we're adding radiation
-!-------------------------------------------------------------------------
-  use amr_commons
-  use pm_commons
-  use rt_hydro_commons
-  use rt_parameters
-  integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid
-  integer,dimension(1:nvector)::ind_grid_part,ind_part
-  real(dp)::dt
-  !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ip
-  real(dp)::dx,dx_loc,scale,vol_loc
-  ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  ! Particle based arrays
-  real(dp),dimension(1:nvector,nGroups),save::part_NpInp
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,3),save::id=0
-  !integer ,dimension(1:nvector,1:ndim),save::id
-  integer ,dimension(1:nvector),save::icell,indp
-  real(dp),dimension(1:3)::skip_loc
-  ! units and temporary quantities
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
-            , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
-            , dt_loc_Gyr, scale_msun
-!-------------------------------------------------------------------------
-  if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  call rt_units(scale_np, scale_Fp)
-  dt_Gyr = dt*scale_t*sec2Gyr
-  ! Mesh spacing in ilevel
-  dx = 0.5D0**ilevel
-  nx_loc = (icoarse_max - icoarse_min + 1)
-  skip_loc = (/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1) = dble(icoarse_min)
-  if(ndim>1)skip_loc(2) = dble(jcoarse_min)
-  if(ndim>2)skip_loc(3) = dble(kcoarse_min)
-  scale = boxlen/dble(nx_loc) ! usually scale == 1
-  dx_loc = dx*scale
-  vol_loc = dx_loc**ndim
-  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
-  scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
-  scale_msun = scale_d * scale_l**ndim / m_sun    
-
-  ! Lower left corners of parent grid
-  do idim = 1, ndim
-     do i = 1, ng
-        x0(i,idim) = xg(ind_grid(i),idim) - dx
-     end do
-  end do
-
-  ! Rescale position of star to position within 3x3x3 cell supercube
-  do idim = 1, ndim
-     do j = 1, np
-        x(j,idim) = xp(ind_part(j),idim)/scale + skip_loc(idim)
-        x(j,idim) = x(j,idim) - x0(ind_grid_part(j),idim)
-        x(j,idim) = x(j,idim)/dx 
-        ! so 0<x<1 is bottom cell, ...., 1<x<2 is top cell
-     end do
-  end do
-
-  ! Compute position of parent cell within parent grid
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim) = x(j,idim) ! id=0-1 is cell in parent containing star
-     end do
-  end do
-  do j = 1, np
-     icell(j) = 1 + id(j,1) + 2*id(j,2) + 4*id(j,3) ! 1 to 8
-  end do
-
-  ! Compute parent cell adress and particle effective mass
-  do j = 1, np
-     if(metal) z = max(zp(ind_part(j)), 10.d-5)   !       [m_metals/m_tot]
-     call getAgeGyr(tp(ind_part(j)), age)         !   End-of-dt age [Gyrs]
-     !Possibilities:      Born i) before dt, ii) within dt, iii) after dt:
-     dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
-     call getNPhotonsEmitted(age,dt_loc_Gyr, z,part_NpInp(j,1:nSEDGroups))
-     part_NpInp(j,:) = part_NpInp(j,:)*mp(ind_part(j))*scale_inp !#photons
-
-     if(showSEDstats .and. nSEDgroups .gt. 0) then
-        step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
-        step_nStar = step_nStar+dt_loc_Gyr*Gyr2sec/scale_t
-        step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
-                                          * dt_loc_Gyr * Gyr2sec / scale_t
-     endif
-
-     indp(j)= ncoarse + (icell(j)-1)*ngridmax + ind_grid(ind_grid_part(j))
-  end do
-
-  do j=1,np                       ! Update hydro variables due to feedback
-     do ip=1,nSEDgroups
-        rtunew(indp(j),iGroups(ip)) &
-             = rtunew(indp(j),iGroups(ip)) + part_NpInp(j,ip)
-                
-     end do
-  end do
-
-END SUBROUTINE star_RT_vsweep_pp
 #endif
 END MODULE SED_module
 
