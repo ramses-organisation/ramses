@@ -36,7 +36,7 @@ subroutine read_params
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie &
-       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars
+       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -239,6 +239,7 @@ subroutine read_params
 #endif
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
+  if (movie)call set_movie_vars
 
 
   close(1)

@@ -70,14 +70,9 @@ subroutine output_frame()
   nw_temp = nw_frame
 
   
-!  proj_axis=trim(proj_axis)
-
  do proj_ind=1,LEN(trim(proj_axis)) 
   opened=.false.
 
-  !inh_temp = nh_frame
-  !nw_temp = nw_frame
-    
 #if NDIM > 1
   if(imov<1)imov=1
   if(imov>imovout)return
@@ -170,6 +165,7 @@ subroutine output_frame()
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
+  ! Compute frame boundaries
   if(proj_axis(proj_ind:proj_ind).eq.'x')then
     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
@@ -200,13 +196,6 @@ subroutine output_frame()
     nh_frame=nw_temp/ratio
   endif
 
-  ! Compute frame boundaries
-!   xcen=xcentre_frame(1)+xcentre_frame(2)*aexp+xcentre_frame(3)*aexp**2+xcentre_frame(4)*aexp**3
-!   ycen=ycentre_frame(1)+ycentre_frame(2)*aexp+ycentre_frame(3)*aexp**2+ycentre_frame(4)*aexp**3
-!   zcen=zcentre_frame(1)+zcentre_frame(2)*aexp+zcentre_frame(3)*aexp**2+zcentre_frame(4)*aexp**3
-!   delx=deltax_frame(1)+deltax_frame(2)/aexp !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
-!   dely=deltay_frame(1)+deltay_frame(2)/aexp !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
-!   delz=deltaz_frame(1)+deltaz_frame(2)/aexp !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
   xleft_frame=xcen-delx/2.
   xright_frame=xcen+delx/2.
   yleft_frame=ycen-dely/2.
@@ -469,16 +458,6 @@ subroutine output_frame()
   end do
   ! End loop over particles
 
-  ! Convert into mass weighted
-!  do ii=1,nw_frame
-!     do jj=1,nh_frame
-!        data_frame(ii,jj,2)=data_frame(ii,jj,2)/data_frame(ii,jj,1)
-!        data_frame(ii,jj,3)=data_frame(ii,jj,3)/data_frame(ii,jj,1)
-!        if(metal)then
-!        data_frame(ii,jj,4)=data_frame(ii,jj,4)/data_frame(ii,jj,1)
-!        endif
-!     end do
-!  end do
 #ifndef WITHOUTMPI
 #ifdef SOLVERmhd
   allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+6))
@@ -567,33 +546,6 @@ subroutine output_frame()
          close(ilun)
        end if
      end do
-!     ! Output mass weighted temperature
-!     open(ilun,file=TRIM(moviefiles(0)),form='unformatted')
-!     data_single=data_frame(:,:,0)
-!!     write(*,*) 'testing', data_single(100,100)
-!     rewind(ilun)  
-!     if(tendmov>0)then
-!        write(ilun)t,delx,dely,delz
-!     else
-!        write(ilun)aexp,delx,dely,delz
-!     endif
-!     write(ilun)nw_frame,nh_frame
-!     write(ilun)data_single
-!     close(ilun)
-!     ! Output mass weighted metal fraction
-!     if(metal)then
-!        open(ilun,file=TRIM(moviefiles(6)),form='unformatted')
-!        data_single=data_frame(:,:,6)
-!        rewind(ilun)  
-!        if(tendmov>0)then
-!           write(ilun)t,delx,dely,delz
-!        else
-!           write(ilun)aexp,delx,dely,delz
-!        endif
-!        write(ilun)nw_frame,nh_frame
-!        write(ilun)data_single
-!        close(ilun)
-!     endif
 
 #ifdef RT
       if(rt) then
@@ -632,3 +584,43 @@ subroutine output_frame()
  enddo
 end subroutine output_frame
 
+subroutine set_movie_vars()
+  use amr_commons
+  ! This routine sets the movie vars from textual form
+  integer::ll
+  character(LEN=5)::dummy
+
+  if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
+  if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
+  if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
+  if(ANY(movie_vars_txt=='vy   ')) movie_vars(3)=1
+#if NDIM>2
+  if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
+#endif
+#if NDIM==2
+  if(ANY(movie_vars_txt=='pres ')) movie_vars(4)=1
+#endif
+#if NDIM>2
+  if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
+#endif
+#if NVAR>5
+  do ll=6,NVAR
+    write(dummy,'(I3.1)') ll
+    if(ANY(movie_vars_txt=='var'//trim(adjustl(dummy))//' ')) movie_vars(ll)=1
+ end do
+#endif
+#ifdef SOLVERmhd
+  if(ANY(movie_vars_txt=='bxl  ')) movie_vars(6)=1
+  if(ANY(movie_vars_txt=='byl  ')) movie_vars(7)=1
+  if(ANY(movie_vars_txt=='bzl  ')) movie_vars(8)=1
+  if(ANY(movie_vars_txt=='bxr  ')) movie_vars(NVAR+1)=1
+  if(ANY(movie_vars_txt=='byr  ')) movie_vars(NVAR+2)=1
+  if(ANY(movie_vars_txt=='bzr  ')) movie_vars(NVAR+3)=1
+  if(ANY(movie_vars_txt=='pmag ')) movie_vars(NVAR+4)=1
+  if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+5)=1
+  if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+6)=1
+#else
+  if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+1)=1
+  if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+2)=1
+#endif
+end subroutine set_movie_vars
