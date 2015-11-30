@@ -182,8 +182,10 @@ module amr_parameters
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
 #ifdef SOLVERmhd
   integer,dimension(0:NVAR+6)::movie_vars=0
+  character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''
 #else
   integer,dimension(0:NVAR+2)::movie_vars=0
+  character(len=5),dimension(0:NVAR+2)::movie_vars_txt=''
 #endif
 
   ! Refinement parameters for each level
