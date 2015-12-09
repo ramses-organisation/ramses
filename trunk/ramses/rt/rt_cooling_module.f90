@@ -113,8 +113,8 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   call update_rt_c
   call init_UV_background
-  call update_UVrates(astart_sim)! In case of aexp_nocosmo
-  call init_coolrates_tables(astart_sim)
+  call update_UVrates(aexp)! In case of aexp_nocosmo
+  call init_coolrates_tables(aexp)
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
