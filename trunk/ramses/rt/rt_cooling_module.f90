@@ -113,8 +113,13 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   call update_rt_c
   call init_UV_background
-  call update_UVrates(aexp)! In case of aexp_nocosmo
-  call init_coolrates_tables(aexp)
+  if(cosmo) then
+     call update_UVrates(aexp)
+     call init_coolrates_tables(aexp)
+  else
+     call update_UVrates(astart_sim)
+     call init_coolrates_tables(astart_sim)
+  endif
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
@@ -137,12 +142,12 @@ SUBROUTINE update_UVrates(aexp)
   
   call inp_UV_rates_table(1./aexp - 1., UVrates, .true.)
 
-  if(myid==1) then
-     write(*,*) 'The UV rates have changed to:'
-     do i=1,nIons
-        write(*,910) UVrates(i,:)
-     enddo
-  endif
+  !if(myid==1) then
+  !   write(*,*) 'The UV rates have changed to:'
+  !   do i=1,nIons
+  !      write(*,910) UVrates(i,:)
+  !   enddo
+  !endif
 910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
 
 END SUBROUTINE update_UVrates
@@ -820,8 +825,9 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   Np(:,1)=0. ; Fp(:,:,1)=0.                  ! Photon densities and fluxes
   dNpdt(:,1)=0. ; dFpdt(:,:,1)=0.                              
   do while (aexp < aend)
-     if(haardt_madau) call inp_UV_rates_table(1./aexp-1., UVrates, .true.)
-
+     call update_UVrates(aexp)
+     call update_coolrates_tables(aexp)
+     
      daexp = dasura*aexp
      dt_cool = daexp                                                     &
              / (aexp*100.*h*3.2408608e-20)                               &
