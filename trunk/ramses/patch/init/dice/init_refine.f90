@@ -32,8 +32,8 @@ module dice_commons
   real(dp)::ic_t_restart   = 0.0D0
   integer::ic_ifout        = 1
   integer::ic_nfile        = 1
-  real(dp),dimension(1:3)::ic_mag_ini= (/ 0.0, 0.0, 0.0 /)
-  real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
+  real(dp),dimension(1:3)::ic_mag_const = (/ 0.0, 0.0, 0.0 /)
+  real(dp),dimension(1:3)::ic_center    = (/ 0.0, 0.0, 0.0 /)
   character(len=4)::ic_head_name  = 'HEAD'
   character(len=4)::ic_pos_name   = 'POS '
   character(len=4)::ic_vel_name   = 'VEL '
@@ -50,6 +50,17 @@ module dice_commons
   real(dp),allocatable,dimension(:)::up
   logical::dice_init       = .false.
   logical::amr_struct      = .false.
+  ! magnetic
+  integer,parameter::MAXGAL= 32
+  real(dp),dimension(1:MAXGAL)::ic_mag_center_x = 0.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_center_y = 0.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_center_z = 0.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_axis_x   = 0.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_axis_y   = 0.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_axis_z   = 1.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_scale_R  = 1.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_scale_H  = 1.0
+  real(dp),dimension(1:MAXGAL)::ic_mag_scale_B  = 0.0
 
 end module dice_commons
 
