@@ -22,22 +22,26 @@ subroutine init_flow
   end do
   if(verbose)write(*,*)'Complete init_flow'
 
-	! magnetic field parameters
-	if(myid==1) write(*,'(A50)')"__________________________________________________"
-	if(myid==1) write(*,*) 'Background magnetic field'
-	if(myid==1) write(*,'(A,E15.7)') 'Bx:',ic_mag_const(1)
-	if(myid==1) write(*,'(A,E15.7)') 'By:',ic_mag_const(2)
-	if(myid==1) write(*,'(A,E15.7)') 'Bz:',ic_mag_const(3)
-	if(myid==1) write(*,'(A50)')"__________________________________________________"
+#ifdef SOLVERmhd
+  ! magnetic field parameters
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+  if(myid==1) write(*,*) 'Background magnetic field'
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+  if(myid==1) write(*,'(A,E15.7)') 'Bx:',ic_mag_const(1)
+  if(myid==1) write(*,'(A,E15.7)') 'By:',ic_mag_const(2)
+  if(myid==1) write(*,'(A,E15.7)') 'Bz:',ic_mag_const(3)
 
   do i=1,MAXGAL
-		if (ic_mag_scale_B(i) .EQ. 0.0) cycle
-		if(myid==1) write(*,'(A,I3)') ' Foreground magnetic field',i
-		if(myid==1) write(*,'(A,E15.7)') 'pos x:', ic_mag_center_x(i)
-		if(myid==1) write(*,'(A,E15.7)') 'pos y:', ic_mag_center_y(i)
-		if(myid==1) write(*,'(A,E15.7)') 'pos z:', ic_mag_center_z(i)
+    if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+    if(myid==1) write(*,'(A50)')"__________________________________________________"
+    if(myid==1) write(*,'(A,I3)') ' Foreground magnetic field',i
+    if(myid==1) write(*,'(A50)')"__________________________________________________"
+    if(myid==1) write(*,'(A,E15.7)') 'pos x:', ic_mag_center_x(i)
+    if(myid==1) write(*,'(A,E15.7)') 'pos y:', ic_mag_center_y(i)
+    if(myid==1) write(*,'(A,E15.7)') 'pos z:', ic_mag_center_z(i)
   enddo
-	if(myid==1) write(*,'(A50)')"__________________________________________________"
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+#endif
 
 end subroutine init_flow
 !################################################################
@@ -77,21 +81,6 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
-  !!! DICE
-  logical,save::init_dice_nml=.false.
-  logical::nml_ok=.true.
-  character(LEN=80)::infile
-  logical::file_exists
-  ! Namelist definitions
-  namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
-       & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
-       & ,ic_u_name,ic_metal_name,ic_age_name &
-       & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart,ic_mag_const &
-       & ,ic_mag_center_x,ic_mag_center_y,ic_mag_center_z &
-       & ,ic_mag_axis_x,ic_mag_axis_y,ic_mag_axis_z &
-       & ,ic_mag_scale_R,ic_mag_scale_H,ic_mag_scale_B
-  !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -417,34 +406,6 @@ subroutine init_flow_fine(ilevel)
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
-    ! DICE: Reading the namelist datablock
-    if (.not.init_dice_nml) then
-      ! Get the name of the namelist
-      call getarg(1,infile)
-      open(1,file=infile)
-      rewind(1)
-      ! Open namelist and read the dice_params data
-      read(1,NML=dice_params,END=106)
-      goto 107
-      106 if(myid==1) write(*,*)' You have to set up namelist &DICE_PARAMS in parameter file'
-      call clean_stop
-      107 continue
-      close(1)
-      ! Check for particle files
-      inquire(file=trim(initfile(levelmin))//'/'//trim(ic_file), exist=file_exists)
-      if(.NOT. file_exists) then
-        if(myid==1) write(*,*)"Error: ic_file ",trim(ic_file)," doesn't exist "
-        nml_ok=.false.
-      end if
-      if(.not. nml_ok)then
-        if(myid==1) write(*,*)'Too many errors in the DICE_PARAMS namelist'
-        if(myid==1) write(*,*)'Aborting...'
-        call clean_stop
-      end if
-      ! Data has been read and understood
-      init_dice_nml = .true.
-      if(debug.and.myid==1) write(*,*) "DICE_PARAMS has been read correctly"
-    end if
     ifout = ic_ifout
 
     do i=1,MAXGAL
@@ -1052,6 +1013,11 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            if(metal) then
              uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
            endif
+           if(cosmo) then
+             if(ivar_refine.gt.0) then
+               uold(indp(j,ind),ivar_refine)=uold(indp(j,ind),ivar_refine)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*maskp(ind_part(j))
+             endif
+           endif
         endif
      end do
   end do
@@ -1186,6 +1152,9 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ! Update passive hydro variables in NGP cell
      if(metal) then
         uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
+     endif
+     if(ivar_refine.gt.0) then
+        uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
      endif
   end do
   
