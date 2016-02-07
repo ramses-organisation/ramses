@@ -381,7 +381,9 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #else
                                call timer('cooling','start')
-  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  if(hydro) then
+    if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
 #endif
   
   !---------------

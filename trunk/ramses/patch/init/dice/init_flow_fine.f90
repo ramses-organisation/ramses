@@ -6,9 +6,10 @@
 subroutine init_flow  
   use amr_commons
   use hydro_commons, ONLY: nvar, uold
+	use dice_commons
   implicit none
 
-  integer::ilevel,ivar
+  integer::ilevel,ivar,i
   
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
@@ -20,6 +21,27 @@ subroutine init_flow
      if(simple_boundary)call make_boundary_hydro(ilevel)
   end do
   if(verbose)write(*,*)'Complete init_flow'
+
+#ifdef SOLVERmhd
+  ! magnetic field parameters
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+  if(myid==1) write(*,*) 'Background magnetic field'
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+  if(myid==1) write(*,'(A,E15.7)') 'Bx:',ic_mag_const(1)
+  if(myid==1) write(*,'(A,E15.7)') 'By:',ic_mag_const(2)
+  if(myid==1) write(*,'(A,E15.7)') 'Bz:',ic_mag_const(3)
+
+  do i=1,MAXGAL
+    if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+    if(myid==1) write(*,'(A50)')"__________________________________________________"
+    if(myid==1) write(*,'(A,I3)') ' Foreground magnetic field',i
+    if(myid==1) write(*,'(A50)')"__________________________________________________"
+    if(myid==1) write(*,'(A,E15.7)') 'pos x:', ic_mag_center_x(i)
+    if(myid==1) write(*,'(A,E15.7)') 'pos y:', ic_mag_center_y(i)
+    if(myid==1) write(*,'(A,E15.7)') 'pos z:', ic_mag_center_z(i)
+  enddo
+  if(myid==1) write(*,'(A50)')"__________________________________________________"
+#endif
 
 end subroutine init_flow
 !################################################################
@@ -50,6 +72,7 @@ subroutine init_flow_fine(ilevel)
   real(dp),dimension(1:nvector)       ,save::vv
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar),save::uu
+  real(dp)::axlen
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane
@@ -58,18 +81,6 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
-  !!! DICE
-  logical,save::init_dice_nml=.false.
-  logical::nml_ok=.true.
-  character(LEN=80)::infile
-  logical::file_exists
-  ! Namelist definitions
-  namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
-       & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
-       & ,ic_u_name,ic_metal_name,ic_age_name &
-       & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
-       & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart,ic_mag_ini
-  !!! DICE 
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -395,35 +406,17 @@ subroutine init_flow_fine(ilevel)
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
-    ! DICE: Reading the namelist datablock
-    if (.not.init_dice_nml) then
-      ! Get the name of the namelist
-      call getarg(1,infile)
-      open(1,file=infile)
-      rewind(1)
-      ! Open namelist and read the dice_params data
-      read(1,NML=dice_params,END=106)
-      goto 107
-      106 if(myid==1) write(*,*)' You have to set up namelist &DICE_PARAMS in parameter file'
-      call clean_stop
-      107 continue
-      close(1)
-      ! Check for particle files
-      inquire(file=trim(initfile(levelmin))//'/'//trim(ic_file), exist=file_exists)
-      if(.NOT. file_exists) then
-        if(myid==1) write(*,*)"Error: ic_file ",trim(ic_file)," doesn't exist "
-        nml_ok=.false.
-      end if
-      if(.not. nml_ok)then
-        if(myid==1) write(*,*)'Too many errors in the DICE_PARAMS namelist'
-        if(myid==1) write(*,*)'Aborting...'
-        call clean_stop
-      end if
-      ! Data has been read and understood
-      init_dice_nml = .true.
-      if(debug.and.myid==1) write(*,*) "DICE_PARAMS has been read correctly"
-    end if
     ifout = ic_ifout
+
+    do i=1,MAXGAL
+			if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+			! renormalise axes
+      axlen = SQRT(ic_mag_axis_x(i)**2 + ic_mag_axis_y(i)**2 + ic_mag_axis_z(i)**2)
+      ic_mag_axis_x(i) = ic_mag_axis_x(i) / axlen
+      ic_mag_axis_y(i) = ic_mag_axis_y(i) / axlen
+      ic_mag_axis_z(i) = ic_mag_axis_z(i) / axlen
+    enddo
+
     ! Initialise uold with values from the DICE_PARAMS namelist
     call reset_uold(ilevel)
     ! Update the grid using the gas particles read from the Gadget1 file
@@ -439,7 +432,7 @@ subroutine init_flow_fine(ilevel)
     end do
 
   end if
-  
+
 111 format('   Entering init_flow_fine for level ',I2)
 
 end subroutine init_flow_fine
@@ -643,15 +636,14 @@ subroutine init_uold(ilevel)
            endif
         end do
      end do
-#ifdef SOLVERmhd
-     do ivar=1,3
-        do i=1,active(ilevel)%ngrid
-            uold(active(ilevel)%igrid(i)+iskip,5+ivar)    = ic_mag_ini(ivar)
-            uold(active(ilevel)%igrid(i)+iskip,nvar+ivar) = ic_mag_ini(ivar)
-        end do
-     end do
-#endif
   end do
+
+#ifdef SOLVERmhd
+  ! set constant magnetic field
+  CALL mag_constant(ilevel)
+  ! toroidal field
+  CALL mag_compute(ilevel)
+#endif
 
   ! Set uold to 0 for virtual boundary cells
   do icpu=1,ncpu
@@ -1021,14 +1013,11 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            if(metal) then
              uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
            endif
-#ifdef SOLVERmhd
-           uold(indp(j,ind),6)      = ic_mag_ini(1)
-           uold(indp(j,ind),7)      = ic_mag_ini(2)
-           uold(indp(j,ind),8)      = ic_mag_ini(3)
-           uold(indp(j,ind),nvar+1) = ic_mag_ini(1)
-           uold(indp(j,ind),nvar+2) = ic_mag_ini(2)
-           uold(indp(j,ind),nvar+3) = ic_mag_ini(3)
-#endif 
+           if(cosmo) then
+             if(ivar_refine.gt.0) then
+               uold(indp(j,ind),ivar_refine)=uold(indp(j,ind),ivar_refine)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*maskp(ind_part(j))
+             endif
+           endif
         endif
      end do
   end do
@@ -1164,15 +1153,225 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(metal) then
         uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
      endif
-#ifdef SOLVERmhd
-     uold(indp(j),6)      = ic_mag_ini(1)
-     uold(indp(j),7)      = ic_mag_ini(2)
-     uold(indp(j),8)      = ic_mag_ini(3)
-     uold(indp(j),nvar+1) = ic_mag_ini(1)
-     uold(indp(j),nvar+2) = ic_mag_ini(2)
-     uold(indp(j),nvar+3) = ic_mag_ini(3)
-#endif
+     if(ivar_refine.gt.0) then
+        uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
+     endif
   end do
   
 end subroutine init_gas_ngp
+
+#ifdef SOLVERmhd
+subroutine mag_constant(ilevel)
+  ! constant background magnetic field
+  use amr_commons
+  use hydro_commons
+  use dice_commons
+  implicit none
+  integer::i,ind,iskip,ilevel
+
+  do ind=1,twotondim
+    iskip=ncoarse+(ind-1)*ngridmax
+		do i=1,active(ilevel)%ngrid
+		  uold(active(ilevel)%igrid(i)+iskip,6:8)           = ic_mag_const
+		  uold(active(ilevel)%igrid(i)+iskip,nvar+1:nvar+3) = ic_mag_const
+    enddo
+  enddo
+end subroutine mag_constant
+
+subroutine mag_compute(ilevel)
+  use amr_commons
+  !use pm_commons
+  use hydro_commons
+  use dice_commons
+  !use random
+  implicit none
+  integer::i,j,ilevel,icell
+  logical::nogal
+  real(dp)::Axdl,Axdr,Axul,Axur
+  real(dp)::Aydl,Aydr,Ayul,Ayur
+  real(dp)::Azdl,Azdr,Azul,Azur
+  real(dp)::Bxl,Bxr,Byl,Byr,Bzl,Bzr
+  real(dp),dimension(1:3)::pos,cell_center
+
+  real(dp)::dx,dxhalf,dxmin,dxminhalf,scale,dx_loc,vol_loc
+  integer::nx_loc,ind,ix,iy,iz,iskip,nfine
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+
+  nogal=.true.
+  do i=1,MAXGAL
+    ! check if galaxy has a magnetic field
+    if (ic_mag_scale_B(i) .NE. 0.0) nogal=.false.
+  enddo
+  if (nogal) return
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  dxhalf = 0.5D0*dx
+	dxmin = 0.5D0**nlevelmax
+	dxminhalf = 0.5D0*dxmin
+	nfine = 2**(nlevelmax-ilevel)
+
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
+     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
+     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+
+  ! compute field
+  do ind=1,twotondim
+    iskip=ncoarse+(ind-1)*ngridmax
+    do j=1,active(ilevel)%ngrid
+      icell=active(ilevel)%igrid(j)
+			cell_center = xg(icell,:)+xc(ind,:)-skip_loc(:)
+
+      ! edge coordinates
+      ! Ax
+		  pos = cell_center
+      pos(1) = pos(1) - dxhalf + dxminhalf
+      pos(2) = pos(2) - dxhalf
+      pos(3) = pos(3) - dxhalf
+			Axdl=0.0;Axdr=0.0;Axul=0.0;Axur=0.0
+			do i=1,nfine
+	      CALL mag_toroidal(pos,1,Axdl)
+				pos(1) = pos(1) + dxmin
+			enddo
+      pos(2) = pos(2) + dx
+			do i=1,nfine
+				pos(1) = pos(1) - dxmin
+      	CALL mag_toroidal(pos,1,Axdr)
+			enddo
+      pos(3) = pos(3) + dx
+			do i=1,nfine
+      	CALL mag_toroidal(pos,1,Axur)
+				pos(1) = pos(1) + dxmin
+			enddo
+      pos(2) = pos(2) - dx
+			do i=1,nfine
+				pos(1) = pos(1) - dxmin
+      	CALL mag_toroidal(pos,1,Axul)
+			enddo
+      ! Ay
+		  pos = cell_center
+      pos(1) = pos(1) - dxhalf
+      pos(2) = pos(2) - dxhalf + dxminhalf
+      pos(3) = pos(3) - dxhalf
+			Aydl=0.0;Aydr=0.0;Ayul=0.0;Ayur=0.0
+			do i=1,nfine
+	      CALL mag_toroidal(pos,2,Aydl)
+				pos(2) = pos(2) + dxmin
+			enddo
+      pos(1) = pos(1) + dx
+			do i=1,nfine
+				pos(2) = pos(2) - dxmin
+    	  CALL mag_toroidal(pos,2,Aydr)
+			enddo
+      pos(3) = pos(3) + dx
+			do i=1,nfine
+   	  	CALL mag_toroidal(pos,2,Ayur)
+				pos(2) = pos(2) + dxmin
+			enddo
+      pos(1) = pos(1) - dx
+			do i=1,nfine
+				pos(2) = pos(2) - dxmin
+				CALL mag_toroidal(pos,2,Ayul)
+			enddo
+      ! Az
+		  pos = cell_center
+      pos(1) = pos(1) - dxhalf
+      pos(2) = pos(2) - dxhalf
+      pos(3) = pos(3) - dxhalf + dxminhalf
+			Azdl=0.0;Azdr=0.0;Azul=0.0;Azur=0.0
+			do i=1,nfine
+    	  CALL mag_toroidal(pos,3,Azdl)
+				pos(3) = pos(3) + dxmin
+			enddo
+      pos(1) = pos(1) + dx
+			do i=1,nfine
+				pos(3) = pos(3) - dxmin
+				CALL mag_toroidal(pos,3,Azdr)
+			enddo
+      pos(2) = pos(2) + dx
+			do i=1,nfine
+    	  CALL mag_toroidal(pos,3,Azur)
+				pos(3) = pos(3) + dxmin
+			enddo
+      pos(1) = pos(1) - dx
+			do i=1,nfine
+				pos(3) = pos(3) - dxmin
+				CALL mag_toroidal(pos,3,Azul)
+			enddo
+
+      ! Bx left
+      Bxl = ((Azul - Azdl) - (Ayul - Aydl))/dx / nfine
+      uold(icell+iskip,6)      = uold(icell+iskip,6) + Bxl
+      ! By left
+      Byl = ((Axul - Axdl) - (Azdr - Azdl))/dx / nfine
+      uold(icell+iskip,7)      = uold(icell+iskip,7) + Byl
+      ! Bz left
+      Bzl = ((Aydr - Aydl) - (Axdr - Axdl))/dx / nfine
+      uold(icell+iskip,8)      = uold(icell+iskip,8) + Bzl
+
+      ! Bx right
+      Bxr = ((Azur - Azdr) - (Ayur - Aydr))/dx / nfine
+      uold(icell+iskip,nvar+1) = uold(icell+iskip,nvar+1) + Bxr
+      ! By right
+      Byr = ((Axur - Axdr) - (Azur - Azul))/dx / nfine
+      uold(icell+iskip,nvar+2) = uold(icell+iskip,nvar+2) + Byr
+      ! Bz right
+      Bzr = ((Ayur - Ayul) - (Axur - Axul))/dx / nfine
+      uold(icell+iskip,nvar+3) = uold(icell+iskip,nvar+3) + Bzr
+    end do
+  end do
+
+end subroutine mag_compute
+
+subroutine mag_toroidal(pos,dir,A)
+  use dice_commons
+	use amr_parameters, ONLY: boxlen
+	implicit none
+  real(dp)::r,h
+  real(dp)::Ah,A
+  integer::i,dir
+  real(dp),dimension(1:3)::pos,gcenter,gaxis,xrel,grad
+  real(dp)::sB,sR,sH
+
+  do i=1,MAXGAL
+    ! check if galaxy has a magnetic field
+    if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+
+    gcenter(1) = 0.5d0 + ic_mag_center_x(i)/boxlen
+    gcenter(2) = 0.5d0 + ic_mag_center_y(i)/boxlen
+    gcenter(3) = 0.5d0 + ic_mag_center_z(i)/boxlen
+    gaxis(1) = ic_mag_axis_x(i)
+    gaxis(2) = ic_mag_axis_y(i)
+    gaxis(3) = ic_mag_axis_z(i)
+    sR = ic_mag_scale_R(i) / boxlen
+    sH = ic_mag_scale_H(i) / boxlen
+    sB = ic_mag_scale_B(i)
+
+		! coordinates in galaxy frame
+    xrel = pos - gcenter
+		h = DOT_PRODUCT(xrel,gaxis)
+		grad = xrel - h*gaxis
+		r = NORM2(grad)
+
+		Ah = sB * sR * exp(-r/sR) * exp(-ABS(h)/sH)
+
+		! vector in cartesian frame
+		A = A + Ah*gaxis(dir)
+  end do
+end subroutine
+#endif
 

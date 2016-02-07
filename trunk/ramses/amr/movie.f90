@@ -223,188 +223,190 @@ subroutine output_frame()
   dx_frame=delx/dble(nw_frame)
   dy_frame=dely/dble(nh_frame)
 
-  ! Loop over levels
-  do ilevel=levelmin,nlevelmax_frame
-
-     ! Mesh size at level ilevel in coarse cell units
-     dx=0.5D0**ilevel
-     
-     ! Set position of cell centres relative to grid centre
-     do ind=1,twotondim
-        iz=(ind-1)/4
-        iy=(ind-1-4*iz)/2
-        ix=(ind-1-2*iy-4*iz)
-        if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
-        if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
-        if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
-     end do
-  
-     dx_loc=dx*scale
-     dx_min=0.5D0**nlevelmax*scale
-     ncache=active(ilevel)%ngrid
-
-     ! Loop over grids by vector sweeps
-     do igrid=1,ncache,nvector
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        ! Loop over cells
+  if(hydro) then
+     ! Loop over levels
+     do ilevel=levelmin,nlevelmax_frame
+   
+        ! Mesh size at level ilevel in coarse cell units
+        dx=0.5D0**ilevel
+        
+        ! Set position of cell centres relative to grid centre
         do ind=1,twotondim
-           ! Gather cell indices
-           iskip=ncoarse+(ind-1)*ngridmax
-           do i=1,ngrid
-              ind_cell(i)=iskip+ind_grid(i)
-           end do
-           ! Gather cell centre positions
-           do idim=1,ndim
-              do i=1,ngrid
-                 xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-              end do
-           end do
-           ! Rescale position from code units to user units
-           do idim=1,ndim
-              do i=1,ngrid
-                 xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-              end do
-           end do
-           
-           ! Check if cell is to be considered
-           do i=1,ngrid
-              ok(i)=son(ind_cell(i))==0.or.ilevel==nlevelmax_frame
-           end do
-
-           do i=1,ngrid
-              if(ok(i))then
-                 ! Check if the cell intersect the domain
-#if NDIM>2                 
-                 if(proj_axis(proj_ind:proj_ind).eq.'x')then
-                   xleft=xx(i,2)-dx_loc/2.
-                   xright=xx(i,2)+dx_loc/2.
-                   yleft=xx(i,3)-dx_loc/2.
-                   yright=xx(i,3)+dx_loc/2.
-                 elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-                   xleft=xx(i,1)-dx_loc/2.
-                   xright=xx(i,1)+dx_loc/2.
-                   yleft=xx(i,3)-dx_loc/2.
-                   yright=xx(i,3)+dx_loc/2.
-                 else
-                   xleft=xx(i,1)-dx_loc/2.
-                   xright=xx(i,1)+dx_loc/2.
-                   yleft=xx(i,2)-dx_loc/2.
-                   yright=xx(i,2)+dx_loc/2.
-                 endif
-                 
-                 if(proj_axis(proj_ind:proj_ind).eq.'x')then
-                   zleft=xx(i,1)-dx_loc/2.
-                   zright=xx(i,1)+dx_loc/2.
-                 elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-                   zleft=xx(i,2)-dx_loc/2.
-                   zright=xx(i,2)+dx_loc/2.
-                 else
-                   zleft=xx(i,3)-dx_loc/2.
-                   zright=xx(i,3)+dx_loc/2.
-                 endif
-                 if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
-                      & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
-                      & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
-#else
-                 xleft=xx(i,1)-dx_loc/2.
-                 xright=xx(i,1)+dx_loc/2.
-                 yleft=xx(i,2)-dx_loc/2.
-                 yright=xx(i,2)+dx_loc/2.
-
-                 if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
-                      & yright.lt.yleft_frame.or.yleft.ge.yright_frame)cycle
-#endif
-                 ! Compute map indices for the cell
-                 if(xleft>xleft_frame)then
-                    imin=min(int((xleft-xleft_frame)/dx_frame)+1,nw_frame)
-                 else
-                    imin=1
-                 endif
-                 imax=min(int((xright-xleft_frame)/dx_frame)+1,nw_frame)
-                 if(yleft>yleft_frame)then
-                    jmin=min(int((yleft-yleft_frame)/dy_frame)+1,nh_frame) ! change
-                 else
-                    jmin=1
-                 endif
-                 jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
-                 
-                 ! Fill up map with projected mass
-#if NDIM>2                 
-                 dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft) ! change
-#endif
-                 do ii=imin,imax
-                    xxleft=xleft_frame+dble(ii-1)*dx_frame
-                    xxright=xxleft+dx_frame
-                    dx_cell=min(xxright,xright)-max(xxleft,xleft)
-                    do jj=jmin,jmax
-                       yyleft=yleft_frame+dble(jj-1)*dy_frame
-                       yyright=yyleft+dy_frame
-                       dy_cell=min(yyright,yright)-max(yyleft,yleft)
-                       ! Intersection volume
-                       dvol=dx_cell*dy_cell
-#if NDIM>2                 
-                       dvol=dvol*dz_cell
-#endif
-                       dens(ii,jj)=dens(ii,jj)+dvol*max(uold(ind_cell(i),1),smallr)
-                       vol(ii,jj)=vol(ii,jj)+dvol
-                       
-                       data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1),smallr)**2
-#ifdef SOLVERmhd
-                       do kk=2,NVAR+3
-#else                       
-                       do kk=2,NVAR
-#endif
-                         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
-                       end do
-
-#ifdef RT
-                       if(rt) then
-                          do kk=1,NGROUPS
-                             if(rt_movie_vars(kk).eq.1) then
-                                rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
-                                     + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
-                                            * max(uold(ind_cell(i),1),smallr) ! mass-weighted
-                             endif
-                          end do
-                       endif
-#endif
-
-                       
-                       if (movie_vars(0).eq.1)then
-                         !Get temperature
-                         ekk=0.0d0
-                         do idim=1,3
-                            ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
-                         enddo
-                         temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
-                         temp=max(temp/max(uold(ind_cell(i),1),smallr),smallc**2)*scale_T2 !temperature in K
-
-                         data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*max(uold(ind_cell(i),1),smallr)*temp !mass weighted temperature
-                       end if
-
-#ifdef SOLVERmhd
-                       if (movie_vars(NVAR+4).eq.1)then
-                               data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)+ dvol*0.125*(&
-                                   uold(ind_cell(i),6)**2 + uold(ind_cell(i),7)**2 + uold(ind_cell(i),8)**2 &
-                                   + uold(ind_cell(i),NVAR+1)**2 + uold(ind_cell(i),NVAR+2)**2 + uold(ind_cell(i),NVAR+3)**2)
-                       end if
-#endif
-
-                    end do
-                 end do
-              end if
-           end do
-
+           iz=(ind-1)/4
+           iy=(ind-1-4*iz)/2
+           ix=(ind-1-2*iy-4*iz)
+           if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
+           if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
+           if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
         end do
-        ! End loop over cells
-
+     
+        dx_loc=dx*scale
+        dx_min=0.5D0**nlevelmax*scale
+        ncache=active(ilevel)%ngrid
+   
+        ! Loop over grids by vector sweeps
+        do igrid=1,ncache,nvector
+           ngrid=MIN(nvector,ncache-igrid+1)
+           do i=1,ngrid
+              ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+           end do
+           ! Loop over cells
+           do ind=1,twotondim
+              ! Gather cell indices
+              iskip=ncoarse+(ind-1)*ngridmax
+              do i=1,ngrid
+                 ind_cell(i)=iskip+ind_grid(i)
+              end do
+              ! Gather cell centre positions
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
+                 end do
+              end do
+              ! Rescale position from code units to user units
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
+                 end do
+              end do
+              
+              ! Check if cell is to be considered
+              do i=1,ngrid
+                 ok(i)=son(ind_cell(i))==0.or.ilevel==nlevelmax_frame
+              end do
+   
+              do i=1,ngrid
+                 if(ok(i))then
+                    ! Check if the cell intersect the domain
+#if NDIM>2                 
+                    if(proj_axis(proj_ind:proj_ind).eq.'x')then
+                      xleft=xx(i,2)-dx_loc/2.
+                      xright=xx(i,2)+dx_loc/2.
+                      yleft=xx(i,3)-dx_loc/2.
+                      yright=xx(i,3)+dx_loc/2.
+                    elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+                      xleft=xx(i,1)-dx_loc/2.
+                      xright=xx(i,1)+dx_loc/2.
+                      yleft=xx(i,3)-dx_loc/2.
+                      yright=xx(i,3)+dx_loc/2.
+                    else
+                      xleft=xx(i,1)-dx_loc/2.
+                      xright=xx(i,1)+dx_loc/2.
+                      yleft=xx(i,2)-dx_loc/2.
+                      yright=xx(i,2)+dx_loc/2.
+                    endif
+                    
+                    if(proj_axis(proj_ind:proj_ind).eq.'x')then
+                      zleft=xx(i,1)-dx_loc/2.
+                      zright=xx(i,1)+dx_loc/2.
+                    elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+                      zleft=xx(i,2)-dx_loc/2.
+                      zright=xx(i,2)+dx_loc/2.
+                    else
+                      zleft=xx(i,3)-dx_loc/2.
+                      zright=xx(i,3)+dx_loc/2.
+                    endif
+                    if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
+                         & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
+                         & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
+#else
+                    xleft=xx(i,1)-dx_loc/2.
+                    xright=xx(i,1)+dx_loc/2.
+                    yleft=xx(i,2)-dx_loc/2.
+                    yright=xx(i,2)+dx_loc/2.
+   
+                    if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
+                         & yright.lt.yleft_frame.or.yleft.ge.yright_frame)cycle
+#endif
+                    ! Compute map indices for the cell
+                    if(xleft>xleft_frame)then
+                       imin=min(int((xleft-xleft_frame)/dx_frame)+1,nw_frame)
+                    else
+                       imin=1
+                    endif
+                    imax=min(int((xright-xleft_frame)/dx_frame)+1,nw_frame)
+                    if(yleft>yleft_frame)then
+                       jmin=min(int((yleft-yleft_frame)/dy_frame)+1,nh_frame) ! change
+                    else
+                       jmin=1
+                    endif
+                    jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
+                    
+                    ! Fill up map with projected mass
+#if NDIM>2                 
+                    dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft) ! change
+#endif
+                    do ii=imin,imax
+                       xxleft=xleft_frame+dble(ii-1)*dx_frame
+                       xxright=xxleft+dx_frame
+                       dx_cell=min(xxright,xright)-max(xxleft,xleft)
+                       do jj=jmin,jmax
+                          yyleft=yleft_frame+dble(jj-1)*dy_frame
+                          yyright=yyleft+dy_frame
+                          dy_cell=min(yyright,yright)-max(yyleft,yleft)
+                          ! Intersection volume
+                          dvol=dx_cell*dy_cell
+#if NDIM>2                 
+                          dvol=dvol*dz_cell
+#endif
+                          dens(ii,jj)=dens(ii,jj)+dvol*max(uold(ind_cell(i),1),smallr)
+                          vol(ii,jj)=vol(ii,jj)+dvol
+                          
+                          data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*max(uold(ind_cell(i),1),smallr)**2
+#ifdef SOLVERmhd
+                          do kk=2,NVAR+3
+#else                       
+                          do kk=2,NVAR
+#endif
+                             if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
+                          end do
+   
+#ifdef RT
+                          if(rt) then
+                             do kk=1,NGROUPS
+                                if(rt_movie_vars(kk).eq.1) then
+                                   rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
+                                        + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
+                                               * max(uold(ind_cell(i),1),smallr) ! mass-weighted
+                                endif
+                             end do
+                          endif
+#endif
+   
+                          
+                          if (movie_vars(0).eq.1)then
+                            !Get temperature
+                            ekk=0.0d0
+                            do idim=1,3
+                               ekk=ekk+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
+                            enddo
+                            temp=(gamma-1.0)*(uold(ind_cell(i),5)-ekk) !pressure
+                            temp=max(temp/max(uold(ind_cell(i),1),smallr),smallc**2)*scale_T2 !temperature in K
+   
+                            data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*max(uold(ind_cell(i),1),smallr)*temp !mass weighted temperature
+                          end if
+   
+#ifdef SOLVERmhd
+                          if (movie_vars(NVAR+4).eq.1)then
+                                  data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)+ dvol*0.125*(&
+                                      uold(ind_cell(i),6)**2 + uold(ind_cell(i),7)**2 + uold(ind_cell(i),8)**2 &
+                                      + uold(ind_cell(i),NVAR+1)**2 + uold(ind_cell(i),NVAR+2)**2 + uold(ind_cell(i),NVAR+3)**2)
+                          end if
+#endif
+   
+                       end do
+                    end do
+                 end if
+              end do
+   
+           end do
+           ! End loop over cells
+   
+        end do
+        ! End loop over grids
      end do
-     ! End loop over grids
-  end do
   ! End loop over levels
+  end if
 
   ! Loop over particles
   do j=1,npartmax
