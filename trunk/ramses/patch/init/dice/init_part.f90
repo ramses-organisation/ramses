@@ -1208,7 +1208,7 @@ subroutine init_part
         npart_cpu(1) = npart_all(1)
 #endif
         if(myid==1)then
-           write(*,'(A,I)') ' npart_tot -> ',sum(npart_all)
+           write(*,*) ' npart_tot -> ',sum(npart_all)
            write(*,'(A50)')"__________________________________________________"
            close(1)
         endif
