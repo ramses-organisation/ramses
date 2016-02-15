@@ -1784,11 +1784,11 @@ subroutine true_max(x,y,z,ilevel)
   ! the true maximum by expanding the density around the cell center to second order.
   !----------------------------------------------------------------------------
 
-  integer::k,j,i,nx_loc,counter
-  integer,dimension(1:nvector)::cell_index,cell_lev
+  integer::k,j,i,nx_loc,counter, ioft, n
+  integer,dimension(1:threetondim)::cell_index,cell_lev
   real(dp)::det,dx,dx_loc,scale,disp_max
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
-  real(dp),dimension(1:nvector,1:ndim)::xtest
+  real(dp),dimension(1:threetondim,1:ndim)::xtest
   real(dp),dimension(1:ndim)::gradient,displacement
   real(dp),dimension(1:ndim,1:ndim)::hess,minor
 
@@ -1811,8 +1811,13 @@ subroutine true_max(x,y,z,ilevel)
      end do
   end do
 
-  call get_cell_index(cell_index,cell_lev,xtest,ilevel,counter)
-
+  do ioft = 0, threetondim - 1, nvector
+     n = min(threetondim - ioft, nvector)
+     call get_cell_index(cell_index(ioft + 1 : ioft + n), cell_lev(ioft + 1 : ioft + n), &
+          xtest(ioft + 1 : ioft + n), ilevel, n)
+  end do
+     
+     
   counter=0
   if(ivar_clump==0)then
      do i=-1,1
