@@ -178,6 +178,7 @@ subroutine read_params
   endif
   noutput=MIN(noutput,MAXOUT)
   if(imovout>0) then
+     imov_index=imov
      allocate(tmovout(1:imovout))
      allocate(amovout(1:imovout))
      tmovout=1d100
