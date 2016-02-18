@@ -25,7 +25,7 @@ subroutine clump_finder(create_output,keep_alive)
   !----------------------------------------------------------------------------
 
   integer::istep,nskip,ilevel,info,icpu,nmove,nzero
-  integer::i,j,peak_nr
+  integer::i,j,peak_nr, levelmin_part
   integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
@@ -33,11 +33,20 @@ subroutine clump_finder(create_output,keep_alive)
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
+  ! When called from the create_sink, particles are all residing at level 1, 
+  ! otherwise at levelmin.
+  
+  if (create_output)then
+     levelmin_part = levelmin
+  else
+     levelmin_part = 1
+  end if
+
   !---------------------------------------------------------------
   ! Compute rho from gas density or dark matter particles
   !---------------------------------------------------------------
   if(ivar_clump==0)then
-     do ilevel=levelmin,nlevelmax
+     do ilevel=levelmin_part,nlevelmax
         if(pic)call make_tree_fine(ilevel)
         if(poisson)call rho_only(ilevel)
         if(pic)then
@@ -45,7 +54,7 @@ subroutine clump_finder(create_output,keep_alive)
            call virtual_tree_fine(ilevel)
         endif
      end do
-     do ilevel=nlevelmax,levelmin,-1
+     do ilevel=nlevelmax,levelmin_part,-1
         if(pic)call merge_tree_fine(ilevel)
      end do
   endif
