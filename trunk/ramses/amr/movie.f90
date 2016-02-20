@@ -80,7 +80,7 @@ subroutine output_frame()
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
-  call title(imov_index, istep_str)
+  call title(imov, istep_str)
   write(temp_string,'(I1)') proj_ind
   moviedir = 'movie'//trim(temp_string)//'/'
   moviecmd = 'mkdir -p '//trim(moviedir)
@@ -593,7 +593,6 @@ subroutine output_frame()
      do while(amovout(imov)<aexp.or.tmovout(imov)<t)
         imov=imov+1
      end do
-     imov_index=imov_index+1
   endif
 
   nw_frame = nw_temp
