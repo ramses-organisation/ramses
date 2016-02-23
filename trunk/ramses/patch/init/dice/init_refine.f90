@@ -1,58 +1,3 @@
-!========================================================================================
-!== Patch DICE
-!== Initial conditions to setup 1 or more galaxies computed from the DICE software
-!== Valentin Perret - October 2014
-!========================================================================================
-!==  Namelist settings:
-!==
-!==	ic_file     : Gadget1 file in the IC directory
-!== 	IG_rho      : Density of the intergalactic medium
-!== 	IG_T2       : Temperature of the intergalactic medium
-!== 	IG_metal    : Metallicity of the intergalactic medium
-!== 
-!========================================================================================
-
-
-module dice_commons
-  use amr_commons
-  use hydro_commons
-  
-  ! particle data
-  character(len=512)::ic_file, ic_format
-  ! misc  
-  real(dp)::IG_rho         = 1.0D-5
-  real(dp)::IG_T2          = 1.0D7
-  real(dp)::IG_metal       = 0.01
-  real(dp)::ic_scale_pos   = 1.0
-  real(dp)::ic_scale_vel   = 1.0
-  real(dp)::ic_scale_mass  = 1.0
-  real(dp)::ic_scale_u     = 1.0
-  real(dp)::ic_scale_age   = 1.0
-  real(dp)::ic_scale_metal = 1.0
-  real(dp)::ic_t_restart   = 0.0D0
-  integer::ic_ifout        = 1
-  integer::ic_nfile        = 1
-  real(dp),dimension(1:3)::ic_mag_ini= (/ 0.0, 0.0, 0.0 /)
-  real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
-  character(len=4)::ic_head_name  = 'HEAD'
-  character(len=4)::ic_pos_name   = 'POS '
-  character(len=4)::ic_vel_name   = 'VEL '
-  character(len=4)::ic_id_name    = 'ID  '
-  character(len=4)::ic_mass_name  = 'MASS'
-  character(len=4)::ic_u_name     = 'U   '
-  character(len=4)::ic_metal_name = 'Z   '
-  character(len=4)::ic_age_name   = 'AGE '
-  ! Gadget units in cgs
-  real(dp)::gadget_scale_l = 3.085677581282D21
-  real(dp)::gadget_scale_v = 1.0D5
-  real(dp)::gadget_scale_m = 1.9891D43
-  real(dp)::gadget_scale_t = 1.0D6*365*24*3600
-  real(dp),allocatable,dimension(:)::up
-  logical::dice_init       = .false.
-  logical::amr_struct      = .false.
-
-end module dice_commons
-
 !################################################################
 !################################################################
 !################################################################
@@ -60,6 +5,7 @@ end module dice_commons
 subroutine init_refine
   use amr_commons
   use pm_commons
+  use dice_commons
   implicit none
   !-------------------------------------------
   ! This routine builds the initial AMR grid
@@ -230,7 +176,7 @@ subroutine init_refine_2
   endif
 #endif  
   ! DICE restart time
-  t=ic_t_restart
+  !t=ic_t_restart
 
 end subroutine init_refine_2
 !################################################################

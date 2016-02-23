@@ -132,6 +132,8 @@ recursive subroutine amr_step(ilevel,icount)
         call dump_all
 
         ! Run the clumpfinder, (produce output, don't keep arrays alive on output)
+        ! CAREFUL: create_output is used to destinguish between the case where 
+        ! the clumpfinder is called from create_sink or directly from amr_step.
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 
         ! Dump lightcone
@@ -381,7 +383,9 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #else
                                call timer('cooling','start')
-  if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  if(hydro) then
+    if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+  endif
 #endif
   
   !---------------
