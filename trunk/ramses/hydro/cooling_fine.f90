@@ -140,9 +140,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
           * rt_c_cgs/c_cgs * rt_pressBoost / scale_d / scale_v**2
   endif
 #endif
-  ! Allow for high-z UV background in noncosmo sims:
   aexp_loc=aexp
-  if(.not. cosmo .and. haardt_madau) aexp_loc = aexp_ini
+  ! Allow for high-z UV background in noncosmo sims:
+  if(.not. cosmo .and. haardt_madau .and. aexp_ini .le. 1.)              &
+       aexp_loc = aexp_ini
 #endif
 
   ! Loop over cells
