@@ -1797,7 +1797,7 @@ subroutine true_max(x,y,z,ilevel)
 
   integer::k,j,i,nx_loc,counter, ioft, n
   integer,dimension(1:threetondim)::cell_index,cell_lev
-  real(dp)::det,dx,dx_loc,scale,disp_max
+  real(dp)::det,dx,dx_loc,scale,disp_max,numerator
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
   real(dp),dimension(1:threetondim,1:ndim)::xtest
   real(dp),dimension(1:ndim)::gradient,displacement
@@ -1892,7 +1892,8 @@ subroutine true_max(x,y,z,ilevel)
   displacement=0.
   do i=1,3
      do j=1,3
-        displacement(i)=displacement(i)-minor(i,j)/(det+1.d10*tiny(0.d0))*gradient(j)
+        numerator = gradient(j)*minor(i,j)
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*tiny(0.d0))
      end do
   end do
 
