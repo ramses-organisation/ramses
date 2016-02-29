@@ -25,7 +25,7 @@ subroutine clump_finder(create_output,keep_alive)
   !----------------------------------------------------------------------------
 
   integer::istep,nskip,ilevel,info,icpu,nmove,nzero
-  integer::i,j,peak_nr
+  integer::i,j,peak_nr, levelmin_part
   integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
@@ -33,11 +33,20 @@ subroutine clump_finder(create_output,keep_alive)
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
+  ! When called from the create_sink, particles are all residing at level 1, 
+  ! otherwise at levelmin.
+  
+  if (create_output)then
+     levelmin_part = levelmin
+  else
+     levelmin_part = 1
+  end if
+
   !---------------------------------------------------------------
   ! Compute rho from gas density or dark matter particles
   !---------------------------------------------------------------
   if(ivar_clump<=0)then
-     do ilevel=levelmin,nlevelmax
+     do ilevel=levelmin_part,nlevelmax
         if(pic)call make_tree_fine(ilevel)
         if(poisson)call rho_only(ilevel)
         if(pic)then
@@ -45,7 +54,7 @@ subroutine clump_finder(create_output,keep_alive)
            call virtual_tree_fine(ilevel)
         endif
      end do
-     do ilevel=nlevelmax,levelmin,-1
+     do ilevel=nlevelmax,levelmin_part,-1
         if(pic)call merge_tree_fine(ilevel)
      end do
   endif
@@ -1299,7 +1308,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use clfind_commons, only: ivar_clump
+  use clfind_commons, ONLY:ivar_clump
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
@@ -1358,7 +1367,15 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   ! Gather particle mass
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     if(ivar_clump==-1)then
+        if(tp(j).ne.0)then
+           mmm(j)=mp(ind_part(j))
+        else
+           mmm(j)=0d0
+        end if
+     else
+        mmm(j)=mp(ind_part(j))
+     end if
   end do
 
   ! Check for illegal moves
@@ -1369,12 +1386,11 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
   if(error)then
-     write(*,*)'problem in cic_only',ilevel
+     write(*,*)'problem in cic_only'
      do idim=1,ndim
         do j=1,np
            if(x(j,idim)<0.5D0.or.x(j,idim)>5.5D0)then
               write(*,*)x(j,1:ndim)
-              write(*,*)'DBG',x(j,1:ndim)*dx,xp(ind_part(j),1:ndim),x0(ind_grid_part(j),1:ndim),skip_loc(1:ndim)
            endif
         end do
      end do
@@ -1510,17 +1526,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
      do j=1,np
         if(ok(j))then
-           !if(ivar_clump==-2)then ! DM only
-           !   if(tp(j)==0)then
-           !      rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
-           !   endif
-           !elseif(ivar_clump==-1)then ! stars only
-           !   if(tp(j)/=0)then
-           !      rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
-           !   endif
-           !else ! stars + DM
-                 rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
-           !endif
+           rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
         end if
      end do
   end do

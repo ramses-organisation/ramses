@@ -24,17 +24,13 @@ subroutine create_sink
   !----------------------------------------------------------------------------
 
   integer::ilevel,ivar
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v!,factG
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(verbose)write(*,*)' Entering create_sink'
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-  !!! Gravitational constant
-  !!factG=1d0
-  !!if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
-  
   ! Merge all particles to level 1
   do ilevel=levelmin-1,1,-1
      call merge_tree_fine(ilevel)
@@ -44,7 +40,7 @@ subroutine create_sink
   call kill_entire_cloud(1) 
   
   ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP     
-  if (create_sinks)then
+  if (create_sinks.and.nsink<nsinkmax)then
      
      ! Run the clump finder,(produce no output, keep clump arrays allocated)
      call clump_finder(.false.,.true.)
@@ -60,11 +56,11 @@ subroutine create_sink
   
      ! Apply all checks and flag cells for sink formation
      call flag_formation_sites
-     !if(smbh) then
-     !   do ilevel=levelmin,nlevelmax
-     !      call quenching(ilevel)
-     !   end do
-     !end if
+     if(smbh.and.quench_AGN) then
+        do ilevel=levelmin,nlevelmax
+           call quenching(ilevel)
+        end do
+     end if
 
      ! Create new sink particles if relevant
      do ilevel=levelmin,nlevelmax
@@ -1352,9 +1348,8 @@ subroutine quenching(ilevel)
 
   !------------------------------------------------------------------------
   ! This routine selects regions which are eligible for SMBH formation.
-  ! It is based on a stellar density threshold and on a stellar velocity
-  ! dispersion threshold.
-  ! On exit, flag2 array is set to 0 for AGN sites and to 1 otherwise.
+  ! It is based on a stellar density threshold.
+  ! On exit, flag2 array is set to 0 if the density is too low.
   !------------------------------------------------------------------------
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -1437,13 +1432,10 @@ subroutine quenching(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         ind_cell=iskip+igrid
-        ! AGN formation sites
-         !if n_star>0.1 H/cc and v_disp>100 km/s
-        !!!if(.not.(str_d>0.1.and.MAX(sig_u,sig_v,sig_w)>100.))then
-        if(.not.(str_d>2000.0.and.MAX(sig_u,sig_v,sig_w)>100.))then
+        ! AGN formation sites - unflag if stellar density in oct is too low
+        !if(str_d<0.1)then
+        if(str_d<1.0)then
            flag2(ind_cell)=0
-        !else
-        !   flag2(ind_cell)=1
         end if
      end do
   end do
@@ -1599,13 +1591,13 @@ subroutine make_sink_from_clump(ilevel)
   !-------------------------------------------
   ! Check wether max number of sink is reached
   !------------------------------------------
-  ok_free=(nsink+ntot_all<=nsinkmax)
-  if(.not. ok_free)then
-     if(myid==1)write(*,*)'global list of sink particles is too long'
-     if(myid==1)write(*,*)'New sink particles',ntot_all
-     if(myid==1)write(*,*)'Increase nsinkmax'
-     call clean_stop
-  end if
+  !ok_free=(nsink+ntot_all<=nsinkmax)
+  !if(.not. ok_free)then
+     !if(myid==1)write(*,*)'global list of sink particles is too long'
+     !if(myid==1)write(*,*)'New sink particles',ntot_all
+     !if(myid==1)write(*,*)'Increase nsinkmax'
+     !call clean_stop
+  !end if
    
   !------------------------------
   ! Create new sink particles
@@ -2704,7 +2696,7 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,c_acc,create_sinks,mass_sink_seed,&
        eddington_limit,sink_drag,acc_sink_boost,mass_merger_vel_check_AGN,&
-       clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,T2_min
+       clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,T2_min,quench_AGN
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
