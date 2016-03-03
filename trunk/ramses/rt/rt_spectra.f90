@@ -390,7 +390,7 @@ SUBROUTINE init_SED_table()
      ! Now the SED properties are in tbl...just need to rebin it, to get !
      ! even log-intervals between bins for fast interpolation.           !
      dlgA = SED_dlgA ; SED_dlgZ = -SED_nz
-     call rebin_log(dlgA, dble(SED_dlgZ)                                 &
+     call rebin_log(dlgA, SED_dlgZ                                       &
           , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), zs, nv        &
           , reb_tbl, SED_nA, SED_nZ, rebAges, SED_Zeds)
      SED_nA=SED_nA+1                              ! Make room for zero age
