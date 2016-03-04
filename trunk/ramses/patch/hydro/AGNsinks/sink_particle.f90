@@ -162,6 +162,7 @@ subroutine create_cloud_from_sink
   integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
   logical,dimension(1:ndim)::period
+  logical::in_box
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   
   ! Conversion factor from user units to cgs units
@@ -203,11 +204,14 @@ subroutine create_cloud_from_sink
            if(rr<=rmax)then
               do isink=1,nsink
                  xtest(1,1:3)=xsink(isink,1:3)+xrel(1:3)
+                 in_box=.true.
                  do idim=1,ndim
                     if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
                     if (period(idim) .and. xtest(1,idim)<0.)xtest(1,idim)=xtest(1,idim)+boxlen
+                    if (xtest(1,idim)<0.0 .or. xtest(1,idim)>boxlen)in_box=.false.
                  end do
-                 call cmp_cpumap(xtest,cc,1)
+                 cc(1)=0
+                 if(in_box)call cmp_cpumap(xtest,cc,1)
                  if(cc(1).eq.myid)then                    
                     call remove_free(ind_cloud,1)
                     call add_list(ind_cloud,ind_grid,ok_true,1)
@@ -248,7 +252,7 @@ subroutine kill_entire_cloud(ilevel)
   ! This routine removes cloud particles (including the central one).
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
-  integer::ig,ip,npart1,npart2,icpu
+  integer::ig,ip,npart1,npart2,icpu,ncache,istart
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   logical,dimension(1:nvector)::ok=.true.
 
@@ -256,12 +260,19 @@ subroutine kill_entire_cloud(ilevel)
   if(verbose)write(*,111)ilevel
   ! Gather sink and cloud particles.
   ! Loop over cpus
-  do icpu=1,ncpu
-     igrid=headl(icpu,ilevel)
+  do icpu=1,ncpu+nboundary
+     if(icpu<=ncpu)then
+        ncache=numbl(icpu,ilevel)
+        istart=headl(icpu,ilevel)
+     else
+        ncache=numbb(icpu-ncpu,ilevel)
+        istart=headb(icpu-ncpu,ilevel)
+     end if
+     igrid=istart
      ig=0
      ip=0
      ! Loop over grids
-     do jgrid=1,numbl(icpu,ilevel)
+     do jgrid=1,ncache
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0        
         ! Count sink and cloud particles
@@ -804,7 +815,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
-  real(dp)::share_en,share_mo
+  real(dp)::share_en,share_mo,dMEDoverdt
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -905,13 +916,24 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  acc_mass=0.         
               end if
            else
-              if (flux_accretion .or. bondi_accretion)then
+              if (flux_accretion .or. bondi_accretion) then
                  if (feedback_scheme=='energy') then
                     share_en = 1.0
                     share_mo = 0.0
                  else if (feedback_scheme=='momentum') then
                     share_en = 0.0
                     share_mo = 1.0
+                 else if (feedback_scheme=='ratio') then
+                    dMEDoverdt=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
+                    if (dMBHoverdt(isink)/dMEDoverdt > 0.01) then
+                       ! Eddington ratio higher than 0.01 -> energy
+                       share_en = 1.0
+                       share_mo = 0.0
+                    else
+                       ! Eddington ratio lower than 0.01 -> momentum
+                       share_en = 0.0
+                       share_mo = 1.0
+                    end if
                  else 
                     share_en = 0.5
                     share_mo = 0.5
@@ -1797,11 +1819,11 @@ subroutine true_max(x,y,z,ilevel)
   ! the true maximum by expanding the density around the cell center to second order.
   !----------------------------------------------------------------------------
 
-  integer::k,j,i,nx_loc,counter
-  integer,dimension(1:nvector)::cell_index,cell_lev
-  real(dp)::det,dx,dx_loc,scale,disp_max
+  integer::k,j,i,nx_loc,counter, ioft, n
+  integer,dimension(1:threetondim)::cell_index,cell_lev
+  real(dp)::det,dx,dx_loc,scale,disp_max,numerator
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
-  real(dp),dimension(1:nvector,1:ndim)::xtest
+  real(dp),dimension(1:threetondim,1:ndim)::xtest
   real(dp),dimension(1:ndim)::gradient,displacement
   real(dp),dimension(1:ndim,1:ndim)::hess,minor
 
@@ -1824,8 +1846,13 @@ subroutine true_max(x,y,z,ilevel)
      end do
   end do
 
-  call get_cell_index(cell_index,cell_lev,xtest,ilevel,counter)
-
+  do ioft = 0, threetondim - 1, nvector
+     n = min(threetondim - ioft, nvector)
+     call get_cell_index(cell_index(ioft + 1 : ioft + n), cell_lev(ioft + 1 : ioft + n), &
+          xtest(ioft + 1 : ioft + n, 1 : ndim), ilevel, n)
+  end do
+     
+     
   counter=0
   if(ivar_clump==0)then
      do i=-1,1
@@ -1889,7 +1916,8 @@ subroutine true_max(x,y,z,ilevel)
   displacement=0.
   do i=1,3
      do j=1,3
-        displacement(i)=displacement(i)-minor(i,j)/(det+1.d10*tiny(0.d0))*gradient(j)
+        numerator = gradient(j)*minor(i,j)
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*tiny(0.d0))
      end do
   end do
 
