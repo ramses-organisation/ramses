@@ -590,7 +590,7 @@ subroutine output_frame()
   if(proj_ind.eq.len(trim(proj_axis))) then 
      ! Increase counter and skip frames if timestep is large
      imov=imov+1
-     do while(amovout(imov)<aexp.or.tmovout(imov)<t)
+     do while((amovout(imov)<aexp.or.tmovout(imov)<t).and.(imov.lt.imovout))
         imov=imov+1
      end do
   endif
