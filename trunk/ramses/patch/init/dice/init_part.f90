@@ -1026,7 +1026,7 @@ subroutine init_part
                   ! All particles counter
                   kpart=kpart+1
                   if(kpart.le.header%npart(1)) type_index = 1
-                  do j=1,6
+                  do j=1,5
                      if(kpart.gt.sum(header%npart(1:j)).and.kpart.le.sum(header%npart(1:j+1))) type_index = j+1
                   enddo
                   if((sum(header%npart(3:5)).gt.0).and.(kpart.gt.(header%npart(1)+header%npart(2)))) mpart=mpart+1
