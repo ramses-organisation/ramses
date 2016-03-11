@@ -817,7 +817,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:nvector),save::ethermal,ekinetic
   real(dp),dimension(1:nvector),save::vol_loc
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_mA
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   ! Mesh spacing in that level
@@ -944,7 +944,11 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 #endif
   do ind=1,twotondim
      do j=1,np
-        igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
+        if(nbors_father_cells(ind_grid_part(j),kg(j,ind)).gt.0) then
+           igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
+        else
+           igrid(j,ind)=0
+        endif
      end do
   end do
 
@@ -1048,6 +1052,7 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   real(dp),dimension(1:nvector),save::ethermal,ekinetic
   ! Particle based arrays
+  logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
@@ -1114,7 +1119,11 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+     if(nbors_father_cells(ind_grid_part(j),kg(j)).gt.0) then
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+     else
+        igrid(j)=0
+     endif
   end do
 
   ! Compute parent cell position
@@ -1128,33 +1137,42 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
   end do
 
+  ! Check if particles are entirely in level ilevel
+  do j=1,np
+     ok(j)=igrid(j)>0
+  end do
+
   ! Compute parent cell adresses
   do j=1,np
-     indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     if(ok(j))then
+        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     endif
   end do
 
   ! Update hydro variables
   do j=1,np
-     ! Specific kinetic energy of the gas particle
-     ekinetic(j)=0d0
-     do idim=1,ndim
-        ekinetic(j)=ekinetic(j)+0.5*vp(ind_part(j),idim)**2
-     end do
-     ethermal(j)=up(ind_part(j))
-     ! Update density in NGP cell
-     uold(indp(j),1)=uold(indp(j),1)+mp(ind_part(j))/vol_loc(j)
-     ! Update velocity in NGP cell
-     do idim=1,ndim
-        uold(indp(j),idim+1)=uold(indp(j),idim+1)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),idim)
-     end do
-     ! Update temperature in NGP cell
-     uold(indp(j),ndim+2)=uold(indp(j),ndim+2)+mp(ind_part(j))/vol_loc(j)*(ekinetic(j)+ethermal(j))
-     ! Update passive hydro variables in NGP cell
-     if(metal) then
-        uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
-     endif
-     if(ivar_refine.gt.0) then
-        uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
+     if(ok(j))then
+        ! Specific kinetic energy of the gas particle
+        ekinetic(j)=0d0
+        do idim=1,ndim
+           ekinetic(j)=ekinetic(j)+0.5*vp(ind_part(j),idim)**2
+        end do
+        ethermal(j)=up(ind_part(j))
+        ! Update density in NGP cell
+        uold(indp(j),1)=uold(indp(j),1)+mp(ind_part(j))/vol_loc(j)
+        ! Update velocity in NGP cell
+        do idim=1,ndim
+           uold(indp(j),idim+1)=uold(indp(j),idim+1)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),idim)
+        end do
+        ! Update temperature in NGP cell
+        uold(indp(j),ndim+2)=uold(indp(j),ndim+2)+mp(ind_part(j))/vol_loc(j)*(ekinetic(j)+ethermal(j))
+        ! Update passive hydro variables in NGP cell
+        if(metal) then
+           uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
+        endif
+        if(ivar_refine.gt.0) then
+           uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
+        endif
      endif
   end do
   
