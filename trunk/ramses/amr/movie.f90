@@ -21,9 +21,9 @@ subroutine output_frame()
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, infofile, sinkfile
 #ifdef SOLVERmhd
-  character(len=100),dimension(0:NVAR+6) :: moviefiles
+  character(len=100),dimension(-1:NVAR+6) :: moviefiles
 #else
-  character(len=100),dimension(0:NVAR+2) :: moviefiles
+  character(len=100),dimension(-1:NVAR+2) :: moviefiles
 #endif
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
@@ -59,6 +59,12 @@ subroutine output_frame()
   logical::opened
 
   character(len=1)::temp_string
+
+  real(dp)::d1,d2,d3,d4,d5,d6,dmean,ul,ur,vl,vr,wr,wl,curlv,d
+  integer ,dimension(1:nvector)::ind_cell2
+  integer,dimension(1:nvector,0:twondim)::ind_nbor
+  integer::ncell
+  logical::vort=.true.
 
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
@@ -96,6 +102,7 @@ subroutine output_frame()
   infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
   if(myid==1)call output_info(infofile)
   
+  moviefiles(-1) = trim(moviedir)//'vort_'//trim(istep_str)//'.map'
   moviefiles(0) = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
@@ -205,9 +212,9 @@ subroutine output_frame()
   
   ! Allocate image
 #ifdef SOLVERmhd
-  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+6))
+  allocate(data_frame(1:nw_frame,1:nh_frame,-1:NVAR+6))
 #else
-  allocate(data_frame(1:nw_frame,1:nh_frame,0:NVAR+2))
+  allocate(data_frame(1:nw_frame,1:nh_frame,-1:NVAR+2))
 #endif
 #ifdef RT
   if(rt) then
@@ -332,6 +339,40 @@ subroutine output_frame()
                     endif
                     jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
                     
+
+                    if (vort == .true.) then
+                        ! Calculate cell vorticity
+                        d = uold(ind_cell(i),1)
+                        ! Get neighbor cells if they exist, otherwise use straight injection from local cell
+                        ncell = 1 ! we just want the neighbors of that cell
+                        ind_cell2(1) = ind_cell(i)
+                        call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
+                        d1    = uold(ind_nbor(1,1),1)     ; d4    = uold(ind_nbor(1,4),1) 
+                        d2    = uold(ind_nbor(1,2),1)     ; d5    = uold(ind_nbor(1,5),1) 
+                        d3    = uold(ind_nbor(1,3),1)     ; d6    = uold(ind_nbor(1,6),1)  
+                        dmean = (d1+d2+d3+d4+d5+d6)/6.0
+          
+                        vl    = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
+                        wl    = (d4*uold(ind_nbor(1,4),4) + d*uold(ind_cell(i),4))/(d4+d)
+                        vr    = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
+                        wr    = (d3*uold(ind_nbor(1,3),4) + d*uold(ind_cell(i),4))/(d3+d)
+                        curlv = ((wr-wl)-(vr-vl))**2       ! first term
+                        ul    = (d6*uold(ind_nbor(1,6),2) + d*uold(ind_cell(i),2))/(d6+d)
+                        wl    = (d2*uold(ind_nbor(1,2),4) + d*uold(ind_cell(i),4))/(d2+d)
+                        ur    = (d5*uold(ind_nbor(1,5),2) + d*uold(ind_cell(i),2))/(d5+d)
+                        wr    = (d1*uold(ind_nbor(1,1),4) + d*uold(ind_cell(i),4))/(d1+d)
+                        curlv = curlv+((ur-ul)-(wr-wl))**2 ! second term
+                        ul    = (d4*uold(ind_nbor(1,4),2) + d*uold(ind_cell(i),2))/(d4+d)
+                        vl    = (d2*uold(ind_nbor(1,2),3) + d*uold(ind_cell(i),3))/(d2+d)
+                        ur    = (d3*uold(ind_nbor(1,3),2) + d*uold(ind_cell(i),2))/(d3+d)
+                        vr    = (d1*uold(ind_nbor(1,1),3) + d*uold(ind_cell(i),3))/(d1+d)
+                        curlv = curlv+((vr-vl)-(ur-ul))**2 ! third term
+                        curlv = curlv/dx_loc**2
+                    end if
+
+
+
+
                     ! Fill up map with projected mass
 #if NDIM>2                 
                     dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft) ! change
@@ -360,6 +401,10 @@ subroutine output_frame()
 #endif
                              if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                           end do
+
+                          if(vort) then
+                             data_frame(ii,jj,-1)=data_frame(ii,jj,-1)+curlv*dvol
+                          end if
    
 #ifdef RT
                           if(rt) then
@@ -470,11 +515,11 @@ subroutine output_frame()
 
 #ifndef WITHOUTMPI
 #ifdef SOLVERmhd
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+6))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+6+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,-1:NVAR+6))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+6+2),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+2))
-  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+2+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,-1:NVAR+2))
+  call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+2+2),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
   allocate(dens_all(1:nw_frame,1:nh_frame))
   call MPI_ALLREDUCE(dens,dens_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -502,7 +547,7 @@ subroutine output_frame()
   do ii=1,nw_frame
     do jj=1,nh_frame
 #ifdef SOLVERmhd
-      do kk=0,5
+      do kk=-1,5
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
       do kk=6,8
@@ -515,7 +560,7 @@ subroutine output_frame()
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
       end do
 #else
-      do kk=0,NVAR
+      do kk=-1,NVAR
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
 #endif
@@ -538,9 +583,9 @@ subroutine output_frame()
      allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
 #ifdef SOLVERmhd
-     do kk=0, NVAR+6
+     do kk=-1, NVAR+6
 #else
-     do kk=0, NVAR+2
+     do kk=-1, NVAR+2
 #endif
        if (movie_vars(kk).eq.1)then
          open(ilun,file=TRIM(moviefiles(kk)),form='unformatted')
@@ -606,6 +651,7 @@ subroutine set_movie_vars()
   integer::ll
   character(LEN=5)::dummy
 
+  if(ANY(movie_vars_txt=='vort ')) movie_vars(-1)=1
   if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
   if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
   if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
@@ -640,3 +686,88 @@ subroutine set_movie_vars()
   if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+2)=1
 #endif
 end subroutine set_movie_vars
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
+  use amr_commons
+  implicit none
+  integer::ncell,ilevel
+  integer,dimension(1:nvector)::ind_cell
+  integer,dimension(1:nvector,0:twondim)::ind_father
+  !-----------------------------------------------------------------
+  ! This subroutine determines the 2*ndim neighboring cells
+  ! cells of the input cell (ind_cell). 
+  ! If for some reasons they don't exist, the routine returns 
+  ! the input cell.
+  !-----------------------------------------------------------------
+  integer::nxny,i,idim,j,iok,ind
+  integer,dimension(1:3)::ibound,iskip1,iskip2
+  integer,dimension(1:nvector,1:3),save::ix
+  integer,dimension(1:nvector),save::ind_grid_father,pos
+  integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
+  integer,dimension(1:nvector,1:twondim),save::icelln_ok
+
+
+  if(ilevel==1)then 
+     write(*,*) 'Warning: attempting to form stars on level 1 --> this is not allowed ...'
+     return
+  endif
+
+  ! Get father cell
+  do i=1,ncell
+     ind_father(i,0)=ind_cell(i)
+  end do
+  
+  ! Get father cell position in the grid
+  do i=1,ncell
+     pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
+  end do
+  
+  ! Get father grid
+  do i=1,ncell
+     ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
+  end do
+  
+  ! Get neighboring father grids
+  call getnborgrids(ind_grid_father,igridn,ncell)
+  
+  ! Loop over position
+  do ind=1,twotondim
+     
+     ! Select father cells that sit at position ind
+     do j=0,twondim
+        iok=0
+        do i=1,ncell
+           if(pos(i)==ind)then
+              iok=iok+1
+              igridn_ok(iok,j)=igridn(i,j)
+           end if
+        end do
+     end do
+     
+     ! Get neighboring cells for selected cells
+     if(iok>0)call getnborcells(igridn_ok,ind,icelln_ok,iok)
+     
+     ! Update neighboring father cells for selected cells
+     do j=1,twondim
+        iok=0
+        do i=1,ncell
+           if(pos(i)==ind)then
+              iok=iok+1
+              if(icelln_ok(iok,j)>0)then
+                 ind_father(i,j)=icelln_ok(iok,j)
+                 !write(*,*) 'index first if',ind_father(i,j) 
+              else
+                 !ind_father(i,j)=nbor(ind_grid_father(i),j)
+                 ind_father(i,j)=ind_cell(i)
+                 !write(*,*) 'index second if',ind_father(i,j) 
+              end if
+           end if
+        end do
+     end do
+     
+  end do
+    
+end subroutine getnbor
