@@ -21,9 +21,9 @@ subroutine output_frame()
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, infofile, sinkfile
 #ifdef SOLVERmhd
-  character(len=100),dimension(-1:NVAR+6) :: moviefiles
+  character(len=100),dimension(0:NVAR+7) :: moviefiles
 #else
-  character(len=100),dimension(-1:NVAR+2) :: moviefiles
+  character(len=100),dimension(0:NVAR+3) :: moviefiles
 #endif
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
@@ -64,7 +64,6 @@ subroutine output_frame()
   integer ,dimension(1:nvector)::ind_cell2
   integer,dimension(1:nvector,0:twondim)::ind_nbor
   integer::ncell
-  logical::vort=.true.
 
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
@@ -102,7 +101,6 @@ subroutine output_frame()
   infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
   if(myid==1)call output_info(infofile)
   
-  moviefiles(-1) = trim(moviedir)//'vort_'//trim(istep_str)//'.map'
   moviefiles(0) = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
@@ -132,9 +130,11 @@ subroutine output_frame()
   moviefiles(NVAR+4) = trim(moviedir)//'pmag_'//trim(istep_str)//'.map'
   moviefiles(NVAR+5) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+6) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+7) = trim(moviedir)//'vort_'//trim(istep_str)//'.map'
 #else
   moviefiles(NVAR+1) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+2) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+3) = trim(moviedir)//'vort_'//trim(istep_str)//'.map'
 #endif
 
 #ifdef RT
@@ -340,7 +340,11 @@ subroutine output_frame()
                     jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
                     
 
-                    if (vort == .true.) then
+#ifdef SOLVERmhd
+                    if (movie_vars(NVAR+7).eq.1) then
+#else
+                    if (movie_vars(NVAR+3).eq.1) then
+#endif
                         ! Calculate cell vorticity
                         d = uold(ind_cell(i),1)
                         ! Get neighbor cells if they exist, otherwise use straight injection from local cell
@@ -369,9 +373,6 @@ subroutine output_frame()
                         curlv = curlv+((vr-vl)-(ur-ul))**2 ! third term
                         curlv = curlv/dx_loc**2
                     end if
-
-
-
 
                     ! Fill up map with projected mass
 #if NDIM>2                 
@@ -402,10 +403,16 @@ subroutine output_frame()
                              if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                           end do
 
-                          if(vort) then
+#ifdef SOLVERmhd
+                          if (movie_vars(NVAR+7).eq.1) then
+                             data_frame(ii,jj,NVAR+7)=data_frame(ii,jj,NVAR+7)+curlv*dvol
+                          end if
+#else
+                          if (movie_vars(NVAR+3).eq.1) then
                              data_frame(ii,jj,-1)=data_frame(ii,jj,-1)+curlv*dvol
                           end if
-   
+#endif
+
 #ifdef RT
                           if(rt) then
                              do kk=1,NGROUPS
@@ -515,10 +522,10 @@ subroutine output_frame()
 
 #ifndef WITHOUTMPI
 #ifdef SOLVERmhd
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,-1:NVAR+6))
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+7))
   call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+6+2),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-  allocate(data_frame_all(1:nw_frame,1:nh_frame,-1:NVAR+2))
+  allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+3))
   call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+2+2),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
   allocate(dens_all(1:nw_frame,1:nh_frame))
@@ -547,7 +554,7 @@ subroutine output_frame()
   do ii=1,nw_frame
     do jj=1,nh_frame
 #ifdef SOLVERmhd
-      do kk=-1,5
+      do kk=0,5
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
       do kk=6,8
@@ -559,10 +566,12 @@ subroutine output_frame()
       do kk=NVAR+1,NVAR+4
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
       end do
+      if(movie_vars(NVAR+7).eq.1) data_frame(ii,jj,NVAR+7)=data_frame(ii,jj,NVAR+7)/dens(ii,jj)
 #else
-      do kk=-1,NVAR
+      do kk=0,NVAR
         if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
       end do
+      if(movie_vars(NVAR+3).eq.1) data_frame(ii,jj,NVAR+3)=data_frame(ii,jj,NVAR+3)/dens(ii,jj)
 #endif
 #ifdef RT
       if(rt) then
@@ -583,9 +592,9 @@ subroutine output_frame()
      allocate(data_single(1:nw_frame,1:nh_frame))
      ! Output mass weighted density
 #ifdef SOLVERmhd
-     do kk=-1, NVAR+6
+     do kk=0, NVAR+7
 #else
-     do kk=-1, NVAR+2
+     do kk=0, NVAR+3
 #endif
        if (movie_vars(kk).eq.1)then
          open(ilun,file=TRIM(moviefiles(kk)),form='unformatted')
@@ -651,7 +660,6 @@ subroutine set_movie_vars()
   integer::ll
   character(LEN=5)::dummy
 
-  if(ANY(movie_vars_txt=='vort ')) movie_vars(-1)=1
   if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
   if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
   if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
@@ -681,9 +689,11 @@ subroutine set_movie_vars()
   if(ANY(movie_vars_txt=='pmag ')) movie_vars(NVAR+4)=1
   if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+5)=1
   if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+6)=1
+  if(ANY(movie_vars_txt=='vort ')) movie_vars(NVAR+7)=1
 #else
   if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+1)=1
   if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+2)=1
+  if(ANY(movie_vars_txt=='vort ')) movie_vars(NVAR+3)=1
 #endif
 end subroutine set_movie_vars
 !################################################################
