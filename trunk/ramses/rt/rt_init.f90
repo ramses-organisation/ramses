@@ -2,6 +2,8 @@
 SUBROUTINE rt_init
 
 !  Initialize everything for radiative transfer
+!  Some initialisation is also needed in case of non-equilibrium
+!  chemistry, even if rt=.false.
 !-------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
@@ -54,8 +56,6 @@ SUBROUTINE rt_init
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
-  ! Update hydro variable to the initial ionized species
-  var_region(1:rt_nregion,iIons-ndim-2)=rt_xion_region(1:rt_nregion)
   do i=1,nGroups  ! Starting indices in uold and unew of each photon group
      iGroups(i)=1+(ndim+1)*(i-1)
      if(nrestart.eq.0) then
@@ -151,7 +151,6 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_reg_length_x, rt_reg_length_y, rt_reg_length_z              &
        & ,rt_exp_region, rt_reg_group                                    &
        & ,rt_n_region, rt_u_region, rt_v_region, rt_w_region             &
-       & ,rt_xion_region                                                 &
        ! RT source regions (for every timestep)                          &
        & ,rt_nsource, rt_source_type                                     &
        & ,rt_src_x_center, rt_src_y_center, rt_src_z_center              &
@@ -162,6 +161,15 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
        & ,rt_movie_vars
 
+
+  ! Set default initialisation of ionisation states:
+  ! -Off if restarting, but can set to true (for postprocessing)
+  ! -On otherwise, but can set to false (for specificic initialisation)
+  if(nrestart .gt. 0) then
+     rt_is_init_xion=.false.
+  else
+     rt_is_init_xion=.true.
+  endif
 
   ! Read namelist file
   rewind(1)
