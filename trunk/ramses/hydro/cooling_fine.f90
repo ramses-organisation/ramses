@@ -2,12 +2,6 @@ subroutine cooling_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
-#ifdef RT
-  !use rt_parameters, only: rt_isDiffuseUVsrc
-  !use rt_cooling_module, only: update_UVrates
-  !use coolrates_module, only: update_coolrates_tables
-  !use UV_module
-#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
