@@ -273,6 +273,11 @@ subroutine output_frame()
               ! Check if cell is to be considered
               do i=1,ngrid
                  ok(i)=son(ind_cell(i))==0.or.ilevel==nlevelmax_frame
+                 if(ivar_refine>0) then
+                   ok(i)=ok(i).and. &
+                      & (uold(ind_cell(i),ivar_refine)/uold(ind_cell(i),1) &
+                      & > var_cut_refine)
+                 endif
               end do
    
               do i=1,ngrid
