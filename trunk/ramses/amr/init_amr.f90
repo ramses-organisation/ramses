@@ -314,6 +314,7 @@ subroutine init_amr
      aout(1:noutput2)=aout2(1:noutput2)
      iout=iout2
      ifout=ifout2
+     if(ifout.gt.nrestart+1) ifout=nrestart+1
      read(ilun)t
      read(ilun)dtold(1:nlevelmax2)
      read(ilun)dtnew(1:nlevelmax2)
