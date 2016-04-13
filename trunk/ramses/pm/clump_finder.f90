@@ -31,8 +31,6 @@ subroutine clump_finder(create_output,keep_alive)
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
   logical::all_bound
 
-  if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
-  if(nstep_coarse==0.and.nrestart>0)return
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   ! When called from the create_sink, particles are all residing at level 1, 
