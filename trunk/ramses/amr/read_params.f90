@@ -35,7 +35,7 @@ subroutine read_params
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
-       & ,deltax_frame,deltay_frame,deltaz_frame,movie &
+       & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
        & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt
 
   ! MPI initialization

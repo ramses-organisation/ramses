@@ -44,6 +44,11 @@ subroutine read_hydro_params(nml_ok)
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling &
        & ,self_shielding,smbh,agn &
        & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne
+#ifdef grackle
+  namelist/grackle_params/grackle_comoving_coordinates,grackle_with_radiative_cooling,grackle_primordial_chemistry &
+       & ,grackle_metal_cooling,grackle_UVbackground,grackle_h2_on_dust,grackle_cmb_temperature_floor &
+       & ,grackle_data_file
+#endif
 
   ! Read namelist file
   rewind(1)
@@ -67,6 +72,10 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   read(1,NML=physics_params,END=105)
 105 continue
+#ifdef grackle
+  rewind(1)
+  read(1,NML=grackle_params)
+#endif
 #ifdef ATON
   if(aton)call read_radiation_params(1)
 #endif
