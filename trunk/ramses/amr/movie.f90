@@ -53,7 +53,6 @@ subroutine output_frame()
   integer::i,j,ig,ip,npart1
   integer::nalloc1,nalloc2
   integer::proj_ind,l,nh_temp,nw_temp
-  real(kind=4)::ratio
 
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   logical::opened
@@ -187,13 +186,6 @@ subroutine output_frame()
     delx=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp) !+deltax_frame(3)*aexp**2+deltax_frame(4)*aexp**3  !Essentially comoving or physical
     dely=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp) !+deltay_frame(3)*aexp**2+deltay_frame(4)*aexp**3
     delz=min(2*min(xcen,ycen,zcen,boxlen-xcen,boxlen-ycen,boxlen-zcen),deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp) !+deltaz_frame(3)*aexp**2+deltaz_frame(4)*aexp**3
-  endif
-
-  ratio = delx/dely
-  if(ratio.gt.1)then
-    nw_frame=nh_temp*ratio
-  else
-    nh_frame=nw_temp/ratio
   endif
 
   xleft_frame=xcen-delx/2.
