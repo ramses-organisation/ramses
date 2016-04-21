@@ -82,6 +82,7 @@ LIBMPI =
 # --- CUDA libraries, for Titane ---
 LIBCUDA = -L/opt/cuda/lib  -lm -lcuda -lcudart
 
+LIBGRACKLE = -lgrackle -lhdf5 -lz
 LIBS = $(LIBMPI)
 #############################################################################
 # Sources directories are searched in this exact order

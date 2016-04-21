@@ -678,7 +678,7 @@ subroutine virtual_tree_fine(ilevel)
   particle_data_width=particle_data_width+1
 #endif
   ! DICE patch / gas temperature
-  if(dice_init) particle_data_width=particle_data_width+1
+  if(dice_init) particle_data_width=particle_data_width+2
   
   ! Allocate communication buffer in emission
   do icpu=1,ncpu
@@ -902,6 +902,12 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
         reception(icpu,ilevel)%up(ind_com(i),current_property)=up(ind_part(i))
      end do
      current_property = current_property+1
+     if(cosmo) then
+       do i=1,np
+          reception(icpu,ilevel)%up(ind_com(i),current_property)=maskp(ind_part(i))
+       end do
+       current_property = current_property+1
+     endif
   endif
   
   ! Remove particles from parent linked list
@@ -986,6 +992,12 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
        up(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
      end do
      current_property = current_property+1
+     if(cosmo) then
+       do i=1,np
+         maskp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+       end do
+       current_property = current_property+1
+     endif
   endif
 
 end subroutine empty_comm

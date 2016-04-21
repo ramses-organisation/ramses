@@ -10,8 +10,8 @@ module rt_parameters
 
   real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
   real(dp),parameter::c_cgs=2.9979250d+10                  ! Actual lightspeed in [cm s-1]
-  real(dp),parameter::one_over_c_cgs=3.335640484668562d-11  ! save some computation
-  real(dp)::rt_c_cgs=c_cgs                                     ! RT lightspeed in [cm s-1]
+  real(dp)::rt_c_cgs=c_cgs                                 !   Reduced lightspeed [cm s-1]
+  real(dp),parameter::one_over_c_cgs=3.335640484668562d-11 !         Save some computation
   real(dp),parameter::m_sun=1.9891d33               ! Solar mass [g], for SED calculations
   real(dp),parameter::eV_to_erg=1.6022d-12          !        eV to erg conversion constant
   real(dp), parameter:: Gyr2sec = 3.15569d+16       !       Gyr to sec conversion constant
@@ -59,7 +59,7 @@ module rt_parameters
   real(dp)::rt_floor_xHI=1.d-10        ! Ionization state floor for refinement           !
   real(dp)::rt_floor_xHII=1.d-10       ! Ionization state floor for refinement           !
   real(dp)::rt_c_fraction=1.d0         ! Actual lightspeed fraction for RT lightspeed    !
-  integer::rt_nsubcycle=1                ! Maximum number of RT-steps during one hydro/    !
+  integer::rt_nsubcycle=1              ! Maximum number of RT-steps during one hydro/    !
                                        ! gravity/etc timestep                            !
   logical::rt_otsa=.true.              ! Use on-the-spot approximation                   !
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
@@ -106,7 +106,6 @@ module rt_parameters
   real(dp),dimension(1:MAXREGION)   ::rt_u_region=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_v_region=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_w_region=0.                         ! Photon flux
-  real(dp),dimension(1:MAXREGION)   ::rt_xion_region=0.  ! Xion state (square regions only)
 
    ! RT source regions parameters----------------------------------------------------------
   integer                           ::rt_nsource=0
@@ -123,13 +122,11 @@ module rt_parameters
   real(dp),dimension(1:MAXREGION)   ::rt_u_source=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_v_source=0.                         ! Photon flux
   real(dp),dimension(1:MAXREGION)   ::rt_w_source=0.                         ! Photon flux
-  real(dp),dimension(1:MAXREGION)   ::rt_wind_source=0.                     ! Stellar wind
 
   ! Indexing in flux_module
   integer,parameter::ifrt1=0                                                           ! 0
   integer,parameter::jfrt1=1-ndim/2                                               ! 0 or 1
   integer,parameter::kfrt1=1-ndim/3                                               ! 0 or 1
-
 
   ! Cooling statistics: avg loop # per cell, maximum loop #, # of cooling calls-----------
   logical::rt_output_coolstats=.false.    ! Output cooling statistics                     !
@@ -139,9 +136,6 @@ module rt_parameters
   ! SED statistics: Radiation emitted, total, last coarse step [#photons/10^50]-----------
   logical::showSEDstats=.true.
   real(dp)::tot_nPhot, step_nPhot, step_nStar, step_mStar
-
-  logical::inLastCoarseStep=.false.    ! .t. when doing last ilevel step in coarse step  !
-  logical::doDump = .false.
 
   integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 

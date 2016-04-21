@@ -10,10 +10,18 @@ subroutine init_time
   integer::i,Nmodel
   real(kind=8)::T2_sim  
 #ifdef grackle
-  integer:: iresult, initialize_grackle, UVbackground
+  integer:: iresult, initialize_grackle, comoving_coordinates=0, use_grackle=1, &
+     &     with_radiative_cooling=1, primordial_chemistry=0, &
+     &     metal_cooling=1, UVbackground=1, h2_on_dust=0, &
+     &     cmb_temperature_floor=1 
   real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  logical::file_exists
+#ifdef gracklefile !Add -Dgracklefile='/path/to/gracklefile' to Makefile, else use default table in grackle directory 
+  character(len=256)::grackle_data_file=gracklefile
+#else
+  character(len=256)::grackle_data_file="../grackle/input/CloudyData_UVB=HM2012.h5" !assumes grackle directory is one directory up
+#endif
+
 #endif
 
   if(nrestart==0)then
@@ -67,48 +75,22 @@ subroutine init_time
   ! Initialize cooling model
 
 #ifdef grackle
-  if(myid==1)write(*,*)'Grackle: Computing cooling model'
-  INQUIRE(FILE=grackle_data_file,EXIST=file_exists) 
-  if(.not.file_exists) then 
-     if(myid==1) write(*,*) TRIM(grackle_data_file)," not found"
-     call clean_stop
-  endif
-  UVbackground = grackle_UVbackground
-  if(cosmo) then
-     grackle_comoving_coordinates = 1
-     a_value = aexp
-     ! Reonization redshift has to be later than starting redshift
-     z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
-     ! Turn on UV background only after z_reion
-     if(1.D0/aexp-1.D0.lt.z_reion) then
-        UVbackground = 1
-        grackle_UVbackground_on = .true.
-     else
-        UVbackground = 0
-        grackle_UVbackground_on = .false.
-     endif
-     ! Approximate initial temperature
-     T2_start=1.356d-2/aexp_ini**2
-     if(nrestart==0)then
-        if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
-     end if
-  endif
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   density_units=scale_d
   length_units=scale_l
   time_units=scale_t
   velocity_units=scale_v
   ! Initialize the Grackle data
-   iresult = initialize_grackle(                                &
-     &     grackle_comoving_coordinates,                        &
-     &     density_units, length_units,                         &
-     &     time_units, velocity_units,                          &
-     &     a_units, a_value,                                    &
-     &     use_grackle, grackle_with_radiative_cooling,         &
-     &     TRIM(grackle_data_file),                             &
-     &     grackle_primordial_chemistry, grackle_metal_cooling, &
-     &     UVbackground, grackle_h2_on_dust,            &
-     &     grackle_cmb_temperature_floor, gamma) 
+   iresult = initialize_grackle(         &
+     &     comoving_coordinates,         &
+     &     density_units, length_units,  &
+     &     time_units, velocity_units,   &
+     &     a_units, a_value,             &
+     &     use_grackle, with_radiative_cooling, &
+     &     TRIM(grackle_data_file),            &
+     &     primordial_chemistry, metal_cooling, &
+     &     UVbackground, h2_on_dust,     &
+     &     cmb_temperature_floor, gamma) 
 #else
   if(cooling.and..not.(neq_chem.or.rt))then
      if(myid==1)write(*,*)'Computing cooling model'
@@ -131,7 +113,7 @@ subroutine init_time
         call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
-             & dble(aexp_ini),T2_sim)
+             & dble(1.0),T2_sim)
      endif
   end if
 #endif
@@ -157,7 +139,7 @@ subroutine init_time
         call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
-             & dble(aexp_ini),T2_sim)
+             & dble(1.0),T2_sim)
      endif
   end if
 #endif
@@ -169,9 +151,6 @@ subroutine init_file
   use hydro_commons
   use pm_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'  
-#endif
   !------------------------------------------------------
   ! Read geometrical parameters in the initial condition files.
   ! Initial conditions are supposed to be made by 
@@ -181,28 +160,14 @@ subroutine init_file
   real(sp)::dxini0,xoff10,xoff20,xoff30,astart0,omega_m0,omega_l0,h00
   character(LEN=80)::filename
   logical::ok
-  integer,parameter::tag=1116
-  integer::dummy_io,info2
-  
+
   if(verbose)write(*,*)'Entering init_file'
 
   ! Reading initial conditions parameters only
-
-
   nlevelmax_part=levelmin-1
   do ilevel=levelmin,nlevelmax
      if(initfile(ilevel).ne.' ')then
         filename=TRIM(initfile(ilevel))//'/ic_d'
-
-        ! Wait for the token
-#ifndef WITHOUTMPI
-        if(IOGROUPSIZE>0) then
-           if (mod(myid-1,IOGROUPSIZE)/=0) then
-              call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                   & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-           end if
-        endif
-#endif
         INQUIRE(file=filename,exist=ok)
         if(.not.ok)then
            if(myid==1)then
@@ -217,20 +182,6 @@ subroutine init_file
              & ,xoff10,xoff20,xoff30 &
              & ,astart0,omega_m0,omega_l0,h00
         close(10)
-
-        ! Send the token
-#ifndef WITHOUTMPI
-        if(IOGROUPSIZE>0) then
-           if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-              dummy_io=1
-              call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                   & MPI_COMM_WORLD,info2)
-           end if
-        endif
-#endif
-        
-
-
         dxini(ilevel)=dxini0
         xoff1(ilevel)=xoff10
         xoff2(ilevel)=xoff20
@@ -238,7 +189,6 @@ subroutine init_file
         nlevelmax_part=nlevelmax_part+1
      endif
   end do
-
 
   ! Check compatibility with run parameters
   nx_loc=icoarse_max-icoarse_min+1
@@ -282,11 +232,9 @@ subroutine init_cosmo
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
+  use dice_commons
 
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'  
-#endif
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
   ! in the initial condition files.
@@ -300,8 +248,6 @@ subroutine init_cosmo
   logical::ok
   TYPE(gadgetheadertype) :: gadgetheader 
   integer::i
-  integer,parameter::tag=1117
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -323,18 +269,6 @@ subroutine init_cosmo
            else
               filename=TRIM(initfile(ilevel))//'/ic_deltab'
            endif
- 
-           ! Wait for the token          
-#ifndef WITHOUTMPI
-           if(IOGROUPSIZE>0) then
-              if (mod(myid-1,IOGROUPSIZE)/=0) then
-                 call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                      & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-              end if
-           endif
-#endif
-           
-
            INQUIRE(file=filename,exist=ok)
            if(.not.ok)then
               if(myid==1)then
@@ -349,19 +283,6 @@ subroutine init_cosmo
                 & ,xoff10,xoff20,xoff30 &
                 & ,astart0,omega_m0,omega_l0,h00
            close(10)
-
-           ! Send the token
-#ifndef WITHOUTMPI
-           if(IOGROUPSIZE>0) then
-              if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-                 dummy_io=1
-                 call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                      & MPI_COMM_WORLD,info2)
-              end if
-           endif
-#endif
-
-
            dxini(ilevel)=dxini0
            xoff1(ilevel)=xoff10
            xoff2(ilevel)=xoff20
@@ -369,7 +290,8 @@ subroutine init_cosmo
            astart(ilevel)=astart0
            omega_m=omega_m0
            omega_l=omega_l0
-           if(hydro)omega_b=0.045
+           if(hydro)omega_b=0.0469388
+           !!!if(hydro)omega_b=0.045
            !!!if(hydro)omega_b=0.999999*omega_m
            h0=h00
            aexp=MIN(aexp,astart(ilevel))
@@ -436,6 +358,31 @@ subroutine init_cosmo
      xoff2(levelmin)=0
      xoff3(levelmin)=0
      dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+
+  CASE ('dice')
+     if (verbose) write(*,*)'Reading in gadget format from'//TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
+     call gadgetreadheader(TRIM(initfile(levelmin))//'/'//TRIM(ic_file), 0,gadgetheader, ok)
+     if(.not.ok) call clean_stop
+     if (gadgetheader%mass(2) == 0) then
+        write(*,*) 'Particles have different masses, not supported'
+        call clean_stop
+     endif
+     omega_m = gadgetheader%omega0
+     omega_l = gadgetheader%omegalambda
+     if(hydro)omega_b=0.0469388
+     h0 = gadgetheader%hubbleparam * 100.d0
+     boxlen_ini = gadgetheader%boxsize/1e3
+     aexp = gadgetheader%time
+     aexp_ini = aexp
+     ! Compute SPH equivalent mass (initial gas mass resolution)
+     mass_sph=omega_b/omega_m*0.5d0**(ndim*levelmin)
+     nlevelmax_part = levelmin
+     astart(levelmin) = aexp
+     xoff1(levelmin)=0
+     xoff2(levelmin)=0
+     xoff3(levelmin)=0
+     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+
 
   CASE DEFAULT
      write(*,*) 'Unsupported input format '//filetype
