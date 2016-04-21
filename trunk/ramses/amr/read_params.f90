@@ -226,9 +226,9 @@ subroutine read_params
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
-  if(clumpfind.and.(.not.pic))then
-     pic=.true.
-  endif
+  !if(clumpfind.and.(.not.pic))then
+  !   pic=.true.
+  !endif
   !if(pic.and.(.not.poisson))then
   !   poisson=.true.
   !endif
