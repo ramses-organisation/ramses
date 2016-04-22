@@ -104,6 +104,7 @@ subroutine phi_fine_cg(ilevel,icount)
           & MPI_COMM_WORLD,info)
      r2=r2_all
 #endif
+
      !====================================
      ! Compute beta factor
      !====================================
