@@ -338,6 +338,7 @@ program part2map
      read(1)ncpu2
      read(1)ndim2
      read(1)npart2
+     write(*,*)k,npart2
      read(1)
      read(1)
      read(1)

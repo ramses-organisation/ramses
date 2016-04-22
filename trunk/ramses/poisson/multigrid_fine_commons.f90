@@ -40,6 +40,7 @@ subroutine multigrid_fine(ilevel,icount)
 
    integer  :: ifine, i, iter, info, icpu
    real(kind=8) :: res_norm2, i_res_norm2, i_res_norm2_tot, res_norm2_tot
+   real(kind=8) :: debug_norm2, debug_norm2_tot
    real(kind=8) :: err, last_err
 
    logical :: allmasked, allmasked_tot
@@ -182,7 +183,6 @@ subroutine multigrid_fine(ilevel,icount)
       if(iter==1) then
          call cmp_residual_norm2_fine(ilevel,i_res_norm2)
 #ifndef WITHOUTMPI
-
          call MPI_ALLREDUCE(i_res_norm2,i_res_norm2_tot,1, &
                  & MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
          i_res_norm2=i_res_norm2_tot
@@ -232,7 +232,7 @@ subroutine multigrid_fine(ilevel,icount)
 #endif
 
       last_err = err
-      err = sqrt(res_norm2/i_res_norm2)
+      err = sqrt(res_norm2/(i_res_norm2+1d-20*rho_tot**2))
 
       ! Verbosity
       if(verbose) print '(A,I5,A,1pE10.3)','   ==> Step=', &
@@ -283,6 +283,7 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
    integer, intent(in) :: ifinelevel
    logical, intent(in) :: safe
 
+   real(dp) :: debug_norm2, debug_norm2_tot
    integer :: i, icpu, info, icycle, ncycle
 
    if(ifinelevel<=levelmin_mg) then
@@ -316,12 +317,12 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
       call cmp_residual_mg_coarse(ifinelevel)
       call make_virtual_mg_dp(3,ifinelevel)  ! Communicate residual
 
-
       ! First clear the rhs in coarser reception comms
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
          active_mg(icpu,ifinelevel-1)%u(:,2)=0.0d0
       end do
+
       ! Restrict and do reverse-comm
       call restrict_residual_coarse_reverse(ifinelevel)
       call make_reverse_mg_dp(2,ifinelevel-1) ! communicate rhs
@@ -350,7 +351,6 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
    end do
 
 end subroutine recursive_multigrid_coarse
-
 
 ! ########################################################################
 ! ########################################################################
