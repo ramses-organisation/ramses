@@ -232,7 +232,7 @@ subroutine multigrid_fine(ilevel,icount)
 #endif
 
       last_err = err
-      err = sqrt(res_norm2/(i_res_norm2+1d-20*rho_tot**))
+      err = sqrt(res_norm2/(i_res_norm2+1d-20*rho_tot**2))
 
       ! Verbosity
       if(verbose) print '(A,I5,A,1pE10.3)','   ==> Step=', &
