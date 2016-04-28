@@ -10,18 +10,10 @@ subroutine init_time
   integer::i,Nmodel
   real(kind=8)::T2_sim  
 #ifdef grackle
-  integer:: iresult, initialize_grackle, comoving_coordinates=0, use_grackle=1, &
-     &     with_radiative_cooling=1, primordial_chemistry=0, &
-     &     metal_cooling=1, UVbackground=1, h2_on_dust=0, &
-     &     cmb_temperature_floor=1 
+  integer:: iresult, initialize_grackle, UVbackground
   real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-#ifdef gracklefile !Add -Dgracklefile='/path/to/gracklefile' to Makefile, else use default table in grackle directory 
-  character(len=256)::grackle_data_file=gracklefile
-#else
-  character(len=256)::grackle_data_file="../grackle/input/CloudyData_UVB=HM2012.h5" !assumes grackle directory is one directory up
-#endif
-
+  logical::file_exists
 #endif
 
   if(nrestart==0)then
@@ -75,22 +67,48 @@ subroutine init_time
   ! Initialize cooling model
 
 #ifdef grackle
+  if(myid==1)write(*,*)'Grackle: Computing cooling model'
+  INQUIRE(FILE=grackle_data_file,EXIST=file_exists) 
+  if(.not.file_exists) then 
+     if(myid==1) write(*,*) TRIM(grackle_data_file)," not found"
+     call clean_stop
+  endif
+  UVbackground = grackle_UVbackground
+  if(cosmo) then
+     grackle_comoving_coordinates = 1
+     a_value = aexp
+     ! Reonization redshift has to be later than starting redshift
+     z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+     ! Turn on UV background only after z_reion
+     if(1.D0/aexp-1.D0.lt.z_reion) then
+        UVbackground = 1
+        grackle_UVbackground_on = .true.
+     else
+        UVbackground = 0
+        grackle_UVbackground_on = .false.
+     endif
+     ! Approximate initial temperature
+     T2_start=1.356d-2/aexp_ini**2
+     if(nrestart==0)then
+        if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
+     end if
+  endif
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   density_units=scale_d
   length_units=scale_l
   time_units=scale_t
   velocity_units=scale_v
   ! Initialize the Grackle data
-   iresult = initialize_grackle(         &
-     &     comoving_coordinates,         &
-     &     density_units, length_units,  &
-     &     time_units, velocity_units,   &
-     &     a_units, a_value,             &
-     &     use_grackle, with_radiative_cooling, &
-     &     TRIM(grackle_data_file),            &
-     &     primordial_chemistry, metal_cooling, &
-     &     UVbackground, h2_on_dust,     &
-     &     cmb_temperature_floor, gamma) 
+   iresult = initialize_grackle(                                &
+     &     grackle_comoving_coordinates,                        &
+     &     density_units, length_units,                         &
+     &     time_units, velocity_units,                          &
+     &     a_units, a_value,                                    &
+     &     use_grackle, grackle_with_radiative_cooling,         &
+     &     TRIM(grackle_data_file),                             &
+     &     grackle_primordial_chemistry, grackle_metal_cooling, &
+     &     UVbackground, grackle_h2_on_dust,            &
+     &     grackle_cmb_temperature_floor, gamma) 
 #else
   if(cooling.and..not.(neq_chem.or.rt))then
      if(myid==1)write(*,*)'Computing cooling model'
@@ -113,7 +131,7 @@ subroutine init_time
         call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
-             & dble(1.0),T2_sim)
+             & dble(aexp_ini),T2_sim)
      endif
   end if
 #endif
