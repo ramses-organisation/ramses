@@ -113,7 +113,7 @@ subroutine rho_fine(ilevel,icount)
            if(ivar_refine>0)then
               do i=1,active(ilevel)%ngrid
                  scalar=uold(active(ilevel)%igrid(i)+iskip,ivar_refine) &
-                      & /uold(active(ilevel)%igrid(i)+iskip,1)
+                      & /max(uold(active(ilevel)%igrid(i)+iskip,1),smallr) 
                  if(scalar>var_cut_refine)then
                     phi(active(ilevel)%igrid(i)+iskip)= &
                          & rho(active(ilevel)%igrid(i)+iskip)/d_scale
