@@ -10,13 +10,18 @@ SUBROUTINE rt_backup_hydro(filename)
   use rt_hydro_commons
   use rt_parameters
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   character(LEN=80)::filename,filedir,rt_filename
 
   integer::i,ivar,idim,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound
   integer,allocatable,dimension(:)::ind_grid
   real(dp),allocatable,dimension(:)::xdp
-  character(LEN=5)::nchar
+  character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::fileloc
+  integer,parameter::tag=1131
+  integer::dummy_io,info2
 !------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering backup_rt'
 
@@ -24,12 +29,27 @@ SUBROUTINE rt_backup_hydro(filename)
      
   if(myid==1)then
      call title(ifout-1,nchar)
-     filedir='output_'//TRIM(nchar)//'/'
+     if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+     else
+        filedir='output_'//TRIM(nchar)//'/'
+     endif
+     
      rt_filename=TRIM(filedir)//'info_rt_'//TRIM(nchar)//'.txt'
      call output_rtInfo(rt_filename)
   endif                                                           
   
   if(.not.rt)return
+ ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if (mod(myid-1,IOGROUPSIZE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
 
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -82,7 +102,18 @@ SUBROUTINE rt_backup_hydro(filename)
      end do
   end do
   close(ilun)
-     
+  
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZE>0) then
+     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+  
 end subroutine rt_backup_hydro
 
 !************************************************************************
@@ -172,7 +203,7 @@ SUBROUTINE write_group_props(update,lun)
 901 format ('  groupL0  [eV] =', 20f12.3)
 902 format ('  groupL1  [eV] =', 20f12.3)
 903 format ('  spec2group    =', 20I12)
-904 format ('  egy      [eV] =', 20f12.3)
+904 format ('  egy      [eV] =', 1pe12.3)
 905 format ('  csn    [cm^2] =', 20(1pe12.3))
 906 format ('  cse    [cm^2] =', 20(1pe12.3))
 907 format ('  ---Group',I2)
@@ -189,7 +220,7 @@ SUBROUTINE output_rt_stats
   use rt_parameters
   implicit none
   integer*8:: max_all, tot_all, cells_all,loopCodes_tot
-  integer*8:: loopCodes_all(5)
+  integer*8:: loopCodes_all(20)
   integer::info
   real(dp)::step_nPhot_all, step_nStar_all, step_mStar_all
   real(dp)::scale_l, scale_t, scale_d, scale_v, scale_nh, scale_T2
@@ -208,7 +239,7 @@ SUBROUTINE output_rt_stats
           MPI_INTEGER,          MPI_SUM, MPI_COMM_WORLD, info)
      call MPI_ALLREDUCE(max_cool_loopcnt,     max_all,       1, &
           MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
-     call MPI_ALLREDUCE(loopCodes,            loopCodes_all, 5, &
+     call MPI_ALLREDUCE(loopCodes,            loopCodes_all, 20, &
           MPI_INTEGER,          MPI_MAX, MPI_COMM_WORLD, info)
      n_cool_cells     = cells_all ; tot_cool_loopcnt = tot_all
      max_cool_loopcnt = max_all   ; loopCodes        = loopCodes_all
@@ -218,15 +249,15 @@ SUBROUTINE output_rt_stats
         write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt_advect
         loopCodes_tot = SUM(loopCodes)
         if(loopCodes_tot .gt. 0) then
-           write(*, 112) dble(loopCodes)/dble(loopCodes_tot)
+           write(*, 112) dble(loopCodes(1:7))/dble(loopCodes_tot)
         else
-           write(*, 112) dble(loopCodes)
+           write(*, 112) dble(loopCodes(1:7))
         endif
      endif
      max_cool_loopcnt=0; tot_cool_loopcnt=0; n_cool_cells=0; loopCodes(:)=0
   endif ! output_coolstats
 111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt_adv=',L)
-112 format(' Subcycling codes [Np, T, xHII, xe, xH2]% = ', 5(f7.3, ''))
+112 format(' Subcycling codes [Np, Fp, T, Npd, Td, xHII, xe, xH2]% = ', 8(f7.3, ''))
 
   ! Stellar rt feedback statistics:
   if(showSEDstats .and. rt_star) then
