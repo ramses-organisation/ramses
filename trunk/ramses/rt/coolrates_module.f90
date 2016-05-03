@@ -262,7 +262,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Collisional ionization rate [cm3 s-1] of HeI (Maselli&'03)------------
   tbl_beta_HeI%rates(iT)  = 2.38d-11 * sqrt(T) / f * exp(-285335.4d0/T)
   tbl_beta_HeI%primes(iT) = (hf+285335.4d0/T)                            &
-                          * log(10d0) * tbl_beta_HeI%primes(iT)
+                          * log(10d0) * tbl_beta_HeI%rates(iT)
 
   ! Collisional ionization rate [cm3 s-1] of HeII (Maselli&'03)-----------
   tbl_beta_HeII%rates(iT)  = 5.68d-12 * sqrt(T) / f * exp(-631515.d0/T)
@@ -310,7 +310,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
  
      tbl_cr_r_HeII%rates(iT)   = 3.d-14 * laHeII**0.654 * kb * T
-     tbl_cr_r_HeII%primes      = 0.346                                   &
+     tbl_cr_r_HeII%primes(iT)   = 0.346                                  &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
      f = 1.d0+(laHeIII/0.541)**0.502                      
