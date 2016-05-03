@@ -14,7 +14,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::ilevel,icount
+  integer::ilevel,icount,ilev
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -313,7 +313,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('sinks','start')
      call grow_sink(ilevel,.false.)
   end if
-  
+
   !-----------
   ! Hydro step
   !-----------
@@ -356,7 +356,6 @@ recursive subroutine amr_step(ilevel,icount)
 
   endif
 
-  
   !---------------------
   ! Do RT/Chemistry step
   !---------------------
