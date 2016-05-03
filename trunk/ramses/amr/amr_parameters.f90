@@ -158,6 +158,18 @@ module amr_parameters
   logical ::use_proper_time=.false.
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
+#ifdef grackle
+  integer::grackle_comoving_coordinates=0
+  integer::use_grackle=1
+  integer::grackle_with_radiative_cooling=1
+  integer::grackle_primordial_chemistry=0
+  integer::grackle_metal_cooling=1
+  integer::grackle_h2_on_dust=0
+  integer::grackle_cmb_temperature_floor=1 
+  integer::grackle_UVbackground=1
+  logical::grackle_UVbackground_on=.false.
+  character(len=256)::grackle_data_file
+#endif
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
@@ -169,6 +181,7 @@ module amr_parameters
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
+  logical::zoom_only=.false.
   integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
   integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0

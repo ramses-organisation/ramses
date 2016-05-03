@@ -12,6 +12,11 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   integer::ncache,i,igrid,ngrid,info
   integer,dimension(1:nvector),save::ind_grid
+#ifdef grackle
+  integer:: iresult, initialize_grackle
+  real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -31,6 +36,27 @@ subroutine cooling_fine(ilevel)
      if(myid==1)write(*,*)'Computing new cooling table'
 #ifdef grackle
      ! Compute new cooling table at current aexp with grackle
+     if((1.D0/aexp-1.D0.lt.z_reion).and.(grackle_UVbackground.eq.1).and.(.not.grackle_UVbackground_on)) then
+        if(myid==1)write(*,*)'Grackle: Activating UV background'
+        grackle_UVbackground_on = .true.
+        a_value = aexp
+        call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+        density_units=scale_d
+        length_units=scale_l
+        time_units=scale_t
+        velocity_units=scale_v
+        ! Initialize the Grackle data
+         iresult = initialize_grackle(                                &
+           &     grackle_comoving_coordinates,                        &
+           &     density_units, length_units,                         &
+           &     time_units, velocity_units,                          &
+           &     a_units, a_value,                                    &
+           &     use_grackle, grackle_with_radiative_cooling,         &
+           &     TRIM(grackle_data_file),                             &
+           &     grackle_primordial_chemistry, grackle_metal_cooling, &
+           &     grackle_UVbackground, grackle_h2_on_dust,            &
+           &     grackle_cmb_temperature_floor, gamma) 
+     endif
 #else
      call set_table(dble(aexp))
 #endif
@@ -91,9 +117,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   &     gr_x_velocity(nvector), gr_y_velocity(nvector), &
   &     gr_z_velocity(nvector), gr_metal_density(nvector), & 
   &     gr_poly(nvector), gr_floor(nvector)
-  integer::iresult, solve_chemistry_table, gr_rank,comoving_coordinates=0
+  integer::iresult, solve_chemistry_table, gr_rank
   integer,dimension(1:3)::gr_dimension,gr_start,gr_end
   real(dp)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0,gr_dt
+  if(cosmo) then
+     a_value=aexp
+  endif
 #endif
 
   ! Mesh spacing in that level
@@ -362,6 +391,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! grackle tabular cooling
 #ifdef grackle
+     if(cosmo) then
+        a_value=aexp
+     endif
      gr_rank = 3
      do i = 1, gr_rank
         gr_dimension(i) = 1
@@ -386,23 +418,23 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
         gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
         gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
-	gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
-	gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+        gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+        gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
         gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
-	gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
+        gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
         gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
      enddo
 
      gr_dt = dtnew(ilevel)
     
-     iresult = solve_chemistry_table(   &
-     &     comoving_coordinates,  &
-     &     density_units, length_units, &
-     &     time_units, velocity_units, &
-     &     a_units, a_value, gr_dt, &
-     &     gr_rank, gr_dimension, &
-     &     gr_start, gr_end, &
-     &     gr_density, gr_energy, &
+     iresult = solve_chemistry_table(    &
+     &     grackle_comoving_coordinates, &
+     &     density_units, length_units,  &
+     &     time_units, velocity_units,   &
+     &     a_units, a_value, gr_dt,      &
+     &     gr_rank, gr_dimension,        &
+     &     gr_start, gr_end,             &
+     &     gr_density, gr_energy,        &
      &     gr_x_velocity, gr_y_velocity, gr_z_velocity, &
      &     gr_metal_density)
 

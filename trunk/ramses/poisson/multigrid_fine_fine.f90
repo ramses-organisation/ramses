@@ -252,7 +252,7 @@ subroutine cmp_residual_norm2_fine(ilevel, norm2)
    integer  :: igrid_amr, icell_amr, iskip_amr
 
    ! Set constants
-   dx2  = (0.5d0**ilevel)**2
+   dx2  = (0.5d0**ilevel)**ndim
    ngrid=active(ilevel)%ngrid
 
    norm2 = 0.0d0
@@ -272,6 +272,45 @@ subroutine cmp_residual_norm2_fine(ilevel, norm2)
    norm2 = dx2*norm2
 
 end subroutine cmp_residual_norm2_fine
+
+subroutine cmp_ivar_norm2_fine(ilevel, ivar, norm2)
+   use amr_commons
+   use poisson_commons
+   implicit none
+
+   integer,  intent(in)  :: ilevel, ivar
+   real(kind=8), intent(out) :: norm2
+
+   real(kind=8) :: dx2
+   integer  :: ngrid
+   integer  :: ind, igrid_mg
+   integer  :: igrid_amr, icell_amr, iskip_amr
+
+   ! Set constants
+   dx2  = (0.5d0**ilevel)**ndim
+   ngrid=active(ilevel)%ngrid
+
+   norm2 = 0.0d0
+   ! Loop over cells
+   do ind=1,twotondim
+      iskip_amr = ncoarse+(ind-1)*ngridmax
+      ! Loop over active grids
+      do igrid_mg=1,ngrid
+         igrid_amr = active(ilevel)%igrid(igrid_mg)
+         icell_amr = iskip_amr + igrid_amr
+         if(f(icell_amr,3)<=0.0) then      ! Do not count masked cells
+            cycle
+         end if
+         if(ivar>0)then
+            norm2 = norm2 + f(icell_amr,ivar)**2
+         else
+            norm2 = norm2 + phi(icell_amr)**2
+         endif
+      end do
+   end do
+   norm2 = dx2*norm2
+
+end subroutine cmp_ivar_norm2_fine
 
 ! ------------------------------------------------------------------------
 ! Gauss-Seidel smoothing

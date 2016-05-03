@@ -255,7 +255,7 @@ subroutine update_time(ilevel)
            ! Output mass and energy conservation to screen
            !----------------------------------------------
            if(cooling.or.pressure_fix)then
-              write(*,778)nstep_coarse,econs,epot_tot,ekin_tot,eint_tot
+              write(*,778)nstep_coarse,mcons,econs,epot_tot,ekin_tot,eint_tot
            else
               write(*,777)nstep_coarse,mcons,econs,epot_tot,ekin_tot
            end if
@@ -335,7 +335,7 @@ subroutine update_time(ilevel)
 
 777 format(' Main step=',i6,' mcons=',1pe9.2,' econs=',1pe9.2, &
          & ' epot=',1pe9.2,' ekin=',1pe9.2)
-778 format(' Main step=',i6,' econs=',1pe9.2, &
+778 format(' Main step=',i6,' mcons=',1pe9.2,' econs=',1pe9.2, &
          & ' epot=',1pe9.2,' ekin=',1pe9.2,' eint=',1pe9.2)
 888 format(' Fine step=',i6,' t=',1pe12.5,' dt=',1pe10.3, &
          & ' a=',1pe10.3,' mem=',0pF4.1,'% ',0pF4.1,'%')

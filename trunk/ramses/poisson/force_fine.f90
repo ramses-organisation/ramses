@@ -185,7 +185,7 @@ subroutine force_fine(ilevel,icount)
 #endif
      epot_tot=epot_tot+epot_loc
      rho_max(ilevel)=rho_loc
-  
+
 111 format('   Entering force_fine for level ',I2)
 
 end subroutine force_fine
