@@ -594,11 +594,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            tau = nH(i) * Zsolar(i) * unit_tau * kScIR                  
            f_trap = 0d0             ! Fraction IR photons that are trapped
            if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0) 
-           ! Update freeflowing photon density, trapped photon density,
-           ! and total energy density:
+           ! Update streaming photons, trapped photons, and tot energy:
            rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
-           EIR_trapped = f_trap * NIRtot * Np2Ep    ! Trapped phot density
-           ! Update total energy due to change in trapped photon energy:
+           rtuold(il,iNp+1:iNp+ndim) = &            ! Limit streaming flux
+                                  rtuold(il,iNp+1:iNp+ndim) * (1d0-f_trap)
+           EIR_trapped = max(0d0, NIRtot-rtuold(il,iNp)) * Np2Ep ! Trapped
+           ! Update tot energy due to change in trapped radiation energy:
            uold(il,ndim+2)=uold(il,ndim+2)-uold(il,iIRtrapVar)+EIR_trapped
            ! Update the trapped photon energy:
            uold(il,iIRtrapVar) = EIR_trapped
