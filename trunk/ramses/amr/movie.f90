@@ -204,7 +204,11 @@ subroutine output_frame()
   allocate(dens(1:nw_frame,1:nh_frame))
   allocate(vol(1:nw_frame,1:nh_frame))
   data_frame=0d0
-  dens=smallr
+  if(cosmo) then
+    dens=0.0
+  else
+    dens=smallr
+  endif
   vol=0d0
   dx_frame=delx/dble(nw_frame)
   dy_frame=dely/dble(nh_frame)
