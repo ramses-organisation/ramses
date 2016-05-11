@@ -44,10 +44,10 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   implicit none
   integer::ngrid
   integer,dimension(1:nvector)::ind_grid
-  integer::i, ind, iskip, idim, nleaf
+  integer::i, ind, iskip, idim, irad, nleaf
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   integer,dimension(1:nvector),save::ind_cell, ind_leaf
-  real(dp)::nH, T2, ekk, x, mu, Zsolar
+  real(dp)::nH, T2, ekk, err, x, mu, Zsolar
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
 !-------------------------------------------------------------------------
@@ -82,7 +82,13 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         do idim=1,ndim
            ekk = ekk+0.5*uold(ind_leaf(i),idim+1)**2/nH
         end do
-        T2 = (gamma-1.0)*(T2-ekk)              !     Gamma is ad. exponent
+        err = 0.0d0
+#if NENER>0
+        do irad=1,nener
+           err = err+uold(ind_leaf(i),ndim+2+irad)
+        end do
+#endif
+        T2 = (gamma-1.0)*(T2-ekk-err)          !     Gamma is ad. exponent
         ! now T2 is pressure (in user units)   !    (relates p and energy)
         ! Compute T2=T/mu in Kelvin from pressure:
         T2 = T2/nH*scale_T2                    !        Ideal gas equation
@@ -93,10 +99,10 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 
         ! UPDATE IONIZATION STATES
         if(isH2) then ! For now, assume zero H2 at initialization
-           x = nSpec(3)/(2.*nSpec(2)+nSpec(3)+nspec(4))               !    HI fraction
+           x = nSpec(3)/(2.*nSpec(2)+nSpec(3)+nspec(4))     !  HI fraction
            uold(ind_leaf(i),iIons-1+ixHI) = x*uold(ind_leaf(i),1)
         endif
-        x = nSpec(4)/(2.*nSpec(2)+nSpec(3)+nspec(4))                  !   HII fraction
+        x = nSpec(4)/(2.*nSpec(2)+nSpec(3)+nspec(4))        ! HII fraction
         uold(ind_leaf(i),iIons-1+ixHII) = x*uold(ind_leaf(i),1)
         if(Y .gt. 0.d0 .and. isHe) then
            x = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7))      !  HeII fraction
@@ -128,9 +134,9 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp),dimension(nvar)::vars
   real(dp),dimension(nrtvar)::rtvars
   real(dp),dimension(nIons)::xion
-  integer::ip, iI, idim
+  integer::ip, iI, idim, irad
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, mu, Zsolar
+  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, err, mu, Zsolar, ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
 !-------------------------------------------------------------------------
@@ -158,21 +164,30 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   do idim=1,ndim
      ekk = ekk+0.5*vars(idim+1)**2/nH
   end do
-  T2 = (gamma-1.0)*(T2-ekk)                 !        Gamma is ad. exponent
+  err = 0.0d0
+#if NENER>0
+  do irad=1,nener
+     err = err+vars(ndim+2+irad)
+  end do
+#endif
+  T2 = (gamma-1.0)*(T2-ekk-err)             !        Gamma is ad. exponent
                                             !      now T2 is pressure [UU]
   T2 = T2/nH*scale_T2                       !                T/mu [Kelvin]
   nH = nH*scale_nH                          !        Number density [H/cc]
 
-
-  if(rt_UV_hom .and. nH .lt. rt_UV_nHSS) &  !   UV backgr. photoionization
-       phI_rates = phI_rates + UVrates(:,1)
-
+  ! UV background photoionization:
+  ss_factor = 1d0
+  if(self_shielding) ss_factor = exp(-nH/1d-2)
+  if(haardt_madau) phI_rates = phI_rates + UVrates(:,1) * ss_factor
+       
   call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec, Zsolar)
-  if(isH2) xion(ixHI)=nSpec(3)/(2.*nSpec(2)+nSpec(3)+nSpec(4))!    HI fraction
-  xion(ixHII)=nSpec(4)/(2.*nSpec(2)+nSpec(3)+nSpec(4))        !   HII fraction
+
+  if(isH2) xion(ixHI)=nSpec(3)/(2.*nSpec(2)+nSpec(3)+nSpec(4))!    HI frac
+  xion(ixHII)=nSpec(4)/(2.*nSpec(2)+nSpec(3)+nSpec(4))        !   HII frac
   if(Y .gt. 0.d0 .and. isHe) then
      xion(ixHeII) = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7)) !  HeII fraction
      xion(ixHeIII) = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))! HeIII fraction
+
   endif
 
 END SUBROUTINE calc_equilibrium_xion
