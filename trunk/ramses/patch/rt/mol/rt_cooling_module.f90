@@ -339,7 +339,7 @@ contains
     real(dp),save:: mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta
     real(dp):: xHI=0d0, xH2=0d0, xHeI=0d0
     real(dp),save:: s, jac, q, Crate, dCdT2, X_nHkb, rate, dRate, cr, de
-    real(dp),save:: photoRate, metal_tot,metal_prime, ss_factor
+    real(dp),save:: photoRate, metal_tot, metal_prime, ss_factor, f_dust
     integer,save:: iion,igroup,idim
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
     real(dp),dimension(nGroups),save:: dustSc, kAbs_loc,kSc_loc
@@ -359,7 +359,7 @@ contains
     xHI = 1d0-dxion(ixHII)       ! need in case of .not. isH2
     if(isH2) xHI = dxion(ixHI)
     if(isH2) xH2 = MAX(1.-dxion(ixHI)-dxion(ixHII),0.d0)/2.
-!    ! Helium chemistry
+    ! Helium chemistry
     if(isHe) xHeI = MAX(1.-dxion(ixHeII)-dxion(ixHeIII),0.d0)
     ! nN='neutral' species (pre-ionized)
     nN=0d0
@@ -383,7 +383,6 @@ contains
     fracMax=0d0   ! Max fractional update, to check if dt can be increased
     ss_factor=1d0                    ! UV background self_shielding factor
     if(self_shielding) ss_factor = exp(-nH(icell)/1d-2)
-
     rho = nH(icell) / X * mH
 #if NGROUPS>0 
     ! Set dust opacities--------------------------------------------------
@@ -401,8 +400,9 @@ contains
           kSc_loc(iIR)  = kappaSc(iIR)  * (TK/10d0)**2
        endif
        ! Set dust absorption and scattering rates [s-1]:
-       dustAbs(:)  = kAbs_loc(:) *rho*Zsolar(icell)*rt_c_cgs
-       dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar(icell)*rt_c_cgs
+       f_dust = (1.-dxion(ixHII))                 ! No dust in ionised gas
+       dustAbs(:)  = kAbs_loc(:) *rho*Zsolar(icell)*f_dust*rt_c_cgs
+       dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar(icell)*f_dust*rt_c_cgs
     endif
 
     !(i) UPDATE PHOTON DENSITY AND FLUX **********************************
