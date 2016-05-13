@@ -13,7 +13,7 @@ subroutine rt_init_hydro
   include 'mpif.h'
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
-  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
+  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info,nGroups2
   integer::ncpu2,ndim2,nlevelmax2,nboundary2,idim
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
@@ -91,11 +91,13 @@ subroutine rt_init_hydro
   read(ilun)nlevelmax2
   read(ilun)nboundary2
   read(ilun)gamma2
-  if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables 
+  ! Allowing for radiation groups to be both added and removed
+  nGroups2=nrtvar2/4 ! Number of groups in output
+  if(nrtvar2.ne.nrtvar .and. myid==1)then
      write(*,*)'File rt.tmp is not compatible (1)'
      write(*,*)'Found nrtvar  =',nrtvar2
-     write(*,*)'Expected=',nrtvar
-     call clean_stop
+     write(*,*)'Expected=',nrtvar     
+     write(*,*)'Continuing regardless, but BE WARNED!'
   end if
   do ilevel=1,nlevelmax2
      do ibound=1,nboundary+ncpu
@@ -126,15 +128,18 @@ subroutine rt_init_hydro
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
               ! Loop over RT variables
-              do ivar=1,nGroups
+              do ivar=1,nGroups2
                  ! Read photon density in flux units
                  read(ilun)xx
-                 do i=1,ncache
-                    rtuold(ind_grid(i)+iskip,iGroups(ivar))=xx(i)/rt_c
-                 end do
+                 if(ivar.le.nGroups) then ! Can read into photon group var
+                    do i=1,ncache
+                       rtuold(ind_grid(i)+iskip,iGroups(ivar))=xx(i)/rt_c
+                    end do
+                 endif
                  ! Read photon flux
                  do idim=1,ndim
                     read(ilun)xx
+                    if(ivar.gt.nGroups) cycle !  Can't read into group var
                     do i=1,ncache
                        rtuold(ind_grid(i)+iskip,iGroups(ivar)+idim)=xx(i)
                     end do
