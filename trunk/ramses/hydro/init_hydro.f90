@@ -170,7 +170,7 @@ subroutine init_hydro
                  end do
 #if NVAR>NDIM+2+NENER
                  ! Read passive scalars
-                 do ivar=ndim+3+nener,nvar2
+                 do ivar=ndim+3+nener,nvar
                     read(ilun)xx
                     do i=1,ncache
                        uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
