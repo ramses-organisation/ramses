@@ -88,7 +88,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         emag = 0.0d0
 #ifdef SOLVERmhd
         do idim=1,ndim
-           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+           emag=emag+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
         end do
 #endif
         T2 = (gamma-1.0)*(T2-ekk-err-emag)     !     Gamma is ad. exponent
@@ -170,7 +170,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   emag = 0.0d0
 #ifdef SOLVERmhd
   do idim=1,ndim
-     emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+     emag=emag+0.125d0*(vars(idim+ndim+2)+vars(idim+nvar))**2
   end do
 #endif
   T2 = (gamma-1.0)*(T2-ekk-err-emag)        !        Gamma is ad. exponent
