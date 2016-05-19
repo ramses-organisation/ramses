@@ -100,7 +100,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
   integer::ii,ig,iNp,il
   real(kind=8),dimension(1:nvector),save:: ekk_new
-  real(kind=8),dimension(1:nvector),save:: emag_new
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp)::scale_Np,scale_Fp,work,Npc,fred,Npnew, kScIR, EIR, TR
   real(dp),dimension(1:ndim)::Fpnew
