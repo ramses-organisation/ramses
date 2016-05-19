@@ -21,7 +21,6 @@ MODULE coolrates_module
   ! Default cooling rates table parameters
   integer,parameter     :: nbinT  = 1001
   real(dp),parameter    :: Tmin   = 1d-2
-  real(dp),parameter    :: Tmax   = 1d+9
   real(dp)              :: dlogTinv ! Inverse of the bin space (in K)
   real(dp)              :: hTable, h2Table, h3Table   ! Interpol constants
   real(dp)              :: one_over_lnTen, one_over_hTable, one_over_h2Table

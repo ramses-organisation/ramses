@@ -4,7 +4,7 @@
 
 module rt_cooling_module
   use amr_commons,only:myid  
-  use cooling_module,only:X, Y
+  use cooling_module,only:X, Y, Tmax
   use rt_parameters
   use coolrates_module
   implicit none

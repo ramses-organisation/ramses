@@ -51,7 +51,9 @@ module cooling_module
   real(kind=8),parameter:: nH_max_fix=1.d+6
   real(kind=8),parameter:: T2_min_fix=1.d-2
   real(kind=8),parameter:: T2_max_fix=1.d+9
-  
+
+  real(dp)              :: Tmax   = T2_max_fix
+
   type cooling_table
      integer::n1
      integer::n2

@@ -1,6 +1,7 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use cooling_module,only: Tmax
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -41,7 +42,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
-       & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling &
+       & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling,Tmax &
        & ,self_shielding,smbh,agn &
        & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne
 #ifdef grackle
