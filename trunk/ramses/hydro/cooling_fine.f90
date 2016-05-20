@@ -92,7 +92,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err
+  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -276,7 +276,17 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
 #endif
      do i=1,nleaf
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i))
+        emag(i)=0.0d0
+     end do
+#ifdef SOLVERmhd
+     do idim=1,ndim
+        do i=1,nleaf
+           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+        end do
+     end do
+#endif
+     do i=1,nleaf
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i)-emag(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
@@ -326,7 +336,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(cooling)then
         ! Compute thermal temperature by subtracting polytrope
         do i=1,nleaf
-           T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),1d9)
+           T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),T2max)
         end do
      endif
 
@@ -534,11 +544,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Update total fluid energy
      if(isothermal)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i)
+           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do
      else if(cooling .or. neq_chem)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i)
+           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i) + emag(i)
         end do
      endif
 
