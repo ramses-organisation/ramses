@@ -72,6 +72,7 @@ end subroutine cooling_fine
 subroutine coolfine1(ind_grid,ngrid,ilevel)
   use amr_commons
   use hydro_commons
+  use hydro_parameters
   use cooling_module
 #ifdef ATON
   use radiation_commons, ONLY: Erad
