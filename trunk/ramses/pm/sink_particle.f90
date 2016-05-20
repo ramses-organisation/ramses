@@ -531,8 +531,8 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
         e=e-0.5*d*(u*u+v*v+w*w)
 #if NENER>0
-        do irad=1,nener
-           e=e-fluid_var(j,5+irad)
+        do irad=0,nener-1
+           e=e-fluid_var(j,inener+irad)
         end do
 #endif
         egas(j)=e
@@ -874,8 +874,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            v2=(vv(1)**2+vv(2)**2+vv(3)**2)
            e=e-0.5d0*d*v2
 #if NENER>0
-           do irad=1,nener
-              e=e-uold(indp(j,ind),5+irad)
+           do irad=0,nener-1
+              e=e-uold(indp(j,ind),inener+irad)
            end do
 #endif
            e=e/d
@@ -1003,8 +1003,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 #endif
               e=e+0.5d0*d*v2
 #if NENER>0
-              do irad=1,nener
-                 e=e+uold(indp(j,ind),5+irad)
+              do irad=0,nener-1
+                 e=e+uold(indp(j,ind),inener+irad)
               end do
 #endif
               uold(indp(j,ind),1)=d
@@ -1658,8 +1658,8 @@ subroutine make_sink_from_clump(ilevel)
               v2=(u**2+v**2+w**2)
               e=e-0.5d0*d*v2
 #if NENER>0
-              do irad=1,nener
-                 e=e-uold(ind_cell_new(i),5+irad)
+              do irad=0,nener-1
+                 e=e-uold(ind_cell_new(i),inener+irad)
               end do
 #endif             
               e=e/d
@@ -1719,8 +1719,8 @@ subroutine make_sink_from_clump(ilevel)
 #endif
               e=e+0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
-              do irad=1,nener
-                 e=e+uold(ind_cell_new(i),5+irad)
+              do irad=0,nener-1
+                 e=e+uold(ind_cell_new(i),inener+irad)
               end do
 #endif              
               uold(ind_cell_new(i),1)=d

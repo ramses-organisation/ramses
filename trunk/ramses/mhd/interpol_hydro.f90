@@ -378,9 +378,9 @@ subroutine upl(ind_cell,ncell)
         ! Compute child radiative energy
         erad(1:ncell)=0.0d0
 #if NENER>0
-        do irad=1,nener
+        do irad=0,nener-1
            do i=1,ncell
-              erad(i)=erad(i)+uold(ind_cell_son(i),8+irad)
+              erad(i)=erad(i)+uold(ind_cell_son(i),inener+irad)
            end do
         end do
 #endif
@@ -410,9 +410,9 @@ subroutine upl(ind_cell,ncell)
      ! Compute new radiative energy
      erad(1:ncell)=0.0d0
 #if NENER>0
-     do irad=1,nener
+     do irad=0,nener-1
         do i=1,ncell
-           erad(i)=erad(i)+uold(ind_cell(i),8+irad)
+           erad(i)=erad(i)+uold(ind_cell(i),inener+irad)
         end do
      end do
 #endif
@@ -582,9 +582,9 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
         end do
         erad(1:nn)=0.0d0
 #if NENER>0
-        do irad=1,nener
+        do irad=0,nener-1
            do i=1,nn
-              erad(i)=erad(i)+u1(i,j,8+irad)
+              erad(i)=erad(i)+u1(i,j,inener+irad)
            end do
         end do
 #endif
@@ -692,9 +692,9 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
         end do
         erad(1:nn)=0.0d0
 #if NENER>0
-        do irad=1,nener
+        do irad=0,nener-1
            do i=1,nn
-              erad(i)=erad(i)+u2(i,ind,8+irad)
+              erad(i)=erad(i)+u2(i,ind,inener+irad)
            end do
         end do
 #endif

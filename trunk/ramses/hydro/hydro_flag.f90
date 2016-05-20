@@ -201,8 +201,8 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      etherm = etherm - 0.5d0*uold(indi,4)**2/dens
 #endif
 #if NENER>0
-     do irad=1,nener
-        etherm=etherm-uold(indi,ndim+2+irad)
+     do irad=0,nener-1
+        etherm=etherm-uold(indi,inener+irad)
      end do
 #endif
      ! the temperature

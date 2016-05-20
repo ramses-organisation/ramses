@@ -40,9 +40,9 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #if NENER>0
-  do irad = 1,nener
+  do irad = 0,nener-1
      do k = 1, ncell
-        uu(k,5) = uu(k,5)-uu(k,8+irad)
+        uu(k,5) = uu(k,5)-uu(k,inener+irad)
      end do
   end do
 #endif
@@ -53,9 +53,9 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      a2(k)=gamma*uu(k,5)/uu(k,1)
   end do
 #if NENER>0
-  do irad = 1,nener
+  do irad = 0,nener-1
      do k = 1, ncell
-        a2(k) = a2(k) + gamma_rad(irad)*(gamma_rad(irad)-1.0d0)*uu(k,8+irad)/uu(k,1)
+        a2(k) = a2(k) + gamma_rad(irad+1)*(gamma_rad(irad+1)-1.0d0)*uu(k,inener+irad)/uu(k,1)
      end do
   end do
 #endif  
@@ -165,11 +165,11 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
      end do
   end do
 #if NENER>0
-  do irad = 1,nener
+  do irad = 0,nener-1
      do k = 1, nn
-        eking(k) = eking(k) + ug(k,8+irad)
-        ekinm(k) = ekinm(k) + um(k,8+irad)
-        ekind(k) = ekind(k) + ud(k,8+irad)
+        eking(k) = eking(k) + ug(k,inener+irad)
+        ekinm(k) = ekinm(k) + um(k,inener+irad)
+        ekind(k) = ekind(k) + ud(k,inener+irad)
      end do
   end do
 #endif
@@ -460,10 +460,10 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   Ptotl = Pl + emagl
   vdotBl= ul*A+vl*Bl+wl*cl
 #if NENER>0
-  do irad = 1,nener
-     eradl(irad) = qleft(8+irad)/(gamma_rad(irad)-1.0d0)
-     etotl = etotl + eradl(irad)
-     Ptotl = Ptotl + qleft(8+irad)
+  do irad = 0,nener-1
+     eradl(irad+1) = qleft(inener+irad)/(gamma_rad(irad+1)-1.0d0)
+     etotl = etotl + eradl(irad+1)
+     Ptotl = Ptotl + qleft(inener+irad)
   end do
 #endif
   eintl=Pl*entho
@@ -477,10 +477,10 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   Ptotr = Pr + emagr
   vdotBr= ur*A+vr*Br+wr*Cr
 #if NENER>0
-  do irad = 1,nener
-     eradr(irad) = qright(8+irad)/(gamma_rad(irad)-1.0d0)
-     etotr = etotr + eradr(irad)
-     Ptotr = Ptotr + qright(8+irad)
+  do irad = 0,nener-1
+     eradr(irad+1) = qright(inener+irad)/(gamma_rad(irad+1)-1.0d0)
+     etotr = etotr + eradr(irad+1)
+     Ptotr = Ptotr + qright(inener+irad)
   end do
 #endif
   eintr=Pr*entho
@@ -675,8 +675,8 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   fgdnv(7) = ro*uo*wo-A*Co
   fgdnv(8) = Co*uo-A*wo
 #if NENER>0
-  do irad = 1,nener
-     fgdnv(8+irad) = uo*erado(irad)
+  do irad = 0,nener-1
+     fgdnv(inener+irad) = uo*erado(irad+1)
   end do
 #endif
 #if NVAR>8+NENER
@@ -718,9 +718,9 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   etot = P*entho+ecin+emag
   Ptot = P + emag
 #if NENER>0
-  do irad = 1,nener
-     etot    = etot + qvar(8+irad)/(gamma_rad(irad)-one)
-     Ptot    = Ptot + qvar(8+irad)
+  do irad = 0,nener-1
+     etot    = etot + qvar(inener+irad)/(gamma_rad(irad+1)-one)
+     Ptot    = Ptot + qvar(inener+irad)
   end do
 #endif
   
@@ -734,8 +734,8 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   cvar(7) = d*w
   cvar(8) = C
 #if NENER>0
-  do irad = 1,nener
-     cvar(8+irad) = qvar(8+irad)/(gamma_rad(irad)-one)
+  do irad = 0,nener-1
+     cvar(inener+irad) = qvar(inener+irad)/(gamma_rad(irad+1)-one)
   end do
 #endif
 #if NVAR>8+NENER
@@ -756,8 +756,8 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   ff(7) = d*u*w-A*C
   ff(8) = C*u-A*w
 #if NENER>0
-  do irad = 1,nener
-     ff(8+irad) = u*cvar(8+irad)
+  do irad = 0,nener-1
+     ff(inener+irad) = u*cvar(inener+irad)
   end do
 #endif
 #if NVAR>8+NENER
@@ -793,8 +793,8 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
 #if NENER>0
-  do irad = 1,nener
-     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  do irad = 0,nener-1
+     c2 = c2 + gamma_rad(irad+1)*qvar(inener+irad)/d
   end do
 #endif
   
@@ -826,8 +826,8 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
 #if NENER>0
-  do irad = 1,nener
-     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  do irad = 0,nener-1
+     c2 = c2 + gamma_rad(irad+1)*qvar(inener+irad)/d
   end do
 #endif
   d2 = half*(B2/d+c2)

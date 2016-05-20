@@ -56,9 +56,9 @@ subroutine condinit(x,u,dx,nn)
 #if NENER>0
   ! radiative pressure -> radiative energy
   ! radiative energy -> total fluid energy
-  do ivar=1,nener
-     u(1:nn,ndim+2+ivar)=q(1:nn,ndim+2+ivar)/(gamma_rad(ivar)-1.0d0)
-     u(1:nn,ndim+2)=u(1:nn,ndim+2)+u(1:nn,ndim+2+ivar)
+  do ivar=0,nener-1
+     u(1:nn,inener+ivar)=q(1:nn,inener+ivar)/(gamma_rad(ivar+1)-1.0d0)
+     u(1:nn,ndim+2)=u(1:nn,ndim+2)+u(1:nn,inener+ivar)
   enddo
 #endif
 #if NVAR>NDIM+2+NENER

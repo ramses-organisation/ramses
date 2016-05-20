@@ -139,10 +139,10 @@ subroutine init_hydro
 
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
-                 do ivar=ndim+3,ndim+2+nener
+                 do ivar=0,nener-1
                     read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-ndim-2)-1d0)
+                       uold(ind_grid(i)+iskip,ivar+inener)=xx(i)/(gamma_rad(ivar+1)-1d0)
                     end do
                  end do
 #endif
@@ -159,8 +159,8 @@ subroutine init_hydro
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
 #if NENER>0
-                    do irad=1,nener
-                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,ndim+2+irad)
+                    do irad=0,nener-1
+                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,inener+irad)
                     end do
 #endif
                  else
@@ -170,7 +170,7 @@ subroutine init_hydro
                  end do
 #if NVAR>NDIM+2+NENER
                  ! Read passive scalars
-                 do ivar=ndim+3+nener,min(nvar,nvar2)
+                 do ivar=inener+nener,min(nvar,nvar2)
                     read(ilun)xx
                     do i=1,ncache
                        uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
