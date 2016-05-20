@@ -13,6 +13,7 @@ recursive subroutine amr_step(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::mpi_err
 #endif
   integer::ilevel,icount,ilev
   !-------------------------------------------------------------------!
@@ -21,7 +22,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! unless you check all consequences first                           !
   !-------------------------------------------------------------------!
   integer::i,idim,ivar
-  logical::ok_defrag
+  logical::ok_defrag,output_now_all
   logical,save::first_step=.true.
 
   if(numbtot(1,ilevel)==0)return
@@ -123,7 +124,16 @@ recursive subroutine amr_step(ilevel,icount)
   ! Output results to files
   !------------------------
   if(ilevel==levelmin)then
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now.EQV..true.)then
+
+#ifdef WITHOUTMPI
+     output_now_all = output_now
+#else
+     ! check if any of the processes received a signal for output
+     call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
+     call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
+#endif
+
+     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now_all.EQV..true.)then
                                call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
@@ -139,7 +149,7 @@ recursive subroutine amr_step(ilevel,icount)
         ! Dump lightcone
         if(lightcone) call output_cone()
 
-        if (output_now.EQV..true.) then
+        if (output_now_all.EQV..true.) then
           output_now=.false.
         endif
 
