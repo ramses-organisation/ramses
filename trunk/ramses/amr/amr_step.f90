@@ -96,6 +96,12 @@ recursive subroutine amr_step(ilevel,icount)
         if(nremap>0)then
            ! Skip first load balance because it has been performed before file dump
            if(nrestart>0.and.first_step)then
+              if(nrestart.eq.nrestart_quad) restart_remap=.true.
+              if(restart_remap) then
+                 call load_balance
+                 call defrag
+                 ok_defrag=.true.
+              endif
               first_step=.false.
            else
               if(MOD(nstep_coarse,nremap)==0)then
@@ -132,7 +138,6 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
-
      if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now_all.EQV..true.)then
                                call timer('io','start')
         if(.not.ok_defrag)then
