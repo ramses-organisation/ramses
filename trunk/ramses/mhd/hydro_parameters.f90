@@ -68,9 +68,6 @@ module hydro_parameters
 #endif
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1.0
 
-  ! Temperature ceiling for cooling_fine
-  real(dp)              :: T2max   = 1d50
-
   ! Initial conditions hydro variables
   real(dp),dimension(1:MAXREGION)::d_region=0.
   real(dp),dimension(1:MAXREGION)::u_region=0.

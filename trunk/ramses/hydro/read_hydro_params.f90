@@ -1,7 +1,6 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
-  use hydro_parameters, only: T2max
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
