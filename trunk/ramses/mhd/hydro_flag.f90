@@ -190,8 +190,8 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      emag = emag / 8.d0
      etherm = (etherm - emag) 
 #if NENER>0
-     do irad=0,nener-1
-        etherm=etherm-uold(indi,inener+irad)
+     do irad=1,nener
+        etherm=etherm-uold(indi,8+irad)
      end do
 #endif
      ! the temperature

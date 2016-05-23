@@ -97,9 +97,9 @@ subroutine courant_fine(ilevel)
            end do
         end do
 #if NENER>0
-        do ivar=0,nener-1
+        do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,inener+ivar)*vol
+              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
            end do
         end do
 #endif
@@ -228,9 +228,9 @@ subroutine check_cons(ilevel)
            end do
         end do
 #if NENER>0
-        do ivar=0,nener-1
+        do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,inener+ivar)*vol
+              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
            end do
         end do
 #endif
