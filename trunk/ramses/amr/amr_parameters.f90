@@ -81,6 +81,8 @@ module amr_parameters
 
   ! Step parameters
   integer::nrestart=0         ! New run or backup file number
+  integer::nrestart_quad=0    ! Restart with double precision Hilbert keys
+  logical::restart_remap=.false. ! Force load balance on restart
   integer::nstepmax=1000000   ! Maximum number of time steps
   integer::ncontrol=1         ! Write control variables
   integer::fbackup=1000000    ! Backup data to disk
