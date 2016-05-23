@@ -80,10 +80,14 @@ subroutine init_poisson
      read(ilun)nlevelmax2
      read(ilun)nboundary2
      if(ndim2.ne.ndim+1)then
-        write(*,*)'File poisson.tmp is not compatible'
-        write(*,*)'Found   =',ndim2
-        write(*,*)'Expected=',ndim+1
-        call clean_stop
+        if(ndim2.ne.ndim)then
+           write(*,*)'File poisson.tmp is not compatible'
+           write(*,*)'Found   =',ndim2
+           write(*,*)'Expected=',ndim+1
+           call clean_stop
+        else
+           if(myid==1) write(*,*)'Assuming pre commit bce4454 output format'
+        endif
      end if
      do ilevel=1,nlevelmax2
         do ibound=1,nboundary+ncpu
