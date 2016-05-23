@@ -34,9 +34,9 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #if NENER>0
-  do irad = 0,nener-1
+  do irad = 1,nener
      do k = 1, ncell
-        uu(k,ndim+2) = uu(k,ndim+2)-uu(k,inener+irad)
+        uu(k,ndim+2) = uu(k,ndim+2)-uu(k,ndim+2+irad)
      end do
   end do
 #endif
@@ -61,9 +61,9 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      uu(k,ndim+2) = max((gamma-one)*uu(k,ndim+2),uu(k,1)*smallp)
   end do
 #if NENER>0
-  do irad = 0,nener-1
+  do irad = 1,nener
      do k = 1, ncell
-        uu(k,inener+irad) = (gamma_rad(irad+1)-one)*uu(k,inener+irad)
+        uu(k,ndim+2+irad) = (gamma_rad(irad)-one)*uu(k,ndim+2+irad)
      end do
   end do
 #endif
@@ -73,9 +73,9 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      uu(k,ndim+2) = gamma*uu(k,ndim+2)
   end do
 #if NENER>0
-  do irad = 0,nener-1
+  do irad = 1,nener
      do k = 1, ncell
-        uu(k,ndim+2) = uu(k,ndim+2) + gamma_rad(irad+1)*uu(k,inener+irad)
+        uu(k,ndim+2) = uu(k,ndim+2) + gamma_rad(irad)*uu(k,ndim+2+irad)
      end do
   end do
 #endif  
@@ -166,11 +166,11 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      end do
   end do
 #if NENER>0
-  do irad = 0,nener-1
+  do irad = 1,nener
      do k = 1, nn
-        eking(k) = eking(k) + ug(k,inener+irad)
-        ekinm(k) = ekinm(k) + um(k,inener+irad)
-        ekind(k) = ekind(k) + ud(k,inener+irad)
+        eking(k) = eking(k) + ug(k,ndim+2+irad)
+        ekinm(k) = ekinm(k) + um(k,ndim+2+irad)
+        ekind(k) = ekind(k) + ud(k,ndim+2+irad)
      end do
   end do
 #endif
@@ -687,8 +687,8 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      pl = max(qleft (i,3),rl*smallp)
      cl = gamma*pl
 #if NENER>0
-     do n = 0,nener-1
-        cl = cl + gamma_rad(n+1)*qleft(i,inener+n)
+     do n = 1,nener
+        cl = cl + gamma_rad(n)*qleft(i,ndim+2+n)
      end do
 #endif
      cl = sqrt(cl/rl)
@@ -698,8 +698,8 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      pr = max(qright(i,3),rr*smallp)
      cr = gamma*pr
 #if NENER>0
-     do n = 0,nener-1
-        cr = cr + gamma_rad(n+1)*qright(i,inener+n)
+     do n = 1,nener
+        cr = cr + gamma_rad(n)*qright(i,ndim+2+n)
      end do
 #endif
      cr = sqrt(cr/rr)
@@ -729,9 +729,9 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      uright(i,3) = uright(i,3)       + half*qright(i,1)*qright(i,5)**2
 #endif
 #if NENER>0
-     do n = 0,nener-1
-        uleft (i,3) = uleft (i,3) + qleft (i,inener+n)/(gamma_rad(n+1)-one)
-        uright(i,3) = uright(i,3) + qright(i,inener+n)/(gamma_rad(n+1)-one)
+     do n = 1,nener
+        uleft (i,3) = uleft (i,3) + qleft (i,ndim+2+n)/(gamma_rad(n)-one)
+        uright(i,3) = uright(i,3) + qright(i,ndim+2+n)/(gamma_rad(n)-one)
      end do
 #endif
   end do
@@ -746,10 +746,10 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
 #endif
   ! Non-thermal energies
 #if NENER>0
-  do n = 0, nener-1
+  do n = 1, nener
      do i = 1, ngrid
-        uleft (i,inener+n) = qleft (i,inener+n)/(gamma_rad(n+1)-one)
-        uright(i,inener+n) = qright(i,inener+n)/(gamma_rad(n+1)-one)
+        uleft (i,ndim+2+n) = qleft (i,ndim+2+n)/(gamma_rad(n)-one)
+        uright(i,ndim+2+n) = qright(i,ndim+2+n)/(gamma_rad(n)-one)
      end do
   end do
 #endif
@@ -779,18 +779,18 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      fleft (i,2) = qleft (i,2)*uleft (i,2) + qleft (i,3)
      fright(i,2) = qright(i,2)*uright(i,2) + qright(i,3)
 #if NENER>0
-     do n = 0,nener-1
-        fleft (i,2) = fleft (i,2) + qleft (i,inener+n)
-        fright(i,2) = fright(i,2) + qright(i,inener+n)
+     do n = 1,nener
+        fleft (i,2) = fleft (i,2) + qleft (i,ndim+2+n)
+        fright(i,2) = fright(i,2) + qright(i,ndim+2+n)
      end do
 #endif
      ! Total energy
      fleft (i,3) = qleft (i,2)*(uleft (i,3)+qleft (i,3))
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
 #if NENER>0
-     do n = 0,nener-1
-        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,inener+n)
-        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,inener+n)
+     do n = 1,nener
+        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,ndim+2+n)
+        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,ndim+2+n)
      end do
 #endif
   end do
@@ -848,8 +848,8 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      pl = max(qleft (i,3),rl*smallp)
      cl = gamma*pl
 #if NENER>0
-     do n = 0,nener-1
-        cl = cl + gamma_rad(n+1)*qleft(i,inener+n)
+     do n = 1,nener
+        cl = cl + gamma_rad(n)*qleft(i,ndim+2+n)
      end do
 #endif
      cl = sqrt(cl/rl)
@@ -859,8 +859,8 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      pr = max(qright(i,3),rr*smallp)
      cr = gamma*pr
 #if NENER>0
-     do n = 0,nener-1
-        cr = cr + gamma_rad(n+1)*qright(i,inener+n)
+     do n = 1,nener
+        cr = cr + gamma_rad(n)*qright(i,ndim+2+n)
      end do
 #endif
      cr = sqrt(cr/rr)
@@ -891,9 +891,9 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      uright(i,3) = uright(i,3)       + half*qright(i,1)*qright(i,5)**2
 #endif
 #if NENER>0
-     do n = 0,nener-1
-        uleft (i,3) = uleft (i,3) + qleft (i,inener+n)/(gamma_rad(n+1)-one)
-        uright(i,3) = uright(i,3) + qright(i,inener+n)/(gamma_rad(n+1)-one)
+     do n = 1,nener
+        uleft (i,3) = uleft (i,3) + qleft (i,ndim+2+n)/(gamma_rad(n)-one)
+        uright(i,3) = uright(i,3) + qright(i,ndim+2+n)/(gamma_rad(n)-one)
      end do
 #endif
   end do
@@ -908,10 +908,10 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
 #endif
   ! Non-thermal energies
 #if NENER>0
-  do n = 0, nener-1
+  do n = 1, nener
      do i = 1, ngrid
-        uleft (i,inener+n) = qleft (i,inener+n)/(gamma_rad(n+1)-one)
-        uright(i,inener+n) = qright(i,inener+n)/(gamma_rad(n+1)-one)
+        uleft (i,ndim+2+n) = qleft (i,ndim+2+n)/(gamma_rad(n)-one)
+        uright(i,ndim+2+n) = qright(i,ndim+2+n)/(gamma_rad(n)-one)
      end do
   end do
 #endif
@@ -941,18 +941,18 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      fleft (i,2) = qleft (i,3)+uleft (i,2)*qleft (i,2)
      fright(i,2) = qright(i,3)+uright(i,2)*qright(i,2)
 #if NENER>0
-     do n = 0,nener-1
-        fleft (i,2) = fleft (i,2) + qleft (i,inener+n)
-        fright(i,2) = fright(i,2) + qright(i,inener+n)
+     do n = 1,nener
+        fleft (i,2) = fleft (i,2) + qleft (i,ndim+2+n)
+        fright(i,2) = fright(i,2) + qright(i,ndim+2+n)
      end do
 #endif
      ! Total energy
      fleft (i,3) = qleft (i,2)*(uleft (i,3)+qleft (i,3))
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
 #if NENER>0
-     do n = 0,nener-1
-        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,inener+n)
-        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,inener+n)
+     do n = 1,nener
+        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,ndim+2+n)
+        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,ndim+2+n)
      end do
 #endif
   end do
@@ -1027,15 +1027,15 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
 #endif
      etotl = el+ecinl
 #if NENER>0
-     do irad=0,nener-1
-        eradl(irad+1)=qleft(i,inener+irad)/(gamma_rad(irad+1)-one)
-        etotl=etotl+eradl(irad+1)
+     do irad=1,nener
+        eradl(irad)=qleft(i,2+ndim+irad)/(gamma_rad(irad)-one)
+        etotl=etotl+eradl(irad)
      end do
 #endif
      Ptotl = Pl
 #if NENER>0
-     do irad=0,nener-1
-        Ptotl=Ptotl+qleft(i,inener+irad)
+     do irad=1,nener
+        Ptotl=Ptotl+qleft(i,2+ndim+irad)
      end do
 #endif
 
@@ -1054,31 +1054,31 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
 #endif
      etotr = er+ecinr
 #if NENER>0
-     do irad=0,nener-1
-        eradr(irad+1)=qright(i,inener+irad)/(gamma_rad(irad+1)-one)
-        etotr=etotr+eradr(irad+1)
+     do irad=1,nener
+        eradr(irad)=qright(i,2+ndim+irad)/(gamma_rad(irad)-one)
+        etotr=etotr+eradr(irad)
      end do
 #endif
      Ptotr = Pr
 #if NENER>0
-     do irad=0,nener-1
-        Ptotr=Ptotr+qright(i,inener+irad)
+     do irad=1,nener
+        Ptotr=Ptotr+qright(i,2+ndim+irad)
      end do
 #endif
 
      ! Find the largest eigenvalues in the normal direction to the interface
      cfastl=gamma*Pl
 #if NENER>0
-     do irad = 0,nener-1
-        cfastl = cfastl + gamma_rad(irad+1)*qleft(i,inener+irad)
+     do irad = 1,nener
+        cfastl = cfastl + gamma_rad(irad)*qleft(i,ndim+2+irad)
      end do
 #endif
      cfastl=sqrt(max(cfastl/rl,smallc**2))
 
      cfastr=gamma*Pr
 #if NENER>0
-     do irad = 0,nener-1
-        cfastr = cfastr + gamma_rad(irad+1)*qright(i,inener+irad)
+     do irad = 1,nener
+        cfastr = cfastr + gamma_rad(irad)*qright(i,ndim+2+irad)
      end do
 #endif
      cfastr=sqrt(max(cfastr/rr,smallc**2))
@@ -1180,8 +1180,8 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
 #endif
      ! Non-thermal energies
 #if NENER>0
-     do irad = 0,nener-1
-        fgdnv(i,inener+irad) = uo*erado(irad+1)
+     do irad = 1,nener
+        fgdnv(i,ndim+2+irad) = uo*erado(irad)
      end do
 #endif
      ! Other passively advected quantities

@@ -319,7 +319,7 @@ subroutine read_hydro_params(nml_ok)
   !-----------------------------------
   ! Sort out passive variable indices
   !-----------------------------------
-  inener=9
+  inener=9 ! MUST BE THIS VALUE !!!
   imetal=9+nener
   idelay=imetal
   if(metal)idelay=imetal+1

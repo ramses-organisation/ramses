@@ -890,8 +890,8 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
               erad = zero
 #if NENER>0
               do irad = 1,nener
-                 q(l,i,j,k,inener-1+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,inener-1+irad)
-                 erad = erad+uin(l,i,j,k,inener-1+irad)*oneoverrho
+                 q(l,i,j,k,ndim+2+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,ndim+2+irad)
+                 erad = erad+uin(l,i,j,k,ndim+2+irad)*oneoverrho
               enddo
 #endif
               ! Compute thermal pressure
@@ -902,7 +902,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
               c(l,i,j,k)=gamma*q(l,i,j,k,ndim+2)
 #if NENER>0
               do irad=1,nener
-                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,inener-1+irad)
+                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,ndim+2+irad)
               enddo
 #endif
               c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)

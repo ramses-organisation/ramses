@@ -378,7 +378,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   
   ! passive scalars
 #if NVAR>8+NENER
-  DO n = inener+nener, nvar
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -720,7 +720,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 
 #if NVAR>8+NENER
   ! Passive scalars
-  DO n = inener+nener, nvar
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -1294,7 +1294,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 
 #if NVAR>8+NENER
   ! Passive scalars
-  DO n = inener+nener, nvar
+  DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
            DO i = ilo, ihi
@@ -1563,12 +1563,12 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
 #if NENER>0
            ! Non-thermal energies
-           do irad = 0,nener-1
+           do irad = 1,nener
               DO l = 1, ngrid
-                 qLL (l,inener+irad) = qRT(l,i,j,k,inener+irad,xdim)
-                 qRL (l,inener+irad) = qLT(l,i,j,k,inener+irad,xdim)
-                 qLR (l,inener+irad) = qRB(l,i,j,k,inener+irad,xdim)
-                 qRR (l,inener+irad) = qLB(l,i,j,k,inener+irad,xdim)
+                 qLL (l,8+irad) = qRT(l,i,j,k,8+irad,xdim)
+                 qRL (l,8+irad) = qLT(l,i,j,k,8+irad,xdim)
+                 qLR (l,8+irad) = qRB(l,i,j,k,8+irad,xdim)
+                 qRR (l,8+irad) = qLB(l,i,j,k,8+irad,xdim)
               END DO
            end do
 #endif
@@ -1590,11 +1590,11 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8) 
                   rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8) 
 #if NENER>0
-                  do irad = 0,nener-1
-                     pLL = pLL + qLL(l,inener+irad)
-                     pLR = pLR + qLR(l,inener+irad)
-                     pRL = pRL + qRL(l,inener+irad)
-                     pRR = pRR + qRR(l,inener+irad)
+                  do irad = 1,nener
+                     pLL = pLL + qLL(l,8+irad)
+                     pLR = pLR + qLR(l,8+irad)
+                     pRL = pRL + qRL(l,8+irad)
+                     pRR = pRR + qRR(l,8+irad)
                   end do
 #endif
 
@@ -1602,32 +1602,32 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRRx)
@@ -1636,32 +1636,32 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRRy)
@@ -1763,32 +1763,32 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
                   vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
                   vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
                   vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
                   vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx)
@@ -1797,32 +1797,32 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
                   vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qLR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
                   vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRL(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
                   vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
-                  do irad = 0,nener-1
-                     qtmp(inener+irad) = qRR(l,inener+irad)
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
                   vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy)
@@ -1916,9 +1916,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
 #if NENER>0
                   !non-thermal energies
-                  do irad = 0,nener-1
-                     qleft (inener+irad) = half*(qLL(l,inener+irad)+qLR(l,inener+irad))
-                     qright(inener+irad) = half*(qRR(l,inener+irad)+qRL(l,inener+irad))
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qLR(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qRL(l,8+irad))
                   end do
 #endif
                   
@@ -1970,9 +1970,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   
 #if NENER>0
                   !non-thermal energies
-                  do irad = 0,nener-1
-                     qleft (inener+irad) = half*(qLL(l,inener+irad)+qRL(l,inener+irad))
-                     qright(inener+irad) = half*(qRR(l,inener+irad)+qLR(l,inener+irad))
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qRL(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qLR(l,8+irad))
                   end do
 #endif
 
@@ -2111,10 +2111,10 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            ! Compute non-thermal pressure
            erad = zero
 #if NENER>0
-           do irad = 0,nener-1
+           do irad = 1,nener
               do l = 1, ngrid
-                 q(l,i,j,k,inener+irad) = (gamma_rad(irad+1)-one)*uin(l,i,j,k,inener+irad)
-                 erad(l) = erad(l)+uin(l,i,j,k,inener+irad)
+                 q(l,i,j,k,8+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,8+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,8+irad)
               end do
            enddo
 #endif
@@ -2139,7 +2139,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 
   ! Passive scalar
 #if NVAR>8+NENER
-  do n = inener+nener, nvar
+  do n = 9+nener, nvar
      do k = ku1, ku2
         do j = ju1, ju2
            do i = iu1, iu2

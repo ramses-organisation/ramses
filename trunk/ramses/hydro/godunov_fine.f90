@@ -72,8 +72,8 @@ subroutine set_unew(ilevel)
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
            e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
-           do irad=0,nener-1
-              e=e-uold(active(ilevel)%igrid(i)+iskip,inener+irad)
+           do irad=1,nener
+              e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
            end do
 #endif          
            enew(active(ilevel)%igrid(i)+iskip)=e
@@ -157,8 +157,8 @@ subroutine set_uold(ilevel)
            if(ndim>2)w=uold(ind_cell,4)/d
            e_kin=0.5*d*(u**2+v**2+w**2)
 #if NENER>0
-           do irad=0,nener-1
-              e_kin=e_kin+uold(ind_cell,inener+irad)
+           do irad=1,nener
+              e_kin=e_kin+uold(ind_cell,ndim+2+irad)
            end do
 #endif
            e_cons=uold(ind_cell,ndim+2)-e_kin
@@ -350,8 +350,8 @@ subroutine add_pdv_source_terms(ilevel)
               if(ndim>2)w=uold(ind_cell(i),4)/d
               eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
-              do irad=0,nener-1
-                 eold=eold-uold(ind_cell(i),inener+irad)
+              do irad=1,nener
+                 eold=eold-uold(ind_cell(i),ndim+2+irad)
               end do
 #endif
               ! Add -pdV term
@@ -361,11 +361,11 @@ subroutine add_pdv_source_terms(ilevel)
         end if
 
 #if NENER>0
-        do irad=0,nener-1
+        do irad=1,nener
            do i=1,ngrid
               ! Add -pdV term
-              unew(ind_cell(i),inener+irad)=unew(ind_cell(i),inener+irad) &
-                & -(gamma_rad(irad+1)-1.0d0)*uold(ind_cell(i),inener+irad)*divu_loc(i)*dtnew(ilevel)
+              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
+                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
            end do
         end do
 #endif
@@ -393,8 +393,8 @@ subroutine add_pdv_source_terms(ilevel)
            if(ndim>2)w=uold(ind_cell1,4)/d
            eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
 #if NENER>0
-           do irad=0,nener-1
-              eold=eold-uold(ind_cell1,inener+irad)
+           do irad=1,nener
+              eold=eold-uold(ind_cell1,ndim+2+irad)
            end do
 #endif
            ! Add pdV term
@@ -405,13 +405,13 @@ subroutine add_pdv_source_terms(ilevel)
   end if
 
 #if NENER>0
-  do irad=0,nener-1
+  do irad=1,nener
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
-           unew(ind_cell1,inener+irad)=unew(ind_cell1,inener+irad) &
-                & +(gamma_rad(irad+1)-1.0d0)*uold(ind_cell1,inener+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
+           unew(ind_cell1,ndim+2+irad)=unew(ind_cell1,ndim+2+irad) &
+                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
      end do
   end do
