@@ -517,7 +517,7 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,ndim+2)=p_region(k)
 #if NENER>0
               do ivar=0,nener-1
-                 q(i,inener+ivar)=prad_region(k,ivar)
+                 q(i,inener+ivar)=prad_region(k,ivar+1)
               enddo
 #endif
 #if NVAR>NDIM+2+NENER
@@ -557,7 +557,7 @@ subroutine region_condinit(x,q,dx,nn)
            q(i,ndim+2)=q(i,ndim+2)+p_region(k)*r/vol
 #if NENER>0
            do ivar=0,nener-1
-              q(i,inener+ivar)=q(i,inener+ivar)+prad_region(k,ivar)*r/vol
+              q(i,inener+ivar)=q(i,inener+ivar)+prad_region(k,ivar+1)*r/vol
            enddo
 #endif
 #if NVAR>NDIM+2+NENER

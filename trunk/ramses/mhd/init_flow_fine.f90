@@ -520,11 +520,11 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,nvar+3)=C_region(k)
 #if NENER>0
               do ivar=0,nener-1
-                 q(i,inener+ivar)=prad_region(k,ivar)
+                 q(i,inener+ivar)=prad_region(k,ivar+1)
               enddo
 #endif
 #if NVAR>8+NENER
-              do ivar=9+nener,nvar
+              do ivar=inener+nener,nvar
                  q(i,ivar)=var_region(k,ivar-8-nener)
               end do
 #endif
