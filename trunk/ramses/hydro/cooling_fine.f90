@@ -269,9 +269,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         err(i)=0.0d0
      end do
 #if NENER>0
-     do irad=1,nener
+     do irad=0,nener-1
         do i=1,nleaf
-           err(i)=err(i)+uold(ind_leaf(i),ndim+2+irad)
+           err(i)=err(i)+uold(ind_leaf(i),inener+irad)
         end do
      end do
 #endif
