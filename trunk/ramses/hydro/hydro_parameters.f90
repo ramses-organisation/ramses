@@ -89,5 +89,6 @@ module hydro_parameters
   integer::idelay=6
   integer::ixion=6
   integer::ichem=6
+  integer::inener=6
 
 end module hydro_parameters

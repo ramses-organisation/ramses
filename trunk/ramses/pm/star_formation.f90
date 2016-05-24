@@ -148,8 +148,8 @@ subroutine star_formation(ilevel)
 #endif
            e=e-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
-           do irad=1,nener
-              e=e-uold(ind_cell(i),5+irad)
+           do irad=0,nener-1
+              e=e-uold(ind_cell(i),inener+irad)
            end do
 #endif
            uold(ind_cell(i),1)=d
@@ -444,8 +444,8 @@ subroutine star_formation(ilevel)
 #endif
            e=e+0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
-           do irad=1,nener
-              e=e+uold(ind_cell(i),5+irad)
+           do irad=0,nener-1
+              e=e+uold(ind_cell(i),inener+irad)
            end do
 #endif
            uold(ind_cell(i),1)=d
