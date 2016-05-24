@@ -7,7 +7,7 @@ module restart_commons
   real(dp)::IG_T2          = 1.0D7
   real(dp)::IG_metal       = 0.01
   real(dp),dimension(1:3)::ic_center = (/ 0.0, 0.0, 0.0 /)
-  integer,dimension(0:100)::restart_vars=0
+  integer,dimension(1:100)::restart_vars=0
   integer::nvar_min
   logical::restart_init=.false.
   real(dp),allocatable,dimension(:,:)::varp     ! Hydro variables for restart

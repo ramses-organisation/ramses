@@ -73,6 +73,7 @@ subroutine init_part
   integer,allocatable,dimension(:,:,:,:)::hydro_var_blck
   integer::kpart,lpart
   integer::nhalo_tot,nsink_tot
+  integer::nstar_loc,nhalo_loc,ngas_loc,nsink_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8),dimension(1:nvector)::tt,zz,aa,dd
   real(kind=8),dimension(1:nvector,1:3)::ll
@@ -845,6 +846,7 @@ subroutine init_part
         ! Initialisation
         restart_init = .true.
         eocpu        = .false.
+        error        = .false.
         icpu         = 1
         lpart        = 0
         ipart        = 0
@@ -853,8 +855,16 @@ subroutine init_part
         mgas_tot     = 0.
         nhalo_tot    = 0
         nstar_tot    = 0
-        if(myid==1) write(*,'(A50)')"__________________________________________________"
+        if(myid==1) then
+           write(*,'(A50)')"__________________________________________________"
+           write(*,*)" RAMSES restart"
+           write(*,'(A50)')"__________________________________________________"
+        endif
         do while(.not.eocpu)
+           nstar_loc = 0
+           nhalo_loc = 0
+           ngas_loc = 0
+           nsink_loc = 0
            if(myid==1)then
               call title(abs(nrestart),nchar)
               if(icpu==1) write(*,'(A12,A)') " Loading -> ",'output_'//TRIM(nchar)
@@ -960,9 +970,11 @@ subroutine init_part
                     if(tt(jpart)==0d0) then
                        mhalo_tot = mhalo_tot+mm(jpart)
                        nhalo_tot = nhalo_tot+1
+                       nhalo_loc = nhalo_loc+1
                     else
                        mstar_tot = mstar_tot+mm(jpart)
                        nstar_tot = nstar_tot+1
+                       nstar_loc = nstar_loc+1
                     endif
                     ! Check the End Of Block
                     if(kpart.ge.header_part%npart) then
@@ -980,6 +992,7 @@ subroutine init_part
               call MPI_BCAST(zz,nvector   ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(tt,nvector   ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(jpart,1      ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
+              call MPI_BARRIER(MPI_COMM_WORLD,info)
               call cmp_cpumap(xx,cc,jpart)
 #endif
               do i=1,jpart
@@ -994,7 +1007,10 @@ subroutine init_part
                         ipart          = ipart+1
                         if(ipart.gt.npartmax) then
                            write(*,*) "Increase npartmax"
-                           call clean_stop
+                           error=.true.
+#ifndef WITHOUTMPI
+                           call MPI_BCAST(error,1,MPI_LOGICAL,0,MPI_COMM_WORLD,info)
+#endif
                         endif
                         xp(ipart,1:3)  = xx(i,1:3)
                         vp(ipart,1:3)  = vv(i,1:3)
@@ -1012,6 +1028,10 @@ subroutine init_part
                   endif
 #endif
               enddo
+#ifndef WITOUTMPI
+              call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+              if(error) call clean_stop
            enddo
 
            if(myid==1)then
@@ -1052,7 +1072,6 @@ subroutine init_part
               read(ilun2,pos=mypos)header_amr%tout(1:header_amr%noutput); mypos=mypos+sizeof(dummy_int)+size_blck
               read(ilun2,pos=mypos)size_blck; mypos=mypos+sizeof(dummy_int)
               read(ilun2,pos=mypos)header_amr%aout(1:header_amr%noutput); mypos=mypos+sizeof(dummy_int)+size_blck
-
 
               ! Old output times
               read(ilun2,pos=mypos)size_blck; mypos=mypos+sizeof(dummy_int)
@@ -1279,21 +1298,45 @@ subroutine init_part
               call MPI_BCAST(header_amr%boxlen,1      ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(header_hydro%nvar,1      ,MPI_INTEGER,0,MPI_COMM_WORLD,info)
               call MPI_BCAST(header_hydro%ndim,1      ,MPI_INTEGER,0,MPI_COMM_WORLD,info)
+              if(cosmo) then
+                 call MPI_BCAST(header_amr%omega_m,1     ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+                 call MPI_BCAST(header_amr%omega_l,1     ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+                 call MPI_BCAST(header_amr%h0,1          ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+                 call MPI_BCAST(header_amr%boxlen_ini,1  ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+                 call MPI_BCAST(header_amr%aexp,1        ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
+              endif
               call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
               ! Setting simulation time
               ifout          = header_amr%ifout 
               t              = header_amr%t
+              ! Number of passive scalars to load (includes also temperature)
               nvar_min       = min(header_hydro%nvar-header_hydro%ndim-1,nvar-ndim-1)
               restart_boxlen = header_amr%boxlen
+              if(cosmo) then
+                 omega_m = header_amr%omega_m
+                 omega_l = header_amr%omega_l
+                 h0 = header_amr%h0
+                 boxlen_ini = header_amr%boxlen_ini
+                 aexp = header_amr%aexp
+                 aexp_ini = aexp
+              endif
               allocate(varp(1:npartmax,1:nvar_min))
               allocate(uu(1:nvector,1:nvar_min))
               ! Check passive hydro variables indices
-              do ivar=2,nvar_min
-                 if(restart_vars(ivar).gt.header_amr%ndim+2.and.restart_vars(ivar).le.header_hydro%nvar) then
-                    write(*,*) '[Warning] No passive hydro variable with index ',restart_vars(ivar)
+              if(myid==1) write(*,'(A50)')"__________________________________________________"
+              do ivar=1,nvar_min-1
+                 if(myid==1) write(*,'(A,I2,A,I2)') ' restart_var',restart_vars(ivar),' loaded in var',ndim+2+ivar
+                 if(restart_vars(ivar).gt.header_hydro%nvar) then
+                    write(*,*) '[Error] ivar=',restart_vars(ivar),' is empty in the restart output'
+                    call clean_stop
+                 endif
+                 if(restart_vars(ivar).lt.header_amr%ndim+2) then
+                    write(*,*) '[Error] ivar=',restart_vars(ivar),' is an active variable'
+                    call clean_stop
                  endif
               enddo
+              if(myid==1) write(*,'(A50)')"__________________________________________________"
               ! Compute movie frame number if applicable
               if(imovout>0) then
                  do i=2,imovout
@@ -1379,6 +1422,8 @@ subroutine init_part
                                    mm(jpart)=mm(jpart)*vol_loc
                                    ! Updating total mass
                                    mgas_tot=mgas_tot+mm(jpart)
+                                   ! Updating leaf cells counter
+                                   ngas_loc = ngas_loc+1
                                    ! Reading velocities
                                    do idim=1,ndim
                                       read(ilun3,pos=hydro_var_blck(ilevel,ibound,ind,idim+1)+sizeof(dummy_real)*(kpart-1)) vv(jpart,idim)
@@ -1388,9 +1433,9 @@ subroutine init_part
                                    read(ilun3,pos=hydro_var_blck(ilevel,ibound,ind,header_amr%ndim+2)+sizeof(dummy_real)*(kpart-1)) uu(jpart,1)
                                    uu(jpart,1)=uu(jpart,1)/(header_hydro%gamma-1d0)
                                    ! Reading passive hydro variables
-                                   do ivar=2,nvar_min
+                                   do ivar=1,nvar_min-1
                                      if(restart_vars(ivar).gt.header_amr%ndim+2.and.restart_vars(ivar).le.header_hydro%nvar) then
-                                        read(ilun3,pos=hydro_var_blck(ilevel,ibound,ind,restart_vars(ivar))+sizeof(dummy_real)*(kpart-1)) uu(jpart,ivar)
+                                        read(ilun3,pos=hydro_var_blck(ilevel,ibound,ind,restart_vars(ivar))+sizeof(dummy_real)*(kpart-1)) uu(jpart,ivar+1)
                                      endif
                                    enddo
                                 endif
@@ -1426,7 +1471,10 @@ subroutine init_part
                                  ipart          = ipart+1
                                  if(ipart.gt.npartmax) then
                                     write(*,*) "Increase npartmax"
-                                    call clean_stop
+                                    error=.true.
+#ifndef WITHOUTMPI
+                                    call MPI_BCAST(error,1,MPI_LOGICAL,0,MPI_COMM_WORLD,info)
+#endif
                                  endif
                                  xp(ipart,1:3)  = xx(i,1:3)
                                  vp(ipart,1:3)  = vv(i,1:3)
@@ -1442,6 +1490,10 @@ subroutine init_part
                            endif
 #endif
                        enddo
+#ifndef WITHOUTMPI
+                       call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+                       if(error) call clean_stop
                     enddo
                  endif
               enddo
@@ -1533,6 +1585,7 @@ subroutine init_part
                           if(tt(jpart)==0d0) then
                              msink_tot = msink_tot+mm(jpart)
                              nsink_tot = nsink_tot+1
+                             nsink_loc = nsink_loc+1
                           endif
                           ! Check the End Of Block
                           if(kpart.ge.header_part%npart) then
@@ -1552,6 +1605,7 @@ subroutine init_part
                     call MPI_BCAST(tt,nvector   ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
                     call MPI_BCAST(jpart,1      ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
                     call cmp_cpumap(xx,cc,jpart)
+                    call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
                     do i=1,jpart
 #ifndef WITHOUTMPI
@@ -1565,7 +1619,10 @@ subroutine init_part
                               ipart          = ipart+1
                               if(ipart.gt.nsinkmax) then
                                  write(*,*) "Increase nsinkmax"
-                                 call clean_stop
+                                 error=.true.
+#ifndef WITHOUTMPI
+                                 call MPI_BCAST(error,1,MPI_LOGICAL,0,MPI_COMM_WORLD,info)
+#endif
                               endif
                               xsink(ipart,1:3)  = xx(i,1:3)
                               vsink(ipart,1:3)  = vv(i,1:3)
@@ -1581,6 +1638,10 @@ subroutine init_part
                         endif
 #endif
                     enddo
+#ifndef WITOUTMPI
+                    call MPI_BARRIER(MPI_COMM_WORLD,info)
+                    if(error) call clean_stop
+#endif
                  enddo
                  call compute_ncloud_sink
                  if(ir_feedback)then
@@ -1597,6 +1658,7 @@ subroutine init_part
               close(ilun2)
               close(ilun3)
               close(ilun4)
+              write(*,*) 'CPU',icpu,' -> [',ngas_loc,'cells/',nstar_loc,'stars/',nhalo_loc,'dm]'
               icpu = icpu+1
               if(icpu.gt.header_part%ncpu) eocpu=.true.
            endif
@@ -1609,15 +1671,17 @@ subroutine init_part
         enddo
         if(myid==1) then
            write(*,'(A50)')"__________________________________________________"
+           write(*,*)" RAMSES restart summary"
+           write(*,'(A50)')"__________________________________________________"
            write(*,'(A,I,A)') '----> ',header_amr%ncpu,' cpus'
            write(*,'(A,I,A)') '----> ',nhalo_tot,' halo particles'
            write(*,'(A,I,A)') '----> ',nstar_tot,' star particles'
            if(hydro) write(*,'(A,I,A)') '----> ',lpart,' leaf cells'
            if(sink)  write(*,'(A,I,A)') '----> ',nsink_tot,' sink particles'
-           write(*,'(A,F16.5,A)') '----> ',mhalo_tot,'d9 Msol [halo]'
-           write(*,'(A,F16.5,A)') '----> ',mstar_tot,'d9 Msol [stars]'
-           if(hydro) write(*,'(A,F16.5,A)') '----> ',mgas_tot,'d9 Msol [gas]'
-           if(sink)  write(*,'(A,F16.5,A)') '----> ',msink_tot,'d9 Msol [sink]'
+           write(*,'(A,F16.5,A)') '----> m_dm    = ',mhalo_tot,' [dm]'
+           write(*,'(A,F16.5,A)') '----> m_stars =',mstar_tot,' [stars]'
+           if(hydro) write(*,'(A,F16.5,A)') '----> m_gas   = ',mgas_tot,' [gas]'
+           if(sink)  write(*,'(A,F16.5,A)') '----> m_sink  = ',msink_tot,' [sink]'
            write(*,'(A50)')"__________________________________________________"
         endif
         npart = ipart
