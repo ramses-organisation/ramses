@@ -228,11 +228,7 @@ subroutine compute_clump_properties_round2(xx)
 
 
 #if NENER>0
-#ifdef SOLVERmhd
-  nener_offset = 8
-#else
-  nener_offset = ndim + 2
-#endif
+  nener_offset = inener-1
 #endif
   
   ! Conversion factor from user units to cgs units
@@ -764,11 +760,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 #endif
 
 #if NENER>0
-#ifdef SOLVERmhd
-  nener_offset = 8
-#else
-  nener_offset = ndim + 2
-#endif
+  nener_offset = inener-1
 #endif
   
 #if NDIM==3

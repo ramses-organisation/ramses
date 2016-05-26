@@ -81,8 +81,8 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         end do
         err = 0.0d0
 #if NENER>0
-        do irad=1,nener
-           err = err+uold(ind_leaf(i),ndim+2+irad)
+        do irad=0,nener-1
+           err = err+uold(ind_leaf(i),inener+irad)
         end do
 #endif
         emag = 0.0d0
@@ -163,8 +163,8 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   end do
   err = 0.0d0
 #if NENER>0
-  do irad=1,nener
-     err = err+vars(ndim+2+irad)
+  do irad=0,nener-1
+     err = err+vars(inener+irad)
   end do
 #endif
   emag = 0.0d0

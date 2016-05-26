@@ -244,7 +244,7 @@ subroutine write_screen
   ! Deallocate local arrays
   deallocate(mm,rr,dd,dtot,et,ei,uu,ll,gg)
   deallocate(mm_all,rr_all,dd_all,dtot_all,et_all,ei_all,uu_all,ll_all,gg_all)
-#if ENER>0
+#if NENER>0
   deallocate(prad,prad_all)
 #endif
   end if
