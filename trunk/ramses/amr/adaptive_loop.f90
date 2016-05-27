@@ -81,7 +81,7 @@ subroutine adaptive_loop
 #endif
 
      ! Make new refinements
-     if(levelmin.lt.nlevelmax .and..not.static)then
+     if(levelmin.lt.nlevelmax.and.(.not.static.or.nstep_coarse_old.eq.nstep_coarse))then
         call refine_coarse
         do ilevel=1,levelmin
            call build_comm(ilevel)
@@ -122,7 +122,7 @@ subroutine adaptive_loop
      call amr_step(levelmin,1)
                                call timer('coarse levels','start')
 
-     if(levelmin.lt.nlevelmax .and..not. static)then
+     if(levelmin.lt.nlevelmax.and.(.not.static.or.nstep_coarse_old.eq.nstep_coarse))then
         do ilevel=levelmin-1,1,-1
            ! Hydro book-keeping
            if(hydro)then
