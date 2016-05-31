@@ -183,7 +183,7 @@ end subroutine flag_formation_sites
 !################################################################
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma,nvar,nener,smallr
+  use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
   use poisson_commons, ONLY:phi,f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
@@ -228,11 +228,7 @@ subroutine compute_clump_properties_round2(xx)
 
 
 #if NENER>0
-#ifdef SOLVERmhd
-  nener_offset = 8
-#else
-  nener_offset = ndim + 2
-#endif
+  nener_offset = inener-1
 #endif
   
   ! Conversion factor from user units to cgs units
@@ -727,7 +723,7 @@ end subroutine surface_int
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
   use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
-  use hydro_commons, ONLY: uold,gamma,nvar,nener,smallr
+  use hydro_commons, ONLY: uold,gamma,nvar,nener,inener,smallr
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_cell
@@ -764,11 +760,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 #endif
 
 #if NENER>0
-#ifdef SOLVERmhd
-  nener_offset = 8
-#else
-  nener_offset = ndim + 2
-#endif
+  nener_offset = inener-1
 #endif
   
 #if NDIM==3

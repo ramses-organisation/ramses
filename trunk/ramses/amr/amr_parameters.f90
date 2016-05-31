@@ -81,6 +81,8 @@ module amr_parameters
 
   ! Step parameters
   integer::nrestart=0         ! New run or backup file number
+  integer::nrestart_quad=0    ! Restart with double precision Hilbert keys
+  logical::restart_remap=.false. ! Force load balance on restart
   integer::nstepmax=1000000   ! Maximum number of time steps
   integer::ncontrol=1         ! Write control variables
   integer::fbackup=1000000    ! Backup data to disk
@@ -133,6 +135,7 @@ module amr_parameters
   real(dp)::B_ave  =0.0D0     ! Average magnetic field
   real(dp)::z_reion=8.5D0     ! Reionization redshift
   real(dp)::T2_start          ! Starting gas temperature
+  real(dp)::T2max= 1d50       ! Temperature ceiling for cooling_fine
   real(dp)::t_delay=1.0D1     ! Feedback time delay in Myr
   real(dp)::t_diss =20.0D0    ! Dissipation timescale for feedback
   real(dp)::t_sne =10.0D0     ! Supernova blast time

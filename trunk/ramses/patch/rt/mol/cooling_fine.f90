@@ -92,7 +92,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err,emag
+  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -107,7 +107,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp),dimension(nGroups, 1:nvector),save:: Np, Np_boost=0d0, dNpdt=0d0
   real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost, dFpdt
   real(dp),dimension(ndim, 1:nvector),save:: p_gas, u_gas
-  real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
+  real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep
+  real(kind=8)::aexp_loc, f_dust, xHII
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux 
 #endif
@@ -238,8 +239,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            endif
            kScIR = kScIR*scale_d*scale_l
            flux = rtuold(il,iNp+1:iNp+ndim)
-           work = scale_v/c_cgs * kScIR * sum(uold(il,2:ndim+1)*flux) &
-                * Zsolar(i) * dtnew(ilevel)       ! Eq A6
+           xHII = uold(il,iIons-1+ixHII)/uold(il,1)
+           f_dust = (1.-xHII)                     ! No dust in ionised gas
+           work = scale_v/c_cgs * kScIR * sum(uold(il,2:ndim+1)*flux)    &
+                * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
            
            uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
                 + work * group_egy(iIR) &
@@ -269,24 +272,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         err(i)=0.0d0
      end do
 #if NENER>0
-     do irad=0,nener-1
+     do irad=1,nener
         do i=1,nleaf
-           err(i)=err(i)+uold(ind_leaf(i),inener+irad)
+           err(i)=err(i)+uold(ind_leaf(i),ndim+2+irad)
         end do
      end do
 #endif
      do i=1,nleaf
-        emag(i)=0.0d0
-     end do
-#ifdef SOLVERmhd
-     do idim=1,ndim
-        do i=1,nleaf
-           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
-        end do
-     end do
-#endif
-     do i=1,nleaf
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i)-emag(i))
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
@@ -336,7 +329,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(cooling)then
         ! Compute thermal temperature by subtracting polytrope
         do i=1,nleaf
-           T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),T2max)
+           T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),1d9)
         end do
      endif
 
@@ -544,11 +537,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Update total fluid energy
      if(isothermal)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i) + emag(i)
+           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i)
         end do
      else if(cooling .or. neq_chem)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i) + emag(i)
+           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i)
         end do
      endif
 
@@ -600,8 +593,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
               kScIR  = kappaSc(iIR) * (TR/10d0)**2               
-           endif                                                        
-           tau = nH(i) * Zsolar(i) * unit_tau * kScIR                  
+           endif
+           f_dust = 1.-xion(ixHII,i)              ! No dust in ionised gas
+           tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kScIR                  
            f_trap = 0d0             ! Fraction IR photons that are trapped
            if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0) 
            ! Update streaming photons, trapped photons, and tot energy:
