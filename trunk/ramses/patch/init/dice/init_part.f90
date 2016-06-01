@@ -981,6 +981,7 @@ subroutine init_part
               ngas      = header%npart(1)
               nhalo     = header%npart(2)
               if(cosmo) T2_start = 1.356d-2/aexp**2
+              ifout = ic_ifout
 
               write(*,'(A50)')"__________________________________________________"
               write(*,*)"Found ",npart," particles"
@@ -1142,11 +1143,11 @@ subroutine init_part
                     endif
                     xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                     vp(ipart,1:3)  = vv(i,1:3)
-                    ! Flag gas particles with idp=1
+                    ! Flag gas particles with idp=-1
                     if((lpart+i).gt.header%npart(1))then
-                      idp(ipart)   = ii(i)+1
+                      idp(ipart)   = ii(i)
                     else
-                      idp(ipart)   = 1
+                      idp(ipart)   = -1
                     endif
                     mp(ipart)      = mm(i)
                     levelp(ipart)  = levelmin
@@ -1171,7 +1172,7 @@ subroutine init_part
                             ! Add a gas particle
                             xp(ipart+1,1:3) = xp(ipart,1:3)
                             vp(ipart+1,1:3) = vp(ipart,1:3)
-                            idp(ipart+1)    = 1
+                            idp(ipart+1)    = -1
                             mp(ipart+1)     = mp(ipart)*(omega_b/omega_m)
                             levelp(ipart+1) = levelmin
                             up(ipart+1)     = T2_start/scale_T2
