@@ -221,7 +221,7 @@ subroutine kill_gas_part(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).eq.-1)then
+              if(idp(ipart).eq.1)then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -238,7 +238,7 @@ subroutine kill_gas_part(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only gas particles
-              if(idp(ipart).eq.-1)then
+              if(idp(ipart).eq.1)then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -280,6 +280,9 @@ subroutine kill_gas_part(ilevel)
         write(*,'(A50)')"__________________________________________________"
      endif
   endif
+  do ipart=1,npart
+    idp(ipart) = idp(ipart)-1
+  enddo
 
 111 format('   Entering kill_gas_part for level ',I2)
 !---------------------------------------------

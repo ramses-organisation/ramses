@@ -1072,9 +1072,9 @@ subroutine init_part
                     gadget_scale_l = scale_l/header%boxsize
                     gadget_scale_v = 1e3*SQRT(aexp)/header%boxsize*aexp/100.
                   endif
-                  xx(i,:)   = xx_sp(i,:)*gadget_scale_l/scale_l*ic_scale_pos
-                  vv(i,:)   = vv_sp(i,:)*gadget_scale_v/scale_v*ic_scale_vel
-                  mm(i)     = mm_sp(i)*gadget_scale_m/scale_m*ic_scale_mass
+                  xx(i,:)   = xx_sp(i,:)*(gadget_scale_l/scale_l)*ic_scale_pos
+                  vv(i,:)   = vv_sp(i,:)*(gadget_scale_v/scale_v)*ic_scale_vel
+                  mm(i)     = mm_sp(i)*(gadget_scale_m/scale_m)*ic_scale_mass
                   if(cosmo) then
                     if(type_index .eq. 1) mass_sph = mm(i)
                     if(xx(i,1)<  0.0d0  )xx(i,1)=xx(i,1)+dble(nx)
@@ -1095,7 +1095,7 @@ subroutine init_part
                       if(cosmo) then
                         tt(i) = tt_sp(i)
                       else
-                        tt(i) = tt_sp(i)*gadget_scale_t/(scale_t/aexp**2)*ic_scale_age
+                        tt(i) = tt_sp(i)*(gadget_scale_t/(scale_t/aexp**2))*ic_scale_age
                       endif
                     endif
                   endif
@@ -1144,9 +1144,9 @@ subroutine init_part
                     vp(ipart,1:3)  = vv(i,1:3)
                     ! Flag gas particles with idp=-1
                     if((lpart+i).gt.header%npart(1))then
-                      idp(ipart)   = ii(i)
+                      idp(ipart)   = ii(i)+1
                     else
-                      idp(ipart)   = -1
+                      idp(ipart)   = 1
                     endif
                     mp(ipart)      = mm(i)
                     levelp(ipart)  = levelmin
