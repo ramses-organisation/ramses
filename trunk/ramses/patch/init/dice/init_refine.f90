@@ -175,8 +175,6 @@ subroutine init_refine_2
      end do
   endif
 #endif  
-  ! DICE restart time
-  !t=ic_t_restart
 
 end subroutine init_refine_2
 !################################################################

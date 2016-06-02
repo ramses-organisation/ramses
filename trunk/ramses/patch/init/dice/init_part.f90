@@ -981,7 +981,6 @@ subroutine init_part
               ngas      = header%npart(1)
               nhalo     = header%npart(2)
               if(cosmo) T2_start = 1.356d-2/aexp**2
-              ifout = ic_ifout
 
               write(*,'(A50)')"__________________________________________________"
               write(*,*)"Found ",npart," particles"
@@ -1153,7 +1152,7 @@ subroutine init_part
                     levelp(ipart)  = levelmin
                     if(star) then
                       tp(ipart)    = tt(i)
-                      if(tp(ipart).ne.0d0) tp(ipart)=tp(ipart)-ic_t_restart
+                      if(tp(ipart).ne.0d0) tp(ipart)=tp(ipart)
                     endif
                     if(metal) then
                       zp(ipart)    = zz(i)
@@ -1217,6 +1216,8 @@ subroutine init_part
            npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
         end do
         if(debug)write(*,*)'npart=',npart,'/',npart_cpu(ncpu)
+        ifout = ic_ifout
+        t = ic_t_restart
         ! DICE patch
 
      case ('gadget')
