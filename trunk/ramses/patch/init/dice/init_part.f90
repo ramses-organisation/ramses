@@ -991,7 +991,7 @@ subroutine init_part
               write(*,*)"----> ",header%npart(5)," type 4 particles"
               write(*,*)"----> ",header%npart(6)," type 5 particles"
               write(*,'(A50)')"__________________________________________________"
-              if((pos_size.ne.npart).or.(vel_size.ne.npart)) then
+              if((pos_size.ne.npart).or.(vel_size.ne.npart).or.((metal_size.ne.npart).and.(metal_size.ne.ngas+nstar_tot))) then
                 write(*,*) 'POS =',pos_size
                 write(*,*) 'Z   =',metal_size
                 write(*,*) 'VEL =',vel_size
@@ -1136,6 +1136,11 @@ subroutine init_part
                   if(cc(i)==myid)then
 #endif
                     ipart          = ipart+1
+                    ! Determine current particle type
+                    if((lpart+i).le.header%npart(1)) type_index = 1
+                    do j=1,5
+                       if((lpart+i).gt.sum(header%npart(1:j)).and.(lpart+i).le.sum(header%npart(1:j+1))) type_index = j+1
+                    enddo
                     if(ipart.gt.npartmax) then
                        write(*,*) "Increase npartmax"
                        call clean_stop
@@ -1153,19 +1158,15 @@ subroutine init_part
                     if(star) then
                       tp(ipart)    = tt(i)
                       if(tp(ipart).ne.0d0) tp(ipart)=tp(ipart)
-                    endif
-                    if(metal) then
-                      zp(ipart)    = zz(i)
+                      ! Particle metallicity
+                      if(metal) then
+                        zp(ipart)  = zz(i)
+                      endif
                     endif
                     up(ipart)      = uu(i)
                     ! Add a gas particle outside the zoom region
                     if(cosmo) then
-                      maskp(ipart)   = 1.0
-                      ! Determine current particle type
-                      if((lpart+i).le.header%npart(1)) type_index = 1
-                      do j=1,6
-                         if((lpart+i).gt.sum(header%npart(1:j)).and.(lpart+i).le.sum(header%npart(1:j+1))) type_index = j+1
-                      enddo
+                      maskp(ipart) = 1.0
                       do j=1,6
                          if(type_index.eq.cosmo_add_gas_index(j)) then
                             ! Add a gas particle
