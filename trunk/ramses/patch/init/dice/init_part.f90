@@ -79,7 +79,7 @@ subroutine init_part
   real::dummy_real
   character(LEN=12)::ifile_str
   character(LEN=4)::blck_name
-  logical::eob,file_exists
+  logical::eob,file_exists,skip
   TYPE(gadgetheadertype)::header
   ! DICE patch
 
@@ -984,12 +984,36 @@ subroutine init_part
 
               write(*,'(A50)')"__________________________________________________"
               write(*,*)"Found ",npart," particles"
-              write(*,*)"----> ",header%npart(1)," type 0 particles"
-              write(*,*)"----> ",header%npart(2)," type 1 particles"
-              write(*,*)"----> ",header%npart(3)," type 2 particles"
-              write(*,*)"----> ",header%npart(4)," type 3 particles"
-              write(*,*)"----> ",header%npart(5)," type 4 particles"
-              write(*,*)"----> ",header%npart(6)," type 5 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.0) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(1)," type 0 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.1) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(2)," type 1 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.2) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(3)," type 2 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.3) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(4)," type 3 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.4) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(5)," type 4 particles"
+              skip=.false.
+              do j=1,6
+                 if(ic_skip_type(j).eq.5) skip=.true.
+              enddo
+              if(.not.skip) write(*,*)"----> ",header%npart(6)," type 5 particles"
               write(*,'(A50)')"__________________________________________________"
               if((pos_size.ne.npart).or.(vel_size.ne.npart).or.((metal_size.ne.npart).and.(metal_size.ne.ngas+nstar_tot))) then
                 write(*,*) 'POS =',pos_size
@@ -1135,57 +1159,62 @@ subroutine init_part
                   ! Check the CPU map
                   if(cc(i)==myid)then
 #endif
-                    ipart          = ipart+1
                     ! Determine current particle type
                     if((lpart+i).le.header%npart(1)) type_index = 1
                     do j=1,5
                        if((lpart+i).gt.sum(header%npart(1:j)).and.(lpart+i).le.sum(header%npart(1:j+1))) type_index = j+1
                     enddo
-                    if(ipart.gt.npartmax) then
-                       write(*,*) "Increase npartmax"
-                       call clean_stop
-                    endif
-                    xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
-                    vp(ipart,1:3)  = vv(i,1:3)
-                    ! Flag gas particles with idp=-1
-                    if((lpart+i).gt.header%npart(1))then
-                      idp(ipart)   = ii(i)+1
-                    else
-                      idp(ipart)   = 1
-                    endif
-                    mp(ipart)      = mm(i)
-                    levelp(ipart)  = levelmin
-                    if(star) then
-                      tp(ipart)    = tt(i)
-                      if(tp(ipart).ne.0d0) tp(ipart)=tp(ipart)
-                      ! Particle metallicity
-                      if(metal) then
-                        zp(ipart)  = zz(i)
-                      endif
-                    endif
-                    up(ipart)      = uu(i)
-                    ! Add a gas particle outside the zoom region
-                    if(cosmo) then
-                      maskp(ipart) = 1.0
-                      do j=1,6
-                         if(type_index.eq.cosmo_add_gas_index(j)) then
-                            ! Add a gas particle
-                            xp(ipart+1,1:3) = xp(ipart,1:3)
-                            vp(ipart+1,1:3) = vp(ipart,1:3)
-                            idp(ipart+1)    = -1
-                            mp(ipart+1)     = mp(ipart)*(omega_b/omega_m)
-                            levelp(ipart+1) = levelmin
-                            up(ipart+1)     = T2_start/scale_T2
-                            maskp(ipart+1)  = 0.0
-                            if(metal) then
-                               zp(ipart+1)  = z_ave*0.02
-                            endif
-                            ! Remove mass from the DM particle
-                            mp(ipart) = mp(ipart)-mp(ipart+1)
-                            ! Update index
-                            ipart           = ipart+1
+                    skip           = .false.
+                    do j=1,6
+                       if(ic_skip_type(j).eq.type_index-1) skip=.true.
+                    enddo
+                    if(.not.skip) then 
+                       ipart          = ipart+1
+                       if(ipart.gt.npartmax) then
+                          write(*,*) "Increase npartmax"
+                          call clean_stop
+                       endif
+                       xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
+                       vp(ipart,1:3)  = vv(i,1:3)
+                       ! Flag gas particles with idp=1
+                       if(type_index.gt.1)then
+                         idp(ipart)   = ii(i)+1
+                       else
+                         idp(ipart)   = 1
+                       endif
+                       mp(ipart)      = mm(i)
+                       levelp(ipart)  = levelmin
+                       if(star) then
+                         tp(ipart)    = tt(i)
+                         ! Particle metallicity
+                         if(metal) then
+                           zp(ipart)  = zz(i)
                          endif
-                      end do
+                       endif
+                       up(ipart)      = uu(i)
+                       ! Add a gas particle outside the zoom region
+                       if(cosmo) then
+                         maskp(ipart) = 1.0
+                         do j=1,6
+                            if(type_index.eq.cosmo_add_gas_index(j)) then
+                               ! Add a gas particle
+                               xp(ipart+1,1:3) = xp(ipart,1:3)
+                               vp(ipart+1,1:3) = vp(ipart,1:3)
+                               idp(ipart+1)    = -1
+                               mp(ipart+1)     = mp(ipart)*(omega_b/omega_m)
+                               levelp(ipart+1) = levelmin
+                               up(ipart+1)     = T2_start/scale_T2
+                               maskp(ipart+1)  = 0.0
+                               if(metal) then
+                                  zp(ipart+1)  = z_ave*0.02
+                               endif
+                               ! Remove mass from the DM particle
+                               mp(ipart) = mp(ipart)-mp(ipart+1)
+                               ! Update index
+                               ipart           = ipart+1
+                            endif
+                         end do
+                       endif
                     endif
 #ifndef WITHOUTMPI
                   endif
