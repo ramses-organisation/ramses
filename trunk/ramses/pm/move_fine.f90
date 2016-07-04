@@ -11,7 +11,7 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2,info
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -24,21 +24,59 @@ subroutine move_fine(ilevel)
   igrid=headl(myid,ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
-     if(npart1>0)then        
+     npart2=0
+     
+     ! Count particles
+     if(npart1>0)then
+        ipart=headp(igrid)
+        ! Loop over particles
+        do jpart=1,npart1
+           ! Save next particle   <--- Very important !!!
+           next_part=nextp(ipart)
+           if(star) then
+              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+                 npart2=npart2+1
+              endif
+           else
+              if(.not.static_dm) then
+                 npart2=npart2+1
+              endif
+           endif
+           ipart=next_part  ! Go to next particle
+        end do
+     endif
+     
+     ! Gather star particles
+     if(npart2>0)then        
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
         ! Loop over particles
         do jpart=1,npart1
-           ! Save next particle  <---- Very important !!!
+           ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
-           if(ig==0)then
-              ig=1
-              ind_grid(ig)=igrid
-           end if
-           ip=ip+1
-           ind_part(ip)=ipart
-           ind_grid_part(ip)=ig   
+           ! Select particles
+           if(star) then
+              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig   
+              endif
+           else
+              if(.not.static_dm) then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig   
+              endif
+           endif
            if(ip==nvector)then
               call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
               ip=0
