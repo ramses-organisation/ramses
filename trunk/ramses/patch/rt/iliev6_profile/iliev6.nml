@@ -18,6 +18,7 @@ length_y=100.0
 length_z=100.0
 exp_region=10.0
 p_region= 8.69869d-10		    ! 100 K
+var_region(1,1) = 1d-6
 /
 
 &AMR_PARAMS 
@@ -60,17 +61,8 @@ rt_smooth=.true.
 rt_courant_factor=0.8		! courant number for RT timesteps
 rt_c_fraction=0.01		      ! fraction of actual lightspeed set to RT lightspeed
 rt_otsa=.false.			      		       	              	        ! no OTSA
+rt_is_init_xion=.false.
 rt_err_grad_xHII=0.1
-rt_nregion=1   !--------------------------------------------------------------------
-rt_region_type(1)='square'
-rt_reg_x_center=0.5
-rt_reg_y_center=0.5
-rt_reg_z_center=0.5
-rt_reg_length_x=100.0
-rt_reg_length_y=100.0
-rt_reg_length_z=100.0
-rt_exp_region=10.0
-rt_xion_region=1.d-6	        ! hydrogen ionization state in box (no Helium)
 rt_nsource=3   !--------------------------------------------------------------------
 rt_source_type=3*'point'
 rt_src_x_center=3*0.0

@@ -7,7 +7,8 @@ rt=.true.
 
 &INIT_PARAMS
 filetype='grafic'
-initfile(1)='../IC'		! Point to Iliev's density cube
+!initfile(1)='../IC'		! Point to Iliev's density cube
+initfile(1)='./IC_better'		! Point to Iliev's density cube
 /
 
 &AMR_PARAMS 
