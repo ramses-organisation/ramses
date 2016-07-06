@@ -1552,7 +1552,7 @@ FUNCTION getUV_Irate(X, Y, N, species)
   integer :: N, species
 !-------------------------------------------------------------------------
   getUV_Irate = fourPi *  & 
-           integrateSpectrum(X,Y,N,dble(ionEvs(species)),0d0,species,fsig)
+           integrateSpectrum(X,Y,N,dble(ionEvs(species)),X(N),species,fsig)
 END FUNCTION getUV_Irate
 
 !*************************************************************************
@@ -1568,9 +1568,9 @@ FUNCTION getUV_Hrate(X, Y, N, species)
 !-------------------------------------------------------------------------
   e0=ionEvs(species)
   getUV_Hrate = &
-        const1*integrateSpectrum(X,Y,N, e0, 0.d0, species, fsigDivLambda)&
+        const1*integrateSpectrum(X,Y,N, e0, X(N), species, fsigDivLambda)&
        -const2*ionEvs(species) *                                         &
-               integrateSpectrum(X,Y,N, e0, 0.d0, species, fsig) 
+               integrateSpectrum(X,Y,N, e0, X(N), species, fsig) 
 END FUNCTION getUV_Hrate
 
 !*************************************************************************

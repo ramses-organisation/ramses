@@ -17,6 +17,7 @@ length_z=100.0
 exp_region=10.0
 d_region=1.d-3		! H atoms per cm3
 p_region= 8.69869d-10	! 100 K
+var_region(1,1)=1d-6
 /
 
 &AMR_PARAMS 
@@ -53,17 +54,8 @@ Y=0d0
 rt_flux_scheme='glf'
 rt_c_fraction=0.01
 rt_otsa=.false.
+rt_is_init_xion=.false.
 rt_err_grad_xHII=0.1
-rt_nregion=1			!-----------------------------------------
-rt_region_type(1)='square'
-rt_reg_x_center=0.5
-rt_reg_y_center=0.5
-rt_reg_z_center=0.5
-rt_reg_length_x=100.0
-rt_reg_length_y=100.0
-rt_reg_length_z=100.0
-rt_exp_region=10.0
-rt_xion_region=1.d-6	        ! initial xHII fraction in box
 rt_nsource=3   			!-----------------------------------------
 rt_source_type=3*'point'
 rt_src_x_center=3*0.0

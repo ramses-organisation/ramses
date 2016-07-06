@@ -22,7 +22,7 @@ subroutine read_hydro_params(nml_ok)
 #if NENER>0
        & ,prad_region &
 #endif
-       & ,d_region,u_region,v_region,w_region,p_region
+       & ,d_region,u_region,v_region,w_region,p_region,var_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
 #if NENER>0
