@@ -80,6 +80,128 @@ end subroutine synchro_fine
 !####################################################################
 !####################################################################
 !####################################################################
+subroutine synchro_fine_static(ilevel)
+  use pm_commons
+  use amr_commons
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h' 
+#endif
+  integer::ilevel
+  !--------------------------------------------------------------------
+  ! This routine synchronizes particle velocity with particle
+  ! position for ilevel particle only. If particle sits entirely 
+  ! in level ilevel, then use inverse CIC at fine level to compute 
+  ! the force. Otherwise, use coarse level force and coarse level CIC.
+  !--------------------------------------------------------------------
+  integer::igrid,jgrid,ipart,jpart
+  integer::ig,ip,next_part,npart1,npart2,isink,info
+  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  if(sink)then
+     fsink_new=0.
+  endif
+
+  ! Synchronize velocity using CIC
+  ig=0
+  ip=0
+  ! Loop over grids
+  igrid=headl(myid,ilevel)
+  do jgrid=1,numbl(myid,ilevel)
+     npart1=numbp(igrid)  ! Number of particles in the grid
+     npart2=0
+     
+     ! Count particles
+     if(npart1>0)then
+        ipart=headp(igrid)
+        ! Loop over particles
+        do jpart=1,npart1
+           ! Save next particle   <--- Very important !!!
+           next_part=nextp(ipart)
+           if(star) then
+              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+                 npart2=npart2+1
+              endif
+           else
+              if(.not.static_dm) then
+                 npart2=npart2+1
+              endif
+           endif
+           ipart=next_part  ! Go to next particle
+        end do
+     endif
+     
+     ! Gather star particles
+     if(npart2>0)then        
+        ig=ig+1
+        ind_grid(ig)=igrid
+        ipart=headp(igrid)
+        ! Loop over particles
+        do jpart=1,npart1
+           ! Save next particle   <--- Very important !!!
+           next_part=nextp(ipart)
+           ! Select particles
+           if(star) then
+              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig   
+              endif
+           else
+              if(.not.static_dm) then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig   
+              endif
+           endif
+           if(ip==nvector)then
+              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              ip=0
+              ig=0
+           end if
+           ipart=next_part  ! Go to next particle
+        end do
+        ! End loop over particles
+     end if
+     igrid=next(igrid)   ! Go to next grid
+  end do
+  ! End loop over grids
+  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  
+  !sink cloud particles are used to average the grav. acceleration
+  if(sink)then
+     if(nsink>0)then
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+        fsink_all=fsink_new
+#endif
+     endif
+     do isink=1,nsink
+        if (.not. direct_force_sink(isink))then 
+           fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
+        end if
+     end do
+  endif
+  
+111 format('   Entering synchro_fine for level ',I2)
+
+end subroutine synchro_fine_static
+!####################################################################
+!####################################################################
+!####################################################################
+!####################################################################
 subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
