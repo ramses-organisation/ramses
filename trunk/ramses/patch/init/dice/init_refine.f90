@@ -175,8 +175,6 @@ subroutine init_refine_2
      end do
   endif
 #endif  
-  ! DICE restart time
-  !t=ic_t_restart
 
 end subroutine init_refine_2
 !################################################################
@@ -275,10 +273,12 @@ subroutine kill_gas_part(ilevel)
   call MPI_ALLREDUCE(npart_cpu,npart_cpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
   npart_all=sum(npart_cpu_all(1:ncpu))
-  if(myid==1)then
-     write(*,'(A50)')"__________________________________________________"
-     write(*,'(A,I15)')' Gas particles deleted ->',npart_all
-     write(*,'(A50)')"__________________________________________________"
+  if(npart_all>0) then
+     if(myid==1) then
+        write(*,'(A50)')"__________________________________________________"
+        write(*,'(A,I15)')' Gas particles deleted ->',npart_all
+        write(*,'(A50)')"__________________________________________________"
+     endif
   endif
   do ipart=1,npart
     idp(ipart) = idp(ipart)-1

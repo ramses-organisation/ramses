@@ -57,6 +57,9 @@ module amr_parameters
   logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
+  logical::static_dm=.false.  ! Static mode for dm only activated
+  logical::static_gas=.false. ! Static mode for gas only activated
+  logical::static_stars=.false.! Static mode for stars only activated
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
