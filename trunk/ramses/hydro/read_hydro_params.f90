@@ -284,6 +284,19 @@ subroutine read_hydro_params(nml_ok)
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+  if(myid==1) then
+     write(*,*) 'Hydro var indices:'
+#if NENER>0
+     write(*,*) '   inener  = ',inener
+#endif
+     if(metal)           write(*,*) '   imetal  = ',imetal
+     if(delayed_cooling) write(*,*) '   idelay  = ',idelay  
+     if(aton)            write(*,*) '   ixion   = ',ixion
+#ifdef RT
+     if(rt) write(*,*) '   iIons   = ',ichem
+#endif
+  endif
+
   ! Last variable is ichem
 
 end subroutine read_hydro_params
