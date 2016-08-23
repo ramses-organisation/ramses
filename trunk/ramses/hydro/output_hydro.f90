@@ -32,14 +32,14 @@ subroutine file_descriptor_hydro(filename)
      ivar=4
      write(ilun,'("variable #",I2,": velocity_z")')ivar
   endif
+  ivar=ndim+2
+  write(ilun,'("variable #",I2,": thermal_pressure")')ivar
 #if NENER>0
   ! Non-thermal pressures
-  do ivar=ndim+2,ndim+1+nener
-     write(ilun,'("variable #",I2,": non_thermal_pressure_",I1)')ivar,ivar-ndim-1
+  do ivar=ndim+3,ndim+2+nener
+     write(ilun,'("variable #",I2,": non_thermal_pressure_",I1)')ivar,ivar-ndim-2
   end do
 #endif
-  ivar=ndim+2+nener
-  write(ilun,'("variable #",I2,": thermal_pressure")')ivar
 #if NVAR>NDIM+2+NENER
   ! Passive scalars
   do ivar=ndim+3+nener,nvar
