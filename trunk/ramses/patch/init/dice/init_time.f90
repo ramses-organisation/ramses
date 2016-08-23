@@ -442,15 +442,15 @@ subroutine init_cosmo
      if (verbose) write(*,*)'Reading in gadget format from'//TRIM(initfile(levelmin))//'/'//TRIM(ic_file)
      call gadgetreadheader(TRIM(initfile(levelmin))//'/'//TRIM(ic_file), 0,gadgetheader, ok)
      if(.not.ok) call clean_stop
-     if (gadgetheader%mass(2) == 0) then
-        write(*,*) 'Particles have different masses, not supported'
-        call clean_stop
-     endif
      omega_m = gadgetheader%omega0
      omega_l = gadgetheader%omegalambda
      if(hydro)omega_b=0.0469388
      h0 = gadgetheader%hubbleparam * 100.d0
-     boxlen_ini = gadgetheader%boxsize/1e3
+     if(gadgetheader%boxsize>0d0) then 
+        boxlen_ini = gadgetheader%boxsize/1e3
+     else
+        boxlen_ini = boxlen
+     endif
      aexp = gadgetheader%time
      aexp_ini = aexp
      ! Compute SPH equivalent mass (initial gas mass resolution)
