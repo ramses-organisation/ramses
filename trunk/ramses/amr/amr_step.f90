@@ -89,7 +89,7 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------------
   ! Load balance
   !--------------------------
-                               call timer('loadbalance','start')
+                               call timer('load balance','start')
   ok_defrag=.false.
   if(levelmin.lt.nlevelmax)then
      if(ilevel==levelmin)then
@@ -196,6 +196,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
+                               call timer('rho','start')
      call rho_fine(ilevel,icount)
   endif
 
