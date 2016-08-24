@@ -198,6 +198,12 @@ module amr_parameters
   real(kind=8),dimension(1:10)::deltax_frame=0d0
   real(kind=8),dimension(1:10)::deltay_frame=0d0
   real(kind=8),dimension(1:10)::deltaz_frame=0d0
+  real(kind=8),dimension(1:5)::dtheta_camera=0d0
+  real(kind=8),dimension(1:5)::dphi_camera=0d0
+  real(kind=8),dimension(1:5)::theta_camera=0d0
+  real(kind=8),dimension(1:5)::phi_camera=0d0
+  real(kind=8),dimension(1:5)::focal_camera=0d0
+  logical,dimension(1:5)::perspective_camera=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
 #ifdef SOLVERmhd
   integer,dimension(0:NVAR+6)::movie_vars=0

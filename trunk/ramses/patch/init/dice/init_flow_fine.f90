@@ -601,7 +601,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0
+           uold(active(ilevel)%igrid(i)+iskip,ivar)=0D0
         end do
      end do
   end do
@@ -612,7 +612,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
-           uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+           uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0D0
         end do
      end do
   end do
@@ -648,11 +648,11 @@ subroutine init_uold(ilevel)
      do ivar=nvar,1,-1
         do i=1,active(ilevel)%ngrid
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
-              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0.
-              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = IG_rho/scale_nH
-              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
+              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0D0
+              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = max(IG_rho/scale_nH,smallr)
+              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = max(IG_rho/scale_nH,smallr)*IG_T2/scale_T2/(gamma-1)
               if(metal) then
-                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
+                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = max(IG_rho/scale_nH,smallr)*IG_metal
               endif
            endif
         end do
