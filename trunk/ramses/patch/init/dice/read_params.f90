@@ -17,6 +17,7 @@ module dice_commons
   real(dp)::ic_t_restart   = 0.0D0
   integer::ic_ifout        = 1
   integer::ic_nfile        = 1
+  integer,dimension(1:6)::ic_skip_type        = -1
   integer,dimension(1:6)::cosmo_add_gas_index = -1
   real(dp),dimension(1:3)::ic_mag_const = (/ 0.0, 0.0, 0.0 /)
   real(dp),dimension(1:3)::ic_center    = (/ 0.0, 0.0, 0.0 /)
@@ -79,7 +80,7 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton
+       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -91,14 +92,16 @@ subroutine read_params
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
        & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt
+       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,perspective_camera
   namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
+       & ,gadget_scale_l, gadget_scale_v, gadget_scale_m ,gadget_scale_t &
        & ,ic_scale_pos,ic_scale_vel,ic_scale_mass,ic_scale_u,ic_scale_age &
        & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart,ic_mag_const &
        & ,ic_mag_center_x,ic_mag_center_y,ic_mag_center_z &
        & ,ic_mag_axis_x,ic_mag_axis_y,ic_mag_axis_z &
-       & ,ic_mag_scale_R,ic_mag_scale_H,ic_mag_scale_B,cosmo_add_gas_index
+       & ,ic_mag_scale_R,ic_mag_scale_H,ic_mag_scale_B,cosmo_add_gas_index,ic_skip_type
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -291,9 +294,9 @@ subroutine read_params
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
-  if(clumpfind.and.(.not.pic))then
-     pic=.true.
-  endif
+  !if(clumpfind.and.(.not.pic))then
+  !   pic=.true.
+  !endif
   !if(pic.and.(.not.poisson))then
   !   poisson=.true.
   !endif

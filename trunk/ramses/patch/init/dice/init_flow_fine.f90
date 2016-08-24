@@ -6,7 +6,7 @@
 subroutine init_flow  
   use amr_commons
   use hydro_commons, ONLY: nvar, uold
-	use dice_commons
+  use dice_commons
   implicit none
 
   integer::ilevel,ivar,i
@@ -428,15 +428,14 @@ subroutine init_flow_fine(ilevel)
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
-    ifout = ic_ifout
 
     do i=1,MAXGAL
-			if (ic_mag_scale_B(i) .EQ. 0.0) cycle
-			! renormalise axes
-      axlen = SQRT(ic_mag_axis_x(i)**2 + ic_mag_axis_y(i)**2 + ic_mag_axis_z(i)**2)
-      ic_mag_axis_x(i) = ic_mag_axis_x(i) / axlen
-      ic_mag_axis_y(i) = ic_mag_axis_y(i) / axlen
-      ic_mag_axis_z(i) = ic_mag_axis_z(i) / axlen
+       if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+       ! renormalise axes
+       axlen = SQRT(ic_mag_axis_x(i)**2 + ic_mag_axis_y(i)**2 + ic_mag_axis_z(i)**2)
+       ic_mag_axis_x(i) = ic_mag_axis_x(i) / axlen
+       ic_mag_axis_y(i) = ic_mag_axis_y(i) / axlen
+       ic_mag_axis_z(i) = ic_mag_axis_z(i) / axlen
     enddo
 
     ! Initialise uold with values from the DICE_PARAMS namelist
@@ -602,7 +601,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0
+           uold(active(ilevel)%igrid(i)+iskip,ivar)=0D0
         end do
      end do
   end do
@@ -613,7 +612,7 @@ subroutine reset_uold(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
-           uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+           uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0D0
         end do
      end do
   end do
@@ -649,11 +648,11 @@ subroutine init_uold(ilevel)
      do ivar=nvar,1,-1
         do i=1,active(ilevel)%ngrid
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
-              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0.
-              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = IG_rho/scale_nH
-              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = IG_rho/scale_nH*IG_T2/scale_T2/(gamma-1)
+              uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0D0
+              if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = max(IG_rho/scale_nH,smallr)
+              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = max(IG_rho/scale_nH,smallr)*IG_T2/scale_T2/(gamma-1)
               if(metal) then
-                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_rho/scale_nH*IG_metal
+                if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = max(IG_rho/scale_nH,smallr)*IG_metal
               endif
            endif
         end do
@@ -1210,11 +1209,11 @@ subroutine mag_constant(ilevel)
   integer::i,ind,iskip,ilevel
 
   do ind=1,twotondim
-    iskip=ncoarse+(ind-1)*ngridmax
-		do i=1,active(ilevel)%ngrid
-		  uold(active(ilevel)%igrid(i)+iskip,6:8)           = ic_mag_const
-		  uold(active(ilevel)%igrid(i)+iskip,nvar+1:nvar+3) = ic_mag_const
-    enddo
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        uold(active(ilevel)%igrid(i)+iskip,6:8)           = ic_mag_const
+        uold(active(ilevel)%igrid(i)+iskip,nvar+1:nvar+3) = ic_mag_const
+     enddo
   enddo
 end subroutine mag_constant
 
@@ -1248,9 +1247,9 @@ subroutine mag_compute(ilevel)
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   dxhalf = 0.5D0*dx
-	dxmin = 0.5D0**nlevelmax
-	dxminhalf = 0.5D0*dxmin
-	nfine = 2**(nlevelmax-ilevel)
+  dxmin = 0.5D0**nlevelmax
+  dxminhalf = 0.5D0*dxmin
+  nfine = 2**(nlevelmax-ilevel)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -1274,84 +1273,84 @@ subroutine mag_compute(ilevel)
     iskip=ncoarse+(ind-1)*ngridmax
     do j=1,active(ilevel)%ngrid
       icell=active(ilevel)%igrid(j)
-			cell_center = xg(icell,:)+xc(ind,:)-skip_loc(:)
+      cell_center = xg(icell,:)+xc(ind,:)-skip_loc(:)
 
       ! edge coordinates
       ! Ax
-		  pos = cell_center
+      pos = cell_center
       pos(1) = pos(1) - dxhalf + dxminhalf
       pos(2) = pos(2) - dxhalf
       pos(3) = pos(3) - dxhalf
-			Axdl=0.0;Axdr=0.0;Axul=0.0;Axur=0.0
-			do i=1,nfine
-	      CALL mag_toroidal(pos,1,Axdl)
-				pos(1) = pos(1) + dxmin
-			enddo
+      Axdl=0.0;Axdr=0.0;Axul=0.0;Axur=0.0
+      do i=1,nfine
+        CALL mag_toroidal(pos,1,Axdl)
+        pos(1) = pos(1) + dxmin
+      enddo
       pos(2) = pos(2) + dx
-			do i=1,nfine
-				pos(1) = pos(1) - dxmin
-      	CALL mag_toroidal(pos,1,Axdr)
-			enddo
+      do i=1,nfine
+        pos(1) = pos(1) - dxmin
+        CALL mag_toroidal(pos,1,Axdr)
+      enddo
       pos(3) = pos(3) + dx
-			do i=1,nfine
-      	CALL mag_toroidal(pos,1,Axur)
-				pos(1) = pos(1) + dxmin
-			enddo
+      do i=1,nfine
+        CALL mag_toroidal(pos,1,Axur)
+        pos(1) = pos(1) + dxmin
+      enddo
       pos(2) = pos(2) - dx
-			do i=1,nfine
-				pos(1) = pos(1) - dxmin
-      	CALL mag_toroidal(pos,1,Axul)
-			enddo
+      do i=1,nfine
+        pos(1) = pos(1) - dxmin
+        CALL mag_toroidal(pos,1,Axul)
+      enddo
       ! Ay
-		  pos = cell_center
+      pos = cell_center
       pos(1) = pos(1) - dxhalf
       pos(2) = pos(2) - dxhalf + dxminhalf
       pos(3) = pos(3) - dxhalf
-			Aydl=0.0;Aydr=0.0;Ayul=0.0;Ayur=0.0
-			do i=1,nfine
-	      CALL mag_toroidal(pos,2,Aydl)
-				pos(2) = pos(2) + dxmin
-			enddo
+      Aydl=0.0;Aydr=0.0;Ayul=0.0;Ayur=0.0
+      do i=1,nfine
+        CALL mag_toroidal(pos,2,Aydl)
+        pos(2) = pos(2) + dxmin
+      enddo
       pos(1) = pos(1) + dx
-			do i=1,nfine
-				pos(2) = pos(2) - dxmin
-    	  CALL mag_toroidal(pos,2,Aydr)
-			enddo
+      do i=1,nfine
+        pos(2) = pos(2) - dxmin
+        CALL mag_toroidal(pos,2,Aydr)
+      enddo
       pos(3) = pos(3) + dx
-			do i=1,nfine
-   	  	CALL mag_toroidal(pos,2,Ayur)
-				pos(2) = pos(2) + dxmin
-			enddo
+      do i=1,nfine
+        CALL mag_toroidal(pos,2,Ayur)
+        pos(2) = pos(2) + dxmin
+      enddo
       pos(1) = pos(1) - dx
-			do i=1,nfine
-				pos(2) = pos(2) - dxmin
-				CALL mag_toroidal(pos,2,Ayul)
-			enddo
+      do i=1,nfine
+        pos(2) = pos(2) - dxmin
+        CALL mag_toroidal(pos,2,Ayul)
+      enddo
       ! Az
-		  pos = cell_center
+      pos = cell_center
       pos(1) = pos(1) - dxhalf
       pos(2) = pos(2) - dxhalf
       pos(3) = pos(3) - dxhalf + dxminhalf
-			Azdl=0.0;Azdr=0.0;Azul=0.0;Azur=0.0
-			do i=1,nfine
-    	  CALL mag_toroidal(pos,3,Azdl)
-				pos(3) = pos(3) + dxmin
-			enddo
+      Azdl=0.0;Azdr=0.0;Azul=0.0;Azur=0.0
+      do i=1,nfine
+        CALL mag_toroidal(pos,3,Azdl)
+        pos(3) = pos(3) + dxmin
+      enddo
       pos(1) = pos(1) + dx
-			do i=1,nfine
-				pos(3) = pos(3) - dxmin
-				CALL mag_toroidal(pos,3,Azdr)
-			enddo
+      do i=1,nfine
+        pos(3) = pos(3) - dxmin
+        CALL mag_toroidal(pos,3,Azdr)
+      enddo
       pos(2) = pos(2) + dx
-			do i=1,nfine
-    	  CALL mag_toroidal(pos,3,Azur)
-				pos(3) = pos(3) + dxmin
-			enddo
+      do i=1,nfine
+        CALL mag_toroidal(pos,3,Azur)
+        pos(3) = pos(3) + dxmin
+      enddo
       pos(1) = pos(1) - dx
-			do i=1,nfine
-				pos(3) = pos(3) - dxmin
-				CALL mag_toroidal(pos,3,Azul)
-			enddo
+      do i=1,nfine
+        pos(3) = pos(3) - dxmin
+        CALL mag_toroidal(pos,3,Azul)
+      enddo
 
       ! Bx left
       Bxl = ((Azul - Azdl) - (Ayul - Aydl))/dx / nfine
@@ -1379,8 +1378,8 @@ end subroutine mag_compute
 
 subroutine mag_toroidal(pos,dir,A)
   use dice_commons
-	use amr_parameters, ONLY: boxlen
-	implicit none
+  use amr_parameters, ONLY: boxlen
+  implicit none
   real(dp)::r,h
   real(dp)::Ah,A
   integer::i,dir
@@ -1401,16 +1400,16 @@ subroutine mag_toroidal(pos,dir,A)
     sH = ic_mag_scale_H(i) / boxlen
     sB = ic_mag_scale_B(i)
 
-		! coordinates in galaxy frame
+    ! coordinates in galaxy frame
     xrel = pos - gcenter
-		h = DOT_PRODUCT(xrel,gaxis)
-		grad = xrel - h*gaxis
-		r = NORM2(grad)
+    h = DOT_PRODUCT(xrel,gaxis)
+    grad = xrel - h*gaxis
+    r = NORM2(grad)
 
-		Ah = sB * sR * exp(-r/sR) * exp(-ABS(h)/sH)
+    Ah = sB * sR * exp(-r/sR) * exp(-ABS(h)/sH)
 
-		! vector in cartesian frame
-		A = A + Ah*gaxis(dir)
+    ! vector in cartesian frame
+    A = A + Ah*gaxis(dir)
   end do
 end subroutine
 #endif

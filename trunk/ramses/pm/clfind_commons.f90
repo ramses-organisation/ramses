@@ -4,6 +4,7 @@ module clfind_commons
 
   integer::ntest,itest                                    !number of cells above threshold per CPU
   integer::ivar_clump=1
+  integer::levelmax_clfind
   integer::npeaks,npeaks_tot,npeaks_max
   integer,allocatable,dimension(:)::npeaks_per_cpu
   integer,allocatable,dimension(:)::ipeak_start
@@ -14,6 +15,7 @@ module clfind_commons
   real(dp)::rho_clfind=-1.d0
   real(dp)::n_clfind=-1.d0
   real(dp)::mass_threshold=0.d0
+  real(dp)::age_cut_clfind=0.d0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
 

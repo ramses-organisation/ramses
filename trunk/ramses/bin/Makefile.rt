@@ -6,6 +6,7 @@ NVECTOR = 64
 NDIM = 3
 NPRE = 8
 NVAR = 6
+NENER = 0
 NGROUPS = 4
 NIONS = 3
 SOLVER = hydro
@@ -18,7 +19,7 @@ GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER) $(ATON_FLAGS) -DRT
+          -DNENER=$(NENER) -DSOLVER$(SOLVER) $(ATON_FLAGS) -DRT
 #############################################################################
 # Fortran compiler options and directives
 

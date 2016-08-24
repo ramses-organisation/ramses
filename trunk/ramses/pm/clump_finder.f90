@@ -864,7 +864,7 @@ subroutine read_clumpfind_params()
   namelist/clumpfind_params/ivar_clump,& 
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
-       & n_clfind,rho_clfind
+       & n_clfind,rho_clfind,age_cut_clfind
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
   
   ! Read namelist file 
@@ -1210,6 +1210,7 @@ subroutine rho_only_level(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use clfind_commons
   implicit none
   integer::ilevel
   !------------------------------------------------------------------
@@ -1218,8 +1219,8 @@ subroutine rho_only_level(ilevel)
   ! level ilevel (boundary particles).
   ! Arrays flag1 and flag2 are used as temporary work space.
   !------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,idim,icpu
-  integer::i,ig,ip,npart1
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,next_part
+  integer::i,ig,ip,npart1,npart2
   real(dp)::dx
 
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -1234,23 +1235,62 @@ subroutine rho_only_level(ilevel)
      ! Loop over grids
      igrid=headl(icpu,ilevel)
      ig=0
-     ip=0
+     ip=0   
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
+        npart2=0
+
+        ! Count elligible particles
         if(npart1>0)then
+           ipart=headp(igrid)
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              ! Select stars younger than age_cut_clfind
+              if(age_cut_clfind>0.d0 .and. star) then
+                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+                    npart2=npart2+1
+                 endif
+              ! All particles
+              else
+                 npart2=npart2+1
+              endif
+              ipart=next_part  ! Go to next particle
+           end do
+        endif
+
+        ! Gather elligible particles
+        if(npart2>0)then        
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
-
+           
            ! Loop over particles
            do jpart=1,npart1
-              if(ig==0)then
-                 ig=1
-                 ind_grid(ig)=igrid
-              end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              ! Select stars younger than age_cut_clfind
+              if(age_cut_clfind>0.d0 .and. star) then
+                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+                    if(ig==0)then
+                       ig=1
+                       ind_grid(ig)=igrid
+                    end if
+                    ip=ip+1
+                    ind_part(ip)=ipart
+                    ind_grid_part(ip)=ig
+                 endif
+              ! All particles
+              else
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig
+              endif
               if(ip==nvector)then
                  ! Lower left corner of 3x3x3 grid-cube
                  do idim=1,ndim
@@ -1266,13 +1306,14 @@ subroutine rho_only_level(ilevel)
 #else
                  call cic_only(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
 #endif
+
                  ip=0
                  ig=0
               end if
-              ipart=nextp(ipart)  ! Go to next particle
+              ipart=next_part  ! Go to next particle
            end do
            ! End loop over particles
-
+           
         end if
 
         igrid=next(igrid)   ! Go to next grid

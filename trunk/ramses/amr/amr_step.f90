@@ -33,7 +33,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Make new refinements and update boundaries
   !-------------------------------------------
                                call timer('refine','start')
-  if(levelmin.lt.nlevelmax .and..not. static)then
+  if(levelmin.lt.nlevelmax .and.(.not.static.or.(nstep_coarse_old.eq.nstep_coarse.and.restart_remap)))then
      if(ilevel==levelmin.or.icount>1)then
         do i=ilevel,nlevelmax
            if(i>levelmin)then
@@ -241,7 +241,11 @@ recursive subroutine amr_step(ilevel,icount)
      ! Synchronize remaining particles for gravity
      if(pic)then
                                call timer('particles','start')
-        call synchro_fine(ilevel)
+        if(static_dm.or.static_stars)then
+           call synchro_fine_static(ilevel)
+        else
+           call synchro_fine(ilevel)
+        end if
      end if
 
      if(hydro)then
@@ -337,7 +341,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
-     call godunov_fine(ilevel)
+     if(.not.static_gas) call godunov_fine(ilevel)
 
      ! Reverse update boundaries
                                call timer('hydro - rev ghostzones','start')
@@ -408,7 +412,11 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
   if(pic)then
                                call timer('particles','start')
-     call move_fine(ilevel) ! Only remaining particles
+     if(static_dm.or.static_stars)then
+        call move_fine_static(ilevel) ! Only remaining particles
+     else
+        call move_fine(ilevel) ! Only remaining particles
+     end if
   end if
   
   !----------------------------------
@@ -450,7 +458,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Compute refinement map
   !-----------------------
                                call timer('flag','start')
-  if(.not.static) call flag_fine(ilevel,icount)
+  if(.not.static.or.(nstep_coarse_old.eq.nstep_coarse.and.restart_remap)) call flag_fine(ilevel,icount)
 
   !----------------------------
   ! Merge finer level particles
