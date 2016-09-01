@@ -22,7 +22,10 @@ subroutine read_hydro_params(nml_ok)
 #if NENER>0
        & ,prad_region &
 #endif
-       & ,d_region,u_region,v_region,w_region,p_region,var_region
+#if NVAR>NDIM+2+NENER
+       & ,var_region &
+#endif
+       & ,d_region,u_region,v_region,w_region,p_region
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
 #if NENER>0
@@ -37,6 +40,12 @@ subroutine read_hydro_params(nml_ok)
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
+#if NENER>0
+       & ,prad_bound &
+#endif
+#if NVAR>NDIM+2+NENER
+       & ,var_bound &
+#endif
        & ,d_bound,u_bound,v_bound,w_bound,p_bound,no_inflow
   namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
@@ -284,6 +293,19 @@ subroutine read_hydro_params(nml_ok)
   if(delayed_cooling)ixion=idelay+1
   ichem=ixion
   if(aton)ichem=ixion+1
+  if(myid==1) then
+     write(*,*) 'Hydro var indices:'
+#if NENER>0
+     write(*,*) '   inener  = ',inener
+#endif
+     if(metal)           write(*,*) '   imetal  = ',imetal
+     if(delayed_cooling) write(*,*) '   idelay  = ',idelay  
+     if(aton)            write(*,*) '   ixion   = ',ixion
+#ifdef RT
+     if(rt) write(*,*) '   iIons   = ',ichem
+#endif
+  endif
+
   ! Last variable is ichem
 
 end subroutine read_hydro_params

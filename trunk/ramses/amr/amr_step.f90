@@ -89,7 +89,7 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------------
   ! Load balance
   !--------------------------
-                               call timer('loadbalance','start')
+                               call timer('load balance','start')
   ok_defrag=.false.
   if(levelmin.lt.nlevelmax)then
      if(ilevel==levelmin)then
@@ -196,6 +196,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
+                               call timer('rho','start')
      call rho_fine(ilevel,icount)
   endif
 
@@ -240,7 +241,11 @@ recursive subroutine amr_step(ilevel,icount)
      ! Synchronize remaining particles for gravity
      if(pic)then
                                call timer('particles','start')
-        call synchro_fine(ilevel)
+        if(static_dm.or.static_stars)then
+           call synchro_fine_static(ilevel)
+        else
+           call synchro_fine(ilevel)
+        end if
      end if
 
      if(hydro)then
@@ -336,7 +341,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
-     call godunov_fine(ilevel)
+     if(.not.static_gas) call godunov_fine(ilevel)
 
      ! Reverse update boundaries
                                call timer('hydro - rev ghostzones','start')
@@ -407,7 +412,11 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------
   if(pic)then
                                call timer('particles','start')
-     call move_fine(ilevel) ! Only remaining particles
+     if(static_dm.or.static_stars)then
+        call move_fine_static(ilevel) ! Only remaining particles
+     else
+        call move_fine(ilevel) ! Only remaining particles
+     end if
   end if
   
   !----------------------------------

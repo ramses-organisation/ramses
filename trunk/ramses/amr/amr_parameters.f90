@@ -57,6 +57,9 @@ module amr_parameters
   logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
+  logical::static_dm=.false.  ! Static mode for dm only activated
+  logical::static_gas=.false. ! Static mode for gas only activated
+  logical::static_stars=.false.! Static mode for stars only activated
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
@@ -195,6 +198,12 @@ module amr_parameters
   real(kind=8),dimension(1:10)::deltax_frame=0d0
   real(kind=8),dimension(1:10)::deltay_frame=0d0
   real(kind=8),dimension(1:10)::deltaz_frame=0d0
+  real(kind=8),dimension(1:5)::dtheta_camera=0d0
+  real(kind=8),dimension(1:5)::dphi_camera=0d0
+  real(kind=8),dimension(1:5)::theta_camera=0d0
+  real(kind=8),dimension(1:5)::phi_camera=0d0
+  real(kind=8),dimension(1:5)::focal_camera=0d0
+  logical,dimension(1:5)::perspective_camera=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
 #ifdef SOLVERmhd
   integer,dimension(-1:NVAR+6)::movie_vars=0
