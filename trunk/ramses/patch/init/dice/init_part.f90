@@ -1127,6 +1127,7 @@ subroutine init_part
                     if(cosmo) then
                       uu(i) = T2_start/scale_T2
                     else
+                      ! Temperature stored in units of K/mu
                       uu(i) = uu_sp(i)*mu_mol*(gadget_scale_v/scale_v)**2*ic_scale_u
                     endif
 
@@ -1223,7 +1224,7 @@ subroutine init_part
               lpart = lpart+jpart
             enddo
             if(myid==1)then
-               write(*,'(A,F10.3,A)') ' Gas mass in AMR grid -> ',mgas_tot,'D9 Msol'
+               write(*,'(A,E10.3,A)') ' Gas mass in AMR grid -> ',mgas_tot,' unit_m'
                write(*,'(A50)')"__________________________________________________"
                close(1)
             endif
