@@ -44,8 +44,11 @@ module rt_cooling_module
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
   real(dp)::Tmu_dissoc=1d3             ! Dissociation temperature [K]
-  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity    
-  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity    
+  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity
+  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity
+  ! Note to users: if photoelectric heating is activated with iPEH_group,
+  !                the value or expression used for kappaAbs should
+  !                not include PEH absorption, as this is done separately.
   
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
@@ -449,6 +452,8 @@ contains
           ! Photoelectric absorption: the effecive PEH cross section is
           ! c_Forbes / Hab_Forbes = 5.36d-23 cm2, where
           ! c_Forbes = 8.5d-26 erg/s and Hab_Forbes = 0.0015859 ert/s/cm2
+          ! Note: as this absorption is done separately, kappaAbs
+          !       should not include PEH absorption when PEH is included.
           phAbs(iPEH_group) = phAbs(iPEH_group) &
                + 5.36d-23 * rt_c_cgs * nH(icell) &
                * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
