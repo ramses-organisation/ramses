@@ -535,7 +535,7 @@ contains
        if(iPEH_group .gt. 0) then
           ! Add photoelectric heating (erg s-1 cm-3):
           f_Habing = group_egy_erg(iPEH_group) &   ! See Forbes et al 2016
-                   * dNp(iPEH_group)*rt_c_cgs/1.15859021d-3   
+                   * dNp(iPEH_group)*rt_c_cgs/1.5859d-3   
           Hrate = Hrate + 8.5d-26 * f_Habing * nH(icell) &
                 * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
        endif
