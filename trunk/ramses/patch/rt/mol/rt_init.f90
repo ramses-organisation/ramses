@@ -145,7 +145,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
        & ,convert_birth_times,isHe,isH2,is_mu_H2                         &
        & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
-       & ,rt_isoPress, rt_isIRtrap                                       &
+       & ,rt_isoPress, rt_isIRtrap, iPEH_group                           &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
