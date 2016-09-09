@@ -1170,6 +1170,9 @@ subroutine init_part
                        if(ic_skip_type(j).eq.type_index-1) skip=.true.
                     enddo
                     if(.not.skip) then 
+                       if(abs(xx(i,1)-ic_center(1)).ge.boxlen/2d0) cycle
+                       if(abs(xx(i,2)-ic_center(2)).ge.boxlen/2d0) cycle
+                       if(abs(xx(i,3)-ic_center(3)).ge.boxlen/2d0) cycle
                        ipart          = ipart+1
                        if(ipart.gt.npartmax) then
                           write(*,*) "Increase npartmax"
