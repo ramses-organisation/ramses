@@ -190,13 +190,6 @@ subroutine output_frame()
   delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
   delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp
-
-  xleft_frame  = xcen-delx/2.
-  xright_frame = xcen+delx/2.
-  yleft_frame  = ycen-dely/2.
-  yright_frame = ycen+dely/2.
-  zleft_frame  = zcen-delz/2.
-  zright_frame = zcen+delz/2.
    
   ! Camera properties
   if(cosmo) then
@@ -217,6 +210,28 @@ subroutine output_frame()
   dist_camera   = boxlen
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera)) focal_camera(proj_ind) = dist_camera
   if(myid==1) write(*,'(5A,F5.1,A,F5.1)') "Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
+  ! Rotating the camera center
+  xcen         = xcen-boxlen/2.
+  ycen         = ycen-boxlen/2.
+  zcen         = zcen-boxlen/2.
+  xtmp         = cos(theta_cam)*xcen+sin(theta_cam)*ycen
+  ytmp         = cos(theta_cam)*ycen-sin(theta_cam)*xcen
+  xcen         = xtmp
+  ycen         = ytmp
+  ytmp         = cos(phi_cam)*ycen+sin(phi_cam)*zcen
+  ztmp         = cos(phi_cam)*zcen-sin(phi_cam)*ycen
+  ycen         = ytmp
+  zcen         = ztmp
+  xcen         = xcen+boxlen/2.
+  ycen         = ycen+boxlen/2.
+  zcen         = zcen+boxlen/2.
+  ! Frame boundaries
+  xleft_frame  = xcen-delx/2.
+  xright_frame = xcen+delx/2.
+  yleft_frame  = ycen-dely/2.
+  yright_frame = ycen+dely/2.
+  zleft_frame  = zcen-delz/2.
+  zright_frame = zcen+delz/2.
 
   ! Allocate image
 #ifdef SOLVERmhd
