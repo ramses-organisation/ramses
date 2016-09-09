@@ -15,7 +15,7 @@ module rt_cooling_module
          , getMu, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi        &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
-         , rt_isoPress, rt_T_rad, rt_vc, a_r
+         , rt_isoPress, rt_T_rad, rt_vc, a_r, iPEH_group
 
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux, 
@@ -31,8 +31,9 @@ module rt_cooling_module
   real(dp)::T_min, T_frac, x_min, x_fm, x_frac
   real(dp)::Np_min, Np_frac, Fp_min, Fp_frac
 
-  integer,parameter::iIR=1                       !          IR group index
-  integer::iIRtrapVar=1                          ! IRtrap passScalar index
+  integer,parameter::iIR=1             !                    IR group index
+  integer::iPEH_group=-1               ! Photoelectric heating group index
+  integer::iIRtrapVar=1                !  Trapped IR energy variable index
   ! Namelist parameters:
   logical::is_mu_H2=.false.
   logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
@@ -43,8 +44,11 @@ module rt_cooling_module
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
   real(dp)::Tmu_dissoc=1d3             ! Dissociation temperature [K]
-  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity    
-  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity    
+  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity
+  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity
+  ! Note to users: if photoelectric heating is activated with iPEH_group,
+  !                the value or expression used for kappaAbs should
+  !                not include PEH absorption, as this is done separately.
   
   ! Cooling constants, updated on SED and c-change [cm3 s-1],[erg cm3 s-1]
   real(dp),dimension(nGroups,nIons)::signc,sigec,PHrate
@@ -344,6 +348,7 @@ contains
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
     real(dp),dimension(nGroups),save:: dustSc, kAbs_loc,kSc_loc
     real(dp),save:: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
+    real(dp),save:: f_Habing
     !---------------------------------------------------------------------
     dt_ok=.false.
     nHe=0.25*nH(icell)*Y/X  !         Helium number density
@@ -443,6 +448,17 @@ contains
                phAbs(igroup) = phAbs(igroup) + dustAbs(igroup)
        end do
 
+       if(iPEH_group .gt. 0) then
+          ! Photoelectric absorption: the effecive PEH cross section is
+          ! c_Forbes / Hab_Forbes = 5.36d-23 cm2, where
+          ! c_Forbes = 8.5d-26 erg/s and Hab_Forbes = 0.0015859 ert/s/cm2
+          ! Note: as this absorption is done separately, kappaAbs
+          !       should not include PEH absorption when PEH is included.
+          phAbs(iPEH_group) = phAbs(iPEH_group) &
+               + 5.36d-23 * rt_c_cgs * nH(icell) &
+               * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
+       endif
+
        dmom(1:nDim)=0d0
        do igroup=1,nGroups  ! ------------------- Do the update of N and F
           dNp(igroup)= MAX(smallNp,                                      &
@@ -516,6 +532,13 @@ contains
           end do
        endif
        if(haardt_madau) Hrate= Hrate + SUM(nN(:)*UVrates(:,2)) * ss_factor
+       if(iPEH_group .gt. 0) then
+          ! Add photoelectric heating (erg s-1 cm-3):
+          f_Habing = group_egy_erg(iPEH_group) &   ! See Forbes et al 2016
+                   * dNp(iPEH_group)*rt_c_cgs/1.5859d-3   
+          Hrate = Hrate + 8.5d-26 * f_Habing * nH(icell) &
+                * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
+       endif
        Crate = compCoolrate(TK,ne,nN,nI,a_exp,dCdT2,RT_OTSA)     ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0.d0 ; metal_prime=0.d0             ! Metal cooling
