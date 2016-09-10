@@ -38,7 +38,9 @@ subroutine read_params
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
        & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
-       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,perspective_camera
+       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
+       & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
+       & ,tend_theta_camera,tend_phi_camera
 
   ! MPI initialization
 #ifndef WITHOUTMPI

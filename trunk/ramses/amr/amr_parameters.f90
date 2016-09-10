@@ -202,9 +202,15 @@ module amr_parameters
   real(kind=8),dimension(1:5)::dphi_camera=0d0
   real(kind=8),dimension(1:5)::theta_camera=0d0
   real(kind=8),dimension(1:5)::phi_camera=0d0
+  real(kind=8),dimension(1:5)::tstart_theta_camera=0d0
+  real(kind=8),dimension(1:5)::tstart_phi_camera=0d0
+  real(kind=8),dimension(1:5)::tend_theta_camera=0d0
+  real(kind=8),dimension(1:5)::tend_phi_camera=0d0
   real(kind=8),dimension(1:5)::focal_camera=0d0
+  real(kind=8),dimension(1:5)::smooth_frame=0d0
   logical,dimension(1:5)::perspective_camera=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
+  character(LEN=6),dimension(1:5)::shader_frame='square'
 #ifdef SOLVERmhd
   integer,dimension(0:NVAR+6)::movie_vars=0
   character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''
