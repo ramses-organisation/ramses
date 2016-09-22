@@ -80,7 +80,8 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap
+       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting&
+       & ,aton,nrestart_quad,restart_remap,use_proper_time,convert_birth_times
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -368,6 +369,11 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
+
+  if(.not.cosmo)then
+     use_proper_time=.false.
+     convert_birth_times=.false.
+  endif
      
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'

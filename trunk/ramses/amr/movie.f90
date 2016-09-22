@@ -196,35 +196,20 @@ subroutine output_frame()
      if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = aendmov
      if(tend_phi_camera(proj_ind).le.0d0) tend_phi_camera(proj_ind) = aendmov
      theta_cam  = theta_camera(proj_ind)*pi/180.                                                                                 &
-                +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180.
+                +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180./(aendmov-astartmov)
      phi_cam    = phi_camera(proj_ind)*pi/180.                                                                                   &
-                +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180.
+                +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(aendmov-astartmov)
   else
      if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = tendmov
      if(tend_phi_camera(proj_ind).le.0d0) tend_phi_camera(proj_ind) = tendmov
      theta_cam  = theta_camera(proj_ind)*pi/180.                                                                                 &
-                +min(max(t-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180.
+                +min(max(t-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180./(tendmov-tstartmov)
      phi_cam    = phi_camera(proj_ind)*pi/180.                                                                                   &
-                +min(max(t-tstart_phi_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180.
+                +min(max(t-tstart_phi_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(tendmov-tstartmov)
   endif
   dist_camera   = boxlen
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera)) focal_camera(proj_ind) = dist_camera
-  if(myid==1) write(*,'(5A,F5.1,A,F5.1)') "Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
-  ! Rotating the camera center
-  xcen         = xcen-boxlen/2.
-  ycen         = ycen-boxlen/2.
-  zcen         = zcen-boxlen/2.
-  xtmp         = cos(theta_cam)*xcen+sin(theta_cam)*ycen
-  ytmp         = cos(theta_cam)*ycen-sin(theta_cam)*xcen
-  xcen         = xtmp
-  ycen         = ytmp
-  ytmp         = cos(phi_cam)*ycen+sin(phi_cam)*zcen
-  ztmp         = cos(phi_cam)*zcen-sin(phi_cam)*ycen
-  ycen         = ytmp
-  zcen         = ztmp
-  xcen         = xcen+boxlen/2.
-  ycen         = ycen+boxlen/2.
-  zcen         = zcen+boxlen/2.
+  if(myid==1) write(*,'(5A,F8.1,A,F8.1)') "Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
   ! Frame boundaries
   xleft_frame  = xcen-delx/2.
   xright_frame = xcen+delx/2.
@@ -336,9 +321,9 @@ subroutine output_frame()
               do i=1,ngrid
                  if(ok(i))then
                     ! Centering
-                    xx(i,1) = xx(i,1)-boxlen/2.0
-                    xx(i,2) = xx(i,2)-boxlen/2.0
-                    xx(i,3) = xx(i,3)-boxlen/2.0
+                    xx(i,1) = xx(i,1)-xcen
+                    xx(i,2) = xx(i,2)-ycen
+                    xx(i,3) = xx(i,3)-zcen
                     ! Rotating
                     xtmp    = cos(theta_cam)*xx(i,1)+sin(theta_cam)*xx(i,2)
                     ytmp    = cos(theta_cam)*xx(i,2)-sin(theta_cam)*xx(i,1)
@@ -359,11 +344,11 @@ subroutine output_frame()
                          pers_corr = focal_camera(proj_ind)/(dist_camera-xx(i,1))
                          xx(i,2)   = xx(i,2)*pers_corr
                          xx(i,3)   = xx(i,3)*pers_corr
-                         dx_proj   = (dx_loc/2.0)*smooth_frame(proj_ind)*pers_corr
+                         dx_proj   = (dx_loc/2.0)*pers_corr*smooth_frame(proj_ind)
                       endif
-                      xcentre = xx(i,2)+boxlen/2.0
-                      ycentre = xx(i,3)+boxlen/2.0
-                      zcentre = xx(i,1)+boxlen/2.0
+                      xcentre = xx(i,2)+ycen
+                      ycentre = xx(i,3)+zcen
+                      zcentre = xx(i,1)+xcen
                     elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
                       if(perspective_camera(proj_ind))then
                          if(shader_frame(proj_ind).eq.'cube')then
@@ -373,11 +358,11 @@ subroutine output_frame()
                          pers_corr = focal_camera(proj_ind)/(dist_camera-xx(i,2))
                          xx(i,1)   = xx(i,1)*pers_corr
                          xx(i,3)   = xx(i,3)*pers_corr
-                         dx_proj   = (dx_loc/2.0)*smooth_frame(proj_ind)*pers_corr
+                         dx_proj   = (dx_loc/2.0)*pers_corr*smooth_frame(proj_ind)
                       endif
-                      xcentre = xx(i,1)+boxlen/2.0
-                      ycentre = xx(i,3)+boxlen/2.0
-                      zcentre = xx(i,2)+boxlen/2.0
+                      xcentre = xx(i,1)+xcen
+                      ycentre = xx(i,3)+zcen
+                      zcentre = xx(i,2)+ycen
                     else
                       if(perspective_camera(proj_ind))then
                          if(shader_frame(proj_ind).eq.'cube')then
@@ -387,11 +372,11 @@ subroutine output_frame()
                          pers_corr = focal_camera(proj_ind)/(dist_camera-xx(i,3))
                          xx(i,1)   = xx(i,1)*pers_corr
                          xx(i,2)   = xx(i,2)*pers_corr
-                         dx_proj   = (dx_loc/2.0)*smooth_frame(proj_ind)*pers_corr
+                         dx_proj   = (dx_loc/2.0)*pers_corr*smooth_frame(proj_ind)
                       endif
-                      xcentre = xx(i,1)+boxlen/2.0
-                      ycentre = xx(i,2)+boxlen/2.0
-                      zcentre = xx(i,3)+boxlen/2.0
+                      xcentre = xx(i,1)+xcen
+                      ycentre = xx(i,2)+ycen
+                      zcentre = xx(i,3)+zcen
                     endif
                     ! Rotating the cube shader
                     if(shader_frame(proj_ind).eq.'cube'.and.perspective_camera(proj_ind))then
@@ -504,7 +489,7 @@ subroutine output_frame()
 666                          continue
                           endif
                           if((shader_frame(proj_ind).eq.'cube'          &
-                             .and.(cube_face))                             &
+                             .and.(cube_face))                          &
                              .or.(shader_frame(proj_ind).eq.'sphere'    &
                              .and.sqrt(xpc**2+ypc**2).le.dx_proj)       &
                              .or.(shader_frame(proj_ind).eq.'square'    &
@@ -512,9 +497,8 @@ subroutine output_frame()
                              .and.(abs(ypc).le.dx_proj)))then
                              ! Intersection volume
                              dvol        = dx_cell*dy_cell
-                             dens(ii,jj) = dens(ii,jj)+dvol*uold(ind_cell(i),1)
                              vol(ii,jj)  = vol(ii,jj)+dvol
-                             
+                             dens(ii,jj) = dens(ii,jj)+dvol*uold(ind_cell(i),1)
                              data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
 #ifdef SOLVERmhd
                              do kk=2,NVAR+3
@@ -559,7 +543,7 @@ subroutine output_frame()
                              end if
       
 #ifdef SOLVERmhd
-                             if (movie_vars(NVAR+4).eq.1)then
+                             if(movie_vars(NVAR+4).eq.1)then
                                      data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)+ dvol*0.125*(&
                                          uold(ind_cell(i),6)**2 + uold(ind_cell(i),7)**2 + uold(ind_cell(i),8)**2 &
                                          + uold(ind_cell(i),NVAR+1)**2 + uold(ind_cell(i),NVAR+2)**2 + uold(ind_cell(i),NVAR+3)**2)
