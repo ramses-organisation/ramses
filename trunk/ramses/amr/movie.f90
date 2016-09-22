@@ -568,9 +568,9 @@ subroutine output_frame()
   do j=1,npartmax
 
 #if NDIM>2                 
-     xpf  = xp(j,1)-boxlen/2.0
-     ypf  = xp(j,2)-boxlen/2.0
-     zpf  = xp(j,3)-boxlen/2.0
+     xpf  = xp(j,1)-xcen
+     ypf  = xp(j,2)-ycen
+     zpf  = xp(j,3)-zcen
      ! Projection
      xtmp=cos(theta_cam)*xpf+sin(theta_cam)*ypf
      ytmp=cos(theta_cam)*ypf-sin(theta_cam)*xpf
@@ -596,9 +596,9 @@ subroutine output_frame()
         xpf  = xpf*focal_camera(proj_ind)/(dist_camera-zpf)
         ypf  = ypf*focal_camera(proj_ind)/(dist_camera-zpf)
      endif
-     xpf  = xpf+boxlen/2.0
-     ypf  = ypf+boxlen/2.0
-     zpf  = zpf+boxlen/2.0
+     xpf  = xpf+xcen
+     ypf  = ypf+ycen
+     zpf  = zpf+zcen
      
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame.or.&
