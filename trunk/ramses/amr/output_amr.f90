@@ -72,7 +72,7 @@ subroutine dump_all
            filename=TRIM(filedir)//'hydro_file_descriptor.txt'
            call file_descriptor_hydro(filename)
         end if
-        if(cooling)then
+        if(cooling .and. .not. neq_chem)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
         end if
