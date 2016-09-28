@@ -162,6 +162,7 @@ module amr_parameters
   logical ::smbh=.false.
   logical ::agn=.false.
   logical ::use_proper_time=.false.
+  logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
 
 #ifdef grackle
@@ -184,6 +185,7 @@ module amr_parameters
   ! Movie
   integer::imovout=0             ! Increment for output times
   integer::imov=1                ! Initialize
+  real(kind=8)::tstartmov=0.,astartmov=0.
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.

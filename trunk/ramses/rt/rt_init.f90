@@ -142,8 +142,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
-       & ,convert_birth_times, is_mu_H2                                  &
-       & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
+       & ,is_mu_H2,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost     &
        & ,rt_isoPress, rt_isIRtrap                                       &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
