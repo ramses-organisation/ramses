@@ -80,7 +80,8 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap
+       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting&
+       & ,aton,nrestart_quad,restart_remap,use_proper_time,convert_birth_times
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -91,8 +92,10 @@ subroutine read_params
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
-       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt
-       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,perspective_camera
+       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
+       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
+       & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
+       & ,tend_theta_camera,tend_phi_camera
   namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
@@ -366,6 +369,11 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
+
+  if(.not.cosmo)then
+     use_proper_time=.false.
+     convert_birth_times=.false.
+  endif
      
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'

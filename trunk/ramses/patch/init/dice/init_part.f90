@@ -190,13 +190,11 @@ subroutine init_part
         allocate(xdp(1:npart2))
         read(ilun)xdp
         tp(1:npart2)=xdp
-#ifdef RT
         if(convert_birth_times) then
            do i = 1, npart2 ! Convert birth time to proper for RT postpr.
               call getProperTime(tp(i),tp(i))
            enddo
         endif
-#endif
         if(metal)then
            ! Read metallicity
            read(ilun)xdp
@@ -1170,6 +1168,9 @@ subroutine init_part
                        if(ic_skip_type(j).eq.type_index-1) skip=.true.
                     enddo
                     if(.not.skip) then 
+                       if(abs(xx(i,1)-ic_center(1)).ge.boxlen/2d0) cycle
+                       if(abs(xx(i,2)-ic_center(2)).ge.boxlen/2d0) cycle
+                       if(abs(xx(i,3)-ic_center(3)).ge.boxlen/2d0) cycle
                        ipart          = ipart+1
                        if(ipart.gt.npartmax) then
                           write(*,*) "Increase npartmax"
