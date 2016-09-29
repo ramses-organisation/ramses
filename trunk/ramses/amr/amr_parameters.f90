@@ -214,11 +214,11 @@ module amr_parameters
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:5)::shader_frame='square'
 #ifdef SOLVERmhd
-  integer,dimension(-1:NVAR+6)::movie_vars=0
-  character(len=5),dimension(-1:NVAR+6)::movie_vars_txt=''
+  integer,dimension(0:NVAR+6)::movie_vars=0
+  character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''
 #else
-  integer,dimension(-1:NVAR+2)::movie_vars=0
-  character(len=5),dimension(-1:NVAR+2)::movie_vars_txt=''
+  integer,dimension(0:NVAR+2)::movie_vars=0
+  character(len=5),dimension(0:NVAR+2)::movie_vars_txt=''
 #endif
 
   ! Refinement parameters for each level
