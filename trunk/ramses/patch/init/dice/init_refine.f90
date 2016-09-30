@@ -280,9 +280,43 @@ subroutine kill_gas_part(ilevel)
         write(*,'(A50)')"__________________________________________________"
      endif
   endif
-  do ipart=1,npart
-    idp(ipart) = idp(ipart)-1
-  enddo
+npart_cpu(myid)=npart
+#ifndef WITHOUTMPI
+  ! Give an array of number of gas on each cpu available to all cpus
+  call MPI_ALLREDUCE(npart_cpu,npart_cpu_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+  npart_all=sum(npart_cpu_all(1:ncpu))
+  if(npart_all>0) then
+     if(myid==1) then
+        write(*,'(A50)')"__________________________________________________"
+        write(*,'(A,I15)')' Collisionless particles remaining ->',npart_all
+        write(*,'(A50)')"__________________________________________________"
+     endif
+  endif
+
+  do icpu=1,ncpu
+     igrid=headl(icpu,ilevel)
+     ig=0
+     ip=0
+     ! Loop over grids
+     do jgrid=1,numbl(icpu,ilevel)
+        npart1=numbp(igrid)  ! Number of particles in the grid
+        npart2=0        
+        ! Count gas particles
+        if(npart1>0)then
+           ipart=headp(igrid)
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              idp(ipart)=idp(ipart)-1
+              ipart=next_part  ! Go to next particle
+           end do
+           npart_cpu(myid)=npart_cpu(myid)+npart2
+        endif
+     end do
+  end do
+
 
 111 format('   Entering kill_gas_part for level ',I2)
 !---------------------------------------------
