@@ -52,7 +52,8 @@ subroutine read_hydro_params(nml_ok)
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling,T2max &
        & ,self_shielding,smbh,agn &
-       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne
+       & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne &
+       & ,sf_virial,sf_trelax,sf_model,sf_birth_properties
 #ifdef grackle
   namelist/grackle_params/grackle_comoving_coordinates,grackle_with_radiative_cooling,grackle_primordial_chemistry &
        & ,grackle_metal_cooling,grackle_UVbackground,grackle_h2_on_dust,grackle_cmb_temperature_floor &
@@ -289,8 +290,10 @@ subroutine read_hydro_params(nml_ok)
   imetal=nener+ndim+3
   idelay=imetal
   if(metal)idelay=imetal+1
-  ixion=idelay
-  if(delayed_cooling)ixion=idelay+1
+  ivirial=idelay
+  if(delayed_cooling)ivirial=idelay+1
+  ixion=ivirial
+  if(sf_virial)ixion=ivirial+1
   ichem=ixion
   if(aton)ichem=ixion+1
   if(myid==1) then
@@ -300,6 +303,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
      if(metal)           write(*,*) '   imetal  = ',imetal
      if(delayed_cooling) write(*,*) '   idelay  = ',idelay  
+     if(sf_virial)       write(*,*) '   ivirial = ',ivirial
      if(aton)            write(*,*) '   ixion   = ',ixion
 #ifdef RT
      if(rt) write(*,*) '   iIons   = ',ichem
