@@ -59,7 +59,7 @@ subroutine output_frame()
   integer::i,j,ig,ip,npart1
   integer::nalloc1,nalloc2
   integer::proj_ind,l,nh_temp,nw_temp
-  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,zpc,d1,d2,d3,d4
+  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,zpc,d1,d2,d3,d4,l1,l2,l3,l4
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   logical::opened,cube_face
   character(len=1)::temp_string
@@ -463,27 +463,29 @@ subroutine output_frame()
                           dy_cell  = min(yyright,yright)-max(yyleft,yleft)
                           xpc      = xxcentre-xcentre
                           ypc      = yycentre-ycentre
+                          xpc      = xpc-sign(0.5*dx_frame,xpc)
+                          ypc      = ypc-sign(0.5*dx_frame,ypc)
                           if(shader_frame(proj_ind).eq.'cube')then
                              cube_face = .false.
                              if(sqrt(xpc**2+ypc**2).gt.dx_proj*sqrt(3.0)) goto 666
                              ! Filling the 6 cube shader faces
                              do iline=1,6
-                                d1 = ((ycube(lind(iline,2))-ycube(lind(iline,1)))*xpc-(xcube(lind(iline,2))-xcube(lind(iline,1)))*ypc     &
-                                     +xcube(lind(iline,2))*ycube(lind(iline,1))-ycube(lind(iline,2))*xcube(lind(iline,1)))               &
-                                     /(sqrt((ycube(lind(iline,2))-ycube(lind(iline,1)))**2+(xcube(lind(iline,2))-xcube(lind(iline,1)))**2))
-                                d2 = ((ycube(lind(iline,4))-ycube(lind(iline,3)))*xpc-(xcube(lind(iline,4))-xcube(lind(iline,3)))*ypc     &
-                                     +xcube(lind(iline,4))*ycube(lind(iline,3))-ycube(lind(iline,4))*xcube(lind(iline,3)))               &
-                                     /(sqrt((ycube(lind(iline,4))-ycube(lind(iline,3)))**2+(xcube(lind(iline,4))-xcube(lind(iline,3)))**2))
-                                if(abs(d1)/d1.eq.-abs(d2)/d2) cube_face=.true.
+                                l1 = (ycube(lind(iline,2))-ycube(lind(iline,1)))**2+(xcube(lind(iline,2))-xcube(lind(iline,1)))**2
+                                l2 = (ycube(lind(iline,4))-ycube(lind(iline,3)))**2+(xcube(lind(iline,4))-xcube(lind(iline,3)))**2
+                                if(l1.eq.0d0) cycle
+                                if(l2.eq.0d0) cycle
+                                d1 = ((ycube(lind(iline,2))-ycube(lind(iline,1)))*xpc-(xcube(lind(iline,2))-xcube(lind(iline,1)))*ypc+xcube(lind(iline,2))*ycube(lind(iline,1))-ycube(lind(iline,2))*xcube(lind(iline,1)))/l1
+                                d2 = ((ycube(lind(iline,4))-ycube(lind(iline,3)))*xpc-(xcube(lind(iline,4))-xcube(lind(iline,3)))*ypc+xcube(lind(iline,4))*ycube(lind(iline,3))-ycube(lind(iline,4))*xcube(lind(iline,3)))/l2
+                                if(d1.eq.-sign(d1,d2)) cube_face=.true.
                                 if(.not.cube_face) cycle
-                                d3 = ((ycube(lind(iline,6))-ycube(lind(iline,5)))*xpc-(xcube(lind(iline,6))-xcube(lind(iline,5)))*ypc     &
-                                    +xcube(lind(iline,6))*ycube(lind(iline,5))-ycube(lind(iline,6))*xcube(lind(iline,5)))               &
-                                    /(sqrt((ycube(lind(iline,6))-ycube(lind(iline,5)))**2+(xcube(lind(iline,6))-xcube(lind(iline,5)))**2))
-                                d4 = ((ycube(lind(iline,8))-ycube(lind(iline,7)))*xpc-(xcube(lind(iline,8))-xcube(lind(iline,7)))*ypc     &
-                                    +xcube(lind(iline,8))*ycube(lind(iline,7))-ycube(lind(iline,8))*xcube(lind(iline,7)))               &
-                                    /(sqrt((ycube(lind(iline,8))-ycube(lind(iline,7)))**2+(xcube(lind(iline,8))-xcube(lind(iline,7)))**2))
+                                l3 = (ycube(lind(iline,6))-ycube(lind(iline,5)))**2+(xcube(lind(iline,6))-xcube(lind(iline,5)))**2
+                                l4 = (ycube(lind(iline,8))-ycube(lind(iline,7)))**2+(xcube(lind(iline,8))-xcube(lind(iline,7)))**2
+                                if(l3.eq.0d0) cycle
+                                if(l4.eq.0d0) cycle
+                                d3 = ((ycube(lind(iline,6))-ycube(lind(iline,5)))*xpc-(xcube(lind(iline,6))-xcube(lind(iline,5)))*ypc+xcube(lind(iline,6))*ycube(lind(iline,5))-ycube(lind(iline,6))*xcube(lind(iline,5)))/l3
+                                d4 = ((ycube(lind(iline,8))-ycube(lind(iline,7)))*xpc-(xcube(lind(iline,8))-xcube(lind(iline,7)))*ypc+xcube(lind(iline,8))*ycube(lind(iline,7))-ycube(lind(iline,8))*xcube(lind(iline,7)))/l4
                                 ! Within the projected face?
-                                if(abs(d3)/d3.eq.abs(d4)/d4) cube_face=.false.
+                                if(d3.eq.sign(d3,d4)) cube_face=.false.
                                 if(cube_face) exit
                              enddo
 666                          continue
@@ -507,7 +509,6 @@ subroutine output_frame()
 #endif
                                 if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
                              end do
-      
 #ifdef RT
                              if(rt) then
                                 do kk=1,NGROUPS
@@ -519,8 +520,6 @@ subroutine output_frame()
                                 end do
                              endif
 #endif
-      
-                             
                              if (movie_vars(0).eq.1)then
                                !Get temperature
                                e=0.0d0
