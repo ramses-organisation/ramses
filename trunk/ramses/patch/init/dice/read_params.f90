@@ -80,8 +80,8 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting&
-       & ,aton,nrestart_quad,restart_remap,use_proper_time,convert_birth_times
+       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting &
+       & ,aton,nrestart_quad,restart_remap,convert_birth_times,use_proper_time
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -92,7 +92,7 @@ subroutine read_params
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
-       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
+       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera
@@ -255,12 +255,12 @@ subroutine read_params
      amovout=1d100
      if(tendmov>0)then
         do i=1,imovout
-           tmovout(i)=tendmov*dble(i)/dble(imovout)
+           tmovout(i)=(tendmov-tstartmov)*dble(i)/dble(imovout)+tstartmov
         enddo
      endif
      if(aendmov>0)then
         do i=1,imovout
-           amovout(i)=aendmov*dble(i)/dble(imovout)
+           amovout(i)=(aendmov-astartmov)*dble(i)/dble(imovout)+astartmov
         enddo
      endif
      if(tendmov==0.and.aendmov==0)movie=.false.

@@ -289,7 +289,7 @@ npart_cpu(myid)=npart
   if(npart_all>0) then
      if(myid==1) then
         write(*,'(A50)')"__________________________________________________"
-        write(*,'(A,I15)')' Collisionless particles remaining ->',npart_all
+        write(*,'(A,I15)')' Remaining particles ->',npart_all
         write(*,'(A50)')"__________________________________________________"
      endif
   endif
