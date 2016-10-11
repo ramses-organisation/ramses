@@ -78,6 +78,9 @@ subroutine output_frame()
 
   nh_temp    = nh_frame
   nw_temp    = nw_frame
+
+  ! Only one projection available in 2D
+  if((ndim.eq.2).and.(trim(proj_axis).ne.'z')) proj_axis = 'z'
   
  do proj_ind=1,LEN(trim(proj_axis)) 
   opened=.false.
@@ -209,7 +212,11 @@ subroutine output_frame()
   endif
   dist_camera   = boxlen
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera)) focal_camera(proj_ind) = dist_camera
+#if NDIM>2                 
   if(myid==1) write(*,'(5A,F8.1,A,F8.1)') "Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
+#else
+  if(myid==1) write(*,'(3A,F8.1)') "Writing frame ", istep_str,' theta=',theta_cam*180./pi
+#endif
   ! Frame boundaries
   xleft_frame  = xcen-delx/2.
   xright_frame = xcen+delx/2.
@@ -217,6 +224,9 @@ subroutine output_frame()
   yright_frame = ycen+dely/2.
   zleft_frame  = zcen-delz/2.
   zright_frame = zcen+delz/2.
+
+  ! No cubic shader for 2D simulations
+  if((ndim.eq.2).and.(shader_frame(proj_ind).eq.'cube')) shader_frame(proj_ind) = 'square'
 
   ! Allocate image
 #ifdef SOLVERmhd
@@ -260,6 +270,7 @@ subroutine output_frame()
         ncache=active(ilevel)%ngrid
 
         dx_proj = (dx_loc/2.0)*smooth_frame(proj_ind)
+#if NDIM>2                 
         if((shader_frame(proj_ind).eq.'cube').and.(.not.perspective_camera(proj_ind)))then
            xcube = (/-dx_proj,-dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj, dx_proj, dx_proj/)
            ycube = (/-dx_proj,-dx_proj, dx_proj, dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj/)
@@ -281,7 +292,7 @@ subroutine output_frame()
            minz = minval(zcube)
            maxz = maxval(zcube)
         endif
-
+#endif
         ! Loop over grids by vector sweeps
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
@@ -320,6 +331,7 @@ subroutine output_frame()
    
               do i=1,ngrid
                  if(ok(i))then
+#if NDIM>2                 
                     ! Centering
                     xx(i,1) = xx(i,1)-xcen
                     xx(i,2) = xx(i,2)-ycen
@@ -426,11 +438,23 @@ subroutine output_frame()
                     yright  = ycentre+maxy
                     zleft   = zcentre+minz
                     zright  = zcentre+maxz
-#if NDIM>2                 
                     if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
                          & yright.lt.yleft_frame.or.yleft.ge.yright_frame.or.&
                          & zright.lt.zleft_frame.or.zleft.ge.zright_frame)cycle
 #else
+                    xx(i,1) = xx(i,1)-xcen
+                    xx(i,2) = xx(i,2)-ycen
+                    ! Rotating
+                    xtmp    = cos(theta_cam)*xx(i,1)+sin(theta_cam)*xx(i,2)
+                    ytmp    = cos(theta_cam)*xx(i,2)-sin(theta_cam)*xx(i,1)
+                    xx(i,1) = xtmp
+                    xx(i,2) = ytmp
+                    xcentre = xx(i,1)+xcen
+                    ycentre = xx(i,2)+ycen
+                    xleft   = xcentre-dx_proj
+                    xright  = xcentre+dx_proj
+                    yleft   = ycentre-dx_proj
+                    yright  = ycentre+dx_proj
                     if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
                          & yright.lt.yleft_frame.or.yleft.ge.yright_frame)cycle
 #endif
@@ -465,6 +489,7 @@ subroutine output_frame()
                           ypc      = yycentre-ycentre
                           xpc      = xpc-sign(0.5*dx_frame,xpc)
                           ypc      = ypc-sign(0.5*dx_frame,ypc)
+#if NDIM>2                 
                           if(shader_frame(proj_ind).eq.'cube')then
                              cube_face = .false.
                              if(sqrt(xpc**2+ypc**2).gt.dx_proj*sqrt(3.0)) goto 666
@@ -490,6 +515,7 @@ subroutine output_frame()
                              enddo
 666                          continue
                           endif
+#endif
                           if((shader_frame(proj_ind).eq.'cube'          &
                              .and.(cube_face))                          &
                              .or.(shader_frame(proj_ind).eq.'sphere'    &
@@ -571,25 +597,25 @@ subroutine output_frame()
      ypf  = xp(j,2)-ycen
      zpf  = xp(j,3)-zcen
      ! Projection
-     xtmp=cos(theta_cam)*xpf+sin(theta_cam)*ypf
-     ytmp=cos(theta_cam)*ypf-sin(theta_cam)*xpf
-     xpf=xtmp
-     ypf=ytmp
-     ytmp=cos(phi_cam)*ypf+sin(phi_cam)*zpf
-     ztmp=cos(phi_cam)*zpf-sin(phi_cam)*ypf
+     xtmp = cos(theta_cam)*xpf+sin(theta_cam)*ypf
+     ytmp = cos(theta_cam)*ypf-sin(theta_cam)*xpf
+     xpf  = xtmp
+     ypf  = ytmp
+     ytmp = cos(phi_cam)*ypf+sin(phi_cam)*zpf
+     ztmp = cos(phi_cam)*zpf-sin(phi_cam)*ypf
 
      if(proj_axis(proj_ind:proj_ind).eq.'x')then
-       xpf  = ytmp
-       ypf  = ztmp
-       zpf  = xtmp
+       xpf = ytmp
+       ypf = ztmp
+       zpf = xtmp
      elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-       xpf  = xtmp
-       ypf  = ztmp
-       zpf  = ytmp
+       xpf = xtmp
+       ypf = ztmp
+       zpf = ytmp
      else
-       xpf  = xtmp
-       ypf  = ytmp
-       zpf  = ztmp
+       xpf = xtmp
+       ypf = ytmp
+       zpf = ztmp
      endif
      if(perspective_camera(proj_ind))then
         xpf  = xpf*focal_camera(proj_ind)/(dist_camera-zpf)
@@ -603,13 +629,14 @@ subroutine output_frame()
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame.or.&
           & zpf.lt.zleft_frame.or.zpf.ge.zright_frame)cycle
 #else
-     xpf  = xp(j,1)
-     ypf  = xp(j,2)
-     xtmp=cos(theta_cam)*xpf+sin(theta_cam)*xpf
-     ytmp=cos(theta_cam)*ypf-sin(theta_cam)*ypf
-     xpf=xtmp
-     ypf=ytmp
-     
+     xpf  = xp(j,1)-xcen
+     ypf  = xp(j,2)-ycen
+     xtmp = cos(theta_cam)*xpf+sin(theta_cam)*xpf
+     ytmp = cos(theta_cam)*ypf-sin(theta_cam)*ypf
+     xpf  = xtmp
+     ypf  = ytmp
+     xpf  = xpf+xcen
+     ypf  = ypf+xcen
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame)cycle
 #endif
