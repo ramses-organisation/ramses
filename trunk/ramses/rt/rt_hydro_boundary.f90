@@ -143,14 +143,14 @@ subroutine rt_make_boundary_hydro(ilevel)
            else if((boundary_type(ibound)/10).eq.1)then
 
               ! Gather reference hydro variables
-              do ivar=1,nvar
+              do ivar=1,nrtvar
                  do i=1,ngrid
                     uu(i,ivar)=rtuold(ind_cell_ref(i),ivar)
                  end do
               end do
 
               ! Scatter to boundary region
-              do ivar=1,nvar
+              do ivar=1,nrtvar
                  do i=1,ngrid
                     rtuold(ind_cell(i),ivar)=uu(i,ivar)
                  end do
