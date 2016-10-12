@@ -1036,7 +1036,7 @@ subroutine init_part
             do while(.not.eob)
               xx=0.
               vv=0.
-              ii=0.
+              ii=0
               mm=0.
               tt=0.
               zz=0.
@@ -1067,7 +1067,7 @@ subroutine init_part
                   if(id_blck.ne.-1) then
                     read(1,POS=id_blck+sizeof(dummy_int)*(kpart-1)) ii(i)
                   else
-                    ii(i) = (kpart-1)
+                    ii(i) = kpart
                   endif
                   if(kpart.le.header%npart(1)) then
                     if((u_blck.ne.-1).and.(u_size.eq.header%npart(1))) then

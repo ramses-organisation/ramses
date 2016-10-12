@@ -11,13 +11,14 @@ subroutine read_params
   ! Local variables
   !--------------------------------------------------
   integer::i,narg,iargc,ierr,levelmax
-  character(LEN=80)::infile
+  character(LEN=80)::infile, info_file
   character(LEN=80)::cmdarg
+  character(LEN=5)::nchar
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
   real(kind=8)::delta_tout=0,tend=0
   real(kind=8)::delta_aout=0,aend=0
-  logical::nml_ok
+  logical::nml_ok, info_ok
   integer,parameter::tag=1134
   integer::dummy_io,info2
   !--------------------------------------------------
@@ -158,6 +159,22 @@ subroutine read_params
   if (myid==1 .and. narg == 2) then
      CALL getarg(2,cmdarg)
      read(cmdarg,*) nrestart
+  endif
+
+  if (myid==1 .and. nrestart .gt. 0) then
+     call title(nrestart,nchar)
+     info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+     inquire(file=info_file, exist=info_ok) 
+     do while(.not. info_ok .and. nrestart .gt. 1)
+        nrestart = nrestart - 1
+        call title(nrestart,nchar)
+        info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+        inquire(file=info_file, exist=info_ok) 
+     enddo   
+     if (.not. info_ok) then
+         write(*,*) "Error: Could not find restart file"
+         call clean_stop
+     endif
   endif
 
 #ifndef WITHOUTMPI
