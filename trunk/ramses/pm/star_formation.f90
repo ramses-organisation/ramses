@@ -6,7 +6,8 @@ subroutine star_formation(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH 
+  use poisson_commons
+  use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
   use random
   implicit none
 #ifndef WITHOUTMPI
@@ -28,28 +29,37 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot
+  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot,ilun
   integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc
-  integer ::ntot,ntot_all,info,nstar_corrected,ideb,ndeb
+  integer ::ntot,ntot_all,info,nstar_corrected,ideb,ndeb,ncell
   logical ::ok_free,ok_all
-  real(dp)::d,x,y,z,u,v,w,e,zg,vdisp,dgas
-  real(dp)::mstar,dstar,tstar,nISM,nCOM
-  real(dp)::T2,nH,T_poly
-  real(dp)::velc,uc,vc,wc,mass_load
-  real(dp)::vxgauss,vygauss,vzgauss,birth_epoch
+  real(dp)::d,x,y,z,u,v,w,e,tg,zg,vdisp,dgas
+  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff
+  real(dp)::velc,uc,vc,wc,mass_load,ul,ur,fl,fr,trgv,alpha0,sigma2,lapld,flong,ftot,pcomp
+  real(dp)::divv,curlv,curlv1,curlv2,curlv3
+  real(dp)::vxgauss,vygauss,vzgauss,birth_epoch,factG
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
   real(kind=8)::RandNum,GaussNum,PoissMean   
-  real(dp)::vsn,costheta,sintheta,phi,cosphi,sinphi
+  real(dp),parameter::pi=0.5*twopi
+  integer,parameter::tag=1120
+  integer::dummy_io,info2
+  real(dp)::vsn,costheta,sintheta,cosphi,sinphi
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
   real(dp)::mdebris,vdebris,zdebris,rdebris
-  real(dp)::bx1,bx2,by1,by2,bz1,bz2
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+  real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell2,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
   integer ,dimension(1:nvector),save::list_debris,ind_debris
+  integer ,dimension(1:nvector,0:twondim)::ind_nbor
   logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
+  character(LEN=80)::filename,filedir,fileloc,filedirini
+  character(LEN=5)::nchar,ncharcpu
+  logical::file_exist
   
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
@@ -57,6 +67,41 @@ subroutine star_formation(ilevel)
   if(static)return
 
   if(verbose)write(*,*)' Entering star_formation'
+
+  if(sf_birth_properties) then
+     call title(ifout-1,nchar)
+     if(IOGROUPSIZEREP>0) then
+        filedirini='output_'//TRIM(nchar)//'/'
+        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+     else
+        filedir='output_'//TRIM(nchar)//'/'
+     endif
+     filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
+     ilun=myid+10
+     call title(myid,nchar)
+     fileloc=TRIM(filename)//TRIM(nchar)
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+   
+     inquire(file=fileloc,exist=file_exist)
+     if((.not.file_exist).or.(nrestart.eq.ifout-1)) then
+        open(ilun, file=fileloc, form='formatted')
+        if(sf_virial) then
+           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg  sf_eff'
+        else
+           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg'
+        endif
+     else
+        open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
+     endif
+  endif
   
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -77,6 +122,7 @@ subroutine star_formation(ilevel)
   ! Star formation time scale from Gyr to code units
   ! SFR apply here for long lived stars only
   t0=t_star*(1d9*365.*24.*3600.)/scale_t
+  trel=sf_trelax*1d6*(365.*24.*3600.)/scale_t
 
   ! ISM density threshold from H/cc to code units
   nISM = n_star
@@ -92,6 +138,9 @@ subroutine star_formation(ilevel)
      mstar=m_star*mass_sph
   endif
   dstar=mstar/vol_loc
+
+  factG = 1d0
+  if(cosmo) factG = 3d0/4d0/twopi*omega_m*aexp
 
   ! Birth epoch as proper time
   if(use_proper_time)then
@@ -168,6 +217,13 @@ subroutine star_formation(ilevel)
      end do
   end do
 
+! get values of uold for density and velocities in virtual boundaries
+#ifndef WITHOUTMPI
+  do ivar=1,4
+     call make_virtual_fine_dp(uold(1,ivar),ilevel)
+  end do
+#endif
+
   !------------------------------------------------
   ! Compute number of new stars in each cell
   !------------------------------------------------
@@ -190,19 +246,238 @@ subroutine star_formation(ilevel)
         do i=1,ngrid
            ok(i)=son(ind_cell(i))==0
         end do
-        ! Density criterion
-        do i=1,ngrid
-           d=uold(ind_cell(i),1)
-           if(d<=d0)ok(i)=.false. 
-        end do
-        ! Temperature criterion
-        do i=1,ngrid
-           T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
-           nH=max(uold(ind_cell(i),1),smallr)*scale_nH
-           T_poly=T2_star*(nH/nISM)**(g_star-1.0)
-           T2=T2-T_poly
-           if(T2>2e4)ok(i)=.false. 
-        end do
+        if(sf_virial)then
+           do i=1,ngrid
+              ! if cell is a leaf cell
+              if (ok(i)) then 
+                 d         = uold(ind_cell(i),1)
+                 ! Compute temperature in K/mu
+                 T2        = (gamma-1.0)*uold(ind_cell(i),5)*scale_T2
+                 ! Correct from polytrope
+                 T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 T2        = T2-T_poly
+                 ! Temperature criterion
+                 if(T2>2e4) ok(i)=.false.
+                 ! Density criterion
+                 if(d<=d0) ok(i)=.false. 
+                 if(ok(i)) then
+                    ! Compute sound speed squared
+                    cs2       = (gamma-1.0)*uold(ind_cell(i),5)
+                    ! prevent numerical crash due to negative temperature
+                    cs2       = max(cs2,smallc**2)
+                    ! Correct from polytrope
+                    cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                    cs2       = cs2-cs2_poly
+                    ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
+                    ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor. 
+                    ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation 
+                    ! from neighbouring cell values and differentiate. 
+                    ! Get neighbor cells if they exist, otherwise use straight injection from local cell
+                    ncell = 1 ! we just want the neighbors of that cell
+                    ind_cell2(1) = ind_cell(i)
+                    call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
+                    d1        = uold(ind_nbor(1,1),1)     ; d4    = uold(ind_nbor(1,4),1) 
+                    d2        = uold(ind_nbor(1,2),1)     ; d5    = uold(ind_nbor(1,5),1) 
+                    d3        = uold(ind_nbor(1,3),1)     ; d6    = uold(ind_nbor(1,6),1)  
+                    ! Divergence terms
+                    ul        = (d2*uold(ind_nbor(1,2),2) + d*uold(ind_cell(i),2))/(d2+d)
+                    ur        = (d1*uold(ind_nbor(1,1),2) + d*uold(ind_cell(i),2))/(d1+d)
+                    if(sf_model.le.2) then
+                       fl     = (d2*f(ind_nbor(1,2),1)    + d*f(ind_cell(i),1))/(d2+d)
+                       fr     = (d1*f(ind_nbor(1,1),1)    + d*f(ind_cell(i),1))/(d1+d)
+                       flong  = max((d2+d)/2*ul*fl-(d1+d)/2*ur*fr,0d0)
+                    endif
+                    trgv      = (ur-ul)**2
+                    divv      = (ur-ul)
+                    ul        = (d4*uold(ind_nbor(1,4),3) + d*uold(ind_cell(i),3))/(d4+d)
+                    ur        = (d3*uold(ind_nbor(1,3),3) + d*uold(ind_cell(i),3))/(d3+d)
+                    if(sf_model.le.2) then
+                       fl     = (d4*f(ind_nbor(1,4),2)    + d*f(ind_cell(i),2))/(d4+d)
+                       fr     = (d3*f(ind_nbor(1,3),2)    + d*f(ind_cell(i),2))/(d3+d)
+                       flong  = flong+max((d4+d)/2*ul*fl-(d3+d)/2*ur*fr,0d0)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    divv      = divv + (ur-ul)
+                    ul        = (d6*uold(ind_nbor(1,6),4) + d*uold(ind_cell(i),4))/(d6+d)
+                    ur        = (d5*uold(ind_nbor(1,5),4) + d*uold(ind_cell(i),4))/(d5+d)
+                    if(sf_model.le.2) then
+                       fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
+                       fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
+                       flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
+                       ftot   = flong
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    divv      = trgv + (ur-ul)
+                    divv      = (divv/dx_loc)**2
+
+                    ! Curl terms
+                    ul        = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
+                    ur        = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
+                    if(sf_model.le.2) then
+                       fl     = (d6*f(ind_nbor(1,6),2)    + d*f(ind_cell(i),2))/(d6+d)
+                       fr     = (d5*f(ind_nbor(1,5),2)    + d*f(ind_cell(i),2))/(d5+d)
+                       ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    curlv1    = -(ur-ul)
+                    ul        = (d4*uold(ind_nbor(1,4),4) + d*uold(ind_cell(i),4))/(d4+d)
+                    ur        = (d3*uold(ind_nbor(1,3),4) + d*uold(ind_cell(i),4))/(d3+d)
+                    if(sf_model.le.2) then
+                       fl     = (d4*f(ind_nbor(1,4),3)    + d*f(ind_cell(i),3))/(d4+d)
+                       fr     = (d3*f(ind_nbor(1,3),3)    + d*f(ind_cell(i),3))/(d3+d)
+                       ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    curlv1    = (curlv1 + (ur-ul))
+                    ul        = (d6*uold(ind_nbor(1,6),2) + d*uold(ind_cell(i),2))/(d6+d)
+                    ur        = (d5*uold(ind_nbor(1,5),2) + d*uold(ind_cell(i),2))/(d5+d)
+                    if(sf_model.le.2) then
+                       fl     = (d6*f(ind_nbor(1,6),1)    + d*f(ind_cell(i),1))/(d6+d)
+                       fr     = (d5*f(ind_nbor(1,5),1)    + d*f(ind_cell(i),1))/(d5+d)
+                       ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    curlv2    = (ur-ul)
+                    ul        = (d2*uold(ind_nbor(1,2),4) + d*uold(ind_cell(i),4))/(d2+d)
+                    ur        = (d1*uold(ind_nbor(1,1),4) + d*uold(ind_cell(i),4))/(d1+d)
+                    if(sf_model.le.2) then
+                       fl     = (d2*f(ind_nbor(1,2),3)    + d*f(ind_cell(i),3))/(d2+d)
+                       fr     = (d1*f(ind_nbor(1,1),3)    + d*f(ind_cell(i),3))/(d1+d)
+                       ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    curlv2    = (curlv2 - (ur-ul))
+                    ul        = (d4*uold(ind_nbor(1,4),2) + d*uold(ind_cell(i),2))/(d4+d)
+                    ur        = (d3*uold(ind_nbor(1,3),2) + d*uold(ind_cell(i),2))/(d3+d)
+                    if(sf_model.le.2) then
+                       fl     = (d4*f(ind_nbor(1,4),1)    + d*f(ind_cell(i),1))/(d4+d)
+                       fr     = (d3*f(ind_nbor(1,3),1)    + d*f(ind_cell(i),1))/(d3+d)
+                       ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    curlv3    = -(ur-ul)
+                    ul        = (d2*uold(ind_nbor(1,2),3) + d*uold(ind_cell(i),3))/(d2+d)
+                    ur        = (d1*uold(ind_nbor(1,1),3) + d*uold(ind_cell(i),3))/(d1+d)
+                    if(sf_model.le.2) then
+                       fl     = (d2*f(ind_nbor(1,2),2)    + d*f(ind_cell(i),2))/(d2+d)
+                       fr     = (d1*f(ind_nbor(1,1),2)    + d*f(ind_cell(i),2))/(d1+d)
+                       ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
+                       pcomp  = flong/ftot
+                    endif
+                    trgv      = trgv + (ur-ul)**2
+                    sigma2    = trgv
+                    trgv      = trgv/dx_loc**2
+                    curlv3    = (curlv3 + (ur-ul))
+                    curlv     = (curlv1**2+curlv2**2+curlv3**2)/dx_loc**2
+                    
+                    SELECT CASE (sf_model)
+                       ! Multi-ff KM model
+                       CASE (1)
+                          ! Virial parameter
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          if(pi*factG*d*dx_loc**2.eq.0d0) write(*,*) d
+                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
+                          zeta      = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
+#ifdef SOLVERmhd
+                          ! Best fit values to the Multi-ff KM model (MHD)
+                          phi_t     = 0.46
+                          phi_x     = 0.17
+                          A         = 0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
+                          B         = 0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
+                          C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+                          emag      = 0.5*(A**2+B**2+C**2)
+                          beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
+                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
+                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2)/(1.0+1.0/beta))
+#else
+                          ! Best fit values to the Multi-ff KM model (Hydro)
+                          phi_t     = 0.49
+                          phi_x     = 0.19
+                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
+                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2))
+#endif
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          uold(ind_cell(i),ivirial) = sfr_ff(i)
+                       ! Multi-ff PN model
+                       CASE (2)
+                          ! Virial parameter
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
+                          zeta      = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
+#ifdef SOLVERmhd
+                          ! Best fit values to the Multi-ff PN model (MHD)
+                          phi_t     = 0.47
+                          theta     = 1.00
+                          A         = 0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
+                          B         = 0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
+                          C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+                          emag      = 0.5*(A**2+B**2+C**2)
+                          beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
+                          fbeta     = ((1+0.925*beta**(-3.0/2.0)**(2.0/3.0)))/((1+1.0/beta)**2)
+                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
+                          scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2)*fbeta)
+#else
+                          ! Best fit values to the Multi-ff PN model (Hydro)
+                          phi_t     = 0.49
+                          theta     = 0.97
+                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
+                          scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
+#endif
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          uold(ind_cell(i),ivirial) = sfr_ff(i)
+                       ! Virial criterion simple model
+                       CASE (3)
+                          ! Laplacian rho
+                          lapld     =       ((d1+d)/2.0)-2.0*d+((d2+d)/2.0)
+                          lapld     = lapld+((d3+d)/2.0)-2.0*d+((d4+d)/2.0)
+                          lapld     = lapld+((d5+d)/2.0)-2.0*d+((d6+d)/2.0)
+                          lapld     = lapld/(dx_loc/2.0)**2
+                          alpha0    = (trgv-cs2*lapld/d)/(4*pi*factG*d)
+                          if(alpha0<1.0.and.lapld<0.0) then
+                             sfr_ff(i) = eps_star
+                          else
+                             sfr_ff(i) = 0.0
+                             ok(i)     = .false.
+                          endif
+                          uold(ind_cell(i),ivirial) = sfr_ff(i)
+                       ! Padoan 2012 "a simple SF law"
+                       CASE (4)
+                          ! Feedback efficiency
+                          t_dyn     = dx_loc/(2.0*sqrt(sigma2+cs2))
+                          t_ff      = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
+                          sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
+                          uold(ind_cell(i),ivirial) = sfr_ff(i)
+                       ! Hopkins 2013
+                       CASE (5)
+                          alpha0    = 0.5*(divv+curlv)/(factG*d)
+                          if(alpha0<1.0) then
+                             sfr_ff(i) = eps_star
+                          else
+                             sfr_ff(i) = 0.0
+                             ok(i)     = .false.
+                          endif
+                          uold(ind_cell(i),ivirial) = sfr_ff(i)
+                       END SELECT
+                 endif
+              endif
+           end do
+        else
+           ! Density criterion
+           do i=1,ngrid
+              d=uold(ind_cell(i),1)
+              if(d<=d0)ok(i)=.false. 
+           end do
+           ! Temperature criterion
+           do i=1,ngrid
+              T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
+              nH=max(uold(ind_cell(i),1),smallr)*scale_nH
+              T_poly=T2_star*(nH/nISM)**(g_star-1.0)
+              T2=T2-T_poly
+              if(T2>2e4)ok(i)=.false. 
+           end do
+        endif
         ! Geometrical criterion
         if(ivar_refine>0)then
            do i=1,ngrid
@@ -217,15 +492,20 @@ subroutine star_formation(ilevel)
               ! Compute mean number of events
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
-              tstar=t0*sqrt(d00/d)
-              PoissMean=dtnew(ilevel)/tstar*mcell/mstar
+              ! Free fall time of an homogeneous sphere 
+              tstar     = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
+              if(.not.sf_virial) sfr_ff(i) = eps_star
+              ! Gas mass to be converted into stars
+              mgas = dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
+              ! Poisson mean
+              PoissMean = mgas/mstar
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
               ! Security to prevent more than 50% of gas depletion
-              if (mgas > 0.5*mcell) then
-                 nstar_corrected=int(0.5*mcell/mstar)
+              if (mgas > 0.9*mcell) then
+                 nstar_corrected=int(0.9*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar
                  nstar(i)=nstar_corrected
               endif
@@ -290,7 +570,7 @@ subroutine star_formation(ilevel)
   nstar_tot=nstar_tot+ntot_all
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Level=",I6," New star=",I6," Tot=",I10," Mass=",1PE10.3," Lost=",0PF4.1,"%")')&
+        write(*,'(" Level=",I6," New star=",I6," Tot=",I10," Mass=",1PE10.3," Lost=",0PF5.1,"%")')&
              & ilevel,ntot_all,nstar_tot,mtot_all,mlost_all/(mlost_all+mtot_all)*100.
      endif
   end if
@@ -358,7 +638,15 @@ subroutine star_formation(ilevel)
            x=(xg(ind_grid_new(i),1)+xc(ind,1)-skip_loc(1))*scale
            y=(xg(ind_grid_new(i),2)+xc(ind,2)-skip_loc(2))*scale
            z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
+           tg=uold(ind_cell_new(i),5)*(gamma-1)*scale_T2
            if(metal)zg=uold(ind_cell_new(i),imetal)
+           if(sf_birth_properties) then
+              if(sf_virial)then
+                 write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
+              else
+                 write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg
+              endif
+           endif
 
            ! Set star particle variables
            tp(ind_part(i))=birth_epoch  ! Birth epoch
@@ -465,9 +753,124 @@ subroutine star_formation(ilevel)
   end do
 
 #endif
+  if(sf_birth_properties) close(ilun)
 
 end subroutine star_formation 
 !################################################################
 !################################################################
 !################################################################
 !################################################################
+subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
+  use amr_commons
+  implicit none
+  integer::ncell,ilevel
+  integer,dimension(1:nvector)::ind_cell
+  integer,dimension(1:nvector,0:twondim)::ind_father
+  !-----------------------------------------------------------------
+  ! This subroutine determines the 2*ndim neighboring cells
+  ! cells of the input cell (ind_cell). 
+  ! If for some reasons they don't exist, the routine returns 
+  ! the input cell.
+  !-----------------------------------------------------------------
+  integer::nxny,i,idim,j,iok,ind
+  integer,dimension(1:3)::ibound,iskip1,iskip2
+  integer,dimension(1:nvector,1:3),save::ix
+  integer,dimension(1:nvector),save::ind_grid_father,pos
+  integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
+  integer,dimension(1:nvector,1:twondim),save::icelln_ok
+
+
+  if(ilevel==1)then 
+     write(*,*) 'Warning: attempting to form stars on level 1 --> this is not allowed ...'
+     return
+  endif
+
+  ! Get father cell
+  do i=1,ncell
+     ind_father(i,0)=ind_cell(i)
+  end do
+  
+  ! Get father cell position in the grid
+  do i=1,ncell
+     pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
+  end do
+  
+  ! Get father grid
+  do i=1,ncell
+     ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
+  end do
+  
+  ! Get neighboring father grids
+  call getnborgrids(ind_grid_father,igridn,ncell)
+  
+  ! Loop over position
+  do ind=1,twotondim
+     
+     ! Select father cells that sit at position ind
+     do j=0,twondim
+        iok=0
+        do i=1,ncell
+           if(pos(i)==ind)then
+              iok=iok+1
+              igridn_ok(iok,j)=igridn(i,j)
+           end if
+        end do
+     end do
+     
+     ! Get neighboring cells for selected cells
+     if(iok>0)call getnborcells(igridn_ok,ind,icelln_ok,iok)
+     
+     ! Update neighboring father cells for selected cells
+     do j=1,twondim
+        iok=0
+        do i=1,ncell
+           if(pos(i)==ind)then
+              iok=iok+1
+              if(icelln_ok(iok,j)>0)then
+                 ind_father(i,j)=icelln_ok(iok,j)
+                 !write(*,*) 'index first if',ind_father(i,j) 
+              else
+                 ind_father(i,j)=ind_cell(i)
+                 !write(*,*) 'index second if',ind_father(i,j) 
+              end if
+           end if
+        end do
+     end do
+     
+  end do
+     
+    
+end subroutine getnbor
+!##############################################################
+!##############################################################
+!##############################################################
+!##############################################################
+function erfc(x)
+
+! complementary error function
+  use amr_commons, ONLY: dp 
+  implicit none
+  real(dp) erfc
+  real(dp) x, y
+  real(kind=8) pv, ph 
+  real(kind=8) q0, q1, q2, q3, q4, q5, q6, q7
+  real(kind=8) p0, p1, p2, p3, p4, p5, p6, p7
+  parameter(pv= 1.26974899965115684d+01, ph= 6.10399733098688199d+00) 
+  parameter(p0= 2.96316885199227378d-01, p1= 1.81581125134637070d-01) 
+  parameter(p2= 6.81866451424939493d-02, p3= 1.56907543161966709d-02) 
+  parameter(p4= 2.21290116681517573d-03, p5= 1.91395813098742864d-04) 
+  parameter(p6= 9.71013284010551623d-06, p7= 1.66642447174307753d-07)
+  parameter(q0= 6.12158644495538758d-02, q1= 5.50942780056002085d-01) 
+  parameter(q2= 1.53039662058770397d+00, q3= 2.99957952311300634d+00) 
+  parameter(q4= 4.95867777128246701d+00, q5= 7.41471251099335407d+00) 
+  parameter(q6= 1.04765104356545238d+01, q7= 1.48455557345597957d+01)
+  
+  y = x*x
+  y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &   
+       &       + p2/(y+q2)+p1/(y+q1)+p0/(y+q0))
+  if (x < ph) y = y+2d0/(exp(pv*x)+1.0)
+  erfc = y
+  
+  return
+  
+end function erfc

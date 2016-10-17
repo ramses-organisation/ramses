@@ -1130,7 +1130,7 @@ subroutine compute_accretion_rate(write_sinks)
         v_bondi=v_bondi*boost**(-1./3.)
         
         ! Bondi radius
-        r2=(factG*(msink(isink)+mgas)/v_bondi**2)**2
+        r2=(factG*msink(isink)/v_bondi**2)**2
         
         ! extrapolate to rho_inf
         rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))

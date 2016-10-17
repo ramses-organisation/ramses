@@ -11,13 +11,14 @@ subroutine read_params
   ! Local variables
   !--------------------------------------------------
   integer::i,narg,iargc,ierr,levelmax
-  character(LEN=80)::infile
+  character(LEN=80)::infile, info_file
   character(LEN=80)::cmdarg
+  character(LEN=5)::nchar
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
   real(kind=8)::delta_tout=0,tend=0
   real(kind=8)::delta_aout=0,aend=0
-  logical::nml_ok
+  logical::nml_ok, info_ok
   integer,parameter::tag=1134
   integer::dummy_io,info2
   !--------------------------------------------------
@@ -26,7 +27,7 @@ subroutine read_params
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
-       & ,static_dm,static_gas,static_stars
+       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -37,7 +38,7 @@ subroutine read_params
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
-       & ,imovout,imov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
+       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera
@@ -160,6 +161,22 @@ subroutine read_params
      read(cmdarg,*) nrestart
   endif
 
+  if (myid==1 .and. nrestart .gt. 0) then
+     call title(nrestart,nchar)
+     info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+     inquire(file=info_file, exist=info_ok) 
+     do while(.not. info_ok .and. nrestart .gt. 1)
+        nrestart = nrestart - 1
+        call title(nrestart,nchar)
+        info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+        inquire(file=info_file, exist=info_ok) 
+     enddo   
+     if (.not. info_ok) then
+         write(*,*) "Error: Could not find restart file"
+         call clean_stop
+     endif
+  endif
+
 #ifndef WITHOUTMPI
   call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 #endif
@@ -188,12 +205,12 @@ subroutine read_params
      amovout=1d100
      if(tendmov>0)then
         do i=1,imovout
-           tmovout(i)=tendmov*dble(i)/dble(imovout)
+           tmovout(i)=(tendmov-tstartmov)*dble(i)/dble(imovout)+tstartmov
         enddo
      endif
      if(aendmov>0)then
         do i=1,imovout
-           amovout(i)=aendmov*dble(i)/dble(imovout)
+           amovout(i)=(aendmov-astartmov)*dble(i)/dble(imovout)+astartmov
         enddo
      endif
      if(tendmov==0.and.aendmov==0)movie=.false.
@@ -302,6 +319,11 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
+
+  if(.not.cosmo)then
+     use_proper_time=.false.
+     convert_birth_times=.false.
+  endif
      
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'

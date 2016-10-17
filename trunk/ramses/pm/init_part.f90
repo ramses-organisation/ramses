@@ -162,13 +162,11 @@ subroutine init_part
         allocate(xdp(1:npart2))
         read(ilun)xdp
         tp(1:npart2)=xdp
-#ifdef RT
         if(convert_birth_times) then
            do i = 1, npart2 ! Convert birth time to proper for RT postpr.
               call getProperTime(tp(i),tp(i))
            enddo
         endif
-#endif
         if(metal)then
            ! Read metallicity
            read(ilun)xdp

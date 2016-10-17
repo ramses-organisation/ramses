@@ -20,7 +20,7 @@ SUBROUTINE rt_init
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
-     iIRtrapVar = ndim+3  ! Trapped rad. stored in nonthermal pressure var
+     iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+3  !                                # hydro vars
 
@@ -142,8 +142,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
-       & ,convert_birth_times, is_mu_H2                                  &
-       & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
+       & ,is_mu_H2,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost     &
        & ,rt_isoPress, rt_isIRtrap                                       &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &

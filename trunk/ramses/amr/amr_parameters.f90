@@ -148,6 +148,8 @@ module amr_parameters
   real(dp)::kappa_IR=0d0      ! IR dust opacity
   real(dp)::ind_rsink=4.0d0   ! Number of cells defining the radius of the sphere where AGN feedback is active
   real(dp)::ir_eff=0.75       ! efficiency of the IR feedback (only when ir_feedback=.true.)
+  real(dp)::sf_trelax=0.0D0  ! Relaxation time for star formation (cosmo=.false. only)
+  integer::sf_model=3         ! Virial star formation model
 
 
   logical ::self_shielding=.false.
@@ -162,7 +164,10 @@ module amr_parameters
   logical ::smbh=.false.
   logical ::agn=.false.
   logical ::use_proper_time=.false.
+  logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
+  logical ::sf_virial=.false.   ! Activate SF Virial criterion
+  logical ::sf_birth_properties=.false. ! Output birth properties of stars
 
 #ifdef grackle
   integer::grackle_comoving_coordinates=0
@@ -184,6 +189,7 @@ module amr_parameters
   ! Movie
   integer::imovout=0             ! Increment for output times
   integer::imov=1                ! Initialize
+  real(kind=8)::tstartmov=0.,astartmov=0.
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
@@ -207,7 +213,7 @@ module amr_parameters
   real(kind=8),dimension(1:5)::tend_theta_camera=0d0
   real(kind=8),dimension(1:5)::tend_phi_camera=0d0
   real(kind=8),dimension(1:5)::focal_camera=0d0
-  real(kind=8),dimension(1:5)::smooth_frame=0d0
+  real(kind=8),dimension(1:5)::smooth_frame=1d0
   logical,dimension(1:5)::perspective_camera=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:5)::shader_frame='square'
