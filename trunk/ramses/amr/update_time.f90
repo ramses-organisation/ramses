@@ -524,7 +524,7 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
   real(dp):: t_birth_proper, age
   real(dp), parameter:: yr = 3.15569d+07
   real(dp),save:: scale_t_Gyr
-  logical::scale_init=.false.
+  logical,save::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   if( .not. scale_init) then 
      ! The timescale has not been initialized
