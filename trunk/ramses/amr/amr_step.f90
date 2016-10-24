@@ -337,11 +337,11 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------
   ! Hydro step
   !-----------
-  if(hydro)then
+  if((hydro).and.(.not.static_gas))then
 
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
-     if(.not.static_gas) call godunov_fine(ilevel)
+     call godunov_fine(ilevel)
 
      ! Reverse update boundaries
                                call timer('hydro - rev ghostzones','start')
@@ -402,7 +402,7 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #else
                                call timer('cooling','start')
-  if(hydro) then
+  if((hydro).and.(.not.static_gas)) then
     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
   endif
 #endif
@@ -428,7 +428,7 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------------------------------
   ! Update physical and virtual boundaries
   !---------------------------------------
-  if(hydro)then
+  if((hydro).and.(.not.static_gas))then
                                call timer('hydro - ghostzones','start')
 #ifdef SOLVERmhd
      do ivar=1,nvar+3
@@ -446,7 +446,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
- if(hydro)then
+  if((hydro).and.(.not.static_gas))then
      if(eta_mag>0d0.and.ilevel==levelmin)then
                                call timer('hydro - diffusion','start')
         call diffusion
