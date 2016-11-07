@@ -53,7 +53,7 @@ subroutine read_hydro_params(nml_ok)
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling,T2max &
        & ,self_shielding,smbh,agn &
        & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne &
-       & ,sf_virial,sf_trelax,sf_model,sf_birth_properties
+       & ,sf_virial,sf_trelax,sf_tdiss,sf_model,sf_birth_properties
 #ifdef grackle
   namelist/grackle_params/grackle_comoving_coordinates,grackle_with_radiative_cooling,grackle_primordial_chemistry &
        & ,grackle_metal_cooling,grackle_UVbackground,grackle_h2_on_dust,grackle_cmb_temperature_floor &
@@ -296,7 +296,7 @@ subroutine read_hydro_params(nml_ok)
   if(sf_virial)ixion=ivirial+1
   ichem=ixion
   if(aton)ichem=ixion+1
-  if(myid==1) then
+  if(myid==1.and.hydro) then
      write(*,*) 'Hydro var indices:'
 #if NENER>0
      write(*,*) '   inener  = ',inener
