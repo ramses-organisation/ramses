@@ -1238,6 +1238,8 @@ subroutine init_part
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
         npart_cpu(1) = npart_all(1)
+#else
+        npart_all       = npart
 #endif
         if(myid==1)then
            write(*,*) ' npart_tot -> ',sum(npart_all)
