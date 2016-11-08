@@ -35,7 +35,7 @@ subroutine star_formation(ilevel)
   logical ::ok_free,ok_all
   real(dp)::d,x,y,z,u,v,w,e,tg,zg,vdisp,dgas
   real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
-  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec
   real(dp)::velc,uc,vc,wc,mass_load,ul,ur,fl,fr,trgv,alpha0,sigma2,lapld,flong,ftot,pcomp
   real(dp)::divv,curlv,curlv1,curlv2,curlv3
   real(dp)::vxgauss,vygauss,vzgauss,birth_epoch,factG
@@ -94,7 +94,7 @@ subroutine star_formation(ilevel)
      if((.not.file_exist).or.(nrestart.eq.ifout-1)) then
         open(ilun, file=fileloc, form='formatted')
         if(sf_virial) then
-           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg  sf_eff'
+           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg  sigma_turb'
         else
            write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg'
         endif
@@ -250,6 +250,11 @@ subroutine star_formation(ilevel)
            do i=1,ngrid
               ! if cell is a leaf cell
               if (ok(i)) then 
+                 ! Subgrid turbulence decay
+                 if((sf_tdiss.gt.0d0).and.(uold(ind_cell(i),ivirial).gt.0d0)) then
+                    tdec = sf_tdiss*dx_loc/uold(ind_cell(i),ivirial)
+                    uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)*exp(-dtold(ilevel)/tdec)
+                 endif
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
                  T2        = (gamma-1.0)*uold(ind_cell(i),5)*scale_T2
@@ -309,7 +314,6 @@ subroutine star_formation(ilevel)
                     trgv      = trgv + (ur-ul)**2
                     divv      = trgv + (ur-ul)
                     divv      = (divv/dx_loc)**2
-
                     ! Curl terms
                     ul        = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
                     ur        = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
@@ -369,15 +373,24 @@ subroutine star_formation(ilevel)
                     trgv      = trgv/dx_loc**2
                     curlv3    = (curlv3 + (ur-ul))
                     curlv     = (curlv1**2+curlv2**2+curlv3**2)/dx_loc**2
-                    
+                    ! Advect unresolved turbulence if a decay time is defined
+                    if(sf_tdiss.gt.0d0) then
+                       uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)+sqrt(sigma2)
+                       sigma2 = uold(ind_cell(i),ivirial)
+                    else
+                       uold(ind_cell(i),ivirial) = sqrt(sigma2)
+                    endif
                     SELECT CASE (sf_model)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
                           alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
-                          if(pi*factG*d*dx_loc**2.eq.0d0) write(*,*) d
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          zeta      = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          if(pcomp*ndim-1.0.eq.0d0) then
+                             zeta   = 0.5
+                          else
+                             zeta   = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          endif
                           b_turb    = 1.0+(1.0/ndim-1.0)*zeta
 #ifdef SOLVERmhd
                           ! Best fit values to the Multi-ff KM model (MHD)
@@ -398,13 +411,16 @@ subroutine star_formation(ilevel)
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2))
 #endif
                           sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
-                          uold(ind_cell(i),ivirial) = sfr_ff(i)
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
                           alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          zeta      = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          if(pcomp*ndim-1.0.eq.0d0) then
+                             zeta   = 0.5
+                          else
+                             zeta   = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                          endif
                           b_turb    = 1.0+(1.0/ndim-1.0)*zeta
 #ifdef SOLVERmhd
                           ! Best fit values to the Multi-ff PN model (MHD)
@@ -426,7 +442,6 @@ subroutine star_formation(ilevel)
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
 #endif
                           sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
-                          uold(ind_cell(i),ivirial) = sfr_ff(i)
                        ! Virial criterion simple model
                        CASE (3)
                           ! Laplacian rho
@@ -441,14 +456,12 @@ subroutine star_formation(ilevel)
                              sfr_ff(i) = 0.0
                              ok(i)     = .false.
                           endif
-                          uold(ind_cell(i),ivirial) = sfr_ff(i)
                        ! Padoan 2012 "a simple SF law"
                        CASE (4)
                           ! Feedback efficiency
                           t_dyn     = dx_loc/(2.0*sqrt(sigma2+cs2))
                           t_ff      = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
                           sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
-                          uold(ind_cell(i),ivirial) = sfr_ff(i)
                        ! Hopkins 2013
                        CASE (5)
                           alpha0    = 0.5*(divv+curlv)/(factG*d)
@@ -458,7 +471,6 @@ subroutine star_formation(ilevel)
                              sfr_ff(i) = 0.0
                              ok(i)     = .false.
                           endif
-                          uold(ind_cell(i),ivirial) = sfr_ff(i)
                        END SELECT
                  endif
               endif
@@ -493,12 +505,12 @@ subroutine star_formation(ilevel)
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
               ! Free fall time of an homogeneous sphere 
-              tstar     = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
+              tstar= .5427*sqrt(1.0/(factG*max(d,smallr)))
               if(.not.sf_virial) sfr_ff(i) = eps_star
               ! Gas mass to be converted into stars
-              mgas = dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
+              mgas=dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
               ! Poisson mean
-              PoissMean = mgas/mstar
+              PoissMean=mgas/mstar
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
@@ -828,10 +840,8 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
               iok=iok+1
               if(icelln_ok(iok,j)>0)then
                  ind_father(i,j)=icelln_ok(iok,j)
-                 !write(*,*) 'index first if',ind_father(i,j) 
               else
                  ind_father(i,j)=ind_cell(i)
-                 !write(*,*) 'index second if',ind_father(i,j) 
               end if
            end if
         end do

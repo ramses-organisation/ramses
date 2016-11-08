@@ -423,7 +423,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Star formation in leaf cells only
   !----------------------------------
                                call timer('feedback','start')
-  if(hydro.and.star)call star_formation(ilevel)
+  if(hydro.and.star.and.(.not.static_gas))call star_formation(ilevel)
 
   !---------------------------------------
   ! Update physical and virtual boundaries
