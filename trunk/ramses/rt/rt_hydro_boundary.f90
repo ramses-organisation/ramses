@@ -116,8 +116,8 @@ subroutine rt_make_boundary_hydro(ilevel)
               ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
            end do
 
-           ! Wall boundary conditions
-           if((boundary_type(ibound)/10).eq.0)then
+           ! Wall and free boundary conditions
+           if((boundary_type(ibound)/10).ne.2)then
               
               ! Gather reference hydro variables
               do ivar=1,nrtvar
@@ -138,40 +138,8 @@ subroutine rt_make_boundary_hydro(ilevel)
                     rtuold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
               end do
-
-           ! Free boundary conditions
-           else if((boundary_type(ibound)/10).eq.1)then
-
-              ! Gather reference hydro variables
-              do ivar=1,nvar
-                 do i=1,ngrid
-                    uu(i,ivar)=rtuold(ind_cell_ref(i),ivar)
-                 end do
-              end do
-
-              ! Scatter to boundary region
-              do ivar=1,nvar
-                 do i=1,ngrid
-                    rtuold(ind_cell(i),ivar)=uu(i,ivar)
-                 end do
-              end do
-
-              ! Prevent inflow back into the box
-              if(no_inflow) then
-                 ivar = gdim+1
-                 if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
-                    do i=1,ngrid
-                       rtuold(ind_cell(i),ivar) = min(0d0,rtuold(ind_cell(i),ivar))
-                    end do
-                 endif
-                 if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
-                    do i=1,ngrid
-                       rtuold(ind_cell(i),ivar) = max(0d0,rtuold(ind_cell(i),ivar))
-                    end do
-                 endif
-              endif
-
-           ! Imposed boundary conditions
+              
+              ! Imposed boundary conditions
            else
               
               ! Compute cell center in code units

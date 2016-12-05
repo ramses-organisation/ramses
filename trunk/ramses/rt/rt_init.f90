@@ -20,7 +20,7 @@ SUBROUTINE rt_init
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
-     iIRtrapVar = ndim+3  ! Trapped rad. stored in nonthermal pressure var
+     iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+3  !                                # hydro vars
 
