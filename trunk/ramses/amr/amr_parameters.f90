@@ -108,7 +108,7 @@ module amr_parameters
 
   ! Cosmology and physical parameters
   real(dp)::boxlen_ini        ! Box size in h-1 Mpc
-  real(dp)::omega_b=0.0D0     ! Omega Baryon
+  real(dp)::omega_b=0.045     ! Omega Baryon
   real(dp)::omega_m=1.0D0     ! Omega Matter
   real(dp)::omega_l=0.0D0     ! Omega Lambda
   real(dp)::omega_k=0.0D0     ! Omega Curvature
