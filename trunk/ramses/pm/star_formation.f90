@@ -654,7 +654,7 @@ subroutine star_formation(ilevel)
            if(metal)zg=uold(ind_cell_new(i),imetal)
            if(sf_birth_properties) then
               if(sf_virial)then
-                 write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
+                 write(ilun,'(2I10,12E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
               else
                  write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg
               endif
