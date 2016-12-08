@@ -98,7 +98,7 @@ end
 pro pp_amr2d,grid,scale=scale,noerase=noerase $
            ,xr=xr,yr=yr,nodata=nodata,cpu=cpu,cmin=cmin,cmax=cmax $
            ,lmin=lmin,lmax=lmax $
-           ,x0=x0,y0=y0,level=level,color=color,regular=regular,expand=expand
+           ,x0=x0,y0=y0,level=level,color=color,t3d=t3d,expand=expand
 
 IF N_PARAMS() NE 1 THEN BEGIN
     PRINT, 'Wrong number of arguments'
@@ -119,7 +119,7 @@ endif
 
 if not(keyword_set(scale)) then scale = 1.0
 scalein=scale/sqrt(3.0d0)
-if keyword_set(color) then tek_color
+if keyword_set(color) then setcolors,values=numcol,/silent
 if not keyword_set(x0) then x0=0.5d0
 if not keyword_set(y0) then y0=0.5d0
 if not keyword_set(xr)then xr=[0.0d0,1.0d0]
@@ -127,10 +127,12 @@ if not keyword_set(yr)then yr=[0.0d0,1.0d0]
 
 xz=[x0,x0]+scalein*[-0.5,0.5]
 yz=[y0,y0]+scalein*[-0.5,0.5]*!d.y_size/!d.x_size
-if not keyword_set(regular) then begin
+regular=1
+if keyword_set(t3d) then begin
     !p.t3d=1
     scale3,xrange=xz,yrange=yz,ax=90,az=0
     if not keyword_set(noerase) then erase
+    regular=0
 endif
 if not keyword_set(lmin) then lmin=1
 if not keyword_set(lmax) then lmax=nlevelmax
@@ -148,8 +150,8 @@ for ilevel=leveldown,levelup do begin
         if not keyword_set(color) then begin
             color1=!d.table_size-1
         endif else begin
-            if keyword_set(cpu) then color1=icpu+1 else $
-              color1=ilevel
+            if keyword_set(cpu) then color1=numcol[((icpu+1) MOD 11)+1] else $
+              color1=numcol[(ilevel MOD 11)+1]
         endelse
         dx=0.5d0^(ilevel-1)
         if(ngrid(ilevel-1,icpu) gt 0)then begin
@@ -179,7 +181,7 @@ for ilevel=leveldown,levelup do begin
     endfor
 endfor
 
-if not keyword_set(regular) then !p.t3d=0
+if keyword_set(t3d) then !p.t3d=0
 end
 ;###################################################
 ;###################################################
