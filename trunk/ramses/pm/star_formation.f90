@@ -261,10 +261,6 @@ subroutine star_formation(ilevel)
                  ! Correct from polytrope
                  T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
                  T2        = T2-T_poly
-                 ! Temperature criterion
-                 if(T2>2e4) ok(i)=.false.
-                 ! Density criterion
-                 if(d<=d0) ok(i)=.false. 
                  if(ok(i)) then
                     ! Compute sound speed squared
                     cs2       = (gamma-1.0)*uold(ind_cell(i),5)
