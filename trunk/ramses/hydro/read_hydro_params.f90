@@ -91,6 +91,13 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   !--------------------------------------------------
+  ! Check for non cosmo runs
+  !--------------------------------------------------
+  if(.not.cosmo)then
+     omega_b = 0.0D0
+  endif
+
+  !--------------------------------------------------
   ! Check for star formation
   !--------------------------------------------------
   if(t_star>0)then
