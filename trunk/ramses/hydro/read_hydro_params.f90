@@ -303,7 +303,7 @@ subroutine read_hydro_params(nml_ok)
   if(sf_virial)ixion=ivirial+1
   ichem=ixion
   if(aton)ichem=ixion+1
-  if(myid==1.and.hydro) then
+  if(myid==1.and.hydro.and.(nvar>ndim+2)) then
      write(*,*) 'Hydro var indices:'
 #if NENER>0
      write(*,*) '   inener  = ',inener
