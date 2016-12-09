@@ -126,8 +126,10 @@ subroutine star_formation(ilevel)
 
   ! ISM density threshold from H/cc to code units
   nISM = n_star
-  nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*XH/mH
-  nISM = MAX(nCOM,nISM)
+  if(cosmo)then
+     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*XH/mH
+     nISM = MAX(nCOM,nISM)
+  endif
   d0   = nISM/scale_nH
   d00  = n_star/scale_nH
 
@@ -261,125 +263,123 @@ subroutine star_formation(ilevel)
                  ! Correct from polytrope
                  T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
                  T2        = T2-T_poly
-                 ! Temperature criterion
-                 if(T2>2e4) ok(i)=.false.
+                 ! Compute sound speed squared
+                 cs2       = (gamma-1.0)*uold(ind_cell(i),5)
+                 ! prevent numerical crash due to negative temperature
+                 cs2       = max(cs2,smallc**2)
+                 ! Correct from polytrope
+                 cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 cs2       = cs2-cs2_poly
+                 ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
+                 ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor. 
+                 ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation 
+                 ! from neighbouring cell values and differentiate. 
+                 ! Get neighbor cells if they exist, otherwise use straight injection from local cell
+                 ncell = 1 ! we just want the neighbors of that cell
+                 ind_cell2(1) = ind_cell(i)
+                 call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
+                 d1        = uold(ind_nbor(1,1),1)     ; d4    = uold(ind_nbor(1,4),1) 
+                 d2        = uold(ind_nbor(1,2),1)     ; d5    = uold(ind_nbor(1,5),1) 
+                 d3        = uold(ind_nbor(1,3),1)     ; d6    = uold(ind_nbor(1,6),1)  
+                 ! Divergence terms
+                 ul        = (d2*uold(ind_nbor(1,2),2) + d*uold(ind_cell(i),2))/(d2+d)
+                 ur        = (d1*uold(ind_nbor(1,1),2) + d*uold(ind_cell(i),2))/(d1+d)
+                 if(sf_model.le.2) then
+                    fl     = (d2*f(ind_nbor(1,2),1)    + d*f(ind_cell(i),1))/(d2+d)
+                    fr     = (d1*f(ind_nbor(1,1),1)    + d*f(ind_cell(i),1))/(d1+d)
+                    flong  = max((d2+d)/2*ul*fl-(d1+d)/2*ur*fr,0d0)
+                 endif
+                 trgv      = (ur-ul)**2
+                 divv      = (ur-ul)
+                 ul        = (d4*uold(ind_nbor(1,4),3) + d*uold(ind_cell(i),3))/(d4+d)
+                 ur        = (d3*uold(ind_nbor(1,3),3) + d*uold(ind_cell(i),3))/(d3+d)
+                 if(sf_model.le.2) then
+                    fl     = (d4*f(ind_nbor(1,4),2)    + d*f(ind_cell(i),2))/(d4+d)
+                    fr     = (d3*f(ind_nbor(1,3),2)    + d*f(ind_cell(i),2))/(d3+d)
+                    flong  = flong+max((d4+d)/2*ul*fl-(d3+d)/2*ur*fr,0d0)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 divv      = divv + (ur-ul)
+                 ul        = (d6*uold(ind_nbor(1,6),4) + d*uold(ind_cell(i),4))/(d6+d)
+                 ur        = (d5*uold(ind_nbor(1,5),4) + d*uold(ind_cell(i),4))/(d5+d)
+                 if(sf_model.le.2) then
+                    fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
+                    fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
+                    flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
+                    ftot   = flong
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 divv      = trgv + (ur-ul)
+                 divv      = (divv/dx_loc)**2
+                 ! Curl terms
+                 ul        = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
+                 ur        = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
+                 if(sf_model.le.2) then
+                    fl     = (d6*f(ind_nbor(1,6),2)    + d*f(ind_cell(i),2))/(d6+d)
+                    fr     = (d5*f(ind_nbor(1,5),2)    + d*f(ind_cell(i),2))/(d5+d)
+                    ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 curlv1    = -(ur-ul)
+                 ul        = (d4*uold(ind_nbor(1,4),4) + d*uold(ind_cell(i),4))/(d4+d)
+                 ur        = (d3*uold(ind_nbor(1,3),4) + d*uold(ind_cell(i),4))/(d3+d)
+                 if(sf_model.le.2) then
+                    fl     = (d4*f(ind_nbor(1,4),3)    + d*f(ind_cell(i),3))/(d4+d)
+                    fr     = (d3*f(ind_nbor(1,3),3)    + d*f(ind_cell(i),3))/(d3+d)
+                    ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 curlv1    = (curlv1 + (ur-ul))
+                 ul        = (d6*uold(ind_nbor(1,6),2) + d*uold(ind_cell(i),2))/(d6+d)
+                 ur        = (d5*uold(ind_nbor(1,5),2) + d*uold(ind_cell(i),2))/(d5+d)
+                 if(sf_model.le.2) then
+                    fl     = (d6*f(ind_nbor(1,6),1)    + d*f(ind_cell(i),1))/(d6+d)
+                    fr     = (d5*f(ind_nbor(1,5),1)    + d*f(ind_cell(i),1))/(d5+d)
+                    ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 curlv2    = (ur-ul)
+                 ul        = (d2*uold(ind_nbor(1,2),4) + d*uold(ind_cell(i),4))/(d2+d)
+                 ur        = (d1*uold(ind_nbor(1,1),4) + d*uold(ind_cell(i),4))/(d1+d)
+                 if(sf_model.le.2) then
+                    fl     = (d2*f(ind_nbor(1,2),3)    + d*f(ind_cell(i),3))/(d2+d)
+                    fr     = (d1*f(ind_nbor(1,1),3)    + d*f(ind_cell(i),3))/(d1+d)
+                    ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 curlv2    = (curlv2 - (ur-ul))
+                 ul        = (d4*uold(ind_nbor(1,4),2) + d*uold(ind_cell(i),2))/(d4+d)
+                 ur        = (d3*uold(ind_nbor(1,3),2) + d*uold(ind_cell(i),2))/(d3+d)
+                 if(sf_model.le.2) then
+                    fl     = (d4*f(ind_nbor(1,4),1)    + d*f(ind_cell(i),1))/(d4+d)
+                    fr     = (d3*f(ind_nbor(1,3),1)    + d*f(ind_cell(i),1))/(d3+d)
+                    ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 curlv3    = -(ur-ul)
+                 ul        = (d2*uold(ind_nbor(1,2),3) + d*uold(ind_cell(i),3))/(d2+d)
+                 ur        = (d1*uold(ind_nbor(1,1),3) + d*uold(ind_cell(i),3))/(d1+d)
+                 if(sf_model.le.2) then
+                    fl     = (d2*f(ind_nbor(1,2),2)    + d*f(ind_cell(i),2))/(d2+d)
+                    fr     = (d1*f(ind_nbor(1,1),2)    + d*f(ind_cell(i),2))/(d1+d)
+                    ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
+                    pcomp  = flong/ftot
+                 endif
+                 trgv      = trgv + (ur-ul)**2
+                 sigma2    = trgv
+                 trgv      = trgv/dx_loc**2
+                 curlv3    = (curlv3 + (ur-ul))
+                 curlv     = (curlv1**2+curlv2**2+curlv3**2)/dx_loc**2
+                 ! Advect unresolved turbulence if a decay time is defined
+                 if(sf_tdiss.gt.0d0) then
+                    uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)+sqrt(sigma2)
+                    sigma2 = uold(ind_cell(i),ivirial)
+                 else
+                    uold(ind_cell(i),ivirial) = sqrt(sigma2)
+                 endif
                  ! Density criterion
                  if(d<=d0) ok(i)=.false. 
                  if(ok(i)) then
-                    ! Compute sound speed squared
-                    cs2       = (gamma-1.0)*uold(ind_cell(i),5)
-                    ! prevent numerical crash due to negative temperature
-                    cs2       = max(cs2,smallc**2)
-                    ! Correct from polytrope
-                    cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
-                    cs2       = cs2-cs2_poly
-                    ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
-                    ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor. 
-                    ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation 
-                    ! from neighbouring cell values and differentiate. 
-                    ! Get neighbor cells if they exist, otherwise use straight injection from local cell
-                    ncell = 1 ! we just want the neighbors of that cell
-                    ind_cell2(1) = ind_cell(i)
-                    call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
-                    d1        = uold(ind_nbor(1,1),1)     ; d4    = uold(ind_nbor(1,4),1) 
-                    d2        = uold(ind_nbor(1,2),1)     ; d5    = uold(ind_nbor(1,5),1) 
-                    d3        = uold(ind_nbor(1,3),1)     ; d6    = uold(ind_nbor(1,6),1)  
-                    ! Divergence terms
-                    ul        = (d2*uold(ind_nbor(1,2),2) + d*uold(ind_cell(i),2))/(d2+d)
-                    ur        = (d1*uold(ind_nbor(1,1),2) + d*uold(ind_cell(i),2))/(d1+d)
-                    if(sf_model.le.2) then
-                       fl     = (d2*f(ind_nbor(1,2),1)    + d*f(ind_cell(i),1))/(d2+d)
-                       fr     = (d1*f(ind_nbor(1,1),1)    + d*f(ind_cell(i),1))/(d1+d)
-                       flong  = max((d2+d)/2*ul*fl-(d1+d)/2*ur*fr,0d0)
-                    endif
-                    trgv      = (ur-ul)**2
-                    divv      = (ur-ul)
-                    ul        = (d4*uold(ind_nbor(1,4),3) + d*uold(ind_cell(i),3))/(d4+d)
-                    ur        = (d3*uold(ind_nbor(1,3),3) + d*uold(ind_cell(i),3))/(d3+d)
-                    if(sf_model.le.2) then
-                       fl     = (d4*f(ind_nbor(1,4),2)    + d*f(ind_cell(i),2))/(d4+d)
-                       fr     = (d3*f(ind_nbor(1,3),2)    + d*f(ind_cell(i),2))/(d3+d)
-                       flong  = flong+max((d4+d)/2*ul*fl-(d3+d)/2*ur*fr,0d0)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    divv      = divv + (ur-ul)
-                    ul        = (d6*uold(ind_nbor(1,6),4) + d*uold(ind_cell(i),4))/(d6+d)
-                    ur        = (d5*uold(ind_nbor(1,5),4) + d*uold(ind_cell(i),4))/(d5+d)
-                    if(sf_model.le.2) then
-                       fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
-                       fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
-                       flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
-                       ftot   = flong
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    divv      = trgv + (ur-ul)
-                    divv      = (divv/dx_loc)**2
-                    ! Curl terms
-                    ul        = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
-                    ur        = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
-                    if(sf_model.le.2) then
-                       fl     = (d6*f(ind_nbor(1,6),2)    + d*f(ind_cell(i),2))/(d6+d)
-                       fr     = (d5*f(ind_nbor(1,5),2)    + d*f(ind_cell(i),2))/(d5+d)
-                       ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    curlv1    = -(ur-ul)
-                    ul        = (d4*uold(ind_nbor(1,4),4) + d*uold(ind_cell(i),4))/(d4+d)
-                    ur        = (d3*uold(ind_nbor(1,3),4) + d*uold(ind_cell(i),4))/(d3+d)
-                    if(sf_model.le.2) then
-                       fl     = (d4*f(ind_nbor(1,4),3)    + d*f(ind_cell(i),3))/(d4+d)
-                       fr     = (d3*f(ind_nbor(1,3),3)    + d*f(ind_cell(i),3))/(d3+d)
-                       ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    curlv1    = (curlv1 + (ur-ul))
-                    ul        = (d6*uold(ind_nbor(1,6),2) + d*uold(ind_cell(i),2))/(d6+d)
-                    ur        = (d5*uold(ind_nbor(1,5),2) + d*uold(ind_cell(i),2))/(d5+d)
-                    if(sf_model.le.2) then
-                       fl     = (d6*f(ind_nbor(1,6),1)    + d*f(ind_cell(i),1))/(d6+d)
-                       fr     = (d5*f(ind_nbor(1,5),1)    + d*f(ind_cell(i),1))/(d5+d)
-                       ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    curlv2    = (ur-ul)
-                    ul        = (d2*uold(ind_nbor(1,2),4) + d*uold(ind_cell(i),4))/(d2+d)
-                    ur        = (d1*uold(ind_nbor(1,1),4) + d*uold(ind_cell(i),4))/(d1+d)
-                    if(sf_model.le.2) then
-                       fl     = (d2*f(ind_nbor(1,2),3)    + d*f(ind_cell(i),3))/(d2+d)
-                       fr     = (d1*f(ind_nbor(1,1),3)    + d*f(ind_cell(i),3))/(d1+d)
-                       ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    curlv2    = (curlv2 - (ur-ul))
-                    ul        = (d4*uold(ind_nbor(1,4),2) + d*uold(ind_cell(i),2))/(d4+d)
-                    ur        = (d3*uold(ind_nbor(1,3),2) + d*uold(ind_cell(i),2))/(d3+d)
-                    if(sf_model.le.2) then
-                       fl     = (d4*f(ind_nbor(1,4),1)    + d*f(ind_cell(i),1))/(d4+d)
-                       fr     = (d3*f(ind_nbor(1,3),1)    + d*f(ind_cell(i),1))/(d3+d)
-                       ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    curlv3    = -(ur-ul)
-                    ul        = (d2*uold(ind_nbor(1,2),3) + d*uold(ind_cell(i),3))/(d2+d)
-                    ur        = (d1*uold(ind_nbor(1,1),3) + d*uold(ind_cell(i),3))/(d1+d)
-                    if(sf_model.le.2) then
-                       fl     = (d2*f(ind_nbor(1,2),2)    + d*f(ind_cell(i),2))/(d2+d)
-                       fr     = (d1*f(ind_nbor(1,1),2)    + d*f(ind_cell(i),2))/(d1+d)
-                       ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
-                       pcomp  = flong/ftot
-                    endif
-                    trgv      = trgv + (ur-ul)**2
-                    sigma2    = trgv
-                    trgv      = trgv/dx_loc**2
-                    curlv3    = (curlv3 + (ur-ul))
-                    curlv     = (curlv1**2+curlv2**2+curlv3**2)/dx_loc**2
-                    ! Advect unresolved turbulence if a decay time is defined
-                    if(sf_tdiss.gt.0d0) then
-                       uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)+sqrt(sigma2)
-                       sigma2 = uold(ind_cell(i),ivirial)
-                    else
-                       uold(ind_cell(i),ivirial) = sqrt(sigma2)
-                    endif
                     SELECT CASE (sf_model)
                        ! Multi-ff KM model
                        CASE (1)
@@ -654,7 +654,7 @@ subroutine star_formation(ilevel)
            if(metal)zg=uold(ind_cell_new(i),imetal)
            if(sf_birth_properties) then
               if(sf_virial)then
-                 write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
+                 write(ilun,'(2I10,12E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
               else
                  write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg
               endif
