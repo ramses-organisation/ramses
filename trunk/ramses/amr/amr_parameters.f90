@@ -151,6 +151,7 @@ module amr_parameters
   real(dp)::sf_trelax=0.0D0   ! Relaxation time for star formation (cosmo=.false. only)
   real(dp)::sf_tdiss=0.0D0    ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3         ! Virial star formation model
+  integer::nlevel_collapse=3  ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
 
 
   logical ::self_shielding=.false.
