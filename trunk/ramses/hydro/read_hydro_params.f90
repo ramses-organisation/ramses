@@ -91,9 +91,9 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   !--------------------------------------------------
-  ! Check for non cosmo runs
+  ! Check for dm only cosmo run
   !--------------------------------------------------
-  if(.not.cosmo)then
+  if(.not.hydro)then
      omega_b = 0.0D0
   endif
 
