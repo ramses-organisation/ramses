@@ -47,7 +47,7 @@ subroutine read_hydro_params(nml_ok)
        & ,var_bound &
 #endif
        & ,d_bound,u_bound,v_bound,w_bound,p_bound,no_inflow
-  namelist/physics_params/cooling,haardt_madau,metal,isothermal &
+  namelist/physics_params/omega_b,cooling,haardt_madau,metal,isothermal &
        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling,T2max &
@@ -89,6 +89,13 @@ subroutine read_hydro_params(nml_ok)
 #ifdef ATON
   if(aton)call read_radiation_params(1)
 #endif
+
+  !--------------------------------------------------
+  ! Check for dm only cosmo run
+  !--------------------------------------------------
+  if(.not.hydro)then
+     omega_b = 0.0D0
+  endif
 
   !--------------------------------------------------
   ! Check for star formation
@@ -296,7 +303,7 @@ subroutine read_hydro_params(nml_ok)
   if(sf_virial)ixion=ivirial+1
   ichem=ixion
   if(aton)ichem=ixion+1
-  if(myid==1.and.hydro) then
+  if(myid==1.and.hydro.and.(nvar>ndim+2)) then
      write(*,*) 'Hydro var indices:'
 #if NENER>0
      write(*,*) '   inener  = ',inener

@@ -108,7 +108,7 @@ module amr_parameters
 
   ! Cosmology and physical parameters
   real(dp)::boxlen_ini        ! Box size in h-1 Mpc
-  real(dp)::omega_b=0.0D0     ! Omega Baryon
+  real(dp)::omega_b=0.045     ! Omega Baryon
   real(dp)::omega_m=1.0D0     ! Omega Matter
   real(dp)::omega_l=0.0D0     ! Omega Lambda
   real(dp)::omega_k=0.0D0     ! Omega Curvature
@@ -151,6 +151,7 @@ module amr_parameters
   real(dp)::sf_trelax=0.0D0   ! Relaxation time for star formation (cosmo=.false. only)
   real(dp)::sf_tdiss=0.0D0    ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3         ! Virial star formation model
+  integer::nlevel_collapse=3  ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
 
 
   logical ::self_shielding=.false.

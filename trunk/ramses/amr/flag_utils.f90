@@ -327,38 +327,17 @@ subroutine userflag_fine(ilevel)
   ! Do we prevent the whole level from refining ?
   prevent_refine=.false.
   
-  ! Prevent from refining too much relative to available star mass res.      
-  ! This translates into a constant physical res., except at very high z.    
-  if(star)then
+  ! Prevent over refinement due to gas cooling
+  ! This translates into :
+  ! - a constant physical resolution at low redshift (ilevel<=nlevelmax_part+nlevel_collapse)
+  ! - a constant comobile resolution at high redshift (ilevel>nlevelmax_part+nlevel_collapse)
+  if(cosmo.and.cooling)then
      ! Finest cell size                                                      
      dx_min=(0.5D0**nlevelmax)*scale
-     vol_min=dx_min**ndim
-     ! Typical ISM mass density from H/cc to code units                      
-     nISM = n_star
-     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
-     nISM = MAX(nCOM,nISM)
-     d0   = nISM/scale_nH
-     ! Star particle mass                                                    
-     mstar=n_star/(scale_nH*aexp**3)*vol_min
-     ! Test is designed so that nlevelmax is activated at aexp \simeq 0.8
-     if(d0*(dx_loc/2.0)**ndim.lt.mstar/2d0)prevent_refine=.true.
-  endif
-  
-  ! Prevent from refining too much relative to available sink mass res.      
-  ! This translates into a constant physical res., except at very high z.    
-  if(sink .and. cosmo)then
-     ! Finest cell size                                                      
-     dx_min=(0.5D0**nlevelmax)*scale
-     vol_min=dx_min**ndim
-     ! Typical ISM mass density from H/cc to code units
-     nISM = n_sink
-     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
-     nISM = MAX(nCOM,nISM)
-     d0   = nISM/scale_nH
-     ! Sink particle mass                                                    
-     msnk=n_sink/(scale_nH*aexp**3)*vol_min
-     ! Test is designed so that nlevelmax is activated at aexp \simeq 0.8    
-     if(d0*(dx_loc/2.0)**ndim.lt.msnk/2d0)prevent_refine=.true.
+     ! Test is designed so that nlevelmax is activated at aexp~0.8
+     if(ilevel.gt.nlevelmax_part+nlevel_collapse)then
+        if(dx_loc<(4d0**(1d0/ndim))*(dx_min/aexp)) prevent_refine=.true.
+     endif
   endif
   
   if(prevent_refine)return
