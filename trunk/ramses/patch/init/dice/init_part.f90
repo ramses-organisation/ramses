@@ -1174,7 +1174,11 @@ subroutine init_part
                        ipart          = ipart+1
                        if(ipart.gt.npartmax) then
                           write(*,*) "Increase npartmax"
-                          call clean_stop
+#ifndef WITHOUTMPI
+                          call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#else
+                          stop
+#endif
                        endif
                        xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                        vp(ipart,1:3)  = vv(i,1:3)
