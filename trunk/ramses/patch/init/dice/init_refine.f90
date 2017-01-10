@@ -64,6 +64,10 @@ subroutine init_refine_2
   use dice_commons
   implicit none
   integer::ilevel,i,ivar
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp)::eps_star2
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   if(filetype.eq.'grafic')return
   if(myid==1.and.amr_struct) then
@@ -163,6 +167,14 @@ subroutine init_refine_2
      call merge_tree_fine(ilevel)
   end do
   deallocate(up)
+  if(sf_virial)then
+     eps_star2=eps_star
+     eps_star=0d0
+     do ilevel=nlevelmax,levelmin,-1
+        call star_formation(ilevel)
+     enddo
+     eps_star=eps_star2
+  endif
   dice_init=.false.
   ! ----------
 
@@ -174,7 +186,7 @@ subroutine init_refine_2
         call upload_fine(ilevel)
      end do
   endif
-#endif  
+#endif
 
 end subroutine init_refine_2
 !################################################################
@@ -309,7 +321,7 @@ npart_cpu(myid)=npart
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              idp(ipart)=idp(ipart)-1
+              if(idp(ipart).gt.0) idp(ipart)=idp(ipart)-1
               ipart=next_part  ! Go to next particle
            end do
            npart_cpu(myid)=npart_cpu(myid)+npart2

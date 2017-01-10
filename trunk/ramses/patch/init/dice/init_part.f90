@@ -76,7 +76,7 @@ subroutine init_part
   real,dimension(1:nvector,1:3)::xx_sp,vv_sp
   real,dimension(1:nvector)::mm_sp,tt_sp,zz_sp,uu_sp
   real(dp)::mgas_tot
-  real::dummy_real
+  real::dummy_real,ipbar
   character(LEN=12)::ifile_str
   character(LEN=4)::blck_name
   logical::eob,file_exists,skip
@@ -1012,7 +1012,7 @@ subroutine init_part
                  if(ic_skip_type(j).eq.5) skip=.true.
               enddo
               if(.not.skip) write(*,*)"----> ",header%npart(6)," type 5 particles"
-              write(*,'(A50)')"__________________________________________________"
+              write(*,'(A50)')"_____________________progress_____________________"
               if((pos_size.ne.npart).or.(vel_size.ne.npart).or.((metal_size.ne.npart).and.(metal_size.ne.ngas+nstar_tot))) then
                 write(*,*) 'POS =',pos_size
                 write(*,*) 'Z   =',metal_size
@@ -1033,6 +1033,7 @@ subroutine init_part
             gpart    = 0
             opart    = 0
             mgas_tot = 0.
+            ipbar    = 0.
             do while(.not.eob)
               xx=0.
               vv=0.
@@ -1132,7 +1133,12 @@ subroutine init_part
                   endif
                   if(kpart.le.header%npart(1)) mgas_tot = mgas_tot+mm(i)
                   ! Check the End Of Block
+                  if(kpart.ge.ipbar*(npart/49.0))then
+                     write(*,'(A1)',advance='no') "_"
+                     ipbar = ipbar+1.0
+                  endif
                   if(kpart.ge.npart) then
+                    write(*,'(A1)') " "
                     write(*,'(A,A7,A)') ' ',TRIM(ic_format),' file successfully loaded'
                     write(*,'(A50)')"__________________________________________________"
                     eob=.true.
