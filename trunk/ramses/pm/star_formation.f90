@@ -553,6 +553,7 @@ subroutine star_formation(ilevel)
               mgas=dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
               ! Poisson mean
               PoissMean=mgas/mstar
+              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel),1.0)
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
