@@ -369,8 +369,6 @@ subroutine init_cosmo
            astart(ilevel)=astart0
            omega_m=omega_m0
            omega_l=omega_l0
-           if(hydro)omega_b=0.045
-           !!!if(hydro)omega_b=0.999999*omega_m
            h0=h00
            aexp=MIN(aexp,astart(ilevel))
            nlevelmax_part=nlevelmax_part+1
@@ -446,7 +444,7 @@ subroutine init_cosmo
   if(myid==1)then
      write(*,'(" Cosmological parameters:")')
      write(*,'(" aexp=",1pe10.3," H0=",1pe10.3," km s-1 Mpc-1")')aexp,h0
-     write(*,'(" omega_m=",F7.3," omega_l=",F7.3)')omega_m,omega_l
+     write(*,'(" omega_m=",F7.3," omega_l=",F7.3," omega_b=",F7.3)')omega_m,omega_l,omega_b
      write(*,'(" box size=",1pe10.3," h-1 Mpc")')boxlen_ini
   end if
   omega_k=1.d0-omega_l-omega_m

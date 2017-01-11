@@ -1174,7 +1174,11 @@ subroutine init_part
                        ipart          = ipart+1
                        if(ipart.gt.npartmax) then
                           write(*,*) "Increase npartmax"
-                          call clean_stop
+#ifndef WITHOUTMPI
+                          call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#else
+                          stop
+#endif
                        endif
                        xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                        vp(ipart,1:3)  = vv(i,1:3)
@@ -1238,6 +1242,8 @@ subroutine init_part
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
         npart_cpu(1) = npart_all(1)
+#else
+        npart_all       = npart
 #endif
         if(myid==1)then
            write(*,*) ' npart_tot -> ',sum(npart_all)
