@@ -473,7 +473,7 @@ subroutine star_formation(ilevel)
                           C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
                           emag      = 0.5*(A**2+B**2+C**2)
                           beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
-                          fbeta     = ((1+0.925*beta**(-3.0/2.0)**(2.0/3.0)))/((1+1.0/beta)**2)
+                          fbeta     = ((1+0.925*beta**(-3.0/2.0))**(2.0/3.0))/((1+1.0/beta)**2)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2)*fbeta)
 #else
