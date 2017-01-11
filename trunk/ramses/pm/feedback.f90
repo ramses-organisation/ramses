@@ -352,7 +352,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            eta_sn2   = eta_sn
            if(sf_imf)then
               if(mp(ind_part(j)).le.mstar_max)then
-                 if(mp(ind_part(j)).ge.msne_min) eta_sn2 = 1.0
+                 if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
                  if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
               endif
            endif
@@ -919,7 +919,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
      eta_sn2    = eta_sn
      if(sf_imf)then
         if(mSN(iSN).le.mstar_max)then
-           if(mSN(iSN).ge.msne_min) eta_sn2 = 1.0
+           if(mSN(iSN).ge.msne_min) eta_sn2 = eta_ssn
            if(mSN(iSN).lt.msne_min) eta_sn2 = 0.0
         endif
      endif
