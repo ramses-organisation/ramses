@@ -85,6 +85,7 @@ module amr_parameters
   ! Step parameters
   integer::nrestart=0         ! New run or backup file number
   integer::nrestart_quad=0    ! Restart with double precision Hilbert keys
+  real(dp)::trestart=0.0      ! Restart time
   logical::restart_remap=.false. ! Force load balance on restart
   integer::nstepmax=1000000   ! Maximum number of time steps
   integer::ncontrol=1         ! Write control variables
@@ -128,6 +129,7 @@ module amr_parameters
   real(dp)::jeans_ncells=-1   ! Jeans polytropic EOS
   real(dp)::del_star=2.D2     ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0.0D0     ! Supernova mass fraction
+  real(dp)::eta_ssn=0.95      ! Single supernova ejected mass fraction (sf_imf=.true. only)
   real(dp)::yield  =0.0D0     ! Supernova yield
   real(dp)::f_ek   =1.0D0     ! Supernovae kinetic energy fraction (only between 0 and 1)
   real(dp)::rbubble=0.0D0     ! Supernovae superbubble radius in pc
@@ -152,6 +154,8 @@ module amr_parameters
   real(dp)::sf_tdiss=0.0D0    ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3         ! Virial star formation model
   integer::nlevel_collapse=3  ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
+  real(dp)::mass_star_max=120.0D0 ! Maximum mass of a star in solar mass
+  real(dp)::mass_sne_min=10.0D0   ! Minimum mass of a single supernova in solar mass
 
 
   logical ::self_shielding=.false.
@@ -169,20 +173,9 @@ module amr_parameters
   logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
   logical ::sf_virial=.false.   ! Activate SF Virial criterion
-  logical ::sf_birth_properties=.false. ! Output birth properties of stars
-
-#ifdef grackle
-  integer::grackle_comoving_coordinates=0
-  integer::use_grackle=1
-  integer::grackle_with_radiative_cooling=1
-  integer::grackle_primordial_chemistry=0
-  integer::grackle_metal_cooling=1
-  integer::grackle_h2_on_dust=0
-  integer::grackle_cmb_temperature_floor=1 
-  integer::grackle_UVbackground=1
-  logical::grackle_UVbackground_on=.false.
-  character(len=256)::grackle_data_file
-#endif
+  logical ::sf_log_properties=.false. ! Log in ascii files birth properties of stars and supernovae
+  logical ::sf_imf=.false.      ! Activate IMF sampling for SN feedback when resolution allows it
+  logical ::sf_compressive=.false. ! Advect compressive and solenoidal turbulence terms separately
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
@@ -199,7 +192,6 @@ module amr_parameters
   integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
   integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0
-  integer::ivar_frame=1
   real(kind=8),dimension(1:20)::xcentre_frame=0d0
   real(kind=8),dimension(1:20)::ycentre_frame=0d0
   real(kind=8),dimension(1:20)::zcentre_frame=0d0
@@ -216,9 +208,13 @@ module amr_parameters
   real(kind=8),dimension(1:5)::tend_phi_camera=0d0
   real(kind=8),dimension(1:5)::focal_camera=0d0
   real(kind=8),dimension(1:5)::smooth_frame=1d0
+  real(kind=8),dimension(1:5)::varmin_frame=0d0
+  real(kind=8),dimension(1:5)::varmax_frame=1d60
+  integer,dimension(1:5)::ivar_frame=0
   logical,dimension(1:5)::perspective_camera=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:5)::shader_frame='square'
+  character(LEN=10),dimension(1:5)::method_frame='mean_mass'
 #ifdef SOLVERmhd
   integer,dimension(0:NVAR+6)::movie_vars=0
   character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''

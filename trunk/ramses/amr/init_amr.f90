@@ -334,6 +334,7 @@ subroutine init_amr
         read(ilun)mass_sph2
      endif
      if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
+     trestart = t
 
      ! Compute movie frame number if applicable
      if(imovout>0) then

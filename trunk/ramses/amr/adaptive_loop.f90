@@ -34,8 +34,9 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine    ! Build initial AMR grid
 
 #ifdef grackle
-  if(cosmo)then
-     ! Compute cooling table at current aexp
+  if(use_grackle==0)then
+     if(cooling.and..not.neq_chem) &
+        call set_table(dble(aexp))    ! Initialize cooling look up table
   endif
 #else  
   if(cooling.and..not.neq_chem) &
