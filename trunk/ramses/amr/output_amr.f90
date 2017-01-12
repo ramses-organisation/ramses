@@ -268,7 +268,7 @@ subroutine backup_amr(filename)
   write(ilun)dtold(1:nlevelmax)
   write(ilun)dtnew(1:nlevelmax)
   write(ilun)nstep,nstep_coarse
-  write(ilun)const,mass_tot_0,rho_tot
+  write(ilun)einit,mass_tot_0,rho_tot
   write(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
   write(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
   write(ilun)mass_sph
