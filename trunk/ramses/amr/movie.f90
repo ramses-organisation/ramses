@@ -518,13 +518,13 @@ subroutine output_frame()
                        xxleft      = xleft_frame+dble(ii-1)*dx_frame
                        xxright     = xxleft+dx_frame
                        xxcentre    = xxleft+0.5*dx_frame
-                       dx_cell     = (min(xxright,xright)-max(xxleft,xleft))/dx_proj
+                       dx_cell     = dx_frame/dx_proj
                        do jj=jmin,jmax
                           ! Pixel y-axis position
                           yyleft   = yleft_frame+dble(jj-1)*dy_frame
                           yyright  = yyleft+dy_frame
                           yycentre = yyleft+0.5*dy_frame
-                          dy_cell  = (min(yyright,yright)-max(yyleft,yleft))/dx_proj
+                          dy_cell  = dx_frame/dx_proj
                           xpc      = xxcentre-xcentre
                           ypc      = yycentre-ycentre
                           if(abs(xxcentre-xleft).lt.1d-2*dx_frame) xpc = xpc-1e-2*dx_frame
