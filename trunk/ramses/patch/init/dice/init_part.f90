@@ -214,7 +214,20 @@ subroutine init_part
         end if
      endif
 #endif
-
+     ! Get nlevelmax_part from cosmological inital conditions
+     if(cosmo)then
+        min_mdm_cpu = 1.0
+        do ipart=1,npart2
+           if(star)then
+              if(tp(ipart).eq.0d0)then
+                 if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
+              endif
+           else
+              if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
+           endif
+        enddo
+     endif
+     if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
 
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2     

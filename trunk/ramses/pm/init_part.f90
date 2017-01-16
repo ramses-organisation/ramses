@@ -190,7 +190,11 @@ subroutine init_part
      if(cosmo)then
         min_mdm_cpu = 1.0
         do ipart=1,npart2
-           if(tp(ipart).eq.0d0)then
+           if(star)then
+              if(tp(ipart).eq.0d0)then
+                 if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
+              endif
+           else
               if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
            endif
         enddo
