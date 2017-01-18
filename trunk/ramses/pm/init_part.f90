@@ -212,8 +212,8 @@ subroutine init_part
            endif
            ilevel = ilevel+1
         enddo
+        if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
      endif
-     if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
 
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2     

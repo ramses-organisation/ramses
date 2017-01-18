@@ -52,7 +52,7 @@ subroutine thermal_feedback(ilevel)
      inquire(file=fileloc,exist=file_exist)
      if(.not.file_exist) then
         open(ilun, file=fileloc, form='formatted')
-        write(ilun,'(A20)',advance='no') '# event id  ilevel  '
+        write(ilun,'(A24)',advance='no') '# event id  ilevel  mp  '
         do idim=1,ndim
            write(ilun,'(A2,I1,A2)',advance='no') 'xp',idim,'  '
         enddo
@@ -383,14 +383,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif           
            if(sf_log_properties) then     
               write(ilun,'(I10)',advance='no') 1
-              write(ilun,'(2I10)',advance='no') idp(ind_part(j)),ilevel
+              write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
               do idim=1,ndim
-                 write(ilun,'(E24.16)',advance='no') xp(ind_part(j),idim)
+                 write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
               enddo
               do idim=1,ndim
-                 write(ilun,'(E24.16)',advance='no') vp(ind_part(j),idim)
+                 write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
               enddo
-              write(ilun,'(E24.16)',advance='no') unew(indp(j),1)
+              write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
               do ivar=2,nvar
                  if(ivar.eq.ndim+2)then
                     e=0.0d0
@@ -412,7 +412,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  else
                     uvar=unew(indp(j),ivar)
                  endif
-                 write(ilun,'(E24.16)',advance='no') uvar/unew(indp(j),1)
+                 write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
               enddo
               write(ilun,'(A1)') ' '
            endif
