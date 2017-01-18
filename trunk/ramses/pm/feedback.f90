@@ -5,7 +5,11 @@
 subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
+  use hydro_commons
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   integer::ilevel
   !------------------------------------------------------------------------
   ! This routine computes the thermal energy, the kinetic energy and 
@@ -14,10 +18,60 @@ subroutine thermal_feedback(ilevel)
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal
-  integer::igrid,jgrid,ipart,jpart,next_part
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc
+  integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
+  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,ilun,idim
   real(dp),dimension(1:3)::skip_loc
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+  character(LEN=80)::filename,filedir,fileloc,filedirini
+  character(LEN=5)::nchar,ncharcpu
+  logical::file_exist
+  integer,parameter::tag=1120
+
+  if(sf_log_properties) then
+     call title(ifout-1,nchar)
+     if(IOGROUPSIZEREP>0) then
+        filedirini='output_'//TRIM(nchar)//'/'
+        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+     else
+        filedir='output_'//TRIM(nchar)//'/'
+     endif
+     filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
+     ilun=myid+10
+     call title(myid,nchar)
+     fileloc=TRIM(filename)//TRIM(nchar)
+     ! Wait for the token
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+   
+     inquire(file=fileloc,exist=file_exist)
+     if(.not.file_exist) then
+        open(ilun, file=fileloc, form='formatted')
+        write(ilun,'(A20)',advance='no') '# event id  ilevel  '
+        do idim=1,ndim
+           write(ilun,'(A2,I1,A2)',advance='no') 'xp',idim,'  '
+        enddo
+        do idim=1,ndim
+           write(ilun,'(A2,I1,A2)',advance='no') 'vp',idim,'  '
+        enddo
+        do ivar=1,nvar
+           if(ivar.ge.10) then
+              write(ilun,'(A1,I2,A2)',advance='no') 'u',ivar,'  '
+           else
+              write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
+           endif
+        enddo
+        write(ilun,'(A1)') ' '
+     else
+        open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
+     endif
+  endif
+
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -85,6 +139,7 @@ subroutine thermal_feedback(ilevel)
   ! End loop over cpus
 
 #endif
+  if(sf_log_properties) close(ilun)
 
 111 format('   Entering thermal_feedback for level ',I2)
 
@@ -107,11 +162,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc
+  integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
-  real(dp)::xxx,mmm,t0,ESN,mejecta,zloss
-  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig
+  real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
+  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
   real(dp)::dx,dx_loc,scale,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -132,6 +187,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
+  if(sf_log_properties) ilun=myid+10
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -154,6 +210,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   else
      mstar=m_star*mass_sph
   endif
+  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
 
   ! Compute stochastic boost to account for target GMC mass
   SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
@@ -290,9 +348,16 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         birth_time=tp(ind_part(j))
         ! Make sure that we don't count feedback twice
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then           
+        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
+           eta_sn2   = eta_sn
+           if(sf_imf)then
+              if(mp(ind_part(j)).le.mstar_max)then
+                 if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
+                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
+              endif
+           endif
            ! Stellar mass loss
-           mejecta=eta_sn*mp(ind_part(j))
+           mejecta=eta_sn2*mp(ind_part(j))
            mloss(j)=mloss(j)+mejecta/vol_loc(j)
            ! Thermal energy
            ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
@@ -316,6 +381,41 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  ethermal(j)=0d0
               endif
            endif           
+           if(sf_log_properties) then     
+              write(ilun,'(I10)',advance='no') 1
+              write(ilun,'(2I10)',advance='no') idp(ind_part(j)),ilevel
+              do idim=1,ndim
+                 write(ilun,'(E24.16)',advance='no') xp(ind_part(j),idim)
+              enddo
+              do idim=1,ndim
+                 write(ilun,'(E24.16)',advance='no') vp(ind_part(j),idim)
+              enddo
+              write(ilun,'(E24.16)',advance='no') unew(indp(j),1)
+              do ivar=2,nvar
+                 if(ivar.eq.ndim+2)then
+                    e=0.0d0
+                    do idim=1,ndim
+                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                    enddo
+#if NENER>0
+                    do irad=0,nener-1
+                       e=e+unew(ind_cell(i),inener+irad)
+                    enddo
+#endif   
+#ifdef SOLVERmhd
+                    do idim=1,ndim
+                       e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
+                    enddo
+#endif
+                    ! Temperature
+                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                 else
+                    uvar=unew(indp(j),ivar)
+                 endif
+                 write(ilun,'(E24.16)',advance='no') uvar/unew(indp(j),1)
+              enddo
+              write(ilun,'(A1)') ' '
+           endif
         endif
      end do
   endif
@@ -331,6 +431,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      tau_factor=kappa_IR*delta_x*scale_d*z_ave
   endif
   rad_factor=ERAD/ESN
+
   do j=1,np
 
      ! Infrared photon trapping boost
@@ -344,7 +445,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      else
         RAD_BOOST=0.0
      endif
-
+  
      ! Specific kinetic energy of the star
      ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
           &          +vp(ind_part(j),2)**2 &
@@ -357,7 +458,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
           & ethermal(j)*(1d0+RAD_BOOST)
-          
   end do
 
   ! Add metals
@@ -428,8 +528,13 @@ subroutine kinetic_feedback
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
-  ! Initial star particle mass
-  mstar=n_star/(scale_nH*aexp**3)*vol_min
+  ! Minimum star particle mass
+  if(m_star < 0d0)then
+     mstar=n_star/(scale_nH*aexp**3)*vol_min
+  else
+     mstar=m_star*mass_sph
+  endif
+
 
   ! Lifetime of Giant Molecular Clouds from Myr to code units
   ! Massive star lifetime from Myr to code units
@@ -768,8 +873,8 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
   integer::i,nx_loc,igrid,info,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN
-  real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax
+  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN,mstar,eta_sn2,msne_min,mstar_max
+  real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,vol_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -789,6 +894,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax
+  vol_min=dx_min**ndim
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -797,24 +903,39 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
-  
+
+  ! Minimum star particle mass
+  if(m_star < 0d0)then
+     mstar=n_star/(scale_nH*aexp**3)*vol_min
+  else
+     mstar=m_star*mass_sph
+  endif
+  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
   ESN=(1d51/(10d0*2d33))/scale_v**2
 
   do iSN=1,nSN
+     eta_sn2    = eta_sn
+     if(sf_imf)then
+        if(mSN(iSN).le.mstar_max)then
+           if(mSN(iSN).ge.msne_min) eta_sn2 = eta_ssn
+           if(mSN(iSN).lt.msne_min) eta_sn2 = 0.0
+        endif
+     endif
      if(vol_gas(iSN)>0d0)then
         d_gas(iSN)=mSN(iSN)/vol_gas(iSN)
         if(metal)d_metal(iSN)=ZSN(iSN)*mSN(iSN)/vol_gas(iSN)
         if(ekBlast(iSN)==0d0)then
-           p_gas(iSN)=eta_sn*sSN(iSN)*ESN/vol_gas(iSN)
+           p_gas(iSN)=eta_sn2*sSN(iSN)*ESN/vol_gas(iSN)
            uSedov(iSN)=0d0
         else
-           p_gas(iSN)=(1d0-f_ek)*eta_sn*sSN(iSN)*ESN/vol_gas(iSN)
-           uSedov(iSN)=sqrt(f_ek*eta_sn*sSN(iSN)*ESN/mSN(iSN)/ekBlast(iSN))
+           p_gas(iSN)=(1d0-f_ek)*eta_sn2*sSN(iSN)*ESN/vol_gas(iSN)
+           uSedov(iSN)=sqrt(f_ek*eta_sn2*sSN(iSN)*ESN/mSN(iSN)/ekBlast(iSN))
         endif
      else
         d_gas(iSN)=mSN(iSN)/ekBlast(iSN)
-        p_gas(iSN)=eta_sn*sSN(iSN)*ESN/ekBlast(iSN)
+        p_gas(iSN)=eta_sn2*sSN(iSN)*ESN/ekBlast(iSN)
         if(metal)d_metal(iSN)=ZSN(iSN)*mSN(iSN)/ekBlast(iSN)
      endif
   end do

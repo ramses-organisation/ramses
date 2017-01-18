@@ -18,7 +18,7 @@ module amr_commons
   real(dp)::epot_tot=0.0D0                      ! Total potential energy
   real(dp)::epot_tot_old=0.0D0                  ! Old potential energy
   real(dp)::epot_tot_int=0.0D0                  ! Time integrated potential
-  real(dp)::const=0.0D0                         ! Energy conservation
+  real(dp)::einit=0.0D0                         ! Initial total energy
   real(dp)::aexp_old=1.0D0                      ! Old expansion factor
   real(dp)::rho_tot=0.0D0                       ! Mean density in the box
   real(dp)::t=0.0D0                             ! Time variable

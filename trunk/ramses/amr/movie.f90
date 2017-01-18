@@ -38,7 +38,7 @@ subroutine output_frame()
   real(dp)::xxleft,xxright,yyleft,yyright,zzleft,zzright,xxcentre,yycentre,zzcentre
   real(dp)::xpf,ypf,zpf
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min,pers_corr
-  real(dp)::dx_cell,dy_cell,dz_cell,dvol,dx_proj
+  real(dp)::dx_cell,dy_cell,dz_cell,dvol,dx_proj,weight
   real(kind=8)::cell_value
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
@@ -47,14 +47,12 @@ subroutine output_frame()
   real(dp),dimension(1:nvector,1:ndim)::xx
   real(dp),dimension(1:nvector,1:ndim)::xx2
   real(kind=8),dimension(:,:,:),allocatable::data_frame,data_frame_all
-  real(kind=8),dimension(:,:),allocatable::dens,dens_all,vol,vol_all
+  real(kind=8),dimension(:,:),allocatable::weights,weights_all,vol,vol_all
   real(kind=4),dimension(:,:),allocatable::data_single
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
-  real(kind=8) :: observer(3),thetay,thetaz,theta,phi,temp,e
+  real(kind=8) :: observer(3),thetay,thetaz,theta,phi,temp,e,uvar
   real(kind=8) :: pi=3.14159265359
-  real(dp),dimension(8)::xcube
-  real(dp),dimension(8)::ycube
-  real(dp),dimension(8)::zcube
+  real(dp),dimension(8)::xcube,ycube,zcube
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel,next_part,icube,iline
   integer::i,j,ig,ip,npart1
   integer::nalloc1,nalloc2
@@ -176,6 +174,9 @@ subroutine output_frame()
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
+  if(xcentre_frame(proj_ind*4-3).eq.0d0) xcentre_frame(proj_ind*4-3) = boxlen/2d0
+  if(ycentre_frame(proj_ind*4-3).eq.0d0) ycentre_frame(proj_ind*4-3) = boxlen/2d0
+  if(zcentre_frame(proj_ind*4-3).eq.0d0) zcentre_frame(proj_ind*4-3) = boxlen/2d0
   ! Compute frame boundaries
   if(proj_axis(proj_ind:proj_ind).eq.'x')then
     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
@@ -189,6 +190,15 @@ subroutine output_frame()
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
     ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
     zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
+  endif
+  if(deltax_frame(proj_ind*2-1).eq.0d0 .and. deltay_frame(proj_ind*2-1).gt.0d0)then
+     deltax_frame(proj_ind*2-1)=deltay_frame(proj_ind*2-1)*float(nw_frame)/float(nh_frame)
+  endif
+  if(deltay_frame(proj_ind*2-1).eq.0d0 .and. deltax_frame(proj_ind*2-1).gt.0d0)then
+     deltay_frame(proj_ind*2-1)=deltax_frame(proj_ind*2-1)*float(nh_frame)/float(nw_frame)
+  endif
+  if(deltaz_frame(proj_ind*2-1).eq.0d0)then
+     deltaz_frame(proj_ind*2-1)=boxlen
   endif
   delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
@@ -213,9 +223,9 @@ subroutine output_frame()
   dist_camera   = boxlen
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera)) focal_camera(proj_ind) = dist_camera
 #if NDIM>2                 
-  if(myid==1) write(*,'(5A,F8.1,A,F8.1)') "Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
+  if(myid==1) write(*,'(5A,F8.1,A,F8.1)') " Writing frame ", istep_str,' los=',proj_axis(proj_ind:proj_ind),' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
 #else
-  if(myid==1) write(*,'(3A,F8.1)') "Writing frame ", istep_str,' theta=',theta_cam*180./pi
+  if(myid==1) write(*,'(3A,F8.1)') " Writing frame ", istep_str,' theta=',theta_cam*180./pi
 #endif
   ! Frame boundaries
   xleft_frame  = xcen-delx/2.
@@ -240,10 +250,10 @@ subroutine output_frame()
      rt_data_frame(:,:,:) = 0d0
   endif
 #endif
-  allocate(dens(1:nw_frame,1:nh_frame))
+  allocate(weights(1:nw_frame,1:nh_frame))
   allocate(vol(1:nw_frame,1:nh_frame))
   data_frame=0d0
-  dens=0d0
+  weights=0d0
   vol=0d0
   dx_frame=delx/dble(nw_frame)
   dy_frame=dely/dble(nh_frame)
@@ -326,6 +336,36 @@ subroutine output_frame()
                    ok(i)=ok(i).and. &
                       & (uold(ind_cell(i),ivar_refine)/uold(ind_cell(i),1) &
                       & > var_cut_refine)
+                 endif
+                 if((ok(i)).and.(ivar_frame(proj_ind)>0).and.(ivar_frame(proj_ind)<=nvar))then
+                    uvar = uold(ind_cell(i),ivar_frame(proj_ind))
+                    ! Scale temperature to K
+                    if(ivar_frame(proj_ind)==ndim+2)then
+                       e = 0.0d0
+                       do idim=1,ndim
+                          e = e+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
+                       enddo
+#if NENER>0
+                       do irad=0,nener-1
+                          e = e+uold(ind_cell(i),inener+irad)
+                       enddo
+#endif
+#ifdef SOLVERmhd
+                       do idim=1,ndim 
+                          e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
+                       enddo
+#endif
+                       ! Pressure
+                       uvar = (gamma-1.0)*(uold(ind_cell(i),ivar_frame(proj_ind))-e)*scale_T2
+                    endif
+                    ! Switch to primitive variables
+                    if(ivar_frame(proj_ind)>1) uvar = uvar/uold(ind_cell(i),1)
+                    ! Scale density to cm**-3
+                    if(ivar_frame(proj_ind)==1) uvar = uvar*scale_nH
+                    ! Scale velocities to km/s
+                    if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<ndim+2) uvar = uvar*scale_v/1e5
+                    ok(i) = ok(i).and.(uvar.ge.varmin_frame(proj_ind))
+                    ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                  endif
               end do
    
@@ -478,17 +518,19 @@ subroutine output_frame()
                        xxleft      = xleft_frame+dble(ii-1)*dx_frame
                        xxright     = xxleft+dx_frame
                        xxcentre    = xxleft+0.5*dx_frame
-                       dx_cell     = min(xxright,xright)-max(xxleft,xleft)
+                       dx_cell     = dx_frame/dx_proj
                        do jj=jmin,jmax
                           ! Pixel y-axis position
                           yyleft   = yleft_frame+dble(jj-1)*dy_frame
                           yyright  = yyleft+dy_frame
                           yycentre = yyleft+0.5*dy_frame
-                          dy_cell  = min(yyright,yright)-max(yyleft,yleft)
+                          dy_cell  = dx_frame/dx_proj
                           xpc      = xxcentre-xcentre
                           ypc      = yycentre-ycentre
-                          xpc      = xpc-sign(0.5*dx_frame,xpc)
-                          ypc      = ypc-sign(0.5*dx_frame,ypc)
+                          if(abs(xxcentre-xleft).lt.1d-2*dx_frame) xpc = xpc-1e-2*dx_frame
+                          if(abs(yycentre-yleft).lt.1d-2*dx_frame) ypc = ypc-1e-2*dx_frame
+                          if(abs(xxcentre-xright).lt.1d-2*dx_frame) xpc = xpc-1e-2*dx_frame
+                          if(abs(yycentre-yright).lt.1d-2*dx_frame) ypc = ypc-1e-2*dx_frame
 #if NDIM>2                 
                           if(shader_frame(proj_ind).eq.'cube')then
                              cube_face = .false.
@@ -521,33 +563,59 @@ subroutine output_frame()
                              .or.(shader_frame(proj_ind).eq.'sphere'    &
                              .and.sqrt(xpc**2+ypc**2).le.dx_proj)       &
                              .or.(shader_frame(proj_ind).eq.'square'    &
-                             .and.(abs(xpc).le.dx_proj)                 &
-                             .and.(abs(ypc).le.dx_proj)))then
+                             .and.(abs(xpc).lt.dx_proj)                 &
+                             .and.(abs(ypc).lt.dx_proj)))then
                              ! Intersection volume
                              dvol        = dx_cell*dy_cell
                              vol(ii,jj)  = vol(ii,jj)+dvol
-                             dens(ii,jj) = dens(ii,jj)+dvol*uold(ind_cell(i),1)
-                             data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)**2
+                             if(method_frame(proj_ind).eq.'mean_mass')then
+                                weight = dvol*uold(ind_cell(i),1)*dx_loc**3
+                             elseif(method_frame(proj_ind).eq.'mean_dens')then
+                                weight = dvol*uold(ind_cell(i),1)
+                             elseif(method_frame(proj_ind).eq.'mean_vol')then
+                                weight = dvol*dx_loc**3
+                             elseif(method_frame(proj_ind).eq.'sum')then
+                                weight = 1.0
+                             endif
+                             ! Update weights map
+                             if(method_frame(proj_ind)(1:4).eq.'mean')then
+                                weights(ii,jj) = weights(ii,jj)+weight
+                             endif
+
+                             if(method_frame(proj_ind).eq.'min')then
+                                data_frame(ii,jj,1)=min(data_frame(ii,jj,1),uold(ind_cell(i),1))
+                             elseif(method_frame(proj_ind).eq.'max')then
+                                data_frame(ii,jj,1)=max(data_frame(ii,jj,1),uold(ind_cell(i),1))
+                             else
+                                data_frame(ii,jj,1)=data_frame(ii,jj,1)+weight*uold(ind_cell(i),1)
+                             endif
 #ifdef SOLVERmhd
                              do kk=2,NVAR+3
 #else                       
                              do kk=2,NVAR
 #endif
-                                if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+dvol*uold(ind_cell(i),kk)
+                                if(movie_vars(kk).eq.1)then
+                                   if(method_frame(proj_ind).eq.'min')then
+                                      data_frame(ii,jj,kk)=min(data_frame(ii,jj,kk),uold(ind_cell(i),kk)/uold(ind_cell(i),1))
+                                   elseif(method_frame(proj_ind).eq.'max')then
+                                      data_frame(ii,jj,kk)=max(data_frame(ii,jj,kk),uold(ind_cell(i),kk)/uold(ind_cell(i),1))
+                                   else
+                                      data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+weight*uold(ind_cell(i),kk)/uold(ind_cell(i),1)
+                                   endif
+                                endif
                              end do
 #ifdef RT
                              if(rt) then
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
-                                      rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk) &
-                                           + dvol * rtuold(ind_cell(i), 1+(kk-1)*(ndim+1)) * rt_c_cgs &
-                                                  * max(uold(ind_cell(i),1),smallr) ! mass-weighted
+                                      rt_data_frame(ii,jj,kk) = rt_data_frame(ii,jj,kk)+weight*rtuold(ind_cell(i),1+(kk-1) &
+                                                                *(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
                                    endif
                                 end do
                              endif
 #endif
                              if (movie_vars(0).eq.1)then
-                               !Get temperature
+                               ! Get temperature
                                e=0.0d0
                                do idim=1,ndim
                                   e=e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
@@ -562,14 +630,20 @@ subroutine output_frame()
                                   e=e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
                                enddo
 #endif
-                               temp=(gamma-1.0)*(uold(ind_cell(i),ndim+2)-e) !pressure
-                               temp=max(temp/max(uold(ind_cell(i),1),smallr),smallc**2)*scale_T2 !temperature in K
-                               data_frame(ii,jj,0)=data_frame(ii,jj,0)+dvol*uold(ind_cell(i),1)*temp !mass weighted temperature
+                               temp=(gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
+                               temp=max(temp/uold(ind_cell(i),1),smallc**2)*scale_T2
+                               if(method_frame(proj_ind).eq.'min')then
+                                  data_frame(ii,jj,0)=min(data_frame(ii,jj,0),temp)
+                               elseif(method_frame(proj_ind).eq.'max')then
+                                  data_frame(ii,jj,0)=max(data_frame(ii,jj,0),temp)
+                               else
+                                  data_frame(ii,jj,0)=data_frame(ii,jj,0)+weight*temp
+                               endif
                              end if
       
 #ifdef SOLVERmhd
                              if(movie_vars(NVAR+4).eq.1)then
-                                     data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)+ dvol*0.125*(&
+                                     data_frame(ii,jj,NVAR+4)=data_frame(ii,jj,NVAR+4)+ weight*0.125*(&
                                          uold(ind_cell(i),6)**2 + uold(ind_cell(i),7)**2 + uold(ind_cell(i),8)**2 &
                                          + uold(ind_cell(i),NVAR+1)**2 + uold(ind_cell(i),NVAR+2)**2 + uold(ind_cell(i),NVAR+3)**2)
                              end if
@@ -693,15 +767,15 @@ subroutine output_frame()
   allocate(data_frame_all(1:nw_frame,1:nh_frame,0:NVAR+2))
   call MPI_ALLREDUCE(data_frame,data_frame_all,nw_frame*nh_frame*(NVAR+2+1),MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
-  allocate(dens_all(1:nw_frame,1:nh_frame))
-  call MPI_ALLREDUCE(dens,dens_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  allocate(weights_all(1:nw_frame,1:nh_frame))
+  call MPI_ALLREDUCE(weights,weights_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   allocate(vol_all(1:nw_frame,1:nh_frame))
   call MPI_ALLREDUCE(vol,vol_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   data_frame=data_frame_all
-  dens=dens_all
+  weights=weights_all
   vol=vol_all
   deallocate(data_frame_all)
-  deallocate(dens_all)
+  deallocate(weights_all)
   deallocate(vol_all)
 #ifdef RT
   if(rt) then
@@ -718,36 +792,21 @@ subroutine output_frame()
   ! Convert into mass weighted                                                                                                         
   do ii=1,nw_frame
     do jj=1,nh_frame
-#ifdef SOLVERmhd
-      do kk=0,5
-        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
-      end do
-      do kk=6,8
-        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
-      end do
-      do kk=9,NVAR
-        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/dens(ii,jj)
-      end do
-      do kk=NVAR+1,NVAR+4
-        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/vol(ii,jj)
-      end do
-#else
       do kk=0,NVAR
-        if(movie_vars(kk).eq.1) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/max(dens(ii,jj),smallr)
+        if((movie_vars(kk).eq.1).and.(weights(ii,jj).gt.0d0)) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)/weights(ii,jj)
       end do
-#endif
 #ifdef RT
       if(rt) then
          do kk=1,NGROUPS
-            if(rt_movie_vars(kk).eq.1) &
-                 rt_data_frame(ii,jj,kk)=rt_data_frame(ii,jj,kk)/dens(ii,jj)
+            if(rt_movie_vars(kk).eq.1.and.(weights(ii,jj).gt.0d0)) &
+                 rt_data_frame(ii,jj,kk)=rt_data_frame(ii,jj,kk)/weights(ii,jj)
          end do
       endif
 #endif
 
     end do
   end do
-  deallocate(dens)
+  deallocate(weights)
   deallocate(vol)
 
   if(myid==1)then

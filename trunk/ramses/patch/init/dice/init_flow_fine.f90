@@ -628,14 +628,14 @@ subroutine init_uold(ilevel)
   use hydro_commons
   use dice_commons
   implicit none
-  integer::ilevel
+  integer::ilevel,info
   !--------------------------------------------------------------------------
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,icpu,iskip
+  integer::i,ivar,irad,ind,icpu,iskip,idim
   real(dp)::d,u,v,w,e
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2, IS_cs2, IG_cs2
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -650,12 +650,25 @@ subroutine init_uold(ilevel)
            if(uold(active(ilevel)%igrid(i)+iskip,1).lt.IG_rho/scale_nH) then
               uold(active(ilevel)%igrid(i)+iskip,ivar)                      = 0D0
               if(ivar.eq.1) uold(active(ilevel)%igrid(i)+iskip,ivar)        = max(IG_rho/scale_nH,smallr)
-              if(ivar.eq.ndim+2) uold(active(ilevel)%igrid(i)+iskip,ivar)   = max(IG_rho/scale_nH,smallr)*IG_T2/scale_T2/(gamma-1)
+              if(ivar.eq.ndim+2)then
+                 uold(active(ilevel)%igrid(i)+iskip,ivar) = IG_T2/scale_T2/(gamma-1)*max(IG_rho/scale_nH,smallr)
+              endif
               if(metal) then
                 if(ivar.eq.imetal) uold(active(ilevel)%igrid(i)+iskip,ivar) = max(IG_rho/scale_nH,smallr)*IG_metal
               endif
            endif
         end do
+     end do
+  end do
+  ! Set cell averaged kinetic energy
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        e = 0d0
+        do idim=1,ndim
+           e = e+0.5*uold(active(ilevel)%igrid(i)+iskip,idim+1)**2/uold(active(ilevel)%igrid(i)+iskip,1)
+        enddo
+        uold(active(ilevel)%igrid(i)+iskip,ndim+2) = uold(active(ilevel)%igrid(i)+iskip,ndim+2)+e
      end do
   end do
 
@@ -799,7 +812,6 @@ subroutine condinit_loc(ilevel)
      end if
 
   end do
-  ! End loop over cpus
 
 111 format('   Entering condinit_loc for level ',I2)
 
@@ -836,7 +848,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-  real(dp),dimension(1:nvector),save::ethermal,ekinetic
+  real(dp),dimension(1:nvector),save::ethermal
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
 
@@ -1026,15 +1038,13 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      do j=1,np
         if(ok(j)) then
            ! Specific kinetic energy of the gas particle
-           ekinetic(j)=0d0
            ethermal(j)=up(ind_part(j))
            ! Update hydro variable in CIC cells
            uold(indp(j,ind),1)=uold(indp(j,ind),1)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)
            do idim=1,ndim
               uold(indp(j,ind),idim+1)=uold(indp(j,ind),idim+1)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*vp(ind_part(j),idim)
-              ekinetic(j)=ekinetic(j)+0.5*vp(ind_part(j),idim)**2
            end do
-           uold(indp(j,ind),ndim+2)=uold(indp(j,ind),ndim+2)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*(ekinetic(j)+ethermal(j))
+           uold(indp(j,ind),ndim+2)=uold(indp(j,ind),ndim+2)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*ethermal(j)
            if(metal) then
              uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
            endif
@@ -1071,7 +1081,7 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::ethermal,ekinetic
+  real(dp),dimension(1:nvector),save::ethermal
   ! Particle based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::vol_loc
@@ -1173,11 +1183,6 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Update hydro variables
   do j=1,np
      if(ok(j))then
-        ! Specific kinetic energy of the gas particle
-        ekinetic(j)=0d0
-        do idim=1,ndim
-           ekinetic(j)=ekinetic(j)+0.5*vp(ind_part(j),idim)**2
-        end do
         ethermal(j)=up(ind_part(j))
         ! Update density in NGP cell
         uold(indp(j),1)=uold(indp(j),1)+mp(ind_part(j))/vol_loc(j)
@@ -1186,7 +1191,7 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            uold(indp(j),idim+1)=uold(indp(j),idim+1)+mp(ind_part(j))/vol_loc(j)*vp(ind_part(j),idim)
         end do
         ! Update temperature in NGP cell
-        uold(indp(j),ndim+2)=uold(indp(j),ndim+2)+mp(ind_part(j))/vol_loc(j)*(ekinetic(j)+ethermal(j))
+        uold(indp(j),ndim+2)=uold(indp(j),ndim+2)+mp(ind_part(j))/vol_loc(j)*ethermal(j)
         ! Update passive hydro variables in NGP cell
         if(metal) then
            uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))

@@ -12,11 +12,7 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   integer::ncache,i,igrid,ngrid,info
   integer,dimension(1:nvector),save::ind_grid
-#ifdef grackle
-  integer:: iresult, initialize_grackle
-  real(kind=8)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -35,28 +31,7 @@ subroutine cooling_fine(ilevel)
   if((cooling.and..not.neq_chem).and.ilevel==levelmin.and.cosmo)then
      if(myid==1)write(*,*)'Computing new cooling table'
 #ifdef grackle
-     ! Compute new cooling table at current aexp with grackle
-     if((1.D0/aexp-1.D0.lt.z_reion).and.(grackle_UVbackground.eq.1).and.(.not.grackle_UVbackground_on)) then
-        if(myid==1)write(*,*)'Grackle: Activating UV background'
-        grackle_UVbackground_on = .true.
-        a_value = aexp
-        call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-        density_units=scale_d
-        length_units=scale_l
-        time_units=scale_t
-        velocity_units=scale_v
-        ! Initialize the Grackle data
-         iresult = initialize_grackle(                                &
-           &     grackle_comoving_coordinates,                        &
-           &     density_units, length_units,                         &
-           &     time_units, velocity_units,                          &
-           &     a_units, a_value,                                    &
-           &     use_grackle, grackle_with_radiative_cooling,         &
-           &     TRIM(grackle_data_file),                             &
-           &     grackle_primordial_chemistry, grackle_metal_cooling, &
-           &     grackle_UVbackground, grackle_h2_on_dust,            &
-           &     grackle_cmb_temperature_floor, gamma) 
-     endif
+     if(use_grackle==0) call set_table(dble(aexp))
 #else
      call set_table(dble(aexp))
 #endif
@@ -73,6 +48,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+#ifdef grackle
+  use grackle_parameters
+#endif
 #ifdef ATON
   use radiation_commons, ONLY: Erad
 #endif
@@ -83,11 +61,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
        ,rt_pressBoost,iIRtrapVar,kappaSc,a_r,is_kIR_T,rt_vc
 #endif
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz
+  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,info
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant
@@ -110,19 +91,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux 
-#endif
-
-#ifdef grackle     
-  real(kind=8) gr_density(nvector), gr_energy(nvector), &
-  &     gr_x_velocity(nvector), gr_y_velocity(nvector), &
-  &     gr_z_velocity(nvector), gr_metal_density(nvector), & 
-  &     gr_poly(nvector), gr_floor(nvector)
-  integer::iresult, solve_chemistry_table, gr_rank
-  integer,dimension(1:3)::gr_dimension,gr_start,gr_end
-  real(dp)::density_units,length_units,time_units,velocity_units,temperature_units,a_units=1.0,a_value=1.0,gr_dt
-  if(cosmo) then
-     a_value=aexp
-  endif
 #endif
 
   ! Mesh spacing in that level
@@ -401,57 +369,80 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! grackle tabular cooling
 #ifdef grackle
-     if(cosmo) then
-        a_value=aexp
-     endif
-     gr_rank = 3
-     do i = 1, gr_rank
-        gr_dimension(i) = 1
-        gr_start(i) = 0
-        gr_end(i) = 0
-     enddo
-     gr_dimension(1) = nvector
-     gr_end(1) = nleaf - 1
-     ! set units
-     density_units=scale_d
-     length_units=scale_l
-     time_units=scale_t
-     velocity_units=scale_v
-     temperature_units=scale_T2
-     do i = 1, nleaf
-        gr_density(i) = max(uold(ind_leaf(i),1),smallr)
-        if(metal)then
-           gr_metal_density(i) = uold(ind_leaf(i),imetal)
-        else
-           gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
+     if(use_grackle==1)then
+        gr_rank = 3
+        do i = 1, gr_rank
+           gr_dimension(i) = 1
+           gr_start(i) = 0
+           gr_end(i) = 0
+        enddo
+        gr_dimension(1) = nvector
+        gr_end(1) = nleaf - 1
+   
+        if(cosmo)then
+           my_grackle_units%a_value = aexp
+           my_grackle_units%density_units = scale_d
+           my_grackle_units%length_units = scale_l
+           my_grackle_units%time_units = scale_t
+           my_grackle_units%velocity_units = scale_v
         endif
-        gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
-        gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
-        gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
-        gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
-        gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
-        gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
-        gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
-        gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
-     enddo
-
-     gr_dt = dtnew(ilevel)
-    
-     iresult = solve_chemistry_table(    &
-     &     grackle_comoving_coordinates, &
-     &     density_units, length_units,  &
-     &     time_units, velocity_units,   &
-     &     a_units, a_value, gr_dt,      &
-     &     gr_rank, gr_dimension,        &
-     &     gr_start, gr_end,             &
-     &     gr_density, gr_energy,        &
-     &     gr_x_velocity, gr_y_velocity, gr_z_velocity, &
-     &     gr_metal_density)
-
-     do i = 1, nleaf
-        T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0)
-     end do
-     delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
+   
+        do i = 1, nleaf
+           gr_density(i) = max(uold(ind_leaf(i),1),smallr)
+           if(metal)then
+              gr_metal_density(i) = uold(ind_leaf(i),imetal)
+           else
+              gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
+           endif
+           gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
+           gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
+           gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
+           gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+           gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
+           gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
+           gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
+           gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
+        enddo
+   
+        my_grackle_fields%grid_rank = gr_rank
+        my_grackle_fields%grid_dimension = C_LOC(gr_dimension)
+        my_grackle_fields%grid_start = C_LOC(gr_start)
+        my_grackle_fields%grid_end = C_LOC(gr_end)
+        my_grackle_fields%grid_dx = dx_loc
+        my_grackle_fields%density = C_LOC(gr_density)
+        my_grackle_fields%metal_density = C_LOC(gr_metal_density)
+        my_grackle_fields%internal_energy = C_LOC(gr_energy)
+        my_grackle_fields%x_velocity = C_LOC(gr_x_velocity)
+        my_grackle_fields%y_velocity = C_LOC(gr_y_velocity)
+        my_grackle_fields%z_velocity = C_LOC(gr_z_velocity)
+        my_grackle_fields%volumetric_heating_rate = C_LOC(gr_volumetric_heating_rate)
+        my_grackle_fields%specific_heating_rate = C_LOC(gr_specific_heating_rate)
+        my_grackle_fields%RT_HI_ionization_rate = C_LOC(gr_RT_HI_ionization_rate)
+        my_grackle_fields%RT_HeI_ionization_rate = C_LOC(gr_RT_HeI_ionization_rate)
+        my_grackle_fields%RT_HeII_ionization_rate = C_LOC(gr_RT_HeII_ionization_rate)
+        my_grackle_fields%RT_H2_dissociation_rate = C_LOC(gr_RT_H2_dissociation_rate)
+        my_grackle_fields%RT_heating_rate = C_LOC(gr_RT_heating_rate)
+   
+        iresult = solve_chemistry(my_grackle_units, my_grackle_fields, dtnew(ilevel))
+        if(iresult.eq.0)then
+            write(*,*) 'Grackle: error in solve_chemistry'
+#ifndef WITHOUTMPI
+            call MPI_ABORT(MPI_COMM_WORLD,1,info)
+#else
+            stop
+#endif
+        endif
+   
+        do i = 1, nleaf
+           T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0)
+        end do
+        delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
+     else
+        ! Compute net cooling at constant nH
+        if(cooling.and..not.neq_chem)then
+           call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
+        endif
+     endif
 #else
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then

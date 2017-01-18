@@ -25,29 +25,29 @@ subroutine star_formation(ilevel)
   ! Yann Rasera  10/2002-01/2003
   !----------------------------------------------------------------------
   ! local constants
-  real(dp)::t0,d0,d00,e0,mgas,mcell
+  real(dp)::t0,d0,d00,mgas,mcell
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
   integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot,ilun
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc
-  integer ::ntot,ntot_all,info,nstar_corrected,ideb,ndeb,ncell
+  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc,idim
+  integer ::ntot,ntot_all,info,nstar_corrected,ncell
   logical ::ok_free,ok_all
-  real(dp)::d,x,y,z,u,v,w,e,tg,zg,vdisp,dgas
+  real(dp)::d,x,y,z,u,v,w,e,tg,zg
   real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
-  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec
-  real(dp)::velc,uc,vc,wc,mass_load,ul,ur,fl,fr,trgv,alpha0,sigma2,lapld,flong,ftot,pcomp
-  real(dp)::divv,curlv,curlv1,curlv2,curlv3
-  real(dp)::vxgauss,vygauss,vzgauss,birth_epoch,factG
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
+  real(dp)::ul,ur,fl,fr,trgv,alpha0
+  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
+  real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
+  real(dp)::birth_epoch,factG
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
-  real(kind=8)::RandNum,GaussNum,PoissMean   
+  real(kind=8)::RandNum,GaussNum,PoissMean
   real(dp),parameter::pi=0.5*twopi
   integer,parameter::tag=1120
   integer::dummy_io,info2
-  real(dp)::vsn,costheta,sintheta,cosphi,sinphi
   real(dp),dimension(1:3)::skip_loc
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
-  real(dp)::mdebris,vdebris,zdebris,rdebris
+  real(dp)::mdebris
   real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
   real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
@@ -68,7 +68,7 @@ subroutine star_formation(ilevel)
 
   if(verbose)write(*,*)' Entering star_formation'
 
-  if(sf_birth_properties) then
+  if(sf_log_properties.and.ifout.gt.1) then
      call title(ifout-1,nchar)
      if(IOGROUPSIZEREP>0) then
         filedirini='output_'//TRIM(nchar)//'/'
@@ -91,13 +91,23 @@ subroutine star_formation(ilevel)
 #endif
    
      inquire(file=fileloc,exist=file_exist)
-     if((.not.file_exist).or.(nrestart.eq.ifout-1)) then
+     if((.not.file_exist).or.(abs(t-trestart).lt.dtnew(ilevel))) then
         open(ilun, file=fileloc, form='formatted')
-        if(sf_virial) then
-           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg  sigma_turb'
-        else
-           write(ilun,'(A70)') '# i  ilevel  birth  n*mstar  x  y  z  vx  vy  vz  d  tg  zg'
-        endif
+        write(ilun,'(A20)',advance='no') '# event id  ilevel  '
+        do idim=1,ndim
+           write(ilun,'(A2,I1,A2)',advance='no') 'xp',idim,'  '
+        enddo
+        do idim=1,ndim
+           write(ilun,'(A2,I1,A2)',advance='no') 'vp',idim,'  '
+        enddo
+        do ivar=1,nvar
+           if(ivar.ge.10) then
+              write(ilun,'(A1,I2,A2)',advance='no') 'u',ivar,'  '
+           else
+              write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
+           endif
+        enddo
+        write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
@@ -253,9 +263,14 @@ subroutine star_formation(ilevel)
               ! if cell is a leaf cell
               if (ok(i)) then 
                  ! Subgrid turbulence decay
-                 if((sf_tdiss.gt.0d0).and.(uold(ind_cell(i),ivirial).gt.0d0)) then
-                    tdec = sf_tdiss*dx_loc/uold(ind_cell(i),ivirial)
-                    uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)*exp(-dtold(ilevel)/tdec)
+                 if(sf_tdiss.gt.0d0) then
+                    if(sf_compressive) then
+                       tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1)+uold(ind_cell(i),ivirial2))
+                    else
+                       tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1))
+                    endif
+                    uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
+                    uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)*exp(-dtold(ilevel)/tdec)
                  endif
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
@@ -278,19 +293,23 @@ subroutine star_formation(ilevel)
                  ncell = 1 ! we just want the neighbors of that cell
                  ind_cell2(1) = ind_cell(i)
                  call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
-                 d1        = uold(ind_nbor(1,1),1)     ; d4    = uold(ind_nbor(1,4),1) 
-                 d2        = uold(ind_nbor(1,2),1)     ; d5    = uold(ind_nbor(1,5),1) 
-                 d3        = uold(ind_nbor(1,3),1)     ; d6    = uold(ind_nbor(1,6),1)  
+                 d1           = uold(ind_nbor(1,1),1) ; d2 = uold(ind_nbor(1,2),1) ; d3 = uold(ind_nbor(1,3),1)
+                 d4           = uold(ind_nbor(1,4),1) ; d5 = uold(ind_nbor(1,5),1) ; d6 = uold(ind_nbor(1,6),1)  
+                 sigma2       = 0d0 ; sigma2_comp = 0d0 ; sigma2_sole = 0d0
+                 trgv         = 0d0 ; divv = 0d0 ; curlva = 0d0 ; curlvb = 0d0 ; curlvc = 0d0
+                 flong        = 0d0
+                 !!!!!!!!!!!!!!!!!!
                  ! Divergence terms
+                 !!!!!!!!!!!!!!!!!!
                  ul        = (d2*uold(ind_nbor(1,2),2) + d*uold(ind_cell(i),2))/(d2+d)
                  ur        = (d1*uold(ind_nbor(1,1),2) + d*uold(ind_cell(i),2))/(d1+d)
                  if(sf_model.le.2) then
                     fl     = (d2*f(ind_nbor(1,2),1)    + d*f(ind_cell(i),1))/(d2+d)
                     fr     = (d1*f(ind_nbor(1,1),1)    + d*f(ind_cell(i),1))/(d1+d)
-                    flong  = max((d2+d)/2*ul*fl-(d1+d)/2*ur*fr,0d0)
+                    flong  = flong+max((d2+d)/2*ul*fl-(d1+d)/2*ur*fr,0d0)
                  endif
-                 trgv      = (ur-ul)**2
-                 divv      = (ur-ul)
+                 sigma2_comp = sigma2_comp + (ur-ul)**2
+                 divv      = divv + (ur-ul)
                  ul        = (d4*uold(ind_nbor(1,4),3) + d*uold(ind_cell(i),3))/(d4+d)
                  ur        = (d3*uold(ind_nbor(1,3),3) + d*uold(ind_cell(i),3))/(d3+d)
                  if(sf_model.le.2) then
@@ -298,7 +317,7 @@ subroutine star_formation(ilevel)
                     fr     = (d3*f(ind_nbor(1,3),2)    + d*f(ind_cell(i),2))/(d3+d)
                     flong  = flong+max((d4+d)/2*ul*fl-(d3+d)/2*ur*fr,0d0)
                  endif
-                 trgv      = trgv + (ur-ul)**2
+                 sigma2_comp = sigma2_comp + (ur-ul)**2
                  divv      = divv + (ur-ul)
                  ul        = (d6*uold(ind_nbor(1,6),4) + d*uold(ind_cell(i),4))/(d6+d)
                  ur        = (d5*uold(ind_nbor(1,5),4) + d*uold(ind_cell(i),4))/(d5+d)
@@ -306,12 +325,13 @@ subroutine star_formation(ilevel)
                     fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
                     fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
                     flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
-                    ftot   = flong
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 divv      = trgv + (ur-ul)
-                 divv      = (divv/dx_loc)**2
+                 sigma2_comp = sigma2_comp + (ur-ul)**2
+                 divv      = divv + (ur-ul)
+                 ftot      = flong
+                 !!!!!!!!!!!!
                  ! Curl terms
+                 !!!!!!!!!!!!
                  ul        = (d6*uold(ind_nbor(1,6),3) + d*uold(ind_cell(i),3))/(d6+d)
                  ur        = (d5*uold(ind_nbor(1,5),3) + d*uold(ind_cell(i),3))/(d5+d)
                  if(sf_model.le.2) then
@@ -319,8 +339,8 @@ subroutine star_formation(ilevel)
                     fr     = (d5*f(ind_nbor(1,5),2)    + d*f(ind_cell(i),2))/(d5+d)
                     ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 curlv1    = -(ur-ul)
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlva    = curlva-(ur-ul)
                  ul        = (d4*uold(ind_nbor(1,4),4) + d*uold(ind_cell(i),4))/(d4+d)
                  ur        = (d3*uold(ind_nbor(1,3),4) + d*uold(ind_cell(i),4))/(d3+d)
                  if(sf_model.le.2) then
@@ -328,8 +348,8 @@ subroutine star_formation(ilevel)
                     fr     = (d3*f(ind_nbor(1,3),3)    + d*f(ind_cell(i),3))/(d3+d)
                     ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 curlv1    = (curlv1 + (ur-ul))
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlva    = (curlva + (ur-ul))
                  ul        = (d6*uold(ind_nbor(1,6),2) + d*uold(ind_cell(i),2))/(d6+d)
                  ur        = (d5*uold(ind_nbor(1,5),2) + d*uold(ind_cell(i),2))/(d5+d)
                  if(sf_model.le.2) then
@@ -337,8 +357,8 @@ subroutine star_formation(ilevel)
                     fr     = (d5*f(ind_nbor(1,5),1)    + d*f(ind_cell(i),1))/(d5+d)
                     ftot   = ftot+abs((d6+d)/2*ul*fl-(d5+d)/2*ur*fr)
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 curlv2    = (ur-ul)
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlvb    = curlvb+(ur-ul)
                  ul        = (d2*uold(ind_nbor(1,2),4) + d*uold(ind_cell(i),4))/(d2+d)
                  ur        = (d1*uold(ind_nbor(1,1),4) + d*uold(ind_cell(i),4))/(d1+d)
                  if(sf_model.le.2) then
@@ -346,8 +366,8 @@ subroutine star_formation(ilevel)
                     fr     = (d1*f(ind_nbor(1,1),3)    + d*f(ind_cell(i),3))/(d1+d)
                     ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 curlv2    = (curlv2 - (ur-ul))
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlvb    = (curlvb - (ur-ul))
                  ul        = (d4*uold(ind_nbor(1,4),2) + d*uold(ind_cell(i),2))/(d4+d)
                  ur        = (d3*uold(ind_nbor(1,3),2) + d*uold(ind_cell(i),2))/(d3+d)
                  if(sf_model.le.2) then
@@ -355,8 +375,8 @@ subroutine star_formation(ilevel)
                     fr     = (d3*f(ind_nbor(1,3),1)    + d*f(ind_cell(i),1))/(d3+d)
                     ftot   = ftot+abs((d4+d)/2*ul*fl-(d3+d)/2*ur*fr)
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 curlv3    = -(ur-ul)
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlvc    = curlvc-(ur-ul)
                  ul        = (d2*uold(ind_nbor(1,2),3) + d*uold(ind_cell(i),3))/(d2+d)
                  ur        = (d1*uold(ind_nbor(1,1),3) + d*uold(ind_cell(i),3))/(d1+d)
                  if(sf_model.le.2) then
@@ -365,22 +385,44 @@ subroutine star_formation(ilevel)
                     ftot   = ftot+abs((d2+d)/2*ul*fl-(d1+d)/2*ur*fr)
                     pcomp  = flong/ftot
                  endif
-                 trgv      = trgv + (ur-ul)**2
-                 sigma2    = trgv
-                 trgv      = trgv/dx_loc**2
-                 curlv3    = (curlv3 + (ur-ul))
-                 curlv     = (curlv1**2+curlv2**2+curlv3**2)/dx_loc**2
+                 sigma2_sole = sigma2_sole + (ur-ul)**2
+                 curlvc    = (curlvc + (ur-ul))
+                 sigma2    = sigma2_comp+sigma2_sole
+                 ! Trace of gradient velocity tensor
+                 trgv      = sigma2/dx_loc**2
+                 ! Velocity vector divergence
+                 divv      = divv/dx_loc
+                 ! Velocity vector curl
+                 curlv     = (curlva+curlvb+curlvc)/dx_loc
+                 divv2     = divv**2
+                 curlv2    = curlv**2
                  ! Advect unresolved turbulence if a decay time is defined
                  if(sf_tdiss.gt.0d0) then
-                    uold(ind_cell(i),ivirial) = uold(ind_cell(i),ivirial)+sqrt(sigma2)
-                    sigma2 = uold(ind_cell(i),ivirial)
+                    if(sf_compressive)then
+                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2_comp
+                       uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)+sigma2_sole
+                       sigma2_comp = uold(ind_cell(i),ivirial1)
+                       sigma2_sole = uold(ind_cell(i),ivirial2)
+                       sigma2      = sigma2_sole+sigma2_comp
+                    else 
+                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2
+                       sigma2 = uold(ind_cell(i),ivirial1)
+                    endif
                  else
-                    uold(ind_cell(i),ivirial) = sqrt(sigma2)
+                    if(sf_compressive)then
+                       uold(ind_cell(i),ivirial1) = sigma2_comp
+                       uold(ind_cell(i),ivirial2) = sigma2_sole
+                    else
+                       uold(ind_cell(i),ivirial1) = sigma2
+                    endif
                  endif
                  ! Density criterion
                  if(d<=d0) ok(i)=.false. 
                  if(ok(i)) then
                     SELECT CASE (sf_model)
+                       ! Classical density threshold
+                       CASE (0)
+                          sfr_ff(i) = eps_star
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
@@ -431,7 +473,7 @@ subroutine star_formation(ilevel)
                           C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
                           emag      = 0.5*(A**2+B**2+C**2)
                           beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
-                          fbeta     = ((1+0.925*beta**(-3.0/2.0)**(2.0/3.0)))/((1+1.0/beta)**2)
+                          fbeta     = ((1+0.925*beta**(-3.0/2.0))**(2.0/3.0))/((1+1.0/beta)**2)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2)*fbeta)
 #else
@@ -464,7 +506,7 @@ subroutine star_formation(ilevel)
                           sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
                        ! Hopkins 2013
                        CASE (5)
-                          alpha0    = 0.5*(divv+curlv)/(factG*d)
+                          alpha0    = 0.5*(divv2+curlv2)/(factG*d)
                           if(alpha0<1.0) then
                              sfr_ff(i) = eps_star
                           else
@@ -511,6 +553,7 @@ subroutine star_formation(ilevel)
               mgas=dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
               ! Poisson mean
               PoissMean=mgas/mstar
+              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel),1.0)
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
@@ -652,13 +695,6 @@ subroutine star_formation(ilevel)
            z=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
            tg=uold(ind_cell_new(i),5)*(gamma-1)*scale_T2
            if(metal)zg=uold(ind_cell_new(i),imetal)
-           if(sf_birth_properties) then
-              if(sf_virial)then
-                 write(ilun,'(2I10,12E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg,uold(ind_cell_new(i),ivirial)
-              else
-                 write(ilun,'(2I10,11E24.16)') index_star,ilevel,birth_epoch,n*mstar,x,y,z,u,v,w,d,tg,zg
-              endif
-           endif
 
            ! Set star particle variables
            tp(ind_part(i))=birth_epoch  ! Birth epoch
@@ -695,6 +731,29 @@ subroutine star_formation(ilevel)
               ! GMC metallicity + yield from ejecta 
               if(metal)zp(ind_debris(i))=zg+eta_sn*yield*(1-zg)*n*mstar/mdebris
            endif
+
+           if(sf_log_properties) then     
+              write(ilun,'(I10)',advance='no') 0
+              write(ilun,'(2I10)',advance='no') idp(ind_part(i)),ilevel
+              do idim=1,ndim
+                 write(ilun,'(E24.16)',advance='no') xp(ind_part(i),idim)
+              enddo
+              do idim=1,ndim
+                 write(ilun,'(E24.16)',advance='no') vp(ind_part(i),idim)
+              enddo
+              write(ilun,'(E24.16)',advance='no') uold(ind_cell_new(i),1)
+              do ivar=2,nvar
+                 if(ivar.eq.ndim+2)then
+                    ! Temperature
+                    uvar=(gamma-1.0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
+                 else
+                    uvar=uold(ind_cell_new(i),ivar)
+                 endif
+                 write(ilun,'(E24.16)',advance='no') uvar
+              enddo
+              write(ilun,'(A1)') ' '
+           endif
+
 
         end do
         ! End loop over new star particles
@@ -765,7 +824,7 @@ subroutine star_formation(ilevel)
   end do
 
 #endif
-  if(sf_birth_properties) close(ilun)
+  if(sf_log_properties) close(ilun)
 
 end subroutine star_formation 
 !################################################################

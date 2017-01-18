@@ -163,7 +163,7 @@ subroutine compute_clump_properties(xx)
 #endif
 
   do ipeak=1,npeaks
-     if (relevance(ipeak)>0.)then
+     if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
         center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
         clump_velocity(ipeak,1:3)=clump_velocity(ipeak,1:3)/clump_mass(ipeak)
      end if
@@ -191,7 +191,7 @@ subroutine compute_clump_properties(xx)
 
   ! Compute further properties of the clumps
   do ipeak=1,npeaks
-     if (relevance(ipeak)>0.)then
+     if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
         av_dens(ipeak)=clump_mass(ipeak)/clump_vol(ipeak)
      end if
   end do
@@ -241,7 +241,7 @@ subroutine compute_clump_properties(xx)
         call virtual_peak_dp(center_of_mass(1,i),'sum')
      end do
      do ipeak=1,npeaks
-        if (relevance(ipeak)>0.)then
+        if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
            center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
         end if
      end do
@@ -358,7 +358,7 @@ subroutine write_clump_properties(to_file)
   
   do j=npeaks,1,-1
      jj=ind_sort(j)
-     if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then           
+     if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
         write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
              jj+ipeak_start(myid)&
              ,lev_peak(jj)&
@@ -417,9 +417,6 @@ subroutine write_clump_properties(to_file)
      if(clinfo)write(*,'(A,1PE12.5)')' Total mass above threshold =',tot_mass
      if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
   endif
-
-
-
 
 end subroutine write_clump_properties
 !#########################################################################

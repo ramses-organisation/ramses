@@ -232,12 +232,12 @@ subroutine update_time(ilevel)
      end if
      epot_tot_old=epot_tot
      aexp_old=aexp
-     if(const==0.0D0)then
-        const=epot_tot+ekin_tot  ! initial total energy
+     if(einit==0.0D0)then
+        einit=epot_tot+ekin_tot  ! initial total energy
         econs=0.0D0
      else
-        econs=(ekin_tot+epot_tot-epot_tot_int-const) / &
-             &(-(epot_tot-epot_tot_int-const)+ekin_tot)
+        econs=(ekin_tot+epot_tot-epot_tot_int-einit) / &
+             &(-(epot_tot-epot_tot_int-einit)+ekin_tot)
      end if
 
      if(mod(nstep_coarse,ncontrol)==0.or.output_done)then
