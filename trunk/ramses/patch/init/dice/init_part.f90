@@ -27,7 +27,7 @@ subroutine init_part
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
-  real(dp)::scale,dx_loc,rr,rmax,dx_min
+  real(dp)::scale,dx_loc,rr,rmax,dx_min,min_mdm_cpu,min_mdm_all
   integer::ncode,bit_length,temp
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -226,8 +226,8 @@ subroutine init_part
               if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
            endif
         enddo
+        if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
      endif
-     if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
 
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2     

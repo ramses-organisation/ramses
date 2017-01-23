@@ -93,7 +93,7 @@ subroutine star_formation(ilevel)
      inquire(file=fileloc,exist=file_exist)
      if((.not.file_exist).or.(abs(t-trestart).lt.dtnew(ilevel))) then
         open(ilun, file=fileloc, form='formatted')
-        write(ilun,'(A20)',advance='no') '# event id  ilevel  '
+        write(ilun,'(A24)',advance='no') '# event id  ilevel  mp  '
         do idim=1,ndim
            write(ilun,'(A2,I1,A2)',advance='no') 'xp',idim,'  '
         enddo
@@ -734,14 +734,14 @@ subroutine star_formation(ilevel)
 
            if(sf_log_properties) then     
               write(ilun,'(I10)',advance='no') 0
-              write(ilun,'(2I10)',advance='no') idp(ind_part(i)),ilevel
+              write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(i)),ilevel,mp(ind_part(i))
               do idim=1,ndim
-                 write(ilun,'(E24.16)',advance='no') xp(ind_part(i),idim)
+                 write(ilun,'(E24.12)',advance='no') xp(ind_part(i),idim)
               enddo
               do idim=1,ndim
-                 write(ilun,'(E24.16)',advance='no') vp(ind_part(i),idim)
+                 write(ilun,'(E24.12)',advance='no') vp(ind_part(i),idim)
               enddo
-              write(ilun,'(E24.16)',advance='no') uold(ind_cell_new(i),1)
+              write(ilun,'(E24.12)',advance='no') uold(ind_cell_new(i),1)
               do ivar=2,nvar
                  if(ivar.eq.ndim+2)then
                     ! Temperature
@@ -749,7 +749,7 @@ subroutine star_formation(ilevel)
                  else
                     uvar=uold(ind_cell_new(i),ivar)
                  endif
-                 write(ilun,'(E24.16)',advance='no') uvar
+                 write(ilun,'(E24.12)',advance='no') uvar
               enddo
               write(ilun,'(A1)') ' '
            endif
