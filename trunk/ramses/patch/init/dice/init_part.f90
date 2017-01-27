@@ -27,7 +27,7 @@ subroutine init_part
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
-  real(dp)::scale,dx_loc,rr,rmax,dx_min
+  real(dp)::scale,dx_loc,rr,rmax,dx_min,min_mdm_cpu,min_mdm_all
   integer::ncode,bit_length,temp
   real(kind=8)::bscale
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -76,7 +76,7 @@ subroutine init_part
   real,dimension(1:nvector,1:3)::xx_sp,vv_sp
   real,dimension(1:nvector)::mm_sp,tt_sp,zz_sp,uu_sp
   real(dp)::mgas_tot
-  real::dummy_real
+  real::dummy_real,ipbar
   character(LEN=12)::ifile_str
   character(LEN=4)::blck_name
   logical::eob,file_exists,skip
@@ -214,7 +214,20 @@ subroutine init_part
         end if
      endif
 #endif
-
+     ! Get nlevelmax_part from cosmological inital conditions
+     if(cosmo)then
+        min_mdm_cpu = 1.0
+        do ipart=1,npart2
+           if(star)then
+              if(tp(ipart).eq.0d0)then
+                 if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
+              endif
+           else
+              if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
+           endif
+        enddo
+        if(myid==1) write(*,*) 'nlevelmax_part=',nlevelmax_part
+     endif
 
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2     
@@ -1012,7 +1025,7 @@ subroutine init_part
                  if(ic_skip_type(j).eq.5) skip=.true.
               enddo
               if(.not.skip) write(*,*)"----> ",header%npart(6)," type 5 particles"
-              write(*,'(A50)')"__________________________________________________"
+              write(*,'(A50)')"_____________________progress_____________________"
               if((pos_size.ne.npart).or.(vel_size.ne.npart).or.((metal_size.ne.npart).and.(metal_size.ne.ngas+nstar_tot))) then
                 write(*,*) 'POS =',pos_size
                 write(*,*) 'Z   =',metal_size
@@ -1033,6 +1046,7 @@ subroutine init_part
             gpart    = 0
             opart    = 0
             mgas_tot = 0.
+            ipbar    = 0.
             do while(.not.eob)
               xx=0.
               vv=0.
@@ -1132,7 +1146,12 @@ subroutine init_part
                   endif
                   if(kpart.le.header%npart(1)) mgas_tot = mgas_tot+mm(i)
                   ! Check the End Of Block
+                  if(kpart.ge.ipbar*(npart/49.0))then
+                     write(*,'(A1)',advance='no') "_"
+                     ipbar = ipbar+1.0
+                  endif
                   if(kpart.ge.npart) then
+                    write(*,'(A1)') " "
                     write(*,'(A,A7,A)') ' ',TRIM(ic_format),' file successfully loaded'
                     write(*,'(A50)')"__________________________________________________"
                     eob=.true.

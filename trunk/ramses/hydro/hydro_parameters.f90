@@ -1,4 +1,8 @@
 module hydro_parameters
+
+#ifdef grackle
+  use grackle_parameters
+#endif
   use amr_parameters
 
   ! Number of independant variables
@@ -89,7 +93,8 @@ module hydro_parameters
   integer::idelay=6
   integer::ixion=6
   integer::ichem=6
-  integer::ivirial=6
+  integer::ivirial1=6
+  integer::ivirial2=6
   integer::inener=6
 
 end module hydro_parameters

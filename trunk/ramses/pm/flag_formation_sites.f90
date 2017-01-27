@@ -52,8 +52,8 @@ subroutine flag_formation_sites
   pos=0.0
   if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
 
+  ! Block clumps (halo done later) that contain a sink for formation
   if (smbh)then 
-     ! Block clumps (halo done later) that contain a sink for formation
      do j=1,nsink
         pos(1,1:3)=xsink(j,1:3)
         call cmp_cpumap(pos,cc,1)
@@ -68,7 +68,8 @@ subroutine flag_formation_sites
         end if
      end do
   end if
-  ! Block clumps (halo done later) that are closer than twice R_accretion from existing sinks
+
+  ! Block clumps whose centres are closer than twice R_accretion from existing sinks
   do j=1,nsink
      do i=1,npeaks
         rrel=xsink(j,1:ndim)-peak_pos(i,1:ndim)
@@ -90,8 +91,8 @@ subroutine flag_formation_sites
   call boundary_peak_int(occupied)
 #endif
 
+  ! Block halos that contain a blocked clump
   if(smbh)then
-     ! Block halos that contain a blocked clump
      do i=1,npeaks
         if(occupied(i)==1)then
            merge_to=ind_halo(i)
@@ -156,6 +157,7 @@ subroutine flag_formation_sites
          end if
      else
         ok=ok.and.relevance(jj)>0.
+        ok=ok.and.n_cells(jj)>0.
         ok=ok.and.occupied(jj)==0
         ok=ok.and.max_dens(jj)>d_sink
         ok=ok.and.contracting(jj)
@@ -225,7 +227,6 @@ subroutine compute_clump_properties_round2(xx)
   real(dp),dimension(1:nGroups,1:ndim)::Fp
   real(dp),dimension(1:nGroups)::Np2Ep_flux
 #endif
-
 
 #if NENER>0
   nener_offset = inener-1
@@ -443,7 +444,7 @@ subroutine compute_clump_properties_round2(xx)
        +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
   do j=npeaks,1,-1
-     if (relevance(j)>0.)then
+     if (relevance(j)>0..and.n_cells(j)>0)then
         contracting(j)=.true.
         if (n_cells(j)>1)then !not just one cell...        
            !compute eigenvalues and eigenvectors of Icl_d_3by3
@@ -478,7 +479,7 @@ subroutine compute_clump_properties_round2(xx)
         write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
-        if (relevance(j)>0.)then
+        if (relevance(j)>0..and.n_cells(j)>0)then
 
            write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
                 ,n_cells(j)&
@@ -490,6 +491,7 @@ subroutine compute_clump_properties_round2(xx)
                 ,MagPsurf(j),MagTsurf(j)&
                 ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
                 ,rad_term(j)
+
         end if
      end do
   end if

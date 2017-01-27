@@ -9,6 +9,7 @@ NVAR = 5
 NENER = 0
 SOLVER = hydro
 PATCH = 
+GRACKLE = 0
 EXEC = ramses
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
@@ -17,6 +18,9 @@ GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
           -DSOLVER$(SOLVER)
+ifeq ($(GRACKLE),1)
+DEFINES += -Dgrackle
+endif
 #############################################################################
 # Fortran compiler options and directives
 
@@ -82,15 +86,22 @@ LIBMPI =
 # --- CUDA libraries, for Titane ---
 LIBCUDA = -L/opt/cuda/lib  -lm -lcuda -lcudart
 
-LIBGRACKLE = -lgrackle -lhdf5 -lz
-LIBS = $(LIBMPI)
+ifeq ($(GRACKLE),1)
+# Add include and library install path for grackle and hdf5 here
+LIBS_GRACKLE = -L$(HOME)/local/lib -lgrackle -lhdf5 -lz -lgfortran -ldl
+LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
+endif
+LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o \
-         poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
+MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o 
+ifeq ($(GRACKLE),1)
+MODOBJ += grackle_parameters.o
+endif
+MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
          clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o \
@@ -135,8 +146,10 @@ write_makefile.o: FORCE
 write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
 	$(F90) $(FFLAGS) -c write_patch.f90 -o $@
+%.o:%.F
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
 %.o:%.f90
-	$(F90) $(FFLAGS) -c $^ -o $@
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
 FORCE:
 #############################################################################
 clean :
