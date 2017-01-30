@@ -20,13 +20,12 @@
      &     gr_HDI_density(NVECTOR),
      &     gr_e_density(NVECTOR), gr_metal_density(NVECTOR),
      &     gr_volumetric_heating_rate(NVECTOR),
-     &     gr_specific_heating_rate(NVECTOR), gr_floor(NVECTOR),
-     &     gr_poly(NVECTOR), gr_RT_HI_ionization_rate(NVECTOR),
+     &     gr_specific_heating_rate(NVECTOR),
+     &     gr_RT_HI_ionization_rate(NVECTOR),
      &     gr_RT_HeI_ionization_rate(NVECTOR),
      &     gr_RT_HeII_ionization_rate(NVECTOR),
      &     gr_RT_H2_dissociation_rate(NVECTOR), 
      &     gr_RT_heating_rate(NVECTOR)
-
 
       INTEGER, TARGET :: gr_rank,gr_dimension(3),gr_start(3),gr_end(3)
       INTEGER :: iresult

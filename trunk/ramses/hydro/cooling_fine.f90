@@ -2,6 +2,9 @@ subroutine cooling_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+#ifdef grackle
+  use grackle_parameters
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -29,10 +32,13 @@ subroutine cooling_fine(ilevel)
   end do
 
   if((cooling.and..not.neq_chem).and.ilevel==levelmin.and.cosmo)then
-     if(myid==1)write(*,*)'Computing new cooling table'
 #ifdef grackle
-     if(use_grackle==0) call set_table(dble(aexp))
+     if(use_grackle==0)then
+        if(myid==1)write(*,*)'Computing new cooling table'
+        call set_table(dble(aexp)) 
+     endif
 #else
+     if(myid==1)write(*,*)'Computing new cooling table'
      call set_table(dble(aexp))
 #endif
   endif
@@ -380,7 +386,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_end(1) = nleaf - 1
    
         if(cosmo)then
-           my_grackle_units%a_value = aexp
+           my_grackle_units%a_value = MAX(aexp,0.0625)
            my_grackle_units%density_units = scale_d
            my_grackle_units%length_units = scale_l
            my_grackle_units%time_units = scale_t
@@ -388,41 +394,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
    
         do i = 1, nleaf
-           gr_density(i) = max(uold(ind_leaf(i),1),smallr)
+           gr_density(i) = uold(ind_leaf(i),1)
            if(metal)then
               gr_metal_density(i) = uold(ind_leaf(i),imetal)
            else
               gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
            endif
-           gr_x_velocity(i) = uold(ind_leaf(i),2)/max(uold(ind_leaf(i),1),smallr)
-           gr_y_velocity(i) = uold(ind_leaf(i),3)/max(uold(ind_leaf(i),1),smallr)
-           gr_z_velocity(i) = uold(ind_leaf(i),4)/max(uold(ind_leaf(i),1),smallr)
-           gr_floor(i)  = 1.0*nH(i)/scale_nH/scale_T2/(gamma-1.0)
-           gr_poly(i)   = T2min(i)*nH(i)/scale_nH/scale_T2/(gamma-1.0)
-           gr_energy(i) = uold(ind_leaf(i),ndim+2)-ekk(i)-gr_poly(i)
-           gr_energy(i) = MAX(gr_energy(i),gr_floor(i))
-           gr_energy(i) = gr_energy(i)/max(uold(ind_leaf(i),1),smallr)
+           gr_energy(i) = T2(i)/(scale_T2*(gamma-1.0))
+           gr_HI_density(i) = X*gr_density(i)
+           gr_HeI_density(i) = (1.0-X)*gr_density(i)
+           gr_DI_density(i) = 2.0*3.4e-5*gr_density(i)
         enddo
-   
+        ! Update grid properties
         my_grackle_fields%grid_rank = gr_rank
-        my_grackle_fields%grid_dimension = C_LOC(gr_dimension)
-        my_grackle_fields%grid_start = C_LOC(gr_start)
-        my_grackle_fields%grid_end = C_LOC(gr_end)
         my_grackle_fields%grid_dx = dx_loc
-        my_grackle_fields%density = C_LOC(gr_density)
-        my_grackle_fields%metal_density = C_LOC(gr_metal_density)
-        my_grackle_fields%internal_energy = C_LOC(gr_energy)
-        my_grackle_fields%x_velocity = C_LOC(gr_x_velocity)
-        my_grackle_fields%y_velocity = C_LOC(gr_y_velocity)
-        my_grackle_fields%z_velocity = C_LOC(gr_z_velocity)
-        my_grackle_fields%volumetric_heating_rate = C_LOC(gr_volumetric_heating_rate)
-        my_grackle_fields%specific_heating_rate = C_LOC(gr_specific_heating_rate)
-        my_grackle_fields%RT_HI_ionization_rate = C_LOC(gr_RT_HI_ionization_rate)
-        my_grackle_fields%RT_HeI_ionization_rate = C_LOC(gr_RT_HeI_ionization_rate)
-        my_grackle_fields%RT_HeII_ionization_rate = C_LOC(gr_RT_HeII_ionization_rate)
-        my_grackle_fields%RT_H2_dissociation_rate = C_LOC(gr_RT_H2_dissociation_rate)
-        my_grackle_fields%RT_heating_rate = C_LOC(gr_RT_heating_rate)
-   
+  
         iresult = solve_chemistry(my_grackle_units, my_grackle_fields, dtnew(ilevel))
         if(iresult.eq.0)then
             write(*,*) 'Grackle: error in solve_chemistry'
