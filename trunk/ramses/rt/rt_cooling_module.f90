@@ -31,14 +31,14 @@ module rt_cooling_module
   real(dp)::T_min, T_frac, x_min, x_frac, Np_min, Np_frac, Fp_min, Fp_frac
 
   integer,parameter::iIR=1                       !          IR group index
-  integer::iIRtrapVar=1                          ! IRtrap passScalar index
+  integer::iIRtrapVar=1                          ! Trapped IR energy index
   ! Namelist parameters:
   logical::isHe=.true.
   logical::is_mu_H2=.false.
   logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
   real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure            
   logical::rt_isIR=.false.             ! Using IR scattering on dust?    
-  logical::rt_isIRtrap=.false.         ! IR trapping in passive scalar?  
+  logical::rt_isIRtrap=.false.         ! IR trapping in NENER variable?  
   logical::is_kIR_T=.false.            ! k_IR propto T^2?               
   logical::rt_T_rad=.false.            ! Use T_gas = T_rad
   logical::rt_vc=.false.               ! (semi-) relativistic RT
