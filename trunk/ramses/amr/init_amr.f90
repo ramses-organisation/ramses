@@ -289,8 +289,10 @@ subroutine init_amr
      read(ilun)ngrid_current
      read(ilun)boxlen
      if(ncpu2.ne.ncpu)then
-        write(*,*)'Number of processes not compatible'
-        write(*,*)'ncpu should be set equal to',ncpu2
+        if(myid==1)then
+           write(*,*)'Number of processes not compatible'
+           write(*,*)'ncpu should be set equal to',ncpu2
+        endif
         call clean_stop
      end if
      ! Read time variables

@@ -68,103 +68,159 @@ subroutine init_time
 
   ! Initialize cooling model
 #ifdef grackle
-  if(myid==1)then
-     write(*,'(A50)')"__________________________________________________"
-     write(*,*)'Grackle - Computing cooling model'
-     write(*,*)'Grackle - Loading ',TRIM(grackle_data_file)
-     write(*,'(A50)')"__________________________________________________"
-  endif
-  INQUIRE(FILE=grackle_data_file,EXIST=file_exists)
-  if(.not.file_exists) then
-     if(myid==1) write(*,*) grackle_data_file," not found"
-     call clean_stop
-  endif
-
-  iresult = set_default_chemistry_parameters(my_grackle_data)
-  if(iresult.eq.0)then
-      write(*,*) 'Grackle - error in initialize_chemistry_data'
+  if(use_grackle==1)then
+     if(myid==1)then
+        write(*,'(A50)')"__________________________________________________"
+        write(*,*)'Grackle - Computing cooling model'
+        write(*,*)'Grackle - Loading ',TRIM(grackle_data_file)
+        write(*,'(A50)')"__________________________________________________"
+     endif
+     INQUIRE(FILE=grackle_data_file,EXIST=file_exists)
+     if(.not.file_exists) then
+        if(myid==1) write(*,*) grackle_data_file," not found"
+        call clean_stop
+     endif
+   
+     iresult = set_default_chemistry_parameters(my_grackle_data)
+     if(iresult.eq.0)then
+         write(*,*) 'Grackle - error in initialize_chemistry_data'
 #ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+         call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-      stop
+         stop
 #endif
-  endif
-  my_grackle_data%use_grackle = use_grackle
-  my_grackle_data%with_radiative_cooling = grackle_with_radiative_cooling
-  my_grackle_data%primordial_chemistry = grackle_primordial_chemistry
-  my_grackle_data%metal_cooling = grackle_metal_cooling
-  my_grackle_data%UVbackground = grackle_UVbackground
-  my_grackle_data%cmb_temperature_floor = grackle_cmb_temperature_floor
-  my_grackle_data%h2_on_dust = grackle_h2_on_dust
-  my_grackle_data%photoelectric_heating = grackle_photoelectric_heating
-  my_grackle_data%use_volumetric_heating_rate = grackle_use_volumetric_heating_rate
-  my_grackle_data%use_specific_heating_rate = grackle_use_specific_heating_rate
-  my_grackle_data%three_body_rate = grackle_three_body_rate
-  my_grackle_data%cie_cooling = grackle_cie_cooling
-  my_grackle_data%h2_optical_depth_approximation = grackle_h2_optical_depth_approximation
-  my_grackle_data%ih2co = grackle_ih2co
-  my_grackle_data%ipiht = grackle_ipiht
-  my_grackle_data%NumberOfTemperatureBins = grackle_NumberOfTemperatureBins
-  my_grackle_data%CaseBRecombination = grackle_CaseBRecombination
-  my_grackle_data%Compton_xray_heating = grackle_Compton_xray_heating
-  my_grackle_data%LWbackground_sawtooth_suppression = grackle_LWbackground_sawtooth_suppression
-  my_grackle_data%NumberOfDustTemperatureBins = grackle_NumberOfDustTemperatureBins
-  my_grackle_data%use_radiative_transfer = grackle_use_radiative_transfer
-  my_grackle_data%radiative_transfer_coupled_rate_solver = grackle_radiative_transfer_coupled_rate_solver
-  my_grackle_data%radiative_transfer_intermediate_step = grackle_radiative_transfer_intermediate_step
-  my_grackle_data%radiative_transfer_hydrogen_only = grackle_radiative_transfer_hydrogen_only
-  my_grackle_data%self_shielding_method = grackle_self_shielding_method
-  my_grackle_data%Gamma = grackle_Gamma
-  my_grackle_data%photoelectric_heating_rate = grackle_photoelectric_heating_rate
-  my_grackle_data%HydrogenFractionByMass = grackle_HydrogenFractionByMass
-  my_grackle_data%DeuteriumToHydrogenRatio = grackle_DeuteriumToHydrogenRatio
-  my_grackle_data%SolarMetalFractionByMass = grackle_SolarMetalFractionByMass
-  my_grackle_data%TemperatureStart = grackle_TemperatureStart
-  my_grackle_data%TemperatureEnd = grackle_TemperatureEnd
-  my_grackle_data%DustTemperatureStart = grackle_DustTemperatureStart
-  my_grackle_data%DustTemperatureEnd = grackle_DustTemperatureEnd
-  my_grackle_data%LWbackground_intensity = grackle_LWbackground_intensity
-  my_grackle_data%UVbackground_redshift_on = grackle_UVbackground_redshift_on
-  my_grackle_data%UVbackground_redshift_off = grackle_UVbackground_redshift_off
-  my_grackle_data%UVbackground_redshift_fullon = grackle_UVbackground_redshift_fullon
-  my_grackle_data%UVbackground_redshift_drop = grackle_UVbackground_redshift_drop
-  my_grackle_data%cloudy_electron_fraction_factor = grackle_cloudy_electron_fraction_factor
-  grackle_data_file = TRIM(grackle_data_file)//C_NULL_CHAR
-  my_grackle_data%grackle_data_file = C_LOC(grackle_data_file(1:1))
+     endif
+     my_grackle_data%use_grackle = use_grackle
+     my_grackle_data%with_radiative_cooling = grackle_with_radiative_cooling
+     my_grackle_data%primordial_chemistry = grackle_primordial_chemistry
+     my_grackle_data%metal_cooling = grackle_metal_cooling
+     my_grackle_data%UVbackground = grackle_UVbackground
+     my_grackle_data%cmb_temperature_floor = grackle_cmb_temperature_floor
+     my_grackle_data%h2_on_dust = grackle_h2_on_dust
+     my_grackle_data%photoelectric_heating = grackle_photoelectric_heating
+     my_grackle_data%use_volumetric_heating_rate = grackle_use_volumetric_heating_rate
+     my_grackle_data%use_specific_heating_rate = grackle_use_specific_heating_rate
+     my_grackle_data%three_body_rate = grackle_three_body_rate
+     my_grackle_data%cie_cooling = grackle_cie_cooling
+     my_grackle_data%h2_optical_depth_approximation = grackle_h2_optical_depth_approximation
+     my_grackle_data%ih2co = grackle_ih2co
+     my_grackle_data%ipiht = grackle_ipiht
+     my_grackle_data%NumberOfTemperatureBins = grackle_NumberOfTemperatureBins
+     my_grackle_data%CaseBRecombination = grackle_CaseBRecombination
+     my_grackle_data%Compton_xray_heating = grackle_Compton_xray_heating
+     my_grackle_data%LWbackground_sawtooth_suppression = grackle_LWbackground_sawtooth_suppression
+     my_grackle_data%NumberOfDustTemperatureBins = grackle_NumberOfDustTemperatureBins
+     my_grackle_data%use_radiative_transfer = grackle_use_radiative_transfer
+     my_grackle_data%radiative_transfer_coupled_rate_solver = grackle_radiative_transfer_coupled_rate_solver
+     my_grackle_data%radiative_transfer_intermediate_step = grackle_radiative_transfer_intermediate_step
+     my_grackle_data%radiative_transfer_hydrogen_only = grackle_radiative_transfer_hydrogen_only
+     my_grackle_data%self_shielding_method = grackle_self_shielding_method
+     my_grackle_data%Gamma = grackle_Gamma
+     my_grackle_data%photoelectric_heating_rate = grackle_photoelectric_heating_rate
+     my_grackle_data%HydrogenFractionByMass = grackle_HydrogenFractionByMass
+     my_grackle_data%DeuteriumToHydrogenRatio = grackle_DeuteriumToHydrogenRatio
+     my_grackle_data%SolarMetalFractionByMass = grackle_SolarMetalFractionByMass
+     my_grackle_data%TemperatureStart = grackle_TemperatureStart
+     my_grackle_data%TemperatureEnd = grackle_TemperatureEnd
+     my_grackle_data%DustTemperatureStart = grackle_DustTemperatureStart
+     my_grackle_data%DustTemperatureEnd = grackle_DustTemperatureEnd
+     my_grackle_data%LWbackground_intensity = grackle_LWbackground_intensity
+     my_grackle_data%UVbackground_redshift_on = grackle_UVbackground_redshift_on
+     my_grackle_data%UVbackground_redshift_off = grackle_UVbackground_redshift_off
+     my_grackle_data%UVbackground_redshift_fullon = grackle_UVbackground_redshift_fullon
+     my_grackle_data%UVbackground_redshift_drop = grackle_UVbackground_redshift_drop
+     my_grackle_data%cloudy_electron_fraction_factor = grackle_cloudy_electron_fraction_factor
+     grackle_data_file = TRIM(grackle_data_file)//C_NULL_CHAR
+     my_grackle_data%grackle_data_file = C_LOC(grackle_data_file(1:1))
+   
+     ! Grackle units 
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     my_grackle_units%comoving_coordinates = 0
+     my_grackle_units%density_units = scale_d
+     my_grackle_units%length_units = scale_l
+     my_grackle_units%time_units = scale_t
+     my_grackle_units%velocity_units = scale_v
+     my_grackle_units%a_units = 1.0d0
+     !Set initial expansion factor (for internal units).
+     !Set expansion factor to 1 for non-cosmological simulation
+     ! Safety for GRACKLE initialisation
+     my_grackle_units%a_value = MAX(aexp_ini,0.0625)
+   
+     if(cosmo) then
+        my_grackle_units%comoving_coordinates = 1
+        ! Reonization redshift has to be later than starting redshift
+        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        ! Approximate initial temperature
+        T2_start=1.356d-2/aexp_ini**2
+        if(nrestart==0)then
+           if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
+        end if
+     endif
 
-  ! Grackle units 
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  my_grackle_units%comoving_coordinates = 0
-  my_grackle_units%density_units = scale_d
-  my_grackle_units%length_units = scale_l
-  my_grackle_units%time_units = scale_t
-  my_grackle_units%velocity_units = scale_v
-  my_grackle_units%a_units = 1.0d0
-  !Set initial expansion factor (for internal units).
-  !Set expansion factor to 1 for non-cosmological simulation.
-  my_grackle_units%a_value = aexp_ini
-
-  if(cosmo) then
-     my_grackle_units%comoving_coordinates = 1
-     ! Reonization redshift has to be later than starting redshift
-     z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
-     ! Approximate initial temperature
-     T2_start=1.356d-2/aexp_ini**2
-     if(nrestart==0)then
-        if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
-     end if
-  endif
-  ! Initialize the Grackle data
-  iresult = initialize_chemistry_data(my_grackle_units)
-  if(iresult.eq.0)then
-      write(*,*) 'Grackle - error in initialize_chemistry_data'
+     ! Initialize the Grackle data
+     iresult = initialize_chemistry_data(my_grackle_units)
+     ! Enforce UVbackground starting redshift in grackle
+     my_grackle_data%UVbackground_redshift_on = grackle_UVbackground_redshift_on
+     my_grackle_data%UVbackground_redshift_fullon = grackle_UVbackground_redshift_fullon
+     if(iresult.eq.0)then
+         write(*,*) 'Grackle - error in initialize_chemistry_data'
 #ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+         call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-      stop
+         stop
 #endif
-  endif
-  if(use_grackle==0)then
+     endif
+     my_grackle_fields%grid_dimension = C_LOC(gr_dimension)
+     my_grackle_fields%grid_start = C_LOC(gr_start)
+     my_grackle_fields%grid_end = C_LOC(gr_end)
+     ! Point to grackle fields
+     my_grackle_fields%density = C_LOC(gr_density)
+     my_grackle_fields%HI_density = C_LOC(gr_HI_density)
+     my_grackle_fields%HII_density = C_LOC(gr_HII_density)
+     my_grackle_fields%HM_density = C_LOC(gr_HM_density)
+     my_grackle_fields%HeI_density = C_LOC(gr_HeI_density)
+     my_grackle_fields%HeII_density = C_LOC(gr_HeII_density)
+     my_grackle_fields%HeIII_density = C_LOC(gr_HeIII_density)
+     my_grackle_fields%H2I_density = C_LOC(gr_H2I_density)
+     my_grackle_fields%H2II_density = C_LOC(gr_H2II_density)
+     my_grackle_fields%DI_density = C_LOC(gr_DI_density)
+     my_grackle_fields%DII_density = C_LOC(gr_DII_density)
+     my_grackle_fields%HDI_density = C_LOC(gr_HDI_density)
+     my_grackle_fields%e_density = C_LOC(gr_e_density)
+     my_grackle_fields%metal_density = C_LOC(gr_metal_density)
+     my_grackle_fields%internal_energy = C_LOC(gr_energy)
+     my_grackle_fields%x_velocity = C_LOC(gr_x_velocity)
+     my_grackle_fields%y_velocity = C_LOC(gr_y_velocity)
+     my_grackle_fields%z_velocity = C_LOC(gr_z_velocity)
+     my_grackle_fields%volumetric_heating_rate = C_LOC(gr_volumetric_heating_rate)
+     my_grackle_fields%specific_heating_rate = C_LOC(gr_specific_heating_rate)
+     my_grackle_fields%RT_HI_ionization_rate = C_LOC(gr_RT_HI_ionization_rate)
+     my_grackle_fields%RT_HeI_ionization_rate = C_LOC(gr_RT_HeI_ionization_rate)
+     my_grackle_fields%RT_HeII_ionization_rate = C_LOC(gr_RT_HeII_ionization_rate)
+     my_grackle_fields%RT_H2_dissociation_rate = C_LOC(gr_RT_H2_dissociation_rate)
+     my_grackle_fields%RT_heating_rate = C_LOC(gr_RT_heating_rate)
+     do i=1,nvector
+        gr_x_velocity(i) = 0d0 
+        gr_y_velocity(i) = 0d0 
+        gr_z_velocity(i) = 0d0 
+        gr_HII_density(i) = 0d0
+        gr_HM_density(i) = 0d0
+        gr_HeII_density(i) = 0d0
+        gr_HeIII_density(i) = 0d0
+        gr_H2I_density(i) = 0d0
+        gr_H2II_density(i) = 0d0
+        gr_DII_density(i) = 0d0
+        gr_HDI_density(i) = 0d0
+        gr_e_density(i) = 0d0
+        gr_volumetric_heating_rate(i) = 0d0
+        gr_specific_heating_rate(i) = 0d0
+        gr_RT_HI_ionization_rate(i) = 0d0
+        gr_RT_HeI_ionization_rate(i) = 0d0
+        gr_RT_HeII_ionization_rate(i) = 0d0
+        gr_RT_H2_dissociation_rate(i) = 0d0
+        gr_RT_heating_rate(i) = 0d0
+     enddo
+  else
      if(cooling.and..not.(neq_chem.or.rt))then
         if(myid==1)write(*,*)'Computing cooling model'
         Nmodel=-1

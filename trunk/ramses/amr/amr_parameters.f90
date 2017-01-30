@@ -170,7 +170,7 @@ module amr_parameters
   logical ::smbh=.false.
   logical ::agn=.false.
   logical ::use_proper_time=.false.
-  logical::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper
+  logical ::convert_birth_times=.false. ! Convert stellar birthtimes: conformal -> proper
   logical ::ir_feedback=.false. ! Activate ir feedback from accreting sinks
   logical ::sf_virial=.false.   ! Activate SF Virial criterion
   logical ::sf_log_properties=.false. ! Log in ascii files birth properties of stars and supernovae
@@ -188,7 +188,6 @@ module amr_parameters
   real(kind=8)::tendmov=0.,aendmov=0.
   real(kind=8),allocatable,dimension(:)::amovout,tmovout
   logical::movie=.false.
-  logical::zoom_only=.false.
   integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
   integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0
@@ -207,11 +206,14 @@ module amr_parameters
   real(kind=8),dimension(1:5)::tend_theta_camera=0d0
   real(kind=8),dimension(1:5)::tend_phi_camera=0d0
   real(kind=8),dimension(1:5)::focal_camera=0d0
+  real(kind=8),dimension(1:5)::dist_camera=0d0
+  real(kind=8),dimension(1:5)::ddist_camera=0d0
   real(kind=8),dimension(1:5)::smooth_frame=1d0
   real(kind=8),dimension(1:5)::varmin_frame=0d0
   real(kind=8),dimension(1:5)::varmax_frame=1d60
   integer,dimension(1:5)::ivar_frame=0
   logical,dimension(1:5)::perspective_camera=.false.
+  logical,dimension(1:5)::zoom_only_frame=.false.
   character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:5)::shader_frame='square'
   character(LEN=10),dimension(1:5)::method_frame='mean_mass'

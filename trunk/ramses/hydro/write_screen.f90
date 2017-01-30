@@ -14,11 +14,11 @@ subroutine write_screen
   real(dp)::dx,scale,smallp,ddd,ppp
 
   integer     ,dimension(:),allocatable::ind_grid,ind_cell,ind_sort,ll,ll_all
-  real(kind=8),dimension(:),allocatable::rr,et,ei,dd,uu,mm,gg,dtot
-  real(kind=8),dimension(:),allocatable::rr_all,et_all,ei_all
-  real(kind=8),dimension(:),allocatable::dd_all,uu_all,mm_all,gg_all,dtot_all
+  real(qdp),dimension(:),allocatable::rr,et,ei,dd,uu,mm,gg,dtot
+  real(qdp),dimension(:),allocatable::rr_all,et_all,ei_all
+  real(qdp),dimension(:),allocatable::dd_all,uu_all,mm_all,gg_all,dtot_all
 #if NENER>0
-  real(kind=8),dimension(:,:),allocatable::prad_all,prad
+  real(qdp),dimension(:,:),allocatable::prad_all,prad
 #endif
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all

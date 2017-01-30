@@ -37,9 +37,9 @@ subroutine read_params
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
-       & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
-       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
-       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
+       & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
+       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
+       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera,method_frame,varmin_frame,varmax_frame
 
@@ -199,17 +199,17 @@ subroutine read_params
   endif
   noutput=MIN(noutput,MAXOUT)
   if(imovout>0) then
-     allocate(tmovout(1:imovout))
-     allocate(amovout(1:imovout))
+     allocate(tmovout(0:imovout))
+     allocate(amovout(0:imovout))
      tmovout=1d100
      amovout=1d100
      if(tendmov>0)then
-        do i=1,imovout
+        do i=0,imovout
            tmovout(i)=(tendmov-tstartmov)*dble(i)/dble(imovout)+tstartmov
         enddo
      endif
      if(aendmov>0)then
-        do i=1,imovout
+        do i=0,imovout
            amovout(i)=(aendmov-astartmov)*dble(i)/dble(imovout)+astartmov
         enddo
      endif
