@@ -134,7 +134,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   if(rt_isIRtrap) then
      ! For conversion from photon number density to photon energy density:
      Np2Ep = scale_Np * group_egy(iIR) * ev_to_erg                       &
-          * rt_c_cgs/c_cgs * rt_pressBoost / scale_d / scale_v**2
+           * rt_pressBoost / scale_d / scale_v**2
   endif
 #endif
   aexp_loc=aexp

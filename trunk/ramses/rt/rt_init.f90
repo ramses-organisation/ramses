@@ -182,6 +182,10 @@ SUBROUTINE read_rt_params(nml_ok)
 
   rt_c_cgs = c_cgs * rt_c_fraction
   !call update_rt_c
+  
+  ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
+  if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
+
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
   call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params

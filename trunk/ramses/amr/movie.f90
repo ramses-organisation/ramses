@@ -101,15 +101,14 @@ subroutine output_frame()
      if(myid==1)then
         call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
      endif
+#ifndef WITHOUTMPI
      call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
      if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',trim(moviedir)
-#ifndef WITHOUTMPI
         call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
         stop
-#endif
      endif
+#endif
 #endif
   endif
   
