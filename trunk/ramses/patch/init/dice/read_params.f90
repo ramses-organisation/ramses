@@ -80,20 +80,20 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,static_dm,static_stars,static_gas,geom,overload,cost_weighting &
-       & ,aton,nrestart_quad,restart_remap,convert_birth_times,use_proper_time
+       & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
+       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
-       & ,npartmax,nparttot,nexpand,boxlen
+       & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
        & ,xcentre_frame,ycentre_frame,zcentre_frame &
-       & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only &
-       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars,movie_vars_txt &
-       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera &
+       & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
+       & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
+       & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera,method_frame,varmin_frame,varmax_frame
   namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &

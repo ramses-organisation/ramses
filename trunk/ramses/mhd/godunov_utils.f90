@@ -536,10 +536,10 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   er    =rr*(SR-ur)*(SR-ur   )-A**2
 #if NENER>0
   do irad = 1,nener
-     eradstarr(irad)=eradr(irad)*(SL-ul)/(SL-ustar)
+     eradstarr(irad)=eradr(irad)*(SR-ur)/(SR-ustar)
   end do
 #endif
-  eintstarr=eintr*(SL-ul)/(SL-ustar)
+  eintstarr=eintr*(SR-ur)/(SR-ustar)
   if(abs(estar)<1e-4*A**2)then
      vstarr=vr
      Bstarr=Br
