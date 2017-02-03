@@ -224,6 +224,9 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Rates are stored in non-log, while temperature derivatives (primes) 
   ! are stored in dRate/dlogT (= dRate/dT * T * ln(10)).
 
+  ! The log-log primes are just the normal primes times T/rate,
+  ! i.e. dlogL/dlogT = T/L dL/dT
+  
   T = 10d0**T_lookup(iT)
 
   ! Case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)-------------
@@ -281,7 +284,8 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Collisional ionization rate [cm3 s-1] of HeII (Maselli&'03)-----------
   tbl_beta_HeII%rates(iT)  = 5.68d-12 * sqrt(T) / f * exp(-631515.d0/T)
   tbl_beta_HeII%primes(iT) = (hf+631515.d0/T)                            &
-                           * log(10d0) * tbl_beta_HeII%rates(iT)  
+                           * log(10d0) * tbl_beta_HeII%rates(iT)
+
   ! BEGIN COOLING RATES-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
   T5 = T/1d5
   f = 1d0+sqrt(T5) ; hf=0.5d0/f
