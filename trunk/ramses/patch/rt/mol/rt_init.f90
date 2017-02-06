@@ -20,7 +20,7 @@ SUBROUTINE rt_init
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
-     iIRtrapVar = ndim+3  ! Trapped rad. stored in nonthermal pressure var
+     iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+NIONS  !                            # hydro vars
 
@@ -159,8 +159,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_exp_source, rt_src_group                                    &
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
-       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       & ,rt_movie_vars
+       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound
 
 
   ! Set default initialisation of ionisation states:
@@ -185,6 +184,10 @@ SUBROUTINE read_rt_params(nml_ok)
 
   rt_c_cgs = c_cgs * rt_c_fraction
   !call update_rt_c
+
+  ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
+  if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
+
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
   
   ! Set indexes of ionization fractions, and ionization energies, and 
@@ -253,7 +256,6 @@ SUBROUTINE read_rt_groups(nml_ok)
      return
   endif
 #if NGROUPS>0
-  ! BEGIN joki ===========================================================
   !  Use H2, HI, HeI, HeII ionization energies  as default group intervals
   groupL0(1:min(nGroups,nIons))=ionEvs(1:min(nGroups,nIons))! Lower bounds
   groupL1(1:min(nGroups,nIons-1))=ionEvs(2:min(nGroups+1,nIons)) !   Upper
@@ -273,7 +275,7 @@ SUBROUTINE read_rt_groups(nml_ok)
      i=i+1 ; igroup_HeIII=i
   endif
   
-  ! Default groups are all blackbodies at E5 Kelvin:
+  ! Default groups are all blackbodies at 10^5 Kelvin:
   group_csn=0d0 ; group_cse=0d0 ; group_egy=0d0         ! Default all zero
   if(igroup_HI .gt. 0) then
      group_csn(igroup_HI,ixHI)=3d-22                     ! H2 dissociation
@@ -301,7 +303,6 @@ SUBROUTINE read_rt_groups(nml_ok)
      group_cse(igroup_HeIII,ixHeIII)=1.001d-18
      group_egy(igroup_HeIII)=65.666
   endif
-  ! END joki =============================================================
 #endif
 
   do i=1,min(nIons,nGroups)

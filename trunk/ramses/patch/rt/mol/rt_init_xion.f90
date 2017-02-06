@@ -47,7 +47,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   integer::i, ind, iskip, idim, irad, nleaf
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   integer,dimension(1:nvector),save::ind_cell, ind_leaf
-  real(dp)::nH, T2, ekk, err, x, mu, Zsolar
+  real(dp)::nH, T2, ekk, err, emag, x, mu, Zsolar
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
 !-------------------------------------------------------------------------
@@ -84,11 +84,18 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         end do
         err = 0.0d0
 #if NENER>0
-        do irad=1,nener
-           err = err+uold(ind_leaf(i),ndim+2+irad)
+        do irad=0,nener-1
+           err = err+uold(ind_leaf(i),inener+irad)
         end do
 #endif
-        T2 = (gamma-1.0)*(T2-ekk-err)          !     Gamma is ad. exponent
+        emag = 0.0d0
+#ifdef SOLVERmhd
+        do idim=1,ndim
+           emag=emag+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+        end do
+#endif
+
+        T2 = (gamma-1.0)*(T2-ekk-err-emag)     !     Gamma is ad. exponent
         ! now T2 is pressure (in user units)   !    (relates p and energy)
         ! Compute T2=T/mu in Kelvin from pressure:
         T2 = T2/nH*scale_T2                    !        Ideal gas equation
@@ -136,7 +143,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim, irad
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, err, mu, Zsolar, ss_factor
+  real(dp)::scale_Np,scale_Fp,nH,T2,ekk,err,emag,mu,Zsolar,ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
 !-------------------------------------------------------------------------
@@ -166,11 +173,18 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   end do
   err = 0.0d0
 #if NENER>0
-  do irad=1,nener
-     err = err+vars(ndim+2+irad)
+  do irad=0,nener-1
+     err = err+vars(inener+irad)
   end do
 #endif
-  T2 = (gamma-1.0)*(T2-ekk-err)             !        Gamma is ad. exponent
+  emag = 0.0d0
+#ifdef SOLVERmhd
+  do idim=1,ndim
+     emag=emag+0.125d0*(vars(idim+ndim+2)+vars(idim+nvar))**2
+  end do
+#endif
+
+  T2 = (gamma-1.0)*(T2-ekk-err-emag)        !        Gamma is ad. exponent
                                             !      now T2 is pressure [UU]
   T2 = T2/nH*scale_T2                       !                T/mu [Kelvin]
   nH = nH*scale_nH                          !        Number density [H/cc]

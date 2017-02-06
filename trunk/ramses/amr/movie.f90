@@ -710,14 +710,15 @@ endif
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
                                       if(method_frame(proj_ind).eq.'min')then
+                                         uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
                                          rt_data_frame(ii,jj,imap) = &
-                                         &   min(rt_data_frame(ii,jj,imap),rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
+                                         &   min(rt_data_frame(ii,jj,imap),uvar)
                                       elseif(method_frame(proj_ind).eq.'max')then
                                          rt_data_frame(ii,jj,imap) = &
-                                         &   max(rt_data_frame(ii,jj,imap),rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
+                                         &   max(rt_data_frame(ii,jj,imap),uvar)
                                       else
                                          rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)+ &
-                                         &   weight*rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
+                                         &   weight*uvar
                                       endif
                                       imap = imap+1
                                    endif
@@ -1075,6 +1076,9 @@ end subroutine output_frame
 
 subroutine set_movie_vars()
   use amr_commons
+#ifdef RT
+  use rt_parameters,only:rt_movie_vars
+#endif
   ! This routine sets the movie vars from textual form
   integer::ll
   character(LEN=5)::dummy
