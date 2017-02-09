@@ -3003,15 +3003,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
               weight=weight*parts_per_cell/rho(cind_part(i,ind))
            end if
            weightp(ind_part(i),ind)=weight
-        end do
-        
-        if(threshold_accretion)then
-           do i=1,np
-              if(uold(cind_part(i,ind),1)<d_sink)then
-                 weightp(ind_part(i),ind)=0.
-              end if
-           end do
-        end if
+        end do        
      end do
   end if
   
