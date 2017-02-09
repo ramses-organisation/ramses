@@ -709,8 +709,8 @@ endif
 			        imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
                                       if(method_frame(proj_ind).eq.'min')then
-                                         uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
                                       elseif(method_frame(proj_ind).eq.'max')then
@@ -962,7 +962,7 @@ endif
                do kk=1,NGROUPS
                   if(rt_movie_vars(kk).eq.1)then
                      if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
-                        rt_data_frame(ii,jj,imap) = data_frame(ii,jj,imap)/weights(ii,jj)
+                        rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)/weights(ii,jj)
                      endif
                      if(method_frame(proj_ind)(1:4).eq.'min'.and.rt_data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
                         rt_data_frame(ii,jj,imap) = 0.0
