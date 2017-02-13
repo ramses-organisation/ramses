@@ -13,7 +13,7 @@
 ############################################################################
 
 # The source directory:
-SRC="/home/ics/teyssier";
+SRC="/home/ubuntu";
 
 # Test frequency: (YY:MM:DD:hh:mm:ss)
 TEST_FREQ="00:00:01:00:00:00";
