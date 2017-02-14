@@ -19,7 +19,7 @@ subroutine output_frame()
   integer,parameter::tag=100
 
   character(len=5) :: istep_str
-  character(len=100) :: moviedir, moviecmd, infofile, sinkfile
+  character(len=100) :: moviedir, moviecmd, infofile, sinkfile, rt_infofile
 #ifdef SOLVERmhd
   character(len=100),dimension(0:NVAR+6) :: moviefiles
 #else
@@ -187,6 +187,8 @@ subroutine output_frame()
   rt_nframes = 0
 #ifdef RT
   if(rt)then
+    rt_infofile = trim(moviedir)//'rt_info_'//trim(istep_str)//'.txt'
+    if(myid==1.and.proj_ind==1) call output_rtinfo(rt_infofile)
      do kk=1,NGROUPS
         if(rt_movie_vars(kk).eq.1) rt_nframes = rt_nframes+1
      enddo
@@ -709,7 +711,7 @@ endif
 			        imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
-                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
                                       if(method_frame(proj_ind).eq.'min')then
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
