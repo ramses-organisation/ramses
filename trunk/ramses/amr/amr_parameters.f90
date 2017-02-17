@@ -91,6 +91,7 @@ module amr_parameters
   integer::ncontrol=1         ! Write control variables
   integer::fbackup=1000000    ! Backup data to disk
   integer::nremap=0           ! Load balancing frequency (0: never)
+  integer,allocatable,dimension(:)::remap_pscalar
 
   ! Output parameters
   integer::iout=1             ! Increment for output times
