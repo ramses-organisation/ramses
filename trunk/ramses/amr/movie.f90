@@ -258,8 +258,15 @@ subroutine output_frame()
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera(proj_ind))) focal_camera(proj_ind) = dist_cam
   fov_camera = atan((delx/2d0)/focal_camera(proj_ind))
 #if NDIM>2                 
-  if(myid==1) write(*,'(5A,F6.1,A,F6.1,A,F6.3,A,F4.1)') ' Writing frame ', istep_str,' los=',proj_axis(proj_ind:proj_ind),   &
-  &                                              ' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi,' d=',dist_cam,' fov=',fov_camera*180./pi
+  if(myid==1) then
+     write(*,'(5A,F6.1,A,F6.1)',advance='no') ' Writing frame ', istep_str,' los=',proj_axis(proj_ind:proj_ind),   &
+     &                                              ' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
+     if(perspective_camera(proj_ind))then
+        write(*,'(A,F8.2,A,F6.1)') ' d=',dist_cam,' fov=',fov_camera*180./pi
+     else
+        write(*,'(A)') ''
+     endif
+  endif
 #else
   if(myid==1) write(*,'(3A,F6.1)') " Writing frame ", istep_str,' theta=',theta_cam*180./pi
 #endif
