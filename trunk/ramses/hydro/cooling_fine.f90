@@ -386,7 +386,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_end(1) = nleaf - 1
    
         if(cosmo)then
-           my_grackle_units%a_value = MAX(aexp,0.0625)
+           my_grackle_units%a_value = aexp
            my_grackle_units%density_units = scale_d
            my_grackle_units%length_units = scale_l
            my_grackle_units%time_units = scale_t
