@@ -324,7 +324,7 @@ subroutine star_formation(ilevel)
                  if(sf_model.le.2) then
                     fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
                     fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
-                    flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
+                    flong  = flong+max((d6+d)/2*ul*fl-(d5+d)/2*ur*fr,0d0)
                  endif
                  sigma2_comp = sigma2_comp + (ur-ul)**2
                  divv      = divv + (ur-ul)
