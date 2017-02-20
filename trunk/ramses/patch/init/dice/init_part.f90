@@ -102,8 +102,10 @@ subroutine init_part
   allocate(ptcl_phi(npartmax))
 #endif
   ! patch DICE
-  allocate(up    (npartmax))
-  if(cosmo) allocate(maskp (npartmax))
+  allocate(up(npartmax))
+  if(ic_mask_ptype.gt.-1)then
+     allocate(maskp(npartmax))
+  endif
   ! patch DICE
   xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
   if(star.or.sink)then
@@ -1217,9 +1219,15 @@ subroutine init_part
                          endif
                        endif
                        up(ipart)      = uu(i)
+                       if(ic_mask_ptype.gt.-1)then
+                           if(ic_mask_ptype.eq.type_index-1)then
+                              maskp(ipart) = 1.0
+                           else
+                              maskp(ipart) = 0.0
+                           endif
+                       endif
                        ! Add a gas particle outside the zoom region
                        if(cosmo) then
-                         maskp(ipart) = 1.0
                          do j=1,6
                             if(type_index.eq.cosmo_add_gas_index(j)) then
                                ! Add a gas particle
@@ -1229,7 +1237,6 @@ subroutine init_part
                                mp(ipart+1)     = mp(ipart)*(omega_b/omega_m)
                                levelp(ipart+1) = levelmin
                                up(ipart+1)     = T2_start/scale_T2
-                               maskp(ipart+1)  = 0.0
                                if(metal) then
                                   zp(ipart+1)  = z_ave*0.02
                                endif
