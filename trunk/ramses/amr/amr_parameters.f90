@@ -219,10 +219,10 @@ module amr_parameters
   character(LEN=6),dimension(1:5)::shader_frame='square'
   character(LEN=10),dimension(1:5)::method_frame='mean_mass'
 #ifdef SOLVERmhd
-  integer,dimension(0:NVAR+6)::movie_vars=0
+  integer,dimension(0:NVAR+7)::movie_vars=0
   character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''
 #else
-  integer,dimension(0:NVAR+2)::movie_vars=0
+  integer,dimension(0:NVAR+3)::movie_vars=0
   character(len=5),dimension(0:NVAR+2)::movie_vars_txt=''
 #endif
 
