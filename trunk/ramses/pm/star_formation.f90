@@ -426,7 +426,7 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
                           if(pcomp*ndim-1.0.eq.0d0) then
                              zeta   = 0.5
