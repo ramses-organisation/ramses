@@ -266,11 +266,12 @@ subroutine star_formation(ilevel)
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive) then
                        tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1)+uold(ind_cell(i),ivirial2))
+                       if(uold(ind_cell(i),ivirial1).gt.0d0) uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
+                       if(uold(ind_cell(i),ivirial2).gt.0d0) uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)*exp(-dtold(ilevel)/tdec)
                     else
                        tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1))
+                       if(uold(ind_cell(i),ivirial1).gt.0d0) uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
                     endif
-                    uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
-                    uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)*exp(-dtold(ilevel)/tdec)
                  endif
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
@@ -399,13 +400,13 @@ subroutine star_formation(ilevel)
                  ! Advect unresolved turbulence if a decay time is defined
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive)then
-                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2_comp
-                       uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)+sigma2_sole
+                       uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2_comp
+                       uold(ind_cell(i),ivirial2) = max(uold(ind_cell(i),ivirial2),0d0)+sigma2_sole
                        sigma2_comp = uold(ind_cell(i),ivirial1)
                        sigma2_sole = uold(ind_cell(i),ivirial2)
                        sigma2      = sigma2_sole+sigma2_comp
                     else 
-                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2
+                       uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2
                        sigma2 = uold(ind_cell(i),ivirial1)
                     endif
                  else
