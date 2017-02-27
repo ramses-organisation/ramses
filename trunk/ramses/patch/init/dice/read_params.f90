@@ -15,6 +15,10 @@ module dice_commons
   real(dp)::ic_scale_age   = 1.0
   real(dp)::ic_scale_metal = 1.0
   real(dp)::ic_t_restart   = 0.0D0
+  integer::ic_mask_ivar    = 0
+  real(dp)::ic_mask_min    = 1d40
+  real(dp)::ic_mask_max    = -1d40
+  integer::ic_mask_ptype   = -1
   integer::ic_ifout        = 1
   integer::ic_nfile        = 1
   integer,dimension(1:6)::ic_skip_type        = -1
@@ -81,7 +85,7 @@ subroutine read_params
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
-       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time
+       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -104,7 +108,8 @@ subroutine read_params
        & ,ic_scale_metal,ic_center,ic_ifout,amr_struct,ic_t_restart,ic_mag_const &
        & ,ic_mag_center_x,ic_mag_center_y,ic_mag_center_z &
        & ,ic_mag_axis_x,ic_mag_axis_y,ic_mag_axis_z &
-       & ,ic_mag_scale_R,ic_mag_scale_H,ic_mag_scale_B,cosmo_add_gas_index,ic_skip_type
+       & ,ic_mag_scale_R,ic_mag_scale_H,ic_mag_scale_B,cosmo_add_gas_index,ic_skip_type &
+       & ,ic_mask_ivar,ic_mask_min,ic_mask_max,ic_mask_ptype
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -198,6 +203,14 @@ subroutine read_params
      endif
      call clean_stop
   end if
+
+  !-------------------------------------------------
+  ! Default passive scalar map
+  !-------------------------------------------------
+  allocate(remap_pscalar(1:nvar-(ndim+nener+2)))
+  do i=1,nvar-(ndim+2+nener)
+     remap_pscalar(i) = i+(ndim+2+nener)
+  enddo
 
   open(1,file=infile)
   rewind(1)

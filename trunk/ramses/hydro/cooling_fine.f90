@@ -386,7 +386,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_end(1) = nleaf - 1
    
         if(cosmo)then
-           my_grackle_units%a_value = MAX(aexp,0.0625)
+           my_grackle_units%a_value = aexp
            my_grackle_units%density_units = scale_d
            my_grackle_units%length_units = scale_l
            my_grackle_units%time_units = scale_t
@@ -534,7 +534,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         t_blast=t_diss*1d6*(365.*24.*3600.)
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
-           uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor
+           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0d0)
         end do
      endif
 

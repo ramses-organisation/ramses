@@ -91,6 +91,7 @@ module amr_parameters
   integer::ncontrol=1         ! Write control variables
   integer::fbackup=1000000    ! Backup data to disk
   integer::nremap=0           ! Load balancing frequency (0: never)
+  integer,allocatable,dimension(:)::remap_pscalar
 
   ! Output parameters
   integer::iout=1             ! Increment for output times
@@ -218,10 +219,10 @@ module amr_parameters
   character(LEN=6),dimension(1:5)::shader_frame='square'
   character(LEN=10),dimension(1:5)::method_frame='mean_mass'
 #ifdef SOLVERmhd
-  integer,dimension(0:NVAR+6)::movie_vars=0
+  integer,dimension(0:NVAR+7)::movie_vars=0
   character(len=5),dimension(0:NVAR+6)::movie_vars_txt=''
 #else
-  integer,dimension(0:NVAR+2)::movie_vars=0
+  integer,dimension(0:NVAR+3)::movie_vars=0
   character(len=5),dimension(0:NVAR+2)::movie_vars_txt=''
 #endif
 
