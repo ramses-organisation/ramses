@@ -71,12 +71,14 @@ subroutine init_hydro
      read(ilun)nlevelmax2
      read(ilun)nboundary2
      read(ilun)gamma2
-     if(.not.(neq_chem.or.rt) .and. nvar2.ne.nvar)then
-        write(*,*)'File hydro.tmp is not compatible'
-        write(*,*)'Found   =',nvar2
-        write(*,*)'Expected=',nvar
-        call clean_stop
-     end if
+     if(myid==1)then
+        write(*,*)'Restart - Passive scalar mapping'
+        write(*,'(A50)')"__________________________________________________"
+        do i=1,nvar-(ndim+2+nener)
+            write(*,'(A,I3,A,I3)') ' Restart var',remap_pscalar(i),' loaded in var',(i+ndim+2+nener)
+        enddo
+        write(*,'(A50)')"__________________________________________________"
+     endif
 #ifdef RT
      if((neq_chem.or.rt).and.nvar2.lt.nvar)then ! OK to add ionization fraction vars
         ! Convert birth times for RT postprocessing:
@@ -170,10 +172,11 @@ subroutine init_hydro
                  end do
 #if NVAR>NDIM+2+NENER
                  ! Read passive scalars
-                 do ivar=ndim+3+nener,min(nvar,nvar2)
+                 do ivar=ndim+3+nener,nvar2
                     read(ilun)xx
+                    if(ivar.gt.nvar) continue
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       uold(ind_grid(i)+iskip,remap_pscalar(ivar-(ndim+2+nener)))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  end do
 #endif

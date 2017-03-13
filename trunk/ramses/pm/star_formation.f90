@@ -266,11 +266,12 @@ subroutine star_formation(ilevel)
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive) then
                        tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1)+uold(ind_cell(i),ivirial2))
+                       if(uold(ind_cell(i),ivirial1).gt.0d0) uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
+                       if(uold(ind_cell(i),ivirial2).gt.0d0) uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)*exp(-dtold(ilevel)/tdec)
                     else
                        tdec = sf_tdiss*dx_loc/sqrt(uold(ind_cell(i),ivirial1))
+                       if(uold(ind_cell(i),ivirial1).gt.0d0) uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
                     endif
-                    uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)*exp(-dtold(ilevel)/tdec)
-                    uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)*exp(-dtold(ilevel)/tdec)
                  endif
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
@@ -324,7 +325,7 @@ subroutine star_formation(ilevel)
                  if(sf_model.le.2) then
                     fl     = (d6*f(ind_nbor(1,6),3)    + d*f(ind_cell(i),3))/(d6+d)
                     fr     = (d5*f(ind_nbor(1,5),3)    + d*f(ind_cell(i),3))/(d5+d)
-                    flong  = flong+max((d6+d)/2*ul*fl+(d5+d)/2*ur*fr,0d0)
+                    flong  = flong+max((d6+d)/2*ul*fl-(d5+d)/2*ur*fr,0d0)
                  endif
                  sigma2_comp = sigma2_comp + (ur-ul)**2
                  divv      = divv + (ur-ul)
@@ -399,13 +400,13 @@ subroutine star_formation(ilevel)
                  ! Advect unresolved turbulence if a decay time is defined
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive)then
-                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2_comp
-                       uold(ind_cell(i),ivirial2) = uold(ind_cell(i),ivirial2)+sigma2_sole
+                       uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2_comp
+                       uold(ind_cell(i),ivirial2) = max(uold(ind_cell(i),ivirial2),0d0)+sigma2_sole
                        sigma2_comp = uold(ind_cell(i),ivirial1)
                        sigma2_sole = uold(ind_cell(i),ivirial2)
                        sigma2      = sigma2_sole+sigma2_comp
                     else 
-                       uold(ind_cell(i),ivirial1) = uold(ind_cell(i),ivirial1)+sigma2
+                       uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2
                        sigma2 = uold(ind_cell(i),ivirial1)
                     endif
                  else
@@ -426,7 +427,7 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
                           if(pcomp*ndim-1.0.eq.0d0) then
                              zeta   = 0.5
@@ -456,7 +457,7 @@ subroutine star_formation(ilevel)
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
                           if(pcomp*ndim-1.0.eq.0d0) then
                              zeta   = 0.5
