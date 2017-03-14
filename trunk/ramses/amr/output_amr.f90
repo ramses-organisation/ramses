@@ -195,6 +195,16 @@ subroutine dump_all
 #endif
         if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
      end if
+
+     if(myid==1.and.print_when_io) write(*,*)'Start timer'
+     ! Output timer: must be called by each process !
+     filename=TRIM(filedir)//'timer_'//TRIM(nchar)//'.txt'
+     call output_timer(.true., filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif     
+     if(myid==1.and.print_when_io) write(*,*)'End output timer'
+     
   end if
 
 end subroutine dump_all
