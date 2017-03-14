@@ -27,7 +27,7 @@ subroutine read_params
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
-       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time
+       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
   namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -135,6 +135,14 @@ subroutine read_params
      endif
      call clean_stop
   end if
+
+  !-------------------------------------------------
+  ! Default passive scalar map
+  !-------------------------------------------------
+  allocate(remap_pscalar(1:nvar-(ndim+nener+2)))
+  do i=1,nvar-(ndim+2+nener)
+     remap_pscalar(i) = i+(ndim+2+nener)
+  enddo
 
   open(1,file=infile)
   rewind(1)
