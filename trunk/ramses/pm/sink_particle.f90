@@ -2568,7 +2568,7 @@ subroutine f_gas_sink(ilevel)
         
         d_min=d_min**0.5
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,msink(isink)/(4./3.*4.13145*d_min**3))
+        rho_tff=max(rho_tff,msink(isink)/(4./3.*3.1415926*d_min**3))
 
      end if !end if direct force
   end do !end loop over sinks
