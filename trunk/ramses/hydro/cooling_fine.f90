@@ -207,8 +207,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            kScIR  = kappaSc(iIR)  
            if(is_kIR_T) then                      !      k_IR depends on T
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
-              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR)  * (TR/10d0)**2
+              do ig=2,nGroups
+                 EIR = EIR + group_egy(ig) * ev_to_erg &
+                     * rtuold(il,iGroups(ig)) *scale_Np
+              end do
+              TR = max(0d0,(EIR*rt_c_fraction/a_r)**0.25)
+              kScIR  = kappaSc(iIR) * (TR/10d0)**2 * exp(-TR/2d3)
            endif
            kScIR = kScIR*scale_d*scale_l
            flux = rtuold(il,iNp+1:iNp+ndim)
@@ -574,9 +578,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            NIRtot =max(rtuold(il,iNp),smallNp)      ! Total photon density
            kScIR  = kappaSc(iIR)                                          
            if(is_kIR_T) then                        !    k_IR depends on T
-              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
-              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
+               do ig=2,nGroups
+                  EIR = EIR + group_egy(ig) * ev_to_erg * Np(ig,i)
+               end do
+               TR = max(0d0,(EIR*rt_c_fraction/a_r)**0.25)
+               kScIR  = kappaSc(iIR) * (TR/10d0)**2 * exp(-TR/2d3)
            endif                                                        
            tau = nH(i) * Zsolar(i) * unit_tau * kScIR                  
            f_trap = 0d0             ! Fraction IR photons that are trapped
