@@ -2568,7 +2568,7 @@ subroutine f_gas_sink(ilevel)
         
         d_min=d_min**0.5
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,msink(isink)/(4./3.*4.13145*d_min**3))
+        rho_tff=max(rho_tff,msink(isink)/(4./3.*3.1415926*d_min**3))
 
      end if !end if direct force
   end do !end loop over sinks
@@ -3003,15 +3003,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
               weight=weight*parts_per_cell/rho(cind_part(i,ind))
            end if
            weightp(ind_part(i),ind)=weight
-        end do
-        
-        if(threshold_accretion)then
-           do i=1,np
-              if(uold(cind_part(i,ind),1)<d_sink)then
-                 weightp(ind_part(i),ind)=0.
-              end if
-           end do
-        end if
+        end do        
      end do
   end if
   

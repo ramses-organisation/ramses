@@ -381,12 +381,6 @@ SUBROUTINE init_SED_table()
      deallocate(tbl2)
 #endif     
 
-     ! Integrate the cumulative luminosities:
-     do iz = 1, nzs ! Loop metallicity
-        tmp = trapz1( ages, tbl(:,iz,1), nAges, tbl(:,iz,2) )
-     end do
-     tbl(:,:,2) = tbl(:,:,2) * Gyr2sec ! Convert from sec-1 to Myr-1
-
      ! Now the SED properties are in tbl...just need to rebin it, to get !
      ! even log-intervals between bins for fast interpolation.           !
      dlgA = SED_dlgA ; SED_dlgZ = -SED_nz
@@ -394,18 +388,27 @@ SUBROUTINE init_SED_table()
           , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), zs, nv        &
           , reb_tbl, SED_nA, SED_nZ, rebAges, SED_Zeds)
      SED_nA=SED_nA+1                              ! Make room for zero age
-     if(ip .eq. 1 ) allocate(SED_table(SED_nA, SED_nZ, nSEDgroups, nv))
+     if(ip .eq. 1) allocate(SED_table(SED_nA, SED_nZ, nSEDgroups, nv))
      SED_table(1, :,ip,:) = reb_tbl(1,:,:)            ! Zero age properties
      SED_table(1, :,ip,2) = 0.                        !  Lacc=0 at zero age
      SED_table(2:,:,ip,:) = reb_tbl
      deallocate(reb_tbl)
 
-  end do ! End photon group loop
+     if(ip .eq. 1) then
+        SED_lgZ0 = log10(SED_Zeds(1))                  ! Interpolation intervals
+        SED_lgA0 = log10(rebAges(1))
+        allocate(SED_ages(SED_nA))
+        SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
+     end if
 
-  SED_lgZ0 = log10(SED_Zeds(1))                  ! Interpolation intervals
-  SED_lgA0 = log10(rebAges(1))
-  allocate(SED_ages(SED_nA))
-  SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
+     ! Integrate the cumulative luminosities:
+     SED_table(:,:,ip,2)=0.d0
+     do iz = 1, SED_nZ ! Loop metallicity
+        tmp = trapz1( SED_ages, SED_table(:,iz,ip,1), SED_nA, SED_table(:,iz,ip,2) )
+        SED_table(:,iz,ip,2) = SED_table(:,iz,ip,2) * Gyr2sec
+     end do
+
+  end do ! End photon group loop
 
   deallocate(SEDs) ; deallocate(tbl)
   deallocate(ages) ; deallocate(rebAges) 

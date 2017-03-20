@@ -207,8 +207,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            kScIR  = kappaSc(iIR)  
            if(is_kIR_T) then                      !      k_IR depends on T
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
-              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR)  * (TR/10d0)**2
+              do ig=2,nGroups
+                 EIR = EIR + group_egy(ig) * ev_to_erg &
+                     * rtuold(il,iGroups(ig)) *scale_Np
+              end do
+              TR = max(0d0,(EIR*rt_c_fraction/a_r)**0.25)
+              kScIR  = kappaSc(iIR) * (TR/10d0)**2 * exp(-TR/2d3)
            endif
            kScIR = kScIR*scale_d*scale_l
            flux = rtuold(il,iNp+1:iNp+ndim)
@@ -386,7 +390,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         gr_end(1) = nleaf - 1
    
         if(cosmo)then
-           my_grackle_units%a_value = MAX(aexp,0.0625)
+           my_grackle_units%a_value = aexp
            my_grackle_units%density_units = scale_d
            my_grackle_units%length_units = scale_l
            my_grackle_units%time_units = scale_t
@@ -534,7 +538,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         t_blast=t_diss*1d6*(365.*24.*3600.)
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
-           uold(ind_leaf(i),idelay)=uold(ind_leaf(i),idelay)*damp_factor
+           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0d0)
         end do
      endif
 
@@ -574,9 +578,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            NIRtot =max(rtuold(il,iNp),smallNp)      ! Total photon density
            kScIR  = kappaSc(iIR)                                          
            if(is_kIR_T) then                        !    k_IR depends on T
-              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
-              TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
+               do ig=2,nGroups
+                  EIR = EIR + group_egy(ig) * ev_to_erg * Np(ig,i)
+               end do
+               TR = max(0d0,(EIR*rt_c_fraction/a_r)**0.25)
+               kScIR  = kappaSc(iIR) * (TR/10d0)**2 * exp(-TR/2d3)
            endif                                                        
            tau = nH(i) * Zsolar(i) * unit_tau * kScIR                  
            f_trap = 0d0             ! Fraction IR photons that are trapped
