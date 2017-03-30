@@ -355,13 +355,13 @@ contains
        kAbs_loc = kappaAbs
        kSc_loc  = kappaSc
        if(is_kIR_T) then ! k_IR depends on T
-          ! Special stuff for Krumholz/Davis experiment
-          if(rt_T_rad) then  ! Use radiation temperature for kappa
-             E_rad =0.
-             do iGroup=1,nGroups
-                E_rad = E_rad + group_egy_erg(iGroup) * dNp(iGroup)
-             end do
-             TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)
+          E_rad =0.
+          do iGroup=1,nGroups
+             E_rad = E_rad + group_egy_erg(iGroup) * dNp(iGroup)
+          end do
+          TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)
+          if(rt_T_rad) then ! Use radiation temperature for everything
+             dT2 = TR/mu ;   TK = TR
           endif
           kAbs_loc(iIR) = kappaAbs(iIR) * (TR/10d0)**2 * exp(-TR/2d3)
           kSc_loc(iIR)  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/2d3)
