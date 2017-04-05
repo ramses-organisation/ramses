@@ -195,6 +195,16 @@ subroutine dump_all
 #endif
         if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
      end if
+
+     if(myid==1.and.print_when_io) write(*,*)'Start timer'
+     ! Output timer: must be called by each process !
+     filename=TRIM(filedir)//'timer_'//TRIM(nchar)//'.txt'
+     call output_timer(.true., filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif     
+     if(myid==1.and.print_when_io) write(*,*)'End output timer'
+     
   end if
 
 end subroutine dump_all
@@ -603,7 +613,7 @@ subroutine savegadget(filename)
 #ifndef LONGINT
   header%nparttotal(2) = npart_tot
 #else
-  header%nparttotal(2) = MOD(npart_tot,4294967296)
+  header%nparttotal(2) = MOD(npart_tot,4294967296_i8b)
 #endif
   header%flag_cooling = 0
   header%numfiles = ncpu
@@ -617,7 +627,7 @@ subroutine savegadget(filename)
 #ifndef LONGINT
   header%totalhighword(2) = 0
 #else
-  header%totalhighword(2) = npart_tot/4294967296
+  header%totalhighword(2) = npart_tot/4294967296_i8b
 #endif
   header%flag_entropy_instead_u = 0
   header%flag_doubleprecision = 0
