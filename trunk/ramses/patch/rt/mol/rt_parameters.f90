@@ -34,7 +34,7 @@ module rt_parameters
 #else
   integer,parameter::nIons=3                        !   HII and optionally HI, HeII, HeIII
 #endif
-  integer::nIonsUsed=3                              ! # species used (as opposed to alloc)
+  integer::nIonsUsed=0                              ! # species used (as opposed to alloc)
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
   real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
