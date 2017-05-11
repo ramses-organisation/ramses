@@ -589,7 +589,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! no CIC averaging over quantities anymore as average over whole sink 
   ! accretion zone is computed
   !-----------------------------------------------------------------------
-
+#if NDIM==3
   integer::j,irad,nx_loc,isink,divdim,idim,ind
   real(dp)::d,u,v=0d0,w=0d0,e
   real(dp)::scale,weight,dx_min,one_over_dx_min
@@ -688,7 +688,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      wdiv(isink)=wdiv(isink)+weight*divpart(j)
      if (weight>0.)level_sink_new(isink,ilevel)=.true.
   end do
-
+#endif
 end subroutine collect_acczone_avg_np
 !################################################################
 !################################################################
