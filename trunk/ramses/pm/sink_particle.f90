@@ -219,7 +219,7 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))then
+                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
                        mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
@@ -235,7 +235,7 @@ subroutine create_cloud_from_sink
   end do
   
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*1.9891d33/(scale_d*scale_l**3))
+     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -1375,7 +1375,7 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
         xmsink(1:nsink)=msink(1:nsink)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,*)'Total mass in sink = ',sum(msink(1:nsink))*scale_m/1.9891d33
+        write(*,*)'Total mass in sink = ',sum(msink(1:nsink))*scale_m/2d33
         write(*,*)'simulation time = ',t
         write(*,'(" ================================================================================================================================================ ")')
         write(*,'("   Id     M[Msol]          x             y             z            vx            vy            vz    acc_rate[Msol/y] acc_lum[Lsol]     age      ")')
@@ -1384,9 +1384,9 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
            write(*,'(I5,10(2X,E12.5))')&
-                idsink(isink),msink(isink)*scale_m/1.9891d33, &
+                idsink(isink),msink(isink)*scale_m/2d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
-                acc_rate(isink)*scale_m/1.9891d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.9d33,&
+                acc_rate(isink)*scale_m/2d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.9d33,&
                 (t-tsink(isink))*scale_t/(3600*24*365.25)
         end do
         write(*,'(" ================================================================================================================================================ ")')
