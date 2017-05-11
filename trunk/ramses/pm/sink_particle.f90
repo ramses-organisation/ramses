@@ -97,8 +97,14 @@ subroutine create_sink
   ! Perform first accretion with seed mass
   ! Gather particles to levelmin
   do ilevel=nlevelmax,levelmin,-1
+     call set_unew_sink(ilevel)
+  end do
+  do ilevel=nlevelmax,levelmin,-1
      call grow_sink(ilevel,.true.)
      call merge_tree_fine(ilevel)
+  end do
+  do ilevel=nlevelmax,levelmin,-1
+     call set_uold_sink(ilevel)
   end do
 
   ! Update hydro quantities for split cells
@@ -425,7 +431,7 @@ subroutine collect_acczone_avg(ilevel)
                  ind_grid_part(ip)=ig   
               endif
               if(ip==nvector)then
-                 call collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 call collect_acczone_avg_np_2(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
                  ip=0
                  ig=0
               end if
@@ -438,7 +444,7 @@ subroutine collect_acczone_avg(ilevel)
 
      ! End loop over grids
      if(ip>0)then
-        call collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+        call collect_acczone_avg_np_2(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
      end if
   end do
   ! End loop over cpus
@@ -471,6 +477,99 @@ subroutine collect_acczone_avg(ilevel)
 111 format('   Entering collect_acczone_avg for level ',I2)
 
 end subroutine collect_acczone_avg
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine collect_acczone_avg_np_2(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  implicit none
+  integer::ng,np,ilevel
+  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+
+  !-----------------------------------------------------------------------
+  ! inner loop of collect_acczone_avg
+  ! weighted gas quantities and divergence for each particle are computed
+  ! -> replaces bondi_average and divergence_sink
+  ! no CIC averaging over quantities anymore as average over whole sink 
+  ! accretion zone is computed
+  !-----------------------------------------------------------------------
+#if NDIM==3
+  integer::j,irad,nx_loc,isink,divdim,idim,ind
+  real(dp)::d,u,v=0d0,w=0d0,e,v2
+  real(dp)::scale,weight,dx_min,one_over_dx_min
+  real(dp),dimension(1:3)::vv
+#ifdef SOLVERmhd
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2
+  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
+#else
+  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
+#endif
+  real(dp),dimension(1:nvector),save::egas,divpart
+  real(dp),dimension(1:nvector,1:ndim),save::xpart
+  integer ,dimension(1:nvector),save::cind,cind_right,cind_left
+  integer ,dimension(1:nvector,1:twotondim),save::indp
+  real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  logical,dimension(1:nvector,1:twotondim)::ok
+  
+  do idim=1,ndim
+     do j=1,np
+        xpart(j,idim)=xp(ind_part(j),idim)
+     end do
+  end do
+
+  call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
+
+  do ind=1,twotondim
+     do j=1,np
+        if(ok(j,ind))then
+           
+           ! Convert uold to primitive variables
+           d=max(uold(indp(j,ind),1),smallr)
+           vv(1)=uold(indp(j,ind),2)/d
+           vv(2)=uold(indp(j,ind),3)/d
+           vv(3)=uold(indp(j,ind),4)/d
+           e=uold(indp(j,ind),5)
+
+#ifdef SOLVERmhd
+           bx1=uold(indp(j,ind),6)
+           by1=uold(indp(j,ind),7)
+           bz1=uold(indp(j,ind),8)
+           bx2=uold(indp(j,ind),nvar+1)
+           by2=uold(indp(j,ind),nvar+2)
+           bz2=uold(indp(j,ind),nvar+3)
+           e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
+#endif
+           v2=(vv(1)**2+vv(2)**2+vv(3)**2)
+           e=e-0.5d0*d*v2
+#if NENER>0
+           do irad=0,nener-1
+              e=e-uold(indp(j,ind),inener+irad)
+           end do
+#endif
+           e=e/d
+
+           ! Get sink index
+           isink=-idp(ind_part(j))        
+ 
+           ! Compute sink average quantities
+           weight=weightp(ind_part(j),ind)
+           wvol(isink)=wvol(isink)+weight
+           wden(isink)=wden(isink)+weight*d
+           wmom(isink,1:3)=wmom(isink,1:3)+weight*d*vv(1:3)
+           weth(isink)=weth(isink)+weight*d*e
+           wdiv(isink)=0.
+           if (weight>0.)level_sink_new(isink,ilevel)=.true.
+
+        endif
+     end do
+  end do
+
+#endif
+end subroutine collect_acczone_avg_np_2
 !################################################################
 !################################################################
 !################################################################
@@ -973,47 +1072,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)+delta_p(1:3)
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+cross(r_rel(1:3),p_rel_acc(1:3))
 
-           ! Check for neg density inside sink accretion radius
-           if (8*acc_mass/vol_loc>d .and. (.not. on_creation))then 
-              write(*,*)'====================================================='
-              write(*,*)'DANGER of neg density :-( at location'
-              write(*,*)xx(j,1:3,ind)
-              write(*,*)'due to',isink
-              write(*,*)acc_mass/vol_loc,d/d_sink,density/d_sink
-              write(*,*)indp(j,ind),myid
-              write(*,*)'nol_accretion: ',nol_accretion
-              do i=1,nsink
-                 write(*,*)i,' distance ',sum((xx(j,1:3,ind)-xsink(i,1:3))**2)**0.5/dx_min
-              end do
-              write(*,*)'try to decrease c_acc in SINK_PARAMS'
-              write(*,*)'====================================================='
-              !           call clean_stop
-           end if
-
            if (on_creation)then
-              ! new born sinks accrete from uold
-              d=d-acc_mass/vol_loc
-              !new gas velocity
-              vv(1:3)=(d*vol_loc*vv(1:3)-p_acc(1:3))/(d*vol_loc-acc_mass)
-              !convert back to conservative variables
-              v2=(vv(1)**2+vv(2)**2+vv(3)**2)
-              e=e*d
-#ifdef SOLVERmhd
-              e=e+0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
-#endif
-              e=e+0.5d0*d*v2
-#if NENER>0
-              do irad=0,nener-1
-                 e=e+uold(indp(j,ind),inener+irad)
-              end do
-#endif
-              uold(indp(j,ind),1)=d
-              uold(indp(j,ind),2)=d*vv(1)
-              uold(indp(j,ind),3)=d*vv(2)
-              uold(indp(j,ind),4)=d*vv(3)
-              uold(indp(j,ind),5)=e
-              do ivar=imetal,nvar
-                 uold(indp(j,ind),ivar)=d*z(ivar)
+              ! Loop over conservative variables that scale with gas mass
+              ! Warning: for non-thermal energies and magnetic fields, this should be done on a case-by-case basis.
+              do ivar=1,nvar
+                 unew(indp(j,ind),ivar)=unew(indp(j,ind),ivar)-uold(indp(j,ind),ivar)*acc_mass/(d*vol_loc)
               end do
            else
               ! regular accretion from unew
@@ -2837,7 +2900,6 @@ subroutine count_clouds(ilevel,action)
   
   if(numbtot(1,ilevel)==0)return
 
-
   if (action=='count')then
      ! Loop over cpus
      do icpu=1,ncpu
@@ -2899,7 +2961,6 @@ subroutine count_clouds(ilevel,action)
                  ind_grid_part(ip)=ig   
               endif
               if(ip==nvector)then
-!                 call count_clouds_np(ind_part,ip,action,ilevel)
                  call count_clouds_np(ind_grid,ind_part,ind_grid_part,ig,ip,action,ilevel)
                  ip=0
                  ig=0
@@ -2913,7 +2974,6 @@ subroutine count_clouds(ilevel,action)
 
      ! End loop over grids
      if(ip>0)then
-!        call count_clouds_np(ind_part,ip,action,ilevel)
         call count_clouds_np(ind_grid,ind_part,ind_grid_part,ig,ip,action,ilevel)
     end if
   end do
@@ -2957,25 +3017,9 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
      end do
   end do
 
-!  call get_cell_index(cind_part,clevl,xpart,nlevelmax,np)
-!  call get_cell_index_for_particle(cind_part,xx,clevl,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
   call cic_get_cells(cind_part,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
-!  do i=1,np
-!     if (cind_part(i).ne.cind_part2(i))print*,'oups at count clouds'
-!  end do
-
-
-
-
-!  do i=1,np
-!     if (clevl(i) .ne. ilevel)then 
-!        write(*,*)'particle outside its level'
-!        write(*,*)'this should not happen'
-!     end if
-!  end do
-
-  !only particles "in their level" accrete
+  ! only particles "in their level" accrete
   do ind=1,twotondim
      do i=1,np
         if(.not. ok(i,ind))then
@@ -2993,7 +3037,7 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
   end if
   
   ! weight each particle with its actual volume (reduced in the case of overlapping sinks)  
-  if (action=='weight')then     
+  if (action=='weight')then
      do ind=1,twotondim
         do i=1,np
            isink=-idp(ind_part(i))
@@ -3720,3 +3764,102 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   
 
 end subroutine cic_get_vals
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine set_unew_sink(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !--------------------------------------------------------------------------
+  ! This routine sets array unew to its initial value uold before creating
+  ! new sinks. unew is set to zero in virtual boundaries.
+  !--------------------------------------------------------------------------
+  integer::i,ivar,ind,icpu,iskip
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Set unew to uold for myid cells
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+#ifdef SOLVERmhd
+     do ivar=1,nvar+3
+#else
+     do ivar=1,nvar
+#endif
+        do i=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+  end do
+
+  ! Set unew to 0 for virtual boundary cells
+  do icpu=1,ncpu
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+#ifdef SOLVERmhd
+     do ivar=1,nvar+3
+#else
+     do ivar=1,nvar
+#endif
+        do i=1,reception(icpu,ilevel)%ngrid
+           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+        end do
+     end do
+  end do
+  end do
+
+111 format('   Entering set_unew_sink for level ',i2)
+
+end subroutine set_unew_sink
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine set_uold_sink(ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ilevel
+  !---------------------------------------------------------
+  ! This routine sets array uold to its new value unew
+  ! after the hydro step.
+  !---------------------------------------------------------
+  integer::i,ivar,ind,iskip
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Reverse update boundaries
+#ifdef SOLVERmhd
+  do ivar=1,nvar+3
+#else
+  do ivar=1,nvar
+#endif
+     call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+#ifdef SOLVERmhd
+  end do
+#else
+  end do
+#endif
+
+  ! Set uold to unew for myid cells
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+#ifdef SOLVERmhd
+     do ivar=1,nvar+3
+#else
+     do ivar=1,nvar
+#endif
+        do i=1,active(ilevel)%ngrid
+           uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+  end do
+111 format('   Entering set_uold_sink for level ',i2)
+
+end subroutine set_uold_sink
