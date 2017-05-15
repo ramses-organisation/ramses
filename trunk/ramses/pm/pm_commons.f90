@@ -20,7 +20,6 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
   real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all!sink angular momentum
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
-  real(dp),allocatable,dimension(:)::acc_rate,acc_lum !sink accretion rate and luminosity
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,weighted_divergence
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink

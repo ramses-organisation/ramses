@@ -160,9 +160,6 @@ recursive subroutine amr_step(ilevel,icount)
 
      endif
 
-     ! Important can't be done in sink routines because it must be done after dump all
-     if(sink)acc_rate=0.
-
   endif
 
   !----------------------------
