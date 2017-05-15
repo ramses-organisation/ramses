@@ -178,7 +178,7 @@ subroutine create_cloud_from_sink
      endif
   end do
 
-  period(1)=(nx==-1)
+  period(1)=(nx==1)
   period(2)=(ny==1)
   period(3)=(nz==1)
   
