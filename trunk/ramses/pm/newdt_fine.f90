@@ -17,7 +17,7 @@ subroutine newdt_fine(ilevel)
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp 
   ! 4- maximum step time for ATON
-  ! 5- if there's sinks, enforce acc_rate*dt < mgas 
+  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas 
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,nx_loc
