@@ -485,32 +485,39 @@ program amr2map
                  metmax=max(metmax,maxval(var(:,ind,7)))
               case (8)
                  if(do_max)then
-                    map = (1d0-var(:,ind,8)-var(:,ind,9))
+                    map = var(:,ind,8)
                  else
-                    map = (1d0-var(:,ind,8)-var(:,ind,9))*var(:,ind,1)
+                    map = var(:,ind,8)*var(:,ind,1)
                  endif
-                 metmax=max(metmax,maxval(var(:,ind,7)))
+                 metmax=max(metmax,maxval(var(:,ind,8)))
               case (9)
                  if(do_max)then
                     map = var(:,ind,9)
                  else
                     map = var(:,ind,9)*var(:,ind,1)
                  endif
-                 metmax=max(metmax,maxval(var(:,ind,7)))
+                 metmax=max(metmax,maxval(var(:,ind,9)))
               case (10)
                  if(do_max)then
                     map = var(:,ind,10)
                  else
                     map = var(:,ind,10)*var(:,ind,1)
                  endif
-                 metmax=max(metmax,maxval(var(:,ind,7)))
+                 metmax=max(metmax,maxval(var(:,ind,10)))
               case (11)
                  if(do_max)then
                     map = var(:,ind,11)
                  else
                     map = var(:,ind,11)*var(:,ind,1)
                  endif
-                 metmax=max(metmax,maxval(var(:,ind,7)))
+                 metmax=max(metmax,maxval(var(:,ind,11)))
+              case (12) !! This is for H2 using HI and HII (ramses_rt patch mol)
+                 if(do_max)then
+                    map = 1.0-var(:,ind,8)-var(:,ind,9)
+                 else
+                    map = (1.0-var(:,ind,8)-var(:,ind,9))*var(:,ind,1)
+                 endif
+                 metmax=max(metmax,maxval(1.0-var(:,ind,8)-var(:,ind,9)))
 !!$              case (8) !T/mu map
 !!$                 map = var(:,ind,5)*(scale_l/scale_t)**2/var(:,ind,1)/1.38d-16*1.66d-24
 !!$                 do_max=.true.
@@ -563,8 +570,8 @@ program amr2map
   end do
   ! End loop over cpu
 
-  if(type==6.or.type==7)then
-     write(*,*)metmax
+  if(type>=6)then
+     write(*,*)'max val=',metmax
   endif
 
   nx_full=2**lmax
