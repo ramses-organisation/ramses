@@ -82,7 +82,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   !use coolrates_module,only: init_coolrates_tables
   real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
-  integer  :: Nmodel, correct_cooling, realistic_ne, ig
+  integer  :: Nmodel, correct_cooling, realistic_ne
   real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu, ne
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
@@ -131,7 +131,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
-                               ,omegaL,-1.0d0,T2end,mu,ne,.false.)
+                               ,omegaL,T2end,mu,ne,.false.)
   T2_sim=T2end
 
 END SUBROUTINE rt_set_model
@@ -142,7 +142,7 @@ SUBROUTINE update_UVrates(aexp)
 !-------------------------------------------------------------------------
   use UV_module
   use amr_parameters,only:haardt_madau
-  integer::i
+  !integer::i
   real(dp)::aexp
 !------------------------------------------------------------------------
   UVrates=0.
@@ -156,7 +156,7 @@ SUBROUTINE update_UVrates(aexp)
   !      write(*,910) UVrates(i,:)
   !   enddo
   !endif
-910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
+!910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
 
 END SUBROUTINE update_UVrates
 
@@ -337,12 +337,11 @@ contains
     implicit none  
     integer, intent(in)::icell
     real(dp),dimension(nDim),save:: dmom
-    real(dp),dimension(nDim), save:: u_gas ! Gas velocity
     real(dp),dimension(nIons),save:: alpha, beta, nN, nI
     real(dp),save:: dUU, fracMax, x_tot
-    real(dp),save:: mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta
+    real(dp),save:: mu, TK, nHe, ne, neInit, Hrate
     real(dp):: xHI,dxHI, xH2=0d0,dXH2=0d0, xHeI,dxHeI
-    real(dp),save:: s, jac, q, Crate, dCdT2, X_nHkb, rate, dRate, cr, de
+    real(dp),save:: Crate, dCdT2, X_nHkb, rate, dRate, cr, de
     real(dp),save:: photoRate, metal_tot, metal_prime, ss_factor, f_dust
     integer,save:: iion,igroup,idim
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
@@ -372,7 +371,7 @@ contains
     if(isH2) nN(ixHI) = nH(icell) * xH2                          !     nH2
     nN(ixHII) = nH(icell) * xHI                                  !     nHI
     if(isHe) nN(ixHeII)  = nHe*xHeI                              !    nHeI
-    if(isHe) nN(ixHeIII) = nHe*dxion(ixHeII)		         !   nHeII
+    if(isHe) nN(ixHeIII) = nHe*dxion(ixHeII)                     !   nHeII
     ! nI=ionized counterparts of the neutral species
     nI=0d0
     if(isH2) nI(ixHI)  = nN(ixHII)                               !     nHI
@@ -540,7 +539,7 @@ contains
           Hrate = Hrate + 8.5d-26 * f_Habing * nH(icell) &
                 * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
        endif
-       Crate = compCoolrate(TK,ne,nN,nI,a_exp,dCdT2,RT_OTSA)     ! Cooling
+       Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0.d0 ; metal_prime=0.d0             ! Metal cooling
        if(Zsolar(icell) .gt. 0d0) &
@@ -912,7 +911,7 @@ END SUBROUTINE cmp_chem_eq
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
-                           ,J0min_in,T2end,mu,ne,if_write_result)
+                           ,T2end,mu,ne,if_write_result)
 !-------------------------------------------------------------------------
 ! Used for initialization of thermal state in cosmological simulations.
 !
@@ -923,12 +922,6 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 ! omegab : la valeur de Omega baryons
 ! omega0 : la valeur de Omega matiere (total)
 ! omegaL : la valeur de Omega Lambda
-! J0min_in : la valeur du J0min a injecter :
-!          Si high_z_realistic_ne alors c'est J0min a a=astart qui
-!          est considere
-!          Sinon, c'est le J0min habituel.
-!          Si J0min_in <=0, les parametres par defaut ou predefinis
-!          auparavant sont pris pour le J0min.
 ! T2end  : Le T/mu en output
 ! mu     : le poids moleculaire en output
 ! ne     : le ne en output
@@ -938,13 +931,12 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   use amr_commons,only:myid
   use UV_module
   implicit none
-  real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,J0min_in,ne,dasura
+  real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,ne,dasura
   logical :: if_write_result
-  real(dp)::aexp,daexp,dt_cool,coeff,T2_com, nH_com  
-  real(dp),dimension(nIons)::pHI_rates=0., h_rad_spec=0.
+  real(dp)::aexp,daexp,dt_cool,T2_com, nH_com  
+  real(dp),dimension(nIons)::pHI_rates=0.
   real(kind=8) ::mu
-  real(dp) ::cool_tot,heat_tot, mu_dp,diff
-  integer::niter
+  real(dp) ::mu_dp
   real(dp) :: n_spec(1:7)
   real(dp),dimension(1:nvector):: T2
   real(dp),dimension(1:nIons, 1:nvector):: xion
@@ -1076,7 +1068,7 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
        & 1.3743020,1.4247480,1.4730590,1.5174060,1.5552610,1.5833640,1.5976390, &
        & 1.5925270,1.5613110,1.4949610,1.3813710,1.2041510,0.9403100,0.5555344, & 
        & 0.0000000 /)
-  real(dp)::TT,lTT,deltaT,lcool,lcool1,lcool2,lcool1_prime,lcool2_prime
+  real(dp)::TT,lTT,deltaT,lcool1,lcool2,lcool1_prime,lcool2_prime
   real(dp)::ZZ,deltaZ
   real(dp)::c1=0.4,c2=10.0,TT0=1d5,TTC=1d6,alpha1=0.15
   real(dp)::ux,g_courty,f_courty=1d0,g_courty_prime,f_courty_prime
