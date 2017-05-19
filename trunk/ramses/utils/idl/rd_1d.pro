@@ -97,7 +97,7 @@ while not eof(1) do begin
                       , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
                       , p:dblarr(ncell) }
             endelse
-        endelse
+         endelse
         for j=0,ncell-1 do begin
             if keyword_set(mhd) then begin
                 readf,1,ll,rr,dd,uu,vv,ww,pp,AA,BB,CC
@@ -133,12 +133,12 @@ while not eof(1) do begin
             ipos=strpos(st,'Fine step')
         endwhile
         if(not eof(1))then begin
-            t=double(strmid(st,ipos+19,20))
-            time.t=t
-            print,time.t,time.nc,format='("t=",E10.3," ncell=",I5)'
-            pc=ptr_new(time)
-            output(i)=pc
-            i=i+1
+           t=double(strmid(st,ipos+20,20))
+           time.t=t
+           print,time.t,time.nc,format='("t=",E10.3," ncell=",I5)'
+           pc=ptr_new(time)
+           output(i)=pc
+           i=i+1
         endif
         cycle:
     endif
