@@ -661,6 +661,9 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   end do 
   ! End loop over cpus
 
+  if(heat_unresolved_HII.gt.0) &
+       call heat_unresolved_HII_regions(ilevel,dtnew(ilevel))
+
 111 format('   Entering star_rt_feedback for level ',I2)
 #endif
 END SUBROUTINE star_RT_feedback

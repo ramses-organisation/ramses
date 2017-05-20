@@ -21,6 +21,18 @@ SUBROUTINE rt_init
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
      iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
+  if(heat_unresolved_HII .eq. 2) then
+     ! Using NENER for unresolved HII region heating
+     iHIIheat=inener
+     if(rt_isIRtrap) iHIIheat=inener+1
+     if(nener.lt.iHIIheat-inener+1) then
+        if(myid==1) then 
+           write(*,*) 'Need more NENER FOR HEATING HII REGIONS'
+           write(*,*) 'STOPPING'
+        endif
+        call clean_stop
+     endif
+  endif
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+NIONS  !                            # hydro vars
 
@@ -145,7 +157,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
        & ,convert_birth_times,isHe,isH2,is_mu_H2                         &
        & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
-       & ,rt_isoPress, rt_isIRtrap, iPEH_group                           &
+       & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
