@@ -160,9 +160,6 @@ recursive subroutine amr_step(ilevel,icount)
 
      endif
 
-     ! Important can't be done in sink routines because it must be done after dump all
-     if(sink)acc_rate=0.
-
   endif
 
   !----------------------------
@@ -171,7 +168,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(movie) then
      if(imov.le.imovout)then 
         if(aexp>=amovout(imov).or.t>=tmovout(imov))then
-                               call timer('io','start')
+                               call timer('movie','start')
            call output_frame()
         endif
      endif
@@ -568,8 +565,10 @@ subroutine rt_step(ilevel)
      ! Set rtuold equal to rtunew
      call rt_set_uold(ilevel)
 
+                               call timer('cooling','start')
      if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
-     
+                               call timer('radiative transfer','start')    
+
      do ivar=1,nrtvar
         call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
      end do

@@ -38,10 +38,6 @@ subroutine init_sink
   allocate(vsnew(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink_partial(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink(1:nsinkmax,1:ndim))
-  allocate(acc_rate(1:nsinkmax))
-  acc_rate=0.
-  allocate(acc_lum(1:nsinkmax))
-  acc_lum=0.
   allocate(dt_acc(1:nsinkmax))
   allocate(rho_sink_tff(levelmin:nlevelmax))
   allocate(lsink(1:nsinkmax,1:3))
@@ -164,8 +160,6 @@ subroutine init_sink
         end do
         read(ilun)xdp ! Read sink accumulated rest mass energy
         delta_mass(1:nsink)=xdp
-        read(ilun)xdp ! Read sink accretion rate
-        acc_rate(1:nsink)=xdp
         deallocate(xdp)
         allocate(isp(1:nsink))
         read(ilun)isp ! Read sink index 
@@ -192,12 +186,6 @@ subroutine init_sink
 
 
      call compute_ncloud_sink
-
-     if(ir_feedback)then
-        do i=1,nsink
-           acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
-        end do
-     end if
 
   end if
 

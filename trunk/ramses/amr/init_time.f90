@@ -144,7 +144,7 @@ subroutine init_time
      !Set initial expansion factor (for internal units).
      !Set expansion factor to 1 for non-cosmological simulation
      ! Safety for GRACKLE initialisation
-     my_grackle_units%a_value = MAX(aexp_ini,0.0625)
+     my_grackle_units%a_value = aexp_ini
    
      if(cosmo) then
         my_grackle_units%comoving_coordinates = 1

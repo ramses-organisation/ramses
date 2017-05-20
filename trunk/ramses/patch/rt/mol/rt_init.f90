@@ -190,39 +190,39 @@ SUBROUTINE read_rt_params(nml_ok)
 
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
   
-  ! Set indexes of ionization fractions, and ionization energies, and 
-  ! check if we have enough ionization variables (NIONS)                 !
+  ! Set number of used ionisation fractions, indexes of ionization
+  ! fractions, and ionization energies, and check if we have enough
+  ! ionization variables (NIONS)
   iCount=0
   if(isH2) then
-     nIonsUsed=nIonsUsed+1
      iCount=iCount+1
      ixHI=iCount    ; ionEvs(ixHI)=ionEv_HI
   endif
   iCount=iCount+1    ; ixHII=iCount   ; ionEvs(ixHII)=ionEv_HII
   if(isHe) then
-     nIonsUsed=nIonsUsed+2
      iCount=iCount+1 ; ixHeII=iCount  ; ionEvs(ixHeII)=ionEv_HeII
      iCount=iCount+1 ; ixHeIII=iCount ; ionEvs(ixHeIII)=ionEv_HeIII
   endif
-  if(iCount .gt. NIONS) then
+  nIonsUsed = iCount
+  if(nIonsUsed .gt. NIONS) then
      if(myid==1) then
         write(*,*) 'Not enough variables for ionization fractions'
         write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',iCount
+        write(*,*) 'Need NIONS=',nIonsUsed
         write(*,*) 'STOPPING!'
      endif
      call clean_stop
   endif
-  if(iCount .lt. NIONS) then
+  if(nIonsUsed .lt. NIONS) then
      if(myid==1) then
         write(*,*) 'Too many variables for ionization fractions'
         write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',iCount
+        write(*,*) 'Need NIONS=',nIonsUsed
         write(*,*) 'Probably no harm, so still continuing...'
      endif
   endif
   if(myid==1) then
-     write(*,*) 'Number of ionization fractions is:',iCount
+     write(*,*) 'Number of ionization fractions is:',nIonsUsed
      write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
                 , ixHI, ixHII, ixHeII, ixHeIII
   endif

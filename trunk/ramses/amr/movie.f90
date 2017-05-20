@@ -19,11 +19,11 @@ subroutine output_frame()
   integer,parameter::tag=100
 
   character(len=5) :: istep_str
-  character(len=100) :: moviedir, moviecmd, infofile, sinkfile
+  character(len=100) :: moviedir, moviecmd, infofile, sinkfile, rt_infofile
 #ifdef SOLVERmhd
-  character(len=100),dimension(0:NVAR+6) :: moviefiles
+  character(len=100),dimension(0:NVAR+7) :: moviefiles
 #else
-  character(len=100),dimension(0:NVAR+2) :: moviefiles
+  character(len=100),dimension(0:NVAR+3) :: moviefiles
 #endif
   integer::icell,ncache,iskip,irad,ngrid,nlevelmax_frame
   integer::nframes,rt_nframes,imap,ipart_start
@@ -32,7 +32,7 @@ subroutine output_frame()
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,dummy
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::xcen,ycen,zcen,delx,dely,delz
+  real(dp)::xcen,ycen,zcen,delx,dely,delz,timer
   real(dp)::xtmp,ytmp,ztmp,smooth,theta_cam,phi_cam,alpha,beta,smooth_theta,fov_camera,dist_cam
   real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame,rr
   real(dp)::xleft,xright,yleft,yright,zleft,zright,xcentre,ycentre,zcentre
@@ -69,6 +69,20 @@ subroutine output_frame()
                                            1, 3, 5, 7, 1, 5, 3, 7,    &
                                            2, 4, 6, 8, 2, 6, 4, 8 /)  &
                                            ,shape(lind),order=(/2,1/))
+  integer::npoly
+  real(dp)::msol,lumsol,yr,clight,log_lum
+  real(dp),dimension(46)::lum_poly = (/-5.6801548098e+05,5.9946628460e+05,-2.3731255261e+05,3.8560177896e+04,   &
+                                       -5.6808026741e+02,-4.1194896342e+02,-5.4456684492e+00,4.4307467151e+00,  &
+                                       4.2381242791e-01,-1.0831618977e-02,-6.2879957495e-03,-6.4348257709e-04,  &
+                                       -8.7868432521e-06,6.6149289040e-06,1.0739840644e-06,8.1516389787e-08,    &
+                                       -4.9767430769e-10,-1.0869960505e-09,-1.7184492747e-10,-1.5168404854e-11, &
+                                       -4.3154482167e-13,1.1515161236e-13,2.5427591874e-14,3.0240690024e-15,    &
+                                       2.1644677501e-16,5.4516441993e-19,-2.6382406892e-18,-4.8388838089e-19,   &
+                                       -5.4310814625e-20,-3.7196590586e-21,1.6452219840e-23,5.0868990738e-23,   &
+                                       9.0947242158e-24,1.0014439287e-24,6.3725561865e-26,-1.6122919369e-27,    &
+                                       -1.1379163662e-27,-1.8221651341e-28,-1.6791574329e-29,-4.0655271535e-31, &
+                                       1.6771769041e-31,3.3366386465e-32,2.6122101904e-33,-1.7749944262e-34,    &
+                                       -6.6026967339e-35,3.9721180887e-36 /)
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
   real(kind=8),dimension(:,:,:),allocatable::rt_data_frame
@@ -147,9 +161,11 @@ subroutine output_frame()
   moviefiles(NVAR+4) = trim(moviedir)//'pmag_'//trim(istep_str)//'.map'
   moviefiles(NVAR+5) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+6) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+7) = trim(moviedir)//'lum_'//trim(istep_str)//'.map'
 #else
   moviefiles(NVAR+1) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
   moviefiles(NVAR+2) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
+  moviefiles(NVAR+3) = trim(moviedir)//'lum_'//trim(istep_str)//'.map'
 #endif
 
 #ifdef RT
@@ -178,15 +194,17 @@ subroutine output_frame()
 
   nframes = 0
 #ifdef SOLVERmhd
-  do kk=0,NVAR+6
+  do kk=0,NVAR+7
 #else                       
-  do kk=0,NVAR+2
+  do kk=0,NVAR+3
 #endif
      if(movie_vars(kk).eq.1) nframes = nframes+1
   enddo
   rt_nframes = 0
 #ifdef RT
   if(rt)then
+    rt_infofile = trim(moviedir)//'rt_info_'//trim(istep_str)//'.txt'
+    if(myid==1.and.proj_ind==1) call output_rtinfo(rt_infofile)
      do kk=1,NGROUPS
         if(rt_movie_vars(kk).eq.1) rt_nframes = rt_nframes+1
      enddo
@@ -196,6 +214,10 @@ subroutine output_frame()
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  msol   = 2D33/(scale_d*scale_l**3)
+  clight = 2.99792458D10
+  lumsol = 3.828D33*(scale_t/(clight*scale_v)**2)
+  yr     = (365.*24.*3600.)/scale_t
 
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -208,19 +230,24 @@ subroutine output_frame()
   if(xcentre_frame(proj_ind*4-3).eq.0d0) xcentre_frame(proj_ind*4-3) = boxlen/2d0
   if(ycentre_frame(proj_ind*4-3).eq.0d0) ycentre_frame(proj_ind*4-3) = boxlen/2d0
   if(zcentre_frame(proj_ind*4-3).eq.0d0) zcentre_frame(proj_ind*4-3) = boxlen/2d0
+  if(cosmo) then
+      timer = aexp
+  else
+      timer = t
+  endif
   ! Compute frame boundaries
   if(proj_axis(proj_ind:proj_ind).eq.'x')then
-    xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
-    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
-    zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
+    xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
+    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
+    zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
   elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
-    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
-    zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
+    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
+    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
+    zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
   else
-    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*aexp+xcentre_frame(proj_ind*4-1)*aexp**2+xcentre_frame(proj_ind*4)*aexp**3
-    ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*aexp+ycentre_frame(proj_ind*4-1)*aexp**2+ycentre_frame(proj_ind*4)*aexp**3
-    zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*aexp+zcentre_frame(proj_ind*4-1)*aexp**2+zcentre_frame(proj_ind*4)*aexp**3
+    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
+    ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
+    zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
   endif
   if(deltax_frame(proj_ind*2-1).eq.0d0 .and. deltay_frame(proj_ind*2-1).gt.0d0)then
      deltax_frame(proj_ind*2-1)=deltay_frame(proj_ind*2-1)*float(nw_frame)/float(nh_frame)
@@ -258,8 +285,15 @@ subroutine output_frame()
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera(proj_ind))) focal_camera(proj_ind) = dist_cam
   fov_camera = atan((delx/2d0)/focal_camera(proj_ind))
 #if NDIM>2                 
-  if(myid==1) write(*,'(5A,F6.1,A,F6.1,A,F6.3,A,F4.1)') ' Writing frame ', istep_str,' los=',proj_axis(proj_ind:proj_ind),   &
-  &                                              ' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi,' d=',dist_cam,' fov=',fov_camera*180./pi
+  if(myid==1) then
+     write(*,'(5A,F6.1,A,F6.1)',advance='no') ' Writing frame ', istep_str,' los=',proj_axis(proj_ind:proj_ind),   &
+     &                                              ' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
+     if(perspective_camera(proj_ind))then
+        write(*,'(A,F8.2,A,F6.1)') ' d=',dist_cam,' fov=',fov_camera*180./pi
+     else
+        write(*,'(A)') ''
+     endif
+  endif
 #else
   if(myid==1) write(*,'(3A,F6.1)') " Writing frame ", istep_str,' theta=',theta_cam*180./pi
 #endif
@@ -709,8 +743,8 @@ endif
 			        imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
                                       if(method_frame(proj_ind).eq.'min')then
-                                         uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c_cgs*uold(ind_cell(i),1)
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
                                       elseif(method_frame(proj_ind).eq.'max')then
@@ -802,7 +836,7 @@ endif
      ipart_start = NVAR+1
 #endif
      imap = 1
-     do kk=0,ipart_start+1
+     do kk=0,ipart_start+2
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
@@ -816,6 +850,24 @@ endif
               ! Star particles
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
+              endif
+              ! Star particles luminosity in code units (luminosity over speed of light squared)
+	      ! The polynome is fitted on Starburst99 instantaneous bolomtetric magnitude
+              ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
+              ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
+              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
+		 ! Polynome is poorly constrained on high and low ends
+                 if(log10((t-tp(j))/yr)<6)then
+                    log_lum = 3.2d0
+                 else if(log10((t-tp(j))/yr)>9)then
+                    log_lum = log10((t-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
+                 else
+                    log_lum = 0d0
+		    do npoly=1,size(lum_poly)
+                       log_lum = log_lum+lum_poly(npoly)*(log10((t-tp(j))/yr))**(npoly-1)
+                    enddo
+                 endif
+                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
               endif
            else
               ! DM particles only
@@ -962,7 +1014,7 @@ endif
                do kk=1,NGROUPS
                   if(rt_movie_vars(kk).eq.1)then
                      if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
-                        rt_data_frame(ii,jj,imap) = data_frame(ii,jj,imap)/weights(ii,jj)
+                        rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)/weights(ii,jj)
                      endif
                      if(method_frame(proj_ind)(1:4).eq.'min'.and.rt_data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
                         rt_data_frame(ii,jj,imap) = 0.0
@@ -996,9 +1048,9 @@ endif
      ! Output mass weighted density
      imap = 1
 #ifdef SOLVERmhd
-     do kk=0, NVAR+6
+     do kk=0, NVAR+7
 #else
-     do kk=0, NVAR+2
+     do kk=0, NVAR+3
 #endif
        if (movie_vars(kk).eq.1)then
          open(ilun,file=TRIM(moviefiles(kk)),form='unformatted',iostat=ierr)
@@ -1112,9 +1164,11 @@ subroutine set_movie_vars()
   if(ANY(movie_vars_txt=='pmag ')) movie_vars(NVAR+4)=1
   if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+5)=1
   if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+6)=1
+  if(ANY(movie_vars_txt=='lum  ')) movie_vars(NVAR+7)=1
 #else
   if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+1)=1
   if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+2)=1
+  if(ANY(movie_vars_txt=='lum  ')) movie_vars(NVAR+3)=1
 #endif
 #ifdef RT
   do ll=1,NGROUPS

@@ -664,6 +664,21 @@ subroutine init_uold(ilevel)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
+        ! Initialisation of the refinement mask
+        if((ic_mask_ivar.gt.0).and.(ivar_refine.gt.0).and.(ic_mask_ivar.le.nvar).and.(ivar_refine.le.nvar))then
+	   ! Switch to K/mu for ic_mask_ivar=ndim+2 case
+           if(ic_mask_ivar.eq.ndim+2) then
+	      u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)*scale_T2*(gamma-1)
+           else
+	      u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)
+           endif
+           if(ic_mask_ivar.gt.1)then
+              u = u/uold(active(ilevel)%igrid(i)+iskip,1)
+           endif
+           if((u.ge.ic_mask_min).and.(u.le.ic_mask_max))then
+              uold(active(ilevel)%igrid(i)+iskip,ivar_refine) = 1.0*uold(active(ilevel)%igrid(i)+iskip,1)
+           endif
+        endif
         e = 0d0
         do idim=1,ndim
            e = e+0.5*uold(active(ilevel)%igrid(i)+iskip,idim+1)**2/uold(active(ilevel)%igrid(i)+iskip,1)
@@ -740,7 +755,11 @@ subroutine condinit_loc(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).eq.1)then
+              if(ic_mask_ptype.eq.-1)then
+                 if(idp(ipart).eq.1)then
+                    npart2=npart2+1
+                 endif
+              else
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -757,7 +776,17 @@ subroutine condinit_loc(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).eq.1) then
+              if(ic_mask_ptype.eq.-1)then
+                 if(idp(ipart).eq.1)then
+                    if(ig==0)then
+                       ig=1
+                       ind_grid(ig)=igrid
+                    end if
+                    ip=ip+1
+                    ind_part(ip)=ipart
+                    ind_grid_part(ip)=ig
+                 endif
+              else
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -1033,6 +1062,10 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
         end if
      end do
+     
+     do j=1,np
+        ok(j)=ok(j).and.(idp(ind_part(j)).eq.1)
+     end do
 
      ! Update hydro variables
      do j=1,np
@@ -1048,11 +1081,10 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            if(metal) then
              uold(indp(j,ind),imetal)=uold(indp(j,ind),imetal)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*zp(ind_part(j))
            endif
-           if(cosmo) then
-             if(ivar_refine.gt.0) then
-               uold(indp(j,ind),ivar_refine)=uold(indp(j,ind),ivar_refine)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*maskp(ind_part(j))
-             endif
-           endif
+        endif
+        ! Update passive scalar mask 
+        if(ic_mask_ptype.gt.-1) then
+            uold(indp(j,ind),ivar_refine)=uold(indp(j,ind),ivar_refine)+mp(ind_part(j))*vol(j,ind)/vol_loc(j)*maskp(ind_part(j))
         endif
      end do
   end do
@@ -1180,6 +1212,10 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
+  do j=1,np
+     ok(j)=ok(j).and.(idp(ind_part(j)).eq.1)
+  end do
+
   ! Update hydro variables
   do j=1,np
      if(ok(j))then
@@ -1196,9 +1232,10 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         if(metal) then
            uold(indp(j),imetal)=uold(indp(j),imetal)+mp(ind_part(j))/vol_loc(j)*zp(ind_part(j))
         endif
-        if(ivar_refine.gt.0) then
-           uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
-        endif
+     endif
+     ! Update passive scalar mask 
+     if(ic_mask_ptype.gt.-1) then
+       uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
      endif
   end do
   
