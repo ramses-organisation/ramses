@@ -278,8 +278,8 @@ SUBROUTINE read_rt_groups(nml_ok)
   ! Default groups are all blackbodies at 10^5 Kelvin:
   group_csn=0d0 ; group_cse=0d0 ; group_egy=0d0         ! Default all zero
   if(igroup_HI .gt. 0) then
-     group_csn(igroup_HI,ixHI)=3d-22                     ! H2 dissociation
-     group_cse(igroup_HI,ixHI)=3d-22
+     group_csn(igroup_HI,ixHI)=2.1d-19                     ! H2 dissociation
+     group_cse(igroup_HI,ixHI)=2.1d-19        !sln chg from 3d-22
      group_egy(igroup_HI)=12.44
   endif
   if(igroup_HII .gt. 0) then
