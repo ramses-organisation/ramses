@@ -3,7 +3,7 @@
 ! Joki Rosdahl, Andreas Bleuler, and Romain Teyssier, September 2015.
 
 module rt_cooling_module
-  use amr_commons,only:myid  
+  use amr_commons,only:myid
   use cooling_module,only:X, Y
   use rt_parameters
   use coolrates_module
@@ -82,7 +82,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   !use coolrates_module,only: init_coolrates_tables
   real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
-  integer  :: Nmodel, correct_cooling, realistic_ne, ig
+  integer  :: Nmodel, correct_cooling, realistic_ne
   real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu, ne
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
@@ -131,7 +131,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 
   if(nrestart==0 .and. cosmo)                                            &
        call rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0       &
-                               ,omegaL,-1.0d0,T2end,mu,ne,.false.)
+                               ,omegaL,T2end,mu,ne,.false.)
   T2_sim=T2end
 
 END SUBROUTINE rt_set_model
@@ -142,7 +142,7 @@ SUBROUTINE update_UVrates(aexp)
 !-------------------------------------------------------------------------
   use UV_module
   use amr_parameters,only:haardt_madau
-  integer::i
+  !integer::i
   real(dp)::aexp
 !------------------------------------------------------------------------
   UVrates=0.
@@ -156,7 +156,7 @@ SUBROUTINE update_UVrates(aexp)
   !      write(*,910) UVrates(i,:)
   !   enddo
   !endif
-910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
+!910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
 
 END SUBROUTINE update_UVrates
 
@@ -337,12 +337,11 @@ contains
     implicit none  
     integer, intent(in)::icell
     real(dp),dimension(nDim),save:: dmom
-    real(dp),dimension(nDim), save:: u_gas ! Gas velocity
     real(dp),dimension(nIons),save:: alpha, beta, nN, nI
     real(dp),save:: dUU, fracMax, x_tot
-    real(dp),save:: mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta
+    real(dp),save:: mu, TK, nHe, ne, neInit, Hrate
     real(dp):: xHI,dxHI, xH2=0d0,dXH2=0d0, xHeI,dxHeI
-    real(dp),save:: s, jac, q, Crate, dCdT2, X_nHkb, rate, dRate, cr, de
+    real(dp),save:: Crate, dCdT2, X_nHkb, rate, dRate, cr, de
     real(dp),save:: photoRate, metal_tot, metal_prime, ss_factor, f_dust
     integer,save:: iion,igroup,idim
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
@@ -372,7 +371,7 @@ contains
     if(isH2) nN(ixHI) = nH(icell) * xH2                          !     nH2
     nN(ixHII) = nH(icell) * xHI                                  !     nHI
     if(isHe) nN(ixHeII)  = nHe*xHeI                              !    nHeI
-    if(isHe) nN(ixHeIII) = nHe*dxion(ixHeII)		         !   nHeII
+    if(isHe) nN(ixHeIII) = nHe*dxion(ixHeII)                     !   nHeII
     ! nI=ionized counterparts of the neutral species
     nI=0d0
     if(isH2) nI(ixHI)  = nN(ixHII)                               !     nHI
@@ -540,7 +539,7 @@ contains
           Hrate = Hrate + 8.5d-26 * f_Habing * nH(icell) &
                 * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
        endif
-       Crate = compCoolrate(TK,ne,nN,nI,a_exp,dCdT2,RT_OTSA)     ! Cooling
+       Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0.d0 ; metal_prime=0.d0             ! Metal cooling
        if(Zsolar(icell) .gt. 0d0) &
@@ -912,7 +911,7 @@ END SUBROUTINE cmp_chem_eq
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
-                           ,J0min_in,T2end,mu,ne,if_write_result)
+                           ,T2end,mu,ne,if_write_result)
 !-------------------------------------------------------------------------
 ! Used for initialization of thermal state in cosmological simulations.
 !
@@ -923,12 +922,6 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 ! omegab : la valeur de Omega baryons
 ! omega0 : la valeur de Omega matiere (total)
 ! omegaL : la valeur de Omega Lambda
-! J0min_in : la valeur du J0min a injecter :
-!          Si high_z_realistic_ne alors c'est J0min a a=astart qui
-!          est considere
-!          Sinon, c'est le J0min habituel.
-!          Si J0min_in <=0, les parametres par defaut ou predefinis
-!          auparavant sont pris pour le J0min.
 ! T2end  : Le T/mu en output
 ! mu     : le poids moleculaire en output
 ! ne     : le ne en output
@@ -938,13 +931,12 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   use amr_commons,only:myid
   use UV_module
   implicit none
-  real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,J0min_in,ne,dasura
+  real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,ne,dasura
   logical :: if_write_result
-  real(dp)::aexp,daexp,dt_cool,coeff,T2_com, nH_com  
-  real(dp),dimension(nIons)::pHI_rates=0., h_rad_spec=0.
+  real(dp)::aexp,daexp,dt_cool,T2_com, nH_com  
+  real(dp),dimension(nIons)::pHI_rates=0.
   real(kind=8) ::mu
-  real(dp) ::cool_tot,heat_tot, mu_dp,diff
-  integer::niter
+  real(dp) ::mu_dp
   real(dp) :: n_spec(1:7)
   real(dp),dimension(1:nvector):: T2
   real(dp),dimension(1:nIons, 1:nvector):: xion
@@ -1076,7 +1068,7 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
        & 1.3743020,1.4247480,1.4730590,1.5174060,1.5552610,1.5833640,1.5976390, &
        & 1.5925270,1.5613110,1.4949610,1.3813710,1.2041510,0.9403100,0.5555344, & 
        & 0.0000000 /)
-  real(dp)::TT,lTT,deltaT,lcool,lcool1,lcool2,lcool1_prime,lcool2_prime
+  real(dp)::TT,lTT,deltaT,lcool1,lcool2,lcool1_prime,lcool2_prime
   real(dp)::ZZ,deltaZ
   real(dp)::c1=0.4,c2=10.0,TT0=1d5,TTC=1d6,alpha1=0.15
   real(dp)::ux,g_courty,f_courty=1d0,g_courty_prime,f_courty_prime
@@ -1200,4 +1192,273 @@ SUBROUTINE reduce_flux(Fp, cNp)
   if(fred .gt. 1.d0) Fp = Fp/fred
 END SUBROUTINE reduce_flux
 
+
+!************************************************************************
+SUBROUTINE heat_unresolved_HII_regions(ilevel)
+! Heat unresolved HII regions in leaf cells.
+! Heat a cell containing an emitting stellar particle to 2d4 K if its
+! stagnation radius (see e.g. Bisbas et al 2015, eq 17) is larger than
+! half the cell width.
+!------------------------------------------------------------------------
+  use amr_commons
+  use hydro_commons
+  use cooling_module
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  integer::ncache,i,igrid,ngrid
+  integer,dimension(1:nvector),save::ind_grid
+!------------------------------------------------------------------------
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,112)ilevel
+
+  ! Vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     call heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
+  end do
+
+112 format('   Entering heat_unresolved_HII_regions for level',i2)
+
+END SUBROUTINE heat_unresolved_HII_regions
+
+!************************************************************************
+SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
+! Vector sweep for above routine.
+!------------------------------------------------------------------------
+  use amr_commons
+  use hydro_commons
+  use rt_parameters, only: nGroups,iGroups,heat_unresolved_HII,iHIIheat
+  use rt_hydro_commons
+  use rt_cooling_module, only: twopi, mH, rhoc, T2_min_fix, X
+  use cooling_module,only:X, Y
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel,ngrid
+  integer,dimension(1:nvector)::ind_grid
+!------------------------------------------------------------------------
+  integer::i,ind,iskip,idim,nleaf,nx_loc
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::scale_Np,scale_Fp,scale_lum
+  real(kind=8)::dtcool,nISM,nCOM
+  real(dp)::polytropic_constant,stromgren_const
+  integer,dimension(1:nvector),save::ind_cell,ind_leaf
+  real(kind=8),dimension(1:nvector),save::nH,T2,ekk,err,emag,lum
+  real(kind=8),dimension(1:nvector),save::T2min,r_strom,r_stag
+  real(kind=8)::dx,dx_cgs,scale,dx_half_cgs,vol_cgs
+  integer::ig,iNp,il,irad
+  real(dp),parameter::alphab = 2.6d-13 ! ~recombination rate in HII region
+  real(dp),parameter::Tmu_ionised= 1.8d4  !      temperature in HII region
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  call rt_units(scale_Np, scale_Fp)
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_cgs=dx*scale*scale_l
+  dx_half_cgs = dx_cgs / 2d0
+  vol_cgs = dx_cgs**3
+
+  ! Typical ISM density in H/cc
+  nISM = n_star; nCOM=0d0
+  if(cosmo)then
+     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
+  endif
+  nISM = MAX(nCOM,nISM)
+
+  ! Polytropic constant for Jeans length related polytropic EOS
+  if(jeans_ncells>0)then
+     polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
+          & (twopi)*6.67e-8*scale_d*(scale_t/scale_l)**2
+  endif
+
+  ! Loop over cells
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,ngrid
+        ind_cell(i)=iskip+ind_grid(i)
+     end do
+
+     ! Gather leaf cells
+     nleaf=0
+     do i=1,ngrid
+        if(son(ind_cell(i))==0)then
+           nleaf=nleaf+1
+           ind_leaf(nleaf)=ind_cell(i)
+        end if
+     end do
+     if(nleaf.eq.0)cycle
+
+     ! 1: COMPUTE LOCAL TEMPERATURE AND DENSITY ==========================
+     do i=1,nleaf ! Compute rho
+        nH(i)=MAX(uold(ind_leaf(i),1),smallr)
+     end do
+
+     ! Compute thermal pressure
+     do i=1,nleaf
+        T2(i)=uold(ind_leaf(i),ndim+2)
+     end do
+     do i=1,nleaf
+        ekk(i)=0.0d0 ! Kinetic energy
+     end do
+     do idim=1,ndim
+        do i=1,nleaf
+           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
+        end do
+     end do
+     do i=1,nleaf ! Other non-thermal energies
+        err(i)=0.0d0
+     end do
+#if NENER>0
+     do irad=0,nener-1
+        do i=1,nleaf
+           uold(ind_leaf(i),inener+irad)=max(uold(ind_leaf(i),inener+irad),0d0)
+           err(i)=err(i)+uold(ind_leaf(i),inener+irad)
+        end do
+     end do
+#endif
+     do i=1,nleaf ! Magnetic energy
+        emag(i)=0.0d0
+     end do
+#ifdef SOLVERmhd
+     do idim=1,ndim
+        do i=1,nleaf
+           emag(i)=emag(i)+0.125d0* &
+                (uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+        end do
+     end do
+#endif
+     do i=1,nleaf
+        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i)-emag(i))
+     end do
+
+     ! Compute T2=T/mu in Kelvin
+     do i=1,nleaf
+        T2(i)=T2(i)/nH(i)*scale_T2
+     end do
+
+     ! Compute nH in H/cc
+     do i=1,nleaf
+        nH(i)=nH(i)*scale_nH
+     end do
+
+     ! Subtract polytropic temperature
+     if(jeans_ncells>0)then
+        do i=1,nleaf
+           T2min(i) = nH(i)*polytropic_constant*scale_T2
+        end do
+     else
+        do i=1,nleaf
+           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+        end do
+     endif
+     do i=1,nleaf
+        T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),T2max)
+     end do
+
+     ! 2: COMPUTE LOCAL STELLAR LUMINOSITY FROM UNEW AND UOLD ============
+     dtcool = dtnew(ilevel)*scale_t !cooling time step in seconds
+     scale_lum = scale_Np / dtcool * vol_cgs
+     do i=1,nleaf
+        lum = 0d0           ! Local luminosity (ioninsing photons per sec)
+     end do
+     do ig=1,nGroups
+        ! Non-ionising photons don't count:
+        if(group_csn(ig,ixHII).le.0d0) cycle
+        iNp=iGroups(ig)
+        do i=1,nleaf
+           il=ind_leaf(i)
+           lum(i) = lum(i) &
+                  + max(0d0,(rtunew(il,iNp) - rtuold(il,iNp))) * scale_lum
+        enddo
+     end do
+
+     ! 3: COMPUTE LOCAL STROMGREN RADIUS =================================
+     stromgren_const = 3d0/4d0/3.1415926/alphab
+     do i=1,nleaf
+        r_strom(i) = (stromgren_const * lum(i) / nH(i)**2)**0.3333333334
+     end do
+     do i=1,nleaf
+        r_stag(i) = r_strom(i) * (Tmu_ionised/T2(i))**1.3333333334
+     end do
+
+     ! 4: COMPARE R_STAGNATION TO CELL WIDTH AND HEAT IF BIGGER ==========
+     if(heat_unresolved_HII.eq.1) then
+        ! Heat the gas thermally
+        do i=1,nleaf
+           !if(lum(i).gt.1d-30) &
+           !     print*,'Trying to inject HII region ' &
+           !           ,r_strom(i),r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
+           if(r_strom(i).lt. dx_half_cgs .and. r_stag(i) .ge. dx_half_cgs &
+                .and. T2(i) .lt. Tmu_ionised) then
+              
+              !print*,'HIT! ' &
+              !      ,r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
+              uold(ind_leaf(i),ndim+2) =                  &
+                   (Tmu_ionised + T2min(i))               &
+                   * nH(i)/scale_nH/scale_T2/(gamma-1.0)  &
+                   + ekk(i) + err(i) + emag(i)
+              ! Set ionised fraction to 1:
+              if(isH2) uold(ind_leaf(i),iIons-1+ixHI) = 1d-3 * nH(i) ! Need to find eq. value
+              uold(ind_leaf(i),iIons-1+ixHII) = (1d0 - 1d-3) * nH(i)
+           endif
+        end do
+     endif
+
+     ! The above method, heating the cell is not ideal, because the
+     ! heating quickly reduces r_stag, and the gas then cools.
+     ! This results in an 'equilibrium' temperature for the unresolved
+     ! HII region which is under 10^4 K.
+     
+#if NENER>0
+     ! Probably the better way to go here is to use a nonthermal energy.
+     if(heat_unresolved_HII.eq.2 .and. nener.gt.0) then
+        do irad=0,nener-1
+           do i=1,nleaf
+              uold(ind_leaf(i),ndim+2) = &
+                   uold(ind_leaf(i),ndim+2)-uold(ind_leaf(i),inener+irad)
+           end do
+        end do
+        
+        do i=1,nleaf
+           uold(ind_leaf(i),iHIIheat)=0d0
+           !if(lum(i).gt.1d-30) &
+           !     print*,'Trying to inject HII region ' &
+           !           ,r_strom(i),r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
+           if(r_strom(i).lt. dx_half_cgs .and. r_stag(i) .ge. dx_half_cgs &
+                .and. T2(i) .lt. Tmu_ionised) then
+
+              !print*,'HIT! ' &
+              !     ,r_strom(i),r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
+              uold(ind_leaf(i),iHIIheat) = &
+                   Tmu_ionised * nH(i)/scale_nH/scale_T2 &
+                   / (gamma_rad(iHIIheat-inener+1)-1.)
+           endif
+        end do
+        
+        do irad=0,nener-1
+           do i=1,nleaf
+              uold(ind_leaf(i),ndim+2) = &
+                   uold(ind_leaf(i),ndim+2)+uold(ind_leaf(i),inener+irad)
+           end do
+        end do
+     endif
+#endif
+     
+  end do
+  ! End loop over cells
+
+END SUBROUTINE heat_unresolved_HII_regions_vsweep
 
