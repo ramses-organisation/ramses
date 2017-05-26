@@ -14,13 +14,25 @@ SUBROUTINE rt_init
   use SED_module
   use UV_module
   implicit none
-  integer:: i, ilevel, ivar, nvar_count
+  integer:: i, nvar_count
 !-------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering init_rt'
   ! Count the number of variables and check if ok:
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
      iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
+  if(heat_unresolved_HII .eq. 2) then
+     ! Using NENER for unresolved HII region heating
+     iHIIheat=inener
+     if(rt_isIRtrap) iHIIheat=inener+1
+     if(nener.lt.iHIIheat-inener+1) then
+        if(myid==1) then 
+           write(*,*) 'Need more NENER FOR HEATING HII REGIONS'
+           write(*,*) 'STOPPING'
+        endif
+        call clean_stop
+     endif
+  endif
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+NIONS  !                            # hydro vars
 
@@ -145,7 +157,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
        & ,convert_birth_times,isHe,isH2,is_mu_H2                         &
        & ,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost              &
-       & ,rt_isoPress, rt_isIRtrap, iPEH_group                           &
+       & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
@@ -247,7 +259,7 @@ SUBROUTINE read_rt_groups(nml_ok)
        & , groupL0, groupL1, kappaAbs, kappaSc
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
-          ,I2, " ion species")') nGroups, nIons
+          & ,I2, " ion species")') nGroups, nIons
      write(*,*) ''
   endif
    
@@ -351,7 +363,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 !------------------------------------------------------------------------
-  call add_UV_background(ilevel,dt)
+  call add_UV_background(ilevel)
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
   if(rt_nsource .le. 0) return      ! no rt sources
   if(verbose)write(*,111)ilevel
@@ -427,7 +439,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 END SUBROUTINE add_rt_sources
 
 !************************************************************************
-SUBROUTINE add_UV_background(ilevel,dt)
+SUBROUTINE add_UV_background(ilevel)
 
 ! Inject radiation from RT source regions (from the RT namelist). Since 
 ! the light sources are continuously emitting radiation, this is called
@@ -435,7 +447,6 @@ SUBROUTINE add_UV_background(ilevel,dt)
 ! initialization.
 !
 ! ilevel => amr level at which to inject the radiation
-! dt     => timestep for injection (since injected values are per time)
 !------------------------------------------------------------------------
   use UV_module, ONLY: UV_Nphot_cgs, nUVgroups, iUVgroups
   use amr_commons
@@ -443,12 +454,8 @@ SUBROUTINE add_UV_background(ilevel,dt)
   use hydro_commons
   use rt_hydro_commons
   implicit none
-  integer::ilevel
-  real(dp)::dt
-  integer::i,igrid,ncache,iskip,ngrid,j
-  integer::ind,ivar,ind_group,ic,ig
+  integer::ilevel,i,igrid,ncache,iskip,ngrid,j,ind,ic,ig
   integer ,dimension(1:nvector),save::ind_grid
-  real(dp),dimension(1:3)::skip_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
             ,scale_fp,efactor,nH
 !------------------------------------------------------------------------

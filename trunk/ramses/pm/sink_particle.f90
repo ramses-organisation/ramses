@@ -2534,7 +2534,7 @@ subroutine read_sink_params()
 
   real(dp)::dx_min,scale,cty
   integer::nx_loc
-  namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,nol_accretion,merging_timescale,&
+  namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,c_acc,create_sinks,mass_sink_seed,&
        eddington_limit,sink_drag,acc_sink_boost,mass_merger_vel_check_AGN,&
        clump_core,verbose_AGN,T2_AGN,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
