@@ -1,5 +1,6 @@
 # Makefile for RAMSES utils
-F90=gfortran
+F90=ifort 
+#gfortran
 BINDIR=.
 FLAGS=-ffree-line-length-none
 

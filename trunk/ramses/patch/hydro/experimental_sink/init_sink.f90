@@ -65,6 +65,8 @@ subroutine init_sink
   allocate(idsink_new(1:nsinkmax))
   allocate(idsink_all(1:nsinkmax))
   allocate(idsink_old(1:nsinkmax))
+  allocate(merge_sink(1:nsinkmax))
+  allocate(msum_overlap(1:nsinkmax))
   allocate(vsink_new(1:nsinkmax,1:ndim))
   allocate(vsink_all(1:nsinkmax,1:ndim))
   allocate(fsink_new(1:nsinkmax,1:ndim))

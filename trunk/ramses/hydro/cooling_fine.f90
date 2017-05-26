@@ -92,7 +92,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:ndim)::Fpnew
   real(dp),dimension(nIons, 1:nvector),save:: xion
   real(dp),dimension(nGroups, 1:nvector),save:: Np, Np_boost=0d0, dNpdt=0d0
-  real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost, dFpdt
+  real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost=0d0, dFpdt
   real(dp),dimension(ndim, 1:nvector),save:: p_gas, u_gas
   real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor

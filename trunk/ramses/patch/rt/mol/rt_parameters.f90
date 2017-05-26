@@ -34,7 +34,7 @@ module rt_parameters
 #else
   integer,parameter::nIons=3                        !   HII and optionally HI, HeII, HeIII
 #endif
-  integer::nIonsUsed=3                              ! # species used (as opposed to alloc)
+  integer::nIonsUsed=0                              ! # species used (as opposed to alloc)
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
   real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
@@ -73,6 +73,8 @@ module rt_parameters
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
   real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
+  integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
+  integer::iHIIheat=6                  ! Var index for HII heating                       !
 
   character(LEN=128)::hll_evals_file=''! File HLL eigenvalues                            !
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
