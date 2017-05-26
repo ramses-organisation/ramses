@@ -15,7 +15,7 @@ subroutine make_boundary_hydro(ilevel)
   integer::i,ncache,ivar,igrid,ngrid,ind,iperp1,iperp2,iplane,icell
   integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
-  integer,dimension(1:2,1:4)::ind0
+  integer,dimension(1:4,1:2)::ind0
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
@@ -104,12 +104,12 @@ subroutine make_boundary_hydro(ilevel)
      if(boundary_dir==3.or.boundary_dir==4)gdim=2
      if(boundary_dir==5.or.boundary_dir==6)gdim=3
 
-     if(boundary_dir==1)ind0(1:2,1:4)=RESHAPE((/2,4,6,8,1,3,5,7/),SHAPE=(/2, 4/))
-     if(boundary_dir==2)ind0(1:2,1:4)=RESHAPE((/1,3,5,7,2,4,6,8/),SHAPE=(/2, 4/))
-     if(boundary_dir==3)ind0(1:2,1:4)=RESHAPE((/3,4,7,8,1,2,5,6/),SHAPE=(/2, 4/))
-     if(boundary_dir==4)ind0(1:2,1:4)=RESHAPE((/1,2,5,6,3,4,7,8/),SHAPE=(/2, 4/))
-     if(boundary_dir==5)ind0(1:2,1:4)=RESHAPE((/5,6,7,8,1,2,3,4/),SHAPE=(/2, 4/))
-     if(boundary_dir==6)ind0(1:2,1:4)=RESHAPE((/1,2,3,4,5,6,7,8/),SHAPE=(/2, 4/))
+     if(boundary_dir==1)ind0(1:4,1:2)=RESHAPE((/2,4,6,8,1,3,5,7/),SHAPE=(/4, 2/))
+     if(boundary_dir==2)ind0(1:4,1:2)=RESHAPE((/1,3,5,7,2,4,6,8/),SHAPE=(/4, 2/))
+     if(boundary_dir==3)ind0(1:4,1:2)=RESHAPE((/3,4,7,8,1,2,5,6/),SHAPE=(/4, 2/))
+     if(boundary_dir==4)ind0(1:4,1:2)=RESHAPE((/1,2,5,6,3,4,7,8/),SHAPE=(/4, 2/))
+     if(boundary_dir==5)ind0(1:4,1:2)=RESHAPE((/5,6,7,8,1,2,3,4/),SHAPE=(/4, 2/))
+     if(boundary_dir==6)ind0(1:4,1:2)=RESHAPE((/1,2,3,4,5,6,7,8/),SHAPE=(/4, 2/))
 
      if(boundary_dir==1)then
         iperp1=6; iperp2=nvar+1
@@ -143,7 +143,7 @@ subroutine make_boundary_hydro(ilevel)
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
         end do
 
-        ! Wall and free boundary conditions
+        ! Wall or reflexive boundary conditions
         if((boundary_type(ibound)/10).eq.0)then
            
            ! Loop over cells
@@ -204,6 +204,7 @@ subroutine make_boundary_hydro(ilevel)
            end do
            ! End loop over cells
 
+        ! Free or outflowing or zero gradient boundary conditions
         else if((boundary_type(ibound)/10).eq.1)then
            
            ! Loop over cells
@@ -343,7 +344,7 @@ subroutine make_boundary_hydro(ilevel)
               ! Loop over cells
               do icell=1,twotondim/2
 
-                 ind=ind0(iplane,icell)
+                 ind=ind0(icell,iplane)
                  
                  iskip=ncoarse+(ind-1)*ngridmax
                  do i=1,ngrid
@@ -357,7 +358,7 @@ subroutine make_boundary_hydro(ilevel)
                        ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
                     end do
                  else
-                    iskip_ref=ncoarse+(ind0(1,icell)-1)*ngridmax
+                    iskip_ref=ncoarse+(ind0(icell,1)-1)*ngridmax
                     do i=1,ngrid
                        ind_cell_ref(i)=iskip_ref+ind_grid(i)
                     end do
