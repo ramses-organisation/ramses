@@ -75,8 +75,10 @@ subroutine create_sink
 
   end if
 
-  ! Merge sink for smbh runs 
+  ! Remove merged sinks
   call clean_merged_sinks
+
+  ! Merge sink for smbh runs 
   !if (smbh)then
     !call merge_smbh_sink
   !else
@@ -353,37 +355,15 @@ subroutine collect_acczone_avg(ilevel)
   !------------------------------------------------------------------------
 
   integer::igrid,jgrid,ipart,jpart,next_part,info,ind
-  integer::ig,ip,npart1,npart2,icpu,nx_loc,isink
+  integer::ig,ip,npart1,npart2,icpu,isink
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  real(dp)::dx_loc,dx_min,scale,factG
-  character(LEN=15)::action
 
   if(ilevel<levelmin)return
   if(verbose)write(*,111)ilevel
 
-  action='count'
-  call count_clouds(ilevel,action)
-
-  call make_virtual_reverse_dp(rho(1),ilevel)
-  call make_virtual_fine_dp(rho(1),ilevel)
-
-  action='weight'
-  call count_clouds(ilevel,action)
-  
-  level_sink_new(1:nsinkmax,ilevel)=.false.
-  
-  ! Gravitational constant
-  factG=1d0
-  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
-
-  ! Mesh spacing in that level
-  dx_loc=0.5D0**ilevel
-  nx_loc=(icoarse_max-icoarse_min+1)
-  scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
-
-  ! compute (volume weighted) averages over accretion zone
+  ! Compute (volume weighted) averages over accretion zone
   wden=0d0; wvol=0d0; weth=0d0; wmom=0d0
+
   ! Loop over cpus
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
@@ -452,13 +432,11 @@ subroutine collect_acczone_avg(ilevel)
      call MPI_ALLREDUCE(wvol,wvol_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(weth,weth_new,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(wmom,wmom_new,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-     call MPI_ALLREDUCE(level_sink_new,level_sink,nsinkmax*(nlevelmax-levelmin+1),MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
 #else
      wden_new=wden
      wvol_new=wvol
      weth_new=weth
      wmom_new=wmom
-     level_sink=level_sink_new
 #endif
   endif
 
@@ -493,7 +471,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #if NDIM==3
   integer::j,irad,nx_loc,isink,idim,ind
   real(dp)::d,u,v=0d0,w=0d0,e,v2
-  real(dp)::scale,weight,dx_min,one_over_dx_min
+  real(dp)::scale,weight,dx_cloud,vol_cloud,one_over_dx_min
   real(dp),dimension(1:3)::vv
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -509,12 +487,20 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim)::vol
   logical,dimension(1:nvector,1:twotondim)::ok
   
+  ! Compute volume of each cloud particle
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_cloud=(0.5D0**nlevelmax)*scale/aexp/2.0 ! factor of 2 hard-coded
+  vol_cloud=dx_cloud**ndim
+
+  ! Copy cloud particle coordinates
   do idim=1,ndim
      do j=1,np
         xpart(j,idim)=xp(ind_part(j),idim)
      end do
   end do
 
+  ! Compute cloud particle CIC weights at the current level
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
   do ind=1,twotondim
@@ -551,8 +537,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            isink=-idp(ind_part(j))        
  
            ! Get cloud particle CIC weight
-           weight=weightp(ind_part(j),ind)
-           if (weight>0.)level_sink_new(isink,ilevel)=.true.
+           weight=vol_cloud*vol(j,ind)
 
            ! Compute sink average quantities
            wvol(isink)=wvol(isink)+weight
@@ -589,22 +574,8 @@ subroutine grow_sink(ilevel,on_creation)
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink,lev,nx_loc
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  logical::highest_level
 
   if(accretion_scheme=='none'.and.(.not.on_creation))return
-
-  if(.not. on_creation)then
-     ! Determine if on highest active level...
-     if (ilevel==nlevelmax)then
-        highest_level=.true.
-     else if (numbtot(1,ilevel+1)==0)then
-        highest_level=.true.
-     else
-        highest_level=.false.
-     end if
-     if (.not. highest_level)return
-  end if
-
   if(verbose)write(*,111)ilevel
 
 #if NDIM==3
@@ -613,7 +584,7 @@ subroutine grow_sink(ilevel,on_creation)
   call compute_accretion_rate(.false.)
 
   ! Reset new sink variables
-  msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
+  msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -674,16 +645,16 @@ subroutine grow_sink(ilevel,on_creation)
   if(nsink>0)then
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(msink_new,msink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-     call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(xsink_new,xsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
      msink_all=msink_new
-     delta_mass_all=delta_mass_new
      xsink_all=xsink_new
      vsink_all=vsink_new
      lsink_all=lsink_new
+     delta_mass_all=delta_mass_new
 #endif
   endif
 
@@ -745,7 +716,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 #endif
   real(dp),dimension(1:nvar)::z
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,dx_min,scale,vol_min,vol_loc,weight,m_acc,temp,d_jeans
+  real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc,temp,d_jeans
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::xpart
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
@@ -786,6 +757,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   vol_loc=dx_loc**ndim
   dx_min=scale*0.5D0**nlevelmax/aexp
   vol_min=dx_min**ndim
+
+  ! Compute volume of each cloud particle
+  dx_cloud=dx_min/2.0 ! factor of 2 hard-coded
+  vol_cloud=dx_cloud**ndim
 
   ! Jet geometry safety net
   cone_opening = max(tiny(0.0),cone_opening)
@@ -834,11 +809,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            ! Get sink index
            isink=-idp(ind_part(j))        
             
-           ! Resetting masses of cloud particles that are marked for merging
-           if (msink(isink) == 0.0)then
-              mp(ind_part(j)) = 0
-           end if
-
            ! Reference frame relative to the sink position
            r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            do idim=1,ndim
@@ -850,12 +820,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            v_rel(1:3)=vv(1:3)-vsink(isink,1:3)
 
            ! Cloud particle CIC weight
-           weight=weightp(ind_part(j),ind)
+           weight=vol_cloud*vol(j,ind)
 
            ! Get sink average density
            density=rho_gas(isink)
            volume=volume_gas(isink)
-           if (volume==0. .or. density==0.)then
+           if (volume<=0. .or. density<=0.)then
               print*,'something might be going wrong here...',weight,volume,density,ilevel
            endif
 
@@ -869,19 +839,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc=0.0
               end if
            else
-              if (bondi_accretion.and.msink(isink)>0.0)then              
-                 m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
-              else
-                 m_acc=0.0
-              end if
-
-              if (threshold_accretion.and.d_sink>0.0.and.msink(isink)>0.0)then
-                 d_floor=d_sink ! User defined density threshold
-                 m_acc=c_acc*weight*(d-d_floor)
-              else
-                 m_acc=0.0
-              end if
+              m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
            end if
+
            m_acc=max(m_acc,0.0_dp)               
 
            ! Accreted relative center of mass
@@ -967,8 +927,6 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
   real(dp)::T2_gas,delta_mass_min
 
-  dt_acc=huge(0._dp)
-
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
@@ -983,99 +941,57 @@ subroutine compute_accretion_rate(write_sinks)
 
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
-     if(msink(isink)>0.0)then
-        density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
-        do i=levelmin,nlevelmax
-           density=density+weighted_density(isink,i)
-           ethermal=ethermal+weighted_ethermal(isink,i)
-           velocity(1:3)=velocity(1:3)+weighted_momentum(isink,i,1:3)
-           volume=volume+weighted_volume(isink,i)
-        end do
-        mgas=density
-        density=density/(volume+tiny(0.0_dp))
-        if (density>0)then
-           velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
-           ethermal=ethermal/(density*volume+tiny(0.0_dp))
-           c2=MAX((gamma-1.0)*ethermal,smallc**2)
-           c2sink(isink)=c2
-           v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
-           v_bondi=sqrt(c2+v2)
-        
-           ! Compute Bondi-Hoyle accretion rate in code units
-           if (star.and.acc_sink_boost.lt.0.0)then
-              boost=max((density/d_star)**2,1.0_dp)
-           else
-              boost=abs(acc_sink_boost)
-           end if
-        
-           v_bondi=v_bondi*boost**(-1./3.)
-        
-           ! Bondi radius
-           r2=(factG*msink(isink)/v_bondi**2)**2
-        
-           ! extrapolate to rho_inf
-           rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/r2**0.5))
 
-           ! use other values for lambda depending on the EOS, this is for isothermal
-           dMBHoverdt(isink)=4.*3.1415926*rho_inf*r2*v_bondi
-           dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-        
-           ! set sink accretion rate to Bondi value
-           if(smbh.or.bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
-           
-           ! reduction due to overlap
-           dMsink_overdt(isink)=dMsink_overdt(isink)*msink(isink)/(msum_overlap(isink)+msink(isink))
-
-           ! limit accretion to Eddington rate
-           if(eddington_limit)then
-              dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
-           endif
-
-           ! store average quantities for accretion and diagnostics
-           eps_sink(isink)=ethermal
-           rho_gas(isink)=density
-           volume_gas(isink)=volume
-           vel_gas(isink,1:ndim)=velocity(1:ndim)
-
-           ! make sure, accretion rate is positive
-           dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
-        end if
+     ! Compute sink sphere average quantities 
+     density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
+     do i=levelmin,nlevelmax
+        density=density+weighted_density(isink,i)
+        ethermal=ethermal+weighted_ethermal(isink,i)
+        velocity(1:3)=velocity(1:3)+weighted_momentum(isink,i,1:3)
+        volume=volume+weighted_volume(isink,i)
+     end do
+     mgas=density
+     density=density/(volume+tiny(0.0_dp))
+     if (volume<=0. .or. density<=0.)then
+        print*,'something might be going wrong here...',volume,density
+     endif
+     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
+     ethermal=ethermal/(density*volume+tiny(0.0_dp))
+     c2=MAX((gamma-1.0)*ethermal,smallc**2)
+     c2sink(isink)=c2
+     v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
+     v_bondi=sqrt(c2+v2)
+     
+     ! Compute boost factor for subgrid fluctuations 
+     if (star.and.acc_sink_boost.lt.0.0)then
+        boost=max((density/d_star)**2,1.0_dp)
      else
-        dMsink_overdt(isink)=0.0d0
+        boost=abs(acc_sink_boost)
      end if
+     v_bondi=v_bondi*boost**(-1./3.)
+     
+     ! Bondi radius
+     r2=(factG*msink(isink)/v_bondi**2)**2
+     
+     ! Extrapolate to rho_inf
+     rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/(r2+tiny(0.0_dp))**0.5))
+     
+     ! Compute Bondi-Hoyle accretion rate in code units
+     dMBHoverdt(isink)=4.*3.1415926*rho_inf*r2*v_bondi
 
-     ! compute maximum timestep allowed by sink
-     if (dMsink_overdt(isink)>0.0)then
-
-        ! make sure that sink doesnt accrete more than the gas mass within one timestep
-        if (bondi_accretion .or. flux_accretion)dt_acc(isink)=c_acc*mgas/dMsink_overdt(isink)
-        ! make sure that sink doesnt accrete more than its own mass within one timestep
-        dt_acc(isink)=min(dt_acc(isink),(c_acc*msink(isink)/dMsink_overdt(isink)))
-        
-        ! make sure that agn feedback doesn't increase the thermal energy of the gas too much
-        if(agn)then
-
-           ! check whether we should have AGN feedback
-           ok_blast_agn(isink)=.false.
-           T2_gas=ethermal*scale_T2 ! in Kelvin
-           delta_mass_min = mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)
-           if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.mgas*(T2_min-T2_gas)/(T2_AGN-T2_min)))then
-             ok_blast_agn(isink)=.true.
-           end if
-           if(myid==1.and.verbose_AGN.and.ok_blast_agn(isink).and.delta_mass(isink).gt.0.)then
-             write(*,'("***BLAST***",I4,1X,4(1PE12.5,1X))')isink &
-                 & ,msink(isink)*scale_d*scale_l**3/2d33 &  
-                 & ,delta_mass(isink)*scale_d*scale_l**3/2d33 &
-                 & ,((delta_mass(isink)*T2_AGN+mgas*T2_gas) &
-                 & /(delta_mass(isink)+mgas))
-           endif
-
-           ! make sure that sink doesnt blast more than the gas internal energy within one timestep
-!          if((T2_gas.ge.T2_min).or.(delta_mass(isink).ge.delta_mass_min))then
-!             dt_acc(isink)=min(dt_acc(isink),(c_acc*mgas*T2_gas/(dMsink_overdt(isink)*T2_AGN)))
-!          end if
-        end if
-     end if
+     ! Compute Eddington accretiob rate in code units 
+     dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
+     
+     ! Compute final sink accretion rate
+     if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
+     if(eddington_limit)dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
+     
+     ! Store average quantities for diagnostics
+     eps_sink(isink)=ethermal
+     rho_gas(isink)=density
+     volume_gas(isink)=volume
+     vel_gas(isink,1:ndim)=velocity(1:ndim)
+     
   end do
   
   if (write_sinks)then 
@@ -1200,122 +1116,6 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
      endif
   endif
 end subroutine print_sink_properties
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine quenching(ilevel)
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  implicit none
-  integer::ilevel
-
-  !------------------------------------------------------------------------
-  ! This routine selects regions which are eligible for SMBH formation.
-  ! It is based on a stellar density threshold and on a stellar velocity
-  ! dispersion threshold.
-  ! On exit, flag2 array is set to 0 for AGN sites and to 1 otherwise.
-  !------------------------------------------------------------------------
-
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,scale,vol_loc
-  real(dp)::str_d,tot_m,ave_u,ave_v,ave_w,sig_u,sig_v,sig_w
-  integer::igrid,ipart,jpart,next_part,ind_cell,iskip,ind
-  integer::i,npart1,npart2,nx_loc
-  real(dp),dimension(1:3)::skip_loc
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  ! Mesh spacing in that level
-  dx=0.5D0**ilevel
-  nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-  scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-  vol_loc=dx_loc**ndim
-
-#if NDIM==3
-  ! Gather star particles only.
-
-  ! Loop over grids
-  do i=1,active(ilevel)%ngrid
-     igrid=active(ilevel)%igrid(i)
-     ! Number of particles in the grid
-     npart1=numbp(igrid)
-     npart2=0
-     
-     ! Reset velocity moments
-     str_d=0.0
-     tot_m=0.0
-     ave_u=0.0
-     ave_v=0.0
-     ave_w=0.0
-     sig_u=0.0
-     sig_v=0.0
-     sig_w=0.0
-     
-     ! Count star particles
-     if(npart1>0)then
-        ipart=headp(igrid)
-        ! Loop over particles
-        do jpart=1,npart1
-           ! Save next particle   <--- Very important !!!
-           next_part=nextp(ipart)
-           if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
-              npart2=npart2+1
-              tot_m=tot_m+mp(ipart)
-              ave_u=ave_u+mp(ipart)*vp(ipart,1)
-              ave_v=ave_v+mp(ipart)*vp(ipart,2)
-              ave_w=ave_w+mp(ipart)*vp(ipart,3)
-              sig_u=sig_u+mp(ipart)*vp(ipart,1)**2
-              sig_v=sig_v+mp(ipart)*vp(ipart,2)**2
-              sig_w=sig_w+mp(ipart)*vp(ipart,3)**2
-           endif
-           ipart=next_part  ! Go to next particle
-        end do
-     endif
-     
-     ! Normalize velocity moments
-     if(npart2.gt.0)then
-        ave_u=ave_u/tot_m
-        ave_v=ave_v/tot_m
-        ave_w=ave_w/tot_m
-        sig_u=sqrt(sig_u/tot_m-ave_u**2)*scale_v/1d5
-        sig_v=sqrt(sig_v/tot_m-ave_v**2)*scale_v/1d5
-        sig_w=sqrt(sig_w/tot_m-ave_w**2)*scale_v/1d5
-        str_d=tot_m/(2**ndim*vol_loc)*scale_nH
-     endif
-     
-     ! Loop over cells
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        ind_cell=iskip+igrid
-        ! AGN formation sites
-        ! if n_star>0.1 H/cc and v_disp>100 km/s
-        if(str_d>0.1.and.MAX(sig_u,sig_v,sig_w)>100.)then
-           flag2(ind_cell)=0
-        else
-           flag2(ind_cell)=1
-        end if
-     end do
-  end do
-  ! End loop over grids
-
-#endif
-
-111 format('   Entering quenching for level ',I2)
-
-end subroutine quenching
-!################################################################
-!################################################################
 !################################################################
 !################################################################
 !################################################################
