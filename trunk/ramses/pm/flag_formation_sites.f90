@@ -52,7 +52,7 @@ subroutine flag_formation_sites
   allocate(occupied(1:npeaks_max))
   occupied=0
   pos=0.0
-  if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
+  if(myid==1 .and. clinfo .and. nsink>0)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
 
   ! Block clumps (halo done later) that contain a sink for formation
   if (smbh)then 
@@ -482,7 +482,7 @@ subroutine compute_clump_properties_round2(xx)
 
   ! Write to the log file some information that could be of interest for debugging etc.
   if(clinfo .and. (.not. smbh) .and. sink)then 
-     if (myid==ncpu)then
+     if (myid==1.and.npeaks>0)then
         write(*,'(135A)')'======================================================================================================================================'
         write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
         write(*,'(135A)')'======================================================================================================================================'
