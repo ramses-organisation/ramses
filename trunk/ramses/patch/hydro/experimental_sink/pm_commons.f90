@@ -6,7 +6,6 @@ module pm_commons
   real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)::msink_new,msink_all
-  real(dp),allocatable,dimension(:)::mseed,mseed_new,mseed_all
   real(dp),allocatable,dimension(:)::xmsink
   real(dp),allocatable,dimension(:)::dMsink_overdt,dMBHoverdt
   real(dp),allocatable,dimension(:)::rho_gas,volume_gas,eps_sink
@@ -45,7 +44,6 @@ module pm_commons
   real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
-  real(dp),allocatable,dimension(:,:)::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list

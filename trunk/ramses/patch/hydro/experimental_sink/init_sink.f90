@@ -26,8 +26,6 @@ subroutine init_sink
 
 
   !allocate all sink related quantities...
-  allocate(weightp(1:npartmax,1:twotondim))
-  weightp=0.0
   allocate(msink(1:nsinkmax))
   allocate(tsink(1:nsinkmax))
   allocate(idsink(1:nsinkmax))
@@ -56,9 +54,6 @@ subroutine init_sink
   allocate(wvol_new(1:nsinkmax))
   allocate(wdiv_new(1:nsinkmax))
   allocate(msink_new(1:nsinkmax))
-  allocate(mseed(1:nsinkmax))
-  allocate(mseed_new(1:nsinkmax))
-  allocate(mseed_all(1:nsinkmax))
   allocate(msink_all(1:nsinkmax))
   allocate(tsink_new(1:nsinkmax))
   allocate(tsink_all(1:nsinkmax))
