@@ -1,6 +1,6 @@
 module pm_parameters
   use amr_parameters, ONLY: dp
-  integer::nsinkmax=20000           ! Maximum number of sinks
+  integer::nsinkmax=2000            ! Maximum number of sinks
   integer::npartmax=0               ! Maximum number of particles
   integer::npart=0                  ! Actual number of particles
   integer::nsink=0                  ! Actual number of sinks
@@ -13,22 +13,20 @@ module pm_parameters
   ! More sink related parameters, can all be set in namelist file
 
   integer::ir_cloud=4                        ! Radius of cloud region in unit of grid spacing (i.e. the ACCRETION RADIUS)
-  integer::ir_cloud_massive=3                ! Radius of massive cloud region in unit of grid spacing for PM sinks
+  integer::ir_cloud_massive=4                ! Radius of massive cloud region in unit of grid spacing for PM sinks
   real(dp)::sink_soft=2.d0                   ! Sink grav softening length in dx at levelmax for "direct force" sinks
   real(dp)::mass_sink_direct_force=-1.d0     ! mass above which sinks are treated as "direct force" objects
   
   logical::create_sinks=.false.              ! turn formation of new sinks on
 
-  real(dp)::merging_timescale=-1.d0          ! time during which sinks are considered for merging (only when 'timescale' is used),                                             ! used also as contraction timescale in creation
-  real(dp)::cont_speed=0.
+  real(dp)::merging_timescale=-1.d0          ! time during which sinks are considered for merging (only when 'timescale' is used),
+                                             ! used also as contraction timescale in creation
+  real(dp)::cont_speed=0.                    ! Clump contraction rate
 
   character(LEN=15)::accretion_scheme='none' ! Sink accretion scheme; options: 'none', 'bondi'
   logical::bondi_accretion=.false.
 
-  logical::nol_accretion=.false.             ! Leave angular momentum in the gas at accretion
   real(dp)::mass_sink_seed=0.0               ! Initial sink mass
-  real(dp)::c_acc=-1.0                       ! "courant factor" for sink accretion time step control.
-                                             ! gives fration of available gas that can be accreted in one timestep.
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
   logical::sink_drag=.false.                 ! Gas dragging sink

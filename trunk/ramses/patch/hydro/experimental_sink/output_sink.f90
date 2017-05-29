@@ -79,22 +79,17 @@ subroutine backup_sink(filename)
         ii(i)=idsink(i)
      end do
      write(ilun)ii ! Write sink index
-     !        do i=1,nsink
-     !           ii(i)=level_sink(i)
-     !        end do
-     !        write(ilun)ii ! Write sink level
      deallocate(ii)
-     !        write(ilun)ncloud_sink   ! Write ncloud
      allocate(nb(1:nsink))
      do i=1,nsink
         nb(i)=new_born(i)
      end do
-     write(ilun)nb ! Write level at which sinks where integrated
+     write(ilun)nb ! Write if sink is new born
      deallocate(nb)
-     write(ilun)sinkint_level ! Write level at which sinks where integrated
+     write(ilun)sinkint_level ! Write level at which sinks were integrated
   endif
   close(ilun)
- 
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -105,11 +100,12 @@ subroutine backup_sink(filename)
      end if
   endif
 #endif
-  
+
 end subroutine backup_sink
-
-
-
+!####################################################
+!####################################################
+!####################################################
+!####################################################
 subroutine output_sink(filename)
   use amr_commons
   use pm_commons
@@ -158,11 +154,10 @@ subroutine output_sink(filename)
   close(ilun)
 
 end subroutine output_sink
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!####################################################
+!####################################################
+!####################################################
+!####################################################
 subroutine output_sink_csv(filename)
   use amr_commons
   use pm_commons
