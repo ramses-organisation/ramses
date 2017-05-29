@@ -1593,11 +1593,15 @@ subroutine update_sink(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx_loc,scale,dx_min
   real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom
-  real(dp),dimension(1:3)::xcom,vcom,lcom
+  real(dp),dimension(1:3)::xcom,vcom,lcom,r_rel
 
 #if NDIM==3
 
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
+
+  period(1)=(nx==1)
+  period(2)=(ny==1)
+  period(3)=(nz==1)
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**nlevelmax
@@ -1624,10 +1628,12 @@ subroutine update_sink(ilevel)
         do jsink=isink+1,nsink
 
            ! Compute relative distance
-           ! TODO: add periodic boundary conditions
-           rr=  (xsink(isink,1)-xsink(jsink,1))**2&
-             & +(xsink(isink,2)-xsink(jsink,2))**2&
-             & +(xsink(isink,3)-xsink(jsink,3))**2
+           r_rel(1:3)=xsink(isink,1:3)-xsink(jsink,1:3) 
+           do idim=1,ndim
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
+           end do
+           rr=r_rel(1)**2+r_rel(2)**2+r_rel(3)**2
 
            ! Check for overlap
            overlap=rr<4*rmax2 .and. msink(jsink)>0.
@@ -2359,7 +2365,7 @@ subroutine read_sink_params()
   if(mass_sink_direct_force<0.)then 
      mass_sink_direct_force=huge(0._dp)
   end if
-  
+
 end subroutine read_sink_params
 !################################################################
 !################################################################
