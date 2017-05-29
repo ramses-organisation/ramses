@@ -129,7 +129,7 @@ subroutine force_fine(ilevel,icount)
         call f_gas_sink(ilevel)
      end if
      
-  ! Update boundaries
+     ! Update boundaries
      do idim=1,ndim
         call make_virtual_fine_dp(f(1,idim),ilevel)
      end do
