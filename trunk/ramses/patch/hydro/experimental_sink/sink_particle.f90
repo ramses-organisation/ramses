@@ -975,7 +975,7 @@ subroutine compute_accretion_rate(write_sinks)
      ! Compute Bondi-Hoyle accretion rate in code units
      dMBHoverdt(isink)=4.*3.1415926*rho_inf*r2*v_bondi
 
-     ! Compute Eddington accretiob rate in code units 
+     ! Compute Eddington accretion rate in code units 
      dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
      
      ! Compute final sink accretion rate
@@ -1588,12 +1588,13 @@ subroutine update_sink(ilevel)
   integer::lev,isink
 
   ! new variables
-  integer::jsink,nx_loc
+  integer::jsink,nx_loc,idim
   logical::iyoung,jyoung,overlap,merge
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx_loc,scale,dx_min
   real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom
   real(dp),dimension(1:3)::xcom,vcom,lcom,r_rel
+  logical,dimension(1:ndim)::period
 
 #if NDIM==3
 
