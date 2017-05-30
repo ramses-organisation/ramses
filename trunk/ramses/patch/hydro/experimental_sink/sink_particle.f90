@@ -951,21 +951,20 @@ subroutine compute_accretion_rate(write_sinks)
      if (volume<=0. .or. density<=0.)then
         print*,'something might be going wrong here...',volume,density
      endif
-     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
-     ethermal=ethermal/(density*volume+tiny(0.0_dp))
-     c2=MAX((gamma-1.0)*ethermal,smallc**2)
-     c2sink(isink)=c2
-     v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
-     v_bondi=sqrt(c2+v2)
-     
-     ! Compute boost factor for subgrid fluctuations 
+     ! Compute Bondi-Hoyle accretion rate in code units
      if (star.and.acc_sink_boost.lt.0.0)then
-        boost=max((density/d_star)**2,1.0_dp)
+        boost=max((density/(boost_threshold_density/scale_nH))**2,1.0_dp)
      else
         boost=abs(acc_sink_boost)
      end if
-     v_bondi=v_bondi*boost**(-1./3.)
-     
+
+     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
+     ethermal=ethermal/(density*volume+tiny(0.0_dp))
+     c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
+     c2sink(isink)=c2
+     v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
+     v_bondi=sqrt(c2+v2)
+
      ! Bondi radius
      r2=(factG*msink(isink)/v_bondi**2)**2
      
@@ -977,7 +976,7 @@ subroutine compute_accretion_rate(write_sinks)
 
      ! Compute Eddington accretion rate in code units 
      dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-     
+
      ! Compute final sink accretion rate
      if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
      if(eddington_limit)dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
@@ -1640,7 +1639,6 @@ subroutine update_sink(ilevel)
            overlap=rr<4*rmax2 .and. msink(jsink)>0.
 
            if(overlap)then
-              if(myid==1)write(*,*)'DBG1 ', isink, jsink 
               msum_overlap(isink)=msum_overlap(isink)+msink(jsink)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
@@ -1648,10 +1646,9 @@ subroutine update_sink(ilevel)
               merge=rr<rmax2 ! Sinks are within one linking length
 
               ! Merging based on relative velocity
-              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check_AGN*2d33/(scale_d*scale_l**3)) then
+              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge=merge .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
-                 if(myid==1.and.overlap)write(*,*)'DBG2 ', sqrt(2*factG*(msink(isink)+msink(jsink))/sqrt(rr))*scale_v/1e5,sqrt(v1_v2)*scale_v/1e5
               end if
 
               ! Merging based on sink age
@@ -2177,7 +2174,7 @@ end subroutine f_gas_sink
 !################################################################
 subroutine f_sink_sink
   use amr_commons
-  use pm_commons  
+  use pm_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -2366,6 +2363,11 @@ subroutine read_sink_params()
   if(mass_sink_direct_force<0.)then 
      mass_sink_direct_force=huge(0._dp)
   end if
+
+  if(mass_merger_vel_check<0.)then 
+     mass_merger_vel_check=huge(0._dp)
+  end if
+
 
 end subroutine read_sink_params
 !################################################################
