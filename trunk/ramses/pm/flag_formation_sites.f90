@@ -168,6 +168,8 @@ subroutine flag_formation_sites
         ok=ok.and.occupied(jj)==0
         ! Peak has to be dense enough
         ok=ok.and.max_dens(jj)>d_sink
+        ! Clump has to be massive enough
+        ok=ok.and.clump_mass4(jj)>mass_sink_seed*2d33/(scale_d*scale_l**3.0)
         ! Clump has to be contracting
         ok=ok.and.contracting(jj)
         ! Clump has to be virialized
