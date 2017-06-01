@@ -8,8 +8,8 @@ subroutine init_sink
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::idim
-  integer::i,isink
-  integer::ilun,nx_loc
+  integer::isink
+  integer::ilun
   integer::nsinkold
   real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
   real(dp),allocatable,dimension(:)::xdp

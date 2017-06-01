@@ -112,12 +112,11 @@ subroutine output_sink(filename)
   implicit none
   character(LEN=80)::filename
 
-  integer::i,idim,ipart,isink
-  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom
+  integer::isink
+  integer::nx_loc,ilun
   real(dp)::scale,l_abs,rot_period,dx_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
 
   if(verbose)write(*,*)'Entering output_sink'
 
@@ -164,7 +163,7 @@ subroutine output_sink_csv(filename)
   implicit none
   character(LEN=80)::filename,fileloc
 
-  integer::ilun,icpu,isink
+  integer::ilun,isink
 
   if(verbose)write(*,*)'Entering output_sink_csv'
 
