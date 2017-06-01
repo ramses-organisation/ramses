@@ -765,48 +765,48 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   ! Get cloud particle CIC weights
   do idim=1,ndim
-     do i=1,np
-        xpart(i,idim)=xp(ind_part(i),idim)
+     do j=1,np
+        xpart(j,idim)=xp(ind_part(j),idim)
      end do
   end do
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
   ! Loop over eight CIC volumes
   do ind=1,twotondim
-     do i=1,np
-        if(ok(i,ind))then ! Only volumes at the current level
+     do j=1,np
+        if(ok(j,ind))then ! Only volumes at the current level
 
            ! Convert uold to primitive variables
-           d=max(uold(indp(i,ind),1),smallr)
-           vv(1)=uold(indp(i,ind),2)/d
-           vv(2)=uold(indp(i,ind),3)/d
-           vv(3)=uold(indp(i,ind),4)/d
+           d=max(uold(indp(j,ind),1),smallr)
+           vv(1)=uold(indp(j,ind),2)/d
+           vv(2)=uold(indp(j,ind),3)/d
+           vv(3)=uold(indp(j,ind),4)/d
 
            ! Compute the gas total specific energy (kinetic plus thermal) 
            ! removing all the other energies, if any.
-           e=uold(indp(i,ind),5)
+           e=uold(indp(j,ind),5)
 
 #ifdef SOLVERmhd
-           bx1=uold(indp(i,ind),6)
-           by1=uold(indp(i,ind),7)
-           bz1=uold(indp(i,ind),8)
-           bx2=uold(indp(i,ind),nvar+1)
-           by2=uold(indp(i,ind),nvar+2)
-           bz2=uold(indp(i,ind),nvar+3)
+           bx1=uold(indp(j,ind),6)
+           by1=uold(indp(j,ind),7)
+           bz1=uold(indp(j,ind),8)
+           bx2=uold(indp(j,ind),nvar+1)
+           by2=uold(indp(j,ind),nvar+2)
+           bz2=uold(indp(j,ind),nvar+3)
            e=e-0.125d0*((bx1+bx2)**2+(by1+by2)**2+(bz1+bz2)**2)
 #endif
 #if NENER>0
            do irad=0,nener-1
-              e=e-uold(indp(i,ind),inener+irad)
+              e=e-uold(indp(j,ind),inener+irad)
            end do
 #endif
            e=e/d ! Specific energy
 
            ! Get sink index
-           isink=-idp(ind_part(i))        
+           isink=-idp(ind_part(j))        
             
            ! Reference frame relative to the sink position
-           r_rel(1:3)=xx(i,1:3,ind)-xsink(isink,1:3) 
+           r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3) 
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)r_rel(idim)=r_rel(idim)-boxlen
               if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
@@ -816,7 +816,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            v_rel(1:3)=vv(1:3)-vsink(isink,1:3)
 
            ! Cloud particle CIC weight
-           weight=vol_cloud*vol(i,ind)
+           weight=vol_cloud*vol(j,ind)
 
            ! Get sink average density
            density=rho_gas(isink)
@@ -857,14 +857,14 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            delta_mass_new(isink)=delta_mass_new(isink)+m_acc
 
            ! Accrete mass, momentum and gas total energy
-           unew(indp(i,ind),1)=unew(indp(i,ind),1)-m_acc/vol_loc
-           unew(indp(i,ind),2:4)=unew(indp(i,ind),2:4)-m_acc*vv(1:3)/vol_loc
-           unew(indp(i,ind),5)=unew(indp(i,ind),5)-m_acc*e/vol_loc
+           unew(indp(j,ind),1)=unew(indp(j,ind),1)-m_acc/vol_loc
+           unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)-m_acc*vv(1:3)/vol_loc
+           unew(indp(j,ind),5)=unew(indp(j,ind),5)-m_acc*e/vol_loc
            ! Note that we do not accrete magnetic fields and non-thermal energies.
            
            ! Accrete passive scalars
            do ivar=imetal,nvar
-              unew(indp(i,ind),ivar)=unew(indp(i,ind),ivar)-m_acc*uold(indp(i,ind),ivar)/d/vol_loc
+              unew(indp(j,ind),ivar)=unew(indp(j,ind),ivar)-m_acc*uold(indp(j,ind),ivar)/d/vol_loc
            end do
 
            ! AGN feedback
@@ -873,7 +873,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
                     if(feedback_scheme=='energy')then
                        fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
-                       unew(indp(i,ind),5)=unew(indp(i,ind),5)+fbk_ener_AGN/vol_loc
+                       unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
                     end if
                     if(feedback_scheme=='momentum')then
                        fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
@@ -882,8 +882,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                        cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
                        orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
                        if (orth_dist.le.abs(cone_dist)*tan_theta)then
-                          unew(indp(i,ind),2:4)=unew(indp(i,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
-                          unew(indp(i,ind),5)=unew(indp(i,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
+                          unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
+                          unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
                        end if
                     end if
                  end if
