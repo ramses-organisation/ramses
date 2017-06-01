@@ -37,7 +37,6 @@ SUBROUTINE rt_init
 
   if(rt_star .or. sedprops_update .ge. 0) &
      call init_SED_table    ! init stellar energy distribution properties
-
   if(rt .and. .not. hydro) then
      if(myid==1) then
         write(*,*) 'hydro must be turned on when running radiative transfer.'
@@ -64,7 +63,6 @@ SUBROUTINE rt_init
   end do
   if(trim(rt_flux_scheme).eq.'hll') rt_use_hll=.true.
   if(rt_use_hll) call read_hll_eigenvalues
-
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
   tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0

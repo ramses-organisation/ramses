@@ -184,7 +184,7 @@ FUNCTION getCrosssection_Hui(lambda, species)
   endif
   if(species .eq. ixHI) then !H2
      getCrosssection_Hui = 0.
-     if(E .lt. (ionEvs(1)+1.)) getCrosssection_Hui = 3.0d-22
+     if(E .lt. (ionEvs(1)+1.)) getCrosssection_Hui = 2.1d-19 !sln chg from 3.0d-22
      return
   endif
   if(species .eq. ixHII) then ! HI
