@@ -335,6 +335,7 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
   call rt_units(scale_np, scale_fp)
   dx_cgs=dx*scale_l
   ! Set some (tiny) default values in case n_region=0
+  uu=0d0
   do i=1,nGroups ! Starting indices in uold and unew of each photon group
      uu(1:nn,iGroups(i))=smallNp
   end do

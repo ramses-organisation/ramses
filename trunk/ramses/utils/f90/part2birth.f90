@@ -11,7 +11,7 @@ program part2birth
   real(KIND=8)::mtot,ddx,ddy,dex,dey,time,time_tot,time_simu,weight
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,mmax=1d10
   real(KIND=8)::xcenter,ycenter,zcenter
-  real(KIND=8)::age,birth_date
+  real(KIND=8)::age
   real(KIND=8)::jxin=0,jyin=0,jzin=0,jx,jy,jz
   real(KIND=8)::kxin,kyin,kzin,kx,ky,kz
   real(KIND=8)::lxin,lyin,lzin,lx,ly,lz
@@ -23,7 +23,7 @@ program part2birth
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
   real(KIND=8),dimension(:),allocatable::sfr
   real(KIND=8),dimension(:,:),allocatable::x
-  real(KIND=8),dimension(:)  ,allocatable::m,birth
+  real(KIND=8),dimension(:)  ,allocatable::m,birth,birth_date
   integer,dimension(:)  ,allocatable::id
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu

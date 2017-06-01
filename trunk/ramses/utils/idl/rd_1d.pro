@@ -55,7 +55,7 @@
 ;###################################################
 ;###################################################
 ;###################################################
-pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd
+pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd,turb=turb
 
 if not keyword_set(file) then file=pickfile(/READ)
 if not keyword_set(nmax) then nmax=100
@@ -92,6 +92,10 @@ while not eof(1) do begin
                       , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
                       , v:dblarr(ncell), w:dblarr(ncell), p:dblarr(ncell) $
                       , A:dblarr(ncell), B:dblarr(ncell), C:dblarr(ncell) }
+            endif else if keyword_set(turb) then begin
+                time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                      , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
+                      , p:dblarr(ncell), pt:dblarr(ncell) }
             endif else begin
                 time={t:0.0d0, nc:ncell, l:intarr(ncell) $
                       , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
@@ -111,6 +115,14 @@ while not eof(1) do begin
                 time.A(j)=AA
                 time.B(j)=BB
                 time.C(j)=CC
+            endif else if keyword_set(turb) then begin
+                readf,1,ll,rr,dd,uu,tt,pp
+                time.l(j)=ll
+                time.x(j)=rr
+                time.d(j)=dd
+                time.p(j)=pp
+                time.pt(j)=tt
+                time.u(j)=uu
             endif else begin
                 readf,1,ll,rr,dd,uu,pp
                 time.l(j)=ll

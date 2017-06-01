@@ -27,24 +27,19 @@ subroutine compute_clump_properties(xx)
   logical,dimension(1:ndim)::period
   logical::periodic
   
+#if NDIM==3
+
   period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
+  period(2)=(ny==1)
+  period(3)=(nz==1)
 
   periodic=period(1)
-#if NDIM>1
-  if(ndim>1)periodic=periodic.or.period(2)
-#endif
-#if NDIM>2
-  if(ndim>2)periodic=periodic.or.period(3)
-#endif
+  periodic=periodic.or.period(2)
+  periodic=periodic.or.period(3)
+
   !peak-patch related arrays before sharing information with other cpus
 
-  min_dens=huge(zero);! max_dens=0.d0; av_dens=0d0
+  min_dens=huge(zero)
   n_cells=0; n_cells_halo=0 
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0
@@ -111,31 +106,23 @@ subroutine compute_clump_properties(xx)
         ! Min density
         min_dens(peak_nr)=min(d,min_dens(peak_nr))
 
-        ! Max density and peak location
-!        if(d>=max_dens(peak_nr))then
-!           max_dens(peak_nr)=d
-!           ! Abuse av_dens as a "local max density" for now...
-!           av_dens(peak_nr)=d
-!           peak_pos(peak_nr,1:ndim)=xcell(1:ndim)
-!        end if
-
         ! Clump mass
         clump_mass(peak_nr)=clump_mass(peak_nr)+vol*d
 
         ! Clump volume
         clump_vol(peak_nr)=clump_vol(peak_nr)+vol
         
-        ! center of mass location
+        ! Clump center of mass location
         center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
 
-        ! center of mass velocity
+        ! Clump center of mass velocity
         if (hydro)clump_velocity(peak_nr,1:3)=clump_velocity(peak_nr,1:3)+vol*uold(icellp(ipart),2:4)
 
      end if
   end do
 
   !--------------------------------------------------------------------------
-  ! loop over local peaks and identify true peak positions
+  ! Loop over local peaks and identify true peak positions
   !--------------------------------------------------------------------------
   do ipeak=1,npeaks
      ! Peak cell coordinates
@@ -147,9 +134,8 @@ subroutine compute_clump_properties(xx)
      call true_max(xcell(1),xcell(2),xcell(3),plevel)     
      peak_pos(ipeak,1:3)=xcell(1:3)
   end do
-
-
   call build_peak_communicator
+
 #ifndef WITHOUTMPI     
   ! Collect results from all MPI domains
   call virtual_peak_int(n_cells,'sum')
@@ -162,6 +148,7 @@ subroutine compute_clump_properties(xx)
   end do
 #endif
 
+  ! Compute specific quantities
   do ipeak=1,npeaks
      if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
         center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
@@ -171,7 +158,6 @@ subroutine compute_clump_properties(xx)
 
 #ifndef WITHOUTMPI
   ! Scatter results to all MPI domains
-  call boundary_peak_dp(max_dens)
   do i=1,ndim
      call boundary_peak_dp(peak_pos(1,i))
      call boundary_peak_dp(center_of_mass(1,i))
@@ -181,6 +167,7 @@ subroutine compute_clump_properties(xx)
 
   ! Initialize halo mass to clump mass
   halo_mass=clump_mass
+
   ! Calculate total mass above threshold
   tot_mass=sum(clump_mass(1:npeaks))
 
@@ -196,8 +183,12 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
-  !for periodic boxes the center of mass can be meaningless at that stage
-  ! -> recompute center of mass relative to peak position
+#ifndef WITHOUTMPI     
+  ! Scatter results to all MPI domains
+  call boundary_peak_dp(av_dens)
+#endif
+
+  ! For periodic boxes, recompute center of mass relative to peak position
   if(periodic)then
      center_of_mass=0.d0;
      do ipart=1,ntest     
@@ -228,29 +219,37 @@ subroutine compute_clump_properties(xx)
            ! Cell volume
            vol=volume(levp(ipart))
 
-           ! center of mass location
+           ! Clump center of mass location
            center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
 
         end if
      end do
-
      call build_peak_communicator
-     ! MPI communication to collect the results from the different cpus
+
 #ifndef WITHOUTMPI     
+     ! Collect results from all MPI domains
      do i=1,ndim
         call virtual_peak_dp(center_of_mass(1,i),'sum')
      end do
+#endif
+     
+     ! Compute specific quantity
      do ipeak=1,npeaks
         if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
            center_of_mass(ipeak,1:3)=center_of_mass(ipeak,1:3)/clump_mass(ipeak)
         end if
      end do
+
+#ifndef WITHOUTMPI     
+     ! Scatter results to all MPI domains
      do i=1,ndim
         call boundary_peak_dp(center_of_mass(1,i))
      end do
 #endif
 
   end if
+
+#endif
 end subroutine compute_clump_properties
 !################################################################
 !################################################################

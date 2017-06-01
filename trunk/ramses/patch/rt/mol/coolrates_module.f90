@@ -78,7 +78,7 @@ SUBROUTINE init_coolrates_tables(aexp)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  real(dp) :: aexp, T
+  real(dp) :: aexp
   integer :: myid, ncpu, ierr, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
@@ -148,7 +148,6 @@ SUBROUTINE init_coolrates_tables(aexp)
 #endif
 
   if(myid==0) print*,'Coolrates tables initialised '
-901 format (20(1pe12.3))
 
 END SUBROUTINE init_coolrates_tables
 
@@ -512,24 +511,22 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
 END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FUNCTION compCoolrate(T, ne, nN, nI, aexp, dcooldT, rt_OTSA)
+FUNCTION compCoolrate(T, ne, nN, nI, dcooldT)
 
 ! Compute cooling rate in a cell, using interpolation from cooling rate
 ! tables
 ! T        => Cell emperature [K]
 ! nN       => Neutral abundances
 ! nI       => Ionized abundances
-! aexp     => Cosmic expansion
 ! dcooldT  <= Temperature derivative of the rate
 ! dcooldx  <= Ionized fraction derivative of the rate
 ! returns:    Cooling rate [erg s-1 cm-3]  
 !-------------------------------------------------------------------------
   use rt_parameters,only: nIons, isH2, isHe, ixHI, ixHII, ixHeII, ixHeIII
   implicit none  
-  real(dp)::T, ne, aexp
+  real(dp)::T, ne
   real(dp),dimension(nIons)::nN,nI
-  real(dp)::compCoolrate, dcooldT
-  logical::RT_OTSA!-------------------------------------------------------
+  real(dp)::compCoolrate, dcooldT !---------------------------------------
   real(dp),save::ci_HI,ci_HeI,ci_HeII
   real(dp),save::ci_HI_prime,ci_HeI_prime,ci_HeII_prime
   real(dp),save::cr_H2HI,cr_H2H2,cr_H2HI_prime,cr_H2H2_prime
@@ -636,7 +633,7 @@ ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
 !-------------------------------------------------------------------------
   implicit none  
   real(dp),intent(in)::T,Z
-  real(dp)::comp_Alpha_H2,lambda,T2
+  real(dp)::comp_Alpha_H2,T2
 !-------------------------------------------------------------------------
   T2=T/1d2
   comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5) &
@@ -681,8 +678,8 @@ ELEMENTAL FUNCTION dgamma_hi(T,J)
   T3 = T/1.d3
   jconsts=0.33+0.9*exp(-1.0d0*((J-3.5d0)/0.9d0)**2)
   dgamma_hi = &
-       jconsts*(1.d-11*sqrt(T3)/(1.+60.*T3**(-4))*(1./(2.*T3)+ &
-			240.*T3**(-5)/(1.+60.*T3**(-4)))+1.d-12)/1.d3
+       jconsts*(1.d-11*sqrt(T3)/(1.+60.*T3**(-4))*(1./(2.*T3)   &
+                +240.*T3**(-5)/(1.+60.*T3**(-4)))+1.d-12) / 1.d3
                
 END FUNCTION dgamma_hi
 
