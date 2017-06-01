@@ -15,7 +15,7 @@ subroutine flag_formation_sites
 #endif
 
   !=============================================================================
-  ! This routine flags (flag 2 = 1 )  the cells where a sink is going to be formed
+  ! This routine flags (flag2 = 1)  the cells where a sink is going to be formed
   !=============================================================================
 
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
