@@ -2,14 +2,14 @@ module pm_commons
   use amr_parameters
   use pm_parameters
   use random
+
   ! Sink particle related arrays
-  real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
-  real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
+  real(dp),allocatable,dimension(:)::msink,xmsink
   real(dp),allocatable,dimension(:)::msink_new,msink_all
-  real(dp),allocatable,dimension(:)::mseed,mseed_new,mseed_all
-  real(dp),allocatable,dimension(:)::xmsink
+  real(dp),allocatable,dimension(:)::oksink_new,oksink_all
+  real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)::dMsink_overdt,dMBHoverdt
-  real(dp),allocatable,dimension(:)::rho_gas,volume_gas,eps_sink
+  real(dp),allocatable,dimension(:)::rho_gas,volume_gas,eps_sink,c2sink
   real(dp),allocatable,dimension(:,:)::vel_gas
   real(dp),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
   real(dp),allocatable,dimension(:)::wden,weth,wvol,wdiv,wden_new,weth_new,wvol_new,wdiv_new
@@ -18,24 +18,21 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::fsink,fsink_new,fsink_all
   real(dp),allocatable,dimension(:,:,:)::vsnew,vsold
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
-  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all!sink angular momentum
+  real(dp),allocatable,dimension(:,:)::lsink,lsink_new,lsink_all
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,weighted_divergence
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
-  real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink
   real(dp),allocatable,dimension(:)::rho_sink_tff
   real(dp),allocatable,dimension(:)::msum_overlap
   integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
-  integer,allocatable,dimension(:)::merge_sink
-  logical,allocatable,dimension(:,:)::level_sink,level_sink_new
-  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all,direct_force_sink
+  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
+  logical,allocatable,dimension(:)::direct_force_sink
   logical,allocatable,dimension(:)::new_born,new_born_all,new_born_new
   integer,allocatable,dimension(:)::idsink_sort
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
   integer::sinkint_level=0         ! maximum level currently active is where the global sink variables are updated
   real(dp)::ssoft                  ! sink softening lenght in code units
-
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)::xp       ! Positions
@@ -45,7 +42,6 @@ module pm_commons
   real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
-  real(dp),allocatable,dimension(:,:)::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)  ::zp       ! Birth metallicity
   integer ,allocatable,dimension(:)  ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)  ::prevp    ! Previous particle in list
@@ -60,8 +56,7 @@ module pm_commons
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
 
-
-  contains
+contains
   function cross(a,b)
     use amr_parameters, only:dp
     real(dp),dimension(1:3)::a,b

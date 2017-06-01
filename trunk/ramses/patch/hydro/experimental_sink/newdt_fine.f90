@@ -41,7 +41,7 @@ subroutine newdt_fine(ilevel)
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*ACOS(-1.0d0)
      if(cosmo)fourpi=1.5d0*omega_m*aexp
-     if (sink.and.(mass_sink_direct_force .ge. 0.))then
+     if (sink)then
         tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
      else
         tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))

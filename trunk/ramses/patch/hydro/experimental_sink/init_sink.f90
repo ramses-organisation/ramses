@@ -23,27 +23,24 @@ subroutine init_sink
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
 
-
-
-  !allocate all sink related quantities...
-  allocate(weightp(1:npartmax,1:twotondim))
-  weightp=0.0
-  allocate(msink(1:nsinkmax))
-  allocate(tsink(1:nsinkmax))
+  ! Allocate all sink related quantities...
   allocate(idsink(1:nsinkmax))
   idsink=0 ! Important: need to set idsink to zero
+  allocate(msink(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
   allocate(vsink(1:nsinkmax,1:ndim))
+  allocate(lsink(1:nsinkmax,1:ndim))
+  allocate(delta_mass(1:nsinkmax))
+
+  allocate(tsink(1:nsinkmax))
   allocate(vsold(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(vsnew(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink_partial(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink(1:nsinkmax,1:ndim))
-  allocate(dt_acc(1:nsinkmax))
+
+  allocate(msum_overlap(1:nsinkmax))
   allocate(rho_sink_tff(levelmin:nlevelmax))
-  allocate(lsink(1:nsinkmax,1:3))
-  lsink=0.d0
-  allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))
-  allocate(delta_mass(1:nsinkmax))
+
   ! Temporary sink variables
   allocate(wden(1:nsinkmax))
   allocate(wmom(1:nsinkmax,1:ndim))
@@ -56,28 +53,22 @@ subroutine init_sink
   allocate(wvol_new(1:nsinkmax))
   allocate(wdiv_new(1:nsinkmax))
   allocate(msink_new(1:nsinkmax))
-  allocate(mseed(1:nsinkmax))
-  allocate(mseed_new(1:nsinkmax))
-  allocate(mseed_all(1:nsinkmax))
   allocate(msink_all(1:nsinkmax))
   allocate(tsink_new(1:nsinkmax))
   allocate(tsink_all(1:nsinkmax))
   allocate(idsink_new(1:nsinkmax))
   allocate(idsink_all(1:nsinkmax))
   allocate(idsink_old(1:nsinkmax))
-  allocate(merge_sink(1:nsinkmax))
-  allocate(msum_overlap(1:nsinkmax))
   allocate(vsink_new(1:nsinkmax,1:ndim))
   allocate(vsink_all(1:nsinkmax,1:ndim))
   allocate(fsink_new(1:nsinkmax,1:ndim))
   allocate(fsink_all(1:nsinkmax,1:ndim))
-  allocate(lsink_new(1:nsinkmax,1:3))
-  allocate(lsink_all(1:nsinkmax,1:3))
+  allocate(lsink_new(1:nsinkmax,1:ndim))
+  allocate(lsink_all(1:nsinkmax,1:ndim))
   allocate(xsink_new(1:nsinkmax,1:ndim))
   allocate(xsink_all(1:nsinkmax,1:ndim))
   allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   sink_jump=0.d0
-  allocate(level_sink_new(1:nsinkmax,levelmin:nlevelmax))
   allocate(dMsink_overdt(1:nsinkmax))
   allocate(dMBHoverdt(1:nsinkmax))
   allocate(eps_sink(1:nsinkmax))
@@ -109,10 +100,12 @@ subroutine init_sink
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
   ! Compute softening length from minimum cell spacing
   call compute_ncloud_sink  
 
   if(nrestart>0)then
+
      ilun=4*ncpu+myid+10
      call title(nrestart,nchar)
 
@@ -122,12 +115,11 @@ subroutine init_sink
      else
         fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.out'
      endif
-
      
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
 
-     ! Wait for the token                                                                                                                                                                    
+     ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -156,7 +148,7 @@ subroutine init_sink
            read(ilun)xdp ! Read sink velocity
            vsink(1:nsink,idim)=xdp
         end do
-        do idim=1,3
+        do idim=1,ndim
            read(ilun)xdp ! Read sink angular momentum
            lsink(1:nsink,idim)=xdp
         end do
@@ -167,15 +159,15 @@ subroutine init_sink
         read(ilun)isp ! Read sink index 
         idsink(1:nsink)=isp
         deallocate(isp)
-!        read(ilun)ncloud_sink
         allocate(nb(1:nsink))
         read(ilun)nb ! Read newborn boolean
         new_born(1:nsink)=nb
         deallocate(nb)
-        read(ilun)sinkint_level
+        read(ilun)sinkint_level ! Read level at which sinks were integrated
      end if
      close(ilun)
-     ! Send the token                                                                                                                                                                        
+
+     ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
@@ -186,7 +178,7 @@ subroutine init_sink
      endif
 #endif
 
-
+     ! Compute number of cloud particles within sink sphere
      call compute_ncloud_sink
 
   end if
@@ -223,7 +215,7 @@ subroutine init_sink
       
   if (ic_sink)then
 
-     ! Wait for the token                                                                                                                                                                    
+     ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -255,7 +247,8 @@ subroutine init_sink
      end do
 102  continue
      close(10)
-     ! Send the token                                                                                                                                                                        
+
+     ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
@@ -266,9 +259,9 @@ subroutine init_sink
      endif
 #endif
 
-
-
   end if
+
+  ! Output sink properties to screen
   if (myid==1.and.nsink-nsinkold>0)then
      write(*,*)'sinks read from file '//filename
      write(*,'("   Id           M             x             y             z            vx            vy            vz            lx            ly            lz       ")')
@@ -278,9 +271,12 @@ subroutine init_sink
              vsink(isink,1:ndim),lsink(isink,1:ndim)
      end do
   end if
+
+  ! Set direct force boolean
   do isink=1,nsink
      direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force)
   end do  
+
 end subroutine init_sink
 !################################################################
 !################################################################

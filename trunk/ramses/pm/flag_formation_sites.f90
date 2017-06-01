@@ -1,3 +1,7 @@
+!################################################################
+!################################################################
+!################################################################
+!################################################################
 subroutine flag_formation_sites
   use amr_commons
   use pm_commons
@@ -29,13 +33,11 @@ subroutine flag_formation_sites
   integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
 
+#if NDIM==3
+
   period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
+  period(2)=(ny==1)
+  period(3)=(nz==1)
 
   ! Grid spacing and physical scales
   dx=0.5D0**nlevelmax
@@ -50,7 +52,7 @@ subroutine flag_formation_sites
   allocate(occupied(1:npeaks_max))
   occupied=0
   pos=0.0
-  if(myid==1 .and. clinfo)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
+  if(myid==1 .and. clinfo .and. nsink>0)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
 
   ! Block clumps (halo done later) that contain a sink for formation
   if (smbh)then 
@@ -84,9 +86,10 @@ subroutine flag_formation_sites
         end if
      end do
   end do
-#ifndef WITHOUTMPI
   ! This is required because new sink positions might bring new peaks into local memory in the smbh case
   call build_peak_communicator
+
+#ifndef WITHOUTMPI
   call virtual_peak_int(occupied,'max')
   call boundary_peak_int(occupied)
 #endif
@@ -108,7 +111,7 @@ subroutine flag_formation_sites
   endif
   
   !------------------------------------------------------------------------------
-  ! determine whether a peak patch is allowed to form a new sink.
+  ! Determine whether a peak patch is allowed to form a new sink.
   ! if a new sink has to be created, flag2 is set to the clump number at the peak position
   ! -> criteria to be chosen depend on the physics
   ! -> this routine can be patched
@@ -128,17 +131,18 @@ subroutine flag_formation_sites
      jj=ind_sort(j)
      ok=.true.
      if (smbh)then
-        ! Peak has to be a halo
+        ! Clump has to be a halo
         ok=ok.and.(ind_halo(jj).EQ.jj+ipeak_start(myid))
         ! Halo must have no existing sink 
         ok=ok.and.occupied(jj)==0
         ! Halo mass has to be larger than some threshold
         ok=ok.and.halo_mass(jj)>mass_halo_AGN*2d33/(scale_d*scale_l**3.0)
-        ! 4-cell ball has to be larger than some threshold
+        ! 4-cell ball mass has to be larger than some threshold
         ok=ok.and.clump_mass4(jj)>mass_clump_AGN*2d33/(scale_d*scale_l**3.0)
         ! Peak density has to be larger than star formation thresold
         ok=ok.and.max_dens(jj)>n_star/scale_nH
-        if (ok .eqv. .true.)then
+        ! Then create a sink at the peak position
+        if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
            if (cc(1) .eq. myid)then
@@ -156,14 +160,23 @@ subroutine flag_formation_sites
             end if
          end if
      else
+        ! Clump has to be peaky enough
         ok=ok.and.relevance(jj)>0.
+        ! Clump has to contain at least one cell
         ok=ok.and.n_cells(jj)>0.
+        ! Clmup must have no existing sink
         ok=ok.and.occupied(jj)==0
+        ! Peak has to be dense enough
         ok=ok.and.max_dens(jj)>d_sink
+        ! Clump has to be massive enough
+        ok=ok.and.clump_mass4(jj)>mass_sink_seed*2d33/(scale_d*scale_l**3.0)
+        ! Clump has to be contracting
         ok=ok.and.contracting(jj)
+        ! Clump has to be virialized
         ok=ok.and.Icl_dd(jj)<0.
-        ! Avoid formation of sinks from gas which is only comressed by thermal pressure rather than gravity.
-        ok=ok.and.grav_term(jj) + kinetic_support(jj)<0.d0
+        ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
+        ok=ok.and.(grav_term(jj)+kinetic_support(jj))<0.d0
+        ! Then create a sink at the peak position
         if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
@@ -178,6 +191,7 @@ subroutine flag_formation_sites
 
   deallocate(occupied)
 
+#endif
 end subroutine flag_formation_sites
 !################################################################
 !################################################################
@@ -206,7 +220,6 @@ subroutine compute_clump_properties_round2(xx)
   ! more information like binding energies, etc, that can not be created by
   ! just summing up cell properties.
   !----------------------------------------------------------------------------
-
   integer::ipart,ilevel,info,i,peak_nr,global_peak_id,j,ii,jj
   integer::grid,nx_loc,ix,iy,iz,ind,icpu,idim
   integer::ig,iNp,irad,nener_offset
@@ -245,18 +258,15 @@ subroutine compute_clump_properties_round2(xx)
   c_code=c_cgs/scale_v
 #endif
 
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-
 #if NDIM==3
+
+  period(1)=(nx==1)
+  period(2)=(ny==1)
+  period(3)=(nz==1)
+
   call surface_int
 
-  ! initialize arrays
+  ! Initialize arrays
   clump_size=0.d0; clump_mass4=0.d0
   grav_term=0.d0; rad_term=0.d0 
   kinetic_support=0.d0; thermal_support=0.d0; magnetic_support=0.d0 
@@ -293,14 +303,15 @@ subroutine compute_clump_properties_round2(xx)
   end do
   
 #ifndef WITHOUTMPI
+  call boundary_peak_dp(max_dens)
+  call boundary_peak_dp(clump_mass)
   do i=1,ndim
-     call boundary_peak_dp(max_dens)
-     call boundary_peak_dp(clump_mass)
      call boundary_peak_dp(peak_pos(1,i))
   end do
 #endif
+
   !---------------------------------------------------------------------------
-  ! loop over all test particles to collect information from the cells
+  ! Loop over all test particles to collect information from the cells
   !---------------------------------------------------------------------------
   do ipart=1,ntest     
      global_peak_id=flag2(icellp(ipart)) 
@@ -313,7 +324,7 @@ subroutine compute_clump_properties_round2(xx)
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
 
-        ! gas density and energydensity
+        ! Gas mass and energy densities
         d=max(uold(icellp(ipart),1),smallr)
         de=uold(icellp(ipart),ndim+2) 
         do i=1,ndim
@@ -321,7 +332,7 @@ subroutine compute_clump_properties_round2(xx)
            xpeak(i)=peak_pos(peak_nr,i)
         end do
 
-        ! get RT fluxes
+        ! Get RT fluxes
 #ifdef RT
         do ig=1,nGroups
            iNp=iGroups(ig)
@@ -329,9 +340,8 @@ subroutine compute_clump_properties_round2(xx)
         end do
 #endif
 
-
 #ifdef SOLVERmhd
-        ! cell averaged magnetic fields
+        ! Cell averaged magnetic fields
         do i=1,ndim
            B(i)=0.5d0*(uold(icellp(ipart),5+i)+uold(icellp(ipart),nvar+i))
         end do
@@ -340,7 +350,7 @@ subroutine compute_clump_properties_round2(xx)
         ! Cell volume
         vol=volume(levp(ipart))                  
         
-        !properties of the cell relative to center of mass
+        ! Properties of the cell relative to center of mass
         rrel=xcell(1:3)-center_of_mass(peak_nr,1:3)
         do idim=1,ndim
            if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
@@ -350,22 +360,22 @@ subroutine compute_clump_properties_round2(xx)
         fgrav=f(icellp(ipart),1:3)
 
         do i=1,ndim
-           ! size relative to center of mass
+           ! Size relative to center of mass
            clump_size(peak_nr,i)=clump_size(peak_nr,i)+rrel(i)**2 * vol
         end do
 
-        ! properties for regions close to peak (4 cells away)
+        ! Properties for regions close to peak (4 cells away)
         if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
            clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol           
         endif
 
-        ! thermal energy
+        ! Kinetic energy
         ekk=0.
         do i=1,3 
            ekk=ekk+0.5*vd(i)**2/d                          
         end do
         
-        ! non-themal energy 
+        ! Non-themal energy 
         err=0.d0
 #if NENER>0
         do irad=1,nener
@@ -373,21 +383,21 @@ subroutine compute_clump_properties_round2(xx)
         end do
 #endif
 
-        ! magnetic energy
+        ! Magnetic energy
         emag=0.d0
 #ifdef SOLVERmhd
         do i=1,3 
            emag=emag+0.5d0*(B(i))**2
         end do
 #endif
-        ! thermal pressure and temperature
+        ! Thermal pressure and temperature
         p=(de-ekk-emag-err)*(gamma-1)
         T2=p/d*scale_T2
 
-        ! add radiation pressure by trapped photons
+        ! Add radiation pressure by trapped photons
         p=p+err/3.d0
         
-        ! compute radiative acceleration by streaming photons
+        ! Compute radiative acceleration by streaming photons
         frad=0.d0
 #ifdef RT
         do ig=1,nGroups
@@ -396,7 +406,7 @@ subroutine compute_clump_properties_round2(xx)
         end do
 #endif
 
-        ! virial analysis volume terms
+        ! Virial analysis volume terms
         magnetic_support(peak_nr)  = magnetic_support(peak_nr) + vol*emag
         thermal_support (peak_nr)  = thermal_support(peak_nr)  + 3*vol*p
         do i=1,3
@@ -405,7 +415,7 @@ subroutine compute_clump_properties_round2(xx)
            rad_term(peak_nr)       = rad_term(peak_nr)         + frad(i)  * rrel(i) * vol*d
         end do
         
-        ! time derivatives of the moment of inertia
+        ! Time derivatives of the moment of inertia
         do i=1,3
            Icl_d(peak_nr)        = Icl_d(peak_nr)     + vrel(i)  * rrel(i) * vol*d
            Icl(peak_nr)          = Icl(peak_nr)       + rrel(i)  * rrel(i) * vol*d
@@ -417,8 +427,9 @@ subroutine compute_clump_properties_round2(xx)
 
      end if
   end do
+
   !---------------------------------------------------------------------------
-  ! a lot of MPI communication to collect the results from the different cpu's
+  ! MPI communication to collect the results from the different CPU
   !---------------------------------------------------------------------------
 #ifndef WITHOUTMPI     
   call virtual_peak_dp(thermal_support,'sum')
@@ -438,7 +449,7 @@ subroutine compute_clump_properties_round2(xx)
   end do
 #endif
 
-  !second time derivative of I
+  ! Second time derivative of I
   Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)+rad_term(1:npeaks)&
        -Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)&
        +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
@@ -446,14 +457,14 @@ subroutine compute_clump_properties_round2(xx)
   do j=npeaks,1,-1
      if (relevance(j)>0..and.n_cells(j)>0)then
         contracting(j)=.true.
-        if (n_cells(j)>1)then !not just one cell...        
-           !compute eigenvalues and eigenvectors of Icl_d_3by3
+        if (n_cells(j)>1)then ! Only if more than one cell...        
+           ! Compute eigenvalues and eigenvectors of Icl_d_3by3
            a=Icl_3by3(j,1:3,1:3)
            abs_err=1.d-8*Icl(j)**2+1.d-40
            call jacobi(a,eigenv,abs_err)        
            A1=a(1,1); A2=a(2,2); A3=a(3,3)
            
-           !compute the contractions along the eigenvectors of Icl
+           ! Compute the contraction rates along the eigenvectors of Icl
            contractions(j,1:3)=0._dp
            do ii=1,3
               do jj=1,3
@@ -463,7 +474,7 @@ subroutine compute_clump_properties_round2(xx)
               end do
            end do
            
-           !Check wether clump is contracting fast enough along all axis                      
+           ! Check wether clump is contracting fast enough along all axis                      
            contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0.d0)) < cont_speed 
            contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed 
@@ -471,30 +482,29 @@ subroutine compute_clump_properties_round2(xx)
      endif
   end do
 
-  !write to the log file some information that could be of interest for debugging etc.
+  ! Write to the log file some information that could be of interest for debugging etc.
   if(clinfo .and. (.not. smbh) .and. sink)then 
-     if (myid==ncpu)then
+     if (myid==1.and.npeaks>0)then
         write(*,'(135A)')'======================================================================================================================================'
         write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
         write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0..and.n_cells(j)>0)then
-
            write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
-                ,n_cells(j)&
-                ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
-                ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
-                ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
-                ,(Icl_dd(j)<0)&
-                ,grav_term(j),Psurf(j)&
-                ,MagPsurf(j),MagTsurf(j)&
-                ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
-                ,rad_term(j)
-
+                & ,n_cells(j)&
+                & ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
+                & ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
+                & ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
+                & ,(Icl_dd(j)<0)&
+                & ,grav_term(j),Psurf(j)&
+                & ,MagPsurf(j),MagTsurf(j)&
+                & ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
+                & ,rad_term(j)
         end if
      end do
   end if
+
 #endif
 end subroutine compute_clump_properties_round2
 !#########################################################################
@@ -522,14 +532,12 @@ subroutine trim_clumps
   real(dp),dimension(1:twotondim,1:3)::xc
   logical,dimension(1:ndim)::period
 
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
 #if NDIM==3
+
+  period(1)=(nx==1)
+  period(2)=(ny==1)
+  period(3)=(nz==1)
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   
@@ -540,7 +548,7 @@ subroutine trim_clumps
   skip_loc(2)=dble(jcoarse_min)
   skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
+  dx_loc=dx*scale/aexp
   
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -557,7 +565,7 @@ subroutine trim_clumps
   end do
 #endif
 
-  !update flag 2
+  ! Update flag 2
   do ipart=1,ntest
      glob_peak_nr=flag2(icellp(ipart))
      if (glob_peak_nr /=0 ) then
@@ -573,8 +581,7 @@ subroutine trim_clumps
         end do
         r2=sum(rrel(1:ndim)**2)
         if (r2 > (ir_cloud*dx_loc)**2.)then        
-           !remove cell from clump
-           flag2(icellp(ipart))=0
+           flag2(icellp(ipart))=0 ! Remove cell from clump
         end if
      end if
   end do
@@ -584,12 +591,9 @@ subroutine trim_clumps
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
 #endif
+
 #endif
 end subroutine trim_clumps
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
