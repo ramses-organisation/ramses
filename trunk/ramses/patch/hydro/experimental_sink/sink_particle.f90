@@ -146,12 +146,10 @@ subroutine create_cloud_from_sink
   !----------------------------------------------------------------------
 
   real(dp)::scale,dx_min,rr,rmax,rmass
-  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc,idim
-  integer ::ntot,ntot_all,info
-  logical ::ok_free
+  integer ::icpu,isink,indp,ii,jj,kk,nx_loc,idim
   real(dp),dimension(1:ndim)::xrel
   real(dp),dimension(1:nvector,1:ndim)::xtest
-  integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
+  integer ,dimension(1:nvector)::ind_grid,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
   logical,dimension(1:ndim)::period
   logical::in_box
@@ -347,7 +345,7 @@ subroutine collect_acczone_avg(ilevel)
   ! No gaussian accretion kernel is used anymore...
   !------------------------------------------------------------------------
 
-  integer::igrid,jgrid,ipart,jpart,next_part,info,ind
+  integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
@@ -462,9 +460,12 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! accretion zone is computed
   !-----------------------------------------------------------------------
 #if NDIM==3
-  integer::j,irad,nx_loc,isink,idim,ind
-  real(dp)::d,u,v=0d0,w=0d0,e,v2
-  real(dp)::scale,weight,dx_cloud,vol_cloud,one_over_dx_min
+  integer::j,nx_loc,isink,idim,ind
+#if NENER>0
+  integer::irad
+#endif
+  real(dp)::d,e,v2
+  real(dp)::scale,weight,dx_cloud,vol_cloud
   real(dp),dimension(1:3)::vv
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -565,7 +566,7 @@ subroutine grow_sink(ilevel,on_creation)
   ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,info
-  integer::ig,ip,npart1,npart2,icpu,isink,lev,nx_loc
+  integer::ig,ip,npart1,npart2,icpu,isink,lev
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
 
   if(accretion_scheme=='none'.and.(.not.on_creation))return
@@ -705,29 +706,28 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! for nvector particles. Routine is not very efficient. Optimize if taking too long...
   !-----------------------------------------------------------------------
 
-  integer::i,j,nx_loc,isink,ivar,irad,idim,ind
-  real(dp)::v2,d,e,d_floor,density,volume
+  integer::j,nx_loc,isink,ivar,idim,ind
+  real(dp)::d,e,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
-  real(dp),dimension(1:nvar)::z
+#if NENER>0
+  integer::irad
+#endif
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc,temp,d_jeans
+  real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::xpart
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
   real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector)::cell_lev
   ! Particle based arrays
   logical,dimension(1:nvector,1:twotondim)::ok
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:3)::vv
 
-  real(dp),dimension(1:3)::r_rel,v_rel,x_acc,p_acc,l_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener_AGN,fbk_mom_AGN
+  real(dp),dimension(1:3)::r_rel,v_rel,x_acc,p_acc,l_acc
+  real(dp)::fbk_ener_AGN,fbk_mom_AGN
   logical,dimension(1:ndim)::period
-  real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
-  real(dp),dimension(1:nsinkmax)::delta_M
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
@@ -917,7 +917,7 @@ subroutine compute_accretion_rate(write_sinks)
 
   integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::factG,d_star,boost,fa_fact
+  real(dp)::factG,d_star,boost
   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf,v_bondi
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
@@ -951,21 +951,20 @@ subroutine compute_accretion_rate(write_sinks)
      if (volume<=0. .or. density<=0.)then
         print*,'something might be going wrong here...',volume,density
      endif
-     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
-     ethermal=ethermal/(density*volume+tiny(0.0_dp))
-     c2=MAX((gamma-1.0)*ethermal,smallc**2)
-     c2sink(isink)=c2
-     v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
-     v_bondi=sqrt(c2+v2)
-     
-     ! Compute boost factor for subgrid fluctuations 
+     ! Compute Bondi-Hoyle accretion rate in code units
      if (star.and.acc_sink_boost.lt.0.0)then
-        boost=max((density/d_star)**2,1.0_dp)
+        boost=max((density/(boost_threshold_density/scale_nH))**2,1.0_dp)
      else
         boost=abs(acc_sink_boost)
      end if
-     v_bondi=v_bondi*boost**(-1./3.)
-     
+
+     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
+     ethermal=ethermal/(density*volume+tiny(0.0_dp))
+     c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
+     c2sink(isink)=c2
+     v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
+     v_bondi=sqrt(c2+v2)
+
      ! Bondi radius
      r2=(factG*msink(isink)/v_bondi**2)**2
      
@@ -975,9 +974,9 @@ subroutine compute_accretion_rate(write_sinks)
      ! Compute Bondi-Hoyle accretion rate in code units
      dMBHoverdt(isink)=4.*3.1415926*rho_inf*r2*v_bondi
 
-     ! Compute Eddington accretiob rate in code units 
+     ! Compute Eddington accretion rate in code units 
      dMEDoverdt(isink)=4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t
-     
+
      ! Compute final sink accretion rate
      if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
      if(eddington_limit)dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
@@ -1001,7 +1000,7 @@ subroutine compute_accretion_rate(write_sinks)
   end do
   
   if (write_sinks)then 
-     call print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
+     call print_sink_properties(dMEDoverdt,rho_inf,r2)
   end if
 
 contains
@@ -1051,7 +1050,7 @@ end subroutine compute_accretion_rate
 !################################################################
 !################################################################
 !################################################################
-subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
+subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -1063,7 +1062,7 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
   integer::i,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::l_abs
-  real(dp)::v_bondi,r2,rho_inf
+  real(dp)::r2,rho_inf
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
@@ -1144,23 +1143,22 @@ subroutine make_sink_from_clump(ilevel)
   ! The true RAMSES particle is NOT produced here...
   !----------------------------------------------------------------------
 
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_sink,index_sink_tot
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_sink,index_sink_tot
+#if NENER>0
+  integer ::irad
+#endif
   integer ::igrid,ix,iy,iz,ind,i,iskip,isink,nx_loc
   integer ::ntot,ntot_all,info
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new
   integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
-  integer::ipart,peak_nr,grid
   logical ::ok_free
   real(dp)::d,u,v,w,e,factG,delta_d,v2
   real(dp)::birth_epoch
   real(dp)::dx,dx_loc,scale,vol_loc
-  real(dp)::fourpi,threepi2,tff,tsal
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  real(dp)::d_ball,vol,mclump
-  real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:nvar)::z
-  real(dp),dimension(1:3)::skip_loc,x,xcell,xpeak
+  real(dp),dimension(1:3)::skip_loc,x
   real(dp),dimension(1:twotondim,1:3)::xc
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
@@ -1588,16 +1586,21 @@ subroutine update_sink(ilevel)
   integer::lev,isink
 
   ! new variables
-  integer::jsink,nx_loc
+  integer::jsink,nx_loc,idim
   logical::iyoung,jyoung,overlap,merge
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx_loc,scale,dx_min
   real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom
-  real(dp),dimension(1:3)::xcom,vcom,lcom
+  real(dp),dimension(1:3)::xcom,vcom,lcom,r_rel
+  logical,dimension(1:ndim)::period
 
 #if NDIM==3
 
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
+
+  period(1)=(nx==1)
+  period(2)=(ny==1)
+  period(3)=(nz==1)
 
   ! Mesh spacing in that level
   dx_loc=0.5D0**nlevelmax
@@ -1624,16 +1627,17 @@ subroutine update_sink(ilevel)
         do jsink=isink+1,nsink
 
            ! Compute relative distance
-           ! TODO: add periodic boundary conditions
-           rr=  (xsink(isink,1)-xsink(jsink,1))**2&
-             & +(xsink(isink,2)-xsink(jsink,2))**2&
-             & +(xsink(isink,3)-xsink(jsink,3))**2
+           r_rel(1:3)=xsink(isink,1:3)-xsink(jsink,1:3) 
+           do idim=1,ndim
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
+           end do
+           rr=r_rel(1)**2+r_rel(2)**2+r_rel(3)**2
 
            ! Check for overlap
            overlap=rr<4*rmax2 .and. msink(jsink)>0.
 
            if(overlap)then
-              if(myid==1)write(*,*)'DBG1 ', isink, jsink 
               msum_overlap(isink)=msum_overlap(isink)+msink(jsink)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
@@ -1641,10 +1645,9 @@ subroutine update_sink(ilevel)
               merge=rr<rmax2 ! Sinks are within one linking length
 
               ! Merging based on relative velocity
-              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check_AGN*2d33/(scale_d*scale_l**3)) then
+              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge=merge .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
-                 if(myid==1.and.overlap)write(*,*)'DBG2 ', sqrt(2*factG*(msink(isink)+msink(jsink))/sqrt(rr))*scale_v/1e5,sqrt(v1_v2)*scale_v/1e5
               end if
 
               ! Merging based on sink age
@@ -2084,20 +2087,15 @@ subroutine f_gas_sink(ilevel)
               ! Relative position and distance
               d2=0.d0
               do idim=1,ndim    
-                 if (period(idim))then
-                    do i=1,ngrid    
-                       ! zero order Ewald sum
-                       ff(i,idim)=xsink(isink,idim)-xx(i,idim)
+                 do i=1,ngrid    
+                    ! zero order Ewald sum
+                    ff(i,idim)=xsink(isink,idim)-xx(i,idim)
+                    if (period(idim))then
                        if(ff(i,idim)>0.5*boxlen)ff(i,idim)=ff(i,idim)-boxlen
                        if(ff(i,idim)<-0.5*boxlen)ff(i,idim)=ff(i,idim)+boxlen
-                       d2(i)=d2(i)+ff(i,idim)**2
-                    end do
-                 else
-                    do i=1,ngrid
-                       ff(i,idim)=xsink(isink,idim)-xx(i,idim)
-                       d2(i)=d2(i)+ff(i,idim)**2
-                    end do
-                 end if
+                    end if
+                    d2(i)=d2(i)+ff(i,idim)**2
+                 end do
               end do
 
               ! Store minimum distance of cell in current level to isink
@@ -2170,7 +2168,7 @@ end subroutine f_gas_sink
 !################################################################
 subroutine f_sink_sink
   use amr_commons
-  use pm_commons  
+  use pm_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -2259,8 +2257,9 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,mass_sink_seed,&
-       eddington_limit,sink_drag,acc_sink_boost,mass_merger_vel_check_AGN,&
-       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme
+       eddington_limit,acc_sink_boost,mass_merger_vel_check,&
+       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,&
+       boost_threshold_density
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -2359,7 +2358,12 @@ subroutine read_sink_params()
   if(mass_sink_direct_force<0.)then 
      mass_sink_direct_force=huge(0._dp)
   end if
-  
+
+  if(mass_merger_vel_check<0.)then 
+     mass_merger_vel_check=huge(0._dp)
+  end if
+
+
 end subroutine read_sink_params
 !################################################################
 !################################################################
@@ -2656,7 +2660,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   !------------------------------------------------------------------
   ! This routine returns the CIC cells and volumes for np particles.
   !------------------------------------------------------------------
-  logical::error
   integer::i,j,ind,idim,nx_loc,ix,iy,iz
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays

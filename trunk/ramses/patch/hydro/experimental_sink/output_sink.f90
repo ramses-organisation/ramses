@@ -112,12 +112,11 @@ subroutine output_sink(filename)
   implicit none
   character(LEN=80)::filename
 
-  integer::i,idim,ipart,isink
-  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom
+  integer::isink
+  integer::nx_loc,ilun
   real(dp)::scale,l_abs,rot_period,dx_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
 
   if(verbose)write(*,*)'Entering output_sink'
 
@@ -164,7 +163,7 @@ subroutine output_sink_csv(filename)
   implicit none
   character(LEN=80)::filename,fileloc
 
-  integer::ilun,icpu,isink
+  integer::ilun,isink
 
   if(verbose)write(*,*)'Entering output_sink_csv'
 
@@ -176,11 +175,13 @@ subroutine output_sink_csv(filename)
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,12(A1,ES20.10))')idsink(isink),',',msink(isink),&
+     write(ilun,'(I10,18(A1,ES20.10))')idsink(isink),',',msink(isink),&
           ',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),&
           ',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),&
           ',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),&
-          ',',t-tsink(isink),',',dMBHoverdt(isink)
+          ',',t-tsink(isink),',',dMBHoverdt(isink),&
+          ',',rho_gas(isink),',',c2sink(isink),',',eps_sink(isink),&
+          ',',vel_gas(isink,1),',',vel_gas(isink,2),',',vel_gas(isink,3)
   end do
 
   close(ilun)
