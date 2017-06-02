@@ -177,7 +177,6 @@ module amr_parameters
   logical ::sf_log_properties=.false. ! Log in ascii files birth properties of stars and supernovae
   logical ::sf_imf=.false.      ! Activate IMF sampling for SN feedback when resolution allows it
   logical ::sf_compressive=.false. ! Advect compressive and solenoidal turbulence terms separately
-  logical ::sf_thermal_decay=.false. ! Decay turbulent energy into thermal energy scalar
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
