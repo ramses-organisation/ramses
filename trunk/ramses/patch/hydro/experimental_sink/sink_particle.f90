@@ -1687,6 +1687,7 @@ subroutine update_sink(ilevel)
 
                  ! Zero mass of the sink that was merged in
                  msink(jsink)=0.
+                 msum_overlap(jsink)=0.
 
               end if
            end if
@@ -1961,6 +1962,7 @@ subroutine clean_merged_sinks
            new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
+           msum_overlap(j)=msum_overlap(j+1)
         end do
 
         ! whipe last position in the sink list
@@ -1971,6 +1973,7 @@ subroutine clean_merged_sinks
         new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
+        msum_overlap(nsink+1)=0.
 
      else
         i=i+1
