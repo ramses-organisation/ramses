@@ -19,6 +19,7 @@ subroutine flag_formation_sites
   !=============================================================================
 
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp)::factG
   real(dp),dimension(1:nvector,1:3)::pos
   real(dp),dimension(1:ndim)::rrel
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
@@ -47,6 +48,10 @@ subroutine flag_formation_sites
   
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Loop over sinks and mark all clumps which are already occupied by a sink
   allocate(occupied(1:npeaks_max))
@@ -168,12 +173,16 @@ subroutine flag_formation_sites
         ok=ok.and.occupied(jj)==0
         ! Peak has to be dense enough
         ok=ok.and.max_dens(jj)>d_sink
-        ! Clump has to be contracting
-        ok=ok.and.contracting(jj)
-        ! Clump has to be virialized
-        ok=ok.and.Icl_dd(jj)<0.
+        ! Clump has to be massive enough
+        ok=ok.and.clump_mass4(jj)>mass_sink_seed*2d33/(scale_d*scale_l**3.0)
+!!$        ! Clump has to be contracting
+!!$        ok=ok.and.contracting(jj)
+!!$        ! Clump has to be virialized
+!!$        ok=ok.and.Icl_dd(jj)<0.
         ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
-        ok=ok.and.(grav_term(jj)+kinetic_support(jj))<0.d0
+        ok=ok.and.(kinetic_support(jj)<abs(grav_term(jj)))
+        ! Avoid formation of crazy spins
+        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
         ! Then create a sink at the peak position
         if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
@@ -222,7 +231,7 @@ subroutine compute_clump_properties_round2(xx)
   integer::grid,nx_loc,ix,iy,iz,ind,icpu,idim
   integer::ig,iNp,irad,nener_offset
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2,scale_kappa,scale_Np,scale_Fp
-  real(dp)::d,vol,M,ekk,err,phi_rel,de,c_sound,d0,v_bulk2,p,T2,c_code
+  real(dp)::d,vol,M,ekk,err,phi_rel,etot,c_sound,d0,v_bulk2,p,T2,c_code
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,fgrav,skip_loc,frad
@@ -230,7 +239,7 @@ subroutine compute_clump_properties_round2(xx)
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
   logical,dimension(1:ndim)::period
-  real(dp)::emag,ev_to_uu,kappa
+  real(dp)::emag,pmag,ev_to_uu,kappa
 #ifdef SOLVERmhd
   real(dp),dimension(1:3)::B
 #endif
@@ -316,21 +325,42 @@ subroutine compute_clump_properties_round2(xx)
      if (global_peak_id /=0 ) then
         call get_local_peak_id(global_peak_id,peak_nr)
         
+        ! Peak position
+        do i=1,ndim
+           xpeak(i)=peak_pos(peak_nr,i)
+        end do
+
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
 
-        ! Gas mass and energy densities
-        d=max(uold(icellp(ipart),1),smallr)
-        de=uold(icellp(ipart),ndim+2) 
-        do i=1,ndim
-           vd(i)=uold(icellp(ipart),i+1)
-           xpeak(i)=peak_pos(peak_nr,i)
+        ! Periodic boundary conditions relative to peak position
+        do idim=1,ndim
+           if (period(idim) .and. (xcell(idim)-xpeak(idim))>boxlen*0.5)xcell(idim)=xcell(idim)-boxlen
+           if (period(idim) .and. (xcell(idim)-xpeak(idim))<boxlen*(-0.5))xcell(idim)=xcell(idim)+boxlen
         end do
 
-        ! Get RT fluxes
+        ! Cell mass density
+        d=max(uold(icellp(ipart),1),smallr)
+
+        ! Cell total energy density
+        etot=uold(icellp(ipart),ndim+2)
+
+        ! Cell velocity
+        do i=1,ndim
+           vd(i)=uold(icellp(ipart),i+1)
+        end do
+        vd(1:3)=vd(1:3)/d
+
+        ! Cell kinetic energy
+        ekk=0.d0
+        do i=1,3 
+           ekk=ekk+0.5*d*vd(i)**2
+        end do
+        
+        ! Cell radiation flux
 #ifdef RT
         do ig=1,nGroups
            iNp=iGroups(ig)
@@ -338,42 +368,23 @@ subroutine compute_clump_properties_round2(xx)
         end do
 #endif
 
+        ! Cell magnetic field
 #ifdef SOLVERmhd
-        ! Cell averaged magnetic fields
         do i=1,ndim
            B(i)=0.5d0*(uold(icellp(ipart),5+i)+uold(icellp(ipart),nvar+i))
         end do
 #endif
      
-        ! Cell volume
-        vol=volume(levp(ipart))                  
-        
-        ! Properties of the cell relative to center of mass
-        rrel=xcell(1:3)-center_of_mass(peak_nr,1:3)
-        do idim=1,ndim
-           if (period(idim) .and. rrel(idim)>boxlen*0.5)rrel(idim)=rrel(idim)-boxlen
-           if (period(idim) .and. rrel(idim)<boxlen*(-0.5))rrel(idim)=rrel(idim)+boxlen
-        end do
-        vrel=vd(1:3)/d-clump_velocity(peak_nr,1:3)
-        fgrav=f(icellp(ipart),1:3)
-
-        do i=1,ndim
-           ! Size relative to center of mass
-           clump_size(peak_nr,i)=clump_size(peak_nr,i)+rrel(i)**2 * vol
-        end do
-
-        ! Properties for regions close to peak (4 cells away)
-        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
-           clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol           
-        endif
-
-        ! Kinetic energy
-        ekk=0.
+        ! Cell magnetic energy and magnetic pressure
+        emag=0.d0; pmag=0.0d0
+#ifdef SOLVERmhd
         do i=1,3 
-           ekk=ekk+0.5*vd(i)**2/d                          
+           emag=emag+0.5d0*B(i)**2
         end do
-        
-        ! Non-themal energy 
+        pmag=emag
+#endif
+
+        ! Cell non-themal energy 
         err=0.d0
 #if NENER>0
         do irad=1,nener
@@ -381,32 +392,45 @@ subroutine compute_clump_properties_round2(xx)
         end do
 #endif
 
-        ! Magnetic energy
-        emag=0.d0
-#ifdef SOLVERmhd
-        do i=1,3 
-           emag=emag+0.5d0*(B(i))**2
-        end do
-#endif
-        ! Thermal pressure and temperature
-        p=(de-ekk-emag-err)*(gamma-1)
+        ! Cell thermal pressure and temperature
+        p=(etot-ekk-emag-err)*(gamma-1)
         T2=p/d*scale_T2
 
         ! Add radiation pressure by trapped photons
         p=p+err/3.d0
         
-        ! Compute radiative acceleration by streaming photons
+        ! Cell volume
+        vol=volume(levp(ipart))                  
+        
+        ! Properties of the cell relative to center of mass
+        rrel(1:3)=xcell(1:3)-center_of_mass(peak_nr,1:3)
+        vrel(1:3)=vd(1:3)-clump_velocity(peak_nr,1:3)
+
+        ! Size relative to center of mass
+        do i=1,ndim
+           clump_size(peak_nr,i)=clump_size(peak_nr,i)+rrel(i)**2 * vol
+        end do
+
+        ! Properties for regions close to peak (4 cells away)
+        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
+           clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
+        endif
+
+        ! Cell gravitational acceleration
+        fgrav(1:3)=f(icellp(ipart),1:3)
+
+        ! Cell radiation acceleration
         frad=0.d0
 #ifdef RT
         do ig=1,nGroups
-           kappa=kappaSc(ig)/scale_kappa
-           frad(1:ndim)  = frad(1:ndim) +  Fp(ig,1:ndim) * kappa / c_code
+           kappa = kappaSc(ig)/scale_kappa
+           frad(1:3)  = frad(1:3) +  Fp(ig,1:3) * kappa / c_code
         end do
 #endif
 
         ! Virial analysis volume terms
-        magnetic_support(peak_nr)  = magnetic_support(peak_nr) + vol*emag
-        thermal_support (peak_nr)  = thermal_support(peak_nr)  + 3*vol*p
+        magnetic_support(peak_nr)  = magnetic_support(peak_nr) + 3*vol*pmag
+        thermal_support (peak_nr)  = thermal_support (peak_nr) + 3*vol*p
         do i=1,3
            kinetic_support(peak_nr)= kinetic_support(peak_nr)  + vrel(i)**2         * vol*d
            grav_term(peak_nr)      = grav_term(peak_nr)        + fgrav(i) * rrel(i) * vol*d
@@ -484,21 +508,16 @@ subroutine compute_clump_properties_round2(xx)
   if(clinfo .and. (.not. smbh) .and. sink)then 
      if (myid==1.and.npeaks>0)then
         write(*,'(135A)')'======================================================================================================================================'
-        write(*,'(135A)')'Cl_N   N_cls    ax1 ax2 ax3  I_dd<0  tidal_Fg    Psurf       MagPsurf    MagTsurf    kin_supp    therm_supp  mag_supp    rad_term'
+        write(*,'(135A)')'Clump ID   Ncell   Mass     Mass4    Ekin     Eth    Emag     Egrav    Erad   '
         write(*,'(135A)')'======================================================================================================================================'
      end if
      do j=npeaks,1,-1
         if (relevance(j)>0..and.n_cells(j)>0)then
            write(*,'(I4,2X,I8,2x,3(L2,2X),(L2,6X),8(E9.2E2,3X))')j+ipeak_start(myid)&
                 & ,n_cells(j)&
-                & ,contractions(j,1)/(A1+tiny(0.d0)) < cont_speed&
-                & ,contractions(j,2)/(A2+tiny(0.d0)) < cont_speed&
-                & ,contractions(j,3)/(A3+tiny(0.d0)) < cont_speed&
-                & ,(Icl_dd(j)<0)&
-                & ,grav_term(j),Psurf(j)&
-                & ,MagPsurf(j),MagTsurf(j)&
+                & ,clump_mass(j),clump_mass4(j)&
                 & ,kinetic_support(j),thermal_support(j),magnetic_support(j)&
-                & ,rad_term(j)
+                & ,grav_term(j),rad_term(j)
         end if
      end do
   end if
