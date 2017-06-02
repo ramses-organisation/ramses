@@ -27,13 +27,12 @@ module pm_parameters
   logical::bondi_accretion=.false.
 
   real(dp)::mass_sink_seed=0.0               ! Initial sink mass
+  real(dp)::mass_merger_vel_check=-1.0       ! Threshold for velocity check in  merging; in Msun; default: don't check
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
-  logical::sink_drag=.false.                 ! Gas dragging sink
   logical::clump_core=.false.                ! Trims the clump (for star formation)
   logical::verbose_AGN=.false.               ! Controls print verbosity for the SMBH case
   real(dp)::acc_sink_boost=1.0               ! Boost coefficient for accretion
-  real(dp)::mass_merger_vel_check_AGN=-1.0   ! Threshold for velocity check in  merging; in Msun; default: don't check
 
   character(LEN=15)::feedback_scheme='energy' ! AGN feedback scheme; options: 'energy' or 'momentum'
   real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast; in K
@@ -46,5 +45,7 @@ module pm_parameters
 
   real(dp)::mass_halo_AGN=1.d10              ! Minimum mass of the halo for sink creation
   real(dp)::mass_clump_AGN=1.d10             ! Minimum mass of the clump for sink creation
+
+  real(dp)::boost_threshold_density=0.1      ! Accretion boost threshold for Bondi
 
 end module pm_parameters
