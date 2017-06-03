@@ -94,7 +94,7 @@ subroutine read_params
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
-       & ,xcentre_frame,ycentre_frame,zcentre_frame &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame,movie_vars &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
        & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
@@ -207,9 +207,9 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
-  allocate(remap_pscalar(1:nvar-(ndim+nener+2)))
-  do i=1,nvar-(ndim+2+nener)
-     remap_pscalar(i) = i+(ndim+2+nener)
+  allocate(remap_pscalar(1:nvar-(ndim+2)))
+  do i=1,nvar-(ndim+2)
+     remap_pscalar(i) = i+(ndim+2)
   enddo
 
   open(1,file=infile)

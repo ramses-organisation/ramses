@@ -32,7 +32,7 @@ subroutine rt_init_hydro
   ncell=ncoarse+twotondim*ngridmax
   allocate(rtuold(1:ncell,1:nrtvar))
   allocate(rtunew(1:ncell,1:nrtvar))
-  rtuold=0.0d0 ; rtunew=0.0d0
+  rtuold=smallNp ; rtunew=smallNp
 
   if(verbose)write(*,*)'Allocate done for nrtvar'
 
@@ -67,7 +67,7 @@ subroutine rt_init_hydro
   call title(myid,nchar)
   fileloc=TRIM(fileloc)//TRIM(nchar)
   inquire(file=fileloc, exist=ok)
-  if(.not.ok.and.static) then
+  if(.not.ok) then
      if(myid==1) write(*,*) &
           'Could not read RT output, but continuing in case of postprocessing.'
      return ! May be post-processing of normal RAMSES

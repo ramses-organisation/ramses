@@ -72,10 +72,16 @@ subroutine init_hydro
      read(ilun)nboundary2
      read(ilun)gamma2
      if(myid==1)then
-        write(*,*)'Restart - Passive scalar mapping'
+        write(*,*)'Restart - Non-thermal pressure / Passive scalar mapping'
         write(*,'(A50)')"__________________________________________________"
-        do i=1,nvar-(ndim+2+nener)
-            write(*,'(A,I3,A,I3)') ' Restart var',remap_pscalar(i),' loaded in var',(i+ndim+2+nener)
+        do i=1,nvar2-(ndim+2)
+            if(remap_pscalar(i).gt.0) then 
+               write(*,'(A,I3,A,I3)') ' Restart var',i+ndim+2,' loaded in var',remap_pscalar(i)
+            else if(remap_pscalar(i).gt.-1)then
+               write(*,'(A,I3,A)') ' Restart var',i+ndim+2,' read but not loaded'
+            else
+               write(*,'(A,I3,A)') ' Restart var',i+ndim+2,' not read'
+            endif
         enddo
         write(*,'(A50)')"__________________________________________________"
      endif
@@ -142,9 +148,13 @@ subroutine init_hydro
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=ndim+3,ndim+2+nener
-                    read(ilun)xx
+                    if(remap_pscalar(ivar-ndim-2).gt.-1) read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-ndim-2)-1d0)
+                       if(remap_pscalar(ivar-ndim-2).gt.0) then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-ndim-2))=xx(i)/(gamma_rad(ivar-ndim-2)-1d0)
+                       else if(remap_pscalar(ivar-ndim-2).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-ndim-2)))=0d0
+                       endif
                     end do
                  end do
 #endif
@@ -172,11 +182,17 @@ subroutine init_hydro
                  end do
 #if NVAR>NDIM+2+NENER
                  ! Read passive scalars
-                 do ivar=ndim+3+nener,nvar2
-                    read(ilun)xx
-                    if(ivar.gt.nvar) continue
+                 do ivar=ndim+3+nener,max(nvar2,nvar)
+                    if(remap_pscalar(ivar-ndim-2).gt.-1) read(ilun)xx
+                    if(ivar.gt.nvar)then
+                       continue
+                    endif
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,remap_pscalar(ivar-(ndim+2+nener)))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       if(remap_pscalar(ivar-ndim-2).gt.0)then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-ndim-2))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       else if(remap_pscalar(ivar-ndim-2).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-ndim-2)))=0d0
+                       endif
                     end do
                  end do
 #endif
