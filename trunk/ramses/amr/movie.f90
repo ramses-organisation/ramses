@@ -218,6 +218,7 @@ subroutine output_frame()
   clight = 2.99792458D10
   lumsol = 3.828D33*(scale_t/(clight*scale_v)**2)
   yr     = (365.*24.*3600.)/scale_t
+  if(cosmo) yr = yr*aexp**2
 
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -857,14 +858,14 @@ endif
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
 		 ! Polynome is poorly constrained on high and low ends
-                 if(log10((t-tp(j))/yr)<6)then
+                 if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0
-                 else if(log10((t-tp(j))/yr)>9)then
-                    log_lum = log10((t-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
+                 else if(log10((texp-tp(j))/yr)>9)then
+                    log_lum = log10((texp-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
                  else
                     log_lum = 0d0
 		    do npoly=1,size(lum_poly)
-                       log_lum = log_lum+lum_poly(npoly)*(log10((t-tp(j))/yr))**(npoly-1)
+                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
                     enddo
                  endif
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol

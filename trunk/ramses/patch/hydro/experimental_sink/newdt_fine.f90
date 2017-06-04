@@ -12,21 +12,24 @@ subroutine newdt_fine(ilevel)
 #endif
   integer::ilevel
   !-----------------------------------------------------------
-  ! This routine compute the time step using 3 constraints:
+  ! This routine compute the time step using 4 constraints:
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp 
   ! 4- maximum step time for ATON
-  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas 
-  ! This routine also compute the particle kinetic energy.
+  ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,nx_loc
-  integer::npart1,ip,info,isink,ilev
+  integer::igrid,jgrid,ipart,jpart
+  integer::npart1,ip,info
   integer,dimension(1:nvector),save::ind_part
-  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all,dt_acc_min
+  real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
-  real(dp)::aton_time_step,dt_aton,dt_rt
-  real(dp)::dx_min,dx,scale,dt_fact,limiting_dt_fact
+#ifdef ATON
+  real(dp)::aton_time_step,dt_aton
+#endif
+#ifdef RT
+  real(dp)::dt_rt
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
