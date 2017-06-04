@@ -1110,12 +1110,12 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
         write(*,'(" =================================================================================================================================")')
         do i=nsink,1,-1
            isink=idsink_sort(i)
-           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
-           write(*,'(I5,9(2X,E12.5))')&
+           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
+           write(*,'(I5,10(2X,E12.5))')&
                 idsink(isink),msink(isink)*scale_m/2d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
                 dMsink_overdt(isink)*scale_m/2d33/(scale_t)*365.*24.*3600.,&
-                (t-tsink(isink))*scale_t/(3600*24*365.25)
+                (t-tsink(isink))*scale_t/(3600*24*365.25),l_abs
         end do
         write(*,'(" =================================================================================================================================")')
      endif
