@@ -1,6 +1,7 @@
 ! Non-equlibrium (in H and He) cooling module for radiation-hydrodynamics.
 ! For details, see Rosdahl et al. 2013, and Rosdahl & Teyssier 2015.
 ! Joki Rosdahl, Andreas Bleuler, and Romain Teyssier, September 2015.
+!7/2/17 sln added ss and new beta h2
 
 module rt_cooling_module
   use amr_commons,only:myid
@@ -15,7 +16,7 @@ module rt_cooling_module
          , getMu, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi        &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
-         , rt_isoPress, rt_T_rad, rt_vc, a_r, iPEH_group
+         , rt_isoPress, rt_T_rad, rt_vc, a_r, iPEH_group,rt_cmp_metals !sln added metals
 
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux, 
@@ -32,7 +33,7 @@ module rt_cooling_module
   real(dp)::Np_min, Np_frac, Fp_min, Fp_frac
 
   integer,parameter::iIR=1             !                    IR group index
-  integer::iPEH_group=-1               ! Photoelectric heating group index
+  integer::iPEH_group=1!-1 sln               ! Photoelectric heating group index
   integer::iIRtrapVar=1                !  Trapped IR energy variable index
   ! Namelist parameters:
   logical::is_mu_H2=.false.
@@ -348,7 +349,7 @@ contains
     real(dp),dimension(nGroups),save:: dustSc, kAbs_loc,kSc_loc
     real(dp),save:: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
     real(dp),save:: f_Habing
-    logical::newAtomicCons=.false.
+    logical::newAtomicCons=.true.
     !---------------------------------------------------------------------
     dt_ok=.false.
     nHe=0.25*nH(icell)*Y/X  !         Helium number density
@@ -440,6 +441,8 @@ contains
        do igroup=1,nGroups      ! -------------------Ionization absorbtion
           phAbs(igroup) = SUM(nN(:)*signc(igroup,:)) ! s-1
        end do
+       if(isH2) phAbs(ixHI)=phAbs(ixHI)*5d2 !sln photo cs adjust to diss cs
+
        ! IR, optical and UV depletion by dust absorption: ----------------
        if(rt_isIR) & !IR scattering/abs on dust (abs after T update)        
             phSc(iIR)  = phSc(iIR) + dustSc(iIR)                        
@@ -456,7 +459,7 @@ contains
           !       should not include PEH absorption when PEH is included.
           phAbs(iPEH_group) = phAbs(iPEH_group) &
                + 5.36d-23 * rt_c_cgs * nH(icell) &
-               * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
+               * Zsolar(icell) * exp(-1.d0*T2(icell)/2d3) !sln was 2d4
        endif
 
        dmom(1:nDim)=0d0
@@ -537,7 +540,7 @@ contains
           f_Habing = group_egy_erg(iPEH_group) &   ! See Forbes et al 2016
                    * dNp(iPEH_group)*rt_c_cgs/1.5859d-3   
           Hrate = Hrate + 8.5d-26 * f_Habing * nH(icell) &
-                * Zsolar(icell) * exp(-1.d0*T2(icell)/2d4)
+                * Zsolar(icell) * exp(-1.d0*T2(icell)/2d3) !sln was over 2d4
        endif
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
@@ -545,7 +548,7 @@ contains
        if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
-       X_nHkb= X/(1.5 * nH(icell) * kB)            ! Multiplication factor   
+       X_nHkb= X/(1.5 * nH(icell) * kB)            ! Multiplication factor  
        rate  = X_nHkb*(Hrate - Crate - Zsolar(icell)*metal_tot)
        dRate = -X_nHkb*(dCdT2 + Zsolar(icell)*metal_prime)     ! dRate/dT2
        ! 1st order dt constr
@@ -602,7 +605,8 @@ contains
     dxH2=xH2
     if(isH2) then
        alpha(ixHI) = comp_Alpha_H2(TK,Zsolar(icell))  ! H2 formation rates
-       beta(ixHI) = inp_coolrates_table(tbl_Beta_H2HI, TK)
+       beta(ixHI) = inp_coolrates_table(tbl_Beta_H2HI, TK)* dxion(ixHI)  & !sln
+          +inp_coolrates_table(tbl_Beta_H2H2, TK)*xH2  !sln H2 beta slightly different because two betas used
        cr = alpha(ixHI) * nH(icell) * dxion(ixHI)     !    H2 Creation
        photoRate=0.
        if(rt) photoRate = SUM(signc(:,ixHI)*dNp)
@@ -829,7 +833,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   real(dp)::n_H2, n_HI, n_HII, n_HEI, n_HEII, n_HEIII, n_E, n_E_min
   real(dp)::g_H2=0,  g_HI=0,    g_HEI=0,  g_HEII=0  ! Photoionisation/dissociation
   real(dp)::a_H2=0,  a_HI=0,    a_HEI=0,  a_HEII=0  ! Recombination
-  real(dp)::b_H2=0,  b_HI=0,    b_HEI=0,  b_HEII=0  ! Collisional ionisation
+  real(dp)::b_H2HI=0, b_H2H2=0, b_HI=0,    b_HEI=0,  b_HEII=0  ! Collisional ionisation !sln
   real(dp)::C_HII=0, D_H2=0,    f_HII=0,  f_H2=0    ! Creation and destruction
   real(dp)::D_HEI=0, C_HEIII=0, f_HeI=0,  f_HeIII=0 ! Creation and destruction
   real(dp)::err_nE, err_nH2, n_H2_old
@@ -852,7 +856,8 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      a_HEII = inp_coolrates_table(tbl_AlphaA_HeIII, TK)
   endif
   
-  b_H2 = inp_coolrates_table(tbl_Beta_H2HI, TK) ! Cdiss [cm3 s-1]
+  b_H2HI = inp_coolrates_table(tbl_Beta_H2HI, TK) ! Cdiss [cm3 s-1] !sln
+  b_H2H2 = inp_coolrates_table(tbl_Beta_H2H2, TK) ! Cdiss [cm3 s-1] !sln 
   b_HI = inp_coolrates_table(tbl_Beta_HI, TK)   !  Cion [cm3 s-1]
   if(isHe) b_HEI  = inp_coolrates_table(tbl_Beta_HeI, TK)
   if(isHe) b_HEII = inp_coolrates_table(tbl_Beta_HeII, TK)
@@ -860,6 +865,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   n_E = nH     ; n_H2 = 0d0    ; n_H2_old = nH/2d0
   n_HeI=0d0    ; n_HeII=0d0    ; n_HeIII=0d0
   err_nE = 1d0 ; err_nH2=0d0     ! err_nH2 initialisation in case of no H2
+  n_HI = 0.0d0 ; n_HII=nH !sln
 
   do while(err_nE > 1d-8 .or. err_nH2 > 1d-8)
      n_E_min = MAX(n_E,1e-15*nH)
@@ -868,9 +874,8 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      !f_HII = C_HII / a_HI / n_E_min                 ! Cre/Destr [unitless]
      f_H2 = 0d0
      if(isH2) then
-        D_H2  = b_H2 * nH  + g_H2                   !      H2 destr. (s-1)
-        !f_H2  = a_H2 * nH / max(D_H2,1d-50)         ! Cre/Destr [unitless]
-        f_H2  = a_H2 * nH / D_H2                    ! Cre/Destr [unitless]
+        D_H2  = b_H2HI*n_HI+b_H2H2*n_H2 + g_H2       !      H2 destr. (s-1) !sln
+        f_H2  = a_H2 * nH / max(D_H2,1d-50)         ! Cre/Destr [unitless] !sln uncommented
         n_H2  = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
      endif ! if(isH2)
      n_HI  = nH / (1d0 + f_HII + 2d0*f_H2)
