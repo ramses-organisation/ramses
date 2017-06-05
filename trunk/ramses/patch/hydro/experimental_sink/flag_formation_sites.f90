@@ -214,7 +214,7 @@ subroutine flag_formation_sites
 
      ! Copy properties into array
      do j=1,npeaks
-        table_properties(j+ipeak_start(myid),1:18)=&
+        table_properties(j,1:18)=&
              & (/&
              & real(j+ipeak_start(myid),kind=dp)&
              & ,real(relevance(j),kind=dp)&
