@@ -278,6 +278,8 @@ subroutine write_clump_properties(to_file)
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
 
+  if (.not. to_file)return
+
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   if(ivar_clump==0)then
@@ -414,7 +416,7 @@ subroutine write_clump_properties(to_file)
 #endif
   if(myid==1)then
      if(clinfo)write(*,'(A,1PE12.5)')' Total mass above threshold =',tot_mass
-     if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel,' listed clumps =',rel_mass
+     if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel_tot,' listed clumps =',rel_mass_tot
   endif
 
 end subroutine write_clump_properties
@@ -545,7 +547,7 @@ subroutine merge_clumps(action)
         call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
         nmove=nmove_all
 #endif
-        if(myid==1.and.clinfo)write(*,*)'niter=',iter,'nmove=',nmove
+        if(verbose)write(*,*)'niter=',iter,'nmove=',nmove
      end do
 
      ! Transfer matrix elements of merged peaks to surviving peaks
@@ -612,7 +614,7 @@ subroutine merge_clumps(action)
      call MPI_ALLREDUCE(nsurvive,nsurvive_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nsurvive=nsurvive_all
 #endif
-     if(myid==1.and.clinfo)write(*,*)'level=',idepth,'nmove=',nzero,'survived=',nsurvive
+     if(verbose)write(*,*)'level=',idepth,'nmove=',nzero,'survived=',nsurvive
      idepth=idepth+1
      
   end do
