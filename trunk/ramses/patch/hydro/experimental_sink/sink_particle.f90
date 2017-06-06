@@ -2382,7 +2382,7 @@ subroutine read_sink_params()
   end if
 
   if(mass_merger_vel_check<0.)then 
-     mass_merger_vel_check=huge(0._dp)
+     mass_merger_vel_check=0.0
   end if
 
 
