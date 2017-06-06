@@ -5,6 +5,7 @@ MODULE coolrates_module
   ! The rates are interpolated using cubic splines, and extrapolated in
   ! log-log space if temperature is above table boundaries.
   ! Joki Rosdahl and Andreas Bleuler, September 2015.
+!7/2/17 sln fixed betah2 both
 
   use amr_parameters,only:dp
   implicit none
@@ -217,7 +218,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   real(dp)::aexp, T, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
   real(dp)::lowrleft,lowrright,lowr_hi,lowr_h2
   real(dp)::lowvleft_hi,lowvright_hi,lowv_hi,lowv_h2
-  real(dp)::kbT,TT
+  real(dp)::TT,fTT3,lowtot_hi,lowtot_h2,ltetot !sln no kbT
   real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
   ! Rates are stored in non-log, while temperature derivatives (primes) 
@@ -370,27 +371,23 @@ SUBROUTINE comp_table_rates(iT, aexp)
                               - f*94000.) /T**2 * T * log(10d0) 
   endif
 
-  !BEGIN H2 STUFF --------------------------------------------------------
+  !BEGIN H2 STUFF --------------------------------------------------------!sln
 
-  ! Collisional dissociation  (Abel 1997->Dove&Mandy 1986)****************
-  kbT=8.618d-5*T !eV
+  ! Collisional dissociation ground state (Dove&Mandy 1986)****************
   tbl_Beta_H2HI%rates(iT) =                                              &
-       3.324d-9*(kbT**2.012)*exp(-4.463d0/kbT)/(1.d0+0.2472d0*kbT)**3.512
-  ! Collisional dissociation   (Martin&Keogh&Mandy 1998y)
+       7.073d-19*(T**2.012)*exp(-5.179d4/T)/(1.d0+2.130d-5*T)**3.512
+  ! Collisional dissociation  ground state (Martin&Keogh&Mandy 1998y)
   tbl_Beta_H2H2%rates(iT) = &
-       2.519d-5*(kbT**4.1881)*exp(-0.1731d0/kbT)                         &
-       /(1.d0+2.1347d0*kbT)**5.6881
+       5.996d-30*(T**4.1881)*exp(-5.466d4/T)/(1.d0+6.761d-6*T)**5.6881
   ! Prefer to use numerical prime, rather than analytic:
   TT=T*1.0001
-  kbT=8.618d-5*TT !eV
   tbl_Beta_H2HI%primes(iT) =                                             &
-       3.324d-9*(kbT**2.012)*exp(-4.463d0/kbT)/(1.d0+0.2472d0*kbT)**3.512
+       7.073d-19*(TT**2.012)*exp(-5.179d4/TT)/(1.d0+2.130d-5*TT)**3.512
   tbl_Beta_H2HI%primes(iT) = &
        (tbl_Beta_H2HI%primes(iT) - tbl_Beta_H2HI%rates(iT)) &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log
   tbl_Beta_H2H2%primes(iT) = &
-       2.519d-5*(kbT**4.1881)*exp(-0.1731d0/kbT)                         &
-       /(1.d0+2.1347d0*kbT)**5.6881
+      5.996d-30*(TT**4.1881)*exp(-5.466d4/TT)/(1.d0+6.761d-6*TT)**5.6881
   tbl_Beta_H2H2%primes(iT) = &
        (tbl_Beta_H2H2%primes(iT) - tbl_Beta_H2H2%rates(iT))              &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log

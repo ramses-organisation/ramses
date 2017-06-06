@@ -19,14 +19,15 @@ subroutine flag_formation_sites
   !=============================================================================
 
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  real(dp)::factG
+  real(dp)::factG,scale_m
   real(dp),dimension(1:nvector,1:3)::pos
   real(dp),dimension(1:ndim)::rrel
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
   integer::j,jj,i,nx_loc,idim
-  integer::flag_form,flag_form_tot,info
+  integer::flag_form,flag_form_tot
   integer::global_peak_id,local_peak_id
   integer::merge_to,local_halo_id
+  integer::tag=101,info,icpu
   logical::ok
   real(dp)::dx,dx_min,dist2,scale,tff,acc_r
   real(dp)::fourpi,threepi2
@@ -48,16 +49,18 @@ subroutine flag_formation_sites
   
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**3
 
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
 
   ! Loop over sinks and mark all clumps which are already occupied by a sink
-  allocate(occupied(1:npeaks_max))
+  allocate(occupied(1:npeaks_max),form(1:npeaks_max))
   occupied=0
+  form=0
   pos=0.0
-  if(myid==1 .and. clinfo .and. nsink>0)write(*,*)'looping over ',nsink,' sinks and marking their clumps'
+  if(myid==1 .and. clinfo .and. nsink>0)write(*,*)'Looping over ',nsink,' sinks and marking neighboring clumps'
 
   ! Block clumps (halo done later) that contain a sink for formation
   if (smbh)then 
@@ -87,7 +90,7 @@ subroutine flag_formation_sites
         dist2=sum(rrel**2)
         if (dist2<(2.*ir_cloud*dx_min/aexp)**2)then
            occupied(i)=1
-           if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
+           if(verbose)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
         end if
      end do
   end do
@@ -181,47 +184,85 @@ subroutine flag_formation_sites
 !!$        ok=ok.and.Icl_dd(jj)<0.
         ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
         ok=ok.and.(kinetic_support(jj)<abs(grav_term(jj)))
-        ! Avoid formation of crazy spins
-        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
+!!$        ! Avoid formation of crazy spins
+!!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
         ! Then create a sink at the peak position
         if (ok)then
+           form(jj)=1
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
            if (cc(1) .eq. myid)then
               call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
               flag2(cell_index(1))=jj
-              write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
+              if(verbose)write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
            end if
         end if
      end if
   end do
 
   ! Write to the log file some information that could be of interest for debugging etc.
-  if(clinfo .and. (.not. smbh) .and. sink)then 
-     if (myid==1.and.npeaks>0)then
-     !if (npeaks>0)then
-        write(*,'(135A)')'=FlagFormationSites==================================================================================================================='
-        write(*,'(135A)')'ClumpID  lvl  Ncell  x  y  z  Vx  Vy  Vz  Mass  rhomax  Ekin  Eth  Egrav  Erad  dens  occup  mass  Grav  spin  flaged'
-        write(*,'(135A)')'======================================================================================================================================'
-     end if
-     do j=npeaks,1,-1
-        if (relevance(j)>0..and.n_cells(j)>0)then
-           write(*,'(I4,X,I2,X,I6,X,12(E12.4E2,2X),6(L1,X))')j+ipeak_start(myid)&
-                & ,lev_peak(j),n_cells(j)&
-                & ,peak_pos(j,1),peak_pos(j,2),peak_pos(j,3)&
-                & ,clump_velocity(j,1),clump_velocity(j,2),clump_velocity(j,3)&
-                & ,clump_mass(j),max_dens(j)&
-                & ,kinetic_support(j),thermal_support(j)&
-                & ,grav_term(j),rad_term(j)&
-                & ,max_dens(jj)>d_sink,clump_mass4(jj)>mass_sink_seed*2d33/(scale_d*scale_l**3.0)&
-                & ,kinetic_support(jj)<abs(grav_term(jj))&
-                & ,kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp)&
-                & ,occupied(i),ok
-        end if
-     end do
-  end if
+  if(clinfo .and. (.not. smbh) .and. sink .and. npeaks_tot>0)then 
 
-  deallocate(occupied)
+     if (myid==1)then
+        write(*,'(200A)')'======================================================== FlagFormationSites ==================================================================================================================='
+        write(*,'(200A)')'     ID  relevance lvl Ncell     x            y            z         vx[km/s]     vy[km/s]      vz[km/s]   mass[Msol]  rhomax[g/cc]  Ekin[km/s]   Eth[km/s]    Egrav[km/s]  Erad[km/s] blk form'
+        write(*,'(200A)')'==============================================================================================================================================================================================='
+     end if
+
+     allocate(table_properties(npeaks_max,20))
+     table_properties=0
+
+     ! Copy properties into array
+     do j=1,npeaks
+        table_properties(j,1:18)=&
+             & (/&
+             & real(j+ipeak_start(myid),kind=dp)&
+             & ,real(relevance(j),kind=dp)&
+             & ,real(lev_peak(j),kind=dp)&
+             & ,real(n_cells(j),kind=dp)&
+             & ,real(peak_pos(j,1),kind=dp)&
+             & ,real(peak_pos(j,2),kind=dp)&
+             & ,real(peak_pos(j,3),kind=dp)&
+             & ,real(clump_velocity(j,1)*scale_v/1d5,kind=dp)&
+             & ,real(clump_velocity(j,2)*scale_v/1d5,kind=dp)&
+             & ,real(clump_velocity(j,3)*scale_v/1d5,kind=dp)&
+             & ,real(clump_mass(j)*scale_m/2d33,kind=dp)&
+             & ,real(max_dens(j)*scale_d,kind=dp)&
+             & ,real(sqrt(kinetic_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(thermal_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(grav_term(j)) /clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(rad_term(j))  /clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(occupied(j),kind=dp)&
+             & ,real(form(j),kind=dp)&
+             & /)
+     end do
+
+     ! Write properties to screen in CPU order
+     if(myid==1)then
+        do j=1,npeaks_max
+           if(table_properties(j,2)>relevance_threshold.and.table_properties(j,4)>0.)then
+              write(*,'(I7,1X,1PE10.3,1X,I2,1X,I4,1X,12(1PE12.4,1X),I1,3X,I1)')int(table_properties(j,1)),table_properties(j,2)&
+                   & ,int(table_properties(j,3:4)),table_properties(j,5:16),int(table_properties(j,17:18))
+           endif
+        end do
+        do icpu=2,ncpu
+           call MPI_RECV(table_properties,npeaks_max*20,MPI_DOUBLE,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+           do j=1,npeaks_max
+              if(table_properties(j,2)>relevance_threshold.and.table_properties(j,4)>0.)then
+                 write(*,'(I7,1X,1PE10.3,1X,I2,1X,I4,1X,12(1PE12.4,1X),I1,3X,I1)')int(table_properties(j,1)),table_properties(j,2)&
+                      & ,int(table_properties(j,3:4)),table_properties(j,5:16),int(table_properties(j,17:18))
+              endif
+           end do
+        end do
+     else
+        call MPI_SEND(table_properties,npeaks_max*20,MPI_DOUBLE,0,tag,MPI_COMM_WORLD,info)
+     endif
+
+     deallocate(table_properties)
+     
+  endif
+
+  deallocate(occupied,form)
 
 #endif
 end subroutine flag_formation_sites
