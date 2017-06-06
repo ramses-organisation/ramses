@@ -228,10 +228,10 @@ subroutine flag_formation_sites
              & ,real(clump_velocity(j,3)*scale_v/1d5,kind=dp)&
              & ,real(clump_mass(j)*scale_m/2d33,kind=dp)&
              & ,real(max_dens(j)*scale_d,kind=dp)&
-             & ,real(sqrt(kinetic_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(thermal_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(abs(grav_term(j)) /clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(abs(rad_term(j))  /clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(kinetic_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(thermal_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(grav_term(j)) /(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(rad_term(j))  /(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
              & ,real(occupied(j),kind=dp)&
              & ,real(form(j),kind=dp)&
              & /)
