@@ -1118,8 +1118,8 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
         xmsink(1:nsink)=msink(1:nsink)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,*)'Total mass in sink = ',sum(msink(1:nsink))*scale_m/2d33
-        write(*,*)'simulation time = ',t
+        write(*,*)'Total mass in sink [Msol] = ',sum(msink(1:nsink))*scale_m/2d33
+        write(*,*)'simulation time [yr] = ',t*scale_t/(3600*24*365.25)
         write(*,'(" =============================================================================================================================================")')
         write(*,'("   Id     M[Msol]          x             y             z         vx[km/s]      vy[km/s]      vz[km/s]     spin/spmax    Mdot[Msol/y]   age[yr]")')
         write(*,'(" =============================================================================================================================================")')
