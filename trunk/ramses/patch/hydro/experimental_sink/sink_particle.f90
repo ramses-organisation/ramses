@@ -1059,11 +1059,26 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
   include 'mpif.h'
 #endif
   real(dp),dimension(1:nsinkmax)::dMEDoverdt  
-  integer::i,isink
+  integer::i,isink,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::l_abs
+  real(dp)::l_abs,l_max,factG,scale,dx_min
   real(dp)::r2,rho_inf
+  real(dp),dimension(1:3)::skip_loc
 
+  ! Gravitational constant
+  factG=1d0
+  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+
+  ! Mesh spacing in that level
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_min=0.5D0**nlevelmax*scale/aexp
+
+  ! Scaling factors
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
   
@@ -1103,21 +1118,25 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
         xmsink(1:nsink)=msink(1:nsink)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
-        write(*,*)'Total mass in sink = ',sum(msink(1:nsink))*scale_m/2d33
-        write(*,*)'simulation time = ',t
-        write(*,'(" =================================================================================================================================")')
-        write(*,'("   Id     M[Msol]          x             y             z            vx            vy            vz    acc rate[Msol/y]     age[yr]")')
-        write(*,'(" =================================================================================================================================")')
+        write(*,*)'Total mass in sink [Msol] = ',sum(msink(1:nsink))*scale_m/2d33
+        write(*,*)'simulation time [yr] = ',t*scale_t/(3600*24*365.25)
+        write(*,'(" =============================================================================================================================================")')
+        write(*,'("   Id     M[Msol]          x             y             z         vx[km/s]      vy[km/s]      vz[km/s]     spin/spmax    Mdot[Msol/y]   age[yr]")')
+        write(*,'(" =============================================================================================================================================")')
         do i=nsink,1,-1
            isink=idsink_sort(i)
            l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
-           write(*,'(I5,10(2X,E12.5))')&
-                idsink(isink),msink(isink)*scale_m/2d33, &
-                xsink(isink,1:ndim),vsink(isink,1:ndim),&
-                dMsink_overdt(isink)*scale_m/2d33/(scale_t)*365.*24.*3600.,&
-                (t-tsink(isink))*scale_t/(3600*24*365.25),l_abs
+           l_max=msink(isink)*sqrt(factG*msink(isink)/(dble(ir_cloud)*dx_min))*(dble(ir_cloud)*dx_min)
+           write(*,'(I5,10(2X,1PE12.5))')&
+                & idsink(isink),&
+                & msink(isink)*scale_m/2d33,&
+                & xsink(isink,1:ndim),&
+                & vsink(isink,1:ndim)*scale_v/1d5,&
+                & l_abs/l_max,&
+                & dMsink_overdt(isink)*scale_m/2d33/(scale_t)*365.*24.*3600.,&
+                & (t-tsink(isink))*scale_t/(3600*24*365.25)
         end do
-        write(*,'(" =================================================================================================================================")')
+        write(*,'(" =============================================================================================================================================")')
      endif
   endif
 end subroutine print_sink_properties
@@ -1255,7 +1274,7 @@ subroutine make_sink_from_clump(ilevel)
   nindsink=nindsink+ntot_all
   if(myid==1)then
      if(ntot_all.gt.0)then
-        write(*,'(" Level = ",I6," New sinks produced from clumps= ",I6," Total sinks =",I8)')&
+        write(*,'(" Level = ",I6," Number of new sinks produced= ",I6," Total sinks =",I8)')&
              & ilevel,ntot_all,nsink
      endif
   end if
@@ -1642,7 +1661,7 @@ subroutine update_sink(ilevel)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
               ! Merging based on relative distance
-              merge=rr<rmax2 ! Sinks are within one linking length
+              merge=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
               if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
@@ -1659,6 +1678,9 @@ subroutine update_sink(ilevel)
               end if
             
               if (merge)then
+
+                 if(myid==1)write(*,*)'Merging sink ',jsink,' into sink ',isink
+
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))
@@ -1943,7 +1965,7 @@ subroutine clean_merged_sinks
      end if
   end do
 
-  if (myid==1 .and. mergers>0)write(*,*)'merged ',mergers,' sinks'
+  if (myid==1 .and. mergers>0)write(*,*)'Clean ',mergers,' merged sinks'
 
   ! Sort sink particle arrays to account for merged sinks that disappeared
   i=1
@@ -2363,7 +2385,7 @@ subroutine read_sink_params()
   end if
 
   if(mass_merger_vel_check<0.)then 
-     mass_merger_vel_check=huge(0._dp)
+     mass_merger_vel_check=0.0
   end if
 
 

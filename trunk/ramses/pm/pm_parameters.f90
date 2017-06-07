@@ -37,7 +37,7 @@ module pm_parameters
   logical::clump_core=.false.                ! Trims the clump (for star formation)
   logical::verbose_AGN=.false.               ! Controls print verbosity for the SMBH case
   real(dp)::acc_sink_boost=1.0               ! Boost coefficient for accretion
-  real(dp)::mass_merger_vel_check_AGN=-1.0   ! Threshold for velocity check in  merging; in Msun; default: don't check
+  real(dp)::mass_merger_vel_check_AGN=0.0    ! Threshold for velocity check in  merging; in Msun; default: always check
 
   character(LEN=15)::feedback_scheme='energy' ! AGN feedback scheme; options: 'energy' or 'momentum'
   real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast; in K
