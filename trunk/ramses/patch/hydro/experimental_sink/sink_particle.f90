@@ -1675,19 +1675,18 @@ subroutine update_sink(ilevel)
                  iyoung=(t-tsink(isink)<t_larson1)
                  jyoung=(t-tsink(jsink)<t_larson1)
                  merge=merge .and. (iyoung .or.  jyoung)
-                 merge=merge .or.  (iyoung .and. jyoung)
               end if
             
               if (merge)then
 
                  if(myid==1)then
                     write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
-                    write(*,*)'Sink #1: ',idsink(isink)
-                    write(*,*)msink(isink)
-                    write(*,*)xsink(isink,1:3)
-                    write(*,*)'Sink #2: ',idsink(jsink)
-                    write(*,*)msink(jsink)
-                    write(*,*)xsink(jsink,1:3)
+!!$                    write(*,*)'Sink #1: ',idsink(isink)
+!!$                    write(*,*)msink(isink)
+!!$                    write(*,*)xsink(isink,1:3)
+!!$                    write(*,*)'Sink #2: ',idsink(jsink)
+!!$                    write(*,*)msink(jsink)
+!!$                    write(*,*)xsink(jsink,1:3)
                  endif
 
                  ! Set new values of remaining sink (keep one with larger index)
