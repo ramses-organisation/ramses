@@ -1679,7 +1679,7 @@ subroutine update_sink(ilevel)
             
               if (merge)then
 
-                 if(myid==1)write(*,*)'Merging sink ',jsink,' into sink ',isink
+                 if(myid==1)write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
 
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
