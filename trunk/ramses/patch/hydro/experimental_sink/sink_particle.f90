@@ -1680,7 +1680,15 @@ subroutine update_sink(ilevel)
             
               if (merge)then
 
-                 if(myid==1)write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
+                 if(myid==1)then
+                    write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
+                    write(*,*)'Sink #1: ',idsink(isink)
+                    write(*,*)msink(isink)
+                    write(*,*)xsink(isink,1:3)
+                    write(*,*)'Sink #2: ',idsink(jsink)
+                    write(*,*)msink(jsink)
+                    write(*,*)xsink(jsink,1:3)
+                 endif
 
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
@@ -1846,9 +1854,9 @@ subroutine update_cloud(ilevel)
   if(ip>0)call upd_cloud(ind_part,ip)
   
   if (myid==1.and.verbose)then
-     write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
+     write(*,*)'Sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        write(*,*)'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,'("#sink: ",I6," drift: ",3(1PE12.5))')isink,sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
   end if
 
