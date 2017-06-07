@@ -1661,7 +1661,7 @@ subroutine update_sink(ilevel)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
               ! Merging based on relative distance
-              merge=rr<rmax2 ! Sinks are within one linking length
+              merge=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
               if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
@@ -1678,6 +1678,9 @@ subroutine update_sink(ilevel)
               end if
             
               if (merge)then
+
+                 if(myid==1)write(*,*)'Merging sink ',jsink,' into sink ',isink
+
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))

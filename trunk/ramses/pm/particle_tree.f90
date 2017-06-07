@@ -323,7 +323,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)
+              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)*scale
            endif
         end do
      end do
