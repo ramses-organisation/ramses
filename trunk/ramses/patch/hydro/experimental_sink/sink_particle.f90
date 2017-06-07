@@ -223,6 +223,7 @@ subroutine create_cloud_from_sink
      end do
   end do
   
+  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
   do isink=1,nsink
      direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
   end do
