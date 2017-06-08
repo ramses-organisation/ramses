@@ -281,7 +281,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
-  do igrid=0,ncache,nvector
+  do igrid=1,ncache,nvector
    
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
