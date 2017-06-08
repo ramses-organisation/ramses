@@ -223,6 +223,7 @@ subroutine create_cloud_from_sink
      end do
   end do
   
+  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
   do isink=1,nsink
      direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
   end do
@@ -1661,7 +1662,7 @@ subroutine update_sink(ilevel)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
               ! Merging based on relative distance
-              merge=rr<rmax2 ! Sinks are within one linking length
+              merge=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
               if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
@@ -1674,10 +1675,20 @@ subroutine update_sink(ilevel)
                  iyoung=(t-tsink(isink)<t_larson1)
                  jyoung=(t-tsink(jsink)<t_larson1)
                  merge=merge .and. (iyoung .or.  jyoung)
-                 merge=merge .or.  (iyoung .and. jyoung)
               end if
             
               if (merge)then
+
+                 if(myid==1)then
+                    write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
+!!$                    write(*,*)'Sink #1: ',idsink(isink)
+!!$                    write(*,*)msink(isink)
+!!$                    write(*,*)xsink(isink,1:3)
+!!$                    write(*,*)'Sink #2: ',idsink(jsink)
+!!$                    write(*,*)msink(jsink)
+!!$                    write(*,*)xsink(jsink,1:3)
+                 endif
+
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))
@@ -1842,9 +1853,9 @@ subroutine update_cloud(ilevel)
   if(ip>0)call upd_cloud(ind_part,ip)
   
   if (myid==1.and.verbose)then
-     write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
+     write(*,*)'Sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        write(*,*)'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,'("#sink: ",I6," drift: ",3(1PE12.5))')isink,sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
   end if
 
