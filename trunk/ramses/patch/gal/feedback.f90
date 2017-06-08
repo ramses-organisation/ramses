@@ -456,8 +456,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),2)=unew(indp(j),2)+mloss(j)*vp(ind_part(j),1)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
-     unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
-          & ethermal(j)*(1d0+RAD_BOOST)
+     unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
   end do
 
   ! Add metals
@@ -468,9 +467,16 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Add delayed cooling switch variable
+  if(nener>0)then
+     do j=1,np
+        unew(indp(j),inener)=unew(indp(j),inener)+ethermal(j)
+     end do
+  endif
+
+  ! Add delayed cooling switch variable
   if(delayed_cooling)then
      do j=1,np
-        unew(indp(j),idelay)=unew(indp(j),idelay)+mloss(j)
+        unew(indp(j),idelay)=unew(indp(j),idelay)!+mloss(j)
      end do
   endif
 
