@@ -205,7 +205,7 @@ subroutine flag_formation_sites
 
      if (myid==1)then
         write(*,'(200A)')'======================================================== FlagFormationSites ==================================================================================================================='
-        write(*,'(200A)')'     ID  relevance lvl Ncell     x            y            z         vx[km/s]     vy[km/s]      vz[km/s]   mass[Msol]  rhomax[g/cc]  Ekin[km/s]   Eth[km/s]    Egrav[km/s]  Erad[km/s] blk form'
+        write(*,'(200A)')'     ID  relevance lvl Ncell     x            y            z         vx[km/s]     vy[km/s]      vz[km/s]   mass[Msol]  rhomax[g/cc]  Ekin[km/s]   Eth[km/s]    Egrav[km/s]  Erad[km/s] occ form'
         write(*,'(200A)')'==============================================================================================================================================================================================='
      end if
 
