@@ -1647,7 +1647,7 @@ subroutine update_sink(ilevel)
         do jsink=isink+1,nsink
 
            ! Compute relative distance
-           r_rel(1:3)=xsink(isink,1:3)-xsink(jsink,1:3) 
+           r_rel(1:3)=xsink(jsink,1:3)-xsink(isink,1:3) 
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
               if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
@@ -1681,18 +1681,18 @@ subroutine update_sink(ilevel)
 
                  if(myid==1)then
                     write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
-!!$                    write(*,*)'Sink #1: ',idsink(isink)
-!!$                    write(*,*)msink(isink)
-!!$                    write(*,*)xsink(isink,1:3)
-!!$                    write(*,*)'Sink #2: ',idsink(jsink)
-!!$                    write(*,*)msink(jsink)
-!!$                    write(*,*)xsink(jsink,1:3)
+                    write(*,*)'Sink #1: ',idsink(isink)
+                    write(*,*)msink(isink)
+                    write(*,*)xsink(isink,1:3)
+                    write(*,*)'Sink #2: ',idsink(jsink)
+                    write(*,*)msink(jsink)
+                    write(*,*)xsink(jsink,1:3)
                  endif
 
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))
-                 xcom(1:3)=(msink(isink)*xsink(isink,1:3)+msink(jsink)*xsink(jsink,1:3))/mcom
+                 xcom(1:3)=xsink(isink,1:3)+msink(jsink)*r_rel(1:3)/mcom
                  vcom(1:3)=(msink(isink)*vsink(isink,1:3)+msink(jsink)*vsink(jsink,1:3))/mcom
                  lcom(1:3)=msink(isink)*cross((xsink(isink,1:3)-xcom(1:3)),vsink(isink,1:3)-vcom(1:3))+ &
                       &    msink(jsink)*cross((xsink(jsink,1:3)-xcom(1:3)),vsink(jsink,1:3)-vcom(1:3))
