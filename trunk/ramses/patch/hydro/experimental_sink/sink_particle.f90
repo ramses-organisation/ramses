@@ -208,8 +208,10 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
-                       mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                    if (rr<=rmass .and. max(msink(isink),msink_dyn*2d33/(scale_d*scale_l**3))<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
+                       mp(indp)=max(msink(isink),msink_dyn*2d33/(scale_d*scale_l**3))/dble(ncloud_sink_massive)
+                    !if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
+                       !mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                     else
                        mp(indp)=0.
                     end if
@@ -225,7 +227,8 @@ subroutine create_cloud_from_sink
   
   sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
   do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+     direct_force_sink(isink)=(max(msink(isink),msink_dyn*2d33/(scale_d*scale_l**3)) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+     !direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
   end do
 
 #endif
@@ -732,6 +735,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
+  real(dp)::acc_ratio
 
 #if NDIM==3
 
@@ -837,6 +841,22 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               end if
            else
               m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+
+              acc_ratio=dMBHoverdt(isink)/(4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
+              if (acc_ratio > chi_switch) then
+                 ! Eddington ratio higher than chi_switch -> energy
+                 AGN_fbk_frac_ener = 1.0
+                 AGN_fbk_frac_mom = 0.0
+              else
+                 ! Eddington ratio lower than chi_switch -> momentum
+                 AGN_fbk_frac_ener = 0.0
+                 AGN_fbk_frac_mom = 1.0
+              end if
+              v_AGN = (2*0.1*epsilon_kin/kin_mass_loading)**0.5*3.d+5 ! in km/s
+              fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+              !fbk_mom_AGN=AGN_fbk_frac_mom*min(delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density/(1-cos(3.1415926/180.*cone_opening/2)),&
+                                                  !v_max*1.e5/scale_v*weight*d)
+              fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN*1.e5/scale_v*weight/volume*d/density/(1-cos(3.1415926/180.*cone_opening/2))
            end if
 
            m_acc=max(m_acc,0.0_dp)               
@@ -872,19 +892,19 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            if( .not. on_creation)then
               if(agn)then
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
-                    if(feedback_scheme=='energy')then
-                       fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                    if(AGN_fbk_frac_ener.gt.0.0)then ! thermal AGN feedback
                        unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
                     end if
-                    if(feedback_scheme=='momentum')then
-                       fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
+                  
+                    if(AGN_fbk_frac_mom.gt.0.0)then ! momentum AGN feedback
                        ! checking if particle is in cone
                        cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
                        cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
                        orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
                        if (orth_dist.le.abs(cone_dist)*tan_theta)then
                           unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)/vol_loc
-                          unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(ir_cloud*dx_min)*vv(1:3))/vol_loc
+                          !unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/r_abs*vv(1:3))/vol_loc
+                          unew(indp(j,ind),5)=unew(indp(j,ind),5)+(fbk_mom_AGN**2/(2*kin_mass_loading*m_acc))/vol_loc
                        end if
                     end if
                  end if
@@ -1706,6 +1726,7 @@ subroutine update_sink(ilevel)
 
                  ! Compute merged quantities
                  msink(isink)    =mcom
+                 msum_overlap(isink)=msink(isink)
                  xsink(isink,1:3)=xcom(1:3)
                  vsink(isink,1:3)=vcom(1:3)
                  lsink(isink,1:3)=lcom(1:3)+lsink(isink,1:3)+lsink(jsink,1:3)
@@ -1874,9 +1895,11 @@ subroutine upd_cloud(ind_part,np)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use hydro_commons, only: mass_sph
   implicit none
   integer::np
   integer,dimension(1:nvector)::ind_part
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   !------------------------------------------------------------
   ! Vector loop called by update_cloud
@@ -1886,11 +1909,15 @@ subroutine upd_cloud(ind_part,np)
   real(dp),dimension(1:nvector,1:ndim)::new_xp,new_vp
   integer,dimension(1:nvector)::level_p
 
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
   ! Overwrite cloud particle mass with sink mass
   do j=1,np
      isink=-idp(ind_part(j))
      if(isink>0 .and. mp(ind_part(j))>0.)then
-        mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
+        mp(ind_part(j))=max(msink(isink),msink_dyn*2d33/(scale_d*scale_l**3))/dble(ncloud_sink_massive)
+        !mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
      endif
   end do
 
@@ -2043,8 +2070,12 @@ subroutine f_gas_sink(ilevel)
   real(dp),dimension(1:nvector)::d2,mcell,denom
   real(dp)::rho_tff,rho_tff_tot,d_min
   logical,dimension(1:ndim)::period
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
 #if NDIM==3
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Gravitational constant
   factG=1d0
@@ -2150,7 +2181,8 @@ subroutine f_gas_sink(ilevel)
 
               ! Add gas acceleration due to sink
               do i=1,ngrid
-                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+factG*msink(isink)*ff(i,1:ndim)
+                 f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+factG*max(msink(isink), msink_dyn*2d33/(scale_d*scale_l**3))*ff(i,1:ndim)
+                 !f(ind_cell(i),1:ndim)=f(ind_cell(i),1:ndim)+factG*msink(isink)*ff(i,1:ndim)
               end do
 
               ! Add sink acceleration due to gas
@@ -2164,7 +2196,8 @@ subroutine f_gas_sink(ilevel)
         
         d_min=d_min**0.5
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4./3.*3.1415926*d_min**3))
+        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink),msink_dyn*2d33/(scale_d*scale_l**3))/(4./3.*3.145926*d_min**3))
+        !rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4./3.*3.1415926*d_min**3))
 
      end if !end if direct force
   end do !end loop over sinks
@@ -2218,11 +2251,13 @@ subroutine f_sink_sink
   logical,dimension(1:ndim)::period
   real(dp)::factG
 
-#if NDIM==3
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
+#if NDIM==3
   allocate(d2(1:nsink))
   allocate(ff(1:nsink,1:ndim))
   
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
@@ -2259,7 +2294,8 @@ subroutine f_sink_sink
            !compute acceleration
            do jsink=1,nsink
               if (direct_force_sink(jsink))then
-                 ff(jsink,1:ndim)=factG*msink(jsink)/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
+                 ff(jsink,1:ndim)=factG*max(msink(jsink),msink_dyn*2d33/(scale_d*scale_l**3))/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
+                 !ff(jsink,1:ndim)=factG*msink(jsink)/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
               end if
            end do
            do jsink=1,nsink           
@@ -2293,8 +2329,9 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,mass_sink_seed,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
-       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,&
-       boost_threshold_density
+       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,&
+       AGN_fbk_frac_ener, AGN_fbk_frac_mom, T2_max, v_max, boost_threshold_density, msink_dyn,&
+       epsilon_kin, chi_switch, kin_mass_loading
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
