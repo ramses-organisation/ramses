@@ -41,10 +41,7 @@ module pm_parameters
   real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast; in K
   real(dp)::T2_AGN=1.d12                     ! AGN blast temperature; in K
 
-  real(dp)::v_max=5.d4                       ! Maximum allowed velocity of the AGN blast; in km/s
-  real(dp)::v_AGN=1.d4                       ! AGN blast velocity; in km/s
   real(dp)::cone_opening=180.                ! Outflow cone opening angle; in deg
-
   real(dp)::epsilon_kin=1.0                  ! Efficiency of kinetic feedback
   real(dp)::chi_switch=0.1                   ! M_Bondi/M_Edd ratio to swich between feedback modes, gt is thermal
   real(dp)::kin_mass_loading=100.            ! Mass loading of the jet
@@ -54,6 +51,5 @@ module pm_parameters
 
   real(dp)::boost_threshold_density=0.1      ! Accretion boost threshold for Bondi
   
-  real(dp)::msink_dyn=0.                     ! Dynamical mass used for sinks evolution
 
 end module pm_parameters
