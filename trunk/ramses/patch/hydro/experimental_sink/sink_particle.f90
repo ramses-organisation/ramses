@@ -564,7 +564,6 @@ subroutine grow_sink(ilevel,on_creation)
   ! This routine performs accretion onto the sink. It vectorizes the loop
   ! over all sink cloud particles and calls accrete_sink as soon as nvector 
   ! particles are collected
-  ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink,lev
@@ -732,6 +731,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
+  real(dp)::acc_ratio,v_AGN
 
 #if NDIM==3
 
@@ -837,6 +837,22 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               end if
            else
               m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+
+              if(agn)then
+                 acc_ratio=dMBHoverdt(isink)/(4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
+                 if (acc_ratio > chi_switch) then
+                    ! Eddington ratio higher than chi_switch -> energy
+                    AGN_fbk_frac_ener = 1.0
+                    AGN_fbk_frac_mom = 0.0
+                 else
+                    ! Eddington ratio lower than chi_switch -> momentum
+                    AGN_fbk_frac_ener = 0.0
+                    AGN_fbk_frac_mom = 1.0
+                 end if
+                 v_AGN = (5/3*2*0.1*epsilon_kin/kin_mass_loading)**0.5*3d10 ! in cm/s
+                 fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
+                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1-cos(3.1415926/180.*cone_opening/2)) ! vol-weighted
+              end if
            end if
 
            m_acc=max(m_acc,0.0_dp)               
@@ -872,12 +888,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            if( .not. on_creation)then
               if(agn)then
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
-                    if(feedback_scheme=='energy')then
-                       fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                    if(AGN_fbk_frac_ener.gt.0.0)then ! thermal AGN feedback
                        unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
                     end if
-                    if(feedback_scheme=='momentum')then
-                       fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
+                  
+                    if(AGN_fbk_frac_mom.gt.0.0)then ! momentum AGN feedback
                        ! checking if particle is in cone
                        cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
                        cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
@@ -2293,8 +2308,9 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,mass_sink_seed,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
-       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,&
-       boost_threshold_density
+       clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,&
+       AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
+       epsilon_kin,chi_switch,kin_mass_loading
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
