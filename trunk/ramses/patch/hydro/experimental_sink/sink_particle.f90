@@ -564,7 +564,6 @@ subroutine grow_sink(ilevel,on_creation)
   ! This routine performs accretion onto the sink. It vectorizes the loop
   ! over all sink cloud particles and calls accrete_sink as soon as nvector 
   ! particles are collected
-  ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink,lev
@@ -839,19 +838,21 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            else
               m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
 
-              acc_ratio=dMBHoverdt(isink)/(4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
-              if (acc_ratio > chi_switch) then
-                 ! Eddington ratio higher than chi_switch -> energy
-                 AGN_fbk_frac_ener = 1.0
-                 AGN_fbk_frac_mom = 0.0
-              else
-                 ! Eddington ratio lower than chi_switch -> momentum
-                 AGN_fbk_frac_ener = 0.0
-                 AGN_fbk_frac_mom = 1.0
+              if(agn)then
+                 acc_ratio=dMBHoverdt(isink)/(4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
+                 if (acc_ratio > chi_switch) then
+                    ! Eddington ratio higher than chi_switch -> energy
+                    AGN_fbk_frac_ener = 1.0
+                    AGN_fbk_frac_mom = 0.0
+                 else
+                    ! Eddington ratio lower than chi_switch -> momentum
+                    AGN_fbk_frac_ener = 0.0
+                    AGN_fbk_frac_mom = 1.0
+                 end if
+                 v_AGN = (5/3*2*0.1*epsilon_kin/kin_mass_loading)**0.5*3d10 ! in cm/s
+                 fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
+                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1-cos(3.1415926/180.*cone_opening/2)) ! vol-weighted
               end if
-              v_AGN = (5/3*2*0.1*epsilon_kin/kin_mass_loading)**0.5*3d10 ! in cm/s
-              fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
-              fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1-cos(3.1415926/180.*cone_opening/2)) ! vol-weighted
            end if
 
            m_acc=max(m_acc,0.0_dp)               
@@ -978,7 +979,8 @@ subroutine compute_accretion_rate(write_sinks)
      c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
      c2sink(isink)=c2
      v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
-     v_bondi=sqrt(c2+v2)
+     !v_bondi=sqrt(c2+v2)
+     v_bondi=sqrt(c2)
 
      ! Bondi radius
      r2=(factG*msink(isink)/v_bondi**2)**2
