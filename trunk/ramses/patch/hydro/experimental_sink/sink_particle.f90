@@ -979,8 +979,7 @@ subroutine compute_accretion_rate(write_sinks)
      c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
      c2sink(isink)=c2
      v2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
-     !v_bondi=sqrt(c2+v2)
-     v_bondi=sqrt(c2)
+     v_bondi=sqrt(c2+v2)
 
      ! Bondi radius
      r2=(factG*msink(isink)/v_bondi**2)**2
