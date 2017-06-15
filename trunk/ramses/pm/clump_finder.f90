@@ -568,8 +568,6 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids 
   integer::ntestpos,ntp,idim,ipos
 
-
-
 #if NDIM==3
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -614,9 +612,6 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
      ind_max(j)=ind_cell(j) !save cell index   
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
-
-
-
 
   ntestpos=3**ndim
   if(ilevel>levelmin)ntestpos=ntestpos+2**ndim
@@ -917,7 +912,6 @@ subroutine read_clumpfind_params()
      end if
   end if
 end subroutine read_clumpfind_params
-
 !################################################################
 !################################################################
 !################################################################
@@ -932,10 +926,8 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   real(dp),dimension(1:99,1:ndim)::xpart
   integer ,dimension(1:threetondim)::nbors_father_cells
 
-
   !-----------------------------------------------------------------------
-  ! Very similar as get_cell_index_for_particle but optimized for the usage
-  ! inside neighborsearch.
+  ! This subroutine finds the leaf cell in which a particle sits
   !-----------------------------------------------------------------------
 
   integer::i,j,idim,nx_loc,ind,ix,iy,iz
@@ -949,7 +941,6 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   real(dp),dimension(1:twotondim,1:3),save::xc
   logical,dimension(1:99),save::ok
  
-
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -974,7 +965,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
-        x0(idim)=xg(ind_grid,idim)-3.0D0*dx
+     x0(idim)=xg(ind_grid,idim)-3.0D0*dx
   end do
 
   ! Rescale position at level ilevel
@@ -1040,7 +1031,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   ! Compute parent cell position
   do idim=1,ndim
      do j=1,np
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        icd(j,idim)=id(j,idim)-2*igd(j,idim)
      end do
   end do
         
@@ -1068,7 +1059,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
      endif
   end do
 
-  !cell center positions for particles which sit in the level ilevel
+  ! Cell center positions for particles which sit in the level ilevel
   do j=1,np
      if (ok(j))then
         cell_lev(j)=ilevel
@@ -1085,7 +1076,9 @@ subroutine geticell99(icell,icd,np)
   integer::np
   integer,dimension(1:99,1:ndim)::icd
   integer,dimension(1:99)::icell
-  ! same as geticell but for input vector size of 99 instead of nvector
+  ! mini subroutine that gets the cell index (1 to 8)
+  ! for certain coordinates (0,1 along each direction)
+  ! put into a subroutine to make the code look less ugly
   integer::j
     
 #if NDIM==1
