@@ -407,8 +407,7 @@ subroutine add_viscosity_source_terms(ilevel)
               e_kin_old=e_kin_old+uold(ind_cell(i),ndim+2+irad)
            end do
 #endif
-!Michael           Kturb=uold(ind_cell(i),ndim+3)
-           Kturb=uold(ind_cell(i),ivirial1)
+           Kturb=uold(ind_cell(i),ndim+3)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
            ! Explicit
@@ -424,8 +423,7 @@ subroutine add_viscosity_source_terms(ilevel)
 !!$           e_thermal_new=e_thermal_new+unew(ind_cell(i),ndim+3)*sigma/dx_loc*dtnew(ilevel)
 
            ! Stationary solution
-!Michael           unew(ind_cell(i),ndim+3)=d_old*dx_loc**2*phi_diss(i)
-           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+           unew(ind_cell(i),ndim+3)=d_old*dx_loc**2*phi_diss(i)
 
            e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
 #if NENER>0
