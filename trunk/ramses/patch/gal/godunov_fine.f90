@@ -423,9 +423,15 @@ subroutine add_viscosity_source_terms(ilevel)
 !                & /(1.0+sigma/dx_loc*dtnew(ilevel))
 !!$           e_thermal_new=e_thermal_new+unew(ind_cell(i),ndim+3)*sigma/dx_loc*dtnew(ilevel)
 
+! Implicit
+           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
+                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
+                & /(1.0+sigma/dx_loc*dtnew(ilevel))
+           e_thermal_new=e_thermal_new+unew(ind_cell(i),ivirial1)*sigma/dx_loc*dtnew(ilevel)
+
            ! Stationary solution
 !Michael           unew(ind_cell(i),ndim+3)=d_old*dx_loc**2*phi_diss(i)
-           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
            e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
 #if NENER>0
