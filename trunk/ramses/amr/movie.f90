@@ -687,7 +687,7 @@ endif
                                 weights(ii,jj) = weights(ii,jj)+weight
                              endif
 
-			     imap = 1
+                             imap = 1
 #ifdef SOLVERmhd
                              do kk=0,NVAR+4
 #else                       
@@ -741,7 +741,7 @@ endif
                              end do
 #ifdef RT
                              if(rt) then
-			        imap = 1
+                                imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
                                       uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
@@ -826,7 +826,7 @@ endif
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame)cycle
 #endif
-     ! Compute map indices for the cell
+     ! Compute map indices for the particle 
      ii = min(int((xpf-xleft_frame)/dx_frame)+1,nw_frame)
      jj = min(int((ypf-yleft_frame)/dy_frame)+1,nh_frame)
      
@@ -853,18 +853,18 @@ endif
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
-	      ! The polynome is fitted on Starburst99 instantaneous bolomtetric magnitude
+              ! The polynome is fitted on Starburst99 instantaneous bolomtetric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
-		 ! Polynome is poorly constrained on high and low ends
+                 ! Polynome is poorly constrained on high and low ends
                  if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0
                  else if(log10((texp-tp(j))/yr)>9)then
                     log_lum = log10((texp-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
                  else
                     log_lum = 0d0
-		    do npoly=1,size(lum_poly)
+                    do npoly=1,size(lum_poly)
                        log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
                     enddo
                  endif
@@ -1062,7 +1062,7 @@ endif
 #else
             stop
 #endif
-	 endif
+         endif
          rewind(ilun)  
          if(tendmov>0)then
             write(ilun)t,delx,dely,delz
