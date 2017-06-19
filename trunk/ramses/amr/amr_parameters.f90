@@ -183,6 +183,7 @@ module amr_parameters
   real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times
 
   ! Movie
+  integer,parameter::NMOV=5
   integer::imovout=0             ! Increment for output times
   integer::imov=1                ! Initialize
   real(kind=8)::tstartmov=0.,astartmov=0.
@@ -192,30 +193,30 @@ module amr_parameters
   integer::nw_frame=512 ! prev: nx_frame, width of frame in pixels
   integer::nh_frame=512 ! prev: ny_frame, height of frame in pixels
   integer::levelmax_frame=0
-  real(kind=8),dimension(1:20)::xcentre_frame=0d0
-  real(kind=8),dimension(1:20)::ycentre_frame=0d0
-  real(kind=8),dimension(1:20)::zcentre_frame=0d0
-  real(kind=8),dimension(1:10)::deltax_frame=0d0
-  real(kind=8),dimension(1:10)::deltay_frame=0d0
-  real(kind=8),dimension(1:10)::deltaz_frame=0d0
-  real(kind=8),dimension(1:5)::dtheta_camera=0d0
-  real(kind=8),dimension(1:5)::dphi_camera=0d0
-  real(kind=8),dimension(1:5)::theta_camera=0d0
-  real(kind=8),dimension(1:5)::phi_camera=0d0
-  real(kind=8),dimension(1:5)::tstart_theta_camera=0d0
-  real(kind=8),dimension(1:5)::tstart_phi_camera=0d0
-  real(kind=8),dimension(1:5)::tend_theta_camera=0d0
-  real(kind=8),dimension(1:5)::tend_phi_camera=0d0
-  real(kind=8),dimension(1:5)::focal_camera=0d0
-  real(kind=8),dimension(1:5)::dist_camera=0d0
-  real(kind=8),dimension(1:5)::ddist_camera=0d0
-  real(kind=8),dimension(1:5)::smooth_frame=1d0
-  real(kind=8),dimension(1:5)::varmin_frame=0d0
-  real(kind=8),dimension(1:5)::varmax_frame=1d60
-  integer,dimension(1:5)::ivar_frame=0
-  logical,dimension(1:5)::perspective_camera=.false.
-  logical,dimension(1:5)::zoom_only_frame=.false.
-  character(LEN=5)::proj_axis='z' ! x->x, y->y, projection along z
+  real(kind=8),dimension(1:4*NMOV)::xcentre_frame=0d0
+  real(kind=8),dimension(1:4*NMOV)::ycentre_frame=0d0
+  real(kind=8),dimension(1:4*NMOV)::zcentre_frame=0d0
+  real(kind=8),dimension(1:2*NMOV)::deltax_frame=0d0
+  real(kind=8),dimension(1:2*NMOV)::deltay_frame=0d0
+  real(kind=8),dimension(1:2*NMOV)::deltaz_frame=0d0
+  real(kind=8),dimension(1:NMOV)::dtheta_camera=0d0
+  real(kind=8),dimension(1:NMOV)::dphi_camera=0d0
+  real(kind=8),dimension(1:NMOV)::theta_camera=0d0
+  real(kind=8),dimension(1:NMOV)::phi_camera=0d0
+  real(kind=8),dimension(1:NMOV)::tstart_theta_camera=0d0
+  real(kind=8),dimension(1:NMOV)::tstart_phi_camera=0d0
+  real(kind=8),dimension(1:NMOV)::tend_theta_camera=0d0
+  real(kind=8),dimension(1:NMOV)::tend_phi_camera=0d0
+  real(kind=8),dimension(1:NMOV)::focal_camera=0d0
+  real(kind=8),dimension(1:NMOV)::dist_camera=0d0
+  real(kind=8),dimension(1:NMOV)::ddist_camera=0d0
+  real(kind=8),dimension(1:NMOV)::smooth_frame=1d0
+  real(kind=8),dimension(1:NMOV)::varmin_frame=-1d60
+  real(kind=8),dimension(1:NMOV)::varmax_frame=1d60
+  integer,dimension(1:NMOV)::ivar_frame=0
+  logical,dimension(1:NMOV)::perspective_camera=.false.
+  logical,dimension(1:NMOV)::zoom_only_frame=.false.
+  character(LEN=NMOV)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:5)::shader_frame='square'
   character(LEN=10),dimension(1:5)::method_frame='mean_mass'
 #ifdef SOLVERmhd
