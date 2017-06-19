@@ -210,7 +210,7 @@ subroutine output_frame()
      enddo
   endif
 #endif
-  if(nframes+rt_nframes==0) continue
+  if(nframes+rt_nframes==0) cycle
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -491,12 +491,12 @@ endif
                     ! Perspective correction factor
                     pers_corr = 1.0 
                     if(proj_axis(proj_ind:proj_ind).eq.'x')then
-                      if(dist_cam-xx(i,1).lt.0d0) continue
+                      if(dist_cam-xx(i,1).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
                          alpha  = atan(xx(i,2)/(dist_cam-xx(i,1)))
                          beta   = atan(xx(i,3)/(dist_cam-xx(i,1)))
-                         if(abs(alpha)/2d0.gt.fov_camera) continue
-                         if(abs(beta)/2d0.gt.fov_camera) continue
+                         if(abs(alpha)/2d0.gt.fov_camera) cycle
+                         if(abs(beta)/2d0.gt.fov_camera) cycle
                          pers_corr = focal_camera(proj_ind)/(dist_cam-xx(i,1))
                          xx(i,2)   = xx(i,2)*pers_corr
                          xx(i,3)   = xx(i,3)*pers_corr
@@ -506,12 +506,12 @@ endif
                       ycentre = xx(i,3)+zcen
                       zcentre = xx(i,1)+xcen
                     elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-                      if(dist_cam-xx(i,2).lt.0d0) continue
+                      if(dist_cam-xx(i,2).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
                          alpha  = atan(xx(i,1)/(dist_cam-xx(i,2)))
                          beta   = atan(xx(i,3)/(dist_cam-xx(i,2)))
-                         if(abs(alpha)/2d0.gt.fov_camera) continue
-                         if(abs(beta)/2d0.gt.fov_camera) continue
+                         if(abs(alpha)/2d0.gt.fov_camera) cycle
+                         if(abs(beta)/2d0.gt.fov_camera) cycle
                          pers_corr = focal_camera(proj_ind)/(dist_cam-xx(i,2))
                          xx(i,1)   = xx(i,1)*pers_corr
                          xx(i,3)   = xx(i,3)*pers_corr
@@ -521,12 +521,12 @@ endif
                       ycentre = xx(i,3)+zcen
                       zcentre = xx(i,2)+ycen
                     else
-                      if(dist_cam-xx(i,3).lt.0d0) continue
+                      if(dist_cam-xx(i,3).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
                          alpha  = atan(xx(i,1)/(dist_cam-xx(i,3)))
                          beta   = atan(xx(i,2)/(dist_cam-xx(i,3)))
-                         if(abs(alpha)/2d0.gt.fov_camera) continue
-                         if(abs(beta)/2d0.gt.fov_camera) continue
+                         if(abs(alpha)/2d0.gt.fov_camera) cycle
+                         if(abs(beta)/2d0.gt.fov_camera) cycle
                          pers_corr = focal_camera(proj_ind)/(dist_cam-xx(i,3))
                          xx(i,1)   = xx(i,1)*pers_corr
                          xx(i,2)   = xx(i,2)*pers_corr
@@ -810,7 +810,11 @@ endif
      xpf  = xpf+xcen
      ypf  = ypf+ycen
      zpf  = zpf+zcen
-     
+
+     ! Check if particle is in front of camera
+     if(dist_cam-zpf.lt.0) cycle
+
+     ! Check if particle is in the movie box
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame.or.&
           & zpf.lt.zleft_frame.or.zpf.ge.zright_frame)cycle
