@@ -853,7 +853,7 @@ endif
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
-              ! The polynome is fitted on Starburst99 instantaneous bolomtetric magnitude
+              ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
