@@ -253,7 +253,7 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_new,u_new,v_new,w_new,e_kin_new,e_thermal_new,d_old,u_old,v_old,w_old,e_kin_old
+  real(dp)::Kturb,sigma,d_old
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -383,63 +383,20 @@ subroutine add_viscosity_source_terms(ilevel)
 
         ! Add viscosity term at time t with half time step
         do i=1,ngrid
-           d_new=max(unew(ind_cell(i),1),smallr)
-           u_new=0.0; v_new=0.0; w_new=0.0
-           if(ndim>0)u_new=unew(ind_cell(i),2)/d_new
-           if(ndim>1)v_new=unew(ind_cell(i),3)/d_new
-           if(ndim>2)w_new=unew(ind_cell(i),4)/d_new
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           e_thermal_new=unew(ind_cell(i),ndim+2)-e_kin_new
 
+           ! Compute old turbulent state
            d_old=max(uold(ind_cell(i),1),smallr)
-           u_old=0.0; v_old=0.0; w_old=0.0
-           if(ndim>0)u_old=uold(ind_cell(i),2)/d_old
-           if(ndim>1)v_old=uold(ind_cell(i),3)/d_old
-           if(ndim>2)w_old=uold(ind_cell(i),4)/d_old
-           e_kin_old=0.5*d_old*(u_old**2+v_old**2+w_old**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_old=e_kin_old+uold(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-!Michael           Kturb=uold(ind_cell(i),ndim+3)
            Kturb=uold(ind_cell(i),ivirial1)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
-           ! Explicit
-!!$           unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
-!!$                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel) &
-!!$                & -Kturb*sigma/dx_loc*dtnew(ilevel)
-!!$           e_thermal_new=e_thermal_new+Kturb*sigma/dx_loc*dtnew(ilevel)
-
-           ! Implicit
-!           unew(ind_cell(i),ndim+3)=(unew(ind_cell(i),ndim+3) &
-!                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
-!                & /(1.0+sigma/dx_loc*dtnew(ilevel))
-!!$           e_thermal_new=e_thermal_new+unew(ind_cell(i),ndim+3)*sigma/dx_loc*dtnew(ilevel)
-
-! Implicit
+           ! Implicit solution
            unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
                 &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
                 & /(1.0+sigma/dx_loc*dtnew(ilevel))
-!           e_thermal_new=e_thermal_new+unew(ind_cell(i),ivirial1)*sigma/dx_loc*dtnew(ilevel)
 
            ! Stationary solution
-!Michael           unew(ind_cell(i),ndim+3)=d_old*dx_loc**2*phi_diss(i)
 !           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           unew(ind_cell(i),ndim+2)=e_thermal_new+e_kin_new
         end do
         ! End loop over grids
      end do
