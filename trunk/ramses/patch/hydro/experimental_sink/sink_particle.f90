@@ -223,6 +223,7 @@ subroutine create_cloud_from_sink
      end do
   end do
   
+  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
   do isink=1,nsink
      direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
   end do
@@ -563,7 +564,6 @@ subroutine grow_sink(ilevel,on_creation)
   ! This routine performs accretion onto the sink. It vectorizes the loop
   ! over all sink cloud particles and calls accrete_sink as soon as nvector 
   ! particles are collected
-  ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,info
   integer::ig,ip,npart1,npart2,icpu,isink,lev
@@ -731,6 +731,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
+  real(dp)::acc_ratio,v_AGN
 
 #if NDIM==3
 
@@ -836,6 +837,22 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               end if
            else
               m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+
+              if(agn)then
+                 acc_ratio=dMBHoverdt(isink)/(4.*3.1415926*6.67d-8*msink(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
+                 if (acc_ratio > chi_switch) then
+                    ! Eddington ratio higher than chi_switch -> energy
+                    AGN_fbk_frac_ener = 1.0
+                    AGN_fbk_frac_mom = 0.0
+                 else
+                    ! Eddington ratio lower than chi_switch -> momentum
+                    AGN_fbk_frac_ener = 0.0
+                    AGN_fbk_frac_mom = 1.0
+                 end if
+                 v_AGN = (5/3*2*0.1*epsilon_kin/kin_mass_loading)**0.5*3d10 ! in cm/s
+                 fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
+                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1-cos(3.1415926/180.*cone_opening/2)) ! vol-weighted
+              end if
            end if
 
            m_acc=max(m_acc,0.0_dp)               
@@ -871,12 +888,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            if( .not. on_creation)then
               if(agn)then
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
-                    if(feedback_scheme=='energy')then
-                       fbk_ener_AGN=min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                    if(AGN_fbk_frac_ener.gt.0.0)then ! thermal AGN feedback
                        unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
                     end if
-                    if(feedback_scheme=='momentum')then
-                       fbk_mom_AGN=min(delta_mass(isink)*v_AGN*(180./cone_opening)*1.e5/scale_v*weight/volume*d/density,v_max*1.e5/scale_v*weight*d)
+                  
+                    if(AGN_fbk_frac_mom.gt.0.0)then ! momentum AGN feedback
                        ! checking if particle is in cone
                        cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
                        cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
@@ -1646,7 +1662,7 @@ subroutine update_sink(ilevel)
         do jsink=isink+1,nsink
 
            ! Compute relative distance
-           r_rel(1:3)=xsink(isink,1:3)-xsink(jsink,1:3) 
+           r_rel(1:3)=xsink(jsink,1:3)-xsink(isink,1:3) 
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
               if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
@@ -1661,7 +1677,7 @@ subroutine update_sink(ilevel)
               msum_overlap(jsink)=msum_overlap(jsink)+msink(isink)
 
               ! Merging based on relative distance
-              merge=rr<rmax2 ! Sinks are within one linking length
+              merge=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
               if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
@@ -1674,14 +1690,26 @@ subroutine update_sink(ilevel)
                  iyoung=(t-tsink(isink)<t_larson1)
                  jyoung=(t-tsink(jsink)<t_larson1)
                  merge=merge .and. (iyoung .or.  jyoung)
-                 merge=merge .or.  (iyoung .and. jyoung)
               end if
             
               if (merge)then
+
+                 if(myid==1)then
+                    write(*,*)'Merging sink ',idsink(jsink),' into sink ',idsink(isink)
+                    if(verbose)then
+                       write(*,*)'Sink #1: ',idsink(isink)
+                       write(*,*)msink(isink)
+                       write(*,*)xsink(isink,1:3)
+                       write(*,*)'Sink #2: ',idsink(jsink)
+                       write(*,*)msink(jsink)
+                       write(*,*)xsink(jsink,1:3)
+                    endif
+                 endif
+
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))
-                 xcom(1:3)=(msink(isink)*xsink(isink,1:3)+msink(jsink)*xsink(jsink,1:3))/mcom
+                 xcom(1:3)=xsink(isink,1:3)+msink(jsink)*r_rel(1:3)/mcom
                  vcom(1:3)=(msink(isink)*vsink(isink,1:3)+msink(jsink)*vsink(jsink,1:3))/mcom
                  lcom(1:3)=msink(isink)*cross((xsink(isink,1:3)-xcom(1:3)),vsink(isink,1:3)-vcom(1:3))+ &
                       &    msink(jsink)*cross((xsink(jsink,1:3)-xcom(1:3)),vsink(jsink,1:3)-vcom(1:3))
@@ -1725,7 +1753,7 @@ subroutine update_sink(ilevel)
   ! Loop over sinks
   do isink=1,nsink
      if(msink(isink)>0.0)then
-        ! sum force contributions from all levels and gather 
+        ! Sum force contributions from all levels and gather 
         do lev=levelmin,nlevelmax
            fsink(isink,1:ndim)=fsink(isink,1:ndim)+fsink_partial(isink,1:ndim,lev)
         end do
@@ -1733,9 +1761,9 @@ subroutine update_sink(ilevel)
            fsink(isink,1:ndim)=fsink(isink,1:ndim)/dble(ncloud_sink)
         end if
      
-        ! compute timestep for the synchronization
+        ! Compute timestep for the synchronization
         if (new_born(isink))then
-           ! no sync necessary for newly produced sink
+           ! No sync necessary for newly produced sink
            dteff=0d0 
         else
            if(sinkint_level>ilevel)then
@@ -1749,16 +1777,16 @@ subroutine update_sink(ilevel)
            end if
         end if
      
-        ! this is the kick-kick (half old half new timestep)
+        ! This is the kick-kick (half old half new timestep)
         vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fsink(isink,1:ndim)+vsink(isink,1:ndim)
 
-        ! save the velocity
+        ! Save the velocity
         vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
 
-        ! this is the kick-kick (half old half new timestep)
+        ! This is the kick-kick (half old half new timestep)
         vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fsink(isink,1:ndim)+vsink(isink,1:ndim)
 
-        ! save the velocity
+        ! Save the velocity
         vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
      
         ! and this is the drift (only for the global sink variable)
@@ -1842,9 +1870,9 @@ subroutine update_cloud(ilevel)
   if(ip>0)call upd_cloud(ind_part,ip)
   
   if (myid==1.and.verbose)then
-     write(*,*)'sink drift due to accretion relative to grid size at level ',ilevel
+     write(*,*)'Sink drift due to accretion relative to grid size at level ',ilevel
      do isink=1,nsink
-        write(*,*)'#sink: ',isink,' drift: ',sink_jump(isink,1:ndim,ilevel)/dx_loc
+        write(*,'("#sink: ",I6," drift: ",3(1PE12.5))')isink,sink_jump(isink,1:ndim,ilevel)/dx_loc
      end do
   end if
 
@@ -1899,14 +1927,14 @@ subroutine upd_cloud(ind_part,np)
      end do
   end do
 
-  ! write back velocity
+  ! Write back velocity
   do idim=1,ndim
      do j=1,np
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
 
-  ! read level
+  ! Read level
   do j=1,np
      level_p(j)=levelp(ind_part(j))
   end do
@@ -2280,8 +2308,9 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,mass_sink_seed,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
-       clump_core,verbose_AGN,T2_AGN,T2_min,v_AGN,cone_opening,mass_halo_AGN,mass_clump_AGN,feedback_scheme,&
-       boost_threshold_density
+       clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,&
+       AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
+       epsilon_kin,chi_switch,kin_mass_loading
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)  
@@ -2382,288 +2411,10 @@ subroutine read_sink_params()
   end if
 
   if(mass_merger_vel_check<0.)then 
-     mass_merger_vel_check=huge(0._dp)
+     mass_merger_vel_check=0.0
   end if
 
-
 end subroutine read_sink_params
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine get_cell_index_for_particle(indp,xx,cell_lev,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ok)
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  implicit none
-  integer::ng,np,ilevel
-  integer,dimension(1:nvector)::ind_grid,indp,cell_lev,ind_grid_part
-  real(dp),dimension(1:nvector,1:ndim)::xpart,xx
-  logical,dimension(1:nvector)::ok
-
-
-  !-----------------------------------------------------------------------
-  ! This subroutine finds the leaf cell in which a particle sits 
-  !-----------------------------------------------------------------------
-
-  integer::i,j,idim,nx_loc,ind,ix,iy,iz
-  real(dp)::dx,dx_loc,scale,one_over_dx,one_over_scale
-  ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  ! Particle based arrays
-
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd,icd_fine
-  integer ,dimension(1:nvector),save::igrid,icell,kg,icell_fine
-  real(dp),dimension(1:3),save::skip_loc
-  real(dp),dimension(1:twotondim,1:3),save::xc
- 
-
-  ! Mesh spacing in that level
-  dx=0.5D0**ilevel
-  nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-  scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-  one_over_dx=1./dx
-  one_over_scale=1./scale
-
-  ! Cells center position relative to grid center position
-  do ind=1,twotondim
-     iz=(ind-1)/4
-     iy=(ind-1-4*iz)/2
-     ix=(ind-1-2*iy-4*iz)
-     xc(ind,1)=(dble(ix)-0.5D0)*dx
-     xc(ind,2)=(dble(iy)-0.5D0)*dx
-     xc(ind,3)=(dble(iz)-0.5D0)*dx
-  end do
-
-  ! Lower left corner of 3x3x3 grid-cube
-  do idim=1,ndim
-     do i=1,ng
-        x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
-     end do
-  end do
-
-  ! Gather 27 neighboring father cells (should be present anytime !)
-  do i=1,ng
-     ind_cell(i)=father(ind_grid(i))
-  end do
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
-
-  ! Rescale position at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=xpart(j,idim)*one_over_scale+skip_loc(idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
-        x(j,idim)=x(j,idim)*one_over_dx
-     end do
-  end do
-
-  ! Check for illegal moves
-  do idim=1,ndim
-     do j=1,np
-        if(x(j,idim)<=0.0D0.or.x(j,idim)>=6.0D0)then
-           print*,'cpu ', myid, ' hosts an escaped particle'
-           print*,'x: ',x(j,1:ndim)
-           print*,'x0: ',x0(ind_grid_part(j),1:ndim)
-           print*,'xg: ',xg(ind_grid(ind_grid_part(j)),1:ndim)
-           print*,'xp: ',xpart(j,1:ndim)
-           print*,'skip_loc: ',skip_loc(1:ndim)
-           print*,'scale: ',scale
-           call clean_stop
-        end if
-     end do
-  end do
-  
-  ! NGP at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim)=int(x(j,idim))
-     end do
-  end do
-
-   ! Compute parent grids
-  do idim=1,ndim
-     do j=1,np
-        igd(j,idim)=id(j,idim)/2
-     end do
-  end do
-#if NDIM==1
-  do j=1,np
-     kg(j)=1+igd(j,1)
-  end do
-#endif
-#if NDIM==2
-  do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)
-  end do
-#endif
-#if NDIM==3
-  do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
-  end do
-#endif
-
-  do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
-  end do
-
-  ! Check if particle has escaped to ilevel-1
-  ok(1:np)=.true.
-  do j=1,np
-     if (igrid(j)==0)then
-        ok(j)=.false.
-        indp(j)=nbors_father_cells(ind_grid_part(j),kg(j))
-        cell_lev(j)=ilevel-1
-        xx(j,1:ndim)=(xg(ind_grid(ind_grid_part(j)),1:ndim)+(igd(j,1:ndim)-1.)*2.*dx-skip_loc(1:ndim))*scale
-        if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.000001*dx_loc*3**0.5)print*,'oups at ilevel-1'
-     end if
-  end do
-  
-  ! Compute parent cell position
-  do idim=1,ndim
-     do j=1,np
-        icd(j,idim)=id(j,idim)-2*igd(j,idim)
-     end do
-  end do
-        
-  call geticell(icell,icd,np)
-  
-  ! Compute parent cell adress
-  do j=1,np
-     if(ok(j))then
-        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
-     end if
-  end do
-
-  ! Check if particles have leaked into level ilevel+1
-  do j=1,np
-     if(ok(j))then
-        if (son(indp(j))>0)then
-           ok(j)=.false.
-           cell_lev(j)=ilevel+1
-           do idim=1,ndim
-              icd_fine(1,idim)=int(2*(x(j,idim)-int(x(j,idim))))
-           end do
-           call geticell(icell_fine,icd_fine,1)
-           xx(j,1:ndim)=(xg(son(indp(j)),1:ndim)+xc(icell_fine(1),1:ndim)*0.5-skip_loc(1:ndim))*scale
-           indp(j)=ncoarse+(icell_fine(1)-1)*ngridmax+son(indp(j))
-           if (sum((xx(j,1:ndim)-xpart(j,1:ndim))**2)**0.5>1.0000001*0.25*dx_loc*3**0.5)then
-              print*,icd_fine(1,1:ndim)
-              print*,icell_fine(1)
-              print*,'oups at ilevel+1'
-           end if
-        end if
-     endif
-  end do
-
-  !cell center positions for particles which sit in the leve ilevel
-  do j=1,np
-     if (ok(j))then
-        xx(j,1:ndim)=(xg(igrid(j),1:ndim)+xc(icell(j),1:ndim)-skip_loc(1:ndim))*scale
-        cell_lev(j)=ilevel
-     end if
-  end do
-
-end subroutine get_cell_index_for_particle
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine geticell(icell,icd,np)
-  use amr_parameters, only:nvector,ndim
-  integer::np
-  integer,dimension(1:nvector,1:ndim)::icd
-  integer,dimension(1:nvector)::icell
-  ! mini subroutine that gets the cell index (1 to 8)
-  ! for certain coordinates (0,1 along each direction)
-  ! put into a subroutine to make the code look less ugly
-  integer::j
-    
-#if NDIM==1
-  do j=1,np
-     icell(j)=1+icd(j,1)
-  end do
-#endif
-#if NDIM==2
-  do j=1,np
-     icell(j)=1+icd(j,1)+2*icd(j,2)
-  end do
-#endif
-#if NDIM==3
-  do j=1,np
-     icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-  end do
-#endif
-  
-end subroutine geticell
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine get_cell_center(xx,index,ilevel)
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  implicit none
-  real(dp),dimension(1:3)::xx
-  integer::index,ilevel
-  ! little helper routine that gets the cell center of a cell with a given index
-  ! used only for debugging...
-  integer::ind,ix,iy,iz,i,ind8,grid
-  real(dp)::dx,scale
-  real(dp),dimension(1:8,1:3)::xc
-  real(dp),dimension(1:3)::skip_loc
-  integer::nx_loc
-  dx=0.5D0**ilevel 
-  nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-  scale=boxlen/dble(nx_loc)
-
-
-  ! Cells center position relative to grid center position
-  do ind=1,8  
-     iz=(ind-1)/4
-     iy=(ind-1-4*iz)/2
-     ix=(ind-1-2*iy-4*iz)
-     xc(ind,1)=(dble(ix)-0.5D0)*dx
-     xc(ind,2)=(dble(iy)-0.5D0)*dx
-     xc(ind,3)=(dble(iz)-0.5D0)*dx
-  end do
-  
-  ind8=(index-ncoarse)/ngridmax
-
-  grid=mod((index-ncoarse),ngridmax)
-  print*,'ind8',ind8
-  print*,'grid',grid
-  print*,'xg',xg(grid,1:3)
-  print*,'xc',xc(ind8+1,1:3)
-
-
-  do i=1,3
-     xx(i)=(xg(grid,i)+xc(ind8+1,i)-skip_loc(i))*scale
-  end do
-  print*,'xx',xx(1:3)
-  
-end subroutine get_cell_center
 !################################################################
 !################################################################
 !################################################################
@@ -3089,3 +2840,7 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################

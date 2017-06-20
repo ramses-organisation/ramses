@@ -147,8 +147,11 @@ subroutine flag_formation_sites
         ok=ok.and.halo_mass(jj)>mass_halo_AGN*2d33/(scale_d*scale_l**3.0)
         ! 4-cell ball mass has to be larger than some threshold
         ok=ok.and.clump_mass4(jj)>mass_clump_AGN*2d33/(scale_d*scale_l**3.0)
+        ! 4-cell ball av. density has to be larger that SF threshold
+        ok=ok.and.clump_mass4(jj)/(4./3.*ACOS(-1.d0)*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
         ! Peak density has to be larger than star formation thresold
-        ok=ok.and.max_dens(jj)>n_star/scale_nH
+        !ok=ok.and.max_dens(jj)>10.0*n_star/scale_nH
+        !ok=ok.and.max_dens(jj)>n_star/scale_nH
         ! Then create a sink at the peak position
         if (ok)then
            pos(1,1:3)=peak_pos(jj,1:3)
@@ -205,7 +208,7 @@ subroutine flag_formation_sites
 
      if (myid==1)then
         write(*,'(200A)')'======================================================== FlagFormationSites ==================================================================================================================='
-        write(*,'(200A)')'     ID  relevance lvl Ncell     x            y            z         vx[km/s]     vy[km/s]      vz[km/s]   mass[Msol]  rhomax[g/cc]  Ekin[km/s]   Eth[km/s]    Egrav[km/s]  Erad[km/s] blk form'
+        write(*,'(200A)')'     ID  relevance lvl Ncell     x            y            z         vx[km/s]     vy[km/s]      vz[km/s]   mass[Msol]  rhomax[g/cc]  Ekin[km/s]   Eth[km/s]    Egrav[km/s]  Erad[km/s] occ form'
         write(*,'(200A)')'==============================================================================================================================================================================================='
      end if
 
@@ -228,10 +231,10 @@ subroutine flag_formation_sites
              & ,real(clump_velocity(j,3)*scale_v/1d5,kind=dp)&
              & ,real(clump_mass(j)*scale_m/2d33,kind=dp)&
              & ,real(max_dens(j)*scale_d,kind=dp)&
-             & ,real(sqrt(kinetic_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(thermal_support(j)/clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(abs(grav_term(j)) /clump_mass(j))*scale_v/1d5,kind=dp)&
-             & ,real(sqrt(abs(rad_term(j))  /clump_mass(j))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(kinetic_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(thermal_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(grav_term(j)) /(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
+             & ,real(sqrt(abs(rad_term(j))  /(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
              & ,real(occupied(j),kind=dp)&
              & ,real(form(j),kind=dp)&
              & /)

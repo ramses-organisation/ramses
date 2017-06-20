@@ -415,8 +415,8 @@ subroutine write_clump_properties(to_file)
   rel_mass=rel_mass_tot  
 #endif
   if(myid==1)then
-     if(clinfo)write(*,'(A,1PE12.5)')' Total mass above threshold =',tot_mass
-     if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass in',n_rel_tot,' listed clumps =',rel_mass_tot
+     if(clinfo)write(*,'(A,1PE12.5)')' Total mass [code units] above threshold =',tot_mass
+     if(clinfo)write(*,'(A,I10,A,1PE12.5)')' Total mass [code units] in',n_rel_tot,' listed clumps =',rel_mass_tot
   endif
 
 end subroutine write_clump_properties
