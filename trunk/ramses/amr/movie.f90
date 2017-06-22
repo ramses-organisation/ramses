@@ -836,7 +836,7 @@ endif
      
      ! Fill up map with projected mass
 #ifdef SOLVERmhd
-     ipart_start = NVAR+4
+     ipart_start = NVAR+5
 #else
      ipart_start = NVAR+1
 #endif
