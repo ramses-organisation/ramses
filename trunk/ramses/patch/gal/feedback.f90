@@ -226,7 +226,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*2d33)/scale_v**2
+  ESN=2*1d51/(10.*2d33)/scale_v**2 !double the energy
 
   ! Life time radiation specific energy from cgs to code units
   ERAD=1d53/(10.*2d33)/scale_v**2
@@ -464,12 +464,12 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Use non-thermal energy
   if(nener>0)then
      do j=1,np
-        unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+ethermal(j)*(1d0+RAD_BOOST)/2.
+        unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+ethermal(j)*(1d0+RAD_BOOST)!/2.
      end do
   endif
 
 #endif
-  
+
 end subroutine feedbk
 !################################################################
 !################################################################
@@ -907,7 +907,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  ESN=(1d51/(10d0*2d33))/scale_v**2
+  !ESN=(1d51/(10d0*2d33))/scale_v**2   !why is that here again? see 229
 
   do iSN=1,nSN
      eta_sn2    = eta_sn
