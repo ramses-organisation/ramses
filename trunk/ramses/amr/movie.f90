@@ -836,12 +836,12 @@ endif
      
      ! Fill up map with projected mass
 #ifdef SOLVERmhd
-     ipart_start = NVAR+5
+     ipart_start = NVAR+4
 #else
      ipart_start = NVAR+1
 #endif
      imap = 1
-     do kk=0,ipart_start+2
+     do kk=ipart_start,ipart_start+2
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
