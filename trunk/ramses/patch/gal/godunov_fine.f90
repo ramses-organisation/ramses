@@ -406,7 +406,7 @@ subroutine add_viscosity_source_terms(ilevel)
         if(nener>0)then
            ! Perform decay of non-thermal energy
            do i=1,ngrid
-              
+
               ! Compute old turbulent state
               d_old=max(uold(ind_cell(i),1),smallr)
               Kturb=uold(ind_cell(i),ndim+3)
@@ -417,7 +417,7 @@ subroutine add_viscosity_source_terms(ilevel)
               ! Implicit solution
               unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
                    & /(1.0+decay_rate*dtnew(ilevel))
-              
+
            end do
            ! End loop over grids
         endif
