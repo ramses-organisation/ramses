@@ -253,7 +253,8 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_old
+  real(dp)::Kturb,sigma,d_old,decay_rate
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -271,6 +272,8 @@ subroutine add_viscosity_source_terms(ilevel)
   dx=0.5d0**ilevel
   dx_loc=dx*scale
   dx_min=(0.5**levelmax)*scale
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
@@ -399,6 +402,26 @@ subroutine add_viscosity_source_terms(ilevel)
 
         end do
         ! End loop over grids
+
+        if(nener>0)then
+           ! Perform decay of non-thermal energy
+           do i=1,ngrid
+              
+              ! Compute old turbulent state
+              d_old=max(uold(ind_cell(i),1),smallr)
+              Kturb=uold(ind_cell(i),ndim+3)
+              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+!              decay_rate=sigma/dx_loc
+              decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
+
+              ! Implicit solution
+              unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
+                   & /(1.0+decay_rate*dtnew(ilevel))
+              
+           end do
+           ! End loop over grids
+        endif
+
      end do
      ! End loop over cells
   end do
