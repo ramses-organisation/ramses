@@ -277,7 +277,7 @@ subroutine star_formation(ilevel)
                  cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
                  cs2       = cs2-cs2_poly
                  ! Turbulence 1D velocity dispersion
-                 sigma2 = uold(ind_cell(i),ivirial1)
+                 sigma2 = uold(ind_cell(i),ivirial1)*2/d/3
 
                  ! Density criterion
                  if(d<=d0) ok(i)=.false.
