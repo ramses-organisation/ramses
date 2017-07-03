@@ -72,7 +72,6 @@ subroutine thermal_feedback(ilevel)
      endif
   endif
 
-
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -448,6 +447,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
           & ethermal(j)*(1d0+RAD_BOOST)
+     if(pressure_fix)then
+        enew(indp(j))=enew(indp(j))+(1.0-FRAC_NT)*ethermal(j)*(1d0+RAD_BOOST)
+     endif
   end do
 
   ! Add metals

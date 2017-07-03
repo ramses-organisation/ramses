@@ -137,9 +137,7 @@ subroutine set_uold(ilevel)
   if(pressure_fix.OR.nener>0)then
      call add_pdv_source_terms(ilevel)
   endif
-  if(nener>0)then
-     call add_viscosity_source_terms(ilevel)
-  endif
+  call add_viscosity_source_terms(ilevel)
 
   ! Set uold to unew for myid cells
   do ind=1,twotondim
@@ -414,9 +412,18 @@ subroutine add_viscosity_source_terms(ilevel)
 !              decay_rate=sigma/dx_loc
               decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
 
+!              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2)-unew(ind_cell(i),ndim+3)
+
+
               ! Implicit solution
               unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
                    & /(1.0+decay_rate*dtnew(ilevel))
+
+!              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2)+unew(ind_cell(i),ndim+3)
+
+              if(pressure_fix)then
+                 enew(ind_cell(i))=enew(ind_cell(i))+unew(ind_cell(i),ndim+3)*decay_rate*dtnew(ilevel)
+              endif
 
            end do
            ! End loop over grids
