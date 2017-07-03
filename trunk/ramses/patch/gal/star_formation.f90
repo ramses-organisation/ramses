@@ -39,7 +39,7 @@ subroutine star_formation(ilevel)
   real(dp)::ul,ur,fl,fr,trgv,alpha0
   real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
   real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
-  real(dp)::birth_epoch,factG
+  real(dp)::birth_epoch,factG,M2
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
   real(kind=8)::RandNum,GaussNum,PoissMean
   real(dp),parameter::pi=0.5*twopi
@@ -288,7 +288,7 @@ subroutine star_formation(ilevel)
                        CASE (1)
                           ! Virial parameter
                           alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          M2 = max(sigma2/cs2,1)
+                          M2 = max(sigma2/cs2,1.0)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
 !Michael                          zeta      = 0.3
 !Michael                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
