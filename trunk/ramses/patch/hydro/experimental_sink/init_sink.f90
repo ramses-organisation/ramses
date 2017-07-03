@@ -39,6 +39,7 @@ subroutine init_sink
   allocate(fsink(1:nsinkmax,1:ndim))
 
   allocate(msum_overlap(1:nsinkmax))
+  msum_overlap=0.0
   allocate(rho_sink_tff(levelmin:nlevelmax))
 
   ! Temporary sink variables
