@@ -1035,8 +1035,6 @@ endif
           end do
         end do
      endif
-     if(method_frame(proj_ind)(1:4).eq.'min')then
-     endif
   endif
   if(method_frame(proj_ind)(1:4).eq.'mean') deallocate(weights)
 
