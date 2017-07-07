@@ -167,6 +167,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
+  real(dp)::VSN,momentum_dot,pressure
   real(dp)::dx,dx_loc,scale,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -225,7 +226,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=2*1d51/(10.*2d33)/scale_v**2 !double the energy
+  ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
+
+  ! Stellar momentum injection from cgs to code units
+  VSN=360.*1d5/scale_v
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.5
@@ -404,6 +408,22 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
               enddo
               write(ilun,'(A1)') ' '
+           endif
+        endif
+     end do
+  endif
+
+
+  ! Use non-thermal energy
+  if(nener>0)then
+     do j=1,np
+        birth_time=tp(ind_part(j))
+        ! Make sure that we don't count feedback twice
+        if(birth_time.ge.(current_time-t0))then
+           momentum_dot=VSN*mp(ind_part(j))/t0
+           pressure=momentum_dot/dx_loc**2
+           if(uold(indp(j),ndim+3).lt.pressure)then
+              unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
            endif
         endif
      end do
