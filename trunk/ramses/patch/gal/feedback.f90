@@ -167,7 +167,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::VSN,momentum_dot,pressure
+  real(dp)::VSN,momentum_dot,pressure,cs_TH,cs_old,P_nt_new
   real(dp)::dx,dx_loc,scale,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -230,6 +230,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   VSN=360.*1d5/scale_v
+  cs_TH=1000.*1d5/scale_v
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.5
@@ -413,22 +414,35 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-
   ! Use non-thermal energy
-  if(nener>0)then
-     do j=1,np
-        birth_time=tp(ind_part(j))
-        ! Make sure that we don't count feedback twice
-        if(birth_time.ge.(current_time-t0))then
-           momentum_dot=VSN*mp(ind_part(j))/t0
-           pressure=momentum_dot/dx_loc**2
-           if(uold(indp(j),ndim+3).lt.pressure)then
-              unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
-           endif
-        endif
-     end do
-  endif
+  ! if(nener>0)then
+  !    do j=1,np
+  !       birth_time=tp(ind_part(j))
+  !       if(birth_time.ge.(current_time-t0))then
+  !          momentum_dot=VSN*mp(ind_part(j))/t0
+  !          pressure=momentum_dot/dx_loc**2
+  !          P_nt_new = unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
+  !          cs_old = sqrt(P_nt_new/max(uold(indp(j),1),smallr))
+  !           if(uold(indp(j),ndim+3).lt.pressure.and.cs_old.lt.cs_TH)then
+  !             unew(indp(j),ndim+3)=P_nt_new
+  !          endif
+  !       endif
+  !    end do
+  ! endif
 
+  if(nener>0)then
+    do j=1,np
+       birth_time=tp(ind_part(j))
+       if(birth_time.ge.(current_time-t0))then
+          momentum_dot=VSN*mp(ind_part(j))/t0
+          pressure=momentum_dot/dx_loc**2
+          cs_old = sqrt(uold(indp(j),ndim+3)/max(uold(indp(j),1),smallr))
+           if(uold(indp(j),ndim+3).lt.pressure.and.cs_old.lt.cs_TH)then
+             unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
+          endif
+       endif
+    end do
+  endif
   ! Update hydro variables due to feedback
 
   ! For IR radiation trapping,
@@ -490,6 +504,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(nener>0)then
      do j=1,np
         unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)*(1d0+RAD_BOOST)
+        unew(indp(j),ndim+3)=MIN(unew(indp(j),ndim+3),unew(indp(j),1)*cs_TH**2)
      end do
   endif
 
