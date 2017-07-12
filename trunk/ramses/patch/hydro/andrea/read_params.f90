@@ -20,7 +20,7 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/cosmo,pic,poisson,hydro,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,static,geom
-  namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode
+  namelist/output_params/noutput,foutput,fbackup,aout,tout
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen
   namelist/poisson_params/epsilon,gravity_type,gravity_params
