@@ -186,9 +186,11 @@ subroutine flag_formation_sites
 !!$        ! Clump has to be virialized
 !!$        ok=ok.and.Icl_dd(jj)<0.
         ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
-        ok=ok.and.(kinetic_support(jj)<abs(grav_term(jj)))
+        ok=ok.and.(kinetic_support(jj)<-grav_term(jj))
 !!$        ! Avoid formation of crazy spins
 !!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
+        ! Clumps should not be thermally supported against gravity
+        ok=ok.and.(thermal_support(jj)<-grav_term(jj))
         ! Then create a sink at the peak position
         if (ok)then
            form(jj)=1
