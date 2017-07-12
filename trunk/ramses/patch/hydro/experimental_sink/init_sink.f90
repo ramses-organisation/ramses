@@ -274,9 +274,15 @@ subroutine init_sink
   end if
 
   ! Set direct force boolean
-  do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force)
-  end do  
+  if(mass_sink_direct_force .ge. 0.0)then
+     do isink=1,nsink
+        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+     end do
+  else
+     do isink=1,nsink
+        direct_force_sink(isink)=.False.
+     end do
+  endif
 
 end subroutine init_sink
 !################################################################
