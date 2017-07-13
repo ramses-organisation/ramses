@@ -251,7 +251,7 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_old,decay_rate,cs_TH
+  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
@@ -265,9 +265,6 @@ subroutine add_viscosity_source_terms(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  cs_TH=1000.*1d5/scale_v
-
-
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel
@@ -275,6 +272,8 @@ subroutine add_viscosity_source_terms(ilevel)
   dx_min=(0.5**levelmax)*scale
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  cs_TH=1000.*1d5/scale_v
 
   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
@@ -407,30 +406,27 @@ subroutine add_viscosity_source_terms(ilevel)
         if(nener>0)then
            ! Perform decay of non-thermal energy
            do i=1,ngrid
-
               ! Compute old turbulent state
               d_old=max(uold(ind_cell(i),1),smallr)
               Kturb=uold(ind_cell(i),ndim+3)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-!              sigma=min(sqrt(max(2.0*Kturb/d_old,smallc**2)),cs_TH)
 !              decay_rate=sigma/dx_loc
               decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
-
-!              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2)-unew(ind_cell(i),ndim+3)
-
 
               ! Implicit solution
               unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
                    & /(1.0+decay_rate*dtnew(ilevel))
-
-              unew(ind_cell(i),ndim+3)=MIN(unew(ind_cell(i),ndim+3),unew(ind_cell(i),1)*cs_TH**2)
-
-!              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2)+unew(ind_cell(i),ndim+3)
+              ! Check for high sound speed
+              cs=sqrt(unew(ind_cell(i),ndim+3)/unew(ind_cell(i),1))
+              if(cs.ge.cs_TH)then
+!                write(*,*) "entering check godunov_fine",unew(ind_cell(i),ndim+3),cs
+                unew(ind_cell(i),ndim+3)=unew(ind_cell(i),1)*cs_TH**2
+!                write(*,*) "exit check godunov_fine",unew(ind_cell(i),ndim+3)
+              end if
 
               if(pressure_fix)then
                  enew(ind_cell(i))=enew(ind_cell(i))+unew(ind_cell(i),ndim+3)*decay_rate*dtnew(ilevel)
               endif
-
            end do
            ! End loop over grids
         endif

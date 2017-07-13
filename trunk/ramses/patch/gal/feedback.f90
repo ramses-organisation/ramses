@@ -167,7 +167,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::VSN,momentum_dot,pressure,cs_TH,cs_old,P_nt_new
+  real(dp)::VSN,momentum_dot,pressure,cs_TH,cs,P_nt_new
   real(dp)::dx,dx_loc,scale,birth_time,current_time
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -422,8 +422,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !          momentum_dot=VSN*mp(ind_part(j))/t0
   !          pressure=momentum_dot/dx_loc**2
   !          P_nt_new = unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
-  !          cs_old = sqrt(P_nt_new/max(uold(indp(j),1),smallr))
-  !           if(uold(indp(j),ndim+3).lt.pressure.and.cs_old.lt.cs_TH)then
+  !          cs = sqrt(P_nt_new/max(uold(indp(j),1),smallr))
+  !           if(uold(indp(j),ndim+3).lt.pressure.and.cs.lt.cs_TH)then
   !             unew(indp(j),ndim+3)=P_nt_new
   !          endif
   !       endif
@@ -436,9 +436,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
        if(birth_time.ge.(current_time-t0))then
           momentum_dot=VSN*mp(ind_part(j))/t0
           pressure=momentum_dot/dx_loc**2
-          cs_old = sqrt(uold(indp(j),ndim+3)/max(uold(indp(j),1),smallr))
-           if(uold(indp(j),ndim+3).lt.pressure.and.cs_old.lt.cs_TH)then
-             unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
+          cs = sqrt(uold(indp(j),ndim+3)/max(uold(indp(j),1),smallr))
+          if(uold(indp(j),ndim+3).lt.pressure.and.cs.lt.cs_TH)then
+            unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
           endif
        endif
     end do
@@ -504,7 +504,12 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(nener>0)then
      do j=1,np
         unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)*(1d0+RAD_BOOST)
-        unew(indp(j),ndim+3)=MIN(unew(indp(j),ndim+3),unew(indp(j),1)*cs_TH**2)
+        cs=sqrt(unew(indp(j),ndim+3)/unew(indp(j),1))
+        if(cs.ge.cs_TH)then
+!          write(*,*) "entering check feedback",unew(indp(j),ndim+3),cs*scale_v/1d5,j
+          unew(indp(j),ndim+3)=unew(indp(j),1)*cs_TH**2
+!          write(*,*) "exit check feedback",unew(indp(j),ndim+3),sqrt(unew(indp(j),ndim+3)/unew(indp(j),1))*scale_v/1d5
+        endif
      end do
   endif
 
