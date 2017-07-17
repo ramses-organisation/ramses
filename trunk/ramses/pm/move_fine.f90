@@ -11,7 +11,7 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,info
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -73,7 +73,7 @@ subroutine move_fine_static(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2,info
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -178,7 +178,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !------------------------------------------------------------
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
-  real(dp)::dx,length,dx_loc,scale,vol_loc,r2
+  real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector),save::father_cell
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -257,7 +257,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -324,7 +324,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         if(.not.ok(j))then
            dd(j,idim)=x(j,idim)+0.5D0
-           id(j,idim)=dd(j,idim)
+           id(j,idim)=int(dd(j,idim))
            dd(j,idim)=dd(j,idim)-id(j,idim)
            dg(j,idim)=1.0D0-dd(j,idim)
            ig(j,idim)=id(j,idim)-1

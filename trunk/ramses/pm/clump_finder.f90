@@ -1,6 +1,6 @@
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
-  use poisson_commons, ONLY:phi,rho
+  use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
   implicit none
@@ -25,11 +25,10 @@ subroutine clump_finder(create_output,keep_alive)
   !----------------------------------------------------------------------------
 
   integer::istep,nskip,ilevel,info,icpu,nmove,nzero
-  integer::i,j,peak_nr, levelmin_part
+  integer::i,levelmin_part
   integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
-  logical::all_bound
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
@@ -453,7 +452,6 @@ subroutine flag_peaks(xx,ipeak)
   ! Flag (flag2 array) all cells that host a peak with the global peak id
   !----------------------------------------------------------------------
   integer::ipart,jpart
-  integer,dimension(1:nvector)::ind_part,ind_cell,ind_max
   do ipart=1,ntest
      jpart=testp_sort(ipart)
      if(imaxp(jpart).EQ.-1)then
@@ -512,7 +510,7 @@ subroutine saddlepoint_search(xx)
   ! neighboring cell) are connected by a new densest saddle.
   !---------------------------------------------------------------------------
   integer::ipart,ip,ilevel,next_level
-  integer::i,j,info,dummyint
+  integer::dummyint
   integer,dimension(1:nvector)::ind_cell,ind_max
 
   ip=0
@@ -536,7 +534,6 @@ end subroutine saddlepoint_search
 !#########################################################################
 subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   use amr_commons
-  use clfind_commons,ONLY:ipeak_start
   implicit none
   integer::np,count,ilevel,action
   integer,dimension(1:nvector)::ind_max,ind_cell
@@ -563,7 +560,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   logical ,dimension(1:99)::ok
   real(dp),dimension(1:nvector)::density_max
   real(dp),dimension(1:3)::skip_loc
-  logical ,dimension(1:nvector)::okpeak,okdummy
+  logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids 
   integer::ntestpos,ntp,idim,ipos
@@ -860,7 +857,7 @@ subroutine read_clumpfind_params()
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,age_cut_clfind
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   
   ! Read namelist file 
   rewind(1)
@@ -921,7 +918,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   use pm_commons
   use hydro_commons
   implicit none
-  integer::ng,np,ilevel,ind_grid
+  integer::np,ilevel,ind_grid
   integer,dimension(1:99)::indp,cell_lev
   real(dp),dimension(1:99,1:ndim)::xpart
   integer ,dimension(1:threetondim)::nbors_father_cells
@@ -930,7 +927,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   ! This subroutine finds the leaf cell in which a particle sits
   !-----------------------------------------------------------------------
 
-  integer::i,j,idim,nx_loc,ind,ix,iy,iz
+  integer::j,idim,nx_loc,ind,ix,iy,iz
   real(dp)::dx,dx_loc,scale,one_over_dx,one_over_scale
   ! Grid based arrays
   real(dp),dimension(1:ndim),save::x0
@@ -1118,7 +1115,7 @@ subroutine rho_only(ilevel)
   ! level ilevel contribute also to the level density field
   ! (boundary particles) using buffer grids.
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,info,nx_loc,ibound,idim
+  integer::iskip,icpu,ind,i,nx_loc,ibound
   real(dp)::dx,scale,dx_loc
 
   if(.not. poisson)return
@@ -1426,7 +1423,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -1582,7 +1579,6 @@ subroutine tsc_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
