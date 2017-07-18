@@ -805,6 +805,13 @@ subroutine cic_from_multipole(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
+  !-------------------------------------------------------------------
+  ! This routine compute array rho (source term for Poisson equation)
+  ! by first reseting array rho to zero, then 
+  ! by affecting the gas density to leaf cells, and finally
+  ! by performing a restriction operation for split cells.
+  ! For pure particle runs, the restriction is not necessary and the
+  ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
   integer::ind,i,icpu,ncache,ngrid,iskip,ibound,igrid
