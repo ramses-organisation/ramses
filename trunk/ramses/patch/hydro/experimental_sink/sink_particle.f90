@@ -208,11 +208,20 @@ subroutine create_cloud_from_sink
                     indp=ind_cloud(1)
                     idp(indp)=-isink
                     levelp(indp)=levelmin
-                    if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
-                       mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                    if (rr<=rmass)then
+                       ! check if direct_force is turned on
+                       if(mass_sink_direct_force .ge. 0.0)then
+                          if(msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
+                             mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                          else
+                             mp(indp)=0.
+                          endif
+                       else
+                          mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                       endif
                     else
                        mp(indp)=0.
-                    end if
+                    endif
                     xp(indp,1:3)=xtest(1,1:3)
                     vp(indp,1:3)=vsink(isink,1:3)
                     tp(indp)=tsink(isink)     ! Birth epoch
@@ -224,9 +233,15 @@ subroutine create_cloud_from_sink
   end do
   
   sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
-  do isink=1,nsink
-     direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
-  end do
+  if(mass_sink_direct_force .ge. 0.0)then
+     do isink=1,nsink
+        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+     end do
+  else
+     do isink=1,nsink
+        direct_force_sink(isink)=.False.
+     end do
+  endif
 
 #endif
 end subroutine create_cloud_from_sink
@@ -2404,10 +2419,6 @@ subroutine read_sink_params()
         if(myid==1)print*, 'periodic boundaries in combination with '
         if(myid==1)print*, 'direct force sinks are not treated accurately....'
      end if
-  end if
-
-  if(mass_sink_direct_force<0.)then 
-     mass_sink_direct_force=huge(0._dp)
   end if
 
   if(mass_merger_vel_check<0.)then 
