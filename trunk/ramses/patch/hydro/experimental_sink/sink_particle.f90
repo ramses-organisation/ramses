@@ -485,13 +485,8 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::vv
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
-  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
-#else
-  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
 #endif
-  real(dp),dimension(1:nvector),save::egas
   real(dp),dimension(1:nvector,1:ndim),save::xpart
-  integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   integer ,dimension(1:nvector,1:twotondim),save::indp
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
   real(dp),dimension(1:nvector,1:twotondim)::vol
@@ -2451,9 +2446,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
-  real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
-  real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
@@ -2533,7 +2525,7 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -2700,12 +2692,10 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   !------------------------------------------------------------------
   ! This routine returns the CIC cells and volumes for np particles.
   !------------------------------------------------------------------
-  integer::i,j,ind,ivar
+  integer::j,ind,ivar
 
   ! Particle-based arrays
 
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
-  real(dp),dimension(1:nvector,1:ndim),save::x0
   real(dp),dimension(1:nvector),save::vol_tot
   real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xx
   real(dp),dimension(1:nvector,1:twotondim),save::vol
