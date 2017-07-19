@@ -16,8 +16,10 @@ end program ramses
 subroutine set_signal_handler
   implicit none
   external output_signal
-  integer::jsigact,jhandle
   integer::istatus=-1
+#ifdef NOSYSTEM
+  integer::jsigact,jhandle
+#endif
 
 #ifndef NOSYSTEM
   call SIGNAL(10,output_signal,istatus)

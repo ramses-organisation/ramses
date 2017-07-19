@@ -13,10 +13,15 @@ subroutine init_time
 #ifndef WITHOUTMPI
   include 'mpif.h'  
 #endif
-  integer::i,Nmodel,info
+  integer::i,Nmodel
   real(kind=8)::T2_sim  
+#ifdef grackle
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::file_exists
+#endif
+#ifndef WITHOUTMPI
+  integer::info
+#endif
 
   if(nrestart==0)then
      if(cosmo)then
@@ -812,8 +817,10 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
      t = t - dt
      
   end do
-
-!  write(*,666)-t
+  
+  if(debug)then
+     write(*,666)-t
+  end if
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable
