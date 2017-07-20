@@ -215,7 +215,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
-  real(dp)::dx,length,scale,r2
+  real(dp)::dx,scale
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
@@ -292,7 +292,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -359,7 +359,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         if(.not.ok(j))then
            dd(j,idim)=x(j,idim)+0.5D0
-           id(j,idim)=dd(j,idim)
+           id(j,idim)=int(dd(j,idim))
            dd(j,idim)=dd(j,idim)-id(j,idim)
            dg(j,idim)=1.0D0-dd(j,idim)
            ig(j,idim)=id(j,idim)-1

@@ -1,6 +1,6 @@
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
-  use poisson_commons, ONLY:phi,rho
+  use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
   implicit none
@@ -25,11 +25,10 @@ subroutine clump_finder(create_output,keep_alive)
   !----------------------------------------------------------------------------
 
   integer::istep,nskip,ilevel,info,icpu,nmove,nzero
-  integer::i,j,peak_nr, levelmin_part
+  integer::i,levelmin_part
   integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
-  logical::all_bound
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
@@ -229,7 +228,7 @@ subroutine clump_finder(create_output,keep_alive)
      nmove_tot=nmove_all
      nzero_tot=nzero_all
 #endif   
-     if(myid==1.and.ntest_all>0.and.clinfo)write(*,*)"istep=",istep,"nmove=",nmove_tot
+     if(ntest_all>0.and.verbose)write(*,*)"istep=",istep,"nmove=",nmove_tot
   end do
 
   !------------------------------------
@@ -283,10 +282,10 @@ subroutine clump_finder(create_output,keep_alive)
      !------------------------------------------
      ! Output clumps properties to file
      !------------------------------------------
-     if(myid==1.and.clinfo)then
+     if(verbose)then
         write(*,*)"Output status of peak memory."
      endif
-     if(clinfo)call analyze_peak_memory
+     if(verbose)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
@@ -453,7 +452,6 @@ subroutine flag_peaks(xx,ipeak)
   ! Flag (flag2 array) all cells that host a peak with the global peak id
   !----------------------------------------------------------------------
   integer::ipart,jpart
-  integer,dimension(1:nvector)::ind_part,ind_cell,ind_max
   do ipart=1,ntest
      jpart=testp_sort(ipart)
      if(imaxp(jpart).EQ.-1)then
@@ -512,7 +510,7 @@ subroutine saddlepoint_search(xx)
   ! neighboring cell) are connected by a new densest saddle.
   !---------------------------------------------------------------------------
   integer::ipart,ip,ilevel,next_level
-  integer::i,j,info,dummyint
+  integer::dummyint
   integer,dimension(1:nvector)::ind_cell,ind_max
 
   ip=0
@@ -536,7 +534,6 @@ end subroutine saddlepoint_search
 !#########################################################################
 subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   use amr_commons
-  use clfind_commons,ONLY:ipeak_start
   implicit none
   integer::np,count,ilevel,action
   integer,dimension(1:nvector)::ind_max,ind_cell
@@ -563,12 +560,10 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   logical ,dimension(1:99)::ok
   real(dp),dimension(1:nvector)::density_max
   real(dp),dimension(1:3)::skip_loc
-  logical ,dimension(1:nvector)::okpeak,okdummy
+  logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids 
   integer::ntestpos,ntp,idim,ipos
-
-
 
 #if NDIM==3
   ! Mesh spacing in that level
@@ -614,9 +609,6 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
      ind_max(j)=ind_cell(j) !save cell index   
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
-
-
-
 
   ntestpos=3**ndim
   if(ilevel>levelmin)ntestpos=ntestpos+2**ndim
@@ -865,7 +857,7 @@ subroutine read_clumpfind_params()
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,age_cut_clfind
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m  
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   
   ! Read namelist file 
   rewind(1)
@@ -917,7 +909,6 @@ subroutine read_clumpfind_params()
      end if
   end if
 end subroutine read_clumpfind_params
-
 !################################################################
 !################################################################
 !################################################################
@@ -927,18 +918,16 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   use pm_commons
   use hydro_commons
   implicit none
-  integer::ng,np,ilevel,ind_grid
+  integer::np,ilevel,ind_grid
   integer,dimension(1:99)::indp,cell_lev
   real(dp),dimension(1:99,1:ndim)::xpart
   integer ,dimension(1:threetondim)::nbors_father_cells
 
-
   !-----------------------------------------------------------------------
-  ! Very similar as get_cell_index_for_particle but optimized for the usage
-  ! inside neighborsearch.
+  ! This subroutine finds the leaf cell in which a particle sits
   !-----------------------------------------------------------------------
 
-  integer::i,j,idim,nx_loc,ind,ix,iy,iz
+  integer::j,idim,nx_loc,ind,ix,iy,iz
   real(dp)::dx,dx_loc,scale,one_over_dx,one_over_scale
   ! Grid based arrays
   real(dp),dimension(1:ndim),save::x0
@@ -949,7 +938,6 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   real(dp),dimension(1:twotondim,1:3),save::xc
   logical,dimension(1:99),save::ok
  
-
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -974,7 +962,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
-        x0(idim)=xg(ind_grid,idim)-3.0D0*dx
+     x0(idim)=xg(ind_grid,idim)-3.0D0*dx
   end do
 
   ! Rescale position at level ilevel
@@ -1040,7 +1028,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   ! Compute parent cell position
   do idim=1,ndim
      do j=1,np
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        icd(j,idim)=id(j,idim)-2*igd(j,idim)
      end do
   end do
         
@@ -1068,7 +1056,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
      endif
   end do
 
-  !cell center positions for particles which sit in the level ilevel
+  ! Cell center positions for particles which sit in the level ilevel
   do j=1,np
      if (ok(j))then
         cell_lev(j)=ilevel
@@ -1085,7 +1073,9 @@ subroutine geticell99(icell,icd,np)
   integer::np
   integer,dimension(1:99,1:ndim)::icd
   integer,dimension(1:99)::icell
-  ! same as geticell but for input vector size of 99 instead of nvector
+  ! mini subroutine that gets the cell index (1 to 8)
+  ! for certain coordinates (0,1 along each direction)
+  ! put into a subroutine to make the code look less ugly
   integer::j
     
 #if NDIM==1
@@ -1125,7 +1115,7 @@ subroutine rho_only(ilevel)
   ! level ilevel contribute also to the level density field
   ! (boundary particles) using buffer grids.
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,info,nx_loc,ibound,idim
+  integer::iskip,icpu,ind,i,nx_loc,ibound
   real(dp)::dx,scale,dx_loc
 
   if(.not. poisson)return
@@ -1433,7 +1423,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -1589,7 +1579,6 @@ subroutine tsc_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc

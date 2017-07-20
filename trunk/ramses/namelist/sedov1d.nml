@@ -27,7 +27,6 @@ p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-output_mode=1
 noutput=5
 tout=0.0125,0.025,0.05,0.1,0.2
 /

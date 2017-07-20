@@ -63,7 +63,6 @@ module amr_parameters
   integer::iback=1            ! Increment for backup files
   integer::noutput=1          ! Total number of outputs
   integer::foutput=1000000    ! Frequency of outputs
-  integer::output_mode=0      ! Output mode (for hires runs)
 
   ! Cosmology
   real(dp)::boxlen_ini        ! Box size in h-1 Mpc

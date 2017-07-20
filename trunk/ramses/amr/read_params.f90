@@ -28,7 +28,7 @@ subroutine read_params
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
-  namelist/output_params/noutput,foutput,fbackup,aout,tout,output_mode &
+  namelist/output_params/noutput,foutput,fbackup,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse
@@ -36,7 +36,7 @@ subroutine read_params
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
-       & ,xcentre_frame,ycentre_frame,zcentre_frame &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame,movie_vars &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
        & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
@@ -139,9 +139,9 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
-  allocate(remap_pscalar(1:nvar-(ndim+nener+2)))
-  do i=1,nvar-(ndim+2+nener)
-     remap_pscalar(i) = i+(ndim+2+nener)
+  allocate(remap_pscalar(1:nvar-(ndim+2)))
+  do i=1,nvar-(ndim+2)
+     remap_pscalar(i) = i+ndim+2
   enddo
 
   open(1,file=infile)
