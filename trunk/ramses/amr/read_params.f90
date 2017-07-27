@@ -29,7 +29,7 @@ subroutine read_params
        & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
   namelist/output_params/noutput,foutput,fbackup,aout,tout &
-       & ,tend,delta_tout,aend,delta_aout,gadget_output
+       & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
