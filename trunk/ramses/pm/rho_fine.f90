@@ -24,12 +24,8 @@ subroutine rho_fine(ilevel,icount)
   ! - cpu_map2 containing the refinement map due to particle
   !   number density criterion (quasi Lagrangian mesh).
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,info,nx_loc,ibound,idim
+  integer::iskip,icpu,ind,i,info,nx_loc,ibound
   real(dp)::dx,d_scale,scale,dx_loc,scalar
-  real(dp)::d0,m_refine_loc,dx_min,vol_min,mstar,msnk,nISM,nCOM
-  real(kind=8)::total,total_all,total2,total2_all,tms
-  real(kind=8),dimension(2)::totals_in,totals_out
-  logical::multigrid=.false.
   real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 
   if(.not. poisson)return
@@ -430,7 +426,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -657,12 +653,12 @@ subroutine multipole_fine(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,info,ibound,nx_loc
+  integer ::ind,i,ncache,igrid,ngrid,iskip,nx_loc
   integer ::idim,nleaf,nsplit,ix,iy,iz,iskip_son,ind_son,ind_grid_son,ind_cell_son
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf,ind_split
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector),save::dd
-  real(kind=8)::vol,dx,dx_loc,scale,vol_loc,mm
+  real(kind=8)::dx,dx_loc,scale,vol_loc,mm
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
 
@@ -809,7 +805,6 @@ subroutine cic_from_multipole(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  logical::multigrid
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
   ! by first reseting array rho to zero, then 
@@ -819,8 +814,7 @@ subroutine cic_from_multipole(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer::ind,i,icpu,ncache,ngrid,iskip,ibound,igrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -881,13 +875,12 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
-  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::new_rho
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,ttt
+  real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -966,7 +959,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do j=1,np
            dd(j,idim)=x(j,idim)+0.5D0
-           id(j,idim)=dd(j,idim)
+           id(j,idim)=int(dd(j,idim))
            dd(j,idim)=dd(j,idim)-id(j,idim)
            dg(j,idim)=1.0D0-dd(j,idim)
            ig(j,idim)=id(j,idim)-1
@@ -1476,7 +1469,6 @@ subroutine tsc_from_multipole(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  logical::multigrid
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
   ! by first reseting array rho to zero, then 
@@ -1486,8 +1478,8 @@ subroutine tsc_from_multipole(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer::ind,i,icpu,ncache,ngrid,iskip,ibound
+  integer::igrid
   integer,dimension(1:nvector),save::ind_grid
 
 #if NDIM==3
@@ -1550,13 +1542,12 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
-  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::new_rho
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,ttt
+  real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc

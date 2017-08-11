@@ -16,33 +16,26 @@ subroutine init_part
   !------------------------------------------------------------
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
-  integer::i,igrid,ncache,ngrid,iskip,isink
-  integer::ind,ix,iy,iz,ilun,info,icpu,nx_loc
+  integer::i,igrid,ncache,ngrid,iskip
+  integer::ind,ix,iy,iz,ilun,info,icpu
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
   integer::buf_count,indglob,npart_new
-  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
-  real(dp)::scale,dx_loc,rr,rmax,dx_min,min_mdm_cpu,min_mdm_all
-  integer::ncode,bit_length,temp
-  real(kind=8)::bscale
+  real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
+  real(dp)::min_mdm_cpu,min_mdm_all
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
-  logical,allocatable,dimension(:)::nb
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
-  real(kind=8),dimension(1:nvector,1:3)::xx,vv,xs
+  real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(dp),dimension(1:nvector,1:3)::xx_dp
-  integer,dimension(1:nvector)::ixx,iyy,izz
-  real(qdp),dimension(1:nvector)::order
   real(kind=8),dimension(1:nvector)::mm
-  real(kind=8)::dispmax=0.0,dispall
-  real(dp),dimension(1:3)::skip_loc
-  real(dp),dimension(1:3)::centerofmass
+  real(kind=8)::dispmax=0.0
 
-  integer::ibuf,tag=101,tagf=102,tagu=102
+  integer::ibuf,tagu=102
   integer::countsend,countrecv
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
@@ -50,7 +43,7 @@ subroutine init_part
   integer,dimension(ncpu)::sendbuf,recvbuf
 #endif
 
-  logical::error,keep_part,eof,jumped,ic_sink=.false.,read_pos=.false.,ok
+  logical::error,keep_part,eof,read_pos=.false.,ok
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
@@ -839,22 +832,21 @@ subroutine load_gadget
 #endif
 
   logical::ok
-  TYPE(gadgetheadertype) :: gadgetheader
+  TYPE(gadgetheadertype)::gadgetheader
   integer::numfiles
   integer::ifile
   real(dp),dimension(1:nvector,1:3)::xx_dp
-  real, dimension(:, :), allocatable:: pos, vel
+  real,dimension(:,:),allocatable:: pos, vel
   real(dp)::massparticles
   integer(kind=8)::allparticles
-  integer(i8b), dimension(:), allocatable:: ids  
-  integer::nparticles, arraysize
-  integer::i, icpu, ipart, info, np, start
+  integer(i8b),dimension(:),allocatable:: ids  
+  integer::nparticles
+  integer::i,icpu,ipart,info,start
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
-  integer ,dimension(1:nvector)::cc
-  integer :: clock_start, clock_end, clock_rate
-  integer :: mpi_cs, mpi_ce
-  real:: gadgetvfact
+  integer,dimension(1:nvector)::cc
+  integer::clock_start,clock_end,clock_rate
+  real(dp)::gadgetvfact
   ! Local particle count
   ipart=0
   call SYSTEM_CLOCK(COUNT_RATE=clock_rate)

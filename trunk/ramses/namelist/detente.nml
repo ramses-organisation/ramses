@@ -40,7 +40,6 @@ p_region =1d-4,1d-4
 /
 
 &OUTPUT_PARAMS
-output_mode=1
 noutput=1
 tout=0.25,
 /

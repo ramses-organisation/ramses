@@ -26,7 +26,6 @@ p_region=1.0,1.0
 /
 
 &OUTPUT_PARAMS
-output_mode=1
 noutput=1
 tout=10.0
 /

@@ -2,7 +2,6 @@ subroutine compute_clump_properties(xx)
   use amr_commons
   use hydro_commons, ONLY:uold
   use clfind_commons
-  use poisson_commons, ONLY:phi,f
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -13,11 +12,10 @@ subroutine compute_clump_properties(xx)
   ! collects the  relevant information. After some MPI communications,
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
-  integer::ipart,grid,info,i,j,peak_nr,ilevel,global_peak_id,ipeak,plevel
+  integer::ipart,grid,info,i,peak_nr,ilevel,global_peak_id,ipeak,plevel
   real(dp)::zero=0.
   !variables needed temporarily store cell properties
   real(dp)::d,vol
-  real(dp),dimension(1:3)::vd
   ! variables related to the size of a cell on a given level
   real(dp)::dx,dx_loc,scale,vol_loc,tot_mass_tot
   real(dp),dimension(1:nlevelmax)::volume
@@ -438,16 +436,14 @@ subroutine merge_clumps(action)
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::info,j,i,ii,merge_count,final_peak,merge_to,ipart
-  integer::peak,next_peak,current,isearch,nmove,nmove_all,ipeak,jpeak,iter
+  integer::info,j,i,merge_to,ipart
+  integer::current,nmove,nmove_all,ipeak,jpeak,iter
   integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
-  integer::jmerge,ilev,global_peak_id
-  real(dp)::value_iij,zero=0.,relevance_peak,dens_max
-  real(dp)::mass_threshold_sm,mass_threshold_uu
+  integer::ilev,global_peak_id
+  real(dp)::value_iij,zero=0.,relevance_peak
   integer,dimension(1:npeaks_max)::alive,ind_sort
   real(dp),dimension(1:npeaks_max)::peakd
-  real(dp),dimension(1:2)::max_loc_input,max_loc_output
-  logical::do_merge
+  logical::do_merge=.false.
 
   if (verbose)then
      if(action.EQ.'relevance')then
@@ -785,7 +781,6 @@ subroutine allocate_peak_patch_arrays
   use sparse_matrix
   implicit none
 
-  real(dp)::zero=0.
   integer::bit_length,ncode,ipart,peak_nr
   integer::ipeak
 
@@ -991,7 +986,7 @@ subroutine build_peak_communicator
   include 'mpif.h'
 #endif
 
-  integer::ipeak,icpu,info,j
+  integer::ipeak,icpu,info!,j
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
@@ -1344,7 +1339,7 @@ subroutine analyze_peak_memory
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::icpu,info,i,j
+  integer::info,i,j
   integer,dimension(1:ncpu)::npeak_all,npeak_tot
   integer,dimension(1:ncpu)::hfree_all,hfree_tot
   integer,dimension(1:ncpu)::sparse_all,sparse_tot
