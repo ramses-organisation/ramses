@@ -229,11 +229,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
 
   ! Stellar momentum injection from cgs to code units
-  VSN=360.*1d5/scale_v
+  VSN=400.*1d5/scale_v
   cs_TH=1000.*1d5/scale_v
 
   ! Fraction of the SN energy into non-thermal component
-  FRAC_NT=0.5
+  FRAC_NT=0.1
 
   ! Life time radiation specific energy from cgs to code units
   ERAD=1d53/(10.*2d33)/scale_v**2
@@ -433,8 +433,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(nener>0)then
     do j=1,np
        birth_time=tp(ind_part(j))
-       if(birth_time.ge.(current_time-t0))then
-          momentum_dot=VSN*mp(ind_part(j))/t0
+       if(birth_time.ge.(current_time-(t0*2.0)))then
+          !momentum_dot=VSN*mp(ind_part(j))/(t0*1.0)
+          momentum_dot=VSN*mp(ind_part(j))/t0*max(mp(ind_part(j))/mass_sph,1.0)
           pressure=momentum_dot/dx_loc**2
           cs = sqrt(uold(indp(j),ndim+3)/max(uold(indp(j),1),smallr))
           if(uold(indp(j),ndim+3).lt.pressure.and.cs.lt.cs_TH)then
@@ -504,10 +505,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(nener>0)then
      do j=1,np
         unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)*(1d0+RAD_BOOST)
-        cs=sqrt(unew(indp(j),ndim+3)/unew(indp(j),1))
+        cs=sqrt(unew(indp(j),ndim+3)/max(unew(indp(j),1),smallr))
         if(cs.ge.cs_TH)then
 !          write(*,*) "entering check feedback",unew(indp(j),ndim+3),cs*scale_v/1d5,j
-          unew(indp(j),ndim+3)=unew(indp(j),1)*cs_TH**2
+          unew(indp(j),ndim+3)=max(unew(indp(j),1),smallr)*cs_TH**2
 !          write(*,*) "exit check feedback",unew(indp(j),ndim+3),sqrt(unew(indp(j),ndim+3)/unew(indp(j),1))*scale_v/1d5
         endif
      end do

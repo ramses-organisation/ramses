@@ -240,6 +240,7 @@ subroutine add_viscosity_source_terms(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use pm_commons
   implicit none
   integer::ilevel,levelmax
   !--------------------------------------------------------------------------
@@ -250,9 +251,11 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH
+  real(dp)::scale,dx,dx_loc,d,u,v,w,eold,dx_min
+  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH,current_time,t0
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  integer::ipart,jpart,next_part,npart1,npart2
+
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -282,6 +285,55 @@ subroutine add_viscosity_source_terms(ilevel)
   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
+!
+#if NDIM==3
+  ! Gather star particles only.
+  if(use_proper_time)then
+     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
+
+  ! Loop over grids
+  do i=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(i)
+     ! Number of particles in the grid
+     npart1=numbp(igrid)
+     npart2=0
+
+     ! Count star particles
+     if(npart1>0)then
+        ipart=headp(igrid)
+        ! Loop over particles
+        do jpart=1,npart1
+           ! Save next particle   <--- Very important !!!
+           next_part=nextp(ipart)
+           if(idp(ipart).gt.0.and.tp(ipart).ne.0.and.tp(ipart).ge.(current_time-(t0*2.0)))then
+              npart2=npart2+1
+              cycle
+           endif
+           ipart=next_part  ! Go to next particle
+        end do
+     endif
+
+     ! Loop over cells
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        ind_cell=iskip+igrid
+        ! cells with young stars
+        if(npart2.gt.0)then
+           flag2(ind_cell)=1
+        else
+           flag2(ind_cell)=0
+        end if
+     end do
+  end do
+  ! End loop over grids
+#endif
+
+!
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -295,7 +347,7 @@ subroutine add_viscosity_source_terms(ilevel)
      ! Gather neighboring grids
      do i=1,ngrid
         igridn(i,0)=ind_grid(i)
-    end do
+     end do
      do idim=1,ndim
         do i=1,ngrid
            ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
@@ -410,19 +462,17 @@ subroutine add_viscosity_source_terms(ilevel)
               d_old=max(uold(ind_cell(i),1),smallr)
               Kturb=uold(ind_cell(i),ndim+3)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-!              decay_rate=sigma/dx_loc
-              decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
+              decay_rate=sigma/dx_loc/2.0
+!              decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
 
               ! Implicit solution
-              unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
-                   & /(1.0+decay_rate*dtnew(ilevel))
-              ! Check for high sound speed
-              cs=sqrt(unew(ind_cell(i),ndim+3)/unew(ind_cell(i),1))
-              if(cs.ge.cs_TH)then
-!                write(*,*) "entering check godunov_fine",unew(ind_cell(i),ndim+3),cs
-                unew(ind_cell(i),ndim+3)=unew(ind_cell(i),1)*cs_TH**2
-!                write(*,*) "exit check godunov_fine",unew(ind_cell(i),ndim+3)
+              if(flag2(ind_cell(i)).eq.0)then
+                unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
+                     & /(1.0+decay_rate*dtnew(ilevel))
               end if
+              !Check for negative Pressure and values higher then threshhold
+              unew(ind_cell(i),ndim+3)=max(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*smallc**2)
+              unew(ind_cell(i),ndim+3)=min(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*cs_TH**2)
 
               if(pressure_fix)then
                  enew(ind_cell(i))=enew(ind_cell(i))+unew(ind_cell(i),ndim+3)*decay_rate*dtnew(ilevel)
