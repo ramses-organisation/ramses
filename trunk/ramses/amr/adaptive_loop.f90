@@ -13,11 +13,16 @@ subroutine adaptive_loop
 #endif
   integer(kind=8)::n_step
   integer::ilevel,idim,ivar,info,tot_pt
-  real(kind=8)::tt1,tt2,muspt,muspt_this_step
+  real(kind=8)::tt1,tt2,muspt,muspt_this_step,wallsec,dumpsec
   real(kind=4)::real_mem,real_mem_tot
+  real(kind=8),save::tstart=0.0
 
 #ifndef WITHOUTMPI
   tt1=MPI_WTIME()
+  ! for calculating total run time
+  if (tstart.eq.0.0) then
+     tstart = MPI_WTIME(info)
+  end if
 #endif
 
   call init_amr                      ! Initialize AMR variables
@@ -188,6 +193,17 @@ subroutine adaptive_loop
           ,' s',muspt_this_step,' mus/pt'  &
           ,muspt / max(tot_pt,1), ' mus/pt (av)'
            call writemem(real_mem_tot)
+           write(*,*)'Total running time:', NINT((tt2-tstart)*100.0)*0.01,'s'
+        endif
+        if(walltime_hrs.gt.0d0) then
+           wallsec = walltime_hrs*3600.     ! Convert from hours to seconds
+           dumpsec = minutes_dump*60.       ! Convert minutes before end to seconds                                                                                                                 
+           if(wallsec-dumpsec.lt.tt2-tstart) then
+              output_now=.true.
+              if(myid==1) write(*,*) 'Dumping snapshot before walltime runs out'
+              ! Now set walltime to a negative number so we don't keep printing outputs                                                                                                               
+              walltime_hrs = -1d0
+           endif
         endif
      endif
 #endif

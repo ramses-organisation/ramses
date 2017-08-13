@@ -25,7 +25,7 @@ subroutine dump_all
   ifout=ifout+1
   if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
   output_done=.true.
-  
+
   if(IOGROUPSIZEREP>0)call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
 
   if(ndim>1)then
@@ -37,8 +37,8 @@ subroutine dump_all
      endif
 
      filecmd='mkdir -p '//TRIM(filedir)
-     
-     if (.not.withoutmkdir) then 
+
+     if (.not.withoutmkdir) then
 #ifdef NOSYSTEM
         call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
         call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
@@ -54,7 +54,7 @@ subroutine dump_all
         endif
 #endif
      endif
-     
+
 #ifndef WITHOUTMPI
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -64,7 +64,7 @@ subroutine dump_all
      call output_header(filename)
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif     
+#endif
      if(myid==1.and.print_when_io) write(*,*)'End backup header'
 
      if(myid==1.and.print_when_io) write(*,*)'Start backup info etc.'
@@ -137,7 +137,7 @@ subroutine dump_all
 #endif
         if(myid==1.and.print_when_io) write(*,*)'End backup hydro'
      end if
-     
+
 #ifdef RT
      if(rt.or.neq_chem)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
@@ -149,7 +149,7 @@ subroutine dump_all
         if(myid==1.and.print_when_io) write(*,*)'End backup rt'
      endif
 #endif
-    
+
      if(pic)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup part'
         filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
@@ -163,7 +163,7 @@ subroutine dump_all
 #endif
         if(myid==1.and.print_when_io) write(*,*)'End backup part'
      end if
-     
+
      if(poisson)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup poisson'
         filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
@@ -202,9 +202,9 @@ subroutine dump_all
      call output_timer(.true., filename)
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif     
+#endif
      if(myid==1.and.print_when_io) write(*,*)'End output timer'
-     
+
   end if
 
 end subroutine dump_all
@@ -252,7 +252,7 @@ subroutine backup_amr(filename)
 
   !-----------------------------------
   ! Output amr grid in file
-  !-----------------------------------  
+  !-----------------------------------
   ilun=myid+10
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -395,7 +395,7 @@ subroutine backup_amr(filename)
      end do
   end do
   close(ilun)
-   
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -452,7 +452,7 @@ subroutine output_info(filename)
      stop
 #endif
   endif
-  
+
   ! Write run parameters
   write(ilun,'("ncpu        =",I11)')ncpu
   write(ilun,'("ndim        =",I11)')ndim
@@ -475,14 +475,14 @@ subroutine output_info(filename)
   write(ilun,'("unit_d      =",E23.15)')scale_d
   write(ilun,'("unit_t      =",E23.15)')scale_t
   write(ilun,*)
-  
+
   ! Write ordering information
   write(ilun,'("ordering type=",A80)')ordering
   if(ordering=='bisection') then
      do icpu=1,ncpu
-        ! write 2*ndim floats for cpu bound box                                                         
+        ! write 2*ndim floats for cpu bound box
         write(ilun,'(E23.15)')bisec_cpubox_min(icpu,:),bisec_cpubox_max(icpu,:)
-        ! write 1 float for cpu load                                                                    
+        ! write 1 float for cpu load
         write(ilun,'(E23.15)')dble(bisec_cpu_load(icpu))
      end do
   else
@@ -538,7 +538,7 @@ subroutine output_header(filename)
      ! Open file
      fileloc=TRIM(filename)
      open(unit=ilun,file=fileloc,form='formatted')
-     
+
      ! Write header information
      write(ilun,*)'Total number of particles'
      write(ilun,*)npart_tot
@@ -656,4 +656,3 @@ subroutine savegadget(filename)
   deallocate(pos, vel, ids)
 
 end subroutine savegadget
-

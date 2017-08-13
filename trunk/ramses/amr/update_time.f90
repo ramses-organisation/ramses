@@ -100,7 +100,7 @@ subroutine output_timer(write_file, filename)
      fileloc=TRIM(filename) ! Open file for timing info
      open(unit=ilun,file=fileloc,form='formatted')
   endif
-     
+
   if (o .and. ncpu==1) write (ilun,'(/a,i7,a)') '     seconds         %    STEP (rank=',myid,')'
   do i = 1,ntimer
      total = total + time(i)
@@ -171,9 +171,9 @@ subroutine output_timer(write_file, filename)
         endif
      end do
      if (o) write (ilun,'(f12.3,4x,f6.1,4x,a)') total, 100., 'TOTAL'
-     if (o) close(ilun)
   endif
 #endif
+  if (o) close(ilun)
 end subroutine
 !=======================================================================
 subroutine reset_timer
@@ -196,7 +196,7 @@ subroutine update_time(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
+#endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons
@@ -249,7 +249,7 @@ subroutine update_time(ilevel)
 
      if(mod(nstep_coarse,ncontrol)==0.or.output_done)then
         if(myid==1)then
-           
+
            !-------------------------------
            ! Output AMR structure to screen
            !-------------------------------
@@ -257,7 +257,7 @@ subroutine update_time(ilevel)
            do i=1,nlevelmax
               if(numbtot(1,i)>0)write(*,999)i,numbtot(1:4,i)
            end do
-           
+
            !----------------------------------------------
            ! Output mass and energy conservation to screen
            !----------------------------------------------
@@ -347,16 +347,19 @@ subroutine update_time(ilevel)
 888 format(' Fine step=',i7,' t=',1pe12.5,' dt=',1pe10.3, &
          & ' a=',1pe10.3,' mem=',0pF4.1,'% ',0pF4.1,'%')
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
- 
+
 end subroutine update_time
-  
+
 subroutine clean_stop
   use amr_commons
+  use poisson_commons
+  use pm_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
   integer::info
+  integer :: ilevel
   character(LEN=80)::str
 
   call output_timer(.false., str)
@@ -364,6 +367,84 @@ subroutine clean_stop
 #ifndef WITHOUTMPI
   call MPI_FINALIZE(info)
 #endif
+
+  ! allocations in read_params.f90
+  if(allocated(remap_pscalar)) deallocate(remap_pscalar)
+
+
+  ! allocations in init_amr.f90
+  if(allocated(bound_key)) deallocate(bound_key)
+  if(allocated(bound_key2)) deallocate(bound_key2)
+  if(allocated(headl)) deallocate(headl)
+  if(allocated(taill)) deallocate(taill)
+  if(allocated(numbl)) deallocate(numbl)
+  if(allocated(numbtot)) deallocate(numbtot)
+  if(allocated(headb)) deallocate(headb)
+  if(allocated(tailb)) deallocate(tailb)
+  if(allocated(numbb)) deallocate(numbb)
+  if(allocated(boundary)) deallocate(boundary)
+
+  ! communicators
+  if(allocated(active))then
+     do ilevel=1,nlevelmax
+        ! virtual_boundaries.f90
+        ! TODO: cleaner solution (fortran 2003): s/pointer/allocatable/
+        if(active(ilevel)%ngrid>0) deallocate(active(ilevel)%igrid)
+     enddo
+     deallocate(active)
+  endif
+  if(allocated(emission)) deallocate(emission)
+  if(allocated(reception)) deallocate(reception)
+  !
+  if(allocated(lookup_mg)) deallocate(lookup_mg)
+  !
+  if(allocated(father)) deallocate(father)
+  if(allocated(nbor)) deallocate(nbor)
+  if(allocated(next)) deallocate(next)
+  if(allocated(prev)) deallocate(prev)
+  if(pic)then
+     if(allocated(headp)) deallocate(headp)
+     if(allocated(tailp)) deallocate(tailp)
+     if(allocated(numbp)) deallocate(numbp)
+  endif
+  if(allocated(xg)) deallocate(xg)
+  ! amr cell-based arrays
+  if(allocated(flag1)) deallocate(flag1)
+  if(allocated(flag2)) deallocate(flag2)
+  if(allocated(son)) deallocate(son)
+  ! mpi cell-based arrays
+  if(allocated(cpu_map)) deallocate(cpu_map)
+  if(allocated(cpu_map2)) deallocate(cpu_map2)
+  if(allocated(hilbert_key)) deallocate(hilbert_key)
+
+
+  ! allocations in init_poisson.f90
+  if(allocated(safe_mode)) deallocate(safe_mode)
+  if(allocated(active_mg)) deallocate(active_mg)
+  if(allocated(emission_mg)) deallocate(emission_mg)
+  ! cell-centred variables
+  if(allocated(rho)) deallocate(rho)
+  if(allocated(phi)) deallocate(phi)
+  if(allocated(phi_old)) deallocate(phi_old)
+  if(allocated(f)) deallocate(f)
+
+
+  ! allocations in init_time.f90
+  if(allocated(aexp_frw)) deallocate(aexp_frw)
+  if(allocated(hexp_frw)) deallocate(hexp_frw)
+  if(allocated(tau_frw)) deallocate(tau_frw)
+  if(allocated(t_frw)) deallocate(t_frw)
+
+
+  ! init_part.f90 - in general, BIG deallocations
+  if(allocated(idp)) deallocate(idp)
+  if(allocated(nextp)) deallocate(nextp)
+  if(allocated(prevp)) deallocate(prevp)
+  if(allocated(levelp)) deallocate(levelp)
+  if(allocated(mp)) deallocate(mp)
+  if(allocated(vp)) deallocate(vp)
+  if(allocated(xp)) deallocate(xp)
+
   stop
 end subroutine clean_stop
 
@@ -397,7 +478,7 @@ subroutine getmem(outmem)
   use amr_commons,only:myid,IOGROUPSIZE,ncpu
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   real(kind=4)::outmem
   character(len=300) :: dir, dir2, file
@@ -406,7 +487,7 @@ subroutine getmem(outmem)
   integer::dummy_io,info2
   integer::nmem,ind,j
   logical::file_exists
-  
+
   file='/proc/self/stat'
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -479,7 +560,7 @@ SUBROUTINE getProperTime(tau,tproper)
 END SUBROUTINE getProperTime
 !------------------------------------------------------------------------
 SUBROUTINE getAgeGyr(t_birth_proper, age)
-! Calculate proper time passed, in Gyrs, since proper time t_birth_proper 
+! Calculate proper time passed, in Gyrs, since proper time t_birth_proper
 ! (given in code units) until the current time.
 !------------------------------------------------------------------------
   use amr_commons
@@ -490,7 +571,7 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
   real(dp),save:: scale_t_Gyr
   logical,save::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  if( .not. scale_init) then 
+  if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      scale_t_Gyr = (scale_t/aexp**2)/yr/1.e9
@@ -500,7 +581,7 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
 END SUBROUTINE getAgeGyr
 !------------------------------------------------------------------------
 SUBROUTINE getAgeSec(t_birth_proper, age)
-! Calculate proper time passed, in sec, since proper time t_birth_proper 
+! Calculate proper time passed, in sec, since proper time t_birth_proper
 ! (given in code units) until the current time.
 !------------------------------------------------------------------------
   use amr_commons
@@ -510,7 +591,7 @@ SUBROUTINE getAgeSec(t_birth_proper, age)
   real(dp),save:: scale_t_sec
   logical::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  if( .not. scale_init) then 
+  if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      scale_t_sec = (scale_t/aexp**2)
@@ -519,9 +600,3 @@ SUBROUTINE getAgeSec(t_birth_proper, age)
   age = (texp - t_birth_proper) * scale_t_sec
 END SUBROUTINE getAgeSec
 !------------------------------------------------------------------------
-
-
-
-
-
-
