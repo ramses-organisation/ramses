@@ -838,20 +838,21 @@ endif
 #else
      ipart_start = NVAR+1
 #endif
-     do kk=ipart_start,ipart_start+2
+     imap=1
+     do kk=0,ipart_start+2
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
               if((tp(j).eq.0d0).and.(kk.eq.ipart_start)) then
                  if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
-                    data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  endif
               endif
               ! Star particles
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
-                 data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
@@ -869,18 +870,19 @@ endif
                        log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
                     enddo
                  endif
-                 data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
+                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
               endif
            else
               ! DM particles only
               if(kk.eq.ipart_start) then
                  if(mass_cut_refine>0d0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
-                    data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  endif
               endif
            endif
+           imap=imap+1
         endif
      enddo
   end do
