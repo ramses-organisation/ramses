@@ -14,7 +14,7 @@ subroutine dump_all
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filedir,filedirini,filecmd
-  integer::i,itest,info,irec,ierr = 0
+  integer::info,irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -226,7 +226,6 @@ subroutine backup_amr(filename)
   integer::ilevel,ibound,ncache,istart,i,igrid,idim,ind,iskip
   integer,allocatable,dimension(:)::ind_grid,iig
   real(dp),allocatable,dimension(:)::xdp
-  real(sp),allocatable,dimension(:)::xsp
   real(dp),dimension(1:3)::skip_loc
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
@@ -427,7 +426,6 @@ subroutine output_info(filename)
   real(dp)::scale
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
 
   if(verbose)write(*,*)'Entering output_info'
 
@@ -512,8 +510,11 @@ subroutine output_header(filename)
   character(LEN=80)::filename
 
   integer::info,ilun
-  integer(i8b)::tmp_long,npart_tot
+  integer(i8b)::npart_tot
   character(LEN=80)::fileloc
+#ifdef LONGINT
+  integer(i8b)::tmp_long
+#endif
 
   if(verbose)write(*,*)'Entering output_header'
 
@@ -579,14 +580,14 @@ subroutine savegadget(filename)
   include 'mpif.h'
 #endif
   character(LEN=80)::filename
-  TYPE (gadgetheadertype) :: header
-  real,allocatable,dimension(:,:)::pos, vel
+  TYPE(gadgetheadertype)::header
+  real,allocatable,dimension(:,:)::pos,vel
   integer(i8b),allocatable,dimension(:)::ids
-  integer::i, idim, ipart
-  real:: gadgetvfact
+  integer::i,idim,ipart
+  real(dp)::gadgetvfact
   integer::info
-  integer(i8b)::npart_tot, npart_loc
-  real, parameter:: RHOcrit = 2.7755d11
+  integer(i8b)::npart_tot,npart_loc
+  real(dp),parameter::RHOcrit=2.7755d11
 
 #ifndef WITHOUTMPI
   npart_loc=npart

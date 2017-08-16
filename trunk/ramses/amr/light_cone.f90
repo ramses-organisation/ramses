@@ -17,7 +17,7 @@ subroutine output_cone()
   character(len=5) :: istep_str
   character(len=100) :: conedir, conecmd, conefile
   
-  integer::ilun,nx_loc,ipout,npout,npart_out
+  integer::ilun,ipout,npout,npart_out
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
   real(kind=8),dimension(1:3,1:nvector),save::pos,vel
@@ -29,7 +29,7 @@ subroutine output_cone()
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
-  integer::i,ig,ip,npart1
+  integer::i,ip,npart1
   integer::nalloc1,nalloc2
 
   integer,dimension(1:nvector),save::ind_part
@@ -476,7 +476,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: posout(3,npartout),velout(3,npartout),zout(npartout)
   real(kind=8) :: coord_distance
   real(kind=8) :: thetarad,phirad,thetayrad,thetazrad,tanybound,tanzbound
-  real(kind=8) :: rot(3,3),rotm1(3,3),dist1,dist2,cosy,cosz
+  real(kind=8) :: rot(3,3),rotm1(3,3),dist1,dist2
   real(kind=8) :: xcoordfr,ycoordfr,zcoordfr,xcoord,ycoord,zcoord
   real(kind=8) :: tany,tanz,dist,vxfr,vyfr,vzfr,dxtest1,dxtest2,facnorm
   real(kind=8) :: pi
@@ -619,9 +619,7 @@ subroutine compute_minimum_polygon(x1,x2,thetayrad,thetazrad,sl)
   ! polygon containing it. 
   !===========================================================================  
   implicit none
-  real(kind=8) :: x1,x2,thetayrad,thetazrad,sl(3,8)
-  
-  real(kind=8) :: r(3),axis(3)
+  real(kind=8)::x1,x2,thetayrad,thetazrad,sl(3,8)
   
   ! Part of the polygon close to the observer
   sl(1,1:4)=x1/sqrt(1.0d0+tan(thetayrad)**2+tan(thetazrad)**2)

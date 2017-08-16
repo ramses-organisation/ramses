@@ -366,12 +366,13 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any double precision array in the AMR grid.
   ! -------------------------------------------------------------------
-  integer::icpu,i,j,ncache,ind,iskip,step
+  integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
-  integer::info,buf_count,tag=101
+  integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
 
   if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
   ! Receive all messages
@@ -449,12 +450,13 @@ subroutine make_virtual_fine_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any integer array in the AMR grid.
   ! -------------------------------------------------------------------
-  integer::icpu,i,j,ncache,ind,iskip,step
+  integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
-  integer::info,buf_count,tag=101
+  integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
 
   if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
   ! Receive all messages
@@ -531,9 +533,9 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for double precision arrays.
   ! -------------------------------------------------------------------
-  integer::icpu,i,j,ncache,ind,iskip,step,icell,ibuf
+  integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
-  integer::info,buf_count,tag=101
+  integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
@@ -541,6 +543,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #endif
 
   if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
   if(ilevel.LE.switchlevel)then
@@ -694,9 +697,9 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for integer arrays.
   ! -------------------------------------------------------------------
-  integer::icpu,i,j,ncache,ind,iskip,step,icell,ibuf
+  integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
-  integer::info,buf_count,tag=101
+  integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
@@ -704,6 +707,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #endif
 
   if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
 

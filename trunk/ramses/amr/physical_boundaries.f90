@@ -265,10 +265,10 @@ subroutine make_boundary_flag(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
+  integer::ibound,boundary_dir,inbor
+  integer::i,ncache,igrid,ngrid,ind
+  integer::iskip,iskip_ref
+  integer,dimension(1:8)::ind_ref
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
   integer,dimension(1:nvector),save::fff

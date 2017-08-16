@@ -15,51 +15,49 @@ subroutine output_frame()
   include "mpif.h"
 #endif
   
-  integer::dummy_io,info,ierr,iframe
+  integer::info,ierr,iframe
   integer,parameter::tag=100
 
-  character(len=5) :: istep_str
-  character(len=100) :: moviedir, moviecmd, infofile, sinkfile, rt_infofile
+  character(len=5)::istep_str
+  character(len=100)::moviedir,moviecmd,infofile,sinkfile
 #ifdef SOLVERmhd
   character(len=100),dimension(0:NVAR+7) :: moviefiles
 #else
   character(len=100),dimension(0:NVAR+3) :: moviefiles
 #endif
-  integer::icell,ncache,iskip,irad,ngrid,nlevelmax_frame
+#ifdef RT
+  integer::irad
+  character(len=100)::rt_infofile
+#endif
+  integer::ncache,iskip,ngrid,nlevelmax_frame
   integer::nframes,rt_nframes,imap,ipart_start
-  integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
+  integer::idim,ilun,nx_loc,ind,ix,iy,iz
   integer::imin,imax,jmin,jmax,ii,jj,kk,ll
-  character(LEN=80)::fileloc
-  character(LEN=5)::nchar,dummy
+  character(LEN=5)::dummy
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::xcen,ycen,zcen,delx,dely,delz,timer
-  real(dp)::xtmp,ytmp,ztmp,smooth,theta_cam,phi_cam,alpha,beta,smooth_theta,fov_camera,dist_cam
-  real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame,rr
+  real(dp)::xtmp,ytmp,ztmp,theta_cam,phi_cam,alpha,beta,fov_camera,dist_cam
+  real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame
   real(dp)::xleft,xright,yleft,yright,zleft,zright,xcentre,ycentre,zcentre
-  real(dp)::xxleft,xxright,yyleft,yyright,zzleft,zzright,xxcentre,yycentre,zzcentre
+  real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
   real(dp)::xpf,ypf,zpf
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min,pers_corr
   real(dp)::dx_cell,dy_cell,dz_cell,dvol,dx_proj,weight
-  real(kind=8)::cell_value
-  integer ,dimension(1:nvector)::ind_grid,ind_cell
+  integer,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim)::xx
-  real(dp),dimension(1:nvector,1:ndim)::xx2
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8),dimension(:),allocatable::data_single,data_single_all
-  real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
-  real(kind=8) :: observer(3),thetay,thetaz,theta,phi,temp,e,uvar
-  real(kind=8) :: pi=3.14159265359
+  real(kind=8)::e,uvar
+  real(kind=8)::pi=3.14159265359
   real(dp),dimension(8)::xcube,ycube,zcube
-  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel,next_part,icube,iline
-  integer::i,j,ig,ip,npart1
-  integer::nalloc1,nalloc2
-  integer::proj_ind,l,nh_temp,nw_temp
-  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,zpc,d1,d2,d3,d4,l1,l2,l3,l4
-  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  integer::igrid,ilevel,icube,iline
+  integer::i,j
+  integer::proj_ind,nh_temp,nw_temp
+  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,d1,d2,d3,d4,l1,l2,l3,l4
   logical::opened,cube_face
   character(len=1)::temp_string
   integer,dimension(6,8)::lind = reshape((/1, 2, 3, 4, 1, 3, 2, 4,    &
@@ -840,20 +838,21 @@ endif
 #else
      ipart_start = NVAR+1
 #endif
-     do kk=ipart_start,ipart_start+2
+     imap=1
+     do kk=0,ipart_start+2
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
               if((tp(j).eq.0d0).and.(kk.eq.ipart_start)) then
                  if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
-                    data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  endif
               endif
               ! Star particles
               if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
-                 data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
@@ -871,18 +870,19 @@ endif
                        log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
                     enddo
                  endif
-                 data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
+                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
               endif
            else
               ! DM particles only
               if(kk.eq.ipart_start) then
                  if(mass_cut_refine>0d0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
-                    data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  endif
               endif
            endif
+           imap=imap+1
         endif
      enddo
   end do
@@ -992,7 +992,7 @@ endif
   deallocate(data_single_all)
 #endif
   if(myid==1)then
-     if(method_frame(proj_ind)(1:4).ne.'sum')then
+     if(method_frame(proj_ind)(1:3).ne.'sum')then
         ! Convert into mass weighted                                                                                                         
         do ii=1,nw_frame
           do jj=1,nh_frame
@@ -1002,10 +1002,10 @@ endif
                  if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
                     data_frame(ii,jj,imap) = data_frame(ii,jj,imap)/weights(ii,jj)
                  endif
-                 if(method_frame(proj_ind)(1:4).eq.'min'.and.data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
+                 if(method_frame(proj_ind)(1:3).eq.'min'.and.data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
                     data_frame(ii,jj,imap) = 0.0
                  endif
-                 if(method_frame(proj_ind)(1:4).eq.'max'.and.data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
+                 if(method_frame(proj_ind)(1:3).eq.'max'.and.data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
                     data_frame(ii,jj,imap) = 0.0
                  endif
                  imap = imap+1
@@ -1019,10 +1019,10 @@ endif
                      if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
                         rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)/weights(ii,jj)
                      endif
-                     if(method_frame(proj_ind)(1:4).eq.'min'.and.rt_data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
+                     if(method_frame(proj_ind)(1:3).eq.'min'.and.rt_data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
                         rt_data_frame(ii,jj,imap) = 0.0
                      endif
-                     if(method_frame(proj_ind)(1:4).eq.'max'.and.rt_data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
+                     if(method_frame(proj_ind)(1:3).eq.'max'.and.rt_data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
                         rt_data_frame(ii,jj,imap) = 0.0
                      endif
                      imap = imap+1

@@ -24,13 +24,11 @@ subroutine flag_formation_sites
   real(dp),dimension(1:ndim)::rrel
   integer,dimension(1:nvector)::cell_index,cell_levl,cc
   integer::j,jj,i,nx_loc,idim
-  integer::flag_form,flag_form_tot
   integer::global_peak_id,local_peak_id
   integer::merge_to,local_halo_id
   integer::tag=101,info,icpu
   logical::ok
-  real(dp)::dx,dx_min,dist2,scale,tff,acc_r
-  real(dp)::fourpi,threepi2
+  real(dp)::dx,dx_min,dist2,scale
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
@@ -277,8 +275,8 @@ end subroutine flag_formation_sites
 !################################################################
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
-  use poisson_commons, ONLY:phi,f
+  use hydro_commons, ONLY:uold,gamma,nvar,nener,smallr
+  use poisson_commons, ONLY:f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
   use pm_parameters
@@ -286,6 +284,9 @@ subroutine compute_clump_properties_round2(xx)
   use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
   use rt_hydro_commons, only:rtuold
   use rt_cooling_module, only:kappaAbs,kappaSc
+#endif
+#if NENER>0
+  use hydro_commons, ONLY:inener
 #endif
 
   implicit none
@@ -298,31 +299,29 @@ subroutine compute_clump_properties_round2(xx)
   ! more information like binding energies, etc, that can not be created by
   ! just summing up cell properties.
   !----------------------------------------------------------------------------
-  integer::ipart,ilevel,info,i,peak_nr,global_peak_id,j,ii,jj
-  integer::grid,nx_loc,ix,iy,iz,ind,icpu,idim
-  integer::ig,iNp,irad,nener_offset
-  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2,scale_kappa,scale_Np,scale_Fp
-  real(dp)::d,vol,M,ekk,err,phi_rel,etot,c_sound,d0,v_bulk2,p,T2,c_code
+  integer::ipart,ilevel,i,peak_nr,global_peak_id,j,ii,jj
+  integer::grid,nx_loc,ix,iy,iz,ind,idim
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp)::d,vol,ekk,err,etot,p,T2
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
   real(dp),dimension(1:nlevelmax)::volume
-  real(dp),dimension(1:3)::vd,xcell,xpeak,v_cl,rrel,vrel,fgrav,skip_loc,frad
+  real(dp),dimension(1:3)::vd,xcell,xpeak,rrel,vrel,fgrav,skip_loc,frad
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3,1:3)::eigenv,a
   real(dp),dimension(1:npeaks,1:3)::contractions
   logical,dimension(1:ndim)::period
-  real(dp)::emag,pmag,ev_to_uu,kappa
+  real(dp)::emag,pmag
 #ifdef SOLVERmhd
   real(dp),dimension(1:3)::B
 #endif
 #ifdef RT
+  integer::ig,iNp,irad
+  real(dp)::c_code,d0,ev_to_uu,kappa
+  real(dp)::scale_kappa,scale_Np,scale_Fp
   real(dp),dimension(1:nGroups,1:ndim)::Fp
   real(dp),dimension(1:nGroups)::Np2Ep_flux
 #endif
 
-#if NENER>0
-  nener_offset = inener-1
-#endif
-  
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -459,7 +458,7 @@ subroutine compute_clump_properties_round2(xx)
         err=0.d0
 #if NENER>0
         do irad=1,nener
-           err=err+uold(icellp(ipart),nener_offset+irad)
+           err=err+uold(icellp(ipart),inener-1+irad)
         end do
 #endif
 
@@ -670,7 +669,7 @@ end subroutine trim_clumps
 !#########################################################################
 !#########################################################################
 subroutine jacobi(A,x,err2)
-  use amr_commons, only:myid,dp
+  use amr_commons, only:dp
   implicit none
   real(dp)::err2
   real(dp),dimension(3,3)::A,x
@@ -762,7 +761,6 @@ subroutine surface_int
   ! Compute all the surface terms for virial analysis.
   !---------------------------------------------------------------
 
-  integer::info   
   integer::ipart,ip,ilevel,next_level
   integer,dimension(1:nvector)::ind_cell
 
@@ -799,8 +797,15 @@ end subroutine surface_int
 !#########################################################################
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
-  use hydro_commons, ONLY: uold,gamma,nvar,nener,inener,smallr
+  use clfind_commons, ONLY: center_of_mass,Psurf
+  use hydro_commons, ONLY: uold,gamma,smallr
+#ifdef SOLVERmhd
+  use clfind_commons, ONLY: MagPsurf,MagTsurf
+  use hydro_commons, ONLY: nvar
+#endif
+#if NENER>0
+  use hydro_commons, ONLY: nener,inener
+#endif
   implicit none
   integer::np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_cell
@@ -824,9 +829,13 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
   logical,dimension(1:ndim)::period
+#ifdef SOLVERmhd
   real(dp),dimension(1:nvector)::B_dot_n,B_dot_r,B2
   real(dp),dimension(1:nvector,1:3)::B
-  integer::irad, nener_offset
+#endif
+#ifdef RT
+  integer::irad
+#endif
 
   period(1)=(nx==1)
 #if NDIM>1
@@ -836,10 +845,6 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   if(ndim>2)period(3)=(nz==1)
 #endif
 
-#if NENER>0
-  nener_offset = inener-1
-#endif
-  
 #if NDIM==3
 
   ! Mesh spacing in that level
@@ -884,7 +889,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 #endif
 #if NENER>0
      do irad=1,nener
-        err_cell(j)=err_cell(j)+uold(ind_cell(j),nener_offset+irad)
+        err_cell(j)=err_cell(j)+uold(ind_cell(j),inener-1+irad)
      end do
 #endif
      P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j)-emag_cell(j))
