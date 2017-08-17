@@ -288,17 +288,14 @@ subroutine userflag_fine(ilevel)
   ! This routine flag for refinement cells that satisfies
   ! some user-defined physical criteria at the level ilevel. 
   ! -------------------------------------------------------------------
-  integer::i,j,ncache,nok,ix,iy,iz,iskip
-  integer::igrid,ind,idim,ngrid,ivar
+  integer::i,ncache,nok,ix,iy,iz,iskip
+  integer::igrid,ind,idim,ngrid
   integer::nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  integer,dimension(1:nvector,0:twondim),save::igridn
-  integer,dimension(1:nvector,1:twondim),save::indn
 
   logical,dimension(1:nvector),save::ok
 
-  real(dp)::dx,dx_loc,scale
-  real(dp)::d0,dx_min,vol_min,mstar,msnk,nISM,nCOM
+  real(dp)::dx,dx_loc,scale,dx_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -392,7 +389,7 @@ subroutine userflag_fine(ilevel)
                     xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                  end do
               end do
-              call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+              call geometry_refine(xx,ok,ngrid,ilevel)
            end if
         end if
 
@@ -494,14 +491,13 @@ end subroutine poisson_refine
 !#####################################################################
 !#####################################################################
 !#####################################################################
-subroutine geometry_refine(xx,ind_cell,ok,ncell,ilevel)
+subroutine geometry_refine(xx,ok,ncell,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
   implicit none
   integer::ncell,ilevel
-  integer,dimension(1:nvector)::ind_cell
   real(dp),dimension(1:nvector,1:ndim)::xx
   logical ,dimension(1:nvector)::ok
   !-------------------------------------------------
@@ -725,7 +721,7 @@ subroutine init_refmap
   use amr_commons
   implicit none
 
-  integer::ilevel,ivar
+  integer::ilevel
 
   if(verbose)write(*,*)'Entering init_refmap'
   do ilevel=nlevelmax,1,-1
@@ -748,26 +744,20 @@ subroutine init_refmap_fine(ilevel)
 #endif
   integer::ilevel
   
-  integer::i,icell,igrid,ncache,iskip,ngrid,ilun
-  integer::ind,idim,ivar,ix,iy,iz,nx_loc
+  integer::i,icell,igrid,ncache,iskip,ilun
+  integer::ind,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,info,nvar_in
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer::buf_count,info
 
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale
+  real(dp)::dx,xx1,xx2,xx3,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector)       ,save::vv
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:nvar),save::uu
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane
 
-  logical::error,ok_file1,ok_file2,ok_file
+  logical::error,ok_file
   character(LEN=80)::filename
-  character(LEN=5)::nchar,ncharvar
   integer,parameter::tag=1103
   integer::dummy_io,info2
 
@@ -802,12 +792,12 @@ subroutine init_refmap_fine(ilevel)
   !--------------------------------------
   if(multiple)then
      filename=TRIM(initfile(ilevel))//'/dir_refmap/ic_refmap.00001'
-     INQUIRE(file=filename,exist=ok_file2)
+     INQUIRE(file=filename,exist=ok_file)
   else
      filename=TRIM(initfile(ilevel))//'/ic_refmap'
-     INQUIRE(file=filename,exist=ok_file2)
+     INQUIRE(file=filename,exist=ok_file)
   endif
-  if (.not. ok_file2)then
+  if (.not. ok_file)then
      if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
      call clean_stop
   endif

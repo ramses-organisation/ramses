@@ -22,7 +22,7 @@ contains
       integer, intent(out), dimension(:)   :: c
       integer, intent(in) :: nn
       
-      integer :: p, dir, id, cur, half
+      integer :: p, dir, cur, half
 
 !      if(verbose) print *, 'entering cmp_bisection_cpumap'
 
@@ -73,7 +73,6 @@ contains
       integer :: load2, mytmp, tottmp
       real(dp) :: scale, nload1, nload2, score
       real(dp) :: mean, var, stdev
-      real(dp), dimension(1:ndim) :: xmin, xmax
   
       integer :: nc, dir, i, lvl, ierr, iter
       integer :: lncpu, cpuid, child1, child2
@@ -477,10 +476,8 @@ contains
       include 'mpif.h'
 #endif
 
-      integer::igrid,ncache,ngrid,ierr
-      integer::ilevel,i,ind,idim
-
-      integer::nc,ibcell,p,slot
+      integer::igrid,ncache,ngrid
+      integer::ilevel,i,ind
 
       integer::nx_loc
       integer::icpu,ncell,ncell_loc
@@ -489,7 +486,6 @@ contains
       integer,dimension(1:nvector),save::ind_grid,ind_cell
 
       real(dp)::dx,scale
-      real(dp),dimension(1:twotondim,1:3)::xc
       
       if(verbose) print *,'entering init_bisection_histogram'
 
@@ -586,7 +582,6 @@ contains
       integer :: nc, nx_loc, nxny
       integer :: i, ibicell, icell, igrid, isubcell, cell_cost
       integer, dimension(1:3) :: iarray, icoarse_array
-      integer :: ierr
 
       real(dp) :: subcell_c, cell_coord, dx, scale
       integer  :: cell_slot

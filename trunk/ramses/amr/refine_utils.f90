@@ -31,9 +31,11 @@ subroutine refine_coarse
   integer::nxny,i,j,k
   integer::ind,info,ibound
   logical::boundary_region
-  logical::ok_free,ok_all
+  logical::ok_free
   integer,dimension(1:nvector),save::ind_cell_tmp
+#ifdef LONGING
   integer(i8b)::tmp_long
+#endif
   
   if(verbose)write(*,*)'  Entering refine_coarse'
   
@@ -350,8 +352,9 @@ subroutine refine_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector),save::ind_grid_tmp,ind_cell_tmp
   logical,dimension(1:nvector),save::ok
+#ifdef LONGINT
   integer(i8b)::tmp_long
-  logical::ok_free,ok_all
+#endif
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -602,8 +605,6 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
 #endif  
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0
 
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
