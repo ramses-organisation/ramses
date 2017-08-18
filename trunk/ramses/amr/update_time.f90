@@ -472,7 +472,7 @@ subroutine writemem(usedmem)
 
 996 format(' Used memory:',F9.1,' kb')
 997 format(' Used memory:',F9.1,' Mb')
-998 format(' Used memory:',F9.1,' Gb')
+998 format(' Used memory:',F9.3,' Gb')
 999 format(' Used memory:',F9.3,' Tb')
 
 end subroutine writemem
