@@ -460,17 +460,20 @@ subroutine writemem(usedmem)
 #endif
   usedmem=dble(usedmem)*dble(ipagesize)
 
-  if(usedmem>1024.**3.)then
-     write(*,999)usedmem/1024.**3.
+  if(usedmem>1024.**4.)then
+     write(*,999)usedmem/1024.**4.
+  else if (usedmem>1024.**3.) then
+     write(*,998)usedmem/1024.**3.
   else if (usedmem>1024.**2.) then
-     write(*,998)usedmem/1024.**2
+     write(*,997)usedmem/1024.**2.
   else if (usedmem>1024.) then
-     write(*,997)usedmem/1024.
+     write(*,996)usedmem/1024.
   endif
 
-997 format(' Used memory:',F9.1,' kb')
-998 format(' Used memory:',F9.1,' Mb')
-999 format(' Used memory:',F9.3,' Gb')
+996 format(' Used memory:',F9.1,' kb')
+997 format(' Used memory:',F9.1,' Mb')
+998 format(' Used memory:',F9.1,' Gb')
+999 format(' Used memory:',F9.3,' Tb')
 
 end subroutine writemem
 
