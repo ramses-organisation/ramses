@@ -25,8 +25,10 @@ subroutine output_frame()
 #else
   character(len=100),dimension(0:NVAR+3) :: moviefiles
 #endif
-#ifdef RT
+#if NENER>0 
   integer::irad
+#endif
+#ifdef RT
   character(len=100)::rt_infofile
 #endif
   integer::ncache,iskip,ngrid,nlevelmax_frame
