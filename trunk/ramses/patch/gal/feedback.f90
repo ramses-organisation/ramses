@@ -168,7 +168,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
   real(dp)::VSN,momentum_dot,pressure,cs_TH,cs,P_nt_new
-  real(dp)::dx,dx_loc,scale,birth_time,current_time
+  real(dp)::M_SINGLE_SN,mpart_ini
+  real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
   ! Grid based arrays
@@ -176,6 +177,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  integer ::n_SN
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
   integer,dimension(1:nvector),save::list1
@@ -219,14 +221,19 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
      t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
      current_time=texp
   else
      t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/scale_t
      current_time=t
   endif
 
   ! Type II supernova specific energy from cgs to code units
   ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
+
+  ! Type II supernova average mass from cgs to code units
+  M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
 
   ! Stellar momentum injection from cgs to code units
   VSN=400.*1d5/scale_v
@@ -338,81 +345,111 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Compute stellar mass loss and thermal feedback due to supernovae
-  if(f_w==0)then
-     do j=1,np
-        birth_time=tp(ind_part(j))
-        ! Make sure that we don't count feedback twice
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
-           eta_sn2   = eta_sn
-           if(sf_imf)then
-              if(mp(ind_part(j)).le.mstar_max)then
-                 if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
-                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
-              endif
-           endif
-           ! Stellar mass loss
-           mejecta=eta_sn2*mp(ind_part(j))
-           mloss(j)=mloss(j)+mejecta/vol_loc(j)
-           ! Thermal energy
-           ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
-           ! Metallicity
-           if(metal)then
-              zloss=yield+(1d0-yield)*zp(ind_part(j))
-              mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
-           endif
-           ! Reduce star particle mass
-           mp(ind_part(j))=mp(ind_part(j))-mejecta
-           ! Boost SNII energy and depopulate accordingly
-           if(SN_BOOST>1d0)then
-              call ranf(localseed,RandNum)
-              if(RandNum<1d0/SN_BOOST)then
-                 mloss(j)=SN_BOOST*mloss(j)
-                 mzloss(j)=SN_BOOST*mzloss(j)
-                 ethermal(j)=SN_BOOST*ethermal(j)
-              else
-                 mloss(j)=0d0
-                 mzloss(j)=0d0
-                 ethermal(j)=0d0
-              endif
-           endif
-           if(sf_log_properties) then
-              write(ilun,'(I10)',advance='no') 1
-              write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
-              do idim=1,ndim
-                 write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
-              enddo
-              do idim=1,ndim
-                 write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
-              enddo
-              write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
-              do ivar=2,nvar
-                 if(ivar.eq.ndim+2)then
-                    e=0.0d0
-                    do idim=1,ndim
-                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
-                    enddo
-#if NENER>0
-                    do irad=0,nener-1
-                       e=e+unew(ind_cell(i),inener+irad)
-                    enddo
-#endif
-#ifdef SOLVERmhd
-                    do idim=1,ndim
-                       e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
-                    enddo
-#endif
-                    ! Temperature
-                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
-                 else
-                    uvar=unew(indp(j),ivar)
-                 endif
-                 write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
-              enddo
-              write(ilun,'(A1)') ' '
-           endif
-        endif
-     end do
-  endif
+!   if(f_w==0)then
+!      do j=1,np
+!         birth_time=tp(ind_part(j))
+!         ! Make sure that we don't count feedback twice
+!         if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
+!            eta_sn2   = eta_sn
+!            if(sf_imf)then
+!               if(mp(ind_part(j)).le.mstar_max)then
+!                  if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
+!                  if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
+!               endif
+!            endif
+!            ! Stellar mass loss
+!            mejecta=eta_sn2*mp(ind_part(j))
+!            mloss(j)=mloss(j)+mejecta/vol_loc(j)
+!            ! Thermal energy
+!            ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
+!            ! Metallicity
+!            if(metal)then
+!               zloss=yield+(1d0-yield)*zp(ind_part(j))
+!               mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
+!            endif
+!            ! Reduce star particle mass
+!            mp(ind_part(j))=mp(ind_part(j))-mejecta
+!            ! Boost SNII energy and depopulate accordingly
+!            if(SN_BOOST>1d0)then
+!               call ranf(localseed,RandNum)
+!               if(RandNum<1d0/SN_BOOST)then
+!                  mloss(j)=SN_BOOST*mloss(j)
+!                  mzloss(j)=SN_BOOST*mzloss(j)
+!                  ethermal(j)=SN_BOOST*ethermal(j)
+!               else
+!                  mloss(j)=0d0
+!                  mzloss(j)=0d0
+!                  ethermal(j)=0d0
+!               endif
+!            endif
+!            if(sf_log_properties) then
+!               write(ilun,'(I10)',advance='no') 1
+!               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+!               do idim=1,ndim
+!                  write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
+!               enddo
+!               do idim=1,ndim
+!                  write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
+!               enddo
+!               write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
+!               do ivar=2,nvar
+!                  if(ivar.eq.ndim+2)then
+!                     e=0.0d0
+!                     do idim=1,ndim
+!                        e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+!                     enddo
+! #if NENER>0
+!                     do irad=0,nener-1
+!                        e=e+unew(ind_cell(i),inener+irad)
+!                     enddo
+! #endif
+! #ifdef SOLVERmhd
+!                     do idim=1,ndim
+!                        e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
+!                     enddo
+! #endif
+!                     ! Temperature
+!                     uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+!                  else
+!                     uvar=unew(indp(j),ivar)
+!                  endif
+!                  write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
+!               enddo
+!               write(ilun,'(A1)') ' '
+!            endif
+!         endif
+!      end do
+!   endif
+
+   if(f_w==0)then
+      do j=1,np
+         birth_time=tp(ind_part(j))
+         ! Make sure that we don't count feedback twice
+         if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+            ! Guesstimate the initial star particle mass
+            mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
+            ! Compute the constant SN rate
+            n_dot=eta_sn*mpart_ini/M_SINGLE_SN/(t_sn_cont-t0)
+            ! Compute the mean SN count
+            avg_n=n_dot*dteff(j)
+            ! Draw a Poisson process for this mean
+            call poissdev(localseed,avg_n,n_SN)
+            write(*,*)avg_n,n_SN
+            ! Stellar mass loss
+            mejecta=n_SN*M_SINGLE_SN
+            mloss(j)=mloss(j)+mejecta/vol_loc(j)
+            ! Thermal energy
+            ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
+            ! Metallicity
+            if(metal)then
+               zloss=yield+(1d0-yield)*zp(ind_part(j))
+               mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
+            endif
+            ! Reduce star particle mass
+            mp(ind_part(j))=mp(ind_part(j))-mejecta
+         endif
+      end do
+   endif
 
   ! Use non-thermal energy
   ! if(nener>0)then
