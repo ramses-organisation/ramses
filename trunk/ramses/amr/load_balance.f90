@@ -18,7 +18,7 @@ subroutine load_balance
   !------------------------------------------------
   ! This routine performs parallel load balancing.
   !------------------------------------------------
-  integer::igrid,ncache,ilevel,i,ind,jlevel,info
+  integer::igrid,ncache,ilevel,i,ind,info
   integer::idim,ivar,icpu,jcpu,kcpu
   integer::nxny,ix,iy,iz,iskip
   integer,dimension(nlevelmax,3)::comm_buffin,comm_buffout
@@ -277,14 +277,14 @@ subroutine cmp_new_cpu_map
   ! the choosen ordering to balance load across cpus.
   !---------------------------------------------------
   integer::igrid,ncell,ncell_loc,ncache,ngrid
-  integer::ncode,bit_length,ilevel,i,ind,idim
-  integer::nx_loc,ny_loc,nz_loc,nfar
-  integer::info,icpu,jcpu,isub,idom,jdom
+  integer::ilevel,i,ind,idim
+  integer::nx_loc
+  integer::info,icpu,isub,idom
   integer::nxny,ix,iy,iz,iskip
   integer::ind_long
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
-  real(dp)::dx,scale,weight
+  real(dp)::dx,scale
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(kind=8)::incost_tot,local_cost,cell_cost
@@ -294,13 +294,15 @@ subroutine cmp_new_cpu_map
   integer,dimension(1:overload)::ncell_sub
   real(kind=8),dimension(1:ndomain)::cost_loc,cost_old,cost_new
   real(qdp),dimension(0:ndomain)::bound_key_loc
-  real(kind=8),dimension(0:ndomain)::bigdbl,bigtmp
   integer,dimension(1:nvector),save::dom
   real(qdp),dimension(1:nvector),save::order_min,order_max
   integer,dimension(1:MAXLEVEL),save::niter_cost
 
   real(dp),dimension(1:1,1:ndim),save :: xx_tmp
   integer,dimension(1:1),save :: c_tmp
+#ifdef QUADHILBERT
+  real(kind=8),dimension(0:ndomain)::bigdbl,bigtmp
+#endif
 
   ! Local constants
   nxny=nx*ny
@@ -804,7 +806,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   ! ordering.
   !-----------------------------------------------------
   integer,dimension(1:nvector),save::ix,iy,iz
-  integer::i,ncode,bit_length,nxny,nx_loc
+  integer::i,ncode,bit_length,nx_loc
 
   real(dp)::theta1,theta2,theta3,theta4,dxx,dxmin  
   real(kind=8)::scale,bscaleloc,bscale,xx,yy,zz,xc,yc,zc
@@ -951,7 +953,7 @@ subroutine defrag
   implicit none
 
   integer::ncache,ngrid2,igridmax,i,igrid,ibound,ilevel
-  integer::iskip1,iskip2,igrid1,igrid2,ind1,ind2,icell1,icell2
+  integer::iskip1,iskip2,igrid1,igrid2,ind1,icell1,icell2
   integer::ind,idim,ivar,istart
 
   if(verbose)write(*,*)'Defragmenting main memory...'

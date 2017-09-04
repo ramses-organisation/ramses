@@ -560,7 +560,7 @@ subroutine star_formation(ilevel)
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
-              ! Security to prevent more than 50% of gas depletion
+              ! Security to prevent more than 90% of gas depletion
               if (mgas > 0.9*mcell) then
                  nstar_corrected=int(0.9*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar

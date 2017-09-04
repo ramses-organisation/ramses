@@ -25,10 +25,11 @@ subroutine init_amr
   character(LEN=128)::ordering2
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
-  real(dp),allocatable,dimension(:)::bxmin,bxmax
   integer,parameter::tag=1100
   integer::dummy_io,info2
+#ifdef QUADHILBERT
   real(kind=8),allocatable,dimension(:)::bound_key_restart
+#endif
   
   if(verbose.and.myid==1)write(*,*)'Entering init_amr'
 
