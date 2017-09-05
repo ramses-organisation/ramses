@@ -72,6 +72,7 @@ subroutine thermal_feedback(ilevel)
      endif
   endif
 
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -161,14 +162,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun,irad
+  integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::VSN,momentum_dot,pressure,cs_TH,cs,P_nt_new
-  real(dp)::M_SINGLE_SN,mpart_ini
+  real(dp)::p_SN,pressure,cs_TH,cs
+  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -177,7 +178,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  integer ::n_SN
+  !integer ::n_SN
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
   integer,dimension(1:nvector),save::list1
@@ -186,8 +187,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  integer ,dimension(1:nvector),save::igrid,icell,indp,kg,n_SN
   real(dp),dimension(1:3)::skip_loc
+#if NENER>0
+  integer::irad
+#endif
 
   if(sf_log_properties) ilun=myid+10
   ! Conversion factor from user units to cgs units
@@ -236,14 +240,20 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
 
   ! Stellar momentum injection from cgs to code units
-  VSN=400.*1d5/scale_v
+  p_SN=1.4*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
   cs_TH=1000.*1d5/scale_v
+
+  ! Photoionization momentum injection from cgs to code units
+  cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.1
 
   ! Life time radiation specific energy from cgs to code units
   ERAD=1d53/(10.*2d33)/scale_v**2
+
+  ! Critical density for momentum injection via SN for a resolved cooling radius
+  n_crit=100./scale_nH*(3.*3.08d18/scale_l/dx_min)**2
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -279,7 +289,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! NGP at level ilevel
   do idim=1,ndim
      do j=1,np
-        id(j,idim)=x(j,idim)
+        id(j,idim)=int(x(j,idim))
      end do
   end do
 
@@ -345,86 +355,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Compute stellar mass loss and thermal feedback due to supernovae
-!   if(f_w==0)then
-!      do j=1,np
-!         birth_time=tp(ind_part(j))
-!         ! Make sure that we don't count feedback twice
-!         if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t0-dteff(j)))then
-!            eta_sn2   = eta_sn
-!            if(sf_imf)then
-!               if(mp(ind_part(j)).le.mstar_max)then
-!                  if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
-!                  if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
-!               endif
-!            endif
-!            ! Stellar mass loss
-!            mejecta=eta_sn2*mp(ind_part(j))
-!            mloss(j)=mloss(j)+mejecta/vol_loc(j)
-!            ! Thermal energy
-!            ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
-!            ! Metallicity
-!            if(metal)then
-!               zloss=yield+(1d0-yield)*zp(ind_part(j))
-!               mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
-!            endif
-!            ! Reduce star particle mass
-!            mp(ind_part(j))=mp(ind_part(j))-mejecta
-!            ! Boost SNII energy and depopulate accordingly
-!            if(SN_BOOST>1d0)then
-!               call ranf(localseed,RandNum)
-!               if(RandNum<1d0/SN_BOOST)then
-!                  mloss(j)=SN_BOOST*mloss(j)
-!                  mzloss(j)=SN_BOOST*mzloss(j)
-!                  ethermal(j)=SN_BOOST*ethermal(j)
-!               else
-!                  mloss(j)=0d0
-!                  mzloss(j)=0d0
-!                  ethermal(j)=0d0
-!               endif
-!            endif
-!            if(sf_log_properties) then
-!               write(ilun,'(I10)',advance='no') 1
-!               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
-!               do idim=1,ndim
-!                  write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
-!               enddo
-!               do idim=1,ndim
-!                  write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
-!               enddo
-!               write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
-!               do ivar=2,nvar
-!                  if(ivar.eq.ndim+2)then
-!                     e=0.0d0
-!                     do idim=1,ndim
-!                        e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
-!                     enddo
-! #if NENER>0
-!                     do irad=0,nener-1
-!                        e=e+unew(ind_cell(i),inener+irad)
-!                     enddo
-! #endif
-! #ifdef SOLVERmhd
-!                     do idim=1,ndim
-!                        e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
-!                     enddo
-! #endif
-!                     ! Temperature
-!                     uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
-!                  else
-!                     uvar=unew(indp(j),ivar)
-!                  endif
-!                  write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
-!               enddo
-!               write(ilun,'(A1)') ' '
-!            endif
-!         endif
-!      end do
-!   endif
-
-   if(f_w==0)then
+   if(supernova_feedback)then !I removed SN logging and SN boost for now.
       do j=1,np
+         n_SN(j)=0
          birth_time=tp(ind_part(j))
-         ! Make sure that we don't count feedback twice
          if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
             ! Guesstimate the initial star particle mass
             mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
@@ -433,10 +367,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
             ! Compute the mean SN count
             avg_n=n_dot*dteff(j)
             ! Draw a Poisson process for this mean
-            call poissdev(localseed,avg_n,n_SN)
-            write(*,*)avg_n,n_SN
+            call poissdev(localseed,avg_n,n_SN(j))
             ! Stellar mass loss
-            mejecta=n_SN*M_SINGLE_SN
+            mejecta=n_SN(j)*M_SINGLE_SN
             mloss(j)=mloss(j)+mejecta/vol_loc(j)
             ! Thermal energy
             ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
@@ -451,36 +384,27 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
       end do
    endif
 
-  ! Use non-thermal energy
-  ! if(nener>0)then
-  !    do j=1,np
-  !       birth_time=tp(ind_part(j))
-  !       if(birth_time.ge.(current_time-t0))then
-  !          momentum_dot=VSN*mp(ind_part(j))/t0
-  !          pressure=momentum_dot/dx_loc**2
-  !          P_nt_new = unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
-  !          cs = sqrt(P_nt_new/max(uold(indp(j),1),smallr))
-  !           if(uold(indp(j),ndim+3).lt.pressure.and.cs.lt.cs_TH)then
-  !             unew(indp(j),ndim+3)=P_nt_new
-  !          endif
-  !       endif
-  !    end do
-  ! endif
+   ! Photo-ionization
+   if(momentum_feedback)then
+     do j=1,np
+        birth_time=tp(ind_part(j))
+        if(birth_time.ge.(current_time-t_sn_cont))then
+           scamomnew(indp(j))=max(uold(indp(j),1),smallr)*cs_H2_2
+        endif
+     end do
+   endif
 
-  if(nener>0)then
-    do j=1,np
-       birth_time=tp(ind_part(j))
-       if(birth_time.ge.(current_time-(t0*2.0)))then
-          !momentum_dot=VSN*mp(ind_part(j))/(t0*1.0)
-          momentum_dot=VSN*mp(ind_part(j))/t0*max(mp(ind_part(j))/mass_sph,1.0)
-          pressure=momentum_dot/dx_loc**2
-          cs = sqrt(uold(indp(j),ndim+3)/max(uold(indp(j),1),smallr))
-          if(uold(indp(j),ndim+3).lt.pressure.and.cs.lt.cs_TH)then
-            unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+(pressure-uold(indp(j),ndim+3))
-          endif
-       endif
-    end do
-  endif
+   ! Pressure FB from SN
+   if(momentum_feedback)then
+     do j=1,np
+        birth_time=tp(ind_part(j))
+        if(birth_time.ge.(current_time-t_sn_cont).and.max(uold(indp(j),1),smallr).ge.n_crit)then
+           pressure=p_SN*n_SN(j)/dx_loc**2/dteff(j)
+           scamomnew(indp(j))=scamomnew(indp(j))+pressure/(gamma_rad(1)-1.0)
+        endif
+     end do
+   endif
+
   ! Update hydro variables due to feedback
 
   ! For IR radiation trapping,
@@ -538,15 +462,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-  ! Use non-thermal energy
+  ! Add a fraction of the SN energy to the non-thermal energy
   if(nener>0)then
      do j=1,np
         unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)*(1d0+RAD_BOOST)
         cs=sqrt(unew(indp(j),ndim+3)/max(unew(indp(j),1),smallr))
         if(cs.ge.cs_TH)then
-!          write(*,*) "entering check feedback",unew(indp(j),ndim+3),cs*scale_v/1d5,j
           unew(indp(j),ndim+3)=max(unew(indp(j),1),smallr)*cs_TH**2
-!          write(*,*) "exit check feedback",unew(indp(j),ndim+3),sqrt(unew(indp(j),ndim+3)/unew(indp(j),1))*scale_v/1d5
         endif
      end do
   endif

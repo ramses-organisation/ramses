@@ -60,6 +60,12 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+#if NENER>0
+     ivar=ndim+3
+     do i=1,active(ilevel)%ngrid
+        unew(active(ilevel)%igrid(i)+iskip,ivar) = 0.0
+     end do
+#endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -620,13 +626,13 @@ subroutine add_pdv_source_terms(ilevel)
         end if
 
 #if NENER>0
-        do irad=1,nener
-           do i=1,ngrid
-              ! Add -pdV term
-              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
-                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
-           end do
-        end do
+!!$        do irad=1,nener
+!!$           do i=1,ngrid
+!!$              ! Add -pdV term
+!!$              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
+!!$                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
+!!$           end do
+!!$        end do
 #endif
 
      enddo
@@ -850,6 +856,11 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
   call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+
+#if NENER>0
+     ivar=ndim+3
+     flux(1:nvector,if1:if2,jf1:jf2,kf1:kf2,ivar,1:ndim) = 0.0
+#endif
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface
