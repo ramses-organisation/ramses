@@ -14,6 +14,7 @@ subroutine output_frame()
 #ifndef WITHOUTMPI
   include "mpif.h"
 #endif
+  
   integer::info,ierr,iframe
   integer,parameter::tag=100
 
@@ -85,15 +86,15 @@ subroutine output_frame()
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
   real(kind=8),dimension(:,:,:),allocatable::rt_data_frame
-#endif
+#endif  
 
   nh_temp    = nh_frame
   nw_temp    = nw_frame
 
   ! Only one projection available in 2D
   if((ndim.eq.2).and.(trim(proj_axis).ne.'z')) proj_axis = 'z'
-
- do proj_ind=1,LEN(trim(proj_axis))
+  
+ do proj_ind=1,LEN(trim(proj_axis)) 
   opened=.false.
 
 #if NDIM > 1
@@ -107,9 +108,9 @@ subroutine output_frame()
   write(temp_string,'(I1)') proj_ind
   moviedir = 'movie'//trim(temp_string)//'/'
   moviecmd = 'mkdir -p '//trim(moviedir)
-  if(.not.withoutmkdir) then
+  if(.not.withoutmkdir) then 
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
 #else
      if(myid==1)then
         call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
@@ -124,13 +125,13 @@ subroutine output_frame()
 #endif
 #endif
   endif
-
+  
   infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
   if(myid==1)call output_info(infofile)
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-
+  
   moviefiles(0) = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
@@ -182,7 +183,7 @@ subroutine output_frame()
     sinkfile = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
     if(myid==1.and.proj_ind==1) call output_sink_csv(sinkfile)
   endif
-
+  
   if(levelmax_frame==0)then
      nlevelmax_frame=nlevelmax
   else if (levelmax_frame.gt.nlevelmax)then
@@ -194,7 +195,7 @@ subroutine output_frame()
   nframes = 0
 #ifdef SOLVERmhd
   do kk=0,NVAR+7
-#else
+#else                       
   do kk=0,NVAR+3
 #endif
      if(movie_vars(kk).eq.1) nframes = nframes+1
@@ -262,7 +263,7 @@ subroutine output_frame()
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
   delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp
   if(dist_camera(proj_ind).le.0D0) dist_camera(proj_ind) = boxlen
-
+   
   ! Camera properties
   if(cosmo) then
      if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = aendmov
@@ -281,10 +282,10 @@ subroutine output_frame()
                 +min(max(t-tstart_phi_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(tendmov-tstartmov)
      dist_cam   = dist_camera(proj_ind)+min(max(t-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*ddist_camera(proj_ind)/(tendmov-tstartmov)
   endif
-
+  
   if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera(proj_ind))) focal_camera(proj_ind) = dist_cam
   fov_camera = atan((delx/2d0)/focal_camera(proj_ind))
-#if NDIM>2
+#if NDIM>2                 
   if(myid==1) then
      write(*,'(5A,F6.1,A,F6.1)',advance='no') ' Writing frame ', istep_str,' los=',proj_axis(proj_ind:proj_ind),   &
      &                                              ' theta=',theta_cam*180./pi,' phi=',phi_cam*180./pi
@@ -363,10 +364,10 @@ endif
   if(hydro) then
      ! Loop over levels
      do ilevel=levelmin,nlevelmax_frame
-
+   
         ! Mesh size at level ilevel in coarse cell units
         dx=0.5D0**ilevel
-
+        
         ! Set position of cell centres relative to grid centre
         do ind=1,twotondim
            iz=(ind-1)/4
@@ -376,13 +377,13 @@ endif
            if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
            if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
         end do
-
+     
         dx_loc=dx*scale
         dx_min=0.5D0**nlevelmax*scale
         ncache=active(ilevel)%ngrid
 
         dx_proj = (dx_loc/2.0)*smooth_frame(proj_ind)
-#if NDIM>2
+#if NDIM>2                 
         if((shader_frame(proj_ind).eq.'cube').and.(.not.perspective_camera(proj_ind)))then
            xcube = (/-dx_proj,-dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj, dx_proj, dx_proj/)
            ycube = (/-dx_proj,-dx_proj, dx_proj, dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj/)
@@ -453,7 +454,7 @@ endif
                        enddo
 #endif
 #ifdef SOLVERmhd
-                       do idim=1,ndim
+                       do idim=1,ndim 
                           e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
                        enddo
 #endif
@@ -470,10 +471,10 @@ endif
                     ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                  endif
               end do
-
+   
               do i=1,ngrid
                  if(ok(i))then
-#if NDIM>2
+#if NDIM>2                 
                     ! Centering
                     xx(i,1) = xx(i,1)-xcen
                     xx(i,2) = xx(i,2)-ycen
@@ -488,7 +489,7 @@ endif
                     xx(i,2) = ytmp
                     xx(i,3) = ztmp
                     ! Perspective correction factor
-                    pers_corr = 1.0
+                    pers_corr = 1.0 
                     if(proj_axis(proj_ind:proj_ind).eq.'x')then
                       if(dist_cam-xx(i,1).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
@@ -636,7 +637,7 @@ endif
                           if(abs(yycentre-yleft).lt.1d-2*dx_frame) ypc = ypc-1e-2*dx_frame
                           if(abs(xxcentre-xright).lt.1d-2*dx_frame) xpc = xpc-1e-2*dx_frame
                           if(abs(yycentre-yright).lt.1d-2*dx_frame) ypc = ypc-1e-2*dx_frame
-#if NDIM>2
+#if NDIM>2                 
                           if(shader_frame(proj_ind).eq.'cube')then
                              cube_face = .false.
                              if(sqrt(xpc**2+ypc**2).gt.dx_proj*sqrt(3.0)) goto 666
@@ -689,7 +690,7 @@ endif
                              imap = 1
 #ifdef SOLVERmhd
                              do kk=0,NVAR+4
-#else
+#else                       
                              do kk=0,NVAR
 #endif
                                 if(movie_vars(kk).eq.1)then
@@ -705,7 +706,7 @@ endif
                                       enddo
 #endif
 #ifdef SOLVERmhd
-                                      do idim=1,ndim
+                                      do idim=1,ndim 
                                          e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
                                       enddo
 #endif
@@ -715,7 +716,7 @@ endif
                                    ! Density map case
                                    if(kk==1) then
                                       uvar = uold(ind_cell(i),kk)
-                                   endif
+                                   endif 
                                    ! Other scalars map
                                    if(kk>1)then
                                       uvar = uold(ind_cell(i),kk)/max(uold(ind_cell(i),1),smallr)
@@ -764,10 +765,10 @@ endif
                     end do
                  end if
               end do
-
+   
            end do
            ! End loop over cells
-
+   
         end do
         ! End loop over grids
      end do
@@ -777,7 +778,7 @@ endif
   ! Loop over particles
   do j=1,npartmax
 
-#if NDIM>2
+#if NDIM>2                 
      xpf  = xp(j,1)-xcen
      ypf  = xp(j,2)-ycen
      zpf  = xp(j,3)-zcen
@@ -829,10 +830,10 @@ endif
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame)cycle
 #endif
-     ! Compute map indices for the particle
+     ! Compute map indices for the particle 
      ii = min(int((xpf-xleft_frame)/dx_frame)+1,nw_frame)
      jj = min(int((ypf-yleft_frame)/dy_frame)+1,nh_frame)
-
+     
      ! Fill up map with projected mass
 #ifdef SOLVERmhd
      ipart_start = NVAR+5
@@ -1064,7 +1065,7 @@ endif
             stop
 #endif
          endif
-         rewind(ilun)
+         rewind(ilun)  
          if(tendmov>0)then
             write(ilun)t,delx,dely,delz
          else
@@ -1092,7 +1093,7 @@ endif
                  stop
 #endif
               endif
-              rewind(ilun)
+              rewind(ilun)  
               if(tendmov>0)then
                  write(ilun)t,delx,dely,delz
               else
@@ -1115,7 +1116,7 @@ endif
 #endif
 #endif
   ! Update counter
-  if(proj_ind.eq.len(trim(proj_axis))) then
+  if(proj_ind.eq.len(trim(proj_axis))) then 
      ! Increase counter and skip frames if timestep is large
      imov=imov+1
      do while((amovout(imov)<aexp.or.tmovout(imov)<t).and.(imov.lt.imovout))
