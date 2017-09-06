@@ -11,7 +11,7 @@ subroutine godunov_fine(ilevel)
   ! This routine is a wrapper to the second order Godunov solver.
   ! Small grids (2x2x2) are gathered from level ilevel and sent to the
   ! hydro solver. On entry, hydro variables are gathered from array uold.
-  ! On exit, unew has been updated. 
+  ! On exit, unew has been updated.
   !--------------------------------------------------------------------------
   integer::i,ivar,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
@@ -60,6 +60,12 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+#if NENER>0
+     ivar=ndim+3
+     do i=1,active(ilevel)%ngrid
+        unew(active(ilevel)%igrid(i)+iskip,ivar) = 0.0
+     end do
+#endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -75,7 +81,7 @@ subroutine set_unew(ilevel)
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
            end do
-#endif          
+#endif
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
      end if
@@ -113,7 +119,7 @@ subroutine set_uold(ilevel)
   implicit none
   integer::ilevel
   !---------------------------------------------------------
-  ! This routine sets array uold to its new value unew 
+  ! This routine sets array uold to its new value unew
   ! after the hydro step.
   !---------------------------------------------------------
   integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell
@@ -132,15 +138,13 @@ subroutine set_uold(ilevel)
      call add_gravity_source_terms(ilevel)
   end if
 
-  ! Add non conservative pdV terms to unew 
+  ! Add non conservative pdV terms to unew
   ! for thermal and/or non-thermal energies
   if(pressure_fix.OR.nener>0)then
      call add_pdv_source_terms(ilevel)
-  endif  
-  if(nener>0)then
-     call add_viscosity_source_terms(ilevel)
   endif
-  
+  call add_viscosity_source_terms(ilevel)
+
   ! Set uold to unew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -242,6 +246,7 @@ subroutine add_viscosity_source_terms(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use pm_commons
   implicit none
   integer::ilevel,levelmax
   !--------------------------------------------------------------------------
@@ -252,8 +257,11 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_new,u_new,v_new,w_new,e_kin_new,e_thermal_new,d_old,u_old,v_old,w_old,e_kin_old
+  real(dp)::scale,dx,dx_loc,d,u,v,w,eold,dx_min
+  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH,current_time,t0
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  integer::ipart,jpart,next_part,npart1,npart2
+
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -272,6 +280,10 @@ subroutine add_viscosity_source_terms(ilevel)
   dx_loc=dx*scale
   dx_min=(0.5**levelmax)*scale
 
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  cs_TH=1000.*1d5/scale_v
+
   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
@@ -279,20 +291,69 @@ subroutine add_viscosity_source_terms(ilevel)
   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
+!
+#if NDIM==3
+  ! Gather star particles only.
+  if(use_proper_time)then
+     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
+
+  ! Loop over grids
+  do i=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(i)
+     ! Number of particles in the grid
+     npart1=numbp(igrid)
+     npart2=0
+
+     ! Count star particles
+     if(npart1>0)then
+        ipart=headp(igrid)
+        ! Loop over particles
+        do jpart=1,npart1
+           ! Save next particle   <--- Very important !!!
+           next_part=nextp(ipart)
+           if(idp(ipart).gt.0.and.tp(ipart).ne.0.and.tp(ipart).ge.(current_time-(t0*2.0)))then
+              npart2=npart2+1
+              cycle
+           endif
+           ipart=next_part  ! Go to next particle
+        end do
+     endif
+
+     ! Loop over cells
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        ind_cell=iskip+igrid
+        ! cells with young stars
+        if(npart2.gt.0)then
+           flag2(ind_cell)=1
+        else
+           flag2(ind_cell)=0
+        end if
+     end do
+  end do
+  ! End loop over grids
+#endif
+
+!
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
-   
+
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Gather neighboring grids
      do i=1,ngrid
         igridn(i,0)=ind_grid(i)
-    end do
+     end do
      do idim=1,ndim
         do i=1,ngrid
            ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
@@ -301,16 +362,16 @@ subroutine add_viscosity_source_terms(ilevel)
            igridn(i,2*idim  )=son(ind_right(i,idim))
         end do
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
-        
+
         ! Compute central cell index
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather all neighboring velocities
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
@@ -330,14 +391,14 @@ subroutine add_viscosity_source_terms(ilevel)
               if(igridn(i,ig2)>0)then
                  veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
                  dx_d(i,idim)=dx_loc
-              else 
+              else
                  veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
                  dx_d(i,idim)=dx_loc*1.5_dp
               end if
            enddo
         end do
         ! End loop over dimensions
-  
+
         ! Compute divu = Trace G
         divu_loc(1:ngrid)=0.0d0
         do idim=1,ndim
@@ -383,54 +444,49 @@ subroutine add_viscosity_source_terms(ilevel)
 
         ! Add viscosity term at time t with half time step
         do i=1,ngrid
-           d_new=max(unew(ind_cell(i),1),smallr)
-           u_new=0.0; v_new=0.0; w_new=0.0
-           if(ndim>0)u_new=unew(ind_cell(i),2)/d_new
-           if(ndim>1)v_new=unew(ind_cell(i),3)/d_new
-           if(ndim>2)w_new=unew(ind_cell(i),4)/d_new
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           e_thermal_new=unew(ind_cell(i),ndim+2)-e_kin_new
 
+           ! Compute old turbulent state
            d_old=max(uold(ind_cell(i),1),smallr)
-           u_old=0.0; v_old=0.0; w_old=0.0
-           if(ndim>0)u_old=uold(ind_cell(i),2)/d_old
-           if(ndim>1)v_old=uold(ind_cell(i),3)/d_old
-           if(ndim>2)w_old=uold(ind_cell(i),4)/d_old
-           e_kin_old=0.5*d_old*(u_old**2+v_old**2+w_old**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_old=e_kin_old+uold(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           Kturb=uold(ind_cell(i),ndim+3)
+           Kturb=uold(ind_cell(i),ivirial1)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
-           ! Explicit
-!!$           unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
-!!$                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel) &
-!!$                & -Kturb*sigma/dx_loc*dtnew(ilevel)
-!!$           e_thermal_new=e_thermal_new+Kturb*sigma/dx_loc*dtnew(ilevel)
-
-           ! Implicit
-           unew(ind_cell(i),ndim+3)=(unew(ind_cell(i),ndim+3) &
+           ! Implicit solution
+           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
                 &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
                 & /(1.0+sigma/dx_loc*dtnew(ilevel))
-           e_thermal_new=e_thermal_new+unew(ind_cell(i),ndim+3)*sigma/dx_loc*dtnew(ilevel)
 
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           unew(ind_cell(i),ndim+2)=e_thermal_new+e_kin_new
+           ! Stationary solution
+!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+
         end do
         ! End loop over grids
+
+        if(nener>0)then
+           ! Perform decay of non-thermal energy
+           do i=1,ngrid
+              ! Compute old turbulent state
+              d_old=max(uold(ind_cell(i),1),smallr)
+              Kturb=uold(ind_cell(i),ndim+3)
+              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+              decay_rate=sigma/dx_loc/2.0
+!              decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
+
+              ! Implicit solution
+              if(flag2(ind_cell(i)).eq.0)then
+                unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
+                     & /(1.0+decay_rate*dtnew(ilevel))
+              end if
+              !Check for negative Pressure and values higher then threshhold
+              unew(ind_cell(i),ndim+3)=max(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*smallc**2)
+              unew(ind_cell(i),ndim+3)=min(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*cs_TH**2)
+
+              if(pressure_fix)then
+                 enew(ind_cell(i))=enew(ind_cell(i))+unew(ind_cell(i),ndim+3)*decay_rate*dtnew(ilevel)
+              endif
+           end do
+           ! End loop over grids
+        endif
+
      end do
      ! End loop over cells
   end do
@@ -483,13 +539,13 @@ subroutine add_pdv_source_terms(ilevel)
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
-   
+
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Gather neighboring grids
      do i=1,ngrid
         igridn(i,0)=ind_grid(i)
@@ -502,16 +558,16 @@ subroutine add_pdv_source_terms(ilevel)
            igridn(i,2*idim  )=son(ind_right(i,idim))
         end do
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
-        
+
         ! Compute central cell index
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather all neighboring velocities
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
@@ -531,14 +587,14 @@ subroutine add_pdv_source_terms(ilevel)
               if(igridn(i,ig2)>0)then
                  veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
                  dx_d(i,idim)=dx_loc
-              else 
+              else
                  veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
                  dx_d(i,idim)=dx_loc*1.5_dp
               end if
            enddo
         end do
         ! End loop over dimensions
-  
+
         ! Compute divu = Trace G
         divu_loc(1:ngrid)=0.0d0
         do i=1,ngrid
@@ -548,7 +604,7 @@ subroutine add_pdv_source_terms(ilevel)
            enddo
         end do
 
-        ! Update thermal internal energy 
+        ! Update thermal internal energy
         if(pressure_fix)then
            do i=1,ngrid
               ! Compute old thermal energy
@@ -570,13 +626,13 @@ subroutine add_pdv_source_terms(ilevel)
         end if
 
 #if NENER>0
-        do irad=1,nener
-           do i=1,ngrid
-              ! Add -pdV term
-              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
-                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
-           end do
-        end do
+!!$        do irad=1,nener
+!!$           do i=1,ngrid
+!!$              ! Add -pdV term
+!!$              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
+!!$                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
+!!$           end do
+!!$        end do
 #endif
 
      enddo
@@ -588,7 +644,7 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! This is the old technique based on the "pressure fix" option.
 
-  ! Update thermal internal energy 
+  ! Update thermal internal energy
   if(pressure_fix)then
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -644,10 +700,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolate from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated 
-  ! and stored in array unew(:), both at the current level and at the 
+  ! already been taken into account. Conservative variables are updated
+  ! and stored in array unew(:), both at the current level and at the
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -701,7 +757,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -709,7 +765,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-     
+
      ! Check if neighboring grid exists
      nbuffer=0
      nexist=0
@@ -725,7 +781,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
           ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
         end if
      end do
-     
+
      ! If not, interpolate hydro variables from parent cells
      if(nbuffer>0)then
         call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
@@ -749,12 +805,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nexist
            ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
         end do
-        
+
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2
         if(ndim>1)j3=1+2*(j1-1)+j2
         if(ndim>2)k3=1+2*(k1-1)+k2
-        
+
         ! Gather hydro variables
         do ivar=1,nvar
            do i=1,nexist
@@ -764,7 +820,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -777,7 +833,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
-        
+
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -785,7 +841,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nbuffer
            ok(ind_nexist(i),i3,j3,k3)=.false.
         end do
-        
+
      end do
      end do
      end do
@@ -801,8 +857,13 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
+#if NENER>0
+     ivar=ndim+3
+     flux(1:nvector,if1:if2,jf1:jf2,kf1:kf2,ivar,1:ndim) = 0.0
+#endif
+
   !------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -887,10 +948,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-     
+
      !----------------------
      ! Left flux at boundary
-     !----------------------     
+     !----------------------
      ! Check if grids sits near left boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
@@ -939,10 +1000,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end if
-     
+
      !-----------------------
      ! Right flux at boundary
-     !-----------------------     
+     !-----------------------
      ! Check if grids sits near right boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
