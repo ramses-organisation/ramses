@@ -503,9 +503,9 @@ subroutine getmem(outmem)
 
   inquire(file=file, exist=file_exists)
   if (file_exists) then
-     open(unit=1,file=file,form='formatted')
-     read(1,'(A300)',IOSTAT=read_status)dir
-     close(1)
+     open(unit=12,file=file,form='formatted')
+     read(12,'(A300)',IOSTAT=read_status)dir
+     close(12)
   else
      read_status=-1000
   endif
