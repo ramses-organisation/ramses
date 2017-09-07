@@ -5,7 +5,7 @@
 subroutine load_balance
   use amr_commons
   use pm_commons
-  use hydro_commons, ONLY: nvar, uold
+  use hydro_commons, ONLY: nvar, uold, pstarold
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
