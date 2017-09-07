@@ -867,12 +867,13 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
   integer:: i, j, k, l
   real(dp)::pstar
 
-  ! Add stellar momentum to the normal momentum fluxd
+  ! Add stellar momentum to the normal momentum flux
+  ! The one sixth factor is there to account for the mesh geometry
   do k = kf1, MAX(kf1,ku2-2)
      do j = jf1, MAX(jf1, ju2-2) 
         do i = if1, if2
            do l = 1, ngrid
-              pstar=half*(pin(l,i,j,k)+pin(l,i-1,j,k))
+              pstar=sixth*(pin(l,i,j,k)+pin(l,i-1,j,k))
               flux(l,i,j,k,2,1) = flux(l,i,j,k,2,1) + pstar*dx/dt
            end do
            
@@ -885,7 +886,7 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
      do j = jf1, jf2
         do i = iu1+2, iu2-2
            do l = 1, ngrid
-              pstar=half*(pin(l,i,j,k)+pin(l,i,j-1,k))
+              pstar=sixth*(pin(l,i,j,k)+pin(l,i,j-1,k))
               flux(l,i,j,k,3,2) = flux(l,i,j,k,3,2) + pstar*dy/dt
            end do
         end do
@@ -898,7 +899,7 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
      do j = ju1+2, ju2-2 
         do i = iu1+2, iu2-2 
            do l = 1, ngrid
-              pstar=half*(pin(l,i,j,k)+pin(l,i,j,k-1))
+              pstar=sixth*(pin(l,i,j,k)+pin(l,i,j,k-1))
               flux(l,i,j,k,4,3) = flux(l,i,j,k,4,3) + pstar*dz/dt
            end do
         end do

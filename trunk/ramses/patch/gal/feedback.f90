@@ -72,7 +72,6 @@ subroutine thermal_feedback(ilevel)
      endif
   endif
 
-
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -168,7 +167,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
-  real(dp)::p_SN,pressure,cs_TH,cs
+  real(dp)::p_SN,pressure,dens
   real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -194,6 +193,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
 
   if(sf_log_properties) ilun=myid+10
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -219,9 +219,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
 
-  ! Compute stochastic boost to account for target GMC mass
-  SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
-
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
      t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
@@ -240,19 +237,17 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
 
   ! Stellar momentum injection from cgs to code units
+  ! and for solar metallicity
   p_SN=1.4*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
-  cs_TH=1000.*1d5/scale_v
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
 
   ! Fraction of the SN energy into non-thermal component
-  FRAC_NT=0.1
-
-  ! Life time radiation specific energy from cgs to code units
-  ERAD=1d53/(10.*2d33)/scale_v**2
+  FRAC_NT=0.0
 
   ! Critical density for momentum injection via SN for a resolved cooling radius
+  ! and for solar metallicity
   n_crit=100./scale_nH*(3.*3.08d18/scale_l/dx_min)**2
 
 #if NDIM==3
@@ -355,97 +350,92 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Compute stellar mass loss and thermal feedback due to supernovae
-   if(supernova_feedback)then !I removed SN logging and SN boost for now.
-      do j=1,np
-         n_SN(j)=0
-         birth_time=tp(ind_part(j))
-         if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
-            ! Guesstimate the initial star particle mass
-            mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
-            ! Compute the constant SN rate
-            n_dot=eta_sn*mpart_ini/M_SINGLE_SN/(t_sn_cont-t0)
-            ! Compute the mean SN count
-            avg_n=n_dot*dteff(j)
-            ! Draw a Poisson process for this mean
-            call poissdev(localseed,avg_n,n_SN(j))
-            ! Stellar mass loss
-            mejecta=n_SN(j)*M_SINGLE_SN
-            mloss(j)=mloss(j)+mejecta/vol_loc(j)
-            ! Thermal energy
-            ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
-            ! Metallicity
-            if(metal)then
-               zloss=yield+(1d0-yield)*zp(ind_part(j))
-               mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
-            endif
-            ! Reduce star particle mass
-            mp(ind_part(j))=mp(ind_part(j))-mejecta
-         endif
-      end do
-   endif
+  if(f_w==0)then
+     do j=1,np
+        n_SN(j)=0
+        birth_time=tp(ind_part(j))
+        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+           ! Guesstimate the initial star particle mass
+           mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
+           ! Compute the constant SN rate
+           n_dot=eta_sn*mpart_ini/M_SINGLE_SN/(t_sn_cont-t0)
+           ! Compute the mean SN count
+           avg_n=n_dot*dteff(j)
+           ! Draw a Poisson process for this mean
+           call poissdev(localseed,avg_n,n_SN(j))
+           ! Stellar mass loss
+           mejecta=n_SN(j)*M_SINGLE_SN
+           mloss(j)=mloss(j)+mejecta/vol_loc(j)
+           ! Thermal energy
+           ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
+           ! Metallicity
+           if(metal)then
+              zloss=yield+(1d0-yield)*zp(ind_part(j))
+              mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
+           endif
+           ! Reduce star particle mass
+           mp(ind_part(j))=mp(ind_part(j))-mejecta
+        endif
+     end do
 
-   ! Photo-ionization
-   if(momentum_feedback)then
+     ! Photo-ionization thermal feedback
      do j=1,np
         birth_time=tp(ind_part(j))
         if(birth_time.ge.(current_time-t_sn_cont))then
-           scamomnew(indp(j))=max(uold(indp(j),1),smallr)*cs_H2_2
+           pressure=max(uold(indp(j),1),smallr)*cs_H2_2
+           ethermal(j)=ethermal(j)+pressure
         endif
      end do
-   endif
+        
+     ! Use stellar momentum feedback
+     if(momentum_feedback)then
 
-   ! Pressure FB from SN
-   if(momentum_feedback)then
-     do j=1,np
-        birth_time=tp(ind_part(j))
-        if(birth_time.ge.(current_time-t_sn_cont).and.max(uold(indp(j),1),smallr).ge.n_crit)then
-           pressure=p_SN*n_SN(j)/dx_loc**2/dteff(j)
-           scamomnew(indp(j))=scamomnew(indp(j))+pressure/(gamma_rad(1)-1.0)
-        endif
-     end do
-   endif
+        ! Momentum feedback from supernovae
+        do j=1,np
+           birth_time=tp(ind_part(j))
+           gas_density=max(uold(indp(j),1),smallr)
+           ! Compute metallicity for cooling 
+           if(metal)then
+              metallicity=max(uold(indp(j),imetal),smallr)/gas_density/0.02
+           else
+              metallicity=z_ave
+           endif
+           metallicity=max(metallicity,0.01)
+           ! Check if cooling radius is not resolved
+           if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
+              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**3
+           endif
+        end do
+
+     endif
+  
+  endif
 
   ! Update hydro variables due to feedback
 
-  ! For IR radiation trapping,
-  ! we use a fixed length to estimate the column density of gas
-  delta_x=200.*3d18
-  if(metal)then
-     tau_factor=kappa_IR*delta_x*scale_d/0.02
-  else
-     tau_factor=kappa_IR*delta_x*scale_d*z_ave
-  endif
-  rad_factor=ERAD/ESN
-
+  ! Loop on particles
   do j=1,np
 
-     ! Infrared photon trapping boost
-     if(metal)then
-        tauIR=tau_factor*max(uold(indp(j),imetal),smallr)
-     else
-        tauIR=tau_factor*max(uold(indp(j),1),smallr)
-     endif
-     if(uold(indp(j),1)*scale_nH > 10.)then
-        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
-     else
-        RAD_BOOST=0.0
-     endif
-
      ! Specific kinetic energy of the star
-     ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
-          &          +vp(ind_part(j),2)**2 &
-          &          +vp(ind_part(j),3)**2)
+     ekinetic(j)=0.5*(vp(ind_part(j),1)**2+vp(ind_part(j),2)**2+vp(ind_part(j),3)**2)
 
      ! Update hydro variable in NGP cell
      unew(indp(j),1)=unew(indp(j),1)+mloss(j)
      unew(indp(j),2)=unew(indp(j),2)+mloss(j)*vp(ind_part(j),1)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
-     unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
-          & ethermal(j)*(1d0+RAD_BOOST)
+     unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+
+     ! Update internal energy
      if(pressure_fix)then
-        enew(indp(j))=enew(indp(j))+(1.0-FRAC_NT)*ethermal(j)*(1d0+RAD_BOOST)
+        enew(indp(j))=enew(indp(j))+(1.0-FRAC_NT)*ethermal(j)
      endif
+     
+     ! Add a fraction of the SN energy to the non-thermal energy
+     if(nener>0)then
+        unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)
+     endif
+
   end do
 
   ! Add metals
@@ -459,17 +449,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(delayed_cooling)then
      do j=1,np
         unew(indp(j),idelay)=unew(indp(j),idelay)+mloss(j)
-     end do
-  endif
-
-  ! Add a fraction of the SN energy to the non-thermal energy
-  if(nener>0)then
-     do j=1,np
-        unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)*(1d0+RAD_BOOST)
-        cs=sqrt(unew(indp(j),ndim+3)/max(unew(indp(j),1),smallr))
-        if(cs.ge.cs_TH)then
-          unew(indp(j),ndim+3)=max(unew(indp(j),1),smallr)*cs_TH**2
-        endif
      end do
   endif
 

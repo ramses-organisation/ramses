@@ -11,7 +11,7 @@ subroutine godunov_fine(ilevel)
   ! This routine is a wrapper to the second order Godunov solver.
   ! Small grids (2x2x2) are gathered from level ilevel and sent to the
   ! hydro solver. On entry, hydro variables are gathered from array uold.
-  ! On exit, unew has been updated.
+  ! On exit, unew has been updated. 
   !--------------------------------------------------------------------------
   integer::i,ivar,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
@@ -60,12 +60,11 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
-#if NENER>0
-     ivar=ndim+3
-     do i=1,active(ilevel)%ngrid
-        unew(active(ilevel)%igrid(i)+iskip,ivar) = 0.0
-     end do
-#endif
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarnew(active(ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -81,7 +80,7 @@ subroutine set_unew(ilevel)
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
            end do
-#endif
+#endif          
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
      end if
@@ -96,6 +95,11 @@ subroutine set_unew(ilevel)
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,reception(icpu,ilevel)%ngrid
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
            divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
@@ -119,7 +123,7 @@ subroutine set_uold(ilevel)
   implicit none
   integer::ilevel
   !---------------------------------------------------------
-  ! This routine sets array uold to its new value unew
+  ! This routine sets array uold to its new value unew 
   ! after the hydro step.
   !---------------------------------------------------------
   integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell
@@ -138,12 +142,18 @@ subroutine set_uold(ilevel)
      call add_gravity_source_terms(ilevel)
   end if
 
-  ! Add non conservative pdV terms to unew
+  ! Add non conservative pdV terms to unew 
   ! for thermal and/or non-thermal energies
   if(pressure_fix.OR.nener>0)then
      call add_pdv_source_terms(ilevel)
   endif
-  call add_viscosity_source_terms(ilevel)
+
+  ! Add turbulent energy source and sink terms
+  ! to the corresponding passive scalar
+  ! Used for the sugrid scale turbulence model
+  if(sf_model > 0)then
+     call add_viscosity_source_terms(ilevel) 
+  endif
 
   ! Set uold to unew for myid cells
   do ind=1,twotondim
@@ -153,6 +163,11 @@ subroutine set_uold(ilevel)
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
+        end do
+     endif
      if(pressure_fix)then
         ! Correct total energy if internal energy is too small
         do i=1,active(ilevel)%ngrid
@@ -242,6 +257,195 @@ end subroutine add_gravity_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
+subroutine add_pdv_source_terms(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !---------------------------------------------------------
+  ! This routine adds the pdV source term to the internal
+  ! energy equation and to the non-thermal energy equations.
+  !---------------------------------------------------------
+  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
+  integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
+  integer,dimension(1:3,1:2,1:8)::iii,jjj
+  real(dp)::scale,dx,dx_loc,d,u,v,w,eold
+
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector,0:twondim),save::igridn
+  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
+  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
+  real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
+  real(dp),dimension(1:nvector),save::divu_loc
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+  dx=0.5d0**ilevel
+  dx_loc=dx*scale
+
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+
+  ! Loop over myid grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+   
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igridn(i,0)=ind_grid(i)
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
+           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
+           igridn(i,2*idim-1)=son(ind_left (i,idim))
+           igridn(i,2*idim  )=son(ind_right(i,idim))
+        end do
+     end do
+     
+     ! Loop over cells
+     do ind=1,twotondim
+        
+        ! Compute central cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        
+        ! Gather all neighboring velocities
+        do idim=1,ndim
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
+           ih1=ncoarse+(id1-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig1)>0)then
+                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
+                 dx_g(i,idim) = dx_loc
+              else
+                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
+                 dx_g(i,idim) = dx_loc*1.5_dp
+              end if
+           enddo
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig2)>0)then
+                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
+                 dx_d(i,idim)=dx_loc
+              else 
+                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
+                 dx_d(i,idim)=dx_loc*1.5_dp
+              end if
+           enddo
+        end do
+        ! End loop over dimensions
+  
+        ! Compute divu = Trace G
+        divu_loc(1:ngrid)=0.0d0
+        do i=1,ngrid
+           do idim=1,ndim
+              divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
+                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
+           enddo
+        end do
+
+        ! Update thermal internal energy 
+        if(pressure_fix)then
+           do i=1,ngrid
+              ! Compute old thermal energy
+              d=max(uold(ind_cell(i),1),smallr)
+              u=0.0; v=0.0; w=0.0
+              if(ndim>0)u=uold(ind_cell(i),2)/d
+              if(ndim>1)v=uold(ind_cell(i),3)/d
+              if(ndim>2)w=uold(ind_cell(i),4)/d
+              eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
+#if NENER>0
+              do irad=1,nener
+                 eold=eold-uold(ind_cell(i),ndim+2+irad)
+              end do
+#endif
+              ! Add -pdV term
+              enew(ind_cell(i))=enew(ind_cell(i)) &
+                   & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
+           end do
+        end if
+
+#if NENER>0
+        do irad=1,nener
+           do i=1,ngrid
+              ! Add -pdV term
+              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
+                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
+           end do
+        end do
+#endif
+
+     enddo
+     ! End loop over cells
+  end do
+  ! End loop over grids
+
+  return
+
+  ! This is the old technique based on the "pressure fix" option.
+
+  ! Update thermal internal energy 
+  if(pressure_fix)then
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,active(ilevel)%ngrid
+           ind_cell1=active(ilevel)%igrid(i)+iskip
+           ! Compute old thermal energy
+           d=max(uold(ind_cell1,1),smallr)
+           u=0.0; v=0.0; w=0.0
+           if(ndim>0)u=uold(ind_cell1,2)/d
+           if(ndim>1)v=uold(ind_cell1,3)/d
+           if(ndim>2)w=uold(ind_cell1,4)/d
+           eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              eold=eold-uold(ind_cell1,ndim+2+irad)
+           end do
+#endif
+           ! Add pdV term
+           enew(ind_cell1)=enew(ind_cell1) &
+                & +(gamma-1.0d0)*eold*divu(ind_cell1) ! Note: here divu=-div.u*dt
+        end do
+     end do
+  end if
+
+#if NENER>0
+  do irad=1,nener
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,active(ilevel)%ngrid
+           ind_cell1=active(ilevel)%igrid(i)+iskip
+           unew(ind_cell1,ndim+2+irad)=unew(ind_cell1,ndim+2+irad) &
+                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
+        end do
+     end do
+  end do
+#endif
+
+111 format('   Entering add_pdv_source_terms for level ',i2)
+
+end subroutine add_pdv_source_terms
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 subroutine add_viscosity_source_terms(ilevel)
   use amr_commons
   use hydro_commons
@@ -261,7 +465,6 @@ subroutine add_viscosity_source_terms(ilevel)
   real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH,current_time,t0
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   integer::ipart,jpart,next_part,npart1,npart2
-
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -291,55 +494,6 @@ subroutine add_viscosity_source_terms(ilevel)
   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
-!
-#if NDIM==3
-  ! Gather star particles only.
-  if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
-     current_time=texp
-  else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
-     current_time=t
-  endif
-
-  ! Loop over grids
-  do i=1,active(ilevel)%ngrid
-     igrid=active(ilevel)%igrid(i)
-     ! Number of particles in the grid
-     npart1=numbp(igrid)
-     npart2=0
-
-     ! Count star particles
-     if(npart1>0)then
-        ipart=headp(igrid)
-        ! Loop over particles
-        do jpart=1,npart1
-           ! Save next particle   <--- Very important !!!
-           next_part=nextp(ipart)
-           if(idp(ipart).gt.0.and.tp(ipart).ne.0.and.tp(ipart).ge.(current_time-(t0*2.0)))then
-              npart2=npart2+1
-              cycle
-           endif
-           ipart=next_part  ! Go to next particle
-        end do
-     endif
-
-     ! Loop over cells
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        ind_cell=iskip+igrid
-        ! cells with young stars
-        if(npart2.gt.0)then
-           flag2(ind_cell)=1
-        else
-           flag2(ind_cell)=0
-        end if
-     end do
-  end do
-  ! End loop over grids
-#endif
-
-!
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -460,33 +614,6 @@ subroutine add_viscosity_source_terms(ilevel)
 
         end do
         ! End loop over grids
-
-        if(nener>0)then
-           ! Perform decay of non-thermal energy
-           do i=1,ngrid
-              ! Compute old turbulent state
-              d_old=max(uold(ind_cell(i),1),smallr)
-              Kturb=uold(ind_cell(i),ndim+3)
-              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-              decay_rate=sigma/dx_loc/2.0
-!              decay_rate=scale_t/(t_diss*1d6*(365.*24.*3600.))
-
-              ! Implicit solution
-              if(flag2(ind_cell(i)).eq.0)then
-                unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
-                     & /(1.0+decay_rate*dtnew(ilevel))
-              end if
-              !Check for negative Pressure and values higher then threshhold
-              unew(ind_cell(i),ndim+3)=max(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*smallc**2)
-              unew(ind_cell(i),ndim+3)=min(unew(ind_cell(i),ndim+3),max(unew(ind_cell(i),1),smallr)*cs_TH**2)
-
-              if(pressure_fix)then
-                 enew(ind_cell(i))=enew(ind_cell(i))+unew(ind_cell(i),ndim+3)*decay_rate*dtnew(ilevel)
-              endif
-           end do
-           ! End loop over grids
-        endif
-
      end do
      ! End loop over cells
   end do
@@ -495,196 +622,6 @@ subroutine add_viscosity_source_terms(ilevel)
 111 format('    Entering add_viscosity_terms for level ',i2)
 
 end subroutine add_viscosity_source_terms
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine add_pdv_source_terms(ilevel)
-  use amr_commons
-  use hydro_commons
-  implicit none
-  integer::ilevel
-  !---------------------------------------------------------
-  ! This routine adds the pdV source term to the internal
-  ! energy equation and to the non-thermal energy equations.
-  !---------------------------------------------------------
-  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
-  integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,d,u,v,w,eold
-  real(dp)::Kturb,sigma
-
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
-  integer ,dimension(1:nvector,0:twondim),save::igridn
-  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
-  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
-  real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
-  real(dp),dimension(1:nvector),save::divu_loc
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  nx_loc=icoarse_max-icoarse_min+1
-  scale=boxlen/dble(nx_loc)
-  dx=0.5d0**ilevel
-  dx_loc=dx*scale
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
-
-  ! Loop over myid grids by vector sweeps
-  ncache=active(ilevel)%ngrid
-  do igrid=1,ncache,nvector
-
-     ! Gather nvector grids
-     ngrid=MIN(nvector,ncache-igrid+1)
-     do i=1,ngrid
-        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-     end do
-
-     ! Gather neighboring grids
-     do i=1,ngrid
-        igridn(i,0)=ind_grid(i)
-     end do
-     do idim=1,ndim
-        do i=1,ngrid
-           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
-           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
-           igridn(i,2*idim-1)=son(ind_left (i,idim))
-           igridn(i,2*idim  )=son(ind_right(i,idim))
-        end do
-     end do
-
-     ! Loop over cells
-     do ind=1,twotondim
-
-        ! Compute central cell index
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,ngrid
-           ind_cell(i)=iskip+ind_grid(i)
-        end do
-
-        ! Gather all neighboring velocities
-        do idim=1,ndim
-           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
-           ih1=ncoarse+(id1-1)*ngridmax
-           do i=1,ngrid
-              if(igridn(i,ig1)>0)then
-                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
-                 dx_g(i,idim) = dx_loc
-              else
-                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
-                 dx_g(i,idim) = dx_loc*1.5_dp
-              end if
-           enddo
-           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
-           ih2=ncoarse+(id2-1)*ngridmax
-           do i=1,ngrid
-              if(igridn(i,ig2)>0)then
-                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
-                 dx_d(i,idim)=dx_loc
-              else
-                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
-                 dx_d(i,idim)=dx_loc*1.5_dp
-              end if
-           enddo
-        end do
-        ! End loop over dimensions
-
-        ! Compute divu = Trace G
-        divu_loc(1:ngrid)=0.0d0
-        do i=1,ngrid
-           do idim=1,ndim
-              divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
-                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
-           enddo
-        end do
-
-        ! Update thermal internal energy
-        if(pressure_fix)then
-           do i=1,ngrid
-              ! Compute old thermal energy
-              d=max(uold(ind_cell(i),1),smallr)
-              u=0.0; v=0.0; w=0.0
-              if(ndim>0)u=uold(ind_cell(i),2)/d
-              if(ndim>1)v=uold(ind_cell(i),3)/d
-              if(ndim>2)w=uold(ind_cell(i),4)/d
-              eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
-#if NENER>0
-              do irad=1,nener
-                 eold=eold-uold(ind_cell(i),ndim+2+irad)
-              end do
-#endif
-              ! Add -pdV term
-              enew(ind_cell(i))=enew(ind_cell(i)) &
-                   & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
-           end do
-        end if
-
-#if NENER>0
-!!$        do irad=1,nener
-!!$           do i=1,ngrid
-!!$              ! Add -pdV term
-!!$              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
-!!$                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
-!!$           end do
-!!$        end do
-#endif
-
-     enddo
-     ! End loop over cells
-  end do
-  ! End loop over grids
-
-  return
-
-  ! This is the old technique based on the "pressure fix" option.
-
-  ! Update thermal internal energy
-  if(pressure_fix)then
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,active(ilevel)%ngrid
-           ind_cell1=active(ilevel)%igrid(i)+iskip
-           ! Compute old thermal energy
-           d=max(uold(ind_cell1,1),smallr)
-           u=0.0; v=0.0; w=0.0
-           if(ndim>0)u=uold(ind_cell1,2)/d
-           if(ndim>1)v=uold(ind_cell1,3)/d
-           if(ndim>2)w=uold(ind_cell1,4)/d
-           eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
-#if NENER>0
-           do irad=1,nener
-              eold=eold-uold(ind_cell1,ndim+2+irad)
-           end do
-#endif
-           ! Add pdV term
-           enew(ind_cell1)=enew(ind_cell1) &
-                & +(gamma-1.0d0)*eold*divu(ind_cell1) ! Note: here divu=-div.u*dt
-        end do
-     end do
-  end if
-
-#if NENER>0
-  do irad=1,nener
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,active(ilevel)%ngrid
-           ind_cell1=active(ilevel)%igrid(i)+iskip
-           unew(ind_cell1,ndim+2+irad)=unew(ind_cell1,ndim+2+irad) &
-                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
-        end do
-     end do
-  end do
-#endif
-
-111 format('   Entering add_pdv_source_terms for level ',i2)
-
-end subroutine add_pdv_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
@@ -700,10 +637,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolate from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated
-  ! and stored in array unew(:), both at the current level and at the
+  ! already been taken into account. Conservative variables are updated 
+  ! and stored in array unew(:), both at the current level and at the 
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -716,6 +653,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -757,7 +695,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-
+  
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -765,7 +703,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-
+     
      ! Check if neighboring grid exists
      nbuffer=0
      nexist=0
@@ -781,7 +719,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
           ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
         end if
      end do
-
+     
      ! If not, interpolate hydro variables from parent cells
      if(nbuffer>0)then
         call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
@@ -805,12 +743,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nexist
            ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
         end do
-
+        
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2
         if(ndim>1)j3=1+2*(j1-1)+j2
         if(ndim>2)k3=1+2*(k1-1)+k2
-
+        
         ! Gather hydro variables
         do ivar=1,nvar
            do i=1,nexist
@@ -820,7 +758,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
            end do
         end do
-
+        
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -833,7 +771,17 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
-
+        ! Gather stellar momentum
+        if(momentum_feedback)then
+           do i=1,nexist
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+           end do
+           ! Use straight injection for buffer cells
+           do i=1,nbuffer
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+           end do
+        end if
+        
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -841,7 +789,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nbuffer
            ok(ind_nexist(i),i3,j3,k3)=.false.
         end do
-
+        
      end do
      end do
      end do
@@ -855,15 +803,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
-
-#if NENER>0
-     ivar=ndim+3
-     flux(1:nvector,if1:if2,jf1:jf2,kf1:kf2,ivar,1:ndim) = 0.0
-#endif
+  call unsplit(uloc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
-  ! Reset flux along direction at refined interface
+  ! Reset flux along direction at refined interface    
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -948,10 +891,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-
+     
      !----------------------
      ! Left flux at boundary
-     !----------------------
+     !----------------------     
      ! Check if grids sits near left boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
@@ -1000,10 +943,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end if
-
+     
      !-----------------------
      ! Right flux at boundary
-     !-----------------------
+     !-----------------------     
      ! Check if grids sits near right boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
