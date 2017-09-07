@@ -158,7 +158,7 @@ module amr_parameters
   integer::nlevel_collapse=3  ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120.0D0 ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10.0D0   ! Minimum mass of a single supernova in solar mass
-
+  logical::momentum_feedback=.false. ! Use supernovae momentum feedback if cooling radius not resolved
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
