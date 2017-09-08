@@ -15,6 +15,9 @@
 ! This returns a pseudorandom real and a seed to be passed back in the
 ! next invocation. The returned seed carries the state normally hidden
 ! in imperative generators.
+!
+! Derived from sphot: Public domain (2001) Brian Carnes LLNL
+! https://asc.llnl.gov/computing_resources/purple/archive/benchmarks/sphot/
 !=======================================================================
 module random
   integer,parameter :: IRandNumSize = 4, IBinarySize = 48

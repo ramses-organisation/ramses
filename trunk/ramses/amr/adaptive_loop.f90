@@ -104,6 +104,7 @@ subroutine adaptive_loop
 #else
               end do
 #endif
+              if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),ilevel)
               if(simple_boundary)call make_boundary_hydro(ilevel)
            endif
 #ifdef RT
@@ -144,6 +145,7 @@ subroutine adaptive_loop
 #else
               end do
 #endif
+              if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),ilevel)
               if(simple_boundary)call make_boundary_hydro(ilevel)
            end if
 #ifdef RT

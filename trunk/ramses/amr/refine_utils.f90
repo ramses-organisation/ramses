@@ -839,6 +839,18 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         enddo
      end if
 #endif
+     !=============================
+     ! Interpolate stellar momentum
+     !=============================
+     if(momentum_feedback)then
+        ! Scatter to children cells
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
+           do i=1,nn
+              pstarold(iskip+ind_grid_son(i))=pstarold(ind_fathers(i,0))
+           end do
+        end do
+     endif
      !==============================
      ! Interpolate gravity variables
      !==============================
@@ -1040,6 +1052,12 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         end do
 #endif
      end if
+     if(momentum_feedback)then
+        do i=1,nn
+           pstarold(ind_cell_son(i))=0.0D0
+           pstarnew(ind_cell_son(i))=0.0D0
+        end do
+     endif
 #ifdef RT
      ! RT variables
      if(rt)then
