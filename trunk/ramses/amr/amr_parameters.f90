@@ -218,8 +218,8 @@ module amr_parameters
   logical,dimension(1:NMOV)::perspective_camera=.false.
   logical,dimension(1:NMOV)::zoom_only_frame=.false.
   character(LEN=NMOV)::proj_axis='z' ! x->x, y->y, projection along z
-  character(LEN=6),dimension(1:5)::shader_frame='square'
-  character(LEN=10),dimension(1:5)::method_frame='mean_mass'
+  character(LEN=6),dimension(1:NMOV)::shader_frame='square'
+  character(LEN=10),dimension(1:NMOV)::method_frame='mean_mass'
 #ifdef SOLVERmhd
   integer,dimension(0:NVAR+7)::movie_vars=0
   character(len=5),dimension(0:NVAR+7)::movie_vars_txt=''
