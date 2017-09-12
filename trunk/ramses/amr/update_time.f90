@@ -449,16 +449,9 @@ subroutine clean_stop
 end subroutine clean_stop
 
 subroutine writemem(usedmem)
-  real(kind=8)::usedmem
+  real(kind=4)::usedmem
 
-#ifdef NOSYSTEM
-!  call PXFSYSCONF(_SC_PAGESIZE,ipagesize,ierror)
-  ipagesize=4096
-#else
-!  ipagesize = getpagesize()
-  ipagesize=4096
-#endif
-  usedmem=dble(usedmem)*dble(ipagesize)
+  usedmem=dble(usedmem)*4096
 
   if(usedmem>1024.**4.)then
      write(*,999)usedmem/1024.**4.
@@ -470,10 +463,10 @@ subroutine writemem(usedmem)
      write(*,996)usedmem/1024.
   endif
 
-996 format(' Used memory:',F9.1,' kb')
-997 format(' Used memory:',F9.1,' Mb')
-998 format(' Used memory:',F9.3,' Gb')
-999 format(' Used memory:',F9.3,' Tb')
+996 format(' Used memory:',F9.1,' kB')
+997 format(' Used memory:',F9.1,' MB')
+998 format(' Used memory:',F9.3,' GB')
+999 format(' Used memory:',F9.3,' TB')
 
 end subroutine writemem
 

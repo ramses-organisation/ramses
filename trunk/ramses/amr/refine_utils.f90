@@ -33,7 +33,7 @@ subroutine refine_coarse
   logical::boundary_region
   logical::ok_free
   integer,dimension(1:nvector),save::ind_cell_tmp
-#ifdef LONGING
+#ifdef LONGINT
   integer(i8b)::tmp_long
 #endif
   
