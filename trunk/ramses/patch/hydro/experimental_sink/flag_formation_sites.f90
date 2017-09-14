@@ -248,6 +248,7 @@ subroutine flag_formation_sites
                    & ,int(table_properties(j,3:4)),table_properties(j,5:16),int(table_properties(j,17:18))
            endif
         end do
+#ifndef WITHOUTMPI
         do icpu=2,ncpu
            call MPI_RECV(table_properties,npeaks_max*20,MPI_DOUBLE,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
            do j=1,npeaks_max
@@ -259,6 +260,7 @@ subroutine flag_formation_sites
         end do
      else
         call MPI_SEND(table_properties,npeaks_max*20,MPI_DOUBLE,0,tag,MPI_COMM_WORLD,info)
+#endif
      endif
 
      deallocate(table_properties)

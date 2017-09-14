@@ -60,6 +60,11 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarnew(active(ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -90,6 +95,11 @@ subroutine set_unew(ilevel)
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,reception(icpu,ilevel)%ngrid
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
            divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
@@ -136,11 +146,15 @@ subroutine set_uold(ilevel)
   ! for thermal and/or non-thermal energies
   if(pressure_fix.OR.nener>0)then
      call add_pdv_source_terms(ilevel)
-  endif  
-  if(nener>0)then
-     call add_viscosity_source_terms(ilevel)
   endif
-  
+
+  ! Add turbulent energy source and sink terms
+  ! to the corresponding passive scalar
+  ! Used for the sugrid scale turbulence model
+  if(sf_model > 0)then
+     call add_viscosity_source_terms(ilevel) 
+  endif
+
   ! Set uold to unew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -149,6 +163,11 @@ subroutine set_uold(ilevel)
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
+        end do
+     endif
      if(pressure_fix)then
         ! Correct total energy if internal energy is too small
         do i=1,active(ilevel)%ngrid
@@ -238,211 +257,6 @@ end subroutine add_gravity_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine add_viscosity_source_terms(ilevel)
-  use amr_commons
-  use hydro_commons
-  use poisson_commons
-  implicit none
-  integer::ilevel,levelmax
-  !--------------------------------------------------------------------------
-  ! This routine adds to unew the viscosity terms
-  ! with only half a time step. Only the momentum and the
-  ! total energy are modified in array unew.
-  !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
-  integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,d,u,v,w,eold, dx_min
-  real(dp)::Kturb,sigma,d_new,u_new,v_new,w_new,e_kin_new,e_thermal_new,d_old,u_old,v_old,w_old,e_kin_old
-
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
-  integer ,dimension(1:nvector,0:twondim),save::igridn
-  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
-  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
-  real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
-  real(dp),dimension(1:nvector),save::divu_loc,phi_diss
-  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::gradu_loc,E_loc
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  nx_loc=icoarse_max-icoarse_min+1
-  scale=boxlen/dble(nx_loc)
-  dx=0.5d0**ilevel
-  dx_loc=dx*scale
-  dx_min=(0.5**levelmax)*scale
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
-
-  ! Loop over myid grids by vector sweeps
-  ncache=active(ilevel)%ngrid
-  do igrid=1,ncache,nvector
-   
-     ! Gather nvector grids
-     ngrid=MIN(nvector,ncache-igrid+1)
-     do i=1,ngrid
-        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-     end do
-     
-     ! Gather neighboring grids
-     do i=1,ngrid
-        igridn(i,0)=ind_grid(i)
-    end do
-     do idim=1,ndim
-        do i=1,ngrid
-           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
-           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
-           igridn(i,2*idim-1)=son(ind_left (i,idim))
-           igridn(i,2*idim  )=son(ind_right(i,idim))
-        end do
-     end do
-     
-     ! Loop over cells
-     do ind=1,twotondim
-        
-        ! Compute central cell index
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,ngrid
-           ind_cell(i)=iskip+ind_grid(i)
-        end do
-        
-        ! Gather all neighboring velocities
-        do idim=1,ndim
-           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
-           ih1=ncoarse+(id1-1)*ngridmax
-           do i=1,ngrid
-              if(igridn(i,ig1)>0)then
-                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
-                 dx_g(i,idim) = dx_loc
-              else
-                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
-                 dx_g(i,idim) = dx_loc*1.5_dp
-              end if
-           enddo
-           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
-           ih2=ncoarse+(id2-1)*ngridmax
-           do i=1,ngrid
-              if(igridn(i,ig2)>0)then
-                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
-                 dx_d(i,idim)=dx_loc
-              else 
-                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
-                 dx_d(i,idim)=dx_loc*1.5_dp
-              end if
-           enddo
-        end do
-        ! End loop over dimensions
-  
-        ! Compute divu = Trace G
-        divu_loc(1:ngrid)=0.0d0
-        do idim=1,ndim
-           do i=1,ngrid
-              divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
-                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
-           enddo
-        end do
-
-        ! Compute gradu = G
-        gradu_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
-        do idim=1,ndim
-           do jdim=1,ndim
-              do i=1,ngrid
-                 gradu_loc(i,idim,jdim) = (veld(i,idim,jdim)-velg(i,idim,jdim)) &
-                      &                 / (dx_g(i,idim)     +dx_d(i,idim))
-              enddo
-           enddo
-        end do
-
-        ! Compute 0.5*(gradu+gradu^T) = E
-        E_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
-        do idim=1,ndim
-           do jdim=1,ndim
-              do i=1,ngrid
-                 E_loc(i,idim,jdim) = 0.5*(gradu_loc(i,idim,jdim)+gradu_loc(i,jdim,idim))
-              enddo
-           enddo
-        end do
-
-        ! Compute turbulent viscosity dissipation function
-        phi_diss(1:ngrid)=0
-        do idim=1,ndim
-           do jdim=1,ndim
-              do i=1,ngrid
-                 phi_diss(i) = phi_diss(i)+2.0*E_loc(i,idim,jdim)**2
-              enddo
-           enddo
-        enddo
-        do i=1,ngrid
-           phi_diss(i)=phi_diss(i)-2.0/3.0*divu_loc(i)**2
-        end do
-
-        ! Add viscosity term at time t with half time step
-        do i=1,ngrid
-           d_new=max(unew(ind_cell(i),1),smallr)
-           u_new=0.0; v_new=0.0; w_new=0.0
-           if(ndim>0)u_new=unew(ind_cell(i),2)/d_new
-           if(ndim>1)v_new=unew(ind_cell(i),3)/d_new
-           if(ndim>2)w_new=unew(ind_cell(i),4)/d_new
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           e_thermal_new=unew(ind_cell(i),ndim+2)-e_kin_new
-
-           d_old=max(uold(ind_cell(i),1),smallr)
-           u_old=0.0; v_old=0.0; w_old=0.0
-           if(ndim>0)u_old=uold(ind_cell(i),2)/d_old
-           if(ndim>1)v_old=uold(ind_cell(i),3)/d_old
-           if(ndim>2)w_old=uold(ind_cell(i),4)/d_old
-           e_kin_old=0.5*d_old*(u_old**2+v_old**2+w_old**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_old=e_kin_old+uold(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           Kturb=uold(ind_cell(i),ndim+3)
-           sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-
-           ! Explicit
-!!$           unew(ind_cell(i),ndim+3)=unew(ind_cell(i),ndim+3) &
-!!$                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel) &
-!!$                & -Kturb*sigma/dx_loc*dtnew(ilevel)
-!!$           e_thermal_new=e_thermal_new+Kturb*sigma/dx_loc*dtnew(ilevel)
-
-           ! Implicit
-           unew(ind_cell(i),ndim+3)=(unew(ind_cell(i),ndim+3) &
-                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
-                & /(1.0+sigma/dx_loc*dtnew(ilevel))
-           e_thermal_new=e_thermal_new+unew(ind_cell(i),ndim+3)*sigma/dx_loc*dtnew(ilevel)
-
-           e_kin_new=0.5*d_new*(u_new**2+v_new**2+w_new**2)
-#if NENER>0
-           do irad=1,nener
-              e_kin_new=e_kin_new+unew(ind_cell(i),ndim+2+irad)
-           end do
-#endif
-           unew(ind_cell(i),ndim+2)=e_thermal_new+e_kin_new
-        end do
-        ! End loop over grids
-     end do
-     ! End loop over cells
-  end do
-  ! End loop over sweeps
-
-111 format('    Entering add_viscosity_terms for level ',i2)
-
-end subroutine add_viscosity_source_terms
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
 subroutine add_pdv_source_terms(ilevel)
   use amr_commons
   use hydro_commons
@@ -456,7 +270,6 @@ subroutine add_pdv_source_terms(ilevel)
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold
-  real(dp)::Kturb,sigma
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -633,6 +446,186 @@ end subroutine add_pdv_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
+subroutine add_viscosity_source_terms(ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  use pm_commons
+  implicit none
+  integer::ilevel,levelmax
+  !--------------------------------------------------------------------------
+  ! This routine adds to unew the viscosity terms
+  ! with only half a time step. Only the momentum and the
+  ! total energy are modified in array unew.
+  !--------------------------------------------------------------------------
+  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
+  integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
+  integer,dimension(1:3,1:2,1:8)::iii,jjj
+  real(dp)::scale,dx,dx_loc,d,u,v,w,eold,dx_min
+  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH,current_time,t0
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  integer::ipart,jpart,next_part,npart1,npart2
+
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector,0:twondim),save::igridn
+  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
+  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
+  real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
+  real(dp),dimension(1:nvector),save::divu_loc,phi_diss
+  real(dp),dimension(1:nvector,1:ndim,1:ndim),save::gradu_loc,E_loc
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+  dx=0.5d0**ilevel
+  dx_loc=dx*scale
+  dx_min=(0.5**levelmax)*scale
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  cs_TH=1000.*1d5/scale_v
+
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+
+  ! Loop over myid grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igridn(i,0)=ind_grid(i)
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
+           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
+           igridn(i,2*idim-1)=son(ind_left (i,idim))
+           igridn(i,2*idim  )=son(ind_right(i,idim))
+        end do
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute central cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+
+        ! Gather all neighboring velocities
+        do idim=1,ndim
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
+           ih1=ncoarse+(id1-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig1)>0)then
+                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
+                 dx_g(i,idim) = dx_loc
+              else
+                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
+                 dx_g(i,idim) = dx_loc*1.5_dp
+              end if
+           enddo
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig2)>0)then
+                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
+                 dx_d(i,idim)=dx_loc
+              else
+                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
+                 dx_d(i,idim)=dx_loc*1.5_dp
+              end if
+           enddo
+        end do
+        ! End loop over dimensions
+
+        ! Compute divu = Trace G
+        divu_loc(1:ngrid)=0.0d0
+        do idim=1,ndim
+           do i=1,ngrid
+              divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
+                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
+           enddo
+        end do
+
+        ! Compute gradu = G
+        gradu_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 gradu_loc(i,idim,jdim) = (veld(i,idim,jdim)-velg(i,idim,jdim)) &
+                      &                 / (dx_g(i,idim)     +dx_d(i,idim))
+              enddo
+           enddo
+        end do
+
+        ! Compute 0.5*(gradu+gradu^T) = E
+        E_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 E_loc(i,idim,jdim) = 0.5*(gradu_loc(i,idim,jdim)+gradu_loc(i,jdim,idim))
+              enddo
+           enddo
+        end do
+
+        ! Compute turbulent viscosity dissipation function
+        phi_diss(1:ngrid)=0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 phi_diss(i) = phi_diss(i)+2.0*E_loc(i,idim,jdim)**2
+              enddo
+           enddo
+        enddo
+        do i=1,ngrid
+           phi_diss(i)=phi_diss(i)-2.0/3.0*divu_loc(i)**2
+        end do
+
+        ! Add viscosity term at time t with half time step
+        do i=1,ngrid
+
+           ! Compute old turbulent state
+           d_old=max(uold(ind_cell(i),1),smallr)
+           Kturb=uold(ind_cell(i),ivirial1)
+           sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+
+           ! Implicit solution
+           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
+                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
+                & /(1.0+sigma/dx_loc*dtnew(ilevel))
+
+           ! Stationary solution
+!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+
+        end do
+        ! End loop over grids
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over sweeps
+
+111 format('    Entering add_viscosity_terms for level ',i2)
+
+end subroutine add_viscosity_source_terms
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 subroutine godfine1(ind_grid,ncache,ilevel)
   use amr_commons
   use hydro_commons
@@ -644,10 +637,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolate from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated 
-  ! and stored in array unew(:), both at the current level and at the 
+  ! already been taken into account. Conservative variables are updated
+  ! and stored in array unew(:), both at the current level and at the
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -660,6 +653,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -777,6 +771,16 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
+        ! Gather stellar momentum
+        if(momentum_feedback)then
+           do i=1,nexist
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+           end do
+           ! Use straight injection for buffer cells
+           do i=1,nbuffer
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+           end do
+        end if
         
         ! Gather refinement flag
         do i=1,nexist
@@ -799,10 +803,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -890,7 +894,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      
      !----------------------
      ! Left flux at boundary
-     !----------------------     
+     !----------------------
      ! Check if grids sits near left boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
@@ -942,7 +946,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      
      !-----------------------
      ! Right flux at boundary
-     !-----------------------     
+     !-----------------------
      ! Check if grids sits near right boundary
      ! and gather neighbor father cells index
      nb_noneigh=0

@@ -60,6 +60,11 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarnew(active(ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0.0
@@ -90,6 +95,11 @@ subroutine set_unew(ilevel)
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,reception(icpu,ilevel)%ngrid
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
+        end do
+     endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
            divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
@@ -146,6 +156,11 @@ subroutine set_uold(ilevel)
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback)then
+        do i=1,active(ilevel)%ngrid
+           pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
+        end do
+     endif
      if(pressure_fix)then
         ! Correct total energy if internal energy is too small
         do i=1,active(ilevel)%ngrid
@@ -451,6 +466,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -568,6 +584,16 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
+        ! Gather stellar momentum
+        if(momentum_feedback)then
+           do i=1,nexist
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+           end do
+           ! Use straight injection for buffer cells
+           do i=1,nbuffer
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+           end do
+        end if
         
         ! Gather refinement flag
         do i=1,nexist
@@ -590,7 +616,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface    

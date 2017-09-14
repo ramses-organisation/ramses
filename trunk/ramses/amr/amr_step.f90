@@ -59,6 +59,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
                  end do
 #endif
+                 if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),i)
                  if(simple_boundary)call make_boundary_hydro(i)
               end if
 #ifdef RT
@@ -353,6 +354,9 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
+     if(momentum_feedback)then
+        call make_virtual_reverse_dp(pstarnew(1),ilevel)
+     endif
      if(pressure_fix)then
         call make_virtual_reverse_dp(enew(1),ilevel)
         call make_virtual_reverse_dp(divu(1),ilevel)
@@ -438,6 +442,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
+     if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 
