@@ -459,7 +459,7 @@ endif
 #endif
 #ifdef SOLVERmhd
                        do idim=1,3 
-                          e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
+                          e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
                        enddo
 #endif
                        ! Pressure
@@ -711,7 +711,7 @@ endif
 #endif
 #ifdef SOLVERmhd
                                       do idim=1,3
-                                         e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
+                                         e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
                                       enddo
 #endif
                                       uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
