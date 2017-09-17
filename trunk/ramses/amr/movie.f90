@@ -716,8 +716,8 @@ endif
                                       do idim=1,3
 #else                       
                                       do idim=1,ndim
-                                         e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
 #endif
+                                         e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
                                       enddo
 #if NENER>0
                                       do irad=0,nener-1
