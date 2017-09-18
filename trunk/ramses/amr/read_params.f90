@@ -271,8 +271,6 @@ subroutine read_params
   if (movie)call set_movie_vars
 
 
-  close(1)
-
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
