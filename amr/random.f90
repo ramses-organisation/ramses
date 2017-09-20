@@ -95,7 +95,7 @@ contains
     integer,dimension( IRandNumSize ) :: Seed
     real(kind=8) :: GaussNum
     
-    real(kind=8) :: fac,rsq,v1,v2
+    real(kind=8) :: fac,rsq,v1=0d0,v2=0d0
     
     if (IGauss.eq.IZero) then
        rsq=0.0d0

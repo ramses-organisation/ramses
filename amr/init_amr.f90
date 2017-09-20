@@ -10,7 +10,7 @@ subroutine init_amr
 #endif
   integer::i,idim,ncell,iskip,ind,ncache,ilevel,ibound,nboundary2
   integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
-  integer::noutput2,iout2,ifout2,ilun,info
+  integer::noutput2,iout2,ifout2,ilun
   integer::ix,iy,iz,ix_max,iy_max,iz_max,nxny,nx_loc
   real(dp)::mass_sph2 
   integer,dimension(:),allocatable::ind_grid,iig,pos,grid
@@ -26,7 +26,9 @@ subroutine init_amr
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tag=1100
-  integer::dummy_io,info2
+#ifndef WITHOUTMPI
+  integer::dummy_io,info2,info
+#endif
 #ifdef QUADHILBERT
   real(kind=8),allocatable,dimension(:)::bound_key_restart
 #endif
@@ -246,6 +248,7 @@ subroutine init_amr
   ! Read amr file for a restart
   !----------------------------
   if(nrestart>0)then
+
      ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then

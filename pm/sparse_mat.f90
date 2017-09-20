@@ -19,7 +19,7 @@ module sparse_matrix
   integer,parameter::NSPARSEMAX=10000000
 contains
   !----------------------------------------------------------------------------------------------
-  subroutine sparse_initialize(m,n,mat)
+  subroutine sparse_initialize(m,mat)
     type(sparse_mat)::mat 
     integer::m !size of the array
     allocate(mat%val(1:NSPARSEMAX))
@@ -145,8 +145,8 @@ contains
     integer::current
 
     ! empty line
+    get_value=0.0
     if (mat%first(i)==0)then
-       get_value=0.
        return
     end if
 

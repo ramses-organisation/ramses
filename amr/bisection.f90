@@ -73,10 +73,12 @@ contains
       integer :: load2, mytmp, tottmp
       real(dp) :: scale, nload1, nload2, score
       real(dp) :: mean, var, stdev
-  
-      integer :: nc, dir, i, lvl, ierr, iter
+      integer :: nc, dir, i, lvl, iter
       integer :: lncpu, cpuid, child1, child2
       integer :: cur_levelstart, cur_cell
+#ifndef WITHOUTMPI
+      integer :: ierr
+#endif
 
       scale=boxlen/dble(icoarse_max-icoarse_min+1)
 
