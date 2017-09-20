@@ -324,7 +324,9 @@ subroutine init_file
   character(LEN=80)::filename
   logical::ok
   integer,parameter::tag=1116
+#ifndef WITHOUTMPI
   integer::dummy_io,info2
+#endif
   
   if(verbose)write(*,*)'Entering init_file'
 
@@ -370,8 +372,6 @@ subroutine init_file
            end if
         endif
 #endif
-        
-
 
         dxini(ilevel)=dxini0
         xoff1(ilevel)=xoff10
@@ -424,7 +424,6 @@ subroutine init_cosmo
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
-
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'  
@@ -443,7 +442,9 @@ subroutine init_cosmo
   TYPE(gadgetheadertype) :: gadgetheader 
   integer::i
   integer,parameter::tag=1117
+#ifndef WITHOUTMPI
   integer::dummy_io,info2
+#endif
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -466,7 +467,7 @@ subroutine init_cosmo
               filename=TRIM(initfile(ilevel))//'/ic_deltab'
            endif
  
-           ! Wait for the token          
+           ! Wait for the token
 #ifndef WITHOUTMPI
            if(IOGROUPSIZE>0) then
               if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -475,7 +476,6 @@ subroutine init_cosmo
               end if
            endif
 #endif
-           
 
            INQUIRE(file=filename,exist=ok)
            if(.not.ok)then
@@ -502,7 +502,6 @@ subroutine init_cosmo
               end if
            endif
 #endif
-
 
            dxini(ilevel)=dxini0
            xoff1(ilevel)=xoff10

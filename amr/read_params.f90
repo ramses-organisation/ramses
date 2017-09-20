@@ -10,7 +10,7 @@ subroutine read_params
   !--------------------------------------------------
   ! Local variables
   !--------------------------------------------------
-  integer::i,narg,iargc,ierr,levelmax
+  integer::i,narg,iargc,levelmax
   character(LEN=80)::infile, info_file
   character(LEN=80)::cmdarg
   character(LEN=5)::nchar
@@ -20,7 +20,10 @@ subroutine read_params
   real(kind=8)::delta_aout=0,aend=0
   logical::nml_ok, info_ok
   integer,parameter::tag=1134
-  integer::dummy_io,info2
+#ifndef WITHOUTMPI
+  integer::dummy_io,ierr,info2
+#endif
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
@@ -116,7 +119,7 @@ subroutine read_params
   ! Read the namelist
   !-------------------------------------------------
 
-  ! Wait for the token                                                                                                                                                                                
+  ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -245,11 +248,11 @@ subroutine read_params
         if(myid==1)write(*,*)'Allocate some space for refinements !!!'
         nml_ok=.false.
      else
-        ngridmax=ngridtot/int(ncpu,kind=8)
+        ngridmax=int(ngridtot/int(ncpu,kind=8),kind=4)
      endif
   end if
   if(npartmax==0)then
-     npartmax=nparttot/int(ncpu,kind=8)
+     npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
   if(sink.and.(.not.pic))then
@@ -270,7 +273,6 @@ subroutine read_params
   if (clumpfind .or. sink)call read_clumpfind_params
   if (movie)call set_movie_vars
 
-
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -282,8 +284,6 @@ subroutine read_params
   endif
 #endif
   
-
-
   !-----------------
   ! Max size checks
   !-----------------

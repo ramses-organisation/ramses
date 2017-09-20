@@ -42,7 +42,9 @@ CONTAINS
 ! Read and return the gadget file header for the specified file
 !
   
+#ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
     IMPLICIT NONE
 #ifndef WITHOUTMPI
   include 'mpif.h'  
@@ -56,9 +58,10 @@ CONTAINS
 ! Internal variables
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=6) :: fileno
-     integer,parameter::tag=1104
+    integer,parameter::tag=1104
+#ifndef WITHOUTMPI
     integer::dummy_io,info2
-
+#endif
     filename = TRIM(basename)
     INQUIRE(file=filename, exist=ok)
     if (.not.ok) then
@@ -124,7 +127,9 @@ CONTAINS
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
+#ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
     IMPLICIT NONE
 #ifndef WITHOUTMPI
     include 'mpif.h'  
@@ -147,8 +152,9 @@ CONTAINS
     INTEGER :: np
     logical::ok
      integer,parameter::tag=1105
+#ifndef WITHOUTMPI
     integer::dummy_io,info2
-
+#endif
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile
@@ -217,7 +223,9 @@ CONTAINS
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
+#ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
     IMPLICIT NONE
 #ifndef WITHOUTMPI
     include 'mpif.h'  
@@ -238,10 +246,10 @@ CONTAINS
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=6) :: fileno
     INTEGER :: np
-    logical::ok
-     integer,parameter::tag=1106
+    integer,parameter::tag=1106
+#ifndef WITHOUTMPI
     integer::dummy_io,info2
-
+#endif
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile

@@ -801,7 +801,7 @@ subroutine allocate_peak_patch_arrays
   allocate(clump_mass(1:npeaks_max))
   allocate(clump_vol(1:npeaks_max))
   allocate(relevance(1:npeaks_max))
-  call sparse_initialize(npeaks_max,npeaks_max,sparse_saddle_dens)
+  call sparse_initialize(npeaks_max,sparse_saddle_dens)
 
   ! These arrays are not used by the clump finder
   allocate(clump_velocity(1:npeaks_max,1:ndim))
