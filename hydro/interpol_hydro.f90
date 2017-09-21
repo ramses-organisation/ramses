@@ -82,9 +82,12 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,irad,i,idim,ind_son,iskip_son
+  integer ::ivar,i,idim,ind_son,iskip_son
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx,ekin,erad
+#if NENER>0
+  integer::irad
+#endif
 
   ! Get child oct index
   do i=1,ncell
@@ -226,13 +229,16 @@ subroutine interpol_hydro(u1,u2,nn)
   !                 type 3 for velocity and type 2 for density and
   !                 internal energy.
   !----------------------------------------------------------
-  integer::i,j,ivar,irad,idim,ind,ix,iy,iz,ind2
+  integer::i,j,ivar,idim,ind,ix,iy,iz
   real(dp)::oneover_twotondim
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
   real(dp),dimension(1:nvector),save::ekin,mom
   real(dp),dimension(1:nvector),save::erad
+#if NENER>0
+  integer::irad
+#endif
 
   ! volume fraction of a fine cell realtive to a coarse cell
   oneover_twotondim=1.D0/dble(twotondim)

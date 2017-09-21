@@ -13,7 +13,10 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:ndim)::gg
   
   real(dp)::dtcell,smallp
-  integer::k,idim,irad
+  integer::k,idim
+#if NENER>0
+  integer::irad
+#endif
   
   smallp = smallc**2/gamma
 
@@ -134,9 +137,12 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   real(dp)::ud(1:nvector,1:nvar)
   logical ::ok(1:nvector)
   
-  integer::k,idim,irad
+  integer::k,idim
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
+#if NENER>0
+  integer::irad
+#endif
   
   ! Convert to primitive variables
   do k = 1,nn
@@ -1000,11 +1006,12 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
   REAL(dp)::ustar,ptotstar
   REAL(dp)::ro,uo,ptoto,etoto,eo
   REAL(dp)::smallp
+  INTEGER::ivar,i
 #if NENER>0
   REAL(dp),dimension(1:nener)::eradl,eradr,erado
   REAL(dp),dimension(1:nener)::eradstarl,eradstarr
+  INTEGER::irad
 #endif
-  INTEGER ::irad, ivar, i
 
   ! constants
   smallp = smallc**2/gamma
