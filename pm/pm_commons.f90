@@ -100,7 +100,7 @@ contains
     integer :: index
     type(part_t), intent(in) :: part
 
-    index = part%family * 256 + part%tag
+    index = part%family * huge(part%family) + part%tag
   end function part2int
 
   pure function int2part(index)
@@ -108,8 +108,12 @@ contains
     type(part_t) :: int2part
     integer, intent(in) :: index
 
-    int2part%family = int(index / 256, 1)
-    int2part%tag = int(mod(index, 256), 1)
+    integer :: magic
+
+    magic = huge(int2part%family)
+
+    int2part%family = int(index / magic, 1)
+    int2part%tag = int(mod(index, magic), 1)
   end function int2part
 
 end module pm_commons
