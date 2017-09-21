@@ -16,6 +16,7 @@ subroutine backup_part(filename)
   integer,allocatable,dimension(:)::ll
   integer,parameter::tag=1122
   integer::dummy_io,info2
+  integer(1),allocatable,dimension(:)::ii1
 
   if(verbose)write(*,*)'Entering backup_part'
 
@@ -140,10 +141,26 @@ subroutine backup_part(filename)
      deallocate(xdp)
   end if
 
-  do i = 1, npartmax
-     ishort(ipart) = typep(i)
+  ! Write family
+  allocate(ii1(1:npart))
+  ipart=0
+  do i=1,npartmax
+     if(levelp(i)>0)then
+        ipart=ipart+1
+        ii1(ipart)=typep(i)%family
+     end if
   end do
-  write(ilun) ishort
+  write(ilun)ii1
+  ! Write tag
+  ipart=0
+  do i=1,npartmax
+     if(levelp(i)>0)then
+        ipart=ipart+1
+        ii1(ipart)=typep(i)%tag
+     end if
+  end do
+  write(ilun)ii1
+  deallocate(ii1)
 
   close(ilun)
 

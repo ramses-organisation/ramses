@@ -40,7 +40,7 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::vp       ! Velocities
   real(dp),allocatable,dimension(:)  ::mp       ! Masses
 #ifdef OUTPUT_PARTICLE_POTENTIAL
-  real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes 
+  real(dp),allocatable,dimension(:)  ::ptcl_phi ! Potential of particle added by AP for output purposes
 #endif
   real(dp),allocatable,dimension(:)  ::tp       ! Birth epoch
   real(dp),allocatable,dimension(:,:)::weightp  ! weight of cloud parts for sink accretion only
@@ -59,13 +59,9 @@ module pm_commons
   integer,dimension(IRandNumSize) :: localseed=-1
 
 
-  ! Add particle type
-  integer(kind=2), allocatable, dimension(:) :: typep  ! Particle type
-  integer, parameter :: TYPE_UNDEF=9999
-  integer, parameter :: TYPE_DM=0
-  integer, parameter :: TYPE_STAR=100, TYPE_DEAD_STAR=101
-  integer, parameter :: TYPE_SINK=200
-  integer, parameter :: TYPE_TRACER_DM=1000, TYPE_TRACER_STAR=1100, TYPE_TRACER_DEAD_STAR=1101, TYPE_TRACER_SINK=1200
+  ! Add particle types
+  integer(1) :: FAM_STAR=0, FAM_DM=1, FAM_SINK=2, FAM_TRACER=3, FAM_OTHER=4, FAM_UNDEF=-1
+  type(part_t), allocatable, dimension(:) :: typep  ! Particle type
 
 contains
   function cross(a,b)
@@ -79,34 +75,40 @@ contains
   end function cross
 
   logical pure function is_DM(typep)
-    integer(kind=2), intent(in) :: typep
-    is_DM = (typep >= 0) .and. (typep < 100)
+    type(part_t), intent(in) :: typep
+    is_DM = typep%family == FAM_DM
   end function is_DM
 
   logical pure function is_star(typep)
-    integer(kind=2), intent(in) :: typep
-    is_star = (typep >= 100) .and. (typep < 200)
+    type(part_t), intent(in) :: typep
+    is_star = typep%family == FAM_STAR
   end function is_star
 
   logical pure function is_sink(typep)
-    integer(kind=2), intent(in) :: typep
-
-    is_sink = (typep >= 200) .and. (typep < 300)
+    type(part_t), intent(in) :: typep
+    is_sink = typep%family == FAM_SINK
   end function is_sink
 
   logical pure function is_tracer(typep)
-    integer(kind=2), intent(in) :: typep
-    is_tracer = is_particle_tracer(typep) .or. is_gas_tracer(typep)
+    type(part_t), intent(in) :: typep
+    is_tracer = typep%family == FAM_TRACER
   end function is_tracer
 
-  logical pure function is_particle_tracer(typep)
-    integer(kind=2), intent(in) :: typep
-    is_particle_tracer = (typep >= 1000) .and. (typep < 2000)
-  end function is_particle_tracer
+  pure function int2part(index)
+    type(part_t) :: int2part
+    integer, intent(in) :: index
 
-  logical pure function is_gas_tracer(typep)
-    integer(kind=2), intent(in) :: typep
-    is_gas_tracer = (typep < 0)
-  end function is_gas_tracer
+    int2part%family = int(index / 256, 1)
+    int2part%tag = int(mod(index, 256), 1)
+  end function int2part
+
+  pure function part2int (part)
+    integer :: index
+    type(part_t), intent(in) :: part
+
+    index = part%family * 256 + part%tag
+  end function part2int
+
+
 
 end module pm_commons

@@ -51,4 +51,14 @@ module pm_parameters
   real(dp)::mass_halo_AGN=1.d10              ! Minimum mass of the halo for sink creation
   real(dp)::mass_clump_AGN=1.d10             ! Minimum mass of the clump for sink creation
 
+
+  type part_t
+     ! We store these two things contiguously in memory
+     ! because they are fetched at similar times
+     integer :: family
+     integer :: tag
+  end type part_t
+
+
+
 end module pm_parameters
