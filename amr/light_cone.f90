@@ -9,9 +9,9 @@ subroutine output_cone()
 
 #ifndef WITHOUTMPI
 #include "mpif.h"
+  integer::info,info2,dummy_io
 #endif
   
-  integer::info,dummy_io,info2
   integer,parameter::tag=1118
 
   character(len=5) :: istep_str
