@@ -5,12 +5,12 @@ subroutine init_sink
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer,parameter::tag=1112,tag2=1113
+  integer::dummy_io,info2
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  integer::idim
-  integer::i,isink
-  integer::ilun,nx_loc
-  integer::nsinkold
+  integer::idim, isink, nsinkold
+  integer::ilun
   real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
@@ -19,11 +19,6 @@ subroutine init_sink
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
-
-  integer,parameter::tag=1112,tag2=1113
-  integer::dummy_io,info2
-
-
 
   !allocate all sink related quantities...
   allocate(weightp(1:npartmax,1:twotondim))
