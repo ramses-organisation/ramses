@@ -143,6 +143,8 @@ if not keyword_set(density) and not keyword_set(time) then begin
                ,npart:npart $
                ,xp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart)}
     endif else begin
         part={ ndim:ndim $
@@ -150,6 +152,8 @@ if not keyword_set(density) and not keyword_set(time) then begin
                ,xp:fltarr(npart,ndim) $
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $               
                ,mp:fltarr(npart)}
     endelse
 endif else if not keyword_set(time) then begin
@@ -158,6 +162,8 @@ endif else if not keyword_set(time) then begin
           ,npart:npart $
           ,xp:fltarr(npart,ndim) $
           ,id:lonarr(npart) $
+          ,family:lonarr(npart) $
+          ,tag:lonarr(npart) $
           ,mp:fltarr(npart) $
           ,dp:fltarr(npart) }
     endif else begin
@@ -166,6 +172,8 @@ endif else if not keyword_set(time) then begin
                ,xp:fltarr(npart,ndim) $
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $                                 
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) }
     endelse
@@ -175,6 +183,8 @@ endif else if not keyword_set(density) then begin
                ,npart:npart $
                ,xp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $        
                ,mp:fltarr(npart) $
                ,ap:fltarr(npart) }
     endif else begin
@@ -183,6 +193,8 @@ endif else if not keyword_set(density) then begin
                ,xp:fltarr(npart,ndim) $
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $                  
                ,mp:fltarr(npart) $
                ,ap:fltarr(npart) }
     endelse
@@ -192,6 +204,8 @@ endif else begin
                ,npart:npart $
                ,xp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $                  
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) $
                ,ap:fltarr(npart) }
@@ -201,6 +215,8 @@ endif else begin
                ,xp:fltarr(npart,ndim) $
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
+               ,family:lonarr(npart) $
+               ,tag:lonarr(npart) $                  
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) $
                ,ap:fltarr(npart) }
@@ -248,6 +264,10 @@ for jcpu=0,ncpu-1 do begin
         id=lonarr(npartp)
         readu,1,id
         part.id(i1:i2)=id
+        readu,1,id
+        part.family(i1:i2)=id
+        readu,1,id
+        part.tag(i1:i2)=id
         readu,1,id
         if(nstar gt 0)then begin
             if keyword_set(time) then begin 
