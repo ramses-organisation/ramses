@@ -10,9 +10,9 @@ subroutine boundana(x,u,dx,ibound,ncell)
   integer ::ncell                         ! Number of active cells
   real(dp)::dx                            ! Cell size
 #ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
-#else
   real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
+#else
+  real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
 #endif
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
