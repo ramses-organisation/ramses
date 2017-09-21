@@ -37,7 +37,7 @@ subroutine read_hydro_params(nml_ok)
 #if NENER>0
        & ,prad_region &
 #endif
-       & ,d_region,u_region,v_region,w_region,p_region
+       & ,d_region,u_region,v_region,w_region,p_region,omega_b
 
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
@@ -48,7 +48,7 @@ subroutine read_hydro_params(nml_ok)
 #ifdef SOLVERmhd
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
-       & ,pressure_fix,beta_fix,scheme,riemann,omega_b
+       & ,pressure_fix,beta_fix,scheme,riemann
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -96,19 +96,6 @@ subroutine read_hydro_params(nml_ok)
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
-
-! Removed, kept here for now in case of emergency  
-!   namelist/physics_params/omega_b,cooling,haardt_madau,metal,isothermal &
-!        & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
-!        & ,eta_sn,eta_ssn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
-!        & ,J21,a_spec,z_ave,z_reion,ind_rsink,delayed_cooling,T2max &
-!        & ,self_shielding,smbh,agn,momentum_feedback &
-!        & ,units_density,units_time,units_length,neq_chem,ir_feedback,ir_eff,t_diss,t_sne &
-!        & ,sf_virial,sf_trelax,sf_tdiss,sf_model,sf_log_properties,sf_imf &
-! #ifdef SOLVERmhd
-!        & ,etamag, B_ave, &
-! #endif
-!        & ,mass_star_max,mass_sne_min,sf_compressive
 
 #ifdef grackle
    namelist/grackle_params/use_grackle,grackle_with_radiative_cooling,grackle_primordial_chemistry,grackle_metal_cooling &
