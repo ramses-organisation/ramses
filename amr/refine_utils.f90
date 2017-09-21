@@ -27,9 +27,10 @@ subroutine refine_coarse
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::nxny,i,j,k
-  integer::ind,info,ibound
+  integer::ind,ibound
   logical::boundary_region
   logical::ok_free
   integer,dimension(1:nvector),save::ind_cell_tmp
@@ -333,6 +334,7 @@ subroutine refine_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   !---------------------------------------------------------
@@ -346,7 +348,7 @@ subroutine refine_fine(ilevel)
   !---------------------------------------------------------
   integer::ncache,ngrid
   integer::igrid,icell,i
-  integer::ind,iskip,info,icpu,ibound
+  integer::ind,iskip,icpu,ibound
   integer::ncreate_tmp,nkill_tmp
   logical::boundary_region
   integer,dimension(1:nvector),save::ind_grid,ind_cell

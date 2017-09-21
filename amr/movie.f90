@@ -13,9 +13,15 @@ subroutine output_frame()
   implicit none
 #ifndef WITHOUTMPI
   include "mpif.h"
+  integer::info,iframe
+  real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif
   
-  integer::info,ierr,iframe
+#ifdef NOSYSTEM
+  integer::info2
+#endif
+
+  integer::ierr
   integer,parameter::tag=100
 
   character(len=5)::istep_str
@@ -31,11 +37,14 @@ subroutine output_frame()
 #ifdef RT
   character(len=100)::rt_infofile
 #endif
+#if NVAR>5 || defined (RT)
+  character(LEN=5)::dummy
+  integer::ll
+#endif
   integer::ncache,iskip,ngrid,nlevelmax_frame
   integer::nframes,rt_nframes,imap,ipart_start
   integer::idim,ilun,nx_loc,ind,ix,iy,iz
-  integer::imin,imax,jmin,jmax,ii,jj,kk,ll
-  character(LEN=5)::dummy
+  integer::imin,imax,jmin,jmax,ii,jj,kk
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::xcen,ycen,zcen,delx,dely,delz,timer
   real(dp)::xtmp,ytmp,ztmp,theta_cam,phi_cam,alpha,beta,fov_camera,dist_cam
@@ -44,7 +53,7 @@ subroutine output_frame()
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
   real(dp)::xpf,ypf,zpf
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min,pers_corr
-  real(dp)::dx_cell,dy_cell,dz_cell,dvol,dx_proj,weight
+  real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight
   integer,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
@@ -52,7 +61,6 @@ subroutine output_frame()
   real(dp),dimension(1:nvector,1:ndim)::xx
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
-  real(kind=8),dimension(:),allocatable::data_single,data_single_all
   real(kind=8)::e,uvar
   real(kind=8)::pi=3.14159265359
   real(dp),dimension(8)::xcube,ycube,zcube
@@ -110,7 +118,7 @@ subroutine output_frame()
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(.not.withoutmkdir) then 
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)  
 #else
      if(myid==1)then
         call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
@@ -1155,9 +1163,12 @@ subroutine set_movie_vars()
 #ifdef RT
   use rt_parameters,only:rt_movie_vars
 #endif
-  ! This routine sets the movie vars from textual form
-  integer::ll
+#if NVAR>5 || defined (RT)
   character(LEN=5)::dummy
+  integer::ll
+#endif
+
+  ! This routine sets the movie vars from textual form
 
   if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
   if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1

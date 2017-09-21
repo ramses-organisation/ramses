@@ -18,9 +18,9 @@ subroutine init_time
 #ifdef grackle
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::file_exists
-#endif
 #ifndef WITHOUTMPI
   integer::info
+#endif
 #endif
 
   if(nrestart==0)then

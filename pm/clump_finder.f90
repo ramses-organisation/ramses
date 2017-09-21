@@ -6,6 +6,7 @@ subroutine clump_finder(create_output,keep_alive)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   logical::create_output,keep_alive
 
@@ -24,11 +25,15 @@ subroutine clump_finder(create_output,keep_alive)
   ! Andreas Bleuler & Davide Martizzi & Romain Teyssier
   !----------------------------------------------------------------------------
 
-  integer::istep,nskip,ilevel,info,icpu,nmove,nzero
+  integer::istep,nskip,ilevel,icpu,nmove,nzero
   integer::i,levelmin_part
-  integer(i8b)::ntest_all,nmove_all,nmove_tot,nzero_all,nzero_tot
+  integer(i8b)::ntest_all,nmove_tot,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
+
+#ifndef WITHOUTMPI
+  integer(i8b)::nmove_all,nzero_all
+#endif
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
