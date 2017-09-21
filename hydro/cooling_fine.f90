@@ -8,14 +8,14 @@ subroutine cooling_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
   !-------------------------------------------------------------------
-  integer::ncache,i,igrid,ngrid,info
+  integer::ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -69,21 +69,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
   !-------------------------------------------------------------------
-  integer::i,ind,iskip,idim,nleaf,nx_loc,ix,iy,iz,info
+  integer::i,ind,iskip,idim,nleaf,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err,emag
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
-  integer::irad
 #ifdef RT
   integer::ii,ig,iNp,il
   real(kind=8),dimension(1:nvector),save:: ekk_new
@@ -97,6 +97,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux 
+  real(kind=8),dimension(1:nvector),save::T2_new
+#endif
+#ifdef grackle
+  real(kind=8),dimension(1:nvector),save::T2_new
+#endif
+#if NENER>0
+  integer::irad
 #endif
 
   ! Mesh spacing in that level

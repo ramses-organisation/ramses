@@ -137,7 +137,8 @@ subroutine hydro_flag(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           !call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           call geometry_refine(xx,ok,ngrid,ilevel)
         end if
 
         ! Count newly flagged cells
