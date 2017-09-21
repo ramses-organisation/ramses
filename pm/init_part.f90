@@ -26,6 +26,7 @@ subroutine init_part
   integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
+  integer(2),allocatable,dimension(:)::ishort
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
@@ -167,6 +168,12 @@ subroutine init_part
         end if
         deallocate(xdp)
      end if
+
+     ! Read particle type
+     allocate(ishort(1:npart2))
+     read(ilun)ishort
+     typep(1:npart2) = ishort
+
      close(ilun)
 
      ! Send the token
@@ -739,7 +746,7 @@ contains
     end if
 
   end subroutine load_grafic
-      
+
   subroutine load_ascii
     ! Local particle count
     ipart=0
