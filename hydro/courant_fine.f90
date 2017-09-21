@@ -5,6 +5,8 @@ subroutine courant_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  real(kind=8),dimension(3)::comm_buffin,comm_buffout
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -12,13 +14,12 @@ subroutine courant_fine(ilevel)
   ! this routine computes the maximum allowed time-step.                !
   !----------------------------------------------------------------------
   integer::i,ivar,idim,ind,ncache,igrid,iskip
-  integer::info,nleaf,ngrid,nx_loc
+  integer::nleaf,ngrid,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
 
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,dt_all
-  real(kind=8),dimension(3)::comm_buffin,comm_buffout
   real(dp),dimension(1:nvector,1:nvar),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 
@@ -151,19 +152,20 @@ subroutine check_cons(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  real(kind=8),dimension(3)::comm_buffin,comm_buffout
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Check mass and energy conservation
   !----------------------------------------------------------------------
-  integer::i,ivar,idim,ind,ncache,igrid,iskip
-  integer::info,nleaf,ngrid,nx_loc
+  integer::i,ivar,ind,ncache,igrid,iskip
+  integer::nleaf,ngrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
 
-  real(dp)::dt_lev,dx,vol,scale
-  real(kind=8)::mass_loc,ekin_loc,eint_loc,dt_loc
-  real(kind=8)::mass_all,ekin_all,eint_all,dt_all
-  real(kind=8),dimension(3)::comm_buffin,comm_buffout
+  real(dp)::dx,vol
+  real(kind=8)::mass_loc,ekin_loc,eint_loc
+  real(kind=8)::mass_all,ekin_all,eint_all
   real(dp),dimension(1:nvector,1:nvar),save::uu
 
   if(numbtot(1,ilevel)==0)return

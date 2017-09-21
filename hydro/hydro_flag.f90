@@ -137,7 +137,8 @@ subroutine hydro_flag(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           !call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           call geometry_refine(xx,ok,ngrid,ilevel)
         end if
 
         ! Count newly flagged cells
@@ -179,9 +180,12 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   ! user-defined physical criterion for refinement.
   ! P. Hennebelle 03/11/2005
   !-------------------------------------------------
-  integer::i,indi,irad
+  integer::i,indi
   real(dp)::lamb_jeans,tail_pix,pi,n_jeans
-  real(dp)::dens,tempe,emag,etherm,factG
+  real(dp)::dens,tempe,etherm,factG
+#if NENER>0
+  integer::irad
+#endif
   pi = twopi / 2.
   factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp  

@@ -5,16 +5,18 @@
 subroutine load_balance
   use amr_commons
   use pm_commons
-  use hydro_commons, ONLY: nvar, uold, pstarold
+  use hydro_commons, ONLY: nvar
+#ifndef WITHOUTMPI
+  use hydro_commons, ONLY: uold, pstarold
+  use poisson_commons, ONLY: phi, f
+#endif
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
-  use poisson_commons, ONLY: phi, f
   use bisection
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h' 
-#endif
   !------------------------------------------------
   ! This routine performs parallel load balancing.
   !------------------------------------------------
@@ -22,6 +24,7 @@ subroutine load_balance
   integer::idim,ivar,icpu,jcpu,kcpu
   integer::nxny,ix,iy,iz,iskip
   integer,dimension(nlevelmax,3)::comm_buffin,comm_buffout
+#endif
 
   if(ncpu==1)return
 
@@ -274,6 +277,7 @@ subroutine cmp_new_cpu_map
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   !---------------------------------------------------
   ! This routine computes the new cpu map using 
@@ -282,7 +286,7 @@ subroutine cmp_new_cpu_map
   integer::igrid,ncell,ncell_loc,ncache,ngrid
   integer::ilevel,i,ind,idim
   integer::nx_loc
-  integer::info,icpu,isub,idom
+  integer::icpu,isub,idom
   integer::nxny,ix,iy,iz,iskip
   integer::ind_long
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -699,6 +703,7 @@ subroutine cmp_ordering(x,order,nn)
   integer ::nn
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   real(dp),dimension(1:nvector,1:ndim)::x
   real(qdp),dimension(1:nvector)::order
@@ -709,7 +714,7 @@ subroutine cmp_ordering(x,order,nn)
   !-----------------------------------------------------
   integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nx_loc
-  integer::temp,info
+  integer::temp
   real(kind=8)::scale,bscale,xx,yy,zz,xc,yc,zc
 
   nx_loc=icoarse_max-icoarse_min+1
@@ -797,9 +802,10 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer ::nn
-  integer ::temp,info
+  integer ::temp
   real(dp)::dx
   real(dp),dimension(1:nvector,1:ndim)::x
   real(qdp),dimension(1:nvector)::order_min,order_max
