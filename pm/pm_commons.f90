@@ -61,6 +61,7 @@ module pm_commons
 
   ! Add particle type
   integer(kind=2), allocatable, dimension(:) :: typep  ! Particle type
+  integer, parameter :: TYPE_UNDEF=9999
   integer, parameter :: TYPE_DM=0
   integer, parameter :: TYPE_STAR=100, TYPE_DEAD_STAR=101
   integer, parameter :: TYPE_SINK=200

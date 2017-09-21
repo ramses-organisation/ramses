@@ -3,13 +3,13 @@ subroutine synchro_fine(ilevel)
   use amr_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::ilevel
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
-  ! position for ilevel particle only. If particle sits entirely 
-  ! in level ilevel, then use inverse CIC at fine level to compute 
+  ! position for ilevel particle only. If particle sits entirely
+  ! in level ilevel, then use inverse CIC at fine level to compute
   ! the force. Otherwise, use coarse level force and coarse level CIC.
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -30,7 +30,7 @@ subroutine synchro_fine(ilevel)
   igrid=headl(myid,ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
-     if(npart1>0)then        
+     if(npart1>0)then
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
@@ -42,7 +42,7 @@ subroutine synchro_fine(ilevel)
            end if
            ip=ip+1
            ind_part(ip)=ipart
-           ind_grid_part(ip)=ig   
+           ind_grid_part(ip)=ig
            if(ip==nvector)then
               call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
               ip=0
@@ -56,7 +56,7 @@ subroutine synchro_fine(ilevel)
   end do
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  
+
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
      if(nsink>0)then
@@ -67,12 +67,12 @@ subroutine synchro_fine(ilevel)
 #endif
      endif
      do isink=1,nsink
-        if (.not. direct_force_sink(isink))then 
+        if (.not. direct_force_sink(isink))then
            fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
         end if
      end do
   endif
-  
+
 111 format('   Entering synchro_fine for level ',I2)
 
 end subroutine synchro_fine
@@ -85,13 +85,13 @@ subroutine synchro_fine_static(ilevel)
   use amr_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::ilevel
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
-  ! position for ilevel particle only. If particle sits entirely 
-  ! in level ilevel, then use inverse CIC at fine level to compute 
+  ! position for ilevel particle only. If particle sits entirely
+  ! in level ilevel, then use inverse CIC at fine level to compute
   ! the force. Otherwise, use coarse level force and coarse level CIC.
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -113,7 +113,7 @@ subroutine synchro_fine_static(ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
      npart2=0
-     
+
      ! Count particles
      if(npart1>0)then
         ipart=headp(igrid)
@@ -133,9 +133,9 @@ subroutine synchro_fine_static(ilevel)
            ipart=next_part  ! Go to next particle
         end do
      endif
-     
+
      ! Gather star particles
-     if(npart2>0)then        
+     if(npart2>0)then
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
@@ -152,7 +152,7 @@ subroutine synchro_fine_static(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
            else
               if(.not.static_dm) then
@@ -162,7 +162,7 @@ subroutine synchro_fine_static(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
            endif
            if(ip==nvector)then
@@ -178,7 +178,7 @@ subroutine synchro_fine_static(ilevel)
   end do
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  
+
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
      if(nsink>0)then
@@ -189,12 +189,12 @@ subroutine synchro_fine_static(ilevel)
 #endif
      endif
      do isink=1,nsink
-        if (.not. direct_force_sink(isink))then 
+        if (.not. direct_force_sink(isink))then
            fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
         end if
      end do
   endif
-  
+
 111 format('   Entering synchro_fine for level ',I2)
 
 end subroutine synchro_fine_static
@@ -231,7 +231,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -419,11 +419,11 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         icell(j,5)=1+icg(j,1)+3*icg(j,2)+9*icd(j,3)
         icell(j,6)=1+icd(j,1)+3*icg(j,2)+9*icd(j,3)
         icell(j,7)=1+icg(j,1)+3*icd(j,2)+9*icd(j,3)
-        icell(j,8)=1+icd(j,1)+3*icd(j,2)+9*icd(j,3)   
+        icell(j,8)=1+icd(j,1)+3*icd(j,2)+9*icd(j,3)
      end if
   end do
 #endif
-        
+
   ! Compute parent cell adresses
   do ind=1,twotondim
      do j=1,np
@@ -478,7 +478,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do idim=1,ndim
         do j=1,np
            isink=-idp(ind_part(j))
-           if(isink>0) then 
+           if(isink>0) then
               if(.not. direct_force_sink(isink))then
                  fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
               endif
