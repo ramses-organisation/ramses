@@ -1,7 +1,11 @@
 module pm_commons
+
   use amr_parameters
   use pm_parameters
   use random
+
+  implicit none
+
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
@@ -94,7 +98,7 @@ contains
 
   logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
-    is_tracer = typep%family == FAM_TRACER
+    is_tracer = typep%family <= 0
   end function is_tracer
 
   pure function part2int (part)
@@ -122,7 +126,6 @@ contains
   function props2type(idpii, tpii, mpii)
     use amr_commons
     use pm_parameters, only : part_t
-    implicit none
 
     ! Converts from "old" ramses to "new" ramses
     !
@@ -131,7 +134,8 @@ contains
     ! stars  tpii != 0 and idpii > 0
     ! sinks  tpii != 0 and idpii < 0
     !
-    ! This is mostly for support of GRAFFIC I/O
+    ! This is mostly for support of GRAFFIC I/O.
+    ! The reason we use idpii instead of idp is to prevent name clashes
     real(dp), intent(in) :: tpii, mpii
     integer, intent(in)  :: idpii
 
@@ -149,6 +153,4 @@ contains
     props2type%tag = 0
   end function props2type
 end module pm_commons
-
-
 

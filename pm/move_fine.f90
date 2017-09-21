@@ -96,8 +96,8 @@ subroutine move_fine_static(ilevel)
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
            if(star) then
-              if ( (.not. static_DM .and. is_DM(typep(ind_part(j)))) .or. &
-                   & (.not. static_stars .and. is_star(typep(ind_part(j)))) ) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. is_star(typep(ipart))) ) then
                  ! FIXME: there should be a static_sink as well
                  npart2=npart2+1
               endif
@@ -121,8 +121,8 @@ subroutine move_fine_static(ilevel)
            next_part=nextp(ipart)
            ! Select particles
            if(star) then
-              if ( (.not. static_DM .and. is_DM(typep(ind_part(j)))) .or. &
-                   & (.not. static_stars .and. is_star(typep(ind_part(j)))) ) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. is_star(typep(ipart))) ) then
                  ! FIXME: there should be a static_sink as well
                  if(ig==0)then
                     ig=1
