@@ -1,7 +1,11 @@
 module pm_commons
+
   use amr_parameters
   use pm_parameters
   use random
+
+  implicit none
+
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)::msink,c2sink,oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
@@ -94,7 +98,7 @@ contains
 
   logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
-    is_tracer = typep%family == FAM_TRACER
+    is_tracer = typep%family <= 0
   end function is_tracer
 
   pure function part2int (part)
@@ -149,6 +153,4 @@ contains
     props2type%tag = 0
   end function props2type
 end module pm_commons
-
-
 
