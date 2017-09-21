@@ -454,7 +454,7 @@ end subroutine clean_stop
 subroutine writemem(usedmem)
   real(kind=4)::usedmem
 
-  usedmem=dble(usedmem)*4096
+  usedmem=real(usedmem)*4096
 
   if(usedmem>1024.**4.)then
      write(*,999)usedmem/1024.**4.

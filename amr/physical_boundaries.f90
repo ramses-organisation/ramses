@@ -218,7 +218,7 @@ subroutine make_boundary_coarse
   ! This routine set up boundary conditions for flag at the coarse level
   !---------------------------------------------------------------------
   integer::nxny,boundary_dir
-  integer::i,j,k,ibound,iskip,ind,ind_ref
+  integer::i,j,k,ibound,iskip=1,ind,ind_ref
 
   if(verbose)write(*,*)'  Entering make_boundary_coarse'
 
@@ -265,7 +265,7 @@ subroutine make_boundary_flag(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,inbor
+  integer::ibound,boundary_dir,inbor=1
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip,iskip_ref
   integer,dimension(1:8)::ind_ref

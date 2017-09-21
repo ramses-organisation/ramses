@@ -11,6 +11,7 @@ subroutine output_frame()
   use rt_hydro_commons
 #endif
   implicit none
+#if NDIM > 1
 #ifndef WITHOUTMPI
   include "mpif.h"
   integer::info,iframe
@@ -105,7 +106,6 @@ subroutine output_frame()
  do proj_ind=1,LEN(trim(proj_axis)) 
   opened=.false.
 
-#if NDIM > 1
   if(imov<1)imov=1
   if(imov>imovout)return
 
@@ -322,14 +322,14 @@ subroutine output_frame()
 
   ! Allocate image
   allocate(data_frame(1:nw_frame,1:nh_frame,1:nframes),stat=ierr)
-if(ierr .ne. 0)then
-   write(*,*) 'Error - Movie frame allocation failed'
+  if(ierr .ne. 0)then
+     write(*,*) 'Error - Movie frame allocation failed'
 #ifndef WITHOUTMPI
-   call MPI_ABORT(MPI_COMM_WORLD,1,info)
+     call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-   stop
+     stop
 #endif
-endif
+  endif
 #ifdef RT
   if(rt) then
      allocate(rt_data_frame(1:nw_frame,1:nh_frame,1:rt_nframes),stat=ierr)
@@ -1143,7 +1143,6 @@ endif
 #ifdef RT
   if(rt) deallocate(rt_data_frame)
 #endif
-#endif
   ! Update counter
   if(proj_ind.eq.len(trim(proj_axis))) then 
      ! Increase counter and skip frames if timestep is large
@@ -1155,7 +1154,8 @@ endif
 
   nw_frame = nw_temp
   nh_frame = nh_temp
- enddo
+  enddo
+#endif
 end subroutine output_frame
 
 subroutine set_movie_vars()

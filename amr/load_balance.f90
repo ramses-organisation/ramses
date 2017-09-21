@@ -261,9 +261,9 @@ subroutine load_balance
         if(numbtot(1,ilevel)>0)write(*,999)ilevel,numbtot(1:4,ilevel)
      end do
   end if
-#endif
 
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
+#endif
 
 end subroutine load_balance
 !#########################################################################
@@ -715,7 +715,10 @@ subroutine cmp_ordering(x,order,nn)
   integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nx_loc
   integer::temp
-  real(kind=8)::scale,bscale,xx,yy,zz,xc,yc,zc
+  real(kind=8)::scale,bscale
+#if NDIM>1
+  real(kind=8)::xx,yy,zz,xc,yc,zc
+#endif
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -817,8 +820,12 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nx_loc
 
-  real(dp)::theta1,theta2,theta3,theta4,dxx,dxmin  
-  real(kind=8)::scale,bscaleloc,bscale,xx,yy,zz,xc,yc,zc
+  real(dp)::dxx,dxmin  
+#if NDIM>1
+  real(dp)::theta1,theta2,theta3,theta4
+  real(kind=8)::xx,yy,zz,xc,yc,zc
+#endif
+  real(kind=8)::scale,bscaleloc,bscale
   real(qdp)::dkey,oneqdp=1.0
 
   nx_loc=icoarse_max-icoarse_min+1
