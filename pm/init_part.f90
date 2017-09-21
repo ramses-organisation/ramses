@@ -17,13 +17,13 @@ subroutine init_part
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip
-  integer::ind,ix,iy,iz,ilun,info,icpu
+  integer::ind,ix,iy,iz,ilun,icpu
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,indglob,npart_new
+  integer::buf_count,indglob
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
   real(dp)::min_mdm_cpu,min_mdm_all
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,ii
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
@@ -31,26 +31,24 @@ subroutine init_part
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
-  real(dp),dimension(1:nvector,1:3)::xx_dp
   real(kind=8),dimension(1:nvector)::mm
   real(kind=8)::dispmax=0.0
-
-  integer::ibuf,tagu=102
-  integer::countsend,countrecv
 #ifndef WITHOUTMPI
+  real(dp),dimension(1:nvector,1:3)::xx_dp
+  integer,dimension(1:nvector)::cc
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
+  integer::dummy_io,info,info2,npart_new
+  integer::countsend,countrecv
+  integer::ibuf,tagu=102
 #endif
-
   logical::error,keep_part,eof,read_pos=.false.,ok
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
-  integer::dummy_io,info2
-
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -733,6 +731,7 @@ subroutine init_part
         end if
         eof=.false.
 
+        jpart=0
         do while (.not.eof)
            xx=0.0
            if(myid==1)then
@@ -835,16 +834,19 @@ subroutine load_gadget
   TYPE(gadgetheadertype)::gadgetheader
   integer::numfiles
   integer::ifile
-  real(dp),dimension(1:nvector,1:3)::xx_dp
   real,dimension(:,:),allocatable:: pos, vel
   real(dp)::massparticles
   integer(kind=8)::allparticles
   integer(i8b),dimension(:),allocatable:: ids  
   integer::nparticles
-  integer::i,icpu,ipart,info,start
+  integer::i,icpu,ipart,start
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
+#ifndef WITHOUTMPI
+  integer::info
   integer,dimension(1:nvector)::cc
+#endif
+  real(dp),dimension(1:nvector,1:3)::xx_dp
   integer::clock_start,clock_end,clock_rate
   real(dp)::gadgetvfact
   ! Local particle count
@@ -878,19 +880,21 @@ subroutine load_gadget
         TIME_SPENT(clock_start, clock_end, clock_rate)
         start = 1
         TIME_START(clock_start)
-#ifndef WITHOUTMPI
         do i=1,nparticles
            xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
            xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
            xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+#ifndef WITHOUTMPI
            call cmp_cpumap(xx_dp,cc,1)
            if(cc(1)==myid)then
 #endif
               ipart=ipart+1
+#ifndef WITHOUTMPI
               if (ipart .ge. size(mp)) then
                  write(*,*) "For ", myid, ipart, " exceeds ", size(mp)
                  call clean_stop
               end if
+#endif
               xp(ipart,1:3)=xx_dp(1,1:3)
               vp(ipart,1)  =vel(1, i) * gadgetvfact
               vp(ipart,2)  =vel(2, i) * gadgetvfact
@@ -900,7 +904,9 @@ subroutine load_gadget
               idp(ipart)   =ids(i)
 #ifndef WITHOUTMPI
             endif
+#endif
         enddo
+#ifndef WITHOUTMPI
         TIME_END(clock_end)
         if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ',&
              &  TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart

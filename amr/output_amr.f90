@@ -10,11 +10,12 @@ subroutine dump_all
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filedir,filedirini,filecmd
-  integer::info,irec,ierr
+  integer::irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -647,8 +648,8 @@ subroutine savegadget(filename)
                 write(*,*) myid, "Ipart=",ipart, "exceeds", npart
                 call clean_stop
            endif
-           pos(idim, ipart)=xp(i,idim) * boxlen_ini
-           vel(idim, ipart)=vp(i,idim) * gadgetvfact
+           pos(idim, ipart)=real(xp(i,idim) * boxlen_ini , kind=4)
+           vel(idim, ipart)=real(vp(i,idim) * gadgetvfact , kind=4)
            if (idim.eq.1) ids(ipart) = idp(i)
         end if
      end do
