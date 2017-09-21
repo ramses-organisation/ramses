@@ -3,9 +3,9 @@
 #############################################################################
 # Compilation time parameters
 NVECTOR = 32
-NDIM = 1
+NDIM = 3
 NPRE = 8
-NVAR = 5
+NVAR = 8
 NENER = 0
 SOLVER = hydro
 PATCH = 
