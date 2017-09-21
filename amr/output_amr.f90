@@ -219,6 +219,7 @@ subroutine backup_amr(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info2
 #endif
   character(LEN=80)::filename
 
@@ -232,7 +233,6 @@ subroutine backup_amr(filename)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::scale
   integer,parameter::tag=1120
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering backup_amr'
 
@@ -506,10 +506,11 @@ subroutine output_header(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   character(LEN=80)::filename
 
-  integer::info,ilun
+  integer::ilun
   integer(i8b)::npart_tot
   character(LEN=80)::fileloc
 #ifdef LONGINT
@@ -578,6 +579,8 @@ subroutine savegadget(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  integer(i8b)::npart_loc
 #endif
   character(LEN=80)::filename
   TYPE(gadgetheadertype)::header
@@ -585,8 +588,7 @@ subroutine savegadget(filename)
   integer(i8b),allocatable,dimension(:)::ids
   integer::i,idim,ipart
   real(dp)::gadgetvfact
-  integer::info
-  integer(i8b)::npart_tot,npart_loc
+  integer(i8b)::npart_tot
   real(dp),parameter::RHOcrit=2.7755d11
 
 #ifndef WITHOUTMPI

@@ -282,7 +282,7 @@ contains
   !=======================================================================
   
   !=======================================================================
-  function iranfodd( N )
+  integer function iranfodd( N )
     integer N
     if( mod( N, 2 ) .eq. 0 ) then
        iranfodd = 0
@@ -294,7 +294,7 @@ contains
   end function iranfodd
   !=======================================================================
   !=======================================================================
-  function iranfeven( N )
+  integer function iranfeven( N )
     integer N
     if( mod( N, 2 ) .eq. 0 ) then
        iranfeven = 1
