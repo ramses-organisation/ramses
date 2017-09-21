@@ -68,6 +68,7 @@ subroutine init_part
   allocate(prevp (npartmax))
   allocate(levelp(npartmax))
   allocate(idp   (npartmax))
+  allocate(typep (npartmax))
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
