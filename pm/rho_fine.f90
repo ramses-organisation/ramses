@@ -11,6 +11,8 @@ subroutine rho_fine(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 #endif
   integer::ilevel,icount
   !------------------------------------------------------------------
@@ -24,9 +26,8 @@ subroutine rho_fine(ilevel,icount)
   ! - cpu_map2 containing the refinement map due to particle
   !   number density criterion (quasi Lagrangian mesh).
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,info,nx_loc,ibound
+  integer::iskip,icpu,ind,i,nx_loc,ibound
   real(dp)::dx,d_scale,scale,dx_loc,scalar
-  real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return

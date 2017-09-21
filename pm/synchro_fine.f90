@@ -4,6 +4,7 @@ subroutine synchro_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h' 
+  integer::info
 #endif
   integer::ilevel
   !--------------------------------------------------------------------
@@ -13,7 +14,7 @@ subroutine synchro_fine(ilevel)
   ! the force. Otherwise, use coarse level force and coarse level CIC.
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::ig,ip,npart1,isink,info
+  integer::ig,ip,npart1,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -86,6 +87,7 @@ subroutine synchro_fine_static(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h' 
+  integer::info
 #endif
   integer::ilevel
   !--------------------------------------------------------------------
@@ -95,7 +97,7 @@ subroutine synchro_fine_static(ilevel)
   ! the force. Otherwise, use coarse level force and coarse level CIC.
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::ig,ip,next_part,npart1,npart2,isink,info
+  integer::ig,ip,next_part,npart1,npart2,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
