@@ -18,14 +18,22 @@ module amr_parameters
 #endif
   integer,parameter::MAXOUT=1000
   integer,parameter::MAXLEVEL=100
-  
+
   ! Define integer types (for particle IDs mostly)
-  integer,parameter::i4b=4
+  ! Warning: compiler needs to accept fortran standard 2003.
+  ! Specific numbers for fortran kinds are, in principle, implementation
+  ! dependent, so "i8b=8" with "integer(i8b)" is implementation-dependent.
+  ! See portability note for non-gcc compilers: (boud 2016-11-29) -
+  ! https://gcc.gnu.org/onlinedocs/gfortran/ISO_005fFORTRAN_005fENV.html
+  ! The selected_int_kind approach below is more likely to be portable:
+  integer,parameter::i4b=selected_int_kind(9) ! since log(2*10^9)/log(2)=30.9
 #ifndef LONGINT
-  integer,parameter::i8b=4  ! default long int are short int
+  !integer,parameter::i8b=4  ! default long int are 4-byte int
+  integer,parameter::i8b=selected_int_kind(9) ! since log(2*10^9)/log(2)=30.9
 #else
-  integer,parameter::i8b=8  ! long int are long int
-#endif
+  integer, parameter :: i8b=selected_int_kind(18) ! since log(2*10^18)/log(2)=60.8
+  !integer,parameter::i8b=8  ! long int are 8-byte int
+#endif /* LONGINT */
 
   ! Number of dimensions
 #ifndef NDIM
