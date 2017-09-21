@@ -116,4 +116,25 @@ contains
     int2part%tag = int(mod(index, magic), 1)
   end function int2part
 
+  pure function props2type(idp, tp, mp)
+    ! Converts from "old" ramses to "new" ramses
+    !
+    ! Here's the match, add yours here for backward compatibility purposes
+    ! DM     tp == 0
+    ! stars  tp != 0 and idp > 0
+    ! sinks  tp != 0 and idp < 0
+    real(dp), intent(in) :: tp, mp
+    integer, intent(in)  :: idp
+
+    type(type_t) :: props2type
+
+    if (tp(i) == 0) then
+       props2type(i)%family = FAM_DM
+    else if (idp(i) > 0) then
+       props2type(i)%family = FAM_STAR
+    else if (idp(i) < 0) then
+       props2type(i)%family = FAM_SINK
+    end if
+  end function props2type
+
 end module pm_commons
