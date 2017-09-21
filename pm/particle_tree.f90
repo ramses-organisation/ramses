@@ -886,7 +886,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      current_property = current_property+1
      if(metal)then
         do i=1,np
-           reception(icpu,ilevel)%up(ind_com(i),current_property+1)=zp(ind_part(i))
+           reception(icpu,ilevel)%up(ind_com(i),current_property)=zp(ind_part(i))
         end do
      end if
      current_property = current_property+1
@@ -962,7 +962,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
      current_property = current_property+1
      if(metal)then
         do i=1,np
-           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property+1)
+           zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
         end do
      end if
      current_property = current_property+1
