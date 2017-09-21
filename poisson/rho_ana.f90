@@ -20,6 +20,7 @@ subroutine rho_ana(x,d,dx,ncell)
   integer::i
   real(dp)::dmass,emass,xmass,ymass,zmass,rr,rx,ry,rz,dd
 
+  emass=dx
   emass=gravity_params(1) ! Softening length
   xmass=gravity_params(2) ! Point mass coordinates
   ymass=gravity_params(3)

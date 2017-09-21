@@ -1,3 +1,4 @@
+#if NDIM==3
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
   use poisson_commons, ONLY:rho
@@ -1822,4 +1823,4 @@ end subroutine tsc_only
 !###########################################################
 !###########################################################
 !###########################################################
-
+#endif

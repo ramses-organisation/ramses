@@ -11,7 +11,7 @@ subroutine create_sink
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
+#if NDIM==3
   !----------------------------------------------------------------------------
   ! sink creation routine
   ! -remove all cloud particles, keep only global sink arrays
@@ -126,6 +126,7 @@ subroutine create_sink
   ! Compute and print accretion rates
   call compute_accretion_rate(.true.)
   
+#endif
 end subroutine create_sink
 !################################################################
 !################################################################

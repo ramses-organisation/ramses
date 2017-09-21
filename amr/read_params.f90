@@ -270,7 +270,9 @@ subroutine read_params
   call rt_read_hydro_params(nml_ok)
 #endif
   if (sink)call read_sink_params
+#if NDIM==3
   if (clumpfind .or. sink)call read_clumpfind_params
+#endif
   if (movie)call set_movie_vars
 
   ! Send the token

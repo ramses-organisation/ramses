@@ -3,6 +3,7 @@
 !################################################################
 !################################################################
 subroutine flag_formation_sites
+#if NDIM==3
   use amr_commons
   use pm_commons
   use clfind_commons
@@ -31,8 +32,6 @@ subroutine flag_formation_sites
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -202,6 +201,7 @@ end subroutine flag_formation_sites
 !################################################################
 !################################################################
 !################################################################
+#if NDIM==3
 subroutine compute_clump_properties_round2(xx)
   use amr_commons
 #if NENER>0
@@ -268,8 +268,6 @@ subroutine compute_clump_properties_round2(xx)
   scale_kappa=(scale_d*scale_l)**(-1.d0)
   c_code=c_cgs/scale_v
 #endif
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -526,13 +524,14 @@ subroutine compute_clump_properties_round2(xx)
      end do
   end if
 
-#endif
 end subroutine compute_clump_properties_round2
+#endif
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
 subroutine trim_clumps
+#if NDIM==3
   use amr_commons
   use clfind_commons
   use pm_commons, only:ir_cloud
@@ -554,8 +553,6 @@ subroutine trim_clumps
   real(dp),dimension(1:3)::skip_loc,xcell,rrel
   real(dp),dimension(1:twotondim,1:3)::xc
   logical,dimension(1:ndim)::period
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -699,6 +696,7 @@ end subroutine jacobi
 !################################################################ 
 !################################################################                 
 !################################################################     
+#if NDIM==3
 subroutine surface_int
   use amr_commons
   use hydro_commons
@@ -744,10 +742,12 @@ subroutine surface_int
 #endif
 
 end subroutine surface_int
+#endif
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
+#if NDIM==3
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
 #ifdef SOLVERmhd
@@ -771,7 +771,6 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   ! pressure onto these surfaces and integrates over the surface
   ! of the clumps.
   !------------------------------------------------------------
-
   integer::j,ind,nx_loc,i2,j2,k2,ix,iy,iz,idim,jdim,i3,j3,k3
   real(dp)::dx,dx_loc,scale,vol_loc
   integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,neigh_cl
@@ -783,6 +782,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
   logical,dimension(1:ndim)::period
+#endif
 
 #ifdef SOLVERmhd
   real(dp),dimension(1:nvector)::B_dot_n,B_dot_r,B2
@@ -795,17 +795,12 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   nener_offset = inener-1
 #endif
 
-  period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-
-  
 #if NDIM==3
 
+  period(1)=(nx==1)
+  period(2)=(ny==1)
+  period(3)=(nz==1)
+  
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1131,7 +1126,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
         end do
      end do
   endif
-#endif
      
 end subroutine surface_int_np
+#endif
 
