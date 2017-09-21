@@ -19,15 +19,21 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
 
   ! Local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, ip
   real(dp)::dtdx,project_out
-  real(dp)::cc, ccc, csq, r, u, p, a
-  real(dp)::drx, dux, dpx, dax
+  real(dp)::cc, ccc, csq, r, u, p
+  real(dp)::drx, dux, dpx
   real(dp)::alpham, alphap, alpha0r
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azaleft
+  real(dp)::apright, amright, azrright
+  real(dp)::apleft,  amleft,  azrleft
+#if NVAR > NDIM + 2
+  integer ::n
+  real(dp)::a
+  real(dp)::dax
+  real(dp)::azaright, azaleft
+#endif
   
   dtdx = dt/dx
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -152,18 +158,23 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, iv, ip
   real(dp)::dtdx,dtdy,project_out
-  real(dp)::cc, ccc, csq, r, u, v, p, a
-  real(dp)::drx, dux, dvx, dpx, dax
-  real(dp)::dry, duy, dvy, dpy, day
+  real(dp)::cc, ccc, csq, r, u, v, p
+  real(dp)::drx, dux, dvx, dpx
+  real(dp)::dry, duy, dvy, dpy
   real(dp)::alpham, alphap, alpha0r, alpha0u, alpha0v
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azuright, azvright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azaleft
-  real(dp)::srx,sux,svx,spx,sax
-  real(dp)::sry,suy,svy,spy,say
+  real(dp)::apright, amright, azrright, azuright, azvright
+  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft
+  real(dp)::srx,sux,svx,spx
+  real(dp)::sry,suy,svy,spy
+#if NVAR > NDIM + 2
+  integer::n
+  real(dp)::a, dax, day, sax, say
+  real(dp)::azaright, azaleft
+#endif
     
   dtdx = dt/dx; dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -378,20 +389,25 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, iv, iw, ip
   real(dp)::dtdx,dtdy,dtdz,project_out
-  real(dp)::cc, ccc, csq, r, u, v, w, p, a
-  real(dp)::drx, dux, dvx, dwx, dpx, dax
-  real(dp)::dry, duy, dvy, dwy, dpy, day
-  real(dp)::drz, duz, dvz, dwz, dpz, daz
+  real(dp)::cc, ccc, csq, r, u, v, w, p
+  real(dp)::drx, dux, dvx, dwx, dpx
+  real(dp)::dry, duy, dvy, dwy, dpy
+  real(dp)::drz, duz, dvz, dwz, dpz
   real(dp)::alpham, alphap, alpha0r, alpha0u, alpha0v, alpha0w
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azuright, azvright, azwright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azwleft,  azaleft
-  real(dp)::srx,sux,svx,swx,spx,sax
-  real(dp)::sry,suy,svy,swy,spy,say
-  real(dp)::srz,suz,svz,swz,spz,saz
+  real(dp)::apright, amright, azrright, azuright, azvright, azwright
+  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azwleft
+  real(dp)::srx,sux,svx,swx,spx
+  real(dp)::sry,suy,svy,swy,spy
+  real(dp)::srz,suz,svz,swz,spz
+#if NVAR > NDIM + 2
+  integer::n
+  real(dp)::a, dax, day, daz, sax, say, saz
+  real(dp)::azaright, azaleft
+#endif
     
   dtdx = dt/dx; dtdy = dt/dy; dtdz = dt/dz
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
