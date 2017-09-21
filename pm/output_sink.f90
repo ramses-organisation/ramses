@@ -3,7 +3,8 @@ subroutine backup_sink(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
+  integer,parameter::tag=1135
   integer::dummy_io,info2
 #endif 
 
@@ -15,7 +16,6 @@ subroutine backup_sink(filename)
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::ii
   logical,allocatable,dimension(:)::nb
-  integer,parameter::tag=1135
 
   if(.not. sink) return
 
