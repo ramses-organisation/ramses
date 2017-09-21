@@ -6,11 +6,11 @@ subroutine write_screen
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
-  !
-  integer::igrid,jgrid,ind,icpu,info
+  integer::igrid,jgrid,ind,icpu
   integer::i,icell,ncell,ilevel,ncache
-  integer::icellmin,nx_loc,irad
+  integer::icellmin,nx_loc
   real(dp)::dx,scale,smallp,ddd,ppp
 
   integer     ,dimension(:),allocatable::ind_grid,ind_cell,ind_sort,ll,ll_all
@@ -18,6 +18,7 @@ subroutine write_screen
   real(qdp),dimension(:),allocatable::rr_all,et_all,ei_all
   real(qdp),dimension(:),allocatable::dd_all,uu_all,mm_all,gg_all,dtot_all
 #if NENER>0
+  integer::irad
   real(qdp),dimension(:,:),allocatable::prad_all,prad
 #endif
 

@@ -32,13 +32,14 @@ subroutine init_flow_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info,info2,dummy_io
 #endif
   integer::ilevel
   
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,info,nvar_in
+  integer::buf_count
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -56,8 +57,7 @@ subroutine init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
-   integer,parameter::tag=1107
-   integer::dummy_io,info2
+  integer,parameter::tag=1107
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -461,8 +461,11 @@ subroutine region_condinit(x,q,dx,nn)
   real(dp),dimension(1:nvector,1:nvar)::q
   real(dp),dimension(1:nvector,1:ndim)::x
 
-  integer::i,ivar,k
+  integer::i,k
   real(dp)::vol,r,xn,yn,zn,en
+#if NVAR > NDIM + 2
+  integer::ivar
+#endif
 
   ! Set some (tiny) default values in case n_region=0
   q(1:nn,1)=smallr
