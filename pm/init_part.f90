@@ -251,6 +251,8 @@ subroutine init_part
 contains
 
   subroutine load_grafic
+    ! Read data in the grafic format. The particle type is derived
+    ! following conversion rules (see pm_commons:props2type)
 
     !----------------------------------------------------
     ! Reading initial conditions GRAFIC2 multigrid arrays
@@ -860,6 +862,7 @@ end subroutine init_part
 #define TIME_END(ce) call SYSTEM_CLOCK(COUNT=ce)
 #define TIME_SPENT(cs,ce,cr) REAL((ce-cs)/cr)
 subroutine load_gadget
+  ! This routine only create DM particles
   use amr_commons
   use pm_commons
   use gadgetreadfilemod
