@@ -59,9 +59,9 @@ module pm_commons
   integer,dimension(IRandNumSize) :: localseed=-1
 
   ! Add particle types
-  integer(1) :: FAM_DM=1, FAM_STAR=2, FAM_SINK=3, FAM_DEBRIS=4, FAM_OTHER=5
+  integer(1) :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
   ! Add tracer types
-  integer(1) :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_SINK=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
+  integer(1) :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
   integer(1) :: FAM_TRACER_GAS=0
 
   type(part_t), allocatable, dimension(:) :: typep  ! Particle type
@@ -87,9 +87,9 @@ contains
     is_star = typep%family == FAM_STAR
   end function is_star
 
-  logical pure function is_sink(typep)
+  logical pure function is_cloud(typep)
     type(part_t), intent(in) :: typep
-    is_sink = typep%family == FAM_SINK
+    is_cloud = typep%family == FAM_CLOUD
   end function is_sink
 
   logical pure function is_tracer(typep)
@@ -100,10 +100,10 @@ contains
   pure function part2int (part)
     ! Convert a particle into an integer
     ! This saves some space e.g. when communicating
-    integer :: index
+    integer :: part2int
     type(part_t), intent(in) :: part
 
-    index = part%family * huge(part%family) + part%tag
+    part2int = part%family * huge(part%family) + part%tag
   end function part2int
 
   pure function int2part(index)
@@ -119,30 +119,36 @@ contains
     int2part%tag = int(mod(index, magic), 1)
   end function int2part
 
-  pure function props2type(idp, tp, mp)
-    ! Converts from "old" ramses to "new" ramses
-    !
-    ! Here's the match, add yours here for backward compatibility purposes
-    ! DM     tp == 0
-    ! stars  tp != 0 and idp > 0
-    ! sinks  tp != 0 and idp < 0
-    !
-    ! This is mostly for support of GRAFFIC I/O
-    real(dp), intent(in) :: tp, mp
-    integer, intent(in)  :: idp
-
-    type(part_t) :: props2type
-
-    if (tp(i) == 0) then
-       props2type%family = FAM_DM
-    else if (idp(i) > 0) then
-       props2type%family = FAM_STAR
-    else if (idp(i) < 0) then
-       props2type%family = FAM_SIN
-    else if (mp(i) == 0) then
-       props2type%family = FAM_TRACER_GAS
-    end if
-    props2type%tag = 0
-  end function props2type
-
 end module pm_commons
+
+function props2type(idp, tp, mp)
+  use amr_commons
+  use pm_parameters, only : part_t
+  use pm_commons, only: FAM_DM, FAM_STAR, FAM_SINK, FAM_TRACER_GAS
+  implicit none
+
+  ! Converts from "old" ramses to "new" ramses
+  !
+  ! Here's the match, add yours here for backward compatibility purposes
+  ! DM     tp == 0
+  ! stars  tp != 0 and idp > 0
+  ! sinks  tp != 0 and idp < 0
+  !
+  ! This is mostly for support of GRAFFIC I/O
+  real(dp), intent(in) :: tp, mp
+  integer, intent(in)  :: idp
+
+  type(part_t) :: props2type
+
+  if (tp == 0) then
+     props2type%family = FAM_DM
+  else if (idp > 0) then
+     props2type%family = FAM_STAR
+  else if (idp < 0) then
+     props2type%family = FAM_SINK
+  else if (mp == 0) then
+     props2type%family = FAM_TRACER_GAS
+  end if
+  props2type%tag = 0
+end function props2type
+
