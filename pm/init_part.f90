@@ -23,7 +23,7 @@ subroutine init_part
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
   real(dp)::min_mdm_cpu,min_mdm_all
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii,pp
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
@@ -147,6 +147,16 @@ subroutine init_part
      read(ilun)isp8
      idp(1:npart2)=isp8
      deallocate(isp8)
+
+     ! Read family
+     allocate(ii1(1:npart2))
+     read(ilun)ii1
+     typep(1:npart2)%family = ii1
+     ! Read tag
+     read(ilun)ii1
+     typep(1:npart2)%tag = ii1
+     deallocate(ii1)
+
      ! Read level
      allocate(isp(1:npart2))
      read(ilun)isp
@@ -174,15 +184,6 @@ subroutine init_part
         deallocate(xdp)
      end if
 
-     ! Read family
-     allocate(ii1(1:npart2))
-     read(ilun)ii1
-     typep(1:npart2)%family = ii1
-     ! Read tag
-     read(ilun)ii1
-     typep(1:npart2)%tag = ii1
-     deallocate(ii1)
-
      close(ilun)
 
      ! Send the token
@@ -199,14 +200,10 @@ subroutine init_part
      if(cosmo)then
         min_mdm_cpu = 1.0
         do ipart=1,npart2
-           if(star)then
-              if(tp(ipart).eq.0d0)then
-                 if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
-              endif
-           else
-              if(mp(ipart).lt.min_mdm_cpu) min_mdm_cpu = mp(ipart)
-           endif
-        enddo
+           ! Get dark matter only
+           if (is_DM(typep(ipart))) min_mdm_cpu = mp(ipart)
+        end do
+
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(min_mdm_cpu,min_mdm_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
 #else
@@ -238,7 +235,6 @@ subroutine init_part
         call load_grafic
      case ('ascii')
         call load_ascii
-
      case ('gadget')
         call load_gadget
 
@@ -757,6 +753,7 @@ contains
   end subroutine load_grafic
 
   subroutine load_ascii
+    ! This function load from ASCII file. As is, you can only load dark matter particles
     ! Local particle count
     ipart=0
 
@@ -785,6 +782,9 @@ contains
                 vv(i,3)=vv3
                 mm(i  )=mm1
                 ii(i  )=indglob
+                tmppart%family = FAM_DM
+                tmppart%tag    = 0
+                pp(i  )=part2int(tmppart)
              end do
 100          continue
              if(jpart<nvector)eof=.true.
@@ -795,6 +795,7 @@ contains
           call MPI_BCAST(vv,buf_count,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
           call MPI_BCAST(mm,nvector  ,MPI_DOUBLE_PRECISION,0,MPI_COMM_WORLD,info)
           call MPI_BCAST(ii,nvector  ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
+          call MPI_BCAST(pp,nvector  ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
           call MPI_BCAST(eof,1       ,MPI_LOGICAL         ,0,MPI_COMM_WORLD,info)
           call MPI_BCAST(jpart,1     ,MPI_INTEGER         ,0,MPI_COMM_WORLD,info)
           call cmp_cpumap(xx,cc,jpart)
@@ -810,11 +811,14 @@ contains
                    write(*,*)'npartmax should be greater than',ipart
                    call clean_stop
                 endif
-                xp(ipart,1:3)=xx(i,1:3)
-                vp(ipart,1:3)=vv(i,1:3)
-                mp(ipart)    =mm(i)
-                levelp(ipart)=levelmin
-                idp(ipart)   =ii(i)
+                xp(ipart,1:3)= xx(i,1:3)
+                vp(ipart,1:3)= vv(i,1:3)
+                mp(ipart)    = mm(i)
+                levelp(ipart)= levelmin
+                idp(ipart)   = ii(i)
+                ! Get back the particle type from the communicated
+                ! shortened integer
+                typep(ipart) = int2part(pp(i))
 #ifndef WITHOUTMPI
              endif
 #endif
@@ -928,6 +932,8 @@ subroutine load_gadget
               mp(ipart)    = massparticles
               levelp(ipart)=levelmin
               idp(ipart)   =ids(i)
+
+              ! Get the particle type
 #ifndef WITHOUTMPI
             endif
         enddo
