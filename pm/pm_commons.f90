@@ -130,7 +130,8 @@ contains
     ! stars  tpii != 0 and idpii > 0
     ! sinks  tpii != 0 and idpii < 0
     !
-    ! This is mostly for support of GRAFFIC I/O
+    ! This is mostly for support of GRAFFIC I/O.
+    ! The reason we use idpii instead of idp is to prevent name clashes
     real(dp), intent(in) :: tpii, mpii
     integer, intent(in)  :: idpii
 
