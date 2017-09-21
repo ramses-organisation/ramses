@@ -94,21 +94,22 @@ contains
     is_tracer = typep%family == FAM_TRACER
   end function is_tracer
 
-  pure function int2part(index)
-    type(part_t) :: int2part
-    integer, intent(in) :: index
-
-    int2part%family = int(index / 256, 1)
-    int2part%tag = int(mod(index, 256), 1)
-  end function int2part
-
   pure function part2int (part)
+    ! Convert a particle into an integer
+    ! This saves some space e.g. when communicating
     integer :: index
     type(part_t), intent(in) :: part
 
     index = part%family * 256 + part%tag
   end function part2int
 
+  pure function int2part(index)
+    ! Convert from an index to particle type
+    type(part_t) :: int2part
+    integer, intent(in) :: index
 
+    int2part%family = int(index / 256, 1)
+    int2part%tag = int(mod(index, 256), 1)
+  end function int2part
 
 end module pm_commons
