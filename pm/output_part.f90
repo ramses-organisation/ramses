@@ -90,6 +90,28 @@ subroutine backup_part(filename)
   end do
   write(ilun)ii8
   deallocate(ii8)
+
+  ! Write family
+  allocate(ii1(1:npart))
+  ipart=0
+  do i=1,npartmax
+     if(levelp(i)>0)then
+        ipart=ipart+1
+        ii1(ipart)=typep(i)%family
+     end if
+  end do
+  write(ilun)ii1
+  ! Write tag
+  ipart=0
+  do i=1,npartmax
+     if(levelp(i)>0)then
+        ipart=ipart+1
+        ii1(ipart)=typep(i)%tag
+     end if
+  end do
+  write(ilun)ii1
+  deallocate(ii1)
+
   ! Write level
   allocate(ll(1:npart))
   ipart=0
@@ -140,27 +162,6 @@ subroutine backup_part(filename)
      end if
      deallocate(xdp)
   end if
-
-  ! Write family
-  allocate(ii1(1:npart))
-  ipart=0
-  do i=1,npartmax
-     if(levelp(i)>0)then
-        ipart=ipart+1
-        ii1(ipart)=typep(i)%family
-     end if
-  end do
-  write(ilun)ii1
-  ! Write tag
-  ipart=0
-  do i=1,npartmax
-     if(levelp(i)>0)then
-        ipart=ipart+1
-        ii1(ipart)=typep(i)%tag
-     end if
-  end do
-  write(ilun)ii1
-  deallocate(ii1)
 
   close(ilun)
 

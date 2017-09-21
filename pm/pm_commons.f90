@@ -58,9 +58,12 @@ module pm_commons
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
 
-
   ! Add particle types
-  integer(1) :: FAM_STAR=0, FAM_DM=1, FAM_SINK=2, FAM_TRACER=3, FAM_OTHER=4, FAM_UNDEF=-1
+  integer(1) :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
+  ! Add tracer types
+  integer(1) :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
+  integer(1) :: FAM_TRACER_GAS=0
+
   type(part_t), allocatable, dimension(:) :: typep  ! Particle type
 
 contains
@@ -84,31 +87,68 @@ contains
     is_star = typep%family == FAM_STAR
   end function is_star
 
-  logical pure function is_sink(typep)
+  logical pure function is_cloud(typep)
     type(part_t), intent(in) :: typep
-    is_sink = typep%family == FAM_SINK
-  end function is_sink
+    is_cloud = typep%family == FAM_CLOUD
+  end function is_cloud
 
   logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
     is_tracer = typep%family == FAM_TRACER
   end function is_tracer
 
+  pure function part2int (part)
+    ! Convert a particle into an integer
+    ! This saves some space e.g. when communicating
+    integer :: part2int
+    type(part_t), intent(in) :: part
+
+    part2int = part%family * huge(part%family) + part%tag
+  end function part2int
+
   pure function int2part(index)
+    ! Convert from an index to particle type
     type(part_t) :: int2part
     integer, intent(in) :: index
 
-    int2part%family = int(index / 256, 1)
-    int2part%tag = int(mod(index, 256), 1)
+    integer :: magic
+
+    magic = huge(int2part%family)
+
+    int2part%family = int(index / magic, 1)
+    int2part%tag = int(mod(index, magic), 1)
   end function int2part
 
-  pure function part2int (part)
-    integer :: index
-    type(part_t), intent(in) :: part
+  function props2type(idpii, tpii, mpii)
+    use amr_commons
+    use pm_parameters, only : part_t
+    implicit none
 
-    index = part%family * 256 + part%tag
-  end function part2int
+    ! Converts from "old" ramses to "new" ramses
+    !
+    ! Here's the match, add yours here for backward compatibility purposes
+    ! DM     tpii == 0
+    ! stars  tpii != 0 and idpii > 0
+    ! sinks  tpii != 0 and idpii < 0
+    !
+    ! This is mostly for support of GRAFFIC I/O
+    real(dp), intent(in) :: tpii, mpii
+    integer, intent(in)  :: idpii
 
+    type(part_t) :: props2type
 
-
+    if (tpii == 0) then
+       props2type%family = FAM_DM
+    else if (idpii > 0) then
+       props2type%family = FAM_STAR
+    else if (idpii < 0) then
+       props2type%family = FAM_CLOUD
+    else if (mpii == 0) then
+       props2type%family = FAM_TRACER_GAS
+    end if
+    props2type%tag = 0
+  end function props2type
 end module pm_commons
+
+
+
