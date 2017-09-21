@@ -681,7 +681,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(reception(icpu,ilevel)%fp(1:ncache,1:3))
+        allocate(reception(icpu,ilevel)%fp(1:ncache,1:4))
         allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -852,7 +852,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   do i=1,np
      reception(icpu,ilevel)%fp(ind_com(i),2)=levelp(ind_part(i))
      reception(icpu,ilevel)%fp(ind_com(i),3)=idp   (ind_part(i))
-     reception(icpu,ilevel)%fp(ind_com(i),4)=int(typep (ind_part(i)))
+     reception(icpu,ilevel)%fp(ind_com(i),4)=int(typep(ind_part(i)))
   end do
 
   ! Gather particle position and velocity
@@ -927,7 +927,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
      levelp(ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),2)
      idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
-     typep (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3), 2)
+     typep (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),4), 2)
   end do
 
   ! Scatter particle position and velocity
