@@ -122,7 +122,6 @@ contains
   function props2type(idpii, tpii, mpii)
     use amr_commons
     use pm_parameters, only : part_t
-    implicit none
 
     ! Converts from "old" ramses to "new" ramses
     !
