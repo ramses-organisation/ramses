@@ -9,6 +9,7 @@ subroutine newdt_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   !-----------------------------------------------------------
@@ -20,14 +21,19 @@ subroutine newdt_fine(ilevel)
   ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas 
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,nx_loc
-  integer::npart1,ip,info,isink,ilev,levelmin_isink,limiting_sink
+  integer::igrid,jgrid,ipart,jpart
+  integer::npart1,ip,isink,ilev,levelmin_isink,limiting_sink
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all,dt_acc_min
   real(dp)::tff,fourpi,threepi2
-  real(dp)::aton_time_step,dt_aton,dt_rt
-  real(dp)::dx_min,dx,scale,dt_fact,limiting_dt_fact
+  real(dp)::dt_fact,limiting_dt_fact
   logical::highest_level
+#ifdef ATON
+  real(dp)::aton_time_step,dt_aton
+#endif
+#ifdef RT
+  real(dp)::dt_rt
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

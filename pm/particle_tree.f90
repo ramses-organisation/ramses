@@ -8,6 +8,7 @@ subroutine init_tree
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------
   ! This subroutine build the particle linked list at the 
@@ -16,7 +17,7 @@ subroutine init_tree
   ! the particle tree.
   !------------------------------------------------------
   integer::ipart,idim,i,nxny,ilevel
-  integer::npart1,info,icpu,nx_loc
+  integer::npart1,icpu,nx_loc
   logical::error
   real(dp),dimension(1:3)::xbound
   integer,dimension(1:nvector),save::ix,iy,iz
@@ -631,18 +632,18 @@ subroutine virtual_tree_fine(ilevel)
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.
   !-----------------------------------------------------------------------
-  integer::igrid,ipart,jpart,ncache_tot,next_part
-  integer::ip,ipcom,npart1,icpu,ncache
-  integer::info,buf_count,tag=101,tagf=102,tagu=102
-  integer::countsend,countrecv
 #ifndef WITHOUTMPI
+  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
+  integer::icpu,igrid,ipart,jpart
+  integer::info,buf_count,tagf=102,tagu=102
+  integer::countsend,countrecv
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
-#endif
-  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
-  logical::ok_free,ok_all
+  logical::ok_free
   integer::particle_data_width
+  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

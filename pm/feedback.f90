@@ -9,6 +9,7 @@ subroutine thermal_feedback(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info2,dummy_io
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
@@ -16,7 +17,7 @@ subroutine thermal_feedback(ilevel)
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
+  integer::igrid,jgrid,ipart,jpart,next_part,ivar
   integer::ig,ip,npart1,npart2,icpu,ilun,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
@@ -472,6 +473,7 @@ subroutine kinetic_feedback
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
   integer,dimension(1:ncpu)::nSN_icpu_all
   real(dp),dimension(:),allocatable::mSN_all,sSN_all,ZSN_all
   real(dp),dimension(:,:),allocatable::xSN_all,vSN_all
@@ -484,7 +486,7 @@ subroutine kinetic_feedback
   !----------------------------------------------------------------------
   ! local constants
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
-  integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
+  integer::nSN,nSN_loc,nSN_tot,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::current_time
@@ -685,12 +687,13 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------------------------
   ! This routine average the hydro quantities inside the SN bubble
   !------------------------------------------------------------------------
   integer::ilevel,ncache,nSN,iSN,ind,ix,iy,iz,ngrid,iskip
-  integer::i,nx_loc,igrid,info
+  integer::i,nx_loc,igrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp)::x,y,z,dr_SN,u,v,w,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
