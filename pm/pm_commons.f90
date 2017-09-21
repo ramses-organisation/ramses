@@ -59,7 +59,14 @@ module pm_commons
   integer,dimension(IRandNumSize) :: localseed=-1
 
 
-  contains
+  ! Add particle type
+  integer(kind=2), allocatable, dimension(:) :: typep  ! Particle type
+  integer, parameter :: TYPE_DM=0
+  integer, parameter :: TYPE_STAR=100, TYPE_DEAD_STAR=101
+  integer, parameter :: TYPE_SINK=200
+  integer, parameter :: TYPE_TRACER_DM=1000, TYPE_TRACER_STAR=1100, TYPE_TRACER_DEAD_STAR=1101, TYPE_TRACER_SINK=1200
+
+contains
   function cross(a,b)
     use amr_parameters, only:dp
     real(dp),dimension(1:3)::a,b
@@ -69,5 +76,36 @@ module pm_commons
     cross(2)=a(3)*b(1)-a(1)*b(3)
     cross(3)=a(1)*b(2)-a(2)*b(1)
   end function cross
-  
+
+  logical pure function is_DM(typep)
+    integer(kind=2), intent(in) :: typep
+    is_DM = (typep >= 0) .and. (typep < 100)
+  end function is_DM
+
+  logical pure function is_star(typep)
+    integer(kind=2), intent(in) :: typep
+    is_star = (typep >= 100) .and. (typep < 200)
+  end function is_star
+
+  logical pure function is_sink(typep)
+    integer(kind=2), intent(in) :: typep
+
+    is_sink = (typep >= 200) .and. (typep < 300)
+  end function is_sink
+
+  logical pure function is_tracer(typep)
+    integer(kind=2), intent(in) :: typep
+    is_tracer = is_particle_tracer(typep) .or. is_gas_tracer(typep)
+  end function is_tracer
+
+  logical pure function is_particle_tracer(typep)
+    integer(kind=2), intent(in) :: typep
+    is_particle_tracer = (typep >= 1000) .and. (typep < 2000)
+  end function is_particle_tracer
+
+  logical pure function is_gas_tracer(typep)
+    integer(kind=2), intent(in) :: typep
+    is_gas_tracer = (typep < 0)
+  end function is_gas_tracer
+
 end module pm_commons
