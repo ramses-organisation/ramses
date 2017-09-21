@@ -632,7 +632,7 @@ subroutine grow_sink(ilevel,on_creation)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if ( is_cloud(type(ipart)) ) then
+              if (is_cloud(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
