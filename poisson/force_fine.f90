@@ -9,6 +9,7 @@ subroutine force_fine(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel,icount
   !----------------------------------------------------------
@@ -16,13 +17,13 @@ subroutine force_fine(ilevel,icount)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::info,ibound,nx_loc,idim
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,fact,fourpi
   real(kind=8)::rho_loc,rho_all,epot_loc,epot_all
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
 
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx,ff
  
   if(numbtot(1,ilevel)==0)return
