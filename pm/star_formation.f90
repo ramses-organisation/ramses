@@ -61,7 +61,11 @@ subroutine star_formation(ilevel)
 #if NENER>0
   integer::irad
 #endif
-  
+
+  ! TODO: when f2008 is obligatory - remove this and replace erfc_pre_f08 below by
+  ! the f2008 intrinsic erfc() function:
+  real(dp) erfc_pre_f08
+
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
   if(ndim.ne.3)return
@@ -454,7 +458,7 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
@@ -485,7 +489,7 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
                        ! Virial criterion simple model
                        CASE (3)
                           ! Laplacian rho
@@ -905,41 +909,41 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
            end if
         end do
      end do
-     
+
   end do
-     
-    
+
+
 end subroutine getnbor
 !##############################################################
 !##############################################################
 !##############################################################
 !##############################################################
-function erfc(x)
+function erfc_pre_f08(x)
 
 ! complementary error function
-  use amr_commons, ONLY: dp 
+  use amr_commons, ONLY: dp
   implicit none
-  real(dp) erfc
+  real(dp) erfc_pre_f08
   real(dp) x, y
-  real(kind=8) pv, ph 
+  real(kind=8) pv, ph
   real(kind=8) q0, q1, q2, q3, q4, q5, q6, q7
   real(kind=8) p0, p1, p2, p3, p4, p5, p6, p7
-  parameter(pv= 1.26974899965115684d+01, ph= 6.10399733098688199d+00) 
-  parameter(p0= 2.96316885199227378d-01, p1= 1.81581125134637070d-01) 
-  parameter(p2= 6.81866451424939493d-02, p3= 1.56907543161966709d-02) 
-  parameter(p4= 2.21290116681517573d-03, p5= 1.91395813098742864d-04) 
+  parameter(pv= 1.26974899965115684d+01, ph= 6.10399733098688199d+00)
+  parameter(p0= 2.96316885199227378d-01, p1= 1.81581125134637070d-01)
+  parameter(p2= 6.81866451424939493d-02, p3= 1.56907543161966709d-02)
+  parameter(p4= 2.21290116681517573d-03, p5= 1.91395813098742864d-04)
   parameter(p6= 9.71013284010551623d-06, p7= 1.66642447174307753d-07)
-  parameter(q0= 6.12158644495538758d-02, q1= 5.50942780056002085d-01) 
-  parameter(q2= 1.53039662058770397d+00, q3= 2.99957952311300634d+00) 
-  parameter(q4= 4.95867777128246701d+00, q5= 7.41471251099335407d+00) 
+  parameter(q0= 6.12158644495538758d-02, q1= 5.50942780056002085d-01)
+  parameter(q2= 1.53039662058770397d+00, q3= 2.99957952311300634d+00)
+  parameter(q4= 4.95867777128246701d+00, q5= 7.41471251099335407d+00)
   parameter(q6= 1.04765104356545238d+01, q7= 1.48455557345597957d+01)
-  
+
   y = x*x
-  y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &   
+  y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &
        &       + p2/(y+q2)+p1/(y+q1)+p0/(y+q0))
   if (x < ph) y = y+2d0/(exp(pv*x)+1.0)
-  erfc = y
-  
+  erfc_pre_f08 = y
+
   return
-  
-end function erfc
+
+end function erfc_pre_f08
