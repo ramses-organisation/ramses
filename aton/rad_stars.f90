@@ -56,7 +56,7 @@ subroutine compute_Srad_level(ilevel)
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
-        
+
         ! Count star particles
         if(npart1>0)then
            ipart=headp(igrid)
@@ -64,15 +64,15 @@ subroutine compute_Srad_level(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if(is_star(typep(ipart)))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
            end do
         endif
-        
+
         ! Gather star particles
-        if(npart2>0)then        
+        if(npart2>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
@@ -81,14 +81,15 @@ subroutine compute_Srad_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if(is_star(typep(ipart)))then
+
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
                  call process_particle(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -103,7 +104,7 @@ subroutine compute_Srad_level(ilevel)
      end do
      ! End loop over grids
      if(ip>0)call process_particle(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  end do 
+  end do
   ! End loop over cpus
 
 111 format('   Entering compute_Srad for level ',I2)
@@ -268,7 +269,7 @@ subroutine process_particle(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! FIXME(tstranex): is the dt calculation ok since we are working on the coarse
   ! level only?
 
-  ! Compute individual time steps                                               
+  ! Compute individual time steps
   do j=1,np
      if(ok(j))then
         dteff(j)=dtnew(levelmin)
