@@ -852,7 +852,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   do i=1,np
      reception(icpu,ilevel)%fp(ind_com(i),2)=levelp(ind_part(i))
      reception(icpu,ilevel)%fp(ind_com(i),3)=idp   (ind_part(i))
-     reception(icpu,ilevel)%fp(ind_com(i),4)=int(typep(ind_part(i)))
+     reception(icpu,ilevel)%fp(ind_com(i),4)=part2int(typep(ind_part(i)))
   end do
 
   ! Gather particle position and velocity
@@ -911,7 +911,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
-  integer::current_property
+  integer::current_property,tmpi
 
   ! Compute parent grid index
   do i=1,np
@@ -927,7 +927,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
      levelp(ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),2)
      idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
-     typep (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),4), 2)
+     typep(ind_part(i)) = int2part(emission(icpu,ilevel)%fp(ind_com(i),4))
   end do
 
   ! Scatter particle position and velocity

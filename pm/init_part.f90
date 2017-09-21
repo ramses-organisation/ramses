@@ -26,9 +26,9 @@ subroutine init_part
   integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
-  integer(2),allocatable,dimension(:)::ishort
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
+  integer(1),allocatable,dimension(:)::ii1
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
@@ -72,7 +72,7 @@ subroutine init_part
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
+  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0; typep(1:npartmax)%family=FAM_UNDEF
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
@@ -152,6 +152,10 @@ subroutine init_part
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+     ! We don't need the potential, but read it anyway (to get the records correctly for tp/zp)
+     read(ilun)
+#endif
      if(star.or.sink)then
         ! Read birth epoch
         allocate(xdp(1:npart2))
@@ -170,10 +174,14 @@ subroutine init_part
         deallocate(xdp)
      end if
 
-     ! Read particle type
-     allocate(ishort(1:npart2))
-     read(ilun)ishort
-     typep(1:npart2) = ishort
+     ! Read family
+     allocate(ii1(1:npart2))
+     read(ilun)ii1
+     typep(1:npart2)%family = ii1
+     ! Read tag
+     read(ilun)ii1
+     typep(1:npart2)%tag = ii1
+     deallocate(ii1)
 
      close(ilun)
 
