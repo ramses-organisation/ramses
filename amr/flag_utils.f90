@@ -741,13 +741,15 @@ subroutine init_refmap_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  integer::dummy_io,info2
 #endif
   integer::ilevel
   
   integer::i,icell,igrid,ncache,iskip,ilun
   integer::ind,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,info
+  integer::buf_count
 
   real(dp)::dx,xx1,xx2,xx3,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
@@ -759,7 +761,6 @@ subroutine init_refmap_fine(ilevel)
   logical::error,ok_file
   character(LEN=80)::filename
   integer,parameter::tag=1103
-  integer::dummy_io,info2
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

@@ -10,12 +10,13 @@ subroutine adaptive_loop
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
   integer(kind=8)::n_step
-  integer::ilevel,idim,ivar,info,tot_pt
+  integer::info,tot_pt
   real(kind=8)::tt1,tt2,muspt,muspt_this_step,wallsec,dumpsec
   real(kind=4)::real_mem,real_mem_tot
   real(kind=8),save::tstart=0.0
+#endif
+  integer::ilevel,idim,ivar
 
 #ifndef WITHOUTMPI
   tt1=MPI_WTIME()
