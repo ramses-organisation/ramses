@@ -309,9 +309,12 @@ subroutine make_virtual_coarse_int(xx)
   ! at the coarse level for integer arrays.
   !-----------------------------------------------------------
   integer::nxny,ncell
+
+#ifndef WITHOUTMPI
   integer::i,j,k
   integer::icell,info
   integer,dimension(:),allocatable::ind_cell,fff,ffg
+#endif
 
   ! Constants
   nxny=nx*ny
@@ -366,10 +369,12 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any double precision array in the AMR grid.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -450,10 +455,12 @@ subroutine make_virtual_fine_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any integer array in the AMR grid.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -533,11 +540,11 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for double precision arrays.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
 #endif
@@ -697,11 +704,11 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for integer arrays.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
 #endif
@@ -866,9 +873,9 @@ subroutine build_comm(ilevel)
   integer::ncache,ind,iskip
   integer::i,j,k,nxny
   integer::igrid,jgrid,ngrid
+#ifndef WITHOUTMPI
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(ncpu)::sendbuf,recvbuf
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::countsend,countrecv
