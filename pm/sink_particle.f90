@@ -150,12 +150,10 @@ subroutine create_cloud_from_sink
   !----------------------------------------------------------------------
 
   real(dp)::scale,dx_min,rr,rmax,rmass
-  integer ::i,icpu,isink,indp,ii,jj,kk,nx_loc,idim
-  integer ::ntot,ntot_all,info
-  logical ::ok_free
+  integer ::icpu,isink,indp,ii,jj,kk,nx_loc,idim
   real(dp),dimension(1:ndim)::xrel
   real(dp),dimension(1:nvector,1:ndim)::xtest
-  integer ,dimension(1:nvector)::ind_grid,ind_part,cc,ind_cloud
+  integer ,dimension(1:nvector)::ind_grid,cc,ind_cloud
   logical ,dimension(1:nvector)::ok_true
   logical,dimension(1:ndim)::period
   logical::in_box
@@ -336,6 +334,7 @@ subroutine collect_acczone_avg(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
 
@@ -351,7 +350,7 @@ subroutine collect_acczone_avg(ilevel)
   ! No gaussian accretion kernel is used anymore...
   !------------------------------------------------------------------------
 
-  integer::igrid,jgrid,ipart,jpart,next_part,info,ind
+  integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,nx_loc,isink
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   real(dp)::dx_loc,dx_min,scale,factG
@@ -490,19 +489,17 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! accretion zone is computed
   !-----------------------------------------------------------------------
 #if NDIM==3
-  integer::j,irad,nx_loc,isink,idim,ind
-  real(dp)::d,u,v=0d0,w=0d0,e,v2
-  real(dp)::scale,weight,dx_min,one_over_dx_min
+  integer::j,isink,idim,ind
+  real(dp)::d,e,v2
+  real(dp)::weight
   real(dp),dimension(1:3)::vv
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
-  real(dp) ,dimension(1:nvector,1:nvar+3),save::fluid_var_left,fluid_var_right,fluid_var
-#else
-  real(dp) ,dimension(1:nvector,1:nvar),save::fluid_var_left,fluid_var_right,fluid_var
 #endif
-  real(dp),dimension(1:nvector),save::egas
+#if NENER>0
+  integer::irad
+#endif
   real(dp),dimension(1:nvector,1:ndim),save::xpart
-  integer ,dimension(1:nvector),save::cind,cind_right,cind_left
   integer ,dimension(1:nvector,1:twotondim),save::indp
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
   real(dp),dimension(1:nvector,1:twotondim)::vol
@@ -576,6 +573,7 @@ subroutine grow_sink(ilevel,on_creation)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   logical::on_creation
@@ -585,8 +583,8 @@ subroutine grow_sink(ilevel,on_creation)
   ! particles are collected
   ! -> replaces grow_bondi and grow_jeans
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,info
-  integer::ig,ip,npart1,npart2,icpu,isink,lev,nx_loc
+  integer::igrid,jgrid,ipart,jpart,next_part
+  integer::ig,ip,npart1,npart2,icpu,isink,lev
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   logical::highest_level
 
@@ -735,29 +733,28 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! for nvector particles. Routine is not very efficient. Optimize if taking too long...
   !-----------------------------------------------------------------------
 
-  integer::i,j,nx_loc,isink,ivar,irad,idim,ind
-  real(dp)::v2,d,e,d_floor,density,volume
+  integer::j,nx_loc,isink,ivar,idim,ind
+  real(dp)::d,e,d_floor,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
-  real(dp),dimension(1:nvar)::z
+#if NENER>0
+  integer::irad
+#endif
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,dx_min,scale,vol_min,vol_loc,weight,m_acc,temp,d_jeans
+  real(dp)::dx,dx_loc,dx_min,scale,vol_min,vol_loc,weight,m_acc
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::xpart
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx
   real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector)::cell_lev
   ! Particle based arrays
   logical,dimension(1:nvector,1:twotondim)::ok
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:3)::vv
 
-  real(dp),dimension(1:3)::r_rel,v_rel,x_acc,p_acc,l_acc,p_rel,p_rel_rad,p_rel_acc,p_rel_tan,delta_x,delta_p,drag
-  real(dp)::r_abs,fbk_ener_AGN,fbk_mom_AGN
+  real(dp),dimension(1:3)::r_rel,v_rel,x_acc,p_acc,l_acc
+  real(dp)::fbk_ener_AGN,fbk_mom_AGN
   logical,dimension(1:ndim)::period
-  real(dp)::virt_acc_mass,delta_e_tot,Mred,Macc
-  real(dp),dimension(1:nsinkmax)::delta_M
 
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:3)::cone_dir
@@ -948,7 +945,7 @@ subroutine compute_accretion_rate(write_sinks)
 
   integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
-  real(dp)::factG,d_star,boost,fa_fact
+  real(dp)::factG,d_star,boost
   real(dp)::r2,v2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf,v_bondi
   real(dp),dimension(1:3)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
@@ -1309,6 +1306,7 @@ subroutine make_sink_from_clump(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info,icpu
 #endif
   integer::ilevel
 
@@ -1318,26 +1316,30 @@ subroutine make_sink_from_clump(ilevel)
   ! The true RAMSES particle is NOT produced here...
   !----------------------------------------------------------------------
 
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_sink,index_sink_tot
+  integer ::ncache,nnew,ivar,ngrid,index_sink,index_sink_tot
   integer ::igrid,ix,iy,iz,ind,i,iskip,isink,nx_loc
-  integer ::ntot,ntot_all,info
+  integer ::ntot,ntot_all
   integer ,dimension(1:nvector)::ind_grid,ind_cell
   integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new
-  integer ,dimension(1:ncpu)::ntot_sink_cpu,ntot_sink_all
-  integer::ipart,peak_nr,grid
+  integer ,dimension(1:ncpu)::ntot_sink_cpu
+#ifndef WITHOUTMPI
+  integer ,dimension(1:ncpu)::ntot_sink_all
+#endif
   logical ::ok_free
   real(dp)::d,u,v,w,e,factG,delta_d,v2
   real(dp)::birth_epoch
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::fourpi,threepi2,tff,tsal
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  real(dp)::d_ball,vol,mclump
-  real(dp),dimension(1:nlevelmax)::volume
+  real(dp)::mclump
   real(dp),dimension(1:nvar)::z
-  real(dp),dimension(1:3)::skip_loc,x,xcell,xpeak
+  real(dp),dimension(1:3)::skip_loc,x
   real(dp),dimension(1:twotondim,1:3)::xc
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
+#endif
+#if NENER>0
+  integer::irad
 #endif
   
   if(verbose)write(*,*)'entering make_sink_from_clump for level ',ilevel
@@ -2129,7 +2131,6 @@ end subroutine merge_star_sink
 subroutine merge_smbh_sink
   use pm_commons
   use amr_commons
-  use hydro_commons,ONLY:mass_sph
   implicit none
 
   !------------------------------------------------------------------------
@@ -2259,6 +2260,7 @@ subroutine f_gas_sink(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif 
  integer::ilevel
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
@@ -2266,7 +2268,7 @@ subroutine f_gas_sink(ilevel)
   ! A plummer-sphere with radius ssoft is used for softening   
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
-  integer::info,nx_loc,idim
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,factG
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
@@ -2761,7 +2763,6 @@ end subroutine count_clouds
 subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
   use amr_commons
   use pm_commons
-  use hydro_commons, only:uold
   use poisson_commons, only:rho
   implicit none
   integer::ng,np,ilevel
@@ -2772,7 +2773,6 @@ subroutine count_clouds_np(ind_grid,ind_part,ind_grid_part,ng,np,action,ilevel)
   !--------------------------------------------------------------------------------  
   integer::i,nx_loc,isink,idim,ind
   real(dp)::scale,dx_min,weight,parts_per_cell,vol_min
-  integer,dimension(1:nvector),save::clevl
   integer,dimension(1:nvector,1:twotondim),save::cind_part
   real(dp),dimension(1:nvector,1:ndim),save::xpart
   real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xx
@@ -3144,13 +3144,14 @@ subroutine count_parts
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
 
   ! ugly routine to count all particles in the simulation level by level
   ! used for debugging
   integer::ilevel
   integer::igrid,jgrid,i,ngrid,ncache
-  integer::ig,ip,npart1,npart2,npart2_tot,icpu,info
+  integer::ig,ip,npart1,npart2,npart2_tot,icpu
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nlevelmax)::npts
 
@@ -3228,7 +3229,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   !------------------------------------------------------------------
   ! This routine returns the CIC cells and volumes for np particles.
   !------------------------------------------------------------------
-  logical::error
   integer::i,j,ind,idim,nx_loc,ix,iy,iz
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
@@ -3236,9 +3236,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
-  real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
-  real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
@@ -3318,7 +3315,7 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=INT( dd(j,idim) )
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -3486,12 +3483,10 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   !------------------------------------------------------------------
   ! This routine returns the CIC cells and volumes for np particles.
   !------------------------------------------------------------------
-  integer::i,j,ind,ivar
+  integer::j,ind,ivar
 
   ! Particle-based arrays
 
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
-  real(dp),dimension(1:nvector,1:ndim),save::x0
   real(dp),dimension(1:nvector),save::vol_tot
   real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xx
   real(dp),dimension(1:nvector,1:twotondim),save::vol
