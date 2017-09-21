@@ -264,8 +264,6 @@ subroutine init_sink
      endif
 #endif
 
-
-
   end if
   if (myid==1.and.nsink-nsinkold>0)then
      write(*,*)'sinks read from file '//filename
