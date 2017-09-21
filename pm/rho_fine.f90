@@ -1117,6 +1117,7 @@ end subroutine cic_cell
 !##############################################################################
 !##############################################################################
 !##############################################################################
+#if NDIM==3
 subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use amr_parameters
@@ -1153,8 +1154,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      write(*,*)'TSC not supported for ndim neq 3'
      call clean_stop
   end if
-
-#if NDIM==3
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -1455,12 +1454,13 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      endif
 
   end do
-#endif
 end subroutine tsc_amr
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==3
 subroutine tsc_from_multipole(ilevel)
   use amr_commons
   use hydro_commons
@@ -1482,8 +1482,6 @@ subroutine tsc_from_multipole(ilevel)
   integer::ind,i,icpu,ncache,ngrid,iskip,ibound
   integer::igrid
   integer,dimension(1:nvector),save::ind_grid
-
-#if NDIM==3
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1525,14 +1523,16 @@ subroutine tsc_from_multipole(ilevel)
         call tsc_cell(ind_grid,ngrid,ilevel)
      end do
   end if
-#endif
+
 111 format('   Entering tsc_from_multipole for level',i2)
 
 end subroutine tsc_from_multipole
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==3 
 subroutine tsc_cell(ind_grid,ngrid,ilevel)
   use amr_commons
   use poisson_commons
@@ -1557,8 +1557,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
-
-#if NDIM==3 
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel 
@@ -1737,7 +1735,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         end do
      end do
      
- ! Compute parent cell position
+     ! Compute parent cell position
      do idim=1,ndim
         do j=1,np
            icl(j,idim)=int(cl(j,idim))-2*igl(j,idim)
@@ -1799,8 +1797,8 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      
   end do
   ! End loop over grid cells
-#endif
 end subroutine tsc_cell
+#endif
 !###########################################################
 !###########################################################
 !###########################################################

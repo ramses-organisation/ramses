@@ -125,11 +125,12 @@ subroutine force_fine(ilevel,icount)
         call gradient_phi(ind_grid,ngrid,ilevel,icount)
      end do
      ! End loop over grids
-     
+
+#if NDIM==3
      if (sink)then
         call f_gas_sink(ilevel)
      end if
-     
+#endif
      ! Update boundaries
      do idim=1,ndim
         call make_virtual_fine_dp(f(1,idim),ilevel)
