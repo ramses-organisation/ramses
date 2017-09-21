@@ -90,7 +90,7 @@ contains
   logical pure function is_cloud(typep)
     type(part_t), intent(in) :: typep
     is_cloud = typep%family == FAM_CLOUD
-  end function is_sink
+  end function is_cloud
 
   logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
@@ -119,36 +119,36 @@ contains
     int2part%tag = int(mod(index, magic), 1)
   end function int2part
 
+  function props2type(idpii, tpii, mpii)
+    use amr_commons
+    use pm_parameters, only : part_t
+    implicit none
+
+    ! Converts from "old" ramses to "new" ramses
+    !
+    ! Here's the match, add yours here for backward compatibility purposes
+    ! DM     tpii == 0
+    ! stars  tpii != 0 and idpii > 0
+    ! sinks  tpii != 0 and idpii < 0
+    !
+    ! This is mostly for support of GRAFFIC I/O
+    real(dp), intent(in) :: tpii, mpii
+    integer, intent(in)  :: idpii
+
+    type(part_t) :: props2type
+
+    if (tpii == 0) then
+       props2type%family = FAM_DM
+    else if (idpii > 0) then
+       props2type%family = FAM_STAR
+    else if (idpii < 0) then
+       props2type%family = FAM_CLOUD
+    else if (mpii == 0) then
+       props2type%family = FAM_TRACER_GAS
+    end if
+    props2type%tag = 0
+  end function props2type
 end module pm_commons
 
-function props2type(idp, tp, mp)
-  use amr_commons
-  use pm_parameters, only : part_t
-  use pm_commons, only: FAM_DM, FAM_STAR, FAM_SINK, FAM_TRACER_GAS
-  implicit none
 
-  ! Converts from "old" ramses to "new" ramses
-  !
-  ! Here's the match, add yours here for backward compatibility purposes
-  ! DM     tp == 0
-  ! stars  tp != 0 and idp > 0
-  ! sinks  tp != 0 and idp < 0
-  !
-  ! This is mostly for support of GRAFFIC I/O
-  real(dp), intent(in) :: tp, mp
-  integer, intent(in)  :: idp
-
-  type(part_t) :: props2type
-
-  if (tp == 0) then
-     props2type%family = FAM_DM
-  else if (idp > 0) then
-     props2type%family = FAM_STAR
-  else if (idp < 0) then
-     props2type%family = FAM_SINK
-  else if (mp == 0) then
-     props2type%family = FAM_TRACER_GAS
-  end if
-  props2type%tag = 0
-end function props2type
 

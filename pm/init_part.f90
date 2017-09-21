@@ -34,6 +34,7 @@ subroutine init_part
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(dp),dimension(1:nvector,1:3)::xx_dp
   real(kind=8),dimension(1:nvector)::mm
+  type(part_t)::tmppart
   real(kind=8)::dispmax=0.0
 
   integer::ibuf,tagu=102
@@ -550,6 +551,11 @@ contains
     ! Initial particle number
     npart=ipart
 
+    ! Get particle type from properties
+    do i = 1, npart
+       typep(i) = props2type(idp(i), tp(i), mp(i))
+    end do
+
     ! Move particle according to Zeldovich approximation
     if(.not. read_pos)then
        xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
@@ -850,9 +856,6 @@ contains
 end subroutine init_part
 
 
-
-
-
 #define TIME_START(cs) call SYSTEM_CLOCK(COUNT=cs)
 #define TIME_END(ce) call SYSTEM_CLOCK(COUNT=ce)
 #define TIME_SPENT(cs,ce,cr) REAL((ce-cs)/cr)
@@ -934,6 +937,8 @@ subroutine load_gadget
               idp(ipart)   =ids(i)
 
               ! Get the particle type
+              typep(ipart)%family = FAM_DM
+              typep(ipart)%tag    = 0
 #ifndef WITHOUTMPI
             endif
         enddo
