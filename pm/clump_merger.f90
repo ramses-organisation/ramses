@@ -5,6 +5,7 @@ subroutine compute_clump_properties(xx)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------------
@@ -12,18 +13,23 @@ subroutine compute_clump_properties(xx)
   ! collects the  relevant information. After some MPI communications,
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
-  integer::ipart,grid,info,i,peak_nr,ilevel,global_peak_id,ipeak,plevel
+  integer::ipart,grid,peak_nr,ilevel,global_peak_id,ipeak,plevel
   real(dp)::zero=0.
   !variables needed temporarily store cell properties
   real(dp)::d,vol
   ! variables related to the size of a cell on a given level
-  real(dp)::dx,dx_loc,scale,vol_loc,tot_mass_tot
+  real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::skip_loc,xcell
   real(dp),dimension(1:twotondim,1:3)::xc
   integer::nx_loc,ind,ix,iy,iz,idim
   logical,dimension(1:ndim)::period
   logical::periodic
+
+#ifndef WITHOUTMPI
+  integer::i
+  real(dp)::tot_mass_tot
+#endif
   
 #if NDIM==3
 
@@ -261,20 +267,24 @@ subroutine write_clump_properties(to_file)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer,parameter::tag=1101
+  integer::dummy_io,info,info2
 #endif
   logical::to_file
-  integer,parameter::tag=1101
-  integer::dummy_io,info2
   !---------------------------------------------------------------------------
   ! this routine writes the clump properties to screen and to file
   !---------------------------------------------------------------------------
 
-  integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,info,nx_loc
-  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass,particle_mass_tot
+  integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,nx_loc
+  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
+
+#ifndef WITHOUTMPI
+  real(dp)::particle_mass_tot
+#endif
 
   if (.not. to_file)return
 
@@ -429,6 +439,7 @@ subroutine merge_clumps(action)
   character(len=9)::action
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif  
   !---------------------------------------------------------------------------
   ! This routine merges the irrelevant clumps 
@@ -436,14 +447,18 @@ subroutine merge_clumps(action)
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
 
-  integer::info,j,i,merge_to,ipart
-  integer::current,nmove,nmove_all,ipeak,jpeak,iter
-  integer::nsurvive,nsurvive_all,nzero,nzero_all,idepth
+  integer::j,i,merge_to,ipart
+  integer::current,nmove,ipeak,jpeak,iter
+  integer::nsurvive,nzero,idepth
   integer::ilev,global_peak_id
   real(dp)::value_iij,zero=0.,relevance_peak
   integer,dimension(1:npeaks_max)::alive,ind_sort
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
+
+#ifndef WITHOUTMPI
+  integer::nmove_all,nsurvive_all,nzero_all
+#endif
 
   if (verbose)then
      if(action.EQ.'relevance')then
@@ -984,13 +999,11 @@ subroutine build_peak_communicator
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-
-  integer::ipeak,icpu,info!,j
+  integer::info,ipeak,icpu
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
-#ifndef WITHOUTMPI
+  
   npeak_alltoall=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
@@ -1043,16 +1056,14 @@ subroutine virtual_peak_int(xx,action)
   use amr_commons
   use clfind_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif  
   integer,dimension(1:npeaks_max)::xx
   character(len=3)::action
-
+#ifndef WITHOUTMPI
+  include 'mpif.h'
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-#ifndef WITHOUTMPI
+  
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -1091,17 +1102,15 @@ subroutine virtual_peak_dp(xx,action)
   use amr_commons
   use clfind_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:npeaks_max)::xx
   character(len=3)::action
-  
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
 
-#ifndef WITHOUTMPI
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -1142,14 +1151,12 @@ subroutine virtual_saddle_max
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-  
+  integer::info,icpu
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
-  integer::ipeak,icpu,info,j,jpeak
+  integer::ipeak,jpeak,j
   integer,dimension(1:ncpu)::ipeak_alltoall
 
-#ifndef WITHOUTMPI
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   allocate(dp_peak_send_buf(1:peak_send_tot))
@@ -1185,15 +1192,13 @@ subroutine boundary_peak_int(xx)
   use amr_commons
   use clfind_commons
   implicit none
+  integer,dimension(1:npeaks_max)::xx
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
-  integer,dimension(1:npeaks_max)::xx
-
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-#ifndef WITHOUTMPI
+  
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1219,15 +1224,14 @@ subroutine boundary_peak_dp(xx)
   use amr_commons
   use clfind_commons
   implicit none
+  real(dp),dimension(1:npeaks_max)::xx
+
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-  real(dp),dimension(1:npeaks_max)::xx
-  
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-#ifndef WITHOUTMPI
+  
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1255,6 +1259,8 @@ subroutine write_clump_map
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info2
+  integer,parameter::tag=1102
 #endif
   !---------------------------------------------------------------------------
   ! This routine writes a csv-file of cell center coordinates and clump number
@@ -1267,8 +1273,6 @@ subroutine write_clump_map
   real(dp),dimension(1:3)::xcell,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   character(LEN=5)::myidstring,nchar,ncharcpu
-  integer,parameter::tag=1102
-  integer::dummy_io,info2
   
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
@@ -1338,8 +1342,9 @@ subroutine analyze_peak_memory
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
-  integer::info,i,j
+  integer::i,j
   integer,dimension(1:ncpu)::npeak_all,npeak_tot
   integer,dimension(1:ncpu)::hfree_all,hfree_tot
   integer,dimension(1:ncpu)::sparse_all,sparse_tot
