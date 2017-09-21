@@ -475,10 +475,12 @@ end subroutine writemem
 
 subroutine getmem(outmem)
   use amr_commons,only:myid
-  implicit none
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE
   use amr_commons,only:ncpu
+#endif
+  implicit none
+#ifndef WITHOUTMPI
   include 'mpif.h'
   integer::dummy_io,info2
 #endif
