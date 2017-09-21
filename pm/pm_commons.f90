@@ -58,9 +58,12 @@ module pm_commons
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
 
-
   ! Add particle types
-  integer(1) :: FAM_STAR=0, FAM_DM=1, FAM_SINK=2, FAM_TRACER=3, FAM_OTHER=4, FAM_UNDEF=-1
+  integer(1) :: FAM_DM=1, FAM_STAR=2, FAM_SINK=3, FAM_DEBRIS=4, FAM_OTHER=5
+  ! Add tracer types
+  integer(1) :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_SINK=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
+  integer(1) :: FAM_TRACER_GAS=0
+
   type(part_t), allocatable, dimension(:) :: typep  ! Particle type
 
 contains
@@ -123,18 +126,23 @@ contains
     ! DM     tp == 0
     ! stars  tp != 0 and idp > 0
     ! sinks  tp != 0 and idp < 0
+    !
+    ! This is mostly for support of GRAFFIC I/O
     real(dp), intent(in) :: tp, mp
     integer, intent(in)  :: idp
 
-    type(type_t) :: props2type
+    type(part_t) :: props2type
 
     if (tp(i) == 0) then
-       props2type(i)%family = FAM_DM
+       props2type%family = FAM_DM
     else if (idp(i) > 0) then
-       props2type(i)%family = FAM_STAR
+       props2type%family = FAM_STAR
     else if (idp(i) < 0) then
-       props2type(i)%family = FAM_SINK
+       props2type%family = FAM_SIN
+    else if (mp(i) == 0) then
+       props2type%family = FAM_TRACER_GAS
     end if
+    props2type%tag = 0
   end function props2type
 
 end module pm_commons
