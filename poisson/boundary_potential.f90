@@ -12,8 +12,8 @@ subroutine make_boundary_force(ilevel)
   ! -------------------------------------------------------------------
   integer::ibound,boundary_dir,idim,inbor
   integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
+  integer::iskip,iskip_ref,nx_loc,ix,iy,iz
+  integer,dimension(1:8)::ind_ref
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
@@ -184,10 +184,9 @@ subroutine make_boundary_phi(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
+  integer::ibound,idim
+  integer::i,ncache,igrid,ngrid,ind
+  integer::iskip,nx_loc,ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::dx,dx_loc,scale,fourpi,boxlen2
@@ -195,7 +194,6 @@ subroutine make_boundary_phi(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -293,7 +291,7 @@ subroutine make_boundary_mask(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
+  integer::ibound 
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip
   integer,dimension(1:nvector),save::ind_grid,ind_cell

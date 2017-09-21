@@ -9,6 +9,7 @@ subroutine phi_fine_cg(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel,icount
   !=========================================================
@@ -20,12 +21,15 @@ subroutine phi_fine_cg(ilevel,icount)
   ! x  : stored in phi(i)
   ! b  : stored in rho(i)
   !=========================================================
-  integer::i,idim,info,ind,iter,iskip,itermax,nx_loc
+  integer::i,ind,iter,iskip,itermax,nx_loc
   integer::idx
   real(dp)::error,error_ini
   real(dp)::dx2,fourpi,scale,oneoversix,fact,fact2
   real(dp)::r2_old,alpha_cg,beta_cg
-  real(kind=8)::r2,pAp,rhs_norm,r2_all,pAp_all,rhs_norm_all
+  real(kind=8)::r2,pAp,rhs_norm
+#ifndef WITHOUTMPI
+  real(kind=8) :: rhs_norm_all, pAp_all, r2_all
+#endif
 
   if(gravity_type>0)return
   if(numbtot(1,ilevel)==0)return
@@ -452,7 +456,7 @@ subroutine make_initial_phi(ilevel,icount)
   !
   !
   !
-  integer::igrid,ncache,i,ngrid,ind,iskip,idim,ibound
+  integer::igrid,ncache,i,ngrid,ind,iskip,idim
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
   real(dp),dimension(1:nvector,1:twotondim),save::phi_int
 
@@ -526,18 +530,16 @@ subroutine make_multipole_phi(ilevel)
   !
   !
   !
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
+  integer::idim
+  integer::i,ncache,igrid,ngrid,ind
+  integer::iskip,nx_loc,ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
-  real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps,r2
+  real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
-
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

@@ -41,16 +41,17 @@ subroutine multigrid_coarse(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: info
 #endif
   integer::ilevel,icount
   !--------------------------------------------------------
   ! Multigrid Poisson solver using Gauss-Seidel smoother
   ! with Red-Black ordering.
   !--------------------------------------------------------
-  integer::i,idim,info,ind,iter,iterj,itermax,niter_jacobi,iskip,ibound,nx_loc
-  logical::multigrid=.true.,redstep=.true.,blackstep=.false.
-  real(kind=8)::dx2,oneoversix,fourpi,scale,fact,error_ini,floor,tms
-  real(kind=8)::error,rhs_norm,error_all,rhs_norm_all,prec
+  integer :: i,ind,iter,iterj,itermax,niter_jacobi,iskip,ibound,nx_loc
+  logical :: multigrid=.true.,redstep=.true.,blackstep=.false.
+  real(kind=8) :: dx2,oneoversix,fourpi,scale,fact,error_ini,floor
+  real(kind=8) :: error,rhs_norm,error_all,rhs_norm_all,prec
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -277,7 +278,7 @@ recursive subroutine multigrid_iterator(ilevel)
   !--------------------------------------------------------
   integer::i,ind,iter,niter_jacobi,iskip
   logical::multigrid=.true.,redstep=.true.,blackstep=.false.
-  real(kind=8)::dx2,oneoversix,fact,tms
+  real(kind=8)::dx2,oneoversix,fact
  
   if(numbtot(1,ilevel)==0)return
 
@@ -569,14 +570,9 @@ subroutine restriction_fine(ilevel,multigrid)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz
-  integer,dimension(1:nvector),save::ind_grid, ind_cell, ind_leaf
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector),save::dd
-  real(kind=8)::vol,dx,dx_loc,scale,vol_loc
-  real(dp),dimension(1:3)::skip_loc
-  real(dp),dimension(1:twotondim,1:3)::xc
+  integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,ibound,nx_loc
+  integer,dimension(1:nvector),save::ind_grid
+  real(kind=8)::dx,dx_loc,scale,vol_loc
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

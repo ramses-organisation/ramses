@@ -717,7 +717,7 @@ subroutine set_scan_flag_coarse(ilevel)
 
    integer :: ind, ngrid, scan_flag
    integer :: igrid_mg, inbor, idim, igshift
-   integer :: igrid_amr, igrid_nbor_amr, cpu_nbor_amr, icell_nbor_amr
+   integer :: igrid_amr, igrid_nbor_amr, cpu_nbor_amr
 
    integer :: iskip_mg, icell_mg, igrid_nbor_mg, icell_nbor_mg
 
