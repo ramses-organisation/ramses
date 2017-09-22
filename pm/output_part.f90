@@ -14,7 +14,6 @@ subroutine backup_part(filename, file_desc)
   character(LEN=5)::nchar
   real(dp),allocatable,dimension(:)::xdp
   integer(i8b),allocatable,dimension(:)::ii8
-  integer(2),allocatable,dimension(:)::ishort
   integer,allocatable,dimension(:)::ll
   integer(1),allocatable,dimension(:)::ii1
 
@@ -127,7 +126,7 @@ subroutine backup_part(filename, file_desc)
   do i=1,npartmax
      if(levelp(i)>0)then
         ipart=ipart+1
-        ii1(ipart)=typep(i)%family
+        ii1(ipart)=int(typep(i)%family, 1)
      end if
   end do
   write(ilun)ii1
@@ -138,7 +137,7 @@ subroutine backup_part(filename, file_desc)
   do i=1,npartmax
      if(levelp(i)>0)then
         ipart=ipart+1
-        ii1(ipart)=typep(i)%tag
+        ii1(ipart)=int(typep(i)%tag, 1)
      end if
   end do
   write(ilun)ii1

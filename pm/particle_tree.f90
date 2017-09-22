@@ -913,7 +913,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
-  integer::current_property,tmpi
+  integer::current_property
 
   ! Compute parent grid index
   do i=1,np

@@ -16,7 +16,7 @@ subroutine dump_all
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::filename,,filename2,filedir,filedirini,filecmd
+  character(LEN=80)::filename,filename2,filedir,filedirini,filecmd
   integer::irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
@@ -515,9 +515,8 @@ subroutine output_header(filename)
   character(LEN=80)::filename
 
   integer::ilun
-  integer(i8b)::npart_tot
   character(LEN=80)::fileloc
-  integer(i8b)::npart_loc(-5:5), npart_tot(-5:5), npart_all_loc, npart_all
+  integer(i8b)::npart_loc(-5:5), npart_tot_fam(-5:5), npart_all_loc, npart_all
   integer :: ifam, ipart
 
   if(verbose)write(*,*)'Entering output_header'
@@ -543,18 +542,18 @@ subroutine output_header(filename)
   end do
 
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(npart_loc,npart_tot,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_loc,npart_tot_fam,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-  npart_tot = npart_loc
-  npart_all = npart_all_loc - sum(npart_tot)
+  npart_tot_fam = npart_loc
+  npart_all = npart_all_loc - sum(npart_tot_fam)
 #endif
 
   if (myid == 1) then
      write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
      do ifam = -5, 5
         write(ilun, '(a13, i10)') &
-             trim(particle_family_keys(ifam)), npart_tot(ifam)
+             trim(particle_family_keys(ifam)), npart_tot_fam(ifam)
      end do
      write(ilun, '(a13, i10)') &
           'undefined', npart_all
