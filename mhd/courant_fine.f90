@@ -5,6 +5,8 @@ subroutine courant_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  real(kind=8),dimension(4)::comm_buffin,comm_buffout
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -12,13 +14,12 @@ subroutine courant_fine(ilevel)
   ! this routine computes the maximum allowed time-step.                !
   !----------------------------------------------------------------------
   integer::i,ivar,idim,ind,ncache,igrid,iskip
-  integer::info,nleaf,ngrid,nx_loc
+  integer::nleaf,ngrid,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
 
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,emag_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
-  real(kind=8),dimension(4)::comm_buffin,comm_buffout
   real(dp),dimension(1:nvector,1:nvar+3),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 
@@ -179,9 +180,8 @@ subroutine velocity_fine(ilevel)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::info,ibound,nx_loc,idim,neul=5
+  integer::nx_loc,idim,neul=5
   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
-  real(kind=8)::rho_max_loc,rho_max_all,epot_loc,epot_all
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc
 
