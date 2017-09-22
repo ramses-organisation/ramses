@@ -17,7 +17,7 @@ subroutine compute_clump_properties(xx)
   integer::ipart,grid,peak_nr,ilevel,global_peak_id,ipeak,plevel
   real(dp)::zero=0.
   !variables needed temporarily store cell properties
-  real(dp)::d,vol
+  real(dp)::d=0.,vol=0.
   ! variables related to the size of a cell on a given level
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:nlevelmax)::volume
@@ -277,7 +277,7 @@ subroutine write_clump_properties(to_file)
   !---------------------------------------------------------------------------
 
   integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,nx_loc
-  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass
+  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass=0.
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   real(dp),dimension(1:npeaks)::peakd

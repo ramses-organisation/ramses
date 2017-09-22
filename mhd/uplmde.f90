@@ -11,7 +11,7 @@ subroutine diffusion
   integer::info
 #endif
   integer::ilevel,icycle,nsubdiff
-  real(dp)::dx,scale,dx_loc,dtdiff
+  real(dp)::dx=1.,scale,dx_loc,dtdiff
   real(dp),dimension(1:3)::skip_loc
 
   ! Determine minimum mesh size
@@ -28,7 +28,7 @@ subroutine diffusion
   dx_loc=dx/scale
 
   dtdiff=0.05*dx_loc**2/eta_mag
-  nsubdiff=dtnew(levelmin)/dtdiff
+  nsubdiff=int(dtnew(levelmin)/dtdiff,kind=4)
   nsubdiff=nsubdiff+1
   dtdiff=-dtnew(levelmin)/dble(nsubdiff)*eta_mag
 
@@ -683,9 +683,9 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
         jm1=j-1
         do i=1,Nx
            do ic=1,ngrid
-              dBz_arete_dy=(Bz(ic,i,j,k)-Bz(ic,i,jm1,k))
-              dBy_arete_dz=(By(ic,i,j,k)-By(ic,i,j,km1))
-              Ex_arete(ic,i,j,k)=(dBz_arete_dy-dBy_arete_dz)/dx
+              dBz_arete_dy=(Bz(ic,i,j,k)-Bz(ic,i,jm1,k))/dy
+              dBy_arete_dz=(By(ic,i,j,k)-By(ic,i,j,km1))/dz
+              Ex_arete(ic,i,j,k)=(dBz_arete_dy-dBy_arete_dz)
            enddo
         enddo
      enddo
@@ -698,9 +698,9 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
         do i=1,Nxp1
            im1=i-1
            do ic=1,ngrid
-              dBx_arete_dz=(Bx(ic,i,j,k)-Bx(ic,i,j,km1))
-              dBz_arete_dx=(Bz(ic,i,j,k)-Bz(ic,im1,j,k))
-              Ey_arete(ic,i,j,k)=(dBx_arete_dz-dBz_arete_dx)/dx
+              dBx_arete_dz=(Bx(ic,i,j,k)-Bx(ic,i,j,km1))/dz
+              dBz_arete_dx=(Bz(ic,i,j,k)-Bz(ic,im1,j,k))/dx
+              Ey_arete(ic,i,j,k)=(dBx_arete_dz-dBz_arete_dx)
            enddo
         enddo
      enddo
@@ -713,9 +713,9 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
         do i=1,Nxp1
            im1=i-1
            do ic=1,ngrid
-              dBy_arete_dx=(By(ic,i,j,k)-By(ic,im1,j,k))
-              dBx_arete_dy=(Bx(ic,i,j,k)-Bx(ic,i,jm1,k))
-              Ez_arete(ic,i,j,k)=(dBy_arete_dx-dBx_arete_dy)/dx
+              dBy_arete_dx=(By(ic,i,j,k)-By(ic,im1,j,k))/dx
+              dBx_arete_dy=(Bx(ic,i,j,k)-Bx(ic,i,jm1,k))/dy
+              Ez_arete(ic,i,j,k)=(dBy_arete_dx-dBx_arete_dy)
            enddo
         enddo
      enddo
