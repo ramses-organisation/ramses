@@ -444,43 +444,43 @@ contains
 !{{{
 function find_Vcirc(rayon, indice)
 implicit none
-real(dp), intent(in)		:: rayon
-integer, intent(in)		:: indice
-real(dp)					:: find_Vcirc
-real(dp)					:: vitesse, rayon_bin, vitesse_old, rayon_bin_old
-integer					:: k, indmax
+real(dp), intent(in)    :: rayon
+integer, intent(in)    :: indice
+real(dp)          :: find_Vcirc
+real(dp)          :: vitesse, rayon_bin, vitesse_old, rayon_bin_old
+integer          :: k, indmax
 
 k=2
 if (indice .EQ. 1) then
-	indmax = size(Vcirc_dat1,1)
-	rayon_bin = Vcirc_dat1(k,1)
-	rayon_bin_old = Vcirc_dat1(k-1,1)
-	vitesse = Vcirc_dat1(k,2)
-	vitesse_old = Vcirc_dat1(k-1,2)
+  indmax = size(Vcirc_dat1,1)
+  rayon_bin = Vcirc_dat1(k,1)
+  rayon_bin_old = Vcirc_dat1(k-1,1)
+  vitesse = Vcirc_dat1(k,2)
+  vitesse_old = Vcirc_dat1(k-1,2)
 else
-	indmax = size(Vcirc_dat2,1)
-	rayon_bin = Vcirc_dat2(k,1)
-	rayon_bin_old = Vcirc_dat2(k-1,1)
-	vitesse = Vcirc_dat2(k,2)
-	vitesse_old = Vcirc_dat2(k-1,2)
+  indmax = size(Vcirc_dat2,1)
+  rayon_bin = Vcirc_dat2(k,1)
+  rayon_bin_old = Vcirc_dat2(k-1,1)
+  vitesse = Vcirc_dat2(k,2)
+  vitesse_old = Vcirc_dat2(k-1,2)
 end if
 do while (rayon .GT. rayon_bin)
-	if(k .GE. indmax) then
-		write(*,*) "Hydro IC error : Radius out of rotation curve !!!"
-		call clean_stop
-	end if
-	k = k + 1
-	if (indice .EQ. 1) then
-		vitesse_old = vitesse
-		vitesse = Vcirc_dat1(k,2)
-		rayon_bin_old = rayon_bin
-		rayon_bin = Vcirc_dat1(k,1)
-	else
-		vitesse_old = vitesse
-		vitesse = Vcirc_dat2(k,2)
-		rayon_bin_old = rayon_bin
-		rayon_bin = Vcirc_dat2(k,1)
-	end if
+  if(k .GE. indmax) then
+    write(*,*) "Hydro IC error : Radius out of rotation curve !!!"
+    call clean_stop
+  end if
+  k = k + 1
+  if (indice .EQ. 1) then
+    vitesse_old = vitesse
+    vitesse = Vcirc_dat1(k,2)
+    rayon_bin_old = rayon_bin
+    rayon_bin = Vcirc_dat1(k,1)
+  else
+    vitesse_old = vitesse
+    vitesse = Vcirc_dat2(k,2)
+    rayon_bin_old = rayon_bin
+    rayon_bin = Vcirc_dat2(k,1)
+  end if
 end do
 
 find_Vcirc = vitesse_old + (rayon - rayon_bin_old) * (vitesse - vitesse_old) / (rayon_bin - rayon_bin_old)
@@ -533,16 +533,16 @@ subroutine read_vcirc_files
   nvitesses = 0
   open(unit=123, file=trim(Vcirc_dat_file1), iostat=ierr)
   do while (ierr==0)
-	read(123,*,iostat=ierr)
-	if(ierr==0) then
-		nvitesses = nvitesses + 1  ! Number of samples
-	end if
+  read(123,*,iostat=ierr)
+  if(ierr==0) then
+    nvitesses = nvitesses + 1  ! Number of samples
+  end if
   end do
   allocate(Vcirc_dat1(nvitesses,2))
   Vcirc_dat1 = 0.0D0
   rewind(123)
   do i=1,nvitesses
-	read(123,*) Vcirc_dat1(i,:)
+  read(123,*) Vcirc_dat1(i,:)
   end do
   close(123)
   ! Unit conversion kpc -> code unit and km/s -> code unit
@@ -553,16 +553,16 @@ subroutine read_vcirc_files
   nvitesses = 0
   open(unit=123, file=trim(Vcirc_dat_file2), iostat=ierr)
   do while (ierr==0)
-	read(123,*,iostat=ierr)
-	if(ierr==0) then
-		nvitesses = nvitesses + 1 ! Number of samples
-	end if
+  read(123,*,iostat=ierr)
+  if(ierr==0) then
+    nvitesses = nvitesses + 1 ! Number of samples
+  end if
   end do
   allocate(Vcirc_dat2(nvitesses,2))
   Vcirc_dat2 = 0.0D0
   rewind(123)
   do i=1,nvitesses
-	read(123,*) Vcirc_dat2(i,:)
+  read(123,*) Vcirc_dat2(i,:)
   end do
   close(123)
   ! Unit conversion kpc -> code unit and km/s -> code unit

@@ -550,44 +550,44 @@ end program halo_evolution
 
 subroutine title(n,nstring)
 
-	implicit none
-	integer::n
-	character*5::nstring
+  implicit none
+  integer::n
+  character*5::nstring
 
-	character*1::nchar1
-	character*2::nchar2
-	character*3::nchar3
-	character*4::nchar4
-	character*5::nchar5
+  character*1::nchar1
+  character*2::nchar2
+  character*3::nchar3
+  character*4::nchar4
+  character*5::nchar5
 
-	if(n.ge.10000)then
-		write(nchar5,'(i5)') n
-		nstring = nchar5
-	elseif(n.ge.1000)then
-		write(nchar4,'(i4)') n
-		nstring = '0'//nchar4
-	elseif(n.ge.100)then
-		write(nchar3,'(i3)') n
-		nstring = '00'//nchar3
-	elseif(n.ge.10)then
-		write(nchar2,'(i2)') n
-		nstring = '000'//nchar2
-	else
-		write(nchar1,'(i1)') n
-		nstring = '0000'//nchar1
-	endif
+  if(n.ge.10000)then
+    write(nchar5,'(i5)') n
+    nstring = nchar5
+  elseif(n.ge.1000)then
+    write(nchar4,'(i4)') n
+    nstring = '0'//nchar4
+  elseif(n.ge.100)then
+    write(nchar3,'(i3)') n
+    nstring = '00'//nchar3
+  elseif(n.ge.10)then
+    write(nchar2,'(i2)') n
+    nstring = '000'//nchar2
+  else
+    write(nchar1,'(i1)') n
+    nstring = '0000'//nchar1
+  endif
 
 end subroutine title
 
 
 subroutine swap(A,C)
 
-	implicit none
+  implicit none
 
-	real :: A,C,Anew
-	Anew=A
-	A=C
-	C=Anew
+  real :: A,C,Anew
+  Anew=A
+  A=C
+  C=Anew
 
 end subroutine
 

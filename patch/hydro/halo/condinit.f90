@@ -144,7 +144,7 @@ contains
     i=0
 10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
-       !	Calculate next trapezoidal rule approximation to integral.
+       !  Calculate next trapezoidal rule approximation to integral.
 
        g0=0.0d0
        do k=1,nint

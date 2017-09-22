@@ -666,11 +666,11 @@ subroutine init_uold(ilevel)
      do i=1,active(ilevel)%ngrid
         ! Initialisation of the refinement mask
         if((ic_mask_ivar.gt.0).and.(ivar_refine.gt.0).and.(ic_mask_ivar.le.nvar).and.(ivar_refine.le.nvar))then
-	   ! Switch to K/mu for ic_mask_ivar=ndim+2 case
+     ! Switch to K/mu for ic_mask_ivar=ndim+2 case
            if(ic_mask_ivar.eq.ndim+2) then
-	      u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)*scale_T2*(gamma-1)
+        u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)*scale_T2*(gamma-1)
            else
-	      u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)
+        u = uold(active(ilevel)%igrid(i)+iskip,ic_mask_ivar)
            endif
            if(ic_mask_ivar.gt.1)then
               u = u/uold(active(ilevel)%igrid(i)+iskip,1)

@@ -5,10 +5,10 @@
 !========================================================================================
 !==  Namelist settings:
 !==
-!==	ic_file     : Gadget1 file in the IC directory
-!== 	IG_rho      : Density of the intergalactic medium
-!== 	IG_T2       : Temperature of the intergalactic medium
-!== 	IG_metal    : Metallicity of the intergalactic medium
+!==  ic_file     : Gadget1 file in the IC directory
+!==   IG_rho      : Density of the intergalactic medium
+!==   IG_T2       : Temperature of the intergalactic medium
+!==   IG_metal    : Metallicity of the intergalactic medium
 !==
 !========================================================================================
 
