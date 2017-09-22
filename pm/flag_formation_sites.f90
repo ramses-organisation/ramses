@@ -782,7 +782,6 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
   logical,dimension(1:ndim)::period
-#endif
 
 #ifdef SOLVERmhd
   real(dp),dimension(1:nvector)::B_dot_n,B_dot_r,B2
@@ -794,8 +793,6 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   integer::nener_offset
   nener_offset = inener-1
 #endif
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
