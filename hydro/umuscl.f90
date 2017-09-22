@@ -994,7 +994,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
   real(dp)::dfz
 #endif
-#if NDIM>2
+#if NDIM>1
   real(dp)::vmin,vmax,dfx,dfy,dff
 #endif
   integer::ilo,ihi,jlo,jhi,klo,khi

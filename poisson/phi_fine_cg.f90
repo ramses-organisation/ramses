@@ -25,7 +25,7 @@ subroutine phi_fine_cg(ilevel,icount)
   integer::idx
   real(dp)::error,error_ini
   real(dp)::dx2,fourpi,scale,oneoversix,fact,fact2
-  real(dp)::r2_old,alpha_cg,beta_cg
+  real(dp)::r2_old=0.,alpha_cg,beta_cg
   real(kind=8)::r2,pAp,rhs_norm
 #ifndef WITHOUTMPI
   real(kind=8) :: rhs_norm_all, pAp_all, r2_all

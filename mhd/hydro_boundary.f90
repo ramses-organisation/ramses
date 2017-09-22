@@ -11,9 +11,9 @@ subroutine make_boundary_hydro(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1,iperp2,iplane,icell
-  integer::iskip,iskip_ref,iskip_normal,gdim,nx_loc,ix,iy,iz
+  integer::ibound,boundary_dir,idim,inbor=1
+  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1=7,iperp2=8,iplane,icell
+  integer::iskip,iskip_ref,iskip_normal,gdim=1,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt,ind_normal
   integer,dimension(1:4,1:2)::ind0
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref

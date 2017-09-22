@@ -82,7 +82,10 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,irad,i,idim,ind_son,iskip_son
+  integer ::ivar,i,idim,ind_son,iskip_son
+#if NENER>0
+  integer::irad
+#endif
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx,ekin,erad
 
@@ -226,7 +229,10 @@ subroutine interpol_hydro(u1,u2,nn)
   !                 type 3 for velocity and type 2 for density and
   !                 internal energy.
   !----------------------------------------------------------
-  integer::i,j,ivar,irad,idim,ind,ix,iy,iz,ind2
+  integer::i,j,ivar,idim,ind,ix,iy,iz
+#if NENER>0
+  integer::irad
+#endif
   real(dp)::oneover_twotondim
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a

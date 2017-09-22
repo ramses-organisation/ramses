@@ -30,6 +30,7 @@ subroutine gravana(x,f,dx,ncell)
   ! Point mass
   if(gravity_type==2)then 
      gmass=gravity_params(1) ! GM
+     emass=dx
      emass=gravity_params(2) ! Softening length
      xmass=gravity_params(3) ! Point mass coordinates
      ymass=gravity_params(4)

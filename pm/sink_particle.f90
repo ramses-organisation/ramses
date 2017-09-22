@@ -1,3 +1,4 @@
+#if NDIM==3
 !################################################################
 !################################################################
 !################################################################
@@ -11,7 +12,6 @@ subroutine create_sink
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-
   !----------------------------------------------------------------------------
   ! sink creation routine
   ! -remove all cloud particles, keep only global sink arrays
@@ -3632,3 +3632,4 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
+#endif

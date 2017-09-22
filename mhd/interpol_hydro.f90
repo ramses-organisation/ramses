@@ -18,7 +18,7 @@ subroutine upload_fine(ilevel)
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   integer::ind_left,ind_right,neul=5
   integer::id1,id2,ig1,ig2,ih1,ih2
-  integer::i,icpu,idim,ivar,ncache,igrid,ngrid,ind,iskip,nsplit,icell
+  integer::i,idim,ncache,igrid,ngrid,ind,iskip,nsplit,icell
 
   real(dp)::emag
 
@@ -242,7 +242,10 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,i,idim,ind_son,iskip_son,ind,neul=5,irad
+  integer::ivar,i,idim,ind_son,iskip_son,ind,neul=5
+#if NENER>0
+  integer::irad
+#endif
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx,ekin,emag,erad
   integer,dimension(1:6,1:4)::hhh
@@ -546,8 +549,10 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5,irad
-
+  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
+#if NENER>0
+  integer::irad
+#endif
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
@@ -752,7 +757,7 @@ subroutine compute_central(a,w,nn)
   ! MinMod slope
   !---------------
   integer::i,idim
-  real(dp)::diff_left,diff_right,minmod
+  real(dp)::diff_left,diff_right
 
   do idim=1,ndim
      do i=1,nn
@@ -920,7 +925,7 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   ! interpol_mag_type=2: linear interpolation with Monotonized Central slope
   ! interpol_mag_type=3: linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,k,ind,l,idim,imax,jmax,kmax
+  integer::i,j,k,ind,l,imax,jmax,kmax
   real(dp),dimension(1:nvector,-1:1,0:1,0:1),save::u
   real(dp),dimension(1:nvector,0:1,-1:1,0:1),save::v
   real(dp),dimension(1:nvector,0:1,0:1,-1:1),save::w

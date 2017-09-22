@@ -1,3 +1,4 @@
+#if NDIM==3
 subroutine star_formation(ilevel)
   use amr_commons
   use pm_commons
@@ -178,7 +179,6 @@ subroutine star_formation(ilevel)
      localseed=allseed(myid,1:IRandNumSize)
   end if
 
-#if NDIM==3
   !------------------------------------------------
   ! Convert hydro variables to primitive variables
   !------------------------------------------------
@@ -825,10 +825,10 @@ subroutine star_formation(ilevel)
      end do
   end do
 
-#endif
   if(sf_log_properties) close(ilun)
 
 end subroutine star_formation 
+#endif
 !################################################################
 !################################################################
 !################################################################

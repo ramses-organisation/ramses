@@ -118,9 +118,10 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------
   ! Update sink cloud particle properties
   !-----------------
+#if NDIM==3
                                call timer('sinks','start')
   if(sink)call update_cloud(ilevel)
-
+#endif
   !-----------------
   ! Particle leakage
   !-----------------
@@ -267,9 +268,10 @@ recursive subroutine amr_step(ilevel,icount)
         if(simple_boundary)call make_boundary_hydro(ilevel)
         
         ! Compute Bondi-Hoyle accretion parameters
+#if NDIM==3
                                call timer('sinks','start')
         if(sink)call collect_acczone_avg(ilevel)
-
+#endif
      end if
   end if
 
@@ -315,23 +317,30 @@ recursive subroutine amr_step(ilevel,icount)
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         call update_time(ilevel)
+#if NDIM==3
         if(sink)call update_sink(ilevel)
+#endif
      end if
   else
      call update_time(ilevel)
+#if NDIM==3
      if(sink)call update_sink(ilevel)
+#endif
   end if
 
   ! Thermal feedback from stars
+#if NDIM==3
                                call timer('feedback','start')
   if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
+#endif
 
   ! Density threshold or Bondi accretion onto sink particle
+#if NDIM==3
   if(sink)then
                                call timer('sinks','start')
      call grow_sink(ilevel,.false.)
   end if
-
+#endif
   !-----------
   ! Hydro step
   !-----------
@@ -423,9 +432,10 @@ recursive subroutine amr_step(ilevel,icount)
   !----------------------------------
   ! Star formation in leaf cells only
   !----------------------------------
+#if NDIM==3
                                call timer('feedback','start')
   if(hydro.and.star.and.(.not.static_gas))call star_formation(ilevel)
-
+#endif
   !---------------------------------------
   ! Update physical and virtual boundaries
   !---------------------------------------
@@ -493,7 +503,9 @@ recursive subroutine amr_step(ilevel,icount)
      !---------------
      ! Sink production
      !---------------
+#if NDIM==3
      if(ilevel==levelmin)call create_sink
+#endif
   end if
 
   !-------------------------------

@@ -10,7 +10,7 @@ subroutine make_boundary_force(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
+  integer::ibound,boundary_dir,idim,inbor=1
   integer::i,ncache,ivar,igrid,ngrid,ind
   integer::iskip,iskip_ref,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref

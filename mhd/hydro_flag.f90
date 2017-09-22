@@ -158,7 +158,10 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use poisson_commons
   use cooling_module, ONLY: twopi
   implicit none
-  integer::ncell,ilevel,irad
+  integer::ncell,ilevel
+#if NENER>0
+  integer::irad
+#endif
   integer,dimension(1:nvector)::ind_cell
   logical,dimension(1:nvector)::ok
   !-------------------------------------------------

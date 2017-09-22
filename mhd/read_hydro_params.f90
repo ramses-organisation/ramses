@@ -9,9 +9,9 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Local variables  
   !--------------------------------------------------
-  integer::i,idim,nboundary_true=0
+  integer::i,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type
-  real(dp)::scale,ek_bound,em_bound
+  real(dp)::ek_bound,em_bound
 
   !--------------------------------------------------
   ! Namelist definitions
