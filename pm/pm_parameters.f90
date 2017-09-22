@@ -16,7 +16,7 @@ module pm_parameters
   integer::ir_cloud_massive=3                ! Radius of massive cloud region in unit of grid spacing for PM sinks
   real(dp)::sink_soft=2.d0                   ! Sink grav softening length in dx at levelmax for "direct force" sinks
   real(dp)::mass_sink_direct_force=-1.d0     ! mass above which sinks are treated as "direct force" objects
-  
+
   logical::create_sinks=.false.              ! turn formation of new sinks on
 
   real(dp)::merging_timescale=-1.d0          ! time during which sinks are considered for merging (only when 'timescale' is used),                                             ! used also as contraction timescale in creation

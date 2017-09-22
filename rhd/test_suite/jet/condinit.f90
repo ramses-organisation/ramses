@@ -28,7 +28,7 @@ subroutine condinit(x,u,dx,nn)
   real(dp)::h,lor
   real(dp)::r,x0,y0
 
-! Initial conditions for a relativistic 2d blast wave 
+! Initial conditions for a relativistic 2d blast wave
 ! Del Zanna - Bucciantini-2002- A&A 390,1177
 
   y0=0.5*boxlen

@@ -3,10 +3,10 @@ subroutine backup_part(filename, file_desc)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
   integer::dummy_io,info2
   integer,parameter::tag=1122
-#endif 
+#endif
   character(LEN=80)::filename, file_desc
 
   integer::i,idim,ilun,ipart

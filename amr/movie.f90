@@ -17,7 +17,7 @@ subroutine output_frame()
   integer::info,iframe
   real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif
-  
+
 #ifdef NOSYSTEM
   integer::info2
 #endif
@@ -97,7 +97,7 @@ subroutine output_frame()
   real(dp),dimension(8)::xcube,ycube,zcube
   integer::icube,iline
   real(dp)::minx,maxx,miny,maxy,minz,maxz,d1,d2,d3,d4,l1,l2,l3,l4
-#endif  
+#endif
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
   real(kind=8),dimension(:,:,:),allocatable::rt_data_frame
@@ -124,7 +124,7 @@ subroutine output_frame()
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(.not.withoutmkdir) then
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)  
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)
 #else
      if(myid==1)then
         call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)

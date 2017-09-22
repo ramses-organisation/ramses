@@ -20,7 +20,7 @@ subroutine init_radiation
   integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------
   ! Allocate radiation arrays on the AMR grid
   !------------------------------------------
@@ -29,7 +29,7 @@ subroutine init_radiation
   allocate(Srad(1:ncell))
   Erad=0.0  ! Photon density = 0 initially.
   Srad=0.0  ! No initial sources.
-  
+
   ! Force constant UV bkg
   force_j0_one=.true.
 
@@ -39,7 +39,7 @@ subroutine init_radiation
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     if(IOGROUPSIZEREP>0) then 
+     if(IOGROUPSIZEREP>0) then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/rad_'//TRIM(nchar)//'.out'
      else

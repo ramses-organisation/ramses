@@ -17,8 +17,10 @@ program histo_main
   real::omega_m,omega_l,omega_k,omega_b
   real::tpoly=0d0, npoly=1.0
 
-  integer::imin,imax,jmin,jmax,kmin,kmax,gcc=0
-  integer::nvarh
+  integer::nx_sample=0,ny_sample=0,nz_sample=0
+  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
+  integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
+  integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max

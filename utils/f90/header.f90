@@ -59,7 +59,7 @@ program header
      write(*,996)scale_l,scale_d,scale_t
   end if
 
-
+990 format(' Enter output number:',i6)
 991 format(' ncpu=',i6,' ndim=',i1,' nstep=',i6)
 993 format(' nlevelmax=',i3,' ngridmax=',i8)
 994 format(' t=',1pe10.3,' aexp=',1pe10.3,' hexp=',1pe10.3)

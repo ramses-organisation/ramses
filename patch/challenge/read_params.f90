@@ -126,7 +126,7 @@ subroutine read_params
      end if
   endif
 #endif
-  
+
 
   INQUIRE(file=infile,exist=nml_ok)
   if(.not. nml_ok)then
@@ -153,7 +153,7 @@ subroutine read_params
   read(1,NML=poisson_params,END=81)
 81 continue
 
- 
+
   !-------------------------------------------------
   ! Compute time step for outputs
   !-------------------------------------------------
@@ -246,7 +246,7 @@ subroutine read_params
      end if
   endif
 #endif
-  
+
   !-----------------
   ! Max size checks
   !-----------------
@@ -258,7 +258,7 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -288,7 +288,7 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

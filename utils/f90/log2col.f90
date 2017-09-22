@@ -88,6 +88,7 @@ contains
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
+    logical       :: bad, ok
 
     n = iargc()
     if (n < 4) then

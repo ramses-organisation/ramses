@@ -1,5 +1,5 @@
-!RT patch: RT variables are output as they are and not divided by gas  
-!          density. Also there are checks on zero division to avoid 
+!RT patch: RT variables are output as they are and not divided by gas
+!          density. Also there are checks on zero division to avoid
 !          floating point exceptions.
 !          Also added call to output_rtInfo.
 !************************************************************************
@@ -26,7 +26,7 @@ SUBROUTINE rt_backup_hydro(filename)
   if(verbose)write(*,*)'Entering backup_rt'
 
   ilun=ncpu+myid+10
-     
+
   if(myid==1)then
      call title(ifout-1,nchar)
           if(IOGROUPSIZEREP>0) then
@@ -36,8 +36,8 @@ SUBROUTINE rt_backup_hydro(filename)
      endif
      rt_filename=TRIM(filedir)//'info_rt_'//TRIM(nchar)//'.txt'
      call output_rtInfo(rt_filename)
-  endif                                                           
-  
+  endif
+
   if(.not.rt)return
   ! Wait for the token
 #ifndef WITHOUTMPI
@@ -48,8 +48,8 @@ SUBROUTINE rt_backup_hydro(filename)
      end if
   endif
 #endif
-  
-  
+
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(unit=ilun,file=fileloc,form='unformatted')
@@ -140,7 +140,7 @@ SUBROUTINE output_rtInfo(filename)
   ! Open file
   fileloc=TRIM(filename)
   open(unit=ilun,file=fileloc,form='formatted')
-  
+
   ! Write run parameters
   write(ilun,'("nRTvar      =",I11)')nRTvar
   write(ilun,'("nIons       =",I11)')nIons

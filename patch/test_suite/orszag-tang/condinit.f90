@@ -15,10 +15,10 @@ subroutine condinit(x,u,dx,nn)
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft, 
+  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft,
   ! U(i,nvar+1:nvar+3): Bright
   ! Q is the primitive variable vector. Conventions are here:
-  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft, 
+  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft,
   ! Q(i,nvar+1:nvar+3): Bright
   ! If nvar > 8, remaining variables (9:nvar) are treated as passive
   ! scalars in the hydro solver.
@@ -95,7 +95,7 @@ end subroutine condinit
 !================================================================
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -137,12 +137,12 @@ end subroutine velana
 !========================================================================================
 !========================================================================================
 subroutine calc_boxlen
- 
+
   implicit none
   !================================================================
   !this routine calculate boxlen
   !================================================================
-  
+
   return
 
 end subroutine calc_boxlen

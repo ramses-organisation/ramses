@@ -56,13 +56,13 @@ subroutine backup_hydro(filename)
 
               !convert to primitive variables
               ! Compute density
-              D = uold(ind_grid(i)+iskip,1) 
+              D = uold(ind_grid(i)+iskip,1)
               ! Compute momentum
-              Mx=uold(ind_grid(i)+iskip,2) 
-              My=uold(ind_grid(i)+iskip,3) 
+              Mx=uold(ind_grid(i)+iskip,2)
+              My=uold(ind_grid(i)+iskip,3)
               Mz=uold(ind_grid(i)+iskip,4)
               M = sqrt(Mx**2+My**2+Mz**2)
-              ! Compute total energy 
+              ! Compute total energy
               E = uold(ind_grid(i)+iskip,5)
               !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
@@ -76,46 +76,46 @@ subroutine backup_hydro(filename)
                  write(*,*),'E<0 in ctoprimbis'
                  uold(ind_grid(i)+iskip,5)=E
               endif
-              
+
               if (E**2<M**2+D**2) then
-                 
+
                  write (*,*) 'Switch...ctoprimbis'
                  E=sqrt(M**2+d**2+1d-8)
                  uold(ind_grid(i)+iskip,5)=E
               endif
 
-              
-              if ( M .eq. 0) then 
+
+              if ( M .eq. 0) then
                  qq(i,1) = D
                  qq(i,2) = 0d0
                  qq(i,3) = 0d0
                  qq(i,4) = 0d0
-                 if (eos .eq. 'TM') then 
+                 if (eos .eq. 'TM') then
                     qq(i,5) =(E**2-D**2)/3d0/E
                  else
-                    qq(i,5)=(E-D)*(gamma-1d0)   
+                    qq(i,5)=(E-D)*(gamma-1d0)
                  endif
                  lor=1d0
               else
-                 
+
                  call Newton_Raphson_Mignone(D,M,E,gamma,R)
-                 
+
                  ! Compute the Lorentz factor
                  u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
                  lor = (1.0d0+u2)**(1.d0/2.d0)
-                 
+
                  ! Compute the density
                  qq(i,1) = D/lor
-                 
+
                  ! compute velocities
                  qq(i,2) = Mx/R
                  qq(i,3) = My/R
                  qq(i,4) = Mz/R
-                 
+
                  ! Compute pressure
                  Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
-                 
-                 if (eos .eq. 'TM') then 
+
+                 if (eos .eq. 'TM') then
                     rho=qq(i,1)
                     qq(i,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                  else
@@ -123,10 +123,10 @@ subroutine backup_hydro(filename)
                  endif
               endif
               if ((qq(i,1)<0.d0) .or.((qq(i,5)<0.d0))) then
-                 
+
                  write(*,*) 'negative pressure or density output'
               endif
-              
+
               do ivar=6,nvar
                  qq(i,ivar)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
               enddo
@@ -157,7 +157,7 @@ subroutine backup_hydro(filename)
   end do
 end do
 close(ilun)
-     
+
 end subroutine backup_hydro
 
 

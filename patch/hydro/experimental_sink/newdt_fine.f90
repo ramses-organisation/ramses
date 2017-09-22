@@ -15,7 +15,7 @@ subroutine newdt_fine(ilevel)
   ! This routine compute the time step using 4 constraints:
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
-  ! 3- 10% maximum variation for aexp 
+  ! 3- 10% maximum variation for aexp
   ! 4- maximum step time for ATON
   ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
@@ -79,7 +79,7 @@ subroutine newdt_fine(ilevel)
 
      dt_all=dtnew(ilevel); dt_loc=dt_all
      ekin_all=0.0; ekin_loc=0.0
-     
+
      ! Compute maximum time step on active region
      if(numbl(myid,ilevel)>0)then
         ! Loop over grids
@@ -124,7 +124,7 @@ subroutine newdt_fine(ilevel)
   end if
 
   if(hydro)call courant_fine(ilevel)
-  
+
 111 format('   Entering newdt_fine for level ',I2)
 
 end subroutine newdt_fine
@@ -171,7 +171,7 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
         ekin_loc=ekin_loc+0.5D0*mp(ind_part(i))*vp(ind_part(i),idim)**2
      end do
   end do
-    
+
 end subroutine newdt2
 
 

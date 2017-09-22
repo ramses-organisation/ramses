@@ -43,12 +43,12 @@ subroutine condinit(x,u,dx,nn)
      yy=x(i,2)-y0
      rr=sqrt(xx**2+yy**2)
      sigma=atan((rmax-rr)/hh)/pi + 0.5
-     
+
      q(i,id)=MAX(sigma,smallr)
 
      ! Keplerian angular velocity
      omegaK=1.0/(rr**1.5+rmin**1.5)
-      
+
      ! Sound speed profile
      c2=hh**2*(omegaK*rr)**2
 
@@ -56,7 +56,7 @@ subroutine condinit(x,u,dx,nn)
      omega=sqrt(omegaK**2 &
           & +c2/gamma/rr**2*(2.-3.*omegaK*rr**(1.5)) + &
           & -c2/gamma/rr**2*(rr/hh)/(1.+((rmax-rr)/hh)**2)/pi/sigma )
-     
+
      q(i,iu)=-omega*yy
      q(i,iv)=+omega*xx
      q(i,ip)=sigma*c2/gamma

@@ -44,12 +44,12 @@ subroutine read_eos_params(eos_type, nH_H_cc_threshold)
   character(LEN=80)::infile
   character(len=32)::eos_type
   real(dp)::nH_H_cc_threshold
-  
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
   namelist/eos_params/eos_type, nH_H_cc_threshold
-  
+
   CALL getarg(1,infile)
   open(1,file=infile)
   rewind(1)
@@ -106,7 +106,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
       call read_eos_params(eos_type, nH_H_cc_threshold)
       init_nml = .true.
   end if
-  
+
   ! Typical ISM density in H/cc
   nISM = n_star; nCOM=0d0
   if(cosmo)then
@@ -143,7 +143,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      do i=1,nleaf
         nH(i)=MAX(uold(ind_leaf(i),1),smallr)
      end do
-     
+
      ! Compute metallicity in solar units
      if(metal)then
         do i=1,nleaf

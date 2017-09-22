@@ -1,7 +1,7 @@
 program amr2map
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite projetee pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   use utils
@@ -74,13 +74,13 @@ program amr2map
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -213,7 +213,7 @@ program amr2map
         kmin=int(zmin*dble(maxdom))
         kmax=kmin+1
      endif
-     
+
      dkey=(dble(2**(nlevelmax+1)/dble(maxdom)))**ndim
      ndom=1
      if(bit_length>0)ndom=8
@@ -229,7 +229,7 @@ program amr2map
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),bounding(1),bit_length,1)
@@ -254,7 +254,7 @@ program amr2map
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -466,7 +466,7 @@ program amr2map
                  map = var(:,ind,4)*var(:,ind,1)
               case (5) ! Pressure
                  if(do_max)then
-                    map = var(:,ind,5)/var(:,ind,1)                    
+                    map = var(:,ind,5)/var(:,ind,1)
                  else
                     map = var(:,ind,5)
                  endif
@@ -689,11 +689,11 @@ program amr2map
   endif
 
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
@@ -731,7 +731,7 @@ contains
        print *, ' maxi : 1 = maximum along line of sight'
        stop
     end if
-    
+
     do i = 1,n,2
        call get_command_argument(i,opt)
        if (i == n) then
@@ -745,7 +745,7 @@ contains
        case ('-out')
           outfich = trim(arg)
        case ('-dir')
-          proj = trim(arg) 
+          proj = trim(arg)
        case ('-xmi')
           read (arg,*) xmin
        case ('-xma')
@@ -774,9 +774,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2map

@@ -4,15 +4,15 @@
 !##############################################################
 subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
      &                    nbors_father_grids,ncell,ilevel)
-  use amr_commons 
+  use amr_commons
   implicit none
   integer::ncell,ilevel
   integer,dimension(1:nvector)::ind_cell_father
   integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
   integer,dimension(1:nvector,1:twotondim)::nbors_father_grids
   !------------------------------------------------------------------
-  ! This subroutine determines the 3^ndim neighboring father cells 
-  ! of the input father cell. According to the refinement rule, 
+  ! This subroutine determines the 3^ndim neighboring father cells
+  ! of the input father cell. According to the refinement rule,
   ! they should be present anytime.
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok
@@ -140,7 +140,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
      end do
 
   else    ! else, more complicated...
-     
+
      ! Get father cell position in the grid
      do i=1,ncell
         pos(i)=(ind_cell_father(i)-ncoarse-1)/ngridmax+1
@@ -204,9 +204,9 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
   integer,dimension(1:nvector,1:twotondim)::nbors_father_grids
   !--------------------------------------------------------------------
-  ! This subroutine determines the 3^ndim neighboring father cells 
-  ! of the input cell at position ind in grid ind_grid. According to 
-  ! the refinements rules and since the input cell is refined, 
+  ! This subroutine determines the 3^ndim neighboring father cells
+  ! of the input cell at position ind in grid ind_grid. According to
+  ! the refinements rules and since the input cell is refined,
   ! they should be present anytime.
   !--------------------------------------------------------------------
   integer::i,j,iskip
@@ -220,7 +220,7 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:27,1:8,1:3)::lll,mmm
   integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
-  
+
   call getindices3cube(lll,mmm)
 
   iimin=0; iimax=0
@@ -255,7 +255,7 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
               endif
            end do
         end if
- 
+
         do ii=iimin,iimax
            do i=1,ng
               ind_grid3(i)=ind_grid2(i)
@@ -272,11 +272,11 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
            inbor=1+ii+2*jj+4*kk
            do i=1,ng
               nbors_grids(i,inbor)=ind_grid3(i)
-           end do     
+           end do
 
         end do
      end do
-  end do     
+  end do
 
   do j=1,twotondim
      do i=1,ng
@@ -305,7 +305,7 @@ end subroutine get3cubepos
 subroutine getindices3cube(lll,mmm)
   implicit none
   integer,dimension(1:27,1:8,1:3)::lll,mmm
-  
+
   lll=0; mmm=0
   ! -> ndim=1
   ! @ind =1
@@ -369,7 +369,7 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   !--------------------------------------------------------------
   ! This routine computes the index of 6-neighboring cells
   ! The user must provide igridn = index of the 6 neighboring
-  ! grids and the cell's grid (see routine getnborgrids). 
+  ! grids and the cell's grid (see routine getnborgrids).
   ! ind is the cell index in the grid.
   !--------------------------------------------------------------
   integer::i,in,ig,ih,iskip
@@ -409,8 +409,8 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector,0:twondim)::ind_father
   !-----------------------------------------------------------------
   ! This subroutine determines the 2*ndim neighboring cells
-  ! cells of the input cell (ind_cell). 
-  ! If for some reasons they don't exist, the routine returns 
+  ! cells of the input cell (ind_cell).
+  ! If for some reasons they don't exist, the routine returns
   ! the neighboring father cells of the input cell.
   !-----------------------------------------------------------------
   integer::nxny,i,idim,j,iok,ind
@@ -477,7 +477,7 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
      do i=1,ncell
         pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
      end do
-     
+
      ! Get father grid
      do i=1,ncell
         ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
@@ -534,8 +534,8 @@ subroutine getnborgrids(igrid,igridn,ngrid)
   integer,dimension(1:nvector)::igrid
   integer,dimension(1:nvector,0:twondim)::igridn
   !---------------------------------------------------------
-  ! This routine computes the index of the 6 neighboring 
-  ! grids for grid igrid(:). The index for the central 
+  ! This routine computes the index of the 6 neighboring
+  ! grids for grid igrid(:). The index for the central
   ! grid is stored in igridn(:,0). If for some reasons
   ! the neighboring grids don't exist, then igridn(:,j) = 0.
   !---------------------------------------------------------
@@ -551,7 +551,7 @@ subroutine getnborgrids(igrid,igridn,ngrid)
         igridn(i,j)=son(nbor(igrid(i),j))
      end do
   end do
-    
+
 end subroutine getnborgrids
 !##############################################################
 !##############################################################
@@ -580,7 +580,7 @@ subroutine getnborgrids_check(igrid,igridn,ngrid)
         if (nbor(igrid(i),j)>0)igridn(i,j)=son(nbor(igrid(i),j))
      end do
   end do
-    
+
 end subroutine getnborgrids_check
 
 

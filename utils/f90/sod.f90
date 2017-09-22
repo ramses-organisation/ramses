@@ -54,15 +54,15 @@ program sphericaloverdensity
 
   npart=0
   do icpu=1,ncpu
-  call title(icpu,ncharcpu)
-  nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-  write(*,*)'Reading file '//TRIM(nomfich)
-  open(unit=1,file=nomfich,status='old',form='unformatted')
-  read(1)ncpu2
-  read(1)ndim2
-  read(1)npart2
-  close(1)
-  npart=npart+npart2
+     call title(icpu,ncharcpu)
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     write(*,*)'Reading file '//TRIM(nomfich)
+     open(unit=1,file=nomfich,status='old',form='unformatted')
+     read(1)ncpu2
+     read(1)ndim2
+     read(1)npart2
+     close(1)
+     npart=npart+npart2
   end do
 
   write(*,*)'Found ',npart,' particles'
@@ -73,25 +73,25 @@ program sphericaloverdensity
 
   npart=0
   do icpu=1,ncpu
-  call title(icpu,ncharcpu)
-  nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-  open(unit=1,file=nomfich,status='old',form='unformatted')
-  read(1)ncpu2
-  read(1)ndim2
-  read(1)npart2
-  allocate(tmp(1:npart2))
-  do i=1,ndim
+     call title(icpu,ncharcpu)
+     nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
+     open(unit=1,file=nomfich,status='old',form='unformatted')
+     read(1)ncpu2
+     read(1)ndim2
+     read(1)npart2
+     allocate(tmp(1:npart2))
+     do i=1,ndim
+        read(1)tmp
+        x(npart+1:npart+npart2,i)=tmp
+     end do
+     do i=1,ndim
+        read(1)tmp
+     end do
      read(1)tmp
-     x(npart+1:npart+npart2,i)=tmp
-  end do
-  do i=1,ndim
-     read(1)tmp
-  end do
-  read(1)tmp
-  mp(npart+1:npart+npart2)=tmp
-  close(1)
-  npart=npart+npart2
-  deallocate(tmp)
+     mp(npart+1:npart+npart2)=tmp
+     close(1)
+     npart=npart+npart2
+     deallocate(tmp)
   end do
 
   mtot=0.0d0
@@ -136,61 +136,61 @@ program sphericaloverdensity
 contains
   subroutine read_params
 
-      implicit none
+    implicit none
 
-      integer       :: i,n
-      integer       :: iargc
-      character(len=4)   :: opt
-      character(len=128) :: arg
+    integer       :: i,n
+    integer       :: iargc
+    character(len=4)   :: opt
+    character(len=128) :: arg
 
-      n = iargc()
-      if (n < 2) then
-         print *, 'usage: sod  [-inp input_dir]'
-         print *, '            [-nx  nx_grid]  (optional)'
-         print *, '            [-min np_min]   (optional)'
-         print *, '            [-sel ncell]    (optional)'
-         print *, '            [-del del_bar]  (optional)'
-         print *, '            [-hlp]          (optional)'
-         stop
-      end if
+    n = command_argument_count()
+    if (n < 2) then
+       print *, 'usage: sod  [-inp input_dir]'
+       print *, '            [-nx  nx_grid]  (optional)'
+       print *, '            [-min np_min]   (optional)'
+       print *, '            [-sel ncell]    (optional)'
+       print *, '            [-del del_bar]  (optional)'
+       print *, '            [-hlp]          (optional)'
+       stop
+    end if
 
-      do i = 1,n,2
-         call getarg(i,opt)
-         if (opt == '-hlp') then
-            print 1, repository,nx,seuil,mmin
-            stop
-         end if
-         if (i == n) then
-            print '("option ",a2," has no argument")', opt
-            stop 2
-         end if
-         call getarg(i+1,arg)
-         select case (opt)
-         case ('-inp')
-            repository = trim(arg)
-         case ('-nx')
-            read (arg,*) nx
-         case('-min')
-            read (arg,*) nmin
-         case('-sel')
-            read (arg,*) ncut
-         case ('-del')
-            read (arg,*) seuil
-         case default
-            print '("unknown option ",a2," ignored")', opt
-         end select
-      end do
+    do i = 1,n,2
+       call getarg(i,opt)
+       if (opt == '-hlp') then
+          print 1, repository,nx,seuil,mmin
+          stop
+       end if
+       if (i == n) then
+          print '("option ",a2," has no argument")', opt
+          stop 2
+       end if
+       call getarg(i+1,arg)
+       select case (opt)
+       case ('-inp')
+          repository = trim(arg)
+       case ('-nx')
+          read (arg,*) nx
+       case('-min')
+          read (arg,*) nmin
+       case('-sel')
+          read (arg,*) ncut
+       case ('-del')
+          read (arg,*) seuil
+       case default
+          print '("unknown option ",a2," ignored")', opt
+       end select
+    end do
 
-1     format(/,&
-           & " -inp [] ",A,/,&
-           & " -nx  [] ",I6,/,&
-           & " -min [] ",I6,/,&
-           & " -sel [] ",I6,/,&
-           & " -del [] ",e10.2,/)
+1   format(/,&
+         & " -inp [] ",A,/,&
+         & " -nx  [] ",I6,/,&
+         & " -min [] ",I6,/,&
+         & " -sel [] ",I6,/,&
+         & " -del [] ",e10.2,/)
 
-      return
+    return
 
-    end subroutine read_params
+  end subroutine read_params
 
 end program sphericaloverdensity
 
@@ -248,7 +248,7 @@ subroutine tri_ngp(x,mp,pdens,isort,npart,nx,ny,nz,npart_new)
      ntot = i - imin
      amass= 0.0
      do i = imin ,imax
-       amass=amass+mp(isort(i))
+        amass=amass+mp(isort(i))
      end do
      do i = imin ,imax
         pdens(isort(i)) = 1.0d0/amass
@@ -274,7 +274,7 @@ end subroutine tri_ngp
 
 !---------------------------------------------------------------------------
 subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,Mmin,scale)
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
   implicit none
 
   character*5::nchar
@@ -286,11 +286,15 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real(kind=8),dimension(1:npart)::xsort
   integer,dimension(1:npart)::isort
 
+  <<<<<<< HEAD
+  =======
+  integer::np
+  >>>>>>> rum2017/master
   real(kind=8)::twopi=6.283185307179586
   real(kind=8)::dtmax=0.01 ! dr/rayon pour la convergence du barycentre
   integer::Nsel=4000000    ! Nombre maximum de particules selectionnees
 
-!  integer,dimension(1:npart)::structure
+  !  integer,dimension(1:npart)::structure
   integer,dimension(1:npart)::indx_ngp,isort_ngp
   integer,dimension(:),allocatable::first_ngp,num_ngp
 
@@ -300,7 +304,11 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real(kind=8),dimension(:),allocatable::distance
 
   integer::i,j,k,npart_sel,ipart
+  <<<<<<< HEAD
   integer::is,iamas,masse,ip
+  =======
+  integer::is,iamas,masse,ip,ifail
+  >>>>>>> rum2017/master
   integer::ic,jc,kc,ii,jj,kk,ind
   integer::i1,i2,i3,imin,imax,ntot
   integer::niter
@@ -313,7 +321,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
 
   character*80::nomf
 
-!  structure = 0
+  !  structure = 0
   taillex   = dble(nx)
   tailley   = dble(ny)
   taillez   = dble(nz)
@@ -418,139 +426,139 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
            end do
         end do
         npart_sel = is
-!        write(*,*)'npart_sel=',npart_sel
-!        write(*,*)'Mtotsel=',Mtotsel,mmin
+        !        write(*,*)'npart_sel=',npart_sel
+        !        write(*,*)'Mtotsel=',Mtotsel,mmin
 
         if(Mtotsel .ge. Mmin) then
 
-        dt    = 1.
-        niter = 0
+           dt    = 1.
+           niter = 0
 
-        do while(dt.gt.dtmax.and.niter.le.100)
+           do while(dt.gt.dtmax.and.niter.le.100)
 
-           dx = abs(xc-xc0)
-           dx = min(dx,taillex-dx)
-           dy = abs(yc-yc0)
-           dy = min(dy,tailley-dy)
-           dz = abs(zc-zc0)
-           dz = min(dz,taillez-dz)
-           dc0 = dx*dx+dy*dy+dz*dz
-
-           ! Calcul des distances des particules au barycentre
-           !--------------------------------------------------
-           do i = 1,npart_sel
-              xx = x_sel(i,1)
-              yy = x_sel(i,2)
-              zz = x_sel(i,3)
-              dx = abs(xx-xc)
+              dx = abs(xc-xc0)
               dx = min(dx,taillex-dx)
-              dy = abs(yy-yc)
+              dy = abs(yc-yc0)
               dy = min(dy,tailley-dy)
-              dz = abs(zz-zc)
+              dz = abs(zc-zc0)
               dz = min(dz,taillez-dz)
-              distance(i) = dx*dx+dy*dy+dz*dz
-           end do
+              dc0 = dx*dx+dy*dy+dz*dz
 
-           ! Tri des distances
-           !---------------------------------------------------
-           call quick_sort(distance,isort_sel,npart_sel)
+              ! Calcul des distances des particules au barycentre
+              !--------------------------------------------------
+              do i = 1,npart_sel
+                 xx = x_sel(i,1)
+                 yy = x_sel(i,2)
+                 zz = x_sel(i,3)
+                 dx = abs(xx-xc)
+                 dx = min(dx,taillex-dx)
+                 dy = abs(yy-yc)
+                 dy = min(dy,tailley-dy)
+                 dz = abs(zz-zc)
+                 dz = min(dz,taillez-dz)
+                 distance(i) = dx*dx+dy*dy+dz*dz
+              end do
 
-           ! Calcul du rayon de Viriel et de la masse de l'amas
-           !---------------------------------------------------
-           i        = 1
-           overdens = 2.0*seuil
-           amass    = m_sel(isort_sel(i))
-           rayon    = 0.0
-           do while(i.lt.10.or.(overdens.gt.seuil.and.i.lt.npart_sel.and.rayon.lt.(real(ncut)-dc0)))
-              i        = i+1
-              rayon    = SQRT(distance(i))
-              volume   = 2./3.*twopi*rayon**3
-              amass    = amass+m_sel(isort_sel(i))
-              overdens = amass/volume
-!              write(*,*)i,rayon,amass,overdens
-           end do
-           if(overdens.gt.seuil)then
-              write(*,*)'Increase selection radius (-sel option in command line)'
-              write(*,*)'mass     =',i
-              write(*,*)'nsel     =',npart_sel
-              write(*,*)'overdens =',overdens
-              write(*,*)'radius   =',rayon+dc0
-              write(*,*)'nsel     =',ncut
-              write(*,*)'niter    =',niter
-              stop
-           else
-              rayon =SQRT(distance(i-1))
-              volume=2./3.*twopi*rayon**3
-              amass =amass-m_sel(isort_sel(i))
-              if(volume > 0.)then
-                 overdens=amass/volume
+              ! Tri des distances
+              !---------------------------------------------------
+              call quick_sort(distance,isort_sel,npart_sel)
+
+              ! Calcul du rayon de Viriel et de la masse de l'amas
+              !---------------------------------------------------
+              i        = 1
+              overdens = 2.0*seuil
+              amass    = m_sel(isort_sel(i))
+              rayon    = 0.0
+              do while(i.lt.10.or.(overdens.gt.seuil.and.i.lt.npart_sel.and.rayon.lt.(real(ncut)-dc0)))
+                 i        = i+1
+                 rayon    = SQRT(distance(i))
+                 volume   = 2./3.*twopi*rayon**3
+                 amass    = amass+m_sel(isort_sel(i))
+                 overdens = amass/volume
+                 !              write(*,*)i,rayon,amass,overdens
+              end do
+              if(overdens.gt.seuil)then
+                 write(*,*)'Increase selection radius (-sel option in command line)'
+                 write(*,*)'mass     =',i
+                 write(*,*)'nsel     =',npart_sel
+                 write(*,*)'overdens =',overdens
+                 write(*,*)'radius   =',rayon+dc0
+                 write(*,*)'nsel     =',ncut
+                 write(*,*)'niter    =',niter
+                 stop
               else
-                 overdens=0.
+                 rayon =SQRT(distance(i-1))
+                 volume=2./3.*twopi*rayon**3
+                 amass =amass-m_sel(isort_sel(i))
+                 if(volume > 0.)then
+                    overdens=amass/volume
+                 else
+                    overdens=0.
+                 end if
+                 masse=i-1
               end if
-              masse=i-1
-           end if
-!           write(*,*)'iter=',niter,'mass=',masse
+              !           write(*,*)'iter=',niter,'mass=',masse
 
-           ! Calcul du nouveau barycentre:
-           !------------------------------
-           xb=0.
-           yb=0.
-           zb=0.
-           do i=1,masse
-              xx = x_sel(isort_sel(i),1)
-              yy = x_sel(isort_sel(i),2)
-              zz = x_sel(isort_sel(i),3)
-              dx = (xx-xc)
-              if(dx.gt.  taillex/2. )dx = dx-taillex
-              if(dx.lt.(-taillex/2.))dx = dx+taillex
-              dy = (yy-yc)
-              if(dy.gt.  tailley/2. )dy = dy-tailley
-              if(dy.lt.(-tailley/2.))dy = dy+tailley
-              dz = (zz-zc)
-              if(dz.gt.  taillez/2. )dz = dz-taillez
-              if(dz.lt.(-taillez/2.))dz = dz+taillez
-              xb = xb+dx*m_sel(isort_sel(i))
-              yb = yb+dy*m_sel(isort_sel(i))
-              zb = zb+dz*m_sel(isort_sel(i))
+              ! Calcul du nouveau barycentre:
+              !------------------------------
+              xb=0.
+              yb=0.
+              zb=0.
+              do i=1,masse
+                 xx = x_sel(isort_sel(i),1)
+                 yy = x_sel(isort_sel(i),2)
+                 zz = x_sel(isort_sel(i),3)
+                 dx = (xx-xc)
+                 if(dx.gt.  taillex/2. )dx = dx-taillex
+                 if(dx.lt.(-taillex/2.))dx = dx+taillex
+                 dy = (yy-yc)
+                 if(dy.gt.  tailley/2. )dy = dy-tailley
+                 if(dy.lt.(-tailley/2.))dy = dy+tailley
+                 dz = (zz-zc)
+                 if(dz.gt.  taillez/2. )dz = dz-taillez
+                 if(dz.lt.(-taillez/2.))dz = dz+taillez
+                 xb = xb+dx*m_sel(isort_sel(i))
+                 yb = yb+dy*m_sel(isort_sel(i))
+                 zb = zb+dz*m_sel(isort_sel(i))
+              enddo
+              xb = xb/amass
+              yb = yb/amass
+              zb = zb/amass
+              if(rayon > 0)then
+                 dt = sqrt(xb*xb+yb*yb+zb*zb)/rayon
+              else
+                 dt = 0.
+              end if
+              xc = xc+xb
+              yc = yc+yb
+              zc = zc+zb
+
+              niter = niter + 1
+
+              ! On sort de la boucle si la position du barycentre converge
+              !-----------------------------------------------------------
            enddo
-           xb = xb/amass
-           yb = yb/amass
-           zb = zb/amass
-           if(rayon > 0)then
-              dt = sqrt(xb*xb+yb*yb+zb*zb)/rayon
-           else
-              dt = 0.
+
+           if(amass.ge.Mmin)then
+              iamas = iamas + 1
+              write(*,997)iamas,masse,amass/scale**3,xc/scale,yc/scale,zc/scale &
+                   & ,niter,rayon/scale,overdens
            end if
-           xc = xc+xb
-           yc = yc+yb
-           zc = zc+zb
 
-           niter = niter + 1
+           ! On retire de la liste des particules celles de l'amas
+           !------------------------------------------------------
+           do i = 1,masse
+              !           structure(indx_sel(isort_sel(i))) = iamas
+              xsort(indx_sel(isort_sel(i))) = 0.
+           enddo
 
-           ! On sort de la boucle si la position du barycentre converge
-           !-----------------------------------------------------------
-        enddo
+           ! Ecriture des caracteristiques de l'amas sur fichier
+           !----------------------------------------------------
+           if(amass.ge.Mmin)then
+              write(10,999)iamas,masse,amass/scale**3,xc/scale,yc/scale,zc/scale
+           end if
 
-        if(amass.ge.Mmin)then
-           iamas = iamas + 1
-           write(*,997)iamas,masse,amass/scale**3,xc/scale,yc/scale,zc/scale &
-                & ,niter,rayon/scale,overdens
         end if
-
-        ! On retire de la liste des particules celles de l'amas
-        !------------------------------------------------------
-        do i = 1,masse
-!           structure(indx_sel(isort_sel(i))) = iamas
-           xsort(indx_sel(isort_sel(i))) = 0.
-        enddo
-
-        ! Ecriture des caracteristiques de l'amas sur fichier
-        !----------------------------------------------------
-        if(amass.ge.Mmin)then
-           write(10,999)iamas,masse,amass/scale**3,xc/scale,yc/scale,zc/scale
-        end if
-
-     end if
 
      end if
 
@@ -560,10 +568,10 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
 
   close(10)
 
-!  nomf = 'st_sod_'//TRIM(nchar)//'.dat'
-!  open (10,file=nomf,form='unformatted')
-!  write(10)structure
-!  close(10)
+  !  nomf = 'st_sod_'//TRIM(nchar)//'.dat'
+  !  open (10,file=nomf,form='unformatted')
+  !  write(10)structure
+  !  close(10)
 
 997 format (I8,1x,I8,4(1x,1pe10.3),1x,I2,1x,5(E10.3,1x))
 999 format (I8,1x,I8,4(1x,1pe10.3))

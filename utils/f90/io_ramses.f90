@@ -9,7 +9,7 @@ module io_ramses
   real(KIND=8),dimension(:,:),allocatable::xp
   real(KIND=8),dimension(:,:),allocatable::varp
 
-contains 
+contains
 
   subroutine getcell(xcell,ycell,zcell,varcell,levcell,ncell,nvarin,repository, &
        & levelmax,verbose)
@@ -22,7 +22,7 @@ contains
     integer,optional::levelmax
     logical,optional::verbose
     !--------------------------------------------------------------------------
-    ! This routine compute the values of the hydro variables at the position 
+    ! This routine compute the values of the hydro variables at the position
     ! of a set of input mesh points.
     ! INPUT ARGUMENTS:
     ! xcell,ycell,zcell: one dimensional arrays containing the cell coordinates.
@@ -32,7 +32,7 @@ contains
     !                    directory
     ! OUTPUT ARGUMENTS:
     ! varcell:           a 2-dimensional double array containing the cell variables.
-    ! levcell:           a one-dimensional integer array containing the cell level of 
+    ! levcell:           a one-dimensional integer array containing the cell level of
     !                    refinement.
     ! OPTIONAL ARGUMENTS:
     ! verbose:           logical variable activating verbosity
@@ -104,13 +104,13 @@ contains
     ipos=INDEX(repository,'output_')
     nchar=repository(ipos+7:ipos+13)
     nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-    inquire(file=nomfich, exist=ok) ! verify input file 
+    inquire(file=nomfich, exist=ok) ! verify input file
     if ( .not. ok ) then
        print *,TRIM(nomfich)//' not found.'
        stop
     endif
     nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-    inquire(file=nomfich, exist=ok) ! verify input file 
+    inquire(file=nomfich, exist=ok) ! verify input file
     if ( .not. ok ) then
        print *,TRIM(nomfich)//' not found.'
        stop
@@ -462,7 +462,7 @@ contains
     localseed=allseed(1,1:IRandNumSize)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! Compute gas particle mass 
+!!! Compute gas particle mass
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     partmass=0.d0
@@ -630,7 +630,7 @@ contains
 
                          dl=0.5d0**dble(lmax)
 
-                         if(ndim==3)then 
+                         if(ndim==3)then
                             vvdp(i,ind,ivar)=xdp(i)
                             dx=0.5d0**ilevel
                             iz=(ind-1)/4
@@ -650,7 +650,7 @@ contains
                             end if
                          endif
 
-                         if(ndim==2)then 
+                         if(ndim==2)then
                             vvdp(i,ind,ivar)=xdp(i)
                             dx=0.5d0**ilevel
                             iz=0
@@ -658,7 +658,7 @@ contains
                             ix=(ind-1-2*iy)
                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                             xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
-                            xc(3)=(zmin+zmax)/2 
+                            xc(3)=(zmin+zmax)/2
                             if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -670,15 +670,15 @@ contains
                             end if
                          endif
 
-                         if(ndim==1)then 
+                         if(ndim==1)then
                             vvdp(i,ind,ivar)=xdp(i)
                             dx=0.5d0**ilevel
                             iz=0
                             iy=0
                             ix=ind-1
                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
-                            xc(2)=(ymin+ymax)/2 
-                            xc(3)=(zmin+zmax)/2 
+                            xc(2)=(ymin+ymax)/2
+                            xc(3)=(zmin+zmax)/2
                             if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -967,7 +967,7 @@ contains
                             ix=ind-1
                             xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                             xc(2)=(ymin+ymax)/2
-                            xc(3)=(zmin+zmax)/2 
+                            xc(3)=(zmin+zmax)/2
                             if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                  & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                  & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -1156,7 +1156,7 @@ contains
                                ix=(ind-1-2*iy-4*iz)
                                xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                                xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
-                               xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3)) 
+                               xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3))
                                if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                     & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                     & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -1272,7 +1272,7 @@ contains
              end do
           enddo
 
-          ! End loop over levels  
+          ! End loop over levels
           close(10)
           close(11)
 
@@ -1336,7 +1336,7 @@ contains
           nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
           open(unit=11,file=nomfich,status='old',form='unformatted')
           read(11)
-          read(11)nvarh 
+          read(11)nvarh
           read(11)
           read(11)
           read(11)
@@ -1420,7 +1420,7 @@ contains
                 end if
                 ! Read HYDRO data
                 read(11)
-                read(11)       
+                read(11)
                 if(ngridfile(j,ilevel)>0)then
                    ! Read hydro variables
                    do ind=1,twotondim
@@ -1443,7 +1443,7 @@ contains
                                     & .and.(ilevel>=lmin) &
                                     & .and.(ilevel==lmax &
                                     & .or.sdp(i,ind)==0) &
-                                    & .and.(xmin<=xc(1) & 
+                                    & .and.(xmin<=xc(1) &
                                     & .and.xc(1)<=xmax) &
                                     & .and.(ymin<=xc(2) &
                                     & .and.xc(2)<=ymax) &
@@ -1726,12 +1726,12 @@ contains
        if(ndim==2)then
           xcc(1)=xpart(i,1)
           xcc(2)=xpart(i,2)
-          xcc(3)=(zmin+zmax)/2       
+          xcc(3)=(zmin+zmax)/2
        end if
        if(ndim==1)then
           xcc(1)=xpart(i,1)
-          xcc(2)=(ymin+ymax)/2  
-          xcc(3)=(zmin+zmax)/2       
+          xcc(2)=(ymin+ymax)/2
+          xcc(3)=(zmin+zmax)/2
        end if
        !     if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax&
        if(         xmin<=xcc(1).and.xcc(1)<=xmax&
@@ -1796,12 +1796,12 @@ contains
        if(ndim==2)then
           xcc(1)=xpart(i,1)
           xcc(2)=xpart(i,2)
-          xcc(3)=(zmin+zmax)/2       
+          xcc(3)=(zmin+zmax)/2
        end if
        if(ndim==1)then
           xcc(1)=xpart(i,1)
-          xcc(2)=(ymin+ymax)/2  
-          xcc(3)=(zmin+zmax)/2       
+          xcc(2)=(ymin+ymax)/2
+          xcc(3)=(zmin+zmax)/2
        end if
        if(idpart(i)>0&
             & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
@@ -1988,12 +1988,12 @@ contains
        if(ndim==2)then
           xcc(1)=xpart(i,1)
           xcc(2)=xpart(i,2)
-          xcc(3)=(zmin+zmax)/2       
+          xcc(3)=(zmin+zmax)/2
        end if
        if(ndim==1)then
           xcc(1)=xpart(i,1)
-          xcc(2)=(ymin+ymax)/2  
-          xcc(3)=(zmin+zmax)/2       
+          xcc(2)=(ymin+ymax)/2
+          xcc(3)=(zmin+zmax)/2
        end if
 
        if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax &
@@ -2044,12 +2044,12 @@ contains
        if(ndim==2)then
           xcc(1)=xpart(i,1)
           xcc(2)=xpart(i,2)
-          xcc(3)=(zmin+zmax)/2       
+          xcc(3)=(zmin+zmax)/2
        end if
        if(ndim==1)then
           xcc(1)=xpart(i,1)
-          xcc(2)=(ymin+ymax)/2  
-          xcc(3)=(zmin+zmax)/2       
+          xcc(2)=(ymin+ymax)/2
+          xcc(3)=(zmin+zmax)/2
        end if
        if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
             & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax))then

@@ -22,7 +22,7 @@ program degrade_grafic
   !          - un fichier velcz:  output/ic_velcz
   !
   ! f90 degrade_grafic.f90 -o ~/bin/degrade_grafic
-  !  
+  !
   !
   !========================================================
   integer::i1,i2,i3,i,j,k,narg,iargc,i_file
@@ -46,7 +46,7 @@ program degrade_grafic
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
@@ -73,7 +73,7 @@ program degrade_grafic
   filename(16)=TRIM(output)//'/ic_velbz'
   filename(17)=TRIM(output)//'/ic_refmap'
   filename(18)=TRIM(output)//'/ic_pvar_00001'
-  
+
   open(10,file=TRIM(filename(1)),form='unformatted')
   read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
   close(10)
@@ -96,21 +96,21 @@ program degrade_grafic
         open(10,file=TRIM(filename(i_file)),form='unformatted')
         rewind(10)
         read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-        
+
         write(*,*)'Writing ouput file '//TRIM(filename(9+i_file))
         open(11,file=TRIM(filename(9+i_file)),form='unformatted')
         rewind (11)
         write (11)np1o2,np2o2,np3o2,dx2,x1o,x2o,x3o,astart,omegam,omegav,h0
-        
+
         write(*,*)'Degrading initial conditions...'
-        
+
         ! Loop over planes
         do i3=1,np3,2
-           
+
            ! READING INPUT DATA
            read(10) ((f(i1,i2,1),i1=1,np1),i2=1,np2)
            read(10) ((f(i1,i2,2),i1=1,np1),i2=1,np2)
-           
+
            !  DEGRADING INITIAL CONDITIONS
            do i1=1,np1o2
               do i2=1,np2o2
@@ -130,12 +130,12 @@ program degrade_grafic
                  endif
               end do
            end do
-           
-           !   WRITING OUTPUT FILES     
+
+           !   WRITING OUTPUT FILES
            write(11) ((f2(i1,i2,1),i1=1,np1o2),i2=1,np2o2)
-           
+
         enddo
-        
+
         close(10)
         close(11)
         write(*,*)'done'
@@ -150,4 +150,4 @@ program degrade_grafic
 end program degrade_grafic
 
 
-       
+

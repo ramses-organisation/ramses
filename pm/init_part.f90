@@ -215,8 +215,8 @@ subroutine init_part
         do while(.true.)
            mm1 = 0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
            if((mm1.GT.0.90*min_mdm_all).AND.(mm1.LT.1.10*min_mdm_all))then
-               nlevelmax_part = ilevel
-               exit
+              nlevelmax_part = ilevel
+              exit
            endif
            ilevel = ilevel+1
         enddo
@@ -918,7 +918,7 @@ subroutine load_gadget
         call gadgetreadfile(filename,ifile,gadgetheader, pos, vel, ids)
         TIME_END(clock_end)
         if(debug) write(*,*) myid, ':Read ', nparticles, ' from gadget file ', ifile, ' in ', &
-        TIME_SPENT(clock_start, clock_end, clock_rate)
+             TIME_SPENT(clock_start, clock_end, clock_rate)
         start = 1
         TIME_START(clock_start)
         do i=1,nparticles
@@ -948,7 +948,7 @@ subroutine load_gadget
               typep(ipart)%family = FAM_DM
               typep(ipart)%tag    = 0
 #ifndef WITHOUTMPI
-            endif
+           endif
 #endif
         enddo
 #ifndef WITHOUTMPI

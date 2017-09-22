@@ -3,7 +3,7 @@ subroutine synchro_fine(ilevel)
   use amr_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -86,7 +86,7 @@ subroutine synchro_fine_static(ilevel)
   use amr_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel

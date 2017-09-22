@@ -626,7 +626,11 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! by setting particle number density above m_refine(ilevel)
      if(sink_refine)then
         do j=1,np
+<<<<<<< HEAD
            if ( is_cloud(typep(ind_part(j))) ) then
+=======
+           if(idp(ind_part(j))<0.)then
+>>>>>>> rum2017/master
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
@@ -1540,7 +1544,7 @@ end subroutine tsc_from_multipole
 !###########################################################
 !###########################################################
 !###########################################################
-#if NDIM==3 
+#if NDIM==3
 subroutine tsc_cell(ind_grid,ngrid,ilevel)
   use amr_commons
   use poisson_commons

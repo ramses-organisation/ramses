@@ -3,7 +3,7 @@ subroutine backup_hydro(filename)
   use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   character(LEN=80)::filename
 
@@ -19,10 +19,10 @@ subroutine backup_hydro(filename)
   if(verbose)write(*,*)'Entering backup_hydro'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
-  
+
   ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -122,7 +122,7 @@ subroutine backup_hydro(filename)
      end if
   endif
 #endif
-  
+
 end subroutine backup_hydro
 
 

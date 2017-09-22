@@ -65,7 +65,7 @@ subroutine condinit(x,u,dx,nn)
      q(i,8     ) = B0
      q(i,nvar+3) = B0
 
-     IF(rs .le. r0) THEN 
+     IF(rs .le. r0) THEN
        q(i,id) = d0*(1.0+delta_rho*cos(2.*atan(yy/xx)))!(2.0*(xx/rc)**2-1.0))
        q(i,iu) = omega0 * yy
        q(i,iv) = -omega0 * xx
@@ -100,7 +100,7 @@ subroutine condinit(x,u,dx,nn)
   u(1:nn,5)=u(1:nn,5)+0.125*(q(1:nn,8)+q(1:nn,nvar+3))**2
   ! pressure -> total fluid energy
   u(1:nn,5)=u(1:nn,5)+q(1:nn,5)/(gamma-1.0d0)
-  ! magnetic field 
+  ! magnetic field
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
   ! passive scalars
@@ -115,7 +115,7 @@ end subroutine condinit
 !================================================================
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -167,7 +167,7 @@ subroutine velana(x,v,dx,t,ncell)
 !!$     endif
 !!$     vx=-sin(tt)*rr*omega
 !!$     vy=+cos(tt)*rr*omega
-     
+
      v(i,1)=vx
      v(i,2)=vy
      v(i,3)=vz

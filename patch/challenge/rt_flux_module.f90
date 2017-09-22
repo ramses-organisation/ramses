@@ -12,8 +12,8 @@ CONTAINS
 !************************************************************************
 SUBROUTINE read_hll_eigenvalues()
 
-! Read M1 eigenvalues for hll method from file 'hll_evals.list' 
-! into              in the 3*4 flux tensor  
+! Read M1 eigenvalues for hll method from file 'hll_evals.list'
+! into              in the 3*4 flux tensor
 !------------------------------------------------------------------------
   use amr_commons,only:myid,IOGROUPSIZE,ncpu
   use rt_parameters,only:hll_evals_file
@@ -32,7 +32,7 @@ SUBROUTINE read_hll_eigenvalues()
           call get_environment_variable('RAMSES_HLLFILE', hll_evals_file)
   inquire(file=TRIM(hll_evals_file), exist=ok)
   if(.not. ok)then
-     if(myid.eq.1) then 
+     if(myid.eq.1) then
         write(*,*)'Cannot read hll eigenvalues file...'
         write(*,*)'File '//TRIM(hll_evals_file)//' not found'
         write(*,*)'You need to set the RAMSES_HLLFILE envvar' // &
@@ -40,7 +40,7 @@ SUBROUTINE read_hll_eigenvalues()
      endif
      call clean_stop
   end if
-  
+
   ! Wait for the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -50,7 +50,7 @@ SUBROUTINE read_hll_eigenvalues()
      end if
   endif
 #endif
-  
+
 
   open(unit=10,file=TRIM(hll_evals_file),status='old',form='formatted')
   read(10,*)i
@@ -90,16 +90,16 @@ SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
 !
 !  other vars
 !  iu1,iu2     |first and last index of input array,
-!  ju1,ju2     |cell centered,    
+!  ju1,ju2     |cell centered,
 !  ku1,ku2     |including buffer cells.
 !------------------------------------------------------------------------
   real(dp), dimension(nvector, iu1:iu2, ju1:ju2, ku1:ku2, nrtvar),  &
-                                                          intent(in)::uin 
+                                                          intent(in)::uin
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,ndim)::  lmin, lmax
   integer,intent(in)::iP0, ngrid!----------------------------------------
   real(dp), dimension(ndim)::f, costheta
   real(dp)::ff, np
-  integer::i, j, k, n, id, nedge 
+  integer::i, j, k, n, id, nedge
 !------------------------------------------------------------------------
   do k=kfrt1,kf2                                !
   do j=jfrt1,jf2                                !  Loop each cell in grid
@@ -111,12 +111,12 @@ SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
      if(ndim.gt.2 .and. mod(k,3).eq.0) nedge=nedge+1
      if(nedge.ge.2) cycle
 
-  do n=1,ngrid                                     ! Loop buffer of grids 
+  do n=1,ngrid                                     ! Loop buffer of grids
      ! calculate eigenvals
      np = uin(n, i, j, k, iP0)              !              Photon density
      f =  uin(n, i, j, k, iP0+1:iP0+nDim)   !   Ph fluxes, all directions
      ff=sqrt(sum(f(:)**2))                  !              Flux magnitude
-     
+
      if(ff.gt.0.)then
         costheta=f/ff
      else
@@ -186,13 +186,13 @@ END SUBROUTINE inp_eigenvals
 
 !************************************************************************
 subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
-  
-! Compute central fluxes for a photon group, for each cell in a vector 
-! of grids. 
-! The flux tensor is a three by four tensor (2*3 and 1*2 in 1D and 2D, 
-! respectively) where the first column is photon flux (x,y,z) and 
-! the other three columns compose the Eddington tensor (see Aubert & 
-! Teyssier '08), times c^2. 
+
+! Compute central fluxes for a photon group, for each cell in a vector
+! of grids.
+! The flux tensor is a three by four tensor (2*3 and 1*2 in 1D and 2D,
+! respectively) where the first column is photon flux (x,y,z) and
+! the other three columns compose the Eddington tensor (see Aubert &
+! Teyssier '08), times c^2.
 ! input/output:
 ! uin       => RT variables of all cells in a vector of grids
 !              (photon energy densities and photon fluxes).
@@ -200,8 +200,8 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
 ! ngrid     => Number of 'valid' grids in uin.
 ! F        <=  Group flux tensors for all the cells.
 !------------------------------------------------------------------------
-  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nrtvar)::    uin 
-  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nDim+1, 1:ndim)::F 
+  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nrtvar)::    uin
+  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nDim+1, 1:ndim)::F
   integer::iP0, nGrid!---------------------------------------------------
   real(dp),dimension(1:ndim)::pflux, u
   real(dp)::Np, Np_c_sq, pflux_sq, chi, iterm, oterm
@@ -212,9 +212,9 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
   ! the 2X2X2 center cells, so by skipping the 'corners' we are reduced
   ! to half of the 4X4X4 cells.
 
-  do k = kfrt1, kf2                        
+  do k = kfrt1, kf2
   do j = jfrt1, jf2
-  do i = ifrt1, if2      
+  do i = ifrt1, if2
 
      nedge=0                 ! Check if we're at a corner and if so, cycle
      if(mod(i,3).eq.0) nedge=nedge+1
@@ -230,15 +230,15 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
           write(*,*)'negative photon density in cmp_eddington. -EXITING-'
           call clean_stop
         endif
-        F(n,i,j,k,1,1:nDim)= pflux            !   First col is photon flux  
+        F(n,i,j,k,1,1:nDim)= pflux            !   First col is photon flux
         ! Rest is Eddington tensor...initalize it to zero
-        F(n,i,j,k,2:ndim+1,1:nDim) = 0.d0   
+        F(n,i,j,k,2:ndim+1,1:nDim) = 0.d0
         Np_c_sq = Np*rt_c2*Np
         if(Np_c_sq .eq. 0.d0) cycle           !Zero density => no pressure
-        
+
         pflux_sq = sum(pflux**2)              !  Sq. photon flux magnitude
         u(:) = 0.d0                           !           Flux unit vector
-        if(pflux_sq .gt. 0.d0) u(:) = pflux/sqrt(pflux_sq)  
+        if(pflux_sq .gt. 0.d0) u(:) = pflux/sqrt(pflux_sq)
         pflux_sq = pflux_sq/Np_c_sq           !      Reduced flux, squared
         chi = max(4.d0-3.d0*pflux_sq, 0.d0)   !           Eddington factor
         chi = (3.d0+ 4.d0*pflux_sq)/(5.d0 + 2.d0*sqrt(chi))
@@ -257,12 +257,12 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
   enddo
   enddo
   enddo
-  
+
 end subroutine cmp_flux_tensors
 
 !************************************************************************
 FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
-  
+
 ! Compute intercell fluxes for all (four) RT variables, using the
 ! Harten-Lax-van Leer method (see eq. 30 in Aubert&Teyssier(2008).
 ! fdn    => flux function in the cell downwards from the border
@@ -272,7 +272,7 @@ FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
 ! lminus => minimum intercell eigenvalue
 ! lplus  => maximum intercell eigenvalue
 ! returns      flux vector for the given state variables, i.e. line nr dim
-!              in the 3*4 flux function tensor  
+!              in the 3*4 flux function tensor
 !------------------------------------------------------------------------
   real(dp),dimension(nDim+1)::fdn, fup, udn, uup, cmp_face
   real(dp)::lminus, lplus
@@ -303,7 +303,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 !      dN/dt = - nabla(F),
 !      dF/dt = - nabla(c^2*P),
 !  where N is photon density, F is photon flux, c the light speed and P
-!  the Eddington pressure tensor. A flux at index i,j,k represents 
+!  the Eddington pressure tensor. A flux at index i,j,k represents
 !  flux across the lower faces of that cell, i.e. at i-1/2 etc.
 !
 !  inputs/outputs
@@ -316,7 +316,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 !
 !  other vars
 !  iu1,iu2     |First and last index of input array,
-!  ju1,ju2     |cell centered,    
+!  ju1,ju2     |cell centered,
 !  ku1,ku2     |including buffer cells (6x6x6).
 !  if1,if2     |First and last index of output array,
 !  jf1,jf2     |edge centered, for active
@@ -324,8 +324,8 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 !------------------------------------------------------------------------
   use amr_parameters
   use amr_commons
-  use const             
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, 1:nrtvar)::     uin 
+  use const
+  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, 1:nrtvar)::     uin
   real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2, 1:nrtvar, 1:ndim) &
        ::iFlx
   real(dp)::dx, dy, dz, dt
@@ -335,7 +335,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
   real(dp),save, &                                     ! Cell eigenvalues
            dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim)::  lmin, lmax
   ! Upwards and downwards fluxes and states of the group
-  real(dp),dimension(nDim+1),save:: fdn, fup, udn, uup 
+  real(dp),dimension(nDim+1),save:: fdn, fup, udn, uup
   real(dp):: lminus, lplus                        ! Intercell eigenvalues
   real(dp)::dtdx
   integer ::i, j, k, n
@@ -351,14 +351,14 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
   ! Solve for 1D flux in X direction
   !----------------------------------------------------------------------
   dtdx=dt/dx
-  do i=if1,if2                                 ! 
+  do i=if1,if2                                 !
   do j=jf1,jf2                                 !        each cell in grid
-  do k=kf1,kf2                                 !  
+  do k=kf1,kf2                                 !
      do n=1,ngrid                              ! <- buffer of grids
-           fdn = cFlx(n,  i-1, j, k, :, 1    )    ! 
+           fdn = cFlx(n,  i-1, j, k, :, 1    )    !
            fup = cFlx(n,  i,   j, k, :, 1    )   !  upwards and downwards
            udn = uin( n,  i-1, j, k, iP0:iP1 )   !  conditions
-           uup = uin( n,  i,   j, k, iP0:iP1 )    ! 
+           uup = uin( n,  i,   j, k, iP0:iP1 )    !
            lminus=MIN(lmin(n,i-1,j,k,1), lmin(n,i,j,k,1), 0d0)
            lplus =MAX(lmax(n,i-1,j,k,1), lmax(n,i,j,k,1), 0d0)
            iFlx(n, i, j, k, iP0:iP1, 1)=&

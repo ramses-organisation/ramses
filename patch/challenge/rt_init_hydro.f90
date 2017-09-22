@@ -51,10 +51,10 @@ subroutine rt_init_hydro
      end if
 
      if(.not.rt) return
-     
+
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     if(IOGROUPSIZEREP>0)then 
+     if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/rt_'//TRIM(nchar)//'.out'
      else
@@ -74,7 +74,7 @@ subroutine rt_init_hydro
         end if
      endif
 #endif
-     
+
 
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
@@ -83,7 +83,7 @@ subroutine rt_init_hydro
      read(ilun)nlevelmax2
      read(ilun)nboundary2
      read(ilun)gamma2
-     if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables 
+     if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables
         write(*,*)'File rt.tmp is not compatible (1)'
         write(*,*)'Found nrtvar  =',nrtvar2
         write(*,*)'Expected=',nrtvar
@@ -137,8 +137,8 @@ subroutine rt_init_hydro
            end if
         end do
      end do
-     close(ilun)  
-     
+     close(ilun)
+
      ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -150,7 +150,7 @@ subroutine rt_init_hydro
      endif
 #endif
 
-     
+
 
 
 #ifndef WITHOUTMPI

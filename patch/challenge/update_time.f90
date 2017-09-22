@@ -6,7 +6,7 @@ subroutine update_time(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
+#endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons
@@ -59,7 +59,7 @@ subroutine update_time(ilevel)
 
      if(mod(nstep_coarse,ncontrol)==0.or.output_done)then
         if(myid==1)then
-           
+
            !-------------------------------
            ! Output AMR structure to screen
            !-------------------------------
@@ -67,7 +67,7 @@ subroutine update_time(ilevel)
            do i=1,nlevelmax
               if(numbtot(1,i)>0)write(*,999)i,numbtot(1:4,i)
            end do
-           
+
            !----------------------------------------------
            ! Output mass and energy conservation to screen
            !----------------------------------------------
@@ -157,9 +157,9 @@ subroutine update_time(ilevel)
 888 format(' Fine step=',i6,' t=',1pe12.5,' dt=',1pe10.3, &
          & ' a=',1pe10.3,' mem=',0pF4.1,'% ',0pF4.1,'%')
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
- 
+
 end subroutine update_time
-  
+
 subroutine clean_stop
   use amr_commons
   implicit none
@@ -204,7 +204,7 @@ subroutine getmem(outmem)
   use amr_commons,only:myid,IOGROUPSIZE,ncpu
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   real::outmem
   character(len=300) :: dir, dir2,  cmd, file
@@ -212,7 +212,7 @@ subroutine getmem(outmem)
   integer,parameter::tag=1118
   integer::dummy_io,info
   integer::nmem,ind,j
-  
+
   file='/proc/self/stat'
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -274,7 +274,7 @@ subroutine cmpmem(outmem)
   outmem_int=outmem_int+ngridmax           ! father
   outmem_int=outmem_int+ngridmax           ! next
   outmem_int=outmem_int+ngridmax           ! prev
-  outmem_int=outmem_int+ngridmax*twotondim ! son 
+  outmem_int=outmem_int+ngridmax*twotondim ! son
   outmem_int=outmem_int+ngridmax*twotondim ! flag1
   outmem_int=outmem_int+ngridmax*twotondim ! flag2
   outmem_int=outmem_int+ngridmax*twotondim ! cpu_map1
@@ -284,7 +284,7 @@ subroutine cmpmem(outmem)
   ! Add communicator variable here
 
   if(hydro)then
-     
+
   outmem_dp =outmem_dp +ngridmax*twotondim*nvar ! uold
   outmem_dp =outmem_dp +ngridmax*twotondim*nvar ! unew
 
@@ -323,7 +323,7 @@ SUBROUTINE getProperTime(tau,tproper)
 END SUBROUTINE getProperTime
 !------------------------------------------------------------------------
 SUBROUTINE getAgeGyr(t_birth_proper, age)
-! Calculate proper time passed, in Gyrs, since proper time t_birth_proper 
+! Calculate proper time passed, in Gyrs, since proper time t_birth_proper
 ! (given in code units) until the current time.
 !------------------------------------------------------------------------
   use amr_commons
@@ -334,7 +334,7 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
   real(dp),save:: scale_t_Gyr
   logical::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  if( .not. scale_init) then 
+  if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      scale_t_Gyr = (scale_t/aexp**2)/yr/1.e9
@@ -344,7 +344,7 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
 END SUBROUTINE getAgeGyr
 !------------------------------------------------------------------------
 SUBROUTINE getAgeSec(t_birth_proper, age)
-! Calculate proper time passed, in sec, since proper time t_birth_proper 
+! Calculate proper time passed, in sec, since proper time t_birth_proper
 ! (given in code units) until the current time.
 !------------------------------------------------------------------------
   use amr_commons
@@ -354,7 +354,7 @@ SUBROUTINE getAgeSec(t_birth_proper, age)
   real(dp),save:: scale_t_sec
   logical::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  if( .not. scale_init) then 
+  if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      scale_t_sec = (scale_t/aexp**2)

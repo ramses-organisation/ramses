@@ -4,7 +4,7 @@
 !#########################################################
 subroutine gravana(x,f,dx,ncell)
   use amr_commons
-  use poisson_parameters  
+  use poisson_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -23,7 +23,7 @@ subroutine gravana(x,f,dx,ncell)
   real(dp)::omega0,omega1,omega2
 
   ! Constant vector
-  if(gravity_type==1)then 
+  if(gravity_type==1)then
      do idim=1,ndim
         do i=1,ncell
            f(i,idim)=gravity_params(idim)
@@ -32,7 +32,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then 
+  if(gravity_type==2)then
      gmass=gravity_params(1) ! GM
      emass=gravity_params(2) ! Softening length
      xmass=gravity_params(3) ! Point mass coordinates
@@ -59,7 +59,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Planet orbiting around the Sun
-  if(gravity_type==3)then 
+  if(gravity_type==3)then
      msun=1.0                 ! GMsun
      rpla=1.0                 ! Planet radius
      rmin=gravity_params(1)   ! Hard sphere radius
@@ -113,7 +113,7 @@ subroutine barotrop(ilevel)
 !  use const
   implicit none
   integer::ilevel
-  
+
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
   integer::info,ibound,nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,e
@@ -124,7 +124,7 @@ subroutine barotrop(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 !  real(dp),dimension(1:nvector,1:ndim),save::xx
 !  real(dp),dimension(1:nvector,1:nvar),save::uu
- 
+
   if(verbose)write(*,111)ilevel
 
 
@@ -161,7 +161,7 @@ subroutine barotrop(ilevel)
               ind_grid(i)=boundary(ibound-ncpu,ilevel)%igrid(igrid+i-1)
            end do
         end if
-     
+
         ! Loop over cells
         do ind=1,twotondim
 
@@ -177,7 +177,7 @@ subroutine barotrop(ilevel)
 
            do i=1,ngrid
               d=uold(ind_cell(i),1)
- 
+
 
               !! test the density if it is high enough then force
               !! barotropic equation of state
@@ -190,7 +190,7 @@ subroutine barotrop(ilevel)
               if(ndim>2)w=uold(ind_cell(i),4)/d
 
 
-              e = temp*( 1.D0 + (d/rho_ad)**0.6666666 ) / (gamma-1.D0) 
+              e = temp*( 1.D0 + (d/rho_ad)**0.6666666 ) / (gamma-1.D0)
 
               uold(ind_cell(i),ndim+2) =  d*(e + 0.5*(u**2+v**2+w**2))
 

@@ -4,7 +4,7 @@
 !#########################################################
 subroutine gravana(x,f,dx,ncell)
   use amr_parameters
-  use poisson_parameters  
+  use poisson_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -19,7 +19,7 @@ subroutine gravana(x,f,dx,ncell)
   real(dp)::gmass,emass,xmass,ymass,zmass,rr,rx,ry,rz
 
   ! Constant vector
-  if(gravity_type==1)then 
+  if(gravity_type==1)then
      do idim=1,ndim
         do i=1,ncell
            f(i,idim)=gravity_params(idim)
@@ -28,7 +28,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then 
+  if(gravity_type==2)then
      gmass=gravity_params(1) ! GM
      emass=dx
      emass=gravity_params(2) ! Softening length

@@ -86,25 +86,25 @@ module amr_commons
   real(qdp),allocatable,dimension(:)::bound_key,bound_key2
   real(qdp)                         ::order_all_min,order_all_max
 
-  ! Recursive bisection                                                                               
-  real(dp),allocatable,dimension(:)    ::bisec_wall         ! bisection wall positions                
-  integer ,allocatable,dimension(:,:)  ::bisec_next         ! next 2 child cells in bisection         
-  integer::bisec_root                                       ! root of bisection tree                  
+  ! Recursive bisection
+  real(dp),allocatable,dimension(:)    ::bisec_wall         ! bisection wall positions
+  integer ,allocatable,dimension(:,:)  ::bisec_next         ! next 2 child cells in bisection
+  integer::bisec_root                                       ! root of bisection tree
 
-  integer,allocatable,dimension(:)     ::bisec_indx         ! map from leaf cell id to cpu id         
-  real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_min   ! cpu domains boxes                       
+  integer,allocatable,dimension(:)     ::bisec_indx         ! map from leaf cell id to cpu id
+  real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_min   ! cpu domains boxes
   real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_max
-  real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_min2  ! cpu domains boxes for new decomp        
+  real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_min2  ! cpu domains boxes for new decomp
   real(dp),allocatable,dimension(:,:)  ::bisec_cpubox_max2
 
-  integer,allocatable,dimension(:)     ::bisec_cpu_load     ! CPU loads (for stats)                   
-  integer,allocatable,dimension(:,:)   ::bisec_hist         ! histograms for load computation         
-  integer,allocatable,dimension(:)     ::bisec_hist_bounds  ! histogram splitting boundaries          
+  integer,allocatable,dimension(:)     ::bisec_cpu_load     ! CPU loads (for stats)
+  integer,allocatable,dimension(:,:)   ::bisec_hist         ! histograms for load computation
+  integer,allocatable,dimension(:)     ::bisec_hist_bounds  ! histogram splitting boundaries
   integer,allocatable,dimension(:)     ::new_hist_bounds
-  integer,allocatable,dimension(:)     ::bisec_ind_cell     ! histo swap id -> cell id map (big)      
-  integer,allocatable,dimension(:)     ::cell_level         ! store the level of the cells (big)      
+  integer,allocatable,dimension(:)     ::bisec_ind_cell     ! histo swap id -> cell id map (big)
+  integer,allocatable,dimension(:)     ::cell_level         ! store the level of the cells (big)
 
-  real(dp)::bisec_res                                       ! resolution parameters                   
+  real(dp)::bisec_res                                       ! resolution parameters
   integer ::bisec_nres
 
   ! Communication structure

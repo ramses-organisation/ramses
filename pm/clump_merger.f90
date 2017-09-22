@@ -1002,7 +1002,7 @@ subroutine build_peak_communicator
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   npeak_alltoall=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
@@ -1062,7 +1062,7 @@ subroutine virtual_peak_int(xx,action)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -1197,7 +1197,7 @@ subroutine boundary_peak_int(xx)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1230,7 +1230,7 @@ subroutine boundary_peak_dp(xx)
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot

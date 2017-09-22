@@ -16,7 +16,7 @@ subroutine load_balance
   use bisection
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
   !------------------------------------------------
   ! This routine performs parallel load balancing.
   !------------------------------------------------
@@ -30,7 +30,7 @@ subroutine load_balance
 
 #ifndef WITHOUTMPI
   if(myid==1)write(*,*)'Load balancing AMR grid...'
-  
+
   ! Put all particle in main tree trunk
   if(pic.and.(.not.init))then
      call make_tree_fine(levelmin)
@@ -147,9 +147,9 @@ subroutine load_balance
                     taill(kcpu,ilevel)=0
                  end if
               end if
-              numbl(kcpu,ilevel)=numbl(kcpu,ilevel)-1 
+              numbl(kcpu,ilevel)=numbl(kcpu,ilevel)-1
            end if
-        end do        
+        end do
         ! Connect to new linked list
         do i=1,ncache
            if(icpu==myid)then
@@ -247,7 +247,7 @@ subroutine load_balance
      call flag_fine(i,2)
      call refine_fine(i)
      call build_comm(i+1)
-  end do  
+  end do
   call flag_coarse
   call refine_coarse
   call build_comm(1)
@@ -280,7 +280,7 @@ subroutine cmp_new_cpu_map
   integer::info
 #endif
   !---------------------------------------------------
-  ! This routine computes the new cpu map using 
+  ! This routine computes the new cpu map using
   ! the choosen ordering to balance load across cpus.
   !---------------------------------------------------
   integer::igrid,ncell,ncell_loc,ncache,ngrid
@@ -315,7 +315,7 @@ subroutine cmp_new_cpu_map
   nxny=nx*ny
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  
+
   ! Compute time step related cost
   if(cost_weighting)then
      niter_cost(levelmin)=1
@@ -334,7 +334,7 @@ subroutine cmp_new_cpu_map
   !----------------------------------------
   ! Compute cell ordering and cost
   ! for leaf cells with cpu map = myid.
-  ! Store cost in flag1 and MAXIMUM  
+  ! Store cost in flag1 and MAXIMUM
   ! ordering key in hilbert_key of kind=16
   !----------------------------------------
   ncell=0
@@ -432,7 +432,7 @@ subroutine cmp_new_cpu_map
                        flag1(ncell)=flag1(ncell)+numbp(ind_grid(i))
                     endif
                     wflag = flag1(ncell)*niter_cost(ilevel)
-                    if (wflag > 2147483647) then 
+                    if (wflag > 2147483647) then
                        write(*,*) ' wrong type for flag1 --> change to integer kind=8: ',wflag
                        stop
                     endif
@@ -488,7 +488,7 @@ subroutine cmp_new_cpu_map
         idom=0
         do while(incost_new(idom)<incost_old(myid-1+(isub-1)*ncpu))
            idom=idom+1
-           if (idom > ndomain) exit 
+           if (idom > ndomain) exit
         end do
         ! Compute Hilbert key at boundaries
         i=idom
@@ -510,7 +510,7 @@ subroutine cmp_new_cpu_map
   bigdbl= real(bound_key_loc,kind=8)
   bigtmp= 0.0d0
   call MPI_ALLREDUCE(bigdbl,bigtmp,ndomain+1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  ! if call to mpi_sum with mpi_type=mpi_real16 is supported by mpi_allreduce we can do: 
+  ! if call to mpi_sum with mpi_type=mpi_real16 is supported by mpi_allreduce we can do:
   !call MPI_ALLREDUCE(bound_key_loc,bound_key2,ndomain+1,MPI_REAL16,MPI_SUM,MPI_COMM_WORLD,info)
   bound_key2         = real(bigtmp,kind=qdp)
 #else
@@ -521,7 +521,7 @@ subroutine cmp_new_cpu_map
   bound_key2(ndomain)=order_all_max
 
   else     ! doing bisection
-     ! update the bisection                                                                             
+     ! update the bisection
      call build_bisection(update=.true.)
   end if   ! end if not bisection
 
@@ -541,7 +541,7 @@ subroutine cmp_new_cpu_map
 #if NDIM>2
      xx(1,3)=(dble(iz)+0.5d0-dble(kcoarse_min))*scale
 #endif
-     cpu_map2(ind)=ncpu ! default value                                                               
+     cpu_map2(ind)=ncpu ! default value
 
      if(ordering/='bisection') then
         call cmp_ordering(xx,order_max,ncell_loc)
@@ -575,7 +575,7 @@ subroutine cmp_new_cpu_map
 #if NDIM>2
         xc(ind,3)=(dble(iz)-0.5d0)*dx-dble(kcoarse_min)
 #endif
-     end do     
+     end do
      ncache=active(ilevel)%ngrid
      ! Loop over grids by vector sweeps
      do igrid=1,ncache,nvector
@@ -583,7 +583,7 @@ subroutine cmp_new_cpu_map
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do           
+        end do
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
@@ -595,7 +595,7 @@ subroutine cmp_new_cpu_map
                  xx(i,idim)=(xg(ind_grid(i),idim)+xc(ind,idim))*scale
               end do
            end do
-           if(ordering/='bisection') then                                                                     
+           if(ordering/='bisection') then
               if(ngrid>0)call cmp_ordering(xx,order_max,ngrid)
               do i=1,ngrid
                  cpu_map2(ind_cell(i))=ncpu ! default value
@@ -608,7 +608,7 @@ subroutine cmp_new_cpu_map
               end do
            else
               do i=1,ngrid
-                 ! compute cpu_map2 using bisection                                                      
+                 ! compute cpu_map2 using bisection
                  xx_tmp(1,:) = xx(i,:)
                  call cmp_bisection_cpumap(xx_tmp,c_tmp,1)
                  cpu_map2(ind_cell(i)) = c_tmp(1)
@@ -625,7 +625,7 @@ subroutine cmp_new_cpu_map
   call make_virtual_coarse_int(cpu_map2(1))
   do ilevel=1,nlevelmax
      call make_virtual_fine_int(cpu_map2(1),ilevel)
-  end do 
+  end do
 
 end subroutine cmp_new_cpu_map
 !#########################################################################
@@ -690,7 +690,7 @@ subroutine cmp_dommap(x,c,nn)
         endif
      end do
   end do
-  
+
 end subroutine cmp_dommap
 !#########################################################################
 !#########################################################################
@@ -764,7 +764,7 @@ subroutine cmp_ordering(x,order,nn)
      bscale=2**(nlevelmax+1)
      ncode=nx_loc*int(bscale)
      bscale=bscale/scale
-     
+
      temp=ncode
      do bit_length=1,32
         ncode=ncode/2
@@ -781,7 +781,7 @@ subroutine cmp_ordering(x,order,nn)
 
      do i=1,nn
         ix(i)=int(x(i,1)*bscale)
-#if NDIM>1           
+#if NDIM>1
         iy(i)=int(x(i,2)*bscale)
 #endif
 #if NDIM>2
@@ -819,13 +819,13 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   real(qdp),dimension(1:nvector)::order_min,order_max
   !-----------------------------------------------------
   ! This routine computes the minimum and maximum index
-  ! key contained in the input cell and for the chosen 
+  ! key contained in the input cell and for the chosen
   ! ordering.
   !-----------------------------------------------------
   integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nx_loc
 
-  real(dp)::dxx,dxmin  
+  real(dp)::dxx,dxmin
 #if NDIM>1
   real(dp)::theta1,theta2,theta3,theta4
   real(kind=8)::xx,yy,xc,yc
@@ -882,7 +882,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
               xx=xx-1d-10
               theta2=atan(yy/xx)+acos(-1.)*3./2.
            endif
-           
+
            ! x+ y+
            yy=x(i,2)-yc+dxx
            if(xx.gt.0.)then
@@ -922,7 +922,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
      ncode=nx_loc*int(bscaleloc)
      bscaleloc=bscaleloc/scale
      bscale   =bscale   /scale
-     
+
      temp=ncode
      do bit_length=1,32
         ncode=ncode/2
@@ -939,7 +939,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
 
      do i=1,nn
         ix(i)=int(x(i,1)*bscaleloc)
-#if NDIM>1           
+#if NDIM>1
         iy(i)=int(x(i,2)*bscaleloc)
 #endif
 #if NDIM>2
@@ -1006,7 +1006,7 @@ subroutine defrag
         end if
      end do
   end do
-  
+
   ngrid2=0
   do igrid=1,igridmax
      flag2(igrid)=0
@@ -1518,7 +1518,7 @@ subroutine defrag
   end do
 
   ngrid_current=ngrid2
- 
+
 end subroutine defrag
 !#########################################################################
 !#########################################################################
