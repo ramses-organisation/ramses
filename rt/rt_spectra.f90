@@ -1167,8 +1167,8 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      if(showSEDstats .and. nSEDgroups .gt. 0) then
         step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
         step_nStar = step_nStar+dt_loc_Gyr*Gyr2sec/scale_t
-        step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
-                                          * dt_loc_Gyr * Gyr2sec / scale_t
+        step_mStar = step_mStar+mass * scale_msun             &
+             * dt_loc_Gyr * Gyr2sec / scale_t
      endif
 
      if( ok(j) )then
