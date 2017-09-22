@@ -10,7 +10,7 @@ program sphericaloverdensity
   ! E. Audit, R. Teyssier
   ! Meudon, le 30/05/96.
   !---------------------------------------------------------------------
-  ! Version F90 par R. Teyssier le 28/02/00   
+  ! Version F90 par R. Teyssier le 28/02/00
   ! f90 sod.f90 -o sod
   ! Memory: 44*npart in bytes
   !         npart=256**3   707 Mo
@@ -41,7 +41,7 @@ program sphericaloverdensity
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -143,7 +143,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 2) then
          print *, 'usage: sod  [-inp input_dir]'
@@ -175,7 +175,7 @@ contains
             read (arg,*) nmin
          case('-sel')
             read (arg,*) ncut
-         case ('-del') 
+         case ('-del')
             read (arg,*) seuil
          case default
             print '("unknown option ",a2," ignored")', opt
@@ -212,13 +212,13 @@ subroutine tri_ngp(x,mp,pdens,isort,npart,nx,ny,nz,npart_new)
   integer::i,j,ifail
   integer::imin,imax,ntot
   real(kind=8)::amass
-  
+
   ngx=4*nx
   ngy=4*ny
   ngz=4*nz
 
   ngxngy=ngx*ngy
-   
+
   ! Remplissage du tableau des indices
   !-----------------------------------
   do i = 1,npart
@@ -227,7 +227,7 @@ subroutine tri_ngp(x,mp,pdens,isort,npart,nx,ny,nz,npart_new)
      i3 = int(x(i,3)*dble(ngz)/dble(nz))
      indx (i) = 1+i1+i2*ngx+i3*ngxngy
   end do
-  
+
   ! Tri des particules selon les indices
   !-------------------------------------
   ifail=0
@@ -286,7 +286,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real,dimension(1:npart)::mp
   real(kind=8),dimension(1:npart)::xsort
   integer,dimension(1:npart)::isort
-  
+
   integer::np
   real(kind=8)::twopi=6.283185307179586
   real(kind=8)::dtmax=0.01 ! dr/rayon pour la convergence du barycentre
@@ -301,7 +301,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real,dimension(:,:),allocatable::x_sel
   real(kind=8),dimension(:),allocatable::distance
 
-  integer::i,j,k,npart_sel,ipart  
+  integer::i,j,k,npart_sel,ipart
   integer::is,iamas,masse,ip,ifail
   integer::ic,jc,kc,ii,jj,kk,ind
   integer::i1,i2,i3,imin,imax,ntot
@@ -371,7 +371,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
      !-------------------------------------------------
      if(xsort(isort(ipart)).gt.0.)then
 
-        ! On initialise le barycentre de l'amas avec 
+        ! On initialise le barycentre de l'amas avec
         ! la position de la particule courante
         xc = x(isort(ipart),1)
         yc = x(isort(ipart),2)
@@ -528,7 +528,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
            zc = zc+zb
 
            niter = niter + 1
-		 
+
            ! On sort de la boucle si la position du barycentre converge
            !-----------------------------------------------------------
         enddo
@@ -545,7 +545,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
 !           structure(indx_sel(isort_sel(i))) = iamas
            xsort(indx_sel(isort_sel(i))) = 0.
         enddo
-	      
+
         ! Ecriture des caracteristiques de l'amas sur fichier
         !----------------------------------------------------
         if(amass.ge.Mmin)then
@@ -555,11 +555,11 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
      end if
 
      end if
-	   
+
      if(mod(ipart,100000)==0)write(*,'(0PF5.1,"% complete")')100.*dble(ipart)/dble(npart_new)
 
   end do
-  
+
   close(10)
 
 !  nomf = 'st_sod_'//TRIM(nchar)//'.dat'
@@ -569,7 +569,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
 
 997 format (I8,1x,I8,4(1x,1pe10.3),1x,I2,1x,5(E10.3,1x))
 999 format (I8,1x,I8,4(1x,1pe10.3))
-	
+
   return
 end subroutine spherover
 
@@ -603,47 +603,47 @@ subroutine title(n,nchar)
 end subroutine title
 
 SUBROUTINE quick_sort(list, order, n)
-  
+
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified by Alan Miller to include an associated integer array which gives
   ! the positions of the elements in the original order.
-  
+
   IMPLICIT NONE
   INTEGER :: n
   REAL*8, DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
-  
+
   ! Local variable
   INTEGER :: i
-  
+
   DO i = 1, n
      order(i) = i
   END DO
-  
+
   CALL quick_sort_1(1, n)
-  
+
 CONTAINS
-  
+
   RECURSIVE SUBROUTINE quick_sort_1(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     REAL*8              :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
-    
+
     IF (right_end < left_end + max_simple_sort_size) THEN
        ! Use interchange sort for small lists
        CALL interchange_sort(left_end, right_end)
-       
+
     ELSE
        ! Use partition ("quick") sort
        reference = list((left_end + right_end)/2)
        i = left_end - 1; j = right_end + 1
-       
+
        DO
           ! Scan list from left end until element >= reference is found
           DO
@@ -655,8 +655,8 @@ CONTAINS
              j = j - 1
              IF (list(j) <= reference) EXIT
           END DO
-          
-          
+
+
           IF (i < j) THEN
              ! Swap two out-of-order elements
              temp = list(i); list(i) = list(j); list(j) = temp
@@ -668,22 +668,22 @@ CONTAINS
              EXIT
           END IF
        END DO
-       
+
        IF (left_end < j) CALL quick_sort_1(left_end, j)
        IF (i < right_end) CALL quick_sort_1(i, right_end)
     END IF
-    
+
   END SUBROUTINE quick_sort_1
-  
-  
+
+
   SUBROUTINE interchange_sort(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     REAL*8              :: temp
-    
+
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
           IF (list(i) > list(j)) THEN
@@ -692,7 +692,7 @@ CONTAINS
           END IF
        END DO
     END DO
-    
+
   END SUBROUTINE interchange_sort
-  
+
 END SUBROUTINE quick_sort

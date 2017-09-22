@@ -12,7 +12,7 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   v200 = gravity_params(5) ! Virial velocity of the halo (km.s-1)
   c = gravity_params(6)    ! Concentration of the halo
-  
+
   ! scale_d converts mass density from user units into g/cc
   scale_d = rhoc*200./3.0*c*c*c/(log(1d0+c)-c/(1d0+c))
 

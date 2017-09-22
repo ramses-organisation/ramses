@@ -11,7 +11,7 @@ module amr_parameters
   integer,parameter::dp=kind(1.0D0) ! real*8
 #endif
 #endif
-  
+
   ! Number of dimensions
 #ifndef NDIM
   integer,parameter::ndim=1

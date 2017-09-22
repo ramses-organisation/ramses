@@ -45,7 +45,7 @@ subroutine condinit(x,u,dx,nn)
      zz=x(i,3)-z0
      rc=sqrt(xx**2+yy**2)
      rs=sqrt(xx**2+yy**2+zz**2)
-     IF(rc .le. rcut) THEN 
+     IF(rc .le. rcut) THEN
        q(i,iu) =  omega * yy
        q(i,iv) = -omega * xx
      ENDIF
@@ -57,7 +57,7 @@ subroutine condinit(x,u,dx,nn)
        q(i,1) =  q(i,ip) / temp
      ENDIF
   ENDDO
-     
+
   ! Convert primitive to conservative variables
   ! density -> density
   u(1:nn,1)=q(1:nn,1)

@@ -386,7 +386,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            ethermal(j)=ethermal(j)+pressure
         endif
      end do
-        
+
      ! Use stellar momentum feedback
      if(momentum_feedback)then
 
@@ -394,7 +394,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            birth_time=tp(ind_part(j))
            gas_density=max(uold(indp(j),1),smallr)
-           ! Compute metallicity for cooling 
+           ! Compute metallicity for cooling
            if(metal)then
               metallicity=max(uold(indp(j),imetal),smallr)/gas_density/0.02
            else
@@ -408,7 +408,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
 
      endif
-  
+
   endif
 
   ! Update hydro variables due to feedback
@@ -430,7 +430,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(pressure_fix)then
         enew(indp(j))=enew(indp(j))+(1.0-FRAC_NT)*ethermal(j)
      endif
-     
+
      ! Add a fraction of the SN energy to the non-thermal energy
      if(nener>0)then
         unew(indp(j),ndim+3)=unew(indp(j),ndim+3)+FRAC_NT*ethermal(j)

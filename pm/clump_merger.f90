@@ -10,7 +10,7 @@ subroutine compute_clump_properties(xx)
 #endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------------
-  ! this subroutine performs a loop over all cells above the threshold and 
+  ! this subroutine performs a loop over all cells above the threshold and
   ! collects the  relevant information. After some MPI communications,
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
@@ -31,7 +31,7 @@ subroutine compute_clump_properties(xx)
   integer::i
   real(dp)::tot_mass_tot
 #endif
-  
+
 #if NDIM==3
 
   period(1)=(nx==1)
@@ -45,7 +45,7 @@ subroutine compute_clump_properties(xx)
   !peak-patch related arrays before sharing information with other cpus
 
   min_dens=huge(zero)
-  n_cells=0; n_cells_halo=0 
+  n_cells=0; n_cells_halo=0
   halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
   center_of_mass=0.d0; clump_velocity=0.d0
   peak_pos=0.d0
@@ -56,7 +56,7 @@ subroutine compute_clump_properties(xx)
   !------------------------------------------
   do ilevel=1,nlevelmax
      ! Mesh spacing in that level
-     dx=0.5D0**ilevel 
+     dx=0.5D0**ilevel
      nx_loc=(icoarse_max-icoarse_min+1)
      scale=boxlen/dble(nx_loc)
      dx_loc=dx*scale
@@ -82,17 +82,17 @@ subroutine compute_clump_properties(xx)
   !--------------------------------------------------------------------------
   ! loop over all cells above the threshold
   !--------------------------------------------------------------------------
-  do ipart=1,ntest     
-     global_peak_id=flag2(icellp(ipart)) 
+  do ipart=1,ntest
+     global_peak_id=flag2(icellp(ipart))
      if (global_peak_id /=0 ) then
         call get_local_peak_id(global_peak_id,peak_nr)
-        
+
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
         grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-        
+
         ! gas density
         if(ivar_clump==0)then
            d=xx(icellp(ipart))
@@ -107,7 +107,7 @@ subroutine compute_clump_properties(xx)
 
         ! Number of leaf cells per clump
         n_cells(peak_nr)=n_cells(peak_nr)+1
-        
+
         ! Min density
         min_dens(peak_nr)=min(d,min_dens(peak_nr))
 
@@ -116,7 +116,7 @@ subroutine compute_clump_properties(xx)
 
         ! Clump volume
         clump_vol(peak_nr)=clump_vol(peak_nr)+vol
-        
+
         ! Clump center of mass location
         center_of_mass(peak_nr,1:3)=center_of_mass(peak_nr,1:3)+vol*d*xcell(1:3)
 
@@ -136,12 +136,12 @@ subroutine compute_clump_properties(xx)
      plevel=peak_cell_level(ipeak)
      dx=0.5D0**plevel
      xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
-     call true_max(xcell(1),xcell(2),xcell(3),plevel)     
+     call true_max(xcell(1),xcell(2),xcell(3),plevel)
      peak_pos(ipeak,1:3)=xcell(1:3)
   end do
   call build_peak_communicator
 
-#ifndef WITHOUTMPI     
+#ifndef WITHOUTMPI
   ! Collect results from all MPI domains
   call virtual_peak_int(n_cells,'sum')
   call virtual_peak_dp(min_dens,'min')
@@ -167,7 +167,7 @@ subroutine compute_clump_properties(xx)
      call boundary_peak_dp(peak_pos(1,i))
      call boundary_peak_dp(center_of_mass(1,i))
      call boundary_peak_dp(clump_velocity(1,i))
-  end do  
+  end do
 #endif
 
   ! Initialize halo mass to clump mass
@@ -176,7 +176,7 @@ subroutine compute_clump_properties(xx)
   ! Calculate total mass above threshold
   tot_mass=sum(clump_mass(1:npeaks))
 
-#ifndef WITHOUTMPI     
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(tot_mass,tot_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   tot_mass=tot_mass_tot
 #endif
@@ -188,7 +188,7 @@ subroutine compute_clump_properties(xx)
      end if
   end do
 
-#ifndef WITHOUTMPI     
+#ifndef WITHOUTMPI
   ! Scatter results to all MPI domains
   call boundary_peak_dp(av_dens)
 #endif
@@ -196,11 +196,11 @@ subroutine compute_clump_properties(xx)
   ! For periodic boxes, recompute center of mass relative to peak position
   if(periodic)then
      center_of_mass=0.d0;
-     do ipart=1,ntest     
-        global_peak_id=flag2(icellp(ipart)) 
+     do ipart=1,ntest
+        global_peak_id=flag2(icellp(ipart))
         if (global_peak_id /=0 ) then
            call get_local_peak_id(global_peak_id,peak_nr)
-           
+
            ! Cell coordinates
            ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
            grid=icellp(ipart)-ncoarse-(ind-1)*ngridmax ! grid index
@@ -231,13 +231,13 @@ subroutine compute_clump_properties(xx)
      end do
      call build_peak_communicator
 
-#ifndef WITHOUTMPI     
+#ifndef WITHOUTMPI
      ! Collect results from all MPI domains
      do i=1,ndim
         call virtual_peak_dp(center_of_mass(1,i),'sum')
      end do
 #endif
-     
+
      ! Compute specific quantity
      do ipeak=1,npeaks
         if (relevance(ipeak)>0..and.n_cells(ipeak)>0)then
@@ -245,7 +245,7 @@ subroutine compute_clump_properties(xx)
         end if
      end do
 
-#ifndef WITHOUTMPI     
+#ifndef WITHOUTMPI
      ! Scatter results to all MPI domains
      do i=1,ndim
         call boundary_peak_dp(center_of_mass(1,i))
@@ -293,9 +293,9 @@ subroutine write_clump_properties(to_file)
   scale=boxlen/dble(nx_loc)
   if(ivar_clump==0)then
      particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
-#ifndef WITHOUTMPI  
+#ifndef WITHOUTMPI
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
-     particle_mass=particle_mass_tot  
+     particle_mass=particle_mass_tot
 #endif
   else
      if(hydro)then
@@ -308,12 +308,12 @@ subroutine write_clump_properties(to_file)
      peakd(i)=max_dens(i)
      ind_sort(i)=i
   end do
-  call quick_sort_dp(peakd,ind_sort,npeaks) 
+  call quick_sort_dp(peakd,ind_sort,npeaks)
 
   if(to_file)then
      ilun=20
      ilun2=22
-  else 
+  else
      ilun=6
      ilun2=6
   end if
@@ -342,7 +342,7 @@ subroutine write_clump_properties(to_file)
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      open(unit=ilun,file=fileloc,form='formatted')
-     
+
      if(saddle_threshold>0)then
         call title(ifout-1,nchar)
         if(IOGROUPSIZEREP>0)then
@@ -356,7 +356,7 @@ subroutine write_clump_properties(to_file)
         open(unit=ilun2,file=fileloc,form='formatted')
      endif
   end if
-  
+
   if (to_file .or. myid==1)then
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
@@ -365,7 +365,7 @@ subroutine write_clump_properties(to_file)
              '        rho+               mass      '
      endif
   end if
-  
+
   do j=npeaks,1,-1
      jj=ind_sort(j)
      if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
@@ -417,11 +417,11 @@ subroutine write_clump_properties(to_file)
      endif
 #endif
 
-#ifndef WITHOUTMPI  
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(n_rel,n_rel_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  n_rel=n_rel_tot  
+  n_rel=n_rel_tot
   call MPI_ALLREDUCE(rel_mass,rel_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  rel_mass=rel_mass_tot  
+  rel_mass=rel_mass_tot
 #endif
   if(myid==1)then
      if(clinfo)write(*,'(A,1PE12.5)')' Total mass [code units] above threshold =',tot_mass
@@ -441,9 +441,9 @@ subroutine merge_clumps(action)
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer::info
-#endif  
+#endif
   !---------------------------------------------------------------------------
-  ! This routine merges the irrelevant clumps 
+  ! This routine merges the irrelevant clumps
   ! -clumps are sorted by ascending max density
   ! -irrelevent clumps are merged to most relevant neighbor
   !---------------------------------------------------------------------------
@@ -485,14 +485,14 @@ subroutine merge_clumps(action)
         endif
      endif
   end do
-  
+
   ! Sort peaks by maximum peak density in ascending order
   do i=1,npeaks
      peakd(i)=max_dens(i)
      ind_sort(i)=i
   end do
-  call quick_sort_dp(peakd,ind_sort,npeaks) 
-  
+  call quick_sort_dp(peakd,ind_sort,npeaks)
+
   ! Loop over peak levels
   nzero=npeaks_tot
   idepth=0
@@ -514,9 +514,9 @@ subroutine merge_clumps(action)
      call boundary_peak_dp(max_dens)
      call boundary_peak_int(new_peak)
      call boundary_peak_int(alive)
-#endif     
-          
-     ! Merge peaks 
+#endif
+
+     ! Merge peaks
      nmove=npeaks_tot
      iter=0
      do while(nmove>0)
@@ -528,7 +528,7 @@ subroutine merge_clumps(action)
               if(action.EQ.'relevance')then
                  if(sparse_saddle_dens%maxval(ipeak)>0)then
                     relevance_peak=max_dens(ipeak)/sparse_saddle_dens%maxval(ipeak)
-                 else 
+                 else
                     relevance_peak=max_dens(ipeak)/density_threshold
                  end if
                  do_merge=(relevance_peak<relevance_threshold)
@@ -590,7 +590,7 @@ subroutine merge_clumps(action)
         endif
      end do
      call build_peak_communicator
-     
+
      ! Set alive to zero for newly merged peaks
      nzero=0
      nsurvive=0
@@ -598,7 +598,7 @@ subroutine merge_clumps(action)
         if(alive(ipeak)>0)then
            merge_to=new_peak(ipeak)
            if(merge_to.NE.(ipeak_start(myid)+ipeak))then
-              alive(ipeak)=0 
+              alive(ipeak)=0
               lev_peak(ipeak)=idepth
               nzero=nzero+1
            else
@@ -607,7 +607,7 @@ subroutine merge_clumps(action)
         endif
      end do
      call boundary_peak_int(alive)
-     
+
      ! Remove all matrix elements corresponding to merged peaks
      do ipeak=1,hfree-1
         current=sparse_saddle_dens%first(ipeak) ! first element of line ipeak
@@ -619,7 +619,7 @@ subroutine merge_clumps(action)
            current=sparse_saddle_dens%next(current)
         end do
      end do
-     
+
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(nzero,nzero_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nzero=nzero_all
@@ -628,10 +628,10 @@ subroutine merge_clumps(action)
 #endif
      if(verbose)write(*,*)'level=',idepth,'nmove=',nzero,'survived=',nsurvive
      idepth=idepth+1
-     
+
   end do
   ! End loop over peak levels
-  
+
   ! Compute maximum saddle density for each surviving clump
   ! Create new local duplicated peaks and update communicator
   do i=1,hfree-1
@@ -648,7 +648,7 @@ subroutine merge_clumps(action)
   call boundary_peak_dp(max_dens)
   call boundary_peak_int(new_peak)
   call boundary_peak_int(alive)
-  
+
   ! Count surviving peaks
   nsurvive=0
   do ipeak=1,npeaks
@@ -676,7 +676,7 @@ subroutine merge_clumps(action)
         if(alive(ipeak)>0)then
            if (sparse_saddle_dens%maxval(ipeak)>0)then
               relevance_peak=max_dens(ipeak)/sparse_saddle_dens%maxval(ipeak)
-           else 
+           else
               relevance_peak=max_dens(ipeak)/density_threshold
            end if
            relevance(ipeak)=relevance_peak
@@ -684,7 +684,7 @@ subroutine merge_clumps(action)
            relevance(ipeak)=0.
         endif
      end do
-     
+
      ! Merge all peaks to deepest level
      do ilev=idepth-2,0,-1
         do ipeak=1,npeaks
@@ -697,7 +697,7 @@ subroutine merge_clumps(action)
         call build_peak_communicator
         call boundary_peak_int(new_peak)
      end do
-     
+
      ! Update flag2 field
      do ipart=1,ntest
         if (flag2(icellp(ipart))>0)then
@@ -712,7 +712,7 @@ subroutine merge_clumps(action)
   endif
 
   if(action.EQ.'saddleden')then
-     
+
      ! Compute peak index for the halo
      do ipeak=1,npeaks
         ind_halo(ipeak)=new_peak(ipeak)
@@ -754,24 +754,24 @@ subroutine merge_clumps(action)
   endif
 
 end subroutine merge_clumps
-!################################################################              
-!################################################################ 
-!################################################################   
-!################################################################     
+!################################################################
+!################################################################
+!################################################################
+!################################################################
 subroutine get_max(i,mat)
   use amr_commons,ONLY:myid
   use sparse_matrix
   use clfind_commons,ONLY: npeaks,ipeak_start,gkey
-  type(sparse_mat)::mat 
+  type(sparse_mat)::mat
   integer::i
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! get maximum in i-th line by walking the linked list
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   integer::current,icol
-  
+
   mat%maxval(i)=0.
   mat%maxloc(i)=0
-  
+
   ! walk the line...
   current=mat%first(i)
   do  while( current /= 0 )
@@ -787,10 +787,10 @@ subroutine get_max(i,mat)
      current=mat%next(current)
   end do
 end subroutine get_max
-!################################################################              
-!################################################################ 
-!################################################################   
-!################################################################     
+!################################################################
+!################################################################
+!################################################################
+!################################################################
 subroutine allocate_peak_patch_arrays
   use amr_commons, ONLY:ndim,dp
   use clfind_commons
@@ -834,8 +834,8 @@ subroutine allocate_peak_patch_arrays
   allocate(Icl(npeaks_max))
   allocate(Icl_d(npeaks_max))
   allocate(Icl_dd(npeaks_max))
-  allocate(Icl_d_3by3(npeaks_max,1:3,1:3))  
-  allocate(Icl_3by3(npeaks_max,1:3,1:3))  
+  allocate(Icl_d_3by3(npeaks_max,1:3,1:3))
+  allocate(Icl_3by3(npeaks_max,1:3,1:3))
 
   !--------------------
   ! Allocate hash table
@@ -852,7 +852,7 @@ subroutine allocate_peak_patch_arrays
   allocate(gkey(npeaks+1:npeaks_max))
   allocate(nkey(npeaks+1:npeaks_max))
   hkey=0; gkey=0; nkey=0
-  
+
 
   !------------------------------------------------
   ! Initialize the hash table with interior patches
@@ -872,9 +872,9 @@ subroutine allocate_peak_patch_arrays
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
-!################################################################ 
 !################################################################
-!################################################################     
+!################################################################
+!################################################################
 subroutine deallocate_all
   use clfind_commons
   use amr_commons, only:smbh
@@ -923,13 +923,13 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
 
   integer::ihash,ikey,jkey
 
-  if(    global_peak_id> ipeak_start(myid) .and. & 
+  if(    global_peak_id> ipeak_start(myid) .and. &
        & global_peak_id<=ipeak_start(myid)+npeaks_per_cpu(myid))then
      local_peak_id=global_peak_id-ipeak_start(myid)
   else
      ihash=MOD(global_peak_id,nhash)+1 ! compute the simple prime hash key
      if(hkey(ihash)==0)then ! hash table is empty
-        hkey(ihash)=hfree 
+        hkey(ihash)=hfree
         local_peak_id=hfree
         gkey(hfree)=global_peak_id
         hfree=hfree+1
@@ -939,7 +939,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
            stop
         endif
      else
-        ikey=hkey(ihash) ! collision in the hash table 
+        ikey=hkey(ihash) ! collision in the hash table
         do while(ikey>0)
            jkey=ikey
            if(gkey(ikey)==global_peak_id)exit
@@ -957,7 +957,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
               stop
            endif
         else            ! peak already exists
-           local_peak_id=ikey 
+           local_peak_id=ikey
         end if
      end if
   end if
@@ -966,14 +966,14 @@ end subroutine get_local_peak_id
 !################################################################
 !################################################################
 !################################################################
-!################################################################     
+!################################################################
 subroutine get_local_peak_cpu(local_peak_id,peak_cpu)
   use amr_commons
   use clfind_commons
   implicit none
   integer::local_peak_id,peak_cpu
   integer::icpu,global_peak_id
-  
+
   ! get the mpi-domain a peak belongs to from its LOCAL id
 
   if(local_peak_id <= npeaks) then
@@ -982,7 +982,7 @@ subroutine get_local_peak_cpu(local_peak_id,peak_cpu)
      global_peak_id=gkey(local_peak_id)
      peak_cpu=ncpu
      do icpu=1,ncpu
-        if(    global_peak_id> ipeak_start(icpu) .and. & 
+        if(    global_peak_id> ipeak_start(icpu) .and. &
              & global_peak_id<=ipeak_start(icpu)+npeaks_per_cpu(icpu))then
            peak_cpu=icpu
         endif
@@ -1004,7 +1004,7 @@ subroutine build_peak_communicator
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   npeak_alltoall=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
@@ -1064,7 +1064,7 @@ subroutine virtual_peak_int(xx,action)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   ipeak_alltoall=0
@@ -1093,7 +1093,7 @@ subroutine virtual_peak_int(xx,action)
      end do
   end select
   deallocate(int_peak_send_buf,int_peak_recv_buf)
-#endif  
+#endif
 end subroutine virtual_peak_int
 !################################################################
 !################################################################
@@ -1199,7 +1199,7 @@ subroutine boundary_peak_int(xx)
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(int_peak_send_buf(1:peak_send_tot))
   allocate(int_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1215,7 +1215,7 @@ subroutine boundary_peak_int(xx)
      xx(ipeak)=int_peak_send_buf(peak_send_oft(icpu)+ipeak_alltoall(icpu))
   end do
   deallocate(int_peak_send_buf,int_peak_recv_buf)
-#endif  
+#endif
 end subroutine boundary_peak_int
 !################################################################
 !################################################################
@@ -1232,7 +1232,7 @@ subroutine boundary_peak_dp(xx)
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
-  
+
   allocate(dp_peak_send_buf(1:peak_send_tot))
   allocate(dp_peak_recv_buf(1:peak_recv_tot))
   do j=1,peak_recv_tot
@@ -1265,7 +1265,7 @@ subroutine write_clump_map
 #endif
   !---------------------------------------------------------------------------
   ! This routine writes a csv-file of cell center coordinates and clump number
-  ! for each cell which is in a clump. Makes only sense to be called when the 
+  ! for each cell which is in a clump. Makes only sense to be called when the
   ! clump finder is called at output-writing and not for sink-formation.
   !---------------------------------------------------------------------------
 
@@ -1274,7 +1274,7 @@ subroutine write_clump_map
   real(dp),dimension(1:3)::xcell,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   character(LEN=5)::myidstring,nchar,ncharcpu
-  
+
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
 
@@ -1297,7 +1297,7 @@ subroutine write_clump_map
         end if
      endif
 #endif
-   
+
   call title(ifout-1,nchar)
   call title(myid,myidstring)
   if(IOGROUPSIZEREP>0)then
@@ -1307,8 +1307,8 @@ subroutine write_clump_map
      open(unit=20,file=TRIM('output_'//TRIM(nchar)//'/clump_map.csv'//myidstring),form='formatted')
   endif
   !loop parts
-  do ipart=1,ntest     
-     peak_nr=flag2(icellp(ipart)) 
+  do ipart=1,ntest
+     peak_nr=flag2(icellp(ipart))
      if (peak_nr /=0 ) then
         ! Cell coordinates
         ind=(icellp(ipart)-ncoarse-1)/ngridmax+1 ! cell position
@@ -1331,7 +1331,7 @@ subroutine write_clump_map
         end if
      endif
 #endif
- 
+
 
 end subroutine write_clump_map
 !################################################################
@@ -1350,7 +1350,7 @@ subroutine analyze_peak_memory
   integer,dimension(1:ncpu)::hfree_all,hfree_tot
   integer,dimension(1:ncpu)::sparse_all,sparse_tot
   integer,dimension(1:ncpu)::coll_all,coll_tot
-  
+
   npeak_all=0
   npeak_all(myid)=npeaks
   coll_all=0

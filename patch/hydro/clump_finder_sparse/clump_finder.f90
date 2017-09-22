@@ -19,8 +19,8 @@ subroutine clump_finder(create_output)
   ! the relevant properties are computed. If a so called peak patch is
   ! considered irrelevant, it is merged to the neighbor which it is connected
   ! to through the saddle point with the highest density.
-  ! Andreas Bleuler & Davide Martizzi & Romain Teyssier 
-  !---------------------------------------------------------------------------- 
+  ! Andreas Bleuler & Davide Martizzi & Romain Teyssier
+  !----------------------------------------------------------------------------
 
   integer::itest,istep,nskip,ilevel,info,icpu,nmove,nmove_all
   integer::i,j,jj,ntest,ntest_all,peak_nr
@@ -40,10 +40,10 @@ subroutine clump_finder(create_output)
 
   !-------------------------------------------------------------------------------
   ! count the number of test particles to be created, flag the cells, share info
-  !------------------------------------------------------------------------------- 
+  !-------------------------------------------------------------------------------
   ntest=0
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,ntest,0,1) !action 1: count and flag 
+     call count_test_particle(ilevel,ntest,0,1) !action 1: count and flag
   end do
   ntest_cpu=0; ntest_cpu_all=0
   ntest_cpu(myid)=ntest
@@ -71,7 +71,7 @@ subroutine clump_finder(create_output)
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-     call count_test_particle(ilevel,itest,nskip,2) !case2 : create the parts 
+     call count_test_particle(ilevel,itest,nskip,2) !case2 : create the parts
   end do
   do ilevel=nlevelmax,levelmin,-1
      call make_virtual_fine_int(flag2(1),ilevel)
@@ -81,12 +81,12 @@ subroutine clump_finder(create_output)
   ! Sort particles according to density
   !-------------------------------------------------------------------------------
   if (ntest>0) then
-     allocate(testp_sort(ntest)) 
+     allocate(testp_sort(ntest))
      do i=1,ntest
         denp(i)=-denp(i)
         testp_sort(i)=i
      end do
-     call quick_sort_dp(denp(1),testp_sort(1),ntest) 
+     call quick_sort_dp(denp(1),testp_sort(1),ntest)
      deallocate(denp)
   endif
 
@@ -99,8 +99,8 @@ subroutine clump_finder(create_output)
   npeaks_per_cpu(myid)=npeaks
   if(clinfo .and. npeaks>0)write(*,*)'n_peaks on processor number',myid,'= ',npeaks
 
-  !----------------------------------------------------------------------------                       
-  ! Share number of peaks per cpu and create a list  
+  !----------------------------------------------------------------------------
+  ! Share number of peaks per cpu and create a list
   !----------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(npeaks_per_cpu,npeaks_per_cpu_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
@@ -135,12 +135,12 @@ subroutine clump_finder(create_output)
      call make_virtual_fine_int(flag2(1),ilevel)
   end do
 
-  !-------------------------------------------------------------------------------               
+  !-------------------------------------------------------------------------------
   ! main step:
   ! - order cells in descending density
-  ! - get peak id from densest neighbor 
+  ! - get peak id from densest neighbor
   ! - nmove is number of peak id's passed along
-  ! - done when nmove=0 (for single cores, only one sweep necessary)   
+  ! - done when nmove=0 (for single cores, only one sweep necessary)
   !-------------------------------------------------------------------------------
   nmove=1
   istep=0
@@ -152,18 +152,18 @@ subroutine clump_finder(create_output)
         call make_virtual_fine_int(flag2(1),ilevel)
      end do
      istep=istep+1
-#ifndef WITHOUTMPI 
+#ifndef WITHOUTMPI
      call MPI_ALLREDUCE(nmove,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      nmove=nmove_all
-#endif   
-     if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove   
+#endif
+     if(myid==1)write(*,*)"istep=",istep,"nmove=",nmove
   end do
 
   ! Allocate peak-patch property arrays
   call allocate_peak_patch_arrays
 
-  ! Compute peak-patch mass etc. and output these properties before merging 
-  call compute_clump_properties(ntest) 
+  ! Compute peak-patch mass etc. and output these properties before merging
+  call compute_clump_properties(ntest)
   if (clinfo)call write_clump_properties(.false.)
 
 
@@ -176,7 +176,7 @@ subroutine clump_finder(create_output)
         call make_virtual_fine_int(flag2(1),ilevel)
         call make_virtual_fine_dp(phi(1),ilevel)
      end do
-     call saddlepoint_search(ntest) 
+     call saddlepoint_search(ntest)
      call merge_clumps(ntest)
 
 
@@ -201,7 +201,7 @@ subroutine clump_finder(create_output)
 
 
      call compute_clump_properties_round2(ntest,all_bound)
-     ! write properties to screen 
+     ! write properties to screen
      call write_clump_properties(.false.)
      ! ..and if wanted to disk
      if (create_output)then
@@ -244,12 +244,12 @@ subroutine clump_finder(create_output)
      !------------------------------------------------------------------------------
      ! determine whether a peak patch is eligible to form a new sink.
      ! if a new sink has to be created, flag2 is set to 1 at the peak position
-     !------------------------------------------------------------------------------     
+     !------------------------------------------------------------------------------
      pos=0.0
      flag2=0
      allocate(form(1:npeaks_tot),form_all(1:npeaks_tot))
-     form=0; form_all=0; 
-     flag_form=0; flag_form_tot=0;  
+     form=0; form_all=0;
+     flag_form=0; flag_form_tot=0;
      call heapsort_index(max_dens_tot,sort_index,npeaks_tot)
      do j=npeaks_tot,1,-1
         jj=sort_index(j)
@@ -269,7 +269,7 @@ subroutine clump_finder(create_output)
                  write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj
               end if
            end if
-        else 
+        else
            ok=.true.
            ok=ok.and.relevance_tot(jj)>0.
            ok=ok.and.occupied_all(jj)==0
@@ -288,7 +288,7 @@ subroutine clump_finder(create_output)
               call cmp_cpumap(pos,cc,1)
               if (cc(1) .eq. myid)then
                  call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
-                 ! Geometrical criterion 
+                 ! Geometrical criterion
                  if(ivar_refine>0)then
                     if(uold(cell_index(1),ivar_refine)>var_cut_refine)then
                        flag2(cell_index(1))=jj
@@ -342,7 +342,7 @@ subroutine clump_finder(create_output)
      deallocate(occupied,occupied_all)
      deallocate(form,form_all)
   endif
-  
+
   ! Deallocate test particle and peak arrays
   if (ntest>0)then
      deallocate(icellp)
@@ -416,13 +416,13 @@ subroutine count_test_particle(ilevel,ntot,nskip,action)
            ok(i)=ok(i).and.uold(ind_cell(i),1)>d0 !check density
         end do
 
-        select case (action) 
+        select case (action)
         case (1) !count and flag
            ! Compute test particle map
            do i=1,ngrid
               flag2(ind_cell(i))=0
               if(ok(i))then
-                 flag2(ind_cell(i))=1 
+                 flag2(ind_cell(i))=1
                  ntot=ntot+1
               endif
            end do
@@ -451,7 +451,7 @@ subroutine scan_for_peaks(npartt,n,action)
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::npartt,n,action
 
@@ -464,7 +464,7 @@ subroutine scan_for_peaks(npartt,n,action)
 
   integer::ilevel,next_level,ipart,ip
   integer,dimension(1:nvector)::ind_cell
-  
+
   ip=0
   do ipart=1,npartt
      ip=ip+1
@@ -495,7 +495,7 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   integer,dimension(1:nvector)::ind_grid,ind_cell
 
   !------------------------------------------------------------
-  ! This routine constructs all neighboring leaf cells at levels 
+  ! This routine constructs all neighboring leaf cells at levels
   ! ilevel-1, ilevel, ilevel+1.
   ! Depending on the action case value, fuctions performing
   ! further checks for the neighbor cells are called.
@@ -515,7 +515,7 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   logical ,dimension(1:nvector)::okpeak,ok
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -548,16 +548,16 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
      xc(ind,2)=(dble(iy)-0.5D0)*dx
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! some preliminary action...
   do j=1,np
      indv(j)=(ind_cell(j)-ncoarse-1)/ngridmax+1 ! cell position in grid
      ind_grid(j)=ind_cell(j)-ncoarse-(indv(j)-1)*ngridmax ! grid index
      density_max(j)=uold(ind_cell(j),1)*1.0001 !get cell density (1.0001 probably not necessary, just a safety measure)
-     ind_max(j)=ind_cell(j) !save cell index   
+     ind_max(j)=ind_cell(j) !save cell index
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
-  
+
   !initialze logical array
   okpeak=.true.
 
@@ -576,10 +576,10 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
                  xtest(j,3)=(xg(ind_grid(j),3)+2*xc(indv(j),3)-skip_loc(3))*scale+(2*k1-1)*dx_loc
               end do
               call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
-              do j=1,np 
+              do j=1,np
                  !check wether neighbor is in a leaf cell at the right level
                  if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel-1))ok(j)=.true.
-              end do     
+              end do
               !check those neighbors
               if (action<4) call peakcheck(cell_index,okpeak,ok,density_max,ind_max,np)
               if (action==4) call saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
@@ -648,19 +648,19 @@ subroutine neighborsearch(ind_cell,np,count,ilevel,action)
   ! choose action for different cases
   !====================================
   select case (action)
-  case (1)   ! Count peaks  
+  case (1)   ! Count peaks
      do j=1,np
         if(okpeak(j))count=count+1
      end do
-  
+
   case (2)   ! Initialize flag2 to peak global index
      do j=1,np
-        if(okpeak(j))then 
+        if(okpeak(j))then
            count=count+1
            flag2(ind_cell(j))=count
         end if
      end do
-     
+
   case (3) ! Propagate flag2
      do j=1,np
         if(flag2(ind_cell(j)).ne.flag2(ind_max(j)))count=count+1
@@ -718,7 +718,7 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
   integer::index,index_prev,index_next,imatp,imatn
 
   do j=1,np
-     neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
+     neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in
   end do
   do j=1,np
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
@@ -740,7 +740,7 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
            imatp=1
            imatn=1
            do imat=1,last_imat_free ! check if we need to update the value in the linked list
-              if(clump_nr(j)+(neigh_cl(j)-1)*npeaks_tot==icurrent(imat))then ! update 
+              if(clump_nr(j)+(neigh_cl(j)-1)*npeaks_tot==icurrent(imat))then ! update
                  saddle_dens(imat)=max(saddle_dens(imat),av_dens(j))
                  flaggo=1
               else ! compute the closest neighbors in the list
@@ -755,7 +755,7 @@ subroutine saddlecheck(ind_cell,cell_index,clump_nr,ok,np)
                  end if
               end if
            end do
-           if(flaggo == 0)then ! create new element of the list and link it 
+           if(flaggo == 0)then ! create new element of the list and link it
               last_imat_free=last_imat_free+1
               saddle_dens(last_imat_free)=max(saddle_dens(last_imat_free),av_dens(j))
               icurrent(last_imat_free)=clump_nr(j)+(neigh_cl(j)-1)*npeaks_tot
@@ -787,7 +787,7 @@ subroutine phi_ref_check(ind_cell,cell_index,clump_nr,ok,np)
   integer::np,j
 
   do j=1,np
-     neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
+     neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in
   end do
   do j=1,np
      ok(j)=ok(j).and. clump_nr(j)>0 !check that cell is not in a clump that has been merged to zero
@@ -835,7 +835,7 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
      yy = xpart(i,2)/boxlen + (ny-1)/2.0
      zz = xpart(i,3)/boxlen + (nz-1)/2.0
      igrid=igrid0
-     do j=1,ilevel 
+     do j=1,ilevel
         ii=1; jj=1; kk=1
         if(xx<xg(igrid,1))ii=0
         if(yy<xg(igrid,2))jj=0
@@ -860,14 +860,14 @@ subroutine read_clumpfind_params()
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  
-  !--------------------------------------------------                           
-  ! Namelist definitions                                                        
-  !--------------------------------------------------                           
+
+  !--------------------------------------------------
+  ! Namelist definitions
+  !--------------------------------------------------
 
   namelist/clumpfind_params/relevance_threshold,density_threshold,mass_threshold,merge_unbound,clinfo
 
-  ! Read namelist file 
+  ! Read namelist file
   rewind(1)
   read(1,NML=clumpfind_params,END=101)
   goto 102
@@ -889,8 +889,8 @@ subroutine surface_int(ind_cell,np,ilevel)
   integer,dimension(1:nvector)::ind_grid,ind_cell
 
   !------------------------------------------------------------
-  ! This routine constructs all neighboring leaf cells that 
-  ! have a common cell surface at levels 
+  ! This routine constructs all neighboring leaf cells that
+  ! have a common cell surface at levels
   ! ilevel-1, ilevel, ilevel+1.
   ! Depending on the action case value, fuctions performing
   ! further checks for the neighbor cells are called.
@@ -908,7 +908,7 @@ subroutine surface_int(ind_cell,np,ilevel)
   logical ,dimension(1:nvector)::ok
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -927,7 +927,7 @@ subroutine surface_int(ind_cell,np,ilevel)
      xc(ind,2)=(dble(iy)-0.5D0)*dx
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ekk_cell=0.; P_neigh=0; P_cell=0
   ! some preliminary action...
   do j=1,np
@@ -944,8 +944,8 @@ subroutine surface_int(ind_cell,np,ilevel)
 
 
 
-  
-  
+
+
   !================================
   ! generate neighbors at level ilevel
   !================================
@@ -953,8 +953,8 @@ subroutine surface_int(ind_cell,np,ilevel)
   do k2=0,2
      do j2=0,2
         do i2=0,2
-           if((k2-1.)**2+(j2-1.)**2+(i2-1.)**2==1)then !check whether common face exists 
-              
+           if((k2-1.)**2+(j2-1.)**2+(i2-1.)**2==1)then !check whether common face exists
+
               n=0.
               if (k2==0)n(3)=-1.
               if (k2==2)n(3)=1.
@@ -963,44 +963,44 @@ subroutine surface_int(ind_cell,np,ilevel)
               if (i2==0)n(1)=-1.
               if (i2==2)n(1)=1.
               if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong lenght'
-              
-              
+
+
               r=0.
-              do j=1,np                 
+              do j=1,np
                  xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc
                  xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc
                  xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
 
-                 if (clump_nr(j)>0)then                    
+                 if (clump_nr(j)>0)then
                     r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc*0.5&
                          -center_of_mass_tot(clump_nr(j),1)
                     r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5&
                          -center_of_mass_tot(clump_nr(j),2)
                     r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5&
                          -center_of_mass_tot(clump_nr(j),3)
-                 endif                 
+                 endif
               end do
-              
+
               call get_cell_index(cell_index,cell_levl,xtest,ilevel,np)
-              do j=1,np           
+              do j=1,np
                  ok(j)=(son(cell_index(j))==0)
               end do
               do j=1,np
-                 neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
+                 neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in
                  ok(j)=ok(j).and. neigh_cl(j)/=clump_nr(j) !neighboring cell is in another clump
                  ok(j)=ok(j).and. 0/=clump_nr(j) !clump number is not zero
               end do
-              
+
               r_dot_n=0.
               do j=1,np
                  do idim=1,3
                     r_dot_n(j)=r_dot_n(j)+n(idim)*r(j,idim)
                  end do
               end do
-              
+
               ekk_neigh=0.
               do j=1,np
-                 if (ok(j))then 
+                 if (ok(j))then
                     do jdim=1,ndim
                        ekk_neigh(j)=ekk_neigh(j)+0.5*uold(cell_index(j),jdim+1)**2
                     end do
@@ -1013,35 +1013,35 @@ subroutine surface_int(ind_cell,np,ilevel)
         end do
      end do
   end do
-  
+
 
   !===================================
   ! generate neighbors at level ilevel+1
-  !====================================  
-  if(ilevel<nlevelmax)then  
-     ! Generate 4x4x4 neighboring cells at level ilevel+1 
+  !====================================
+  if(ilevel<nlevelmax)then
+     ! Generate 4x4x4 neighboring cells at level ilevel+1
      do k3=0,3
         do j3=0,3
            do i3=0,3
               if((k3-1.5)**2+(j3-1.5)**2+(i3-1.5)**2==2.75)then !check whether common face exists
 
                  n=0.
-                 if (k3==0)n(3)=-1. 
+                 if (k3==0)n(3)=-1.
                  if (k3==3)n(3)=1.
-                 if (j3==0)n(2)=-1. 
+                 if (j3==0)n(2)=-1.
                  if (j3==3)n(2)=1.
-                 if (i3==0)n(1)=-1. 
+                 if (i3==0)n(1)=-1.
                  if (i3==3)n(1)=1.
                  if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong lenght'
 
                  r=0.
-                 do j=1,np 
+                 do j=1,np
 
                     xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
                     xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
                     xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
-                    
-                    if (clump_nr(j)>0)then                       
+
+                    if (clump_nr(j)>0)then
                        r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0*0.5&
                             -center_of_mass_tot(clump_nr(j),1)
                        r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0*0.5&
@@ -1056,14 +1056,14 @@ subroutine surface_int(ind_cell,np,ilevel)
                  do j=1,np
                     !check wether neighbor is in a leaf cell at the right level
                     if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1))ok(j)=.true.
-                 end do                 
+                 end do
 
                  do j=1,np
-                    neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in 
+                    neigh_cl(j)=flag2(cell_index(j))!nuber of clump the neighboring cell is in
                     ok(j)=ok(j).and. neigh_cl(j)/=clump_nr(j) !neighboring cell is in another clump
-                    ok(j)=ok(j).and. 0/=clump_nr(j) !clump number is not zero 
+                    ok(j)=ok(j).and. 0/=clump_nr(j) !clump number is not zero
                  end do
-                 
+
                  r_dot_n=0.
                  do j=1,np
                     do idim=1,3
@@ -1081,14 +1081,14 @@ subroutine surface_int(ind_cell,np,ilevel)
                        Psurf(clump_nr(j))=Psurf(clump_nr(j))+r_dot_n(j)*0.25*dx_loc**2*0.5*(P_neigh(j)+P_cell(j))
                        if(debug.and.((P_neigh(j)-P_cell(j))/P_cell(j))**2>4.)print*,'caution, very high p contrast',(((P_neigh(j)-P_cell(j))/P_cell(j))**2)**0.5
                     endif
-                 end do                 
+                 end do
 
               endif
            end do
         end do
      end do
   endif
-     
+
 
 end subroutine surface_int
 !#########################################################################

@@ -4,7 +4,7 @@
 !#########################################################
 subroutine gravana(x,force,dx,ncell)
   use amr_parameters
-  use poisson_parameters  
+  use poisson_parameters
   use poisson_commons
   use mond_commons
   implicit none
@@ -25,7 +25,7 @@ subroutine gravana(x,force,dx,ncell)
   ! Self-gravity
   ! TODO: Check boundary conditions
   if (gravity_type==0) then
-     
+
      ! Compute position relative to center of mass
      r = 0.0
      do idim=1,ndim
@@ -59,7 +59,7 @@ subroutine gravana(x,force,dx,ncell)
   endif
 
   ! Constant vector
-  if(gravity_type==1)then 
+  if(gravity_type==1)then
      do idim=1,ndim
         do i=1,ncell
            force(i,idim)=gravity_params(idim)
@@ -68,7 +68,7 @@ subroutine gravana(x,force,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then 
+  if(gravity_type==2)then
      gmass=gravity_params(1) ! GM
      emass=gravity_params(2) ! Softening length
      xmass=gravity_params(3) ! Point mass coordinates

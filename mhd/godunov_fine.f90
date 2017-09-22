@@ -11,7 +11,7 @@ subroutine godunov_fine(ilevel)
   ! This routine is a wrapper to the second order Godunov solver.
   ! Small grids (2x2x2) are gathered from level ilevel and sent to the
   ! hydro solver. On entry, hydro variables are gathered from array uold.
-  ! On exit, unew has been updated. 
+  ! On exit, unew has been updated.
   !--------------------------------------------------------------------------
   integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
@@ -80,7 +80,7 @@ subroutine set_unew(ilevel)
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,8+irad)
            end do
-#endif          
+#endif
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
      end if
@@ -140,7 +140,7 @@ subroutine set_uold(ilevel)
      call add_gravity_source_terms(ilevel)
   end if
 
-  ! Add non conservative pdV terms to unew 
+  ! Add non conservative pdV terms to unew
   ! for thermal and/or non-thermal energies
   if(pressure_fix.OR.nener>0)then
      call add_pdv_source_terms(ilevel)
@@ -291,13 +291,13 @@ subroutine add_pdv_source_terms(ilevel)
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
-   
+
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Gather neighboring grids
      do i=1,ngrid
         igridn(i,0)=ind_grid(i)
@@ -310,16 +310,16 @@ subroutine add_pdv_source_terms(ilevel)
            igridn(i,2*idim  )=son(ind_right(i,idim))
         end do
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
-        
+
         ! Compute central cell index
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather all neighboring velocities
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
@@ -339,14 +339,14 @@ subroutine add_pdv_source_terms(ilevel)
               if(igridn(i,ig2)>0)then
                  veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
                  dx_d(i,idim)=dx_loc
-              else 
+              else
                  veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
                  dx_d(i,idim)=dx_loc*1.5_dp
               end if
            enddo
         end do
         ! End loop over dimensions
-  
+
         ! Compute divu = Trace G
         divu_loc(1:ngrid)=0.0d0
         do i=1,ngrid
@@ -356,7 +356,7 @@ subroutine add_pdv_source_terms(ilevel)
            enddo
         end do
 
-        ! Update thermal internal energy 
+        ! Update thermal internal energy
         if(pressure_fix)then
            do i=1,ngrid
               ! Compute old thermal energy
@@ -399,7 +399,7 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! This is the old technique based on the "pressure fix" option.
 
-  ! Update thermal internal energy 
+  ! Update thermal internal energy
   if(pressure_fix)then
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -455,10 +455,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolate from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated 
-  ! and stored in array unew(:), both at the current level and at the 
+  ! already been taken into account. Conservative variables are updated
+  ! and stored in array unew(:), both at the current level and at the
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -517,7 +517,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -525,7 +525,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-     
+
      ! Check if neighboring grid exists
      nbuffer=0
      nexist=0
@@ -541,7 +541,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
           ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
         end if
      end do
-     
+
      ! If not, interpolate variables from parent cells
      if(nbuffer>0)then
         call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
@@ -568,12 +568,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nexist
            ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
         end do
-        
+
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2
         if(ndim>1)j3=1+2*(j1-1)+j2
         if(ndim>2)k3=1+2*(k1-1)+k2
-        
+
         ! Gather hydro variables
         do ivar=1,nvar+3
            do i=1,nexist
@@ -583,7 +583,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -595,7 +595,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
-        
+
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -603,7 +603,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,nbuffer
            ok(ind_nexist(i),i3,j3,k3)=.false.
         end do
-        
+
      end do
      end do
      end do
@@ -640,7 +640,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   endif
 
   !------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -848,13 +848,13 @@ subroutine godfine1(ind_grid,ncache,ilevel)
           &    -( emfz(i,i3,j3,k3)-emfz(i,i3,j3+1,k3) )
         unew(ind_cell(i),neul+1)=unew(ind_cell(i),neul+1)+dflux_x
         dflux_x=( emfy(i,i3+1,j3,k3)-emfy(i,i3+1,j3,k3+1) ) &
-          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )  
+          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )
         unew(ind_cell(i),nvar+1)=unew(ind_cell(i),nvar+1)+dflux_x
      end do
   end do
   end do
   end do
-#if NDIM>1  
+#if NDIM>1
   do k3=k3min,k3max
   do j3=1,2
   do i3=1,2
@@ -910,10 +910,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-     
+
      !----------------------
      ! Left flux at boundary
-     !----------------------     
+     !----------------------
      ! Check if grids sits near left boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
@@ -975,10 +975,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end if
-     
+
      !-----------------------
      ! Right flux at boundary
-     !-----------------------     
+     !-----------------------
      ! Check if grids sits near right boundary
      ! and gather neighbor father cells index
      nb_noneigh=0
@@ -1044,7 +1044,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   end do
   ! End loop over dimensions
 
-#if NDIM>1  
+#if NDIM>1
   !---------------------------------------------------------------
   ! Conservative update at level ilevel-1 for the induction system
   !---------------------------------------------------------------

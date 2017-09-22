@@ -7,8 +7,8 @@ program icextract
   ! Il genere en output les fichiers suivants:
   !          - un fichier mask :  output/ic_refmap
   !          - un fichier metal:  output/ic_pvar_00001
-  !                    
-  !         
+  !
+  !
   ! M. Gonzalez
   ! Saclay, le 31/08/01.
   !---------------------------------------------------------------------
@@ -22,7 +22,7 @@ program icextract
   real::x1o,x2o,x3o,x1o_cube,x2o_cube,x3o_cube,dx,astart,omegam,omegav,h0
   real,dimension(:,:),allocatable::f,f_cube
   character*80::input,output
-  character*80,dimension(4)::filename 
+  character*80,dimension(4)::filename
   logical::ok
 
   narg = iargc()
@@ -37,14 +37,14 @@ program icextract
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
      stop
   endif
 
-  !  COMPUTE FILES TO OPEN AND TO WRITE 
+  !  COMPUTE FILES TO OPEN AND TO WRITE
   filename(1) =TRIM(input)//'/ic_refmap'
   filename(2) =TRIM(input)//'/ic_pvar_00001'
 
@@ -60,7 +60,7 @@ program icextract
   write(*,*)'Enter length of cube nc1,nc2,nc3 (input mesh units)'
   read(*,*) np1_cube,np2_cube,np3_cube
   write(*,*) np1_cube,np2_cube,np3_cube
-  
+
   min_x=max(xc1-np1_cube/2,0)
   max_x=min(xc1+np1_cube/2,np1)
   min_y=max(xc2-np2_cube/2,0)
@@ -79,7 +79,7 @@ program icextract
 
   allocate(f(np1,np2))
   allocate(f_cube(np1_cube,np2_cube))
-  
+
   do i_file=1,2
 
      inquire(file=filename(i_file),exist=ok)
@@ -89,11 +89,11 @@ program icextract
         write(*,*)'Reading input file '//TRIM(filename(i_file))
         open(11,file=filename(i_file),form='unformatted')
         read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-        
+
         write(*,*)'Writing ouput file '//TRIM(filename(9+i_file))
         open(12,file=filename(2+i_file),form='unformatted')
         write(12) np1_cube,np2_cube,np3_cube,dx,x1o_cube,x2o_cube,x3o_cube,astart,omegam,omegav,h0
-        
+
         do i3=1,min_z
            read(11)
         end do
@@ -109,14 +109,14 @@ program icextract
         do i3=max_z+1,np3
            read(11)
         end do
-        
+
         close(11)
         close(12)
-        
+
      endif
-     
+
   enddo
-     
+
   deallocate(f,f_cube)
-     
+
 end program icextract

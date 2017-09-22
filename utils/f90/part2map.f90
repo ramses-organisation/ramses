@@ -1,7 +1,7 @@
 program part2map
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES. 
+  ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -50,14 +50,14 @@ program part2map
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -123,12 +123,12 @@ program part2map
      n_frw=1000
      allocate(aexp_frw(0:n_frw),hexp_frw(0:n_frw))
      allocate(tau_frw(0:n_frw),t_frw(0:n_frw))
-     
+
      ! Compute Friedman model look up table
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
           & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
-     
+
      ! Find neighboring expansion factors
      i=1
      do while(aexp_frw(i)>aexp.and.i<n_frw)
@@ -150,23 +150,23 @@ program part2map
      write(*,*)'Performing rotation'
      write(*,*)jxin,jyin,jzin
   endif
-  
+
   kxin=0.
   kyin=-jzin
   kzin=jyin
-  
+
   lxin=jyin*kzin-jzin*kyin
   lyin=jzin*kxin-jxin*kzin
   lzin=jxin*kyin-jyin*kxin
-  
+
   jx=jxin/sqrt(jxin**2+jyin**2+jzin**2)
   jy=jyin/sqrt(jxin**2+jyin**2+jzin**2)
   jz=jzin/sqrt(jxin**2+jyin**2+jzin**2)
-  
+
   kx=kxin/sqrt(kxin**2+kyin**2+kzin**2)
   ky=kyin/sqrt(kxin**2+kyin**2+kzin**2)
   kz=kzin/sqrt(kxin**2+kyin**2+kzin**2)
-  
+
   lx=lxin/sqrt(lxin**2+lyin**2+lzin**2)
   ly=lyin/sqrt(lxin**2+lyin**2+lzin**2)
   lz=lzin/sqrt(lxin**2+lyin**2+lzin**2)
@@ -236,7 +236,7 @@ program part2map
         kmin=int(zmin*dble(maxdom))
         kmax=kmin+1
      endif
-     
+
      dkey=(dble(2**(levelmax+1)/dble(maxdom)))**ndim
      ndom=1
      if(bit_length>0)ndom=8
@@ -252,7 +252,7 @@ program part2map
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),bounding(1),bit_length,1)
@@ -276,7 +276,7 @@ program part2map
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -374,7 +374,7 @@ program part2map
                 &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
                 &   x(i,3)>=zmin.and.x(i,3)<=zmax.and. &
                 &   m(i)<mmax )
-           
+
            if(nstar>0)then
               if(star)then
                  if(age(i).ne.0.0d0.and.id(i)>0)then
@@ -392,7 +392,7 @@ program part2map
            else
               npart_actual=npart_actual+1
            endif
-           
+
            if(ok_part)then
               ddx=(x(i,idim)-xxmin)/dx
               ddy=(x(i,jdim)-yymin)/dy
@@ -408,7 +408,7 @@ program part2map
                 &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
                 &   x(i,3)>=zmin.and.x(i,3)<=zmax.and. &
                 &   m(i)<mmax)
-           
+
            if(nstar>0)then
               if(star)then
                  ok_part=ok_part.and.(age(i).ne.0.0d0).and.(id(i)>0)
@@ -433,7 +433,7 @@ program part2map
                  ok_part=ok_part.and.(age(i).eq.0.0d0).and.(id(i)>0)
               endif
            endif
-           
+
            if(ok_part)then
               npart_actual=npart_actual+1
               if(rotation)then
@@ -489,7 +489,7 @@ program part2map
   write(*,*)'Total mass=',mtot
   if(.not. star)write(*,*)'npart tot=',npart_actual
   write(*,*)MINVAL(map),MAXVAL(map)
-  
+
   ! Output file
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
@@ -500,7 +500,7 @@ program part2map
      allocate(toto(0:nx,0:ny))
      toto=map(0:nx,0:ny)
   endif
-  ! Binary format (to be read by ramses utilities) 
+  ! Binary format (to be read by ramses utilities)
   if(TRIM(filetype).eq.'bin')then
      open(unit=10,file=nomfich,form='unformatted')
      if(do_density.or.periodic)then
@@ -552,7 +552,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 4) then
          print *, 'usage: part2map  -inp  input_dir'
@@ -593,13 +593,13 @@ contains
          case ('-out')
             outfich = trim(arg)
          case ('-dir')
-            proj = trim(arg) 
+            proj = trim(arg)
          case('-jx')
-            read (arg,*) jxin            
+            read (arg,*) jxin
          case('-jy')
-            read (arg,*) jyin            
+            read (arg,*) jyin
          case('-jz')
-            read (arg,*) jzin            
+            read (arg,*) jzin
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -805,20 +805,20 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   tau = 0.0D0
   t = 0.0D0
   nstep = 0
-  
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
-     
+
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
   end do
 
   age_tot=-t
@@ -826,7 +826,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable
-  
+
   axp_t = 1.d0
   t = 0.d0
   axp_tau = 1.d0
@@ -838,8 +838,8 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   axp_out(nout)=axp_tau
   hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
 
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
@@ -850,7 +850,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
      if(mod(nstep,nskip)==0)then
         nout=nout+1
         t_out(nout)=t
@@ -867,7 +867,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
 end subroutine friedman
 
-function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0) 
+function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
   real(kind=8)::dadtau,axp_tau,O_mat_0,O_vac_0,O_k_0
   dadtau = axp_tau*axp_tau*axp_tau *  &
        &   ( O_mat_0 + &

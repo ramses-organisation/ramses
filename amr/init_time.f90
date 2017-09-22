@@ -11,10 +11,10 @@ subroutine init_time
 #endif
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   integer::i,Nmodel
-  real(kind=8)::T2_sim  
+  real(kind=8)::T2_sim
 #ifdef grackle
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::file_exists
@@ -50,26 +50,26 @@ subroutine init_time
           & 1.d-6,dble(aexp_ini), &
           & aexp_frw,hexp_frw,tau_frw,t_frw,n_frw)
 
-     ! Compute initial conformal time                                    
-     ! Find neighboring expansion factors                                  
-     i=1                                                                   
-     do while(aexp_frw(i)>aexp.and.i<n_frw)                                
-        i=i+1                                                              
-     end do                                                                
-     ! Interploate time                                                    
-     if(nrestart==0)then                                                   
-        t=tau_frw(i)*(aexp-aexp_frw(i-1))/(aexp_frw(i)-aexp_frw(i-1))+ &   
-             & tau_frw(i-1)*(aexp-aexp_frw(i))/(aexp_frw(i-1)-aexp_frw(i)) 
-        aexp=aexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &     
-             & aexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))      
-        hexp=hexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &     
-             & hexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))      
-     end if                                                                
-     texp=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &           
-          & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))            
-  else                                                                     
-     texp=t                                                                
-  end if                                                                   
+     ! Compute initial conformal time
+     ! Find neighboring expansion factors
+     i=1
+     do while(aexp_frw(i)>aexp.and.i<n_frw)
+        i=i+1
+     end do
+     ! Interploate time
+     if(nrestart==0)then
+        t=tau_frw(i)*(aexp-aexp_frw(i-1))/(aexp_frw(i)-aexp_frw(i-1))+ &
+             & tau_frw(i-1)*(aexp-aexp_frw(i))/(aexp_frw(i-1)-aexp_frw(i))
+        aexp=aexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
+             & aexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
+        hexp=hexp_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
+             & hexp_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
+     end if
+     texp=t_frw(i)*(t-tau_frw(i-1))/(tau_frw(i)-tau_frw(i-1))+ &
+          & t_frw(i-1)*(t-tau_frw(i))/(tau_frw(i-1)-tau_frw(i))
+  else
+     texp=t
+  end if
 
   ! Initialize cooling model
 #ifdef grackle
@@ -85,7 +85,7 @@ subroutine init_time
         if(myid==1) write(*,*) grackle_data_file," not found"
         call clean_stop
      endif
-   
+
      iresult = set_default_chemistry_parameters(my_grackle_data)
      if(iresult.eq.0)then
          write(*,*) 'Grackle - error in initialize_chemistry_data'
@@ -137,8 +137,8 @@ subroutine init_time
      my_grackle_data%cloudy_electron_fraction_factor = grackle_cloudy_electron_fraction_factor
      grackle_data_file = TRIM(grackle_data_file)//C_NULL_CHAR
      my_grackle_data%grackle_data_file = C_LOC(grackle_data_file(1:1))
-   
-     ! Grackle units 
+
+     ! Grackle units
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      my_grackle_units%comoving_coordinates = 0
      my_grackle_units%density_units = scale_d
@@ -150,7 +150,7 @@ subroutine init_time
      !Set expansion factor to 1 for non-cosmological simulation
      ! Safety for GRACKLE initialisation
      my_grackle_units%a_value = aexp_ini
-   
+
      if(cosmo) then
         my_grackle_units%comoving_coordinates = 1
         ! Reonization redshift has to be later than starting redshift
@@ -205,9 +205,9 @@ subroutine init_time
      my_grackle_fields%RT_H2_dissociation_rate = C_LOC(gr_RT_H2_dissociation_rate)
      my_grackle_fields%RT_heating_rate = C_LOC(gr_RT_heating_rate)
      do i=1,nvector
-        gr_x_velocity(i) = 0d0 
-        gr_y_velocity(i) = 0d0 
-        gr_z_velocity(i) = 0d0 
+        gr_x_velocity(i) = 0d0
+        gr_y_velocity(i) = 0d0
+        gr_z_velocity(i) = 0d0
         gr_HII_density(i) = 0d0
         gr_HM_density(i) = 0d0
         gr_HeII_density(i) = 0d0
@@ -312,11 +312,11 @@ subroutine init_file
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   !------------------------------------------------------
   ! Read geometrical parameters in the initial condition files.
-  ! Initial conditions are supposed to be made by 
+  ! Initial conditions are supposed to be made by
   ! Bertschinger's grafic version 2.0 code.
   !------------------------------------------------------
   integer:: ilevel,nx_loc,ny_loc,nz_loc
@@ -327,7 +327,7 @@ subroutine init_file
 #ifndef WITHOUTMPI
   integer::dummy_io,info2
 #endif
-  
+
   if(verbose)write(*,*)'Entering init_file'
 
   ! Reading initial conditions parameters only
@@ -388,7 +388,7 @@ subroutine init_file
   nz_loc=kcoarse_max-kcoarse_min+1
   if(         nx_loc.ne.n1(levelmin)/2**levelmin &
        & .or. ny_loc.ne.n2(levelmin)/2**levelmin &
-       & .or. nz_loc.ne.n3(levelmin)/2**levelmin) then 
+       & .or. nz_loc.ne.n3(levelmin)/2**levelmin) then
      write(*,*)'coarser grid is not compatible with initial conditions file'
      write(*,*)'Found    n1=',n1(levelmin),&
           &            ' n2=',n2(levelmin),&
@@ -426,12 +426,12 @@ subroutine init_cosmo
   use gadgetreadfilemod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
   ! in the initial condition files.
-  ! Initial conditions are supposed to be made by 
+  ! Initial conditions are supposed to be made by
   ! Bertschinger's grafic version 2.0 code.
   !------------------------------------------------------
   integer:: ilevel
@@ -439,7 +439,7 @@ subroutine init_cosmo
   character(LEN=80)::filename
   character(LEN=5)::nchar
   logical::ok
-  TYPE(gadgetheadertype) :: gadgetheader 
+  TYPE(gadgetheadertype) :: gadgetheader
   integer::i
   integer,parameter::tag=1117
 #ifndef WITHOUTMPI
@@ -466,7 +466,7 @@ subroutine init_cosmo
            else
               filename=TRIM(initfile(ilevel))//'/ic_deltab'
            endif
- 
+
            ! Wait for the token
 #ifndef WITHOUTMPI
            if(IOGROUPSIZE>0) then
@@ -515,7 +515,7 @@ subroutine init_cosmo
            nlevelmax_part=nlevelmax_part+1
            ! Compute SPH equivalent mass (initial gas mass resolution)
            mass_sph=omega_b/omega_m*0.5d0**(ndim*ilevel)
-           
+
         endif
      end do
 
@@ -525,12 +525,12 @@ subroutine init_cosmo
      else
         aexp_ini=aexp
      endif
-     
+
      ! Check compatibility with run parameters
      if(.not. multiple) then
         if(         nx.ne.n1(levelmin)/2**levelmin &
              & .or. ny.ne.n2(levelmin)/2**levelmin &
-             & .or. nz.ne.n3(levelmin)/2**levelmin) then 
+             & .or. nz.ne.n3(levelmin)/2**levelmin) then
            write(*,*)'coarser grid is not compatible with initial conditions file'
            write(*,*)'Found    n1=',n1(levelmin),&
                 &            ' n2=',n2(levelmin),&
@@ -541,10 +541,10 @@ subroutine init_cosmo
            call clean_stop
         endif
      end if
-     
+
      ! Compute box length in the initial conditions in units of h-1 Mpc
      boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100.)
-     
+
   CASE ('gadget')
      if (verbose) write(*,*)'Reading in gadget format from '//TRIM(initfile(levelmin))
      call gadgetreadheader(TRIM(initfile(levelmin)), 0, gadgetheader, ok)
@@ -589,7 +589,7 @@ subroutine init_cosmo
      write(*,'(" box size=",1pe10.3," h-1 Mpc")')boxlen_ini
   end if
   omega_k=1.d0-omega_l-omega_m
-           
+
   ! Compute linear scaling factor between aexp and astart(ilevel)
   do ilevel=levelmin,nlevelmax_part
      dfact(ilevel)=d1a(aexp)/d1a(astart(ilevel))
@@ -640,10 +640,10 @@ contains
     !      Computes the integrand
     real(dp)::fy
     real(dp)::y,a
-    
+
     y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
     fy=1.d0/y**1.5d0
-    
+
     return
   end function fy
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -653,7 +653,7 @@ contains
     !     Computes the linear growing mode D1 in a Friedmann-Robertson-Walker
     !     universe. See Peebles LSSU sections 11 and 14.
     real(dp)::a,y12,y,eps
-    
+
     eps=1.0d-6
     if(a .le. 0.0d0)then
        write(*,*)'a=',a
@@ -666,7 +666,7 @@ contains
     end if
     y12=y**0.5d0
     d1a=y12/a*rombint(eps,a,eps)
-    
+
     return
   end function d1a
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -675,7 +675,7 @@ contains
 !!$    real(dp)::ad1
 !!$    real(dp)::a,d1,da
 !!$    integer::niter
-!!$    ! Inverts the relation d1(a) given by function d1a(a) using 
+!!$    ! Inverts the relation d1(a) given by function d1a(a) using
 !!$    ! Newton-Raphson.
 !!$    if (d1.eq.0.0) stop 'ad1 undefined for d1=0!'
 !!$    ! Initial guess for Newton-Raphson iteration, good for Omega near 1.
@@ -694,7 +694,7 @@ contains
     real(dp) :: fpeebl,a
     !     Computes the growth factor f=d\log D1/d\log a.
     real(dp) :: fact,y,eps
-    
+
     eps=1.0d-6
     y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
     fact=rombint(eps,a,eps)
@@ -706,10 +706,10 @@ contains
     implicit none
     real(dp)::rombint
     !
-    !     Rombint returns the integral from a to b of f(x)dx using Romberg 
-    !     integration. The method converges provided that f(x) is continuous 
-    !     in (a,b). The function f must be double precision and must be 
-    !     declared external in the calling routine.  
+    !     Rombint returns the integral from a to b of f(x)dx using Romberg
+    !     integration. The method converges provided that f(x) is continuous
+    !     in (a,b). The function f must be double precision and must be
+    !     declared external in the calling routine.
     !     tol indicates the desired relative accuracy in the integral.
     !
     integer::maxiter=16,maxj=5
@@ -726,8 +726,8 @@ contains
     i=0
 10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
-       !	Calculate next trapezoidal rule approximation to integral.
-       
+       !  Calculate next trapezoidal rule approximation to integral.
+
        g0=0.0d0
        do k=1,nint
           g0=g0+fy(a+(k+k-1)*h)
@@ -737,7 +737,7 @@ contains
        nint=nint+nint
        jmax=min(i,maxj)
        fourj=1.0d0
-       
+
        do j=1,jmax
           ! Use Richardson extrapolation.
           fourj=4.0d0*fourj
@@ -760,7 +760,7 @@ contains
          &    rombint,error
     return
   end function rombint
-     
+
 end subroutine init_cosmo
 
 subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
@@ -801,29 +801,29 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   tau = 0.0D0
   t = 0.0D0
   nstep = 0
-  
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
-     
+
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
   end do
-  
+
   if(debug)then
      write(*,666)-t
   end if
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable
-  
+
   axp_t = 1.d0
   t = 0.d0
   axp_tau = 1.d0
@@ -835,8 +835,8 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   axp_out(nout)=axp_tau
   hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
 
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
@@ -847,7 +847,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
      if(mod(nstep,nskip)==0)then
         nout=nout+1
         t_out(nout)=t
@@ -864,7 +864,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
 end subroutine friedman
 
-function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0) 
+function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
   use amr_parameters
   real(kind=8)::dadtau,axp_tau,O_mat_0,O_vac_0,O_k_0
   dadtau = axp_tau*axp_tau*axp_tau *  &

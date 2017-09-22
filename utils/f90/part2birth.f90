@@ -1,7 +1,7 @@
 program part2birth
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES. 
+  ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -48,14 +48,14 @@ program part2birth
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -107,12 +107,12 @@ program part2birth
      n_frw=1000
      allocate(aexp_frw(0:n_frw),hexp_frw(0:n_frw))
      allocate(tau_frw(0:n_frw),t_frw(0:n_frw))
-     
+
      ! Compute Friedman model look up table
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
           & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
-     
+
      ! Find neighboring expansion factors
      i=1
      do while(aexp_frw(i)>aexp.and.i<n_frw)
@@ -211,21 +211,21 @@ program part2birth
               birth_date(i)=(time_tot+time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
            else
               age=(time_simu-birth(i))*unit_t/(365.*24.*3600.*1d9)
-              birth_date(i)=birth(i)*unit_t/(365.*24.*3600.*1d9)          
+              birth_date(i)=birth(i)*unit_t/(365.*24.*3600.*1d9)
            endif
         else
            birth_date(i)=0d0
         endif
      end do
      nomfich=TRIM(repository)//'/birth_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
-     open(unit=1,file=nomfich,status='new',form='unformatted')     
+     open(unit=1,file=nomfich,status='new',form='unformatted')
      write(1)birth_date
      close(1)
      deallocate(x,m)
      deallocate(birth,id)
      deallocate(birth_date)
   end do
-  
+
 contains
 
   subroutine read_params
@@ -237,7 +237,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 2) then
          print *, 'usage: part2birth  -inp  input_dir'
@@ -258,7 +258,7 @@ contains
          case ('-out')
             outfich = trim(arg)
          case ('-dir')
-            proj = trim(arg) 
+            proj = trim(arg)
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -449,20 +449,20 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   tau = 0.0D0
   t = 0.0D0
   nstep = 0
-  
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
-     
+
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
   end do
 
   age_tot=-t
@@ -470,7 +470,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable
-  
+
   axp_t = 1.d0
   t = 0.d0
   axp_tau = 1.d0
@@ -482,8 +482,8 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
   axp_out(nout)=axp_tau
   hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
 
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) ) 
-     
+  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
+
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
      axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
@@ -494,7 +494,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
      axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
-     
+
      if(mod(nstep,nskip)==0)then
         nout=nout+1
         t_out(nout)=t
@@ -511,7 +511,7 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
 end subroutine friedman
 
-function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0) 
+function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
   real(kind=8)::dadtau,axp_tau,O_mat_0,O_vac_0,O_k_0
   dadtau = axp_tau*axp_tau*axp_tau *  &
        &   ( O_mat_0 + &

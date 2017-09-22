@@ -9,7 +9,7 @@ subroutine diffusion
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer::info
-#endif  
+#endif
   integer::ilevel,icycle,nsubdiff
   real(dp)::dx,scale,dx_loc,dtdiff
   real(dp),dimension(1:3)::skip_loc
@@ -18,7 +18,7 @@ subroutine diffusion
   do ilevel=levelmin,nlevelmax
      if(numbtot(1,ilevel)>0)dx=0.5D0**ilevel
   end do
-  
+
   ! Rescaling factors
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -105,7 +105,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   ! This routine gathers first MHD variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It then computes
   ! the current at cell edges. Finally, currents are corrected from finer level
-  ! and boundary currents are stored in buffer regions. Updated 
+  ! and boundary currents are stored in buffer regions. Updated
   ! conservative variables are stored in array unew(:).
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -136,7 +136,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp)::dx,dflux,weight,dflux_x,dflux_y,dflux_z,scale,dx_loc
 
   ! Mesh size at level ilevel in coarse cell units
-  dx=0.5D0**ilevel  
+  dx=0.5D0**ilevel
 
   ! Rescaling factors
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -153,7 +153,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -161,14 +161,14 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   do k1=0,2
   do j1=0,2
   do i1=0,2
-     
+
      ! Check if neighboring grid exists
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
         igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
         exist_nbor(i)=igrid_nbor(i)>0
      end do
-     
+
      ! If not, interpolate variables from parent cells
      nbuffer=0
      do i=1,ncache
@@ -207,11 +207,11 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
         do i=1,ncache
            ind_cell(i)=iskip+igrid_nbor(i)
         end do
-        
+
         i3=1+2*(i1-1)+i2
         j3=1+2*(j1-1)+j2
         k3=1+2*(k1-1)+k2
-        
+
         ! Gather MHD variables
         if(i3>=0)then
            ibuffer=0
@@ -246,7 +246,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
               end if
            end do
         endif
-        
+
         ! Gather refinement flag
         do i=1,ncache
            if(exist_nbor(i))then
@@ -257,7 +257,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
               buffer(i,i3,j3,k3)=.true.
            end if
         end do
-        
+
      end do
      end do
      end do
@@ -337,7 +337,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
           &    -( emfz(i,i3,j3,k3)-emfz(i,i3,j3+1,k3) )
         unew(ind_cell(i),ivar1)=unew(ind_cell(i),ivar1)+dflux_x*dtdiff/dx_loc
         dflux_x=( emfy(i,i3+1,j3,k3)-emfy(i,i3+1,j3,k3+1) ) &
-          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )  
+          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )
         unew(ind_cell(i),ivar4)=unew(ind_cell(i),ivar4)+dflux_x*dtdiff/dx_loc
      end do
      ! Update By using constraint transport
@@ -508,7 +508,7 @@ end do
         unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)-dflux*0.5
      endif
   end do
-  
+
   ! Update coarse Bx and Bz using fine EMFy on X=1 and Z=1 grid edge
   ind_father1=1+(i1  )+3*(j1  )+9*(k1+1)
   ind_father2=1+(i1+1)+3*(j1  )+9*(k1+1)
@@ -598,7 +598,7 @@ end do
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
         unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)+dflux*0.5
         unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)+dflux*0.5
-     endif  
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=1 grid edge
@@ -711,7 +711,7 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
      do j=1,Nyp1
         jm1=j-1
         do i=1,Nxp1
-           im1=i-1             
+           im1=i-1
            do ic=1,ngrid
               dBy_arete_dx=(By(ic,i,j,k)-By(ic,im1,j,k))
               dBx_arete_dy=(Bx(ic,i,j,k)-Bx(ic,i,jm1,k))

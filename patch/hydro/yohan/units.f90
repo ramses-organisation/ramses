@@ -12,7 +12,7 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   v200 = gravity_params(1) ! Virial velocity of the halo (km.s-1)
   c = gravity_params(2)    ! Concentration of the halo
-  
+
   ! NFW scale radius
   h = 0.7
   r200 = v200*1d5/sqrt(2d0*twopi*6.67d-8/3.*200.*rhoc*h**2)

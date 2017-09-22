@@ -33,7 +33,7 @@ subroutine hilbert2d(x,y,order,bit_length,npoint)
   integer     ,INTENT(IN) ,dimension(1:npoint)::x,y
   real(qdp),INTENT(OUT),dimension(1:npoint)::order
 
-  logical,dimension(0:2*bit_length-1)::i_bit_mask 
+  logical,dimension(0:2*bit_length-1)::i_bit_mask
   logical,dimension(0:1*bit_length-1)::x_bit_mask,y_bit_mask
   integer,dimension(0:3,0:1,0:3)::state_diagram
   integer::i,ip,cstate,nstate,b0,b1,sdigit,hdigit
@@ -61,13 +61,13 @@ subroutine hilbert2d(x,y,order,bit_length,npoint)
         x_bit_mask(i)=btest(x(ip),i)
         y_bit_mask(i)=btest(y(ip),i)
      enddo
-     
+
      ! interleave bits
      do i=0,bit_length-1
         i_bit_mask(2*i+1)=x_bit_mask(i)
         i_bit_mask(2*i  )=y_bit_mask(i)
      end do
-     
+
      ! build Hilbert ordering using state diagram
      cstate=0
      do i=bit_length-1,0,-1
@@ -152,14 +152,14 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
         y_bit_mask(i)=btest(y(ip),i)
         z_bit_mask(i)=btest(z(ip),i)
      enddo
-     
+
      ! interleave bits
      do i=0,bit_length-1
         i_bit_mask(3*i+2)=x_bit_mask(i)
         i_bit_mask(3*i+1)=y_bit_mask(i)
         i_bit_mask(3*i  )=z_bit_mask(i)
      end do
-     
+
      ! build Hilbert ordering using state diagram
      cstate=0
      do i=bit_length-1,0,-1

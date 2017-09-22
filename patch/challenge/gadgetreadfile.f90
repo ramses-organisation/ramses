@@ -8,7 +8,7 @@ MODULE gadgetreadfilemod
 !
 !
 !
-! Data type corresponding to gadget file header 
+! Data type corresponding to gadget file header
   TYPE gadgetheadertype
      INTEGER*4, DIMENSION(6) :: npart
      REAL*8, DIMENSION(6) :: mass
@@ -44,7 +44,7 @@ CONTAINS
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
     IMPLICIT NONE
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
@@ -121,7 +121,7 @@ CONTAINS
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
     IMPLICIT NONE
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
@@ -156,7 +156,7 @@ CONTAINS
         write(*,*) 'No file '//filename
         RETURN
     end if
-    
+
     ! Wait for the token (this token might be moved to init_part for best performance)
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -191,7 +191,7 @@ CONTAINS
        end if
     endif
 #endif
-    
+
 
   END SUBROUTINE gadgetreadfile
 
@@ -205,7 +205,7 @@ CONTAINS
 !
     IMPLICIT NONE
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
 ! Input parameters

@@ -1,7 +1,7 @@
 program vrot
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite projetee pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -77,13 +77,13 @@ program vrot
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -210,7 +210,7 @@ program vrot
         kmin=int(zmin*dble(maxdom))
         kmax=kmin+1
      endif
-     
+
      dkey=(dble(2**(nlevelmax+1)/dble(maxdom)))**ndim
      ndom=1
      if(bit_length>0)ndom=8
@@ -226,7 +226,7 @@ program vrot
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -250,7 +250,7 @@ program vrot
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -439,7 +439,7 @@ program vrot
               ! Extract variables
               rho = var(:,ind,1)
               map = var(:,ind,kdim+1)
-              
+
 
               ! Store data map
               do i=1,ngrida
@@ -493,19 +493,19 @@ program vrot
   end do
   close(10)
 
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: vrot      -inp  input_dir'
@@ -522,7 +522,7 @@ contains
        print *, ' '
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -536,7 +536,7 @@ contains
        case ('-out')
           outfich = trim(arg)
        case ('-dir')
-          proj = trim(arg) 
+          proj = trim(arg)
        case ('-xmi')
           read (arg,*) xmin
        case ('-xma')
@@ -553,11 +553,11 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program vrot
 
 !=======================================================================

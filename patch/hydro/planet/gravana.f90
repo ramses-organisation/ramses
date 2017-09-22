@@ -4,7 +4,7 @@
 !#########################################################
 subroutine gravana(x,f,dx,ncell)
   use amr_commons
-  use poisson_parameters  
+  use poisson_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -23,7 +23,7 @@ subroutine gravana(x,f,dx,ncell)
   real(dp)::omega0,omega1,omega2
 
   ! Constant vector
-  if(gravity_type==1)then 
+  if(gravity_type==1)then
      do idim=1,ndim
         do i=1,ncell
            f(i,idim)=gravity_params(idim)
@@ -32,7 +32,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then 
+  if(gravity_type==2)then
      gmass=gravity_params(1) ! GM
      emass=gravity_params(2) ! Softening length
      xmass=gravity_params(3) ! Point mass coordinates
@@ -59,7 +59,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Planet orbiting around the Sun
-  if(gravity_type==3)then 
+  if(gravity_type==3)then
      msun=1.0                 ! GMsun
      rpla=1.0                 ! Planet radius
      rmin=gravity_params(1)   ! Hard sphere radius
@@ -112,7 +112,7 @@ subroutine impose_iso(ilevel)
   use hydro_commons
   implicit none
   integer::ilevel
-  
+
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
   integer::info,ibound,nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,e
@@ -123,12 +123,12 @@ subroutine impose_iso(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar),save::uu
- 
+
   if(verbose)write(*,111)ilevel
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -147,7 +147,7 @@ subroutine impose_iso(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over all AMR linked lists (including physical boundaries).
   do ibound=1,nboundary+ncpu
 
@@ -175,7 +175,7 @@ subroutine impose_iso(ilevel)
               ind_grid(i)=boundary(ibound-ncpu,ilevel)%igrid(igrid+i-1)
            end do
         end if
-     
+
         ! Loop over cells
         do ind=1,twotondim
 
@@ -196,7 +196,7 @@ subroutine impose_iso(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))/scale
               end do
            end do
-           
+
            ! Call initial condition routine
            call condinit(xx,uu,dx_loc,ngrid)
 

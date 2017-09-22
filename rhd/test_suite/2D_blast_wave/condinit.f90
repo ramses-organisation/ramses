@@ -63,7 +63,7 @@ subroutine condinit(x,u,dx,nn)
      u(i,4)=lor**2*q(i,1)*h*q(i,4)
      ! isotropic gas pressure -> total fluid energy
      u(i,5)=lor**2*q(i,1)*h-q(i,5)
-     
+
      !passive scalars
      do ivar=6,nvar
         u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)*lor

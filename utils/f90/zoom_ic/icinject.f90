@@ -24,7 +24,7 @@ program icdegrade
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
@@ -37,7 +37,7 @@ program icdegrade
   filename(3) =TRIM(output)//'/ic_refmap'
   INQUIRE(file=filename(1),exist=ok)
   if(ok)then
-  
+
      open(10,file=filename(1),form='unformatted')
      read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
      write(*,*)'ic_refmap array size is:',np1,np2,np3
@@ -46,7 +46,7 @@ program icdegrade
         read(10) ((f(i,j,k),i=1,np1),j=1,np2)
      enddo
      close(10)
-     
+
      open(11,file=filename(2),form='unformatted')
      read (11)hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0
      write(*,*)'Host array size is:',hnp1,hnp2,hnp3
@@ -65,9 +65,9 @@ program icdegrade
      xstart=(x1o-hx1o)/dx
      ystart=(x2o-hx2o)/dx
      zstart=(x3o-hx3o)/dx
-     
+
      write(*,*) 'Start cells are {i,j,k}=',xstart,ystart,zstart
-     
+
      ! Loop over planes
      kk=1
      do k=zstart+1,zstart+np3
@@ -82,10 +82,10 @@ program icdegrade
         enddo
         kk=kk+1
      enddo
-     
+
      write(*,*) 'Outputting Grafics file ic_refmap'
      open(33,file=filename(3),form='unformatted')
-     write(33) hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0 
+     write(33) hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0
      do k=1,hnp3
         write(33) ((f2(i,j,k),i=1,hnp1),j=1,hnp2)
      enddo
@@ -99,7 +99,7 @@ program icdegrade
   filename(3) =TRIM(output)//'/ic_pvar_00001'
   INQUIRE(file=filename(1),exist=ok)
   if(ok)then
-  
+
      open(10,file=filename(1),form='unformatted')
      read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
      write(*,*)'ic_pvar_00001 array size is:',np1,np2,np3
@@ -108,7 +108,7 @@ program icdegrade
         read(10) ((f(i,j,k),i=1,np1),j=1,np2)
      enddo
      close(10)
-     
+
      open(11,file=filename(2),form='unformatted')
      read (11)hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0
      write(*,*)'Host array size is:',hnp1,hnp2,hnp3
@@ -127,9 +127,9 @@ program icdegrade
      xstart=(x1o-hx1o)/dx
      ystart=(x2o-hx2o)/dx
      zstart=(x3o-hx3o)/dx
-     
+
      write(*,*) 'Start cells are {i,j,k}=',xstart,ystart,zstart
-     
+
      ! Loop over planes
      kk=1
      do k=zstart+1,zstart+np3
@@ -144,18 +144,18 @@ program icdegrade
         enddo
         kk=kk+1
      enddo
-     
+
      write(*,*) 'Outputting Grafics file ic_pvar_00001'
      open(33,file=filename(3),form='unformatted')
-     write(33) hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0 
+     write(33) hnp1,hnp2,hnp3,hdx,hx1o,hx2o,hx3o,astart,omegam,omegav,h0
      do k=1,hnp3
         write(33) ((f2(i,j,k),i=1,hnp1),j=1,hnp2)
      enddo
      close(33)
-     
+
   endif
 
 end program icdegrade
 
 
-       
+

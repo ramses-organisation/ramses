@@ -13,7 +13,7 @@ subroutine phi_fine_cg(ilevel,icount)
 #endif
   integer::ilevel,icount
   !=========================================================
-  ! Iterative Poisson solver with Conjugate Gradient method 
+  ! Iterative Poisson solver with Conjugate Gradient method
   ! to solve A x = b
   ! r  : stored in f(i,1)
   ! p  : stored in f(i,2)
@@ -268,7 +268,7 @@ subroutine cmp_residual_cg(ilevel,icount)
            igridn(i,2*idim  )=son(ind_right(i,idim))
         end do
      end do
-     
+
      ! Interpolate potential from upper level
      do idim=1,ndim
         call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel,icount)
@@ -390,7 +390,7 @@ subroutine cmp_Ap_cg(ilevel)
            igridn(i,2*idim  )=son(nbor(ind_grid(i),2*idim  ))
         end do
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
 
@@ -468,7 +468,7 @@ subroutine make_initial_phi(ilevel,icount)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      if(ilevel==1)then
         ! Loop over cells
         do ind=1,twotondim
@@ -491,10 +491,10 @@ subroutine make_initial_phi(ilevel,icount)
         do i=1,ngrid
            ind_cell_father(i)=father(ind_grid(i))
         end do
-        
+
         ! Interpolate
         call interpol_phi(ind_cell_father,phi_int,ngrid,ilevel,icount)
-        
+
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
@@ -574,14 +574,14 @@ subroutine make_multipole_phi(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         if(simple_boundary)then
            ! Compute cell center in code units
            do idim=1,ndim
@@ -615,10 +615,10 @@ subroutine make_multipole_phi(ilevel)
                phi(ind_cell(i))=0d0
            end do
         endif
-        
+
         ! End loop over cells
      end do
-     
+
   end do
   ! End loop over grids
 

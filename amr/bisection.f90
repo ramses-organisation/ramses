@@ -6,7 +6,7 @@
 module bisection
    use amr_parameters
    use amr_commons
-   
+
    implicit none
 
 contains
@@ -21,7 +21,7 @@ contains
       ! Array of cpu ids to output
       integer, intent(out), dimension(:)   :: c
       integer, intent(in) :: nn
-      
+
       integer :: p, dir, cur, half
 
 !      if(verbose) print *, 'entering cmp_bisection_cpumap'
@@ -114,7 +114,7 @@ contains
       ! Loop through levels
       lvl=0
       level_loop: do
-         
+
          ! Number of cells for the current level
          nc  = 2**lvl
 
@@ -129,7 +129,7 @@ contains
          dichotomy_loop: do ! main dichotomy loop, for levels 0..nbilevelmax-1
             if(lvl==nbilevelmax) exit    ! No need to bisect anything at very last level
             iter=iter+1
-            
+
             all_skip=.true. ! init at true
 
             ! This loop sets the skip flag in some special cases
@@ -205,7 +205,7 @@ contains
                do i=1,nc
                   cur_cell = cur_levelstart + (i-1)
                   if(skip(i)) cycle
-                  
+
                   ! init best wall and init score to a terrible value
                   best_wall(i) = bisec_wall(cur_cell)
 #if NPRE==4
@@ -242,7 +242,7 @@ contains
                   ! transfer differential load
                   cur_cell = cur_levelstart + (i-1)
                   if(skip(i)) cycle
-                  
+
                   if(bisec_wall(cur_cell)>last_wall(i)) then
                      load1(i) = load1(i) + totload(i)
                   else
@@ -340,7 +340,7 @@ contains
             tmp_bxmax(child1,:)=tmp_bxmax(cur_cell,:)
             tmp_bxmin(child2,:)=tmp_bxmin(cur_cell,:)
             tmp_bxmax(child2,:)=tmp_bxmax(cur_cell,:)
-            
+
             tmp_bxmax(child1,dir)=bisec_wall(cur_cell)
             tmp_bxmin(child2,dir)=bisec_wall(cur_cell)
             ! store index ranges
@@ -364,7 +364,7 @@ contains
 
          ! Advance level start cursor
          cur_levelstart = cur_levelstart + nc
-         
+
          ! Alternate direction
          dir=dir+1; if(dir>ndim) dir=1
 
@@ -390,14 +390,14 @@ contains
 
    end subroutine build_bisection
 
-   
+
    function round_to_bisec_res(x) result(y)
       real(dp), intent(in) :: x
       real(dp) :: y
 
       y = dble(nint(x/bisec_res))*bisec_res
    end function round_to_bisec_res
-    
+
 
 
    subroutine splitsort_bisection_histogram(lev,dir,walls)
@@ -407,7 +407,7 @@ contains
 
       real(dp), intent(in), dimension(:) :: walls
       integer, intent(in) :: dir, lev
-   
+
       integer :: i, nc, lmost, rmost, tmp, nxny
       real(dp) :: xc_lmost, subcell_c, dx, scale
 
@@ -446,9 +446,9 @@ contains
                iz=(isubcell-1)/4
                iy=(isubcell-1-4*iz)/2
                ix=(isubcell-1-2*iy-4*iz)
-   
+
                iarray = (/ ix, iy, iz /)
-               subcell_c = (dble(iarray(dir))-0.5d0)*dx - dble(icoarse_array(dir)) 
+               subcell_c = (dble(iarray(dir))-0.5d0)*dx - dble(icoarse_array(dir))
                xc_lmost = scale*( xg(igrid,dir) + subcell_c )
             end if
 
@@ -484,11 +484,11 @@ contains
       integer::nx_loc
       integer::icpu,ncell,ncell_loc
       integer::nxny,ix,iy,iz,iskip
-  
+
       integer,dimension(1:nvector),save::ind_grid,ind_cell
 
       real(dp)::dx,scale
-      
+
       if(verbose) print *,'entering init_bisection_histogram'
 
       ! Local constants
@@ -555,7 +555,7 @@ contains
                         ncell=ncell+1
                         ncell_loc=ncell_loc+1
                         flag1(ncell)=ind_cell(i)
-                        
+
                         bisec_ind_cell(ncell)=ind_cell(i)
                      end if
                   end do
@@ -598,7 +598,7 @@ contains
 
       ! This is the histogram-building loop on bisection cells
       bisection_domains_loop: do ibicell=1,nc
-      
+
          ! loop over all cells of the ibicell domain
          do i=bisec_hist_bounds(ibicell),bisec_hist_bounds(ibicell+1)-1
             ! corresponding cell id
@@ -621,9 +621,9 @@ contains
                iz=(isubcell-1)/4
                iy=(isubcell-1-4*iz)/2
                ix=(isubcell-1-2*iy-4*iz)
-   
+
                iarray = (/ ix, iy, iz /)
-               subcell_c = (dble(iarray(dir))-0.5d0)*dx - dble(icoarse_array(dir)) 
+               subcell_c = (dble(iarray(dir))-0.5d0)*dx - dble(icoarse_array(dir))
                ! compute cell center
                cell_coord = scale*( xg(igrid,dir) + subcell_c )
             end if

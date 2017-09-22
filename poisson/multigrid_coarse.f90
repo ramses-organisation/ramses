@@ -55,7 +55,7 @@ subroutine multigrid_coarse(ilevel,icount)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  
+
   ! Set local constants
   dx2=(0.5d0**ilevel)**2
   oneoversix=1.0D0/dble(twondim)
@@ -125,7 +125,7 @@ subroutine multigrid_coarse(ilevel,icount)
   rhs_norm=rhs_norm_all
 #endif
   rhs_norm=SQRT(rhs_norm)
-  
+
   !-------------------------------
   ! Upward Gauss-Seidel iterations
   !-------------------------------
@@ -171,17 +171,17 @@ subroutine multigrid_coarse(ilevel,icount)
   endif
   do while(error>epsilon*(error_ini+floor).and.iter<itermax)
   iter=iter+1
-  
+
   !--------------------------------------
   ! Get correction from upper level solve
   !--------------------------------------
   if(ilevel>1)then
-     call restriction_fine(ilevel-1,multigrid)    ! Apply restriction operator 
+     call restriction_fine(ilevel-1,multigrid)    ! Apply restriction operator
      call multigrid_iterator(ilevel-1)           ! Recursive call to multigrid
      call prolong(ilevel)! Correct current potential with prolongated solution
      call make_virtual_fine_dp(phi(1),ilevel)      ! Update boundaries for phi
   end if
-  
+
   !---------------------------------
   ! Downward Gauss-Seidel iterations
   !---------------------------------
@@ -279,7 +279,7 @@ recursive subroutine multigrid_iterator(ilevel)
   integer::i,ind,iter,niter_jacobi,iskip
   logical::multigrid=.true.,redstep=.true.,blackstep=.false.
   real(kind=8)::dx2,oneoversix,fact
- 
+
   if(numbtot(1,ilevel)==0)return
 
   ! Set local constants
@@ -323,7 +323,7 @@ recursive subroutine multigrid_iterator(ilevel)
      call multigrid_iterator(ilevel-1)           ! Recursive call to multigrid
      call prolong(ilevel)! Correct current potential with prolongated solution
      call make_virtual_fine_dp(phi(1),ilevel)      ! Update boundaries for phi
-  end if     
+  end if
 
   !---------------------------------
   ! Downward Gauss-Seidel iterations
@@ -348,7 +348,7 @@ subroutine gauss_seidel(ilevel,redstep)
   integer::ilevel
   logical::redstep
   !------------------------------------------------------------------
-  ! This routine computes one relaxation sweep 
+  ! This routine computes one relaxation sweep
   ! for one Gauss-Seidel iteration.
   !------------------------------------------------------------------
   integer::i,ind0,idim,igrid,ngrid,ncache,ind,iskip
@@ -400,15 +400,15 @@ subroutine gauss_seidel(ilevel,redstep)
            igridn(i,2*idim  )=son(nbor(ind_grid(i),2*idim  ))
         end do
      end do
-     
+
      ! Loop over red or black cells
      do ind0=1,twotondim/2
         if(redstep)then
-           ind=ired  (ndim,ind0)        
+           ind=ired  (ndim,ind0)
         else
            ind=iblack(ndim,ind0)
         end if
-        
+
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
@@ -448,7 +448,7 @@ subroutine gauss_seidel(ilevel,redstep)
 
   end do
   ! Loop over grids
-  
+
 end subroutine gauss_seidel
 !###########################################################
 !###########################################################
@@ -506,9 +506,9 @@ subroutine cmp_residual_mg(ilevel)
            igridn(i,2*idim  )=son(nbor(ind_grid(i),2*idim  ))
         end do
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
@@ -545,7 +545,7 @@ subroutine cmp_residual_mg(ilevel)
 
   end do
   ! End loop over grids
-  
+
 end subroutine cmp_residual_mg
 !###########################################################
 !###########################################################
@@ -563,7 +563,7 @@ subroutine restriction_fine(ilevel,multigrid)
   logical::multigrid
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then 
+  ! by first reseting array rho to zero, then
   ! by affecting the gas density to leaf cells, and finally
   ! by performing a restriction operation for split cells.
   ! For pure particle runs, the restriction is not necessary and the
@@ -578,7 +578,7 @@ subroutine restriction_fine(ilevel,multigrid)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
@@ -607,7 +607,7 @@ subroutine restriction_fine(ilevel,multigrid)
         end do
      end do
   end do
-  
+
   ! Perform a restriction over split cells (ilevel+1)
   if(ilevel<nlevelmax)then
      ncache=active(ilevel+1)%ngrid
@@ -650,12 +650,12 @@ subroutine restrict(ind_grid,ngrid,ilevel,multigrid)
   integer ,dimension(1:8,1:8)::ccc
 
   integer::i,ind_father,ind_average,ind,iskip
-  
+
   a = 1.0D0/4.0D0**ndim
   b = 3.0D0*a
   c = 9.0D0*a
   d = 27.D0*a
-  
+
   bbb(:)  =(/a ,b ,b ,c ,b ,c ,c ,d/)
   bbb=bbb/dble(twotondim)
 
@@ -667,7 +667,7 @@ subroutine restrict(ind_grid,ngrid,ilevel,multigrid)
   ccc(:,6)=(/21,20,24,23,12,11,15,14/)
   ccc(:,7)=(/25,26,22,23,16,17,13,14/)
   ccc(:,8)=(/27,26,24,23,18,17,15,14/)
-    
+
   ! Compute father cell index
   do i=1,ngrid
      ind_cell(i)=father(ind_grid(i))
@@ -707,7 +707,7 @@ subroutine restrict(ind_grid,ngrid,ilevel,multigrid)
         do i=1,ngrid
            rho(ind_cell_father(i))=new_rho(i)
         end do
-        
+
      end do
   end do
 
@@ -739,7 +739,7 @@ subroutine prolong(ilevel)
   b = 3.0D0*a
   c = 9.0D0*a
   d = 27.D0*a
-  
+
   bbb(:)  =(/a ,b ,b ,c ,b ,c ,c ,d/)
 
   ccc(:,1)=(/1 ,2 ,4 ,5 ,10,11,13,14/)
@@ -765,10 +765,10 @@ subroutine prolong(ilevel)
      do i=1,ngrid
         ind_cell(i)=father(ind_grid(i))
      end do
-     
+
      ! Gather 3x3x3 neighboring parent cells
      call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
-     
+
      ! Update solution for fine grid cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax

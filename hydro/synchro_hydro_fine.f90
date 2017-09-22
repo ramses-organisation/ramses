@@ -25,7 +25,7 @@ subroutine synchro_hydro_fine(ilevel,dteff)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -72,7 +72,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   do i=1,ncell
      uold(ind_cell(i),neul)=pp(i)
   end do
-  
+
   ! Update momentum
   do idim=1,ndim
      do i=1,ncell
@@ -83,7 +83,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
         uold(ind_cell(i),idim+1)=pp(i)
      end do
   end do
-  
+
   ! Update total energy
   do i=1,ncell
      pp(i)=uold(ind_cell(i),neul)
@@ -96,7 +96,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   do i=1,ncell
      uold(ind_cell(i),neul)=pp(i)
   end do
-  
+
 end subroutine synchydrofine1
 !################################################################
 !################################################################

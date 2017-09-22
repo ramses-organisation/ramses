@@ -29,7 +29,7 @@ subroutine write_screen
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-  
+
   ncell=0
   do ilevel=1,nlevelmax
      ncache=numbl(myid,ilevel)
@@ -249,7 +249,7 @@ subroutine write_screen
   deallocate(prad,prad_all)
 #endif
   end if
- 
+
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif

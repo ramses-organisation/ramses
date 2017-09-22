@@ -19,7 +19,7 @@ subroutine rt_make_boundary_hydro(ilevel)
   integer,dimension(1:8)::ind_ref,alt
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
-  
+
   real(dp)::switch,dx,dx_loc,scale
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -59,7 +59,7 @@ subroutine rt_make_boundary_hydro(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
   do ibound=1,nboundary
      ! Compute direction of reference neighbors
@@ -102,12 +102,12 @@ subroutine rt_make_boundary_hydro(ilevel)
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
-     do igrid=1,ncache,nvector 
+     do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Gather neighboring reference grid
         do i=1,ngrid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
@@ -119,7 +119,7 @@ subroutine rt_make_boundary_hydro(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-              
+
            ! Gather neighboring reference cell
            iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
            do i=1,ngrid
@@ -128,7 +128,7 @@ subroutine rt_make_boundary_hydro(ilevel)
 
            ! Wall and free boundary conditions
            if((boundary_type(ibound)/10).ne.2)then
-              
+
               ! Gather reference hydro variables
               do ivar=1,nrtvar
                  do i=1,ngrid
@@ -150,8 +150,8 @@ subroutine rt_make_boundary_hydro(ilevel)
                     !uu(i,3)=0d0
 
                     gas_rho = uold(ind_cell_ref(i),1)
-                    kIR_sc  = kappaSc(iIR)  
-                    if(is_kIR_T) then         !                   k_IR depends on T 
+                    kIR_sc  = kappaSc(iIR)
+                    if(is_kIR_T) then         !                   k_IR depends on T
                        EIR = group_egy(iGroupIR) * ev_to_erg * uu(i,1) *scale_Np
                        TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
                        kIR_sc  = kIR_sc  * (min(TR,820d0)/10d0)**2
@@ -182,8 +182,8 @@ subroutine rt_make_boundary_hydro(ilevel)
 
 !                    ! Interpolate betweeen free-streaming and diffusion limits:
 !                    gas_rho = uold(ind_cell_ref(i),1)
-!                    kIR_sc  = rt_kIR_sc  
-!                    if(is_kIR_T) then         !                   k_IR depends on T 
+!                    kIR_sc  = rt_kIR_sc
+!                    if(is_kIR_T) then         !                   k_IR depends on T
 !                       EIR = group_egy(iGroupIR) * ev_to_erg * uu(i,1) *scale_Np
 !                       TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
 !                       kIR_sc  = kIR_sc  * (min(TR,820d0)/10d0)**2
@@ -206,7 +206,7 @@ subroutine rt_make_boundary_hydro(ilevel)
 #endif
 
                  end do
-              endif              
+              endif
               if(boundary_dir .eq. 4) then ! Top boundary = zero valued
                  do i=1,ngrid
                     uu(i,1) = 1d-50
@@ -229,26 +229,26 @@ subroutine rt_make_boundary_hydro(ilevel)
                  do i=1,ngrid
                     rtuold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
-                      
+
               end do
-              
+
               ! Imposed boundary conditions
            else
-              
+
               ! Compute cell center in code units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
                  end do
               end do
-              
+
               ! Rescale position from code units to user units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                  end do
               end do
-              
+
               call rt_boundana(xx,uu,dx_loc,ibound,ngrid)
 
               ! Scatter variables
@@ -257,9 +257,9 @@ subroutine rt_make_boundary_hydro(ilevel)
                     rtuold(ind_cell(i),ivar)=uu(i,ivar)
                  end do
               end do
-                 
+
            end if
-              
+
         end do
         ! End loop over cells
 

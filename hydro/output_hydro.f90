@@ -3,7 +3,7 @@ subroutine file_descriptor_hydro(filename)
   use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
   character(LEN=80)::filename
@@ -46,7 +46,7 @@ subroutine file_descriptor_hydro(filename)
      write(ilun,'("variable #",I2,": passive_scalar_",I1)')ivar,ivar-ndim-2-nener
   end do
 #endif
-  
+
   close(ilun)
 
 end subroutine file_descriptor_hydro
@@ -56,7 +56,7 @@ subroutine backup_hydro(filename)
   use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
   integer::dummy_io,info2
 #endif
 
@@ -75,7 +75,7 @@ subroutine backup_hydro(filename)
   if(verbose)write(*,*)'Entering backup_hydro'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 
@@ -88,7 +88,7 @@ subroutine backup_hydro(filename)
      end if
   endif
 #endif
-  
+
   open(unit=ilun,file=fileloc,form='unformatted')
   write(ilun)ncpu
   write(ilun)nvar
@@ -174,7 +174,7 @@ subroutine backup_hydro(filename)
      end do
   end do
   close(ilun)
-   
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -185,8 +185,8 @@ subroutine backup_hydro(filename)
      end if
   endif
 #endif
-  
-  
+
+
 end subroutine backup_hydro
 
 
