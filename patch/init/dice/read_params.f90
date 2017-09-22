@@ -300,11 +300,11 @@ subroutine read_params
         if(myid==1)write(*,*)'Allocate some space for refinements !!!'
         nml_ok=.false.
      else
-        ngridmax=ngridtot/int(ncpu,kind=8)
+        ngridmax=int(ngridtot/int(ncpu,kind=8),kind=4)
      endif
   end if
   if(npartmax==0)then
-     npartmax=nparttot/int(ncpu,kind=8)
+     npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
   if(sink.and.(.not.pic))then
@@ -339,8 +339,6 @@ subroutine read_params
   endif
 #endif
   
-
-
   !-----------------
   ! Max size checks
   !-----------------
