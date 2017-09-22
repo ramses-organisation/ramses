@@ -148,12 +148,12 @@ subroutine output_cone()
                  if(npout>0)then
                     do idim=1,ndim
                        do i=1,npout
-                          xp_out(ipout+i,idim)=posout(idim,i)/Lbox
-                          vp_out(ipout+i,idim)=velout(idim,i)
+                          xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+                          vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
                        end do
                     end do
                     do i=1,npout
-                       zp_out(ipout+i)=zout(i)
+                       zp_out(ipout+i)=real(zout(i),kind=sp)
                     end do
                     ipout=ipout+npout
                     npart_out=npart_out+npout
@@ -222,12 +222,12 @@ subroutine output_cone()
         if(npout>0)then
            do idim=1,ndim
               do i=1,npout
-                 xp_out(ipout+i,idim)=posout(idim,i)/Lbox
-                 vp_out(ipout+i,idim)=velout(idim,i)
+                 xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+                 vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
               end do
            end do
            do i=1,npout
-              zp_out(ipout+i)=zout(i)
+              zp_out(ipout+i)=real(zout(i),kind=sp)
            end do
            ipout=ipout+npout
            npart_out=npart_out+npout
@@ -351,7 +351,7 @@ contains
         end do
         deallocate(xp_out); allocate(xp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
-            xp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
+            xp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
         end do
 
         do idim=1,ndim
@@ -359,12 +359,12 @@ contains
         end do
         deallocate(vp_out); allocate(vp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
-            vp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
+            vp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
         end do
 
         tmparr(1,1:nalloc2)=zp_out(1:nalloc2) 
         deallocate(zp_out); allocate(zp_out(1:new_nalloc2))
-        zp_out(1:nalloc2)=tmparr(1,1:nalloc2)
+        zp_out(1:nalloc2)=real(tmparr(1,1:nalloc2),kind=sp)
 
         nalloc2 = new_nalloc2
 
@@ -660,7 +660,7 @@ subroutine compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: myint
   real(kind=8) :: sl(3,8),slfr(3)
-  real(kind=8) :: xplmin,xplmax,yplmin,yplmax,zplmin,zplmax
+  real(kind=8) :: xplmin=0,xplmax=0,yplmin=0,yplmax=0,zplmin=0,zplmax=0
   integer :: i,j
   
   ! Compute the minimum polygon containing the 2 plans of photons (which

@@ -4,11 +4,11 @@
 subroutine write_gitinfo
   use amr_commons, ONLY:builddate,patchdir,gitrepo,gitbranch,githash
 
-  builddate = xstr(BUILDDATE)
-  patchdir  = xstr(PATCH)
-  gitrepo   = xstr(GITREPO)
-  gitbranch = xstr(GITBRANCH)
-  githash   = xstr(GITHASH)
+  builddate = BUILDDATE
+  patchdir  = PATCH
+  gitrepo   = GITREPO
+  gitbranch = GITBRANCH
+  githash   = GITHASH
 
   write(*,*)' '
   write(*,'(" compile date = ",A)')TRIM(builddate)
