@@ -92,27 +92,27 @@ contains
     cross(3)=a(1)*b(2)-a(2)*b(1)
   end function cross
 
-  logical pure function is_DM(typep)
+  elemental logical pure function is_DM(typep)
     type(part_t), intent(in) :: typep
     is_DM = typep%family == FAM_DM
   end function is_DM
 
-  logical pure function is_star(typep)
+  elemental logical pure function is_star(typep)
     type(part_t), intent(in) :: typep
     is_star = typep%family == FAM_STAR
   end function is_star
 
-  logical pure function is_cloud(typep)
+  elemental logical pure function is_cloud(typep)
     type(part_t), intent(in) :: typep
     is_cloud = typep%family == FAM_CLOUD
   end function is_cloud
 
-  logical pure function is_debris(typep)
+  elemental logical pure function is_debris(typep)
     type(part_t), intent(in) :: typep
     is_debris = typep%family == FAM_DEBRIS
   end function is_debris
-  
-  logical pure function is_tracer(typep)
+
+  elemental logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
     is_tracer = typep%family <= 0
   end function is_tracer
@@ -174,4 +174,3 @@ contains
     props2type%tag = 0
   end function props2type
 end module pm_commons
-
