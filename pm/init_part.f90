@@ -42,7 +42,7 @@ subroutine init_part
   integer,dimension(1:nvector)::cc
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqsend2,reqrecv,reqrecv2
-  integer,dimension(ncpu)::sendbuf,recvbuf
+  integer,dimension(ncpu)::sendbuf,sendbuf2,recvbuf,recvbuf2
   integer::dummy_io,info,info2,npart_new
   integer::countsend,countrecv
   integer::ibuf,tagu=102
