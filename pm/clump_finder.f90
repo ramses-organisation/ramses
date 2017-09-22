@@ -1543,7 +1543,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Update mass density field
   do ind=1,twotondim
      do j=1,np
-        ok(j)=igrid(j,ind)>0
+        ok(j)=(igrid(j,ind)>0) .and. is_not_tracer(typep(ind_part(j)))
      end do
      do j=1,np
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
@@ -1796,7 +1796,7 @@ subroutine tsc_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      do j=1,np
         if(.not.abandoned(j)) then
-           ok(j)=igrid(j,ind)>0
+           ok(j)=(igrid(j,ind)>0) .and. is_not_tracer(typep(ind_part(j)))
         end if
      end do
 
