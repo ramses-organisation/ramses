@@ -9,6 +9,8 @@ subroutine star_formation(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info,info2,dummy_io
+  integer,parameter::tag=1120
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -28,7 +30,7 @@ subroutine star_formation(ilevel)
   ! other variables
   integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
   integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
-  integer ::ntot,ntot_all,info,nstar_corrected,ncell
+  integer ::ntot,ntot_all,nstar_corrected,ncell
   logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg
   real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
@@ -37,11 +39,12 @@ subroutine star_formation(ilevel)
   real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
   real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
   real(dp)::birth_epoch,factG
-  real(kind=8)::mlost,mtot,mlost_all,mtot_all
+  real(kind=8)::mlost_all,mtot_all
+#ifndef WITHOUTMPI
+  real(kind=8)::mlost,mtot
+#endif
   real(kind=8)::PoissMean
   real(dp),parameter::pi=0.5*twopi
-  integer,parameter::tag=1120
-  integer::dummy_io,info2
   real(dp),dimension(1:3)::skip_loc
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
   real(dp)::mdebris

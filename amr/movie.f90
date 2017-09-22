@@ -48,12 +48,12 @@ subroutine output_frame()
   integer::imin,imax,jmin,jmax,ii,jj,kk
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::xcen,ycen,zcen,delx,dely,delz,timer
-  real(dp)::xtmp,ytmp,ztmp,theta_cam,phi_cam,alpha,beta,fov_camera,dist_cam
+  real(dp)::xtmp,ytmp,theta_cam,phi_cam,fov_camera,dist_cam
   real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame
-  real(dp)::xleft,xright,yleft,yright,zleft,zright,xcentre,ycentre,zcentre
+  real(dp)::xleft,xright,yleft,yright,xcentre,ycentre
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
-  real(dp)::xpf,ypf,zpf
-  real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min,pers_corr
+  real(dp)::xpf,ypf
+  real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
   real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight
   integer,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
@@ -64,11 +64,10 @@ subroutine output_frame()
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8)::e,uvar
   real(kind=8)::pi=3.14159265359
-  real(dp),dimension(8)::xcube,ycube,zcube
-  integer::igrid,ilevel,icube,iline
+  integer::igrid,ilevel
   integer::i,j
   integer::proj_ind,nh_temp,nw_temp
-  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,d1,d2,d3,d4,l1,l2,l3,l4
+  real(dp)::xpc,ypc
   logical::opened,cube_face
   character(len=1)::temp_string
   integer,dimension(6,8)::lind = reshape((/1, 2, 3, 4, 1, 3, 2, 4,    &
@@ -92,6 +91,13 @@ subroutine output_frame()
                                        -1.1379163662e-27,-1.8221651341e-28,-1.6791574329e-29,-4.0655271535e-31, &
                                        1.6771769041e-31,3.3366386465e-32,2.6122101904e-33,-1.7749944262e-34,    &
                                        -6.6026967339e-35,3.9721180887e-36 /)
+#if NDIM>2
+  real(dp)::ztmp,alpha,beta,pers_corr
+  real(dp)::zleft,zright,zcentre,zpf
+  real(dp),dimension(8)::xcube,ycube,zcube
+  integer::icube,iline
+  real(dp)::minx,maxx,miny,maxy,minz,maxz,d1,d2,d3,d4,l1,l2,l3,l4
+#endif  
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
   real(kind=8),dimension(:,:,:),allocatable::rt_data_frame

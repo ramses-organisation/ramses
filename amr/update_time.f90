@@ -452,7 +452,7 @@ subroutine clean_stop
 end subroutine clean_stop
 
 subroutine writemem(usedmem)
-  real(kind=4)::usedmem
+  real(kind=8)::usedmem
 
   usedmem=real(usedmem)*4096
 

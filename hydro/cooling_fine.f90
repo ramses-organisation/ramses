@@ -8,7 +8,6 @@ subroutine cooling_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  integer::info
 #endif
   integer::ilevel
   !-------------------------------------------------------------------
@@ -69,6 +68,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+#endif
+#if defined(grackle) && !defined(WITHOUTMPI)
   integer::info
 #endif
   integer::ilevel,ngrid

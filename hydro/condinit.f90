@@ -22,7 +22,9 @@ subroutine condinit(x,u,dx,nn)
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
+#if NENER>0 || NVAR>NDIM+2+NENER
   integer::ivar
+#endif
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 
   ! Call built-in initial condition generator

@@ -717,7 +717,10 @@ subroutine cmp_ordering(x,order,nn)
   integer::temp
   real(kind=8)::scale,bscale
 #if NDIM>1
-  real(kind=8)::xx,yy,zz,xc,yc,zc
+  real(kind=8)::xx,yy,xc,yc
+#endif
+#if NDIM>2
+  real(kind=8)::zz,zc
 #endif
 
   nx_loc=icoarse_max-icoarse_min+1
@@ -735,7 +738,9 @@ subroutine cmp_ordering(x,order,nn)
      ! Angular domain decomposition
      xc=boxlen/2.
      yc=boxlen/2.
+#if NDIM>2
      zc=boxlen/2.
+#endif
      do i=1,nn
         xx=x(i,1)-xc+1d-10
         yy=x(i,2)-yc
@@ -823,7 +828,10 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   real(dp)::dxx,dxmin  
 #if NDIM>1
   real(dp)::theta1,theta2,theta3,theta4
-  real(kind=8)::xx,yy,zz,xc,yc,zc
+  real(kind=8)::xx,yy,xc,yc
+#endif
+#if NDIM>2
+  real(kind=8)::zz,zc
 #endif
   real(kind=8)::scale,bscaleloc,bscale
   real(qdp)::dkey,oneqdp=1.0
@@ -847,7 +855,9 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
      dxx=0.5d0*dx
      xc=boxlen/2.
      yc=boxlen/2.
+#if NDIM>2
      zc=boxlen/2.
+#endif
      do i=1,nn
         if(dx==boxlen)then
            order_min(i)=0.
