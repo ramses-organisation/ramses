@@ -516,7 +516,7 @@ subroutine output_header(filename)
 
   integer::ilun
   character(LEN=80)::fileloc
-  integer(i8b)::npart_loc(-5:5), npart_tot_fam(-5:5), npart_all_loc, npart_all
+  integer(i8b)::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
   integer :: ifam, ipart
 
   if(verbose)write(*,*)'Entering output_header'
@@ -528,35 +528,35 @@ subroutine output_header(filename)
 
   ! Compute total number of particles
   ! Count number of particles
-  npart_loc = 0; npart_all_loc = 0
+  npart_family_loc = 0; npart_all_loc = 0
   do ipart = 1, npartmax
      ! Only used particles have a levelp > 0
      if (levelp(ipart) > 0) then
         npart_all_loc = npart_all_loc + 1
         do ifam = -5, 5
            if (typep(ipart)%family == ifam) then
-              npart_loc(ifam) = npart_loc(ifam) + 1
+              npart_family_loc(ifam) = npart_family_loc(ifam) + 1
            end if
         end do
      end if
   end do
 
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(npart_loc,npart_tot_fam,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-  npart_tot_fam = npart_loc
-  npart_all = npart_all_loc - sum(npart_tot_fam)
+  npart_family = npart_family_loc
+  npart_all = npart_all_loc
 #endif
 
   if (myid == 1) then
      write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
      do ifam = -5, 5
         write(ilun, '(a13, i10)') &
-             trim(particle_family_keys(ifam)), npart_tot_fam(ifam)
+             trim(particle_family_keys(ifam)), npart_family(ifam)
      end do
      write(ilun, '(a13, i10)') &
-          'undefined', npart_all
+          'undefined', npart_all - sum(npart_family)
   end if
 
   if (myid == 1) then
