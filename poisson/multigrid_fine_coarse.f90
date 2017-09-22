@@ -27,7 +27,7 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
    logical, intent(out) :: allmasked
 
    integer :: ind_c_cell, ind_f_cell, cpu_amr
-   
+
    integer :: iskip_c_amr, iskip_c_mg
    integer :: igrid_c_amr, igrid_c_mg
    integer :: icell_c_amr, icell_c_mg
@@ -97,7 +97,7 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
    integer, intent(in) :: ifinelevel
 
    integer :: ind_c_cell, ind_f_cell, cpu_amr
-   
+
    integer :: iskip_c_mg
    integer :: igrid_c_amr, igrid_c_mg
    integer :: icell_c_amr, icell_c_mg
@@ -155,7 +155,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
    integer  :: ngrid
    integer  :: ind, igrid_mg, idim, inbor
    integer  :: icell_mg, iskip_mg, igrid_nbor_mg, icell_nbor_mg
-   integer  :: igrid_amr, iskip_amr, cpu_nbor_amr 
+   integer  :: igrid_amr, iskip_amr, cpu_nbor_amr
    integer  :: igshift, igrid_nbor_amr
 
    real(dp) :: dtwondim = (twondim)
@@ -199,7 +199,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
                      igrid_nbor_amr = son(nbor(igrid_amr,igshift))
                      cpu_nbor_amr   = cpu_map(nbor(igrid_amr,igshift))
                   end if
-                  igrid_nbor_mg = lookup_mg(igrid_nbor_amr) 
+                  igrid_nbor_mg = lookup_mg(igrid_nbor_amr)
                   ! Add up
                   icell_nbor_mg = igrid_nbor_mg + &
                       (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
@@ -345,7 +345,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
    real(dp) :: dx2, nb_sum, weight
    integer  :: ngrid
    integer  :: ind, ind0, igrid_mg, idim, inbor
-   integer  :: igrid_amr, cpu_nbor_amr 
+   integer  :: igrid_amr, cpu_nbor_amr
    integer  :: iskip_mg, igrid_nbor_mg, icell_mg, icell_nbor_mg
    integer  :: igshift, igrid_nbor_amr
    real(dp) :: dtwondim = (twondim)
@@ -548,7 +548,7 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
    integer, intent(in) :: ifinelevel
 
    integer :: ind_c_cell, ind_f_cell, cpu_amr
-   
+
    integer :: iskip_c_mg
    integer :: igrid_c_amr, igrid_c_mg
    integer :: icell_c_amr, icell_c_mg

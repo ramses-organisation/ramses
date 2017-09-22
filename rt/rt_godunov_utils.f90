@@ -1,6 +1,6 @@
 !###########################################################
 !###########################################################
-!###########################################################                                     
+!###########################################################
 SUBROUTINE get_rt_courant_coarse(dt)
 
 ! Determine the coarse RT timestep length set by the Courant condition
@@ -32,7 +32,6 @@ subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   real(dp)::um(1:nvector,1:nrtvar)
   real(dp)::ud(1:nvector,1:nrtvar)
   logical ::ok(1:nvector)
-  
   integer::k,i
   real(dp)::dg,dm,dd,error
   
@@ -54,6 +53,6 @@ end subroutine rt_hydro_refine
 !###########################################################
 !###########################################################
 !###########################################################
-  
+
 
 

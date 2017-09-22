@@ -9,13 +9,13 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
   implicit none
 
   integer::ngrid
-  real(dp)::dx, dt  
+  real(dp)::dx, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! Local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -42,12 +42,12 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
 
 !!!!
   entho = gamma/(gamma-one)
- 
+
   if (eos .eq. 'TM') then
      write(*,*),'plmde does not work with TM eos, switch to a MUSCL scheme of change the EOS'
      stop
   endif
-  
+
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
@@ -84,14 +84,14 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
               ccc = cc
 
               if(ABS(dux) > three*cc)ccc=zero
-              if(ABS(dvx) > three*cc)ccc=zero 
+              if(ABS(dvx) > three*cc)ccc=zero
               if(ABS(dwx) > three*cc)ccc=zero
 
               ! Characteristic analysis along X direction
               alpham =                   (-half/a)*dux               +half/b*dpx
               alpha0x = drx                                          -one/b*dpx
               alpha0y =             u*v/(one-u**2)*dux +dvx         + v/(one-u**2)/lor**2/r/h*dpx
-              alpha0z =             u*w/(one-u**2)*dux       + dwx  + w/(one-u**2)/lor**2/r/h*dpx 
+              alpha0z =             u*w/(one-u**2)*dux       + dwx  + w/(one-u**2)/lor**2/r/h*dpx
               alphap =                    (half/a)*dux              +half/b*dpx
 
               !eigenvalues
@@ -106,12 +106,12 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
 
 
               if(((u*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spplus =-project_out
-              if(((u*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out              
+              if(((u*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out
               if( u     >zero)spzero =-project_out
 
 
               apright  = half*(-one-spplus )*alphap
-              amright  = half*(-one-spminus)*alpham 
+              amright  = half*(-one-spminus)*alpham
               azrxright = half*(-one-spzero )*alpha0x
               azryright = half*(-one-spzero )*alpha0y
               azrzright = half*(-one-spzero )*alpha0z
@@ -140,7 +140,7 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
               spplus  = (u*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2)*dtdx
               spzero  = (u    )*dtdx
 
-                           
+
               if( (u*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2)   <=zero)spplus =+project_out
               if( (u*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2)   <=zero)spminus =+project_out
               if( u     <=zero)spzero =+project_out
@@ -175,7 +175,7 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
                  qm(l,i,j,k,:,1)=q(l,i,j,k,:)
               endif
 
-              ! Passive scalars 
+              ! Passive scalars
               ! simple advection
               do n = 6, nvar
                  a = q(l,i,j,k,n)     ! Cell centered values
@@ -186,13 +186,13 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
                  spzero=(u    )*dtdx
                  if(u>zero)spzero=-project_out
                  azrxright = half*(-one-spzero )*dax
-                 qp(l,i,j,k,n,1) = a + azrxright 
-                 
+                 qp(l,i,j,k,n,1) = a + azrxright
+
                  ! Left state
                  spzero=(u    )*dtdx
                  if(u<=zero)spzero=+project_out
                  azrxleft = half*(+one-spzero )*dax
-                 qm(l,i,j,k,n,1) = a + azrxleft 
+                 qm(l,i,j,k,n,1) = a + azrxleft
 
               end do
            end do
@@ -216,11 +216,11 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dy, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -237,7 +237,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   real(dp):: D,Mx,My,E,M,Mz,velsq
 
 
-    
+
   dtdx = dt/dx; dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
@@ -267,7 +267,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               lor=(one-vtot2)**(-1./2.)
               a= cc*eta/(lor*r)
 
-              
+
               !Slopes in Y direction
               dry = dq(l,i,j,k,ir,2)
               duy = dq(l,i,j,k,iu,2)
@@ -275,13 +275,13 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               dwy = dq(l,i,k,k,iw,2)
               dpy = dq(l,i,j,k,ip,2)
 
-              
+
 
               ! Supersonic fix for high-velocity gradients
               ccc = cc
 
               if(ABS(duy) > three*cc)ccc=zero
-              if(ABS(dvy) > three*cc)ccc=zero 
+              if(ABS(dvy) > three*cc)ccc=zero
               if(ABS(dwy) > three*cc)ccc=zero
 
 
@@ -290,7 +290,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               alpham =                 (-half/a)*dvy                          +half/b*dpy
               alpha0x =      duy +u*v/(one-v**2)*dvy        + u/(one-v**2)/lor**2/r/h*dpy
               alpha0y = dry                                                   - one/b*dpy
-              alpha0z =          v*w/(one-v**2)*dvy  + dwy  + w/(one-v**2)/lor**2/r/h*dpy 
+              alpha0z =          v*w/(one-v**2)*dvy  + dwy  + w/(one-v**2)/lor**2/r/h*dpy
               alphap  =                (half/a)*dvy                           +half/b*dpy
 
 
@@ -304,12 +304,12 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
 
 
               if(((v*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spplus =-project_out
-              if(((v*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out              
+              if(((v*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out
               if( v     >zero)spzero =-project_out
 
 
               apright   = half*(-one-spplus )*alphap
-              amright   = half*(-one-spminus)*alpham 
+              amright   = half*(-one-spminus)*alpham
               azrxright = half*(-one-spzero )*alpha0x
               azryright = half*(-one-spzero )*alpha0y
               azrzright = half*(-one-spzero )*alpha0z
@@ -326,7 +326,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               qp(l,i,j,k,3,2) = v + (-amright + apright)*a
               qp(l,i,j,k,4,2) = w + (amright*w*rm + azrzright + apright*w*rp)
               qp(l,i,j,k,5,2) = p + ( amright+apright)*b
-              
+
               qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               qp(l,i,j,k,ip,2) = max(smallp, qp(l,i,j,k,ip,2))
 
@@ -341,7 +341,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
 
 
               if(((v*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spplus =+project_out
-              if(((v*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spminus=+project_out              
+              if(((v*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spminus=+project_out
               if( v     <zero)spzero =+project_out
 
               apleft   = half*(+one-spplus )*alphap
@@ -398,25 +398,25 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
                  if(u>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*dax
                  qp(l,i,j,k,n,1) = a + azaright + sax
-                 
+
                  ! Left state
                  spzero=(u    )*dtdx
                  if(u<=zero)spzero=+project_out
                  azaleft = half*(+one-spzero )*dax
                  qm(l,i,j,k,n,1) = a + azaleft + sax
-                 
+
                  ! Top state
                  spzero=(v    )*dtdy
                  if(v>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*day
                  qp(l,i,j,k,n,2) = a + azaright + say
-                 
+
                  ! Bottom state
                  spzero=(v    )*dtdy
                  if(v<=zero)spzero=+project_out
                  azaleft = half*(+one-spzero )*day
                  qm(l,i,j,k,n,2) = a + azaleft + say
-                 
+
               end do
            end do
         end do
@@ -439,11 +439,11 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
   integer ::ngrid
   real(dp)::dx,dy,dz, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -475,7 +475,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-  
+
               ! Cell centered values
               cc  = c  (l,i,j,k)
               r   = q  (l,i,j,k,ir)
@@ -495,7 +495,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               a= cc*eta/(lor*r)
 
               ! TVD slopes in all Z directions
-              
+
               drz = dq(l,i,j,k,ir,3)
               duz = dq(l,i,j,k,iu,3)
               dvz = dq(l,i,j,k,iv,3)
@@ -508,7 +508,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               ccc = cc
 
               if(ABS(duz) > three*cc)ccc=zero
-              if(ABS(dvz) > three*cc)ccc=zero 
+              if(ABS(dvz) > three*cc)ccc=zero
               if(ABS(dwz) > three*cc)ccc=zero
 
 
@@ -516,8 +516,8 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               ! Characteristic analysis along Z direction
               alpham  =                   (-1./2./a)*dwz     +1./2./b*dpz
               alpha0x =      duz      + u*w/(1-w**2)*dwz   + u/(1-w**2)/lor**2/r/h*dpz
-              alpha0y =          +dvz + v*w/(1-w**2)*dwz   + v/(1-w**2)/lor**2/r/h*dpz 
-              alpha0z = drz                                   -1./b*dpz      
+              alpha0y =          +dvz + v*w/(1-w**2)*dwz   + v/(1-w**2)/lor**2/r/h*dpz
+              alpha0z = drz                                   -1./b*dpz
               alphap  =                    (1./2./a)*dwz      +1./2./b*dpz
 
 
@@ -529,7 +529,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               spzero  = (w    )*dtdz
 
               if(((w*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spplus =-project_out
-              if(((w*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out              
+              if(((w*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))>zero)spminus=-project_out
               if( w     >zero)spzero =-project_out
 
 
@@ -552,7 +552,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,3,3) = v + (amright*v*rm + azryright + apright*w*rp)
               qp(l,i,j,k,4,3) = w + (-amright + apright)*a
               qp(l,i,j,k,5,3) = p + ( amright+apright)*b
-              
+
               qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
               qp(l,i,j,k,ip,3) = max(smallp, qp(l,i,j,k,ip,3))
 
@@ -564,7 +564,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               spzero  = (w    )*dtdz
 
               if(((w*(one-ccc**2)+ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spplus =+project_out
-              if(((w*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spminus=+project_out              
+              if(((w*(one-ccc**2)-ccc*sqrt(coef))/(one-vtot2*ccc**2))<=zero)spminus=+project_out
               if( w     <zero)spzero =+project_out
 
 
@@ -580,7 +580,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,3,3) = v - (amright*v*rm + azryright + apright*w*rp)
               qp(l,i,j,k,4,3) = w - (-amright + apright)*a
               qp(l,i,j,k,5,3) = p - ( amright+apright)*b
-              
+
               qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
               qp(l,i,j,k,ip,3) = max(smallp, qp(l,i,j,k,ip,3))
 
@@ -604,15 +604,15 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  daz = dq(l,i,j,k,n,3)
                  sax = half*dtdx*(-v*day-w*daz) ! Transverse
                  say = half*dtdx*(-u*dax-w*daz) ! derivatives
-                 saz = half*dtdx*(-v*day-u*dax) ! 
+                 saz = half*dtdx*(-v*day-u*dax) !
 
-                 
+
                  ! Right state
                  spzero = (u    )*dtdx
                  if(u>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*dax
                  qp(l,i,j,k,n,1) = a + azaright + sax
-                 
+
                  ! Left state
                  spzero = (u    )*dtdx
                  if(u<=zero)spzero=+project_out
@@ -624,7 +624,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  if(v>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*day
                  qp(l,i,j,k,n,2) = a + azaright + say
-                 
+
                  ! Bottom state
                  spzero = (v    )*dtdy
                  if(v<=zero)spzero=+project_out
@@ -636,7 +636,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  if(w>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*daz
                  qp(l,i,j,k,n,3) = a + azaright + saz
-                 
+
                  ! Back state
                  spzero = (w    )*dtdy
                  if(w<=zero)spzero=+project_out

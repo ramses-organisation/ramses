@@ -70,14 +70,14 @@ program poshalo
   ipos=INDEX(repository,'output_')
   nstring=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nstring)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nstring)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -175,8 +175,8 @@ program poshalo
   end do
 
   open(18,file=TRIM(directory)//'.pos')
-  write(*,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
-  write(18,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'  
+  write(*,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'
+  write(18,'(A100)')'   #   npart       mass  cont.frac         xc         yc         zc         uc         vc         wc'
   do i=1,ngroup
      x_group(i)=shift1d(x_group(i)/m_group(i),0.5d0,period) ! Ensure group center is within bounds
      y_group(i)=shift1d(y_group(i)/m_group(i),0.5d0,period)
@@ -221,7 +221,7 @@ contains
       integer       :: iargc
       character(len=4)   :: opt
       character(len=128) :: arg
-      
+
       n = iargc()
       if (n < 4) then
          print *, 'usage: poshalo -inp ramses_input -pre hop_prefix'
@@ -266,7 +266,7 @@ contains
 
     end subroutine read_params
 end program poshalo
-  
+
 
 subroutine title(n,nstring)
   implicit none

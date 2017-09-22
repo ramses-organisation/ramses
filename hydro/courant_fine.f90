@@ -44,14 +44,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -67,7 +67,7 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         gg=0.0d0
         if(poisson)then
@@ -77,17 +77,17 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
         end do
-        
+
         ! Compute total energy
         do i=1,nleaf
            ekin_loc=ekin_loc+uu(i,ndim+2)*vol
         end do
-        
+
         ! Compute total internal energy
         do i=1,nleaf
            eint_loc=eint_loc+uu(i,ndim+2)*vol
@@ -104,16 +104,16 @@ subroutine courant_fine(ilevel)
            end do
         end do
 #endif
-        
+
         ! Compute CFL time-step
         if(nleaf>0)then
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -186,14 +186,14 @@ subroutine check_cons(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -209,17 +209,17 @@ subroutine check_cons(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
         end do
-        
+
         ! Compute total energy
         do i=1,nleaf
            ekin_loc=ekin_loc+uu(i,ndim+2)*vol
         end do
-        
+
         ! Compute total internal energy
         do i=1,nleaf
            eint_loc=eint_loc+uu(i,ndim+2)*vol
@@ -261,5 +261,5 @@ subroutine check_cons(ilevel)
   eint_tot=eint_tot+eint_all
 
 111 format('   Entering check_cons for level ',I2)
-  
+
 end subroutine check_cons

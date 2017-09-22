@@ -29,7 +29,7 @@ subroutine write_screen
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-  
+
   ncell=0
   do ilevel=1,nlevelmax
      ncache=numbl(myid,ilevel)
@@ -130,13 +130,13 @@ subroutine write_screen
                     icell=icell+1
 
                     !convert to primitive variables
-                    
+
                     ! Compute density
-                    D = uold(ind_cell(i),1) 
+                    D = uold(ind_cell(i),1)
                     ! Compute momentum
                     Mx=uold(ind_cell(i),2) ; My=uold(ind_cell(i),3) ; Mz=uold(ind_cell(i),4)
                     M = sqrt(Mx**2+My**2+Mz**2)
-                    ! Compute total energy 
+                    ! Compute total energy
                     E = uold(ind_cell(i),5)
                     !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
@@ -150,44 +150,44 @@ subroutine write_screen
                        write(*,*),'E<0 in ctoprimbis'
                        uold(ind_cell(i),5)=E
                     endif
-                    
+
                     if (E**2<M**2+D**2) then
-                       
+
                        write (*,*) 'Switch...ctoprimbis'
                        E=sqrt(M**2+d**2+1d-8)
                        uold(ind_cell(i),5)=E
                     endif
-              
-                    if ( M .eq. 0) then 
+
+                    if ( M .eq. 0) then
                        qq(icell,1) = D
                        qq(icell,2) = 0d0
                        qq(icell,3) = 0d0
                        qq(icell,4) = 0d0
-                       if (eos .eq. 'TM') then 
+                       if (eos .eq. 'TM') then
                           qq(icell,5) =(E**2-D**2)/3d0/E
                        else
-                          qq(icell,5)=(E-D)*(gamma-1d0)   
+                          qq(icell,5)=(E-D)*(gamma-1d0)
                        endif
                        lor=1d0
                     else
-                       
+
                        call Newton_Raphson_Mignone(D,M,E,gamma,R)
-                       
+
                        ! Compute the Lorentz factor
                        u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
                        lor = (1.0d0+u2)**(1.d0/2.d0)
-                       
+
                        ! Compute the density
                        qq(icell,1) = D/lor
-                       
+
                        ! compute velocities
                        qq(icell,2) = Mx/R
                        qq(icell,3) = My/R
                        qq(icell,4) = Mz/R
-                       
+
                        ! Compute pressure
                        Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
-                       if (eos .eq. 'TM') then 
+                       if (eos .eq. 'TM') then
                           rho=qq(icell,1)
                           qq(icell,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                        else
@@ -231,7 +231,7 @@ subroutine write_screen
 
   if(myid==1)then
      write(*,*)'====================================================================='
-        write(*,*)'lev      x           d          u         v         w          P'     
+        write(*,*)'lev      x           d          u         v         w          P'
      endif
      ! Sort radius
      allocate(ind_sort(1:ncell))
@@ -265,7 +265,7 @@ subroutine write_screen
   deallocate(mm_all,rr_all,dd_all,dtot_all,et_all,ei_all,uu_all,ll_all,gg_all)
 
 !end if
- 
+
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif

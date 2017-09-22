@@ -1,8 +1,8 @@
 module restart_commons
   use amr_commons
   use hydro_commons
-  
-  ! misc  
+
+  ! misc
   real(dp)::IG_rho         = 1.0D-5
   real(dp)::IG_T2          = 1.0D7
   real(dp)::IG_metal       = 0.01
@@ -53,7 +53,7 @@ subroutine init_refine
      call refine
      if(nremap>0)call load_balance
      if(numbtot(1,ilevel)==0)exit
-  end do 
+  end do
 
   ! Final pass to initialize the flow
   init=.false.
@@ -113,7 +113,7 @@ subroutine init_refine_2
         if(rt)call rt_init_flow_fine(ilevel)
 #endif
      end do
-      
+
      ! Restart patch ------
      do ilevel=nlevelmax-1,levelmin,-1
         if(pic)call merge_tree_fine(ilevel)
@@ -168,7 +168,7 @@ subroutine init_refine_2
   ! Restart patch ------
   do ilevel=levelmin-1,1,-1
     if(pic)call merge_tree_fine(ilevel)
-  enddo  
+  enddo
   call kill_gas_part(1)
   do ilevel=1,nlevelmax
      if(pic)then
@@ -190,7 +190,7 @@ subroutine init_refine_2
         call upload_fine(ilevel)
      end do
   endif
-#endif  
+#endif
 
   deallocate(varp)
   restart_init = .false.
@@ -209,7 +209,7 @@ subroutine kill_gas_part(ilevel)
   include 'mpif.h'
 #endif
   !--------------------------------------------------------
-  ! This subroutine removes the gas particles 
+  ! This subroutine removes the gas particles
   ! converted from the AMR cells during the restart phase
   !--------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
@@ -232,7 +232,7 @@ subroutine kill_gas_part(ilevel)
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        npart2=0        
+        npart2=0
         ! Count gas particles
         if(npart1>0)then
            ipart=headp(igrid)
@@ -246,9 +246,9 @@ subroutine kill_gas_part(ilevel)
               ipart=next_part  ! Go to next particle
            end do
            npart_cpu(myid)=npart_cpu(myid)+npart2
-        endif        
+        endif
         ! Gather gas particles
-        if(npart2>0)then        
+        if(npart2>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
@@ -264,7 +264,7 @@ subroutine kill_gas_part(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
                  call remove_list(ind_part,ind_grid_part,ok,ip)
@@ -276,10 +276,10 @@ subroutine kill_gas_part(ilevel)
            end do
            ! End loop over particles
         end if
-        
+
         igrid=next(igrid)   ! Go to next grid
      end do
-     
+
      ! End loop over grids
      if(ip>0)then
         call remove_list(ind_part,ind_grid_part,ok,ip)

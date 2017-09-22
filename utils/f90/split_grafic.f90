@@ -5,13 +5,13 @@ program spg
   !===============================================================
   ! This code splits grafic initial conditions files in ncpu files
   ! following a 3D space filling curve.
-  ! 
+  !
   ! Syntax : split_grafic input output ncpu
-  ! 
+  !
   ! - input is a directory which contains the 7 grafic files
   ! - output will contain the splitted files
   ! - ncpu must be a power of 2
-  ! - a verbose mode may be activated by adding 1 at the end of the 
+  ! - a verbose mode may be activated by adding 1 at the end of the
   ! command line
   !
   ! v 0.1 (Dominique Aubert/SAP) initial version
@@ -38,7 +38,7 @@ program spg
   integer::jcoarse_min,jcoarse_max,kcoarse_min,kcoarse_max,ind
   real(kind=8),dimension(:),allocatable::order,order_min,order_max,order_plan,o
   real(kind=8)::order_all_min,order_all_max
-  
+
   integer,dimension(:),allocatable::cpu_map,cpu_plan
   integer,dimension(:,:),allocatable::cpu_plan_min,cpu_plan_max
 
@@ -82,7 +82,7 @@ program spg
   if(narg.eq.4) then
      CALL getarg(4,debug_string)
      read(debug_string,*) debug
-     if(debug.eq.1) then 
+     if(debug.eq.1) then
         verbose=.true.
      elseif(debug.eq.2) then
         verbose=.true.
@@ -90,7 +90,7 @@ program spg
      end if
   end if
 
-  !!Getting the number of cpus  
+  !!Getting the number of cpus
   read(ncpu_string,*) ncpu
   dl=log(real(ncpu))/log(2.)
   if(ncpu.eq.1.or.(dl-int(dl)).ne.0) then
@@ -99,11 +99,11 @@ program spg
   end if
 
 
-  !! Reading the Grafic Header  
+  !! Reading the Grafic Header
   filegraf=trim(input)//'/ic_deltab'
   call read_grafic_header
 
-  
+
   !! Defining some constants
   zstart=1./astart-1.
   boxlen=np1*dx
@@ -112,7 +112,7 @@ program spg
 
   icoarse_min=1
   icoarse_max=np1
-  
+
   jcoarse_min=icoarse_min
   jcoarse_max=icoarse_max
 
@@ -136,7 +136,7 @@ program spg
      write(*,*) 'Boxlen (Mpc)=',boxlen
      write(*,*) '*************************'
   end if
-  
+
   !! allocation of CPU boundaries
   allocate(cpu_plan(1:ncpu))
   allocate(cpu_plan_min(2,1:ncpu))
@@ -192,21 +192,21 @@ program spg
      commande='mkdir '//fdir
 !     call system(commande)
      call PXFMKDIR(TRIM(fdir),LEN(TRIM(fdir)),O'755',info)
-     
+
      !opening ICs files
      open(unit=10,file=trim(input)//filename(ifile),form='unformatted')
      read(10) np1,np2,np3,dx,x1off,x2off,x3off,astart,omegam,omegav,h0
-     
+
      ! some inits
      minunit=20
      open_flag(:)=-1
-     
+
      ! main Loop over Grafic planes
      do iz=kcoarse_min,kcoarse_max
-        
+
         if(verbose) write(*,*) 'Parsing plane #',iz
         z_plan=dble(iz+0.5-kcoarse_min)*2d0
-        
+
         ! some inits in the plane
         cpu_plan(:)=-1
         cpu_plan_min(:,:)=-1
@@ -217,21 +217,21 @@ program spg
         y_plan=dble(iy+0.5-jcoarse_min)*2d0
            do ix=icoarse_min,icoarse_max
            x_plan=dble(ix+0.5-icoarse_min)*2d0
-           
+
            call cmp_cpumap(x_plan,y_plan,z_plan,c)
-           
+
            ! The cpu c has been found
-           cpu_plan(c)=1 
-           
+           cpu_plan(c)=1
+
            ! Looking for Rectangles corners
            if(cpu_plan_min(1,c).eq.-1) then
               cpu_plan_min(1,c)=ix
               cpu_plan_min(2,c)=iy
            end if
-           
+
            if(ix.gt.cpu_plan_max(1,c))cpu_plan_max(1,c)=ix
            if(iy.gt.cpu_plan_max(2,c))cpu_plan_max(2,c)=iy
-           
+
            end do
         end do
 
@@ -240,64 +240,64 @@ program spg
 
         !loop over cpus
         do i=1,ncpu
-           
+
            ! have the cpu been found in this plane ?
            if(cpu_plan(i).ne.-1) then
-              
+
               ! is the file already open ? if no we create it
               if(open_flag(i).eq.-1) then
-                 
+
                  open_flag(i)=minunit
                  call title(i,extnum)
 
                  fcurr=trim(fdir)//filename(ifile)
                  fcurr=trim(fcurr)//'.'
                  fname=trim(fcurr)//trim(extnum)
-                 
+
                  if(verbose) write(*,*) '************  opening file '//fname
                  open(unit=minunit,file=fname,form='unformatted')
                  minunit=minunit+1
-                 
+
                  ! we should write the header
                  np1_loc=cpu_plan_max(1,i)-cpu_plan_min(1,i)+1
                  np2_loc=cpu_plan_max(2,i)-cpu_plan_min(2,i)+1
                  np3_loc=ncoarse/ncpu/np1_loc/np2_loc
-                 
+
                  x1o_loc=real((cpu_plan_min(1,i)-icoarse_min)*dx)
                  x2o_loc=real((cpu_plan_min(2,i)-jcoarse_min)*dx)
                  x3o_loc=real((iz               -kcoarse_min)*dx)
-                 
+
                  write(open_flag(i)) np1_loc,np2_loc,np3_loc,dx,x1o_loc,x2o_loc,x3o_loc,astart,omegam,omegav,h0
-                 
+
                  ! we write the first line of data
                  write(open_flag(i)) ((ics(i1,i2),i1=cpu_plan_min(1,i),cpu_plan_max(1,i)),i2=cpu_plan_min(2,i),cpu_plan_max(2,i))
-                 
+
                  open_line(i)=np3_loc-1
-                                  
+
               else
-                 
+
                  ! we write the current line of data
                  write(open_flag(i)) ((ics(i1,i2),i1=cpu_plan_min(1,i),cpu_plan_max(1,i)),i2=cpu_plan_min(2,i),cpu_plan_max(2,i))
                  open_line(i)=open_line(i)-1
-                 
+
                  !we check if the current file is finished and should be closed
                  if(open_line(i).eq.0) then
                     if(verbose) write(*,*) '*********** closing cpu file #',i
                     close(open_flag(i))
                  end if
-                 
+
               end if
            end if
         end do
         !Loop end over the z-planes
      end do
-  
+
      close(10)
      ! Loop end over the current grafic file
   end do
 
   if(verbose) write(*,*) 'Z Climbing : Done'
-  
+
 end program spg
 
 !================================================================
@@ -313,7 +313,7 @@ subroutine cmp_cpumap(x,y,z,c)
   real(kind=8)::order
   real(kind=8),dimension(0:2048)::bound_key
   common /cpumap/ncpu
-  common /bound/bound_key 
+  common /bound/bound_key
   call cmp_ordering(x,y,z,order)
   c=ncpu ! default value
   do icpu=1,ncpu
@@ -389,10 +389,10 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
                             &   6, 1, 7, 0, 5, 2, 4, 3 /), &
                             & (/8 ,2, 12 /) )
 
-  
+
 
   do ip=1,npoint
-     
+
      ! convert to binary
      do i=0,bit_length-1
 
@@ -407,7 +407,7 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
         i_bit_mask(3*i+1)=y_bit_mask(i)
         i_bit_mask(3*i  )=z_bit_mask(i)
      end do
-     
+
 
      ! build Hilbert ordering using state diagram
      cstate=0
@@ -429,7 +429,7 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
         b0=0 ; if(i_bit_mask(i))b0=1
         order(ip)=order(ip)+dble(b0)*dble(2)**i
      end do
-          
+
   end do
 
 end subroutine hilbert3d
@@ -438,7 +438,7 @@ end subroutine hilbert3d
 !================================================================
 subroutine read_grafic_header
   implicit none
-  
+
   integer::np1,np2,np3
   real::dx,x1off,x2off,x3off
   real::astart,omegam,omegav,h0
@@ -446,7 +446,7 @@ subroutine read_grafic_header
 
   common /graficparam/np1,np2,np3,dx,x1off,x2off,x3off,astart,omegam,omegav,h0
   common /ioparam/filegraf
-  
+
 
   open(unit=10,file=trim(filegraf),form='unformatted')
   read(10) np1,np2,np3,dx,x1off,x2off,x3off,astart,omegam,omegav,h0

@@ -14,7 +14,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar)::uu ! conservative
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector,1:nvar)::q
-  
+
   real(dp) ::dtcell,smallp
   integer  ::k,idim
   real(dp) ::velx,vely,velz
@@ -24,12 +24,12 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   integer::a,b,c
 
 !  smallp = smallc**2/gamma
-  dt=courant_factor*dx/smallc  
+  dt=courant_factor*dx/smallc
   !convert to primitive variables
 
-  call ctoprimbis(uu,ncell,q)  
- 
-  do  k=1,ncell 
+  call ctoprimbis(uu,ncell,q)
+
+  do  k=1,ncell
   !compute fastest signal speed (x dir)
      call find_speed_info((/q(k,1),q(k,5),q(k,2),q(k,3),q(k,4)/),velx)
 
@@ -37,7 +37,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      !compute fastest signal speed (y dir)
      call find_speed_info((/q(k,1),q(k,5),q(k,3),q(k,2),q(k,4)/),vely)
 #endif
-  
+
 #if NDIM == 3
   !compute fastest signal speed (z dir)
      call find_speed_info((/q(k,1),q(k,5),q(k,4),q(k,2),q(k,3)/),velz)
@@ -56,7 +56,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dt=min(dt,dx/(velx+vely+velz) )
 #endif
 
-     
+
   end do
 
 
@@ -80,14 +80,14 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   real(dp),dimension(1:nvector,1:nvar)::qd
   real(dp),dimension(1:nvar)          ::qvarg,qvarm,qvard
   logical ::ok(1:nvector)
-  
+
 
 
   integer::k,idim
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error,lorg,lorm,lord
 
-  
+
      !convert to primitive variables
   call ctoprimbis(ug,nn,qg)
   call ctoprimbis(um,nn,qm)
@@ -125,7 +125,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
            ! compute signal velocity
            qvarg(1)=ug(k,1); qvarm(1)=um(k,1) ; qvard(1)=ud(k,1)
            qvarg(2)=ug(k,5); qvarm(2)=um(k,5) ; qvard(2)=ud(k,5)
-           
+
            ! x direction
            qvarg(3)=ug(k,2) ; qvarm(3)=um(k,2)  ; qvard(3)=ud(k,2)
            qvarg(4)=ug(k,3) ; qvarm(4)=um(k,3)  ; qvard(3)=ud(k,3)
@@ -135,7 +135,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
            call find_speed_info(qvard,vd)
            error=2.0d0*MAX( &
                 & ABS((ud(k,2)-um(k,2))/(ABS(vd)+ABS(vm)+floor_u)) , &
-                & ABS((ug(k,2)-um(k,2))/(ABS(vg)+ABS(vm)+floor_u)) ) 
+                & ABS((ug(k,2)-um(k,2))/(ABS(vg)+ABS(vm)+floor_u)) )
            ok(k) = ok(k) .or. error > err_grad_u
 
 
@@ -150,7 +150,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
 
            error=2.0d0*MAX( &
                 & ABS((ud(k,3)-um(k,3))/(ABS(vd)+ABS(vm)+floor_u)) , &
-                & ABS((ug(k,3)-um(k,3))/(ABS(vg)+ABS(vm)+floor_u)) ) 
+                & ABS((ug(k,3)-um(k,3))/(ABS(vg)+ABS(vm)+floor_u)) )
            ok(k) = ok(k) .or. error > err_grad_u
 
 
@@ -165,7 +165,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
 
            error=2.0d0*MAX( &
                 & ABS((ud(k,4)-um(k,4))/(ABS(vd)+ABS(vm)+floor_u)) , &
-                & ABS((ug(k,4)-um(k,4))/(ABS(vg)+ABS(vm)+floor_u)) ) 
+                & ABS((ug(k,4)-um(k,4))/(ABS(vg)+ABS(vm)+floor_u)) )
            ok(k) = ok(k) .or. error > err_grad_u
 
 
@@ -202,7 +202,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
   use const
   use hydro_parameters
 
-  implicit none  
+  implicit none
 
   real(dp), dimension(1:nvar) :: qleft,qright,fgdnv
   real(dp), dimension(1:nvar) :: fleft,fright
@@ -217,7 +217,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
 
 
 
-  
+
   call find_mhd_flux(qleft ,uleft ,fleft )
   call find_mhd_flux(qright,uright,fright)
 
@@ -251,13 +251,13 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
   factorl = cfleft *(sqrt(1.0d0-vnl**2-cfleft**2 *vplsq))/lorl
   factorr = cfright*(sqrt(1.0d0-vnr**2-cfright**2*vprsq))/lorr
 
-  lleftp =(vnl*(1.0d0- cfleft**2) +factorl)/(1.0d0- cfleft**2*vlsq) 
-  lleftm =(vnl*(1.0d0- cfleft**2) -factorl)/(1.0d0- cfleft**2*vlsq) 
+  lleftp =(vnl*(1.0d0- cfleft**2) +factorl)/(1.0d0- cfleft**2*vlsq)
+  lleftm =(vnl*(1.0d0- cfleft**2) -factorl)/(1.0d0- cfleft**2*vlsq)
 
-  lrightp=(vnr*(1.0d0- cfright**2)+factorr)/(1.0d0- cfright**2*vrsq) 
-  lrightm=(vnr*(1.0d0- cfright**2)-factorr)/(1.0d0- cfright**2*vrsq) 
+  lrightp=(vnr*(1.0d0- cfright**2)+factorr)/(1.0d0- cfright**2*vrsq)
+  lrightm=(vnr*(1.0d0- cfright**2)-factorr)/(1.0d0- cfright**2*vrsq)
 
-  sr=max(lleftp,lrightp) 
+  sr=max(lleftp,lrightp)
   sl=min( lleftm,lrightm)
 
 !--- Step 2. ------------------------------------------------------------------
@@ -266,7 +266,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
 !--- Step 3. ------------------------------------------------------------------
 ! Compute HLL flux using Mignone Eq 11 (necessary for computing lmdas (Eq 18)
 ! Compute HLL conserved quantities using Mignone eq 9
- 
+
   ovs = 1.0 / ( sr - sl )
   srsl = sr*sl
     do i=1, nvar
@@ -278,12 +278,12 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
 ! Compute contact wave speed using larger root from Mignone Eq 18
 ! Physical root is the root with the minus sign
 
- ! quadratic formUla calcUlation 
+ ! quadratic formUla calcUlation
 
   a = fhll(2)
   b = -(uhll(2) +fhll(3))
   c = uhll(3)
-  
+
   if (b >0) then
      quad = -0.5*(b +sqrt(b*b - 4.0*a*c))
   else
@@ -293,16 +293,16 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
 
 !--- Step 5. ------------------------------------------------------------------
 ! Determine intercell flux according to Mignone 13
-                  
 
-  if( sl >= 0.0) then ! Fl 
-     ! intercell flux is left flux 
+
+  if( sl >= 0.0) then ! Fl
+     ! intercell flux is left flux
      fgdnv = fleft
-  else if  (sstar >= 0.0)  then ! Fls 
-     ! Mignone 2006 Eq 48 
+  else if  (sstar >= 0.0)  then ! Fls
+     ! Mignone 2006 Eq 48
      ps = -Fhll(2)*sstar + Fhll(3)
 
-   ! now calcUlate Usl with Mignone Eq 16 
+   ! now calcUlate Usl with Mignone Eq 16
     den = 1.0 / (sl - sstar);
     usl(1) =  uleft(1) * (sl - qleft(3))                                 * den
     usl(3) = (uleft(3) * (sl - qleft(3) )+ps - qleft(2))                 * den
@@ -313,12 +313,12 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
     ! now calcUlate Fsr using Mignone Eq 14
     fgdnv= sl *(usl -uleft) +fleft
 
-  else if( sr >= 0.0) then ! Frs 
+  else if( sr >= 0.0) then ! Frs
 
-    ! Mignone 2006 Eq 48 
+    ! Mignone 2006 Eq 48
     ps = -fhll(2)*sstar + Fhll(3)
 
-    ! now calcUlate Usr with Mignone Eq 16 
+    ! now calcUlate Usr with Mignone Eq 16
     den = 1.0 / (sr - sstar)
 
     usr(1) =  uright(1) * (sr - qright(3))* den
@@ -331,12 +331,12 @@ subroutine riemann_hllc(qleft,qright,fgdnv)
 
     fgdnv= sr *(usr -uright) +fright
 
-  else 
-   ! intercell flux is right flux 
+  else
+   ! intercell flux is right flux
     fgdnv =fright
  endif
  !passive scalars
- do i=6,nvar  ! il faut un facteur de lorentz???? 
+ do i=6,nvar  ! il faut un facteur de lorentz????
     if(fgdnv(1)>0)then
        fgdnv(i) = fgdnv(1)*qleft (i)
     else
@@ -363,7 +363,7 @@ subroutine riemann_hll(qleft,qright,fgdnv)
   use const
   use hydro_parameters
 
-  implicit none  
+  implicit none
 
   real(dp), dimension(1:nvar) :: qleft,qright,fgdnv
   real(dp), dimension(1:nvar) :: fleft,fright
@@ -386,35 +386,35 @@ subroutine riemann_hll(qleft,qright,fgdnv)
   vp1r =qright(4)
   vp2l =qleft (5)
   vp2r =qright(5)
-  
+
   vlsq   =vnl**2+vp1l**2+vp2l**2
   vrsq   =vnr**2+vp1r**2+vp2r**2
   vplsq  =vp1l**2+vp2l**2
   vprsq  =vp1l**2+vp2l**2
 
-  
+
   ! lorentz factors
   lorl=(1.0d0-vlsq)**(-1./2.)
   lorr=(1.0d0-vrsq)**(-1./2.)
-       
+
   !From Del Zanna et al, 2002.Case with transverse velocity component
   !wave speeds
-     
+
   factorl = cfleft *(sqrt(1.0d0-vnl**2-cfleft**2 *vplsq))/lorl
   factorr = cfright*(sqrt(1.0d0-vnl**2-cfright**2*vprsq))/lorr
-     
-  lleftp =(vnl*(1.0d0- cfleft**2) +factorl)/(1.0d0- cfleft**2*vlsq) 
-  lleftm =(vnl*(1.0d0- cfleft**2) -factorl)/(1.0d0- cfleft**2*vlsq) 
-     
-  lrightp=(vnr*(1.0d0- cfright**2)+factorr)/(1.0d0- cfright**2*vrsq) 
-  lrightm=(vnr*(1.0d0- cfright**2)-factorr)/(1.0d0- cfright**2*vrsq) 
-     
+
+  lleftp =(vnl*(1.0d0- cfleft**2) +factorl)/(1.0d0- cfleft**2*vlsq)
+  lleftm =(vnl*(1.0d0- cfleft**2) -factorl)/(1.0d0- cfleft**2*vlsq)
+
+  lrightp=(vnr*(1.0d0- cfright**2)+factorr)/(1.0d0- cfright**2*vrsq)
+  lrightm=(vnr*(1.0d0- cfright**2)-factorr)/(1.0d0- cfright**2*vrsq)
+
 
   sr=max(zero, lleftp,lrightp)
   sl=max(zero, -lleftm,-lrightm)
-     
+
   !Compute HLL fluxes
-     
+
   fgdnv = (sr*fleft+sl*fright-sr*sl*(uright-uleft))/(sr+sl)
   return
 end subroutine riemann_hll
@@ -427,12 +427,12 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   USE amr_parameters
   USE const
   USE hydro_parameters
-  !! calculate the fastest velocity at which information is exchanged 
+  !! calculate the fastest velocity at which information is exchanged
   !! at the interface
   !! the structure of qvar is : rho, Pressure, Vnormal, Vpar1,Vpar2
   IMPLICIT NONE
   integer                 :: i,ib,iv
-  real(dp), dimension(1:nvar) :: qvar  
+  real(dp), dimension(1:nvar) :: qvar
   real(dp)                    :: vel_info
   real(dp)                    :: d,p,u,v,w,velsq,vperpsq,factor
   real(dp)                    :: ein,enth,cs,lor,tau
@@ -450,8 +450,8 @@ SUBROUTINE find_speed_info(qvar,vel_info)
      cs  = sqrt(gamma*p/enth)
   endif
   factor = cs*(sqrt(1.0d0-u*u-cs*cs*vperpsq))/lor
-  vel_info=max(abs(u*(1.0d0-cs*cs)+factor),abs(u*(1.0d0-cs*cs)-factor))/(1.0d0-cs*cs*velsq) 
-    
+  vel_info=max(abs(u*(1.0d0-cs*cs)+factor),abs(u*(1.0d0-cs*cs)-factor))/(1.0d0-cs*cs*velsq)
+
   return
 
 
@@ -475,17 +475,17 @@ subroutine find_mhd_flux(qvar,cvar,ff)
   use hydro_parameters
 
   implicit none
-   
+
   integer                 :: i,ivar,ib
   real(dp), dimension(1:nvar) :: qvar,cvar,ff
   real(dp)                    :: etot,d,u,v,w,p,entho,ein,enth,tau
-  real(dp)                :: lor ! Lorentz factor 
+  real(dp)                :: lor ! Lorentz factor
 
   ! local variables
-  
+
   d=qvar(1); p=qvar(2); u=qvar(3);  v=qvar(4); w=qvar(5)
   lor  = (1-(u**2+v**2+w**2))**(-1./2.)
-  entho = one/(gamma-one)  
+  entho = one/(gamma-one)
 
   if (eos .eq. 'TM') then
      tau=p/d
@@ -500,11 +500,11 @@ subroutine find_mhd_flux(qvar,cvar,ff)
   cvar(3) = enth*lor**2*u
   cvar(4) = enth*lor**2*v
   cvar(5) = enth*lor**2*w
-  do ivar = 6,nvar  
+  do ivar = 6,nvar
      cvar(ivar) = d*qvar(ivar)*lor
   end do
 
-  ! compute fluxes  
+  ! compute fluxes
   ff(1) = d*u*lor
   ff(2) = enth*lor**2*u
   ff(3) = enth*lor**2*u**2+p
@@ -529,14 +529,14 @@ end subroutine find_mhd_flux
 !! The structure of qvar is : rho, pressure, vnormal,vtransverse1, vtransverse2,
 
 subroutine find_speed_fast(qvar,vel_info)
-  
+
   use amr_parameters
   use const
   use hydro_parameters
 
   implicit none
 
-  real(dp), dimension(1:nvar) :: qvar  
+  real(dp), dimension(1:nvar) :: qvar
   real(dp)                    :: vel_info,cs
   real(dp)                    :: d,p,u,v,w,enth,lor,ein,tau
 
@@ -565,7 +565,7 @@ use hydro_parameters
 implicit none
 
   real(dp),dimension(1:nvector,1:nvar)::uu
-  real(dp),dimension(1:nvector,1:nvar)::q  
+  real(dp),dimension(1:nvector,1:nvar)::q
 
   integer::n,k,idim
   real(dp) :: lor,entho ! Lorentz factor
@@ -577,11 +577,11 @@ implicit none
      !convert to primitive variables
 
      ! Compute density
-     D = uu(k,1) 
+     D = uu(k,1)
      ! Compute momentum
      Mx=uu(k,2) ; My=uu(k,3) ; Mz=uu(k,4)
      M = sqrt(Mx**2+My**2+Mz**2)
-     ! Compute total energy 
+     ! Compute total energy
      E = uu(k,5)
      !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
@@ -597,42 +597,42 @@ implicit none
      endif
 
      if (E**2<M**2+D**2) then
-        
+
        write (*,*) 'Switch...ctoprimbis'
         E=sqrt(M**2+d**2+1d-8)
         uu(k,5)=E
      endif
 
-     if ( M .eq. 0) then 
+     if ( M .eq. 0) then
         q(k,1) = D
         q(k,2) = 0d0
         q(k,3) = 0d0
         q(k,4) = 0d0
-        if (eos .eq. 'TM') then 
+        if (eos .eq. 'TM') then
            q(k,5) =(E**2-D**2)/3d0/E
         else
-           q(k,5)=(E-D)*(gamma-1d0)   
+           q(k,5)=(E-D)*(gamma-1d0)
         endif
         lor=1d0
-           
+
      else
 
         call Newton_Raphson_Mignone(D,M,E,gamma,R)
         ! Compute the Lorentz factor
         u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
         lor = (1.0d0+u2)**(1.d0/2.d0)
-        
+
         ! Compute the density
         q(k,1) = D/lor
-        
+
         ! compute velocities
         q(k,2) = Mx/R
         q(k,3) = My/R
         q(k,4) = Mz/R
-  
+
         ! Compute pressure
         Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
-        if (eos .eq. 'TM') then 
+        if (eos .eq. 'TM') then
            rho=q(k,1)
            q(k,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
         else
@@ -650,9 +650,9 @@ implicit none
      tau=q(k,5)/q(k,1)
      h=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
      enddo
-     
 
- 
+
+
 return
 
 

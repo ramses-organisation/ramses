@@ -9,7 +9,7 @@ subroutine rt_hydro_flag(ilevel)
   integer::ilevel
   ! -------------------------------------------------------------------
   ! This routine flag for refinement cells that satisfies
-  ! some user-defined physical criteria at the level ilevel. 
+  ! some user-defined physical criteria at the level ilevel.
   ! -------------------------------------------------------------------
   integer::i,j,ncache,nok,ix,iy,iz,iskip
   integer::igrid,ind,idim,ngrid,ivar
@@ -102,7 +102,7 @@ subroutine rt_hydro_flag(ilevel)
            end do
            call rt_hydro_refine(uug,uum,uud,ok,ngrid)
         end do
-     
+
         ! Count newly flagged cells
         nok=0
         do i=1,ngrid
@@ -110,15 +110,15 @@ subroutine rt_hydro_flag(ilevel)
               nok=nok+1
            end if
         end do
-     
+
         do i=1,ngrid
            if(ok(i))flag1(ind_cell(i))=1
         end do
-        
+
         nflag=nflag+nok
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 

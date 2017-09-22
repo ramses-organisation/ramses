@@ -22,7 +22,7 @@ program icdegrade
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
@@ -41,31 +41,31 @@ program icdegrade
      write(*,*)'Input array size is:',np1,np2,np3
      allocate(f(np1,np2,1:2))
      allocate(f2(np1/2,np2/2,1:1))
-     
+
      np1o2=np1/2
      np2o2=np2/2
      np3o2=np3/2
      dx2=2.*dx
-     
+
      write(*,*)'Reading input file '//TRIM(filename(1))
      open(10,file=filename(1),form='unformatted')
      rewind(10)
      read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     
+
      write(*,*)'Writing ouput file '//TRIM(filename(2))
      open(11,file=filename(2),form='unformatted')
      rewind 11
      write (11)np1o2,np2o2,np3o2,dx2,x1o,x2o,x3o,astart,omegam,omegav,h0
-     
+
      write(*,*)'Degrading initial conditions...'
-     
+
      ! Loop over planes
      do i3=1,np3,2
-        
+
         ! READING INPUT DATA
         read(10) ((f(i1,i2,1),i1=1,np1),i2=1,np2)
         read(10) ((f(i1,i2,2),i1=1,np1),i2=1,np2)
-        
+
         !  DEGRADING INITIAL CONDITIONS
         do i1=1,np1o2
            do i2=1,np2o2
@@ -75,16 +75,16 @@ program icdegrade
                    &          f(2*i+2,2*j+2,1),f(2*i+1,2*j+2,2),f(2*i+2,2*j+1,2),f(2*i+2,2*j+2,2))
            end do
         end do
-        
-        !   WRITING OUTPUT FILES     
+
+        !   WRITING OUTPUT FILES
         write(11) ((f2(i1,i2,1),i1=1,np1o2),i2=1,np2o2)
-        
+
      enddo
-     
+
      close(10)
      close(11)
      write(*,*)'done'
-     
+
      deallocate(f)
      deallocate(f2)
   endif
@@ -100,31 +100,31 @@ program icdegrade
      write(*,*)'Input array size is:',np1,np2,np3
      allocate(f(np1,np2,1:2))
      allocate(f2(np1/2,np2/2,1:1))
-     
+
      np1o2=np1/2
      np2o2=np2/2
      np3o2=np3/2
      dx2=2.*dx
-     
+
      write(*,*)'Reading input file '//TRIM(filename(1))
      open(10,file=filename(1),form='unformatted')
      rewind(10)
      read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-     
+
      write(*,*)'Writing ouput file '//TRIM(filename(2))
      open(11,file=filename(2),form='unformatted')
      rewind 11
      write (11)np1o2,np2o2,np3o2,dx2,x1o,x2o,x3o,astart,omegam,omegav,h0
-     
+
      write(*,*)'Degrading initial conditions...'
-     
+
      ! Loop over planes
      do i3=1,np3,2
-        
+
         ! READING INPUT DATA
         read(10) ((f(i1,i2,1),i1=1,np1),i2=1,np2)
         read(10) ((f(i1,i2,2),i1=1,np1),i2=1,np2)
-        
+
         !  DEGRADING INITIAL CONDITIONS
         do i1=1,np1o2
            do i2=1,np2o2
@@ -134,23 +134,23 @@ program icdegrade
                    &          f(2*i+2,2*j+2,1),f(2*i+1,2*j+2,2),f(2*i+2,2*j+1,2),f(2*i+2,2*j+2,2))
            end do
         end do
-        
-        !   WRITING OUTPUT FILES     
+
+        !   WRITING OUTPUT FILES
         write(11) ((f2(i1,i2,1),i1=1,np1o2),i2=1,np2o2)
-        
+
      enddo
-     
+
      close(10)
      close(11)
      write(*,*)'done'
-     
+
      deallocate(f)
      deallocate(f2)
 
   endif
 
-  
-end program icdegrade
-   
 
-       
+end program icdegrade
+
+
+

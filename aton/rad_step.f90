@@ -47,16 +47,16 @@ subroutine rad_step(time_step_user)
   real(kind=8)::deltat  ! Radiation time step in seconds
   integer::num_steps    ! Number of radiation steps.
   integer::i            ! Radiation step counter.
-  
+
   integer::ierr
 
   ! 1.0 corresponds to the maximum Courant condition.
   real(kind=8)::cfl=0.9
 
-  
+
   call timer_start(total_timer)
   call timer_stop(ramses_timer)
-  
+
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   myid = myid + 1  ! We need a 1-based id.
   call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
@@ -70,7 +70,7 @@ subroutine rad_step(time_step_user)
   deltat=cfl*dx/c_light/3.
   num_steps=time_step_s/deltat
   num_steps=max(num_steps, 1)
-  
+
   if (myid.eq.1) then
      write(*,*) 'Starting ATON radiation step:'
      write(*,*) '  time step = ', time_step_s, ' (seconds)'
@@ -98,7 +98,7 @@ subroutine rad_step(time_step_user)
   else
      call aton_cpu_loop(num_steps,dx,deltat)
   end if
-    
+
   call timer_start(mpi_timer)
   call fill_hydro_from_cpu_field(dx)
   call end_mpi()
@@ -180,7 +180,7 @@ subroutine aton_gpu_loop(num_steps,dx,deltat)
   !call aton_validate(10000+myid, c_light, cpu_e, cpu_d, cpu_t, cpu_x, cpu_f)
 
   !num_steps = 0
-  
+
   i=0
   do while(i.lt.num_steps)
      if(mod(i,100).eq.0) then

@@ -36,7 +36,7 @@ module merger_parameters!{{{
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
   character(len=256)::Vcirc_dat_file1='Vcirc1.dat'
   character(len=256)::Vcirc_dat_file2='Vcirc2.dat'
-  ! Galactic global velocities, given in km/s in namelist, 
+  ! Galactic global velocities, given in km/s in namelist,
   ! then converted in user unit.
   real(dp), dimension(3)::Vgal1 = 0.0D0
   real(dp), dimension(3)::Vgal2 = 0.0D0
@@ -60,12 +60,12 @@ module merger_parameters!{{{
   ! Magnetic Field Setup
   real(dp)::typ_mag_radius = 3.0D0           ! radial scale length
   real(dp)::typ_mag_height = 1.5D-1          ! vertical scale length
-  character(len=16)::mag_topology='constant' ! magnetic topology: 
+  character(len=16)::mag_topology='constant' ! magnetic topology:
                                              ! 'constant' (along x-axis)
                                              ! 'toroidal'
                                              ! 'dipole'
                                              ! 'quadrupole'
-  
+
   !~~~~~~~~~~~~~~~~~~~~~~~~ NOTE ~~~~~~~~~~~~~~~~~~~~~~~~!
   ! For isolated galaxy runs :                           !
   ! --------------------------                           !
@@ -91,7 +91,7 @@ subroutine read_merger_params! {{{
   character(LEN=80)::infile
 
   !--------------------------------------------------
-  ! Local variables  
+  ! Local variables
   !--------------------------------------------------
   real(dp)::norm_u
   logical::vcirc_file1_exists, vcirc_file2_exists
@@ -345,7 +345,7 @@ subroutine condinit(x,u,dx,nn)
   end if
   dmin = IG_density_factor * dmin
 
-  
+
   ! Loop over cells
   do i=1,nn
      xx1=x(i,:)-(gal_center1(:)+boxlen/2.0D0)
@@ -416,7 +416,7 @@ subroutine condinit(x,u,dx,nn)
         q(i,1) = max(weight * q(i,1), 1d-7/scale_nH)
         ! P=rho*cs^2
         q(i,5) = a2*q(i,1)
-        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
+        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal
         !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
             case ('exponential')
@@ -485,43 +485,43 @@ contains
 !{{{
 function find_Vcirc(rayon, indice)
 implicit none
-real(dp), intent(in)		:: rayon
-integer, intent(in)		:: indice
-real(dp)					:: find_Vcirc
-real(dp)					:: vitesse, rayon_bin, vitesse_old, rayon_bin_old
-integer					:: k, indmax
+real(dp), intent(in)    :: rayon
+integer, intent(in)    :: indice
+real(dp)          :: find_Vcirc
+real(dp)          :: vitesse, rayon_bin, vitesse_old, rayon_bin_old
+integer          :: k, indmax
 
 k=2
 if (indice .EQ. 1) then
-	indmax = size(Vcirc_dat1,1)
-	rayon_bin = Vcirc_dat1(k,1)
-	rayon_bin_old = Vcirc_dat1(k-1,1)
-	vitesse = Vcirc_dat1(k,2)
-	vitesse_old = Vcirc_dat1(k-1,2)
+  indmax = size(Vcirc_dat1,1)
+  rayon_bin = Vcirc_dat1(k,1)
+  rayon_bin_old = Vcirc_dat1(k-1,1)
+  vitesse = Vcirc_dat1(k,2)
+  vitesse_old = Vcirc_dat1(k-1,2)
 else
-	indmax = size(Vcirc_dat2,1)
-	rayon_bin = Vcirc_dat2(k,1)
-	rayon_bin_old = Vcirc_dat2(k-1,1)
-	vitesse = Vcirc_dat2(k,2)
-	vitesse_old = Vcirc_dat2(k-1,2)
+  indmax = size(Vcirc_dat2,1)
+  rayon_bin = Vcirc_dat2(k,1)
+  rayon_bin_old = Vcirc_dat2(k-1,1)
+  vitesse = Vcirc_dat2(k,2)
+  vitesse_old = Vcirc_dat2(k-1,2)
 end if
 do while (rayon .GT. rayon_bin)
-	if(k .GE. indmax) then
-		write(*,*) "Hydro IC error : Radius out of rotation curve !!!"
-		call clean_stop
-	end if
-	k = k + 1
-	if (indice .EQ. 1) then
-		vitesse_old = vitesse
-		vitesse = Vcirc_dat1(k,2)
-		rayon_bin_old = rayon_bin
-		rayon_bin = Vcirc_dat1(k,1)
-	else
-		vitesse_old = vitesse
-		vitesse = Vcirc_dat2(k,2)
-		rayon_bin_old = rayon_bin
-		rayon_bin = Vcirc_dat2(k,1)
-	end if
+  if(k .GE. indmax) then
+    write(*,*) "Hydro IC error : Radius out of rotation curve !!!"
+    call clean_stop
+  end if
+  k = k + 1
+  if (indice .EQ. 1) then
+    vitesse_old = vitesse
+    vitesse = Vcirc_dat1(k,2)
+    rayon_bin_old = rayon_bin
+    rayon_bin = Vcirc_dat1(k,1)
+  else
+    vitesse_old = vitesse
+    vitesse = Vcirc_dat2(k,2)
+    rayon_bin_old = rayon_bin
+    rayon_bin = Vcirc_dat2(k,1)
+  end if
 end do
 
 find_Vcirc = vitesse_old + (rayon - rayon_bin_old) * (vitesse - vitesse_old) / (rayon_bin - rayon_bin_old)
@@ -868,7 +868,7 @@ end subroutine mag_quadrupole
 
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -896,7 +896,7 @@ subroutine velana(x,v,dx,t,ncell)
      vx=aa*(cos(twopi*yy)+sin(twopi*zz))
      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
      vz=aa*(cos(twopi*xx)+sin(twopi*yy))
-     
+
      v(i,1)=vx
      v(i,2)=vy
      v(i,3)=vz
@@ -907,7 +907,7 @@ subroutine velana(x,v,dx,t,ncell)
 end subroutine velana
 
 
-!------------------------------------------------------------------------------------- 
+!-------------------------------------------------------------------------------------
 ! Circular velocity files reading
 ! {{{
 subroutine read_vcirc_files
@@ -915,23 +915,23 @@ subroutine read_vcirc_files
   implicit none
   integer:: nvitesses, ierr, i
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  
+
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  
+
   ! Galaxy #1
   nvitesses = 0
   open(unit=123, file=trim(Vcirc_dat_file1), iostat=ierr)
   do while (ierr==0)
-	read(123,*,iostat=ierr)
-	if(ierr==0) then
-		nvitesses = nvitesses + 1  ! Number of samples
-	end if
+  read(123,*,iostat=ierr)
+  if(ierr==0) then
+    nvitesses = nvitesses + 1  ! Number of samples
+  end if
   end do
   allocate(Vcirc_dat1(nvitesses,2))
   Vcirc_dat1 = 0.0D0
   rewind(123)
   do i=1,nvitesses
-	read(123,*) Vcirc_dat1(i,:)
+  read(123,*) Vcirc_dat1(i,:)
   end do
   close(123)
   ! Unit conversion kpc -> code unit and km/s -> code unit
@@ -942,16 +942,16 @@ subroutine read_vcirc_files
   nvitesses = 0
   open(unit=123, file=trim(Vcirc_dat_file2), iostat=ierr)
   do while (ierr==0)
-	read(123,*,iostat=ierr)
-	if(ierr==0) then
-		nvitesses = nvitesses + 1 ! Number of samples
-	end if
+  read(123,*,iostat=ierr)
+  if(ierr==0) then
+    nvitesses = nvitesses + 1 ! Number of samples
+  end if
   end do
   allocate(Vcirc_dat2(nvitesses,2))
   Vcirc_dat2 = 0.0D0
   rewind(123)
   do i=1,nvitesses
-	read(123,*) Vcirc_dat2(i,:)
+  read(123,*) Vcirc_dat2(i,:)
   end do
   close(123)
   ! Unit conversion kpc -> code unit and km/s -> code unit

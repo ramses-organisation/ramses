@@ -1,10 +1,10 @@
 module dice_commons
    use amr_commons
    use hydro_commons
- 
+
    ! particle data
    character(len=512)::ic_file, ic_format
-   ! misc  
+   ! misc
    real(dp)::IG_rho         = 1.0D-5
    real(dp)::IG_T2          = 1.0D7
    real(dp)::IG_metal       = 0.01
@@ -34,7 +34,7 @@ module dice_commons
    real(dp),allocatable,dimension(:)::maskp
    logical::dice_init       = .false.
    logical::amr_struct      = .false.
- 
+
 end module dice_commons
 
 
@@ -285,7 +285,7 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -315,7 +315,7 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

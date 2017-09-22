@@ -2,13 +2,13 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine rt_init_flow  
+subroutine rt_init_flow
   use amr_commons
   use rt_hydro_commons, ONLY: nrtvar, rtuold
   implicit none
 
   integer::ilevel,ivar
-  
+
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call rt_init_flow_fine(ilevel)
@@ -34,7 +34,7 @@ subroutine rt_init_flow_fine(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  
+
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
@@ -56,7 +56,7 @@ subroutine rt_init_flow_fine(ilevel)
   character(LEN=5)::ncharvar
  integer,parameter::tag=1129
  integer::dummy_io,info2
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -65,7 +65,7 @@ subroutine rt_init_flow_fine(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -75,7 +75,7 @@ subroutine rt_init_flow_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -108,7 +108,7 @@ subroutine rt_init_flow_fine(ilevel)
      i1_min=n1(ilevel)+1; i1_max=0
      i2_min=n2(ilevel)+1; i2_max=0
      i3_min=n3(ilevel)+1; i3_max=0
-     do ind=1,twotondim           
+     do ind=1,twotondim
         do i=1,ncache
            igrid=active(ilevel)%igrid(i)
            xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
@@ -153,7 +153,7 @@ subroutine rt_init_flow_fine(ilevel)
 
         INQUIRE(file=filename,exist=ok_file3)
         if(ok_file3)then
-           ! Reading the existing file   
+           ! Reading the existing file
            if(myid==1)write(*,*)'Reading file '//TRIM(filename)
            if(multiple)then
               ! Wait for the token
@@ -215,7 +215,7 @@ subroutine rt_init_flow_fine(ilevel)
               if(myid==1)close(10)
            endif
         else
-           ! If file doesn't exist, initialize variable to default value 
+           ! If file doesn't exist, initialize variable to default value
            ! In most cases, this is zero (you can change that if necessary)
            if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
@@ -253,7 +253,7 @@ subroutine rt_init_flow_fine(ilevel)
 
      ! Deallocate initial conditions array
      if(ncache>0)deallocate(init_array)
-     deallocate(init_plane) 
+     deallocate(init_plane)
 
   !-------------------------------------------------------
   ! Compute initial conditions from subroutine condinit
@@ -341,7 +341,7 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
 
   ! Loop over RT regions
   do k=1,rt_nregion
-     
+
      if (rt_n_region(k).le.0.0) rt_n_region(k)=smallnp
      group_ind = iGroups(rt_reg_group(k))
      if(rt_reg_group(k) .le. 0 .or. rt_reg_group(k) .gt. nGroups) cycle
@@ -368,8 +368,8 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            ! If cell lies within region, inject value
            if(r .lt. 1.0)then
               uu(i,group_ind)=rt_n_region(k)
-              uu(i,group_ind+1)=rt_u_region(k) * rt_c  
-#if NDIM>1 
+              uu(i,group_ind+1)=rt_u_region(k) * rt_c
+#if NDIM>1
               uu(i,group_ind+2)=rt_v_region(k) * rt_c
 #endif
 #if NDIM>2
@@ -378,7 +378,7 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            end if
         end do
      end if
-     
+
      ! For "point" regions only:
      if(rt_region_type(k) .eq. 'point')then
         ! Volume element
@@ -397,7 +397,7 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            if(r .gt. 0.) then
               ! If cell lies within CIC cloud, inject value
               ! Convert photon number to photon number density
-              uu(i,group_ind) = rt_n_region(k)/scale_Np *r/vol 
+              uu(i,group_ind) = rt_n_region(k)/scale_Np *r/vol
               uu(i,group_ind+1) = rt_u_region(k)/scale_Np*r/vol*rt_c
 #if NDIM>1
               uu(i,group_ind+2) = rt_v_region(k)/scale_Np*r/vol*rt_c

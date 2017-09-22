@@ -3,7 +3,7 @@
 !================================================================
 !================================================================
 subroutine condinit(x,u,dx,nn)
-  use amr_parameters 
+  use amr_parameters
   use hydro_parameters
   implicit none
   integer ::nn                            ! Number of cells
@@ -41,7 +41,7 @@ subroutine condinit(x,u,dx,nn)
   &        *cnfw**2/3./(1.+cnfw)**2/(log(1.+cnfw)-cnfw/(1.+cnfw))&
   &        /(1.-3./eta0*(gammaKS-1.0d0)/gammaKS*cnfw/(log(1.+cnfw)&
   &        -cnfw/(1.+cnfw))&
-  &        *(1.-log(1.+cnfw)/cnfw))**(1./(gammaKS-1.0d0))         
+  &        *(1.-log(1.+cnfw)/cnfw))**(1./(gammaKS-1.0d0))
   p_init = 6.672d-8/3.*d_init*Mvirphu/rvir*eta0
   xmass=0.5*boxlen
   ymass=0.5*boxlen
@@ -49,7 +49,7 @@ subroutine condinit(x,u,dx,nn)
   Mdot_BH=2.d72*d_init/(5./3.*p_init/d_init)**1.5
 
   do i=1,nn
-     rx=0.0d0; ry=0.0d0; rz=0.0d0     
+     rx=0.0d0; ry=0.0d0; rz=0.0d0
      rx=x(i,1)-xmass
 #if NDIM>1
      ry=x(i,2)-ymass
@@ -62,7 +62,7 @@ subroutine condinit(x,u,dx,nn)
      &*(1.-3./eta0*(gammaKS-1.0d0)/gammaKS*cnfw/(log(1.+cnfw)&
      &-cnfw/(1.+cnfw))&
      &*(1.-log(1.+cnfw*rr/rvir)/(cnfw*rr/rvir)))**(1./(gammaKS-1.0d0))
-     U(i,2)=0.0d0 
+     U(i,2)=0.0d0
      U(i,3)=0.0d0
      U(i,4)=0.0d0
      U(i,5)=p_init/d_init/(gamma-1.0d0)&

@@ -64,12 +64,12 @@ module hydro_parameters
 
   !parameter for the equation of state
   real(dp) :: f_rho_ad = 1.d0
-  real(dp) :: rho_ad 
-  real(dp) :: temp 
+  real(dp) :: rho_ad
+  real(dp) :: temp
 
   !parameter for the initial conditions (Plummer sphere)
   real(dp) :: Mc       = 1.
-  real(dp) :: fcut     = 0.8  
+  real(dp) :: fcut     = 0.8
   real(dp) :: f0       = 0.2
   real(dp) :: alpha    = 0.5
   real(dp) :: beta_rot = 0.

@@ -11,9 +11,9 @@ PROGRAM generate_coolrates
   real(dp),dimension(nXi) :: a_X  ! Ionization array
   real(dp)::T0, T1, X0, X1, dlogT, dX
   real(dp),dimension(nT) :: a_Aa, a_Ab, a_B, a_dAadT, a_dAbdT, a_dBdT
-  real(dp),dimension(nT,nXi) :: a_L, a_dLdT, a_dLdX 
+  real(dp),dimension(nT,nXi) :: a_L, a_dLdT, a_dLdX
   integer::i, j, ilun_aa, ilun_ab, ilun_b, ilun_daadt, ilun_dabdt,      &
-           ilun_dbdt,ncols 
+           ilun_dbdt,ncols
 !------------------------------------------------------------------------
 
   T0=100 ; T1=1.d8

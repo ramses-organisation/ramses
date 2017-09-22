@@ -64,7 +64,7 @@ program amr2cylprof
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -107,7 +107,7 @@ program amr2cylprof
   zmin=MAX(zcen-rrmax,0.0d0)
   zmax=MIN(zcen+rrmax,1.0d0)
 
-  ! Normalized angular momentum vector                                          
+  ! Normalized angular momentum vector
   jx=jxin/sqrt(jxin**2+jyin**2+jzin**2)
   jy=jyin/sqrt(jxin**2+jyin**2+jzin**2)
   jz=jzin/sqrt(jxin**2+jyin**2+jzin**2)
@@ -180,7 +180,7 @@ program amr2cylprof
   end do
 
   call getcell(x,y,z,var,l,ncell,5,repository,levelmax=lmax)
-  
+
   do i=1,ncell
      xx=x(i)-xcen
      yy=y(i)-ycen
@@ -188,19 +188,19 @@ program amr2cylprof
      z_coord=xx*jx+yy*jy+zz*jz
      r_cyl=sqrt((xx-z_coord*jx)**2+(yy-z_coord*jy)**2+(zz-z_coord*jz)**2)
      irad=int(dble(nrad)*r_cyl/rmax)+1
-     ! Galilean invariant frame                                           
+     ! Galilean invariant frame
      uu=var(i,2)-ucen/(unit_v/1d5)
      vv=var(i,3)-vcen/(unit_v/1d5)
      ww=var(i,4)-wcen/(unit_v/1d5)
-     ! Normalized radial vector                                           
+     ! Normalized radial vector
      rx=(xx-z_coord*jx)/r_cyl
      ry=(yy-z_coord*jy)/r_cyl
      rz=(zz-z_coord*jz)/r_cyl
-     ! Normalized tangential vector                                       
+     ! Normalized tangential vector
      tx=jy*rz-jz*ry
      ty=jz*rx-jx*rz
      tz=jx*ry-jy*rx
-     ! Compute velocity components                                        
+     ! Compute velocity components
      u_z=uu*jx+vv*jy+ww*jz
      u_r=uu*rx+vv*ry+ww*rz
      u_t=uu*tx+vv*ty+ww*tz
@@ -214,7 +214,7 @@ program amr2cylprof
      prof(irad,iw2)=prof(irad,iw2)+var(i,1)*u_z**2
      prof(irad,ip)=prof(irad,ip)+var(i,5)
   end do
-  
+
 
   ! Sampling points volume element
   dv=3.1415926*(rmax*boxlen)**2.*2.0*hmax*boxlen/dble(ncell)
@@ -241,7 +241,7 @@ program amr2cylprof
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
   open(unit=10,file=TRIM(nomfich)//".gas",form='formatted')
-  write(10,'(A97)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)" 
+  write(10,'(A97)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)"
   do i=1,nrad
      write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=1,8)
   end do
@@ -249,17 +249,17 @@ program amr2cylprof
 999 format(30(1PE10.3,2X))
 
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2prof -inp  input_dir'
@@ -277,7 +277,7 @@ contains
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -320,9 +320,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2cylprof

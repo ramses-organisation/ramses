@@ -36,7 +36,7 @@ end subroutine
 subroutine clean_rad_boundary()
   use radiation_commons
   implicit none
-  
+
   deallocate(boundary_send)
   deallocate(boundary_recv)
   deallocate(boundary_request_status)

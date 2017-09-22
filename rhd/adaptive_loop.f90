@@ -30,7 +30,7 @@ subroutine adaptive_loop
   tt2=MPI_WTIME()
   if(myid==1)write(*,*)'Time elapsed since startup:',tt2-tt1
 #endif
-  
+
   i=0
   if(myid==1)then
      write(*,*)'Initial mesh structure'
@@ -41,7 +41,7 @@ subroutine adaptive_loop
 
   nstep_coarse_old=nstep_coarse
 
-  if(myid==1)write(*,*)'Starting time integration' 
+  if(myid==1)write(*,*)'Starting time integration'
 
   do ! Main time loop
      i=i+1
@@ -102,7 +102,7 @@ subroutine adaptive_loop
               end if
            end do
         end if
-        
+
         ! Build refinement map
         do ilevel=levelmin-1,1,-1
            call flag_fine(ilevel,2)

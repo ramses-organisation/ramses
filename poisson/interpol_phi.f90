@@ -5,16 +5,16 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   integer::ncell,ilevel,icount
   integer ,dimension(1:nvector)::ind_cell
   real(dp),dimension(1:nvector,1:twotondim)::phi_int
- 
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Routine for interpolation at level-boundaries. Interpolation is used for
   ! - boundary conditions for solving poisson equation at fine level
   ! - computing force (gradient_phi) at fine level for cells close to boundary
   ! Interpolation is performed in space (CIC) and - if adaptive timestepping is on -
-  ! time (linear extrapolation of the change in phi during the last coarse step 
+  ! time (linear extrapolation of the change in phi during the last coarse step
   ! onto the first fine step)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  
+
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer::i,ind,indice,ind_average,ind_father
@@ -66,12 +66,12 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
         coeff=bbbb(ind_average)
         do i=1,ncell
            indice=nbors_father_cells(i,ind_father)
-           if (indice==0) then 
+           if (indice==0) then
               add=coeff*(phi(ind_cell(i))+(phi(ind_cell(i))-phi_old(ind_cell(i)))*tfrac)
               ! add=coeff*(-3d0/8d0*dx**2*boxlen*rho(ind_cell(i))+phi(ind_cell(i)))
            else
               add=coeff*(phi(indice)+(phi(indice)-phi_old(indice))*tfrac)
-              ! add=coeff*(-3d0/8d0*dx**2*boxlen*rho(indice)+phi(indice)) 
+              ! add=coeff*(-3d0/8d0*dx**2*boxlen*rho(indice)+phi(indice))
            endif
            phi_int(i,ind)=phi_int(i,ind)+add
         end do
@@ -113,7 +113,7 @@ subroutine save_phi_old(ilevel)
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
-           ! save phi      
+           ! save phi
            do i=1,ncache
               phi_old(ind_grid(i)+iskip)=phi(ind_grid(i)+iskip)
            end do

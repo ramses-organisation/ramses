@@ -281,7 +281,7 @@ subroutine init_part
            acc_lum(i)=ir_eff*acc_rate(i)*msink(i)/(5*6.955d10/scale_l)
         end do
      end if
-  else     
+  else
 
      filetype_loc=filetype
      if(.not. cosmo)filetype_loc='ascii'
@@ -291,17 +291,17 @@ subroutine init_part
      case ('grafic')
 
         !----------------------------------------------------
-        ! Reading initial conditions GRAFIC2 multigrid arrays  
+        ! Reading initial conditions GRAFIC2 multigrid arrays
         !----------------------------------------------------
         ipart=0
         ! Loop over initial condition levels
         do ilevel=levelmin,nlevelmax
-           
+
            if(initfile(ilevel)==' ')cycle
-           
+
            ! Mesh size at level ilevel in coarse cell units
            dx=0.5D0**ilevel
-           
+
            ! Set position of cell centers relative to grid center
            do ind=1,twotondim
               iz=(ind-1)/4
@@ -311,7 +311,7 @@ subroutine init_part
               if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
               if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
            end do
-           
+
            !--------------------------------------------------------------
            ! First step: compute level boundaries and particle positions
            !--------------------------------------------------------------
@@ -319,7 +319,7 @@ subroutine init_part
            i2_min=n2(ilevel)+1; i2_max=0
            i3_min=n3(ilevel)+1; i3_max=0
            ipart_old=ipart
-           
+
            ! Loop over grids by vector sweeps
            ncache=active(ilevel)%ngrid
            do igrid=1,ncache,nvector
@@ -327,7 +327,7 @@ subroutine init_part
               do i=1,ngrid
                  ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
               end do
-              
+
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
@@ -365,7 +365,7 @@ subroutine init_part
               ! End loop over cells
            end do
            ! End loop over grids
-           
+
            ! Check that all grids are within initial condition region
            error=.false.
            if(active(ilevel)%ngrid>0)then
@@ -385,7 +385,7 @@ subroutine init_part
            if(debug)then
               write(*,*)myid,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
            endif
-           
+
            !---------------------------------------------------------------------
            ! Second step: read initial condition file and set particle velocities
            !---------------------------------------------------------------------
@@ -398,10 +398,10 @@ subroutine init_part
            end if
            allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
            allocate(init_plane_x(1:n1(ilevel),1:n2(ilevel)))
-           
+
            ! Loop over input variables
            do idim=1,ndim
-              
+
               ! Read dark matter initial displacement field
               if(multiple)then
                  call title(myid,nchar)
@@ -428,7 +428,7 @@ subroutine init_part
               endif
 
               if(myid==1)write(*,*)'Reading file '//TRIM(filename)
-                               
+
               if(multiple)then
                  ilun=myid+10
                  open(ilun,file=filename,form='unformatted')
@@ -461,7 +461,7 @@ subroutine init_part
 #ifndef WITHOUTMPI
                     call MPI_BCAST(init_plane,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
 #endif
-                    
+
                     if(active(ilevel)%ngrid>0)then
                        if(i3.ge.i3_min.and.i3.le.i3_max)then
                           init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
@@ -499,7 +499,7 @@ subroutine init_part
                  end if
 
               endif
-              
+
               if(active(ilevel)%ngrid>0)then
                  ! Rescale initial displacement field to code units
                  init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
@@ -514,7 +514,7 @@ subroutine init_part
                     do i=1,ngrid
                        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
                     end do
-                    
+
                     ! Loop over cells
                     do ind=1,twotondim
                        iskip=ncoarse+(ind-1)*ngridmax
@@ -554,21 +554,21 @@ subroutine init_part
 
            end do
            ! End loop over input variables
-           
+
            ! Deallocate initial conditions array
            if(active(ilevel)%ngrid>0)then
               deallocate(init_array,init_array_x)
            end if
            deallocate(init_plane,init_plane_x)
-           
+
            if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
-           
+
         end do
         ! End loop over levels
-        
+
         ! Initial particle number
         npart=ipart
-        
+
         ! Move particle according to Zeldovich approximation
         if(.not. read_pos)then
            xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
@@ -576,7 +576,7 @@ subroutine init_part
 
         ! Scale displacement to velocity
         vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
-        
+
         ! Periodic box
         do ipart=1,npart
 #if NDIM>0
@@ -592,8 +592,8 @@ subroutine init_part
            if(xp(ipart,3)>=dble(nz))xp(ipart,3)=xp(ipart,3)-dble(nz)
 #endif
         end do
-        
-#ifndef WITHOUTMPI        
+
+#ifndef WITHOUTMPI
         ! Compute particle Hilbert ordering
         sendbuf=0
         do ipart=1,npart
@@ -602,7 +602,7 @@ subroutine init_part
            call cmp_cpumap(xx_dp,cc,1)
            if(cc(1).ne.myid)sendbuf(cc(1))=sendbuf(cc(1))+1
         end do
-           
+
         ! Allocate communication buffer in emission
         do icpu=1,ncpu
            ncache=sendbuf(icpu)
@@ -636,7 +636,7 @@ subroutine init_part
               mp(jpart)    =mp(ipart)
            endif
         end do
-        
+
         ! Communicate virtual particle number to parent cpu
         call MPI_ALLTOALL(sendbuf,1,MPI_INTEGER,recvbuf,1,MPI_INTEGER,MPI_COMM_WORLD,info)
 
@@ -675,7 +675,7 @@ subroutine init_part
                    & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
            end if
         end do
-        
+
         ! Send particles
         countsend=0
         do icpu=1,ncpu
@@ -688,10 +688,10 @@ subroutine init_part
                    & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
            end if
         end do
-        
+
         ! Wait for full completion of receives
         call MPI_WAITALL(countrecv,reqrecv,statuses,info)
-        
+
         ! Wait for full completion of sends
         call MPI_WAITALL(countsend,reqsend,statuses,info)
 
@@ -708,7 +708,7 @@ subroutine init_part
               mp(jpart)  =reception(icpu,1)%up(ibuf,7)
            end do
         end do
-        
+
         ! Erase old particles
         do ipart=jpart+1,npart
            xp(ipart,1)=0d0
@@ -790,7 +790,7 @@ subroutine init_part
         Irot(1,1)=1.0D0
         Irot(2,2)=1.0D0
         Irot(3,3)=1.0D0
-        
+
         if ((gal_axis1(1)==0.0D0) .AND. (gal_axis1(2)==0.0D0) .AND. (gal_axis1(3)==1.0D0)) then
             Rot_gal = Irot
         else
@@ -812,7 +812,7 @@ subroutine init_part
                 cangle = gal_axis1(3)
             end if
 !            theta = datan2(sangle, cangle)
-            
+
             ! P = rot_axis * transpose(rot_axis) => Projection along the
             ! rotation axis
             Prot(:,1) = rot_axis * rot_axis(1)
@@ -888,15 +888,15 @@ subroutine init_part
         if(myid==1)close(10)
 
                 !####################################################################
-        
-        
+
+
         !################### Galaxy #2 particles ############################
         filename=TRIM(initfile(levelmin))//'/'//trim(ic_part_file_gal2)
         if(myid==1)then
            open(10,file=filename,form='formatted')
         end if
         eof=.false.
-        
+
         if ((gal_axis2(1)==0.0D0) .AND. (gal_axis2(2)==0.0D0) .AND. (gal_axis2(3)==1.0D0)) then
             Rot_gal = Irot
         else
@@ -918,7 +918,7 @@ subroutine init_part
                 cangle = gal_axis2(3)
             end if
 !            theta = datan2(sangle, cangle)
-            
+
             ! P = rot_axis * transpose(rot_axis) => Projection along the
             ! rotation axis
             Prot(:,1) = rot_axis * rot_axis(1)
@@ -937,7 +937,7 @@ subroutine init_part
             Rot_gal = Prot + (Irot-Prot)*cangle + Qrot * sangle
 
         end if
-       
+
         do while (.not.eof)
            xx=0.0
            if(myid==1)then

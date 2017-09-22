@@ -1,5 +1,5 @@
 program output2tipsy_v2
-  use random 
+  use random
   use io_ramses
 
   implicit none
@@ -56,7 +56,7 @@ program output2tipsy_v2
   real(KIND=8),dimension(:),allocatable::mpart,age,met
   character(LEN=5)::nn
   logical::metal=.true.,star=.true.,sink=.true.
-  
+
   integer ,dimension(1:1,1:IRandNumSize)::allseed
   integer ,dimension(1:IRandNumSize)::localseed
   integer::iseed=0,poisson
@@ -82,18 +82,18 @@ program output2tipsy_v2
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      typ='gas'
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -248,7 +248,7 @@ program output2tipsy_v2
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -341,9 +341,9 @@ program output2tipsy_v2
      nmax=denspartcount
 
      !-------------------------------------------------------------
-     !  Writing output tipsy file 
+     !  Writing output tipsy file
      !-------------------------------------------------------------
-  
+
 123  open(66,file=outfich,status='unknown',form='formatted')
      open(55,file='partID_'//TRIM(nchar),status='unknown',form='formatted')
      !  write(66,*)ndummypart,ndummypart,0
@@ -492,7 +492,7 @@ program output2tipsy_v2
         if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)age(i)
      end do
   end if
-  
+
   close(66)
   endif
 
@@ -503,15 +503,15 @@ program output2tipsy_v2
 contains
 
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: output2tipsy -inp  input_dir'
@@ -538,7 +538,7 @@ contains
 
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -569,11 +569,11 @@ contains
           read (arg,*) nmin
        case ('-nma')
           read (arg,*) nmax
-       case ('-str') 
+       case ('-str')
           read (arg,*) star
-       case ('-snk') 
+       case ('-snk')
           read (arg,*) sink
-       case ('-met') 
+       case ('-met')
           read (arg,*) metal
        case ('-dum')
           read (arg,*) ndummy
@@ -587,9 +587,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
 
 end program output2tipsy_v2
