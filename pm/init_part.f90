@@ -149,6 +149,9 @@ subroutine init_part
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+     read(ilun)
+#endif
      if(star.or.sink)then
         ! Read birth epoch
         allocate(xdp(1:npart2))
