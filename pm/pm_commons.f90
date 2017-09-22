@@ -64,7 +64,7 @@ module pm_commons
 
   ! Particle types
   integer(1),parameter :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
-  integer(1) :: FAM_TRACER_GAS=0
+  integer(1),parameter :: FAM_TRACER_GAS=0
   integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
 
   ! Customize here for particle tags within particle types (e.g. different kind of stars).
@@ -128,7 +128,10 @@ contains
     integer :: part2int
     type(part_t), intent(in) :: part
 
-    part2int = part%family * huge(part%family) + part%tag
+    integer :: magic
+
+    magic = 127
+    part2int = int(part%family) * magic + int(part%tag)
   end function part2int
 
   pure function int2part(index)
@@ -138,7 +141,7 @@ contains
 
     integer :: magic
 
-    magic = huge(int2part%family)
+    magic = 127 ! int(huge(int2part%family))
 
     int2part%family = int(index / magic, 1)
     int2part%tag = int(mod(index, magic), 1)
