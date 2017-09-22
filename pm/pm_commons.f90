@@ -102,6 +102,11 @@ contains
     is_cloud = typep%family == FAM_CLOUD
   end function is_cloud
 
+  logical pure function is_debris(typep)
+    type(part_t), intent(in) :: typep
+    is_debris = typep%family == FAM_DEBRIS
+  end function is_debris
+  
   logical pure function is_tracer(typep)
     type(part_t), intent(in) :: typep
     is_tracer = typep%family <= 0

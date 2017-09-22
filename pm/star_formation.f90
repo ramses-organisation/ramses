@@ -727,8 +727,8 @@ subroutine star_formation(ilevel)
               mp(ind_debris(i))=mdebris      ! Mass
               levelp(ind_debris(i))=ilevel   ! Level
               idp(ind_debris(i))=-n          ! Number of individual stars
-              typep(ind_part(i))%family = FAM_DEBRIS
-              typep(ind_part(i))%tag = 0
+              typep(ind_debris(i))%family = FAM_DEBRIS
+              typep(ind_debris(i))%tag = 0
               xp(ind_debris(i),1)=x
               xp(ind_debris(i),2)=y
               xp(ind_debris(i),3)=z

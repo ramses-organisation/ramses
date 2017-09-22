@@ -549,7 +549,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if ( is_star(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -609,7 +609,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if ( is_star(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  iSN=iSN+1
                  xSN(iSN,1)=xp(ipart,1)
                  xSN(iSN,2)=xp(ipart,2)
