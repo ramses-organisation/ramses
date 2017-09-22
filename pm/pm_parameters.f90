@@ -55,8 +55,8 @@ module pm_parameters
   type part_t
      ! We store these two things contiguously in memory
      ! because they are fetched at similar times
-     integer :: family
-     integer :: tag
+     integer(1) :: family
+     integer(1) :: tag
   end type part_t
 
 

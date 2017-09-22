@@ -130,7 +130,9 @@ contains
 
     integer :: magic
 
+    ! This is the largest value for integer(1)
     magic = 127
+
     part2int = int(part%family) * magic + int(part%tag)
   end function part2int
 
@@ -141,7 +143,8 @@ contains
 
     integer :: magic
 
-    magic = 127 ! int(huge(int2part%family))
+    ! This is the largest value for integer(1)
+    magic = 127
 
     int2part%family = int(index / magic, 1)
     int2part%tag = int(mod(index, magic), 1)
