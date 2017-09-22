@@ -286,10 +286,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real(kind=8),dimension(1:npart)::xsort
   integer,dimension(1:npart)::isort
 
-  <<<<<<< HEAD
-  =======
   integer::np
-  >>>>>>> rum2017/master
   real(kind=8)::twopi=6.283185307179586
   real(kind=8)::dtmax=0.01 ! dr/rayon pour la convergence du barycentre
   integer::Nsel=4000000    ! Nombre maximum de particules selectionnees
@@ -304,11 +301,7 @@ subroutine spherover(x,mp,xsort,isort,nchar,npart,nx,ny,nz,npart_new,ncut,seuil,
   real(kind=8),dimension(:),allocatable::distance
 
   integer::i,j,k,npart_sel,ipart
-  <<<<<<< HEAD
   integer::is,iamas,masse,ip
-  =======
-  integer::is,iamas,masse,ip,ifail
-  >>>>>>> rum2017/master
   integer::ic,jc,kc,ii,jj,kk,ind
   integer::i1,i2,i3,imin,imax,ntot
   integer::niter
