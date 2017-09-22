@@ -22,7 +22,7 @@ program degrade_grafic
   !          - un fichier velcz:  output/ic_velcz
   !
   ! f90 degrade_grafic.f90 -o ~/bin/degrade_grafic
-  !  
+  !
   !
   !========================================================
   integer::i1,i2,i3,i,j,k,narg,iargc,i_file,nfiles
@@ -45,16 +45,16 @@ program degrade_grafic
 
   CALL getarg(1,input)
   CALL getarg(2,output)
-  
+
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
      stop
   endif
 
-  
+
   !check wether its cosmoligical ics or not
 
   INQUIRE(FILE=TRIM(input)//'/ic_deltab', EXIST=cosmo_ics)
@@ -141,7 +141,7 @@ program degrade_grafic
            end do
         end do
 
-        !   WRITING OUTPUT FILES     
+        !   WRITING OUTPUT FILES
         write(11) ((f2(i1,i2,1),i1=1,np1o2),i2=1,np2o2)
 
      enddo
@@ -158,4 +158,4 @@ program degrade_grafic
 end program degrade_grafic
 
 
-       
+

@@ -44,7 +44,7 @@ subroutine adaptive_loop
      if(cooling.and..not.neq_chem) &
         call set_table(dble(aexp))    ! Initialize cooling look up table
   endif
-#else  
+#else
   if(cooling.and..not.neq_chem) &
        call set_table(dble(aexp))    ! Initialize cooling look up table
 #endif
@@ -68,7 +68,7 @@ subroutine adaptive_loop
 
   nstep_coarse_old=nstep_coarse
 
-  if(myid==1)write(*,*)'Starting time integration' 
+  if(myid==1)write(*,*)'Starting time integration'
 
   do ! Main time loop
                                call timer('coarse levels','start')
@@ -167,7 +167,7 @@ subroutine adaptive_loop
               end do
            end if
         end do
-        
+
         ! Build refinement map
         do ilevel=levelmin-1,1,-1
            call flag_fine(ilevel,2)
@@ -200,11 +200,11 @@ subroutine adaptive_loop
         endif
         if(walltime_hrs.gt.0d0) then
            wallsec = walltime_hrs*3600.     ! Convert from hours to seconds
-           dumpsec = minutes_dump*60.       ! Convert minutes before end to seconds                                                                                                                 
+           dumpsec = minutes_dump*60.       ! Convert minutes before end to seconds
            if(wallsec-dumpsec.lt.tt2-tstart) then
               output_now=.true.
               if(myid==1) write(*,*) 'Dumping snapshot before walltime runs out'
-              ! Now set walltime to a negative number so we don't keep printing outputs                                                                                                               
+              ! Now set walltime to a negative number so we don't keep printing outputs
               walltime_hrs = -1d0
            endif
         endif

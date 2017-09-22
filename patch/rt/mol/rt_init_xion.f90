@@ -74,8 +74,8 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         ! Compute rho
         nH = MAX(uold(ind_leaf(i),1),smallr)   !       Mass density of gas
         Zsolar = z_ave                         ! Metallicity (solar units)
-        if(metal) &                            
-             Zsolar=(uold(ind_leaf(i),imetal)) / nH / 0.02 
+        if(metal) &
+             Zsolar=(uold(ind_leaf(i),imetal)) / nH / 0.02
         ! Compute pressure from energy density
         T2 = uold(ind_leaf(i),ndim+2)          ! Energy density (kin+heat)
         ekk = 0.0d0                            !            Kinetic energy
@@ -113,9 +113,9 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         uold(ind_leaf(i),iIons-1+ixHII) = x*uold(ind_leaf(i),1)
         if(Y .gt. 0.d0 .and. isHe) then
            x = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7))      !  HeII fraction
-           uold(ind_leaf(i),iIons-1+ixHeII) = x*uold(ind_leaf(i),1)         
+           uold(ind_leaf(i),iIons-1+ixHeII) = x*uold(ind_leaf(i),1)
            x = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))      ! HeIII fraction
-           uold(ind_leaf(i),iIons-1+ixHeIII) = x*uold(ind_leaf(i),1)         
+           uold(ind_leaf(i),iIons-1+ixHeIII) = x*uold(ind_leaf(i),1)
         endif
       end do
 
@@ -126,7 +126,7 @@ END SUBROUTINE rt_init_xion_vsweep
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
 
-! Calculate and return photoionization equilibrium abundance states for 
+! Calculate and return photoionization equilibrium abundance states for
 ! a cell
 ! vars     => Cell variables (rho, v, u, w, etc)
 ! rtvars   => Cell RT variables (Np1, Fpx1, Fpy1, etc)
@@ -193,7 +193,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   ss_factor = 1d0
   if(self_shielding) ss_factor = exp(-nH/1d-2)
   if(haardt_madau) phI_rates = phI_rates + UVrates(:,1) * ss_factor
-       
+
   call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec, Zsolar)
 
   if(isH2) xion(ixHI)=nSpec(3)/(2.*nSpec(2)+nSpec(3)+nSpec(4))!    HI frac
@@ -231,7 +231,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
      T = T2*mu_old
      call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu, Zsolar)
      err_mu = (mu-mu_old)/mu_old
-     if(err_mu>0.)then 
+     if(err_mu>0.)then
         mu_left =0.5*(mu_left+mu_right)
         mu_right=mu_right
      else
@@ -245,5 +245,5 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
      write(*,*) 'ERROR in cmp_Equilibrium_Abundances : too many iterations.'
      STOP
   endif
-    
+
 END SUBROUTINE cmp_Equilibrium_Abundances

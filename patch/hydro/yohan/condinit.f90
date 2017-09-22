@@ -119,10 +119,10 @@ contains
     implicit none
     real(dp)::romberg
     !
-    !     Romberg returns the integral from a to b of f(x)dx using Romberg 
-    !     integration. The method converges provided that f(x) is continuous 
-    !     in (a,b). The function f must be double precision and must be 
-    !     declared external in the calling routine.  
+    !     Romberg returns the integral from a to b of f(x)dx using Romberg
+    !     integration. The method converges provided that f(x) is continuous
+    !     in (a,b). The function f must be double precision and must be
+    !     declared external in the calling routine.
     !     tol indicates the desired relative accuracy in the integral.
     !
     integer::maxiter=16,maxj=5
@@ -139,8 +139,8 @@ contains
     i=0
 10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
-       !	Calculate next trapezoidal rule approximation to integral.
-       
+       !  Calculate next trapezoidal rule approximation to integral.
+
        g0=0.0d0
        do k=1,nint
           g0=g0+fffy(a+(k+k-1)*h)
@@ -150,7 +150,7 @@ contains
        nint=nint+nint
        jmax=min(i,maxj)
        fourj=1.0d0
-       
+
        do j=1,jmax
           ! Use Richardson extrapolation.
           fourj=4.0d0*fourj
@@ -173,7 +173,7 @@ contains
          &    write(*,*) 'Romberg failed to converge; integral, error=', &
          &    romberg,error
 
-    
+
 
     return
   end function romberg

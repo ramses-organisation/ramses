@@ -160,7 +160,7 @@ module ramses_hdf5
 
       !Create property list for access mode (used when switching between
       !independent and collective MPI-I/O modes
-      call H5Pcreate_f(H5P_DATASET_XFER_F,mode_id,status) 
+      call H5Pcreate_f(H5P_DATASET_XFER_F,mode_id,status)
       call H5Pcreate_f(H5P_DATASET_XFER_F,mode_indep_id,status)
 
       !Put mode_id in collective mode
@@ -192,7 +192,7 @@ module ramses_hdf5
 
       !Create property list for access mode (used when switching between
       !independent and collective MPI-I/O modes
-      call H5Pcreate_f(H5P_DATASET_XFER_F,mode_id,status) 
+      call H5Pcreate_f(H5P_DATASET_XFER_F,mode_id,status)
 
       !Put mode_id in collective mode
       call H5Pset_dxpl_mpio_f(mode_id,H5FD_MPIO_COLLECTIVE_F,status)

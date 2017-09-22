@@ -25,13 +25,13 @@ subroutine force_fine(ilevel,icount)
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx,ff
- 
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -50,11 +50,11 @@ subroutine force_fine(ilevel,icount)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   !-------------------------------------
   ! Compute analytical gravity force
   !-------------------------------------
-  if(gravity_type>0)then 
+  if(gravity_type>0)then
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
@@ -63,7 +63,7 @@ subroutine force_fine(ilevel,icount)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
-     
+
         ! Loop over cells
         do ind=1,twotondim
 
@@ -84,10 +84,10 @@ subroutine force_fine(ilevel,icount)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           
+
            ! Call analytical gravity routine
            call gravana(xx,ff,dx_loc,ngrid)
-           
+
            ! Scatter variables
            do idim=1,ndim
               do i=1,ngrid
@@ -154,7 +154,7 @@ subroutine force_fine(ilevel,icount)
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-     end do     
+     end do
      ! Loop over cells
      do ind=1,twotondim
         ! Gather cell indices
@@ -283,7 +283,7 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
         id2=hhh(idim,2,ind); ig2=ggg(idim,2,ind); ih2=ncoarse+(id2-1)*ngridmax
         id3=hhh(idim,3,ind); ig3=ggg(idim,3,ind); ih3=ncoarse+(id3-1)*ngridmax
         id4=hhh(idim,4,ind); ig4=ggg(idim,4,ind); ih4=ncoarse+(id4-1)*ngridmax
-        
+
         ! Gather potential
         do i=1,ngrid
            if(igridn(i,ig1)>0)then

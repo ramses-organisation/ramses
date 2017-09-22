@@ -3,7 +3,7 @@ subroutine backup_part(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   character(LEN=80)::filename
 
@@ -38,8 +38,8 @@ subroutine backup_part(filename)
   write(ilun)ndim
   write(ilun)npart
   write(ilun)localseed
-  write(ilun)nstar_tot   
-  write(ilun)mstar_tot   
+  write(ilun)nstar_tot
+  write(ilun)mstar_tot
   write(ilun)mstar_lost
   write(ilun)nsink
   ! Write position
@@ -203,8 +203,8 @@ subroutine backup_part(filename)
      end if
   endif
 #endif
-  
- 
+
+
 
 end subroutine backup_part
 
@@ -225,15 +225,15 @@ subroutine output_sink(filename)
 
   ilun=myid+10
 
-  ! Conversion factor from user units to cgs units                                                                   
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
-  
+
   if(verbose)write(*,*)'Entering output_sink'
-  
+
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
@@ -246,14 +246,14 @@ subroutine output_sink(filename)
   write(ilun,'(" =============================================================================================================================== ")')
   write(ilun,'(" Id     Mass(Msol)     x           y           z           vx        vy        vz     new  rot_period[y] lx/|l|  ly/|l|  lz/|l| ")')
   write(ilun,'(" =============================================================================================================================== ")')
-  
+
   do isink=1,nsink
      l_abs=max((lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5,1.d-50)
      rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs+tiny(0.d0))
      write(ilun,'(I6,2X,F8.4,3(2X,F10.7),3(2X,F6.3),4X,I1,2X,F13.5,3(2X,F6.3))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim), &
           vsink(isink,1:ndim),new_born_all(isink),rot_period*scale_t/(3600*24*365),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs
   end do
-  write(ilun,'(" =============================================================================================================================== ")') 
+  write(ilun,'(" =============================================================================================================================== ")')
   close(ilun)
 
 end subroutine output_sink
@@ -280,7 +280,7 @@ subroutine output_sink_csv(filename)
 
   ilun=myid+10
 
-  ! Conversion factor from user units to cgs units 
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
 

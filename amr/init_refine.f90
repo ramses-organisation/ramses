@@ -32,7 +32,7 @@ subroutine init_refine
      call refine
      if(nremap>0)call load_balance
      if(numbtot(1,ilevel)==0)exit
-  end do 
+  end do
 
   ! Final pass to initialize the flow
   init=.false.
@@ -130,7 +130,7 @@ subroutine init_refine_2
         call upload_fine(ilevel)
      end do
   endif
-#endif  
+#endif
 
 end subroutine init_refine_2
 !################################################################

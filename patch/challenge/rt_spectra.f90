@@ -1,6 +1,6 @@
 ! These are modules for reading, integrating and interpolating RT-relevant
-! values from spectral tables, specifically SED (spectral energy 
-! distrbution) tables for stellar particle sources, as functions of age 
+! values from spectral tables, specifically SED (spectral energy
+! distrbution) tables for stellar particle sources, as functions of age
 ! and metallicity, and UV-spectrum tables, as functions of redshift.
 ! The modules are:
 ! spectrum_integrator_module
@@ -32,7 +32,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func, doPrint)
 
 ! Integrate spectral weighted function in energy interval [e0,e1]
 ! X      => Wavelengths [angstrom]
-! Y      => Spectral luminosity per angstrom at wavelenghts [XX A-1] 
+! Y      => Spectral luminosity per angstrom at wavelenghts [XX A-1]
 ! N      => Length of X and Y
 ! e0,e1  => Integrated interval [ev]
 ! species=> ion species, used as an argument in fx
@@ -58,16 +58,16 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func, doPrint)
   if(N .le. 2) RETURN
   ! Convert energy interval to wavelength interval
   la0 = X(1) ; la1 = X(N)
-  if(e1.gt.0) la0 = max(la0, 1.d8 * hp * c_cgs / e1 / eV_to_erg)                
+  if(e1.gt.0) la0 = max(la0, 1.d8 * hp * c_cgs / e1 / eV_to_erg)
   if(e0.gt.0) la1 = min(la1, 1.d8 * hp * c_cgs / e0 / eV_to_erg)
-  if(la0 .ge. la1) RETURN         
+  if(la0 .ge. la1) RETURN
   ! If we get here, the [la0, la1] inverval is completely within X
   allocate(xx(N)) ; allocate(yy(N)) ; allocate(f(N))
   xx =  la0   ;   yy =  0.   ;   f = 0.
   i=2
   do while ( i.lt.N .and. X(i).le.la0 )
      i = i+1                      !              Below wavelength interval
-  enddo                           !   X(i) is now the first entry .gt. la0 
+  enddo                           !   X(i) is now the first entry .gt. la0
   ! Interpolate to value at la0
   yy(i-1) = Y(i-1) + (xx(i-1)-X(i-1))*(Y(i)-Y(i-1))/(X(i)-X(i-1))
   f(i-1)  = func(xx(i-1), yy(i-1), species)
@@ -141,7 +141,7 @@ END FUNCTION fSigdivLambda
 !*************************************************************************
 FUNCTION trapz1(X,Y,N,cum)
 
-! Integrates function Y(X) along the whole interval 1..N, using a very 
+! Integrates function Y(X) along the whole interval 1..N, using a very
 ! simple staircase method and returns the result.
 ! Optionally, the culumative integral is returned in the cum argument.
 !-------------------------------------------------------------------------
@@ -165,7 +165,7 @@ END FUNCTION trapz1
 !*************************************************************************
 FUNCTION getCrosssection_Hui(lambda, species)
 
-! Gives an atom-photon cross-section of given species at given wavelength, 
+! Gives an atom-photon cross-section of given species at given wavelength,
 ! as given by Hui and Gnedin (1997).
 ! lambda  => Wavelength in angstrom
 ! species => 1=HI, 2=HeI or 3=HeII
@@ -183,13 +183,13 @@ FUNCTION getCrosssection_Hui(lambda, species)
   endif
   select case (species)
   case (1) ! HI
-     E0 = 4.298d-1 ; cs0 = 5.475d-14    ; P  = 2.963 
+     E0 = 4.298d-1 ; cs0 = 5.475d-14    ; P  = 2.963
      ya = 32.88    ; yw  = 0            ; y0 = 0         ; y1 = 0
   case (2) ! HeI
-     E0 = 1.361d1    ; cs0 = 9.492d-16  ; P  = 3.188 
+     E0 = 1.361d1    ; cs0 = 9.492d-16  ; P  = 3.188
      ya = 1.469      ; yw  = 2.039      ; y0 = 0.4434    ; y1 = 2.136
   case (3) ! HeII
-     E0 = 1.720      ; cs0 = 1.369d-14  ; P  = 2.963 
+     E0 = 1.720      ; cs0 = 1.369d-14  ; P  = 2.963
      ya = 32.88      ; yw  = 0          ; y0 = 0         ; y1 = 0
   end select
 
@@ -205,7 +205,7 @@ END FUNCTION getCrosssection_Hui
 END MODULE spectrum_integrator_module
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-! Module for Stellar Energy Distribution table. 
+! Module for Stellar Energy Distribution table.
 !_________________________________________________________________________
 !
 MODULE SED_module
@@ -228,9 +228,9 @@ MODULE SED_module
   real(dp)::SED_dlgZ
   real(dp)::SED_lgA0, SED_lgZ0
   real(dp),allocatable,dimension(:)::SED_ages,SED_zeds![Gyr],[m_met/m_gas]
-  ! SED_table: iAges, imetallicities, igroups, properties 
+  ! SED_table: iAges, imetallicities, igroups, properties
   !                                         (Lum, Lum-acc, egy, csn, cse).
-  ! Lum is photons per sec per solar mass (eV per sec per solar mass in 
+  ! Lum is photons per sec per solar mass (eV per sec per solar mass in
   ! the case of SED_isEgy=true). Lum-acc is accumulated lum.
   real(dp),allocatable,dimension(:,:,:,:)::SED_table
   ! ----------------------------------------------------------------------
@@ -240,8 +240,8 @@ CONTAINS
 !*************************************************************************
 SUBROUTINE init_SED_table()
 
-! Initiate SED properties table, which gives photon luminosities, 
-! integrated luminosities, average photon cross sections and energies of 
+! Initiate SED properties table, which gives photon luminosities,
+! integrated luminosities, average photon cross sections and energies of
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
@@ -270,7 +270,7 @@ SUBROUTINE init_SED_table()
   if(SED_DIR.eq.'')call get_environment_variable('RAMSES_SED_DIR',SED_DIR)
   inquire(FILE=TRIM(sed_dir)//'/all_seds.dat', exist=ok)
   if(.not. ok)then
-     if(myid.eq.1) then 
+     if(myid.eq.1) then
         write(*,*)'Cannot access SED directory ',TRIM(sed_dir)
         write(*,*)'Directory '//TRIM(sed_dir)//' not found'
         write(*,*)'You need to set the RAMSES_SED_DIR envvar' // &
@@ -285,7 +285,7 @@ SUBROUTINE init_SED_table()
   inquire(file=fAges, exist=okAge)
   inquire(file=fSEDs, exist=ok)
   if(.not. ok .or. .not. okAge .or. .not. okZ) then
-     if(myid.eq.1) then 
+     if(myid.eq.1) then
         write(*,*) 'Cannot read SED files...'
         write(*,*) 'Check if SED-directory contains the files ',  &
                    'metallicity_bins.dat, age_bins.dat, all_seds.dat'
@@ -333,7 +333,7 @@ SUBROUTINE init_SED_table()
      end do
   end do
   close(10)
-  
+
 ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -379,7 +379,7 @@ SUBROUTINE init_SED_table()
           MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
      tbl = tbl2
      deallocate(tbl2)
-#endif     
+#endif
 
      ! Integrate the cumulative luminosities:
      do iz = 1, nzs ! Loop metallicity
@@ -409,10 +409,10 @@ SUBROUTINE init_SED_table()
   SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
 
   deallocate(SEDs) ; deallocate(tbl)
-  deallocate(ages) ; deallocate(rebAges) 
+  deallocate(ages) ; deallocate(rebAges)
   deallocate(zs)
   deallocate(Ls)
- 
+
   if (myid==1) call write_SEDtable
 
 END SUBROUTINE init_SED_table
@@ -420,7 +420,7 @@ END SUBROUTINE init_SED_table
 !*************************************************************************
 SUBROUTINE update_SED_group_props()
 
-! Compute and assign to all SED photon groups an average of the  
+! Compute and assign to all SED photon groups an average of the
 ! quantities group_csn and group_egy from all the star particles in the
 ! simulation, weighted by the luminosity of the particles.
 ! If there are no stars, we assign the SED properties of zero-age,
@@ -444,21 +444,21 @@ SUBROUTINE update_SED_group_props()
   real(dp):: mass, age, Z
 !-------------------------------------------------------------------------
   if(.not. allocated(L_star)) then
-     allocate(L_star(nSEDgroups)) 
-     allocate(egy_star(nSEDgroups)) 
-     allocate(csn_star(nSEDgroups,nIons)) 
-     allocate(cse_star(nSEDgroups,nIons)) 
-     allocate(sum_L_cpu(nSEDgroups))    
-     allocate(sum_L_all(nSEDgroups)) 
-     allocate(sum_egy_cpu(nSEDgroups)) 
-     allocate(sum_egy_all(nSEDgroups)) 
-     allocate(sum_csn_cpu(nSEDgroups,nIons)) 
-     allocate(sum_csn_all(nSEDgroups,nIons)) 
-     allocate(sum_cse_cpu(nSEDgroups,nIons)) 
-     allocate(sum_cse_all(nSEDgroups,nIons)) 
+     allocate(L_star(nSEDgroups))
+     allocate(egy_star(nSEDgroups))
+     allocate(csn_star(nSEDgroups,nIons))
+     allocate(cse_star(nSEDgroups,nIons))
+     allocate(sum_L_cpu(nSEDgroups))
+     allocate(sum_L_all(nSEDgroups))
+     allocate(sum_egy_cpu(nSEDgroups))
+     allocate(sum_egy_all(nSEDgroups))
+     allocate(sum_csn_cpu(nSEDgroups,nIons))
+     allocate(sum_csn_all(nSEDgroups,nIons))
+     allocate(sum_cse_cpu(nSEDgroups,nIons))
+     allocate(sum_cse_all(nSEDgroups,nIons))
   endif
-  sum_L_cpu   = 0d0 ! Accumulated luminosity, avg cross sections and 
-  sum_egy_cpu = 0d0 ! photon energies for all stars belonging to  
+  sum_L_cpu   = 0d0 ! Accumulated luminosity, avg cross sections and
+  sum_egy_cpu = 0d0 ! photon energies for all stars belonging to
   sum_csn_cpu = 0d0 ! 'this' cpu
   sum_cse_cpu = 0d0
   do i=1,npartmax
@@ -481,7 +481,7 @@ SUBROUTINE update_SED_group_props()
      end do
 
      do ip=1,nSEDgroups
-        L_star(ip) = L_star(ip) * mass             !       [# photons s-1]       
+        L_star(ip) = L_star(ip) * mass             !       [# photons s-1]
         sum_L_cpu(ip)    =   sum_L_cpu(ip)   + L_star(ip)
         sum_egy_cpu(ip) =  sum_egy_cpu(ip)   + L_star(ip) * egy_star(ip)
         sum_csn_cpu(ip,:)= sum_csn_cpu(ip,:) + L_star(ip) * csn_star(ip,:)
@@ -506,7 +506,7 @@ SUBROUTINE update_SED_group_props()
   call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDgroups*nIons,         &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
 #endif
-  
+
   ! ...and take averages weighted by luminosities
   do ip=1,nSEDgroups
      ! No update for non-SED groups (L0>L1):
@@ -547,17 +547,17 @@ SUBROUTINE update_star_RT_feedback(ilevel)
   if(rt_star.and. nstar_tot .gt. 0) then
      if(.not.rt_advect) then ! Turn on RT advection due to newborn stars:
         if(myid==1) write(*,*) '*****************************************'
-        if(myid==1) write(*,*) 'Stellar RT turned on at a=',aexp      
+        if(myid==1) write(*,*) 'Stellar RT turned on at a=',aexp
         if(myid==1) write(*,*) '*****************************************'
-        rt_advect=.true.     
+        rt_advect=.true.
      endif
-     ! Set group props from stellar populations:                 
+     ! Set group props from stellar populations:
      if(sedprops_update .gt. 0 .and. .not.groupProps_init) then
-        call update_SED_group_props                                         
-        groupProps_init=.true.        
+        call update_SED_group_props
+        groupProps_init=.true.
      else if(sedprops_update .gt. 0 .and. ilevel==levelmin &
-          .and. mod(nstep_coarse,sedprops_update)==0) then               
-        call update_SED_group_props                         
+          .and. mod(nstep_coarse,sedprops_update)==0) then
+        call update_SED_group_props
      endif
   endif
 END SUBROUTINE update_star_RT_feedback
@@ -565,7 +565,7 @@ END SUBROUTINE update_star_RT_feedback
 !*************************************************************************
 SUBROUTINE star_RT_feedback(ilevel, dt)
 
-! This routine adds photons from radiating stars to appropriate cells in 
+! This routine adds photons from radiating stars to appropriate cells in
 ! the  hydro grid.
 ! ilegel =>  grid level in which to perform the feedback
 ! ti     =>  initial time for the timestep (code units)
@@ -594,7 +594,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)   ! Number of particles in the grid
         npart2=0              ! number of selected (i.e. star) particles
-        
+
         ! Count star particles in the grid
         if(npart1 > 0)then
           ipart = headp(igrid)        ! particle index
@@ -602,8 +602,8 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
            do jpart = 1, npart1
               ! Save next particle       <--- Very important !!!
               next_part = nextp(ipart)
-              !if(idp(ipart) .gt. 0 .and. tp(ipart) .ne. 0.d0) then 
-              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then 
+              !if(idp(ipart) .gt. 0 .and. tp(ipart) .ne. 0.d0) then
+              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
                  npart2 = npart2+1     ! only stars
               endif
               ipart = next_part        ! Go to next particle
@@ -611,7 +611,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
         endif
 
         ! Gather star particles within the grid
-        if(npart2 > 0)then        
+        if(npart2 > 0)then
            ig = ig+1
            ind_grid(ig) = igrid
            ipart = headp(igrid)
@@ -622,12 +622,12 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
               ! Select only star particles
               if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
                  if(ig==0)then
-                    ig=1      
+                    ig=1
                     ind_grid(ig)=igrid
                  end if
                  ip = ip+1
                  ind_part(ip) = ipart
-                 ind_grid_part(ip) = ig ! points to grid a star is in  
+                 ind_grid_part(ip) = ig ! points to grid a star is in
               endif
               if(ip == nvector)then
                  if(static) then
@@ -656,7 +656,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
                 ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
         endif
      endif
-  end do 
+  end do
   ! End loop over cpus
 
 111 format('   Entering star_rt_feedback for level ',I2)
@@ -670,11 +670,11 @@ END SUBROUTINE star_RT_feedback
 !*************************************************************************
 FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
 
-! Compute and return luminosity in energy interval (e0,e1) [eV]   
-! in SED Y(X). Assumes X is in Angstroms and Y in Lo/Angstroms/Msun. 
-! (Lo=[Lo_sun], Lo_sun=[erg s-1]. total solar luminosity is 
+! Compute and return luminosity in energy interval (e0,e1) [eV]
+! in SED Y(X). Assumes X is in Angstroms and Y in Lo/Angstroms/Msun.
+! (Lo=[Lo_sun], Lo_sun=[erg s-1]. total solar luminosity is
 ! Lo_sun=10^33.58 erg/s)
-! returns: Photon luminosity in, [# s-1 Msun-1], 
+! returns: Photon luminosity in, [# s-1 Msun-1],
 !                             or [eV s-1 Msun-1] if SED_isEgy=true
 !-------------------------------------------------------------------------
   use rt_parameters,only:c_cgs, hp, ev_to_erg, SED_isEgy
@@ -683,7 +683,7 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   integer :: N, species
   real(kind=8),parameter :: const=1.0e-8/hp/c_cgs
   real(kind=8),parameter :: Lsun=3.8256d33 ! Solar luminosity [erg/s]
-  ! const is a div by ph energy => ph count.  1e-8 is a conversion into 
+  ! const is a div by ph energy => ph count.  1e-8 is a conversion into
   ! cgs, since wly=[angstrom] h=[erg s-1], c=[cm s-1]
 !-------------------------------------------------------------------------
   species          = 1                   ! irrelevant but must be included
@@ -694,7 +694,7 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   else                             ! SED_isEgy=true -> eV per sec per Msun
      getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
      ! Scale by solar lum and convert to eV (bc group energies are in eV)
-     getSEDLuminosity = getSEDLuminosity/eV_to_erg*Lsun 
+     getSEDLuminosity = getSEDLuminosity/eV_to_erg*Lsun
   endif
 END FUNCTION getSEDLuminosity
 
@@ -703,7 +703,7 @@ FUNCTION getSEDEgy(X, Y, N, e0, e1)
 
 ! Compute average energy, in eV, in energy interval (e0,e1) [eV] in SED
 ! Y(X). Assumes X is in Angstroms and Y is energy weight per angstrom
-! (not photon count). 
+! (not photon count).
 !-------------------------------------------------------------------------
   use rt_parameters,only:c_cgs, eV_to_erg, hp
   use spectrum_integrator_module
@@ -720,9 +720,9 @@ END FUNCTION getSEDEgy
 !*************************************************************************
 FUNCTION getSEDcsn(X, Y, N, e0, e1, species)
 
-! Compute and return average photoionization 
-! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in 
-! SED Y(X). Assumes X is in Angstroms and that Y is energy weight per 
+! Compute and return average photoionization
+! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in
+! SED Y(X). Assumes X is in Angstroms and that Y is energy weight per
 ! angstrom (not photon #).
 ! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
 !-------------------------------------------------------------------------
@@ -741,9 +741,9 @@ END FUNCTION getSEDcsn
 !************************************************************************
 FUNCTION getSEDcse(X, Y, N, e0, e1, species)
 
-! Compute and return average energy weighted photoionization 
-! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in 
-! SED Y(X). Assumes X is in Angstroms and that Y is energy weight per 
+! Compute and return average energy weighted photoionization
+! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in
+! SED Y(X). Assumes X is in Angstroms and that Y is energy weight per
 ! angstrom (not photon #).
 ! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
 !-------------------------------------------------------------------------
@@ -761,10 +761,10 @@ END FUNCTION getSEDcse
 
 !*************************************************************************
 SUBROUTINE rebin_log(xint_log, yint_log,                                 &
-               data,       nx,       ny,     x,     y,     nz,           & 
+               data,       nx,       ny,     x,     y,     nz,           &
                new_data, new_nx, new_ny, new_x, new_y      )
 
-! Rebin the given 2d data into constant logarithmic intervals, using 
+! Rebin the given 2d data into constant logarithmic intervals, using
 ! linear interpolation.
 ! xint_log,  => x and y intervals in the rebinned data. If negative,
 ! yint_log      these values represent the new number of bins.
@@ -792,9 +792,9 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   if(allocated(new_data)) deallocate(new_data)
 
   ! Find dimensions of the new_data and initialize it
-  x0lg = log10(x(1));   x1lg = log10(x(nx)) 
+  x0lg = log10(x(1));   x1lg = log10(x(nx))
   y0lg = log10(y(1));   y1lg = log10(y(ny))
-  
+
   if(xint_log .lt. 0 .and. nx .gt. 1) then
      new_nx=-xint_log                             ! xint represents wanted
      xint_log = (x1lg-x0lg)/(new_nx-1)            !     number of new bins
@@ -803,7 +803,7 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   endif
   allocate(new_x(new_nx)) ; allocate(new_lgx(new_nx))
   do i = 0, new_nx-1                              !  initialize the x-axis
-     new_lgx(i+1) = x0lg + i*xint_log 
+     new_lgx(i+1) = x0lg + i*xint_log
   end do
   new_x=10.d0**new_lgx
 
@@ -821,8 +821,8 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
 
   ! Initialize new_data and find values for each point in it
   allocate(new_data(new_nx, new_ny, nz))
-  do j = 1, new_ny  
-     call locate(y, ny, new_y(j), iy) 
+  do j = 1, new_ny
+     call locate(y, ny, new_y(j), iy)
      ! y(iy) <= new_y(j) <= y(iy+1)
      ! iy is lower bound, so it can be zero but not larger than ny
      if(iy < 1) iy=1
@@ -880,7 +880,7 @@ SUBROUTINE write_SEDtable()
      write(filename,'(A, I1, A)') 'SEDtable', ip, '.list'
      open(10, file=filename, status='unknown')
      write(10,*) SED_nA, SED_nZ
-     
+
      do j = 1,SED_nz
         do i = 1,SED_nA
            write(10,900)                                                 &
@@ -905,14 +905,14 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
 ! Compute SED property by interpolation from table.
 ! input/output:
 ! age   => Star population age [Gyrs]
-! Z     => Star population metallicity [m_metals/m_tot] 
-! nprop => Number of property to fetch 
+! Z     => Star population metallicity [m_metals/m_tot]
+! nprop => Number of property to fetch
 !          1=log(photon # intensity [# Msun-1 s-1]),
 !          2=log(cumulative photon # intensity [# Msun-1]),
-!          3=avg_egy, 2+2*iIon=avg_csn, 3+2*iIon=avg_cse 
-! same  => If true then assume same age and Z as used in last call. 
+!          3=avg_egy, 2+2*iIon=avg_csn, 3+2*iIon=avg_cse
+! same  => If true then assume same age and Z as used in last call.
 !          In this case the interpolation indexes can be recycled.
-! ret   => The interpolated values of the sed property for every photon 
+! ret   => The interpolated values of the sed property for every photon
 !          group
 !-------------------------------------------------------------------------
   use amr_commons
@@ -926,11 +926,11 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
   real(dp),save:: da, da0, da1, dz, dz0, dz1
 !-------------------------------------------------------------------------
   ! ia, iz: lower indexes: 0<ia<sed_nA etc.
-  ! da0, da1, dz0, dz1: proportional distances from edges: 
+  ! da0, da1, dz0, dz1: proportional distances from edges:
   ! 0<=da0<=1, 0<=da1<=1 etc.
   if(.not. same) then
      if(age.le.0d0) then
-        lgAge=-4d0 
+        lgAge=-4d0
      else
         lgAge = log10(age)
      endif
@@ -939,7 +939,7 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
      da = SED_ages(ia+1)-SED_ages(ia)
      da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )
      da1= min( max(  (SED_ages(ia+1)-age)/da,       0. ), 1.          )
-     
+
      iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
      dz = sed_Zeds(iz+1)-SED_Zeds(iz)
      dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
@@ -962,12 +962,12 @@ END SUBROUTINE inp_SED_table
 !*************************************************************************
 SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
 
-! Compute number of photons emitted by a stellar particle per solar mass 
+! Compute number of photons emitted by a stellar particle per solar mass
 ! over a timestep.
 ! input/output:
 ! age1_Gyr => Star population age [Gyrs] at timestep end
 ! dt_gyr   => Timestep length in Gyr
-! Z        => Star population metallicity [m_metals/m_tot] 
+! Z        => Star population metallicity [m_metals/m_tot]
 ! ret      => # of photons emitted per solar mass over timestep
 !-------------------------------------------------------------------------
   use rt_parameters
@@ -993,7 +993,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
 ! using array rtunew.
 ! Radiation is injected into cells at level ilevel, but it is important
 ! to know that ilevel-1 cells may also get some radiation. This is due
-! to star particles that have just crossed to a coarser level. 
+! to star particles that have just crossed to a coarser level.
 !
 ! ind_grid      =>  grid indexes in amr_commons (1 to ng)
 ! ind_part      =>  star indexes in pm_commons(1 to np)
@@ -1029,7 +1029,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
   ! units and temporary quantities
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  &
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
             , dt_loc_Gyr, scale_msun
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
@@ -1049,9 +1049,9 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   scale = boxlen/dble(nx_loc) ! usually scale == 1
   dx_loc = dx*scale
   vol_loc = dx_loc**ndim
-  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
+  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
-  scale_msun = scale_d * scale_l**ndim / m_sun    
+  scale_msun = scale_d * scale_l**ndim / m_sun
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
   do idim = 1, ndim
@@ -1066,7 +1066,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   end do
   call get3cubefather(&
           ind_cell, nbors_father_cells, nbors_father_grids, ng, ilevel)
-  ! now nbors_father cells are a cube of 27 cells with ind_cell in the 
+  ! now nbors_father cells are a cube of 27 cells with ind_cell in the
   ! middle and nbors_father_grids are the 8 grids that contain these 27
   ! cells (though only one of those is fully included in the cube)
 
@@ -1075,15 +1075,15 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      do j = 1, np
         x(j,idim) = xp(ind_part(j),idim)/scale + skip_loc(idim)
         x(j,idim) = x(j,idim) - x0(ind_grid_part(j),idim)
-        x(j,idim) = x(j,idim)/dx 
-        ! so 0<x<2 is bottom cell, ...., 4<x<6 is top cell 
+        x(j,idim) = x(j,idim)/dx
+        ! so 0<x<2 is bottom cell, ...., 4<x<6 is top cell
      end do
   end do
 
    ! NGP at level ilevel
   do idim=1,ndim
      do j=1,np
-        id(j,idim) = x(j,idim) ! So id=0-5 is the cell (in the 
+        id(j,idim) = x(j,idim) ! So id=0-5 is the cell (in the
      end do                    ! 3x3x3 supercube) containing the star
   end do
 
@@ -1097,8 +1097,8 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      kg(j) = 1 + igd(j,1) + 3*igd(j,2) + 9*igd(j,3) ! 1 to 27
   end do
   do j = 1, np
-     igrid(j) = son(nbors_father_cells(ind_grid_part(j),kg(j))) 
-     ! grid (not cell) containing the star 
+     igrid(j) = son(nbors_father_cells(ind_grid_part(j),kg(j)))
+     ! grid (not cell) containing the star
   end do
 
   ! Check if particles are entirely in level ilevel.
@@ -1106,7 +1106,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ok(1:np) = .true.
   do j = 1, np
      ok(j) = ok(j) .and. igrid(j) > 0
-  end do ! if ok(j) is true then particle j's cell contains a grid. 
+  end do ! if ok(j) is true then particle j's cell contains a grid.
   ! Otherwise it is a leaf, and we need to fill it with radiation.
 
   ! Compute parent cell position within it's grid
@@ -1180,12 +1180,12 @@ END SUBROUTINE star_RT_vsweep
 SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
                              dt, ilevel)
 ! This routine is called by subroutine star_rt_feedback,
-! in the case of rt-post-processing. The difference from doing coupled 
-! RT is that in the post-processing case, the pointer from a grid to a 
-! particle is always true, so we can trust completely that 
+! in the case of rt-post-processing. The difference from doing coupled
+! RT is that in the post-processing case, the pointer from a grid to a
+! particle is always true, so we can trust completely that
 ! ind_grid(ind_grid_part(j)) refers to the grid that particle ind_part(j)
-! resides in, and we don't need to bother searching for the particle's 
-! grid.  Each star particle dumps a number of photons into the nearest 
+! resides in, and we don't need to bother searching for the particle's
+! grid.  Each star particle dumps a number of photons into the nearest
 ! grid cell using array rtunew.
 !
 ! ind_grid      =>  grid indexes in amr_commons (1 to ng)
@@ -1217,7 +1217,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   integer ,dimension(1:nvector),save::icell,indp
   real(dp),dimension(1:3)::skip_loc
   ! units and temporary quantities
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  &
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
             , dt_loc_Gyr, scale_msun
 !-------------------------------------------------------------------------
@@ -1236,9 +1236,9 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   scale = boxlen/dble(nx_loc) ! usually scale == 1
   dx_loc = dx*scale
   vol_loc = dx_loc**ndim
-  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
+  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
-  scale_msun = scale_d * scale_l**ndim / m_sun    
+  scale_msun = scale_d * scale_l**ndim / m_sun
 
   ! Lower left corners of parent grid
   do idim = 1, ndim
@@ -1252,7 +1252,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
      do j = 1, np
         x(j,idim) = xp(ind_part(j),idim)/scale + skip_loc(idim)
         x(j,idim) = x(j,idim) - x0(ind_grid_part(j),idim)
-        x(j,idim) = x(j,idim)/dx 
+        x(j,idim) = x(j,idim)/dx
         ! so 0<x<1 is bottom cell, ...., 1<x<2 is top cell
      end do
   end do
@@ -1290,7 +1290,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
      do ip=1,nSEDgroups
         rtunew(indp(j),iGroups(ip)) &
              = rtunew(indp(j),iGroups(ip)) + part_NpInp(j,ip)
-                
+
      end do
   end do
 
@@ -1301,17 +1301,17 @@ END MODULE SED_module
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Module for UV table of redshift dependent photon fluxes, cross sections
-! and photon energies, per photon group. This is mainly useful for 
-! calculating heating rates due to the homogeneous UV background in the 
-! cooling-module, and for  radiative transfer of the UV background, where 
-! we then assign intensities, average cross sections and energies to UV 
+! and photon energies, per photon group. This is mainly useful for
+! calculating heating rates due to the homogeneous UV background in the
+! cooling-module, and for  radiative transfer of the UV background, where
+! we then assign intensities, average cross sections and energies to UV
 ! photon groups.
-! 
+!
 ! There are two tables of UV properties:
-! UV_rates_table: Integrated ionization and heating rates for a 
+! UV_rates_table: Integrated ionization and heating rates for a
 !                 homogeneous UV background.
-! UV_groups_table: UV properties integrated over each photon group 
-!                 wavelength interval: photon flux, average energy, 
+! UV_groups_table: UV properties integrated over each photon group
+!                 wavelength interval: photon flux, average energy,
 !                 average cross section, energy weighted cross section.
 !_________________________________________________________________________
 !
@@ -1333,18 +1333,18 @@ MODULE UV_module
   integer::UV_nz
   real(dp),allocatable,dimension(:)::UV_zeds
   ! Redshift interval
-  real(dp)::UV_minz, UV_maxz  
+  real(dp)::UV_minz, UV_maxz
   ! Table of integrated ionization and heating rates per ion species
-  ! (UV_nz, nIons, 2):(z, nIon, ionization rate [# s-1]: Hrate [erg s-1]) 
+  ! (UV_nz, nIons, 2):(z, nIon, ionization rate [# s-1]: Hrate [erg s-1])
   real(dp),allocatable,dimension(:,:,:)::UV_rates_table
   ! rt_n_UVsrc vectors of redshift dependent fluxes for UV background
   real(dp),allocatable::UV_fluxes_cgs(:)    !                    [#/cm2/s]
   real(dp),allocatable::UV_Nphot_cgs(:)     !        Photon density [cm-3]
-  integer::nUVgroups=0                      !        # of UV photon groups 
-  ! UV group indexes among nGroup groups, 
+  integer::nUVgroups=0                      !        # of UV photon groups
+  ! UV group indexes among nGroup groups,
   ! UV Np indexes among solve_cooling vars:
-  integer,allocatable::iUVgroups(:),iUVvars_cool(:) 
-  ! Table of photon group props (UV_nz, nUVgroups, 1+2*nIons): 
+  integer,allocatable::iUVgroups(:),iUVvars_cool(:)
+  ! Table of photon group props (UV_nz, nUVgroups, 1+2*nIons):
   !(z, group, flux [#/cm2/s]: nIons*csn [cm-2]: nIons*egy [ev])
   real(dp),allocatable,dimension(:,:,:)::UV_groups_table
   ! The tables do not have constant redshift intervals, so we need to
@@ -1356,9 +1356,9 @@ CONTAINS
 
 !*************************************************************************
 SUBROUTINE init_UV_background()
-! Initiate UV props table, which gives photon fluxes and average photon 
+! Initiate UV props table, which gives photon fluxes and average photon
 ! cross sections and energies of each photon group as a function of z.
-! The data is read from a file specified by uv_file containing: 
+! The data is read from a file specified by uv_file containing:
 ! a) number of redshifts
 ! b) redshifts (increasing order)
 ! c) number of wavelengths
@@ -1392,7 +1392,7 @@ SUBROUTINE init_UV_background()
        call get_environment_variable('RAMSES_UV_FILE', UV_FILE)
   inquire(file=TRIM(uv_file), exist=ok)
   if(.not. ok)then
-     if(myid.eq.1) then 
+     if(myid.eq.1) then
         write(*,*)'Cannot access UV file ',TRIM(uv_file)
         write(*,*)'File '//TRIM(uv_file)//' not found'
         write(*,*)'You need to set the RAMSES_UV_FILE envvar' // &
@@ -1401,7 +1401,7 @@ SUBROUTINE init_UV_background()
      call clean_stop
   end if
 
-  
+
   ! Read redshifts, wavelengths and spectra
   ! Wait for the token
 #ifndef WITHOUTMPI
@@ -1412,7 +1412,7 @@ SUBROUTINE init_UV_background()
      end if
   endif
 #endif
-  
+
   open(unit=10,file=TRIM(uv_file),status='old',form='unformatted')
   read(10) UV_nz ; allocate(UV_zeds(UV_nz)) ; read(10) UV_zeds(:)
   read(10) nLs   ; allocate(Ls(nLs))        ; read(10) Ls(:)
@@ -1428,7 +1428,7 @@ SUBROUTINE init_UV_background()
      end if
   endif
 #endif
-  
+
   ! If mpi then share the UV integration between the cpus:
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
@@ -1442,7 +1442,7 @@ SUBROUTINE init_UV_background()
   ! so that we start injecting at z_reion
   if(z_reion .gt. UV_zeds(UV_nz-1))  UV_zeds(UV_nz) = z_reion
   UV_minz = UV_zeds(1) ; UV_maxz=UV_zeds(UV_nz)
-  
+
   ! Non-propagated UV background -----------------------------------------
   if(rt_UV_hom) then
      if(myid==1) print*,'The UV background is homogeneous'
@@ -1460,8 +1460,8 @@ SUBROUTINE init_UV_background()
              MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, ierr)
         tbl = tbl2
         deallocate(tbl2)
-#endif     
-        UV_rates_table(:,ii,:)=tbl 
+#endif
+        UV_rates_table(:,ii,:)=tbl
      end do
      deallocate(tbl)
      if (myid==1) call write_UVrates_table
@@ -1497,8 +1497,8 @@ SUBROUTINE init_UV_background()
      endif
 
      ! Initialize photon groups table-------------------------------------
-     allocate(UV_groups_table(UV_nz, nUVgroups, 2+2*nIons))                   
-     allocate(tbl(UV_nz, 2+2*nIons))                                      
+     allocate(UV_groups_table(UV_nz, nUVgroups, 2+2*nIons))
+     allocate(tbl(UV_nz, 2+2*nIons))
      do ip = 1,nUVgroups           !                    Loop photon groups
         tbl=0.
         pL0 = groupL0(nSEDgroups+ip) !  Energy interval of photon group ip
@@ -1518,10 +1518,10 @@ SUBROUTINE init_UV_background()
              MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
         tbl = tbl2
         deallocate(tbl2)
-#endif     
+#endif
         if(tbl(UV_nz,1) .eq. 0.d0) &            !                Zero flux
              tbl(UV_nz,2:)=tbl(UV_nz-1,2:)
-        UV_groups_table(:,ip,:)=tbl 
+        UV_groups_table(:,ip,:)=tbl
      end do
      deallocate(tbl) ; deallocate(Ls) ; deallocate(UV)
 
@@ -1608,7 +1608,7 @@ SUBROUTINE update_UVsrc
      group_cse(iUVgroups,i)  = UVprops(:,2+2*i)
   enddo
 
-  call updateRTgroups_CoolConstants     
+  call updateRTgroups_CoolConstants
 
   if(myid==1) then
      write(*,*) 'Updated UV fluxes [# cm-2 s-1] to'
@@ -1632,13 +1632,13 @@ FUNCTION getUV_Irate(X, Y, N, species)
   real(kind=8):: getUV_Irate, X(N), Y(N)
   integer :: N, species
 !-------------------------------------------------------------------------
-  getUV_Irate = fourPi *  & 
+  getUV_Irate = fourPi *  &
            integrateSpectrum(X,Y,N,dble(ionEvs(species)),0d0,species,fsig)
 END FUNCTION getUV_Irate
 
 !*************************************************************************
 FUNCTION getUV_Hrate(X, Y, N, species)
-! Compute and return heating rate per ion, given the UV background   
+! Compute and return heating rate per ion, given the UV background
 ! Y(X). Assumes X is in Angstroms and Y in [# cm-2 s-1 sr-1 A-1].
 ! returns: Heating rate in erg s-1
 !-------------------------------------------------------------------------
@@ -1651,12 +1651,12 @@ FUNCTION getUV_Hrate(X, Y, N, species)
   getUV_Hrate = &
         const1*integrateSpectrum(X,Y,N, e0, 0.d0, species, fsigDivLambda)&
        -const2*ionEvs(species) *                                         &
-               integrateSpectrum(X,Y,N, e0, 0.d0, species, fsig) 
+               integrateSpectrum(X,Y,N, e0, 0.d0, species, fsig)
 END FUNCTION getUV_Hrate
 
 !*************************************************************************
 FUNCTION getUVFlux(X, Y, N, e0, e1)
-! Compute and return UV photon flux in energy interval (e0,e1) [eV]   
+! Compute and return UV photon flux in energy interval (e0,e1) [eV]
 ! in UV spectrum Y(X). Assumes X is in [A] and Y in # cm-2 s-1 sr-1 A-1.
 ! returns: Photon flux in # cm-2 s-1
 !-------------------------------------------------------------------------
@@ -1684,7 +1684,7 @@ END FUNCTION getUVEgy
 
 !*************************************************************************
 FUNCTION getUVcsn(X, Y, N, e0, e1, species)
-! Compute and return average photoionization cross-section [cm2] for given 
+! Compute and return average photoionization cross-section [cm2] for given
 ! energy interval (e0,e1) [eV] in UV spectrum Y. Assumes X is in Angstroms
 ! and and Y is # cm-2 s-1 sr-1 A-1.
 ! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
@@ -1702,7 +1702,7 @@ END FUNCTION getUVcsn
 !************************************************************************
 FUNCTION getUVcse(X, Y, N, e0, e1, species)
 ! Compute average energy weighted photoionization cross-section [cm2] for
-! given energy interval (e0,e1) [eV] in UV spectrum Y. Assumes X is in 
+! given energy interval (e0,e1) [eV] in UV spectrum Y. Assumes X is in
 ! Angstroms and that Y is energy intensity per angstrom.
 ! Species is a code for the ion in question: 1=HI, 2=HeI, 3=HeIII
 !-------------------------------------------------------------------------
@@ -1719,7 +1719,7 @@ END FUNCTION getUVcse
 
 !*************************************************************************
 SUBROUTINE write_UVrates_table()
-! Write the UV rates to a file (this is just in 
+! Write the UV rates to a file (this is just in
 ! debugging, to check if the UV spectra are being read correctly).
 !-------------------------------------------------------------------------
   character(len=128)::filename
@@ -1728,7 +1728,7 @@ SUBROUTINE write_UVrates_table()
   write(filename,'(A, I1, A)') 'UVrates.list'
   open(10, file=filename, status='unknown')
   write(10,*) UV_nz
-  
+
   do i = 1,UV_nz
      write(10,900) UV_zeds(i), UV_rates_table(i,:,:)
   end do
@@ -1739,7 +1739,7 @@ END SUBROUTINE write_UVrates_table
 !*************************************************************************
 SUBROUTINE write_UVgroups_tables()
 
-! Write the UV photon group properties to files (this is just in 
+! Write the UV photon group properties to files (this is just in
 ! debugging, to check if the UV spectra are being read correctly).
 !-------------------------------------------------------------------------
   character(len=128)::filename
@@ -1749,7 +1749,7 @@ SUBROUTINE write_UVgroups_tables()
      write(filename,'(A, I1, A)') 'UVtable', ip, '.list'
      open(10, file=filename, status='unknown')
      write(10,*) UV_nz
-     
+
      do i = 1,UV_nz
         write(10,901)                                                    &
                 UV_zeds(i)           ,                                   &
@@ -1782,7 +1782,7 @@ SUBROUTINE locate(xx,n,x,j)
 !-------------------------------------------------------------------------
   jl = 0
   ju = n+1
-  do while (ju-jl > 1) 
+  do while (ju-jl > 1)
      jm = (ju+jl)/2
      if ((xx(n) > xx(1)) .eqv. (x > xx(jm))) then
         jl = jm

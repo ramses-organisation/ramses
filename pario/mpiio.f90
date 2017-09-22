@@ -39,8 +39,8 @@ module ramses_mpiio
 
       call hints_set(infos)
 
-      call MPI_File_open(MPI_COMM_COMP,fileloc,MPI_MODE_WRONLY+MPI_MODE_CREATE+MPI_MODE_UNIQUE_OPEN,& 
-                         infos,f_id,ierr) 
+      call MPI_File_open(MPI_COMM_COMP,fileloc,MPI_MODE_WRONLY+MPI_MODE_CREATE+MPI_MODE_UNIQUE_OPEN,&
+                         infos,f_id,ierr)
       call MPI_File_set_size(f_id,int(0,kind=mpi_offset_kind),ierr) !Empties file if existed before
 
       call mpi_info_free(infos,ierr)

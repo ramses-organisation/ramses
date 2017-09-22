@@ -71,7 +71,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      do i=1,nleaf
         nH(i)=MAX(uold(ind_leaf(i),1),smallr)
      end do
-     
+
      ! Compute pressure
      do i=1,nleaf
         T2(i)=uold(ind_leaf(i),neul)

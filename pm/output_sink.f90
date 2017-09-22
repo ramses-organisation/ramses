@@ -6,7 +6,7 @@ subroutine backup_sink(filename)
   include 'mpif.h'
   integer,parameter::tag=1135
   integer::dummy_io,info2
-#endif 
+#endif
 
   character(LEN=80)::filename
 
@@ -94,7 +94,7 @@ subroutine backup_sink(filename)
      write(ilun)sinkint_level ! Write level at which sinks where integrated
   endif
   close(ilun)
- 
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -105,7 +105,7 @@ subroutine backup_sink(filename)
      end if
   endif
 #endif
-  
+
 end subroutine backup_sink
 
 
@@ -126,15 +126,15 @@ subroutine output_sink(filename)
 
   ilun=myid+10
 
-  ! Conversion factor from user units to cgs units                                                                   
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
-  
+
   if(verbose)write(*,*)'Entering output_sink'
-  
+
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
@@ -147,7 +147,7 @@ subroutine output_sink(filename)
   write(ilun,'(" ================================================================================================================================== ")')
   write(ilun,'("        Id       Mass(Msol)             x                y                z               vx               vy               vz      ")')
   write(ilun,'(" ================================================================================================================================== ")')
-  
+
   do isink=1,nsink
      l_abs=max((lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5,1.d-50)
      rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs+tiny(0.d0))

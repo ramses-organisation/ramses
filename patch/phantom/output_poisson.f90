@@ -20,7 +20,7 @@ subroutine backup_poisson(filename)
   if(verbose)write(*,*)'Entering backup_poisson'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(unit=ilun,file=fileloc,form='unformatted')
@@ -82,7 +82,7 @@ subroutine backup_poisson(filename)
                     write(ilun)xdp
                  end do
               end do
-           else           
+           else
               !------------------------------------- Newton only
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
@@ -106,7 +106,7 @@ subroutine backup_poisson(filename)
      end do
   end do
   close(ilun)
-     
+
 end subroutine backup_poisson
 
 

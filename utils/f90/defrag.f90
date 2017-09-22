@@ -131,7 +131,7 @@ program defrag
         read(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
         read(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
         read(ilun)mass_sph
-        ! Read levels variables        
+        ! Read levels variables
         read(ilun)headl(1:ncpu,1:nlevelmax)
         read(ilun)taill(1:ncpu,1:nlevelmax)
         read(ilun)numbl(1:ncpu,1:nlevelmax)
@@ -239,7 +239,7 @@ program defrag
         close(ilun)
      endif
      mapping(headf)=ngridmax2
-     
+
      igrid2=0
      do ilevel=1,nlevelmax
         do ibound=1,ncpu
@@ -273,19 +273,19 @@ program defrag
      do i=1,ncoarse
         igrid1=son(i)
         if(igrid1>0)then
-           igrid2=mapping(igrid1) 
+           igrid2=mapping(igrid1)
         else
            igrid2=0
         endif
-        son2(i)=igrid2 
+        son2(i)=igrid2
      end do
 
      igrid0=0
      do ilevel=1,nlevelmax
         do ibound=1,ncpu
-           
+
            ncache=numbl(ibound,ilevel)
-           
+
            if(ncache>0)then
 
               do i=1,ncache
@@ -335,7 +335,7 @@ program defrag
 
               igrid0=igrid0+ncache
            end if
-              
+
         end do
      end do
 

@@ -6,7 +6,7 @@ subroutine update_time(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
+#endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons,ttend,momcons
@@ -56,7 +56,7 @@ subroutine update_time(ilevel)
 
      if(mod(nstep_coarse,ncontrol)==0.or.output_done)then
         if(myid==1)then
-           
+
            !-------------------------------
            ! Output AMR structure to screen
            !-------------------------------
@@ -64,7 +64,7 @@ subroutine update_time(ilevel)
            do i=1,nlevelmax
               if(numbtot(1,i)>0)write(*,999)i,numbtot(1:4,i)
            end do
-           
+
            !----------------------------------------------
            ! Output mass and energy conservation to screen
            !----------------------------------------------
@@ -148,9 +148,9 @@ subroutine update_time(ilevel)
 888 format(' Fine step=',i6,' t=',1pe12.5,' dt=',1pe10.3, &
          & ' a=',1pe10.3,' mem=',0pF4.1,'% ',0pF4.1,'%')
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
- 
+
 end subroutine update_time
-  
+
 subroutine clean_stop
   use amr_commons
   implicit none

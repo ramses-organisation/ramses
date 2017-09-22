@@ -8,7 +8,7 @@ module io_ramses
   real(KIND=8),dimension(:,:),allocatable::xp
   real(KIND=8),dimension(:,:),allocatable::varp
 
-contains 
+contains
 
   subroutine getcell(xcell,ycell,zcell,varcell,levcell,ncell,nvarin,repository, &
        & levelmax,verbose)
@@ -21,7 +21,7 @@ contains
   integer,optional::levelmax
   logical,optional::verbose
   !--------------------------------------------------------------------------
-  ! This routine compute the values of the hydro variables at the position 
+  ! This routine compute the values of the hydro variables at the position
   ! of a set of input mesh points.
   ! INPUT ARGUMENTS:
   ! xcell,ycell,zcell: one dimensional arrays containing the cell coordinates.
@@ -31,7 +31,7 @@ contains
   !                    directory
   ! OUTPUT ARGUMENTS:
   ! varcell:           a 2-dimensional double array containing the cell variables.
-  ! levcell:           a one-dimensional integer array containing the cell level of 
+  ! levcell:           a one-dimensional integer array containing the cell level of
   !                    refinement.
   ! OPTIONAL ARGUMENTS:
   ! verbose:           logical variable activating verbosity
@@ -103,13 +103,13 @@ contains
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -182,20 +182,20 @@ contains
 
   if(verbosity)write(*,*)'time=',t
   if(TRIM(ordering).eq.'hilbert')then
-     
+
      maxdom=2**(nlevelmax+1)
      do bit_length=1,32
         maxdom=maxdom/2
         if(maxdom<=1)exit
      end do
      maxdom=2**(nlevelmax+1)
-     
+
      do i=1,ncell
         icell(i)=int(xcell(i)*dble(maxdom))
         jcell(i)=int(ycell(i)*dble(maxdom))
         kcell(i)=int(zcell(i)*dble(maxdom))
      end do
-     
+
      call hilbert3d(icell,jcell,kcell,order_cell,bit_length,ncell)
 
      do i=1,ncell
@@ -208,7 +208,7 @@ contains
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do j=1,ncpu
         if(cpu_read(j))then
@@ -222,7 +222,7 @@ contains
         cpu_list(j)=j
      end do
   end  if
-  
+
   do i=1,ncell
      dcpu(i)=cpu_cell(i)
   end do
@@ -238,7 +238,7 @@ contains
   !-----------------------------------------------
   ! Read up variable from the AMR grid
   !----------------------------------------------
-  
+
   ! Loop over processor files
   ifirst=1
   do k=1,ncpu_read
@@ -416,7 +416,7 @@ contains
      deallocate(son)
   end do
   ! End loop over cpu
-  
+
 end subroutine getcell
 
 !=======================================================================
@@ -461,7 +461,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   localseed=allseed(1,1:IRandNumSize)
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!! Compute gas particle mass 
+  !!! Compute gas particle mass
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   partmass=0.d0
@@ -595,7 +595,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                  read(10)xdp
                  do i=1,ngridfile(j,ilevel)
                     xxdp(i,ind)=xdp(i)
-                 end do 
+                 end do
               end do
               read(10) ! Skip father index
               do ind=1,2*ndim
@@ -629,7 +629,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
 
                        dl=0.5d0**dble(lmax)
 
-                       if(ndim==3)then 
+                       if(ndim==3)then
                           vvdp(i,ind,ivar)=xdp(i)
                           dx=0.5d0**ilevel
                           iz=(ind-1)/4
@@ -649,7 +649,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           end if
                        endif
 
-                       if(ndim==2)then 
+                       if(ndim==2)then
                           vvdp(i,ind,ivar)=xdp(i)
                           dx=0.5d0**ilevel
                           iz=0
@@ -657,7 +657,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           ix=(ind-1-2*iy)
                           xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                           xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
-                          xc(3)=(zmin+zmax)/2 
+                          xc(3)=(zmin+zmax)/2
                           if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -669,15 +669,15 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           end if
                        endif
 
-                       if(ndim==1)then 
+                       if(ndim==1)then
                           vvdp(i,ind,ivar)=xdp(i)
                           dx=0.5d0**ilevel
                           iz=0
                           iy=0
                           ix=ind-1
                           xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
-                          xc(2)=(ymin+ymax)/2 
-                          xc(3)=(zmin+zmax)/2 
+                          xc(2)=(ymin+ymax)/2
+                          xc(3)=(zmin+zmax)/2
                           if(ivar==nvarh.and.j==icpu.and.ilevel>=lmin.and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -702,10 +702,10 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         end do
      enddo
      ! End loop over levels
-     
+
      close(10)
      close(11)
-     
+
      nfake(k)=nint(partm(k)/mdm)
 
      deallocate(ngridfile,ngridlevel)
@@ -733,7 +733,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
   write(*,*)'Number of gas dummy particles = ',ndummypart
   write(*,*)'Gas particle mass = ', partmass
   write(*,*)'Target gas particle mass = ', mdm
-  
+
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !!! Distribute gas particles
@@ -838,7 +838,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                  read(10)xdp
                  do i=1,ngridfile(j,ilevel)
                     xxdp(i,ind)=xdp(i)
-                 end do 
+                 end do
               end do
               read(10) ! Skip father index
               do ind=1,2*ndim
@@ -914,7 +914,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              endif
                           end if
                        end if
-                       
+
                        if(ndim==2)then
                           vvdp(i,ind,ivar)=xdp(i)
                           dx=0.5d0**ilevel
@@ -966,7 +966,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                           ix=ind-1
                           xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                           xc(2)=(ymin+ymax)/2
-                          xc(3)=(zmin+zmax)/2 
+                          xc(3)=(zmin+zmax)/2
                           if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -1013,7 +1013,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
            end if
         end do
      enddo
-     
+
      mleft(k)=massleft
 
      close(10)
@@ -1035,7 +1035,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
      call title(icpu,ncharcpu)
 
      if(partcount<ndummypart.and.pc<nmax-nmin+1)then
-        
+
         ! Open AMR file and skip header
         ipos=INDEX(repository,'output_')
         nchar=repository(ipos+7:ipos+13)
@@ -1057,7 +1057,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
         allocate(ngridlevel(1:ncpu,1:nlevelmax))
         if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
-        
+
         ! Open HYDRO file and skip header
         nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
         open(unit=11,file=nomfich,status='old',form='unformatted')
@@ -1067,7 +1067,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         read(11)
         read(11)
         read(11)gamma
-        
+
         ! Read grid numbers
         read(10)ngridlevel
         ngridfile(1:ncpu,1:nlevelmax)=ngridlevel(1:ncpu,1:nlevelmax)
@@ -1092,7 +1092,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         read(10)
         read(10)
         read(10)
-        
+
         ! Loop over levels
         istart=0
         do ilevel=1,lmax
@@ -1155,7 +1155,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                              ix=(ind-1-2*iy-4*iz)
                              xc(1)=boxlen*(xxdp(i,1)+(dble(ix)-0.5D0)*dx-xbound(1))
                              xc(2)=boxlen*(xxdp(i,2)+(dble(iy)-0.5D0)*dx-xbound(2))
-                             xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3)) 
+                             xc(3)=boxlen*(xxdp(i,3)+(dble(iz)-0.5D0)*dx-xbound(3))
                              if(j==icpu.and.ivar==nvarh.and.(ilevel>=lmin).and.(sdp(i,ind)==0&
                                   & .or.ilevel==lmax).and.(xmin<=xc(1).and.xc(1)<=xmax).and.&
                                   & (ymin<=xc(2).and.xc(2)<=ymax).and.(zmin<=xc(3).and.xc(3)<=zmax))then
@@ -1183,7 +1183,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                 endif
                              end if
                           end if
-                   
+
                           if(ndim==2)then
                              vvdp(i,ind,ivar)=xdp(i)
                              dx=0.5d0**ilevel
@@ -1219,8 +1219,8 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                    end do
                                 endif
                              end if
-                          end if       
-                     
+                          end if
+
                           if(ndim==1)then
                              vvdp(i,ind,ivar)=xdp(i)
                              dx=0.5d0**ilevel
@@ -1256,7 +1256,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                    end do
                                 endif
                              end if
-                          end if     
+                          end if
 
                        end do
                     end do
@@ -1271,10 +1271,10 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
            end do
         enddo
 
-        ! End loop over levels  
+        ! End loop over levels
         close(10)
         close(11)
-     
+
      deallocate(ngridfile,ngridlevel)
      if(nboundary>0)deallocate(ngridbound)
 
@@ -1308,7 +1308,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
 
         icpu=cpu_list(k)
         call title(icpu,ncharcpu)
-        
+
         ! Open AMR file and skip header
         ipos=INDEX(repository,'output_')
         nchar=repository(ipos+7:ipos+13)
@@ -1330,17 +1330,17 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         allocate(ngridfile(1:ncpu+nboundary,1:nlevelmax))
         allocate(ngridlevel(1:ncpu,1:nlevelmax))
         if(nboundary>0)allocate(ngridbound(1:nboundary,1:nlevelmax))
-        
+
         ! Open HYDRO file and skip header
         nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
         open(unit=11,file=nomfich,status='old',form='unformatted')
         read(11)
-        read(11)nvarh 
+        read(11)nvarh
         read(11)
         read(11)
         read(11)
         read(11)gamma
-        
+
         ! Read grid numbers
         read(10)ngridlevel
         ngridfile(1:ncpu,1:nlevelmax)=ngridlevel
@@ -1365,7 +1365,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
         read(10)
         read(10)
         read(10)
-        
+
         ! Compute total number of grids
         ngridtot=0
         do j=1,ncpu
@@ -1373,7 +1373,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
               ngridtot=ngridtot+ngridfile(j,ilevel)
            end do
         end do
-        
+
         ! Loop over levels
         istart=0
         !icell=0
@@ -1419,7 +1419,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
               end if
               ! Read HYDRO data
               read(11)
-              read(11)       
+              read(11)
               if(ngridfile(j,ilevel)>0)then
                     ! Read hydro variables
                  do ind=1,twotondim
@@ -1442,7 +1442,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                   & .and.(ilevel>=lmin) &
                                   & .and.(ilevel==lmax &
                                   & .or.sdp(i,ind)==0) &
-                                  & .and.(xmin<=xc(1) & 
+                                  & .and.(xmin<=xc(1) &
                                   & .and.xc(1)<=xmax) &
                                   & .and.(ymin<=xc(2) &
                                   & .and.xc(2)<=ymax) &
@@ -1466,7 +1466,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                 end if
                              end if
                           end if
-                          
+
                           if(ndim==2)then
                              vvdp(i,ind,ivar)=xdp(i)
                              dx=0.5d0**ilevel
@@ -1538,7 +1538,7 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
                                 end if
                              end if
                           end if
-                          
+
                        end do
                     end do
                  end do
@@ -1553,22 +1553,22 @@ subroutine gaspart3(ncpu,ncpu_read,cpu_list,repository,ordering,ndummypart,facde
            end do
         enddo
         ! End loop over levels
-        
+
         close(10)
         close(11)
-        
+
         deallocate(ngridfile,ngridlevel)
         if(nboundary>0)deallocate(ngridbound)
      end do
      deallocate(rindex)
      deallocate(flagcell)
   endif
-  
+
   write(*,*)'gaspart3 III done'
   !write(*,*)'indexcell', indexcelltot
 
   return
-  
+
 end subroutine gaspart3
 
 !=======================================================================
@@ -1723,12 +1723,12 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      if(ndim==2)then
         xcc(1)=xpart(i,1)
         xcc(2)=xpart(i,2)
-        xcc(3)=(zmin+zmax)/2       
+        xcc(3)=(zmin+zmax)/2
      end if
      if(ndim==1)then
         xcc(1)=xpart(i,1)
-        xcc(2)=(ymin+ymax)/2  
-        xcc(3)=(zmin+zmax)/2       
+        xcc(2)=(ymin+ymax)/2
+        xcc(3)=(zmin+zmax)/2
      end if
 !     if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax&
      if(         xmin<=xcc(1).and.xcc(1)<=xmax&
@@ -1737,7 +1737,7 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
           & .and.idpart(i)>0)then
         npart_actual=npart_actual+1 !NOTE: only particles with ID>0. TO SELECT ALSO SINK PARTICLES USE READPART2
      endif
-     
+
      if((.not.star).and.(.not.sink))then
         if(         xmin<=xcc(1).and.xcc(1)<=xmax&
              & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
@@ -1745,7 +1745,7 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
            ndm_actual=ndm_actual+1
         endif
      end if
-     
+
      if((.not.star).and.(sink))then
         if(idpart(i)>0&
              & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
@@ -1782,7 +1782,7 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   allocate(metout(1:npart_actual))
   ageout=0.d0
   metout=0.d0
-  
+
   ipa=0
   do i=1,npart_tot
      if(ndim==3)then
@@ -1793,12 +1793,12 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      if(ndim==2)then
         xcc(1)=xpart(i,1)
         xcc(2)=xpart(i,2)
-        xcc(3)=(zmin+zmax)/2       
+        xcc(3)=(zmin+zmax)/2
      end if
      if(ndim==1)then
         xcc(1)=xpart(i,1)
-        xcc(2)=(ymin+ymax)/2  
-        xcc(3)=(zmin+zmax)/2       
+        xcc(2)=(ymin+ymax)/2
+        xcc(3)=(zmin+zmax)/2
      end if
      if(idpart(i)>0&
           & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
@@ -1819,15 +1819,15 @@ subroutine readpart(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
         end if
      end if
   end do
-  
+
   deallocate(xpart,vpart,mpart,idpart,levpart)
   if(nstar_tot>0)then
      deallocate(age)
      if(metal)deallocate(met)
   end if
-  
+
   return
-  
+
 end subroutine readpart
 
 !=======================================================================
@@ -1985,12 +1985,12 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      if(ndim==2)then
         xcc(1)=xpart(i,1)
         xcc(2)=xpart(i,2)
-        xcc(3)=(zmin+zmax)/2       
+        xcc(3)=(zmin+zmax)/2
      end if
      if(ndim==1)then
         xcc(1)=xpart(i,1)
-        xcc(2)=(ymin+ymax)/2  
-        xcc(3)=(zmin+zmax)/2       
+        xcc(2)=(ymin+ymax)/2
+        xcc(3)=(zmin+zmax)/2
      end if
 
      if(lmin<=levpart(i).and.levpart(i)<=lmax.and.xmin<=xcc(1).and.xcc(1)<=xmax &
@@ -2030,7 +2030,7 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
   allocate(metout(1:npart_actual))
   ageout=0.d0
   metout=0.d0
-  
+
   ipa=0
   do i=1,npart_tot
      if(ndim==3)then
@@ -2041,12 +2041,12 @@ subroutine readpart2(ncpu,ncpu_read,cpu_list,ndim,repository,metal,star,sink,&
      if(ndim==2)then
         xcc(1)=xpart(i,1)
         xcc(2)=xpart(i,2)
-        xcc(3)=(zmin+zmax)/2       
+        xcc(3)=(zmin+zmax)/2
      end if
      if(ndim==1)then
         xcc(1)=xpart(i,1)
-        xcc(2)=(ymin+ymax)/2  
-        xcc(3)=(zmin+zmax)/2       
+        xcc(2)=(ymin+ymax)/2
+        xcc(3)=(zmin+zmax)/2
      end if
      if((lmin<=levpart(i).and.levpart(i)<=lmax).and.(xmin<=xcc(1).and.xcc(1)<=xmax)&
           & .and.(ymin<=xcc(2).and.xcc(2)<=ymax).and.(zmin<=xcc(3).and.xcc(3)<=zmax))then
@@ -2090,13 +2090,13 @@ subroutine title(n,nchar)
   implicit none
   integer::n
   character*5::nchar
-  
+
   character*1::nchar1
   character*2::nchar2
   character*3::nchar3
   character*4::nchar4
   character*5::nchar5
-  
+
   if(n.ge.10000)then
      write(nchar5,'(i5)') n
      nchar = nchar5
@@ -2221,36 +2221,36 @@ SUBROUTINE quick_sort(list, order, n)
   INTEGER :: n
   REAL(qdp), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
-  
+
   ! Local variable
   INTEGER :: i
-  
+
   DO i = 1, n
      order(i) = i
   END DO
-  
+
   CALL quick_sort_1(1, n)
-  
+
 CONTAINS
-  
+
   RECURSIVE SUBROUTINE quick_sort_1(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     REAL(qdp)              :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
-    
+
     IF (right_end < left_end + max_simple_sort_size) THEN
        ! Use interchange sort for small lists
        CALL interchange_sort(left_end, right_end)
-       
+
     ELSE
        ! Use partition ("quick") sort
        reference = list((left_end + right_end)/2)
        i = left_end - 1; j = right_end + 1
-       
+
        DO
           ! Scan list from left end until element >= reference is found
           DO
@@ -2262,8 +2262,8 @@ CONTAINS
              j = j - 1
              IF (list(j) <= reference) EXIT
           END DO
-          
-          
+
+
           IF (i < j) THEN
              ! Swap two out-of-order elements
              temp = list(i); list(i) = list(j); list(j) = temp
@@ -2275,22 +2275,22 @@ CONTAINS
              EXIT
           END IF
        END DO
-       
+
        IF (left_end < j) CALL quick_sort_1(left_end, j)
        IF (i < right_end) CALL quick_sort_1(i, right_end)
     END IF
-    
+
   END SUBROUTINE quick_sort_1
-  
-  
+
+
   SUBROUTINE interchange_sort(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     REAL(qdp)           :: temp
-    
+
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
           IF (list(i) > list(j)) THEN
@@ -2299,7 +2299,7 @@ CONTAINS
           END IF
        END DO
     END DO
-    
+
   END SUBROUTINE interchange_sort
-  
+
 END SUBROUTINE quick_sort

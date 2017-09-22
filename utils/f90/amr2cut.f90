@@ -46,7 +46,7 @@ program amr2cut
   call read_params
 
   !-----------------------
-  ! Rotation parameters 
+  ! Rotation parameters
   !-----------------------
   if(abs(jxin)+abs(jyin)+abs(jzin)>0)then
      rotation=.true.
@@ -93,7 +93,7 @@ program amr2cut
   dz=(zmax-zmin)/dble(nz)
 
   dx_loc=min(dx,dy,dx)
-  
+
   dx_amr=1.0
   lmax=0
   do while (dx_amr.gt.dx_loc)
@@ -142,7 +142,7 @@ program amr2cut
      end do
 
      write(*,*)kk,'/',nz,min(nz-kk+1,nskip)
-     
+
      call getcell(x,y,z,var,l,ncell,nvar,repository,levelmax=lmax)
 
      do kkk=1,min(nz-kk+1,nskip)
@@ -211,19 +211,19 @@ program amr2cut
      endif
      close(20)
   endif
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2cut  -inp  input_dir'
@@ -244,7 +244,7 @@ contains
        print *, ' '
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -293,9 +293,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2cut

@@ -51,7 +51,7 @@ subroutine make_boundary_hydro(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
   do ibound=1,nboundary
 
@@ -92,7 +92,7 @@ subroutine make_boundary_hydro(ilevel)
      if(boundary_type(ibound)==1.or.boundary_type(ibound)==2)gs(1)=-1
      if(boundary_type(ibound)==3.or.boundary_type(ibound)==4)gs(2)=-1
      if(boundary_type(ibound)==5.or.boundary_type(ibound)==6)gs(3)=-1
-     
+
      ! Direction of gravity vector for hydrostatic equilibrium
      if(boundary_dir==1.or.boundary_dir==2)gdim=1
      if(boundary_dir==3.or.boundary_dir==4)gdim=2
@@ -121,7 +121,7 @@ subroutine make_boundary_hydro(ilevel)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Gather neighboring reference grid
         do i=1,ngrid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
@@ -133,7 +133,7 @@ subroutine make_boundary_hydro(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-              
+
            ! Gather neighboring reference cell
            iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
            do i=1,ngrid
@@ -142,7 +142,7 @@ subroutine make_boundary_hydro(ilevel)
 
            ! Wall and free boundary conditions
            if((boundary_type(ibound)/10).ne.2)then
-              
+
               ! Gather reference hydro variables
               do ivar=1,nvar
                  do i=1,ngrid
@@ -156,7 +156,7 @@ subroutine make_boundary_hydro(ilevel)
                     uu(i,2:ndim+1)=0d0 ! Zero velocity
                     uu(i,ndim+2)=82d0*1d3*uu(i,1)/scale_T2 /2.33 !1d3*T_star
                  end do
-              endif              
+              endif
               ! END DAVIS-------------------------------------------------
               ! Scatter to boundary region
               do ivar=1,nvar
@@ -166,35 +166,35 @@ subroutine make_boundary_hydro(ilevel)
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
               end do
-              
+
               ! Imposed boundary conditions
            else
-              
+
               ! Compute cell center in code units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
                  end do
               end do
-              
+
               ! Rescale position from code units to user units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                  end do
               end do
-              
+
               call boundana(xx,uu,dx_loc,ibound,ngrid)
-              
+
               ! Scatter variables
               do ivar=1,nvar
                  do i=1,ngrid
                     uold(ind_cell(i),ivar)=uu(i,ivar)
                  end do
               end do
-                 
+
            end if
-              
+
         end do
         ! End loop over cells
 

@@ -2,7 +2,7 @@
 ! basic sparse matrix package for the use in the RAMSES clumpfinder
 ! every line of the matrix is saved as a linked list
 ! issues/improvements:
-!    -write a routine for quicker "maxmerging" two lines (outer loop calling "get_value" at each position 
+!    -write a routine for quicker "maxmerging" two lines (outer loop calling "get_value" at each position
 !     is very iniefficient)
 !    -disconnect a value which is set to zero rather than just writing zero into memory (not too bad since
 !    -have short lifetime)
@@ -20,7 +20,7 @@ module sparse_matrix
 contains
   !----------------------------------------------------------------------------------------------
   subroutine sparse_initialize(m,mat)
-    type(sparse_mat)::mat 
+    type(sparse_mat)::mat
     integer::m !size of the array
     allocate(mat%val(1:NSPARSEMAX))
     mat%val=0.
@@ -41,15 +41,15 @@ contains
 
   !----------------------------------------------------------------------------------------------
   subroutine sparse_kill(mat)
-    type(sparse_mat)::mat 
+    type(sparse_mat)::mat
     deallocate(mat%val,mat%maxval)
     deallocate(mat%next,mat%col,mat%first,mat%maxloc)
   end subroutine sparse_kill
   !----------------------------------------------------------------------------------------------
-  
+
   !----------------------------------------------------------------------------------------------
   subroutine set_value(i,j,new_value,mat)
-    type(sparse_mat)::mat 
+    type(sparse_mat)::mat
     integer::i,j !new entry
     real(dp)::new_value
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -98,13 +98,13 @@ contains
     do  while( mat%col(mat%next(current)) < j )
        current=mat%next(current)
     end do
-    
+
     ! there is already an existing value in place: overwrite and update max if needed
     if ( mat%col(mat%next(current)) == j)then
        mat%val(mat%next(current))=new_value
        return
     end if
-    
+
     ! next points to zero -> add to the end
     if ( mat%next(current) == 0)then
        if(new_value.NE.0.)then
@@ -112,7 +112,7 @@ contains
           mat%next(current)=mat%used
           mat%next(mat%used)=0
           mat%col(mat%used)=j
-          mat%val(mat%used)=new_value       
+          mat%val(mat%used)=new_value
        endif
        return
     end if
@@ -129,15 +129,15 @@ contains
        endif
        return
     end if
-    
+
     write(*,*)'ooops, I should not be here!'
   end subroutine set_value
   !----------------------------------------------------------------------------------------------
 
   !----------------------------------------------------------------------------------------------
   function get_value(i,j,mat)
-    type(sparse_mat)::mat 
-    integer::i,j 
+    type(sparse_mat)::mat
+    integer::i,j
     real(dp)::get_value
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     ! gets the value of mat at position i,j
@@ -155,13 +155,13 @@ contains
     do  while( mat%col(current) < j )
        current=mat%next(current)
     end do
-    
+
     ! we are sitting at the right spot
     if ( mat%col(current) == j)then
        get_value= mat%val(current)
        return
     end if
-    
+
     ! we are too far (means there was no entry for column j)
     if ( mat%col(current) > j)then
        get_value=0.

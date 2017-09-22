@@ -1,7 +1,7 @@
 program get_music_refmask
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES. 
+  ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -62,14 +62,14 @@ program get_music_refmask
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
-     stop 
+     stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -139,7 +139,7 @@ program get_music_refmask
         kmin=int(zmin*dble(maxdom))
         kmax=kmin+1
      endif
-     
+
      dkey=(dble(2**(levelmax+1)/dble(maxdom)))**ndim
      ndom=1
      if(bit_length>0)ndom=8
@@ -155,7 +155,7 @@ program get_music_refmask
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -178,7 +178,7 @@ program get_music_refmask
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -262,16 +262,16 @@ program get_music_refmask
      vz(nstart:nstart+npart2-1)=temp
 !     Read mass
      read(1)temp
-     m(nstart:nstart+npart2-1)=temp 
+     m(nstart:nstart+npart2-1)=temp
      !Read identity
      read(1)tempid
      id(nstart:nstart+npart2-1)=tempid
      !Read level
-     read(1)temp2   
+     read(1)temp2
      if(nstar>0) then
         ! Read BT
         read(1)temp
-        bt(nstart:nstart+npart2-1)=temp 
+        bt(nstart:nstart+npart2-1)=temp
      endif
 ! ----------------------------
      nstart=nstart+npart2  !Fill up the next set
@@ -288,7 +288,7 @@ program get_music_refmask
   write(*,*) 'Getting IDs...'
   open(18,file='partID.dat',form='formatted')
   maxid=0
-  do i=1,npart !To get maximum identity of the particle        
+  do i=1,npart !To get maximum identity of the particle
      if(nstar.eq.0) then  !Only DM particles
         btime=0
      else
@@ -311,7 +311,7 @@ program get_music_refmask
   enddo
   write(*,*) 'We have',ipart,' particles in selected region'
   write(*,*) 'Total mass =', mass
-  
+
 30 format(i16)
   write(18,50) ipart,npart,maxid
 
@@ -357,7 +357,7 @@ program get_music_refmask
      deallocate(bt)
   endif
 
-  
+
   allocate(m(1:npart))
   allocate(x(1:npart))
   allocate(y(1:npart))
@@ -367,7 +367,7 @@ program get_music_refmask
   allocate(vz(1:npart))
   allocate(id(1:npart))
   allocate(bt(1:npart))
-  
+
 
   !-----------------------------------------------
   ! Compute projected mass using CIC smoothing
@@ -378,7 +378,7 @@ program get_music_refmask
 
   ipos=INDEX(repository2,'output_')
   nchar=repository2(ipos+7:ipos+13)
-  
+
   do icpu=1,ncpu
      call title(icpu,ncharcpu)
      nomfich=TRIM(repository2)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
@@ -416,7 +416,7 @@ program get_music_refmask
      ! Read identity
      read(1)tempid
      ! Read level
-     read(1)temp2   
+     read(1)temp2
      if(nstar.gt.0) then
         ! Read BT
         read(1)tempbt
@@ -427,11 +427,11 @@ program get_music_refmask
      close(1)
 
      call quick_sort(tempid, indtempid, npart2)
-     
+
      ico=1
      i=1
      do while (i.le.npart2.and.ico.le.npart)
-        if(tempid(i).lt.idpart(ico))then 
+        if(tempid(i).lt.idpart(ico))then
            i=i+1
         else
            if(tempid(i).gt.idpart(ico))then
@@ -470,7 +470,7 @@ program get_music_refmask
      deallocate(indtempid)
      deallocate(temp2)
      deallocate(tempbt)
-     
+
   end do
 
   open(20,file=TRIM(outputname),form='formatted')
@@ -493,7 +493,7 @@ program get_music_refmask
 1002 format (f16.8,f16.8,f16.8)
 
 contains
-  
+
   subroutine read_params
 
       implicit none
@@ -503,7 +503,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 4) then
          print *, 'usage: geticref  -inf  input_dir_final_snapshot'
@@ -534,7 +534,7 @@ contains
          case ('-ini')
             repository2 = trim(arg)
          case ('-dir')
-            proj = trim(arg) 
+            proj = trim(arg)
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -560,7 +560,7 @@ contains
          case ('-vel')
             read (arg,*) outputmode
          case ('-per')
-            read (arg,*) periodic 
+            read (arg,*) periodic
          case ('-gfc')
             grafic = trim(arg)
          case ('-fil')
@@ -573,7 +573,7 @@ contains
       return
 
     end subroutine read_params
-  
+
   end program get_music_refmask
 
 !=======================================================================
@@ -699,7 +699,7 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
 end subroutine hilbert3d
 
 SUBROUTINE quick_sort(list,order,n)
-  
+
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
@@ -715,36 +715,36 @@ SUBROUTINE quick_sort(list,order,n)
   INTEGER :: n
   INTEGER(i8b), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
-  
+
   ! Local variable
   INTEGER :: i
-  
+
   DO i = 1, n
      order(i) = i
   END DO
-  
+
   CALL quick_sort_1(1, n)
-  
+
 CONTAINS
-  
+
   RECURSIVE SUBROUTINE quick_sort_1(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     INTEGER(i8b)        :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
-    
+
     IF (right_end < left_end + max_simple_sort_size) THEN
        ! Use interchange sort for small lists
        CALL interchange_sort(left_end, right_end)
-       
+
     ELSE
        ! Use partition ("quick") sort
        reference = list((left_end + right_end)/2)
        i = left_end - 1; j = right_end + 1
-       
+
        DO
           ! Scan list from left end until element >= reference is found
           DO
@@ -756,8 +756,8 @@ CONTAINS
              j = j - 1
              IF (list(j) <= reference) EXIT
           END DO
-          
-          
+
+
           IF (i < j) THEN
              ! Swap two out-of-order elements
              temp = list(i); list(i) = list(j); list(j) = temp
@@ -769,22 +769,22 @@ CONTAINS
              EXIT
           END IF
        END DO
-       
+
        IF (left_end < j) CALL quick_sort_1(left_end, j)
        IF (i < right_end) CALL quick_sort_1(i, right_end)
     END IF
-    
+
   END SUBROUTINE quick_sort_1
-  
-  
+
+
   SUBROUTINE interchange_sort(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     INTEGER(i8b)        :: temp
-    
+
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
           IF (list(i) > list(j)) THEN
@@ -793,8 +793,8 @@ CONTAINS
           END IF
        END DO
     END DO
-    
+
   END SUBROUTINE interchange_sort
-  
+
 END SUBROUTINE quick_sort
 

@@ -74,7 +74,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      do i=1,nleaf
         nH(i)=MAX(uold(ind_leaf(i),1),smallr)
      end do
-     
+
      ! Compute kinetic energy
      do i=1,nleaf
         ekin(i)=0.0d0

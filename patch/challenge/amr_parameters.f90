@@ -18,7 +18,7 @@ module amr_parameters
 #endif
   integer,parameter::MAXOUT=1000
   integer,parameter::MAXLEVEL=100
-  
+
   ! Number of dimensions
 #ifndef NDIM
   integer,parameter::ndim=1
@@ -141,7 +141,7 @@ module amr_parameters
   logical ::neq_chem=.false.  ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
   logical ::metal=.false.
-  logical ::bondi=.false.      ! Activate Bondi accretion onto sink particle 
+  logical ::bondi=.false.      ! Activate Bondi accretion onto sink particle
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
   logical ::smbh=.false.
