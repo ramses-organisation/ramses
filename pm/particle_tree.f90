@@ -634,16 +634,16 @@ subroutine virtual_tree_fine(ilevel)
   ! This subroutine move particles across processors boundaries.
   !-----------------------------------------------------------------------
 #ifndef WITHOUTMPI
-  integer::igrid,ipart,jpart,ncache_tot,next_part
-  integer::ip,ipcom,npart1,icpu,ncache
-  integer::info,buf_count,tag=101,tagf=102,tagu=102
+  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
+  integer::icpu,igrid,ipart,jpart
+  integer::info,buf_count,tagf=102,tagu=102
   integer::countsend,countrecv
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
-  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
-  logical::ok_free,ok_all
+  logical::ok_free
   integer::particle_data_width
+  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
 #endif
 
   if(numbtot(1,ilevel)==0)return

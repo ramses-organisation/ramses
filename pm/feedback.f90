@@ -10,7 +10,7 @@ subroutine thermal_feedback(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  integer::info2
+  integer::info2,dummy_io
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
@@ -18,8 +18,8 @@ subroutine thermal_feedback(ilevel)
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,ivar
-  integer::ig,ip,npart1,npart2,icpu,ilun,idim
+  integer::igrid,jgrid,ipart,jpart,next_part,ivar
+  integer::ig,ip,npart1,npart2,icpu,ilun=0,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -161,7 +161,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun
+  integer::i,j,idim,nx_loc,ivar,ilun=0
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::t0,ESN,mejecta,zloss,e,uvar

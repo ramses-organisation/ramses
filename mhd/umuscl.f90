@@ -428,20 +428,24 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 
   ! Declare local variables
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
   REAL(dp)::dtdx, dtdy, smallp
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::ELL, ELR, ERL, ERR
-  REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dBy, dCy
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
+  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
+  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sC0
   REAL(dp)::AL, AR, BL, BR
   REAL(dp)::dALy, dARy, dBLx, dBRx
   REAL(DP)::sAL0, sAR0, sBL0, sBR0
 #if NENER>0
-  real(dp),dimension(1:nener)::e, dex, dey, se0
+  INTEGER::irad
+  REAL(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
+#if NVAR>8+NENER
+  INTEGER::n
 #endif
 
   dtdx = dt/dx
@@ -776,7 +780,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ey
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
 
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
   REAL(dp)::dtdx, dtdy, dtdz, smallp
@@ -784,10 +788,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::FLL, FLR, FRL, FRR
   REAL(dp)::GLL, GLR, GRL, GRR
-  REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dbY, dCy
-  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz, dCz
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
+  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
+  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz
+  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0
   REAL(dp)::AL, AR, BL, BR, CL, CR
   REAL(dp)::dALy, dARy, dALz, dARz
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
@@ -795,6 +799,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+  integer ::irad
+#endif
+#if NVAR>8+NENER
+  integer ::n
 #endif
   
   dtdx = dt/dx
@@ -1347,10 +1355,14 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
   
   ! local variables
-  integer ::i, j, k, n, l, idim, xdim
+  integer ::i, j, k, l, xdim
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
-  REAL(dp)::zero_flux, bn_mean, entho
+  real(dp)::zero_flux, bn_mean, entho
+
+#if NVAR>8
+  integer::n
+#endif
 
   xdim=ln-1
   entho=one/(gamma-one)
@@ -1474,7 +1486,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
 
   ! local variables
-  INTEGER ::i, j, k, n, l, idim, xdim, m, irad
+  INTEGER ::i, j, k, l, xdim
   REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
   REAL(dp),DIMENSION(1:nvar)::qleft,qright,fmean_x,fmean_y,qtmp
   REAL(dp) :: ELL,ERL,ELR,ERR,SL,SR,SB,ST,SAL,SAR,SAT,SAB
@@ -1490,6 +1502,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: rstarLL,rstarLR,rstarRL,rstarRR,AstarLL,AstarLR,AstarRL,AstarRR,BstarLL,BstarLR,BstarRL,BstarRR
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
+
+#if NENER>0
+  INTEGER :: irad
+#endif
 
   xdim = lor - 1
 
@@ -2019,9 +2035,16 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf  
 
-  integer ::i, j, k, l, n, idim, irad
+  integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
+
+#if NENER>0
+  integer::irad
+#endif
+#if NVAR>8+NENER
+  integer::n
+#endif
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma
@@ -2173,12 +2196,24 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::vmin,vmax,dff
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+#if NDIM==1
+  real(dp)::dfx
+#endif
+
+#if NDIM==2
+  real(dp)::dfx,dfy
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+#endif
+
+#if NDIM==3
+  real(dp)::dfx,dfy,dfz
   real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
   real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::vmin,vmax,dfx,dfy,dfz,dff
-  integer::ilo,ihi,jlo,jhi,klo,khi
+#endif
   
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)

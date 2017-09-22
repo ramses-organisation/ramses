@@ -1056,7 +1056,7 @@ subroutine compute_accretion_rate(write_sinks)
   end do
   
   if (write_sinks)then 
-     call print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
+     call print_sink_properties(dMEDoverdt,rho_inf,r2)
   end if
 
 contains
@@ -1106,7 +1106,7 @@ end subroutine compute_accretion_rate
 !################################################################
 !################################################################
 !################################################################
-subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
+subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -1118,7 +1118,7 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2,v_bondi)
   integer::i,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::l_abs
-  real(dp)::v_bondi,r2,rho_inf
+  real(dp)::r2,rho_inf
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0

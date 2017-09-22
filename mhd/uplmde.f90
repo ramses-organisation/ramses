@@ -8,9 +8,10 @@ subroutine diffusion
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif  
-  integer::ilevel,icycle,nsubdiff,ivar,i,iskip,ind,info
-  real(dp)::dx,scale,dx_loc,dtdiff,norm
+  integer::ilevel,icycle,nsubdiff
+  real(dp)::dx,scale,dx_loc,dtdiff
   real(dp),dimension(1:3)::skip_loc
 
   ! Determine minimum mesh size
@@ -70,7 +71,7 @@ subroutine diffusion_fine(ilevel,dtdiff)
   integer::ilevel
   real(dp)::dtdiff
 
-  integer::i,ivar,igrid,ncache,ngrid
+  integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -113,8 +114,6 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp),dimension(1:nvector,0:twondim  ,1:6   ),save::B1
   integer ,dimension(1:nvector,0:twondim)         ,save::ind1
   real(dp),dimension(1:nvector,1:twotondim,1:6   ),save::B2
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::v2
-  real(dp),dimension(1:nvector,1:ndim),save::vv,xx
 
   logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::ok
   logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::buffer
@@ -124,18 +123,13 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp),dimension(1:nvector, 1:2, 1:3, 1:3),save::emfx
   real(dp),dimension(1:nvector, 1:3, 1:2, 1:3),save::emfy
   real(dp),dimension(1:nvector, 1:3, 1:3, 1:2),save::emfz
-  real(dp),dimension(1:nvector),save :: dB
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,igrid
   logical,dimension(1:nvector),save::exist_nbor
 
   real(dp),dimension(1:3)::skip_loc
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
-  integer::ind,ix,iy,iz
-  integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3
-  integer::i1min,i1max,j1min,j1max,k1min,k1max
-  integer::i2min,i2max,j2min,j2max,k2min,k2max
-  integer::i3min,i3max,j3min,j3max,k3min,k3max
+  integer::i,j,ind_son,ind_father,iskip,nbuffer,ibuffer
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3
   integer::ind_father1,ind_father2,ind_father3
   integer::ind_buffer1,ind_buffer2,ind_buffer3
   integer::ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
@@ -660,7 +654,7 @@ end subroutine diffine1
 !###########################################################
 subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
      & Nx,Ny,Nz,ngrid,dx,dy,dz)
-  use amr_parameters,ONLY:dp,verbose,nvector
+  use amr_parameters,ONLY:dp,nvector
   implicit none
   integer :: Nx,Ny,Nz,ngrid
   real(dp),dimension(1:nvector, 0:Nx+2,-1:Ny+2,-1:Nz+2) :: Bx
@@ -675,7 +669,6 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
   real(dp) :: dBx_arete_dy,dBx_arete_dz
   real(dp) :: dBy_arete_dx,dBy_arete_dz
   real(dp) :: dBz_arete_dx,dBz_arete_dy
-  real(dp) :: dx_L,dx_R,dy_L,dy_R,dz_L,dz_R
   integer  :: ic,i,j,k,im1,jm1,km1
   integer  :: Nxp1,Nyp1,Nzp1
 

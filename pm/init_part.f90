@@ -43,13 +43,13 @@ subroutine init_part
   integer::dummy_io,info,info2,npart_new
   integer::countsend,countrecv
   integer::ibuf,tagu=102
+  integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 #endif
   logical::error,keep_part,eof,read_pos=.false.,ok
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
-  integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -149,6 +149,9 @@ subroutine init_part
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+     read(ilun)
+#endif
      if(star.or.sink)then
         ! Read birth epoch
         allocate(xdp(1:npart2))
@@ -829,6 +832,8 @@ subroutine load_gadget
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  integer,dimension(1:nvector)::cc
 #endif
 
   logical::ok
@@ -843,13 +848,10 @@ subroutine load_gadget
   integer::i,icpu,ipart,start
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
-#ifndef WITHOUTMPI
-  integer::info
-  integer,dimension(1:nvector)::cc
-#endif
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer::clock_start,clock_end,clock_rate
   real(dp)::gadgetvfact
+
   ! Local particle count
   ipart=0
   call SYSTEM_CLOCK(COUNT_RATE=clock_rate)

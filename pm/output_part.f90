@@ -3,8 +3,9 @@ subroutine backup_part(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h' 
   integer::dummy_io,info2
+  integer,parameter::tag=1122
 #endif 
   character(LEN=80)::filename
 
@@ -14,7 +15,6 @@ subroutine backup_part(filename)
   real(dp),allocatable,dimension(:)::xdp
   integer(i8b),allocatable,dimension(:)::ii8
   integer,allocatable,dimension(:)::ll
-  integer,parameter::tag=1122
 
   if(verbose)write(*,*)'Entering backup_part'
   

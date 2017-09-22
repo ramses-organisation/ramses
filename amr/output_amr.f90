@@ -10,6 +10,8 @@ subroutine dump_all
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+#endif
+#if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
 #endif
   character::nml_char
