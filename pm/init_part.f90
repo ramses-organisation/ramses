@@ -73,7 +73,8 @@ subroutine init_part
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0; typep(1:npartmax)%family=FAM_UNDEF
+  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0;
+  typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0
   if(star.or.sink)then
      allocate(tp(npartmax))
      tp=0.0
@@ -556,7 +557,9 @@ contains
 
     ! Get particle type from properties
     do i = 1, npart
-       typep(i) = props2type(idp(i), tp(i), mp(i))
+       ! typep(i) = props2type(idp(i), tp(i), mp(i))
+       typep(i)%family = FAM_DM
+       typep(i)%tag = 0
     end do
 
     ! Move particle according to Zeldovich approximation
