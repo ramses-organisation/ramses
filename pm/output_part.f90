@@ -91,6 +91,18 @@ subroutine backup_part(filename)
   write(ilun)ii8
   deallocate(ii8)
 
+  ! Write level
+  allocate(ll(1:npart))
+  ipart=0
+  do i=1,npartmax
+     if(levelp(i)>0)then
+        ipart=ipart+1
+        ll(ipart)=levelp(i)
+     end if
+  end do
+  write(ilun)ll
+  deallocate(ll)
+
   ! Write family
   allocate(ii1(1:npart))
   ipart=0
@@ -111,18 +123,6 @@ subroutine backup_part(filename)
   end do
   write(ilun)ii1
   deallocate(ii1)
-
-  ! Write level
-  allocate(ll(1:npart))
-  ipart=0
-  do i=1,npartmax
-     if(levelp(i)>0)then
-        ipart=ipart+1
-        ll(ipart)=levelp(i)
-     end if
-  end do
-  write(ilun)ll
-  deallocate(ll)
 
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   ! Write potential (added by AP)

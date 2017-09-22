@@ -149,6 +149,12 @@ subroutine init_part
      idp(1:npart2)=isp8
      deallocate(isp8)
 
+     ! Read level
+     allocate(isp(1:npart2))
+     read(ilun)isp
+     levelp(1:npart2)=isp
+     deallocate(isp)
+
      ! Read family
      allocate(ii1(1:npart2))
      read(ilun)ii1
@@ -158,11 +164,6 @@ subroutine init_part
      typep(1:npart2)%tag = ii1
      deallocate(ii1)
 
-     ! Read level
-     allocate(isp(1:npart2))
-     read(ilun)isp
-     levelp(1:npart2)=isp
-     deallocate(isp)
 #ifdef OUTPUT_PARTICLE_POTENTIAL
      ! We don't need the potential, but read it anyway (to get the records correctly for tp/zp)
      read(ilun)
