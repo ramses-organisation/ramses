@@ -366,8 +366,6 @@ subroutine init_file
         endif
 #endif
         
-
-
         dxini(ilevel)=dxini0
         xoff1(ilevel)=xoff10
         xoff2(ilevel)=xoff20
@@ -439,7 +437,9 @@ subroutine init_cosmo
   TYPE(gadgetheadertype) :: gadgetheader 
   integer::i
   integer,parameter::tag=1117
+#ifndef WITHOUTMPI
   integer::dummy_io,info2
+#endif
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -472,7 +472,6 @@ subroutine init_cosmo
            endif
 #endif
            
-
            INQUIRE(file=filename,exist=ok)
            if(.not.ok)then
               if(myid==1)then
@@ -498,7 +497,6 @@ subroutine init_cosmo
               end if
            endif
 #endif
-
 
            dxini(ilevel)=dxini0
            xoff1(ilevel)=xoff10
@@ -837,7 +835,9 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
      
   end do
 
-!  write(*,666)-t
+  if(debug)then
+     write(*,666)-t
+  end if
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable
