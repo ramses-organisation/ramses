@@ -1,22 +1,22 @@
 subroutine init_amr
   use amr_commons
   use hydro_commons
-  use pm_commons  
+  use pm_commons
   use poisson_commons
   use bisection
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
   integer::i,idim,ncell,iskip,ind,ncache,ilevel,ibound,nboundary2
   integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
   integer::noutput2,iout2,ifout2,ilun,info
   integer::ix,iy,iz,ix_max,iy_max,iz_max,nxny,nx_loc
-  real(dp)::mass_sph2 
+  real(dp)::mass_sph2
   integer,dimension(:),allocatable::ind_grid,iig,pos,grid
-  real(dp),dimension(1:MAXOUT)::aout2=1.1d0 
-  real(dp),dimension(1:MAXOUT)::tout2=0.0d0 
+  real(dp),dimension(1:MAXOUT)::aout2=1.1d0
+  real(dp),dimension(1:MAXOUT)::tout2=0.0d0
   real(dp),dimension(:),allocatable::xxg
   integer ,dimension(1:nvector)::c
   real(dp),dimension(1:nvector,1:ndim)::x
@@ -37,7 +37,7 @@ subroutine init_amr
   ncell=ncoarse+twotondim*ngridmax
   nxny=nx*ny
   ix_max=0; iy_max=0; iz_max=0
-  if(ndim>0)ix_max=1 
+  if(ndim>0)ix_max=1
   if(ndim>1)iy_max=1
   if(ndim>2)iz_max=1
   nx_loc=icoarse_max-icoarse_min+1
@@ -254,7 +254,7 @@ subroutine init_amr
 
      ilun=myid+10
      call title(nrestart,nchar)
-     if(IOGROUPSIZEREP>0)then 
+     if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/amr_'//TRIM(nchar)//'.out'
      else
@@ -303,7 +303,7 @@ subroutine init_amr
         write(*,'("namelist =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
              & ndim ,nx ,ny ,nz ,nlevelmax ,noutput, ngridmax     ,nboundary
         if(myid==1)write(*,*)'Restart failed'
-        call clean_stop 
+        call clean_stop
      end if
      ! Old output times
      tout(1:noutput2)=tout2(1:noutput2)
@@ -407,7 +407,7 @@ subroutine init_amr
               read(ilun)iig
               do i=1,ncache
                  prev(ind_grid(i))=iig(i)
-              end do              
+              end do
               ! Read grid center
               do idim=1,ndim
                  read(ilun)xxg
@@ -502,7 +502,7 @@ subroutine init_amr
      end do
 
   end if
-  
+
 end subroutine init_amr
 
 

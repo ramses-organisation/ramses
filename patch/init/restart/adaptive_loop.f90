@@ -51,7 +51,7 @@ subroutine adaptive_loop
 
   nstep_coarse_old=nstep_coarse
 
-  if(myid==1)write(*,*)'Starting time integration' 
+  if(myid==1)write(*,*)'Starting time integration'
 
   do ! Main time loop
 
@@ -146,7 +146,7 @@ subroutine adaptive_loop
               end do
            end if
         end do
-        
+
         ! Build refinement map
         do ilevel=levelmin-1,1,-1
            call flag_fine(ilevel,2)

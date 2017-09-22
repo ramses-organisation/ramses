@@ -14,7 +14,7 @@ subroutine thermal_feedback(ilevel)
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
-  ! This routine computes the thermal energy, the kinetic energy and 
+  ! This routine computes the thermal energy, the kinetic energy and
   ! the metal mass dumped in the gas by stars (SNII, SNIa, winds).
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
@@ -47,7 +47,7 @@ subroutine thermal_feedback(ilevel)
         end if
      endif
 #endif
-   
+
      inquire(file=fileloc,exist=file_exist)
      if(.not.file_exist) then
         open(ilun, file=fileloc, form='formatted')
@@ -86,7 +86,7 @@ subroutine thermal_feedback(ilevel)
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
-        
+
         ! Count star particles
         if(npart1>0)then
            ipart=headp(igrid)
@@ -100,9 +100,9 @@ subroutine thermal_feedback(ilevel)
               ipart=next_part  ! Go to next particle
            end do
         endif
-        
+
         ! Gather star particles
-        if(npart2>0)then        
+        if(npart2>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
@@ -118,7 +118,7 @@ subroutine thermal_feedback(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
                  call feedbk(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -133,7 +133,7 @@ subroutine thermal_feedback(ilevel)
      end do
      ! End loop over grids
      if(ip>0)call feedbk(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  end do 
+  end do
   ! End loop over cpus
 
   if(sf_log_properties) close(ilun)
@@ -365,8 +365,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  mzloss(j)=0d0
                  ethermal(j)=0d0
               endif
-           endif           
-           if(sf_log_properties) then     
+           endif
+           if(sf_log_properties) then
               write(ilun,'(I10)',advance='no') 1
               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
               do idim=1,ndim
@@ -386,7 +386,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                     do irad=0,nener-1
                        e=e+unew(ind_cell(i),inener+irad)
                     enddo
-#endif   
+#endif
 #ifdef SOLVERmhd
                     do idim=1,ndim
                        e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
@@ -430,7 +430,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      else
         RAD_BOOST=0.0
      endif
-  
+
      ! Specific kinetic energy of the star
      ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
           &          +vp(ind_part(j),2)**2 &
@@ -479,7 +479,7 @@ subroutine kinetic_feedback
 #endif
   !----------------------------------------------------------------------
   ! This subroutine compute the kinetic feedback due to SNII and
-  ! imolement this using exploding GMC particles. 
+  ! imolement this using exploding GMC particles.
   ! This routine is called only at coarse time step.
   ! Yohan Dubois
   !----------------------------------------------------------------------
@@ -501,7 +501,7 @@ subroutine kinetic_feedback
   if(ndim.ne.3)return
 
   if(verbose)write(*,*)'Entering make_sn'
-  
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -570,7 +570,7 @@ subroutine kinetic_feedback
   nSN_tot=sum(nSN_icpu(1:ncpu))
 
   if (nSN_tot .eq. 0) return
-  
+
   if(myid==1)then
      write(*,*)'-----------------------------------------------'
      write(*,*)'Number of GMC to explode=',nSN_tot
@@ -628,7 +628,7 @@ subroutine kinetic_feedback
         endif
         igrid=next(igrid)   ! Go to next grid
      end do
-  end do 
+  end do
   ! End loop over levels
 
   ! Remove GMC particle
@@ -733,12 +733,12 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax
-     ! Computing local volume (important for averaging hydro quantities) 
-     dx=0.5D0**ilevel 
+     ! Computing local volume (important for averaging hydro quantities)
+     dx=0.5D0**ilevel
      dx_loc=dx*scale
      vol_loc=dx_loc**ndim
      ! Cells center position relative to grid center position
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iz=(ind-1)/4
         iy=(ind-1-4*iz)/2
         ix=(ind-1-2*iy-4*iz)
@@ -756,7 +756,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
         end do
 
         ! Loop over cells
-        do ind=1,twotondim  
+        do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
@@ -803,7 +803,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
                  end do
               endif
            end do
-           
+
         end do
         ! End loop over cells
      end do
@@ -926,12 +926,12 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax
-     ! Computing local volume (important for averaging hydro quantities) 
-     dx=0.5D0**ilevel 
+     ! Computing local volume (important for averaging hydro quantities)
+     dx=0.5D0**ilevel
      dx_loc=dx*scale
      vol_loc=dx_loc**ndim
      ! Cells center position relative to grid center position
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iz=(ind-1)/4
         iy=(ind-1-4*iz)/2
         ix=(ind-1-2*iy-4*iz)
@@ -949,7 +949,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
         end do
 
         ! Loop over cells
-        do ind=1,twotondim  
+        do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
@@ -991,7 +991,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
                  end do
               endif
            end do
-           
+
         end do
         ! End loop over cells
      end do

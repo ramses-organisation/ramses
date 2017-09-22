@@ -1,7 +1,7 @@
 subroutine init_hydro
   use amr_commons
   use hydro_commons
-#ifdef RT      
+#ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
   implicit none
@@ -20,7 +20,7 @@ subroutine init_hydro
   integer::dummy_io
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -40,7 +40,7 @@ subroutine init_hydro
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     
+
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/hydro_'//TRIM(nchar)//'.out'
@@ -85,7 +85,7 @@ subroutine init_hydro
         if(myid==1) write(*,*)'..so only reading first ',nvar2, &
                   'variables and setting the rest to zero'
      end if
-     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables 
+     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found   =',nvar2
         if(myid==1) write(*,*)'Expected=',nvar
@@ -138,7 +138,7 @@ subroutine init_hydro
                     else if(ivar==ndim+2)then
                        do i=1,ncache
                           xx(i)=xx(i)/(gamma-1d0)
-                          if (uold(ind_grid(i)+iskip,1)>0.)then                          
+                          if (uold(ind_grid(i)+iskip,1)>0.)then
                              xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
 #if NDIM>1
                              xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)
@@ -146,16 +146,16 @@ subroutine init_hydro
 #if NDIM>2
                              xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/uold(ind_grid(i)+iskip,1)
 #endif
-                             else if(uold(ind_grid(i)+iskip,2) /= 0.)then 
+                             else if(uold(ind_grid(i)+iskip,2) /= 0.)then
                                 write(*,*)'Problem in init_hydro with zero or negative density'
                                 call clean_stop
 #if NDIM>1
-                             else if(uold(ind_grid(i)+iskip,3) /= 0.)then 
+                             else if(uold(ind_grid(i)+iskip,3) /= 0.)then
                                 write(*,*)'Problem in init_hydro with zero or negative density'
                                 call clean_stop
 #endif
 #if NDIM>2
-                             else if(uold(ind_grid(i)+iskip,4) /= 0.)then 
+                             else if(uold(ind_grid(i)+iskip,4) /= 0.)then
                                 write(*,*)'Problem in init_hydro with zero or negative density'
                                 call clean_stop
 #endif

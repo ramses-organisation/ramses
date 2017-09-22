@@ -16,7 +16,7 @@ subroutine init_hydro
   real(dp)::lor,tau,h
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -120,7 +120,7 @@ subroutine init_hydro
                     uold(ind_grid(i)+iskip,4)=rr(i)*h*lor**2*vz(i)
                     uold(ind_grid(i)+iskip,5)=rr(i)*h*lor**2-pp(i)
 
-                    do ivar=6,nvar 
+                    do ivar=6,nvar
                        uold(ind_grid(i)+iskip,ivar)= uold(ind_grid(i)+iskip,ivar)*uold(ind_grid(i)+iskip,1)*lor
                     enddo
                  end do

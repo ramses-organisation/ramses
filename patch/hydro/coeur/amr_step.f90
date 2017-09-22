@@ -115,7 +115,7 @@ recursive subroutine amr_step(ilevel,icount)
         else
            call amr_step(ilevel+1,1)
         endif
-     else 
+     else
         ! Otherwise, update time and finer level time-step
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
@@ -137,7 +137,7 @@ recursive subroutine amr_step(ilevel,icount)
      call upload_fine(ilevel)                                   ! Restriction
      if(poisson) call barotrop(ilevel)
      do ivar=1,nvar                                       ! Update boundaries
-        call make_virtual_fine_dp(uold(1,ivar),ilevel)    
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)
   end if

@@ -10,7 +10,7 @@ subroutine dump_all
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
+#endif
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filedir,filedirini,filecmd
   integer::i,itest,info
@@ -37,7 +37,7 @@ subroutine dump_all
 
      filecmd='mkdir -p '//TRIM(filedir)
 
-     if (.not.withoutmkdir) then 
+     if (.not.withoutmkdir) then
 #ifdef NOSYSTEM
         call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
         call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
@@ -54,9 +54,9 @@ subroutine dump_all
      call output_header(filename)
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif     
+#endif
      if(myid==1.and.print_when_io) write(*,*)'End backup header'
-             
+
      if(myid==1.and.print_when_io) write(*,*)'Start backup amr'
      filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
      call backup_amr(filename)
@@ -110,7 +110,7 @@ subroutine dump_all
         filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
         call backup_radiation(filename)
         filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
-        call store_radiation(filename)        
+        call store_radiation(filename)
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -126,7 +126,7 @@ subroutine dump_all
 #endif
         if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
      end if
-     
+
      if(myid==1.and.print_when_io) write(*,*)'Start backup info etc.'
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
@@ -195,7 +195,7 @@ subroutine backup_amr(filename)
 
   !-----------------------------------
   ! Output amr grid in file
-  !-----------------------------------  
+  !-----------------------------------
   ilun=myid+10
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -338,7 +338,7 @@ subroutine backup_amr(filename)
      end do
   end do
   close(ilun)
-  
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -349,7 +349,7 @@ subroutine backup_amr(filename)
      end if
   endif
 #endif
-  
+
 end subroutine backup_amr
 !#########################################################################
 !#########################################################################
@@ -385,7 +385,7 @@ subroutine output_info(filename)
   ! Open file
   fileloc=TRIM(filename)
   open(unit=ilun,file=fileloc,form='formatted')
-  
+
   ! Write run parameters
   write(ilun,'("ncpu        =",I11)')ncpu
   write(ilun,'("ndim        =",I11)')ndim
@@ -408,14 +408,14 @@ subroutine output_info(filename)
   write(ilun,'("unit_d      =",E23.15)')scale_d
   write(ilun,'("unit_t      =",E23.15)')scale_t
   write(ilun,*)
-  
+
   ! Write ordering information
   write(ilun,'("ordering type=",A80)')ordering
   if(ordering=='bisection') then
      do icpu=1,ncpu
-        ! write 2*ndim floats for cpu bound box                                                         
+        ! write 2*ndim floats for cpu bound box
         write(ilun,'(E23.15)')bisec_cpubox_min(icpu,:),bisec_cpubox_max(icpu,:)
-        ! write 1 float for cpu load                                                                    
+        ! write 1 float for cpu load
         write(ilun,'(E23.15)')dble(bisec_cpu_load(icpu))
      end do
   else
@@ -462,7 +462,7 @@ subroutine output_header(filename)
      ! Open file
      fileloc=TRIM(filename)
      open(unit=ilun,file=fileloc,form='formatted')
-     
+
      ! Write header information
      write(ilun,*)'Total number of particles'
      write(ilun,*)npart_tot

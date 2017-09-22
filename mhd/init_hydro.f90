@@ -21,7 +21,7 @@ subroutine init_hydro
   integer,parameter::tag=1108
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -54,7 +54,7 @@ subroutine init_hydro
      endif
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     ! Wait for the token                                                                                    
+     ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -171,7 +171,7 @@ subroutine init_hydro
         end do
      end do
      close(ilun)
-     ! Send the token                                                                                                                                  
+     ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then

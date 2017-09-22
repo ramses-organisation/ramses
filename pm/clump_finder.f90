@@ -15,8 +15,8 @@ subroutine clump_finder(create_output,keep_alive)
   ! Description of clump_finder:
   ! The clumpfinder detect first all cells having a density above
   ! a given threshold. These cells are linked to their densest neighbors,
-  ! defining a peak patch around each local density maximum. 
-  ! If a so called peak patch is considered irrelevant, it is merged to its 
+  ! defining a peak patch around each local density maximum.
+  ! If a so called peak patch is considered irrelevant, it is merged to its
   ! neighboring peak patch with the highest saddle density.
   ! Parameters are read in a namelist and they are:
   ! - density_threshold: defines the cell population to consider
@@ -38,9 +38,9 @@ subroutine clump_finder(create_output,keep_alive)
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
-  ! When called from the create_sink, particles are all residing at level 1, 
+  ! When called from the create_sink, particles are all residing at level 1,
   ! otherwise at levelmin.
-  
+
   if (create_output)then
      levelmin_part = levelmin
   else
@@ -71,7 +71,7 @@ subroutine clump_finder(create_output,keep_alive)
   ntest=0
   do ilevel=levelmin,nlevelmax
      if(ivar_clump==0)then ! action 1: count and flag
-        call count_test_particle(rho(1),ilevel,0,1) 
+        call count_test_particle(rho(1),ilevel,0,1)
      else
         if(hydro)then      ! action 1: count and flag
            call count_test_particle(uold(1,ivar_clump),ilevel,0,1)
@@ -101,7 +101,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   ! Allocate arrays and create list of cells above the threshold
   !------------------------------------------------------------------------
-  if (ntest>0) then 
+  if (ntest>0) then
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
      denp=0.d0; levp=0; imaxp=0; icellp=0
   endif
@@ -124,17 +124,17 @@ subroutine clump_finder(create_output,keep_alive)
   ! Sort cells above threshold according to their density
   !-----------------------------------------------------------------------
   if (ntest>0) then
-     allocate(testp_sort(ntest)) 
+     allocate(testp_sort(ntest))
      do i=1,ntest
         denp(i)=-denp(i)
         testp_sort(i)=i
      end do
-     call quick_sort_dp(denp(1),testp_sort(1),ntest) 
+     call quick_sort_dp(denp(1),testp_sort(1),ntest)
      deallocate(denp)
   endif
 
   !-----------------------------------------------------------------------
-  ! Count number of density peaks and share info across processors 
+  ! Count number of density peaks and share info across processors
   !-----------------------------------------------------------------------
   npeaks=0
   if(ntest>0)then
@@ -164,7 +164,7 @@ subroutine clump_finder(create_output,keep_alive)
 #endif
   if (myid==1.and.npeaks_tot>0) &
        & write(*,'(" Total number of density peaks found=",I10)')npeaks_tot
-  
+
   !----------------------------------------------------------------------
   ! Determine peak-ids positions for each cpu
   !----------------------------------------------------------------------
@@ -202,7 +202,7 @@ subroutine clump_finder(create_output,keep_alive)
 
   !---------------------------------------------------------------------
   ! Determine peak-patches around each peak
-  ! Main step: 
+  ! Main step:
   ! - order cells in descending density
   ! - get peak id from densest neighbor
   ! - nmove is number of peak id's passed along
@@ -223,7 +223,7 @@ subroutine clump_finder(create_output,keep_alive)
      istep=istep+1
      nmove_tot=nmove
      nzero_tot=nzero
-#ifndef WITHOUTMPI 
+#ifndef WITHOUTMPI
 #ifndef LONGINT
      call MPI_ALLREDUCE(nmove_tot,nmove_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(nzero_tot,nzero_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
@@ -233,7 +233,7 @@ subroutine clump_finder(create_output,keep_alive)
 #endif
      nmove_tot=nmove_all
      nzero_tot=nzero_all
-#endif   
+#endif
      if(ntest_all>0.and.verbose)write(*,*)"istep=",istep,"nmove=",nmove_tot
   end do
 
@@ -248,7 +248,7 @@ subroutine clump_finder(create_output,keep_alive)
      ! Compute the saddle point density matrix
      !------------------------------------------
      if(ivar_clump==0)then
-        call saddlepoint_search(rho(1)) 
+        call saddlepoint_search(rho(1))
      else
         if(hydro)then
            call saddlepoint_search(uold(1,ivar_clump))
@@ -276,7 +276,7 @@ subroutine clump_finder(create_output,keep_alive)
            call compute_clump_properties(uold(1,ivar_clump))
         endif
      endif
-     
+
      !------------------------------------------
      ! Merge clumps into haloes
      !------------------------------------------
@@ -297,7 +297,7 @@ subroutine clump_finder(create_output,keep_alive)
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
      endif
-     
+
   end if
 
   if (.not. keep_alive)then
@@ -345,7 +345,7 @@ subroutine count_test_particle(xx,ilevel,nskip,action)
   if(numbtot(1,ilevel)==0) return
 
   if(verbose .and. myid==1)then
-     write(*,*)' Entering count test particle for level=',& 
+     write(*,*)' Entering count test particle for level=',&
           & ilevel,' and action=',action
   endif
 
@@ -369,13 +369,13 @@ subroutine count_test_particle(xx,ilevel,nskip,action)
            ok(i)=ok(i).and.xx(ind_cell(i))>density_threshold !check density
         end do
 
-        select case (action) 
+        select case (action)
         case (1) !count and flag
            ! Compute test particle map
            do i=1,ngrid
               flag2(ind_cell(i))=0
               if(ok(i))then
-                 flag2(ind_cell(i))=1 
+                 flag2(ind_cell(i))=1
                  ntest=ntest+1
               endif
            end do
@@ -403,7 +403,7 @@ subroutine count_peaks(xx,n)
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -414,8 +414,8 @@ subroutine count_peaks(xx,n)
   !----------------------------------------------------------------------
   integer::ilevel,next_level,ipart,jpart,ip
   integer,dimension(1:nvector)::ind_part,ind_cell,ind_max
-  
-  ! Group chunks of nvector cells (of the same level) and send them 
+
+  ! Group chunks of nvector cells (of the same level) and send them
   ! to the routine that constructs the neighboring cells
   ip=0
   do ipart=1,ntest
@@ -450,7 +450,7 @@ subroutine flag_peaks(xx,ipeak)
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -478,7 +478,7 @@ subroutine propagate_flag(nmove,nzero)
   use clfind_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::nmove,nzero
   !----------------------------------------------------------------------
@@ -546,11 +546,11 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
   !------------------------------------------------------------
-  ! This routine constructs all neighboring leaf cells at levels 
+  ! This routine constructs all neighboring leaf cells at levels
   ! ilevel-1, ilevel, ilevel+1.
   ! Depending on the action case value, fuctions performing
   ! further checks for the neighbor cells are called.
-  ! xx is on input the array containing the density field  
+  ! xx is on input the array containing the density field
   !------------------------------------------------------------
 
   integer::j,ind,nx_loc,i1,j1,k1,i2,j2,k2,i3,j3,k3,ix,iy,iz
@@ -568,12 +568,12 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids 
+  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
 #if NDIM==3
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -606,13 +606,13 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
      xc(ind,2)=(dble(iy)-0.5D0)*dx
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! some preliminary action...
   do j=1,np
      indv(j)=(ind_cell(j)-ncoarse-1)/ngridmax+1 ! cell position in grid
      ind_grid(j)=ind_cell(j)-ncoarse-(indv(j)-1)*ngridmax ! grid index
      density_max(j)=xx(ind_cell(j))*1.0001 ! get cell density (1.0001 probably not necessary)
-     ind_max(j)=ind_cell(j) !save cell index   
+     ind_max(j)=ind_cell(j) !save cell index
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
 
@@ -625,10 +625,10 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   !================================
   ntp=0
   if(ilevel>levelmin)then
-     ! Generate 2x2x2  neighboring cells at level ilevel-1     
+     ! Generate 2x2x2  neighboring cells at level ilevel-1
      do k1=k1min,k1max
         do j1=j1min,j1max
-           do i1=i1min,i1max                                            
+           do i1=i1min,i1max
               ntp=ntp+1
               xrel(ntp,1)=(2*i1-1)*dx_loc
               xrel(ntp,2)=(2*j1-1)*dx_loc
@@ -654,7 +654,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         end do
      end do
   end do
-  
+
   !===================================
   ! generate neighbors at level ilevel+1
   !====================================
@@ -684,7 +684,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
 
   ! initialze logical array
   okpeak=.true.
-  
+
   do j=1,np
      ok=.false.
      do idim=1,ndim
@@ -693,18 +693,18 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
      end do
      grid(1)=ind_grid(j)
      call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
-     
+
      do ipos=1,ntestpos
         if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
      end do
-     
+
      ! check those neighbors
      if (action==1)call peakcheck(xx(1),cell_index,okpeak(j),ok,density_max(j),ind_max(j),ntestpos)
      if (action==4)call saddlecheck(xx(1),ind_cell(j),cell_index,clump_nr(j),ok,ntestpos)
-     
+
   end do
-     
-  ! Count peaks (only one action case left as case 2 and 3 are dealt with 
+
+  ! Count peaks (only one action case left as case 2 and 3 are dealt with
   ! outside neighborsearch
   if (action==1) then
      do j=1,np
@@ -712,7 +712,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
            count=count+1
            ind_max(j)=-1
         endif
-     end do  
+     end do
   end if
 
 #endif
@@ -737,11 +737,11 @@ subroutine peakcheck(xx,cell_index,okpeak,ok,density_max,ind_max,np)
   integer::np,j
 
 
-  do j=1,np           
-     ! only consider leaf-cells at correct level                   
-     if(ok(j))then    
+  do j=1,np
+     ! only consider leaf-cells at correct level
+     if(ok(j))then
         ! if cell is denser than densest neighbor
-        if(xx(cell_index(j))>density_max)then  
+        if(xx(cell_index(j))>density_max)then
            okpeak=.false.                 ! cell is no peak
            density_max=xx(cell_index(j))  ! change densest neighbor dens
            ind_max=cell_index(j)          ! change densest neighbor index
@@ -769,7 +769,7 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
   integer::np,j,ipeak,jpeak,clump_nr,ind_cell
 
   do j=1,np
-     neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in 
+     neigh_cl(j)=flag2(cell_index(j))!index of the clump the neighboring cell is in
   end do
   do j=1,np
      ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
@@ -833,7 +833,7 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
      if(zz>dble(nz))zz=zz-dble(nz)
 
      igrid=igrid0
-     do j=1,ilevel 
+     do j=1,ilevel
         ii=1; jj=1; kk=1
         if(xx<xg(igrid,1))ii=0
         if(yy<xg(igrid,2))jj=0
@@ -859,19 +859,19 @@ subroutine read_clumpfind_params()
   include 'mpif.h'
 #endif
 
-  namelist/clumpfind_params/ivar_clump,& 
+  namelist/clumpfind_params/ivar_clump,&
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,age_cut_clfind
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  
-  ! Read namelist file 
+
+  ! Read namelist file
   rewind(1)
   read(1,NML=clumpfind_params,END=121)
   goto 122
 121 if(myid==1)write(*,*)'You did not set up namelist &CLUMPFIND_PARAMS in parameter file.'
 
-  if (.not. sink)then 
+  if (.not. sink)then
      if(myid==1)write(*,*)'That block should a least contain a density '
      if(myid==1)write(*,*)'threshold n_clfind [parts/cc] or rho_clfind [g/cc]!'
      if(myid==1)write(*,*)'aborting...'
@@ -881,7 +881,7 @@ subroutine read_clumpfind_params()
 122 rewind(1)
 
   if (density_threshold>0.)then
-     if (rho_clfind>0. .or. n_clfind >0.)then     
+     if (rho_clfind>0. .or. n_clfind >0.)then
         if(myid==1)write(*,*)'you provided the density threshold in code units.'
         if(myid==1)write(*,*)'Ignoring the input in physical units...'
      end if
@@ -943,7 +943,7 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   real(dp),dimension(1:3),save::skip_loc
   real(dp),dimension(1:twotondim,1:3),save::xc
   logical,dimension(1:99),save::ok
- 
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -1030,16 +1030,16 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
         cell_lev(j)=ilevel-1
      end if
   end do
-  
+
   ! Compute parent cell position
   do idim=1,ndim
      do j=1,np
         icd(j,idim)=id(j,idim)-2*igd(j,idim)
      end do
   end do
-        
+
   call geticell99(icell,icd,np)
-  
+
   ! Compute parent cell adress
   do j=1,np
      if(ok(j))then
@@ -1083,7 +1083,7 @@ subroutine geticell99(icell,icd,np)
   ! for certain coordinates (0,1 along each direction)
   ! put into a subroutine to make the code look less ugly
   integer::j
-    
+
 #if NDIM==1
   do j=1,np
      icell(j)=1+icd(j,1)
@@ -1099,7 +1099,7 @@ subroutine geticell99(icell,icd,np)
      icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
   end do
 #endif
-  
+
 end subroutine geticell99
 !##############################################################################
 !##############################################################################
@@ -1129,7 +1129,7 @@ subroutine rho_only(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
@@ -1195,7 +1195,7 @@ subroutine rho_only(ilevel)
   end do
 
 111 format('   Entering rho_only for level ',I2)
-  
+
 end subroutine rho_only
 !##############################################################################
 !##############################################################################
@@ -1231,7 +1231,7 @@ subroutine rho_only_level(ilevel)
      ! Loop over grids
      igrid=headl(icpu,ilevel)
      ig=0
-     ip=0   
+     ip=0
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
@@ -1257,11 +1257,11 @@ subroutine rho_only_level(ilevel)
         endif
 
         ! Gather elligible particles
-        if(npart2>0)then        
+        if(npart2>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
-           
+
            ! Loop over particles
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
@@ -1309,7 +1309,7 @@ subroutine rho_only_level(ilevel)
               ipart=next_part  ! Go to next particle
            end do
            ! End loop over particles
-           
+
         end if
 
         igrid=next(igrid)   ! Go to next grid

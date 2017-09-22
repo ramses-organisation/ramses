@@ -8,7 +8,7 @@ MODULE gadgetreadfilemod
 !
 !
 !
-! Data type corresponding to gadget file header 
+! Data type corresponding to gadget file header
   TYPE gadgetheadertype
      INTEGER*4, DIMENSION(6) :: npart
      REAL*8, DIMENSION(6) :: mass
@@ -78,7 +78,7 @@ CONTAINS
           RETURN
        end if
     end if
-       
+
     !OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')
     OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access='stream')
 

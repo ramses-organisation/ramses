@@ -1,10 +1,10 @@
 !************************************************************************
-SUBROUTINE rt_godunov_fine(ilevel, dt)  
+SUBROUTINE rt_godunov_fine(ilevel, dt)
 
 ! This routine is a wrapper to the grid solver for radiative transfer.
 ! Small grids (2x2x2) are gathered from level ilevel and sent to the
 ! RT solver. On entry, RT variables are gathered from array rtuold.
-! On exit, rtunew has been updated. 
+! On exit, rtunew has been updated.
 !------------------------------------------------------------------------
   use amr_commons
   use rt_hydro_commons
@@ -92,8 +92,8 @@ SUBROUTINE rt_set_uold(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! If rt_smooth==true, then cooling_fine takes care of this, adding to 
-  ! the RT variables incrementally during the cooling-substeps. 
+  ! If rt_smooth==true, then cooling_fine takes care of this, adding to
+  ! the RT variables incrementally during the cooling-substeps.
   ! This is useful to keep down the cooling-substepping.
   if(rt_smooth) return
 
@@ -124,7 +124,7 @@ SUBROUTINE rt_set_uold(ilevel)
      ! End photon conservation fix
 
   end do
-  
+
 111 format('   Entering rt_set_uold for level ',i2)
 
 END SUBROUTINE rt_set_uold
@@ -139,7 +139,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 ! since contribution from finer levels has already been taken into
 ! account. Conservative variables are updated and stored in array rtunew(:),
 ! both at the current level and at the coarser level if necessary.
-! 
+!
 ! in ind_grid: Indexes of grids/octs to solve in
 ! in ncache:   Length of ind_grid (i.e. number of grids)
 ! in ilevel:   Level at which the grids are
@@ -166,7 +166,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
   integer,dimension(1:nvector),save::ind_exist,ind_nexist
 
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
+  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
@@ -207,23 +207,23 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells
-  ! of grid (ilevel-1). ind_cell are indexes 
+  ! of grid (ilevel-1). ind_cell are indexes
   ! in rtuold.
   !------------------------------------------
   do i=1,ncache
-     ind_cell(i)=father(ind_grid(i)) 
+     ind_cell(i)=father(ind_grid(i))
   end do
   ! ..and father cells of neighbor grids:
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
   ! now for the parent cell (ind_cell(i)) of each grid i in cache:
   !
-  ! nbors_father_cells contains indexes of all it's neighbor cells 
+  ! nbors_father_cells contains indexes of all it's neighbor cells
   ! (ilevel-1), plus itself, total 3^ndim.
-  ! 
-  ! nbors_father_grids contains indexes of all the neighboring 
-  ! (and containing) grids of the father cell, total 2^ndim 
-  ! (in case interpolation is needed I guess) 
-  
+  !
+  ! nbors_father_grids contains indexes of all the neighboring
+  ! (and containing) grids of the father cell, total 2^ndim
+  ! (in case interpolation is needed I guess)
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -231,15 +231,15 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-     
+
      ! Check if neighbor has a grid (or is just a cell)
 
-     ! # of neighbors (out of all the ncache cells) at k1, j1, i1 
+     ! # of neighbors (out of all the ncache cells) at k1, j1, i1
      ! that are only a cell (not a grid):
-     nbuffer=0       
-     ! # of neighbors (out of all the ncache cells) at k1, j1, i1 
+     nbuffer=0
+     ! # of neighbors (out of all the ncache cells) at k1, j1, i1
      ! that have subgrids:
-     nexist=0        
+     nexist=0
 
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
@@ -255,17 +255,17 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      end do
      !--------------------------------------------------------------------
      ! we should now have: nexist+nbuffer==ncache
-     ! 
-     ! ind_exist has size nexist and contains indexes of cells in cache 
+     !
+     ! ind_exist has size nexist and contains indexes of cells in cache
      ! that have a neighboring father grid at k1, j1, i1
      !
-     ! ind_nexist has size nbuffer and contains indexes of cells in cache 
+     ! ind_nexist has size nbuffer and contains indexes of cells in cache
      ! that only have a neighboring father cell at k1, j1, i1
      !
-     ! ind_buffer has size nbuffer and contains tree indexes of these 
-     ! father nongrid-cells 
+     ! ind_buffer has size nbuffer and contains tree indexes of these
+     ! father nongrid-cells
      !--------------------------------------------------------------------
-     
+
      if(nbuffer>0)then
         ! For those nongrid cells we interpolate variables from parent cells:
         call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
@@ -286,7 +286,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            ind_nbor = son(nbors_father_cells(i,ind_father))
            if(ind_nbor .le. 0) then
               ! Neighbor is leaf.......need container grid to get position
-              ind_nbor = (nbors_father_cells(i,ind_father)-ncoarse-1)    & 
+              ind_nbor = (nbors_father_cells(i,ind_father)-ncoarse-1)    &
                    / ngridmax + 1
               ind_nbor = nbors_father_cells(i,ind_father)                &
                    - ncoarse - (ind_nbor-1)*ngridmax
@@ -311,12 +311,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         do i=1,nexist
            ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
         end do
-        
+
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2 ! From -1 to 4 over outer loop, but
         if(ndim>1)j3=1+2*(j1-1)+j2 ! only over 2x2x2 indexes in inner loop
         if(ndim>2)k3=1+2*(k1-1)+k2
-        
+
         ! Gather hydro variables
 
         ! RT outflow boundary begin---------------------------------------
@@ -324,7 +324,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            do i=1,nexist
               if (rt_per_bnd(ind_exist(i))) then
                  uloc(ind_exist(i),i3,j3,k3,1:nrtvar) =  0.D0
-              else              
+              else
                  do ivar=1,nrtvar
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
                                                   rtuold(ind_cell(i),ivar)
@@ -368,7 +368,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         do i=1,nbuffer
            ok(ind_nexist(i),i3,j3,k3)=.false.
         end do
-        
+
      end do
      end do
      end do
@@ -387,7 +387,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   end do
 
   !----------------------------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !----------------------------------------------------------------------
   if (rt_nsubcycle == 1)then
   do idim=1,ndim
@@ -418,7 +418,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-     do k2=k2min,k2max      ! all from 0 to 1 
+     do k2=k2min,k2max      ! all from 0 to 1
      do j2=j2min,j2max      ! => update 2x2x2 cells
      do i2=i2min,i2max      ! i.e. update one grid at level ilevel
         ind_son=1+i2+2*j2+4*k2
@@ -456,7 +456,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
         !----------------------
         ! Left flux at boundary
-        !----------------------     
+        !----------------------
         ! Check if grids sits near left boundary
         ! and gather neighbor father cells index
         nb_noneigh=0
@@ -484,7 +484,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
         !-----------------------
         ! Right flux at boundary
-        !-----------------------     
+        !-----------------------
         ! Check if grids sits near right boundary
         ! and gather neighbor father cells index
         nb_noneigh=0

@@ -43,7 +43,7 @@ subroutine flag_coarse
         end do
      end do
   end do
-  if(verbose)write(*,112)nflag  
+  if(verbose)write(*,112)nflag
   call make_virtual_coarse_int(flag1(1))
   if(simple_boundary)call make_boundary_coarse
 
@@ -82,7 +82,7 @@ subroutine flag_fine(ilevel,icount)
 
   ! Step 3: if cell satisfies user-defined physical citeria,
   ! then flag cell for refinement.
-  call userflag_fine(ilevel)    
+  call userflag_fine(ilevel)
   if(verbose)write(*,*) '  ==> end step 3',nflag
 
   ! Step 4: make nexpand cubic buffers around flagged cells.
@@ -155,7 +155,7 @@ subroutine init_flag(ilevel)
         end do
      end if
   end if
-  
+
   ! Update boundaries
   call make_virtual_fine_int(flag1(1),ilevel)
   if(simple_boundary)call make_boundary_flag(ilevel)
@@ -170,7 +170,7 @@ subroutine test_flag(ilevel)
   implicit none
   integer::ilevel
   !---------------------------------------------------------
-  ! This routine sets flag1 to 1 if cell is refined and 
+  ! This routine sets flag1 to 1 if cell is refined and
   ! contains a flagged son or a refined son.
   ! This ensures that refinement rules are satisfied.
   !---------------------------------------------------------
@@ -215,9 +215,9 @@ subroutine ensure_ref_rules(ilevel)
   implicit none
   integer::ilevel
   !-----------------------------------------------------------------
-  ! This routine determines if all grids at level ilevel are 
-  ! surrounded by 26 neighboring grids, in order to enforce the 
-  ! strict refinement rule. 
+  ! This routine determines if all grids at level ilevel are
+  ! surrounded by 26 neighboring grids, in order to enforce the
+  ! strict refinement rule.
   ! Used in case of adaptive time steps only.
   !-----------------------------------------------------------------
   integer::i,ind,iskip,igrid,ngrid,ncache
@@ -233,14 +233,14 @@ subroutine ensure_ref_rules(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Gather neighboring father cells (should be present anytime !)
      do i=1,ngrid
         ind_cell(i)=father(ind_grid(i))
      end do
      call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids &
           & ,ngrid,ilevel)
-     
+
      do i=1,ngrid
         ok(i)=.true.
      end do
@@ -253,7 +253,7 @@ subroutine ensure_ref_rules(ilevel)
            if(son(ind_cell(i))==0)ok(i)=.false.
         end do
      end do
-     
+
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
@@ -270,7 +270,7 @@ subroutine ensure_ref_rules(ilevel)
   call make_virtual_fine_int(flag1(1),ilevel)
   if(simple_boundary)call make_boundary_flag(ilevel)
 
-end subroutine ensure_ref_rules 
+end subroutine ensure_ref_rules
 !###############################################################
 !###############################################################
 !###############################################################
@@ -283,7 +283,7 @@ subroutine userflag_fine(ilevel)
   integer::ilevel
   ! -------------------------------------------------------------------
   ! This routine flag for refinement cells that satisfies
-  ! some user-defined physical criteria at the level ilevel. 
+  ! some user-defined physical criteria at the level ilevel.
   ! -------------------------------------------------------------------
   integer::i,j,ncache,nok,ix,iy,iz,iskip
   integer::igrid,ind,idim,ngrid,ivar
@@ -300,13 +300,13 @@ subroutine userflag_fine(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  
+
   logical::prevent_refine
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
 
-  ! Conversion factor from user units to cgs units                              
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Mesh size at level ilevel
@@ -323,28 +323,28 @@ subroutine userflag_fine(ilevel)
 
   ! Do we prevent the whole level from refining ?
   prevent_refine=.false.
-  
-  ! Prevent from refining too much relative to available star mass res.      
-  ! This translates into a constant physical res., except at very high z.    
+
+  ! Prevent from refining too much relative to available star mass res.
+  ! This translates into a constant physical res., except at very high z.
   if(star)then
-     ! Finest cell size                                                      
+     ! Finest cell size
      dx_min=(0.5D0**nlevelmax)*scale
      vol_min=dx_min**ndim
-     ! Typical ISM mass density from H/cc to code units                      
+     ! Typical ISM mass density from H/cc to code units
      nISM = n_star
      nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
      nISM = MAX(nCOM,nISM)
      d0   = nISM/scale_nH
-     ! Star particle mass                                                    
+     ! Star particle mass
      mstar=n_star/(scale_nH*aexp**3)*vol_min
      ! Test is designed so that nlevelmax is activated at aexp \simeq 0.8
      if(d0*(dx_loc/2.0)**ndim.lt.mstar/2d0)prevent_refine=.true.
   endif
-  
-  ! Prevent from refining too much relative to available sink mass res.      
-  ! This translates into a constant physical res., except at very high z.    
+
+  ! Prevent from refining too much relative to available sink mass res.
+  ! This translates into a constant physical res., except at very high z.
   if(sink)then
-     ! Finest cell size                                                      
+     ! Finest cell size
      dx_min=(0.5D0**nlevelmax)*scale
      vol_min=dx_min**ndim
      ! Typical ISM mass density from H/cc to code units
@@ -352,12 +352,12 @@ subroutine userflag_fine(ilevel)
      nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
      nISM = MAX(nCOM,nISM)
      d0   = nISM/scale_nH
-     ! Sink particle mass                                                    
+     ! Sink particle mass
      msnk=n_sink/(scale_nH*aexp**3)*vol_min
-     ! Test is designed so that nlevelmax is activated at aexp \simeq 0.8    
+     ! Test is designed so that nlevelmax is activated at aexp \simeq 0.8
      if(d0*(dx_loc/2.0)**ndim.lt.msnk/2d0)prevent_refine=.true.
   endif
-  
+
   if(prevent_refine)return
 
   ! Set position of cell centers relative to grid center
@@ -421,7 +421,7 @@ subroutine userflag_fine(ilevel)
               nok=nok+1
            end if
         end do
-        
+
         do i=1,ngrid
            if(ok(i))flag1(ind_cell(i))=1
         end do
@@ -496,7 +496,7 @@ subroutine poisson_refine(ind_cell,ok,ncell,ilevel)
         endif
      endif
 
-  else 
+  else
 
      if(hydro)then
         d_scale=mass_sph/vol_loc
@@ -568,11 +568,11 @@ subroutine smooth_fine(ilevel)
   integer::ilevel
   ! -------------------------------------------------------------------
   ! Dilatation operator.
-  ! This routine makes one cell width cubic buffer around flag1 cells 
+  ! This routine makes one cell width cubic buffer around flag1 cells
   ! at level ilevel by following these 3 steps:
-  ! step 1: flag1 cells with at least 1 flag1 neighbors (if ndim > 0) 
-  ! step 2: flag1 cells with at least 2 flag1 neighbors (if ndim > 1) 
-  ! step 3: flag1 cells with at least 2 flag1 neighbors (if ndim > 2) 
+  ! step 1: flag1 cells with at least 1 flag1 neighbors (if ndim > 0)
+  ! step 2: flag1 cells with at least 2 flag1 neighbors (if ndim > 1)
+  ! step 3: flag1 cells with at least 2 flag1 neighbors (if ndim > 2)
   ! Array flag2 is used as temporary workspace.
   ! -------------------------------------------------------------------
   integer::ismooth
@@ -581,7 +581,7 @@ subroutine smooth_fine(ilevel)
   integer,dimension(1:3)::n_nbor
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
-  
+
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
 
@@ -656,11 +656,11 @@ subroutine count_nbors(igridn,ind,n_nbor,nn)
   integer::ind,nn,n_nbor
   integer,dimension(1:nvector,0:twondim)::igridn
   !----------------------------------------------------
-  ! This routine computes the number of neighbors 
+  ! This routine computes the number of neighbors
   ! for cell ind in grid igridn(:,0) for which flag1=1.
   ! The user must provide the neighboring grids index
   ! stored in igridn(:,:) and the threshold n_nbor
-  ! If the number of flag1 neighbors exceeds n_nbor, 
+  ! If the number of flag1 neighbors exceeds n_nbor,
   ! then cell is marked with flag2=1
   !----------------------------------------------------
   integer::i,in,iskip
@@ -695,11 +695,11 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   integer::ind,nn,n_nbor
   integer,dimension(1:nvector,0:twondim)::igridn
   !----------------------------------------------------
-  ! This routine computes the number of neighbors 
+  ! This routine computes the number of neighbors
   ! for cell ind in grid igridn(:,0) for which flag2=1.
   ! The user must provide the neighboring grids index
   ! stored in igridn(:,:) and the threshold n_nbor
-  ! If the number of flag2 neighbors exceeds n_nbor, 
+  ! If the number of flag2 neighbors exceeds n_nbor,
   ! then cell is marked with flag1=1
   !----------------------------------------------------
   integer::i,in,iskip
@@ -753,7 +753,7 @@ subroutine init_refmap_fine(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  
+
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
@@ -782,7 +782,7 @@ subroutine init_refmap_fine(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -792,7 +792,7 @@ subroutine init_refmap_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -817,7 +817,7 @@ subroutine init_refmap_fine(ilevel)
      if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
      call clean_stop
   endif
-     
+
   !-------------------------------------------------------------------------
   ! First step: compute level boundaries in terms of initial condition array
   !-------------------------------------------------------------------------
@@ -825,7 +825,7 @@ subroutine init_refmap_fine(ilevel)
      i1_min=n1(ilevel)+1; i1_max=0
      i2_min=n2(ilevel)+1; i2_max=0
      i3_min=n3(ilevel)+1; i3_max=0
-     do ind=1,twotondim           
+     do ind=1,twotondim
         do i=1,ncache
            igrid=active(ilevel)%igrid(i)
            xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
@@ -875,7 +875,7 @@ subroutine init_refmap_fine(ilevel)
         end if
      endif
 #endif
-     
+
 
      ilun=ncpu+myid+10
      open(ilun,file=filename,form='unformatted')
@@ -900,7 +900,7 @@ subroutine init_refmap_fine(ilevel)
         end if
      endif
 #endif
-     
+
   else
      if(myid==1)then
         open(10,file=filename,form='unformatted')
@@ -926,9 +926,9 @@ subroutine init_refmap_fine(ilevel)
      end do
      if(myid==1)close(10)
   endif
-  
+
   if(ncache>0)then
-     
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -956,8 +956,8 @@ subroutine init_refmap_fine(ilevel)
 
   ! Deallocate initial conditions array
   if(ncache>0)deallocate(init_array)
-  deallocate(init_plane) 
-  
+  deallocate(init_plane)
+
 111 format('   Entering init_refmap_fine ',I2)
 
 end subroutine init_refmap_fine

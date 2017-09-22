@@ -16,7 +16,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, 
+  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E,
   ! U(i,6:8): Bleft, U(i,nvar+1:nvar+3): Bright
   ! U is in user units.
   ! ibound is the index of the boundary region defined in the namelist.
@@ -28,7 +28,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
         u(i,ivar)=boundary_var(ibound,ivar)
      end do
   end do
-  
+
   ! Add here, if you wish, some user-defined boudary conditions
   ! ........
 

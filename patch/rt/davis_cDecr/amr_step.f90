@@ -115,7 +115,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Particle leakage
   !-----------------
   if(pic)call make_tree_fine(ilevel)
-  
+
   !------------------------
   ! Output results to files
   !------------------------
@@ -163,7 +163,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! -------------------------------------------------------------------
      !tscale=3d-2 ! 0.2 t_star
      !rt_c_old=rt_c
-     !rt_c_cgs = c_cgs * (exp(-t/tscale) * (1.-rt_c_fraction) + rt_c_fraction)     
+     !rt_c_cgs = c_cgs * (exp(-t/tscale) * (1.-rt_c_fraction) + rt_c_fraction)
      !if(myid==1) write(*,*) 'Lightspeed fraction = ', rt_c_cgs/c_cgs
      !call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      !rt_c=rt_c_cgs/scale_v
@@ -177,7 +177,7 @@ recursive subroutine amr_step(ilevel,icount)
      stepscale=3d4
      rt_c_old=rt_c
      rt_c_cgs = c_cgs * (exp(-nstep_coarse/stepscale) &
-          * (1.-rt_c_fraction) + rt_c_fraction)     
+          * (1.-rt_c_fraction) + rt_c_fraction)
      if(myid==1) write(*,*) 'Lightspeed fraction, t = ', rt_c_cgs/c_cgs, t
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      rt_c=rt_c_cgs/scale_v
@@ -211,12 +211,12 @@ recursive subroutine amr_step(ilevel,icount)
   ! Gravity update
   !---------------
   if(poisson)then
- 
+
      ! Remove gravity source term with half time step and old force
      if(hydro)then
         call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
      endif
-     
+
      ! Compute gravitational potential
      if(ilevel>levelmin)then
         if(ilevel .ge. cg_levelmin) then
@@ -295,7 +295,7 @@ recursive subroutine amr_step(ilevel,icount)
         else
            call amr_step(ilevel+1,1)
         endif
-     else 
+     else
         ! Otherwise, update time and finer level time-step
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
@@ -314,12 +314,12 @@ recursive subroutine amr_step(ilevel,icount)
   ! Add stellar radiation sources
   if(rt.and.rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 #endif
-  
-  ! Density threshold or Bondi accretion onto sink particle                                                                                
+
+  ! Density threshold or Bondi accretion onto sink particle
   if(sink)then
      call grow_sink(ilevel,.false.)
   end if
-  
+
   !---------------
   ! Move particles
   !---------------
@@ -357,12 +357,12 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! ! Density threshold or Bondi accretion onto sink particle
      ! if(sink)then
-     !    !this is a trick to temporarily solve the issue with sink accretion 
+     !    !this is a trick to temporarily solve the issue with sink accretion
      !    !from ghost zones. Only an option for simulations without dark matter.
      !    if (.not. cosmo)then
      !       call make_tree_fine(ilevel)
      !       call virtual_tree_fine(ilevel)
-     !       ! assuming all sink cloud parts sit on levelmax 
+     !       ! assuming all sink cloud parts sit on levelmax
      !       ! it's better to compute the accretion_rate based on
      !       ! the updated values
      !       call collect_acczone_avg(ilevel)
@@ -371,7 +371,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! end if
 
      ! Add gravity source term with half time step and old force
-     ! in order to complete the time step 
+     ! in order to complete the time step
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator
@@ -401,7 +401,7 @@ recursive subroutine amr_step(ilevel,icount)
      call rt_upload_fine(ilevel)
   endif
 #endif
-  
+
   !-------------------------------
   ! Source term in leaf cells only
   !-------------------------------

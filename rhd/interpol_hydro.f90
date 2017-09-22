@@ -1,5 +1,5 @@
 !###########################################################
-!########################################################### 
+!###########################################################
 !###########################################################
 !###########################################################
 subroutine upload_fine(ilevel)
@@ -18,7 +18,7 @@ subroutine upload_fine(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
- 
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -26,25 +26,25 @@ subroutine upload_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather split cells
         do i=1,ngrid
            ok(i)=son(ind_cell(i))>0
         end do
-        
+
         ! Count split cells
         nsplit=0
         do i=1,ngrid
            if(ok(i))nsplit=nsplit+1
         end do
-        
+
         ! Upload for selected cells
         if(nsplit>0)then
            icell=0
@@ -56,7 +56,7 @@ subroutine upload_fine(ilevel)
            end do
            call upl(ind_split,nsplit)
         end if
-        
+
      end do
      ! End loop over cells
 
@@ -112,7 +112,7 @@ subroutine upl(ind_cell,ncell)
            do i=1,ncell
               uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
            end do
-           
+
         else
            ! Average internal energy
            getx(1:ncell)=0.0d0
@@ -127,7 +127,7 @@ subroutine upl(ind_cell,ncell)
                  ! Compute momentum
                  Mx=uold(ind_cell_son(i),2) ; My=uold(ind_cell_son(i),3) ; Mz=uold(ind_cell_son(i),4)
                  M = sqrt(Mx**2+My**2+Mz**2)
-                 ! Compute total energy 
+                 ! Compute total energy
                  E = uold(ind_cell_son(i),5)
                  !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
@@ -141,7 +141,7 @@ subroutine upl(ind_cell,ncell)
                     E=sqrt((M**2+d**2)*(1+1d-8))
                     uold(ind_cell_son(i),5)=E
                  endif
-        
+
                  if (E**2<M**2+D**2) then
                     write(*,*),'E<M switch'
                     E=sqrt((M**2+d**2)*(1+1d-8))
@@ -150,18 +150,18 @@ subroutine upl(ind_cell,ncell)
 
 
                  call Newton_Raphson_Mignone(D,M,E,gamma,R)
-                 
+
                  ! Compute the Lorentz factor
                  v2  = M**2.0d0/(R**2.0d0-M**2.0d0)
                  lor = (1.0d0+v2)**(1.d0/2.d0)
-                 
+
                  ! Compute the density
                  qd = D/lor
 
                  ! Compute pressure
                  Xsi=((R-D)-v2/(lor+1.d0)*D)/lor**2
-                 
-                 if (eos .eq. 'TM') then 
+
+                 if (eos .eq. 'TM') then
                     qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
                     ! Compute child internal energy (eint)
                     tau=qp/qd
@@ -176,7 +176,7 @@ subroutine upl(ind_cell,ncell)
 !                    write(*,*),qp,qd,D,M,E
                     stop
                  endif
-                 
+
 
 
               end do
@@ -203,7 +203,7 @@ subroutine upl(ind_cell,ncell)
         endif
      enddo
   else
-  
+
      do ivar=1,nvar
         ! Average conservative variable
         getx(1:ncell)=0.0d0
@@ -216,7 +216,7 @@ subroutine upl(ind_cell,ncell)
               getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
            end do
         end do
-        
+
      ! Scatter result to cells
         do i=1,ncell
            uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
@@ -262,7 +262,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
   real(dp),dimension(1:nvector),save::ekin
-  
+
   real(dp) :: lor ! Lorentz factor
   real(dp) :: D,M,Mx,My,Mz,v2,Xsi,R,vx,vy,vz
   real(dp) :: Dr,Mr,E,Mxr,Myr,Mzr
@@ -292,7 +292,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
            ! Compute momentum
            Mx=u1(i,j,2) ; My=u1(i,j,3) ; Mz=u1(i,j,4)
            M = sqrt(Mx**2+My**2+Mz**2)
-           ! Compute total energy 
+           ! Compute total energy
            E = u1(i,j,5)
            !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
@@ -314,18 +314,18 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
 
 
            call Newton_Raphson_Mignone(D,M,E,gamma,R)
-           
+
            ! Compute the Lorentz factor
            v2  = M**2.0d0/(R**2.0d0-M**2.0d0)
            lor = (1.0d0+v2)**(1.d0/2.d0)
-           
+
            ! Compute the density
            qd = D/lor
-           
+
            ! Compute pressure
            Xsi=((R-D)-v2/(lor+1.d0)*D)/lor**2
 
-           if (eos .eq. 'TM') then 
+           if (eos .eq. 'TM') then
               qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
               ! Compute child internal energy (eint)
               tau=qp/qd
@@ -340,19 +340,19 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
               write(*,*) 'negative pressure or density interpol hydro'
               stop
            endif
-           
+
            !store total energie
            Erecord(i,j)=E
         end do
      end do
   end if
-  
+
   ! Loop over interpolation variables
   do ivar=1,nvar
 
      ! Load father variable
      do j=0,twondim
-        do i=1,nn 
+        do i=1,nn
            a(i,j)=u1(i,j,ivar)
         end do
      end do
@@ -384,7 +384,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   ! End loop over variables
 
   do j=0,twondim
-     do i=1,nn 
+     do i=1,nn
         if (u1(i,j,5) <0 )then
            write(*,*),'oops pere'
         endif
@@ -417,7 +417,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   do ind=1,twotondim
      do idim=1,ndim
         do i=1,nn
-           D = u2(i,ind,1) 
+           D = u2(i,ind,1)
            Mx=u2(i,ind,2) ; My=u2(i,ind,3) ; Mz=u2(i,ind,4)
            M = sqrt(Mx**2+My**2+Mz**2)
            E = u2(i,ind,5)

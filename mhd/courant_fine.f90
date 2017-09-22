@@ -45,7 +45,7 @@ subroutine courant_fine(ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
- 
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -53,14 +53,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -76,7 +76,7 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         gg=0.0d0
         if(poisson)then
@@ -86,24 +86,24 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
         end do
-        
+
         ! Compute total energy
         do i=1,nleaf
            ekin_loc=ekin_loc+uu(i,5)*vol
         end do
-        
+
         ! Compute total magnetic energy
         do ivar=1,3
            do i=1,nleaf
               emag_loc=emag_loc+0.125d0*(uu(i,5+ivar)+uu(i,nvar+ivar))**2*vol
            end do
         end do
-        
+
         ! Compute total internal energy
         do i=1,nleaf
            eint_loc=eint_loc+uu(i,5)*vol
@@ -121,16 +121,16 @@ subroutine courant_fine(ilevel)
            end do
         end do
 #endif
-   
+
         ! Compute CFL time-step
         if(nleaf>0)then
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -188,12 +188,12 @@ subroutine velocity_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:3),save::vv
- 
+
   if(numbtot(1,ilevel)==0)return
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -212,28 +212,28 @@ subroutine velocity_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   !-------------------------------------
   ! Compute analytical velocity field
   !-------------------------------------
   ncache=active(ilevel)%ngrid
-  
+
   ! Loop over grids by vector sweeps
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
-        
+
         ! Gather cell indices
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather cell centre positions
         do idim=1,ndim
            do i=1,ngrid
@@ -246,10 +246,10 @@ subroutine velocity_fine(ilevel)
               xx(i,idim)=(xx(i,idim)-skip_loc(idim))/scale
            end do
         end do
-        
+
         ! Impose analytical velocity field
         call velana(xx,vv,dx_loc,t,ngrid)
-        
+
         ! Impose induction variables
         do i=1,ngrid
            uold(ind_cell(i),1)=1.0
@@ -270,7 +270,7 @@ subroutine velocity_fine(ilevel)
            C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
            uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
         end do
-        
+
      end do
      ! End loop over cells
 

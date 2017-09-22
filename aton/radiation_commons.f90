@@ -64,7 +64,7 @@ module radiation_commons
   real(kind=8)::rad_flux_z=0.0
   real(kind=8)::rad_density=0.0  ! inital photon number density [photons / m^3]
 
-  
+
   ! MPI variables:
   ! TODO(tstranex): Comment on these.
 

@@ -5,7 +5,7 @@ module observe_commons
   real(dp),dimension(1:observe_num_quantity)::observe_quantity=0d0
 
   integer::observe_ilun_quantity=8000
-  
+
   ! Star radiation statistics
   real(kind=8)::observe_total_star_source=0d0
   integer::observe_num_stars=0
@@ -57,14 +57,14 @@ subroutine observe_level(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -136,7 +136,7 @@ subroutine observe_init()
 
   open(unit=observe_ilun_quantity,position=mode, &
        & file='averages.txt',form='formatted')
-  write(observe_ilun_quantity,*) '# aexp <one> <nH> <x> <x*nH> <T> <J> <S> <num_stars>'  
+  write(observe_ilun_quantity,*) '# aexp <one> <nH> <x> <x*nH> <T> <J> <S> <num_stars>'
 end subroutine observe_init
 
 subroutine observe_stop()

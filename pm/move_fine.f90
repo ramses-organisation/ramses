@@ -3,11 +3,11 @@ subroutine move_fine(ilevel)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
-  ! Update particle position and time-centred velocity at level ilevel. 
+  ! Update particle position and time-centred velocity at level ilevel.
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
@@ -24,7 +24,7 @@ subroutine move_fine(ilevel)
   igrid=headl(myid,ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
-     if(npart1>0)then        
+     if(npart1>0)then
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
@@ -38,7 +38,7 @@ subroutine move_fine(ilevel)
            end if
            ip=ip+1
            ind_part(ip)=ipart
-           ind_grid_part(ip)=ig   
+           ind_grid_part(ip)=ig
            if(ip==nvector)then
               call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
               ip=0
@@ -65,11 +65,11 @@ subroutine move_fine_static(ilevel)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
-  ! Update particle position and time-centred velocity at level ilevel. 
+  ! Update particle position and time-centred velocity at level ilevel.
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
@@ -87,7 +87,7 @@ subroutine move_fine_static(ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
      npart2=0
-     
+
      ! Count particles
      if(npart1>0)then
         ipart=headp(igrid)
@@ -107,9 +107,9 @@ subroutine move_fine_static(ilevel)
            ipart=next_part  ! Go to next particle
         end do
      endif
-     
+
      ! Gather star particles
-     if(npart2>0)then        
+     if(npart2>0)then
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
@@ -126,7 +126,7 @@ subroutine move_fine_static(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
            else
               if(.not.static_dm) then
@@ -136,7 +136,7 @@ subroutine move_fine_static(ilevel)
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
            endif
            if(ip==nvector)then
@@ -193,7 +193,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -209,7 +209,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
      end do
   end do
-  
+
   ! Gather neighboring father cells (should be present anytime !)
   do i=1,ng
      father_cell(i)=father(ind_grid(i))
@@ -384,11 +384,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         icell(j,5)=1+icg(j,1)+3*icg(j,2)+9*icd(j,3)
         icell(j,6)=1+icd(j,1)+3*icg(j,2)+9*icd(j,3)
         icell(j,7)=1+icg(j,1)+3*icd(j,2)+9*icd(j,3)
-        icell(j,8)=1+icd(j,1)+3*icd(j,2)+9*icd(j,3)   
+        icell(j,8)=1+icd(j,1)+3*icd(j,2)+9*icd(j,3)
      end if
   end do
 #endif
-        
+
   ! Compute parent cell adresses
   do ind=1,twotondim
      do j=1,np
@@ -427,7 +427,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
 #endif
-  
+
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then

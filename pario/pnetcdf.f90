@@ -54,7 +54,7 @@ module ramses_pnetcdf
       character(len=10)::timec
 
 
-      ! mode = NF_CLOBBER+NF_64BIT_OFFSET 
+      ! mode = NF_CLOBBER+NF_64BIT_OFFSET
       mode = NF_CLOBBER+NF_64BIT_DATA !NF_64BIT_DATA is only supported from PnetCDF 1.1.0
       call MPI_Info_create(infos,ierr)
       call hints_set(infos)
