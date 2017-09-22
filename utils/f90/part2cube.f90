@@ -1,9 +1,10 @@
 program part2cube
   !--------------------------------------------------------------------------
-  ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES.
-  ! Version F90 par R. Teyssier le 01/04/01.
+  ! This software computes projected density cubes.
+  ! Version F90 by R. Teyssier le 01/04/01.
+  ! Update for new tracers by C. Cadiou, M. Trebitsch, H. Choi, O. Snaith and R. Bieri
   !--------------------------------------------------------------------------
+  use utils
   implicit none
   integer::ncpu,ndim,npart,i,j,k,icpu,ipos,n_frw,nstar
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel,iii
@@ -35,7 +36,7 @@ program part2cube
   call read_params
 
   !-----------------------------------------------
-  ! Lecture du fichier particules au format RAMSES
+  ! Reading particle files in RAMSES format
   !-----------------------------------------------
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
@@ -69,10 +70,10 @@ program part2cube
   ! read(10,'("time        =",E23.15)')t
   read(10,'(A13,E23.15)')GMGM,t
 
-!  read(10,'("aexp        =",E23.15)')aexp
+  !  read(10,'("aexp        =",E23.15)')aexp
   read(10,'(A13,E23.15)')GMGM,aexp
 
-!  read(10,'("H0          =",E23.15)')h0
+  !  read(10,'("H0          =",E23.15)')h0
   read(10,'(A13,E23.15)')GMGM,h0
 
   !read(10,'("omega_m     =",E23.15)')omega_m
@@ -298,136 +299,138 @@ program part2cube
      read(1)m
      if(nstar>0)then
         read(1) ! Skip identity
+        read(1) ! Skip level
         read(1)family
         read(1)tag
-        read(1) ! Skip level
         read(1)age
      endif
 
      close(1)
      if(periodic)then
-     do i=1,npart2
-        ok_part=(x(i,1)>=xmin.and.x(i,1)<=xmax.and. &
-             &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
-             &   x(i,3)>=zmin.and.x(i,3)<=zmax)
+        do i=1,npart2
+           ok_part=(x(i,1)>=xmin.and.x(i,1)<=xmax.and. &
+                &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
+                &   x(i,3)>=zmin.and.x(i,3)<=zmax)
 
-        if(nstar>0)then
-           if(star)then
-              ok_part=ok_part.and.(family(i).eq.2)
-              if(ageweight)then
-                 iii=1
-                 do while(tau_frw(iii)>age(i).and.iii<n_frw)
-                    iii=iii+1
-                 end do
-                 ! Interploate time
-                 time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                      & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
-                 time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
-                 if(time>0.01)then
-                    weight=(time/0.01)**(-0.7)
+           if(nstar>0)then
+              if(star)then
+                 ! Keep only stars
+                 ok_part=ok_part.and.(family(i)==2)
+                 if(ageweight)then
+                    iii=1
+                    do while(tau_frw(iii)>age(i).and.iii<n_frw)
+                       iii=iii+1
+                    end do
+                    ! Interpolate time
+                    time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                         & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+                    time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
+                    if(time>0.01)then
+                       weight=(time/0.01)**(-0.7)
+                    endif
                  endif
+              else
+                 ! Keep only DM
+                 ok_part=ok_part.and.(family(i).eq.1)
               endif
-           else
-              ok_part=ok_part.and.(family(i).eq.1)
            endif
-        endif
 
-        if(ok_part)then
-           ddx=(x(i,idim)-xxmin)/dx
-           ddy=(x(i,jdim)-yymin)/dy
-           ddz=(x(i,kdim)-zzmin)/dz
-           ix=ddx
-           iy=ddy
-           iz=ddz
-           ddx=ddx-ix
-           ddy=ddy-iy
-           ddz=ddz-iz
-           dex=1.0-ddx
-           dey=1.0-ddy
-           dez=1.0-ddz
-           if(ix<0)ix=ix+nx
-           if(ix>=nx)ix=ix-nx
-           if(iy<0)iy=iy+ny
-           if(iy>=ny)iy=iy-ny
-           if(iz<0)iz=iz+nz
-           if(iz>=nz)iz=iz-nz
-           ixp1=ix+1
-           iyp1=iy+1
-           izp1=iz+1
-           if(ixp1<0)ixp1=ixp1+nx
-           if(ixp1>=nx)ixp1=ixp1-nx
-           if(iyp1<0)iyp1=iyp1+ny
-           if(iyp1>=ny)iyp1=iyp1-ny
-           if(izp1<0)izp1=izp1+nz
-           if(izp1>=nz)izp1=izp1-nz
-           cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez
-           cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez
-           cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez
-           cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez
-           cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz
-           cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz
-           cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz
-           cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz
-           mtot=mtot+m(i)
-        end if
-     end do
-     else
-     do i=1,npart2
-        weight=1.0
-        ok_part=(x(i,1)>=xmin.and.x(i,1)<=xmax.and. &
-             &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
-             &   x(i,3)>=zmin.and.x(i,3)<=zmax)
-
-        if(nstar>0)then
-           if(star)then
-              ok_part=ok_part.and.(family(i).eq.2)
-              if(ageweight)then
-                 iii=1
-                 do while(tau_frw(iii)>age(i).and.iii<n_frw)
-                    iii=iii+1
-                 end do
-                 ! Interpolate time
-                 time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                      & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
-                 time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
-                 if(time>0.01)then
-                    weight=(time/0.01)**(-0.7)
-                 endif
-              endif
-           else
-              ok_part=ok_part.and.(family(i).eq.1)
-           endif
-        endif
-
-        if(ok_part)then
-           ddx=(x(i,idim)-xxmin)/dx
-           ddy=(x(i,jdim)-yymin)/dy
-           ddz=(x(i,kdim)-zzmin)/dz
-           ix=ddx
-           iy=ddy
-           iz=ddz
-           ddx=ddx-ix
-           ddy=ddy-iy
-           ddz=ddz-iz
-           dex=1.0-ddx
-           dey=1.0-ddy
-           dez=1.0-ddz
-           ixp1=ix+1
-           iyp1=iy+1
-           izp1=iz+1
-           if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.iz>=0.and.iz<nz)then
-              cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez*weight
-              cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez*weight
-              cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez*weight
-              cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez*weight
-              cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz*weight
-              cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*weight
-              cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*weight
-              cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*weight
+           if(ok_part)then
+              ddx=(x(i,idim)-xxmin)/dx
+              ddy=(x(i,jdim)-yymin)/dy
+              ddz=(x(i,kdim)-zzmin)/dz
+              ix=ddx
+              iy=ddy
+              iz=ddz
+              ddx=ddx-ix
+              ddy=ddy-iy
+              ddz=ddz-iz
+              dex=1.0-ddx
+              dey=1.0-ddy
+              dez=1.0-ddz
+              if(ix<0)ix=ix+nx
+              if(ix>=nx)ix=ix-nx
+              if(iy<0)iy=iy+ny
+              if(iy>=ny)iy=iy-ny
+              if(iz<0)iz=iz+nz
+              if(iz>=nz)iz=iz-nz
+              ixp1=ix+1
+              iyp1=iy+1
+              izp1=iz+1
+              if(ixp1<0)ixp1=ixp1+nx
+              if(ixp1>=nx)ixp1=ixp1-nx
+              if(iyp1<0)iyp1=iyp1+ny
+              if(iyp1>=ny)iyp1=iyp1-ny
+              if(izp1<0)izp1=izp1+nz
+              if(izp1>=nz)izp1=izp1-nz
+              cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez
+              cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez
+              cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez
+              cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez
+              cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz
+              cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz
+              cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz
+              cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz
               mtot=mtot+m(i)
+           end if
+        end do
+     else
+        do i=1,npart2
+           weight=1.0
+           ok_part=(x(i,1)>=xmin.and.x(i,1)<=xmax.and. &
+                &   x(i,2)>=ymin.and.x(i,2)<=ymax.and. &
+                &   x(i,3)>=zmin.and.x(i,3)<=zmax)
+
+           if(nstar>0)then
+              if(star)then
+                 ok_part=ok_part.and.(family(i).eq.2)
+                 if(ageweight)then
+                    iii=1
+                    do while(tau_frw(iii)>age(i).and.iii<n_frw)
+                       iii=iii+1
+                    end do
+                    ! Interpolate time
+                    time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                         & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+                    time=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
+                    if(time>0.01)then
+                       weight=(time/0.01)**(-0.7)
+                    endif
+                 endif
+              else
+                 ok_part=ok_part.and.(family(i).eq.1)
+              endif
            endif
-        end if
-     end do
+
+           if(ok_part)then
+              ddx=(x(i,idim)-xxmin)/dx
+              ddy=(x(i,jdim)-yymin)/dy
+              ddz=(x(i,kdim)-zzmin)/dz
+              ix=ddx
+              iy=ddy
+              iz=ddz
+              ddx=ddx-ix
+              ddy=ddy-iy
+              ddz=ddz-iz
+              dex=1.0-ddx
+              dey=1.0-ddy
+              dez=1.0-ddz
+              ixp1=ix+1
+              iyp1=iy+1
+              izp1=iz+1
+              if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.iz>=0.and.iz<nz)then
+                 cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez*weight
+                 cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez*weight
+                 cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez*weight
+                 cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez*weight
+                 cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz*weight
+                 cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*weight
+                 cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*weight
+                 cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*weight
+                 mtot=mtot+m(i)
+              endif
+           end if
+        end do
      endif
      deallocate(x,m)
      if(nstar>0)deallocate(age)
@@ -455,325 +458,76 @@ contains
 
   subroutine read_params
 
-      implicit none
+    implicit none
 
-      integer       :: i,n
-      integer       :: iargc
-      character(len=4)   :: opt
-      character(len=128) :: arg
+    integer       :: i,n
+    integer       :: iargc
+    character(len=4)   :: opt
+    character(len=128) :: arg
 
-      n = iargc()
-      if (n < 4) then
-         print *, 'usage: part2cube  -inp  input_dir'
-         print *, '                  -out  output_file'
-         print *, '                 [-xmi xmin] '
-         print *, '                 [-xma xmax] '
-         print *, '                 [-ymi ymin] '
-         print *, '                 [-yma ymax] '
-         print *, '                 [-zmi zmin] '
-         print *, '                 [-zma zmax] '
-         print *, '                 [-nx  nx  ] '
-         print *, '                 [-ny  ny  ] '
-         print *, '                 [-nz  nz  ] '
-         print *, '                 [-per flag] '
-         print *, '                 [-str flag] '
-         print *, 'ex: part2cube -inp output_00001 -out cube.dat'// &
-              &   ' -xmi 0.1 -xma 0.7'
-         stop
-      end if
+    n = command_argument_count()
+    if (n < 4) then
+       print *, 'usage: part2cube  -inp  input_dir'
+       print *, '                  -out  output_file'
+       print *, '                 [-xmi xmin] '
+       print *, '                 [-xma xmax] '
+       print *, '                 [-ymi ymin] '
+       print *, '                 [-yma ymax] '
+       print *, '                 [-zmi zmin] '
+       print *, '                 [-zma zmax] '
+       print *, '                 [-nx  nx  ] '
+       print *, '                 [-ny  ny  ] '
+       print *, '                 [-nz  nz  ] '
+       print *, '                 [-per flag] '
+       print *, '                 [-str flag] '
+       print *, 'ex: part2cube -inp output_00001 -out cube.dat'// &
+            &   ' -xmi 0.1 -xma 0.7'
+       stop
+    end if
 
-      do i = 1,n,2
-         call getarg(i,opt)
-         if (i == n) then
-            print '("option ",a2," has no argument")', opt
-            stop 2
-         end if
-         call getarg(i+1,arg)
-         select case (opt)
-         case ('-age')
-            read (arg,*) ageweight
-         case ('-inp')
-            repository = trim(arg)
-         case ('-out')
-            outfich = trim(arg)
-         case ('-xmi')
-            read (arg,*) xmin
-         case ('-xma')
-            read (arg,*) xmax
-         case ('-ymi')
-            read (arg,*) ymin
-         case ('-yma')
-            read (arg,*) ymax
-         case ('-zmi')
-            read (arg,*) zmin
-         case ('-zma')
-            read (arg,*) zmax
-         case ('-nx')
-            read (arg,*) nx
-         case ('-ny')
-            read (arg,*) ny
-         case ('-nz')
-            read (arg,*) nz
-         case ('-per')
-            read (arg,*) periodic
-         case ('-str')
-            read (arg,*) star
-         case default
-            print '("unknown option ",a2," ignored")', opt
-         end select
-      end do
+    do i = 1,n,2
+       call get_command_argument(i,opt)
+       if (i == n) then
+          print '("option ",a2," has no argument")', opt
+          stop 2
+       end if
+       call get_command_argument(i+1,arg)
+       select case (opt)
+       case ('-age')
+          read (arg,*) ageweight
+       case ('-inp')
+          repository = trim(arg)
+       case ('-out')
+          outfich = trim(arg)
+       case ('-xmi')
+          read (arg,*) xmin
+       case ('-xma')
+          read (arg,*) xmax
+       case ('-ymi')
+          read (arg,*) ymin
+       case ('-yma')
+          read (arg,*) ymax
+       case ('-zmi')
+          read (arg,*) zmin
+       case ('-zma')
+          read (arg,*) zmax
+       case ('-nx')
+          read (arg,*) nx
+       case ('-ny')
+          read (arg,*) ny
+       case ('-nz')
+          read (arg,*) nz
+       case ('-per')
+          read (arg,*) periodic
+       case ('-str')
+          read (arg,*) star
+       case default
+          print '("unknown option ",a2," ignored")', opt
+       end select
+    end do
 
-      return
+    return
 
-    end subroutine read_params
+  end subroutine read_params
 
-  end program part2cube
-
-!=======================================================================
-subroutine title(n,nchar)
-!=======================================================================
-  implicit none
-  integer::n
-  character*5::nchar
-
-  character*1::nchar1
-  character*2::nchar2
-  character*3::nchar3
-  character*4::nchar4
-  character*5::nchar5
-
-  if(n.ge.10000)then
-     write(nchar5,'(i5)') n
-     nchar = nchar5
-  elseif(n.ge.1000)then
-     write(nchar4,'(i4)') n
-     nchar = '0'//nchar4
-  elseif(n.ge.100)then
-     write(nchar3,'(i3)') n
-     nchar = '00'//nchar3
-  elseif(n.ge.10)then
-     write(nchar2,'(i2)') n
-     nchar = '000'//nchar2
-  else
-     write(nchar1,'(i1)') n
-     nchar = '0000'//nchar1
-  endif
-
-end subroutine title
-
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-subroutine hilbert3d(x,y,z,order,bit_length,npoint)
-  implicit none
-
-  integer     ,INTENT(IN)                     ::bit_length,npoint
-  integer     ,INTENT(IN) ,dimension(1:npoint)::x,y,z
-  real(kind=8),INTENT(OUT),dimension(1:npoint)::order
-
-  logical,dimension(0:3*bit_length-1)::i_bit_mask
-  logical,dimension(0:1*bit_length-1)::x_bit_mask,y_bit_mask,z_bit_mask
-  integer,dimension(0:7,0:1,0:11)::state_diagram
-  integer::i,ip,cstate,nstate,b0,b1,b2,sdigit,hdigit
-
-  if(bit_length>bit_size(bit_length))then
-     write(*,*)'Maximum bit length=',bit_size(bit_length)
-     write(*,*)'stop in hilbert3d'
-     stop
-  endif
-
-  state_diagram = RESHAPE( (/   1, 2, 3, 2, 4, 5, 3, 5,&
-                            &   0, 1, 3, 2, 7, 6, 4, 5,&
-                            &   2, 6, 0, 7, 8, 8, 0, 7,&
-                            &   0, 7, 1, 6, 3, 4, 2, 5,&
-                            &   0, 9,10, 9, 1, 1,11,11,&
-                            &   0, 3, 7, 4, 1, 2, 6, 5,&
-                            &   6, 0, 6,11, 9, 0, 9, 8,&
-                            &   2, 3, 1, 0, 5, 4, 6, 7,&
-                            &  11,11, 0, 7, 5, 9, 0, 7,&
-                            &   4, 3, 5, 2, 7, 0, 6, 1,&
-                            &   4, 4, 8, 8, 0, 6,10, 6,&
-                            &   6, 5, 1, 2, 7, 4, 0, 3,&
-                            &   5, 7, 5, 3, 1, 1,11,11,&
-                            &   4, 7, 3, 0, 5, 6, 2, 1,&
-                            &   6, 1, 6,10, 9, 4, 9,10,&
-                            &   6, 7, 5, 4, 1, 0, 2, 3,&
-                            &  10, 3, 1, 1,10, 3, 5, 9,&
-                            &   2, 5, 3, 4, 1, 6, 0, 7,&
-                            &   4, 4, 8, 8, 2, 7, 2, 3,&
-                            &   2, 1, 5, 6, 3, 0, 4, 7,&
-                            &   7, 2,11, 2, 7, 5, 8, 5,&
-                            &   4, 5, 7, 6, 3, 2, 0, 1,&
-                            &  10, 3, 2, 6,10, 3, 4, 4,&
-                            &   6, 1, 7, 0, 5, 2, 4, 3 /), &
-                            & (/8 ,2, 12 /) )
-
-  do ip=1,npoint
-
-     ! convert to binary
-     do i=0,bit_length-1
-        x_bit_mask(i)=btest(x(ip),i)
-        y_bit_mask(i)=btest(y(ip),i)
-        z_bit_mask(i)=btest(z(ip),i)
-     enddo
-
-     ! interleave bits
-     do i=0,bit_length-1
-        i_bit_mask(3*i+2)=x_bit_mask(i)
-        i_bit_mask(3*i+1)=y_bit_mask(i)
-        i_bit_mask(3*i  )=z_bit_mask(i)
-     end do
-
-     ! build Hilbert ordering using state diagram
-     cstate=0
-     do i=bit_length-1,0,-1
-        b2=0 ; if(i_bit_mask(3*i+2))b2=1
-        b1=0 ; if(i_bit_mask(3*i+1))b1=1
-        b0=0 ; if(i_bit_mask(3*i  ))b0=1
-        sdigit=b2*4+b1*2+b0
-        nstate=state_diagram(sdigit,0,cstate)
-        hdigit=state_diagram(sdigit,1,cstate)
-        i_bit_mask(3*i+2)=btest(hdigit,2)
-        i_bit_mask(3*i+1)=btest(hdigit,1)
-        i_bit_mask(3*i  )=btest(hdigit,0)
-        cstate=nstate
-     enddo
-
-     ! save Hilbert key as double precision real
-     order(ip)=0.
-     do i=0,3*bit_length-1
-        b0=0 ; if(i_bit_mask(i))b0=1
-        order(ip)=order(ip)+dble(b0)*dble(2)**i
-     end do
-
-  end do
-
-end subroutine hilbert3d
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
-     & axp_out,hexp_out,tau_out,t_out,ntable,age_tot)
-
-  implicit none
-  integer::ntable
-  real(kind=8)::O_mat_0, O_vac_0, O_k_0
-  real(kind=8)::alpha,axp_min,age_tot
-  real(kind=8),dimension(0:ntable)::axp_out,hexp_out,tau_out,t_out
-  ! ######################################################!
-  ! This subroutine assumes that axp = 1 at z = 0 (today) !
-  ! and that t and tau = 0 at z = 0 (today).              !
-  ! axp is the expansion factor, hexp the Hubble constant !
-  ! defined as hexp=1/axp*daxp/dtau, tau the conformal    !
-  ! time, and t the look-back time, both in unit of 1/H0. !
-  ! alpha is the required accuracy and axp_min is the     !
-  ! starting expansion factor of the look-up table.       !
-  ! ntable is the required size of the look-up table.     !
-  ! ######################################################!
-  real(kind=8)::axp_tau, axp_t
-  real(kind=8)::axp_tau_pre, axp_t_pre
-  real(kind=8)::dadtau, dadt
-  real(kind=8)::dtau,dt
-  real(kind=8)::tau,t
-  integer::nstep,nout,nskip
-
-!!$  if( (O_mat_0+O_vac_0+O_k_0) .ne. 1.0D0 )then
-!!$     write(*,*)'Error: non-physical cosmological constants'
-!!$     write(*,*)'O_mat_0,O_vac_0,O_k_0=',O_mat_0,O_vac_0,O_k_0
-!!$     write(*,*)'The sum must be equal to 1.0, but '
-!!$     write(*,*)'O_mat_0+O_vac_0+O_k_0=',O_mat_0+O_vac_0+O_k_0
-!!$     stop
-!!$  end if
-
-  axp_tau = 1.0D0
-  axp_t = 1.0D0
-  tau = 0.0D0
-  t = 0.0D0
-  nstep = 0
-
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
-
-     nstep = nstep + 1
-     dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
-     axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
-     tau = tau - dtau
-
-     dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
-     axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
-     t = t - dt
-
-  end do
-
-  age_tot=-t
-  write(*,666)-t
-  666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
-
-  nskip=nstep/ntable
-
-  axp_t = 1.d0
-  t = 0.d0
-  axp_tau = 1.d0
-  tau = 0.d0
-  nstep = 0
-  nout=0
-  t_out(nout)=t
-  tau_out(nout)=tau
-  axp_out(nout)=axp_tau
-  hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
-
-  do while ( (axp_tau .ge. axp_min) .or. (axp_t .ge. axp_min) )
-
-     nstep = nstep + 1
-     dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
-     axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
-     tau = tau - dtau
-
-     dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
-     axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
-     t = t - dt
-
-     if(mod(nstep,nskip)==0)then
-        nout=nout+1
-        t_out(nout)=t
-        tau_out(nout)=tau
-        axp_out(nout)=axp_tau
-        hexp_out(nout)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
-     end if
-
-  end do
-  t_out(ntable)=t
-  tau_out(ntable)=tau
-  axp_out(ntable)=axp_tau
-  hexp_out(ntable)=dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)/axp_tau
-
-end subroutine friedman
-
-function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-  real(kind=8)::dadtau,axp_tau,O_mat_0,O_vac_0,O_k_0
-  dadtau = axp_tau*axp_tau*axp_tau *  &
-       &   ( O_mat_0 + &
-       &     O_vac_0 * axp_tau*axp_tau*axp_tau + &
-       &     O_k_0   * axp_tau )
-  dadtau = sqrt(dadtau)
-  return
-end function dadtau
-
-function dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-  real(kind=8)::dadt,axp_t,O_mat_0,O_vac_0,O_k_0
-  dadt   = (1.0D0/axp_t)* &
-       &   ( O_mat_0 + &
-       &     O_vac_0 * axp_t*axp_t*axp_t + &
-       &     O_k_0   * axp_t )
-  dadt = sqrt(dadt)
-  return
-end function dadt
+end program part2cube
