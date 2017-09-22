@@ -37,7 +37,7 @@ subroutine gas_ana
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  
+
 
   maxi_dens=0.d0
   mini_dens=huge(0.d0)
@@ -47,12 +47,12 @@ subroutine gas_ana
 
   m=0.d0; m_tot=0.d0
   v_rms=0.d0; v_rms_tot=0.d0
-        
+
   do ilevel=levelmin,nlevelmax
-     if (numbtot(1,ilevel)/=0)then 
-        
+     if (numbtot(1,ilevel)/=0)then
+
         ! Mesh spacing in that level
-        dx=0.5D0**ilevel 
+        dx=0.5D0**ilevel
         nx_loc=(icoarse_max-icoarse_min+1)
         skip_loc=(/0.0d0,0.0d0,0.0d0/)
         if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -63,10 +63,10 @@ subroutine gas_ana
         vol_loc=dx_loc**ndim
         dx_min=(0.5D0**nlevelmax)*scale
         vol_min=dx_min**ndim
-        
-        
+
+
         ! Cells center position relative to grid center position
-        do ind=1,twotondim  
+        do ind=1,twotondim
            iz=(ind-1)/4
            iy=(ind-1-4*iz)/2
            ix=(ind-1-2*iy-4*iz)
@@ -74,7 +74,7 @@ subroutine gas_ana
            xc(ind,2)=(dble(iy)-0.5D0)*dx
            xc(ind,3)=(dble(iz)-0.5D0)*dx
         end do
-        
+
         !------------------------------------------------
         ! find min and max density
         !------------------------------------------------
@@ -90,17 +90,17 @@ subroutine gas_ana
               do i=1,ngrid
                  ind_cell(i)=iskip+ind_grid(i)
               end do
-              
+
               do i=1,ngrid
 
-                 ! Get cell center positions 
+                 ! Get cell center positions
                  xx=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
 #if NDIM>1
                  yy=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
 #endif
 #if NDIM>2
                  zz=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
-#endif          
+#endif
                  if (son(ind_cell(i))==0)then
                     if(ana_xmi<xx .and. xx<ana_xma .and. ana_ymi<yy .and. yy<ana_yma .and. ana_zmi<zz .and. zz<ana_zma)then
                        if (uold(ind_cell(i),1) > maxi_dens)then
@@ -116,7 +116,7 @@ subroutine gas_ana
         end do
      end if
   end do
-  
+
   !---------------------------------
   ! communicate
   !---------------------------------
@@ -149,7 +149,7 @@ subroutine gas_ana
      if(numbtot(1,ilevel)/=0)then
 
         ! Mesh spacing in that level
-        dx=0.5D0**ilevel 
+        dx=0.5D0**ilevel
         nx_loc=(icoarse_max-icoarse_min+1)
         skip_loc=(/0.0d0,0.0d0,0.0d0/)
         if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -163,7 +163,7 @@ subroutine gas_ana
 
 
         ! Cells center position relative to grid center position
-        do ind=1,twotondim  
+        do ind=1,twotondim
            iz=(ind-1)/4
            iy=(ind-1-4*iz)/2
            ix=(ind-1-2*iy-4*iz)
@@ -187,14 +187,14 @@ subroutine gas_ana
 
               do i=1,ngrid
 
-                 ! Get cell center positions 
+                 ! Get cell center positions
                  xx=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
 #if NDIM>1
                  yy=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
 #endif
 #if NDIM>2
                  zz=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
-#endif          
+#endif
                  if (son(ind_cell(i))==0)then
                     if(ana_xmi<xx .and. xx<ana_xma .and. ana_ymi<yy .and. yy<ana_yma .and. ana_zmi<zz .and. zz<ana_zma)then
                        d=dble(uold(ind_cell(i),1))
@@ -203,13 +203,13 @@ subroutine gas_ana
                        ! THIS DEPENDS ON YOUR THERMODINAMICAL ASSUMPTIONS
                        ! (SEE COOLING_FINE)
                        ! MAYBE YOU WANT TO USE A PATCHED VERSION OF THIS ROUTINE
-                       
+
                        ! assuming a polytropic equation of state
                        ! v_sound=(T2_star/scale_T2*gamma*(d*scale_nH/n_star)**(gamma-1))**0.5
 
                        ! isothermal
                        v_sound=dble((T2_star/scale_T2))**0.5d0
-                       
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                        vx=dble(uold(ind_cell(i),2))/(v_sound)
@@ -219,7 +219,7 @@ subroutine gas_ana
 #if NDIM>2
                        vz=dble(uold(ind_cell(i),4))/(v_sound)
 #endif
-                       v_rms=v_rms+(vx**2.d0+vy**2.d0+vz**2.d0)*vol_loc/d 
+                       v_rms=v_rms+(vx**2.d0+vy**2.d0+vz**2.d0)*vol_loc/d
                        m=m+vol_loc*d
                        ! log(rho) PDF
                        hist_ind=1+int((log10(d)-l_min)/width*nbins)
@@ -229,7 +229,7 @@ subroutine gas_ana
               end do
            end do
         end do
-     end if         
+     end if
   end do
 
 
@@ -291,11 +291,11 @@ subroutine read_gas_analytics_params()
   include 'mpif.h'
 #endif
 
-  !-------------------------------------------------- 
-  ! Namelist definitions                              
-  !-------------------------------------------------- 
+  !--------------------------------------------------
+  ! Namelist definitions
+  !--------------------------------------------------
   namelist/gas_analytics_params/nbins,ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
-  ! Read namelist file                                                                         
+  ! Read namelist file
   rewind(1)
   read(1,NML=gas_analytics_params,END=101)
   goto 102

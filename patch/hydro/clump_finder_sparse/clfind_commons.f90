@@ -14,7 +14,7 @@ module clfind_commons
   integer,allocatable,dimension(:)::icurrent
   integer,allocatable,dimension(:)::imat_next,imat_prev
   real(dp),allocatable,dimension(:)::saddle_dens,saddle_dens_tot
-  
+
   ! Peak patch properties
   real(dp),allocatable,dimension(:,:)::clump_size_tot,center_of_mass_tot,clump_momentum_tot,clump_force_tot
   real(dp),allocatable,dimension(:,:,:)::second_moments,second_moments_tot,Icl_d_3by3_tot,Icl_3by3_tot
@@ -34,7 +34,7 @@ module clfind_commons
 
   ! Test particles properties
   real(dp),allocatable,dimension(:)::denp ! Density of the cell containing a test particle. Davide: used by the clump finder.
-  integer,allocatable,dimension(:)::iglobalp,icellp,levp,testp_sort ! Used to sort test particles by density  
+  integer,allocatable,dimension(:)::iglobalp,icellp,levp,testp_sort ! Used to sort test particles by density
   integer,allocatable,dimension(:)::n_cells_tot,minmatch_tot,new_peak
   integer,allocatable,dimension(:)::sort_index
   integer,allocatable,dimension(:)::occupied,occupied_all ! Tells whether there is already a sink in a clump.

@@ -148,7 +148,7 @@ subroutine init_poisson
                        end do
                     end do
                  end do
-                 
+
               endif
               !~~~~~~~~~~ end ~~~~~~~~~~
               deallocate(ind_grid,xx)

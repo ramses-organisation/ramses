@@ -12,7 +12,7 @@ module halo_parameters!{{{
                                              ! 'quadrupole'
 
 end module halo_parameters!}}}
- 
+
 module halo_commons
 
   use halo_parameters
@@ -95,10 +95,10 @@ subroutine condinit(x,u,dx,nn)
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft, 
+  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft,
   ! U(i,nvar+1:nvar+3): Bright
   ! Q is the primitive variable vector. Conventions are here:
-  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft, 
+  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft,
   ! Q(i,nvar+1:nvar+3): Bright
   ! If nvar > 8, remaining variables (9:nvar) are treated as passive
   ! scalars in the hydro solver.
@@ -245,10 +245,10 @@ contains
     implicit none
     real(dp)::romberg
     !
-    !     Romberg returns the integral from a to b of f(x)dx using Romberg 
-    !     integration. The method converges provided that f(x) is continuous 
-    !     in (a,b). The function f must be double precision and must be 
-    !     declared external in the calling routine.  
+    !     Romberg returns the integral from a to b of f(x)dx using Romberg
+    !     integration. The method converges provided that f(x) is continuous
+    !     in (a,b). The function f must be double precision and must be
+    !     declared external in the calling routine.
     !     tol indicates the desired relative accuracy in the integral.
     !
     integer::maxiter=16,maxj=5
@@ -266,7 +266,7 @@ contains
 10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
        !	Calculate next trapezoidal rule approximation to integral.
-       
+
        g0=0.0d0
        do k=1,nint
           g0=g0+fffy(a+(k+k-1)*h)
@@ -276,7 +276,7 @@ contains
        nint=nint+nint
        jmax=min(i,maxj)
        fourj=1.0d0
-       
+
        do j=1,jmax
           ! Use Richardson extrapolation.
           fourj=4.0d0*fourj
@@ -299,7 +299,7 @@ contains
          &    write(*,*) 'Romberg failed to converge; integral, error=', &
          &    romberg,error
 
-    
+
 
     return
   end function romberg
@@ -654,7 +654,7 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0)
       rs = SQRT( x_edge**2 + y_edge**2 + zfl**2 )
       dnfw=1d0/rs/(1d0+rs)**2
       dnfw=MIN(dmax,dnfw)
-      
+
       A_mag(1,1,1) = A_mag(1,1,1) - zfl * dnfw**two3rd * y_edge / rc
 
       ! ceiling
@@ -809,7 +809,7 @@ subroutine velana(x,v,dx,t,ncell)
 !!$     endif
 !!$     vx=-sin(tt)*rr*omega
 !!$     vy=+cos(tt)*rr*omega
-     
+
      v(i,1)=vx
      v(i,2)=vy
      v(i,3)=vz

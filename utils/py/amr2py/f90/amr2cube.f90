@@ -2,7 +2,7 @@ subroutine amr2cube(repository,type,xmin,xmax,ymin,ymax,zmin,zmax,lmax,&
      & toto,t,n1,n2,n3)
   !--------------------------------------------------------------------------
   ! Ce programme calcule le cube cartesien pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -86,13 +86,13 @@ subroutine amr2cube(repository,type,xmin,xmax,ymin,ymax,zmin,zmax,lmax,&
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -558,9 +558,9 @@ subroutine read_params(filename)
   !   close(1)
   end if
 
-  return    
+  return
 end subroutine read_params
-  
+
 !=======================================================================
 subroutine title(n,nchar)
 !=======================================================================

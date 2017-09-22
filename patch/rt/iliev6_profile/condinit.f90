@@ -34,7 +34,7 @@ subroutine condinit(x,u,dx,nn)
   ! ........
 
   ! Iliev7_profile patch -------------------------------------------------
-  ! setup of a density profile for test 6 in Iliev's 
+  ! setup of a density profile for test 6 in Iliev's
   ! comparison project, w. 100K temperature everywhere.
   ! the profile is:
   !                        /  n0               if   r<=r0
@@ -44,7 +44,7 @@ subroutine condinit(x,u,dx,nn)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   do i=1,nn
      r=sqrt(x(i,1)**2+x(i,2)**2+x(i,3)**2)! radius from origin in kpc
-     if(r .le. r0) then 
+     if(r .le. r0) then
         q(i,1) = n0/scale_nH
      else
         q(i,1) = n0 * (r0/r)**2 /scale_nH

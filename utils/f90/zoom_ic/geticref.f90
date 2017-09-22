@@ -1,7 +1,7 @@
 program icrefine
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES. 
+  ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -54,14 +54,14 @@ program icrefine
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
-     stop 
+     stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -131,7 +131,7 @@ program icrefine
         kmin=int(zmin*dble(maxdom))
         kmax=kmin+1
      endif
-     
+
      dkey=(dble(2**(levelmax+1)/dble(maxdom)))**ndim
      ndom=1
      if(bit_length>0)ndom=8
@@ -147,7 +147,7 @@ program icrefine
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -170,7 +170,7 @@ program icrefine
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -253,16 +253,16 @@ program icrefine
      vz(nstart:nstart+npart2-1)=temp
 !     Read mass
      read(1)temp
-     m(nstart:nstart+npart2-1)=temp 
+     m(nstart:nstart+npart2-1)=temp
      !Read identity
      read(1)temp2
      id(nstart:nstart+npart2-1)=temp2
      !Read level
-     read(1)temp2   
+     read(1)temp2
      if(nstar>0) then
         ! Read BT
         read(1)temp
-        bt(nstart:nstart+npart2-1)=temp 
+        bt(nstart:nstart+npart2-1)=temp
      endif
 ! ----------------------------
      nstart=nstart+npart2  !Fill up the next set
@@ -278,7 +278,7 @@ program icrefine
   write(*,*) 'Getting IDs...'
   open(18,file='partID.dat',form='formatted')
   maxid=0
-  do i=1,npart !To get maximum identity of the particle        
+  do i=1,npart !To get maximum identity of the particle
      if(nstar.eq.0) then  !Only DM particles
         btime=0
      else
@@ -301,7 +301,7 @@ program icrefine
   enddo
   write(*,*) 'We have',ipart,' particles in selected region'
   write(*,*) 'Total mass =', mass
-  
+
 30 format(i16)
   write(18,50) ipart,npart,maxid
   do i=1,npart  !Start finding the IDs
@@ -323,9 +323,9 @@ program icrefine
         endif
      endif
   enddo
-  
+
 contains
-  
+
   subroutine read_params
 
       implicit none
@@ -335,7 +335,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 4) then
          print *, 'usage: geticref  -inp  input_dir'
@@ -359,7 +359,7 @@ contains
          case ('-inp')
             repository = trim(arg)
          case ('-dir')
-            proj = trim(arg) 
+            proj = trim(arg)
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -381,17 +381,17 @@ contains
          case ('-rad')
             read (arg,*) rad
          case ('-per')
-            read (arg,*) periodic 
+            read (arg,*) periodic
          case ('-gid')
             read (arg,*) gid
          case ('-fid')
             read (arg,*) fid
          case ('-smt')
-            read (arg,*) smt 
+            read (arg,*) smt
          case ('-met')
             read (arg,*) metal
          case ('-rsm')
-            read (arg,*) rsm 
+            read (arg,*) rsm
          case ('-gfc')
             grafic = trim(arg)
          case ('-fil')
@@ -410,10 +410,10 @@ contains
     !      Computes the integrand
     real(kind=8)::fy
     real(kind=8)::y,a
-    
+
     y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
     fy=1.d0/y**1.5d0
-    
+
     return
   end function fy
 
@@ -423,7 +423,7 @@ contains
     real(kind=8) :: fpeebl,a
     !     Computes the growth factor f=d\log D1/d\log a.
     real(kind=8) :: fact,y,eps
-    
+
     eps=1.0d-6
     y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
     fact=rombint(eps,a,eps)
@@ -435,10 +435,10 @@ contains
     implicit none
     real(kind=8)::rombint
     !
-    !     Rombint returns the integral from a to b of f(x)dx using Romberg 
-    !     integration. The method converges provided that f(x) is continuous 
-    !     in (a,b). The function f must be double precision and must be 
-    !     declared external in the calling routine.  
+    !     Rombint returns the integral from a to b of f(x)dx using Romberg
+    !     integration. The method converges provided that f(x) is continuous
+    !     in (a,b). The function f must be double precision and must be
+    !     declared external in the calling routine.
     !     tol indicates the desired relative accuracy in the integral.
     !
     integer::maxiter=16,maxj=5
@@ -453,10 +453,10 @@ contains
     nint=1
     error=1.0d20
     i=0
-10  i=i+1 
+10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
        !	Calculate next trapezoidal rule approximation to integral.
-       
+
        g0=0.0d0
        do k=1,nint
           g0=g0+fy(a+(k+k-1)*h)
@@ -466,7 +466,7 @@ contains
        nint=nint+nint
        jmax=min(i,maxj)
        fourj=1.0d0
-       
+
        do j=1,jmax
           ! Use Richardson extrapolation.
           fourj=4.0d0*fourj
@@ -488,7 +488,7 @@ contains
          &    write(*,*) 'Rombint failed to converge; integral, error=', &
          &    rombint,error
     return
-  end function rombint  
+  end function rombint
   end program icrefine
 
 !=======================================================================
@@ -614,4 +614,4 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
 end subroutine hilbert3d
 
 
-     
+

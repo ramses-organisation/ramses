@@ -36,7 +36,7 @@ module merger_parameters!{{{
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
   character(len=256)::Vcirc_dat_file1='Vcirc1.dat'
   character(len=256)::Vcirc_dat_file2='Vcirc2.dat'
-  ! Galactic global velocities, given in km/s in namelist, 
+  ! Galactic global velocities, given in km/s in namelist,
   ! then converted in user unit.
   real(dp), dimension(3)::Vgal1 = 0.0D0
   real(dp), dimension(3)::Vgal2 = 0.0D0
@@ -60,12 +60,12 @@ module merger_parameters!{{{
   ! Magnetic Field Setup
   real(dp)::typ_mag_radius = 3.0D0           ! radial scale length
   real(dp)::typ_mag_height = 1.5D-1          ! vertical scale length
-  character(len=16)::mag_topology='constant' ! magnetic topology: 
+  character(len=16)::mag_topology='constant' ! magnetic topology:
                                              ! 'constant' (along x-axis)
                                              ! 'toroidal'
                                              ! 'dipole'
                                              ! 'quadrupole'
-  
+
   !~~~~~~~~~~~~~~~~~~~~~~~~ NOTE ~~~~~~~~~~~~~~~~~~~~~~~~!
   ! For isolated galaxy runs :                           !
   ! --------------------------                           !
@@ -91,7 +91,7 @@ subroutine read_merger_params! {{{
   character(LEN=80)::infile
 
   !--------------------------------------------------
-  ! Local variables  
+  ! Local variables
   !--------------------------------------------------
   real(dp)::norm_u
   logical::vcirc_file1_exists, vcirc_file2_exists
@@ -345,7 +345,7 @@ subroutine condinit(x,u,dx,nn)
   end if
   dmin = IG_density_factor * dmin
 
-  
+
   ! Loop over cells
   do i=1,nn
      xx1=x(i,:)-(gal_center1(:)+boxlen/2.0D0)
@@ -416,7 +416,7 @@ subroutine condinit(x,u,dx,nn)
         q(i,1) = max(weight * q(i,1), 1d-7/scale_nH)
         ! P=rho*cs^2
         q(i,5) = a2*q(i,1)
-        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
+        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal
         !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
             case ('exponential')
@@ -868,7 +868,7 @@ end subroutine mag_quadrupole
 
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -896,7 +896,7 @@ subroutine velana(x,v,dx,t,ncell)
      vx=aa*(cos(twopi*yy)+sin(twopi*zz))
      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
      vz=aa*(cos(twopi*xx)+sin(twopi*yy))
-     
+
      v(i,1)=vx
      v(i,2)=vy
      v(i,3)=vz
@@ -907,7 +907,7 @@ subroutine velana(x,v,dx,t,ncell)
 end subroutine velana
 
 
-!------------------------------------------------------------------------------------- 
+!-------------------------------------------------------------------------------------
 ! Circular velocity files reading
 ! {{{
 subroutine read_vcirc_files
@@ -915,9 +915,9 @@ subroutine read_vcirc_files
   implicit none
   integer:: nvitesses, ierr, i
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  
+
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  
+
   ! Galaxy #1
   nvitesses = 0
   open(unit=123, file=trim(Vcirc_dat_file1), iostat=ierr)

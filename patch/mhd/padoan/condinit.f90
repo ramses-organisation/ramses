@@ -15,10 +15,10 @@ subroutine condinit(x,u,dx,nn)
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft, 
+  ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E, U(i,6:8): Bleft,
   ! U(i,nvar+1:nvar+3): Bright
   ! Q is the primitive variable vector. Conventions are here:
-  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft, 
+  ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft,
   ! Q(i,nvar+1:nvar+3): Bright
   ! If nvar > 8, remaining variables (9:nvar) are treated as passive
   ! scalars in the hydro solver.
@@ -35,7 +35,7 @@ subroutine condinit(x,u,dx,nn)
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
-  
+
   id=1; iu=2; iv=3; iw=4; ip=5; ibx=6; iby=7; ibz=8
   lambda=1.
   k=2.*acos(-1.0d0)/lambda
@@ -45,7 +45,7 @@ subroutine condinit(x,u,dx,nn)
   b1=b_region(1)
   v2=v_region(2)
   v3=v_region(3)
-  
+
   theta=0.4
 
   do i=1,nn
@@ -60,7 +60,7 @@ subroutine condinit(x,u,dx,nn)
      expz=exp(-3.*zp**2)
      expp=exp(-6.*(xp**2+yp**2+zp**2))
      q(i,iu)=+v1*cos(theta)*sin(k*yp)*expz                 -v2*sin(k*xp)*expp +2.0*v3
-     q(i,iv)=-v1*sin(k*(xx*cos(theta)+zz*sin(theta)))*expz -v2*sin(k*yp)*expp 
+     q(i,iv)=-v1*sin(k*(xx*cos(theta)+zz*sin(theta)))*expz -v2*sin(k*yp)*expp
      q(i,iw)=+v1*sin(theta)*sin(k*yp)*expz                 -v2*sin(k*zp)*expp -2.0*v3
 
      q(i,ip)=p1
@@ -111,7 +111,7 @@ subroutine condinit(x,u,dx,nn)
 !#if NDIM>2
 !  u(1:nn,ndim+5)=q(1:nn,ndim+5)
 !  u(1:nn,nvar+3)=q(1:nn,nvar+3)
-!#endif 
+!#endif
   ! passive scalars
   do ivar=9,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
@@ -124,7 +124,7 @@ end subroutine condinit
 !================================================================
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -176,7 +176,7 @@ subroutine velana(x,v,dx,t,ncell)
 !!$     endif
 !!$     vx=-sin(tt)*rr*omega
 !!$     vy=+cos(tt)*rr*omega
-     
+
 !!     v(i,1)=vx
 !!     v(i,2)=vy
 !!     v(i,3)=vz

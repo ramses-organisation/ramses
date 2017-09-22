@@ -1,4 +1,4 @@
-module poisson_commons 
+module poisson_commons
   use amr_commons
   use poisson_parameters
 
@@ -16,7 +16,7 @@ module poisson_commons
   !
   !~~~~~~~~~~ end ~~~~~~~~~~
 
-  real(dp),allocatable,dimension(:)  ::rho_top   ! Density at last CIC level                                 
+  real(dp),allocatable,dimension(:)  ::rho_top   ! Density at last CIC level
 
   ! Multigrid lookup table for amr -> mg index mapping
   integer, allocatable, dimension(:) :: lookup_mg   ! Lookup table
@@ -65,7 +65,7 @@ end module mond_parameters
 !-----------------------------------------------
 !    Common variables and constants
 !-----------------------------------------------
-module mond_commons 
+module mond_commons
   use amr_commons
   use mond_parameters
   implicit none
@@ -104,8 +104,8 @@ module mond_commons
   real(dp),pointer,dimension(:)   :: phi_old_newton
   real(dp),pointer,dimension(:,:) :: f_newton    ! Newtonian acceleration
 
-  real(dp),target::rho_mond_tot=0.0D0          ! Mean PDM density in the box, needed by the Poisson solver  
-  real(dp),target::rho_newton_tot=0.0D0        ! Mean baryonic density in the box, needed by the Poisson solver  
+  real(dp),target::rho_mond_tot=0.0D0          ! Mean PDM density in the box, needed by the Poisson solver
+  real(dp),target::rho_newton_tot=0.0D0        ! Mean baryonic density in the box, needed by the Poisson solver
 
   logical::connected_Mond = .false.
 
@@ -131,7 +131,7 @@ subroutine get_nu(x, nu)
    nu = -0.5 + 0.5*sqrt(x*x + 4.0*x)/x              ! Simple nu function
 !  nu = sqrt( 0.5 + sqrt( 0.25 + 1.0/x**2 ) ) - 1.0 ! Standard nu function
 !  nu = 1.0/(1.0 - exp(-sqrt(x))) - 1.0             ! ...
-   
+
 end subroutine get_nu
 
 
@@ -164,7 +164,7 @@ subroutine init_mond
    rho_mond=0.0D0
    phi_mond=0.0D0
    f_mond=0.0D0
-   
+
    ! "Connect" also the Newtonian arrays,
    ! assuming they have already been initialized
    ! in the standard Ramses routines (see init_poisson.f90)
@@ -181,7 +181,7 @@ subroutine init_mond
       if (myid==1) write(*,*) ' ERROR: a0 parameter missing'
       call clean_stop
    endif
-      
+
    a0_i = 1.d0 / a0
    if (myid==1) then
       write(*,'(" Initializing MOND extension: a0 = ", E11.4, " m/s^2")') a0_ms2
@@ -215,7 +215,7 @@ subroutine init_mond
    ref_nbpg(2,1) = 4   ! right, y
    ref_nbpg(2,2) = 5   ! left, z
    ref_nbpg(2,3) = 6   ! right, z
-                          
+
    ggg(      0,        1:8) = 0
    ggg(ref_nbc(1,1,1), 1:8) = (/ ref_nbpg(1,1), 0, ref_nbpg(1,1), 0, ref_nbpg(1,1), 0, ref_nbpg(1,1), 0  /)
    ggg(ref_nbc(1,1,2), 1:8) = (/ ref_nbpg(1,2), ref_nbpg(1,2), 0, 0, ref_nbpg(1,2), ref_nbpg(1,2), 0, 0  /)
@@ -225,7 +225,7 @@ subroutine init_mond
    ggg(ref_nbc(1,2,3), 1:8) = (/ 0, 0, 0, 0, ref_nbpg(2,3), ref_nbpg(2,3), ref_nbpg(2,3), ref_nbpg(2,3)  /)
    do i=1,2
       do j=1,3
-         ggg(ref_nbc(2,i,j), 1:8) = ref_nbpg(i,j) 
+         ggg(ref_nbc(2,i,j), 1:8) = ref_nbpg(i,j)
       enddo
    enddo
 
@@ -505,20 +505,20 @@ end subroutine init_mond
 
 
 !-----------------------------------------------
-!  Helper routines to switch between 
+!  Helper routines to switch between
 !  Newtonian/MONDian arrays
 !-----------------------------------------------
 subroutine connect_Newton()
    use poisson_commons
    use mond_commons
    implicit none
-   
+
    rho     => rho_newton
    phi     => phi_newton
    phi_old => phi_old_newton
    f       => f_newton
    rho_tot => rho_newton_tot
-   
+
    connected_Mond = .false.
 end subroutine connect_Newton
 
@@ -526,7 +526,7 @@ subroutine connect_Mond()
    use poisson_commons
    use mond_commons
    implicit none
-   
+
    rho     => rho_mond
    phi     => phi_mond
    phi_old => phi_old_mond
@@ -539,7 +539,7 @@ end subroutine connect_Mond
 
 !-----------------------------------------------
 !  Computes rho_mond_tot at level levelmin
-!  This is the mean 3-dim. density of PDM 
+!  This is the mean 3-dim. density of PDM
 !  in the intire simulation box.
 !  rho_mond_tot is needed by the Poisson solver.
 !-----------------------------------------------
@@ -564,16 +564,16 @@ subroutine compute_rho_mond_tot(ilevel)
   if (ilevel .ne. levelmin) then
      return
   endif
-  
+
   if(nboundary>0)then
      rho_tot=0d0
      return
   endif
-  
+
   do ind=1,twotondim
      iskip(ind)=ncoarse+(ind-1)*ngridmax
   enddo
-   
+
   rmt = 0.0
   count = 0
 
@@ -587,7 +587,7 @@ subroutine compute_rho_mond_tot(ilevel)
       if(ndim>0) xc(ind,1)=(dble(ix)-0.5D0)*dx
       if(ndim>1) xc(ind,2)=(dble(iy)-0.5D0)*dx
       if(ndim>2) xc(ind,3)=(dble(iz)-0.5D0)*dx
-  end do  
+  end do
 
   istart=headl(myid,ilevel)
   ncache=numbl(myid,ilevel)
@@ -611,10 +611,10 @@ subroutine compute_rho_mond_tot(ilevel)
         enddo
      end do
      !$____omp end parallel do
-     
+
      deallocate(ind_grid)
   end if
-  
+
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(rmt,   rmt_all,   1, MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
   call MPI_ALLREDUCE(count, count_all, 1, MPI_INTEGER,          MPI_SUM, MPI_COMM_WORLD, info)
@@ -640,12 +640,12 @@ subroutine compute_pdm_density(ilevel,icount)
    integer::ilevel,icount
 
    if (ilevel==levelmin) then
-      !   compute_pdm_density_at_levelmin:  
+      !   compute_pdm_density_at_levelmin:
       !     Makes use of the already computed acceleration
       !     Used at ilevel==levelmin
       call compute_pdm_density_at_levelmin(ilevel,icount)
    else
-      !   compute_pdm_density_at_fine_levels:  
+      !   compute_pdm_density_at_fine_levels:
       !     Uses a five-point finite difference approximation
       !     Interpolates the potential at the level boundaries
       !     Used at ilevel>levelmin
@@ -664,10 +664,10 @@ end subroutine compute_pdm_density
 !##     Makes use of the already compute acceleration
 !##     Used at ilevel==levelmin
 !##
-!##     The routines compute_pdm_density_at_levelmin and 
+!##     The routines compute_pdm_density_at_levelmin and
 !##     compute_pdm_density_at_fine_levels are effectively
-!##     equivalent. The problem is that the Newtonian 
-!##     potential is not computed for the diagonal boundary 
+!##     equivalent. The problem is that the Newtonian
+!##     potential is not computed for the diagonal boundary
 !##     cells at the coarsest level. Easiest way to avoid
 !##     unconveniences is to use compute_pdm_density_at_levelmin at levelmin
 !##     and compute_pdm_density_at_levelmin at ilevel>levelmin.
@@ -698,7 +698,7 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
   real(dp) :: dx    ! grid step size
   real(dp) :: h_i   ! inverse grid step size
   real(dp) :: factor_a, factor_b  ! weights for the 5-p fda
-  
+
   if(verbose)write(*,111) 'compute_pdm_density_at_levelmin at level',ilevel
 
   if(ndim .ne. 3) then
@@ -729,12 +729,12 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
   do idim=1,ndim
      call make_virtual_fine_dp(f_newton(1,idim),ilevel)
   end do
-  
+
   ! Compute the Newtonian grad phi at the physical boundary regions
   call connect_Newton
   call make_boundary_force(ilevel)
   call connect_Mond
-  
+
 
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -829,7 +829,7 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
              cy2(i) = gy2(i)
              cx2(i) = 0.5d0 * ( f_newton(cell(i,0),1) + f_newton(cell(i,ref_nbc(1,2,2)),1) )
              cz2(i) = 0.5d0 * ( f_newton(cell(i,0),3) + f_newton(cell(i,ref_nbc(1,2,2)),3) )
-   
+
              ! A_y
              cy1(i) = gy1(i)
              cx1(i) = 0.5d0 * ( f_newton(cell(i,0),1) + f_newton(cell(i,ref_nbc(1,1,2)),1) )
@@ -841,12 +841,12 @@ subroutine compute_pdm_density_at_levelmin(ilevel,icount)
              nuy1(i) = sqrt(cx1(i)*cx1(i) + cy1(i)*cy1(i) + cz1(i)*cz1(i))*a0_i
 
              !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
-   
+
              ! B_z
              cz2(i) = gz2(i)
              cx2(i) = 0.5d0 * ( f_newton(cell(i,0),1) + f_newton(cell(i,ref_nbc(1,2,3)),1) )
              cy2(i) = 0.5d0 * ( f_newton(cell(i,0),2) + f_newton(cell(i,ref_nbc(1,2,3)),2) )
-   
+
              ! A_z
              cz1(i) = gz1(i)
              cx1(i) = 0.5d0 * ( f_newton(cell(i,0),1) + f_newton(cell(i,ref_nbc(1,1,3)),1) )
@@ -938,7 +938,7 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
   c2 =  1.0d0/24.0d0/dx
   c3 =  1.0d0/24.0d0/dx
   c4 =  8.0d0/24.0d0/dx
-  
+
   ! Set position of cell centers relative to grid center
   do child=1,twotondim
       iz=(child-1)/4
@@ -949,14 +949,14 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
       if(ndim>2) xc(child,3)=(dble(iz)-0.5D0)*dx
       iskip(child) = ncoarse+(child-1)*ngridmax
   end do
-  
+
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
-  
+
   ! Loop over grids
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
-     
+
      ! Gather grids
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
@@ -966,10 +966,10 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
      do i=1,ngrid
         ind_father_cell(i)=father(ind_grid(i))
      end do
-     
+
      ! For each grid, get all neighboring father cells
      call get3cubefather(ind_father_cell,nbors_father_cells,nbors_father_grids_tmp,ngrid,ilevel)
-     
+
      ! For each grid, get all neighboring father grids (if exist, else 0)
      do n=1,threetondim
         do i=1,ngrid
@@ -986,7 +986,7 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
                  pp(i,child,n) = phi_newton(iskip(child)+nbors_father_grids(i,n))
               enddo
            else
-              ! If the neighboring father grid does not exist,  
+              ! If the neighboring father grid does not exist,
               ! interpolate the potential from the neighboring father cell
               call interpol_phi(nbors_father_cells(i,n), pp(i,1,n), 1, ilevel, icount)
            endif
@@ -1005,22 +1005,22 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
 
            !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
 
-           gx2(i) =  ( c1*(pp(i,cell_ijk(child, 1, 0, 0),grid_ijk(child, 1, 0, 0)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) & 
+           gx2(i) =  ( c1*(pp(i,cell_ijk(child, 1, 0, 0),grid_ijk(child, 1, 0, 0)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) &
                      - c2*(pp(i,cell_ijk(child, 2, 0, 0),grid_ijk(child, 2, 0, 0)) - pp(i,cell_ijk(child,-1, 0, 0),grid_ijk(child,-1, 0, 0))) )
-           gy2(i) =  ( c1*(pp(i,cell_ijk(child, 0, 1, 0),grid_ijk(child, 0, 1, 0)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) & 
+           gy2(i) =  ( c1*(pp(i,cell_ijk(child, 0, 1, 0),grid_ijk(child, 0, 1, 0)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) &
                      - c2*(pp(i,cell_ijk(child, 0, 2, 0),grid_ijk(child, 0, 2, 0)) - pp(i,cell_ijk(child, 0,-1, 0),grid_ijk(child, 0,-1, 0))) )
-           gz2(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 1),grid_ijk(child, 0, 0, 1)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) & 
+           gz2(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 1),grid_ijk(child, 0, 0, 1)) - pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0))) &
                      - c2*(pp(i,cell_ijk(child, 0, 0, 2),grid_ijk(child, 0, 0, 2)) - pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1))) )
 
-           gx1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child,-1, 0, 0),grid_ijk(child,-1, 0, 0))) & 
+           gx1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child,-1, 0, 0),grid_ijk(child,-1, 0, 0))) &
                      - c2*(pp(i,cell_ijk(child, 1, 0, 0),grid_ijk(child, 1, 0, 0)) - pp(i,cell_ijk(child,-2, 0, 0),grid_ijk(child,-2, 0, 0))) )
-           gy1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child, 0,-1, 0),grid_ijk(child, 0,-1, 0))) & 
+           gy1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child, 0,-1, 0),grid_ijk(child, 0,-1, 0))) &
                      - c2*(pp(i,cell_ijk(child, 0, 1, 0),grid_ijk(child, 0, 1, 0)) - pp(i,cell_ijk(child, 0,-2, 0),grid_ijk(child, 0,-2, 0))) )
-           gz1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1))) & 
+           gz1(i) =  ( c1*(pp(i,cell_ijk(child, 0, 0, 0),grid_ijk(child, 0, 0, 0)) - pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1))) &
                      - c2*(pp(i,cell_ijk(child, 0, 0, 1),grid_ijk(child, 0, 0, 1)) - pp(i,cell_ijk(child, 0, 0,-2),grid_ijk(child, 0, 0,-2))) )
-           
+
            !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
-           
+
            ! Ax
            cx1(i) = gx1(i)
            cy1(i) = &
@@ -1041,8 +1041,8 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
                     +pp(i,cell_ijk(child,-1, 0, 1),grid_ijk(child,-1, 0, 1)) &
                     -pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1)) &
                     -pp(i,cell_ijk(child,-1, 0,-1),grid_ijk(child,-1, 0,-1)))
-           
-           ! Bx 
+
+           ! Bx
            cx2(i) = gx2(i)
            cy2(i) = &
                  c3*(pp(i,cell_ijk(child, 0,-2, 0),grid_ijk(child, 0,-2, 0)) &
@@ -1062,15 +1062,15 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
                     +pp(i,cell_ijk(child, 1, 0, 1),grid_ijk(child, 1, 0, 1)) &
                     -pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1)) &
                     -pp(i,cell_ijk(child, 1, 0,-1),grid_ijk(child, 1, 0,-1)))
-                    
+
            ! grad(phi)/a0 at point A_x
            nux1(i) = sqrt(cx1(i)*cx1(i) + cy1(i)*cy1(i) + cz1(i)*cz1(i))*a0_i;
            ! grad(phi)/a0 at point B_x
            nux2(i) = sqrt(cx2(i)*cx2(i) + cy2(i)*cy2(i) + cz2(i)*cz2(i))*a0_i;
-           
+
            !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
-                      
-           ! Ay 
+
+           ! Ay
            cx1(i) = &
                  c3*(pp(i,cell_ijk(child,-2, 0, 0),grid_ijk(child,-2, 0, 0)) &
                     +pp(i,cell_ijk(child,-2,-1, 0),grid_ijk(child,-2,-1, 0)) &
@@ -1090,8 +1090,8 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
                     +pp(i,cell_ijk(child, 0,-1, 1),grid_ijk(child, 0,-1, 1)) &
                     -pp(i,cell_ijk(child, 0, 0,-1),grid_ijk(child, 0, 0,-1)) &
                     -pp(i,cell_ijk(child, 0,-1,-1),grid_ijk(child, 0,-1,-1)))
-           
-           ! By 
+
+           ! By
            cx2(i) = &
                  c3*(pp(i,cell_ijk(child,-2, 0, 0),grid_ijk(child,-2, 0, 0)) &
                     +pp(i,cell_ijk(child,-2, 1, 0),grid_ijk(child,-2, 1, 0)) &
@@ -1116,10 +1116,10 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
            nuy1(i) = sqrt(cx1(i)*cx1(i) + cy1(i)*cy1(i) + cz1(i)*cz1(i))*a0_i;
            ! grad(phi)/a0 at point B_y
            nuy2(i) = sqrt(cx2(i)*cx2(i) + cy2(i)*cy2(i) + cz2(i)*cz2(i))*a0_i;
-                    
+
            !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
-           
-           ! Az 
+
+           ! Az
            cx1(i) = &
                  c3*(pp(i,cell_ijk(child,-2, 0, 0),grid_ijk(child,-2, 0, 0)) &
                     +pp(i,cell_ijk(child,-2, 0,-1),grid_ijk(child,-2, 0,-1)) &
@@ -1139,8 +1139,8 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
                     -pp(i,cell_ijk(child, 0,-1, 0),grid_ijk(child, 0,-1, 0)) &
                     -pp(i,cell_ijk(child, 0,-1,-1),grid_ijk(child, 0,-1,-1)))
            cz1(i) = gz1(i)
-           
-           ! Bz 
+
+           ! Bz
            cx2(i) = &
                  c3*(pp(i,cell_ijk(child,-2, 0, 0),grid_ijk(child,-2, 0, 0)) &
                     +pp(i,cell_ijk(child,-2, 0, 1),grid_ijk(child,-2, 0, 1)) &
@@ -1165,7 +1165,7 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
            nuz1(i) = sqrt(cx1(i)*cx1(i) + cy1(i)*cy1(i) + cz1(i)*cz1(i))*a0_i;
            ! grad(phi)/a0 at point B_z
            nuz2(i) = sqrt(cx2(i)*cx2(i) + cy2(i)*cy2(i) + cz2(i)*cz2(i))*a0_i;
-           
+
            !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ !!
 
            ! Compute nu(x)
@@ -1181,7 +1181,7 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
               ( nux2(i)*gx2(i)-nux1(i)*gx1(i) +       &
                 nuy2(i)*gy2(i)-nuy1(i)*gy1(i) +       &
                 nuz2(i)*gz2(i)-nuz1(i)*gz1(i)  ) * (h_i/boxlen) / FOUR_PI_G
-           
+
         enddo ! i=1,ngrid
 
      enddo ! child=1,8

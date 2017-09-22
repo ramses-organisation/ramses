@@ -16,9 +16,9 @@ subroutine newdt_fine(ilevel)
   ! This routine compute the time step using 3 constraints:
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
-  ! 3- 10% maximum variation for aexp 
+  ! 3- 10% maximum variation for aexp
   ! 4- maximum step time for ATON
-  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas 
+  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas
   ! This routine also compute the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
@@ -87,7 +87,7 @@ subroutine newdt_fine(ilevel)
 
      dt_all=dtnew(ilevel); dt_loc=dt_all
      ekin_all=0.0; ekin_loc=0.0
-     
+
      ! Compute maximum time step on active region
      if(numbl(myid,ilevel)>0)then
         ! Loop over grids
@@ -137,32 +137,32 @@ subroutine newdt_fine(ilevel)
            highest_level=.true.
         else if (numbtot(1,ilevel+1)==0)then
            highest_level=.true.
-        else 
+        else
            highest_level=.false.
         end if
-        
+
         if (highest_level)then
            call compute_accretion_rate(.false.)
            ! timestep due to sink accretion
            dt_acc_min=huge(0._dp)
            do isink=1,nsink
-              
+
               levelmin_isink=nlevelmax
               do ilev=nlevelmax,levelmin,-1
-                 if (level_sink(isink,ilev))levelmin_isink=ilev 
+                 if (level_sink(isink,ilev))levelmin_isink=ilev
               end do
-              
+
               dt_fact=1.
               do ilev=levelmin_isink,ilevel-1
                  dt_fact=dt_fact*nsubcycle(ilev)
               end do
-              
+
               if (dt_acc(isink)/dt_fact<dt_acc_min)then
                  dt_acc_min=dt_acc(isink)/dt_fact
                  limiting_sink=isink
                  limiting_dt_fact=dt_fact
               end if
-              
+
            end do
            if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
               write(*,'(A10,2X,F10.6,2X,A20,2X,I10)')'dt_acc/dt',dt_acc_min/dtnew(ilevel),'limited by sink:',limiting_sink
@@ -174,7 +174,7 @@ subroutine newdt_fine(ilevel)
   end if
 
   if(hydro)call courant_fine(ilevel)
-  
+
 111 format('   Entering newdt_fine for level ',I2)
 
 end subroutine newdt_fine
@@ -221,7 +221,7 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
         ekin_loc=ekin_loc+0.5D0*mp(ind_part(i))*vp(ind_part(i),idim)**2
      end do
   end do
-    
+
 end subroutine newdt2
 
 

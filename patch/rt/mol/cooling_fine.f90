@@ -35,14 +35,14 @@ subroutine cooling_fine(ilevel)
 #ifdef grackle
      if(use_grackle==0)then
         if(myid==1)write(*,*)'Computing new cooling table'
-        call set_table(dble(aexp)) 
+        call set_table(dble(aexp))
      endif
 #else
      if(myid==1)write(*,*)'Computing new cooling table'
      call set_table(dble(aexp))
 #endif
   endif
-  
+
 111 format('   Entering cooling_fine for level',i2)
 
 end subroutine cooling_fine
@@ -97,7 +97,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep
   real(kind=8)::aexp_loc, f_dust, xHII
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
-  real(dp),dimension(nDim):: flux 
+  real(dp),dimension(nDim):: flux
 #endif
 
   ! Mesh spacing in that level
@@ -202,10 +202,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      if(rt_vc) then      ! Add/remove radiation work on gas. Eq A6 in RT15
         iNp=iGroups(iIR)
-        do i=1,nleaf 
+        do i=1,nleaf
            il=ind_leaf(i)
            NIRtot = rtuold(il,iNp)
-           kScIR  = kappaSc(iIR)  
+           kScIR  = kappaSc(iIR)
            if(is_kIR_T) then                      !      k_IR depends on T
               EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
@@ -217,11 +217,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            f_dust = (1.-xHII)                     ! No dust in ionised gas
            work = scale_v/c_cgs * kScIR * sum(uold(il,2:ndim+1)*flux)    &
                 * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
-           
+
            uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
                 + work * group_egy(iIR) &
                 * ev_to_erg / scale_d / scale_v**2 / scale_l**3
-           
+
            rtuold(il,iNp) = rtuold(il,iNp) - work !Remove from rad density
            rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
            call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
@@ -229,7 +229,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 #endif
 #endif
-        
+
      ! Compute thermal pressure
      do i=1,nleaf
         T2(i)=uold(ind_leaf(i),ndim+2)
@@ -357,7 +357,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end if
         if(isothermal)cooling_on(1:nleaf)=.false.
      endif
-     
+
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
         do i=1,nleaf
            do ig=1,nGroups
@@ -387,7 +387,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         enddo
         gr_dimension(1) = nvector
         gr_end(1) = nleaf - 1
-   
+
         if(cosmo)then
            my_grackle_units%a_value = MAX(aexp,0.0625)
            my_grackle_units%density_units = scale_d
@@ -395,7 +395,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            my_grackle_units%time_units = scale_t
            my_grackle_units%velocity_units = scale_v
         endif
-   
+
         do i = 1, nleaf
            gr_density(i) = uold(ind_leaf(i),1)
            if(metal)then
@@ -411,7 +411,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! Update grid properties
         my_grackle_fields%grid_rank = gr_rank
         my_grackle_fields%grid_dx = dx_loc
-  
+
         iresult = solve_chemistry(my_grackle_units, my_grackle_fields, dtnew(ilevel))
         if(iresult.eq.0)then
             write(*,*) 'Grackle: error in solve_chemistry'
@@ -421,7 +421,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
             stop
 #endif
         endif
-   
+
         do i = 1, nleaf
            T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0)
         end do
@@ -462,18 +462,18 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                    + 0.5*uold(ind_leaf(i),idim+1)**2 / uold(ind_leaf(i),1)
            end do
         end do
-        do i=1,nleaf                                   
+        do i=1,nleaf
            ! Update the pressure variable with the new kinetic energy:
            uold(ind_leaf(i),ndim+2) = uold(ind_leaf(i),ndim+2)           &
                                     - ekk(i) + ekk_new(i)
         end do
-        do i=1,nleaf                                   
+        do i=1,nleaf
            ekk(i)=ekk_new(i)
         end do
-     
-#if NGROUPS>0 
+
+#if NGROUPS>0
         if(rt_vc) then ! Photon work: subtract from the IR ONLY radiation
-           do i=1,nleaf                                   
+           do i=1,nleaf
               Np(iIR,i) = Np(iIR,i) + (ekk(i) - ekk_new(i))              &
                    /scale_d/scale_v**2 / group_egy(iIR) / ev_to_erg
            end do
@@ -550,7 +550,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            end do
         end do
      endif
-#if NGROUPS>0 
+#if NGROUPS>0
      if(rt) then
         ! Update photon densities and flux magnitudes
         do ig=1,nGroups
@@ -572,19 +572,19 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
         iNp=iGroups(iIR)
         unit_tau = 1.5d0 * dx_loc * scale_d * scale_l
-        do i=1,nleaf                                                    
-           il=ind_leaf(i)                                               
+        do i=1,nleaf
+           il=ind_leaf(i)
            NIRtot =max(rtuold(il,iNp),smallNp)      ! Total photon density
-           kScIR  = kappaSc(iIR)                                          
+           kScIR  = kappaSc(iIR)
            if(is_kIR_T) then                        !    k_IR depends on T
-              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np  
+              EIR = group_egy(iIR) * ev_to_erg * NIRtot *scale_Np
               TR = max(T2_min_fix,(EIR*rt_c_cgs/c_cgs/a_r)**0.25)
-              kScIR  = kappaSc(iIR) * (TR/10d0)**2               
+              kScIR  = kappaSc(iIR) * (TR/10d0)**2
            endif
            f_dust = 1.-xion(ixHII,i)              ! No dust in ionised gas
-           tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kScIR                  
+           tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kScIR
            f_trap = 0d0             ! Fraction IR photons that are trapped
-           if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0) 
+           if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0)
            ! Update streaming photons, trapped photons, and tot energy:
            rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
            rtuold(il,iNp+1:iNp+ndim) = &            ! Limit streaming flux
@@ -596,9 +596,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            uold(il,iIRtrapVar) = EIR_trapped
 
            call reduce_flux(rtuold(il,iNp+1:iNp+ndim),rtuold(il,iNp)*rt_c)
-        end do ! i=1,nleaf                                                 
+        end do ! i=1,nleaf
 
-     endif  !rt_isIRtrap     
+     endif  !rt_isIRtrap
 #endif
 #endif
 
@@ -610,7 +610,7 @@ end subroutine coolfine1
 #ifdef RT
 !************************************************************************
 subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
-  
+
 ! Compute Eddington tensor for given radiation variables
 ! Npc     => Photon number density times light speed
 ! Fp     => Photon number flux
@@ -620,7 +620,7 @@ subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
   implicit none
   real(dp)::Npc
   real(dp),dimension(1:ndim)::Fp ,u
-  real(dp),dimension(1:ndim,1:ndim)::T_Edd 
+  real(dp),dimension(1:ndim,1:ndim)::T_Edd
   real(dp)::iterm,oterm,Np_c_sq,Fp_sq,fred_sq,chi
   integer::p,q
 !------------------------------------------------------------------------
@@ -628,11 +628,11 @@ subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
      write(*,*)'negative photon density in cmp_Eddington_tensor. -EXITING-'
      call clean_stop
   endif
-  T_Edd(:,:) = 0.d0   
-  Np_c_sq = Npc**2        
+  T_Edd(:,:) = 0.d0
+  Np_c_sq = Npc**2
   Fp_sq = sum(Fp**2)              !  Sq. photon flux magnitude
   u(:) = 0.d0                           !           Flux unit vector
-  if(Fp_sq .gt. 0.d0) u(:) = Fp/sqrt(Fp_sq)  
+  if(Fp_sq .gt. 0.d0) u(:) = Fp/sqrt(Fp_sq)
   fred_sq = Fp_sq/Np_c_sq           !      Reduced flux, squared
   chi = max(4.d0-3.d0*fred_sq, 0.d0)   !           Eddington factor
   chi = (3.d0+ 4.d0*fred_sq)/(5.d0 + 2.d0*sqrt(chi))
@@ -644,6 +644,6 @@ subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
      enddo
      T_Edd(p,p) = T_Edd(p,p) + iterm
   enddo
-  
+
 end subroutine cmp_Eddington_tensor
 #endif

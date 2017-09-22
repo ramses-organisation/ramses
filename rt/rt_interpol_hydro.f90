@@ -14,7 +14,7 @@ SUBROUTINE rt_upload_fine(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
- 
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -22,25 +22,25 @@ SUBROUTINE rt_upload_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather split cells
         do i=1,ngrid
            ok(i)=son(ind_cell(i))>0
         end do
-        
+
         ! Count split cells
         nsplit=0
         do i=1,ngrid
            if(ok(i))nsplit=nsplit+1
         end do
-        
+
         ! Upload for selected cells
         if(nsplit>0)then
            icell=0
@@ -52,7 +52,7 @@ SUBROUTINE rt_upload_fine(ilevel)
            end do
            call rt_upl(ind_split,nsplit)
         end if
-        
+
      end do
      ! End loop over cells
 
@@ -82,7 +82,7 @@ SUBROUTINE rt_upl(ind_cell,ncell)
   end do
 
   ! Loop over variables
-  do ivar=1,nrtvar     
+  do ivar=1,nrtvar
 
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
@@ -94,10 +94,10 @@ SUBROUTINE rt_upl(ind_cell,ncell)
            getx(i)=getx(i)+rtuold(ind_cell_son(i),ivar)
         end do
      end do
-        
-     ! Scatter result to cells 
+
+     ! Scatter result to cells
      do i=1,ncell
-        rtuold(ind_cell(i),ivar)=getx(i)/dble(twotondim) 
+        rtuold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
      end do
 
   end do
@@ -106,7 +106,7 @@ SUBROUTINE rt_upl(ind_cell,ncell)
 END SUBROUTINE rt_upl
 !************************************************************************
 SUBROUTINE rt_interpol_hydro(u1,u2,nn)
-! Same as interpol_hydro, except it only goes through the RT variables 
+! Same as interpol_hydro, except it only goes through the RT variables
 ! (and not the hydro ones)
 !------------------------------------------------------------------------
   use amr_commons
@@ -119,7 +119,7 @@ SUBROUTINE rt_interpol_hydro(u1,u2,nn)
   integer::i,j,ivar,idim,ind,ix,iy,iz
 
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,0:twondim),save::a 
+  real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
 !------------------------------------------------------------------------
   ! Set position of cell centers relative to grid (oct) center
@@ -144,7 +144,7 @@ SUBROUTINE rt_interpol_hydro(u1,u2,nn)
 
      ! Load father variable
      do j=0,twondim
-        do i=1,nn 
+        do i=1,nn
            a(i,j)=u1(i,j,ivar)
         end do
      end do
@@ -153,9 +153,9 @@ SUBROUTINE rt_interpol_hydro(u1,u2,nn)
      w(1:nn,1:ndim)=0.0D0
 
      ! Compute gradient with chosen limiter
-     if(interpol_type==1)call compute_limiter_minmod(a,w,nn) 
+     if(interpol_type==1)call compute_limiter_minmod(a,w,nn)
      if(interpol_type==2)call compute_limiter_central(a,w,nn)
-     if(interpol_type==3)call compute_central(a,w,nn)        
+     if(interpol_type==3)call compute_central(a,w,nn)
 
      ! Interpolate over children cells
      do ind=1,twotondim

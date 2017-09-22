@@ -34,7 +34,7 @@ subroutine rho_fine(ilevel,icount)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
@@ -210,10 +210,10 @@ subroutine rho_fine(ilevel,icount)
 !!$        print*,rho(active(ilevel)%igrid(i)+iskip),rho_tot
 !!$     end do
 !!$  end do
-  
+
 
 111 format('   Entering rho_fine for level ',I2)
-  
+
 end subroutine rho_fine
 !##############################################################################
 !##############################################################################
@@ -239,23 +239,23 @@ subroutine rho_from_current_level(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
-    
+
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
-  
+  dx=0.5D0**ilevel
+
   ! Loop over cpus
   do icpu=1,ncpu
      ! Loop over grids
      igrid=headl(icpu,ilevel)
      ig=0
-     ip=0   
+     ip=0
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then        
+        if(npart1>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
-           
+
            ! Loop over particles
            do jpart=1,npart1
               if(ig==0)then
@@ -286,7 +286,7 @@ subroutine rho_from_current_level(ilevel)
               ipart=nextp(ipart)  ! Go to next particle
            end do
            ! End loop over particles
-           
+
         end if
 
         igrid=next(igrid)   ! Go to next grid
@@ -350,7 +350,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -461,7 +461,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
 #endif
-        
+
   ! Compute parent grids
   do idim=1,ndim
      do j=1,np
@@ -623,14 +623,14 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      if(sink_refine)then
         do j=1,np
            if(idp(ind_part(j))<0.)then
-              ! if (direct_force_sink(-1*idp(ind_part(j))))then                     
+              ! if (direct_force_sink(-1*idp(ind_part(j))))then
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
            end if
         end do
      end if
   end do
-  
+
 end subroutine cic_amr
 !###########################################################
 !###########################################################
@@ -647,7 +647,7 @@ subroutine multipole_fine(ilevel)
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then 
+  ! by first reseting array rho to zero, then
   ! by affecting the gas density to leaf cells, and finally
   ! by performing a restriction operation for split cells.
   ! For pure particle runs, the restriction is not necessary and the
@@ -667,7 +667,7 @@ subroutine multipole_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -705,7 +705,7 @@ subroutine multipole_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -725,7 +725,7 @@ subroutine multipole_fine(ilevel)
               end do
            end if
         end do
-        
+
         ! Compute gas multipole for leaf cells only
         if(hydro)then
            do i=1,nleaf
@@ -741,7 +741,7 @@ subroutine multipole_fine(ilevel)
         endif
 
         ! Add analytical density profile for leaf cells only
-        if(gravity_type < 0)then           
+        if(gravity_type < 0)then
            ! Call user defined routine rho_ana
            call rho_ana(xx,dd,dx_loc,nleaf)
            ! Scatter results to array phi
@@ -753,7 +753,7 @@ subroutine multipole_fine(ilevel)
                  mm=dd(i)*vol_loc
                  unew(ind_leaf(i),idim+1)=unew(ind_leaf(i),idim+1)+mm*xx(i,idim)
               end do
-           end do           
+           end do
         end if
 
         ! Gather split cells
@@ -808,7 +808,7 @@ subroutine cic_from_multipole(ilevel)
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then 
+  ! by first reseting array rho to zero, then
   ! by affecting the gas density to leaf cells, and finally
   ! by performing a restriction operation for split cells.
   ! For pure particle runs, the restriction is not necessary and the
@@ -845,7 +845,7 @@ subroutine cic_from_multipole(ilevel)
         end do
      end do
   end do
-  
+
   if(hydro)then
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
@@ -890,9 +890,9 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
-  
+
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -922,7 +922,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
            x(j,idim)=unew(ind_cell_son,idim+1)/unew(ind_cell_son,1)
         end do
      end do
-     
+
      ! Compute total multipole
      if(ilevel==levelmin)then
         do idim=1,ndim+1
@@ -949,13 +949,13 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
            x(j,idim)=x(j,idim)/dx
         end do
      end do
-     
+
      ! Gather particle mass
      do j=1,np
         ind_cell_son=iskip_son+ind_grid(j)
         mmm(j)=unew(ind_cell_son,1)
      end do
-     
+
      ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
      do idim=1,ndim
         do j=1,np
@@ -966,7 +966,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
            ig(j,idim)=id(j,idim)-1
         end do
      end do
-     
+
      ! Check for illegal moves
      error=.false.
      do idim=1,ndim
@@ -1013,7 +1013,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
      end do
 #endif
-     
+
      ! Compute parent grids
      do idim=1,ndim
         do j=1,np
@@ -1052,7 +1052,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
            igrid(j,ind)=son(nbors_father_cells(j,kg(j,ind)))
         end do
      end do
-     
+
      ! Compute parent cell position
      do idim=1,ndim
         do j=1,np
@@ -1086,14 +1086,14 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
      end do
 #endif
-     
+
      ! Compute parent cell adress
      do ind=1,twotondim
         do j=1,np
            indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
         end do
      end do
-     
+
      ! Update mass density and number density fields
      do ind=1,twotondim
         do j=1,np
@@ -1101,14 +1101,14 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         end do
         do j=1,np
            vol2(j)=mmm(j)*vol(j,ind)/vol_loc
-        end do        
+        end do
         do j=1,np
            if(ok(j))then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
      end do
-     
+
   end do
   ! End loop over grid cells
 
@@ -1156,7 +1156,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   end if
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -1217,7 +1217,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! TSC at level ilevel; a particle contributes 
+  ! TSC at level ilevel; a particle contributes
   !     to three cells in each dimension
   ! cl: position of leftmost cell centre
   ! cc: position of central cell centre
@@ -1270,7 +1270,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         vol(j,27)=wr(j,1)*wr(j,2)*wr(j,3)
      end if
   end do
-        
+
   ! Compute parent grids
   do idim=1,ndim
      do j=1,np
@@ -1472,7 +1472,7 @@ subroutine tsc_from_multipole(ilevel)
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then 
+  ! by first reseting array rho to zero, then
   ! by affecting the gas density to leaf cells, and finally
   ! by performing a restriction operation for split cells.
   ! For pure particle runs, the restriction is not necessary and the
@@ -1510,7 +1510,7 @@ subroutine tsc_from_multipole(ilevel)
         end do
      end do
   end do
-  
+
   if(hydro)then
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
@@ -1532,7 +1532,7 @@ end subroutine tsc_from_multipole
 !###########################################################
 !###########################################################
 !###########################################################
-#if NDIM==3 
+#if NDIM==3
 subroutine tsc_cell(ind_grid,ngrid,ilevel)
   use amr_commons
   use poisson_commons
@@ -1559,7 +1559,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   logical::error
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -1589,7 +1589,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
            x(j,idim)=unew(ind_cell_son,idim+1)/unew(ind_cell_son,1)
         end do
      end do
-     
+
      ! Compute total multipole
      if(ilevel==levelmin)then
         do idim=1,ndim+1
@@ -1616,14 +1616,14 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
            x(j,idim)=x(j,idim)/dx
         end do
      end do
-     
+
      ! Gather particle mass
      do j=1,np
         ind_cell_son=iskip_son+ind_grid(j)
         mmm(j)=unew(ind_cell_son,1)
      end do
-     
-     ! TSC at level ilevel; a particle contributes 
+
+     ! TSC at level ilevel; a particle contributes
      !     to three cells in each dimension
      ! cl: position of leftmost cell centre
      ! cc: position of central cell centre
@@ -1641,7 +1641,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
            wr(j,idim)=0.50D0*(1.5D0-abs(x(j,idim)-cr(j,idim)))**2
         end do
      end do
-     
+
      ! Check for illegal moves
      error=.false.
      do idim=1,ndim
@@ -1734,7 +1734,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
            igrid(j,ind)=son(nbors_father_cells(j,kg(j,ind)))
         end do
      end do
-     
+
      ! Compute parent cell position
      do idim=1,ndim
         do j=1,np
@@ -1772,14 +1772,14 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         icell(j,26)=1+icc(j,1)+2*icr(j,2)+4*icr(j,3)
         icell(j,27)=1+icr(j,1)+2*icr(j,2)+4*icr(j,3)
      end do
-     
+
      ! Compute parent cell adress
      do ind=1,threetondim
         do j=1,np
            indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
         end do
      end do
-    
+
      ! Update mass density and number density fields
      do ind=1,twotondim
         do j=1,np
@@ -1787,14 +1787,14 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         end do
         do j=1,np
            vol2(j)=mmm(j)*vol(j,ind)/vol_loc
-        end do        
+        end do
         do j=1,np
            if(ok(j))then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
      end do
-     
+
   end do
   ! End loop over grid cells
 end subroutine tsc_cell

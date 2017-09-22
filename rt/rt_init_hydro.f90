@@ -55,7 +55,7 @@ subroutine rt_init_hydro
   ! For a restart, read rt file
   !--------------------------------
   ilun=ncpu+myid+10
-  call title(nrestart,nchar)   
+  call title(nrestart,nchar)
 
   if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
@@ -73,7 +73,7 @@ subroutine rt_init_hydro
      return ! May be post-processing of normal RAMSES
   endif
 
-     
+
   ! Wait for the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -91,7 +91,7 @@ subroutine rt_init_hydro
   read(ilun)nlevelmax2
   read(ilun)nboundary2
   read(ilun)gamma2
-  if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables 
+  if(nrtvar2.gt.nrtvar .and. myid==1)then ! Not ok to drop RT variables
      write(*,*)'File rt.tmp is not compatible (1)'
      write(*,*)'Found nrtvar  =',nrtvar2
      write(*,*)'Expected=',nrtvar
@@ -145,7 +145,7 @@ subroutine rt_init_hydro
         end if
      end do
   end do
-  close(ilun)  
+  close(ilun)
 
   ! Send the token
 #ifndef WITHOUTMPI

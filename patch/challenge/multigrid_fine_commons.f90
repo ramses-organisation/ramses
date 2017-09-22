@@ -720,7 +720,7 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
          active_mg(icpu,icoarselevel)%f=0
       end if
    end do
-   
+
    nreq=0
    do i=1,nreq_tot
       cur_grid=flag2(ngridmax+i)
@@ -956,7 +956,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
 
          if(f(icell_amr,3)<=0.0) cycle ! Do not process masked cells
 
-         ! Separate directions 
+         ! Separate directions
          do idim=1,ndim
             ! Loop over the 2 neighbors
             do inbor=1,2
@@ -1291,7 +1291,7 @@ subroutine dump_mg_levels(ilevel,idout)
    use poisson_commons
    implicit none
 #ifndef WITHOUTMPI
-   include 'mpif.h'  
+   include 'mpif.h'
 #endif
    integer, intent(in) :: idout, ilevel
 
@@ -1300,14 +1300,14 @@ subroutine dump_mg_levels(ilevel,idout)
    character(len=5)   :: cout='00000'
 
    integer :: i, ngrids, igrid, icpu, idim
-   
+
    integer,parameter::tag=1112
    integer::dummy_io,info
 
    write(ccpu,'(I5.5)') myid
    write(cout,'(I5.5)') idout
    cfile='multigrid_'//cout//'.out'//ccpu
-   
+
    ! Wait for the token
 #ifndef WITHOUTMPI
    if(IOGROUPSIZE>0) then
@@ -1317,7 +1317,7 @@ subroutine dump_mg_levels(ilevel,idout)
       end if
    endif
 #endif
-   
+
    open(unit=10,file=cfile,status='unknown',form='formatted')
 
    write(10,'(I1)') ndim

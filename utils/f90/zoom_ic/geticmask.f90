@@ -1,7 +1,7 @@
 program icmask
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES. 
+  ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -54,14 +54,14 @@ program icmask
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
-     stop 
+     stop
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -112,11 +112,11 @@ program icmask
   open(19,file='partID.dat',form='formatted',status='old')
   read(19,*) npart,nparttot,maxid
   write(*,*) 'Number of particles in selected region =',npart
-  allocate(idpart(1:npart)) 
-  allocate(indidpart(1:npart)) 
-  do i=1,npart  
+  allocate(idpart(1:npart))
+  allocate(indidpart(1:npart))
+  do i=1,npart
      read(19,*) idd
-     !idpart(idd)=1     
+     !idpart(idd)=1
      idpart(i)=idd
   enddo
   close(19)
@@ -177,7 +177,7 @@ program icmask
      ! Read identity
      read(1)tempid
      ! Read level
-     read(1)temp2   
+     read(1)temp2
      if(nstar.gt.0) then
         ! Read BT
         read(1)tempbt
@@ -188,11 +188,11 @@ program icmask
      close(1)
 
      call quick_sort(tempid, indtempid, npart2)
-     
+
      ico=1
      i=1
      do while (i.le.npart2.and.ico.le.npart)
-        if(tempid(i).lt.idpart(ico))then 
+        if(tempid(i).lt.idpart(ico))then
            i=i+1
         else
            if(tempid(i).gt.idpart(ico))then
@@ -233,14 +233,14 @@ program icmask
 !        if(idpart(i)<=minnid.and.i>=icomin)then
 !           icomin=i
 !        end if
-!        if(idpart(i)>=maxxid.and.i<=icomax)then 
+!        if(idpart(i)>=maxxid.and.i<=icomax)then
 !           icomax=i
 !        end if
 !     end do
 !     write(*,*)icomin,icomax,1,npart
 !     istart=icomin
 !     do i=1,npart2
-!        if(nstar==0) then           
+!        if(nstar==0) then
 !           ico=istart
 !           do while(ico.le.icomax.and.idpart(ico).ne.tempid(i))
 !              ico=ico+1
@@ -300,7 +300,7 @@ program icmask
 
 40 format(3e16.8)
 50 format(2I16)
-   
+
   grafic =TRIM(grafic)//'/ic_deltab'
   open(10,file=grafic,form='unformatted')
   read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
@@ -308,19 +308,19 @@ program icmask
   write(*,*)'Input array size is:',np1,np2,np3
   write(*,*)'Current box size is',np1*dx,' Mpc'
   allocate(imark(1:np1,1:np2,1:np3))
-  
+
   x1or=x1o/(unit_l/aexp/3.08e24)
   x2or=x2o/(unit_l/aexp/3.08e24)
   x3or=x3o/(unit_l/aexp/3.08e24)
   dxor=dx/(unit_l/aexp/3.08e24)
-  
+
   write(*,*)'Total box size ',(unit_l/aexp/3.08e24)
-  
+
   omegak=1.0-omegam-omegav
-  
+
   vfact=aexp*fpeebl(aexp) & ! Same scale factor as in grafic1
-       & *sqrt(omegam/aexp+omegav*aexp*aexp+omegak) 
-  
+       & *sqrt(omegam/aexp+omegav*aexp*aexp+omegak)
+
   write(*,*) 'vfact =', vfact,aexp
 
   maxdisp=0.
@@ -339,7 +339,7 @@ program icmask
         endif
         !              write(*,*) z(i), vz(i)/vfact/dxor
         x(i)=x(i)-vx(i)/vfact   !Trace back the Zeldovich approx.
-        y(i)=y(i)-vy(i)/vfact 
+        y(i)=y(i)-vy(i)/vfact
         z(i)=z(i)-vz(i)/vfact
         maxdisp=max(maxdisp,abs(vx(i)/vfact),abs(vy(i)/vfact),abs(vz(i)/vfact))
         if(x(i)<0.)x(i)=1.0+x(i)
@@ -364,8 +364,8 @@ program icmask
      write(33) ((imark(i,j,k),i=1,np1),j=1,np2)
   enddo
   close(33)
-  
-  
+
+
 
   if(smt>0) then !Dilation
      write(*,*) rsm,smt
@@ -375,7 +375,7 @@ program icmask
            do j=1,np2
               do k=1,np3
                  if(imark(i,j,k)==1.0) then
-                    do ix=i-smt,i+smt 
+                    do ix=i-smt,i+smt
                        ix1=ix
                        if(ix1.LT.1)ix1=ix1+np1
                        if(ix1.GT.np1)ix1=ix1-np1
@@ -388,14 +388,14 @@ program icmask
                              if(iz1.LT.1)iz1=iz1+np3
                              if(iz1.GT.np3)iz1=iz1-np3
                              if(periodic)then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                 r=r**0.5
                                 if(r.LE.smt.and.imark(ix1,iy1,iz1)==0.0) then
                                    imark(ix1,iy1,iz1)=2.0
                                 endif
                              else
                                 if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                    r=r**0.5
                                    if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
                                       imark(ix,iy,iz)=2.0
@@ -409,7 +409,7 @@ program icmask
               enddo
            enddo
         enddo
-        do i=1,np1 
+        do i=1,np1
            do j=1,np2
               do k=1,np3
                  if(imark(i,j,k)>0) then
@@ -437,7 +437,7 @@ program icmask
               do k=1,np3
                  if(imark(i,j,k)==1.0) then
                     okerode=.false.
-                    do ix=i-smt,i+smt  
+                    do ix=i-smt,i+smt
                        ix1=ix
                        if(ix1.LE.0)ix1=ix1+np1
                        if(ix1.GT.np1)ix1=ix1-np1
@@ -450,14 +450,14 @@ program icmask
                              if(iz1.LE.0)iz1=iz1+np3
                              if(iz1.GT.np3)iz1=iz1-np3
                              if(periodic)then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                 r=r**0.5
                                 if(r.LE.smt.and.imark(ix1,iy1,iz1)==0.0) then
                                    okerode=.true.
                                 endif
                              else
                                 if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                   r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                    r=r**0.5
                                    if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
                                       okerode=.true.
@@ -472,7 +472,7 @@ program icmask
               enddo
            enddo
         enddo
-        do i=1,np1 
+        do i=1,np1
            do j=1,np2
               do k=1,np3
                  if(imark(i,j,k)<=0) then
@@ -492,7 +492,7 @@ program icmask
            do k=1,np3
               if(imark(i,j,k)==1.0) then
                  okerode=.false.
-                 do ix=i-smt,i+smt  
+                 do ix=i-smt,i+smt
                     ix1=ix
                     if(ix1.LE.0)ix1=ix1+np1
                     if(ix1.GT.np1)ix1=ix1-np1
@@ -505,14 +505,14 @@ program icmask
                           if(iz1.LE.0)iz1=iz1+np3
                           if(iz1.GT.np3)iz1=iz1-np3
                           if(periodic)then
-                             r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                             r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                              r=r**0.5
                              if(r.LE.smt.and.imark(ix1,iy1,iz1)==0.0) then
                                 okerode=.true.
                              endif
                           else
                              if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                 r=r**0.5
                                 if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
                                    okerode=.true.
@@ -527,7 +527,7 @@ program icmask
            enddo
         enddo
      enddo
-     do i=1,np1 
+     do i=1,np1
         do j=1,np2
            do k=1,np3
               if(imark(i,j,k)<=0) then
@@ -541,7 +541,7 @@ program icmask
         do j=1,np2
            do k=1,np3
               if(imark(i,j,k)==1.0) then
-                 do ix=i-smt,i+smt 
+                 do ix=i-smt,i+smt
                     ix1=ix
                     if(ix1.LE.0)ix1=ix1+np1
                     if(ix1.GT.np1)ix1=ix1-np1
@@ -554,14 +554,14 @@ program icmask
                           if(iz1.LE.0)iz1=iz1+np3
                           if(iz1.GT.np3)iz1=iz1-np3
                           if(periodic)then
-                             r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                             r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                              r=r**0.5
                              if(r.LE.smt.and.imark(ix1,iy1,iz1)==0.0) then
                                 imark(ix1,iy1,iz1)=2.0
                              endif
                           else
                              if(ix.GT.0.and.ix.LE.np1.and.iy.GT.0.and.iy.LE.np2.and.iz.GT.0.and.iz.LE.np3) then
-                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2 
+                                r=(i-ix)**2+(j-iy)**2+(k-iz)**2
                                 r=r**0.5
                                 if(r.LE.smt.and.imark(ix,iy,iz)==0.0) then
                                    imark(ix,iy,iz)=2.0
@@ -575,7 +575,7 @@ program icmask
            enddo
         enddo
      enddo
-     do i=1,np1 
+     do i=1,np1
         do j=1,np2
            do k=1,np3
               if(imark(i,j,k)>0) then
@@ -614,7 +614,7 @@ contains
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
-      
+
       n = iargc()
       if (n < 4) then
          print *, 'usage: geticmask  -inp  input_dir'
@@ -642,7 +642,7 @@ contains
          case ('-inp')
             repository = trim(arg)
          case ('-dir')
-            proj = trim(arg) 
+            proj = trim(arg)
          case ('-xmi')
             read (arg,*) xmin
          case ('-xma')
@@ -664,17 +664,17 @@ contains
          case ('-rad')
             read (arg,*) rad
          case ('-per')
-            read (arg,*) periodic 
+            read (arg,*) periodic
          case ('-gid')
             read (arg,*) gid
          case ('-fid')
             read (arg,*) fid
          case ('-smt')
-            read (arg,*) smt 
+            read (arg,*) smt
          case ('-met')
             read (arg,*) metal
          case ('-rsm')
-            read (arg,*) rsm 
+            read (arg,*) rsm
          case ('-gfc')
             grafic = trim(arg)
          case ('-fil')
@@ -693,10 +693,10 @@ contains
     !      Computes the integrand
     real(kind=8)::fy
     real(kind=8)::y,a
-    
+
     y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
     fy=1.d0/y**1.5d0
-    
+
     return
   end function fy
 
@@ -706,7 +706,7 @@ contains
     real(kind=8) :: fpeebl,a
     !     Computes the growth factor f=d\log D1/d\log a.
     real(kind=8) :: fact,y,eps
-    
+
     eps=1.0d-6
     y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
     fact=rombint(eps,a,eps)
@@ -718,10 +718,10 @@ contains
     implicit none
     real(kind=8)::rombint
     !
-    !     Rombint returns the integral from a to b of f(x)dx using Romberg 
-    !     integration. The method converges provided that f(x) is continuous 
-    !     in (a,b). The function f must be double precision and must be 
-    !     declared external in the calling routine.  
+    !     Rombint returns the integral from a to b of f(x)dx using Romberg
+    !     integration. The method converges provided that f(x) is continuous
+    !     in (a,b). The function f must be double precision and must be
+    !     declared external in the calling routine.
     !     tol indicates the desired relative accuracy in the integral.
     !
     integer::maxiter=16,maxj=5
@@ -736,10 +736,10 @@ contains
     nint=1
     error=1.0d20
     i=0
-10  i=i+1 
+10  i=i+1
     if(.not.  (i>maxiter.or.(i>5.and.abs(error)<tol)))then
        !	Calculate next trapezoidal rule approximation to integral.
-       
+
        g0=0.0d0
        do k=1,nint
           g0=g0+fy(a+(k+k-1)*h)
@@ -749,7 +749,7 @@ contains
        nint=nint+nint
        jmax=min(i,maxj)
        fourj=1.0d0
-       
+
        do j=1,jmax
           ! Use Richardson extrapolation.
           fourj=4.0d0*fourj
@@ -771,9 +771,9 @@ contains
          &    write(*,*) 'Rombint failed to converge; integral, error=', &
          &    rombint,error
     return
-  end function rombint  
+  end function rombint
 end program icmask
-  
+
 !=======================================================================
 subroutine title(n,nchar)
 !=======================================================================
@@ -898,47 +898,47 @@ end subroutine hilbert3d
 
 
 SUBROUTINE quick_sort(list,order,n)
-  
+
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified by Alan Miller to include an associated integer array which gives
   ! the positions of the elements in the original order.
-  
+
   IMPLICIT NONE
   INTEGER :: n
   INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
-  
+
   ! Local variable
   INTEGER :: i
-  
+
   DO i = 1, n
      order(i) = i
   END DO
-  
+
   CALL quick_sort_1(1, n)
-  
+
 CONTAINS
-  
+
   RECURSIVE SUBROUTINE quick_sort_1(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     INTEGER              :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
-    
+
     IF (right_end < left_end + max_simple_sort_size) THEN
        ! Use interchange sort for small lists
        CALL interchange_sort(left_end, right_end)
-       
+
     ELSE
        ! Use partition ("quick") sort
        reference = list((left_end + right_end)/2)
        i = left_end - 1; j = right_end + 1
-       
+
        DO
           ! Scan list from left end until element >= reference is found
           DO
@@ -950,8 +950,8 @@ CONTAINS
              j = j - 1
              IF (list(j) <= reference) EXIT
           END DO
-          
-          
+
+
           IF (i < j) THEN
              ! Swap two out-of-order elements
              temp = list(i); list(i) = list(j); list(j) = temp
@@ -963,22 +963,22 @@ CONTAINS
              EXIT
           END IF
        END DO
-       
+
        IF (left_end < j) CALL quick_sort_1(left_end, j)
        IF (i < right_end) CALL quick_sort_1(i, right_end)
     END IF
-    
+
   END SUBROUTINE quick_sort_1
-  
-  
+
+
   SUBROUTINE interchange_sort(left_end, right_end)
-    
+
     INTEGER, INTENT(IN) :: left_end, right_end
-    
+
     !     Local variables
     INTEGER             :: i, j, itemp
     INTEGER           :: temp
-    
+
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
           IF (list(i) > list(j)) THEN
@@ -987,8 +987,8 @@ CONTAINS
           END IF
        END DO
     END DO
-    
+
   END SUBROUTINE interchange_sort
-  
+
 END SUBROUTINE quick_sort
-     
+

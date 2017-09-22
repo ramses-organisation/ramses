@@ -27,7 +27,7 @@ subroutine restrict_mask_fine(ifinelevel,allmasked)
    logical, intent(out) :: allmasked
 
    integer :: ind_c_cell,ind_f_cell
-   
+
    integer :: iskip_f_amr, iskip_c_amr, iskip_c_mg
    integer :: igrid_f_amr, igrid_c_amr, igrid_c_mg
    integer :: icell_f_amr, icell_c_amr, icell_c_mg
@@ -84,7 +84,7 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
    integer, intent(in) :: ifinelevel
 
    integer :: ind_c_cell, ind_f_cell, cpu_amr
-   
+
    integer :: iskip_c_mg
    integer :: igrid_c_amr, igrid_c_mg
    integer :: icell_c_amr, icell_c_mg
@@ -113,12 +113,12 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
          ind_c_cell=(icell_c_amr-ncoarse-1)/ngridmax+1
          igrid_c_amr=icell_c_amr-ncoarse-(ind_c_cell-1)*ngridmax
          cpu_amr=cpu_map(father(igrid_c_amr))
-         
+
          ! Convert to MG index, get MG coarse cell id
          igrid_c_mg=lookup_mg(igrid_c_amr)
          iskip_c_mg=(ind_c_cell-1)*active_mg(cpu_amr,icoarselevel)%ngrid
          icell_c_mg=iskip_c_mg+igrid_c_mg
-         
+
          ! Stack cell volume fraction in coarse cell
          ngpmask=(1d0+f(icell_f_amr,3))/2d0/dtwotondim
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
@@ -507,7 +507,7 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
    integer, intent(in) :: ifinelevel
 
    integer :: ind_c_cell, ind_f_cell, cpu_amr
-   
+
    integer :: iskip_c_mg
    integer :: igrid_c_amr, igrid_c_mg
    integer :: icell_c_amr, icell_c_mg
@@ -725,7 +725,7 @@ subroutine set_scan_flag_fine(ilevel)
          ! Update flag2 with scan flag,
          ! BEWARE as lookup_mg backups are stored in flag2
          ! Safety init:
-         if(flag2(icell_amr)>ngridmax .or. flag2(icell_amr)<0) flag2(icell_amr)=0 
+         if(flag2(icell_amr)>ngridmax .or. flag2(icell_amr)<0) flag2(icell_amr)=0
          ! Do NOT overwrite flag2 !
          flag2(icell_amr)=flag2(icell_amr)+ngridmax*scan_flag
       end do

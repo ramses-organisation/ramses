@@ -38,14 +38,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -61,7 +61,7 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         gg=0.0d0
         if(poisson)then
@@ -71,17 +71,17 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
         end do
-        
+
         ! Compute total energy
         do i=1,nleaf
            ekin_loc=ekin_loc+uu(i,ndim+2)*vol
         end do
-        
+
         ! Compute total internal energy
         do i=1,nleaf
            eint_loc=eint_loc+uu(i,ndim+2)*vol
@@ -91,16 +91,16 @@ subroutine courant_fine(ilevel)
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol
            end do
         end do
-        
+
         ! Compute CFL time-step
         if(nleaf>0)then
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -134,7 +134,7 @@ subroutine bondi_fine(ilevel)
   use poisson_parameters
   implicit none
   integer::ilevel
-  
+
   integer::igrid,ncache,i,ind,iskip,ngrid
   integer::ix,iy,iz,idim,ivar
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -142,7 +142,7 @@ subroutine bondi_fine(ilevel)
   real(dp)::xmass,ymass,zmass,emass,dx,scale
   real(dp),dimension(1:twotondim,1:ndim)::xc
   real(dp),dimension(1:nvector),save::rr
- 
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -151,7 +151,7 @@ subroutine bondi_fine(ilevel)
 
   ! Rescaling factor
   scale=dble(icoarse_max-icoarse_min+1)/boxlen
-  
+
   ! Scale black hole parameters
   emass=gravity_params(2)*scale
   xmass=gravity_params(3)*scale+dble(icoarse_min)
@@ -167,7 +167,7 @@ subroutine bondi_fine(ilevel)
 !     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx-ymass
 !     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx-zmass
   end do
-  
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -175,14 +175,14 @@ subroutine bondi_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         do i=1,ngrid
            rr(i)=0.0d0
         end do

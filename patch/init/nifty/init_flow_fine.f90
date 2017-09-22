@@ -2,13 +2,13 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine init_flow  
+subroutine init_flow
   use amr_commons
   use hydro_commons, ONLY: nvar, uold
   implicit none
 
   integer::ilevel,ivar
-  
+
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call init_flow_fine(ilevel)
@@ -29,13 +29,13 @@ subroutine init_flow_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
-  use dice_commons 
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
   integer::ilevel
-  
+
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
@@ -66,7 +66,7 @@ subroutine init_flow_fine(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -76,7 +76,7 @@ subroutine init_flow_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -109,7 +109,7 @@ subroutine init_flow_fine(ilevel)
      i1_min=n1(ilevel)+1; i1_max=0
      i2_min=n2(ilevel)+1; i2_max=0
      i3_min=n3(ilevel)+1; i3_max=0
-     do ind=1,twotondim           
+     do ind=1,twotondim
         do i=1,ncache
            igrid=active(ilevel)%igrid(i)
            xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
@@ -181,7 +181,7 @@ subroutine init_flow_fine(ilevel)
 
         INQUIRE(file=filename,exist=ok_file3)
         if(ok_file3)then
-           ! Reading the existing file   
+           ! Reading the existing file
            if(myid==1)write(*,*)'Reading file '//TRIM(filename)
            if(multiple)then
               ilun=ncpu+myid+10
@@ -224,7 +224,7 @@ subroutine init_flow_fine(ilevel)
               if(myid==1)close(10)
            endif
         else
-           ! If file doesn't exist, initialize variable to default value 
+           ! If file doesn't exist, initialize variable to default value
            ! In most cases, this is zero (you can change that if necessary)
            if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
@@ -280,7 +280,7 @@ subroutine init_flow_fine(ilevel)
 
      ! Deallocate initial conditions array
      if(ncache>0)deallocate(init_array)
-     deallocate(init_plane) 
+     deallocate(init_plane)
 
      !----------------------------------------------------------------
      ! For cosmology runs: compute pressure, prevent negative density
@@ -374,7 +374,7 @@ subroutine init_flow_fine(ilevel)
 #endif
         end do
         ! End loop over cells
-        
+
      end do
      ! End loop over grids
 
@@ -398,7 +398,7 @@ subroutine init_flow_fine(ilevel)
     end do
 
   end if
-  
+
 111 format('   Entering init_flow_fine for level ',I2)
 
 end subroutine init_flow_fine
@@ -436,7 +436,7 @@ subroutine region_condinit(x,q,dx,nn)
 
   ! Loop over initial conditions regions
   do k=1,nregion
-     
+
      ! For 'square' regions only:
      if(region_type(k) .eq. 'square')then
         ! Exponent of choosen norm
@@ -482,7 +482,7 @@ subroutine region_condinit(x,q,dx,nn)
            end if
         end do
      end if
-     
+
      ! For 'point' regions only:
      if(region_type(k) .eq. 'point')then
         ! Volume elements
@@ -498,7 +498,7 @@ subroutine region_condinit(x,q,dx,nn)
            zn=max(1.0-abs(x(i,3)-z_center(k))/dx,0.0_dp)
 #endif
            r=xn*yn*zn
-           ! If cell lies within CIC cloud, 
+           ! If cell lies within CIC cloud,
            ! ADD to primitive variables the region values
            q(i,1)=q(i,1)+d_region(k)*r/vol
            q(i,2)=q(i,2)+u_region(k)*r
@@ -645,19 +645,19 @@ subroutine condinit_loc(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
-   
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
-  
+  dx=0.5D0**ilevel
+
   ! Loop over cpus
   do icpu=1,ncpu
      ! Loop over grids
      igrid=headl(icpu,ilevel)
      ig=0
-     ip=0   
+     ip=0
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
         npart2=0
@@ -677,11 +677,11 @@ subroutine condinit_loc(ilevel)
         endif
 
         ! Gather gas particles
-        if(npart2>0)then        
+        if(npart2>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
-           
+
            ! Loop over particles
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
@@ -716,7 +716,7 @@ subroutine condinit_loc(ilevel)
               ipart=next_part  ! Go to next particle
            end do
            ! End loop over particles
-           
+
         end if
 
         igrid=next(igrid)   ! Go to next grid
@@ -784,7 +784,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -871,7 +871,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
 #endif
-        
+
   ! Compute parent grids
   do idim=1,ndim
      do j=1,np
@@ -982,7 +982,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         endif
      end do
   end do
-  
+
 end subroutine init_gas_cic
 
 subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
@@ -1118,5 +1118,5 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         uold(indp(j),ivar_refine)=uold(indp(j),ivar_refine)+mp(ind_part(j))/vol_loc(j)*maskp(ind_part(j))
      endif
   end do
-  
+
 end subroutine init_gas_ngp

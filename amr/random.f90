@@ -22,7 +22,7 @@
 module random
   integer,parameter :: IRandNumSize = 4, IBinarySize = 48
   integer,parameter :: Mod4096DigitSize = 12
-  integer,parameter :: IZero = 0 
+  integer,parameter :: IZero = 0
   integer,parameter :: NPoissonLimit = 10
 
   integer,dimension( IRandNumSize ) :: &
@@ -34,23 +34,23 @@ module random
 
   integer :: IGauss = 0
   real(kind=8) :: GaussBak = 0.0d0
-    
+
 contains
   !=======================================================================
   subroutine ranf( Seed, RandNum )
     implicit none
     integer,dimension( IRandNumSize ) :: Seed
     real(kind=8) :: RandNum
-    
+
     integer,dimension( IRandNumSize ) :: OutSeed
 
     RandNum = float( Seed( 4 ) ) / Divisor( 4 ) + &
          &    float( Seed( 3 ) ) / Divisor( 3 ) + &
          &    float( Seed( 2 ) ) / Divisor( 2 ) + &
          &    float( Seed( 1 ) ) / Divisor( 1 )
-    
+
     call ranfmodmult( Multiplier, Seed, OutSeed )
-    
+
     Seed = OutSeed
 
     return
@@ -68,7 +68,7 @@ contains
     real(kind=8) :: RandNum, GaussNum
 
     if(AverNum <= DBLE(NPoissonLimit)) then
-       Norm=exp(-AverNum) 
+       Norm=exp(-AverNum)
        Repar=1.0d0
        PoissNum=0
        Proba=1.0d0
@@ -94,9 +94,9 @@ contains
     implicit none
     integer,dimension( IRandNumSize ) :: Seed
     real(kind=8) :: GaussNum
-    
+
     real(kind=8) :: fac,rsq,v1=0d0,v2=0d0
-    
+
     if (IGauss.eq.IZero) then
        rsq=0.0d0
        do while (rsq.ge.1.0d0.or.rsq.le.0.0d0)
@@ -145,7 +145,7 @@ contains
        SeedArray( 1, 3 ) = IZero
        SeedArray( 1, 4 ) = IZero
     endif
-    
+
     if( N .eq. 1 ) then
        atothek( 1 ) = Multiplier( 1 )
        atothek( 2 ) = Multiplier( 2 )
@@ -167,11 +167,11 @@ contains
           SeedArray( I, 4 ) = OutSeed( 4 )
        end do
     endif
-    
+
     return
   end subroutine rans
   !=======================================================================
-  
+
   !=======================================================================
   subroutine ranfatok( a, Kbinary, atothek )
     implicit none
@@ -180,29 +180,29 @@ contains
     integer,dimension( IRandNumSize ) :: atothek
 
     integer,dimension( IRandNumSize ) :: asubi
-    
+
     integer :: I
     asubi( 1 ) = a( 1 )
     asubi( 2 ) = a( 2 )
     asubi( 3 ) = a( 3 )
     asubi( 4 ) = a( 4 )
-    
+
     atothek( 1 ) = 1
     atothek( 2 ) = IZero
     atothek( 3 ) = IZero
     atothek( 4 ) = IZero
-    
+
     do I = 1, 45
        if( KBinary( I ) .ne. IZero ) then
           call ranfmodmult( atothek, asubi, atothek )
        endif
        call ranfmodmult( asubi, asubi, asubi )
     end do
-    
+
     return
   end subroutine ranfatok
   !=======================================================================
-  
+
   !=======================================================================
   subroutine ranfk( N, K )
     implicit none
@@ -210,9 +210,9 @@ contains
     integer, dimension( IRandNumSize ) :: K
 
     integer :: nn, r4, r3, r2, q4, q3, q2, q1
-    
+
     nn = N + iranfeven( N )
-    
+
     q4 = 1024 / nn
     r4 = 1024 - (nn * q4)
     q3 = (r4 * 4096) / nn
@@ -220,16 +220,16 @@ contains
     q2 = (r3 * 4096) / nn
     r2 = (r3 * 4096) - (nn * q2)
     q1 = (r2 * 4096) / nn
-    
+
     K( 1 ) = q1
     K( 2 ) = q2
     K( 3 ) = q3
     K( 4 ) = q4
-    
+
     return
   end subroutine ranfk
   !=======================================================================
-  
+
   !=======================================================================
   subroutine ranfkbinary( K, KBinary )
     implicit none
@@ -238,11 +238,11 @@ contains
 
     integer, dimension( Mod4096DigitSize ) :: Bits
     integer X, I, J
-    
+
     do I = 1, 4
        X = K( I ) / 2
-       Bits( 1 ) = iranfodd( K( I ) )     
-       do J = 2, Mod4096DigitSize 
+       Bits( 1 ) = iranfodd( K( I ) )
+       do J = 2, Mod4096DigitSize
           Bits( J ) = iranfodd( X )
           X = X / 2
        end do
@@ -250,37 +250,37 @@ contains
           KBinary( (I-1)*Mod4096DigitSize + J ) = Bits( J )
        end do
     end do
-    
+
     return
   end subroutine ranfkbinary
   !=======================================================================
-  
+
   !=======================================================================
   subroutine ranfmodmult( A, B, C )
     implicit none
     integer, dimension( IRandNumSize ) :: A, B, C
 
     integer :: j1, j2, j3, j4, k1, k2, k3, k4
-        
+
     j1 = A( 1 ) * B( 1 )
     j2 = A( 1 ) * B( 2 ) + A( 2 ) * B( 1 )
     j3 = A( 1 ) * B( 3 ) + A( 2 ) * B( 2 ) + A( 3 ) * B( 1 )
     j4 = A( 1 ) * B( 4 ) + A( 2 ) * B( 3 ) + A( 3 ) * B( 2 ) + A( 4 ) * B( 1 )
-    
+
     k1 = j1
     k2 = j2 + k1 / 4096
     k3 = j3 + k2 / 4096
     k4 = j4 + k3 / 4096
-    
+
     C( 1 ) = mod( k1, 4096 )
     C( 2 ) = mod( k2, 4096 )
     C( 3 ) = mod( k3, 4096 )
     C( 4 ) = mod( k4, 4096 )
-    
+
     return
   end subroutine ranfmodmult
   !=======================================================================
-  
+
   !=======================================================================
   integer function iranfodd( N )
     integer N
@@ -289,7 +289,7 @@ contains
     else
        iranfodd = 1
     endif
-    
+
     return
   end function iranfodd
   !=======================================================================

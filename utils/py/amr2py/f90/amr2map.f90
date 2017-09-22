@@ -6,7 +6,7 @@ program amr2map
 !! Florent Renaud - 5 Aug 2011
 
   implicit none
- 
+
   integer::i, j, k, n, impi, icpu, ilevel, iidim, ivar, ind, ipdf
   character(len=5)::nchar,ncharcpu
   character(len=128)::filename, repository, suffix='', outval, outvalunit
@@ -14,7 +14,7 @@ program amr2map
   character(len=1)::dir
   integer::lmax=0, typ=1, pdfn=500
   logical::maxval=.false., ascii=.false., pdf=.false., makemap=.true., maxrho=.false.
-  
+
   real(kind=8)::pdfmin=1.0D-3, pdfmax=5.0D5, lpdfampli, lpdfmin, lpdfmax
   real(kind=8),dimension(:),allocatable::pdfhist
 
@@ -31,7 +31,7 @@ program amr2map
   character(len=80)::ordering
   character(LEN=80)::GMGM
   logical::ok
-  
+
   integer,dimension(1:8)::idom, jdom, kdom, cpu_min, cpu_max
   real(kind=8),dimension(1:3)::xbound
   real(kind=8),dimension(1:8,1:3)::xc
@@ -72,17 +72,17 @@ program amr2map
 
 
   real(KIND=4),dimension(:,:),allocatable::tmpmap
-  integer::nxmap 
+  integer::nxmap
   real,dimension(:,:),allocatable::map2
-  
+
   real(kind=8)::scale_nH,scale_vkms,scale_T2,scale_t,scale_l,scale_d
-  
-!=======================================================================  
+
+!=======================================================================
 
   call read_params
 
   if(ascii) makemap=.false.
-  
+
   if(pdf) then
     lpdfmin = log10(pdfmin)
     lpdfmax = log10(pdfmax)
@@ -202,7 +202,7 @@ program amr2map
 !  read(1,'("ordering type=",A80)'),ordering
   read(1,'(A13,A80)')GMGM,ordering
   read(1,*)
-  
+
 
 !  output Ramses Merger: kpc, 1e9 Msun
 ! conversion to CGS:
@@ -229,7 +229,7 @@ program amr2map
 ! time * scale_t = Myr
 
   t = t * scale_t
-    
+
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
     allocate(bound_key(0:ncpu))
@@ -245,8 +245,8 @@ program amr2map
   if(lmax==0) lmax=nlevelmax
 !  write(*,*)'time=',t
 !  write(*,*)'Working resolution =',2**lmax
-  
-  if(ndim>2)then  
+
+  if(ndim>2)then
     select case (dir)
       case ('x')
         idim=2
@@ -275,7 +275,7 @@ program amr2map
     idim=1
     jdim=2
     xxmin=xmin ; xxmax=xmax
-    yymin=ymin ; yymax=ymax          
+    yymin=ymin ; yymax=ymax
 ! needed ?
     zzmin=0.0  ; zzmax=1.0
   end if
@@ -286,7 +286,7 @@ program amr2map
       dx=0.5d0**ilevel
       if(dx.lt.dmax) exit
     end do
-  
+
     bit_length=ilevel-1
     maxdom=2**bit_length
     imin=0; imax=0; jmin=0; jmax=0; kmin=0; kmax=0
@@ -300,7 +300,7 @@ program amr2map
     end if
 
     dkey=(dble(2**(nlevelmax+1)/dble(maxdom)))**ndim
-    
+
     ndom=1
     if(bit_length>0)ndom=8
     idom(1)=imin; idom(2)=imax
@@ -315,7 +315,7 @@ program amr2map
     kdom(3)=kmin; kdom(4)=kmin
     kdom(5)=kmax; kdom(6)=kmax
     kdom(7)=kmax; kdom(8)=kmax
-    
+
     do i=1,ndom
       if(bit_length>0)then
         call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -334,7 +334,7 @@ program amr2map
         if (bound_key(impi-1).lt.bounding_max(i).and.bound_key(impi).ge.bounding_max(i)) cpu_max(i)=impi
       end do
     end do
-     
+
     ncpu_read=0
     do i=1,ndom
       do j=cpu_min(i), cpu_max(i)
@@ -369,13 +369,13 @@ program amr2map
     grid(ilevel)%imin=imin
     grid(ilevel)%imax=imax
     grid(ilevel)%jmin=jmin
-    grid(ilevel)%jmax=jmax    
+    grid(ilevel)%jmax=jmax
     grid(ilevel)%kmin=int(zzmin*dble(nz_full))+1
     grid(ilevel)%kmax=int(zzmax*dble(nz_full))+1
   end do
 
   ! Compute projected variables
-  
+
   ! open ascii file for particle output
   if(ascii) open(3, file='gas_part_'//TRIM(nchar)//TRIM(suffix)//'.ascii')
 
@@ -383,7 +383,7 @@ program amr2map
   do k=1,ncpu_read
     icpu=cpu_list(k)
     write(ncharcpu,'(I5.5)') icpu
-    
+
     ! Open AMR file and skip header
     filename=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
     open(unit=1, file=filename, status='old', form='unformatted')
@@ -401,7 +401,7 @@ program amr2map
       read(1) ngridbound
       ngridfile(ncpu+1:ncpu+nboundary,1:nlevelmax)=ngridbound
     endif
-    read(1)     
+    read(1)
     read(1) ! comment this line for old stuff
     if(TRIM(ordering).eq.'bisection')then
       do i=1,5
@@ -509,7 +509,7 @@ program amr2map
         end if
       end do
       ! end loop over domains
-      
+
       ! Compute map
       if(ngrida>0)then
 
@@ -561,7 +561,7 @@ program amr2map
               iz=int(x(i,kdim)*dble(nz_full))+1
 
               ! 2D selection
-              if(ix>=grid(ilevel)%imin.and.iy>=grid(ilevel)%jmin.and.ix<=grid(ilevel)%imax.and.iy<=grid(ilevel)%jmax) then  
+              if(ix>=grid(ilevel)%imin.and.iy>=grid(ilevel)%jmin.and.ix<=grid(ilevel)%imax.and.iy<=grid(ilevel)%jmax) then
                 ! 3D selection
                 if(iz>=grid(ilevel)%kmin.and.iz<=grid(ilevel)%kmax) then
                   ! Compute the PDF
@@ -575,12 +575,12 @@ program amr2map
                   ! Output of particle data
                   if(ascii) then
                     ! x, y, z, vx(mass-weighted), vy(mass-weighted), vz(mass-weighted), rho, level
-                    write(3, '(7e20.6e3,1I5)') x(i,1)*boxlen,x(i,2)*boxlen,x(i,3)*boxlen,var(i,ind,2)*scale_vkms,var(i,ind,3)*scale_vkms,var(i,ind,4)*scale_vkms,var(i,ind,1)*scale_nH,ilevel               
+                    write(3, '(7e20.6e3,1I5)') x(i,1)*boxlen,x(i,2)*boxlen,x(i,3)*boxlen,var(i,ind,2)*scale_vkms,var(i,ind,3)*scale_vkms,var(i,ind,4)*scale_vkms,var(i,ind,1)*scale_nH,ilevel
                   endif
-                         
+
                 endif
                 ! end of 3D selection
-                
+
                 if(makemap)then
                   if(ndim==3)then
                     weight=(min(x(i,kdim)+dx/2.,zzmax)-max(x(i,kdim)-dx/2.,zzmin))/dx
@@ -609,7 +609,7 @@ program amr2map
 
               endif
               ! end of 2D selection
-              
+
             end if
           end do
         end do
@@ -629,7 +629,7 @@ program amr2map
     close(3)
     stop
   endif
-  
+
   if(pdf) then
     open(1, file='pdf_'//TRIM(nchar)//TRIM(suffix)//'.hist')
     do ipdf=1, pdfn
@@ -682,7 +682,7 @@ program amr2map
       tmpmap=grid(lmax)%map(imin:imax,jmin:jmax)/grid(lmax)%rho(imin:imax,jmin:jmax)
     else
       tmpmap=grid(lmax)%map(imin:imax,jmin:jmax)
-    endif    
+    endif
   else
     if(ny_sample==0) ny_sample = nx_sample
     allocate(tmpmap(0:nx_sample,0:ny_sample))
@@ -697,7 +697,7 @@ program amr2map
           tmpmap=grid(lmax)%map(imin:imax,jmin:jmax)/grid(lmax)%rho(imin:imax,jmin:jmax)
         else
           tmpmap=grid(lmax)%map(imin:imax,jmin:jmax)
-        endif    
+        endif
       end do
     end do
   endif
@@ -709,7 +709,7 @@ program amr2map
   !status=0
   !filename='map_'//TRIM(nchar)//TRIM(suffix)//'.fits'
   !write(*,*) TRIM(filename)//' has been created.'
-  
+
   !call deletefile(filename,status)
   !call ftgiou(unit,status)
   !blocksize=1
@@ -721,7 +721,7 @@ program amr2map
   !naxes(2)=NXmap
   !extend=.true.
   !call ftphpr(unit,simple,bitpix,naxis,naxes,0,1,extend,status)
-  
+
   !call ftpkyd(unit,'time',t,6,'time',status)
   !call ftpkyd(unit,'boxlen',boxlen,6,'boxlen',status)
   !call ftpkyd(unit,'xmin',xxmin,6,'xmin',status)
@@ -735,7 +735,7 @@ program amr2map
   !call ftpkys(unit,'outvalunit',outvalunit,'value unit',status)
   !call ftpkyl(unit,'maxval',maxval,'maxval',status)
   !call ftpkyl(unit,'maxrho',maxrho,'maxrho',status)
-  
+
   !group=1
   !fpixel=1
   !nelements=naxes(1)*naxes(2)
@@ -794,7 +794,7 @@ program amr2map
       select case (opt)
         case ('-inp')
           call getarg(i+1,arg)
-          repository = trim(arg)        
+          repository = trim(arg)
         case ('-nml')
           call getarg(i+1,arg)
           open(1,file=trim(arg))
@@ -814,7 +814,7 @@ program amr2map
 
         case ('-dir')
           call getarg(i+1,arg)
-          dir = trim(arg) 
+          dir = trim(arg)
         case ('-xmin')
           call getarg(i+1,arg)
           read (arg,*) xmin
@@ -861,9 +861,9 @@ program amr2map
       i = i+2
     end do
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2map
 
 
@@ -875,13 +875,13 @@ end program amr2map
 !
 !  integer::status,unit,blocksize
 !  character(*)::filename
-!  
+!
 !  if (status .gt. 0) return
 !
 !  call ftgiou(unit,status) ! Get an unused Logical Unit Number
 !  call ftopen(unit,filename,1,blocksize,status) ! Try to open the file
-!  
-!  if (status .eq. 0)then ! file is opened: delete it 
+!
+!  if (status .eq. 0)then ! file is opened: delete it
 !    call ftdelt(unit,status)
 !  else if (status .eq. 103)then ! file doesn't exist: reset status and clear errors
 !    status=0
@@ -891,7 +891,7 @@ end program amr2map
 !    call ftcmsg
 !    call ftdelt(unit,status)
 !  end if
-!  
+!
 !  call ftfiou(unit, status) ! Free the unit number
 !
 !end
@@ -968,7 +968,7 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
       if(i_bit_mask(3*i+1))b1=1
       b0=0
       if(i_bit_mask(3*i  ))b0=1
-      
+
       sdigit=b2*4+b1*2+b0
       nstate=state_diagram(sdigit,0,cstate)
       hdigit=state_diagram(sdigit,1,cstate)
