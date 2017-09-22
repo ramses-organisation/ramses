@@ -757,7 +757,6 @@ subroutine compute_central(a,w,nn)
   ! MinMod slope
   !---------------
   integer::i,idim
-  real(dp)::diff_left,diff_right
 
   do idim=1,ndim
      do i=1,nn

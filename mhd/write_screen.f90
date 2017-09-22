@@ -4,11 +4,12 @@ subroutine write_screen
   use pm_commons
   use poisson_commons
   implicit none
+#if NDIM==1
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
-  !
-  integer::igrid,jgrid,ind,icpu,info,irad
+  integer::igrid,jgrid,ind,icpu
   integer::i,icell,ncell,ilevel,ncache
   integer::icellmin,nx_loc
   real(dp)::dx,scale,smallp,ddd,ppp
@@ -21,10 +22,12 @@ subroutine write_screen
   real(kind=8),dimension(:),allocatable::AA_all,BB_all,CC_all
   real(kind=8),dimension(:),allocatable::mm_all,gg_all,dtot_all
 #if NENER>0
-  real(kind=8),dimension(:,:),allocatable::prad_all,prad
+  integer::irad
+  real(qdp),dimension(:,:),allocatable::prad_all,prad
 #endif
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
+#endif
 
   if(ndim>1)return
 
@@ -265,7 +268,6 @@ subroutine write_screen
 #if NENER>0
   deallocate(prad,prad_all)
 #endif
-
   end if
  
 #ifndef WITHOUTMPI

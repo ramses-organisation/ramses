@@ -780,7 +780,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ey
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
 
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
   REAL(dp)::dtdx, dtdy, dtdz, smallp
@@ -788,10 +788,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::FLL, FLR, FRL, FRR
   REAL(dp)::GLL, GLR, GRL, GRR
-  REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dbY, dCy
-  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz, dCz
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
+  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
+  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz
+  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0
   REAL(dp)::AL, AR, BL, BR, CL, CR
   REAL(dp)::dALy, dARy, dALz, dARz
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
@@ -799,6 +799,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+  integer ::irad
+#endif
+#if NVAR>8+NENER
+  integer ::n
 #endif
   
   dtdx = dt/dx
