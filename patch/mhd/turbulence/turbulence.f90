@@ -75,7 +75,7 @@ subroutine init_force
   implicit none
   namelist /force/ do_force, do_helmh, a_helmh, k1, k2, ampl_turb, t_turn, t_turb, pk, iseed
   integer :: jx, jy, jz
-  
+
   ampl_turb = 0.1
   do_force = .false.
   do_helmh = .true.
@@ -87,7 +87,7 @@ subroutine init_force
   t_turb = 0.
   iseed = 123456789
 
-  rewind(1); read (1,NML=force); if (myid==1) write(*,force)                    ! namelist parameters 
+  rewind(1); read (1,NML=force); if (myid==1) write(*,force)                    ! namelist parameters
 
   if (.not. do_force) return
 
@@ -161,7 +161,7 @@ subroutine update_random_forcing
   real(dp),dimension(1:nvector,4)     :: uu
   real(dp),dimension(1:twotondim,1:3) :: xc
   double precision :: rhoavp, pxavp, pyavp, pzavp, aranxp, aranyp, aranzp
-  double precision,dimension(7)       :: comm_buffin, comm_buffout  
+  double precision,dimension(7)       :: comm_buffin, comm_buffout
   logical     :: first_call = .true.
 
   if (first_call) then
@@ -170,11 +170,11 @@ subroutine update_random_forcing
   end if
 
   if (.not. do_force) return
-  
+
 !-------------------------------------------------------------------------------
   if (t .ne. tprev) then    ! prevent repeat at same t
      tprev = t
-    
+
      if (myid==1) then
         print *,'forceit: t,t_turb=',t,t_turb
         if (t_turb .le. t) print *,'new force'
@@ -193,7 +193,7 @@ subroutine update_random_forcing
 
         ! pk = 11./6.
         ! pk = 7./6.
-  
+
         fpow = 0.
         j = 0
         do jx=-kmax,kmax
@@ -207,32 +207,32 @@ subroutine update_random_forcing
                     lfxx = exp(cmplx(0., 2.*pi*ran1s(iseed)))/fk**pk
                     lfyy = exp(cmplx(0., 2.*pi*ran1s(iseed)))/fk**pk
                     lfzz = exp(cmplx(0., 2.*pi*ran1s(iseed)))/fk**pk
-  
+
                     !------------------
                     ! solenoidal field:
                     if (do_helmh) then
-                       corr=(lkx*lfxx+lky*lfyy+lkz*lfzz)/(lkx*lkx+lky*lky+lkz*lkz+1e-20) 
-  
+                       corr=(lkx*lfxx+lky*lfyy+lkz*lfzz)/(lkx*lkx+lky*lky+lkz*lkz+1e-20)
+
                        if (jx.ne.0) lfxx = lfxx - a_helmh*corr*lkx
                        if (jy.ne.0) lfyy = lfyy - a_helmh*corr*lky
                        if (jz.ne.0) lfzz = lfzz - a_helmh*corr*lkz
                     end if
                     !------------------
                     j = j + 1
-                    ak_next(1,j)=accel*lfxx 
+                    ak_next(1,j)=accel*lfxx
                     ak_next(2,j)=accel*lfyy
-                    ak_next(3,j)=accel*lfzz 
+                    ak_next(3,j)=accel*lfzz
 
                     fact=1.
                     if (jx.gt.0) fact=fact*0.5
                     if (jy.gt.0) fact=fact*0.5
                     if (jz.gt.0) fact=fact*0.5
-                    fpow = fpow+fact*(abs(lfxx)**2+abs(lfyy)**2+abs(lfzz)**2)  
+                    fpow = fpow+fact*(abs(lfxx)**2+abs(lfyy)**2+abs(lfzz)**2)
                  end if
               end do
            end do
         end do
-      
+
      end do ! while
 
   end if   ! t > t_prev
@@ -260,7 +260,7 @@ subroutine update_random_forcing
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      jz=(ind-1)/4
@@ -287,21 +287,21 @@ subroutine update_random_forcing
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells in grid
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather hydro variables (rho, px, py, pz)
         do ivar=1,4
            do i=1,ngrid
               uu(i,ivar)=uold(ind_cell(i),ivar)
            end do
         end do
-        
+
         ! Compute average density and velocities
         do i=1,ngrid
            rhoavp = rhoavp + uu(i,1)
@@ -309,7 +309,7 @@ subroutine update_random_forcing
            pyavp  = pyavp  + uu(i,3)
            pzavp  = pzavp  + uu(i,4)
         end do
-        
+
         ! Compute average acceleration * rho on grid
         do i=1,ngrid
           ! Gather cell center positions
@@ -328,7 +328,7 @@ subroutine update_random_forcing
 
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -365,8 +365,8 @@ subroutine update_random_forcing
   aranz = (aranz + pzav / t_turn) / rhoav
 
   if (myid==1 .and. verbose) write(*,'(a,4e12.4)') 'rho_av, xav, yav, zav :', &
-     (/ rhoav / (real(numbtot(1,levelmin),kind=dp)*twotondim),aranx,arany,aranz/) 
-  
+     (/ rhoav / (real(numbtot(1,levelmin),kind=dp)*twotondim),aranx,arany,aranz/)
+
 end subroutine update_random_forcing
 
 ! Routine doing the actual driving on grid ilevel
@@ -401,7 +401,7 @@ subroutine do_random_force(ilevel,dt)
 
   ! Mesh size at level ilevel in units of coarse grid cells
  dx = 0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      jz=(ind-1)/4
@@ -425,9 +425,9 @@ subroutine do_random_force(ilevel,dt)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells in grid
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         ! Gather leaf cells
         nleaf=0
@@ -438,7 +438,7 @@ subroutine do_random_force(ilevel,dt)
               ind_cell(nleaf)=j
            end if
         end do
-        
+
         ! Gather hydro variables (rho, internal energy)
         do i=1,nleaf
            rho(i)=uold(ind_cell(i),1)
@@ -448,7 +448,7 @@ subroutine do_random_force(ilevel,dt)
                   + uold(ind_cell(i),4)*uold(ind_cell(i),4) &
                                           )/uold(ind_cell(i),1)
         end do
-        
+
         ! Compute average acceleration on grid
         do i=1,nleaf
            ! Gather cell center positions
@@ -474,7 +474,7 @@ subroutine do_random_force(ilevel,dt)
 
         ! Update momentum and total energy
         do i=1,nleaf
-           uold(ind_cell(i),2)=uold(ind_cell(i),2) + ax(i) 
+           uold(ind_cell(i),2)=uold(ind_cell(i),2) + ax(i)
            uold(ind_cell(i),3)=uold(ind_cell(i),3) + ay(i)
            uold(ind_cell(i),4)=uold(ind_cell(i),4) + az(i)
            uold(ind_cell(i),5) = ein(i) + 0.5*( &
@@ -485,7 +485,7 @@ subroutine do_random_force(ilevel,dt)
         end do
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 end subroutine do_random_force

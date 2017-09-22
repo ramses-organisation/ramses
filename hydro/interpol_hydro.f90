@@ -1,5 +1,5 @@
 !###########################################################
-!########################################################### 
+!###########################################################
 !###########################################################
 !###########################################################
 subroutine upload_fine(ilevel)
@@ -18,7 +18,7 @@ subroutine upload_fine(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
- 
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -26,25 +26,25 @@ subroutine upload_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather split cells
         do i=1,ngrid
            ok(i)=son(ind_cell(i))>0
         end do
-        
+
         ! Count split cells
         nsplit=0
         do i=1,ngrid
            if(ok(i))nsplit=nsplit+1
         end do
-        
+
         ! Upload for selected cells
         if(nsplit>0)then
            icell=0
@@ -56,7 +56,7 @@ subroutine upload_fine(ilevel)
            end do
            call upl(ind_split,nsplit)
         end if
-        
+
      end do
      ! End loop over cells
 
@@ -98,7 +98,7 @@ subroutine upl(ind_cell,ncell)
   ! Average conservative variables
   !-------------------------------
   ! Loop over variables
-  do ivar=1,nvar     
+  do ivar=1,nvar
 
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
@@ -111,7 +111,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
         end do
      end do
-     
+
      ! Scatter result to cells
      do i=1,ncell
         uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
@@ -133,7 +133,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+pstarold(ind_cell_son(i))
         end do
      end do
-     
+
      ! Scatter result to cells
      do i=1,ncell
         pstarold(ind_cell(i))=getx(i)/dble(twotondim)
@@ -174,7 +174,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+uold(ind_cell_son(i),ndim+2)-ekin(i)-erad(i)
         end do
      end do
-     
+
      ! Compute new kinetic energy
      ekin(1:ncell)=0.0d0
      do idim=1,ndim
@@ -290,7 +290,7 @@ subroutine interpol_hydro(u1,u2,nn)
 
      ! Load father variable
      do j=0,twondim
-        do i=1,nn 
+        do i=1,nn
            a(i,j)=u1(i,j,ivar)
         end do
      end do
@@ -302,7 +302,7 @@ subroutine interpol_hydro(u1,u2,nn)
      if(interpol_type==1)call compute_limiter_minmod(a,w,nn)
      if(interpol_type==2)call compute_limiter_central(a,w,nn)
      if(interpol_type==3)call compute_central(a,w,nn)
-     ! choose central limiter for velocities, mon-cen for 
+     ! choose central limiter for velocities, mon-cen for
      ! quantities that should not become negative.
      if(interpol_type==4)then
         if (interpol_var .ne. 2)then
@@ -328,19 +328,19 @@ subroutine interpol_hydro(u1,u2,nn)
 
   end do
   ! End loop over variables
-  
+
   ! If necessary, convert children internal energy into total energy
   ! and velocities back to momenta
   if(interpol_var==1 .or. interpol_var==2)then
      if(interpol_var==2)then
-        do ind=1,twotondim        
+        do ind=1,twotondim
            do idim=1,ndim
               do i=1,nn
                  u2(i,ind,idim+1)=u2(i,ind,idim+1)*u2(i,ind,1)
               end do
            end do
         end do
-        
+
         !correct total momentum keeping the slope fixed
         do idim=1,ndim
            mom(1:nn)=0.
@@ -354,7 +354,7 @@ subroutine interpol_hydro(u1,u2,nn)
               ! error in momentum
               mom(i)=mom(i)-u1(i,0,idim+1)*u1(i,0,1)
               ! correct children
-              u2(i,1:twotondim,idim+1)=u2(i,1:twotondim,idim+1)-mom(i)              
+              u2(i,1:twotondim,idim+1)=u2(i,1:twotondim,idim+1)-mom(i)
            end do
         end do
      end if
@@ -380,7 +380,7 @@ subroutine interpol_hydro(u1,u2,nn)
         end do
      end do
   end if
-  
+
 end subroutine interpol_hydro
 !###########################################################
 !###########################################################

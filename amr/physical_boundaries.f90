@@ -6,7 +6,7 @@ subroutine init_boundary_coarse
   use amr_commons
   implicit none
   !----------------------------------------------------------------------
-  ! This routine makes one cell width cubic buffer around inner cells 
+  ! This routine makes one cell width cubic buffer around inner cells
   ! at the coarse level by performing a dilatation on array flag2.
   ! Array flag1 is used as temorary work space.
   ! This routine is called by subroutine authorize_coarse.
@@ -36,7 +36,7 @@ subroutine init_boundary_coarse
   ! Loop over steps
   n_nbor(1:3)=(/1,2,3/)
   flag2(0)=0
-  do ismooth=1,ndim  
+  do ismooth=1,ndim
      ! Initialize flag1 to zero
      do ibound=1,nboundary
         do k=kbound_min(ibound),kbound_max(ibound)
@@ -108,7 +108,7 @@ subroutine init_boundary_fine(ilevel)
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
-  ! This routine makes one cell width cubic buffer around inner cells 
+  ! This routine makes one cell width cubic buffer around inner cells
   ! at level ilevel by performing a dilatation on array flag2.
   ! This routine is called by subroutine authorize_fine.
   ! Array flag1 is used as temporary work space.
@@ -318,7 +318,7 @@ subroutine make_boundary_flag(ilevel)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Gather neighboring reference grid
         do i=1,ngrid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
@@ -330,7 +330,7 @@ subroutine make_boundary_flag(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-              
+
            ! Gather neighboring reference cell
            iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
            do i=1,ngrid
@@ -343,7 +343,7 @@ subroutine make_boundary_flag(ilevel)
            do i=1,ngrid
               flag1(ind_cell(i))=fff(i)
            end do
-           
+
         end do
         ! End loop over cells
 

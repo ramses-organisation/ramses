@@ -19,7 +19,7 @@ subroutine init_hydro
   integer::dummy_io
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -42,7 +42,7 @@ subroutine init_hydro
      fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     
+
      ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then

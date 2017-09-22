@@ -4,7 +4,7 @@
 !#########################################################
 subroutine gravana(x,f,dx,ncell)
   use amr_parameters,only:boxlen
-  use poisson_parameters  
+  use poisson_parameters
   use pm_commons,only:msink, xsink
 
   implicit none
@@ -21,7 +21,7 @@ subroutine gravana(x,f,dx,ncell)
   real(dp):: rr,rx,ry,rz
 
   ! Constant vector
-  if(gravity_type==1)then 
+  if(gravity_type==1)then
      do idim=1,ndim
         do i=1,ncell
            f(i,idim)=gravity_params(idim)
@@ -30,7 +30,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then 
+  if(gravity_type==2)then
      do i=1,ncell
         rx=0.0d0; ry=0.0d0; rz=0.0d0
         rx=x(i,1)-xsink(1,1)

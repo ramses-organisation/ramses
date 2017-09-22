@@ -1,6 +1,6 @@
 program center_grafic
   !---------------------------------------------------------------------
-  ! Ce programme recentre autour d'un pixel donne les fichiers ic_... 
+  ! Ce programme recentre autour d'un pixel donne les fichiers ic_...
   ! generes par GRAFIC.
   ! Ce programme doit lire en input les fichiers suivants:
   !          - un fichier deltab: input/ic_deltab
@@ -22,8 +22,8 @@ program center_grafic
   !          - un fichier velcz:  output/ic_velcz
   !          - un fichier refmap: output/ic_refmap
   !          - un fichier metal:  output/ic_pvar_00001
-  !                    
-  !         
+  !
+  !
   ! M. Gonzalez
   ! Saclay, le 31/08/01.
   !---------------------------------------------------------------------
@@ -51,14 +51,14 @@ program center_grafic
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
      stop
   endif
 
-  ! COMPUTE FILES TO OPEN AND TO WRITE 
+  ! COMPUTE FILES TO OPEN AND TO WRITE
   filename(1) =TRIM(input)//'/ic_deltab'
   filename(2) =TRIM(input)//'/ic_velcx'
   filename(3) =TRIM(input)//'/ic_velcy'
@@ -111,7 +111,7 @@ program center_grafic
 
   allocate(f1(np1,np2))
   allocate(f2(np1,np2))
-     
+
   do i_file=1,9
 
      INQUIRE(file=filename(i_file),exist=ok)
@@ -125,7 +125,7 @@ program center_grafic
         write(*,*)'Writing output file '//TRIM(filename(9+i_file))
         open(12,file=TRIM(filename(9+i_file)),form='unformatted')
         write(12) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
-        
+
         do i3=1,skip2
            read(11)
         end do
@@ -145,7 +145,7 @@ program center_grafic
            write(12)((f2(i1,i2),i1=1,np1),i2=1,np2)
         end do
         close(11)
-        
+
         open(11,file=TRIM(filename(i_file)),form='unformatted')
         read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
         do i3=1,skip1
@@ -167,7 +167,7 @@ program center_grafic
            write(12)((f2(i1,i2),i1=1,np1),i2=1,np2)
         end do
         close(11)
-        
+
         open(11,file=TRIM(filename(i_file)),form='unformatted')
         read(11) np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
         do i3=1,skip1
@@ -188,7 +188,7 @@ program center_grafic
         do i3=skip1+1,np3
            read(11)
         end do
-        
+
         close(11)
 
         write(*,*)'done'
@@ -199,6 +199,6 @@ program center_grafic
   enddo
 
   deallocate(f1,f2)
-     
+
 
 end program center_grafic

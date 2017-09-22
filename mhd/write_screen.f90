@@ -35,7 +35,7 @@ subroutine write_screen
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-  
+
   ncell=0
   do ilevel=1,nlevelmax
      ncache=numbl(myid,ilevel)
@@ -206,7 +206,7 @@ subroutine write_screen
   et=et_all; ek=ek_all; em=em_all; ei=ei_all
   uu=uu_all; vv=vv_all; ww=ww_all
   AA=AA_all; BB=BB_all; CC=CC_all
-  gg=gg_all; ll=ll_all 
+  gg=gg_all; ll=ll_all
 #if NENER>0
   call MPI_ALLREDUCE(prad,prad_all,ncell*nener,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   prad=prad_all
@@ -269,7 +269,7 @@ subroutine write_screen
   deallocate(prad,prad_all)
 #endif
   end if
- 
+
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif

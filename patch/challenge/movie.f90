@@ -10,14 +10,14 @@ subroutine output_frame()
 #ifndef WITHOUTMPI
   include "mpif.h"
 #endif
-  
+
   integer::dummy_io,info
   integer,parameter::tag=100
 
   character(len=5) :: istep_str
   character(len=100) :: moviedir, moviecmd, moviefile
   character(len=100) :: moviefile1,moviefile2,moviefile3
-  
+
   integer::icell,ncache,iskip,ngrid,nlevelmax_frame
   integer::ilun,nx_loc,ipout,npout,npart_out,ind,ix,iy,iz
   integer::imin,imax,jmin,jmax,ii,jj
@@ -47,7 +47,7 @@ subroutine output_frame()
   integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
-  
+
 #if NDIM > 1
 
   ! Update counter
@@ -65,9 +65,9 @@ subroutine output_frame()
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(myid==1) write(*,*) "Writing frame ", istep_str
 
-  if(.not.withoutmkdir) then 
+  if(.not.withoutmkdir) then
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)  
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)
 #else
      if(myid==1)call system(moviecmd)
 #endif
@@ -110,7 +110,7 @@ subroutine output_frame()
   yright_frame=ycen+dely/2.
   zleft_frame=zcen-delz/2.
   zright_frame=zcen+delz/2.
-  
+
   ! Allocate image
   allocate(data_frame(1:nx_frame,1:ny_frame,1:4))
   data_frame=0d0
@@ -122,7 +122,7 @@ subroutine output_frame()
 
      ! Mesh size at level ilevel in coarse cell units
      dx=0.5D0**ilevel
-     
+
      ! Set position of cell centres relative to grid centre
      do ind=1,twotondim
         iz=(ind-1)/4
@@ -132,7 +132,7 @@ subroutine output_frame()
         if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
         if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
      end do
-  
+
      dx_loc=dx*scale
      ncache=active(ilevel)%ngrid
 
@@ -161,7 +161,7 @@ subroutine output_frame()
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           
+
            ! Check if cell is to be considered
            do i=1,ngrid
               ok(i)=son(ind_cell(i))==0.or.ilevel==nlevelmax_frame
@@ -174,7 +174,7 @@ subroutine output_frame()
                  xright=xx(i,1)+dx_loc/2.
                  yleft=xx(i,2)-dx_loc/2.
                  yright=xx(i,2)+dx_loc/2.
-#if NDIM>2                 
+#if NDIM>2
                  zleft=xx(i,3)-dx_loc/2.
                  zright=xx(i,3)+dx_loc/2.
                  if(    xright.lt.xleft_frame.or.xleft.ge.xright_frame.or.&
@@ -197,9 +197,9 @@ subroutine output_frame()
                     jmin=1
                  endif
                  jmax=min(int((yright-yleft_frame)/dy_frame)+1,ny_frame)
-                 
+
                  ! Fill up map with projected mass
-#if NDIM>2                 
+#if NDIM>2
                  dz_cell=min(zright_frame,zright)-max(zleft_frame,zleft)
 #endif
                  do ii=imin,imax
@@ -212,7 +212,7 @@ subroutine output_frame()
                        dy_cell=min(yyright,yright)-max(yyleft,yleft)
                        ! Intersection volume
                        dvol=dx_cell*dy_cell
-#if NDIM>2                 
+#if NDIM>2
                        dvol=dvol*dz_cell
 #endif
                        data_frame(ii,jj,1)=data_frame(ii,jj,1)+dvol*uold(ind_cell(i),1)
@@ -261,7 +261,7 @@ subroutine output_frame()
   data_frame=data_frame_all
   deallocate(data_frame_all)
 #endif
-  ! Convert into mass weighted                                                                                                         
+  ! Convert into mass weighted
   do ii=1,nx_frame
      do jj=1,ny_frame
         data_frame(ii,jj,2)=data_frame(ii,jj,2)/data_frame(ii,jj,1)
@@ -280,7 +280,7 @@ subroutine output_frame()
      ! Output mass weighted density
      open(ilun,file=TRIM(moviefile1),form='unformatted')
      data_single=data_frame(:,:,2)
-     rewind(ilun)  
+     rewind(ilun)
      if(tendmov>0)then
         write(ilun)t,delx,dely,delz
      else
@@ -293,7 +293,7 @@ subroutine output_frame()
      open(ilun,file=TRIM(moviefile2),form='unformatted')
      data_single=data_frame(:,:,3)
 !     write(*,*) 'testing', data_single(100,100)
-     rewind(ilun)  
+     rewind(ilun)
      if(tendmov>0)then
         write(ilun)t,delx,dely,delz
      else
@@ -306,7 +306,7 @@ subroutine output_frame()
      if(metal)then
         open(ilun,file=TRIM(moviefile3),form='unformatted')
         data_single=data_frame(:,:,4)
-        rewind(ilun)  
+        rewind(ilun)
         if(tendmov>0)then
            write(ilun)t,delx,dely,delz
         else

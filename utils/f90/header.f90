@@ -43,7 +43,7 @@ program header
      read(10)nx,ny,nz
      read(10)nlevelmax
      read(10)ngridmax
-     read(10)nstep_coarse    
+     read(10)nstep_coarse
 
      read(10)boxlen
      read(10)t,aexp,hexp
@@ -58,7 +58,7 @@ program header
      write(*,995)omega_m,omega_l,omega_k,omega_b
      write(*,996)scale_l,scale_d,scale_t
   end if
-     
+
 990 format(' Enter output number:',i6)
 991 format(' ncpu=',i6,' ndim=',i1,' nstep=',i6)
 992 format(' nx=',i3,' ny=',i3,' nz=',i3)

@@ -3,10 +3,10 @@ subroutine backup_part(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h' 
+  include 'mpif.h'
   integer::dummy_io,info2
   integer,parameter::tag=1122
-#endif 
+#endif
   character(LEN=80)::filename
 
   integer::i,idim,ilun,ipart
@@ -17,7 +17,7 @@ subroutine backup_part(filename)
   integer,allocatable,dimension(:)::ll
 
   if(verbose)write(*,*)'Entering backup_part'
-  
+
   ! Wait for the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -40,8 +40,8 @@ subroutine backup_part(filename)
   write(ilun)ndim
   write(ilun)npart
   write(ilun)localseed
-  write(ilun)nstar_tot   
-  write(ilun)mstar_tot   
+  write(ilun)nstar_tot
+  write(ilun)mstar_tot
   write(ilun)mstar_lost
   write(ilun)nsink
   ! Write position
@@ -150,7 +150,7 @@ subroutine backup_part(filename)
      end if
   endif
 #endif
-  
+
 
 end subroutine backup_part
 

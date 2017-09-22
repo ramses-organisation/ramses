@@ -26,7 +26,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
 
   ! Add here, if you wish, some user-defined boudary conditions
   !Boundary conditions for a 3D jet coming from z=0
-  ! the box is 0<z<20 by -8<x,y<8. Initially the jet 
+  ! the box is 0<z<20 by -8<x,y<8. Initially the jet
   ! is restricted to z<1 ,r<1 with inflow boundary conditions.
   !The rest of the left boundary is zero gradient
   x0=0.
@@ -43,7 +43,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
            p =0.01d0
            h=1.0d0+gamma/(gamma-1.0d0)*p/d
            lor=(1.-(vx**2+vy**2+vz**2))**(-1.d0/2.d0)
-           
+
            U(i,1) = d*lor
            U(i,2) = lor**2*d*h*vx
            U(i,3) = lor**2*d*h*vy

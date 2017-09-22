@@ -1,7 +1,7 @@
 program amr2cube
   !--------------------------------------------------------------------------
   ! Ce programme calcule le cube cartesien pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -75,13 +75,13 @@ program amr2cube
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -194,7 +194,7 @@ program amr2cube
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -204,7 +204,7 @@ program amr2cube
         bounding_min(i)=(order_min)*dkey
         bounding_max(i)=(order_min+1.0D0)*dkey
      end do
-     
+
      cpu_min=0; cpu_max=0
      do impi=1,ncpu
         do i=1,ndom
@@ -218,7 +218,7 @@ program amr2cube
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -484,7 +484,7 @@ program amr2cube
 
   write(*,'(" Zoom in",3(1x,I5,"-",I5))')imin,imax,jmin,jmax,kmin,kmax
   write(*,*)'Please wait...'
-  
+
   do ix=imin,imax
      xmin=((ix-0.5)/2**lmax)
      do iy=jmin,jmax
@@ -562,7 +562,7 @@ program amr2cube
      endif
      close(20)
   endif
-  
+
   if(TRIM(filetype).eq.'grafic')then
      nomfich=TRIM(outfich)
      write(*,*)'Writing file '//TRIM(nomfich)
@@ -574,7 +574,7 @@ program amr2cube
      end do
      close(20)
   endif
-  
+
   if(TRIM(filetype).eq.'vtk')then
      nomfich=TRIM(outfich)
      write(*,*)'Writing file '//TRIM(nomfich)
@@ -599,19 +599,19 @@ program amr2cube
      end do
      close(20)
   endif
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2cube  -inp  input_dir'
@@ -633,7 +633,7 @@ contains
        print *, ' type : 1-9 = variable number'
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -674,11 +674,11 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2cube
 
 !=======================================================================

@@ -81,7 +81,7 @@ subroutine read_params
      write(*,*)'                     RAMSES  Version 3               '
      write(*,*)'       written by Romain Teyssier (CEA/DSM/IRFU/SAP) '
      write(*,*)'                     (c) CEA 1999-2007               '
-     write(*,*)'                                                     '     
+     write(*,*)'                                                     '
      write(*,*)'                  with  MONDifications by            '
      write(*,*)'                 F. Lueghausen  (Uni Bonn)           '
      write(*,*)'                                                     '
@@ -89,7 +89,7 @@ subroutine read_params
      !~~~~~~~~~~ end ~~~~~~~~~~
   write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
-  
+
 
 !~~~~~~~~~ begin ~~~~~~~~~
 ! Ensure NDIM=3, otherwise throw an error msg and stop
@@ -266,7 +266,7 @@ if (clumpfind .or. sink)call read_clumpfind_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -296,7 +296,7 @@ if (clumpfind .or. sink)call read_clumpfind_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

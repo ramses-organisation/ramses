@@ -103,7 +103,7 @@ subroutine init_sink
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Compute softening length from minimum cell spacing
-  call compute_ncloud_sink  
+  call compute_ncloud_sink
 
   if(nrestart>0)then
 
@@ -116,7 +116,7 @@ subroutine init_sink
      else
         fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.out'
      endif
-     
+
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
 
@@ -157,7 +157,7 @@ subroutine init_sink
         delta_mass(1:nsink)=xdp
         deallocate(xdp)
         allocate(isp(1:nsink))
-        read(ilun)isp ! Read sink index 
+        read(ilun)isp ! Read sink index
         idsink(1:nsink)=isp
         deallocate(isp)
         allocate(nb(1:nsink))
@@ -185,7 +185,7 @@ subroutine init_sink
   end if
 
   if (nrestart>0)then
-     nsinkold=nsink  
+     nsinkold=nsink
      if(TRIM(initfile(levelmin)).NE.' ')then
         filename=TRIM(initfile(levelmin))//'/ic_sink_restart'
      else
@@ -213,7 +213,7 @@ subroutine init_sink
         INQUIRE(FILE=filename, EXIST=ic_sink)
      end if
   end if
-      
+
   if (ic_sink)then
 
      ! Wait for the token
@@ -225,11 +225,11 @@ subroutine init_sink
         end if
      endif
 #endif
-     
-     open(10,file=filename,form='formatted')                                                             
-     eof=.false.                                                                                         
-     do                                                                                                  
-        read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3                                        
+
+     open(10,file=filename,form='formatted')
+     eof=.false.
+     do
+        read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
         nsink=nsink+1
         nindsink=nindsink+1
         idsink(nsink)=nindsink
@@ -267,7 +267,7 @@ subroutine init_sink
      write(*,*)'sinks read from file '//filename
      write(*,'("   Id           M             x             y             z            vx            vy            vz            lx            ly            lz       ")')
      write(*,'("======================================================================================================================================================")')
-     do isink=nsinkold+1,nsink                                                                           
+     do isink=nsinkold+1,nsink
         write(*,'(I8,2X,10(2X,E12.5))')idsink(isink),msink(isink),xsink(isink,1:ndim),&
              vsink(isink,1:ndim),lsink(isink,1:ndim)
      end do

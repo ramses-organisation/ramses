@@ -3,7 +3,7 @@ subroutine backup_hydro(filename)
   use hydro_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
   character(LEN=80)::filename
@@ -19,7 +19,7 @@ subroutine backup_hydro(filename)
   if(verbose)write(*,*)'Entering backup_hydro'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 
@@ -70,7 +70,7 @@ subroutine backup_hydro(filename)
                  else if(ivar>=2.and.ivar<=ndim+1)then ! Write velocity field
                     do i=1,ncache
                        xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)
-                    end do                    
+                    end do
                  else if(ivar==ndim+2)then ! Write pressure
                     do i=1,ncache
                        xdp(i)=uold(ind_grid(i)+iskip,ndim+2)
@@ -82,7 +82,7 @@ subroutine backup_hydro(filename)
                        xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,4)**2/max(uold(ind_grid(i)+iskip,1),smallr)
 #endif
                        xdp(i)=(gamma-1d0)*xdp(i)
-                    end do                                        
+                    end do
                  else ! Write passive scalars if any
                     do i=1,ncache
                        xdp(i)=uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,1),smallr)

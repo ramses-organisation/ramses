@@ -1,7 +1,7 @@
 program amr2cell
   !--------------------------------------------------------------------------
   ! Ce programme calcule le cube cartesien pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -75,13 +75,13 @@ program amr2cell
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -195,7 +195,7 @@ program amr2cell
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min(1),bit_length,1)
@@ -205,7 +205,7 @@ program amr2cell
         bounding_min(i)=(order_min(1))*dkey
         bounding_max(i)=(order_min(1)+1.0D0)*dkey
      end do
-     
+
      cpu_min=0; cpu_max=0
      do impi=1,ncpu
         do i=1,ndom
@@ -219,7 +219,7 @@ program amr2cell
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -427,7 +427,7 @@ program amr2cell
 !                          & (var(i,ind,ivar),ivar=1,nvarh)
                     write(20,'(80(es17.8e3,1x))') x(i,1),x(i,2),x(i,3),dx,real(icpu,8),real(ilevel,8),&
                          & (var(i,ind,ivar),ivar=1,nvarh)
-                    
+
                  end if
               end do
 
@@ -448,25 +448,25 @@ program amr2cell
 
   close(20)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(outfich)
-  
+
   open(unit=32,file='time.dat',form='formatted')
   write(32,*) t
   close(32)
 
 999 format(4(es16.6e3,1x),2(i6,1x),20(es16.6e3,1x))
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2cell  -inp  input_dir'
@@ -483,7 +483,7 @@ contains
        print *, ' '
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -520,11 +520,11 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2cell
 
 !=======================================================================

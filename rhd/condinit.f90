@@ -29,7 +29,7 @@ subroutine condinit(x,u,dx,nn)
   integer ::i
   real(dp)::h,lor,tau
   real(dp)::rl,rr,ul,vl,ur,vr,pl,pr
-  
+
   ! Call built-in initial condition generator
   call region_condinit(x,q,dx,nn)
 
@@ -41,7 +41,7 @@ subroutine condinit(x,u,dx,nn)
   do i=1,nn
      ! Convert primitive to conservative variables
      ! specific enthalpy
- 
+
      h=1.0d0+gamma/(gamma-1.0d0)*q(i,5)/q(i,1)
      if (eos.eq. 'TM') then
         tau=q(i,5)/q(i,1)

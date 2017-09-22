@@ -84,7 +84,7 @@ program amr2tipsy
      write(20)toto
      close(20)
   endif
-  
+
   if(TRIM(filetype).eq.'grafic')then
      nomfich=TRIM(outfich)
      write(*,*)'Writing file '//TRIM(nomfich)
@@ -96,7 +96,7 @@ program amr2tipsy
      end do
      close(20)
   endif
-  
+
   if(TRIM(filetype).eq.'vtk')then
      nomfich=TRIM(outfich)
      write(*,*)'Writing file '//TRIM(nomfich)
@@ -121,7 +121,7 @@ program amr2tipsy
      end do
      close(20)
   endif
-  
+
   if(TRIM(filetype).eq.'tipsy')then
      nomfich=TRIM(outfich)
      write(*,*)'Writing file '//TRIM(nomfich)
@@ -159,19 +159,19 @@ program amr2tipsy
      end do
      close(20)
   endif
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2tipsy -inp  input_dir'
@@ -195,7 +195,7 @@ contains
        print *, ' type : 1-9 = variable number'
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -236,9 +236,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2tipsy

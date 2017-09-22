@@ -1,6 +1,6 @@
 program center_grafic
   !---------------------------------------------------------------------
-  ! Ce programme recentre autour d'un pixel donne les fichiers ic_... 
+  ! Ce programme recentre autour d'un pixel donne les fichiers ic_...
   ! generes par GRAFIC.
   ! Ce programme doit lire en input les fichiers suivants:
   !          - un fichier deltab: input/ic_deltab
@@ -18,8 +18,8 @@ program center_grafic
   !          - un fichier velcx:  output/ic_velcx
   !          - un fichier velcy:  output/ic_velcy
   !          - un fichier velcz:  output/ic_velcz
-  !                    
-  !         
+  !
+  !
   ! M. Gonzalez
   ! Saclay, le 31/08/01.
   !---------------------------------------------------------------------
@@ -33,7 +33,7 @@ program center_grafic
   real,dimension(:,:),allocatable::f1,f2
   character*80::input,output
   character*80,dimension(14)::filename
- 
+
 
   narg = iargc()
   IF(narg .NE. 2)THEN
@@ -47,14 +47,14 @@ program center_grafic
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output directories are the same'
      write(*,*)'input files will be erased by output ones'
      write(*,*)'so type DIFFERENT directories !!!!'
      stop
   endif
 
-  ! COMPUTE FILES TO OPEN AND TO WRITE 
+  ! COMPUTE FILES TO OPEN AND TO WRITE
   filename(1) =TRIM(input)//'/ic_deltab'
   filename(2) =TRIM(input)//'/ic_velcx'
   filename(3) =TRIM(input)//'/ic_velcy'
@@ -91,7 +91,7 @@ program center_grafic
 
   allocate(f1(np1,np2))
   allocate(f2(np1,np2))
-     
+
 !  do i_file=1,7
   do i_file=1,4
 
@@ -170,10 +170,10 @@ program center_grafic
 
      write(*,*)'done'
      close(12)
-     
+
   enddo
 
   deallocate(f1,f2)
-     
+
 
 end program center_grafic

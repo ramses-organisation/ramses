@@ -15,9 +15,9 @@ subroutine star_formation(ilevel)
   integer::ilevel
   !----------------------------------------------------------------------
   ! Description: This subroutine spawns star-particle of constant mass
-  ! using a Poisson probability law if some gas condition are fulfilled. 
-  ! It modifies hydrodynamic variables according to mass conservation 
-  ! and assumes an isothermal transformation... 
+  ! using a Poisson probability law if some gas condition are fulfilled.
+  ! It modifies hydrodynamic variables according to mass conservation
+  ! and assumes an isothermal transformation...
   ! On exit, the gas velocity and sound speed are unchanged.
   ! New star particles are synchronized with other collisionless particles.
   ! Array flag2 is used as temporary work space.
@@ -98,7 +98,7 @@ subroutine star_formation(ilevel)
         end if
      endif
 #endif
-   
+
      inquire(file=fileloc,exist=file_exist)
      if((.not.file_exist).or.(abs(t-trestart).lt.dtnew(ilevel))) then
         open(ilun, file=fileloc, form='formatted')
@@ -121,12 +121,12 @@ subroutine star_formation(ilevel)
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
   endif
-  
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -171,7 +171,7 @@ subroutine star_formation(ilevel)
   endif
 
   ! Cells center position relative to grid center position
-  do ind=1,twotondim  
+  do ind=1,twotondim
      iz=(ind-1)/4
      iy=(ind-1-4*iz)/2
      ix=(ind-1-2*iy-4*iz)
@@ -195,7 +195,7 @@ subroutine star_formation(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
@@ -269,7 +269,7 @@ subroutine star_formation(ilevel)
         if(sf_virial)then
            do i=1,ngrid
               ! if cell is a leaf cell
-              if (ok(i)) then 
+              if (ok(i)) then
                  ! Subgrid turbulence decay
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive) then
@@ -295,15 +295,15 @@ subroutine star_formation(ilevel)
                  cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
                  cs2       = cs2-cs2_poly
                  ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
-                 ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor. 
-                 ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation 
-                 ! from neighbouring cell values and differentiate. 
+                 ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor.
+                 ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation
+                 ! from neighbouring cell values and differentiate.
                  ! Get neighbor cells if they exist, otherwise use straight injection from local cell
                  ncell = 1 ! we just want the neighbors of that cell
                  ind_cell2(1) = ind_cell(i)
                  call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
                  d1           = uold(ind_nbor(1,1),1) ; d2 = uold(ind_nbor(1,2),1) ; d3 = uold(ind_nbor(1,3),1)
-                 d4           = uold(ind_nbor(1,4),1) ; d5 = uold(ind_nbor(1,5),1) ; d6 = uold(ind_nbor(1,6),1)  
+                 d4           = uold(ind_nbor(1,4),1) ; d5 = uold(ind_nbor(1,5),1) ; d6 = uold(ind_nbor(1,6),1)
                  sigma2       = 0d0 ; sigma2_comp = 0d0 ; sigma2_sole = 0d0
                  trgv         = 0d0 ; divv = 0d0 ; curlva = 0d0 ; curlvb = 0d0 ; curlvc = 0d0
                  flong        = 0d0
@@ -413,7 +413,7 @@ subroutine star_formation(ilevel)
                        sigma2_comp = uold(ind_cell(i),ivirial1)
                        sigma2_sole = uold(ind_cell(i),ivirial2)
                        sigma2      = sigma2_sole+sigma2_comp
-                    else 
+                    else
                        uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2
                        sigma2 = uold(ind_cell(i),ivirial1)
                     endif
@@ -426,7 +426,7 @@ subroutine star_formation(ilevel)
                     endif
                  endif
                  ! Density criterion
-                 if(d<=d0) ok(i)=.false. 
+                 if(d<=d0) ok(i)=.false.
                  if(ok(i)) then
                     SELECT CASE (sf_model)
                        ! Classical density threshold
@@ -530,7 +530,7 @@ subroutine star_formation(ilevel)
            ! Density criterion
            do i=1,ngrid
               d=uold(ind_cell(i),1)
-              if(d<=d0)ok(i)=.false. 
+              if(d<=d0)ok(i)=.false.
            end do
            ! Temperature criterion
            do i=1,ngrid
@@ -538,7 +538,7 @@ subroutine star_formation(ilevel)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
               T_poly=T2_star*(nH/nISM)**(g_star-1.0)
               T2=T2-T_poly
-              if(T2>2e4)ok(i)=.false. 
+              if(T2>2e4)ok(i)=.false.
            end do
         endif
         ! Geometrical criterion
@@ -555,7 +555,7 @@ subroutine star_formation(ilevel)
               ! Compute mean number of events
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
-              ! Free fall time of an homogeneous sphere 
+              ! Free fall time of an homogeneous sphere
               tstar= .5427*sqrt(1.0/(factG*max(d,smallr)))
               if(.not.sf_virial) sfr_ff(i) = eps_star
               ! Gas mass to be converted into stars
@@ -737,11 +737,11 @@ subroutine star_formation(ilevel)
               vp(ind_debris(i),1)=u
               vp(ind_debris(i),2)=v
               vp(ind_debris(i),3)=w
-              ! GMC metallicity + yield from ejecta 
+              ! GMC metallicity + yield from ejecta
               if(metal)zp(ind_debris(i))=zg+eta_sn*yield*(1-zg)*n*mstar/mdebris
            endif
 
-           if(sf_log_properties) then     
+           if(sf_log_properties) then
               write(ilun,'(I10)',advance='no') 0
               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(i)),ilevel,mp(ind_part(i))
               do idim=1,ndim
@@ -780,7 +780,7 @@ subroutine star_formation(ilevel)
      ! End loop over cells
   end do
   ! End loop over grids
-  
+
   !---------------------------------------------------------
   ! Convert hydro variables back to conservative variables
   !---------------------------------------------------------
@@ -790,7 +790,7 @@ subroutine star_formation(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
@@ -834,7 +834,7 @@ subroutine star_formation(ilevel)
 
   if(sf_log_properties) close(ilun)
 
-end subroutine star_formation 
+end subroutine star_formation
 #endif
 !################################################################
 !################################################################
@@ -848,8 +848,8 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector,0:twondim)::ind_father
   !-----------------------------------------------------------------
   ! This subroutine determines the 2*ndim neighboring cells
-  ! cells of the input cell (ind_cell). 
-  ! If for some reasons they don't exist, the routine returns 
+  ! cells of the input cell (ind_cell).
+  ! If for some reasons they don't exist, the routine returns
   ! the input cell.
   !-----------------------------------------------------------------
   integer::i,j,iok,ind
@@ -858,7 +858,7 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector,1:twondim),save::icelln_ok
 
 
-  if(ilevel==1)then 
+  if(ilevel==1)then
      write(*,*) 'Warning: attempting to form stars on level 1 --> this is not allowed ...'
      return
   endif
@@ -867,23 +867,23 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   do i=1,ncell
      ind_father(i,0)=ind_cell(i)
   end do
-  
+
   ! Get father cell position in the grid
   do i=1,ncell
      pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
   end do
-  
+
   ! Get father grid
   do i=1,ncell
      ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
   end do
-  
+
   ! Get neighboring father grids
   call getnborgrids(ind_grid_father,igridn,ncell)
-  
+
   ! Loop over position
   do ind=1,twotondim
-     
+
      ! Select father cells that sit at position ind
      do j=0,twondim
         iok=0
@@ -894,10 +894,10 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
            end if
         end do
      end do
-     
+
      ! Get neighboring cells for selected cells
      if(iok>0)call getnborcells(igridn_ok,ind,icelln_ok,iok)
-     
+
      ! Update neighboring father cells for selected cells
      do j=1,twondim
         iok=0

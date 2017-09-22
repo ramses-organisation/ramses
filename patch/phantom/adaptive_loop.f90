@@ -25,7 +25,7 @@ subroutine adaptive_loop
 
   !~~~~~~~~~ begin ~~~~~~~~~
   ! Associate the rho_tot pointer, if this is not the case (at the beginning)
-  if (.not. associated(rho_tot)) then 
+  if (.not. associated(rho_tot)) then
      rho_tot => rho_newton_tot
   endif
   !~~~~~~~~~~ end ~~~~~~~~~~
@@ -65,7 +65,7 @@ subroutine adaptive_loop
 
   nstep_coarse_old=nstep_coarse
 
-  if(myid==1)write(*,*)'Starting time integration' 
+  if(myid==1)write(*,*)'Starting time integration'
 
   do ! Main time loop
 
@@ -190,7 +190,7 @@ subroutine adaptive_loop
               !~~~~~~~~~~ end ~~~~~~~~~~
            end if
         end do
-        
+
         ! Build refinement map
         do ilevel=levelmin-1,1,-1
            call flag_fine(ilevel,2)
