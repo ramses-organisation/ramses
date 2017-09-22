@@ -1,11 +1,11 @@
-subroutine backup_part(filename)
+subroutine backup_part(filename, file_desc)
   use amr_commons
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  character(LEN=80)::filename
+  character(LEN=80), intent(in)::filename, file_desc
 
   integer::i,idim,ilun,ipart
   character(LEN=80)::fileloc
@@ -18,7 +18,14 @@ subroutine backup_part(filename)
   integer::dummy_io,info2
   integer(1),allocatable,dimension(:)::ii1
 
+  integer :: unit_info, ivar
+
+  character(len=1),dimension(1:3) :: dim_keys = (/"x", "y", "z"/)
+
   if(verbose)write(*,*)'Entering backup_part'
+
+  ! Set ivar to 1 for first variable
+  ivar = 1
 
   ! Wait for the token
 #ifndef WITHOUTMPI
@@ -36,6 +43,11 @@ subroutine backup_part(filename)
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(unit=ilun,file=TRIM(fileloc),form='unformatted')
+  if (myid == 1) then
+     open(newunit=unit_info,file=trim(file_desc),form='formatted')
+     write(unit_info, *) 'version: ', 1
+  end if
+
   rewind(ilun)
   ! Write header
   write(ilun)ncpu
@@ -57,6 +69,7 @@ subroutine backup_part(filename)
          end if
      end do
      write(ilun)xdp
+     if (myid == 1) call dump_var("position_"//dim_keys(idim), ivar, unit_info)
   end do
   ! Write velocity
   do idim=1,ndim
@@ -68,6 +81,7 @@ subroutine backup_part(filename)
         end if
      end do
      write(ilun)xdp
+     if (myid == 1) call dump_var("velocity_"//dim_keys(idim), ivar, unit_info)
   end do
   ! Write mass
   ipart=0
@@ -77,6 +91,7 @@ subroutine backup_part(filename)
         xdp(ipart)=mp(i)
      end if
   end do
+  if (myid == 1) call dump_var("mass", ivar, unit_info)
   write(ilun)xdp
   deallocate(xdp)
   ! Write identity
@@ -89,6 +104,7 @@ subroutine backup_part(filename)
      end if
   end do
   write(ilun)ii8
+  if (myid == 1) call dump_var("identity", ivar, unit_info)
   deallocate(ii8)
 
   ! Write level
@@ -101,6 +117,8 @@ subroutine backup_part(filename)
      end if
   end do
   write(ilun)ll
+  if (myid == 1) call dump_var("levelp", ivar, unit_info)
+
   deallocate(ll)
 
   ! Write family
@@ -113,6 +131,8 @@ subroutine backup_part(filename)
      end if
   end do
   write(ilun)ii1
+  if (myid == 1) call dump_var("family", ivar, unit_info)
+
   ! Write tag
   ipart=0
   do i=1,npartmax
@@ -122,6 +142,8 @@ subroutine backup_part(filename)
      end if
   end do
   write(ilun)ii1
+  if (myid == 1) call dump_var("tag", ivar, unit_info)
+
   deallocate(ii1)
 
 #ifdef OUTPUT_PARTICLE_POTENTIAL
@@ -135,6 +157,8 @@ subroutine backup_part(filename)
      end if
   end do
   write(ilun)xdp
+  if (myid == 1) call dump_var("potential", ivar, unit_info)
+
   deallocate(xdp)
 #endif
 
@@ -149,6 +173,7 @@ subroutine backup_part(filename)
         end if
      end do
      write(ilun)xdp
+     if (myid == 1) call dump_var("birth_time", ivar, unit_info)
      ! Write metallicity
      if(metal)then
         ipart=0
@@ -159,11 +184,13 @@ subroutine backup_part(filename)
            end if
         end do
         write(ilun)xdp
+        if (myid == 1) call dump_var("metallicity", ivar, unit_info)
      end if
      deallocate(xdp)
   end if
 
   close(ilun)
+  if (myid == 1) close(unit_info)
 
   ! Send the token
 #ifndef WITHOUTMPI
@@ -176,5 +203,16 @@ subroutine backup_part(filename)
   endif
 #endif
 
+contains
+  subroutine dump_var(varname, ivar, unit)
+    character(len=*), intent(in) :: varname
+    integer, intent(in) :: unit
+    integer, intent(inout) :: ivar
+
+    if (myid == 1) &
+         write(unit, '("variable #",I2,": ",a)') ivar, trim(varname)
+
+    ivar = ivar + 1
+  end subroutine dump_var
 
 end subroutine backup_part
