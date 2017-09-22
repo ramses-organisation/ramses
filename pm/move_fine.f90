@@ -96,11 +96,13 @@ subroutine move_fine_static(ilevel)
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
            if(star) then
-              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. is_star(typep(ipart))) ) then
+                 ! FIXME: there should be a static_sink as well
                  npart2=npart2+1
               endif
            else
-              if(.not.static_dm) then
+              if(.not.static_DM) then
                  npart2=npart2+1
               endif
            endif
@@ -119,7 +121,9 @@ subroutine move_fine_static(ilevel)
            next_part=nextp(ipart)
            ! Select particles
            if(star) then
-              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. is_star(typep(ipart))) ) then
+                 ! FIXME: there should be a static_sink as well
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -472,8 +476,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ! Overwrite cloud particle velocity with sink velocity
      do idim=1,ndim
         do j=1,np
-           isink=-idp(ind_part(j))
-           if(isink>0)then
+           if( is_cloud(typep(ind_part(j))) ) then
+              isink=-idp(ind_part(j))
               new_vp(j,idim)=vsnew(isink,idim,ilevel)
            end if
         end do

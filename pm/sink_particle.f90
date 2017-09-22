@@ -209,17 +209,19 @@ subroutine create_cloud_from_sink
                  if(cc(1).eq.myid)then                    
                     call remove_free(ind_cloud,1)
                     call add_list(ind_cloud,ind_grid,ok_true,1)
-                    indp=ind_cloud(1)
-                    idp(indp)=-isink
-                    levelp(indp)=levelmin
+                    indp               = ind_cloud(1)
+                    idp(indp)          = -isink
+                    typep(indp)%family = FAM_CLOUD
+                    typep(indp)%tag    = 0
+                    levelp(indp)       = levelmin
                     if (rr<=rmass .and. msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
-                       mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                       mp(indp)        = msink(isink)/dble(ncloud_sink_massive)
                     else
-                       mp(indp)=0.
+                       mp(indp)        = 0.0d0
                     end if
-                    xp(indp,1:3)=xtest(1,1:3)
-                    vp(indp,1:3)=vsink(isink,1:3)
-                    tp(indp)=tsink(isink)     ! Birth epoch
+                    xp(indp,1:3)       = xtest(1,1:3)
+                    vp(indp,1:3)       = vsink(isink,1:3)
+                    tp(indp)           = tsink(isink)     ! Birth epoch
                  end if
               end do
            end if
@@ -276,7 +278,7 @@ subroutine kill_entire_cloud(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if( is_cloud(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -292,14 +294,14 @@ subroutine kill_entire_cloud(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if( is_cloud(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
                  end if
                  ip=ip+1
                  ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig   
+                 ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
                  call remove_list(ind_part,ind_grid_part,ok,ip)
@@ -399,7 +401,7 @@ subroutine collect_acczone_avg(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if( is_cloud(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -416,7 +418,7 @@ subroutine collect_acczone_avg(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if( is_cloud(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -628,7 +630,7 @@ subroutine grow_sink(ilevel,on_creation)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if (is_cloud(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -644,7 +646,7 @@ subroutine grow_sink(ilevel,on_creation)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if( is_cloud(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -1246,7 +1248,7 @@ subroutine quenching(ilevel)
         do jpart=1,npart1
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
-           if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+           if ( is_star(typep(ipart)) ) then
               npart2=npart2+1
               tot_m=tot_m+mp(ipart)
               ave_u=ave_u+mp(ipart)*vp(ipart,1)
@@ -1949,16 +1951,16 @@ subroutine upd_cloud(ind_part,np)
 
   ! Overwrite cloud particle mass with sink mass
   do j=1,np
-     isink=-idp(ind_part(j))
-     if(isink>0 .and. mp(ind_part(j))>0.)then
-        mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
-     endif
+     if ( is_cloud(typep(ind_part(j))) .and. mp(ind_part(j))>0.0d0 ) then
+        isink = -idp(ind_part(j))
+        mp(ind_part(j)) = msink(isink)/dble(ncloud_sink_massive)
+     end if
   end do
 
   ! store velocity 
   do idim=1,ndim
      do j=1,np
-        new_vp(j,idim)=vp(ind_part(j),idim)
+        new_vp(j,idim) = vp(ind_part(j),idim)
      end do
   end do
 
@@ -1966,9 +1968,9 @@ subroutine upd_cloud(ind_part,np)
   ! is going to be overwritten again before move
   do idim=1,ndim
      do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-              new_vp(j,idim)=vsink(isink,idim)
+        if ( is_cloud(typep(ind_part(j))) ) then
+           isink = -idp(ind_part(j))
+           new_vp(j,idim) = vsink(isink,idim)
         end if
      end do
   end do
@@ -1976,27 +1978,27 @@ subroutine upd_cloud(ind_part,np)
   ! write back velocity
   do idim=1,ndim
      do j=1,np
-        vp(ind_part(j),idim)=new_vp(j,idim)
+        vp(ind_part(j),idim) = new_vp(j,idim)
      end do
   end do
 
   ! read level
   do j=1,np
-     level_p(j)=levelp(ind_part(j))
+     level_p(j) = levelp(ind_part(j))
   end do
  
   ! Update position
   do idim=1,ndim
      do j=1,np
-        new_xp(j,idim)=xp(ind_part(j),idim)
+        new_xp(j,idim) = xp(ind_part(j),idim)
      end do
   end do
   do idim=1,ndim
      do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           lev=level_p(j)
-           new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,lev)
+        if ( is_cloud(typep(ind_part(j))) ) then
+           isink = -idp(ind_part(j))
+           lev = level_p(j)
+           new_xp(j,idim) = new_xp(j,idim) + sink_jump(isink,idim,lev)
         endif
      end do
   end do
@@ -2004,7 +2006,7 @@ subroutine upd_cloud(ind_part,np)
  ! Write back postion
   do idim=1,ndim
      do j=1,np
-        xp(ind_part(j),idim)=new_xp(j,idim)
+        xp(ind_part(j),idim) = new_xp(j,idim)
      end do
   end do
 
@@ -2710,7 +2712,7 @@ subroutine count_clouds(ilevel,action)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if ( is_cloud(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -2727,7 +2729,7 @@ subroutine count_clouds(ilevel,action)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if ( is_cloud(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid

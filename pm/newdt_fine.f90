@@ -193,7 +193,8 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
 
   integer::i,idim,nx_loc
   real(dp)::dx,dx_loc,scale,dtpart
-  real(dp),dimension(1:nvector),save::v2
+  real(dp),dimension(1:nvector),save::v2,mmm
+  real(dp),dimension(1:ndim,1:nvector)::vvv
 
   ! Compute time step
   dx=0.5D0**ilevel
@@ -204,8 +205,9 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
   v2(1:nn)=0.0D0
   do idim=1,ndim
      do i=1,nn
-        v2(i)=MAX(v2(i),vp(ind_part(i),idim)**2)
-!        v2(i)=v2(i)+vp(ind_part(i),idim)**2
+        vvv(i, idim) = vp(ind_part(i), idim)
+        v2(i)=max(v2(i),vvv(i, idim)**2)
+        ! v2(i)=v2(i)+vp(ind_part(i),idim)**2
      end do
   end do
   do i=1,nn
@@ -215,13 +217,18 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
      end if
   end do
 
+  ! Fetch mass
+  do i = 1, nn
+     mmm(i) = mp(ind_part(i))
+  end do
+
   ! Compute kinetic energy
   do idim=1,ndim
      do i=1,nn
-        ekin_loc=ekin_loc+0.5D0*mp(ind_part(i))*vp(ind_part(i),idim)**2
+        ekin_loc=ekin_loc+0.5D0*mmm(i)*vvv(i, idim)**2
      end do
   end do
-    
+
 end subroutine newdt2
 
 

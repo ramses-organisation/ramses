@@ -1,39 +1,38 @@
 program log2col
   !--------------------------------------------------------------------------
   ! Ce programme calcule la carte de densite projetee pour les
-  ! variables hydro d'une simulation RAMSES. 
+  ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
   integer::nstep,ipos,jpos
   logical::ok
   character(LEN=4)::char4
-  character(LEN=5)::nchar,ncharcpu
   character(LEN=6)::char6
   character(LEN=9)::char9
   character(LEN=11)::char11
   character(LEN=12)::char12
   character(LEN=128)::nomfich,repository,outfich
-  character(LEN=128)::full_line,char
+  character(LEN=128)::full_line
   real::ekin,t,a,dt,epot,econs,mem_grid,mem_part
 
   call read_params
 
   !-----------------------------------------------
   ! Lecture du fichier log au format RAMSES
-  !-----------------------------------------------  
+  !-----------------------------------------------
   nomfich=TRIM(repository)
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   print *,'Reading file '//TRIM(nomfich)
   open(unit=10,file=nomfich,status='old',form='formatted')
-  
+
   !-----------------------------------------------
   ! Ecriture du fichier log en colonnes
-  !-----------------------------------------------  
+  !-----------------------------------------------
   open(unit=11,file=TRIM(outfich),form='formatted')
   write(11,'("   nstep            t          dt        aexp        ekin        epot       econs  memgrid(%)  mempart(%) ")')
 
@@ -78,19 +77,18 @@ program log2col
 
   close(10)
   close(11)
-  
+
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
-    LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: log2col -inp amrlog_file'
@@ -99,7 +97,7 @@ contains
        print *, ' '
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -116,11 +114,11 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program log2col
 
 !=======================================================================
@@ -155,4 +153,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-

@@ -116,6 +116,7 @@ subroutine star_formation(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
@@ -706,17 +707,19 @@ subroutine star_formation(ilevel)
            if(metal)zg=uold(ind_cell_new(i),imetal)
 
            ! Set star particle variables
-           tp(ind_part(i))=birth_epoch  ! Birth epoch
-           mp(ind_part(i))=n*mstar      ! Mass
-           levelp(ind_part(i))=ilevel   ! Level
-           idp(ind_part(i))=index_star  ! Star identity
-           xp(ind_part(i),1)=x
-           xp(ind_part(i),2)=y
-           xp(ind_part(i),3)=z
-           vp(ind_part(i),1)=u
-           vp(ind_part(i),2)=v
-           vp(ind_part(i),3)=w
-           if(metal)zp(ind_part(i))=zg  ! Initial star metallicity
+           tp(ind_part(i)) = birth_epoch  ! Birth epoch
+           mp(ind_part(i)) = n*mstar      ! Mass
+           levelp(ind_part(i)) = ilevel   ! Level
+           idp(ind_part(i)) = index_star  ! Star identity
+           typep(ind_part(i))%family = FAM_STAR
+           typep(ind_part(i))%tag = 0
+           xp(ind_part(i),1) = x
+           xp(ind_part(i),2) = y
+           xp(ind_part(i),3) = z
+           vp(ind_part(i),1) = u
+           vp(ind_part(i),2) = v
+           vp(ind_part(i),3) = w
+           if(metal)zp(ind_part(i)) = zg  ! Initial star metallicity
 
            ! Set GMC particle variables
            if(f_w>0)then
@@ -731,6 +734,8 @@ subroutine star_formation(ilevel)
               mp(ind_debris(i))=mdebris      ! Mass
               levelp(ind_debris(i))=ilevel   ! Level
               idp(ind_debris(i))=-n          ! Number of individual stars
+              typep(ind_debris(i))%family = FAM_DEBRIS
+              typep(ind_debris(i))%tag = 0
               xp(ind_debris(i),1)=x
               xp(ind_debris(i),2)=y
               xp(ind_debris(i),3)=z
@@ -760,6 +765,7 @@ subroutine star_formation(ilevel)
                  endif
                  write(ilun,'(E24.12)',advance='no') uvar
               enddo
+              write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
               write(ilun,'(A1)') ' '
            endif
 

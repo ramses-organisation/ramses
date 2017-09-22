@@ -5,55 +5,46 @@ program histo_main
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
-  integer::ndim,n,i,j,k,twotondim,ncoarse,type=0,domax=0
-  integer::ivar,nvar,ncpu,ncpuh,lmax=0,nboundary,ngrid_current
-  integer::nx,ny,nz,ilevel,idim,jdim,kdim,icell
-  integer::nlevelmax,ilevel1,ngrid1
-  integer::nlevelmaxs,nlevel,iout
-  integer::ind,ipos,ngrida,ngridh,ilevela,ilevelh
-  integer::ngridmax,nstep_coarse,icpu,ncpu_read
-  integer::nhx=0,nhy=0,ihx,ihy,ivar1,ivar2
-  real::gamma,smallr,smallc,gammah
-  real::boxlen,boxlen2
-  real::t,aexp,hexp,t2,aexp2,hexp2
+  integer::ndim,i,j,k,twotondim
+  integer::ivar,ncpu,lmax=0,nboundary,ngrid_current
+  integer::nx,ny,nz,ilevel,idim
+  integer::nlevelmax
+  integer::ind,ipos,ngrida
+  integer::ngridmax,icpu,ncpu_read
+  integer::nhx=0,nhy=0,ihx,ihy
+  real::boxlen
+  real::t,aexp
   real::omega_m,omega_l,omega_k,omega_b
-  real::scale_l,scale_d,scale_t
-  real::omega_m2,omega_l2,omega_k2,omega_b2
   real::tpoly=0d0, npoly=1.0
-  
-  integer::nx_sample=0,ny_sample=0,nz_sample=0
-  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
-  integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
-  integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
+
+  integer::imin,imax,jmin,jmax,kmin,kmax,gcc=0
+  integer::nvarh
   integer::nx_full,ny_full,nz_full,lmin,levelmin
-  integer::ix,iy,iz,ixp1,iyp1,izp1,ndom,impi,bit_length,maxdom
+  integer::ix,iy,iz,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   integer::levelmax
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dxmax,dummy
+  real(KIND=8)::dkey,order_min,dxmax
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::dymin,dymax,tymin,tymax
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
-  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz,dxx,dyy,dd,dt
-  real(KIND=8),dimension(:,:),allocatable::x,xg,histo,im
+  real(KIND=8)::xx,yy,dxx,dyy,dd,dt
+  real(KIND=8),dimension(:,:),allocatable::x,xg,histo
   real(KIND=8)::dmin=0.0,dmax=0.0,tmin=0.0,tmax=0.0
   real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,mmm
   real(KIND=8),dimension(:,:,:),allocatable::var
-  real(KIND=4),dimension(:,:,:),allocatable::toto
   real(KIND=8),dimension(:)  ,allocatable::rho,pre
   logical,dimension(:)  ,allocatable::ref
-  integer,dimension(:)  ,allocatable::isp
   integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
   real(KIND=8),dimension(1:8,1:3)::xc
   real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering
   character(LEN=128)::nomfich,repository,outfich,filetype='bin'
-  logical::ok,ok_part,ok_cell
+  logical::ok,ok_cell
   real(KIND=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
-  character(LEN=1)::proj='z'
 
   type level
      integer::ilevel
@@ -108,13 +99,13 @@ program histo_main
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -167,8 +158,8 @@ program histo_main
   read(10,'("unit_t      =",E23.15)')unit_t
   read(10,*)
 
-  read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  read(10,'("ordering type=",A80)')ordering
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -228,7 +219,7 @@ program histo_main
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -238,7 +229,7 @@ program histo_main
         bounding_min(i)=(order_min)*dkey
         bounding_max(i)=(order_min+1.0D0)*dkey
      end do
-     
+
      cpu_min=0; cpu_max=0
      do impi=1,ncpu
         do i=1,ndom
@@ -252,7 +243,7 @@ program histo_main
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -472,7 +463,7 @@ program histo_main
   write(*,*)'Total mass=',total_mass
 
   ! Output file
-  if (filetype=='bin')then 
+  if (filetype=='bin')then
      nomfich=TRIM(outfich)
      write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
      open(unit=10,file=nomfich,form='unformatted')
@@ -483,7 +474,7 @@ program histo_main
      close(10)
   end if
 
-  if (filetype=='ascii')then 
+  if (filetype=='ascii')then
      nomfich=TRIM(outfich)
      write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
      open(unit=10,file=nomfich,form='formatted')
@@ -497,10 +488,10 @@ program histo_main
      end do
      close(10)
   end if
-  
-  
+
+
 contains
- 
+
   subroutine read_params
 
     implicit none
@@ -509,7 +500,6 @@ contains
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
-    LOGICAL       :: bad, ok
 
     n = iargc()
     if (n < 4) then
@@ -575,13 +565,13 @@ contains
        case default
           print '("unknown option ",a2," ignored")', opt
 
-          
+
 
        end select
     end do
-    
+
   end subroutine read_params
-  
+
 end program histo_main
 
 !=======================================================================
