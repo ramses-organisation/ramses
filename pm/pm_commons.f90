@@ -62,19 +62,23 @@ module pm_commons
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
 
-  ! Add particle types
+  ! Particle types
   integer(1),parameter :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
-  ! Add tracer types
-  integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
   integer(1) :: FAM_TRACER_GAS=0
+  integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
 
-  ! Particle keys for outputing
+  ! Customize here for particle tags within particle types (e.g. different kind of stars).
+  ! Note that the type should be integer(1) (1 byte integers) for memory concerns.
+  ! Also don't forget to create a function is_<type>_<tag>. See the wiki for a more complete example
+
+  ! Particle keys for outputing. They should match the above particle
+  ! types, except for 'under' family
   character(len=13), dimension(-5:5), parameter :: particle_family_keys = (/ &
        ' other_tracer', 'debris_tracer', ' cloud_tracer', '  star_tracer', ' other_tracer', &
        '   gas_tracer', &
        '           DM', '         star', '        cloud', '       debris', '        other'/)
 
-  type(part_t), allocatable, dimension(:) :: typep  ! Particle type
+  type(part_t), allocatable, dimension(:) :: typep  ! Particle type array
 
 contains
   function cross(a,b)
