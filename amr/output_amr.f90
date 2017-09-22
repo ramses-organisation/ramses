@@ -13,7 +13,7 @@ subroutine dump_all
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::filename,filedir,filedirini,filecmd
+  character(LEN=80)::filename,filename2,filedir,filedirini,filecmd
   integer::info,irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
@@ -152,8 +152,9 @@ subroutine dump_all
 
      if(pic)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup part'
-        filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
-        call backup_part(filename)
+        filename=trim(filedir)//'part_'//trim(nchar)//'.out'
+        filename2=TRIM(filedir)//'part_file_descriptor.txt'
+        call backup_part(filename, filename2)
         if(sink)then
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
            call backup_sink(filename)
