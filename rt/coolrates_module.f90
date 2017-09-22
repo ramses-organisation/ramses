@@ -69,7 +69,7 @@ SUBROUTINE init_coolrates_tables(aexp)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  real(dp) :: aexp, T
+  real(dp) :: aexp
   integer :: myid, ncpu, ierr, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
@@ -434,23 +434,21 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
 END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp,       &
-                       dcooldT, rt_OTSA)
+FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, dcooldT)
 
 ! Compute cooling rate in a cell, using interpolation from cooling rate
 ! tables
 ! T        => Cell emperature [K]
 ! xion     => Cell ionization fraction
-! nH       => Hydrogen number density [cm-3]
-! aexp     => Cosmic expansion
+! nH       => Hydrogen number density [cm-3]  
 ! dcooldT <=  Temperature derivative of the rate
 ! dcooldx <=  Ionized fraction derivative of the rate
 ! returns:  Resulting cooling rate [erg s-1 cm-3]
 !-------------------------------------------------------------------------
-  implicit none
-  real(dp)::T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp
+  implicit none  
+  real(dp)::T, ne, nHI, nHII, nHeI, nHeII, nHeIII
   real(dp)::compCoolrate, dcooldT
-  logical::RT_OTSA!-------------------------------------------------------
+  !-----------------------------------------------------------------------
   real(dp),save::ci_HI,ci_HeI,ci_HeII
   real(dp),save::ci_HI_prime,ci_HeI_prime,ci_HeII_prime
   real(dp),save::ce_HI,ce_HeI,ce_HeII

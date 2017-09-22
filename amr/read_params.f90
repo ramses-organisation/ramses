@@ -267,7 +267,7 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call rt_read_hydro_params(nml_ok)
+  call rt_read_hydro_params()
 #endif
 #if NDIM==3
   if (sink)call read_sink_params

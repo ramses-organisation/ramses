@@ -14,7 +14,7 @@ SUBROUTINE rt_init
   use SED_module
   use UV_module
   implicit none
-  integer:: i, ilevel, ivar, nvar_count
+  integer:: i, nvar_count
 !-------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering init_rt'
   ! Count the number of variables and check if ok:
@@ -121,7 +121,7 @@ END SUBROUTINE adaptive_rt_c_update
 
 
 !*************************************************************************
-SUBROUTINE read_rt_params(nml_ok)
+SUBROUTINE read_rt_params()
 
 ! Read rt_params namelist
 !-------------------------------------------------------------------------
@@ -132,7 +132,6 @@ SUBROUTINE read_rt_params(nml_ok)
   use UV_module
   use SED_module
   implicit none
-  logical::nml_ok
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
@@ -186,12 +185,13 @@ SUBROUTINE read_rt_params(nml_ok)
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
   if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
 
-  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true.
-  call read_rt_groups(nml_ok)
+  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
+  call read_rt_groups()
+
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
-SUBROUTINE read_rt_groups(nml_ok)
+SUBROUTINE read_rt_groups()
 
 ! Read rt_groups namelist
 !-------------------------------------------------------------------------
@@ -200,7 +200,6 @@ SUBROUTINE read_rt_groups(nml_ok)
   use rt_cooling_module
   use SED_module
   implicit none
-  logical::nml_ok
   integer::i
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
@@ -283,7 +282,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 !------------------------------------------------------------------------
-  call add_UV_background(ilevel,dt)
+  call add_UV_background(ilevel)
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
   if(rt_nsource .le. 0) return      ! no rt sources
   if(verbose)write(*,111)ilevel
@@ -359,7 +358,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 END SUBROUTINE add_rt_sources
 
 !************************************************************************
-SUBROUTINE add_UV_background(ilevel,dt)
+SUBROUTINE add_UV_background(ilevel)
 
 ! Inject radiation from RT source regions (from the RT namelist). Since
 ! the light sources are continuously emitting radiation, this is called
@@ -367,7 +366,6 @@ SUBROUTINE add_UV_background(ilevel,dt)
 ! initialization.
 !
 ! ilevel => amr level at which to inject the radiation
-! dt     => timestep for injection (since injected values are per time)
 !------------------------------------------------------------------------
   use UV_module, ONLY: UV_Nphot_cgs, nUVgroups, iUVgroups
   use amr_commons
@@ -376,11 +374,9 @@ SUBROUTINE add_UV_background(ilevel,dt)
   use rt_hydro_commons
   implicit none
   integer::ilevel
-  real(dp)::dt
   integer::i,igrid,ncache,iskip,ngrid,j
-  integer::ind,ivar,ind_group,ic,ig
+  integer::ind,ic,ig
   integer ,dimension(1:nvector),save::ind_grid
-  real(dp),dimension(1:3)::skip_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
             ,scale_fp,efactor,nH
 !------------------------------------------------------------------------
