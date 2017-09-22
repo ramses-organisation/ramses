@@ -41,7 +41,7 @@ subroutine init_part
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::cc
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
-  integer,dimension(2*ncpu)::reqsend,reqrecv
+  integer,dimension(2*ncpu)::reqsend,reqsend2,reqrecv,reqrecv2
   integer,dimension(ncpu)::sendbuf,recvbuf
   integer::dummy_io,info,info2,npart_new
   integer::countsend,countrecv
@@ -622,6 +622,8 @@ contains
           emission(icpu,1)%up(ibuf,5)=vp(ipart,2)
           emission(icpu,1)%up(ibuf,6)=vp(ipart,3)
           emission(icpu,1)%up(ibuf,7)=mp(ipart)
+
+          emission(icpu,1)%fp(ibuf,1)=part2int(typep(ipart))
        else
           jpart=jpart+1
           xp(jpart,1:3)=xp(ipart,1:3)
@@ -666,6 +668,9 @@ contains
           call MPI_IRECV(reception(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+          call MPI_IRECV(reception(icpu,1)%fp,ncache, &
+               & MPI_INTEGER,icpu-1,&
+               & tagu,MPI_COMM_WORLD,reqrecv2(countrecv),info)
        end if
     end do
 
@@ -679,6 +684,9 @@ contains
           call MPI_ISEND(emission(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+          call MPI_IRECV(emission(icpu,1)%fp,ncache, &
+               & MPI_INTEGER,icpu-1,&
+               & tagu,MPI_COMM_WORLD,reqsend2(countrecv),info)
        end if
     end do
 
@@ -699,6 +707,7 @@ contains
           vp(jpart,2)=reception(icpu,1)%up(ibuf,5)
           vp(jpart,3)=reception(icpu,1)%up(ibuf,6)
           mp(jpart)  =reception(icpu,1)%up(ibuf,7)
+          typep(jpart)=int2part(reception(icpu,1)%fp(ibuf,1))
        end do
     end do
 
@@ -711,6 +720,8 @@ contains
        vp(ipart,2)=0d0
        vp(ipart,3)=0d0
        mp(ipart)  =0d0
+       typep(ipart)%family=FAM_UNDEF
+       typep(ipart)%tag=0
     end do
     npart=jpart
 
@@ -718,6 +729,8 @@ contains
     do icpu=1,ncpu
        if(sendbuf(icpu)>0)deallocate(emission(icpu,1)%up)
        if(recvbuf(icpu)>0)deallocate(reception(icpu,1)%up)
+       if(sendbuf2(icpu)>0)deallocate(emission(icpu,1)%fp)
+       if(recvbuf2(icpu)>0)deallocate(reception(icpu,1)%fp)
     end do
 
     write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
