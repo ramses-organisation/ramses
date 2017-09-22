@@ -52,7 +52,7 @@ subroutine create_sink
      call compute_clump_properties(uold(1,1))
 
      ! Compute quantities relative to mean (2nd moments)
-     call compute_clump_properties_round2(uold(1,1))
+     call compute_clump_properties_round2
 
      ! Apply all checks and flag cells for sink formation
      call flag_formation_sites
@@ -742,7 +742,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   integer::irad
 #endif
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,dx_loc,dx_min,scale,vol_min,vol_loc,weight,m_acc
+  real(dp)::dx,dx_loc,dx_min,scale,vol_min,vol_loc,weight,m_acc=0.
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::xpart
   real(dp),dimension(1:nvector,1:ndim,1:twotondim)::xx

@@ -54,7 +54,7 @@ subroutine output_frame()
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
   real(dp)::xpf,ypf
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
-  real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight
+  real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight=0
   integer,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
@@ -68,7 +68,7 @@ subroutine output_frame()
   integer::i,j
   integer::proj_ind,nh_temp,nw_temp
   real(dp)::xpc,ypc
-  logical::opened,cube_face
+  logical::opened,cube_face=.true.
   character(len=1)::temp_string
   integer,dimension(6,8)::lind = reshape((/1, 2, 3, 4, 1, 3, 2, 4,    &
                                            5, 6, 7, 8, 5, 7, 6, 8,    &
@@ -92,11 +92,11 @@ subroutine output_frame()
                                        1.6771769041e-31,3.3366386465e-32,2.6122101904e-33,-1.7749944262e-34,    &
                                        -6.6026967339e-35,3.9721180887e-36 /)
 #if NDIM>2
-  real(dp)::ztmp,alpha,beta,pers_corr
+  real(dp)::ztmp,alpha=0,beta=0,pers_corr
   real(dp)::zleft,zright,zcentre,zpf
   real(dp),dimension(8)::xcube,ycube,zcube
   integer::icube,iline
-  real(dp)::minx,maxx,miny,maxy,minz,maxz,d1,d2,d3,d4,l1,l2,l3,l4
+  real(dp)::minx=0,maxx=0,miny=0,maxy=0,minz=0,maxz=0,d1,d2,d3,d4,l1,l2,l3,l4
 #endif
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles

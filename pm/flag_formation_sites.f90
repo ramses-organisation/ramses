@@ -202,7 +202,7 @@ end subroutine flag_formation_sites
 !################################################################
 !################################################################
 #if NDIM==3
-subroutine compute_clump_properties_round2(xx)
+subroutine compute_clump_properties_round2
   use amr_commons
 #if NENER>0
   use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
@@ -223,7 +223,7 @@ subroutine compute_clump_properties_round2(xx)
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
+
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects
   ! more information like binding energies, etc, that can not be created by

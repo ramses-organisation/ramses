@@ -276,11 +276,8 @@ subroutine write_screen
 
 #endif
 
-111 format(2(1pe12.5,1x))
-112 format(i3,1x,1pe10.3,1x,8(1pe10.3,1x))
 113 format(i3,1x,1pe12.5,1x,9(1pe10.3,1x))
 114 format(' Output ',i5,' cells')
-115 format(' Output ',i5,' parts')
 116 format(100(A))
 
 end subroutine write_screen
