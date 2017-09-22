@@ -69,7 +69,8 @@ module pm_commons
 
   ! Customize here for particle tags within particle types (e.g. different kind of stars).
   ! Note that the type should be integer(1) (1 byte integers) for memory concerns.
-  ! Also don't forget to create a function is_<type>_<tag>. See the wiki for a more complete example
+  ! Also don't forget to create a function is_<type>_<tag>. See the wiki for a more complete example.
+  ! By default, the tag is always 0.
 
   ! Particle keys for outputing. They should match the above particle
   ! types, except for 'under' family
