@@ -14,7 +14,10 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
   
   real(dp)::dtcell,smallp,cf,cc,bc,bn
-  integer::k,idim, irad
+  integer::k,idim 
+#if NENER>0
+  integer::irad
+#endif
   
   smallp = smallr*smallc**2/gamma
 
@@ -114,7 +117,10 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   use const
   implicit none
   ! dummy arguments
-  integer nn,ilevel,irad
+  integer nn,ilevel
+#if NENER>0
+  integer::irad
+#endif
   real(dp)::ug(1:nvector,1:nvar+3)
   real(dp)::um(1:nvector,1:nvar+3)
   real(dp)::ud(1:nvector,1:nvar+3)
@@ -316,8 +322,7 @@ SUBROUTINE upwind(qleft,qright,fgdnv,zero_flux)
 
   REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean
   REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
-  REAL(dp):: vleft,vright,bx_mean
-  INTEGER ::l
+  REAL(dp):: vleft,bx_mean
   
   ! Enforce continuity of normal component
   bx_mean=half*(qleft(4)+qright(4))
@@ -356,7 +361,6 @@ SUBROUTINE lax_friedrich(qleft,qright,fgdnv,zero_flux)
   REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean,fgdnv
   REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
   REAL(dp):: vleft,vright,bx_mean
-  INTEGER ::l
   
   ! Enforce continuity of normal component
   bx_mean=half*(qleft(4)+qright(4))
@@ -392,9 +396,8 @@ SUBROUTINE hll(qleft,qright,fgdnv)
   IMPLICIT NONE  
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
   REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fgdnv
-  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
+  REAL(dp),DIMENSION(1:nvar+1)::uleft,uright
   REAL(dp):: vleft,vright,bx_mean,cfleft,cfright,SL,SR
-  INTEGER ::l
   
   ! Enforce continuity of normal component
   bx_mean=half*(qleft(4)+qright(4))
@@ -439,8 +442,11 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   REAL(dp)::ro,uo,vo,wo,bo,co,ptoto,etoto,vdotbo
   REAL(dp)::einto,eintl,eintr,eintstarr,eintstarl
 
-  INTEGER ::ivar,irad
+#if NVAR>8+NENER
+  INTEGER ::ivar
+#endif
 #if NENER>0
+  INTEGER ::irad
   REAL(dp),dimension(1:nener)::erado,eradl,eradr
   REAL(dp),dimension(1:nener)::eradstarl,eradstarr
 #endif
@@ -704,7 +710,12 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   !! Vtransverse1, Btransverse1, Vtransverse2, Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i , irad, ib, ivar
+#if NENER>0
+  INTEGER :: irad
+#endif
+#if NVAR>8+NENER
+  INTEGER :: ivar
+#endif
   REAL(dp),DIMENSION(1:nvar  ):: qvar
   REAL(dp),DIMENSION(1:nvar+1):: cvar,ff
   REAL(dp) :: ecin,emag,etot,d,u,v,w,A,B,C,P,Ptot,entho
@@ -783,7 +794,9 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i ,ib, iv, irad
+#if NENER>0
+  INTEGER :: irad
+#endif
   REAL(dp),DIMENSION(1:nvar):: qvar  
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
@@ -816,7 +829,9 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i ,ib, iv, irad
+#if NENER>0
+  INTEGER :: irad
+#endif
   REAL(dp),DIMENSION(1:nvar):: qvar  
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
@@ -848,10 +863,9 @@ SUBROUTINE find_speed_alfven(qvar,vel_info)
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
   IMPLICIT NONE
    
-  INTEGER :: i ,ib, iv
   REAL(dp),DIMENSION(1:nvar):: qvar  
   REAL(dp) :: vel_info
-  REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
+  REAL(dp) :: d,A
 
   d=qvar(1); A=qvar(4)
   vel_info = sqrt(A*A/d)
@@ -868,11 +882,11 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   IMPLICIT NONE
 
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
-  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean,qmean
+  REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fmean
   REAL(dp),DIMENSION(1:nvar+1)::uleft,uright,udiff
 
   REAL(dp), DIMENSION(7,7) :: lem, rem
-  REAL(dp), DIMENSION(7)        :: lambda, lambdal, lambdar, a
+  REAL(dp), DIMENSION(7)   :: lambda, lambdal, lambdar, a
 
   REAL(dp) :: droe, vxroe, vyroe, vzroe, sqrtdl, sqrtdr
   REAL(dp) :: hroe, byroe, bzroe, Xfactor, Yfactor
@@ -886,9 +900,9 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   REAL(dp) :: mxr, myr, mzr, er
   REAL(dp) :: coef, bx_mean
   REAL(dp) :: vleft,vright
-  REAL(dp) :: zero_flux,dim,pim,eim,mxm,mym,mzm,bym,bzm,etm,l1,l2
+  REAL(dp) :: zero_flux,dim,eim,mxm,mym,mzm,bym,bzm,etm,l1,l2
 
-  INTEGER :: i, n, m
+  INTEGER :: n
   LOGICAL :: llf
 
   ! Enforce continuity of normal component
@@ -1086,7 +1100,7 @@ SUBROUTINE hydro_acoustic(qleft,qright,fgdnv)
   real(dp),dimension(1:nvar+1)::fgdnv,qgdnv,ugdnv
 
   ! local variables
-  integer::i,n
+  integer::n
   real(dp)::smallp, bx_mean
   real(dp)::rl   ,ul   ,pl   ,cl
   real(dp)::rr   ,ur   ,pr   ,cr   
@@ -1217,7 +1231,7 @@ subroutine eigenvalues(d,vx,vy,vz,p,bx,by,bz,lambda)
   real (dp), intent(IN) :: bx, by, bz
   real (dp), dimension(1:7), intent(OUT) :: lambda
   ! local variables
-  real (dp) :: btsq, bt, vsq, vax,  vaxsq, hp
+  real (dp) :: btsq, bt, vsq, vax,  vaxsq
   real (dp) :: asq, astarsq, cfsq, cfast, cssq, cslow
 
   vsq = vx**2+vy**2+vz**2
@@ -1288,11 +1302,6 @@ SUBROUTINE eigen_cons(d,vx,vy,vz,h,Bx,by,bz,Xfac,Yfac,lambda,rem,lem)
   REAL(dp) :: Qfast, Qslow, af_prime, as_prime, Afpbb, Aspbb, na
   REAL(dp) :: cff, css, af, as, Afpb, Aspb, vqstr, norm
   REAL(dp) :: Q_ystar, Q_zstar
-  
-  REAL(dp) :: smalle
-  
-  real(dp),dimension(7)::toto
-  integer :: i
   
   vsq = vx*vx+vy*vy+vz*vz
   btsq = by*by+bz*bz

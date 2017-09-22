@@ -18,7 +18,8 @@ subroutine init_part
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip
   integer::ind,ix,iy,iz,ilun,icpu
-  integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
+  integer::i1,i2,i3
+  integer::i1_min=0,i1_max=0,i2_min=0,i2_max=0,i3_min=0,i3_max=0
   integer::buf_count,indglob
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
   real(dp)::min_mdm_cpu,min_mdm_all

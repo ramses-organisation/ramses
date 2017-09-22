@@ -24,7 +24,12 @@ subroutine condinit(x,u,dx,nn)
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
+#if NENER>0
+  integer::irad
+#endif
+#if NVAR>8+NENER
   integer::ivar
+#endif
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
   ! Call built-in initial condition generator
@@ -56,9 +61,9 @@ subroutine condinit(x,u,dx,nn)
 #if NENER>0
   ! radiative pressure -> radiative energy
   ! radiative energy -> total fluid energy
-  do ivar=1,nener
-     u(1:nn,8+ivar)=q(1:nn,8+ivar)/(gamma_rad(ivar)-1.0d0)
-     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+ivar)
+  do irad=1,nener
+     u(1:nn,8+irad)=q(1:nn,8+irad)/(gamma_rad(irad)-1.0d0)
+     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+irad)
   enddo
 #endif
 #if NVAR>8+NENER
@@ -88,7 +93,7 @@ subroutine velana(x,v,dx,t,ncell)
   ! v(i,1:3) is the imposed 3-velocity in user units.
   !================================================================
   integer::i
-  real(dp)::xx,yy,zz,vx,vy,vz,rr,tt,omega,aa,twopi
+  real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,rr,tt,omega,aa,twopi
 
   ! Add here, if you wish, some user-defined initial conditions
   aa=1.0
