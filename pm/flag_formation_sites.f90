@@ -246,6 +246,7 @@ subroutine compute_clump_properties_round2(xx)
 #endif
 #ifdef RT
   integer::iNp, ig
+  real(dp)::scale_Np,scale_Fp,scale_kappa
   real(dp)::kappa, c_code, ev_to_uu
   real(dp),dimension(1:nGroups,1:ndim)::Fp
   real(dp),dimension(1:nGroups)::Np2Ep_flux
