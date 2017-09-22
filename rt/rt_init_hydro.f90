@@ -13,7 +13,7 @@ subroutine rt_init_hydro
   include 'mpif.h'
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
-  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
+  integer::ilevel2,numbl2,ilun,ibound,istart,info
   integer::ncpu2,ndim2,nlevelmax2,nboundary2,idim
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx

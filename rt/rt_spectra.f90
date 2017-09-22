@@ -28,7 +28,7 @@ MODULE spectrum_integrator_module
 CONTAINS
 
 !*************************************************************************
-FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func, doPrint)
+FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
 
 ! Integrate spectral weighted function in energy interval [e0,e1]
 ! X      => Wavelengths [angstrom]
@@ -52,7 +52,6 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func, doPrint)
   real(kind=8),dimension(:),allocatable:: xx, yy, f
   real(dp):: la0, la1
   integer :: i
-  logical,optional::doPrint
 !-------------------------------------------------------------------------
   integrateSpectrum=0.
   if(N .le. 2) RETURN
@@ -580,10 +579,10 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   use pm_commons
   use amr_commons
   use rt_parameters
-  integer:: ilevel
+  integer::  ilevel
   real(dp):: dt
-  integer:: igrid, jgrid, ipart, jpart, next_part
-  integer:: i, ig, ip, npart1, npart2, icpu
+  integer::  igrid, jgrid, ipart, jpart, next_part
+  integer::  ig, ip, npart1, npart2, icpu
   integer,dimension(1:nvector),save:: ind_grid, ind_part, ind_grid_part
 !-------------------------------------------------------------------------
 #if NGROUPS > 0
@@ -969,7 +968,7 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
 !-------------------------------------------------------------------------
   use rt_parameters
   real(dp),intent(in):: age1_Gyr, dt_Gyr, Z
-  real(dp),dimension(nSEDgroups):: ret, Lc0, Lc1, SEDegy
+  real(dp),dimension(nSEDgroups):: ret, Lc0, Lc1
 !-------------------------------------------------------------------------
   ! Lc0 = cumulative emitted photons at the start of the timestep
   call inp_SED_table(age1_Gyr-dt_Gyr, Z, 2, .false., Lc0)
@@ -1012,14 +1011,12 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,ip
   real(dp)::dx,dx_loc,scale,vol_loc
-  logical::error
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,ngroups),save::part_NpInp
   real(dp),dimension(1:nvector,1:ndim),save::x
@@ -1271,12 +1268,11 @@ SUBROUTINE init_UV_background()
   real(kind=8),allocatable  :: Ls(:)            ! Wavelengths
   real(kind=8),allocatable  :: UV(:,:)          ! UV f(lambda,z)
   real(kind=8),allocatable  :: tbl(:,:), tbl2(:,:)
-  integer::i,ia,iz,ip,ii,dum,locid,ncpu2,ierr
+  integer::i,iz,ip,ii,locid,ncpu2,ierr
   logical::ok
-  real(kind=8)::da, dz, pL0,pL1
+  real(kind=8)::pL0,pL1
   integer,parameter::tag=1133
   integer::dummy_io,info2
-
 !-------------------------------------------------------------------------
   ! First check if there is any need for UV setup:
   if(rt_UVsrc_nHmax .le. 0d0 .and. .not. haardt_madau) return
@@ -1495,7 +1491,7 @@ SUBROUTINE update_UVsrc
   use SED_module
   use amr_commons,only:t,levelmin,myid,aexp
   implicit none
-  integer::ilevel,i
+  integer::i
   real(dp),allocatable,save::UVprops(:,:) !Each group: flux, egy, csn, cse
   real(dp)::scale_Np, scale_Fp, redshift
 !-------------------------------------------------------------------------
@@ -1645,7 +1641,7 @@ SUBROUTINE write_UVrates_table()
 ! debugging, to check if the UV spectra are being read correctly).
 !-------------------------------------------------------------------------
   character(len=128)::filename
-  integer::i, j
+  integer::i
 !-------------------------------------------------------------------------
   write(filename,'(A, I1, A)') 'UVrates.list'
   open(10, file=filename, status='unknown')
@@ -1665,7 +1661,7 @@ SUBROUTINE write_UVgroups_tables()
 ! debugging, to check if the UV spectra are being read correctly).
 !-------------------------------------------------------------------------
   character(len=128)::filename
-  integer::ip, i, j
+  integer::ip, i
 !-------------------------------------------------------------------------
   do ip=1,nUVgroups
      write(filename,'(A, I1, A)') 'UVtable', ip, '.list'
@@ -1725,9 +1721,9 @@ SUBROUTINE inp_1d(xax,nx,x,ix0,ix1,dx0,dx1)
 ! dx0,dx1 <=  Weights of ix0 and ix1 indexes
 !-------------------------------------------------------------------------
   use amr_commons,only:dp
+  integer:: nx, ix0, ix1
   real(dp), intent(in)::xax(nx), x
   real(dp):: x_step, dx0, dx1
-  integer:: nx, ix0, ix1
 !-------------------------------------------------------------------------
   call locate(xax, nx, x, ix0)
   if(ix0 < 1) ix0=1

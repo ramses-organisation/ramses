@@ -34,7 +34,7 @@ subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   logical ::ok(1:nvector)
   
   integer::k,i
-  real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
+  real(dp)::dg,dm,dd,error
   
   if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------                           
      do i=1,nGroups                                                 

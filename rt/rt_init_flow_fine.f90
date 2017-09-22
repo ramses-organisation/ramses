@@ -42,10 +42,9 @@ subroutine rt_init_flow_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale,xval
+  real(dp)::dx,xx1,xx2,xx3,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 
@@ -54,7 +53,7 @@ subroutine rt_init_flow_fine(ilevel)
 
   logical::error,ok_file1,ok_file2,ok_file3,ok_file
   character(LEN=80)::filename
-  character(LEN=5)::nchar,ncharvar
+  character(LEN=5)::ncharvar
  integer,parameter::tag=1129
  integer::dummy_io,info2
   
