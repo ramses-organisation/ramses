@@ -601,6 +601,7 @@ contains
        ncache=sendbuf(icpu)
        if(ncache>0)then
           allocate(emission(icpu,1)%up(1:ncache,1:twondim+1))
+          allocate(emission(icpu,1)%fp(1:ncache,1:1))
        end if
     end do
 
@@ -655,6 +656,7 @@ contains
        ncache=recvbuf(icpu)
        if(ncache>0)then
           allocate(reception(icpu,1)%up(1:ncache,1:twondim+1))
+          allocate(reception(icpu,1)%fp(1:ncache,1:1))
        end if
     end do
 
