@@ -3,7 +3,6 @@
 ! Joki Rosdahl, Andreas Bleuler, and Romain Teyssier, September 2015.
 
 module rt_cooling_module
-  use amr_commons,only:myid
   use cooling_module,only:X, Y
   use rt_parameters
   use coolrates_module
@@ -64,10 +63,11 @@ SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
 ! astart_sim (dble)   => Redshift at which we start the simulation
 ! T2_sim (dble)      <=  Starting temperature in simulation?
 !-------------------------------------------------------------------------
+  use amr_commons, ONLY: myid
   use UV_module
   use coolrates_module,only: init_coolrates_tables
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
-  real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu, ne
+  real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu=1., ne
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
@@ -135,7 +135,7 @@ SUBROUTINE update_UVrates(aexp)
   !      write(*,910) UVrates(i,:)
   !   enddo
   !endif
-910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
+  !910 format (1pe21.6, ' s-1', 1pe21.6,' erg s-1')
 
 END SUBROUTINE update_UVrates
 
@@ -300,11 +300,10 @@ contains
     implicit none
     integer, intent(in)::icell
     real(dp),dimension(nDim),save:: dmom
-    real(dp),dimension(nDim), save:: u_gas ! Gas velocity
     real(dp),dimension(nIons),save:: alpha, beta, nN, nI
     real(dp),save:: dUU, fracMax
-    real(dp),save:: xHeI, mu, TK, nHe, ne, neInit, Hrate, dAlpha, dBeta
-    real(dp),save:: s, jac, q, Crate, dCdT2, X_nHkb, rate, dRate, cr, de
+    real(dp),save:: xHeI, mu=1., TK, nHe, ne, neInit, Hrate, dAlpha, dBeta
+    real(dp),save:: s, jac, Crate, dCdT2, X_nHkb, rate, dRate, cr, de
     real(dp),save:: photoRate, metal_tot,metal_prime, ss_factor
     integer,save:: iion,igroup,idim
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
@@ -762,7 +761,7 @@ END SUBROUTINE cmp_chem_eq
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
-                           ,T2end,mu,ne,if_write_result)
+     & ,T2end,mu,ne,if_write_result)
 !-------------------------------------------------------------------------
 ! Used for initialization of thermal state in cosmological simulations.
 !
@@ -779,12 +778,11 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 ! if_write_result : .true. pour ecrire l'evolution de la temperature
 !          et de n_e sur l'ecran.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
   use UV_module
   implicit none
   real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,ne,dasura
   logical :: if_write_result
-  real(dp)::aexp,daexp,dt_cool,T2_com, nH_com  
+  real(dp)::aexp,daexp=0.,dt_cool,T2_com, nH_com  
   real(dp),dimension(nIons)::pHI_rates=0.
   real(kind=8) ::mu
   real(dp) :: mu_dp
@@ -801,9 +799,9 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   T2_com = 2.726d0 / aexp * aexp**2 / mu_mol
   nH_com = omegab*rhoc*h**2*X/mH
 
-  mu_dp=mu
-  call cmp_Equilibrium_Abundances(                                       &
-                 T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
+  mu_dp = mu
+  call cmp_Equilibrium_Abundances( &
+       & T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
   xion(1,1)=n_Spec(3)/(nH_com/aexp**3)                  !   HII   fraction
