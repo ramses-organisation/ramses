@@ -216,7 +216,7 @@ subroutine compute_clump_properties_round2
 #ifdef RT
   use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
   use rt_hydro_commons, only:rtuold
-  use rt_cooling_module, only:kappaAbs,kappaSc
+  use rt_cooling_module, only:kappaSc
 #endif
 
   implicit none

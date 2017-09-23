@@ -68,9 +68,10 @@ SUBROUTINE init_coolrates_tables(aexp)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: ierr
 #endif
   real(dp) :: aexp
-  integer :: myid, ncpu, ierr, iT
+  integer :: myid, ncpu, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
@@ -133,7 +134,6 @@ SUBROUTINE init_coolrates_tables(aexp)
 #endif
 
   if(myid==0) print*,'Coolrates tables initialised '
-901 format (20(1pe12.3))
 
 END SUBROUTINE init_coolrates_tables
 
@@ -144,9 +144,10 @@ SUBROUTINE update_coolrates_tables(aexp)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  intger :: ierr
 #endif
   real(dp) :: aexp
-  integer:: myid, ncpu, ierr, iT
+  integer :: myid, ncpu, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
