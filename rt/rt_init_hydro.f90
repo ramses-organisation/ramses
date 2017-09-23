@@ -11,9 +11,10 @@ subroutine rt_init_hydro
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info,info2
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
-  integer::ilevel2,numbl2,ilun,ibound,istart,info
+  integer::ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2,idim
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
@@ -23,7 +24,6 @@ subroutine rt_init_hydro
   integer::nRTvar2=0
   logical::ok
   integer,parameter::tag=1130
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_rt'
   !------------------------------------------------------

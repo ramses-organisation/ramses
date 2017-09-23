@@ -32,14 +32,16 @@ subroutine rt_init_flow_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+ integer::dummy_io,info2
 #endif
   integer::ilevel
 
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
   integer::ind,idim,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,info
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer::buf_count
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,xx1,xx2,xx3,dx_loc,scale
@@ -55,7 +57,6 @@ subroutine rt_init_flow_fine(ilevel)
   character(LEN=80)::filename
   character(LEN=5)::ncharvar
  integer,parameter::tag=1129
- integer::dummy_io,info2
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
