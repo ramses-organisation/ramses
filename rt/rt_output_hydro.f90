@@ -12,6 +12,7 @@ SUBROUTINE rt_backup_hydro(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info2
 #endif
   character(LEN=80)::filename,filedir,rt_filename
 
@@ -21,7 +22,6 @@ SUBROUTINE rt_backup_hydro(filename)
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::fileloc
   integer,parameter::tag=1131
-  integer::dummy_io,info2
 !------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering backup_rt'
 
@@ -221,11 +221,11 @@ SUBROUTINE output_rt_stats
   implicit none
   integer*8:: max_all, tot_all, cells_all,loopCodes_tot
   integer*8:: loopCodes_all(20)
-  integer::info
   real(dp)::step_nPhot_all, step_nStar_all, step_mStar_all
   real(dp)::scale_l, scale_t, scale_d, scale_v, scale_nh, scale_T2
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
 !-------------------------------------------------------------------------
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -245,7 +245,7 @@ SUBROUTINE output_rt_stats
      max_cool_loopcnt = max_all   ; loopCodes        = loopCodes_all
 #endif
      if(myid .eq. 1) then
-        if(n_cool_cells .eq. 0) n_cool_cells=1.
+        if(n_cool_cells .eq. 0) n_cool_cells=1
         write(*, 111) dble(tot_cool_loopcnt)/n_cool_cells,max_cool_loopcnt,rt_advect
         loopCodes_tot = SUM(loopCodes)
         if(loopCodes_tot .gt. 0) then

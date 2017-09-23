@@ -206,7 +206,7 @@ SUBROUTINE read_rt_groups()
        & , groupL0, groupL1, kappaAbs, kappaSc
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
-          ,I2, " ion species")') nGroups, nIons
+          & ,I2, " ion species")') nGroups, nIons
      write(*,*) ''
   endif
 

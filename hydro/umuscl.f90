@@ -1095,7 +1095,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
               else
-                 write(*,*)'Unknown slope type'
+                 write(*,*)'Unknown slope type',dx,dt
                  stop
               end if
            end do
@@ -1236,7 +1236,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
 #endif
@@ -1476,7 +1476,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
 #endif

@@ -93,14 +93,15 @@ subroutine velana(x,v,dx,t,ncell)
   ! v(i,1:3) is the imposed 3-velocity in user units.
   !================================================================
   integer::i
-  real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,rr,tt,omega,aa,twopi
-
+  real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
+!!$  real(dp)::rr,tt,omega
+  
   ! Add here, if you wish, some user-defined initial conditions
-  aa=1.0
+  aa=1.0+0.*t
   twopi=2d0*ACOS(-1d0)
   do i=1,ncell
 
-     xx=x(i,1)
+     xx=x(i,1)+0.*dx
 #if NDIM > 1
      yy=x(i,2)
 #endif

@@ -9,9 +9,9 @@ subroutine load_balance
 #ifndef WITHOUTMPI
   use hydro_commons, ONLY: uold, pstarold
   use poisson_commons, ONLY: phi, f
-#endif
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
+#endif
 #endif
   use bisection
   implicit none
