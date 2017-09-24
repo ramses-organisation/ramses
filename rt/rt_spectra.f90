@@ -149,9 +149,9 @@ FUNCTION trapz1(X,Y,N,cum)
   real(kind=8),optional::cum(N)
   real(kind=8),allocatable::cumInt(:)
   !-------------------------------------------------------------------------
+  if (N.le.1) RETURN
   allocate(cumInt(N))
   cumInt(:)=0.d0
-  if (N.le.1) RETURN
   do i=2,N
      cumInt(i)= cumInt(i-1) + abs(X(i)-X(i-1)) * (Y(i)+Y(i-1)) / 2.d0
   end do
