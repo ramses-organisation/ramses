@@ -39,7 +39,6 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
 ! func   => Function which is integrated (of X, Y, species)
 !-------------------------------------------------------------------------
   use rt_parameters,only:c_cgs,eV_to_erg, hp
-  use amr_commons,only:myid
   real(kind=8):: integrateSpectrum, X(N), Y(N), e0, e1
   integer :: N, species
   interface
@@ -150,9 +149,9 @@ FUNCTION trapz1(X,Y,N,cum)
   real(kind=8),optional::cum(N)
   real(kind=8),allocatable::cumInt(:)
 !-------------------------------------------------------------------------
+  if (N.le.1) RETURN
   allocate(cumInt(N))
   cumInt(:)=0.d0
-  if (N.le.1) RETURN
   do i=2,N
      cumInt(i)= cumInt(i-1) + abs(X(i)-X(i-1)) * (Y(i)+Y(i-1)) / 2.d0
   end do

@@ -779,7 +779,6 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 ! if_write_result : .true. pour ecrire l'evolution de la temperature
 !          et de n_e sur l'ecran.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
   use UV_module
   implicit none
   real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,ne,dasura
@@ -802,8 +801,8 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   nH_com = omegab*rhoc*h**2*X/mH
 
   mu_dp=mu
-  call cmp_Equilibrium_Abundances(                                       &
-                 T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
+  call cmp_Equilibrium_Abundances( &
+       & T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
   xion(1,1)=n_Spec(3)/(nH_com/aexp**3)                  !   HII   fraction
