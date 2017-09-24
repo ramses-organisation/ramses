@@ -149,6 +149,7 @@ FUNCTION trapz1(X,Y,N,cum)
   real(kind=8),optional::cum(N)
   real(kind=8),allocatable::cumInt(:)
   !-------------------------------------------------------------------------
+  trapz1=0.
   if (N.le.1) RETURN
   allocate(cumInt(N))
   cumInt(:)=0.d0
