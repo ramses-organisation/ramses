@@ -139,16 +139,16 @@ END FUNCTION fSigdivLambda
 !*************************************************************************
 FUNCTION trapz1(X,Y,N,cum)
 
-! Integrates function Y(X) along the whole interval 1..N, using a very
-! simple staircase method and returns the result.
-! Optionally, the culumative integral is returned in the cum argument.
-!-------------------------------------------------------------------------
+  ! Integrates function Y(X) along the whole interval 1..N, using a very
+  ! simple staircase method and returns the result.
+  ! Optionally, the culumative integral is returned in the cum argument.
+  !-------------------------------------------------------------------------
   integer :: N,i
   real(kind=8):: trapz1
   real(kind=8):: X(N),Y(N)
   real(kind=8),optional::cum(N)
   real(kind=8),allocatable::cumInt(:)
-!-------------------------------------------------------------------------
+  !-------------------------------------------------------------------------
   if (N.le.1) RETURN
   allocate(cumInt(N))
   cumInt(:)=0.d0
@@ -162,18 +162,19 @@ END FUNCTION trapz1
 
 !*************************************************************************
 FUNCTION getCrosssection_Hui(lambda, species)
-
-! Gives an atom-photon cross-section of given species at given wavelength,
-! as given by Hui and Gnedin (1997).
-! lambda  => Wavelength in angstrom
-! species => 1=HI, 2=HeI or 3=HeII
-! returns :  photoionization cross-section in cm^2
-!------------------------------------------------------------------------
+  
+  ! Gives an atom-photon cross-section of given species at given wavelength,
+  ! as given by Hui and Gnedin (1997).
+  ! lambda  => Wavelength in angstrom
+  ! species => 1=HI, 2=HeI or 3=HeII
+  ! returns :  photoionization cross-section in cm^2
+  !------------------------------------------------------------------------
   use rt_parameters,only:c_cgs, eV_to_erg, ionEvs, hp
   real(kind=8)      :: lambda, getCrosssection_Hui
   integer           :: species
-  real(kind=8)      :: E, E0, cs0, P, ya, yw, y0, y1, x, y
-!------------------------------------------------------------------------
+  real(kind=8)      :: E0=1., cs0=0., P=1., ya=1., yw=0., y0=0., y1=1.
+  real(kind=8)      :: E, x, y
+  !------------------------------------------------------------------------
   E = hp * c_cgs/(lambda*1.d-8) / ev_to_erg         ! photon energy in ev
   if ( E .lt. ionEvs(species) ) then            ! below ionization energy
      getCrosssection_Hui=0.
@@ -243,25 +244,27 @@ SUBROUTINE init_SED_table()
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid,IOGROUPSIZE,ncpu
+  use amr_commons,only:myid
   use rt_parameters
   use spectrum_integrator_module
 #ifndef WITHOUTMPI
+  use amr_commons,only:IOGROUPSIZE,ncpu
   include 'mpif.h'
+  real(kind=8),allocatable::tbl2(:,:,:)
+  integer::dummy_io,info2,ierr
 #endif
   ! Temporary SSP/SED parameters (read from SED files):
   integer:: nAges, nzs, nLs              ! # of bins of age, z, wavelength
   real(kind=8),allocatable::ages(:), Zs(:), Ls(:), rebAges(:)
   real(kind=8),allocatable::SEDs(:,:,:)           ! SEDs f(lambda,age,met)
-  real(kind=8),allocatable::tbl(:,:,:), tbl2(:,:,:), reb_tbl(:,:,:)
+  real(kind=8),allocatable::tbl(:,:,:), reb_tbl(:,:,:)
   integer::i,ia,iz,ip,ii,dum
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp
-  integer::locid,ncpu2,ierr
+  integer::locid,ncpu2
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
   integer,parameter::tag=1132
-  integer::dummy_io,info2
 
 !-------------------------------------------------------------------------
   if(myid==1) &
@@ -432,8 +435,9 @@ SUBROUTINE update_SED_group_props()
   use rt_parameters
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
-  integer :: i, ip, ii, info
+  integer :: i, ip, ii
   real(dp),save,allocatable,dimension(:)::  L_star
   real(dp),save,allocatable,dimension(:,:)::csn_star, cse_star
   real(dp),save,allocatable,dimension(:)::  egy_star
@@ -791,10 +795,10 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   y0lg = log10(y(1));   y1lg = log10(y(ny))
 
   if(xint_log .lt. 0 .and. nx .gt. 1) then
-     new_nx=-xint_log                             ! xint represents wanted
+     new_nx=int(-xint_log)                             ! xint represents wanted
      xint_log = (x1lg-x0lg)/(new_nx-1)            !     number of new bins
   else
-     new_nx = (x1lg-x0lg)/xint_log + 1
+     new_nx =int((x1lg-x0lg)/xint_log) + 1
   endif
   allocate(new_x(new_nx)) ; allocate(new_lgx(new_nx))
   do i = 0, new_nx-1                              !  initialize the x-axis
@@ -803,10 +807,10 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   new_x=10.d0**new_lgx
 
   if(yint_log .lt. 0 .and. ny .gt. 1) then        ! yint represents wanted
-     new_ny=-yint_log                             !     number of new bins
+     new_ny=int(-yint_log)                        !     number of new bins
      yint_log = (y1lg-y0lg)/(new_ny-1)
   else
-     new_ny = (y1lg-y0lg)/yint_log + 1
+     new_ny = int((y1lg-y0lg)/yint_log) + 1
   endif
   allocate(new_y(new_ny)) ; allocate(new_lgy(new_ny))
   do j = 0, new_ny-1                              !      ...and the y-axis
@@ -1024,10 +1028,10 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   real(dp),dimension(1:3)::skip_loc
   ! units and temporary quantities
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  &
-            , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
-            , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
+       & , scale_Fp, age, z=0., scale_inp, scale_Nphot, dt_Gyr           &
+       & , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
-!-------------------------------------------------------------------------
+  !-------------------------------------------------------------------------
   if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -1078,7 +1082,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   ! NGP at level ilevel
   do idim=1,ndim
      do j=1,np
-        id(j,idim) = x(j,idim) ! So id=0-5 is the cell (in the
+        id(j,idim) = int(x(j,idim)) ! So id=0-5 is the cell (in the
      end do                    ! 3x3x3 supercube) containing the star
   end do
 
@@ -1257,21 +1261,23 @@ SUBROUTINE init_UV_background()
 ! d) wavelengths (increasing order) [Angstrom]
 ! e) fluxes per (redshift,wavelength) [photons cm-2 s-1 A-1 sr-1]
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid,IOGROUPSIZE,ncpu
+  use amr_commons,only:myid
   use rt_parameters
   use SED_module
 #ifndef WITHOUTMPI
+  use amr_commons,only:IOGROUPSIZE,ncpu
   include 'mpif.h'
+  real(kind=8),allocatable  :: tbl2(:,:)
+  integer::dummy_io,info2,ierr
 #endif
   integer:: nLs                                 ! # of bins of wavelength
   real(kind=8),allocatable  :: Ls(:)            ! Wavelengths
   real(kind=8),allocatable  :: UV(:,:)          ! UV f(lambda,z)
-  real(kind=8),allocatable  :: tbl(:,:), tbl2(:,:)
-  integer::i,iz,ip,ii,locid,ncpu2,ierr
+  real(kind=8),allocatable  :: tbl(:,:)
+  integer::i,iz,ip,ii,locid,ncpu2
   logical::ok
   real(kind=8)::pL0,pL1
   integer,parameter::tag=1133
-  integer::dummy_io,info2
 !-------------------------------------------------------------------------
   ! First check if there is any need for UV setup:
   if(rt_UVsrc_nHmax .le. 0d0 .and. .not. haardt_madau) return
@@ -1488,7 +1494,7 @@ SUBROUTINE update_UVsrc
 !-------------------------------------------------------------------------
   use rt_parameters
   use SED_module
-  use amr_commons,only:t,levelmin,myid,aexp
+  use amr_commons,only:levelmin,myid,aexp
   implicit none
   integer::i
   real(dp),allocatable,save::UVprops(:,:) !Each group: flux, egy, csn, cse
@@ -1534,7 +1540,7 @@ SUBROUTINE update_UVsrc
   endif
 
 900 format (20f16.6)
-901 format (20(1pe16.6))
+
 END SUBROUTINE update_UVsrc
 
 !*************************************************************************
