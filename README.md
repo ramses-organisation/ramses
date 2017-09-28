@@ -22,6 +22,10 @@ Download the code by cloning the git repository using
 ```
 $ git clone https://bitbucket.org/rteyssie/ramses
 ```
+This is the development branch. To get the stable release do the following
+```
+$ git clone --branch stable_17_09 https://bitbucket.org/rteyssie/ramses
+```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 
 To generate idealised initial conditions of galaxies, check out the [DICE][5] code.
