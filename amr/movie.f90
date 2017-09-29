@@ -888,14 +888,14 @@ subroutine output_frame()
                  endif
               endif
               ! Star particles
-              if((is_DM(typep(j))).and.(kk.eq.ipart_start+1)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+1)) then
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
-              if((is_DM(typep(j))).and.(kk.eq.ipart_start+2)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
                  if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0
