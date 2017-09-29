@@ -542,8 +542,13 @@ subroutine output_header(filename)
   end do
 
 #ifndef WITHOUTMPI
+#ifndef LONGINT
+  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#else
   call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
 #else
   npart_family = npart_family_loc
   npart_all = npart_all_loc
@@ -551,7 +556,7 @@ subroutine output_header(filename)
 
   if (myid == 1) then
      write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
-     do ifam = -5, 5
+     do ifam = -NFAMILIES, NFAMILIES
         write(ilun, '(a13, i10)') &
              trim(particle_family_keys(ifam)), npart_family(ifam)
      end do

@@ -917,7 +917,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Compute parent grid index
   do i=1,np
-     igrid=emission(icpu,ilevel)%fp(ind_com(i),1)
+     igrid=int(emission(icpu,ilevel)%fp(ind_com(i),1), 4)
      ind_list(i)=emission(icpu,ilevel)%igrid(igrid)
   end do
 
@@ -927,9 +927,9 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Scatter particle level and identity
   do i=1,np
-     levelp(ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),2)
-     idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
-     typep(ind_part(i)) = int2part(emission(icpu,ilevel)%fp(ind_com(i),4))
+     levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
+     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     typep(ind_part(i)) = int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
   end do
 
   ! Scatter particle position and velocity
