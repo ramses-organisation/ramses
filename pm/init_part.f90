@@ -41,8 +41,8 @@ subroutine init_part
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::cc
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
-  integer,dimension(2*ncpu)::reqsend,reqsend2,reqrecv,reqrecv2
-  integer,dimension(ncpu)::sendbuf,sendbuf2,recvbuf,recvbuf2
+  integer,dimension(2*ncpu)::reqsend,reqrecv
+  integer,dimension(ncpu)::sendbuf,recvbuf
   integer::dummy_io,info,info2,npart_new
   integer::countsend,countrecv
   integer::ibuf,tagu=102
@@ -555,13 +555,6 @@ contains
     ! Initial particle number
     npart=ipart
 
-    ! Get particle type from properties
-    do i = 1, npart
-       ! typep(i) = props2type(idp(i), tp(i), mp(i))
-       typep(i)%family = FAM_DM
-       typep(i)%tag = 0
-    end do
-
     ! Move particle according to Zeldovich approximation
     if(.not. read_pos)then
        xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
@@ -660,6 +653,7 @@ contains
        end if
     end do
 
+    ! Taking care of real values
     ! Receive particles
     countrecv=0
     do icpu=1,ncpu
@@ -670,9 +664,6 @@ contains
           call MPI_IRECV(reception(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
-          call MPI_IRECV(reception(icpu,1)%fp,ncache, &
-               & MPI_INTEGER,icpu-1,&
-               & tagu,MPI_COMM_WORLD,reqrecv2(countrecv),info)
        end if
     end do
 
@@ -686,11 +677,9 @@ contains
           call MPI_ISEND(emission(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
-          call MPI_IRECV(emission(icpu,1)%fp,ncache, &
-               & MPI_INTEGER,icpu-1,&
-               & tagu,MPI_COMM_WORLD,reqsend2(countrecv),info)
        end if
     end do
+
 
     ! Wait for full completion of receives
     call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -709,7 +698,6 @@ contains
           vp(jpart,2)=reception(icpu,1)%up(ibuf,5)
           vp(jpart,3)=reception(icpu,1)%up(ibuf,6)
           mp(jpart)  =reception(icpu,1)%up(ibuf,7)
-          typep(jpart)=int2part(reception(icpu,1)%fp(ibuf,1))
        end do
     end do
 
@@ -722,17 +710,14 @@ contains
        vp(ipart,2)=0d0
        vp(ipart,3)=0d0
        mp(ipart)  =0d0
-       typep(ipart)%family=FAM_UNDEF
-       typep(ipart)%tag=0
     end do
+
     npart=jpart
 
     ! Deallocate communicators
     do icpu=1,ncpu
        if(sendbuf(icpu)>0)deallocate(emission(icpu,1)%up)
        if(recvbuf(icpu)>0)deallocate(reception(icpu,1)%up)
-       if(sendbuf2(icpu)>0)deallocate(emission(icpu,1)%fp)
-       if(recvbuf2(icpu)>0)deallocate(reception(icpu,1)%fp)
     end do
 
     write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
@@ -741,6 +726,12 @@ contains
     ! Compute particle initial level
     do ipart=1,npart
        levelp(ipart)=levelmin
+    end do
+
+    ! Setup DM for all particles
+    do ipart=1, npart
+       typep(ipart)%family = FAM_DM
+       typep(ipart)%tag = 0
     end do
 
     ! Compute particle initial age and metallicity

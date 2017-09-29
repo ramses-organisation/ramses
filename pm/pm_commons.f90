@@ -65,7 +65,7 @@ module pm_commons
   ! Particle types
   integer, parameter :: NFAMILIES=5
   integer(1),parameter :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
-  integer(1) :: FAM_TRACER_GAS=0
+  integer(1),parameter :: FAM_TRACER_GAS=0
   integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
 
   ! Customize here for particle tags within particle types (e.g. different kind of stars).
@@ -123,13 +123,24 @@ contains
     is_not_tracer = typep%family > 0
   end function is_not_tracer
 
+  elemental logical pure function is_not_DM(typep)
+    type(part_t), intent(in) :: typep
+    is_not_DM = typep%family /= FAM_DM
+  end function is_not_DM
+  
+
   pure function part2int (part)
     ! Convert a particle into an integer
     ! This saves some space e.g. when communicating
     integer :: part2int
     type(part_t), intent(in) :: part
 
-    part2int = part%family * huge(part%family) + part%tag
+    integer :: magic
+
+    ! This is the largest value for integer(1)
+    magic = 127
+
+    part2int = int(part%family) * magic + int(part%tag)
   end function part2int
 
   pure function int2part(index)
@@ -139,7 +150,8 @@ contains
 
     integer :: magic
 
-    magic = huge(int2part%family)
+    ! This is the largest value for integer(1)
+    magic = 127
 
     int2part%family = int(index / magic, 1)
     int2part%tag = int(mod(index, magic), 1)
