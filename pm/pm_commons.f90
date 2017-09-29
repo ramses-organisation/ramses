@@ -63,6 +63,7 @@ module pm_commons
   integer,dimension(IRandNumSize) :: localseed=-1
 
   ! Particle types
+  integer, parameter :: NFAMILIES=5
   integer(1),parameter :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
   integer(1) :: FAM_TRACER_GAS=0
   integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
@@ -74,7 +75,7 @@ module pm_commons
 
   ! Particle keys for outputing. They should match the above particle
   ! types, except for 'under' family
-  character(len=13), dimension(-5:5), parameter :: particle_family_keys = (/ &
+  character(len=13), dimension(-NFAMILIES:NFAMILIES), parameter :: particle_family_keys = (/ &
        ' other_tracer', 'debris_tracer', ' cloud_tracer', '  star_tracer', ' other_tracer', &
        '   gas_tracer', &
        '           DM', '         star', '        cloud', '       debris', '        other'/)
