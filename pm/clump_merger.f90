@@ -1,3 +1,4 @@
+#if NDIM==3
 subroutine compute_clump_properties(xx)
   use amr_commons
   use hydro_commons, ONLY:uold
@@ -1391,3 +1392,4 @@ end subroutine analyze_peak_memory
 !################################################################
 !################################################################
 !################################################################
+#endif
