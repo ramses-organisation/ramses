@@ -122,6 +122,12 @@ contains
     is_not_tracer = typep%family > 0
   end function is_not_tracer
 
+  elemental logical pure function is_not_DM(typep)
+    type(part_t), intent(in) :: typep
+    is_not_DM = typep%family /= FAM_DM
+  end function is_not_DM
+  
+
   pure function part2int (part)
     ! Convert a particle into an integer
     ! This saves some space e.g. when communicating
