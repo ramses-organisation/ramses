@@ -19,7 +19,7 @@ GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREPO = $(shell git config --get remote.origin.url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
-          -DNENER=$(NENER) -DSOLVER$(SOLVER) $(ATON_FLAGS) -DRT
+          -DNENER=$(NENER) -DSOLVER$(SOLVER) -DRT $(ATON_FLAGS)
 #############################################################################
 # Fortran compiler options and directives
 

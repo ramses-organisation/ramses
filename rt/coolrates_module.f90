@@ -144,7 +144,7 @@ SUBROUTINE update_coolrates_tables(aexp)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  intger :: ierr
+  integer :: ierr
 #endif
   real(dp) :: aexp
   integer :: myid, ncpu, iT
