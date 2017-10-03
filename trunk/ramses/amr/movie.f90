@@ -136,14 +136,17 @@ subroutine output_frame()
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
   moviefiles(3) = trim(moviedir)//'vy_'//trim(istep_str)//'.map'
-#if NDIM>2
+#ifdef SOLVERmhd
   moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
-#endif
+  moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
+#else
 #if NDIM==2
   moviefiles(4) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
 #endif
 #if NDIM>2
+  moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
   moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
+#endif
 #endif
 #if NVAR>5
   do ll=6,NVAR
@@ -442,10 +445,17 @@ endif
                  endif
                  if((ok(i)).and.(ivar_frame(proj_ind)>0).and.(ivar_frame(proj_ind)<=nvar))then
                     uvar = uold(ind_cell(i),ivar_frame(proj_ind))
+#ifdef SOLVERmhd
+                    ! Scale temperature to K
+                    if(ivar_frame(proj_ind)==5)then
+                       e = 0.0d0
+                       do idim=1,3
+#else
                     ! Scale temperature to K
                     if(ivar_frame(proj_ind)==ndim+2)then
                        e = 0.0d0
                        do idim=1,ndim
+#endif
                           e = e+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
                        enddo
 #if NENER>0
@@ -454,8 +464,8 @@ endif
                        enddo
 #endif
 #ifdef SOLVERmhd
-                       do idim=1,ndim 
-                          e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
+                       do idim=1,3 
+                          e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
                        enddo
 #endif
                        ! Pressure
@@ -465,8 +475,13 @@ endif
                     if(ivar_frame(proj_ind)>1) uvar = uvar/uold(ind_cell(i),1)
                     ! Scale density to cm**-3
                     if(ivar_frame(proj_ind)==1) uvar = uvar*scale_nH
+#ifdef SOLVERmhd
+                    ! Scale velocities to km/s
+                    if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<5) uvar = uvar*scale_v/1e5
+#else
                     ! Scale velocities to km/s
                     if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<ndim+2) uvar = uvar*scale_v/1e5
+#endif
                     ok(i) = ok(i).and.(uvar.ge.varmin_frame(proj_ind))
                     ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                  endif
@@ -697,7 +712,11 @@ endif
                                    ! Temperature map case
                                    if(kk==0)then
                                       e = 0.0d0
+#ifdef SOLVERmhd
+                                      do idim=1,3
+#else                       
                                       do idim=1,ndim
+#endif
                                          e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
                                       enddo
 #if NENER>0
@@ -706,11 +725,13 @@ endif
                                       enddo
 #endif
 #ifdef SOLVERmhd
-                                      do idim=1,ndim 
-                                         e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
+                                      do idim=1,3
+                                         e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
                                       enddo
-#endif
+                                      uvar = (gamma-1.0)*(uold(ind_cell(i),5)-e)
+#else
                                       uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
+#endif
                                       uvar = uvar/uold(ind_cell(i),1)*scale_T2
                                    endif
                                    ! Density map case
@@ -1142,14 +1163,17 @@ subroutine set_movie_vars()
   if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
   if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
   if(ANY(movie_vars_txt=='vy   ')) movie_vars(3)=1
-#if NDIM>2
+#ifdef SOLVERmhd
   if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
-#endif
+  if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
+#else
 #if NDIM==2
   if(ANY(movie_vars_txt=='pres ')) movie_vars(4)=1
 #endif
 #if NDIM>2
+  if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
   if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
+#endif
 #endif
 #if NVAR>5
   do ll=6,NVAR
