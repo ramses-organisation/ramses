@@ -163,7 +163,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
-  real(dp)::SN_BOOST,mstar,dx_min,vol_min
+  real(dp)::mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
@@ -177,7 +177,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  !integer ::n_SN
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
   integer,dimension(1:nvector),save::list1
