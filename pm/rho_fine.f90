@@ -1213,12 +1213,10 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   if(ilevel==levelmin)then
      do j=1,np
-        ! multipole(1)=multipole(1)+mp(ind_part(j))
         multipole(1)=multipole(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
-           ! multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
            multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
@@ -1414,7 +1412,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>cic_levelmax) then
         do j=1,np
-           ! if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
            if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
@@ -1423,7 +1420,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      if(ilevel==cic_levelmax)then
         do j=1,np
-           ! if(ok(j).and.(ttt(j)==0d0).and.(.not.abandoned(j)))then
            if ( ok(j) .and. is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
@@ -1448,7 +1444,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! Remove massive dark matter particle
      if(mass_cut_refine>0.0) then
         do j=1,np
-           ! if(ttt(j)==0d0.and.(.not.abandoned(j))) then
            if ( is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               ok(j)=ok(j).and.mmm(j)<mass_cut_refine
            endif
@@ -1458,7 +1453,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! For low mass baryon particles
      if(star) then
         do j=1,np
-           ! if(ttt(j).ne.0.0.and.(.not.abandoned(j))) then
            if ( is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               vol2(j)=vol2(j)*mmm(j)/mass_sph
            endif
@@ -1473,7 +1467,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>=cic_levelmax) then
         do j=1,np
-           ! if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
            if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
