@@ -204,7 +204,10 @@ subroutine init_part
         min_mdm_cpu = 1.0
         do ipart=1,npart2
            ! Get dark matter only
-           if (is_DM(typep(ipart))) min_mdm_cpu = mp(ipart)
+           if (is_DM(typep(ipart))) then
+              ! note: using two nested if so that the second one is only evaluated for DM particles
+              if (mp(ipart) .lt. min_mdm_cpu) min_mdm_cpu = mp(ipart)
+           end if
         end do
 
 #ifndef WITHOUTMPI
