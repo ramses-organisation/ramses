@@ -509,14 +509,18 @@ subroutine output_header(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  include "mpif.h"
   integer::info
 #endif
   character(LEN=80)::filename
 
   integer::ilun
   character(LEN=80)::fileloc
+#ifdef LONGINT
   integer(i8b)::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+#else
+  integer::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+#endif
   integer :: ifam, ipart
 
   if(verbose)write(*,*)'Entering output_header'
@@ -542,12 +546,12 @@ subroutine output_header(filename)
   end do
 
 #ifndef WITHOUTMPI
-#ifndef LONGINT
-  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
+#ifdef LONGINT
   call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
 #else
   npart_family = npart_family_loc
