@@ -852,7 +852,7 @@ end subroutine consup
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
+subroutine stellar_momentum(uin,pin,flux,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -862,19 +862,47 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
   real(dp)::dx, dy, dz
   real(dp)::dt
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
 
-  integer:: i, j, k, l
-  real(dp)::pstar
+  integer::i, j, k, l
+  integer::id, iu, iv, iw, ie
+  real(dp)::ustar, DL, DR, PL, PR, UL, UR
 
   ! Add stellar momentum to the normal momentum flux
   ! The one sixth factor is there to account for the mesh geometry
+
+  id=1; iu=2; iv=3; iw=4; ie=ndim+2
+
   do k = kf1, MAX(kf1,ku2-2)
      do j = jf1, MAX(jf1, ju2-2)
         do i = if1, if2
            do l = 1, ngrid
-              pstar=sixth*(pin(l,i,j,k)+pin(l,i-1,j,k))
-              flux(l,i,j,k,2,1) = flux(l,i,j,k,2,1) + pstar !*dx/dt
+
+              ! Solve the SN Riemann problem
+              PL=pin(l,i-1,j,k)
+              PR=pin(l,i,j,k)
+              DL=max(uin(l,i-1,j,k,1),smallr)
+              DR=max(uin(l,i,j,k,1),smallr)
+              UL=sqrt(PL/DL)
+              UR=sqrt(PR/DR)
+              if((DL*UL+DR*UR).lt.smallc)then
+                 ustar=0.0
+              else
+                 ustar=(PL-PR)/(DL*UL+DR*UR)
+              endif
+
+              ! Fluxes in the x direction
+              if(ustar>0.)then
+                 flux(l,i,j,k,id,1) = flux(l,i,j,k,id,1) + DL*ustar
+                 flux(l,i,j,k,iu,1) = flux(l,i,j,k,iu,1) + DL*ustar**2
+                 flux(l,i,j,k,ie,1) = flux(l,i,j,k,ie,1) + DL*ustar**3*half
+              else
+                 flux(l,i,j,k,id,1) = flux(l,i,j,k,id,1) + DR*ustar
+                 flux(l,i,j,k,iu,1) = flux(l,i,j,k,iu,1) + DR*ustar**2
+                 flux(l,i,j,k,ie,1) = flux(l,i,j,k,ie,1) + DR*ustar**3*half
+              endif
+
            end do
 
         end do
@@ -886,8 +914,30 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
      do j = jf1, jf2
         do i = iu1+2, iu2-2
            do l = 1, ngrid
-              pstar=sixth*(pin(l,i,j,k)+pin(l,i,j-1,k))
-              flux(l,i,j,k,3,2) = flux(l,i,j,k,3,2) + pstar !*dy/dt
+
+              ! Solve the SN Riemann problem
+              PL=pin(l,i,j-1,k)
+              PR=pin(l,i,j,k)
+              DL=max(uin(l,i,j-1,k,1),smallr)
+              DR=max(uin(l,i,j,k,1),smallr)
+              UL=sqrt(PL/DL)
+              UR=sqrt(PR/DR)
+              if((DL*UL+DR*UR).lt.smallc)then
+                 ustar=0.0
+              else
+                 ustar=(PL-PR)/(DL*UL+DR*UR)
+              endif
+              ! Fluxes in the y direction
+              if(ustar>0.)then
+                 flux(l,i,j,k,id,2) = flux(l,i,j,k,id,2) + DL*ustar
+                 flux(l,i,j,k,iv,2) = flux(l,i,j,k,iv,2) + DL*ustar**2
+                 flux(l,i,j,k,ie,2) = flux(l,i,j,k,ie,2) + DL*ustar**3*half
+              else
+                 flux(l,i,j,k,id,2) = flux(l,i,j,k,id,2) + DR*ustar
+                 flux(l,i,j,k,iv,2) = flux(l,i,j,k,iv,2) + DR*ustar**2
+                 flux(l,i,j,k,ie,2) = flux(l,i,j,k,ie,2) + DR*ustar**3*half
+              endif
+
            end do
         end do
      end do
@@ -899,8 +949,30 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
      do j = ju1+2, ju2-2
         do i = iu1+2, iu2-2
            do l = 1, ngrid
-              pstar=sixth*(pin(l,i,j,k)+pin(l,i,j,k-1))
-              flux(l,i,j,k,4,3) = flux(l,i,j,k,4,3) + pstar !*dz/dt
+
+              ! Solve the SN Riemann problem
+              PL=pin(l,i,j,k-1)
+              PR=pin(l,i,j,k)
+              DL=max(uin(l,i,j,k-1,1),smallr)
+              DR=max(uin(l,i,j,k,1),smallr)
+              UL=sqrt(PL/DL)
+              UR=sqrt(PR/DR)
+              if((DL*UL+DR*UR).lt.smallc)then
+                 ustar=0.0
+              else
+                 ustar=(PL-PR)/(DL*UL+DR*UR)
+              endif
+              ! Fluxes in the z direction
+              if(ustar>0.)then
+                 flux(l,i,j,k,id,3) = flux(l,i,j,k,id,3) + DL*ustar
+                 flux(l,i,j,k,iw,3) = flux(l,i,j,k,iw,3) + DL*ustar**2
+                 flux(l,i,j,k,ie,3) = flux(l,i,j,k,ie,3) + DL*ustar**3*half
+              else
+                 flux(l,i,j,k,id,3) = flux(l,i,j,k,id,3) + DR*ustar
+                 flux(l,i,j,k,iw,3) = flux(l,i,j,k,iw,3) + DR*ustar**2
+                 flux(l,i,j,k,ie,3) = flux(l,i,j,k,ie,3) + DR*ustar**3*half
+              endif
+
            end do
         end do
      end do

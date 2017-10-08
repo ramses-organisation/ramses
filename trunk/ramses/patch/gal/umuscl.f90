@@ -64,7 +64,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
   ! Translate to primative variables, compute sound speeds
-  call ctoprim(uin,qin,cin,pin,gravin,dt,ngrid)
+  call ctoprim(uin,qin,cin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
   call uslope(qin,dq,dx,dt,ngrid)
@@ -168,9 +168,9 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
     call consup(uin,flux,divu,dt,ngrid)
   endif
 
-!  if(momentum_feedback)then
-!     call stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
-!  endif
+  if(momentum_feedback)then
+     call stellar_momentum(uin,pin,flux,dx,dy,dz,dt,ngrid)
+  endif
 
 end subroutine unsplit
 !###########################################################
@@ -844,7 +844,7 @@ end subroutine cmpflxm
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,c,pin,gravin,dt,ngrid)
+subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -856,7 +856,6 @@ subroutine ctoprim(uin,q,c,pin,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
 
   integer ::i, j, k, l, n, idim, irad
   real(dp)::eint, smalle, dtxhalf, oneoverrho
@@ -903,10 +902,6 @@ subroutine ctoprim(uin,q,c,pin,gravin,dt,ngrid)
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,ndim+2)*oneoverrho-eken-erad,smalle)
               q(l,i,j,k,ndim+2) = (gamma-one)*q(l,i,j,k,1)*eint
-
-              if(momentum_feedback)then
-                 q(l,i,j,k,ndim+2) = q(l,i,j,k,ndim+2) + pin(l,i,j,k)
-              endif
 
               ! Compute sound speed
               c(l,i,j,k)=gamma*q(l,i,j,k,ndim+2)
