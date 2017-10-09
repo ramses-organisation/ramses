@@ -143,7 +143,7 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -171,7 +171,7 @@ subroutine read_params
      exp_refine(i)= 2.0
      initfile  (i)= ' '
   end do
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

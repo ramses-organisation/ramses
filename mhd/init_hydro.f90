@@ -4,9 +4,13 @@ subroutine init_hydro
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info,info2
 #endif
-  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar,irad
-  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
+  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
+#if NENER>0
+  integer::irad
+#endif
+  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
@@ -15,10 +19,9 @@ subroutine init_hydro
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tag=1108
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_hydro'
-  
+
   !------------------------------------------------------
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
@@ -51,7 +54,7 @@ subroutine init_hydro
      endif
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     ! Wait for the token                                                                                    
+     ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -168,7 +171,7 @@ subroutine init_hydro
         end do
      end do
      close(ilun)
-     ! Send the token                                                                                                                                  
+     ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then

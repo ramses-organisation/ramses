@@ -5,16 +5,16 @@ subroutine init_poisson
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: info,info2,dummy_io
+  integer,parameter::tag=1114
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
-  integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
+  integer::ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
-  integer,parameter::tag=1114
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering init_poisson'
 
@@ -55,7 +55,7 @@ subroutine init_poisson
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     if(IOGROUPSIZEREP>0)then 
+     if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/grav_'//TRIM(nchar)//'.out'
      else

@@ -1,3 +1,4 @@
+#if NDIM==3
 subroutine star_formation(ilevel)
   use amr_commons
   use pm_commons
@@ -8,13 +9,15 @@ subroutine star_formation(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info,info2,dummy_io
+  integer,parameter::tag=1120
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Description: This subroutine spawns star-particle of constant mass
-  ! using a Poisson probability law if some gas condition are fulfilled. 
-  ! It modifies hydrodynamic variables according to mass conservation 
-  ! and assumes an isothermal transformation... 
+  ! using a Poisson probability law if some gas condition are fulfilled.
+  ! It modifies hydrodynamic variables according to mass conservation
+  ! and assumes an isothermal transformation...
   ! On exit, the gas velocity and sound speed are unchanged.
   ! New star particles are synchronized with other collisionless particles.
   ! Array flag2 is used as temporary work space.
@@ -25,22 +28,23 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun=10
   integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
-  integer ::ntot,ntot_all,info,nstar_corrected,ncell
+  integer ::ntot,ntot_all,nstar_corrected,ncell
   logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg
   real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
   real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
   real(dp)::ul,ur,fl,fr,trgv,alpha0
-  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
+  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp=0.3
   real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
   real(dp)::birth_epoch,factG
-  real(kind=8)::mlost,mtot,mlost_all,mtot_all
+  real(kind=8)::mlost_all,mtot_all
+#ifndef WITHOUTMPI
+  real(kind=8)::mlost,mtot
+#endif
   real(kind=8)::PoissMean
   real(dp),parameter::pi=0.5*twopi
-  integer,parameter::tag=1120
-  integer::dummy_io,info2
   real(dp),dimension(1:3)::skip_loc
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
   real(dp)::mdebris
@@ -61,7 +65,11 @@ subroutine star_formation(ilevel)
 #if NENER>0
   integer::irad
 #endif
-  
+
+  ! TODO: when f2008 is obligatory - remove this and replace erfc_pre_f08 below by
+  ! the f2008 intrinsic erfc() function:
+  real(dp) erfc_pre_f08
+
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
   if(ndim.ne.3)return
@@ -90,7 +98,7 @@ subroutine star_formation(ilevel)
         end if
      endif
 #endif
-   
+
      inquire(file=fileloc,exist=file_exist)
      if((.not.file_exist).or.(abs(t-trestart).lt.dtnew(ilevel))) then
         open(ilun, file=fileloc, form='formatted')
@@ -113,12 +121,12 @@ subroutine star_formation(ilevel)
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
   endif
-  
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel 
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -163,7 +171,7 @@ subroutine star_formation(ilevel)
   endif
 
   ! Cells center position relative to grid center position
-  do ind=1,twotondim  
+  do ind=1,twotondim
      iz=(ind-1)/4
      iy=(ind-1-4*iz)/2
      ix=(ind-1-2*iy-4*iz)
@@ -178,7 +186,6 @@ subroutine star_formation(ilevel)
      localseed=allseed(myid,1:IRandNumSize)
   end if
 
-#if NDIM==3
   !------------------------------------------------
   ! Convert hydro variables to primitive variables
   !------------------------------------------------
@@ -188,7 +195,7 @@ subroutine star_formation(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
@@ -262,7 +269,7 @@ subroutine star_formation(ilevel)
         if(sf_virial)then
            do i=1,ngrid
               ! if cell is a leaf cell
-              if (ok(i)) then 
+              if (ok(i)) then
                  ! Subgrid turbulence decay
                  if(sf_tdiss.gt.0d0) then
                     if(sf_compressive) then
@@ -288,15 +295,15 @@ subroutine star_formation(ilevel)
                  cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
                  cs2       = cs2-cs2_poly
                  ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
-                 ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor. 
-                 ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation 
-                 ! from neighbouring cell values and differentiate. 
+                 ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor.
+                 ! So construct values of velocity field on the 6 faces of the cell using simple linear interpolation
+                 ! from neighbouring cell values and differentiate.
                  ! Get neighbor cells if they exist, otherwise use straight injection from local cell
                  ncell = 1 ! we just want the neighbors of that cell
                  ind_cell2(1) = ind_cell(i)
                  call getnbor(ind_cell2,ind_nbor,ncell,ilevel)
                  d1           = uold(ind_nbor(1,1),1) ; d2 = uold(ind_nbor(1,2),1) ; d3 = uold(ind_nbor(1,3),1)
-                 d4           = uold(ind_nbor(1,4),1) ; d5 = uold(ind_nbor(1,5),1) ; d6 = uold(ind_nbor(1,6),1)  
+                 d4           = uold(ind_nbor(1,4),1) ; d5 = uold(ind_nbor(1,5),1) ; d6 = uold(ind_nbor(1,6),1)
                  sigma2       = 0d0 ; sigma2_comp = 0d0 ; sigma2_sole = 0d0
                  trgv         = 0d0 ; divv = 0d0 ; curlva = 0d0 ; curlvb = 0d0 ; curlvc = 0d0
                  flong        = 0d0
@@ -406,7 +413,7 @@ subroutine star_formation(ilevel)
                        sigma2_comp = uold(ind_cell(i),ivirial1)
                        sigma2_sole = uold(ind_cell(i),ivirial2)
                        sigma2      = sigma2_sole+sigma2_comp
-                    else 
+                    else
                        uold(ind_cell(i),ivirial1) = max(uold(ind_cell(i),ivirial1),0d0)+sigma2
                        sigma2 = uold(ind_cell(i),ivirial1)
                     endif
@@ -419,7 +426,7 @@ subroutine star_formation(ilevel)
                     endif
                  endif
                  ! Density criterion
-                 if(d<=d0) ok(i)=.false. 
+                 if(d<=d0) ok(i)=.false.
                  if(ok(i)) then
                     SELECT CASE (sf_model)
                        ! Classical density threshold
@@ -454,7 +461,7 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
@@ -485,7 +492,7 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
                        ! Virial criterion simple model
                        CASE (3)
                           ! Laplacian rho
@@ -523,7 +530,7 @@ subroutine star_formation(ilevel)
            ! Density criterion
            do i=1,ngrid
               d=uold(ind_cell(i),1)
-              if(d<=d0)ok(i)=.false. 
+              if(d<=d0)ok(i)=.false.
            end do
            ! Temperature criterion
            do i=1,ngrid
@@ -531,7 +538,7 @@ subroutine star_formation(ilevel)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
               T_poly=T2_star*(nH/nISM)**(g_star-1.0)
               T2=T2-T_poly
-              if(T2>2e4)ok(i)=.false. 
+              if(T2>2e4)ok(i)=.false.
            end do
         endif
         ! Geometrical criterion
@@ -548,7 +555,7 @@ subroutine star_formation(ilevel)
               ! Compute mean number of events
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
-              ! Free fall time of an homogeneous sphere 
+              ! Free fall time of an homogeneous sphere
               tstar= .5427*sqrt(1.0/(factG*max(d,smallr)))
               if(.not.sf_virial) sfr_ff(i) = eps_star
               ! Gas mass to be converted into stars
@@ -730,11 +737,11 @@ subroutine star_formation(ilevel)
               vp(ind_debris(i),1)=u
               vp(ind_debris(i),2)=v
               vp(ind_debris(i),3)=w
-              ! GMC metallicity + yield from ejecta 
+              ! GMC metallicity + yield from ejecta
               if(metal)zp(ind_debris(i))=zg+eta_sn*yield*(1-zg)*n*mstar/mdebris
            endif
 
-           if(sf_log_properties) then     
+           if(sf_log_properties) then
               write(ilun,'(I10)',advance='no') 0
               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(i)),ilevel,mp(ind_part(i))
               do idim=1,ndim
@@ -773,7 +780,7 @@ subroutine star_formation(ilevel)
      ! End loop over cells
   end do
   ! End loop over grids
-  
+
   !---------------------------------------------------------
   ! Convert hydro variables back to conservative variables
   !---------------------------------------------------------
@@ -783,7 +790,7 @@ subroutine star_formation(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     do ind=1,twotondim  
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
@@ -825,10 +832,10 @@ subroutine star_formation(ilevel)
      end do
   end do
 
-#endif
   if(sf_log_properties) close(ilun)
 
-end subroutine star_formation 
+end subroutine star_formation
+#endif
 !################################################################
 !################################################################
 !################################################################
@@ -841,8 +848,8 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector,0:twondim)::ind_father
   !-----------------------------------------------------------------
   ! This subroutine determines the 2*ndim neighboring cells
-  ! cells of the input cell (ind_cell). 
-  ! If for some reasons they don't exist, the routine returns 
+  ! cells of the input cell (ind_cell).
+  ! If for some reasons they don't exist, the routine returns
   ! the input cell.
   !-----------------------------------------------------------------
   integer::i,j,iok,ind
@@ -851,7 +858,7 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector,1:twondim),save::icelln_ok
 
 
-  if(ilevel==1)then 
+  if(ilevel==1)then
      write(*,*) 'Warning: attempting to form stars on level 1 --> this is not allowed ...'
      return
   endif
@@ -860,23 +867,23 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   do i=1,ncell
      ind_father(i,0)=ind_cell(i)
   end do
-  
+
   ! Get father cell position in the grid
   do i=1,ncell
      pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
   end do
-  
+
   ! Get father grid
   do i=1,ncell
      ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
   end do
-  
+
   ! Get neighboring father grids
   call getnborgrids(ind_grid_father,igridn,ncell)
-  
+
   ! Loop over position
   do ind=1,twotondim
-     
+
      ! Select father cells that sit at position ind
      do j=0,twondim
         iok=0
@@ -887,10 +894,10 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
            end if
         end do
      end do
-     
+
      ! Get neighboring cells for selected cells
      if(iok>0)call getnborcells(igridn_ok,ind,icelln_ok,iok)
-     
+
      ! Update neighboring father cells for selected cells
      do j=1,twondim
         iok=0
@@ -905,41 +912,41 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
            end if
         end do
      end do
-     
+
   end do
-     
-    
+
+
 end subroutine getnbor
 !##############################################################
 !##############################################################
 !##############################################################
 !##############################################################
-function erfc(x)
+function erfc_pre_f08(x)
 
 ! complementary error function
-  use amr_commons, ONLY: dp 
+  use amr_commons, ONLY: dp
   implicit none
-  real(dp) erfc
+  real(dp) erfc_pre_f08
   real(dp) x, y
-  real(kind=8) pv, ph 
+  real(kind=8) pv, ph
   real(kind=8) q0, q1, q2, q3, q4, q5, q6, q7
   real(kind=8) p0, p1, p2, p3, p4, p5, p6, p7
-  parameter(pv= 1.26974899965115684d+01, ph= 6.10399733098688199d+00) 
-  parameter(p0= 2.96316885199227378d-01, p1= 1.81581125134637070d-01) 
-  parameter(p2= 6.81866451424939493d-02, p3= 1.56907543161966709d-02) 
-  parameter(p4= 2.21290116681517573d-03, p5= 1.91395813098742864d-04) 
+  parameter(pv= 1.26974899965115684d+01, ph= 6.10399733098688199d+00)
+  parameter(p0= 2.96316885199227378d-01, p1= 1.81581125134637070d-01)
+  parameter(p2= 6.81866451424939493d-02, p3= 1.56907543161966709d-02)
+  parameter(p4= 2.21290116681517573d-03, p5= 1.91395813098742864d-04)
   parameter(p6= 9.71013284010551623d-06, p7= 1.66642447174307753d-07)
-  parameter(q0= 6.12158644495538758d-02, q1= 5.50942780056002085d-01) 
-  parameter(q2= 1.53039662058770397d+00, q3= 2.99957952311300634d+00) 
-  parameter(q4= 4.95867777128246701d+00, q5= 7.41471251099335407d+00) 
+  parameter(q0= 6.12158644495538758d-02, q1= 5.50942780056002085d-01)
+  parameter(q2= 1.53039662058770397d+00, q3= 2.99957952311300634d+00)
+  parameter(q4= 4.95867777128246701d+00, q5= 7.41471251099335407d+00)
   parameter(q6= 1.04765104356545238d+01, q7= 1.48455557345597957d+01)
-  
+
   y = x*x
-  y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &   
+  y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &
        &       + p2/(y+q2)+p1/(y+q1)+p0/(y+q0))
   if (x < ph) y = y+2d0/(exp(pv*x)+1.0)
-  erfc = y
-  
+  erfc_pre_f08 = y
+
   return
-  
-end function erfc
+
+end function erfc_pre_f08

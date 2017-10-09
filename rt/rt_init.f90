@@ -14,7 +14,7 @@ SUBROUTINE rt_init
   use SED_module
   use UV_module
   implicit none
-  integer:: i, ilevel, ivar, nvar_count
+  integer:: i, nvar_count
 !-------------------------------------------------------------------------
   if(verbose)write(*,*)'Entering init_rt'
   ! Count the number of variables and check if ok:
@@ -24,8 +24,8 @@ SUBROUTINE rt_init
   iIons=nvar_count+1         !      Starting index of ionisation fractions
   nvar_count = nvar_count+3  !                                # hydro vars
 
-  if(nvar_count .gt. nvar) then 
-     if(myid==1) then 
+  if(nvar_count .gt. nvar) then
+     if(myid==1) then
         write(*,*) 'rt_init(): Something wrong with NVAR.'
         write(*,*) 'Should have NVAR=2+ndim+1*metal+1*dcool+1*aton+IRtrap+nIons'
         write(*,*) 'Have NVAR=',nvar
@@ -47,11 +47,11 @@ SUBROUTINE rt_init
   endif
   if(rt_star) use_proper_time=.true.    ! Need proper birth time for stars
   if(rt) neq_chem=.true.        ! Equilibrium cooling doesn't work with RT
-  
+
   ! To maximize efficiency, rt advection and rt timestepping is turned off
   ! until needed.
-  if(rt .and. .not.rt_otsa) rt_advect=.true.                              
-  if(rt .and. rt_nsource .gt. 0) rt_advect=.true.                         
+  if(rt .and. .not.rt_otsa) rt_advect=.true.
+  if(rt .and. rt_nsource .gt. 0) rt_advect=.true.
   if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
@@ -74,7 +74,7 @@ END SUBROUTINE rt_init
 SUBROUTINE update_rt_c
 
 ! Update the speed of light for radiative transfer, in code units.
-! This cannot be just a constant, since scale_v changes with time in 
+! This cannot be just a constant, since scale_v changes with time in
 ! cosmological simulations.
 !-------------------------------------------------------------------------
   use rt_parameters
@@ -90,7 +90,7 @@ END SUBROUTINE update_rt_c
 !*************************************************************************
 SUBROUTINE adaptive_rt_c_update(ilevel, dt)
 
-! Set the lightspeed such that RT can be done at ilevel in time dt in 
+! Set the lightspeed such that RT can be done at ilevel in time dt in
 ! a single step.
 !-------------------------------------------------------------------------
   use amr_parameters
@@ -107,7 +107,7 @@ SUBROUTINE adaptive_rt_c_update(ilevel, dt)
   dx=0.5D0**ilevel*scale
 
   ! new lightspeed
-  rt_c = dx/3.d0/dt * rt_courant_factor 
+  rt_c = dx/3.d0/dt * rt_courant_factor
   rt_c2 = rt_c**2
 
   ! new ligtspeed in cgs
@@ -121,7 +121,7 @@ END SUBROUTINE adaptive_rt_c_update
 
 
 !*************************************************************************
-SUBROUTINE read_rt_params(nml_ok)
+SUBROUTINE read_rt_params()
 
 ! Read rt_params namelist
 !-------------------------------------------------------------------------
@@ -132,7 +132,6 @@ SUBROUTINE read_rt_params(nml_ok)
   use UV_module
   use SED_module
   implicit none
-  logical::nml_ok
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
@@ -182,16 +181,17 @@ SUBROUTINE read_rt_params(nml_ok)
 
   rt_c_cgs = c_cgs * rt_c_fraction
   !call update_rt_c
-  
+
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
   if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
 
   if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
-  call read_rt_groups(nml_ok)
+  call read_rt_groups()
+
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
-SUBROUTINE read_rt_groups(nml_ok)
+SUBROUTINE read_rt_groups()
 
 ! Read rt_groups namelist
 !-------------------------------------------------------------------------
@@ -200,17 +200,16 @@ SUBROUTINE read_rt_groups(nml_ok)
   use rt_cooling_module
   use SED_module
   implicit none
-  logical::nml_ok
   integer::i
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
        & , groupL0, groupL1, kappaAbs, kappaSc
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
-          ,I2, " ion species")') nGroups, nIons
+          & ,I2, " ion species")') nGroups, nIons
      write(*,*) ''
   endif
-   
+
   if(nGroups .le. 0) then
      rt = .false.
      return
@@ -240,7 +239,7 @@ SUBROUTINE read_rt_groups(nml_ok)
   do i=1,min(nIons,nGroups)
      spec2group(i)=i                   ! Species contributions to groups
   end do
-  
+
   ! Read namelist file
   rewind(1)
   read(1,NML=rt_groups,END=101)
@@ -260,9 +259,9 @@ END SUBROUTINE read_rt_groups
 !************************************************************************
 SUBROUTINE add_rt_sources(ilevel,dt)
 
-! Inject radiation from RT source regions (from the RT namelist). Since 
+! Inject radiation from RT source regions (from the RT namelist). Since
 ! the light sources are continuously emitting radiation, this is called
-! continuously during code execution, rather than just during 
+! continuously during code execution, rather than just during
 ! initialization.
 !
 ! ilevel => amr level at which to inject the radiation
@@ -283,7 +282,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 !------------------------------------------------------------------------
-  call add_UV_background(ilevel,dt)
+  call add_UV_background(ilevel)
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
   if(rt_nsource .le. 0) return      ! no rt sources
   if(verbose)write(*,111)ilevel
@@ -359,15 +358,14 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 END SUBROUTINE add_rt_sources
 
 !************************************************************************
-SUBROUTINE add_UV_background(ilevel,dt)
+SUBROUTINE add_UV_background(ilevel)
 
-! Inject radiation from RT source regions (from the RT namelist). Since 
+! Inject radiation from RT source regions (from the RT namelist). Since
 ! the light sources are continuously emitting radiation, this is called
-! continuously during code execution, rather than just during 
+! continuously during code execution, rather than just during
 ! initialization.
 !
 ! ilevel => amr level at which to inject the radiation
-! dt     => timestep for injection (since injected values are per time)
 !------------------------------------------------------------------------
   use UV_module, ONLY: UV_Nphot_cgs, nUVgroups, iUVgroups
   use amr_commons
@@ -376,11 +374,9 @@ SUBROUTINE add_UV_background(ilevel,dt)
   use rt_hydro_commons
   implicit none
   integer::ilevel
-  real(dp)::dt
   integer::i,igrid,ncache,iskip,ngrid,j
-  integer::ind,ivar,ind_group,ic,ig
+  integer::ind,ic,ig
   integer ,dimension(1:nvector),save::ind_grid
-  real(dp),dimension(1:3)::skip_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
             ,scale_fp,efactor,nH
 !------------------------------------------------------------------------
@@ -483,7 +479,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,group_ind+1) =                                       &
                         rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
-#if NDIM>1 
+#if NDIM>1
               uu(i,group_ind+2) =                                       &
                         rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
 #endif

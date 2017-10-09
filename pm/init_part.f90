@@ -17,13 +17,14 @@ subroutine init_part
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip
-  integer::ind,ix,iy,iz,ilun,info,icpu
-  integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,indglob,npart_new
+  integer::ind,ix,iy,iz,ilun,icpu
+  integer::i1,i2,i3
+  integer::i1_min=0,i1_max=0,i2_min=0,i2_max=0,i3_min=0,i3_max=0
+  integer::buf_count,indglob
   real(dp)::dx,xx1,xx2,xx3,vv1,vv2,vv3,mm1
   real(dp)::min_mdm_cpu,min_mdm_all
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer ,dimension(1:nvector)::ind_grid,ind_cell,cc,ii
+  integer ,dimension(1:nvector)::ind_grid,ind_cell,ii
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
@@ -31,26 +32,24 @@ subroutine init_part
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
-  real(dp),dimension(1:nvector,1:3)::xx_dp
   real(kind=8),dimension(1:nvector)::mm
   real(kind=8)::dispmax=0.0
-
-  integer::ibuf,tagu=102
-  integer::countsend,countrecv
 #ifndef WITHOUTMPI
+  real(dp),dimension(1:nvector,1:3)::xx_dp
+  integer,dimension(1:nvector)::cc
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
+  integer::dummy_io,info,info2,npart_new
+  integer::countsend,countrecv
+  integer::ibuf,tagu=102
+  integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 #endif
-
   logical::error,keep_part,eof,read_pos=.false.,ok
   character(LEN=80)::filename,filename_x
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
-  integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
-  integer::dummy_io,info2
-
 
   if(verbose)write(*,*)'Entering init_part'
 
@@ -98,7 +97,7 @@ subroutine init_part
 
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
-     ! Wait for the token                                                                                                                                                                    
+     ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -118,7 +117,7 @@ subroutine init_part
      read(ilun)nstar_tot
      read(ilun)mstar_tot
      read(ilun)mstar_lost
-     read(ilun)nsink     
+     read(ilun)nsink
      if(ncpu2.ne.ncpu.or.ndim2.ne.ndim.or.npart2.gt.npartmax)then
         write(*,*)'File part.tmp not compatible'
         write(*,*)'Found   =',ncpu2,ndim2,npart2
@@ -150,6 +149,9 @@ subroutine init_part
      read(ilun)isp
      levelp(1:npart2)=isp
      deallocate(isp)
+#ifdef OUTPUT_PARTICLE_POTENTIAL
+     read(ilun)
+#endif
      if(star.or.sink)then
         ! Read birth epoch
         allocate(xdp(1:npart2))
@@ -169,7 +171,7 @@ subroutine init_part
      end if
      close(ilun)
 
-     ! Send the token      
+     ! Send the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
@@ -209,9 +211,9 @@ subroutine init_part
      endif
 
      if(debug)write(*,*)'part.tmp read for processor ',myid
-     npart=npart2     
+     npart=npart2
 
-  else     
+  else
 
      filetype_loc=filetype
      if(.not. cosmo)filetype_loc='ascii'
@@ -221,17 +223,17 @@ subroutine init_part
      case ('grafic')
 
         !----------------------------------------------------
-        ! Reading initial conditions GRAFIC2 multigrid arrays  
+        ! Reading initial conditions GRAFIC2 multigrid arrays
         !----------------------------------------------------
         ipart=0
         ! Loop over initial condition levels
         do ilevel=levelmin,nlevelmax
-           
+
            if(initfile(ilevel)==' ')cycle
-           
+
            ! Mesh size at level ilevel in coarse cell units
            dx=0.5D0**ilevel
-           
+
            ! Set position of cell centers relative to grid center
            do ind=1,twotondim
               iz=(ind-1)/4
@@ -241,7 +243,7 @@ subroutine init_part
               if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
               if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
            end do
-           
+
            !--------------------------------------------------------------
            ! First step: compute level boundaries and particle positions
            !--------------------------------------------------------------
@@ -249,7 +251,7 @@ subroutine init_part
            i2_min=n2(ilevel)+1; i2_max=0
            i3_min=n3(ilevel)+1; i3_max=0
            ipart_old=ipart
-           
+
            ! Loop over grids by vector sweeps
            ncache=active(ilevel)%ngrid
            do igrid=1,ncache,nvector
@@ -257,7 +259,7 @@ subroutine init_part
               do i=1,ngrid
                  ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
               end do
-              
+
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
@@ -295,7 +297,7 @@ subroutine init_part
               ! End loop over cells
            end do
            ! End loop over grids
-           
+
            ! Check that all grids are within initial condition region
            error=.false.
            if(active(ilevel)%ngrid>0)then
@@ -315,7 +317,7 @@ subroutine init_part
            if(debug)then
               write(*,*)myid,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
            endif
-           
+
            !---------------------------------------------------------------------
            ! Second step: read initial condition file and set particle velocities
            !---------------------------------------------------------------------
@@ -328,10 +330,10 @@ subroutine init_part
            end if
            allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
            allocate(init_plane_x(1:n1(ilevel),1:n2(ilevel)))
-           
+
            ! Loop over input variables
            do idim=1,ndim
-              
+
               ! Read dark matter initial displacement field
               if(multiple)then
                  call title(myid,nchar)
@@ -358,10 +360,10 @@ subroutine init_part
               endif
 
               if(myid==1)write(*,*)'Reading file '//TRIM(filename)
-                               
+
               if(multiple)then
                  ilun=myid+10
-                 ! Wait for the token                                                                                                                                                        
+                 ! Wait for the token
 #ifndef WITHOUTMPI
                  if(IOGROUPSIZE>0) then
                     if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -383,7 +385,7 @@ subroutine init_part
                     endif
                  end do
                  close(ilun)
-                 ! Send the token                                                                                                                                                            
+                 ! Send the token
 #ifndef WITHOUTMPI
                  if(IOGROUPSIZE>0) then
                     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
@@ -411,7 +413,7 @@ subroutine init_part
 #ifndef WITHOUTMPI
                     call MPI_BCAST(init_plane,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
 #endif
-                    
+
                     if(active(ilevel)%ngrid>0)then
                        if(i3.ge.i3_min.and.i3.le.i3_max)then
                           init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
@@ -449,7 +451,7 @@ subroutine init_part
                  end if
 
               endif
-              
+
               if(active(ilevel)%ngrid>0)then
                  ! Rescale initial displacement field to code units
                  init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
@@ -464,7 +466,7 @@ subroutine init_part
                     do i=1,ngrid
                        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
                     end do
-                    
+
                     ! Loop over cells
                     do ind=1,twotondim
                        iskip=ncoarse+(ind-1)*ngridmax
@@ -504,21 +506,21 @@ subroutine init_part
 
            end do
            ! End loop over input variables
-           
+
            ! Deallocate initial conditions array
            if(active(ilevel)%ngrid>0)then
               deallocate(init_array,init_array_x)
            end if
            deallocate(init_plane,init_plane_x)
-           
+
            if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
-           
+
         end do
         ! End loop over levels
-        
+
         ! Initial particle number
         npart=ipart
-        
+
         ! Move particle according to Zeldovich approximation
         if(.not. read_pos)then
            xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
@@ -526,7 +528,7 @@ subroutine init_part
 
         ! Scale displacement to velocity
         vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
-        
+
         ! Periodic box
         do ipart=1,npart
 #if NDIM>0
@@ -542,8 +544,8 @@ subroutine init_part
            if(xp(ipart,3)>=dble(nz))xp(ipart,3)=xp(ipart,3)-dble(nz)
 #endif
         end do
-        
-#ifndef WITHOUTMPI        
+
+#ifndef WITHOUTMPI
         ! Compute particle Hilbert ordering
         sendbuf=0
         do ipart=1,npart
@@ -552,7 +554,7 @@ subroutine init_part
            call cmp_cpumap(xx_dp,cc,1)
            if(cc(1).ne.myid)sendbuf(cc(1))=sendbuf(cc(1))+1
         end do
-           
+
         ! Allocate communication buffer in emission
         do icpu=1,ncpu
            ncache=sendbuf(icpu)
@@ -586,7 +588,7 @@ subroutine init_part
               mp(jpart)    =mp(ipart)
            endif
         end do
-        
+
         ! Communicate virtual particle number to parent cpu
         call MPI_ALLTOALL(sendbuf,1,MPI_INTEGER,recvbuf,1,MPI_INTEGER,MPI_COMM_WORLD,info)
 
@@ -625,7 +627,7 @@ subroutine init_part
                    & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
            end if
         end do
-        
+
         ! Send particles
         countsend=0
         do icpu=1,ncpu
@@ -638,10 +640,10 @@ subroutine init_part
                    & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
            end if
         end do
-        
+
         ! Wait for full completion of receives
         call MPI_WAITALL(countrecv,reqrecv,statuses,info)
-        
+
         ! Wait for full completion of sends
         call MPI_WAITALL(countsend,reqsend,statuses,info)
 
@@ -658,7 +660,7 @@ subroutine init_part
               mp(jpart)  =reception(icpu,1)%up(ibuf,7)
            end do
         end do
-        
+
         ! Erase old particles
         do ipart=jpart+1,npart
            xp(ipart,1)=0d0
@@ -733,6 +735,7 @@ subroutine init_part
         end if
         eof=.false.
 
+        jpart=0
         do while (.not.eof)
            xx=0.0
            if(myid==1)then
@@ -829,24 +832,26 @@ subroutine load_gadget
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  integer,dimension(1:nvector)::cc
 #endif
 
   logical::ok
   TYPE(gadgetheadertype)::gadgetheader
   integer::numfiles
   integer::ifile
-  real(dp),dimension(1:nvector,1:3)::xx_dp
   real,dimension(:,:),allocatable:: pos, vel
   real(dp)::massparticles
   integer(kind=8)::allparticles
-  integer(i8b),dimension(:),allocatable:: ids  
+  integer(i8b),dimension(:),allocatable:: ids
   integer::nparticles
-  integer::i,icpu,ipart,info,start
+  integer::i,icpu,ipart,start
   integer(i8b),dimension(1:ncpu)::npart_cpu,npart_all
   character(LEN=256)::filename
-  integer,dimension(1:nvector)::cc
+  real(dp),dimension(1:nvector,1:3)::xx_dp
   integer::clock_start,clock_end,clock_rate
   real(dp)::gadgetvfact
+
   ! Local particle count
   ipart=0
   call SYSTEM_CLOCK(COUNT_RATE=clock_rate)
@@ -878,19 +883,21 @@ subroutine load_gadget
         TIME_SPENT(clock_start, clock_end, clock_rate)
         start = 1
         TIME_START(clock_start)
-#ifndef WITHOUTMPI
         do i=1,nparticles
            xx_dp(1,1) = pos(1,i)/gadgetheader%boxsize
            xx_dp(1,2) = pos(2,i)/gadgetheader%boxsize
            xx_dp(1,3) = pos(3,i)/gadgetheader%boxsize
+#ifndef WITHOUTMPI
            call cmp_cpumap(xx_dp,cc,1)
            if(cc(1)==myid)then
 #endif
               ipart=ipart+1
+#ifndef WITHOUTMPI
               if (ipart .ge. size(mp)) then
                  write(*,*) "For ", myid, ipart, " exceeds ", size(mp)
                  call clean_stop
               end if
+#endif
               xp(ipart,1:3)=xx_dp(1,1:3)
               vp(ipart,1)  =vel(1, i) * gadgetvfact
               vp(ipart,2)  =vel(2, i) * gadgetvfact
@@ -900,7 +907,9 @@ subroutine load_gadget
               idp(ipart)   =ids(i)
 #ifndef WITHOUTMPI
             endif
+#endif
         enddo
+#ifndef WITHOUTMPI
         TIME_END(clock_end)
         if(debug) write(*,*) myid, ':Processed ', nparticles, ' in ',&
              &  TIME_SPENT(clock_start, clock_end, clock_rate), " ipart now ", ipart

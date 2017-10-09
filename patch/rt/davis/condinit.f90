@@ -48,8 +48,8 @@ subroutine condinit(x,u,dx,nn)
   ! Add randomness:
   do i=1,nn
      call ranf(localseed,RandNum)
-     q(i,1) = q(i,1) * (1+0.5*(0.5+RandNum)) 
-print*,(1+0.5*(0.5+RandNum)) 
+     q(i,1) = q(i,1) * (1+0.5*(0.5+RandNum))
+print*,(1+0.5*(0.5+RandNum))
   end do
   ! Set temperature to 82 K everywhere:
   q(1:nn,4) = 82./scale_T2 / 2.33 * q(1:nn,1) ! Const T

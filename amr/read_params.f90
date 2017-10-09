@@ -90,7 +90,7 @@ subroutine read_params
      call clean_stop
   endif
 #endif
-  
+
   !Write I/O group size information
   if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
   if(IOGROUPSIZE>0) write(*,*)'IOGROUPSIZE=',IOGROUPSIZE
@@ -142,10 +142,12 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
+#if NVAR>NDIM+2
   allocate(remap_pscalar(1:nvar-(ndim+2)))
   do i=1,nvar-(ndim+2)
      remap_pscalar(i) = i+ndim+2
   enddo
+#endif
 
   open(1,file=infile)
   rewind(1)
@@ -175,13 +177,13 @@ subroutine read_params
   if (myid==1 .and. nrestart .gt. 0) then
      call title(nrestart,nchar)
      info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-     inquire(file=info_file, exist=info_ok) 
+     inquire(file=info_file, exist=info_ok)
      do while(.not. info_ok .and. nrestart .gt. 1)
         nrestart = nrestart - 1
         call title(nrestart,nchar)
         info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-        inquire(file=info_file, exist=info_ok) 
-     enddo   
+        inquire(file=info_file, exist=info_ok)
+     enddo
      if (.not. info_ok) then
          write(*,*) "Error: Could not find restart file"
          call clean_stop
@@ -267,10 +269,12 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call rt_read_hydro_params(nml_ok)
+  call rt_read_hydro_params()
 #endif
+#if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
+#endif
   if (movie)call set_movie_vars
 
   ! Send the token
@@ -283,7 +287,7 @@ subroutine read_params
      end if
   endif
 #endif
-  
+
   !-----------------
   ! Max size checks
   !-----------------
@@ -295,7 +299,7 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -330,7 +334,7 @@ subroutine read_params
      use_proper_time=.false.
      convert_birth_times=.false.
   endif
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

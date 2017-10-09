@@ -9,10 +9,11 @@ subroutine phi_fine_cg(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel,icount
   !=========================================================
-  ! Iterative Poisson solver with Conjugate Gradient method 
+  ! Iterative Poisson solver with Conjugate Gradient method
   ! to solve A x = b
   ! r  : stored in f(i,1)
   ! p  : stored in f(i,2)
@@ -20,12 +21,15 @@ subroutine phi_fine_cg(ilevel,icount)
   ! x  : stored in phi(i)
   ! b  : stored in rho(i)
   !=========================================================
-  integer::i,idim,info,ind,iter,iskip,itermax,nx_loc
+  integer::i,ind,iter,iskip,itermax,nx_loc
   integer::idx
   real(dp)::error,error_ini
   real(dp)::dx2,fourpi,scale,oneoversix,fact,fact2
-  real(dp)::r2_old,alpha_cg,beta_cg
-  real(kind=8)::r2,pAp,rhs_norm,r2_all,pAp_all,rhs_norm_all
+  real(dp)::r2_old=0.,alpha_cg,beta_cg
+  real(kind=8)::r2,pAp,rhs_norm
+#ifndef WITHOUTMPI
+  real(kind=8) :: rhs_norm_all, pAp_all, r2_all
+#endif
 
   if(gravity_type>0)return
   if(numbtot(1,ilevel)==0)return
@@ -264,7 +268,7 @@ subroutine cmp_residual_cg(ilevel,icount)
            igridn(i,2*idim  )=son(ind_right(i,idim))
         end do
      end do
-     
+
      ! Interpolate potential from upper level
      do idim=1,ndim
         call interpol_phi(ind_left (1,idim),phi_left (1,1,idim),ngrid,ilevel,icount)
@@ -386,7 +390,7 @@ subroutine cmp_Ap_cg(ilevel)
            igridn(i,2*idim  )=son(nbor(ind_grid(i),2*idim  ))
         end do
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
 
@@ -452,7 +456,7 @@ subroutine make_initial_phi(ilevel,icount)
   !
   !
   !
-  integer::igrid,ncache,i,ngrid,ind,iskip,idim,ibound
+  integer::igrid,ncache,i,ngrid,ind,iskip,idim
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
   real(dp),dimension(1:nvector,1:twotondim),save::phi_int
 
@@ -464,7 +468,7 @@ subroutine make_initial_phi(ilevel,icount)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      if(ilevel==1)then
         ! Loop over cells
         do ind=1,twotondim
@@ -487,10 +491,10 @@ subroutine make_initial_phi(ilevel,icount)
         do i=1,ngrid
            ind_cell_father(i)=father(ind_grid(i))
         end do
-        
+
         ! Interpolate
         call interpol_phi(ind_cell_father,phi_int,ngrid,ilevel,icount)
-        
+
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
@@ -526,18 +530,16 @@ subroutine make_multipole_phi(ilevel)
   !
   !
   !
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
+  integer::idim
+  integer::i,ncache,igrid,ngrid,ind
+  integer::iskip,nx_loc,ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
-  real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps,r2
+  real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
-
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
@@ -572,14 +574,14 @@ subroutine make_multipole_phi(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         if(simple_boundary)then
            ! Compute cell center in code units
            do idim=1,ndim
@@ -613,10 +615,10 @@ subroutine make_multipole_phi(ilevel)
                phi(ind_cell(i))=0d0
            end do
         endif
-        
+
         ! End loop over cells
      end do
-     
+
   end do
   ! End loop over grids
 

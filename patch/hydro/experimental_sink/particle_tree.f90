@@ -10,7 +10,7 @@ subroutine init_tree
   include 'mpif.h'
 #endif
   !------------------------------------------------------
-  ! This subroutine build the particle linked list at the 
+  ! This subroutine build the particle linked list at the
   ! coarse level for ALL the particles in the box.
   ! This routine should be used only as initial set up for
   ! the particle tree.
@@ -81,7 +81,7 @@ subroutine init_tree
         end do
      endif
   end do
- 
+
   !----------------------------------
   ! Reset all linked lists at level 1
   !----------------------------------
@@ -168,7 +168,7 @@ subroutine make_tree_fine(ilevel)
   integer::ilevel
   !-----------------------------------------------------------------------
   ! This subroutine checks if particles have moved from their parent grid
-  ! to one of the 3**ndim neighboring sister grids. The particle is then 
+  ! to one of the 3**ndim neighboring sister grids. The particle is then
   ! disconnected from the parent grid linked list, and connected to the
   ! corresponding sister grid linked list. If the sister grid does
   ! not exist, the particle is left to its original parent grid.
@@ -187,7 +187,7 @@ subroutine make_tree_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel    
+  dx=0.5D0**ilevel
   xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -204,7 +204,7 @@ subroutine make_tree_fine(ilevel)
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then        
+        if(npart1>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
@@ -281,7 +281,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel    
+  dx=0.5D0**ilevel
   xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -315,7 +315,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
-        ok(j)=ok(j).or.i.ne.1 
+        ok(j)=ok(j).or.i.ne.1
      end do
   end do
   if(error)then
@@ -379,11 +379,11 @@ subroutine kill_tree_fine(ilevel)
   implicit none
   integer::ilevel
   !------------------------------------------------------------------------
-  ! This routine sorts particle between ilevel grids and their 
-  ! ilevel+1 children grids. Particles are disconnected from their parent 
-  ! grid linked list and connected to their corresponding child grid linked 
-  ! list. If the  child grid does not exist, the particle is left to its 
-  ! original parent grid. 
+  ! This routine sorts particle between ilevel grids and their
+  ! ilevel+1 children grids. Particles are disconnected from their parent
+  ! grid linked list and connected to their corresponding child grid linked
+  ! list. If the  child grid does not exist, the particle is left to its
+  ! original parent grid.
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::i,ig,ip,npart1,icpu
@@ -418,7 +418,7 @@ subroutine kill_tree_fine(ilevel)
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then        
+        if(npart1>0)then
            ig=ig+1
            ind_grid(ig)=igrid
            ipart=headp(igrid)
@@ -432,7 +432,7 @@ subroutine kill_tree_fine(ilevel)
               end if
               ip=ip+1
               ind_part(ip)=ipart
-              ind_grid_part(ip)=ig   
+              ind_grid_part(ip)=ig
               if(ip==nvector)then
                  call kill_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
                  ip=0
@@ -446,7 +446,7 @@ subroutine kill_tree_fine(ilevel)
      end do
      ! End loop over grids
      if(ip>0)call kill_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-  end do 
+  end do
   ! End loop over cpus
 
 111 format('   Entering kill_tree_fine for level ',I2)
@@ -477,7 +477,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
-  dx=0.5D0**ilevel   
+  dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -500,7 +500,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         ok(j)=ok(j) .and. (xxx >= 0.d0 .and. xxx < 2.0d0)
      end do
   end do
-  
+
   ! Determines in which son particles sit
   ind_son(1:np)=0
   do idim=1,ndim
@@ -508,7 +508,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx)
         ind_son(j)=ind_son(j)+i*2**(idim-1)
      end do
-  end do 
+  end do
   do j=1,np
      ind_son(j)=ncoarse+ind_son(j)*ngridmax+ind_grid(ind_grid_part(j))
   end do
@@ -677,7 +677,7 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   particle_data_width=particle_data_width+1
 #endif
-  
+
   ! Allocate communication buffer in emission
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
@@ -855,7 +855,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      reception(icpu,ilevel)%fp(ind_com(i),2)=levelp(ind_part(i))
      reception(icpu,ilevel)%fp(ind_com(i),3)=idp   (ind_part(i))
   end do
-  
+
   ! Gather particle position and velocity
   do idim=1,ndim
      do i=1,np
@@ -863,7 +863,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
         reception(icpu,ilevel)%up(ind_com(i),idim+ndim)=vp(ind_part(i),idim)
      end do
   end do
-  
+
   current_property = twondim+1
   ! Gather particle mass
   do i=1,np
@@ -878,7 +878,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   end do
   current_property = current_property+1
 #endif
-  
+
   ! Gather particle birth epoch
   if(star.or.sink)then
      do i=1,np
@@ -892,12 +892,12 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   end if
 
   ! following line is not strictly necessary, but in case one adds extra data later
-  current_property = current_property + 2 
-  
+  current_property = current_property + 2
+
   ! Remove particles from parent linked list
   call remove_list(ind_part,ind_list,ok,np)
   call add_free(ind_part,np)
-  
+
 end subroutine fill_comm
 !################################################################
 !################################################################
@@ -909,7 +909,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   implicit none
   integer::np,icpu,ilevel
   integer,dimension(1:nvector)::ind_com
-  
+
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.

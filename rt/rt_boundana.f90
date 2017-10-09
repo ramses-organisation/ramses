@@ -27,7 +27,7 @@ subroutine rt_boundana(x,u,dx,ibound,ncell)
         u(i,ivar)=rt_boundary_var(ibound,ivar)
      end do
   end do
-  
+
   ! Add here, if you wish, some user-defined boudary conditions
   ! ........
 

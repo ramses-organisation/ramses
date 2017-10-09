@@ -9,14 +9,14 @@ subroutine output_cone()
 
 #ifndef WITHOUTMPI
 #include "mpif.h"
+  integer::info,info2,dummy_io
 #endif
-  
-  integer::info,dummy_io,info2
+
   integer,parameter::tag=1118
 
   character(len=5) :: istep_str
   character(len=100) :: conedir, conecmd, conefile
-  
+
   integer::ilun,ipout,npout,npart_out
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
@@ -35,9 +35,9 @@ subroutine output_cone()
   integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
-  
+
   if(nstep_coarse.lt.2)return
-  
+
   z2=1./aexp_old-1.
   z1=1./aexp-1.
 
@@ -55,7 +55,7 @@ subroutine output_cone()
   observer=(/Lbox/2.0,Lbox/2.0,Lbox/2.0/)
 
   ilun=3*ncpu+myid+10
-  
+
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping lightcone'
 
@@ -65,7 +65,7 @@ subroutine output_cone()
   if(.not.withoutmkdir) then
      if (myid==1) call system(conecmd)
   endif
-  
+
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD, info)
 #endif
@@ -108,12 +108,12 @@ subroutine output_cone()
   do icpu=1,ncpu
      ! Loop over grids
      igrid=headl(icpu,ilevel)
-     ip=0   
+     ip=0
      do jgrid=1,numbl(icpu,ilevel)
         npart1=numbp(igrid)  ! Number of particles in the grid
-        if(npart1>0)then        
+        if(npart1>0)then
            ipart=headp(igrid)
-           
+
            ! Loop over particles
            do jpart=1,npart1
               ip=ip+1
@@ -148,12 +148,12 @@ subroutine output_cone()
                  if(npout>0)then
                     do idim=1,ndim
                        do i=1,npout
-                          xp_out(ipout+i,idim)=posout(idim,i)/Lbox
-                          vp_out(ipout+i,idim)=velout(idim,i)
+                          xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+                          vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
                        end do
                     end do
                     do i=1,npout
-                       zp_out(ipout+i)=zout(i)
+                       zp_out(ipout+i)=real(zout(i),kind=sp)
                     end do
                     ipout=ipout+npout
                     npart_out=npart_out+npout
@@ -164,7 +164,7 @@ subroutine output_cone()
               if(ipout>=nstride)then
                  if(.not.opened) then
                     open(ilun,file=TRIM(fileloc),form='unformatted')
-                    rewind(ilun)  
+                    rewind(ilun)
                     write(ilun)ncpu
                     write(ilun)nstride
                     write(ilun)npart
@@ -188,7 +188,7 @@ subroutine output_cone()
               endif
               ipart=nextp(ipart)  ! Go to next particle
            end do
-           ! End loop over particles           
+           ! End loop over particles
         end if
         igrid=next(igrid)   ! Go to next grid
      end do
@@ -211,7 +211,7 @@ subroutine output_cone()
              &                           posout,velout,zout,npout,.false.)
 
         call extend_arrays_if_needed()
-            
+
         ! Perform actual selection
         call perform_my_selection(.false.,z1,z2, &
              &                           om0in,omLin,hubin,Lbox, &
@@ -222,12 +222,12 @@ subroutine output_cone()
         if(npout>0)then
            do idim=1,ndim
               do i=1,npout
-                 xp_out(ipout+i,idim)=posout(idim,i)/Lbox
-                 vp_out(ipout+i,idim)=velout(idim,i)
+                 xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+                 vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
               end do
            end do
            do i=1,npout
-              zp_out(ipout+i)=zout(i)
+              zp_out(ipout+i)=real(zout(i),kind=sp)
            end do
            ipout=ipout+npout
            npart_out=npart_out+npout
@@ -236,7 +236,7 @@ subroutine output_cone()
      if(ipout>=nstride)then
         if(.not.opened) then
            open(ilun,file=TRIM(fileloc),form='unformatted')
-           rewind(ilun)  
+           rewind(ilun)
            write(ilun)ncpu
            write(ilun)nstride
            write(ilun)npart
@@ -264,7 +264,7 @@ subroutine output_cone()
   if(ipout>0)then
      if(.not.opened) then
         open(ilun,file=TRIM(fileloc),form='unformatted')
-        rewind(ilun)  
+        rewind(ilun)
         write(ilun)ncpu
         write(ilun)nstride
         write(ilun)npart
@@ -278,7 +278,7 @@ subroutine output_cone()
   endif
 
   if(opened)close(ilun)
-  
+
   if (verbose)write(*,*)'cone output=',myid,npart_out
 
   if(npart_out>0) then
@@ -302,7 +302,7 @@ subroutine output_cone()
      end if
   endif
 #endif
-  
+
 
    if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_cone'
@@ -315,7 +315,7 @@ contains
 
     ! Extends (deallocates and reallocates) the arrays
     ! posout, velout, zout, xp_out, vp_out and zp_out
-    ! after npout has been updated, so they can hold enough particles 
+    ! after npout has been updated, so they can hold enough particles
     !
     ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
     ! reallocating too frequently.
@@ -351,27 +351,27 @@ contains
         end do
         deallocate(xp_out); allocate(xp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
-            xp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
+            xp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
         end do
 
         do idim=1,ndim
-            tmparr(idim,1:nalloc2)=vp_out(1:nalloc2,idim) 
+            tmparr(idim,1:nalloc2)=vp_out(1:nalloc2,idim)
         end do
         deallocate(vp_out); allocate(vp_out(1:new_nalloc2,1:3))
         do idim=1,ndim
-            vp_out(1:nalloc2,idim)=tmparr(idim,1:nalloc2)
+            vp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
         end do
 
-        tmparr(1,1:nalloc2)=zp_out(1:nalloc2) 
+        tmparr(1,1:nalloc2)=zp_out(1:nalloc2)
         deallocate(zp_out); allocate(zp_out(1:new_nalloc2))
-        zp_out(1:nalloc2)=tmparr(1,1:nalloc2)
+        zp_out(1:nalloc2)=real(tmparr(1,1:nalloc2),kind=sp)
 
         nalloc2 = new_nalloc2
 
 
         ! Resize posout, velout, zout
         do idim=1,ndim
-            tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1) 
+            tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1)
         deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         end do
         do idim=1,ndim
@@ -379,14 +379,14 @@ contains
         end do
 
         do idim=1,ndim
-            tmparr(idim,1:nalloc1)=velout(idim,1:nalloc1) 
+            tmparr(idim,1:nalloc1)=velout(idim,1:nalloc1)
         end do
         deallocate(velout); allocate(velout(1:3,1:new_nalloc1))
         do idim=1,ndim
             velout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
         end do
 
-        tmparr(1,1:nalloc1)=zout(1:nalloc1) 
+        tmparr(1,1:nalloc1)=zout(1:nalloc1)
         deallocate(zout); allocate(zout(1:new_nalloc1))
         zout(1:nalloc1)=tmparr(1,1:nalloc1)
 
@@ -415,8 +415,8 @@ subroutine perform_my_selection(justcount,z1,z2, &
   !            .false. to perform the actual selection: npartout is an input
   !            then  posout, velout, zout are appropriate outputs.
   !
-  ! z1,z2    : the lightcone part of interest is in between z1 and z2, 
-  !            with z1 < z2. If we consider a redshift z(t) where all the 
+  ! z1,z2    : the lightcone part of interest is in between z1 and z2,
+  !            with z1 < z2. If we consider a redshift z(t) where all the
   !            particles are synchrone, and if coarse timestep is
   !            a fixed dt, it is most appropriate to choose z1 and z2 such
   !            that z1=z(t+dt/2) and z2=z(t-dt/2) to have best accuracy.
@@ -434,7 +434,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   !            coordinates are in [0,Lbox[
   !
   ! thetay   : half the opening angle in degrees of the lightcone along y direction
-  !            (it should be obviously smaller than 90 degrees to avoid catastrophic 
+  !            (it should be obviously smaller than 90 degrees to avoid catastrophic
   !            behavior). The lightcone is assume to be aligned with x axis (after
   !            appropriates rotations given by angles theta and phi)
   !
@@ -461,7 +461,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   !
   ! npartout : number of selected particles. To be computed appropriately,
   !            this routine must be called with juscount=.true., which will give
-  !            npartout as an output. Then this routine must be called with 
+  !            npartout as an output. Then this routine must be called with
   !            juscount=.false. with the correct value of npartout, after having
   !            allocated correctly arrays posout,velout,zout.
   !===========================================================================
@@ -481,43 +481,43 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: tany,tanz,dist,vxfr,vyfr,vzfr,dxtest1,dxtest2,facnorm
   real(kind=8) :: pi
   real(kind=8) :: small=1d-5
-  
+
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
-  
+
   if (verbose) write(*,*) 'Entering perform_my_selection'
-  
+
   ! pi=3.14159
   pi=acos(-1.0d0)
-  
+
   ! Initialize cosmological parameters
   call init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
-  
+
   ! Convert angles in radians
   thetarad=theta*pi/180.0d0
   phirad=phi*pi/180.0d0
-  
+
   ! Compute the rotation matrix and its inverse to be in the appropriate frame
   call compute_rotation_matrix(thetarad,phirad,rot,rotm1)
-  
+
   ! Compute comoving distance of the photon planes from the observer
   ! dist1,dist2=integral of c.dt/a between zero and z1,z2
   dist1=coord_distance(z1,Omega0,OmegaL,OmegaR,coverH0)
   dist2=coord_distance(z2,Omega0,OmegaL,OmegaR,coverH0)
-  
+
   ! Convert angles in radians
   thetayrad=thetay*pi/180.0d0
   thetazrad=thetaz*pi/180.0d0
-  
+
   ! Compute the set of replica to be considered
   call compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
-       &                       nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp)    
-  
+       &                       nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp)
+
   facnorm=1.0d0/(dist2-dist1)
   tanybound=tan(thetayrad)
   tanzbound=tan(thetazrad)
-  
-  npartcount=0    
+
+  npartcount=0
   ! loop on all the replica of potential interest
   do k=nrepzm,nrepzp,1
      do j=nrepym,nrepyp,1
@@ -526,7 +526,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
               xcoordfr=pos(1,np)+Lbox*dble(i)-observer(1)
               ycoordfr=pos(2,np)+Lbox*dble(j)-observer(2)
               zcoordfr=pos(3,np)+Lbox*dble(k)-observer(3)
-              
+
               ! Rotation to get in the framework of the photon plane
               xcoord=xcoordfr*rotm1(1,1)+ &
                    & ycoordfr*rotm1(2,1)+ &
@@ -537,7 +537,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
               zcoord=xcoordfr*rotm1(1,3)+ &
                    & ycoordfr*rotm1(2,3)+ &
                    & zcoordfr*rotm1(3,3)
-              
+
               if (xcoord > small) then ! To avoid divergences near the origin
                  tany=abs(ycoord/xcoord)
                  tanz=abs(zcoord/xcoord)
@@ -551,7 +551,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
                         posout(1,npartcount)=xcoord
                         posout(2,npartcount)=ycoord
                         posout(3,npartcount)=zcoord
-                        
+
                         ! Velocities are rotated
                         vxfr=vel(1,np)
                         vyfr=vel(2,np)
@@ -565,7 +565,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
                         velout(3,npartcount)=vxfr*rotm1(1,3)+ &
                             &               vyfr*rotm1(2,3)+ &
                             &               vzfr*rotm1(3,3)
-                        
+
                         ! Compute the redshift of the particle using linear
                         ! interpolation
                         dxtest1=dist-dist1
@@ -591,9 +591,9 @@ subroutine compute_rotation_matrix(thetashiftrad,phishiftrad,rot,rotm1)
   implicit none
   real(kind=8) :: thetashiftrad,phishiftrad
   real(kind=8) :: rot(3,3),rotm1(3,3)
-  
+
   integer :: i,j
-  
+
   rot(1,1) = cos(thetashiftrad)*cos(phishiftrad)
   rot(1,2) = cos(thetashiftrad)*sin(phishiftrad)
   rot(1,3) = -sin(thetashiftrad)
@@ -615,12 +615,12 @@ subroutine compute_minimum_polygon(x1,x2,thetayrad,thetazrad,sl)
   !===========================================================================
   ! A slice of photons between redshifts z1 and z2 corresponding to coordinates
   ! x1 and x2 at its center and of opening angles thetay and thetaz is considered.
-  ! We compute the coordinates of the eights points of the mimimum (simple) 
-  ! polygon containing it. 
-  !===========================================================================  
+  ! We compute the coordinates of the eights points of the mimimum (simple)
+  ! polygon containing it.
+  !===========================================================================
   implicit none
   real(kind=8)::x1,x2,thetayrad,thetazrad,sl(3,8)
-  
+
   ! Part of the polygon close to the observer
   sl(1,1:4)=x1/sqrt(1.0d0+tan(thetayrad)**2+tan(thetazrad)**2)
   sl(2,1)=-sl(1,1)*tan(thetayrad)
@@ -631,8 +631,8 @@ subroutine compute_minimum_polygon(x1,x2,thetayrad,thetazrad,sl)
   sl(3,3)= sl(1,1)*tan(thetazrad)
   sl(2,4)= sl(1,1)*tan(thetayrad)
   sl(3,4)= sl(1,1)*tan(thetazrad)
-  
-  
+
+
   ! Part of the polygon far away from the observer
   sl(1,5:8)=x2
   sl(2,5)=-x2*tan(thetayrad)
@@ -660,13 +660,13 @@ subroutine compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: myint
   real(kind=8) :: sl(3,8),slfr(3)
-  real(kind=8) :: xplmin,xplmax,yplmin,yplmax,zplmin,zplmax
+  real(kind=8) :: xplmin=0,xplmax=0,yplmin=0,yplmax=0,zplmin=0,zplmax=0
   integer :: i,j
-  
+
   ! Compute the minimum polygon containing the 2 plans of photons (which
   ! are slightly curved)
   call compute_minimum_polygon(dist1,dist2,thetayrad,thetazrad,sl)
-  
+
   ! Rotate the minimum polygon in the reference frame of the simulation
   do j=1,8
      do i=1,3
@@ -690,20 +690,20 @@ subroutine compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
         zplmax=max(zplmax,slfr(3))
      endif
   enddo
-  
-  
+
+
   ! Uses the fact that a cube will contain the minimum polygon if and only
-  ! if all its edges are contained in the cube to compute the relevant 
+  ! if all its edges are contained in the cube to compute the relevant
   ! replica
   nrepxm=myint((xplmin+observer(1))/Lbox)
   nrepxp=myint((xplmax+observer(1))/Lbox)
   nrepym=myint((yplmin+observer(2))/Lbox)
   nrepyp=myint((yplmax+observer(2))/Lbox)
   nrepzm=myint((zplmin+observer(3))/Lbox)
-  nrepzp=myint((zplmax+observer(3))/Lbox)   
+  nrepzp=myint((zplmax+observer(3))/Lbox)
 end subroutine compute_replica
 
- 
+
 !===================
 !cone cosmo routines
 !===================
@@ -715,7 +715,7 @@ subroutine init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
   ! om0in : the value of omega0
   ! omLin : the value of Lambda
   !         We MUST have omega0+Lambda=1.0d0
-  ! hubin : the value of H0/100 where H0 is the present Hubble constant 
+  ! hubin : the value of H0/100 where H0 is the present Hubble constant
   !         in km/s/Mpc
   !===========================================================================
   implicit none
@@ -752,7 +752,7 @@ function funcE(z,Omega0,OmegaL,OmegaR)
   implicit none
   real(kind=8) :: funcE,z,HsurH0
   real(kind=8) :: omega0,omegaL,OmegaR
-  
+
   funcE=1.d0/HsurH0(z,Omega0,OmegaL,OmegaR)
 end function funcE
 
@@ -864,7 +864,7 @@ function myint(x)
   !=======================================================================
   real(kind=8) :: x
   integer :: myint
-  
+
   if (x >= 0.0d0) then
      myint=int(x)
   else

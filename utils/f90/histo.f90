@@ -20,7 +20,7 @@ program histo_main
   real::scale_l,scale_d,scale_t
   real::omega_m2,omega_l2,omega_k2,omega_b2
   real::tpoly=0d0, npoly=1.0
-  
+
   integer::nx_sample=0,ny_sample=0,nz_sample=0
   integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
@@ -108,13 +108,13 @@ program histo_main
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/hydro_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
   endif
   nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out00001'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -228,7 +228,7 @@ program histo_main
      kdom(3)=kmin; kdom(4)=kmin
      kdom(5)=kmax; kdom(6)=kmax
      kdom(7)=kmax; kdom(8)=kmax
-     
+
      do i=1,ndom
         if(bit_length>0)then
            call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
@@ -238,7 +238,7 @@ program histo_main
         bounding_min(i)=(order_min)*dkey
         bounding_max(i)=(order_min+1.0D0)*dkey
      end do
-     
+
      cpu_min=0; cpu_max=0
      do impi=1,ncpu
         do i=1,ndom
@@ -252,7 +252,7 @@ program histo_main
            endif
         end do
      end do
-     
+
      ncpu_read=0
      do i=1,ndom
         do j=cpu_min(i),cpu_max(i)
@@ -472,7 +472,7 @@ program histo_main
   write(*,*)'Total mass=',total_mass
 
   ! Output file
-  if (filetype=='bin')then 
+  if (filetype=='bin')then
      nomfich=TRIM(outfich)
      write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
      open(unit=10,file=nomfich,form='unformatted')
@@ -483,7 +483,7 @@ program histo_main
      close(10)
   end if
 
-  if (filetype=='ascii')then 
+  if (filetype=='ascii')then
      nomfich=TRIM(outfich)
      write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
      open(unit=10,file=nomfich,form='formatted')
@@ -497,10 +497,10 @@ program histo_main
      end do
      close(10)
   end if
-  
-  
+
+
 contains
- 
+
   subroutine read_params
 
     implicit none
@@ -575,13 +575,13 @@ contains
        case default
           print '("unknown option ",a2," ignored")', opt
 
-          
+
 
        end select
     end do
-    
+
   end subroutine read_params
-  
+
 end program histo_main
 
 !=======================================================================

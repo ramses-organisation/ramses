@@ -66,7 +66,7 @@ program amr2prof
   ipos=INDEX(repository,'output_')
   nchar=repository(ipos+7:ipos+13)
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
-  inquire(file=nomfich, exist=ok) ! verify input file 
+  inquire(file=nomfich, exist=ok) ! verify input file
   if ( .not. ok ) then
      print *,TRIM(nomfich)//' not found.'
      stop
@@ -171,7 +171,7 @@ program amr2prof
   write(*,*)'Using max level=',ilevel
 
   call getcell(x,y,z,var,l,ncell,6,repository,levelmax=ilevel)
-  
+
   do i=1,ncell
      rad2=(x(i)-xcen)**2+(y(i)-ycen)**2+(z(i)-zcen)**2
      irad=int(dble(nrad)*sqrt(rad2)/rmax)+1
@@ -197,10 +197,10 @@ program amr2prof
      else
         prof(irad,ilxc)=prof(irad,ilxc)+var(i,1)*dv*(yy*ww-zz*vv)
         prof(irad,ilyc)=prof(irad,ilyc)-var(i,1)*dv*(xx*ww-zz*uu)
-        prof(irad,ilzc)=prof(irad,ilzc)+var(i,1)*dv*(xx*vv-yy*uu)        
+        prof(irad,ilzc)=prof(irad,ilzc)+var(i,1)*dv*(xx*vv-yy*uu)
      endif
   end do
-  
+
   ! Compute cumulated profiles
   mcum=0d0
   ucum=0d0; vcum=0d0; wcum=0d0
@@ -288,17 +288,17 @@ program amr2prof
 999 format(50(1PE10.3,2X))
 
 contains
-  
+
   subroutine read_params
-    
+
     implicit none
-    
+
     integer       :: i,n
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = iargc()
     if (n < 4) then
        print *, 'usage: amr2prof -inp  input_dir'
@@ -317,7 +317,7 @@ contains
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
        stop
     end if
-    
+
     do i = 1,n,2
        call getarg(i,opt)
        if (i == n) then
@@ -356,9 +356,9 @@ contains
           print '("unknown option ",a2," ignored")', opt
        end select
     end do
-    
+
     return
-    
+
   end subroutine read_params
-  
+
 end program amr2prof

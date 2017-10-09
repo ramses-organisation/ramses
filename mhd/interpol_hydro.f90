@@ -1,5 +1,5 @@
 !###########################################################
-!########################################################### 
+!###########################################################
 !###########################################################
 !###########################################################
 subroutine upload_fine(ilevel)
@@ -18,7 +18,7 @@ subroutine upload_fine(ilevel)
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   integer::ind_left,ind_right,neul=5
   integer::id1,id2,ig1,ig2,ih1,ih2
-  integer::i,icpu,idim,ivar,ncache,igrid,ngrid,ind,iskip,nsplit,icell
+  integer::i,idim,ncache,igrid,ngrid,ind,iskip,nsplit,icell
 
   real(dp)::emag
 
@@ -27,7 +27,7 @@ subroutine upload_fine(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
- 
+
   !------------------------------------------------------------
   ! Average down all MHD variables in split cells
   !------------------------------------------------------------
@@ -38,25 +38,25 @@ subroutine upload_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather split cells
         do i=1,ngrid
            ok(i)=son(ind_cell(i))>0
         end do
-        
+
         ! Count split cells
         nsplit=0
         do i=1,ngrid
            if(ok(i))nsplit=nsplit+1
         end do
-        
+
         ! Upload for selected cells
         if(nsplit>0)then
            icell=0
@@ -68,7 +68,7 @@ subroutine upload_fine(ilevel)
            end do
            call upl(ind_split,nsplit)
         end if
-        
+
      end do
      ! End loop over cells
 
@@ -106,7 +106,7 @@ subroutine upload_fine(ilevel)
            igridn(i,2*idim  )=son(ind_right)
         end do
      end do
- 
+
     ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -138,7 +138,7 @@ subroutine upload_fine(ilevel)
            do i=1,ngrid
               if(ok(i))nsplit=nsplit+1
            end do
-        
+
            ! Upload for selected cells
            if(nsplit>0)then
               icell=0
@@ -167,7 +167,7 @@ subroutine upload_fine(ilevel)
                  end do
               endif
            end if
-        
+
            !  Select unsplit cells with a refined right neighboring cell
            id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
            ih2=ncoarse+(id2-1)*ngridmax
@@ -184,7 +184,7 @@ subroutine upload_fine(ilevel)
            do i=1,ngrid
               if(ok(i))nsplit=nsplit+1
            end do
-        
+
            ! Upload for selected cells
            if(nsplit>0)then
               icell=0
@@ -213,7 +213,7 @@ subroutine upload_fine(ilevel)
                  end do
               endif
            end if
-        
+
         end do
         ! End loop over dimensions
 
@@ -242,7 +242,10 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer ::ivar,i,idim,ind_son,iskip_son,ind,neul=5,irad
+  integer::ivar,i,idim,ind_son,iskip_son,ind,neul=5
+#if NENER>0
+  integer::irad
+#endif
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx,ekin,emag,erad
   integer,dimension(1:6,1:4)::hhh
@@ -269,7 +272,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
         end do
      end do
-     
+
      ! Scatter result to cells
      do i=1,ncell
         uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
@@ -295,10 +298,10 @@ subroutine upl(ind_cell,ncell)
   !----------------------------------
   ! Loop over face centered variables
   !----------------------------------
-  hhh(1,1:4)=(/1,3,5,7/) 
-  hhh(2,1:4)=(/2,4,6,8/) 
-  hhh(3,1:4)=(/1,2,5,6/) 
-  hhh(4,1:4)=(/3,4,7,8/) 
+  hhh(1,1:4)=(/1,3,5,7/)
+  hhh(2,1:4)=(/2,4,6,8/)
+  hhh(3,1:4)=(/1,2,5,6/)
+  hhh(4,1:4)=(/3,4,7,8/)
   hhh(5,1:4)=(/1,2,3,4/)
   hhh(6,1:4)=(/5,6,7,8/)
 
@@ -307,7 +310,7 @@ subroutine upl(ind_cell,ncell)
 
      !----------------------
      ! Left B in parent cell
-     !----------------------    
+     !----------------------
      getx(1:ncell)=0.0d0
      do ind=1,twotondim/2
         ind_son=hhh(2*idim-1,ind)
@@ -327,7 +330,7 @@ subroutine upl(ind_cell,ncell)
 
      !-----------------------
      ! Right B in parent cell
-     !-----------------------     
+     !-----------------------
      getx(1:ncell)=0.0d0
      do ind=1,twotondim/2
         ind_son=hhh(2*idim,ind)
@@ -390,7 +393,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+uold(ind_cell_son(i),neul)-ekin(i)-emag(i)-erad(i)
         end do
      end do
-        
+
      ! Compute new kinetic energy
      ekin(1:ncell)=0.0d0
      do idim=1,3
@@ -421,7 +424,7 @@ subroutine upl(ind_cell,ncell)
      do i=1,ncell
         uold(ind_cell(i),neul)=getx(i)/dble(twotondim)+ekin(i)+emag(i)+erad(i)
      end do
-     
+
   endif
 
 end subroutine upl
@@ -471,7 +474,7 @@ subroutine upl_left(ind_cell,igrid_son,idim,ncell)
   do i=1,ncell
      uold(ind_cell(i),idim+neul)=getx(i)/dble(twotondim/2)
   end do
-  
+
 end subroutine upl_left
 !##########################################################################
 !##########################################################################
@@ -492,15 +495,15 @@ subroutine upl_right(ind_cell,igrid_son,idim,ncell)
   real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
 
-  hhh(1,1:4)=(/1,3,5,7/) 
-  hhh(2,1:4)=(/2,4,6,8/) 
-  hhh(3,1:4)=(/1,2,5,6/) 
-  hhh(4,1:4)=(/3,4,7,8/) 
+  hhh(1,1:4)=(/1,3,5,7/)
+  hhh(2,1:4)=(/2,4,6,8/)
+  hhh(3,1:4)=(/1,2,5,6/)
+  hhh(4,1:4)=(/3,4,7,8/)
   hhh(5,1:4)=(/1,2,3,4/)
   hhh(6,1:4)=(/5,6,7,8/)
 
   !--------------------------------------------------
-  ! Right B in parent cell is computed as the average 
+  ! Right B in parent cell is computed as the average
   ! over left B in all right children cells
   !--------------------------------------------------
   getx(1:ncell)=0.0d0
@@ -546,8 +549,10 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5,irad
-
+  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
+#if NENER>0
+  integer::irad
+#endif
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
@@ -603,7 +608,7 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
 
      ! Load father variable
      do j=0,twondim
-        do i=1,nn 
+        do i=1,nn
            a(i,j)=u1(i,j,ivar)
         end do
      end do
@@ -664,7 +669,7 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
      do i=1,nn
         u2(i,ind,neul+1)=B2(i,ind,1)
         u2(i,ind,nvar+1)=B2(i,ind,4)
-#if NDIM>1        
+#if NDIM>1
         u2(i,ind,neul+2)=B2(i,ind,2)
         u2(i,ind,nvar+2)=B2(i,ind,5)
 #endif
@@ -752,7 +757,6 @@ subroutine compute_central(a,w,nn)
   ! MinMod slope
   !---------------
   integer::i,idim
-  real(dp)::diff_left,diff_right,minmod
 
   do idim=1,ndim
      do i=1,nn
@@ -920,7 +924,7 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   ! interpol_mag_type=2: linear interpolation with Monotonized Central slope
   ! interpol_mag_type=3: linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,k,ind,l,idim,imax,jmax,kmax
+  integer::i,j,k,ind,l,imax,jmax,kmax
   real(dp),dimension(1:nvector,-1:1,0:1,0:1),save::u
   real(dp),dimension(1:nvector,0:1,-1:1,0:1),save::v
   real(dp),dimension(1:nvector,0:1,0:1,-1:1),save::w
@@ -935,10 +939,10 @@ subroutine interpol_mag(B1,ind1,B2,nn)
 
   ! Compute interpolated fine B over coarse side faces
   call interpol_faces(B1,u,v,w,nn)
-  
+
   ! Get fine B from refined faces, if any
   call copy_from_refined_faces(B1,ind1,u,v,w,nn)
- 
+
   ! Compute interpolated fine B inside coarse cell.
   call cmp_central_faces(u,v,w,nn)
 
@@ -991,7 +995,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
   do l=1,nn
      b(l,0)=b1(l,0,1)
   end do
-#if NDIM>1     
+#if NDIM>1
   do l=1,nn
      b(l,1)=b1(l,3,1)
      b(l,2)=b1(l,4,1)
@@ -1023,7 +1027,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
   do l=1,nn
      b(l,0)=b1(l,0,4)
   end do
-#if NDIM>1     
+#if NDIM>1
   do l=1,nn
      b(l,1)=b1(l,3,4)
      b(l,2)=b1(l,4,4)
@@ -1060,7 +1064,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
      b(l,1)=b1(l,1,2)
      b(l,2)=b1(l,2,2)
   end do
-#if NDIM>2     
+#if NDIM>2
   do l=1,nn
      b(l,3)=b1(l,5,2)
      b(l,4)=b1(l,6,2)
@@ -1090,7 +1094,7 @@ subroutine interpol_faces(b1,u,v,w,nn)
      b(l,1)=b1(l,1,5)
      b(l,2)=b1(l,2,5)
   end do
-#if NDIM>2     
+#if NDIM>2
   do l=1,nn
      b(l,3)=b1(l,5,5)
      b(l,4)=b1(l,6,5)
@@ -1399,7 +1403,7 @@ subroutine compute_2d_tvd(b,s,nn)
   integer::nn
   real(dp),dimension(1:nvector,0:4)::b
   real(dp),dimension(1:nvector,1:2)::s
-  
+
   integer::i
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
 
@@ -1453,7 +1457,7 @@ subroutine compute_1d_tvd(b,s,nn)
   integer::nn
   real(dp),dimension(1:nvector,0:4)::b
   real(dp),dimension(1:nvector,1:2)::s
-  
+
   integer::i
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
 

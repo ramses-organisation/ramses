@@ -11,10 +11,13 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
-  
+
   real(dp)::dtcell,smallp
-  integer::k,idim,irad
-  
+  integer::k,idim
+#if NENER>0
+  integer::irad
+#endif
+
   smallp = smallc**2/gamma
 
   ! Convert to primitive variables
@@ -43,7 +46,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
 
   ! Debug
   if(debug)then
-     do k = 1, ncell 
+     do k = 1, ncell
         if(uu(k,ndim+2).le.0.or.uu(k,1).le.smallr)then
            write(*,*)'stop in cmpdt'
            write(*,*)'dx   =',dx
@@ -78,8 +81,8 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
         uu(k,ndim+2) = uu(k,ndim+2) + gamma_rad(irad)*uu(k,ndim+2+irad)
      end do
   end do
-#endif  
-  do k = 1, ncell 
+#endif
+  do k = 1, ncell
      uu(k,ndim+2)=sqrt(uu(k,ndim+2)/uu(k,1))
   end do
 
@@ -88,7 +91,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      uu(k,ndim+2)=dble(ndim)*uu(k,ndim+2)
   end do
   do idim = 1,ndim
-     do k = 1, ncell 
+     do k = 1, ncell
         uu(k,ndim+2)=uu(k,ndim+2)+abs(uu(k,idim+1))
      end do
   end do
@@ -98,7 +101,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      uu(k,1)=zero
   end do
   do idim = 1,ndim
-     do k = 1, ncell 
+     do k = 1, ncell
         uu(k,1)=uu(k,1)+abs(gg(k,idim))
      end do
   end do
@@ -133,11 +136,14 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   real(dp)::um(1:nvector,1:nvar)
   real(dp)::ud(1:nvector,1:nvar)
   logical ::ok(1:nvector)
-  
-  integer::k,idim,irad
+
+  integer::k,idim
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
-  
+#if NENER>0
+  integer::irad
+#endif
+
   ! Convert to primitive variables
   do k = 1,nn
      ug(k,1) = max(ug(k,1),smallr)
@@ -226,32 +232,32 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      end do
   end if
 
-#ifdef RT 
-  ! Ionization state (only Hydrogen)                              
-  if(rt_err_grad_xHII >= 0.) then !--------------------------------------- 
-     do k=1,nn                                                    
-        dg=min(1.d0,max(0.d0,ug(k,iIons)))                        
-        dm=min(1.d0,max(0.d0,um(k,iIons)))                        
-        dd=min(1.d0,max(0.d0,ud(k,iIons)))                        
-        error=2.0d0*MAX( &                                        
-             & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &             
+#ifdef RT
+  ! Ionization state (only Hydrogen)
+  if(rt_err_grad_xHII >= 0.) then !---------------------------------------
+     do k=1,nn
+        dg=min(1.d0,max(0.d0,ug(k,iIons)))
+        dm=min(1.d0,max(0.d0,um(k,iIons)))
+        dd=min(1.d0,max(0.d0,ud(k,iIons)))
+        error=2.0d0*MAX( &
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &
              & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
-        ok(k) = ok(k) .or. error > rt_err_grad_xHII  
-     end do                                                       
-  end if                                                          
+        ok(k) = ok(k) .or. error > rt_err_grad_xHII
+     end do
+  end if
 
-  ! Neutral state (only Hydrogen)                                 
-  if(rt_err_grad_xHI  >= 0.) then !---------------------------------------  
-     do k=1,nn                                                    
-        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))                 
-        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))                 
-        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))                 
-        error=2.0d0*MAX( &                                        
-             & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &              
-             & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )                
-        ok(k) = ok(k) .or. error > rt_err_grad_xHI                
-     end do                                                      
-  end if                                                         
+  ! Neutral state (only Hydrogen)
+  if(rt_err_grad_xHI  >= 0.) then !---------------------------------------
+     do k=1,nn
+        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))
+        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))
+        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))
+        error=2.0d0*MAX( &
+             & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &
+             & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )
+        ok(k) = ok(k) .or. error > rt_err_grad_xHI
+     end do
+  end if
 #endif
 
 end subroutine hydro_refine
@@ -273,12 +279,12 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
   ! local arrays
   real(dp),dimension(1:nvector,1:nvar+1),save::qgdnv
   real(dp),dimension(1:nvector),save::rl   ,ul   ,pl   ,cl
-  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr   
-  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co   
+  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr
+  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co
   real(dp),dimension(1:nvector),save::rstar,ustar,pstar,cstar
-  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo   
+  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo
   real(dp),dimension(1:nvector),save::sgnm ,spin ,spout,ushock
-  real(dp),dimension(1:nvector),save::frac ,delp ,pold  
+  real(dp),dimension(1:nvector),save::frac ,delp ,pold
   integer ,dimension(1:nvector),save::ind  ,ind2
 
   ! local variables
@@ -321,7 +327,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
 
   ! Newton-Raphson iterations to find pstar at the required accuracy
   ! for a two-shock Riemann problem
-  do iter = 1,niter_riemann 
+  do iter = 1,niter_riemann
      do i=1,n
         wwl=sqrt(cl(ind(i))*(one+gamma6*(pold(i)-pl(ind(i)))/pl(ind(i))))
         wwr=sqrt(cr(ind(i))*(one+gamma6*(pold(i)-pr(ind(i)))/pr(ind(i))))
@@ -335,10 +341,10 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
         pold(i)=pold(i)+delp(i)
      end do
      ! Convergence indicator
-     do i=1,n 
+     do i=1,n
         uo(i)=ABS(delp(i)/(pold(i)+smallpp))
      end do
-     n_new=0    
+     n_new=0
      do i=1,n
         if(uo(i)>1.d-06)then
            n_new=n_new+1
@@ -377,7 +383,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
   end do
 
   ! Left going or right going contact wave
-  do i=1,ngrid   
+  do i=1,ngrid
      sgnm(i) = sign(one,ustar(i))
   end do
 
@@ -509,10 +515,10 @@ subroutine riemann_acoustic(qleft,qright,fgdnv,ngrid)
   ! local arrays
   real(dp),dimension(1:nvector,1:nvar+1),save::qgdnv
   real(dp),dimension(1:nvector),save::rl   ,ul   ,pl   ,cl
-  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr   
-  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co   
+  real(dp),dimension(1:nvector),save::rr   ,ur   ,pr   ,cr
+  real(dp),dimension(1:nvector),save::ro   ,uo   ,po   ,co
   real(dp),dimension(1:nvector),save::rstar,ustar,pstar,cstar
-  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo   
+  real(dp),dimension(1:nvector),save::wl   ,wr   ,wo
   real(dp),dimension(1:nvector),save::sgnm ,spin ,spout,ushock
   real(dp),dimension(1:nvector),save::frac
 
@@ -544,7 +550,7 @@ subroutine riemann_acoustic(qleft,qright,fgdnv,ngrid)
   end do
 
   ! Left going or right going contact wave
-  do i=1,ngrid   
+  do i=1,ngrid
      sgnm(i) = sign(one,ustar(i))
   end do
 
@@ -671,7 +677,7 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
   integer::i,n
   real(dp)::smallp, entho
   real(dp)::rl   ,ul   ,pl   ,cl
-  real(dp)::rr   ,ur   ,pr   ,cr   
+  real(dp)::rr   ,ur   ,pr   ,cr
 
   ! Constants
   smallp = smallc**2/gamma
@@ -708,9 +714,9 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
   end do
 
   !===============================
-  ! Compute conservative variables  
+  ! Compute conservative variables
   !===============================
-  do i = 1, ngrid 
+  do i = 1, ngrid
      ! Mass density
      uleft (i,1) = qleft (i,1)
      uright(i,1) = qright(i,1)
@@ -769,9 +775,9 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
   end do
 
   !==============================
-  ! Compute left and right fluxes  
+  ! Compute left and right fluxes
   !==============================
-  do i = 1, ngrid 
+  do i = 1, ngrid
      ! Mass density
      fleft (i,1) = qleft (i,2)*uleft (i,1)
      fright(i,1) = qright(i,2)*uright(i,1)
@@ -806,7 +812,7 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
   ! Compute Lax-Friedrich fluxes
   !=============================
   do n = 1, nvar+1
-     do i = 1, ngrid 
+     do i = 1, ngrid
         fgdnv(i,n) = half*(fleft(i,n)+fright(i,n)-cmax(i)*(uright(i,n)-uleft(i,n)))
      end do
   end do
@@ -832,7 +838,7 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
   integer::i,n
   real(dp)::smallp, entho
   real(dp)::rl   ,ul   ,pl   ,cl
-  real(dp)::rr   ,ur   ,pr   ,cr   
+  real(dp)::rr   ,ur   ,pr   ,cr
 
   ! Constants
   smallp = smallc**2/gamma
@@ -1000,11 +1006,12 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
   REAL(dp)::ustar,ptotstar
   REAL(dp)::ro,uo,ptoto,etoto,eo
   REAL(dp)::smallp
+  INTEGER::ivar,i
 #if NENER>0
   REAL(dp),dimension(1:nener)::eradl,eradr,erado
   REAL(dp),dimension(1:nener)::eradstarl,eradstarr
+  INTEGER::irad
 #endif
-  INTEGER ::irad, ivar, i
 
   ! constants
   smallp = smallc**2/gamma
@@ -1204,6 +1211,6 @@ end subroutine riemann_hllc
 !###########################################################
 !###########################################################
 !###########################################################
-  
+
 
 

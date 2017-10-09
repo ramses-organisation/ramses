@@ -3,14 +3,14 @@
 !              polytropic relativistic gas dynamics using MUSCL-HANCOCK  with
 !              hll and hllc riemann solver
 !              with various slope limiters (moncen crashes for the moment).
-!              This routine is inspired by the mhd/umuscl scheme 
-!              
+!              This routine is inspired by the mhd/umuscl scheme
+!
 !
 !  inputs/outputs
 !  uin         => (const)  input state
 !  gravin      => (const)  input gravitational acceleration
 !  iu1,iu2     => (const)  first and last index of input array,
-!  ju1,ju2     => (const)  cell centered,    
+!  ju1,ju2     => (const)  cell centered,
 !  ku1,ku2     => (const)  including buffer cells.
 !  flux       <=  (modify) return fluxes in the 3 coord directions
 !  if1,if2     => (const)  first and last index of output array,
@@ -30,23 +30,23 @@
 ! ----------------------------------------------------------------
 subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
-  use const             
+  use const
   use hydro_parameters
-  implicit none 
+  implicit none
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp 
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp
 
   ! Primitive variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
@@ -55,7 +55,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
-  
+
   ! Intermediate fluxes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
@@ -69,7 +69,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
 
-  ! Translate to primative variables, compute sound speeds  
+  ! Translate to primative variables, compute sound speeds
   call ctoprim(uin,qin,  gravin,dt,ngrid)
 
   ! Compute TVD slopes
@@ -86,7 +86,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
 #if NDIM==3
      call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
-  
+
    else if (scheme=='plmde')then
 !#if NDIM==1
      call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
@@ -99,7 +99,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
 #endif
    else
       write(*,*),'no valid scheme'
-      stop 
+      stop
 
    endif
 
@@ -188,7 +188,7 @@ end subroutine unsplit
 !  Subroutine TRACE1D
 !
 !> This subroutine assumed that one considers a 1D problem
-!! with 3 velocities (vx,vy,vz) 
+!! with 3 velocities (vx,vy,vz)
 
 subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
 
@@ -200,10 +200,10 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   integer :: ngrid
   real(dp) :: dx,dt
 
-  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar       ) :: q  
-  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: dq 
-  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: qm 
-  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: qp 
+  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar       ) :: q
+  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: dq
+  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: qm
+  real(dp), dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim) :: qp
 
   ! Local variables
   integer :: i, j, k, l, n
@@ -216,7 +216,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   real(dp)    :: h,kappa,chi,f,ni,cs2,velsq,entho,lorsq
   real(dp)    :: a11,a12,a15,a22,a25,a32,a33,a35,a42,a44,a45,a52,a55
   real(dp)    :: lor,tau,ka
- 
+
   smallp = smallr*smallc**2/gamma
 
   ilo=min(1,iu1+1); ihi=max(1,iu2-1)
@@ -239,7 +239,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               p = q(l,i,j,k,ip)
 
               velsq=u*u+v*v+w*w ; lor=(1.0d0-velsq)**(-1./2.) ; lorsq=lor*lor
-              
+
               ! TVD slopes in X direction
               drx = half*dq(l,i,j,k,ir,1)
               dux = half*dq(l,i,j,k,iu,1)
@@ -261,25 +261,25 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
                  chi   = -entho*p/r**2     !dh/dr
               endif
               f=lorsq*(-h+h*r*kappa+r*chi*velsq) !normalizing factor
-              
+
               a11= u*f
               a12= h*r*lorsq*(r*kappa-one)
               a15= u*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               a22=u*lorsq*(-h+r*chi+r*h*kappa)
               a25= (r*lorsq*kappa*h-r*h*kappa*lorsq*u*u-h-h*lorsq*(v*v+w*w)+lorsq*r*chi*(v*v+w*w))/(r*lorsq*h)
-              
+
               a32= v*r*chi
               a33= u*f
               a35= -(u*v*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a42= w*r*chi
               a44= u*f
               a45= -(u*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a52= -r*r*h*lorsq*chi
               a55= lorsq*u*(-h+r*chi+h*r*kappa)
-              
+
               sr0 = -a11*drx-a12*dux                -a15*dpx
               su0 =         -a22*dux                -a25*dpx
               sv0 =         -a32*dux-a33*dvx        -a35*dpx
@@ -291,7 +291,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               sv0 = sv0/f*dtdx
               sw0 = sw0/f*dtdx
               sp0 = sp0/f*dtdx
-              
+
               ! Cell-centered predicted states
               r = r + sr0
               u = u + su0
@@ -305,7 +305,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - dvx
               qp(l,i,j,k,iw,1) = w - dwx
               qp(l,i,j,k,ip,1) = p - dpx
-             if (qp(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,1) 
+             if (qp(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,1)
              if (qp(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qp(l,i,j,k,ip,1)
               qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
               qp(l,i,j,k,ip,1) = max(smallp, qp(l,i,j,k,ip,1))
@@ -316,11 +316,11 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,iv,1) = v + dvx
               qm(l,i,j,k,iw,1) = w + dwx
               qm(l,i,j,k,ip,1) = p + dpx
-             if (qm(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,1) 
-             if (qm(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,1) 
+             if (qm(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,1)
+             if (qm(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,1)
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
               qm(l,i,j,k,ip,1) = max(smallp, qm(l,i,j,k,ip,1))
-              
+
               velsq=qp(l,i,j,k,iu,1)*qp(l,i,j,k,iu,1)+qp(l,i,j,k,iv,1)*qp(l,i,j,k,iv,1)+qp(l,i,j,k,iw,1)*qp(l,i,j,k,iw,1)
               if (velsq>1.d0) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
@@ -367,15 +367,15 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp)    :: dx,dy,dt
   integer :: ngrid
 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar       ) :: q  
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: dq 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qm 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qp 
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar       ) :: q
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: dq
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qm
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qp
 
   ! Local variables
   integer :: i,j,k,l,n
   integer :: ilo,ihi,jlo,jhi,klo,khi
-  integer :: ir,iu,iv,iw,ip 
+  integer :: ir,iu,iv,iw,ip
   real(dp)    :: dtdx,dtdy,xc,xL,xR,yL,yR,smallp
   real(dp)    :: sr0,su0,sv0,sw0,sp0,sa0
   real(dp)    :: r,u,v,w,p ,a
@@ -393,7 +393,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 
   ir=1; iu=2; iv=3; iw=4 ; ip=5
 
- 
+
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
@@ -406,7 +406,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               r = q(l,i,j,k,ir)
               u = q(l,i,j,k,iu)
               v = q(l,i,j,k,iv)
-              w = q(l,i,j,k,iw)            
+              w = q(l,i,j,k,iw)
               p = q(l,i,j,k,ip)
 
               velsq=u**2+v**2+w**2 ; lorsq=1.d0/(1.d0-velsq) ; lor=sqrt(lorsq)
@@ -445,45 +445,45 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 
 
               f=lorsq*(-h+h*r*kappa+r*chi*velsq)
-              
+
               a11= u*f
               a12= h*r*lorsq*(r*kappa-1)
               a15= u*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               a22= u*lorsq*(-h+r*chi+r*h*kappa)
               a25= (r*lorsq*kappa*h-r*h*kappa*lorsq*u**2-h-h*lorsq*(v**2+w**2)+lorsq*r*chi*(v**2+w**2))/(r*lorsq*h)
-              
+
               a32= v*r*chi
               a33= u*f
               a35= -(u*v*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a42= w*r*chi
               a44= u*f
               a45= -(u*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a52= -r**2*h*lorsq*chi
               a55= lorsq*u*(-h+r*chi+h*r*kappa)
-              
-       
+
+
               b11= v*f
               b13= h*r*lorsq*(r*kappa-1)
               b15= v*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               b22= v*f
               b23= u*r*chi
               b25=-(v*u*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               b33= v*lorsq*(-h+r*chi+r*h*kappa)
               b35= (r*lorsq*kappa*h-r*h*kappa*lorsq*v**2-h-h*lorsq*(u**2+w**2)+lorsq*r*chi*(u**2+w**2))/(r*lorsq*h)
-              
+
               b43= w*r*chi
               b44= v*f
               b45=-(v*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               b53=-r**2*h*lorsq*chi
               b55= lorsq*v*(-h+r*chi+h*r*kappa)
-              
-              
+
+
               ! Source terms (including transverse derivatives)
               sr0 = (-a11*drx-a12*dux                -a15*dpx)*dtdx/f + (-b11*dry        -b13*dvy        -b15*dpy)*dtdy/f
               su0 = (        -a22*dux                -a25*dpx)*dtdx/f + (        -b22*duy-b23*dvy        -b25*dpy)*dtdy/f
@@ -505,34 +505,34 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - dvx
               qp(l,i,j,k,iw,1) = w - dwx
               qp(l,i,j,k,ip,1) = p - dpx
-              if (qp(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,1) 
-             if (qp(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qp(l,i,j,k,ip,1) 
-          
+              if (qp(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,1)
+             if (qp(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qp(l,i,j,k,ip,1)
+
               qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
               qp(l,i,j,k,ip,1) = max(smallp, qp(l,i,j,k,ip,1))
-              
+
               ! Left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
               qm(l,i,j,k,iu,1) = u + dux
               qm(l,i,j,k,iv,1) = v + dvx
               qm(l,i,j,k,iw,1) = w + dwx
               qm(l,i,j,k,ip,1) = p + dpx
-              if (qm(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,1) 
-              if (qm(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,1) 
-          
+              if (qm(l,i,j,k,ir,1)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,1)
+              if (qm(l,i,j,k,ip,1)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,1)
+
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
               qm(l,i,j,k,ip,1) = max(smallp, qm(l,i,j,k,ip,1))
-              
+
 
               ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - dry  
-              qp(l,i,j,k,iu,2) = u - duy 
-              qp(l,i,j,k,iv,2) = v - dvy 
-              qp(l,i,j,k,iw,2) = w - dwy 
-              qp(l,i,j,k,ip,2) = p - dpy  
-              if (qp(l,i,j,k,ir,2)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,2) 
-             if (qp(l,i,j,k,ip,2)<0.) write (*,*) 'p negative',i,qp(l,i,j,k,ip,2) 
-          
+              qp(l,i,j,k,ir,2) = r - dry
+              qp(l,i,j,k,iu,2) = u - duy
+              qp(l,i,j,k,iv,2) = v - dvy
+              qp(l,i,j,k,iw,2) = w - dwy
+              qp(l,i,j,k,ip,2) = p - dpy
+              if (qp(l,i,j,k,ir,2)<0.) write (*,*) 'd negative',i,qp(l,i,j,k,ir,2)
+             if (qp(l,i,j,k,ip,2)<0.) write (*,*) 'p negative',i,qp(l,i,j,k,ip,2)
+
               qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               qp(l,i,j,k,ip,2) = max(smallp, qp(l,i,j,k,ip,2))
 
@@ -543,9 +543,9 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qm(l,i,j,k,iv,2) = v + dvy
               qm(l,i,j,k,iw,2) = w + dwy
               qm(l,i,j,k,ip,2) = p + dpy
-              if (qm(l,i,j,k,ir,2)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,2) 
-             if (qm(l,i,j,k,ip,2)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,2) 
-          
+              if (qm(l,i,j,k,ir,2)<0.) write (*,*) 'd negative',i,qm(l,i,j,k,ir,2)
+             if (qm(l,i,j,k,ip,2)<0.) write (*,*) 'p negative',i,qm(l,i,j,k,ip,2)
+
               qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
               qm(l,i,j,k,ip,2) = max(smallp, qm(l,i,j,k,ip,2))
 
@@ -613,10 +613,10 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   real(dp) :: dx,dy,dz,dt
   integer :: ngrid
 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar       ) :: q  
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: dq 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qm 
-  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qp 
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar       ) :: q
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: dq
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qm
+  real(dp), dimension(1:nvector,iu1:iu2  ,ju1:ju2  ,ku1:ku2  ,1:nvar,1:ndim) :: qp
 
   ! Declare local variables
 
@@ -660,7 +660,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               r =    q(l,i,j,k,ir)
               u =    q(l,i,j,k,iu)
               v =    q(l,i,j,k,iv)
-              w =    q(l,i,j,k,iw)            
+              w =    q(l,i,j,k,iw)
               p =    q(l,i,j,k,ip)
 
               ! Cell centered TVD slopes in X direction
@@ -701,65 +701,65 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  chi   = -entho*p/r**2     !dh/dr
               endif
 
-              f=lorsq*(-h+h*r*kappa+r*chi*velsq)              
+              f=lorsq*(-h+h*r*kappa+r*chi*velsq)
 
               a11= u*f
               a12= h*r*lorsq*(r*kappa-1)
               a15= u*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               a22= u*lorsq*(-h+r*chi+r*h*kappa)
               a25= (r*lorsq*kappa*h-r*h*kappa*lorsq*u**2-h-h*lorsq*(v**2+w**2)+lorsq*r*chi*(v**2+w**2))/(r*lorsq*h)
-              
+
               a32= v*r*chi
               a33= u*f
               a35= -(u*v*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a42= w*r*chi
               a44= u*f
               a45= -(u*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               a52= -r**2*h*lorsq*chi
               a55= lorsq*u*(-h+r*chi+h*r*kappa)
-              
-       
+
+
               b11= v*f
               b13= h*r*lorsq*(r*kappa-1)
               b15= v*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               b22= v*f
               b23= u*r*chi
               b25=-(v*u*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               b33= v*lorsq*(-h+r*chi+r*h*kappa)
               b35= (r*lorsq*kappa*h-r*h*kappa*lorsq*v**2-h-h*lorsq*(u**2+w**2)+lorsq*r*chi*(u**2+w**2))/(r*lorsq*h)
-              
+
               b43= w*r*chi
               b44= v*f
               b45=-(v*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               b53=-r**2*h*lorsq*chi
               b55= lorsq*v*(-h+r*chi+h*r*kappa)
-              
+
 
 
               c11= w*f
               c14= h*r*lorsq*(r*kappa-1)
               c15= w*(-r*lorsq*kappa+r*lorsq*velsq*kappa+1)
-              
+
               c22= w*f
               c24= u*r*chi
               c25=-(u*w*(-h+r*chi+r*h*kappa))/(r*h)
-              
+
               c33= w*f
               c34= v*r*chi
-              c35=-(v*w*(-h+r*chi+r*h*kappa))/(r*h)       
-              
+              c35=-(v*w*(-h+r*chi+r*h*kappa))/(r*h)
+
               c44= w*lorsq*(r*h*kappa-h+r*chi)
               c45=(r*lorsq*kappa*h-r*h*kappa*lorsq*w**2-h-h*lorsq*(u**2+v**2)+lorsq*r*chi*(u**2+v**2))/(r*lorsq*h)
-              
+
               c54=-r**2*h*lorsq*chi
               c55= lorsq*w*(-h+r*chi+h*r*kappa)
-              
+
 
               ! Source terms (including transverse derivatives)
               sr0 = (-a11*drx-a12*dux                -a15*dpx)*dtdx/f + (-b11*dry        -b13*dvy        -b15*dpy)*dtdy/f + (-c11*drz                -c14*dwz-c15*dpz)*dtdz/f
@@ -767,7 +767,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               sv0 = (        -a32*dux-a33*dvx        -a35*dpx)*dtdx/f + (                -b33*dvy        -b35*dpy)*dtdy/f + (                -c33*dvz-c34*dwz-c35*dpz)*dtdz/f
               sw0 = (        -a42*dux        -a44*dwx-a45*dpx)*dtdx/f + (                -b43*dvy-b44*dwy-b45*dpy)*dtdy/f + (                        -c44*dwz-c45*dpz)*dtdz/f
               sp0 = (        -a52*dux                -a55*dpx)*dtdx/f + (                -b53*dvy        -b55*dpy)*dtdy/f + (                        -c54*dwz-c55*dpz)*dtdz/f
-              
+
 
               !Update in time the  primitive variables
               r = r + sr0
@@ -961,10 +961,10 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
-  
+
   ! local variables
   integer ::i, j, k, n, l, idim, xdim
   real(dp)::entho
@@ -977,7 +977,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-      
+
               ! Left state
               qleft (1) = qm(l,i,j,k,1  ,xdim) ! Mass density
               qleft (2) = qm(l,i,j,k,5  ,xdim) ! Pressure
@@ -995,9 +995,9 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ! Passive scalars
               do n = 6, nvar
                  qleft (n) = qm(l,i,j,k,n,xdim)
-                 qright(n) = qp(l,i,j,k,n,xdim)    
+                 qright(n) = qp(l,i,j,k,n,xdim)
               end do
-              
+
 
               ! Solve 1D Riemann problem
               if (riemann.eq.'hll')then
@@ -1008,8 +1008,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  write(*,*)'unknown Riemann solver'
                  stop
               end if
-           
-           
+
+
               ! Output fluxes
               flx(l,i,j,k,1  ) = fgdnv(1)  ! Mass density
               flx(l,i,j,k,5  ) = fgdnv(2)  ! Total energy
@@ -1035,7 +1035,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
         end do
      end do
   end do
-  
+
 end subroutine cmpflxm
 !###########################################################
 !###########################################################
@@ -1046,8 +1046,8 @@ end subroutine cmpflxm
 !  Subroutine CTOPRIM
 !
 !> Converts conservative variables to primitive in rhd
-! Modified to include special relativity. The equation of state is an extension of 
-!classical EOS , and may fail for adiabatic indexes >2. 
+! Modified to include special relativity. The equation of state is an extension of
+!classical EOS , and may fail for adiabatic indexes >2.
 
 
 subroutine ctoprim(uin,q,gravin,dt,ngrid)
@@ -1055,12 +1055,12 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
   use amr_parameters
   use amr_commons
   implicit none
-  
+
   integer ::ngrid
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-!  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+!  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   integer :: i,j,k,l,n,idim
   real(dp) :: dt,time
@@ -1082,11 +1082,11 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
            do l = 1 ,ngrid
 
              ! Compute density
-             D = uin(l,i,j,k,1) 
+             D = uin(l,i,j,k,1)
              ! Compute momentum
              Mx=uin(l,i,j,k,2) ; My=uin(l,i,j,k,3) ; Mz=uin(l,i,j,k,4)
              M = sqrt(Mx**2+My**2+Mz**2)
-             ! Compute total energy 
+             ! Compute total energy
              E = uin(l,i,j,k,5)
              !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
              if (D<0) then
@@ -1101,13 +1101,13 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
              endif
 
              if (E**2<M**2+D**2) then
-                
+
                write (*,*) 'Switch...ctoprim'
                 E=sqrt(M**2+d**2+1d-8)
                 uin(l,i,j,k,5)=E
              endif
 
-             if ( M .eq. 0) then 
+             if ( M .eq. 0) then
                 q(l,i,j,k,1) = D
                 q(l,i,j,k,2) = 0d0
                 q(l,i,j,k,3) = 0d0
@@ -1119,21 +1119,21 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
                 endif
                 lor=1d0
              else
-                
+
                 call Newton_Raphson_Mignone(D,M,E,gamma,R)
-                
+
                 ! Compute the Lorentz factor
                 u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
                 lor = (1.0d0+u2)**(1.d0/2.d0)
-                
+
                 ! Compute the density
                 q(l,i,j,k,1) = D/lor
-                
+
                 ! compute velocities
                 q(l,i,j,k,2) = Mx/R!max(1.0e-10,Mx/R)
                 q(l,i,j,k,3) = My/R!max(1.0e-10,My/R)
                 q(l,i,j,k,4) = Mz/R!max(1.0e-10,Mz/R)
-                
+
                 ! Compute pressure
                 Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
                 if (eos .eq. 'TM') then
@@ -1183,7 +1183,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 
   integer::ngrid
   real(dp)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
 
   ! local arrays
@@ -1195,7 +1195,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
   real(dp)::vmin,vmax,dfx,dfy,dfz,dff
   integer::ilo,ihi,jlo,jhi,klo,khi
-  
+
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
@@ -1276,11 +1276,11 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               end if
            end do
         end do
-     end do     
+     end do
   end do
 #endif
 
-#if NDIM==2              
+#if NDIM==2
   if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
@@ -1327,22 +1327,22 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
                     dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
                     dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
-                    
+
                     vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
                     vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-                    
+
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dff  = half*(abs(dfx)+abs(dfy))
-                    
+
                     if(dff>zero)then
                        slop = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
                        slop = one
                     endif
-                    
+
                     dlim = slop
-                    
+
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
 
@@ -1480,27 +1480,27 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
                     dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
                     dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
-                    
+
                     vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                          &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
                          &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
                     vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                          &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
                          &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-                    
+
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dfz  = half*(q(l,i,j,k+1,n)-q(l,i,j,k-1,n))
                     dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
-                    
+
                     if(dff>zero)then
                        slop = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
                        slop = one
                     endif
-                    
+
                     dlim = slop
-                    
+
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
                     dq(l,i,j,k,n,3) = dlim*dfz
@@ -1513,9 +1513,9 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   else
      write(*,*)'Unknown slope type'
      stop
-  endif     
+  endif
 #endif
-  
+
 end subroutine uslope
 
 
@@ -1589,16 +1589,16 @@ function f_prim_Mignone(R,D,M,Eprim,gamma)
      Xsi=(R-u2/(lor+1)*D)/lor**2
      rho=D/lor
      P=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
-     
+
      dpdxsi=(2d0*xsi+2d0*rho-5d0*P)/(5d0*rho+5d0*xsi-8d0*P)
      dpdrho=(2d0*xsi-5d0*P)/(5d0*rho+5d0*xsi-8d0*P)
      dv2dR=-2d0*M**2/(R+D)**3
-     
+
      dxsidR=1d0/lor**2-lor/2d0*(D+2d0*lor*xsi)*dv2dR
      drhodR=D*lor/2d0*dv2dR
-     
+
      dpdR=dpdxsi*dxsidR+dpdrho*drhodR
-  else     
+  else
 
      dpdR=(gamma-1.d0)/gamma
      dpdR=dpdR*(1.d0+M**2/(R+D)**2*(1.d0-D*lor/(R+D)))

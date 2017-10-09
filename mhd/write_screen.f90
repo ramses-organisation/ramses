@@ -4,11 +4,12 @@ subroutine write_screen
   use pm_commons
   use poisson_commons
   implicit none
+#if NDIM==1
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
-  !
-  integer::igrid,jgrid,ind,icpu,info,irad
+  integer::igrid,jgrid,ind,icpu
   integer::i,icell,ncell,ilevel,ncache
   integer::icellmin,nx_loc
   real(dp)::dx,scale,smallp,ddd,ppp
@@ -21,10 +22,12 @@ subroutine write_screen
   real(kind=8),dimension(:),allocatable::AA_all,BB_all,CC_all
   real(kind=8),dimension(:),allocatable::mm_all,gg_all,dtot_all
 #if NENER>0
-  real(kind=8),dimension(:,:),allocatable::prad_all,prad
+  integer::irad
+  real(qdp),dimension(:,:),allocatable::prad_all,prad
 #endif
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
+#endif
 
   if(ndim>1)return
 
@@ -32,7 +35,7 @@ subroutine write_screen
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-  
+
   ncell=0
   do ilevel=1,nlevelmax
      ncache=numbl(myid,ilevel)
@@ -203,7 +206,7 @@ subroutine write_screen
   et=et_all; ek=ek_all; em=em_all; ei=ei_all
   uu=uu_all; vv=vv_all; ww=ww_all
   AA=AA_all; BB=BB_all; CC=CC_all
-  gg=gg_all; ll=ll_all 
+  gg=gg_all; ll=ll_all
 #if NENER>0
   call MPI_ALLREDUCE(prad,prad_all,ncell*nener,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   prad=prad_all
@@ -265,20 +268,16 @@ subroutine write_screen
 #if NENER>0
   deallocate(prad,prad_all)
 #endif
-
   end if
- 
+
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
 
 #endif
 
-111 format(2(1pe12.5,1x))
-112 format(i3,1x,1pe10.3,1x,8(1pe10.3,1x))
 113 format(i3,1x,1pe12.5,1x,9(1pe10.3,1x))
 114 format(' Output ',i5,' cells')
-115 format(' Output ',i5,' parts')
 116 format(100(A))
 
 end subroutine write_screen

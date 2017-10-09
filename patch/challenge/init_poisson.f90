@@ -55,7 +55,7 @@ subroutine init_poisson
   if(nrestart>0)then
      ilun=ncpu+myid+10
      call title(nrestart,nchar)
-     if(IOGROUPSIZEREP>0)then 
+     if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/grav_'//TRIM(nchar)//'.out'
      else

@@ -7,7 +7,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
   logical::nml_ok
   !--------------------------------------------------
-  ! Local variables  
+  ! Local variables
   !--------------------------------------------------
   integer::i,idim,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type

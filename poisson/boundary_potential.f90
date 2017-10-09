@@ -10,10 +10,10 @@ subroutine make_boundary_force(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
+  integer::ibound,boundary_dir,idim,inbor=1
   integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
+  integer::iskip,iskip_ref,nx_loc,ix,iy,iz
+  integer,dimension(1:8)::ind_ref
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
@@ -47,7 +47,7 @@ subroutine make_boundary_force(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
   do ibound=1,nboundary
 
@@ -88,7 +88,7 @@ subroutine make_boundary_force(ilevel)
      if(boundary_type(ibound)==1.or.boundary_type(ibound)==2)gs(1)=-1
      if(boundary_type(ibound)==3.or.boundary_type(ibound)==4)gs(2)=-1
      if(boundary_type(ibound)==5.or.boundary_type(ibound)==6)gs(3)=-1
-     
+
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
      do igrid=1,ncache,nvector
@@ -96,7 +96,7 @@ subroutine make_boundary_force(ilevel)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Gather neighboring reference grid
         do i=1,ngrid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
@@ -108,7 +108,7 @@ subroutine make_boundary_force(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-              
+
            ! Gather neighboring reference cell
            iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
            do i=1,ngrid
@@ -117,7 +117,7 @@ subroutine make_boundary_force(ilevel)
 
            ! Wall and free boundary conditions
            if((boundary_type(ibound)/10).ne.2)then
-              
+
               ! Gather reference hydro variables
               do ivar=1,ndim
                  do i=1,ngrid
@@ -131,35 +131,35 @@ subroutine make_boundary_force(ilevel)
                     f(ind_cell(i),ivar)=ff(i,ivar)*switch
                  end do
               end do
-              
+
               ! Imposed boundary conditions
            else
-              
+
               ! Compute cell center in code units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
                  end do
               end do
-              
+
               ! Rescale position from code units to user units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                  end do
               end do
-              
+
               call gravana(xx,ff,dx_loc,ngrid)
-              
+
               ! Scatter variables
               do ivar=1,ndim
                  do i=1,ngrid
                     f(ind_cell(i),ivar)=ff(i,ivar)
                  end do
               end do
-                 
+
            end if
-              
+
         end do
         ! End loop over cells
 
@@ -184,10 +184,9 @@ subroutine make_boundary_phi(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind
-  integer::iskip,iskip_ref,gdim,nx_loc,ix,iy,iz
-  integer,dimension(1:8)::ind_ref,alt
+  integer::ibound,idim
+  integer::i,ncache,igrid,ngrid,ind
+  integer::iskip,nx_loc,ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::dx,dx_loc,scale,fourpi,boxlen2
@@ -195,7 +194,6 @@ subroutine make_boundary_phi(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ndim),save::ff
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -223,7 +221,7 @@ subroutine make_boundary_phi(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
   do ibound=1,nboundary
 
@@ -234,14 +232,14 @@ subroutine make_boundary_phi(ilevel)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-              
+
            ! Compute cell center in code units
            do idim=1,ndim
               do i=1,ngrid
@@ -293,7 +291,7 @@ subroutine make_boundary_mask(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
+  integer::ibound
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip
   integer,dimension(1:nvector),save::ind_grid,ind_cell

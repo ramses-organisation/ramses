@@ -1,6 +1,3 @@
-#define xstr(s) str(s)
-#define str(s) #s
-
 subroutine write_gitinfo
   use amr_commons, ONLY:builddate,patchdir,gitrepo,gitbranch,githash
 

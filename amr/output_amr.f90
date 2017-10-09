@@ -11,10 +11,13 @@ subroutine dump_all
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
+#if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
+  integer::info
+#endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filedir,filedirini,filecmd
-  integer::info,irec,ierr
+  integer::irec,ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -219,6 +222,7 @@ subroutine backup_amr(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info2
 #endif
   character(LEN=80)::filename
 
@@ -232,7 +236,6 @@ subroutine backup_amr(filename)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::scale
   integer,parameter::tag=1120
-  integer::dummy_io,info2
 
   if(verbose)write(*,*)'Entering backup_amr'
 
@@ -506,10 +509,11 @@ subroutine output_header(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   character(LEN=80)::filename
 
-  integer::info,ilun
+  integer::ilun
   integer(i8b)::npart_tot
   character(LEN=80)::fileloc
 #ifdef LONGINT
@@ -578,6 +582,8 @@ subroutine savegadget(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  integer(i8b)::npart_loc
 #endif
   character(LEN=80)::filename
   TYPE(gadgetheadertype)::header
@@ -585,8 +591,7 @@ subroutine savegadget(filename)
   integer(i8b),allocatable,dimension(:)::ids
   integer::i,idim,ipart
   real(dp)::gadgetvfact
-  integer::info
-  integer(i8b)::npart_tot,npart_loc
+  integer(i8b)::npart_tot
   real(dp),parameter::RHOcrit=2.7755d11
 
 #ifndef WITHOUTMPI
@@ -645,8 +650,8 @@ subroutine savegadget(filename)
                 write(*,*) myid, "Ipart=",ipart, "exceeds", npart
                 call clean_stop
            endif
-           pos(idim, ipart)=xp(i,idim) * boxlen_ini
-           vel(idim, ipart)=vp(i,idim) * gadgetvfact
+           pos(idim, ipart)=real(xp(i,idim) * boxlen_ini , kind=4)
+           vel(idim, ipart)=real(vp(i,idim) * gadgetvfact , kind=4)
            if (idim.eq.1) ids(ipart) = idp(i)
         end if
      end do

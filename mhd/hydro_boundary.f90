@@ -11,9 +11,9 @@ subroutine make_boundary_hydro(ilevel)
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
-  integer::ibound,boundary_dir,idim,inbor
-  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1,iperp2,iplane,icell
-  integer::iskip,iskip_ref,iskip_normal,gdim,nx_loc,ix,iy,iz
+  integer::ibound,boundary_dir,idim,inbor=1
+  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1=7,iperp2=8,iplane,icell
+  integer::iskip,iskip_ref,iskip_normal,gdim=1,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt,ind_normal
   integer,dimension(1:4,1:2)::ind0
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
@@ -51,7 +51,7 @@ subroutine make_boundary_hydro(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Loop over boundaries
   do ibound=1,nboundary
 
@@ -105,7 +105,7 @@ subroutine make_boundary_hydro(ilevel)
      if(boundary_type(ibound)==1.or.boundary_type(ibound)==2)gs(1)=-1
      if(boundary_type(ibound)==3.or.boundary_type(ibound)==4)gs(2)=-1
      if(boundary_type(ibound)==5.or.boundary_type(ibound)==6)gs(3)=-1
-     
+
      ! Direction of gravity vector for hydrostatic equilibrium
      if(boundary_dir==1.or.boundary_dir==2)gdim=1
      if(boundary_dir==3.or.boundary_dir==4)gdim=2
@@ -144,7 +144,7 @@ subroutine make_boundary_hydro(ilevel)
         do i=1,ngrid
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
         end do
-        
+
         ! Gather neighboring reference grid
         do i=1,ngrid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
@@ -152,26 +152,26 @@ subroutine make_boundary_hydro(ilevel)
 
         ! Wall or reflexive boundary conditions
         if((boundary_type(ibound)/10).eq.0)then
-           
+
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
               do i=1,ngrid
                  ind_cell(i)=iskip+ind_grid(i)
               end do
-              
+
               ! Gather neighboring reference cell
               iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
               do i=1,ngrid
                  ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
               end do
-              
+
               ! Gather cell to get the normal magnetic field component
               iskip_normal=ncoarse+(ind_normal(ind)-1)*ngridmax
               do i=1,ngrid
                  ind_cell_normal(i)=iskip_normal+ind_grid_ref(i)
               end do
-              
+
               ! Gather reference hydro variables
               do ivar=1,nvar+3
                  do i=1,ngrid
@@ -224,20 +224,20 @@ subroutine make_boundary_hydro(ilevel)
 
         ! Free or outflowing or zero gradient boundary conditions
         else if((boundary_type(ibound)/10).eq.1)then
-           
+
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
               do i=1,ngrid
                  ind_cell(i)=iskip+ind_grid(i)
               end do
-              
+
               ! Gather neighboring reference cell
               iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
               do i=1,ngrid
                  ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
               end do
-              
+
               ! Gather reference hydro variables
               do ivar=1,nvar+3
                  do i=1,ngrid
@@ -311,7 +311,7 @@ subroutine make_boundary_hydro(ilevel)
 
         ! Imposed boundary conditions
         else
-              
+
            ! Loop over cells
            do ind=1,twotondim
 
@@ -319,23 +319,23 @@ subroutine make_boundary_hydro(ilevel)
               do i=1,ngrid
                  ind_cell(i)=iskip+ind_grid(i)
               end do
-              
+
               ! Compute cell center in code units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
                  end do
               end do
-              
+
               ! Rescale position from code units to user units
               do idim=1,ndim
                  do i=1,ngrid
                     xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                  end do
               end do
-              
+
               call boundana(xx,uu,dx_loc,ibound,ngrid)
-              
+
               ! Remove magnetic energy
               do i=1,ngrid
                  emag=0.125d0*((uu(i,6)+uu(i,nvar+1))**2+ &
@@ -363,12 +363,12 @@ subroutine make_boundary_hydro(ilevel)
               do icell=1,twotondim/2
 
                  ind=ind0(icell,iplane)
-                 
+
                  iskip=ncoarse+(ind-1)*ngridmax
                  do i=1,ngrid
                     ind_cell(i)=iskip+ind_grid(i)
                  end do
-                 
+
                  ! Gather neighboring reference cell
                  if(iplane==1)then
                     iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
@@ -381,23 +381,23 @@ subroutine make_boundary_hydro(ilevel)
                        ind_cell_ref(i)=iskip_ref+ind_grid(i)
                     end do
                  endif
-                    
+
                  ! Compute correction
                  do i=1,ngrid
                     uu_ref(i,icell)=uold(ind_cell_ref(i),iperp1)-uold(ind_cell(i),iperp2)
                  end do
-                 
+
                  do i=1,ngrid
                     uold(ind_cell(i),5+gdim)=uold(ind_cell(i),5+gdim)+uu_ref(i,icell)
                     uold(ind_cell(i),nvar+gdim)=uold(ind_cell(i),nvar+gdim)+uu_ref(i,icell)
                  end do
-                 
+
               end do
               ! End loop over cells
 
            end do
            ! End loop over planes
-                 
+
            ! Add magnetic energy
 
            ! Loop over cells
@@ -407,17 +407,17 @@ subroutine make_boundary_hydro(ilevel)
               do i=1,ngrid
                  ind_cell(i)=iskip+ind_grid(i)
               end do
-              
+
               do i=1,ngrid
                  emag=0.125d0*((uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))**2+ &
                       &        (uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))**2+ &
                       &        (uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))**2)
                  uold(ind_cell(i),5)=uold(ind_cell(i),5)+emag
               end do
-              
+
            end do
            ! End loop over cells
-           
+
         end if
 
      end do

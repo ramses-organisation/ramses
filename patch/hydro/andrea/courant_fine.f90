@@ -45,14 +45,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -68,7 +68,7 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         gg=0.0d0
         if(poisson)then
@@ -78,17 +78,17 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
         end do
-        
+
         ! Compute total energy
         do i=1,nleaf
            ekin_loc=ekin_loc+uu(i,ndim+2)*vol
         end do
-        
+
         ! Compute total internal energy
         do i=1,nleaf
            eint_loc=eint_loc+uu(i,ndim+2)*vol
@@ -98,16 +98,16 @@ subroutine courant_fine(ilevel)
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol
            end do
         end do
-        
+
         ! Compute CFL time-step
         if(nleaf>0)then
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -149,7 +149,7 @@ subroutine bondi_fine(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  
+
   integer::igrid,ncache,i,ind,iskip,ngrid,info
   integer::ix,iy,iz,idim,ivar,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -180,7 +180,7 @@ subroutine bondi_fine(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**3
-  
+
   ! Jet parameters in cgs
   rjet=r_jet*dx_loc               ! Jet radius
   hjet=h_jet*dx_loc               ! Jet height
@@ -201,7 +201,7 @@ subroutine bondi_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   Mcylinder=0.0
   Ecylinder=0.0
   Vcylinder=0.0
@@ -214,14 +214,14 @@ subroutine bondi_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather cell centre positions
         do idim=1,ndim
            do i=1,ngrid
@@ -289,7 +289,7 @@ subroutine bondi_fine(ilevel)
   if(t.gt.0.0.and.t.lt.tjet.and.myid==1)then
      rho_cylinder=Mcylinder/Vcylinder
      cs2_cylinder=gamma*(gamma-1.0)*Ecylinder/Mcylinder
-     Mdot_BH=2d72*rho_cylinder/cs2_cylinder**1.5     
+     Mdot_BH=2d72*rho_cylinder/cs2_cylinder**1.5
      if(myid==1)write(*,*)'Mdot_BH (Msol/yr)=',Mdot_BH/2d33*(3600.*24.*365.)
   endif
 

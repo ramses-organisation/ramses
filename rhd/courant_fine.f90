@@ -24,14 +24,14 @@ subroutine courant_fine(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::q
   real(dp)::lor,v
 !  real(dp)::lor_max_loc,lor_max_all
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   gam_loc=0d0
   mass_all=0.0d0; mass_loc=0.0d0
   e_all=0d0; e_loc=0d0
-  mom_all=0d0;momx_all=0d0;momy_all=0d0;momz_all=0d0 
+  mom_all=0d0;momx_all=0d0;momy_all=0d0;momz_all=0d0
   momx_loc=0d0 ;momy_loc=0d0; momz_loc=0d0
   dt_all=dtnew(ilevel); dt_loc=dt_all
 
@@ -50,14 +50,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -67,14 +67,14 @@ subroutine courant_fine(ilevel)
            end if
         end do
 
-     
+
         ! Gather hydro variables
         do ivar=1,nvar
            do i=1,nleaf
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-        
+
         call ctoprimbis(uu,nleaf,q)
         ! Compute total mass,energy,momentum
         do i=1,nleaf
@@ -92,10 +92,10 @@ subroutine courant_fine(ilevel)
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 ! gam_loc saves the max lorentz factor of each processor
@@ -112,14 +112,14 @@ subroutine courant_fine(ilevel)
   momx_all=comm_buffout(2)
   momy_all=comm_buffout(3)
   momz_all=comm_buffout(4)
- 
+
 
  comm_buffin(1)=e_loc
   call MPI_ALLREDUCE(comm_buffin,comm_buffout,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
        &MPI_COMM_WORLD,info)
   e_all=comm_buffout(1)
 
-  
+
   mom_all=sqrt(momx_all**2+momy_all**2+momz_all**2)
 
   call MPI_ALLREDUCE(dt_loc,dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
@@ -131,7 +131,7 @@ subroutine courant_fine(ilevel)
   gam_all=comm_buffout(1)
 
 #endif
-  
+
 #ifdef WITHOUTMPI
   mass_all=mass_loc
   gam_all=gam_loc

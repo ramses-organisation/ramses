@@ -1,16 +1,16 @@
 ! ---------------------------------------------------------------
 !  MAG_UNSPLIT Unsplit second order Godunov integrator for
-!              polytropic magnetized gas dynamics using 
+!              polytropic magnetized gas dynamics using
 !              MUSCL-HANCOCK scheme
 !              with various Riemann solvers and slope limiters.
 !              The sheme follows closely the paper by
-!              Londrillo & Del Zanna ApJ 2000, 530, 508, 
+!              Londrillo & Del Zanna ApJ 2000, 530, 508,
 !
 !  inputs/outputs
 !  uin         => (const)  input state
 !  gravin      => (const)  input gravitational acceleration
 !  iu1,iu2     => (const)  first and last index of input array,
-!  ju1,ju2     => (const)  cell centered,    
+!  ju1,ju2     => (const)  cell centered,
 !  ku1,ku2     => (const)  including buffer cells.
 !  flux       <=  (modify) return fluxes in the 3 coord directions
 !  if1,if2     => (const)  first and last index of output array,
@@ -22,7 +22,7 @@
 !  ndim        => (const)  number of dimensions
 !
 !  uin = (\rho, \rho u, \rho v, \rho w, Etot, A, B, C)
-!  the hydro variable are cell-centered 
+!  the hydro variable are cell-centered
 !  whereas the magnetic field B=(A,B,C) are face-centered.
 !  Note that here we have 3 components for v and B whatever ndim.
 !
@@ -30,20 +30,20 @@
 ! ----------------------------------------------------------------
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
-  use const             
+  use const
   use hydro_parameters
-  implicit none 
+  implicit none
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp 
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp
 
   ! Output electromotive force
   REAL(dp),DIMENSION(1:nvector,1:3,1:3,1:3)::emfx
@@ -51,8 +51,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,1:3,1:3,1:3)::emfz
 
   ! Primitive variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin 
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),save::bf  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),save::bf
 
   ! Cell-centered slopes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
@@ -63,7 +63,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Face-averaged left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
-  
+
   ! Edge-averaged left-right and top-bottom state arrays
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRT
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRB
@@ -83,7 +83,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
-  ! Translate to primative variables, compute sound speeds  
+  ! Translate to primative variables, compute sound speeds
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Compute TVD slopes
@@ -250,10 +250,10 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   INTEGER ::ngrid
   REAL(dp)::dx,dt
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
   INTEGER ::i, j, k, l, n, irad
@@ -266,7 +266,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, se0
 #endif
- 
+
   dtdx = dt/dx
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -311,7 +311,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx-r*dux
               if(ischeme.ne.1)then
-              su0 = -u*dux-(dpx+B*dBx+C*dCx)/r  
+              su0 = -u*dux-(dpx+B*dBx+C*dCx)/r
               sv0 = -u*dvx+(A*dBx)/r
               sw0 = -u*dwx+(A*dCx)/r
               endif
@@ -352,7 +352,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
 #endif
 
@@ -368,14 +368,14 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
 #endif
            END DO
         END DO
      END DO
   END DO
-  
+
   ! passive scalars
 #if NVAR>8+NENER
   DO n = 9+nener, nvar
@@ -384,7 +384,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
            DO i = ilo, ihi
               DO l = 1, ngrid
                  a   = q(l,i,j,k,n )           ! Cell centered values
-                 u   = q(l,i,j,k,iu)  
+                 u   = q(l,i,j,k,iu)
                  dax = half * dq(l,i,j,k,n,1)  ! TVD slope
                  sa0 = -u*dax                  ! Source terms
                  a   = a + sa0*dtdx            ! Predicted state
@@ -413,11 +413,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   INTEGER ::ngrid
   REAL(dp)::dx, dy, dt
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
 
@@ -428,20 +428,24 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 
   ! Declare local variables
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
-  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
+  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
   REAL(dp)::dtdx, dtdy, smallp
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::ELL, ELR, ERL, ERR
-  REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dBy, dCy
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
+  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
+  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sC0
   REAL(dp)::AL, AR, BL, BR
   REAL(dp)::dALy, dARy, dBLx, dBRx
   REAL(DP)::sAL0, sAR0, sBL0, sBR0
 #if NENER>0
-  real(dp),dimension(1:nener)::e, dex, dey, se0
+  INTEGER::irad
+  REAL(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
+#if NVAR>8+NENER
+  INTEGER::n
 #endif
 
   dtdx = dt/dx
@@ -451,7 +455,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8 
+  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8
 
   DO k = klo, ku2
      DO j = jlo, ju2
@@ -543,11 +547,11 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               AR = AR + sAR0
               BL = BL + sBL0
               BR = BR + sBR0
-              
+
               ! Source terms (including transverse derivatives)
               sr0 = (-u*drx-dux*r)*dtdx + (-v*dry-dvy*r)*dtdy
               if(ischeme.ne.1)then
-              su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy 
+              su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy
               sv0 = (-u*dvx+A*dBx/r)*dtdx + (-v*dvy-(dpy+A*dAy+C*dCy)/r)*dtdy
               sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy
               endif
@@ -583,14 +587,14 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - dvx
               qp(l,i,j,k,iw,1) = w - dwx
               qp(l,i,j,k,ip,1) = p - dpx
-              qp(l,i,j,k,iA,1) = AL     
+              qp(l,i,j,k,iA,1) = AL
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
               if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
 #endif
 
@@ -600,14 +604,14 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iv,1) = v + dvx
               qm(l,i,j,k,iw,1) = w + dwx
               qm(l,i,j,k,ip,1) = p + dpx
-              qm(l,i,j,k,iA,1) = AR     
+              qm(l,i,j,k,iA,1) = AR
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
               if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
 #endif
 
@@ -618,13 +622,13 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qp(l,i,j,k,iw,2) = w - dwy
               qp(l,i,j,k,ip,2) = p - dpy
               qp(l,i,j,k,iA,2) = A - dAy
-              qp(l,i,j,k,iB,2) = BL     
+              qp(l,i,j,k,iB,2) = BL
               qp(l,i,j,k,iC,2) = C - dCy
               if (qp(l,i,j,k,ir,2)<smallr) qp(l,i,j,k,ir,2)=r
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad) 
+                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
               end do
 #endif
 
@@ -635,13 +639,13 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               qm(l,i,j,k,iw,2) = w + dwy
               qm(l,i,j,k,ip,2) = p + dpy
               qm(l,i,j,k,iA,2) = A + dAy
-              qm(l,i,j,k,iB,2) = BR     
+              qm(l,i,j,k,iB,2) = BR
               qm(l,i,j,k,iC,2) = C + dCy
               if (qm(l,i,j,k,ir,2)<smallr) qm(l,i,j,k,ir,2)=r
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad) 
+                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
               end do
 #endif
 
@@ -759,11 +763,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   INTEGER ::ngrid
   REAL(dp)::dx, dy, dz, dt
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRT
@@ -776,18 +780,18 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ey
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ez
 
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
-  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC 
+  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
   REAL(dp)::dtdx, dtdy, dtdz, smallp
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::FLL, FLR, FRL, FRR
   REAL(dp)::GLL, GLR, GRL, GRR
-  REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dbY, dCy
-  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz, dCz
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
+  REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
+  REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz
+  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0
   REAL(dp)::AL, AR, BL, BR, CL, CR
   REAL(dp)::dALy, dARy, dALz, dARz
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
@@ -795,8 +799,12 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+  integer ::irad
 #endif
-  
+#if NVAR>8+NENER
+  integer ::n
+#endif
+
   dtdx = dt/dx
   dtdy = dt/dy
   dtdz = dt/dz
@@ -805,7 +813,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8 
+  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8
 
   DO k = klo, ku2
      DO j = jlo, ju2
@@ -842,11 +850,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               r =    q(l,i,j,k,ir)
               u =    q(l,i,j,k,iu)
               v =    q(l,i,j,k,iv)
-              w =    q(l,i,j,k,iw)            
+              w =    q(l,i,j,k,iw)
               p =    q(l,i,j,k,ip)
               A =    q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
-              C =    q(l,i,j,k,iC)            
+              C =    q(l,i,j,k,iC)
 #if NENER>0
               do irad=1,nener
                  e(irad) = q(l,i,j,k,iC+irad)
@@ -940,20 +948,20 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               sBR0 = -(GRR-GLR)*dtdx*half +(ERR-ERL)*dtdz*half
               sCL0 = +(FRL-FLL)*dtdx*half -(ERL-ELL)*dtdy*half
               sCR0 = +(FRR-FLR)*dtdx*half -(ERR-ELR)*dtdy*half
-              
+
               AL = AL + sAL0
               AR = AR + sAR0
               BL = BL + sBL0
               BR = BR + sBR0
               CL = CL + sCL0
               CR = CR + sCR0
-              
+
               ! Source terms (including transverse derivatives)
-              sr0 = (-u*drx-dux*r)*dtdx + (-v*dry-dvy*r)*dtdy + (-w*drz-dwz*r)*dtdz 
+              sr0 = (-u*drx-dux*r)*dtdx + (-v*dry-dvy*r)*dtdy + (-w*drz-dwz*r)*dtdz
               if(ischeme.ne.1)then
-              su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy + (-w*duz+C*dAz/r)*dtdz 
+              su0 = (-u*dux-(dpx+B*dBx+C*dCx)/r)*dtdx + (-v*duy+B*dAy/r)*dtdy + (-w*duz+C*dAz/r)*dtdz
               sv0 = (-u*dvx+A*dBx/r)*dtdx + (-v*dvy-(dpy+A*dAy+C*dCy)/r)*dtdy + (-w*dvz+C*dBz/r)*dtdz
-              sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy + (-w*dwz-(dpz+A*dAz+B*dBz)/r)*dtdz 
+              sw0 = (-u*dwx+A*dCx/r)*dtdx + (-v*dwy+B*dCy/r)*dtdy + (-w*dwz-(dpz+A*dAz+B*dBz)/r)*dtdz
               endif
               sp0 = (-u*dpx-dux*gamma*p)*dtdx + (-v*dpy-dvy*gamma*p)*dtdy + (-w*dpz-dwz*gamma*p)*dtdz
 #if NENER>0
@@ -961,7 +969,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  su0 = su0 - ((dex(irad))/r)*dtdx
                  sv0 = sv0 - ((dey(irad))/r)*dtdy
                  sw0 = sw0 - ((dez(irad))/r)*dtdz
-                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz & 
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz &
                       & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
               end do
 #endif
@@ -994,7 +1002,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
 #endif
 
@@ -1011,7 +1019,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
 #endif
 
@@ -1028,7 +1036,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad) 
+                 qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
               end do
 #endif
 
@@ -1045,7 +1053,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad) 
+                 qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
               end do
 #endif
 
@@ -1062,7 +1070,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,ip,3) = MAX(smallp, qp(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,iC+irad,3) = e(irad) - dez(irad) 
+                 qp(l,i,j,k,iC+irad,3) = e(irad) - dez(irad)
               end do
 #endif
 
@@ -1079,7 +1087,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,ip,3) = MAX(smallp, qm(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,iC+irad,3) = e(irad) + dez(irad) 
+                 qm(l,i,j,k,iC+irad,3) = e(irad) + dez(irad)
               end do
 #endif
 
@@ -1342,15 +1350,19 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
-  
+
   ! local variables
-  integer ::i, j, k, n, l, idim, xdim
+  integer ::i, j, k, l, xdim
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
-  REAL(dp)::zero_flux, bn_mean, entho
+  real(dp)::zero_flux, bn_mean, entho
+
+#if NVAR>8
+  integer::n
+#endif
 
   xdim=ln-1
   entho=one/(gamma-one)
@@ -1359,7 +1371,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-           
+
               ! Enforce continuity for normal magnetic field
               bn_mean = half*(qm(l,i,j,k,bn,xdim)+qp(l,i,j,k,bn,xdim))
 
@@ -1387,7 +1399,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 #if NVAR>8
               do n = 9, nvar
                  qleft (n) = qm(l,i,j,k,n,xdim)
-                 qright(n) = qp(l,i,j,k,n,xdim)    
+                 qright(n) = qp(l,i,j,k,n,xdim)
               end do
 #endif
               ! Solve 1D Riemann problem
@@ -1413,7 +1425,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ELSE
                  CALL upwind(qleft,qright,fgdnv,zero_flux)
               ENDIF
-           
+
               ! Output fluxes
               flx(l,i,j,k,1  ) = fgdnv(1)  ! Mass density
               flx(l,i,j,k,5  ) = fgdnv(2)  ! Total energy
@@ -1429,7 +1441,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               do n = 9, nvar
                  flx(l,i,j,k,n) = fgdnv(n)
               end do
-#endif  
+#endif
               ! Normal velocity estimate
               tmp(l,i,j,k,1) = half*(qleft(3)+qright(3))
               ! Internal energy flux
@@ -1439,7 +1451,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
         end do
      end do
   end do
-  
+
 end subroutine cmpflxm
 !###########################################################
 !###########################################################
@@ -1474,9 +1486,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
 
   ! local variables
-  INTEGER ::i, j, k, n, l, idim, xdim, m, irad
+  INTEGER ::i, j, k, l, xdim
   REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fmean_x,fmean_y,qtmp
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright,qtmp
+  REAL(dp),DIMENSION(1:nvar+1)::fmean_x,fmean_y
   REAL(dp) :: ELL,ERL,ELR,ERR,SL,SR,SB,ST,SAL,SAR,SAT,SAB
   REAL(dp) :: zero_flux,E
   REAL(dp) :: cLLx,cRLx,cLRx,cRRx,cLLy,cRLy,cLRy,cRRy
@@ -1491,6 +1504,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
 
+#if NENER>0
+  INTEGER :: irad
+#endif
+
   xdim = lor - 1
 
   DO k = klo, khi
@@ -1503,9 +1520,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRL (l,1) = qLT(l,i,j,k,1,xdim)
               qLR (l,1) = qRB(l,i,j,k,1,xdim)
               qRR (l,1) = qLB(l,i,j,k,1,xdim)
-           END DO           
+           END DO
 
-           ! Pressure 
+           ! Pressure
            DO l = 1, ngrid
               qLL (l,2) = qRT(l,i,j,k,5,xdim)
               qRL (l,2) = qLT(l,i,j,k,5,xdim)
@@ -1513,7 +1530,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,2) = qLB(l,i,j,k,5,xdim)
            END DO
 
-           ! First parallel velocity 
+           ! First parallel velocity
            DO l = 1, ngrid
               qLL (l,3) = qRT(l,i,j,k,lp1,xdim)
               qRL (l,3) = qLT(l,i,j,k,lp1,xdim)
@@ -1521,7 +1538,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,3) = qLB(l,i,j,k,lp1,xdim)
            END DO
 
-           ! Second parallel velocity 
+           ! Second parallel velocity
            DO l = 1, ngrid
               qLL (l,4) = qRT(l,i,j,k,lp2,xdim)
               qRL (l,4) = qLT(l,i,j,k,lp2,xdim)
@@ -1545,7 +1562,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,7) = half*(qLT(l,i,j,k,bp2,xdim)+qLB(l,i,j,k,bp2,xdim))
            END DO
 
-           ! Orthogonal velocity 
+           ! Orthogonal velocity
            DO l = 1, ngrid
               qLL (l,5) = qRT(l,i,j,k,lor,xdim)
               qRL (l,5) = qLT(l,i,j,k,lor,xdim)
@@ -1574,21 +1591,21 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #endif
 
            ! Compute final fluxes
-            DO l = 1, ngrid 
+            DO l = 1, ngrid
 
                ! vx*by - vy*bx at the four edge centers
                ELL = qLL(l,3)*qLL(l,7) - qLL(l,4)*qLL(l,6)
                ERL = qRL(l,3)*qRL(l,7) - qRL(l,4)*qRL(l,6)
-               ELR = qLR(l,3)*qLR(l,7) - qLR(l,4)*qLR(l,6)  
-               ERR = qRR(l,3)*qRR(l,7) - qRR(l,4)*qRR(l,6) 
+               ELR = qLR(l,3)*qLR(l,7) - qLR(l,4)*qLR(l,6)
+               ERR = qRR(l,3)*qRR(l,7) - qRR(l,4)*qRR(l,6)
 
                if(iriemann2d==5)then
 
-                  
-                  rLL=qLL(l,1); pLL=qLL(l,2); uLL=qLL(l,3); vLL=qLL(l,4); ALL=qLL(l,6); BLL=qLL(l,7) ; CLL=qLL(l,8) 
-                  rLR=qLR(l,1); pLR=qLR(l,2); uLR=qLR(l,3); vLR=qLR(l,4); ALR=qLR(l,6); BLR=qLR(l,7) ; CLR=qLR(l,8) 
-                  rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8) 
-                  rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8) 
+
+                  rLL=qLL(l,1); pLL=qLL(l,2); uLL=qLL(l,3); vLL=qLL(l,4); ALL=qLL(l,6); BLL=qLL(l,7) ; CLL=qLL(l,8)
+                  rLR=qLR(l,1); pLR=qLR(l,2); uLR=qLR(l,3); vLR=qLR(l,4); ALR=qLR(l,6); BLR=qLR(l,7) ; CLR=qLR(l,8)
+                  rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8)
+                  rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8)
 #if NENER>0
                   do irad = 1,nener
                      pLL = pLL + qLL(l,8+irad)
@@ -1680,15 +1697,15 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   PtotLR=pLR+half*(ALR*ALR+BLR*BLR+CLR*CLR)
                   PtotRL=pRL+half*(ARL*ARL+BRL*BRL+CRL*CRL)
                   PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR)
-                  
-                  rcLLx=rLL*(uLL-SL); rcRLx=rRL*(SR-uRL) 
+
+                  rcLLx=rLL*(uLL-SL); rcRLx=rRL*(SR-uRL)
                   rcLRx=rLR*(uLR-SL); rcRRx=rRR*(SR-uRR)
-                  rcLLy=rLL*(vLL-SB); rcLRy=rLR*(ST-vLR) 
+                  rcLLy=rLL*(vLL-SB); rcLRy=rLR*(ST-vLR)
                   rcRLy=rRL*(vRL-SB); rcRRy=rRR*(ST-vRR)
-                  
+
                   ustar=(rcLLx*uLL+rcLRx*uLR+rcRLx*uRL+rcRRx*uRR+(PtotLL-PtotRL+PtotLR-PtotRR))/(rcLLx+rcLRx+rcRLx+rcRRx)
                   vstar=(rcLLy*vLL+rcLRy*vLR+rcRLy*vRL+rcRRy*vRR+(PtotLL-PtotLR+PtotRL-PtotRR))/(rcLLy+rcLRy+rcRLy+rcRRy)
-                  
+
                   rstarLLx=rLL*(SL-uLL)/(SL-ustar); BstarLL=BLL*(SL-uLL)/(SL-ustar)
                   rstarLLy=rLL*(SB-vLL)/(SB-vstar); AstarLL=ALL*(SB-vLL)/(SB-vstar)
                   rstarLL =rLL*(SL-uLL)/(SL-ustar)*(SB-vLL)/(SB-vstar)
@@ -1754,7 +1771,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      E=(SAL*SAB*EstarRR-SAL*SAT*EstarRL-SAR*SAB*EstarLR+SAR*SAT*EstarLL)/(SAR-SAL)/(SAT-SAB) &
                           & -SAT*SAB/(SAT-SAB)*(AstarT-AstarB)+SAR*SAL/(SAR-SAL)*(BstarR-BstarL)
                   endif
-                  
+
                   emf(l,i,j,k) = E
 
                else if(iriemann2d==3)then
@@ -1879,7 +1896,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
                   ! find the average value of E
                   E = forth*(ELL+ERL+ELR+ERR)
-                  
+
                   ! call the first solver in the x direction
                   ! density
                   qleft (1) = half*(qLL(l,1)+qLR(l,1))
@@ -1888,31 +1905,31 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   ! pressure
                   qleft (2) = half*(qLL(l,2)+qLR(l,2))
                   qright(2) = half*(qRR(l,2)+qRL(l,2))
-                  
+
                   ! vt1 becomes normal velocity
                   qleft (3) = half*(qLL(l,3)+qLR(l,3))
                   qright(3) = half*(qRR(l,3)+qRL(l,3))
-                  
+
                   ! bt1 becomes normal magnetic field
                   qleft (4) = half*(qLL(l,6)+qLR(l,6))
                   qright(4) = half*(qRR(l,6)+qRL(l,6))
-                  
+
                   ! vt2 becomes transverse velocity field
                   qleft (5) = half*(qLL(l,4)+qLR(l,4))
                   qright(5) = half*(qRR(l,4)+qRL(l,4))
-                  
-                  ! bt2 becomes transverse magnetic field 
+
+                  ! bt2 becomes transverse magnetic field
                   qleft (6) = half*(qLL(l,7)+qLR(l,7))
                   qright(6) = half*(qRR(l,7)+qRL(l,7))
-                  
+
                   ! velocity component perp. to the plane is now transverse
                   qleft (7) = half*(qLL(l,5)+qLR(l,5))
                   qright(7) = half*(qRR(l,5)+qRL(l,5))
-                  
+
                   ! magnetic field component perp. to the plane is now transverse
                   qleft (8) = half*(qLL(l,8)+qLR(l,8))
                   qright(8) = half*(qRR(l,8)+qRL(l,8))
-                  
+
 
 #if NENER>0
                   !non-thermal energies
@@ -1921,7 +1938,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qright(8+irad) = half*(qRR(l,8+irad)+qRL(l,8+irad))
                   end do
 #endif
-                  
+
                   zero_flux = 0.0
                   SELECT CASE (iriemann2d)
                   CASE (1)
@@ -1939,35 +1956,35 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   ! density
                   qleft (1) = half*(qLL(l,1)+qRL(l,1))
                   qright(1) = half*(qRR(l,1)+qLR(l,1))
-                  
+
                   ! pressure
                   qleft (2) = half*(qLL(l,2)+qRL(l,2))
                   qright(2) = half*(qRR(l,2)+qLR(l,2))
-                  
+
                   ! vt2 becomes normal velocity
                   qleft (3) = half*(qLL(l,4)+qRL(l,4))
                   qright(3) = half*(qRR(l,4)+qLR(l,4))
-                  
+
                   ! bt2 becomes normal magnetic field
                   qleft (4) = half*(qLL(l,7)+qRL(l,7))
                   qright(4) = half*(qRR(l,7)+qLR(l,7))
-                  
-                  ! vt1 becomes transverse velocity field 
+
+                  ! vt1 becomes transverse velocity field
                   qleft (5) = half*(qLL(l,3)+qRL(l,3))
                   qright(5) = half*(qRR(l,3)+qLR(l,3))
-                  
-                  ! bt1 becomes transverse magnetic field 
+
+                  ! bt1 becomes transverse magnetic field
                   qleft (6) = half*(qLL(l,6)+qRL(l,6))
                   qright(6) = half*(qRR(l,6)+qLR(l,6))
-                  
+
                   ! velocity component perp. to the plane is now transverse
                   qleft (7) = half*(qLL(l,5)+qRL(l,5))
                   qright(7) = half*(qRR(l,5)+qLR(l,5))
-                  
+
                   ! magnetic field component perp. to the plane is now transverse
                   qleft (8) = half*(qLL(l,8)+qRL(l,8))
                   qright(8) = half*(qRR(l,8)+qLR(l,8))
-                  
+
 #if NENER>0
                   !non-thermal energies
                   do irad = 1,nener
@@ -1988,11 +2005,11 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      write(*,*)'unknown 2D riemann solver'
                      call clean_stop
                   END SELECT
-                  
+
                   ! compute the final value of E including the 2D diffusive
-                  ! terms that ensure stability 
+                  ! terms that ensure stability
                   emf(l,i,j,k) = E + (fmean_x(6) - fmean_y(6))
-                  
+
                endif
 
             END DO
@@ -2016,12 +2033,19 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp)::dt
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
 
-  integer ::i, j, k, l, n, idim, irad
+  integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
+
+#if NENER>0
+  integer::irad
+#endif
+#if NVAR>8+NENER
+  integer::n
+#endif
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma
@@ -2118,7 +2142,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
               end do
            enddo
 #endif
-           
+
            ! Compute thermal pressure through EOS
            do l = 1, ngrid
               etot = uin(l,i,j,k,5) - emag(l) -erad(l)
@@ -2151,7 +2175,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
      end do
   end do
 #endif
- 
+
 end subroutine ctoprim
 !###########################################################
 !###########################################################
@@ -2166,20 +2190,32 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
   integer::ngrid
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
 
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::vmin,vmax,dff
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+#if NDIM==1
+  real(dp)::dfx
+#endif
+
+#if NDIM==2
+  real(dp)::dfx,dfy
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+#endif
+
+#if NDIM==3
+  real(dp)::dfx,dfy,dfz
   real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
   real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::vmin,vmax,dfx,dfy,dfz,dff
-  integer::ilo,ihi,jlo,jhi,klo,khi
-  
+#endif
+
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
@@ -2204,17 +2240,17 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
                 end do
              end do
           end do
-       end do     
+       end do
     end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   end if
 #endif
 
-#if NDIM==2   
+#if NDIM==2
   if(slope_type==0)then
-    dq=zero           
+    dq=zero
   else if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
@@ -2261,22 +2297,22 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
                     dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
                     dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
                     dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
-                    
+
                     vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
                     vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-                    
+
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dff  = half*(abs(dfx)+abs(dfy))
-                    
+
                     if(dff>zero)then
                        slop = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
                        slop = one
                     endif
-                    
+
                     dlim = slop
-                    
+
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
 
@@ -2286,7 +2322,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
   ! 1D transverse TVD slopes for face-centered magnetic fields
@@ -2328,7 +2364,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
        end do
     end do
   else
-     write(*,*)'Unknown mag. slope type'
+     write(*,*)'Unknown mag. slope type',dx,dt
      stop
   endif
 #endif
@@ -2525,9 +2561,9 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
-  endif     
+  endif
 
   ! 2D transverse TVD slopes for face-centered magnetic fields
   if(slope_mag_type==0)then
@@ -2801,5 +2837,5 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
      stop
   endif
 #endif
-  
+
 end subroutine uslope

@@ -1,12 +1,12 @@
 program center_whitenoise
   !---------------------------------------------------------------------
-  ! Ce programme recentre autour d'un pixel donne les fichiers ic_... 
+  ! Ce programme recentre autour d'un pixel donne les fichiers ic_...
   ! generes par GRAFIC.
   ! Ce programme doit lire en input les fichiers suivants:
   !          - un fichier white noise
   ! Il genere en output les fichiers suivants:
   !          - un fichier white noise
-  !             
+  !
   ! M. Gonzalez
   ! Saclay, le 31/08/01.
   !---------------------------------------------------------------------
@@ -31,7 +31,7 @@ program center_whitenoise
   CALL getarg(2,output)
 
   !  SAFETY CONDITION
-  if (input == output) then 
+  if (input == output) then
      write(*,*)'If input and output files are the same'
      write(*,*)'input will be erased'
      write(*,*)'so type DIFFERENT directories !!!!'
@@ -60,7 +60,7 @@ program center_whitenoise
 
   allocate(f1(np1,np2))
   allocate(f2(np1,np2))
-     
+
      ! READING INPUT FILE
   write(*,*)'Reading input file '//TRIM(input)
   open(11,file=input,form='unformatted')
@@ -88,7 +88,7 @@ program center_whitenoise
      write(12)((f2(i1,i2),i1=1,np1),i2=1,np2)
   end do
   close(11)
-  
+
   open(11,file=input,form='unformatted')
   read(11)  np1,np2,np3,iseed
   do i3=1,skip1
@@ -110,7 +110,7 @@ program center_whitenoise
      write(12)((f2(i1,i2),i1=1,np1),i2=1,np2)
   end do
   close(11)
-  
+
   open(11,file=input,form='unformatted')
   read(11) np1,np2,np3,iseed
   do i3=1,skip1
@@ -131,13 +131,13 @@ program center_whitenoise
   do i3=skip1+1,np3
      read(11)
   end do
-  
+
   close(11)
-  
+
   write(*,*)'done'
   close(12)
-    
+
   deallocate(f1,f2)
-     
+
 
 end program center_whitenoise

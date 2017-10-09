@@ -8,7 +8,7 @@ subroutine hydro_flag(ilevel)
   integer::ilevel
   ! -------------------------------------------------------------------
   ! This routine flag for refinement cells that satisfies
-  ! some user-defined physical criteria at the level ilevel. 
+  ! some user-defined physical criteria at the level ilevel.
   ! -------------------------------------------------------------------
   integer::i,j,ncache,nok,ix,iy,iz,iskip
   integer::igrid,ind,idim,ngrid,ivar
@@ -54,15 +54,15 @@ subroutine hydro_flag(ilevel)
        & err_grad_u==-1.0.and.&
        & jeans_refine(ilevel)==-1.0 )return
 
-#ifdef RT 
-  if( aexp .lt. rt_refine_aexp) return    
+#ifdef RT
+  if( aexp .lt. rt_refine_aexp) return
   if(    neq_chem        .and.          &
        & err_grad_d==-1.0.and.          &
        & err_grad_p==-1.0.and.          &
        & err_grad_u==-1.0.and.          &
        & jeans_refine(ilevel)==-1.0.and.&
-       & rt_err_grad_xHII==-1.0 .and.   & 
-       & rt_err_grad_xHI==-1.0          & 
+       & rt_err_grad_xHII==-1.0 .and.   &
+       & rt_err_grad_xHI==-1.0          &
   & ) &
       return
 #endif
@@ -118,7 +118,7 @@ subroutine hydro_flag(ilevel)
            end do
            call hydro_refine(uug,uum,uud,ok,ngrid)
         end do
-     
+
         if(poisson.and.jeans_refine(ilevel)>0.0)then
            call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
         endif
@@ -137,7 +137,8 @@ subroutine hydro_flag(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           !call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
+           call geometry_refine(xx,ok,ngrid,ilevel)
         end if
 
         ! Count newly flagged cells
@@ -147,15 +148,15 @@ subroutine hydro_flag(ilevel)
               nok=nok+1
            end if
         end do
-     
+
         do i=1,ngrid
            if(ok(i))flag1(ind_cell(i))=1
         end do
-        
+
         nflag=nflag+nok
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 
@@ -179,12 +180,15 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   ! user-defined physical criterion for refinement.
   ! P. Hennebelle 03/11/2005
   !-------------------------------------------------
-  integer::i,indi,irad
+  integer::i,indi
   real(dp)::lamb_jeans,tail_pix,pi,n_jeans
-  real(dp)::dens,tempe,emag,etherm,factG
+  real(dp)::dens,tempe,etherm,factG
+#if NENER>0
+  integer::irad
+#endif
   pi = twopi / 2.
   factG=1
-  if(cosmo)factG=3d0/8d0/pi*omega_m*aexp  
+  if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
   ! compute the size of the pixel
   tail_pix = boxlen / (2.d0)**ilevel
@@ -192,7 +196,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      indi = ind_cell(i)
      ! the thermal energy
      dens = max(uold(indi,1),smallr)
-     etherm = uold(indi,ndim+2) 
+     etherm = uold(indi,ndim+2)
      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
 #if NDIM > 1
      etherm = etherm - 0.5d0*uold(indi,3)**2/dens
@@ -210,7 +214,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      ! prevent numerical crash due to negative temperature
      tempe = max(tempe,smallc**2)
      ! compute the Jeans length (remember G=1)
-     lamb_jeans = sqrt( tempe * pi / dens / factG )  
+     lamb_jeans = sqrt( tempe * pi / dens / factG )
      ! the Jeans length must be smaller
      ! than n_jeans times the size of the pixel
      ok(i) = ok(i) .or. ( n_jeans*tail_pix >= lamb_jeans )

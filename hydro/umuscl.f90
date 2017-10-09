@@ -8,7 +8,7 @@
 !  uin         => (const)  input state
 !  gravin      => (const)  input gravitational acceleration
 !  iu1,iu2     => (const)  first and last index of input array,
-!  ju1,ju2     => (const)  cell centered,    
+!  ju1,ju2     => (const)  cell centered,
 !  ku1,ku2     => (const)  including buffer cells.
 !  flux       <=  (modify) return fluxes in the 3 coord directions
 !  if1,if2     => (const)  first and last index of output array,
@@ -21,24 +21,24 @@
 ! ----------------------------------------------------------------
 subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
-  use const             
+  use const
   use hydro_parameters
-  implicit none 
+  implicit none
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp 
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp
 
   ! Primitive variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
@@ -47,7 +47,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
-  
+
   ! Intermediate fluxes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
@@ -63,7 +63,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
-  ! Translate to primative variables, compute sound speeds  
+  ! Translate to primative variables, compute sound speeds
   call ctoprim(uin,qin,cin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
@@ -186,23 +186,28 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! Local variables
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, ip, irad
+  integer ::ir, iu, ip
   real(dp)::dtdx
-  real(dp)::r, u, p, a
-  real(dp)::drx, dux, dpx, dax
-  real(dp)::sr0, su0, sp0, sa0
+  real(dp)::r, u, p
+  real(dp)::drx, dux, dpx
+  real(dp)::sr0, su0, sp0
 #if NENER>0
+  integer::irad
   real(dp),dimension(1:nener)::e, dex, se0
 #endif
-  
+#if NVAR > NDIM + 2 + NENER
+  integer::n
+  real(dp)::a, dax, sa0
+#endif
+
   dtdx = dt/dx
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -233,7 +238,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
                  dex(irad) = dq(l,i,j,k,ip+irad,1)
               end do
 #endif
-              
+
               ! Source terms (including transverse derivatives)
               sr0 = -u*drx - (dux)*r
               sp0 = -u*dpx - (dux)*gamma*p
@@ -310,24 +315,29 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dy, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, ip, irad
+  integer ::ir, iu, iv, ip
   real(dp)::dtdx, dtdy
-  real(dp)::r, u, v, p, a
-  real(dp)::drx, dux, dvx, dpx, dax
-  real(dp)::dry, duy, dvy, dpy, day
-  real(dp)::sr0, su0, sv0, sp0, sa0
+  real(dp)::r, u, v, p
+  real(dp)::drx, dux, dvx, dpx
+  real(dp)::dry, duy, dvy, dpy
+  real(dp)::sr0, su0, sv0, sp0
 #if NENER>0
+  integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, se0
 #endif
-  
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+  real(dp)::a, dax, day, sa0
+#endif
+
   dtdx = dt/dx
   dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -361,7 +371,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  dex(irad) = dq(l,i,j,k,ip+irad,1)
               end do
 #endif
-              
+
               dry = dq(l,i,j,k,ir,2)
               duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
@@ -371,7 +381,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  dey(irad) = dq(l,i,j,k,ip+irad,2)
               end do
 #endif
-              
+
               ! source terms (with transverse derivatives)
               sr0 = -u*drx-v*dry - (dux+dvy)*r
               sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
@@ -483,25 +493,30 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dy, dz, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, iw, ip, irad
+  integer ::ir, iu, iv, iw, ip
   real(dp)::dtdx, dtdy, dtdz
-  real(dp)::r, u, v, w, p, a
-  real(dp)::drx, dux, dvx, dwx, dpx, dax
-  real(dp)::dry, duy, dvy, dwy, dpy, day
-  real(dp)::drz, duz, dvz, dwz, dpz, daz
-  real(dp)::sr0, su0, sv0, sw0, sp0, sa0
+  real(dp)::r, u, v, w, p
+  real(dp)::drx, dux, dvx, dwx, dpx
+  real(dp)::dry, duy, dvy, dwy, dpy
+  real(dp)::drz, duz, dvz, dwz, dpz
+  real(dp)::sr0, su0, sv0, sw0, sp0
 #if NENER>0
+  integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
 #endif
-  
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+  real(dp)::a, dax, day, daz, sa0
+#endif
+
   dtdx = dt/dx
   dtdy = dt/dy
   dtdz = dt/dz
@@ -538,7 +553,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  dex(irad) = dq(l,i,j,k,ip+irad,1)
               end do
 #endif
-              
+
               dry = dq(l,i,j,k,ir,2)
               dpy = dq(l,i,j,k,ip,2)
               duy = dq(l,i,j,k,iu,2)
@@ -549,7 +564,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  dey(irad) = dq(l,i,j,k,ip+irad,2)
               end do
 #endif
-              
+
               drz = dq(l,i,j,k,ir,3)
               dpz = dq(l,i,j,k,ip,3)
               duz = dq(l,i,j,k,iu,3)
@@ -572,7 +587,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  su0 = su0 - (dex(irad))/r
                  sv0 = sv0 - (dey(irad))/r
                  sw0 = sw0 - (dez(irad))/r
-                 se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) & 
+                 se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) &
                       & - (dux+dvy+dwz)*gamma_rad(irad)*e(irad)
               end do
 #endif
@@ -715,15 +730,18 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp 
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
-  
+
   ! local variables
-  integer ::i, j, k, n, l, idim, xdim
+  integer ::i, j, k, l, xdim
   real(dp)::entho
   real(dp),dimension(1:nvector,1:nvar),save::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1),save::fgdnv
+#if NVAR > NDIM + 2
+  integer ::n
+#endif
 
   entho=one/(gamma-one)
   xdim=ln-1
@@ -731,25 +749,25 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
-           
+
            ! Mass density
            do l = 1, ngrid
               qleft (l,1) = qm(l,i,j,k,1,xdim)
               qright(l,1) = qp(l,i,j,k,1,xdim)
            end do
-           
+
            ! Normal velocity
            do l = 1, ngrid
               qleft (l,2) = qm(l,i,j,k,ln,xdim)
               qright(l,2) = qp(l,i,j,k,ln,xdim)
            end do
-           
+
            ! Pressure
            do l = 1, ngrid
               qleft (l,3) = qm(l,i,j,k,ndim+2,xdim)
               qright(l,3) = qp(l,i,j,k,ndim+2,xdim)
            end do
-           
+
            ! Tangential velocity 1
 #if NDIM>1
            do l = 1, ngrid
@@ -763,7 +781,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qleft (l,5) = qm(l,i,j,k,lt2,xdim)
               qright(l,5) = qp(l,i,j,k,lt2,xdim)
            end do
-#endif           
+#endif
 #if NVAR > NDIM + 2
            ! Other advected quantities
            do n = ndim+3, nvar
@@ -772,7 +790,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  qright(l,n) = qp(l,i,j,k,n,xdim)
               end do
            end do
-#endif          
+#endif
            ! Solve Riemann problem
            if(riemann.eq.'acoustic')then
               call riemann_acoustic(qleft,qright,fgdnv,ngrid)
@@ -788,14 +806,14 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               write(*,*)'unknown Riemann solver'
               stop
            end if
-           
+
            ! Compute fluxes
-           
+
            ! Mass density
-           do l = 1, ngrid 
+           do l = 1, ngrid
               flx(l,i,j,k,1) = fgdnv(l,1)
            end do
-           
+
            ! Normal momentum
            do l = 1, ngrid
               flx(l,i,j,k,ln) = fgdnv(l,2)
@@ -812,7 +830,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
            do l = 1, ngrid
               flx(l,i,j,k,lt2) = fgdnv(l,5)
            end do
-#endif           
+#endif
            ! Total energy
            do l = 1, ngrid
               flx(l,i,j,k,ndim+2) = fgdnv(l,3)
@@ -838,7 +856,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
         end do
      end do
   end do
-  
+
 end subroutine cmpflxm
 !###########################################################
 !###########################################################
@@ -854,12 +872,18 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   real(dp)::dt
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
-  integer ::i, j, k, l, n, idim, irad
+  integer ::i, j, k, l
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+#endif
+#if NENER>0
+  integer ::irad
+#endif
 
   smalle = smallc**2/gamma/(gamma-one)
   dtxhalf = dt*half
@@ -941,7 +965,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
      end do
   end do
 #endif
- 
+
 end subroutine ctoprim
 !###########################################################
 !###########################################################
@@ -955,19 +979,26 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 
   integer::ngrid
   real(dp)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
 
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+#if NDIM==2
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+#endif
+#if NDIM==3
   real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
   real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::vmin,vmax,dfx,dfy,dfz,dff
+  real(dp)::dfz
+#endif
+#if NDIM>1
+  real(dp)::vmin,vmax,dfx,dfy,dff
+#endif
   integer::ilo,ihi,jlo,jhi,klo,khi
-  
+
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
@@ -1064,16 +1095,16 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
               else
-                 write(*,*)'Unknown slope type'
+                 write(*,*)'Unknown slope type',dx,dt
                  stop
               end if
            end do
         end do
-     end do     
+     end do
   end do
 #endif
 
-#if NDIM==2              
+#if NDIM==2
   if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
@@ -1120,22 +1151,22 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
                     dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
                     dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
-                    
+
                     vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
                     vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-                    
+
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dff  = half*(abs(dfx)+abs(dfy))
-                    
+
                     if(dff>zero)then
                        slop = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
                        slop = one
                     endif
-                    
+
                     dlim = slop
-                    
+
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
 
@@ -1205,7 +1236,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
 #endif
@@ -1333,27 +1364,27 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
                     dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
                     dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
-                    
+
                     vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                          &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
                          &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
                     vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                          &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
                          &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-                    
+
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dfz  = half*(q(l,i,j,k+1,n)-q(l,i,j,k-1,n))
                     dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
-                    
+
                     if(dff>zero)then
                        slop = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
                        slop = one
                     endif
-                    
+
                     dlim = slop
-                    
+
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
                     dq(l,i,j,k,n,3) = dlim*dfz
@@ -1445,9 +1476,9 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
-  endif     
+  endif
 #endif
-  
+
 end subroutine uslope

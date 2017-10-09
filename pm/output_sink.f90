@@ -3,8 +3,10 @@ subroutine backup_sink(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
-#endif 
+  include 'mpif.h'
+  integer,parameter::tag=1135
+  integer::dummy_io,info2
+#endif
 
   character(LEN=80)::filename
 
@@ -14,8 +16,6 @@ subroutine backup_sink(filename)
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::ii
   logical,allocatable,dimension(:)::nb
-  integer,parameter::tag=1135
-  integer::dummy_io,info2
 
   if(.not. sink) return
 
@@ -94,7 +94,7 @@ subroutine backup_sink(filename)
      write(ilun)sinkint_level ! Write level at which sinks where integrated
   endif
   close(ilun)
- 
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -105,7 +105,7 @@ subroutine backup_sink(filename)
      end if
   endif
 #endif
-  
+
 end subroutine backup_sink
 
 
@@ -116,26 +116,25 @@ subroutine output_sink(filename)
   implicit none
   character(LEN=80)::filename
 
-  integer::i,idim,ipart,isink
-  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom
+  integer::isink
+  integer::nx_loc,ilun
   real(dp)::scale,l_abs,rot_period,dx_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   character(LEN=80)::fileloc
-  character(LEN=5)::nchar
 
   if(verbose)write(*,*)'Entering output_sink'
 
   ilun=myid+10
 
-  ! Conversion factor from user units to cgs units                                                                   
+  ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_m=scale_d*scale_l**3d0
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
-  
+
   if(verbose)write(*,*)'Entering output_sink'
-  
+
   ilun=2*ncpu+myid+10
 
   fileloc=TRIM(filename)
@@ -148,7 +147,7 @@ subroutine output_sink(filename)
   write(ilun,'(" ================================================================================================================================== ")')
   write(ilun,'("        Id       Mass(Msol)             x                y                z               vx               vy               vz      ")')
   write(ilun,'(" ================================================================================================================================== ")')
-  
+
   do isink=1,nsink
      l_abs=max((lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5,1.d-50)
      rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs+tiny(0.d0))
@@ -169,7 +168,7 @@ subroutine output_sink_csv(filename)
   implicit none
   character(LEN=80)::filename,fileloc
 
-  integer::ilun,icpu,isink
+  integer::ilun,isink
 
   if(verbose)write(*,*)'Entering output_sink_csv'
 

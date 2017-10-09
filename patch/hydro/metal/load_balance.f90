@@ -22,7 +22,7 @@ subroutine load_balance
 
 #ifndef WITHOUTMPI
   if(myid==1)write(*,*)'Load balancing AMR grid...'
-  
+
   ! Put all particle in main tree trunk
   if(pic)then
      call make_tree_fine(levelmin)
@@ -117,9 +117,9 @@ subroutine load_balance
                     taill(kcpu,ilevel)=0
                  end if
               end if
-              numbl(kcpu,ilevel)=numbl(kcpu,ilevel)-1 
+              numbl(kcpu,ilevel)=numbl(kcpu,ilevel)-1
            end if
-        end do        
+        end do
         ! Connect to new linked list
         do i=1,ncache
            if(icpu==myid)then
@@ -209,7 +209,7 @@ subroutine load_balance
      call flag_fine(i,2)
      call refine_fine(i)
      call build_comm(i+1)
-  end do  
+  end do
   call flag_coarse
   call refine_coarse
   call build_comm(1)
@@ -239,7 +239,7 @@ subroutine cmp_new_cpu_map
   include 'mpif.h'
 #endif
   !---------------------------------------------------
-  ! This routine computes the new cpu map using 
+  ! This routine computes the new cpu map using
   ! the choosen ordering to balance load across cpus.
   !---------------------------------------------------
   integer::igrid,ncell,ncell_loc,ncache,ngrid
@@ -267,7 +267,7 @@ subroutine cmp_new_cpu_map
   !----------------------------------------
   ! Compute cell ordering and cost
   ! for leaf cells with cpu map = myid.
-  ! Store cost in flag1 and MAXIMUM  
+  ! Store cost in flag1 and MAXIMUM
   ! ordering key in hilbert_key of kind=8.
   !----------------------------------------
   ncell=0
@@ -469,7 +469,7 @@ subroutine cmp_new_cpu_map
 #if NDIM>2
         xc(ind,3)=(dble(iz)-0.5d0)*dx-dble(kcoarse_min)
 #endif
-     end do     
+     end do
      ncache=active(ilevel)%ngrid
      ! Loop over grids by vector sweeps
      do igrid=1,ncache,nvector
@@ -477,7 +477,7 @@ subroutine cmp_new_cpu_map
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do           
+        end do
         ! Loop over cells
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
@@ -510,7 +510,7 @@ subroutine cmp_new_cpu_map
   call make_virtual_coarse_int(cpu_map2(1))
   do ilevel=1,nlevelmax
      call make_virtual_fine_int(cpu_map2(1),ilevel)
-  end do 
+  end do
 
 end subroutine cmp_new_cpu_map
 !#########################################################################
@@ -586,10 +586,10 @@ subroutine cmp_ordering(x,order,nn)
      ncode=nx_loc*int(bscale)
      bit_length=int(log(dble(ncode))/log(2.))+1
      bscale=bscale/scale
-     
+
      do i=1,nn
         ix(i)=int(x(i,1)*bscale)
-#if NDIM>1           
+#if NDIM>1
         iy(i)=int(x(i,2)*bscale)
 #endif
 #if NDIM>2
@@ -622,13 +622,13 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   real(kind=8),dimension(1:nvector)::order_min,order_max
   !-----------------------------------------------------
   ! This routine computes the minimum and maximum index
-  ! key contained in the input cell and for the chosen 
+  ! key contained in the input cell and for the chosen
   ! ordering.
   !-----------------------------------------------------
   integer,dimension(1:nvector),save::ix,iy,iz
   integer::i,ncode,bit_length,nxny,nx_loc
 
-  real(dp)::theta1,theta2,theta3,theta4,dxx,dxmin  
+  real(dp)::theta1,theta2,theta3,theta4,dxx,dxmin
   real(kind=8)::dkey,scale,bscaleloc,bscale
 
   nx_loc=icoarse_max-icoarse_min+1
@@ -669,11 +669,11 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
      bit_length=int(log(dble(ncode))/log(2.0d0))
      bscaleloc=bscaleloc/scale
      bscale   =bscale   /scale
-     
+
 
      do i=1,nn
         ix(i)=int(x(i,1)*bscaleloc)
-#if NDIM>1           
+#if NDIM>1
         iy(i)=int(x(i,2)*bscaleloc)
 #endif
 #if NDIM>2

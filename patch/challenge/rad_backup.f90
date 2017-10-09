@@ -4,7 +4,7 @@ subroutine backup_radiation(filename)
   use radiation_commons, ONLY: Erad
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
   character(LEN=80)::filename
 
@@ -93,7 +93,7 @@ subroutine store_radiation(filename)
   use radiation_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
   character(LEN=80)::filename
@@ -122,7 +122,7 @@ subroutine store_radiation(filename)
   write(ilun)cpu_e
   write(ilun)cpu_f
   close(ilun)
- 
+
   ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -141,7 +141,7 @@ subroutine restore_radiation
   use radiation_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'  
+  include 'mpif.h'
 #endif
 
   integer::ilun
@@ -154,7 +154,7 @@ subroutine restore_radiation
   ilun=ncpu+myid+10
   call title(nrestart,nchar)
 
-  if(IOGROUPSIZEREP>0)then 
+  if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
      fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/radgpu_'//TRIM(nchar)//'.out'
   else
@@ -190,7 +190,7 @@ subroutine restore_radiation
   read(ilun)cpu_e
   read(ilun)cpu_f
   close(ilun)
-  
+
     ! Send the token (if this create problem here please remove here and above)
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then

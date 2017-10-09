@@ -4,7 +4,7 @@ subroutine refine
 
   integer::ilevel
 
-  if(verbose)write(*,*)'Entering refine' 
+  if(verbose)write(*,*)'Entering refine'
 
   call refine_coarse
   call build_comm(1)
@@ -27,21 +27,22 @@ subroutine refine_coarse
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::nxny,i,j,k
-  integer::ind,info,ibound
+  integer::ind,ibound
   logical::boundary_region
   logical::ok_free
   integer,dimension(1:nvector),save::ind_cell_tmp
 #ifdef LONGINT
   integer(i8b)::tmp_long
 #endif
-  
+
   if(verbose)write(*,*)'  Entering refine_coarse'
-  
+
   ! Constants
   nxny=nx*ny
-  
+
   ! Compute cell authorization map
   call authorize_coarse
 
@@ -208,7 +209,7 @@ subroutine make_grid_coarse(ind_cell,ibound,boundary_region)
   ! Connect to father cell
   son(ind_cell)=ind_grid_son
   father(ind_grid_son)=ind_cell
-  
+
   ! Connect to neighboring father cells
   do j=1,twondim
      ixn(j)=ix
@@ -333,20 +334,21 @@ subroutine refine_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   !---------------------------------------------------------
   ! This routine refines cells at level ilevel if cells
   ! are flagged for refinement and are not already refined.
-  ! This routine destroys refinements for cells that are 
+  ! This routine destroys refinements for cells that are
   ! not flagged for refinement and are already refined.
-  ! For single time-stepping, numerical rules are 
+  ! For single time-stepping, numerical rules are
   ! automatically satisfied. For adaptive time-stepping,
   ! numerical rules are checked before refining any cell.
   !---------------------------------------------------------
   integer::ncache,ngrid
   integer::igrid,icell,i
-  integer::ind,iskip,info,icpu,ibound
+  integer::ind,iskip,icpu,ibound
   integer::ncreate_tmp,nkill_tmp
   logical::boundary_region
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -370,7 +372,7 @@ subroutine refine_fine(ilevel)
   ! Step 1: if cell is flagged for refinement and
   ! if it is not already refined, create a son grid.
   !---------------------------------------------------
-        
+
   !------------------------------------
   ! Refine cells marked for refinement
   !------------------------------------
@@ -401,7 +403,7 @@ subroutine refine_fine(ilevel)
            end do
         else
            do i=1,ngrid
-              ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)           
+              ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
            end do
         end if
         ! Loop over cells
@@ -457,7 +459,7 @@ subroutine refine_fine(ilevel)
   ! Case 2: if cell is not flagged for refinement,but
   ! it is refined, then destroy its child grid.
   !-----------------------------------------------------
-  nkill=0  
+  nkill=0
   do icpu=1,ncpu+nboundary  ! Loop over cpus and boundaries
      if(icpu==myid)then
         ibound=0
@@ -484,7 +486,7 @@ subroutine refine_fine(ilevel)
            end do
         else
            do i=1,ngrid
-              ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)           
+              ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
            end do
         end if
         do ind=1,twotondim     ! Loop over cells
@@ -523,7 +525,7 @@ subroutine refine_fine(ilevel)
                  end if
               end do
               call kill_grid(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
-           end if           
+           end if
         end do  ! End loop over cells
      end do
   end do
@@ -577,7 +579,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   !--------------------------------------------------------------
   ! This routine create new grids at level ilevel (ilevel >= 2)
   ! contained in father cell ind_cell(:).
-  ! ind_grid(:) is the number of the grid that contains 
+  ! ind_grid(:) is the number of the grid that contains
   ! the father cell and ind = 1, 2, 3, 4, 5, 6, 7, or 8.
   ! The actual father cell number is:
   ! ind_cell = ncoarse + (ind-1)*ngridmax + ind_grid
@@ -604,7 +606,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
-#endif  
+#endif
 
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
@@ -629,7 +631,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      numbf=numbf-1
      used_mem=ngridmax-numbf
   end do
-  
+
   ! Set new grids position
   iz=(ind-1)/4
   iy=(ind-1-4*iz)/2
@@ -677,7 +679,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         end do
      end do
   end if
-  
+
   ! Update cpu map
   if(boundary_region)then
      do j=1,twotondim
@@ -917,22 +919,22 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
 #endif
 
 #ifdef RT
-  if(upload_equilibrium_x) then                                       
-     ! Enforce equilibrium on ionization states when merging, to      
+  if(upload_equilibrium_x) then
+     ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
-     do i=1,nn                                                        
+     do i=1,nn
         call calc_equilibrium_xion(uold(ind_cell(i),1:nvar) &
-             , rtuold(ind_cell(i),1:nrtvar), xion)    
+             , rtuold(ind_cell(i),1:nrtvar), xion)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
-     enddo                                                            
-  endif                                                               
+     enddo
+  endif
 #endif
 
   ! Gather son grids
   do i=1,nn
      ind_grid_son(i)=son(ind_cell(i))
   end do
-  
+
   ! Disconnect son grids from father cells
   do i=1,nn
      son(ind_cell(i))=0
@@ -959,7 +961,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
               tailb(ibound,ilevel)=0
            end if
         end if
-        numbb(ibound,ilevel)=numbb(ibound,ilevel)-1 
+        numbb(ibound,ilevel)=numbb(ibound,ilevel)-1
      end do
   else
      do i=1,nn
@@ -982,7 +984,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
               taill(icpu,ilevel)=0
            end if
         end if
-        numbl(icpu,ilevel)=numbl(icpu,ilevel)-1 
+        numbl(icpu,ilevel)=numbl(icpu,ilevel)-1
      end do
   end if
 
@@ -1087,5 +1089,5 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      tailf=igrid
      numbf=numbf+1
   end do
-  
+
 end subroutine kill_grid

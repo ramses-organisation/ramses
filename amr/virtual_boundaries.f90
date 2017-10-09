@@ -1,4 +1,4 @@
-!################################################################ 
+!################################################################
 !################################################################
 !################################################################
 !################################################################
@@ -25,7 +25,7 @@ subroutine authorize_coarse
   end do
   end do
   end do
-  
+
 end subroutine authorize_coarse
 !################################################################
 !################################################################
@@ -62,7 +62,7 @@ subroutine authorize_fine(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -72,7 +72,7 @@ subroutine authorize_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   ! Scaling factor
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -152,15 +152,15 @@ subroutine authorize_fine(ilevel)
                     endif
                  end do
               end do
-           else ! recursive bisection method                                                          
+           else ! recursive bisection method
                do i=1,ngrid
-                  ! Test if cell overlaps the cpu                                                     
+                  ! Test if cell overlaps the cpu
                   test=.true.
                   xmin=xx(i,:)-0.5*dx_loc
                   xmax=xx(i,:)+0.5*dx_loc
                   do idim=1,ndim
-                     ! This needs to be a >=, not a >, to precisely match the                         
-                     ! ordering/=case for refinement flagging                                         
+                     ! This needs to be a >=, not a >, to precisely match the
+                     ! ordering/=case for refinement flagging
                      test=test .and. (bisec_cpubox_max(myid,idim).ge.xmin(idim) &
                                           .and. bisec_cpubox_min(myid,idim).le.xmax(idim))
                   end do
@@ -181,13 +181,13 @@ subroutine authorize_fine(ilevel)
                  end do
               else
                  do i=1,ngrid
-                    ! Test if cell overlaps the cpu with new cpu map                                  
+                    ! Test if cell overlaps the cpu with new cpu map
                     test=.true.
                     xmin=xx(i,:)-0.5*dx_loc
                     xmax=xx(i,:)+0.5*dx_loc
                     do idim=1,ndim
-                       ! This needs to be a >=, not a >, to precisely match the                       
-                       ! ordering/=case for refinement flagging                                       
+                       ! This needs to be a >=, not a >, to precisely match the
+                       ! ordering/=case for refinement flagging
                        test=test .and. (bisec_cpubox_max2(myid,idim).ge.xmin(idim) &
                             .and. bisec_cpubox_min2(myid,idim).le.xmax(idim))
                     end do
@@ -208,7 +208,7 @@ subroutine authorize_fine(ilevel)
   ! End loop over cpus
 
   ! Apply dilatation operator over flag2 cells on virtual cells only
-     
+
   flag2(0)=0
   ! Set flag2 to 0 for physical boundary grids
   do ibound=1,nboundary
@@ -305,13 +305,16 @@ subroutine make_virtual_coarse_int(xx)
 #endif
   integer,dimension(1:ncoarse+ngridmax*twotondim)::xx
   !-----------------------------------------------------------
-  ! This routine communicates virtual boundary conditions 
+  ! This routine communicates virtual boundary conditions
   ! at the coarse level for integer arrays.
   !-----------------------------------------------------------
   integer::nxny,ncell
+
+#ifndef WITHOUTMPI
   integer::i,j,k
   integer::icell,info
   integer,dimension(:),allocatable::ind_cell,fff,ffg
+#endif
 
   ! Constants
   nxny=nx*ny
@@ -333,7 +336,7 @@ subroutine make_virtual_coarse_int(xx)
   end do
   end do
   end do
-    
+
   ! Communications
   fff=0; ffg=0
   do icell=1,ncell
@@ -343,7 +346,7 @@ subroutine make_virtual_coarse_int(xx)
   do icell=1,ncell
      xx(ind_cell(icell))=ffg(icell)
   end do
-     
+
   ! Dealocate local arrays
   deallocate(ind_cell,fff,ffg)
 #endif
@@ -366,10 +369,12 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any double precision array in the AMR grid.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -385,7 +390,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
-  
+
   ! Gather emission array
   do icpu=1,ncpu
     if (emission(icpu,ilevel)%ngrid>0) then
@@ -422,7 +427,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
         do i=1,reception(icpu,ilevel)%ngrid
           xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%u(i+step,1)
         end do
-      end do 
+      end do
     end if
   end do
 
@@ -450,10 +455,12 @@ subroutine make_virtual_fine_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel for any integer array in the AMR grid.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -469,7 +476,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
-  
+
   ! Gather emission array
   do icpu=1,ncpu
     if (emission(icpu,ilevel)%ngrid>0) then
@@ -506,7 +513,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
         do i=1,reception(icpu,ilevel)%ngrid
           xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%f(i+step,1)
         end do
-      end do 
+      end do
     end if
   end do
 
@@ -533,11 +540,11 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for double precision arrays.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
 #endif
@@ -589,7 +596,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,info)
      end if
   end do
-  
+
   ! Receive all messages
   countrecv=0
   do icpu=myid+1,ncpu
@@ -602,7 +609,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
-  
+
   ! Scatter reception array
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
@@ -667,7 +674,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
            xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
                 & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
         end do
-      end do 
+      end do
     end if
   end do
 
@@ -697,11 +704,11 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! This routine communicates virtual boundaries among all cpu's.
   ! at level ilevel in a reverse way for integer arrays.
   ! -------------------------------------------------------------------
+#ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
 #endif
@@ -727,20 +734,20 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-  
+
   ! Receive all messages
   countrecv=0
   do icpu=1,myid-1
      ncache=emission(icpu,ilevel)%ngrid
      if(ncache>0) then
         countrecv=countrecv+1
-        ! request to send 
+        ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%f,ncache*twotondim, &
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
-  
+
   ! Send all messages
   countsend=0
   do icpu=1,ncpu
@@ -754,7 +761,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,info)
      end if
   end do
-  
+
   ! Receive all messages
   countrecv=0
   do icpu=myid+1,ncpu
@@ -767,7 +774,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
-  
+
   ! Scatter reception array
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
@@ -781,7 +788,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-  
+
   else
 
   ! Receive all messages
@@ -807,7 +814,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-  
+
   ! Send all messages
   countsend=0
   do icpu=1,ncpu
@@ -835,7 +842,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         end do
      end if
   end do
-  
+
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
 
@@ -866,9 +873,9 @@ subroutine build_comm(ilevel)
   integer::ncache,ind,iskip
   integer::i,j,k,nxny
   integer::igrid,jgrid,ngrid
+#ifndef WITHOUTMPI
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-#ifndef WITHOUTMPI
   integer,dimension(ncpu)::sendbuf,recvbuf
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::countsend,countrecv
@@ -893,7 +900,7 @@ subroutine build_comm(ilevel)
         end if
      end do
      end do
-     end do    
+     end do
      call make_virtual_coarse_int(flag2(1))
   else
      ! Initialize flag2 to local adress for cpu map = myid cells
@@ -952,7 +959,7 @@ subroutine build_comm(ilevel)
      active(ilevel)%ngrid=0
      deallocate(active(ilevel)%igrid)
   end if
-  if(ncache>0)then     
+  if(ncache>0)then
      ! Allocate grid index to new communicator
      active(ilevel)%ngrid=ncache
      allocate(active(ilevel)%igrid(1:ncache))
@@ -982,7 +989,7 @@ subroutine build_comm(ilevel)
         boundary(ibound,ilevel)%ngrid=0
         deallocate(boundary(ibound,ilevel)%igrid)
      end if
-     if(ncache>0)then     
+     if(ncache>0)then
         ! Allocate grid index to new communicator
         boundary(ibound,ilevel)%ngrid=ncache
         allocate(boundary(ibound,ilevel)%igrid(1:ncache))
@@ -1053,7 +1060,7 @@ subroutine build_comm(ilevel)
      if(ncache>0)allocate(emission(icpu,ilevel)%igrid(1:ncache))
   end do
 
-  ! Receive grid list    
+  ! Receive grid list
   countrecv=0
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%ngrid

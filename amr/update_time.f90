@@ -83,41 +83,44 @@ subroutine output_timer(write_file, filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-  real(kind=8) :: total, gtotal, avtime, rmstime
+  real(kind=8) :: gtotal, avtime, rmstime
   real(kind=8), dimension(ncpu) :: vtime
   integer,      dimension(ncpu) :: all_ntimer
   logical,      dimension(ncpu) :: gprint_timer
-  integer      :: imn, imx, mpi_err, icpu, i
-  logical      :: o, print_timer, write_file
+  integer      :: imn, imx, mpi_err, icpu
+  logical      :: print_timer
+#endif
+  real(kind=8) :: total
+  integer      :: i
+  logical      :: id_is_one, write_file
   integer      :: ilun=11
   character(LEN=80)::filename, fileloc !Optional for writing timing info
 !-----------------------------------------------------------------------
-  o = myid == 1
+  id_is_one = myid == 1
   total = 1e-9
   if (.not. write_file) ilun=6 ! 6 = std output
-  if (o .and. write_file) then
+  if (id_is_one .and. write_file) then
      fileloc=TRIM(filename) ! Open file for timing info
      open(unit=ilun,file=fileloc,form='formatted')
   endif
 
-  if (o .and. ncpu==1) write (ilun,'(/a,i7,a)') '     seconds         %    STEP (rank=',myid,')'
+  if (id_is_one .and. ncpu==1) write (ilun,'(/a,i7,a)') '     seconds         %    STEP (rank=',myid,')'
   do i = 1,ntimer
      total = total + time(i)
   end do
   if (ncpu==1) then
      do i = 1,ntimer
-        if (o .and. time(i)/total > 0.001) write (ilun,'(f12.3,4x,f6.1,4x,a24)') &
+        if (id_is_one .and. time(i)/total > 0.001) write (ilun,'(f12.3,4x,f6.1,4x,a24)') &
           time(i), 100.*time(i)/total,labels(i)
      end do
-     if (o) write (ilun,'(f12.3,4x,f6.1,4x,a)') total, 100., 'TOTAL'
+     if (id_is_one) write (ilun,'(f12.3,4x,f6.1,4x,a)') total, 100., 'TOTAL'
   end if
 #ifndef WITHOUTMPI
   if (ncpu > 1) then
      ! Check that timers are consistent across ranks
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_GATHER(ntimer,1,MPI_INTEGER,all_ntimer,1,MPI_INTEGER,0,MPI_COMM_WORLD,mpi_err)
-     if (o) then
+     if (id_is_one) then
         if (maxval(all_ntimer) .ne. minval(all_ntimer)) then
            write (ilun,*)
            write (ilun,*) '--------------------------------------------------------------------'
@@ -154,12 +157,12 @@ subroutine output_timer(write_file, filename)
      call MPI_ALLREDUCE(total,gtotal,1,MPI_REAL8,MPI_SUM,MPI_COMM_WORLD,mpi_err)
      gtotal = gtotal / ncpu
 
-     if (o) write (ilun,*) '--------------------------------------------------------------------'
-     if (o) write (ilun,'(/a)') '     minimum       average       maximum' // &
+     if (id_is_one) write (ilun,*) '--------------------------------------------------------------------'
+     if (id_is_one) write (ilun,'(/a)') '     minimum       average       maximum' // &
                   '  standard dev        std/av       %   rmn   rmx  TIMER'
      do i = 1,ntimer
         call MPI_GATHER(real(time(i),kind=8),1,MPI_REAL8,vtime,1,MPI_REAL8,0,MPI_COMM_WORLD,mpi_err)
-        if (o) then
+        if (id_is_one) then
            if (maxval(vtime)/gtotal > 0.001) then
               avtime  = sum(vtime) / ncpu ! average time used
               imn     = minloc(vtime,1)
@@ -170,10 +173,10 @@ subroutine output_timer(write_file, filename)
            endif
         endif
      end do
-     if (o) write (ilun,'(f12.3,4x,f6.1,4x,a)') total, 100., 'TOTAL'
+     if (id_is_one) write (ilun,'(f12.3,4x,f6.1,4x,a)') total, 100., 'TOTAL'
   endif
 #endif
-  if (o) close(ilun)
+  if (id_is_one) close(ilun)
 end subroutine
 !=======================================================================
 subroutine reset_timer
@@ -196,12 +199,12 @@ subroutine update_time(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  real(kind=8)::ttend
+  real(kind=8),save::ttstart=0
 #endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons
-  real(kind=8)::ttend
-  real(kind=8),save::ttstart=0
   integer::i,itest
 
   ! Local constants
@@ -357,8 +360,8 @@ subroutine clean_stop
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
   integer::info
+#endif
   integer :: ilevel
   character(LEN=80)::str
 
@@ -451,7 +454,7 @@ end subroutine clean_stop
 subroutine writemem(usedmem)
   real(kind=4)::usedmem
 
-  usedmem=dble(usedmem)*4096
+  usedmem=real(usedmem)*4096
 
   if(usedmem>1024.**4.)then
      write(*,999)usedmem/1024.**4.
@@ -471,16 +474,20 @@ subroutine writemem(usedmem)
 end subroutine writemem
 
 subroutine getmem(outmem)
-  use amr_commons,only:myid,IOGROUPSIZE,ncpu
+  use amr_commons,only:myid
+#ifndef WITHOUTMPI
+  use amr_commons,only:IOGROUPSIZE
+  use amr_commons,only:ncpu
+#endif
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::dummy_io,info2
 #endif
   real(kind=4)::outmem
   character(len=300) :: dir, dir2, file
   integer::read_status
   integer,parameter::tag=1134
-  integer::dummy_io,info2
   integer::nmem,ind,j
   logical::file_exists
 

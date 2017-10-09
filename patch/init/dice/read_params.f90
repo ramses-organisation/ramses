@@ -1,10 +1,10 @@
 module dice_commons
   use amr_commons
   use hydro_commons
-  
+
   ! particle data
   character(len=512)::ic_file, ic_format
-  ! misc  
+  ! misc
   real(dp)::IG_rho         = 1.0D-5
   real(dp)::IG_T2          = 1.0D7
   real(dp)::IG_metal       = 0.01
@@ -155,7 +155,7 @@ subroutine read_params
      call clean_stop
   endif
 #endif
-  
+
   !Write I/O group size information
   if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
   if(IOGROUPSIZE>0) write(*,*)'IOGROUPSIZE=',IOGROUPSIZE
@@ -184,7 +184,7 @@ subroutine read_params
   ! Read the namelist
   !-------------------------------------------------
 
-  ! Wait for the token                                                                                                                                                                                
+  ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
@@ -338,7 +338,7 @@ subroutine read_params
      end if
   endif
 #endif
-  
+
 
 
   !-----------------
@@ -352,7 +352,7 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
-  
+
   !-----------------------------------
   ! Rearrange level dependent arrays
   !-----------------------------------
@@ -387,7 +387,7 @@ subroutine read_params
      use_proper_time=.false.
      convert_birth_times=.false.
   endif
-     
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'

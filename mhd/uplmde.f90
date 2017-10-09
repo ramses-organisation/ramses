@@ -8,16 +8,17 @@ subroutine diffusion
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif  
-  integer::ilevel,icycle,nsubdiff,ivar,i,iskip,ind,info
-  real(dp)::dx,scale,dx_loc,dtdiff,norm
+  integer::info
+#endif
+  integer::ilevel,icycle,nsubdiff
+  real(dp)::dx=1.,scale,dx_loc,dtdiff
   real(dp),dimension(1:3)::skip_loc
 
   ! Determine minimum mesh size
   do ilevel=levelmin,nlevelmax
      if(numbtot(1,ilevel)>0)dx=0.5D0**ilevel
   end do
-  
+
   ! Rescaling factors
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
@@ -27,7 +28,7 @@ subroutine diffusion
   dx_loc=dx/scale
 
   dtdiff=0.05*dx_loc**2/eta_mag
-  nsubdiff=dtnew(levelmin)/dtdiff
+  nsubdiff=int(dtnew(levelmin)/dtdiff,kind=4)
   nsubdiff=nsubdiff+1
   dtdiff=-dtnew(levelmin)/dble(nsubdiff)*eta_mag
 
@@ -70,7 +71,7 @@ subroutine diffusion_fine(ilevel,dtdiff)
   integer::ilevel
   real(dp)::dtdiff
 
-  integer::i,ivar,igrid,ncache,ngrid
+  integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -104,7 +105,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   ! This routine gathers first MHD variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It then computes
   ! the current at cell edges. Finally, currents are corrected from finer level
-  ! and boundary currents are stored in buffer regions. Updated 
+  ! and boundary currents are stored in buffer regions. Updated
   ! conservative variables are stored in array unew(:).
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -113,8 +114,6 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp),dimension(1:nvector,0:twondim  ,1:6   ),save::B1
   integer ,dimension(1:nvector,0:twondim)         ,save::ind1
   real(dp),dimension(1:nvector,1:twotondim,1:6   ),save::B2
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::v2
-  real(dp),dimension(1:nvector,1:ndim),save::vv,xx
 
   logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::ok
   logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::buffer
@@ -124,25 +123,20 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp),dimension(1:nvector, 1:2, 1:3, 1:3),save::emfx
   real(dp),dimension(1:nvector, 1:3, 1:2, 1:3),save::emfy
   real(dp),dimension(1:nvector, 1:3, 1:3, 1:2),save::emfz
-  real(dp),dimension(1:nvector),save :: dB
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,igrid
   logical,dimension(1:nvector),save::exist_nbor
 
   real(dp),dimension(1:3)::skip_loc
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
-  integer::ind,ix,iy,iz
-  integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3
-  integer::i1min,i1max,j1min,j1max,k1min,k1max
-  integer::i2min,i2max,j2min,j2max,k2min,k2max
-  integer::i3min,i3max,j3min,j3max,k3min,k3max
+  integer::i,j,ind_son,ind_father,iskip,nbuffer,ibuffer
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3
   integer::ind_father1,ind_father2,ind_father3
   integer::ind_buffer1,ind_buffer2,ind_buffer3
   integer::ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
   real(dp)::dx,dflux,weight,dflux_x,dflux_y,dflux_z,scale,dx_loc
 
   ! Mesh size at level ilevel in coarse cell units
-  dx=0.5D0**ilevel  
+  dx=0.5D0**ilevel
 
   ! Rescaling factors
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -159,7 +153,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -167,14 +161,14 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   do k1=0,2
   do j1=0,2
   do i1=0,2
-     
+
      ! Check if neighboring grid exists
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
         igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
         exist_nbor(i)=igrid_nbor(i)>0
      end do
-     
+
      ! If not, interpolate variables from parent cells
      nbuffer=0
      do i=1,ncache
@@ -213,11 +207,11 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
         do i=1,ncache
            ind_cell(i)=iskip+igrid_nbor(i)
         end do
-        
+
         i3=1+2*(i1-1)+i2
         j3=1+2*(j1-1)+j2
         k3=1+2*(k1-1)+k2
-        
+
         ! Gather MHD variables
         if(i3>=0)then
            ibuffer=0
@@ -252,7 +246,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
               end if
            end do
         endif
-        
+
         ! Gather refinement flag
         do i=1,ncache
            if(exist_nbor(i))then
@@ -263,7 +257,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
               buffer(i,i3,j3,k3)=.true.
            end if
         end do
-        
+
      end do
      end do
      end do
@@ -343,7 +337,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
           &    -( emfz(i,i3,j3,k3)-emfz(i,i3,j3+1,k3) )
         unew(ind_cell(i),ivar1)=unew(ind_cell(i),ivar1)+dflux_x*dtdiff/dx_loc
         dflux_x=( emfy(i,i3+1,j3,k3)-emfy(i,i3+1,j3,k3+1) ) &
-          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )  
+          &    -( emfz(i,i3+1,j3,k3)-emfz(i,i3+1,j3+1,k3) )
         unew(ind_cell(i),ivar4)=unew(ind_cell(i),ivar4)+dflux_x*dtdiff/dx_loc
      end do
      ! Update By using constraint transport
@@ -514,7 +508,7 @@ end do
         unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)-dflux*0.5
      endif
   end do
-  
+
   ! Update coarse Bx and Bz using fine EMFy on X=1 and Z=1 grid edge
   ind_father1=1+(i1  )+3*(j1  )+9*(k1+1)
   ind_father2=1+(i1+1)+3*(j1  )+9*(k1+1)
@@ -604,7 +598,7 @@ end do
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
         unew(ind_buffer3,ivar2)=unew(ind_buffer3,ivar2)+dflux*0.5
         unew(ind_buffer1,ivar4)=unew(ind_buffer1,ivar4)+dflux*0.5
-     endif  
+     endif
   end do
 
   ! Update coarse Bx and By using fine EMFz on X=1 and Y=1 grid edge
@@ -660,7 +654,7 @@ end subroutine diffine1
 !###########################################################
 subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
      & Nx,Ny,Nz,ngrid,dx,dy,dz)
-  use amr_parameters,ONLY:dp,verbose,nvector
+  use amr_parameters,ONLY:dp,nvector
   implicit none
   integer :: Nx,Ny,Nz,ngrid
   real(dp),dimension(1:nvector, 0:Nx+2,-1:Ny+2,-1:Nz+2) :: Bx
@@ -675,7 +669,6 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
   real(dp) :: dBx_arete_dy,dBx_arete_dz
   real(dp) :: dBy_arete_dx,dBy_arete_dz
   real(dp) :: dBz_arete_dx,dBz_arete_dy
-  real(dp) :: dx_L,dx_R,dy_L,dy_R,dz_L,dz_R
   integer  :: ic,i,j,k,im1,jm1,km1
   integer  :: Nxp1,Nyp1,Nzp1
 
@@ -690,9 +683,9 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
         jm1=j-1
         do i=1,Nx
            do ic=1,ngrid
-              dBz_arete_dy=(Bz(ic,i,j,k)-Bz(ic,i,jm1,k))
-              dBy_arete_dz=(By(ic,i,j,k)-By(ic,i,j,km1))
-              Ex_arete(ic,i,j,k)=(dBz_arete_dy-dBy_arete_dz)/dx
+              dBz_arete_dy=(Bz(ic,i,j,k)-Bz(ic,i,jm1,k))/dy
+              dBy_arete_dz=(By(ic,i,j,k)-By(ic,i,j,km1))/dz
+              Ex_arete(ic,i,j,k)=(dBz_arete_dy-dBy_arete_dz)
            enddo
         enddo
      enddo
@@ -705,9 +698,9 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
         do i=1,Nxp1
            im1=i-1
            do ic=1,ngrid
-              dBx_arete_dz=(Bx(ic,i,j,k)-Bx(ic,i,j,km1))
-              dBz_arete_dx=(Bz(ic,i,j,k)-Bz(ic,im1,j,k))
-              Ey_arete(ic,i,j,k)=(dBx_arete_dz-dBz_arete_dx)/dx
+              dBx_arete_dz=(Bx(ic,i,j,k)-Bx(ic,i,j,km1))/dz
+              dBz_arete_dx=(Bz(ic,i,j,k)-Bz(ic,im1,j,k))/dx
+              Ey_arete(ic,i,j,k)=(dBx_arete_dz-dBz_arete_dx)
            enddo
         enddo
      enddo
@@ -718,11 +711,11 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
      do j=1,Nyp1
         jm1=j-1
         do i=1,Nxp1
-           im1=i-1             
+           im1=i-1
            do ic=1,ngrid
-              dBy_arete_dx=(By(ic,i,j,k)-By(ic,im1,j,k))
-              dBx_arete_dy=(Bx(ic,i,j,k)-Bx(ic,i,jm1,k))
-              Ez_arete(ic,i,j,k)=(dBy_arete_dx-dBx_arete_dy)/dx
+              dBy_arete_dx=(By(ic,i,j,k)-By(ic,im1,j,k))/dx
+              dBx_arete_dy=(Bx(ic,i,j,k)-Bx(ic,i,jm1,k))/dy
+              Ez_arete(ic,i,j,k)=(dBy_arete_dx-dBx_arete_dy)
            enddo
         enddo
      enddo

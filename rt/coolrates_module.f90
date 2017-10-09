@@ -26,14 +26,14 @@ MODULE coolrates_module
   real(dp)              :: hTable, h2Table, h3Table   ! Interpol constants
   real(dp)              :: one_over_lnTen, one_over_hTable, one_over_h2Table
   real(dp)              :: three_over_h2Table, two_over_h3Table
-  
+
   real(dp),dimension(nbinT) :: T_lookup = 0d0 ! Lookup temperature in log K
 
   type coolrates_table
      ! Cooling and interaction rates (log):
      real(dp),dimension(nbinT)::rates  = 0d0
      ! Temperature derivatives of those rates (drate/dlog(T)):
-     real(dp),dimension(nbinT)::primes = 0d0 
+     real(dp),dimension(nbinT)::primes = 0d0
   end type coolrates_table
 
   type(coolrates_table),save::tbl_alphaA_HII ! Case A rec. coefficients
@@ -57,7 +57,7 @@ MODULE coolrates_module
   type(coolrates_table),save::tbl_cr_bre ! Bremsstrahlung cooling rates
   type(coolrates_table),save::tbl_cr_com ! Compton cooling rates
   type(coolrates_table),save::tbl_cr_die ! Dielectronic cooling rates
-  
+
 CONTAINS
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -68,9 +68,10 @@ SUBROUTINE init_coolrates_tables(aexp)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: ierr
 #endif
-  real(dp) :: aexp, T
-  integer :: myid, ncpu, ierr, iT
+  real(dp) :: aexp
+  integer :: myid, ncpu, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
@@ -96,11 +97,11 @@ SUBROUTINE init_coolrates_tables(aexp)
   one_over_h2Table = 1.d0/h2Table
   three_over_h2Table = 3.d0/h2Table
   two_over_h3Table = 2.d0/h3Table
-  
+
   do iT = myid+1, nbinT, ncpu ! Loop over TK and assign rates
      call comp_table_rates(iT,aexp)
   end do ! end TK loop
-  
+
   ! Distribute the complete table between cpus ---------------------------
 #ifndef WITHOUTMPI
   call mpi_distribute_coolrates_table(tbl_alphaA_HII)
@@ -133,7 +134,6 @@ SUBROUTINE init_coolrates_tables(aexp)
 #endif
 
   if(myid==0) print*,'Coolrates tables initialised '
-901 format (20(1pe12.3))
 
 END SUBROUTINE init_coolrates_tables
 
@@ -144,9 +144,10 @@ SUBROUTINE update_coolrates_tables(aexp)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: ierr
 #endif
   real(dp) :: aexp
-  integer:: myid, ncpu, ierr, iT
+  integer :: myid, ncpu, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
@@ -160,7 +161,7 @@ SUBROUTINE update_coolrates_tables(aexp)
   do iT = myid+1, nbinT, ncpu ! Loop over TK and assign rates
      call update_table_rates(iT, aexp)
   end do ! end TK loop
-  
+
   ! Distribute the complete table between cpus ---------------------------
 #ifndef WITHOUTMPI
   call mpi_distribute_coolrates_table(tbl_cr_com)
@@ -174,7 +175,7 @@ END SUBROUTINE update_coolrates_tables
 SUBROUTINE mpi_distribute_coolrates_table(table)
 ! Distribute table between all cpus, assuming table contains only partial
 ! entries on each cpu, but the whole table is acquired by summing those
-! partial tables  
+! partial tables
 !-------------------------------------------------------------------------
   implicit none
   include 'mpif.h'
@@ -204,12 +205,12 @@ SUBROUTINE comp_table_rates(iT, aexp)
   real(dp)::aexp, T, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
   real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
-  ! Rates are stored in non-log, while temperature derivatives (primes) 
+  ! Rates are stored in non-log, while temperature derivatives (primes)
   ! are stored in dRate/dlogT (= dRate/dT * T * ln(10)).
 
   ! The log-log primes are just the normal primes times T/rate,
   ! i.e. dlogL/dlogT = T/L dL/dT
-  
+
   T = 10d0**T_lookup(iT)
 
   ! Case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)-------------
@@ -228,7 +229,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Case A rec. coefficient [cm3 s-1] for HeIII (Hui&Gnedin'97)-----------
   lambda =  1263030./T
   f= 1.d0+(lambda/0.522)**0.47
-  tbl_alphaA_HeIII%rates(iT)  =  2.538d-13 * lambda**1.503 / f**1.923 
+  tbl_alphaA_HeIII%rates(iT)  =  2.538d-13 * lambda**1.503 / f**1.923
   tbl_alphaA_HeIII%primes(iT) =  ( 0.90381*(f-1.)/f - 1.503 )            &
                               * log(10d0) * tbl_alphaA_HeIII%rates(iT)
 
@@ -291,34 +292,34 @@ SUBROUTINE comp_table_rates(iT, aexp)
   tbl_cr_ce_HI%primes(iT) = (118348./T - 0.5d0 * sqrt(T5) / f )          &
                           * log(10d0) * tbl_cr_ce_HI%rates(iT)
 
-  tbl_cr_ce_HeI%rates(iT)  = 9.10d-27 * T**(-0.1687) / f * exp(-13179./T) 
+  tbl_cr_ce_HeI%rates(iT)  = 9.10d-27 * T**(-0.1687) / f * exp(-13179./T)
   tbl_cr_ce_HeI%primes(iT) = (13179./T - 0.1687 - 0.5d0 * sqrt(T5) / f)  &
                            * log(10d0) * tbl_cr_ce_HeI%rates(iT)
 
   tbl_cr_ce_HeII%rates(iT) = 5.54d-17 * T**(-0.397)  / f * exp(-473638./T)
   tbl_cr_ce_HeII%primes(iT) = (473638./T - 0.397 - 0.5d0 * sqrt(T5) / f) &
                             * log(10d0) * tbl_cr_ce_HeII%rates(iT)
-  
+
   ! Recombination Cooling (Hui&Gnedin'97)
-  laHII    = 315614./T                                             
-  laHeII   = 570670./T                                            
+  laHII    = 315614./T
+  laHeII   = 570670./T
   laHeIII  = 1263030./T
   if(.not. rt_otsa) then ! Case A
-     f = 1.d0+(laHII/0.541)**0.502                         
+     f = 1.d0+(laHII/0.541)**0.502
      tbl_cr_r_HII%rates(iT)    = 1.778d-29 * laHII**1.965 / f**2.697 * T
      tbl_cr_r_HII%primes(iT)   = (-0.965 + 1.35389*(f-1.)/f)             &
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
- 
+
      tbl_cr_r_HeII%rates(iT)   = 3.d-14 * laHeII**0.654 * kb * T
      tbl_cr_r_HeII%primes(iT)   = 0.346                                  &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
-     f = 1.d0+(laHeIII/0.541)**0.502                      
+     f = 1.d0+(laHeIII/0.541)**0.502
      tbl_cr_r_HeIII%rates(iT) = 14.224d-29 * laHeIII**1.965 / f**2.697 * T
      tbl_cr_r_HeIII%primes(iT)= (-0.965 + 1.35389*(f-1.)/f)              &
                               * log(10d0) * tbl_cr_r_HeIII%rates(iT)
   else ! Case B
-     f = 1.d0+(laHII/2.25)**0.376                        
+     f = 1.d0+(laHII/2.25)**0.376
      tbl_cr_r_HII%rates(iT)    = 3.435d-30 * laHII**1.97 / f**3.72 * T
      tbl_cr_r_HII%primes(iT)   = (-0.97 + 1.39827*(f-1.)/f)              &
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
@@ -327,7 +328,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
      tbl_cr_r_HeII%primes(iT)  = 0.25                                    &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
-     f = 1.d0+(laHeIII/2.25)**0.376                       
+     f = 1.d0+(laHeIII/2.25)**0.376
      tbl_cr_r_HeIII%rates(iT)  = 27.48d-30 * laHeIII**1.97 / f**3.72 * T
      tbl_cr_r_HeIII%primes(iT) = (-0.97 + 1.39827*(f-1.)/f)              &
                                * log(10d0) * tbl_cr_r_HeIII%rates(iT)
@@ -340,7 +341,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
 
   ! Compton Cooling from Haimann et al. 96, via Maselli et al.
   ! Need to make sure this is done whenever the redshift changes!
-  Ta     = 2.727/aexp                          
+  Ta     = 2.727/aexp
   tbl_cr_com%rates(iT)   = 1.017d-37 * Ta**4 * (T-Ta)
   tbl_cr_com%primes(iT)  = T / (T-Ta)                                    &
                          * log(10d0) * tbl_cr_com%rates(iT)
@@ -351,7 +352,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   tbl_cr_die%primes(iT)=0d0
   if(tbl_cr_die%rates(iT) .gt. 0d0) then ! Can simplify w algebra
      tbl_cr_die%primes(iT) = (tbl_cr_die%rates(iT)*(564000.-1.5*T)       &
-                              - f*94000.) /T**2 * T * log(10d0) 
+                              - f*94000.) /T**2 * T * log(10d0)
   endif
 
 END SUBROUTINE comp_table_rates
@@ -369,10 +370,10 @@ SUBROUTINE update_table_rates(iT,aexp)
   ! stored in non-log
   T = 10d0**T_lookup(iT)
   ! Compton Cooling from Haimann et al. 96, via Maselli et al.
-  Ta     = 2.727/aexp                          
+  Ta     = 2.727/aexp
   tbl_cr_com%rates(iT)   = 1.017d-37 * Ta**4 * (T-Ta)
   tbl_cr_com%primes(iT)  = T / (T-Ta)                                    &
-                         * log(10d0) * tbl_cr_com%rates(iT)    
+                         * log(10d0) * tbl_cr_com%rates(iT)
 
 END SUBROUTINE update_table_rates
 
@@ -381,7 +382,7 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
 ! Returns TABULATED rate value from given table
 ! rates        => Rates (and primes) table to interpolate
 ! T            => Temperature [K]
-! retPrime     <= Temperature derivative of rate at T (optional).  
+! retPrime     <= Temperature derivative of rate at T (optional).
 !-------------------------------------------------------------------------
   implicit none
   type(coolrates_table)::rates_table
@@ -401,7 +402,7 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
      extrap=.false.
      if(facT .gt. T_lookup(nbinT)) extrap=.true. ! Above upper limit
      ! Lower closest index in table:
-     iT = MIN(MAX(int((facT-T_lookup(1))*dlogTinv)+1, 1), nbinT-1) 
+     iT = MIN(MAX(int((facT-T_lookup(1))*dlogTinv)+1, 1), nbinT-1)
      yy=facT-T_lookup(iT)  ! Dist., in log(T), from T to lower table index
      yy2=yy*yy             ! That distance squared
      yy3=yy2*yy            ! ...and cubed
@@ -417,8 +418,8 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
      if( present(retPrime) )                                             &
           retPrime = alpha * inp_coolrates_table / T
      return
-  endif 
-  
+  endif
+
   fa = rates_table%rates(iT)           !
   fb = rates_table%rates(iT+1)         !  Values at neighbouring table
   fprimea=rates_table%primes(iT)       !  indexes
@@ -434,23 +435,21 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
 END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp,       &
-                       dcooldT, rt_OTSA)
+FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, dcooldT)
 
 ! Compute cooling rate in a cell, using interpolation from cooling rate
 ! tables
 ! T        => Cell emperature [K]
 ! xion     => Cell ionization fraction
 ! nH       => Hydrogen number density [cm-3]  
-! aexp     => Cosmic expansion
 ! dcooldT <=  Temperature derivative of the rate
 ! dcooldx <=  Ionized fraction derivative of the rate
-! returns:  Resulting cooling rate [erg s-1 cm-3]  
+! returns:  Resulting cooling rate [erg s-1 cm-3]
 !-------------------------------------------------------------------------
   implicit none  
-  real(dp)::T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp
+  real(dp)::T, ne, nHI, nHII, nHeI, nHeII, nHeIII
   real(dp)::compCoolrate, dcooldT
-  logical::RT_OTSA!-------------------------------------------------------
+  !-----------------------------------------------------------------------
   real(dp),save::ci_HI,ci_HeI,ci_HeII
   real(dp),save::ci_HI_prime,ci_HeI_prime,ci_HeII_prime
   real(dp),save::ce_HI,ce_HeI,ce_HeII
@@ -504,13 +503,13 @@ FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp,       &
   bre_prime = bre_prime  * ne * (nHII + nHeII + 4. * nHeIII)
 
   ! Compton Cooling
-  com       = inp_coolrates_table(tbl_cr_com, T, com_prime) * ne    
+  com       = inp_coolrates_table(tbl_cr_com, T, com_prime) * ne
   com_prime = com_prime * ne
 
   ! Dielectronic recombination cooling
   die = inp_coolrates_table(tbl_cr_die, T, die_prime) * ne_nHeII
   die_prime = die_prime * ne_nHeII
- 
+
   ! Overall Cooling
   compCoolrate  = ci_HI    + r_HII    + ce_HI    + com                   &
                 + ci_HeI   + r_HeII   + ce_HeI   + die                   &
@@ -520,7 +519,7 @@ FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, aexp,       &
                 + ci_HeI_prime  + r_HeII_prime  + ce_HeI_prime           &
                 + ci_HeII_prime + r_HeIII_prime + ce_HeII_prime          &
                 + bre_prime     + com_prime     + die_prime
-  
+
 
 END FUNCTION compCoolrate
 

@@ -12,13 +12,16 @@ subroutine backup_poisson(filename)
   real(dp),allocatable,dimension(:)::xdp
   character(LEN=5)::nchar
   character(LEN=80)::fileloc
+
+#ifndef WITHOUTMPI
   integer,parameter::tag=1123
   integer::dummy_io,info2
+#endif
 
   if(verbose)write(*,*)'Entering backup_poisson'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 
@@ -88,7 +91,7 @@ subroutine backup_poisson(filename)
      end if
   endif
 #endif
-     
+
 end subroutine backup_poisson
 
 

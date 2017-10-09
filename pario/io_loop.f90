@@ -264,7 +264,7 @@ subroutine io_loop
      open(unit=ilun,file=filename,status='old',form='formatted',position='append',action='write',iostat=ierr)
      if(ierr/=0)then
         print *,'Error: re-open file failed in io_loop'
-     end if     
+     end if
   end do
 
 end subroutine io_loop

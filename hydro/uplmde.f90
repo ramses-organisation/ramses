@@ -9,26 +9,32 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
   implicit none
 
   integer::ngrid
-  real(dp)::dx, dt  
+  real(dp)::dx, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! Local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, ip
   real(dp)::dtdx,project_out
-  real(dp)::cc, ccc, csq, r, u, p, a
-  real(dp)::drx, dux, dpx, dax
+  real(dp)::cc, ccc, csq, r, u, p
+  real(dp)::drx, dux, dpx
   real(dp)::alpham, alphap, alpha0r
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azaleft
-  
+  real(dp)::apright, amright, azrright
+  real(dp)::apleft,  amleft,  azrleft
+#if NVAR > NDIM + 2
+  integer ::n
+  real(dp)::a
+  real(dp)::dax
+  real(dp)::azaright, azaleft
+#endif
+
   dtdx = dt/dx
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
@@ -52,7 +58,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
               drx = dq(l,i,j,k,ir,1)
               dux = dq(l,i,j,k,iu,1)
               dpx = dq(l,i,j,k,ip,1)
-              
+
               ! Supersonic fix for high-velocity gradients
               ccc = cc
               if(ABS(dux) > three*cc)ccc=zero
@@ -71,7 +77,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
               if( u     >zero)spzero =-project_out
 
               apright  = half*(-one-spplus )*alphap
-              amright  = half*(-one-spminus)*alpham 
+              amright  = half*(-one-spminus)*alpham
               azrright = half*(-one-spzero )*alpha0r
 
               qp(l,i,j,k,ir,1) = r + (apright+amright+azrright)
@@ -110,7 +116,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
                  a   =  q(l,i,j,k,n)    ! Cell centered values
                  u   =  q(l,i,j,k,iu)
                  dax = dq(l,i,j,k,n,1)  ! TVD slopes
-                 
+
                  ! Right state
                  spzero=(u    )*dtdx
                  if(u>zero)spzero=-project_out
@@ -144,27 +150,32 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dy, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, iv, ip
   real(dp)::dtdx,dtdy,project_out
-  real(dp)::cc, ccc, csq, r, u, v, p, a
-  real(dp)::drx, dux, dvx, dpx, dax
-  real(dp)::dry, duy, dvy, dpy, day
+  real(dp)::cc, ccc, csq, r, u, v, p
+  real(dp)::drx, dux, dvx, dpx
+  real(dp)::dry, duy, dvy, dpy
   real(dp)::alpham, alphap, alpha0r, alpha0u, alpha0v
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azuright, azvright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azaleft
-  real(dp)::srx,sux,svx,spx,sax
-  real(dp)::sry,suy,svy,spy,say
-    
+  real(dp)::apright, amright, azrright, azuright, azvright
+  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft
+  real(dp)::srx,sux,svx,spx
+  real(dp)::sry,suy,svy,spy
+#if NVAR > NDIM + 2
+  integer::n
+  real(dp)::a, dax, day, sax, say
+  real(dp)::azaright, azaleft
+#endif
+
   dtdx = dt/dx; dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
@@ -190,12 +201,12 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               dux = dq(l,i,j,k,iu,1)
               dvx = dq(l,i,j,k,iv,1)
               dpx = dq(l,i,j,k,ip,1)
-              
+
               dry = dq(l,i,j,k,ir,2)
               duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
               dpy = dq(l,i,j,k,ip,2)
-              
+
               ! Transverse derivatives
               srx = half*dtdy*(-v*dry - (dvy)*r      )
               sux = half*dtdy*(-v*duy                )
@@ -225,8 +236,8 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               if((u-ccc)>zero)spminus=-project_out
               if( u     >zero)spzero =-project_out
 
-              apright  = half*(-one-spplus )*alphap 
-              amright  = half*(-one-spminus)*alpham 
+              apright  = half*(-one-spplus )*alphap
+              amright  = half*(-one-spminus)*alpham
               azrright = half*(-one-spzero )*alpha0r
               azvright = half*(-one-spzero )*alpha0v
 
@@ -244,11 +255,11 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               if((u-ccc)<=zero)spminus=+project_out
               if( u     <=zero)spzero =+project_out
 
-              apleft   = half*(+one-spplus )*alphap 
-              amleft   = half*(+one-spminus)*alpham 
+              apleft   = half*(+one-spplus )*alphap
+              amleft   = half*(+one-spminus)*alpham
               azrleft  = half*(+one-spzero )*alpha0r
               azvleft  = half*(+one-spzero )*alpha0v
-              
+
               qm(l,i,j,k,ir,1) = r + (apleft+amleft+azrleft)     +srx
               qm(l,i,j,k,iu,1) = u + (apleft-amleft        )*cc/r+sux
               qm(l,i,j,k,ip,1) = p + (apleft+amleft        )*csq +spx
@@ -274,7 +285,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
               if( v     >zero)spzero =-project_out
 
               apright  = half*(-one-spplus )*alphap
-              amright  = half*(-one-spminus)*alpham 
+              amright  = half*(-one-spminus)*alpham
               azrright = half*(-one-spzero )*alpha0r
               azuright = half*(-one-spzero )*alpha0u
 
@@ -328,25 +339,25 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
                  if(u>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*dax
                  qp(l,i,j,k,n,1) = a + azaright + sax
-                 
+
                  ! Left state
                  spzero=(u    )*dtdx
                  if(u<=zero)spzero=+project_out
                  azaleft = half*(+one-spzero )*dax
                  qm(l,i,j,k,n,1) = a + azaleft + sax
-                 
+
                  ! Top state
                  spzero=(v    )*dtdy
                  if(v>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*day
                  qp(l,i,j,k,n,2) = a + azaright + say
-                 
+
                  ! Bottom state
                  spzero=(v    )*dtdy
                  if(v<=zero)spzero=+project_out
                  azaleft = half*(+one-spzero )*day
                  qm(l,i,j,k,n,2) = a + azaleft + say
-                 
+
               end do
            end do
         end do
@@ -370,41 +381,46 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
   integer ::ngrid
   real(dp)::dx,dy,dz, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! declare local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ir, iu, iv, iw, ip
   real(dp)::dtdx,dtdy,dtdz,project_out
-  real(dp)::cc, ccc, csq, r, u, v, w, p, a
-  real(dp)::drx, dux, dvx, dwx, dpx, dax
-  real(dp)::dry, duy, dvy, dwy, dpy, day
-  real(dp)::drz, duz, dvz, dwz, dpz, daz
+  real(dp)::cc, ccc, csq, r, u, v, w, p
+  real(dp)::drx, dux, dvx, dwx, dpx
+  real(dp)::dry, duy, dvy, dwy, dpy
+  real(dp)::drz, duz, dvz, dwz, dpz
   real(dp)::alpham, alphap, alpha0r, alpha0u, alpha0v, alpha0w
   real(dp)::spminus, spplus, spzero
-  real(dp)::apright, amright, azrright, azuright, azvright, azwright, azaright
-  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azwleft,  azaleft
-  real(dp)::srx,sux,svx,swx,spx,sax
-  real(dp)::sry,suy,svy,swy,spy,say
-  real(dp)::srz,suz,svz,swz,spz,saz
-    
+  real(dp)::apright, amright, azrright, azuright, azvright, azwright
+  real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft,  azwleft
+  real(dp)::srx,sux,svx,swx,spx
+  real(dp)::sry,suy,svy,swy,spy
+  real(dp)::srz,suz,svz,swz,spz
+#if NVAR > NDIM + 2
+  integer::n
+  real(dp)::a, dax, day, daz, sax, say, saz
+  real(dp)::azaright, azaleft
+#endif
+
   dtdx = dt/dx; dtdy = dt/dy; dtdz = dt/dz
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
   ir=1; iu=2; iv=3; iw=4; ip=5
   project_out=one !zero
-  
+
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-  
+
               ! Cell centered values
               cc  = c  (l,i,j,k)
               r   = q  (l,i,j,k,ir)
@@ -420,13 +436,13 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               dvx = dq(l,i,j,k,iv,1)
               dwx = dq(l,i,j,k,iw,1)
               dpx = dq(l,i,j,k,ip,1)
-              
+
               dry = dq(l,i,j,k,ir,2)
               duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
               dwy = dq(l,i,j,k,iw,2)
               dpy = dq(l,i,j,k,ip,2)
-              
+
               drz = dq(l,i,j,k,ir,3)
               duz = dq(l,i,j,k,iu,3)
               dvz = dq(l,i,j,k,iv,3)
@@ -524,8 +540,8 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               if((v-ccc)>zero)spminus=-project_out
               if( v     >zero)spzero =-project_out
 
-              apright  = half*(-one-spplus )*alphap 
-              amright  = half*(-one-spminus)*alpham 
+              apright  = half*(-one-spplus )*alphap
+              amright  = half*(-one-spminus)*alpham
               azrright = half*(-one-spzero )*alpha0r
               azuright = half*(-one-spzero )*alpha0u
               azwright = half*(-one-spzero )*alpha0w
@@ -545,8 +561,8 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               if((v-ccc)<=zero)spminus=+project_out
               if( v     <=zero)spzero =+project_out
 
-              apleft   = half*(+one-spplus )*alphap 
-              amleft   = half*(+one-spminus)*alpham 
+              apleft   = half*(+one-spplus )*alphap
+              amleft   = half*(+one-spminus)*alpham
               azrleft  = half*(+one-spzero )*alpha0r
               azuleft  = half*(+one-spzero )*alpha0u
               azwleft  = half*(+one-spzero )*alpha0w
@@ -577,8 +593,8 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               if((w-ccc)>zero)spminus=-project_out
               if( w     >zero)spzero =-project_out
 
-              apright  = half*(-one-spplus )*alphap 
-              amright  = half*(-one-spminus)*alpham 
+              apright  = half*(-one-spplus )*alphap
+              amright  = half*(-one-spminus)*alpham
               azrright = half*(-one-spzero )*alpha0r
               azuright = half*(-one-spzero )*alpha0u
               azvright = half*(-one-spzero )*alpha0v
@@ -598,8 +614,8 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
               if((w-ccc)<=zero)spminus=+project_out
               if( w     <=zero)spzero =+project_out
 
-              apleft   = half*(+one-spplus )*alphap 
-              amleft   = half*(+one-spminus)*alpham 
+              apleft   = half*(+one-spplus )*alphap
+              amleft   = half*(+one-spminus)*alpham
               azrleft  = half*(+one-spzero )*alpha0r
               azuleft  = half*(+one-spzero )*alpha0u
               azvleft  = half*(+one-spzero )*alpha0v
@@ -632,15 +648,15 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  daz = dq(l,i,j,k,n,3)
                  sax = half*dtdx*(-v*day-w*daz) ! Transverse
                  say = half*dtdx*(-u*dax-w*daz) ! derivatives
-                 saz = half*dtdx*(-v*day-u*dax) ! 
+                 saz = half*dtdx*(-v*day-u*dax) !
 
-                 
+
                  ! Right state
                  spzero = (u    )*dtdx
                  if(u>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*dax
                  qp(l,i,j,k,n,1) = a + azaright + sax
-                 
+
                  ! Left state
                  spzero = (u    )*dtdx
                  if(u<=zero)spzero=+project_out
@@ -652,7 +668,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  if(v>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*day
                  qp(l,i,j,k,n,2) = a + azaright + say
-                 
+
                  ! Bottom state
                  spzero = (v    )*dtdy
                  if(v<=zero)spzero=+project_out
@@ -664,7 +680,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
                  if(w>zero)spzero=-project_out
                  azaright = half*(-one-spzero )*daz
                  qp(l,i,j,k,n,3) = a + azaright + saz
-                 
+
                  ! Back state
                  spzero = (w    )*dtdy
                  if(w<=zero)spzero=+project_out
@@ -691,7 +707,7 @@ subroutine cmpdivu(q,div,dx,dy,dz,ngrid)
 
   integer ::ngrid
   real(dp)::dx, dy, dz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::div
 
   integer::i, j, k, l
@@ -714,7 +730,7 @@ subroutine cmpdivu(q,div,dx,dy,dz,ngrid)
               end do
            end if
 
-#if NDIM>1           
+#if NDIM>1
            if(ndim>1)then
               do l=1, ngrid
                  ux(l)=ux(l)+factorx*(q(l,i  ,j-1,k  ,2) - q(l,i-1,j-1,k  ,2))
@@ -758,9 +774,9 @@ subroutine consup(uin,flux,div,dt,ngrid)
 
   integer ::ngrid
   real(dp)::dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::div 
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::div
 
   integer:: i, j, k, l, n
   real(dp)::factor
@@ -772,7 +788,7 @@ subroutine consup(uin,flux,div,dt,ngrid)
   do n = 1, nvar
 
      do k = kf1, MAX(kf1,ku2-2)
-        do j = jf1, MAX(jf1, ju2-2) 
+        do j = jf1, MAX(jf1, ju2-2)
            do i = if1, if2
               div1 = zero
               do l = 1, ngrid
@@ -827,8 +843,8 @@ subroutine consup(uin,flux,div,dt,ngrid)
 
 #if NDIM>2
      do k = kf1, kf2
-        do j = ju1+2, ju2-2 
-           do i = iu1+2, iu2-2 
+        do j = ju1+2, ju2-2
+           do i = iu1+2, iu2-2
               do l = 1, ngrid
                  div1(l)=factor*(div(l,i,j  ,k) + div(l,i+1,j  ,k) &
                       &        + div(l,i,j+1,k) + div(l,i+1,j+1,k))
@@ -861,7 +877,7 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
   integer ::ngrid
   real(dp)::dx, dy, dz
   real(dp)::dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin 
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
 
   integer:: i, j, k, l
@@ -870,13 +886,13 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
   ! Add stellar momentum to the normal momentum flux
   ! The one sixth factor is there to account for the mesh geometry
   do k = kf1, MAX(kf1,ku2-2)
-     do j = jf1, MAX(jf1, ju2-2) 
+     do j = jf1, MAX(jf1, ju2-2)
         do i = if1, if2
            do l = 1, ngrid
               pstar=sixth*(pin(l,i,j,k)+pin(l,i-1,j,k))
               flux(l,i,j,k,2,1) = flux(l,i,j,k,2,1) + pstar*dx/dt
            end do
-           
+
         end do
      end do
   end do
@@ -896,8 +912,8 @@ subroutine stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
 
 #if NDIM>2
   do k = kf1, kf2
-     do j = ju1+2, ju2-2 
-        do i = iu1+2, iu2-2 
+     do j = ju1+2, ju2-2
+        do i = iu1+2, iu2-2
            do l = 1, ngrid
               pstar=sixth*(pin(l,i,j,k)+pin(l,i,j,k-1))
               flux(l,i,j,k,4,3) = flux(l,i,j,k,4,3) + pstar*dz/dt

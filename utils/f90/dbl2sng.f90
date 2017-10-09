@@ -143,7 +143,7 @@ program dbl2sng
         read(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
         read(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
         read(ilun)mass_sph
-        ! Read levels variables        
+        ! Read levels variables
         read(ilun)headl(1:ncpu,1:nlevelmax)
         read(ilun)taill(1:ncpu,1:nlevelmax)
         read(ilun)numbl(1:ncpu,1:nlevelmax)
@@ -251,7 +251,7 @@ program dbl2sng
         close(ilun)
      endif
      mapping(headf)=ngridmax2
-     
+
      igrid2=0
      do ilevel=1,nlevelmax
         do ibound=1,ncpu
@@ -285,19 +285,19 @@ program dbl2sng
      do i=1,ncoarse
         igrid1=son(i)
         if(igrid1>0)then
-           igrid2=mapping(igrid1) 
+           igrid2=mapping(igrid1)
         else
            igrid2=0
         endif
-        son2(i)=igrid2 
+        son2(i)=igrid2
      end do
 
      igrid0=0
      do ilevel=1,nlevelmax
         do ibound=1,ncpu
-           
+
            ncache=numbl(ibound,ilevel)
-           
+
            if(ncache>0)then
 
               do i=1,ncache
@@ -347,7 +347,7 @@ program dbl2sng
 
               igrid0=igrid0+ncache
            end if
-              
+
         end do
      end do
 
@@ -470,17 +470,17 @@ program dbl2sng
      read(ilun)ndim1
      read(ilun)npart
      read(ilun)localseed
-     read(ilun)nstar_tot   
-     read(ilun)mstar_tot   
+     read(ilun)nstar_tot
+     read(ilun)mstar_tot
      read(ilun)mstar_lost
-     
+
      allocate(xp(1:npart,1:ndim))
      allocate(vp(1:npart,1:ndim))
      allocate(mp(1:npart))
      allocate(idp(1:npart))
      allocate(lvp(1:npart))
      allocate(xsp(1:npart))
-     
+
      do idim=1,ndim
         read(ilun)xp(1:npart,idim)
      end do
@@ -500,10 +500,10 @@ program dbl2sng
      write(ilun)ndim1
      write(ilun)npart
      write(ilun)localseed
-     write(ilun)nstar_tot   
+     write(ilun)nstar_tot
      write(ilun)real(mstar_tot)
      write(ilun)real(mstar_lost)
-     
+
      do idim=1,ndim
         xsp=xp(1:npart,idim)
         write(ilun)xsp
@@ -524,7 +524,7 @@ program dbl2sng
      deallocate(idp)
      deallocate(lvp)
      deallocate(xsp)
-     
+
   end do
 
 end program dbl2sng

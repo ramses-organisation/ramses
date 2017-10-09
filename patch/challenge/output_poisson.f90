@@ -18,7 +18,7 @@ subroutine backup_poisson(filename)
   if(verbose)write(*,*)'Entering backup_poisson'
 
   ilun=ncpu+myid+10
-     
+
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 
@@ -88,7 +88,7 @@ subroutine backup_poisson(filename)
      end if
   endif
 #endif
-     
+
 end subroutine backup_poisson
 
 
