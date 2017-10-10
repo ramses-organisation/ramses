@@ -184,10 +184,17 @@ subroutine read_params
         info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
         inquire(file=info_file, exist=info_ok)
      enddo
-     if (.not. info_ok) then
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+  if (nrestart .gt. 0 .and. .not. info_ok) then
+     if (myid==1) then
          write(*,*) "Error: Could not find restart file"
-         call clean_stop
      endif
+     call clean_stop
   endif
 
 #ifndef WITHOUTMPI
