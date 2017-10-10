@@ -4,6 +4,8 @@ subroutine backup_sink(filename)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer,parameter::tag=1135
+  integer::dummy_io,info2
 #endif
 
   character(LEN=80)::filename
@@ -14,8 +16,6 @@ subroutine backup_sink(filename)
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::ii
   logical,allocatable,dimension(:)::nb
-  integer,parameter::tag=1135
-  integer::dummy_io,info2
 
   if(.not. sink) return
 
@@ -73,7 +73,6 @@ subroutine backup_sink(filename)
         xdp(i)=delta_mass(i)
      end do
      write(ilun)xdp ! Write sink accumulated rest mass energy
-     deallocate(xdp)
      allocate(ii(1:nsink))
      do i=1,nsink
         ii(i)=idsink(i)
@@ -87,6 +86,11 @@ subroutine backup_sink(filename)
      write(ilun)nb ! Write if sink is new born
      deallocate(nb)
      write(ilun)sinkint_level ! Write level at which sinks were integrated
+     do i=1,nsink
+        xdp(i)=msmbh(i)
+     end do
+     write(ilun)xdp ! Write sink mass
+     deallocate(xdp)
   endif
   close(ilun)
 
@@ -114,7 +118,7 @@ subroutine output_sink(filename)
 
   integer::isink
   integer::nx_loc,ilun
-  real(dp)::scale,l_abs,rot_period,dx_min
+  real(dp)::scale,dx_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   character(LEN=80)::fileloc
 
@@ -145,8 +149,6 @@ subroutine output_sink(filename)
   write(ilun,'(" ================================================================================================================================== ")')
 
   do isink=1,nsink
-     l_abs=max((lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5,1.d-50)
-     rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs+tiny(0.d0))
      write(ilun,'(I10,7(2X,E15.7))')idsink(isink),msink(isink)*scale_m/2d33,xsink(isink,1:ndim),vsink(isink,1:ndim)
   end do
   write(ilun,'(" ================================================================================================================================== ")')
@@ -175,13 +177,14 @@ subroutine output_sink_csv(filename)
   ! Write sink properties
   !======================
   do isink=1,nsink
-     write(ilun,'(I10,18(A1,ES20.10))')idsink(isink),',',msink(isink),&
+     write(ilun,'(I10,19(A1,ES20.10))')idsink(isink),',',msink(isink),&
           ',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),&
           ',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),&
           ',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),&
           ',',t-tsink(isink),',',dMBHoverdt(isink),&
           ',',rho_gas(isink),',',c2sink(isink),',',eps_sink(isink),&
-          ',',vel_gas(isink,1),',',vel_gas(isink,2),',',vel_gas(isink,3)
+          ',',vel_gas(isink,1),',',vel_gas(isink,2),',',vel_gas(isink,3),&
+          ',',msmbh(isink)
   end do
 
   close(ilun)
