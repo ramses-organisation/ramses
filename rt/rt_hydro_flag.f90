@@ -23,7 +23,6 @@ subroutine rt_hydro_flag(ilevel)
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uug,uum,uud
   ! ----------------------------------------------------------------------
   if(ilevel==nlevelmax)return

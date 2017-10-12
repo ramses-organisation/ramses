@@ -142,10 +142,12 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
+#if NVAR>NDIM+2
   allocate(remap_pscalar(1:nvar-(ndim+2)))
   do i=1,nvar-(ndim+2)
      remap_pscalar(i) = i+ndim+2
   enddo
+#endif
 
   open(1,file=infile)
   rewind(1)
@@ -267,13 +269,15 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call rt_read_hydro_params(nml_ok)
+  call rt_read_hydro_params()
 #endif
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
 #endif
   if (movie)call set_movie_vars
+
+  close(1)
 
   ! Send the token
 #ifndef WITHOUTMPI

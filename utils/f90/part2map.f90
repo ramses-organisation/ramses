@@ -1,8 +1,8 @@
 program part2map
   !--------------------------------------------------------------------------
-  ! This software computes projected density map.
-  ! Version F90 by R. Teyssier le 01/04/01.
-  ! Update for new tracers by C. Cadiou, M. Trebitsch, H. Choi, O. Snaith and R. Bieri
+  ! Ce programme calcule la carte de densite surfacique projetee
+  ! des particules de matiere noire d'une simulation RAMSES.
+  ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   use utils
   implicit none
@@ -28,6 +28,7 @@ program part2map
   integer,dimension(:)  ,allocatable::id
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
+  character(LEN=80)::GMGM
   character(LEN=80)::ordering,format_grille
   character(LEN=128)::nomfich,repository,outfich,filedens,filetype='bin'
   logical::ok,ok_part,periodic=.false.,star=.false.,ageweight=.false.,do_density=.false.
@@ -65,31 +66,32 @@ program part2map
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
-  read(10,'("levelmin    =",I11)')levelmin
-  read(10,'("levelmax    =",I11)')levelmax
+  read(10,'(A13,I11)')GMGM,ncpu
+  read(10,'(A13,I11)')GMGM,ndim
+  read(10,'(A13,I11)')GMGM,levelmin
+  read(10,'(A13,I11)')GMGM,levelmax
   read(10,*)
   read(10,*)
   read(10,*)
 
-  read(10,'("boxlen      =",E23.15)')boxlen
-  read(10,'("time        =",E23.15)')t
-  read(10,'("aexp        =",E23.15)')aexp
-  read(10,'("H0          =",E23.15)')h0
-  read(10,'("omega_m     =",E23.15)')omega_m
-  read(10,'("omega_l     =",E23.15)')omega_l
-  read(10,'("omega_k     =",E23.15)')omega_k
-  read(10,'("omega_b     =",E23.15)')omega_b
-  read(10,'("unit_l      =",E23.15)')unit_l
-  read(10,'("unit_d      =",E23.15)')unit_d
-  read(10,'("unit_t      =",E23.15)')unit_t
+  read(10,'(A13,E23.15)')GMGM,boxlen
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
+  read(10,'(A13,E23.15)')GMGM,h0
+  read(10,'(A13,E23.15)')GMGM,omega_m
+  read(10,'(A13,E23.15)')GMGM,omega_l
+  read(10,'(A13,E23.15)')GMGM,omega_k
+  read(10,'(A13,E23.15)')GMGM,omega_b
+  read(10,'(A13,E23.15)')GMGM,unit_l
+  read(10,'(A13,E23.15)')GMGM,unit_d
+  read(10,'(A13,E23.15)')GMGM,unit_t
+
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
 
-  read(10,'("ordering type=",A80)') ordering
-  write(*,'(" ordering type=",A20)') TRIM(ordering)
+  read(10,'(A14,A80)')GMGM,ordering
+  write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -110,7 +112,7 @@ program part2map
      allocate(density(npart))
      do j=1,npart
         read(1,rec=j+1)density(j)
-        !        if(mod(j,10000).eq.0)write(*,*)j,density(j)
+!        if(mod(j,10000).eq.0)write(*,*)j,density(j)
      end do
      close(1)
      write(*,*)'Min Max density'
@@ -336,7 +338,7 @@ program part2map
      call title(icpu,ncharcpu)
      nomfich=TRIM(repository)//'/part_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
      open(unit=1,file=nomfich,status='old',form='unformatted')
-     !     write(*,*)'Processing file '//TRIM(nomfich)
+!     write(*,*)'Processing file '//TRIM(nomfich)
      read(1)ncpu2
      read(1)ndim2
      read(1)npart2
@@ -553,99 +555,99 @@ contains
 
   subroutine read_params
 
-    implicit none
+      implicit none
 
-    integer       :: i,n
-    integer       :: iargc
-    character(len=4)   :: opt
-    character(len=128) :: arg
-    LOGICAL       :: bad, ok
+      integer       :: i,n
+      integer       :: iargc
+      character(len=4)   :: opt
+      character(len=128) :: arg
+      LOGICAL       :: bad, ok
 
     n = command_argument_count()
-    if (n < 4) then
-       print *, 'usage: part2map  -inp  input_dir'
-       print *, '                 -out  output_file'
-       print *, '                 [-dir axis] '
-       print *, '                 [-xmi xmin] '
-       print *, '                 [-xma xmax] '
-       print *, '                 [-ymi ymin] '
-       print *, '                 [-yma ymax] '
-       print *, '                 [-zmi zmin] '
-       print *, '                 [-zma zmax] '
-       print *, '                 [-jx  jxin] '
-       print *, '                 [-jy  jyin] '
-       print *, '                 [-jz  jzin] '
-       print *, '                 [-cut mmax] '
-       print *, '                 [-nx  nx  ] '
-       print *, '                 [-ny  ny  ] '
-       print *, '                 [-per flag] '
-       print *, '                 [-sid flag] '
-       print *, '                 [-str flag] '
-       print *, '                 [-fil filetype: bin/ascii] '
-       print *, '                 [-den filedens] '
-       print *, 'ex: part2map -inp output_00001 -out map.dat'// &
-            &   ' -dir z -xmi 0.1 -xma 0.7'
-       stop
-    end if
+      if (n < 4) then
+         print *, 'usage: part2map  -inp  input_dir'
+         print *, '                 -out  output_file'
+         print *, '                 [-dir axis] '
+         print *, '                 [-xmi xmin] '
+         print *, '                 [-xma xmax] '
+         print *, '                 [-ymi ymin] '
+         print *, '                 [-yma ymax] '
+         print *, '                 [-zmi zmin] '
+         print *, '                 [-zma zmax] '
+         print *, '                 [-jx  jxin] '
+         print *, '                 [-jy  jyin] '
+         print *, '                 [-jz  jzin] '
+         print *, '                 [-cut mmax] '
+         print *, '                 [-nx  nx  ] '
+         print *, '                 [-ny  ny  ] '
+         print *, '                 [-per flag] '
+         print *, '                 [-sid flag] '
+         print *, '                 [-str flag] '
+         print *, '                 [-fil filetype: bin/ascii] '
+         print *, '                 [-den filedens] '
+         print *, 'ex: part2map -inp output_00001 -out map.dat'// &
+              &   ' -dir z -xmi 0.1 -xma 0.7'
+         stop
+      end if
 
-    do i = 1,n,2
+      do i = 1,n,2
        call get_command_argument(i,opt)
-       if (i == n) then
-          print '("option ",a2," has no argument")', opt
-          stop 2
-       end if
+         if (i == n) then
+            print '("option ",a2," has no argument")', opt
+            stop 2
+         end if
        call get_command_argument(i+1,arg)
-       select case (opt)
-       case ('-inp')
-          repository = trim(arg)
-       case ('-out')
-          outfich = trim(arg)
-       case ('-dir')
-          proj = trim(arg)
-       case('-jx')
-          read (arg,*) jxin
-       case('-jy')
-          read (arg,*) jyin
-       case('-jz')
-          read (arg,*) jzin
-       case ('-xmi')
-          read (arg,*) xmin
-       case ('-xma')
-          read (arg,*) xmax
-       case ('-ymi')
-          read (arg,*) ymin
-       case ('-yma')
-          read (arg,*) ymax
-       case ('-zmi')
-          read (arg,*) zmin
-       case ('-cut')
-          read (arg,*) mmax
-       case ('-zma')
-          read (arg,*) zmax
-       case ('-nx')
-          read (arg,*) nx
-       case ('-ny')
-          read (arg,*) ny
-       case ('-per')
-          read (arg,*) periodic
-       case ('-sid')
-          read (arg,*) sideon
-       case ('-str')
-          read (arg,*) star
-       case ('-age')
-          read (arg,*) ageweight
-       case ('-fil')
-          filetype = trim(arg)
-       case ('-den')
-          filedens = trim(arg)
-          do_density=.true.
-       case default
-          print '("unknown option ",a2," ignored")', opt
-       end select
-    end do
+         select case (opt)
+         case ('-inp')
+            repository = trim(arg)
+         case ('-out')
+            outfich = trim(arg)
+         case ('-dir')
+            proj = trim(arg)
+         case('-jx')
+            read (arg,*) jxin
+         case('-jy')
+            read (arg,*) jyin
+         case('-jz')
+            read (arg,*) jzin
+         case ('-xmi')
+            read (arg,*) xmin
+         case ('-xma')
+            read (arg,*) xmax
+         case ('-ymi')
+            read (arg,*) ymin
+         case ('-yma')
+            read (arg,*) ymax
+         case ('-zmi')
+            read (arg,*) zmin
+         case ('-cut')
+            read (arg,*) mmax
+         case ('-zma')
+            read (arg,*) zmax
+         case ('-nx')
+            read (arg,*) nx
+         case ('-ny')
+            read (arg,*) ny
+         case ('-per')
+            read (arg,*) periodic
+         case ('-sid')
+            read (arg,*) sideon
+         case ('-str')
+            read (arg,*) star
+         case ('-age')
+            read (arg,*) ageweight
+         case ('-fil')
+            filetype = trim(arg)
+         case ('-den')
+            filedens = trim(arg)
+            do_density=.true.
+         case default
+            print '("unknown option ",a2," ignored")', opt
+         end select
+      end do
 
-    return
+      return
 
-  end subroutine read_params
+    end subroutine read_params
 
-end program part2map
+  end program part2map

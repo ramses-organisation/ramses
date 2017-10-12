@@ -32,23 +32,22 @@ subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   real(dp)::um(1:nvector,1:nrtvar)
   real(dp)::ud(1:nvector,1:nrtvar)
   logical ::ok(1:nvector)
-
   integer::k,i
-  real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
-
-  if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------
-     do i=1,nGroups
-        ! RT-photon density
-        do k=1,nn
-           dg=ug(k,iGroups(i)); dm=um(k,iGroups(i)); dd=ud(k,iGroups(i))
-           error=2.0d0*MAX( &
-                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &
-                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )
-           ok(k) = ok(k) .or. error > rt_err_grad_n
-        end do
-     end do
-  end if
-
+  real(dp)::dg,dm,dd,error
+  
+  if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------                           
+     do i=1,nGroups                                                 
+        ! RT-photon density                                       
+        do k=1,nn                                                 
+           dg=ug(k,iGroups(i)); dm=um(k,iGroups(i)); dd=ud(k,iGroups(i))   
+           error=2.0d0*MAX( &                                    
+                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &            
+                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )              
+           ok(k) = ok(k) .or. error > rt_err_grad_n              
+        end do                                                   
+     end do                                                      
+  end if                                                         
+                                                                  
 end subroutine rt_hydro_refine
 !###########################################################
 !###########################################################

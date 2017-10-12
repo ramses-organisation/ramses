@@ -95,19 +95,15 @@ subroutine dump_all
         endif
         ! Copy namelist file to output directory
         filename=TRIM(filedir)//'namelist.txt'
-        OPEN(UNIT=10, FILE=namelist_file, ACCESS='DIRECT', STATUS='OLD', &
-             & ACTION='READ',  IOSTAT=IERR, RECL=1)
-        OPEN(UNIT=11, FILE=filename, ACCESS='DIRECT', STATUS='REPLACE', &
-             & ACTION='WRITE', IOSTAT=IERR, RECL=1)
-        IREC = 1
+        OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
+        OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
         DO
-           READ(UNIT=10, REC=IREC, IOSTAT=IERR)nml_char
+           READ(10, IOSTAT=IERR)nml_char
            IF (IERR.NE.0) EXIT
-           WRITE(UNIT=11, REC=IREC)nml_char
-           IREC = IREC + 1
+           WRITE(11)nml_char
         END DO
-        CLOSE(10)
         CLOSE(11)
+        CLOSE(10)
         ! Copy compilation details to output directory
         filename=TRIM(filedir)//'compilation.txt'
         OPEN(UNIT=11, FILE=filename, FORM='formatted')

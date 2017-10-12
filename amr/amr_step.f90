@@ -531,7 +531,6 @@ end subroutine amr_step
 subroutine rt_step(ilevel)
   use amr_parameters, only: dp
   use amr_commons,    only: levelmin, t, dtnew, myid
-  use rt_parameters, only: rt_isDiffuseUVsrc
   use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
   use UV_module
@@ -603,7 +602,7 @@ subroutine rt_step(ilevel)
 
   if (myid==1 .and. rt_nsubcycle .gt. 1) write(*,901) ilevel, i_substep
 
-900 format (' dt_hydro=', 1pe12.3, ' dt_rt=', 1pe12.3, ' i_sub=', I5, ' level=', I5)
+  !900 format (' dt_hydro=', 1pe12.3, ' dt_rt=', 1pe12.3, ' i_sub=', I5, ' level=', I5)
 901 format (' Performed level', I3, ' RT-step with ', I5, ' subcycles')
 
 end subroutine rt_step

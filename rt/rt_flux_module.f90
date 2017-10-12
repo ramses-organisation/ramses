@@ -15,16 +15,17 @@ SUBROUTINE read_hll_eigenvalues()
 ! Read M1 eigenvalues for hll method from file 'hll_evals.list'
 ! into              in the 3*4 flux tensor
 !------------------------------------------------------------------------
-  use amr_commons,only:myid,IOGROUPSIZE,ncpu
+  use amr_commons,only:myid
   use rt_parameters,only:hll_evals_file
 #ifndef WITHOUTMPI
+  use amr_commons,only:IOGROUPSIZE,ncpu
   include 'mpif.h'
+  integer::dummy_io,info2
 #endif
   integer::i,j,ii,jj
   real(dp)::dummy
   logical::ok
   integer,parameter::tag=1128
-  integer::dummy_io,info2
 
 !------------------------------------------------------------------------
   if(myid==1) write(*,*) 'Reading HLL eigenvalues from file'

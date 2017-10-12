@@ -1488,7 +1488,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   ! local variables
   INTEGER ::i, j, k, l, xdim
   REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright,fmean_x,fmean_y,qtmp
+  REAL(dp),DIMENSION(1:nvar)::qleft,qright,qtmp
+  REAL(dp),DIMENSION(1:nvar+1)::fmean_x,fmean_y
   REAL(dp) :: ELL,ERL,ELR,ERR,SL,SR,SB,ST,SAL,SAR,SAT,SAB
   REAL(dp) :: zero_flux,E
   REAL(dp) :: cLLx,cRLx,cLRx,cRRx,cLLy,cRLy,cLRy,cRRy
@@ -2242,7 +2243,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
        end do
     end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   end if
 #endif
@@ -2321,7 +2322,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
   ! 1D transverse TVD slopes for face-centered magnetic fields
@@ -2363,7 +2364,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
        end do
     end do
   else
-     write(*,*)'Unknown mag. slope type'
+     write(*,*)'Unknown mag. slope type',dx,dt
      stop
   endif
 #endif
@@ -2560,7 +2561,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
         end do
      end do
   else
-     write(*,*)'Unknown slope type'
+     write(*,*)'Unknown slope type',dx,dt
      stop
   endif
 

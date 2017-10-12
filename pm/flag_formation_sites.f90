@@ -202,7 +202,7 @@ end subroutine flag_formation_sites
 !################################################################
 !################################################################
 #if NDIM==3
-subroutine compute_clump_properties_round2(xx)
+subroutine compute_clump_properties_round2
   use amr_commons
 #if NENER>0
   use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
@@ -216,14 +216,14 @@ subroutine compute_clump_properties_round2(xx)
 #ifdef RT
   use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
   use rt_hydro_commons, only:rtuold
-  use rt_cooling_module, only:kappaAbs,kappaSc
+  use rt_cooling_module, only:kappaSc
 #endif
 
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
+
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects
   ! more information like binding energies, etc, that can not be created by
