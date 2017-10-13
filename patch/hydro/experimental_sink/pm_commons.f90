@@ -6,9 +6,11 @@ module pm_commons
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)::msink,xmsink
   real(dp),allocatable,dimension(:)::msink_new,msink_all
+  real(dp),allocatable,dimension(:)::msmbh,msmbh_new,msmbh_all
   real(dp),allocatable,dimension(:)::oksink_new,oksink_all
   real(dp),allocatable,dimension(:)::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)::dMsink_overdt,dMBHoverdt
+  real(dp),allocatable,dimension(:)::dMsmbh_overdt,dMBHoverdt_smbh
   real(dp),allocatable,dimension(:)::rho_gas,volume_gas,eps_sink,c2sink
   real(dp),allocatable,dimension(:,:)::vel_gas
   real(dp),allocatable,dimension(:)::delta_mass,delta_mass_new,delta_mass_all
@@ -22,13 +24,13 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)::xsink,xsink_new,xsink_all
   real(dp),allocatable,dimension(:,:)::weighted_density,weighted_volume,weighted_ethermal,weighted_divergence
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
-  real(dp),allocatable,dimension(:)::rho_sink_tff
-  real(dp),allocatable,dimension(:)::msum_overlap
-  integer,allocatable,dimension(:)::idsink,idsink_new,idsink_old,idsink_all
-  logical,allocatable,dimension(:)::ok_blast_agn,ok_blast_agn_all
-  logical,allocatable,dimension(:)::direct_force_sink
-  logical,allocatable,dimension(:)::new_born,new_born_all,new_born_new
-  integer,allocatable,dimension(:)::idsink_sort
+  real(dp),allocatable,dimension(:)    ::rho_sink_tff
+  real(dp),allocatable,dimension(:)    ::msum_overlap
+  integer,allocatable,dimension(:)     ::idsink,idsink_new,idsink_old,idsink_all
+  logical,allocatable,dimension(:)     ::ok_blast_agn,ok_blast_agn_all
+  logical,allocatable,dimension(:)     ::direct_force_sink
+  logical,allocatable,dimension(:)     ::new_born,new_born_all,new_born_new
+  integer,allocatable,dimension(:)     ::idsink_sort
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
   integer::sinkint_level=0         ! maximum level currently active is where the global sink variables are updated
@@ -54,7 +56,7 @@ module pm_commons
   ! Global particle linked lists
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator
-  integer,dimension(IRandNumSize) :: localseed=-1
+  integer,dimension(IRandNumSize)    :: localseed=-1
 
 contains
   function cross(a,b)

@@ -5,13 +5,13 @@ subroutine init_sink
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer,parameter::tag=1112,tag2=1113
+  integer::dummy_io,info2
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  integer::idim
-  integer::isink
+  integer::idim, isink, nsinkold
   integer::ilun
-  integer::nsinkold
-  real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,ll1,ll2,ll3
+  real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,mm2,ll1,ll2,ll3
   real(dp),allocatable,dimension(:)::xdp
   integer,allocatable,dimension(:)::isp
   logical,allocatable,dimension(:)::nb
@@ -20,13 +20,11 @@ subroutine init_sink
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
 
-  integer,parameter::tag=1112,tag2=1113
-  integer::dummy_io,info2
-
   ! Allocate all sink related quantities...
   allocate(idsink(1:nsinkmax))
   idsink=0 ! Important: need to set idsink to zero
   allocate(msink(1:nsinkmax))
+  allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
@@ -54,6 +52,8 @@ subroutine init_sink
   allocate(wvol_new(1:nsinkmax))
   allocate(wdiv_new(1:nsinkmax))
   allocate(msink_new(1:nsinkmax))
+  allocate(msmbh_new(1:nsinkmax))
+  allocate(msmbh_all(1:nsinkmax))
   allocate(msink_all(1:nsinkmax))
   allocate(tsink_new(1:nsinkmax))
   allocate(tsink_all(1:nsinkmax))
@@ -72,6 +72,8 @@ subroutine init_sink
   sink_jump=0.d0
   allocate(dMsink_overdt(1:nsinkmax))
   allocate(dMBHoverdt(1:nsinkmax))
+  allocate(dMsmbh_overdt(1:nsinkmax))
+  allocate(dMBHoverdt_smbh(1:nsinkmax))
   allocate(eps_sink(1:nsinkmax))
   eps_sink=0.d0
   allocate(volume_gas(1:nsinkmax))
@@ -155,7 +157,6 @@ subroutine init_sink
         end do
         read(ilun)xdp ! Read sink accumulated rest mass energy
         delta_mass(1:nsink)=xdp
-        deallocate(xdp)
         allocate(isp(1:nsink))
         read(ilun)isp ! Read sink index
         idsink(1:nsink)=isp
@@ -164,7 +165,10 @@ subroutine init_sink
         read(ilun)nb ! Read newborn boolean
         new_born(1:nsink)=nb
         deallocate(nb)
-        read(ilun)sinkint_level ! Read level at which sinks were integrated
+        read(ilun)sinkint_level ! Read sink integration level
+        read(ilun)xdp ! Read smbh mass 
+        msmbh(1:nsink)=xdp
+        deallocate(xdp)
      end if
      close(ilun)
 
@@ -229,7 +233,7 @@ subroutine init_sink
      open(10,file=filename,form='formatted')
      eof=.false.
      do
-        read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3
+        read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3,mm2
         nsink=nsink+1
         nindsink=nindsink+1
         idsink(nsink)=nindsink
@@ -245,6 +249,7 @@ subroutine init_sink
         lsink(nsink,3)=ll3
         tsink(nsink)=t
         new_born(nsink)=.true.
+        msmbh(nsink)=mm2
      end do
 102  continue
      close(10)
