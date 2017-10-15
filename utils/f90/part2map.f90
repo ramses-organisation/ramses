@@ -16,7 +16,7 @@ program part2map
   real(KIND=8)::kxin,kyin,kzin,kx,ky,kz
   real(KIND=8)::lxin,lyin,lzin,lx,ly,lz
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,npart_actual
-  real(KIND=8)::xxmin,xxmax,yymin,yymax,dx,dy,deltax,boxlen
+  real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,deltax,boxlen
   real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d
   real(KIND=4),dimension(:,:),allocatable::toto
   real(KIND=4),dimension(:),allocatable::density
@@ -202,16 +202,19 @@ program part2map
      jdim=3
      xxmin=ymin ; xxmax=ymax
      yymin=zmin ; yymax=zmax
+     zzmin=xmin ; zzmax=xmax
   else if (proj=='y') then
      idim=1
      jdim=3
      xxmin=xmin ; xxmax=xmax
      yymin=zmin ; yymax=zmax
+     zzmin=ymin ; zzmax=ymax
   else
      idim=1
      jdim=2
      xxmin=xmin ; xxmax=xmax
      yymin=ymin ; yymax=ymax
+     zzmin=zmin ; zzmax=zmax
   end if
   dx=(xxmax-xxmin)/dble(nx)
   dy=(yymax-yymin)/dble(ny)
@@ -506,11 +509,13 @@ program part2map
   if(TRIM(filetype).eq.'bin')then
      open(unit=10,file=nomfich,form='unformatted')
      if(do_density.or.periodic)then
+        write(10)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(10)nx,ny
         write(10)toto
         write(10)xxmin,xxmax
         write(10)yymin,yymax
      else
+        write(10)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(10)nx+1,ny+1
         write(10)toto
         write(10)xxmin,xxmax
