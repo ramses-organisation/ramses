@@ -112,7 +112,6 @@ program amr2map
   open(unit=10,file=nomfich,form='formatted',status='old')
   read(10,*)
   read(10,*)
-!  read(10,'("levelmin    =",I11)')levelmin
   read(10,'(A13,I11)')GMGM,levelmin
   read(10,*)
   read(10,*)
@@ -120,7 +119,6 @@ program amr2map
   read(10,*)
 
   read(10,*)
-!  read(10,'("time        =",E23.15)')t
   read(10,'(A13,E23.15)')GMGM,t
   read(10,'(A13,E23.15)')GMGM,aexp
   read(10,*)
@@ -128,15 +126,11 @@ program amr2map
   read(10,*)
   read(10,*)
   read(10,*)
-!  read(10,'("unit_l      =",E23.15)')scale_l
   read(10,'(A13,E23.15)')GMGM,scale_l
-!  read(10,'("unit_d      =",E23.15)')scale_d
   read(10,'(A13,E23.15)')GMGM,scale_d
-!  read(10,'("unit_t      =",E23.15)')scale_t
   read(10,'(A13,E23.15)')GMGM,scale_t
   read(10,*)
 
-!  read(10,'("ordering type=",A80)'),ordering
   read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)

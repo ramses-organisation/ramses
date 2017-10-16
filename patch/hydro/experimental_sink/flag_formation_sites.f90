@@ -3,6 +3,7 @@
 !################################################################
 !################################################################
 subroutine flag_formation_sites
+#if NDIM==3
   use amr_commons
   use pm_commons
   use clfind_commons
@@ -12,6 +13,7 @@ subroutine flag_formation_sites
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::tag=101,info,icpu
 #endif
 
   !=============================================================================
@@ -26,14 +28,11 @@ subroutine flag_formation_sites
   integer::j,jj,i,nx_loc,idim
   integer::global_peak_id,local_peak_id
   integer::merge_to,local_halo_id
-  integer::tag=101,info,icpu
   logical::ok
   real(dp)::dx,dx_min,dist2,scale
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
   logical,dimension(1:ndim)::period
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -160,11 +159,11 @@ subroutine flag_formation_sites
               if(ivar_refine>0)then
                  if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
                     flag2(cell_index(1))=jj
-                    write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
+                    write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6' at',3(1X,1PE14.7))")myid,jj+ipeak_start(myid),peak_pos(jj,1:3)
                  end if
               else
                  flag2(cell_index(1))=jj
-                 write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6)")myid,jj+ipeak_start(myid)
+                 write(*,"('CPU # ',I5,' produces a new sink for clump # ',I6' at',3(1X,1PE14.7))")myid,jj+ipeak_start(myid),peak_pos(jj,1:3)
               end if
             end if
          end if
@@ -595,7 +594,10 @@ subroutine trim_clumps
   ! are removed from the clump by setting flag2 to 0.
   !---------------------------------------------------------------------------
 
-  integer::ipart,nx_loc,ind,ilevel,idim
+#ifndef WITHOUTMPI
+  integer::ilevel
+#endif
+  integer::ipart,nx_loc,ind,idim
   real(dp)::dx,scale,dx_loc,r2
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer ::ix,iy,iz,grid,peak_nr,glob_peak_nr

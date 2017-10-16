@@ -16,7 +16,7 @@ program part2map
   real(KIND=8)::kxin,kyin,kzin,kx,ky,kz
   real(KIND=8)::lxin,lyin,lzin,lx,ly,lz
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,npart_actual
-  real(KIND=8)::xxmin,xxmax,yymin,yymax,dx,dy,deltax,boxlen
+  real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,deltax,boxlen
   real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d
   real(KIND=4),dimension(:,:),allocatable::toto
   real(KIND=4),dimension(:),allocatable::density
@@ -27,6 +27,7 @@ program part2map
   integer,dimension(:)  ,allocatable::id
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
+  character(LEN=80)::GMGM
   character(LEN=80)::ordering,format_grille
   character(LEN=128)::nomfich,repository,outfich,filedens,filetype='bin'
   logical::ok,ok_part,periodic=.false.,star=.false.,ageweight=.false.,do_density=.false.
@@ -63,30 +64,31 @@ program part2map
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
-  read(10,'("levelmin    =",I11)')levelmin
-  read(10,'("levelmax    =",I11)')levelmax
+  read(10,'(A13,I11)')GMGM,ncpu
+  read(10,'(A13,I11)')GMGM,ndim
+  read(10,'(A13,I11)')GMGM,levelmin
+  read(10,'(A13,I11)')GMGM,levelmax
   read(10,*)
   read(10,*)
   read(10,*)
 
-  read(10,'("boxlen      =",E23.15)')boxlen
-  read(10,'("time        =",E23.15)')t
-  read(10,'("aexp        =",E23.15)')aexp
-  read(10,'("H0          =",E23.15)')h0
-  read(10,'("omega_m     =",E23.15)')omega_m
-  read(10,'("omega_l     =",E23.15)')omega_l
-  read(10,'("omega_k     =",E23.15)')omega_k
-  read(10,'("omega_b     =",E23.15)')omega_b
-  read(10,'("unit_l      =",E23.15)')unit_l
-  read(10,'("unit_d      =",E23.15)')unit_d
-  read(10,'("unit_t      =",E23.15)')unit_t
+  read(10,'(A13,E23.15)')GMGM,boxlen
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
+  read(10,'(A13,E23.15)')GMGM,h0
+  read(10,'(A13,E23.15)')GMGM,omega_m
+  read(10,'(A13,E23.15)')GMGM,omega_l
+  read(10,'(A13,E23.15)')GMGM,omega_k
+  read(10,'(A13,E23.15)')GMGM,omega_b
+  read(10,'(A13,E23.15)')GMGM,unit_l
+  read(10,'(A13,E23.15)')GMGM,unit_d
+  read(10,'(A13,E23.15)')GMGM,unit_t
+
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
 
-  read(10,'("ordering type=",A80)'),ordering
+  read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
@@ -200,16 +202,19 @@ program part2map
      jdim=3
      xxmin=ymin ; xxmax=ymax
      yymin=zmin ; yymax=zmax
+     zzmin=xmin ; zzmax=xmax
   else if (proj=='y') then
      idim=1
      jdim=3
      xxmin=xmin ; xxmax=xmax
      yymin=zmin ; yymax=zmax
+     zzmin=ymin ; zzmax=ymax
   else
      idim=1
      jdim=2
      xxmin=xmin ; xxmax=xmax
      yymin=ymin ; yymax=ymax
+     zzmin=zmin ; zzmax=zmax
   end if
   dx=(xxmax-xxmin)/dble(nx)
   dy=(yymax-yymin)/dble(ny)
@@ -504,11 +509,13 @@ program part2map
   if(TRIM(filetype).eq.'bin')then
      open(unit=10,file=nomfich,form='unformatted')
      if(do_density.or.periodic)then
+        write(10)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(10)nx,ny
         write(10)toto
         write(10)xxmin,xxmax
         write(10)yymin,yymax
      else
+        write(10)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(10)nx+1,ny+1
         write(10)toto
         write(10)xxmin,xxmax

@@ -9,6 +9,7 @@ subroutine newdt_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   integer::ilevel
   !-----------------------------------------------------------
@@ -20,7 +21,7 @@ subroutine newdt_fine(ilevel)
   ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::npart1,ip,info
+  integer::npart1,ip
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
