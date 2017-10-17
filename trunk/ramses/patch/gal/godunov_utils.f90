@@ -76,7 +76,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
 
   if(momentum_feedback)then
      do k = 1, ncell
-       uu(k,ndim+2) = uu(k,ndim+2) + gamma*abs(pp(k))
+       uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k))
      end do
   endif
 
@@ -987,7 +987,7 @@ end subroutine riemann_hll
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
+subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -995,6 +995,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
 
   ! HLLC Riemann solver (Toro)
   integer::ngrid
+  real(dp),dimension(1:nvector)::snleft,snright
   real(dp),dimension(1:nvector,1:nvar)::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1)::fgdnv
 
@@ -1046,6 +1047,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
         Ptotl=Ptotl+qleft(i,2+ndim+irad)
      end do
 #endif
+     Ptotl=Ptotl+snleft(i)
 
      ! Right variables
      rr=max(qright(i,1),smallr)
@@ -1073,6 +1075,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
         Ptotr=Ptotr+qright(i,2+ndim+irad)
      end do
 #endif
+     Ptotr=Ptotr+snright(i)
 
      ! Find the largest eigenvalues in the normal direction to the interface
      cfastl=gamma*Pl
@@ -1081,6 +1084,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
         cfastl = cfastl + gamma_rad(irad)*qleft(i,ndim+2+irad)
      end do
 #endif
+     cfastl = cfastl + snleft(i)
      cfastl=sqrt(max(cfastl/rl,smallc**2))
 
      cfastr=gamma*Pr
@@ -1089,6 +1093,7 @@ subroutine riemann_hllc(qleft,qright,fgdnv,ngrid)
         cfastr = cfastr + gamma_rad(irad)*qright(i,ndim+2+irad)
      end do
 #endif
+     cfastr = cfastr + snright(i)
      cfastr=sqrt(max(cfastr/rr,smallc**2))
 
      ! Compute HLL wave speed

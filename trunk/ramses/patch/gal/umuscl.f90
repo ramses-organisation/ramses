@@ -19,7 +19,7 @@
 !  ngrid       => (const)  number of sub-grids
 !  ndim        => (const)  number of dimensions
 ! ----------------------------------------------------------------
-subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
+subroutine unsplit(uin,pin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -29,7 +29,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  !real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
@@ -95,7 +95,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=if1,if2
@@ -118,7 +118,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi
@@ -142,7 +142,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Z direction
 #if NDIM>2
   call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi
@@ -701,7 +701,7 @@ end subroutine trace3d
 !###########################################################
 !###########################################################
 subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
-     &             qp,ip1,ip2,jp1,jp2,kp1,kp2, &
+     &             qp,ip1,ip2,jp1,jp2,kp1,kp2, pin, &
      &                ilo,ihi,jlo,jhi,klo,khi, ln,lt1,lt2, &
      &            flx,tmp,ngrid)
   use amr_parameters
@@ -716,12 +716,14 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2)::pin
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
 
   ! local variables
   integer ::i, j, k, n, l, idim, xdim
   real(dp)::entho
+  real(dp),dimension(1:nvector),save::snleft,snright
   real(dp),dimension(1:nvector,1:nvar),save::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1),save::fgdnv
 
@@ -749,6 +751,26 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qleft (l,3) = qm(l,i,j,k,ndim+2,xdim)
               qright(l,3) = qp(l,i,j,k,ndim+2,xdim)
            end do
+
+           ! Supernovae
+           if(ln==2)then
+              do l = 1, ngrid
+                 snleft (l) = pin(l,i-1,j,k)
+                 snright(l) = pin(l,i,j,k)
+              end do
+           endif
+           if(ln==3)then
+              do l = 1, ngrid
+                 snleft (l) = pin(l,i,j-1,k)
+                 snright(l) = pin(l,i,j,k)
+              end do
+           endif
+           if(ln==4)then
+              do l = 1, ngrid
+                 snleft (l) = pin(l,i,j,k-1)
+                 snright(l) = pin(l,i,j,k)
+              end do
+           endif
 
            ! Tangential velocity 1
 #if NDIM>1
@@ -781,7 +803,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
            else if (riemann.eq.'llf')then
               call riemann_llf     (qleft,qright,fgdnv,ngrid)
            else if (riemann.eq.'hllc')then
-              call riemann_hllc    (qleft,qright,fgdnv,ngrid)
+              call riemann_hllc    (qleft,qright,snleft,snright,fgdnv,ngrid)
            else if (riemann.eq.'hll')then
               call riemann_hll     (qleft,qright,fgdnv,ngrid)
            else

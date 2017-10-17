@@ -392,6 +392,14 @@ subroutine add_pdv_source_terms(ilevel)
         end do
 #endif
 
+        if(momentum_feedback)then
+           ! Add +pdV term
+           do i=1,ngrid
+              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2) &
+                   & +pstarold(ind_cell(i))*divu_loc(i)*dtnew(ilevel)
+           end do
+        endif
+
      enddo
      ! End loop over cells
   end do
@@ -653,7 +661,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
-  !real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -772,16 +780,16 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            end do
         end if
         ! Gather stellar momentum
-      !   if(momentum_feedback)then
-      !      do i=1,nexist
-      !         ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
-      !      end do
-      !      ! Use straight injection for buffer cells
-      !      do i=1,nbuffer
-      !         ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
-      !      end do
-      !   end if
-      !
+        if(momentum_feedback)then
+           do i=1,nexist
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+           end do
+           ! Use straight injection for buffer cells
+           do i=1,nbuffer
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+           end do
+        end if
+        
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -803,7 +811,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,ploc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface
