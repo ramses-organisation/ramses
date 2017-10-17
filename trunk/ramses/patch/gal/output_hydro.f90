@@ -135,12 +135,6 @@ subroutine backup_hydro(filename)
                  do i=1,ncache
                     xdp(i)=(gamma_rad(ivar-ndim-2)-1d0)*uold(ind_grid(i)+iskip,ivar)
                  end do
-                 !very dirty hacking
-                 if(momentum_feedback)then
-                    do i=1,ncache
-                       xdp(i)=pstarold(ind_grid(i)+iskip)
-                    end do
-                 endif
                  write(ilun)xdp
               end do
 #endif

@@ -19,7 +19,7 @@
 !  ngrid       => (const)  number of sub-grids
 !  ndim        => (const)  number of dimensions
 ! ----------------------------------------------------------------
-subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
+subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -29,7 +29,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
+  !real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
@@ -168,9 +168,9 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
     call consup(uin,flux,divu,dt,ngrid)
   endif
 
-  if(momentum_feedback)then
-     call stellar_momentum(uin,pin,flux,dx,dy,dz,dt,ngrid)
-  endif
+  !if(momentum_feedback)then
+  !   call stellar_momentum(uin,pin,flux,dx,dy,dz,dt,ngrid)
+  !endif
 
 end subroutine unsplit
 !###########################################################
