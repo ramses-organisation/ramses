@@ -247,7 +247,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Critical density for momentum injection via SN for a resolved cooling radius
   ! and for solar metallicity
-  n_crit=100./scale_nH*(3.*3.08d18/scale_l/dx_min)**2
+  n_crit=100./scale_nH*(3.0*aexp*3.08d18/scale_l/dx_min/4.0)**2
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube

@@ -230,7 +230,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
+  ESN=1d51/(10.*2d33)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
   M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
@@ -388,7 +388,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
      ! Use stellar momentum feedback
      if(momentum_feedback)then
-
         ! Momentum feedback from supernovae
         do j=1,np
            birth_time=tp(ind_part(j))
@@ -402,7 +401,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            metallicity=max(metallicity,0.01)
            ! Check if cooling radius is not resolved
            if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**2/dteff(j)
+              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**2/dteff(j)/6.0
            endif
         end do
 
