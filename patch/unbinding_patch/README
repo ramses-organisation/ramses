@@ -1,0 +1,58 @@
+============================
+= PARTICLE UNBINDING PATCH =
+============================
+
+The new routines are in the clump_finder.f90 file.
+
+The main routine (unbinding) is called in the clump_finder routine
+from the clump_finder.f90 after clump properties are written to file.
+
+The purpose of this patch is to identify unbound particles in clumps
+as identified by the clumpfinder and pass them on to the parent clumps,
+until the halo-namegiver clumps are reached.
+
+
+New namelist parameters for this pach:
+(Can be set in the CLUMPFIND_PARAMS block)
+
+NAME                        DEFAULT VALUE        FUNCTION
+unbind=                     .true.               Turn particle unbinding on 
+                                                 or off
+
+nmassbins=                  50                   Number of bins for the mass 
+                                                 binning of the cumulative
+                                                 mass profile. Any integer >1.
+
+logbins=                    .true.               use logarithmic binning 
+                                                 distances for cumulative mass
+                                                 profiles (and gravitational 
+                                                 potential of clumps).
+                                                 If false, the code  will use 
+                                                 linear binning distances.
+
+saddle_pot=                 .true.               Take neighbouring structures 
+                                                 into account; Cut potentiall
+                                                 off at closest saddle.
+
+unbinding_formatted_output= .false.              Create formatted output for 
+                                                 particles, cumulative mass
+                                                 profiles, binning distances, 
+                                                 particle based clump
+                                                 properties, gravitational 
+                                                 potential of substructure
+                                                 clumps 
+
+iter_properties=            .true.               whether to unbind multiple times 
+                                                 with updated clump properties
+                                                 determined by earlier unbindings
+
+conv_limit =                0.01                 convergence limit. If the 
+                                                 v_clump_old/v_clump_new < conv_limit,
+                                                 stop iterating for this clump. 
+                                                 (only used when iter_properties=.true.)
+
+repeat_max =                100                  maximal number of loops per level
+                                                 for iterative unbinding
+                                                 (in case a clump doesn't converge)
+                                                 (shouldn't happen)
+                                                 (only used when iter_properties=.true.)
