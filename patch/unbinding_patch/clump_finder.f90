@@ -2066,8 +2066,8 @@ subroutine unbinding()
       if (loop_again) then
         !communicate whether peaks have remaining contributing particles
         call build_peak_communicator()
-        call boundary_peak_int(hasatleastoneptcl,'max')
-        call virtual_peak_int(hasatleastoneptcl)
+        call virtual_peak_int(hasatleastoneptcl,'max')
+        call boundary_peak_int(hasatleastoneptcl)
         do ipeak=1,hfree-1
           !if peak has no contributing particles anymore
           if (hasatleastoneptcl(ipeak)==0) to_iter(ipeak)=.false. !dont loop anymore over this peak
