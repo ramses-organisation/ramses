@@ -117,6 +117,7 @@ subroutine clump_finder(create_output,keep_alive)
   integer(i8b)::ntest_all,nmove_tot,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
+  logical :: verbose_all
 
 #ifndef WITHOUTMPI
   integer(i8b)::nmove_all,nzero_all
@@ -374,10 +375,13 @@ subroutine clump_finder(create_output,keep_alive)
      !------------------------------------------
      ! Output clumps properties to file
      !------------------------------------------
+
+     call MPI_ALLREDUCE(verbose, verbose_all, ncpu, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, info)
+
      if(verbose)then
         write(*,*)"Output status of peak memory."
      endif
-     if(verbose)call analyze_peak_memory
+     if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
