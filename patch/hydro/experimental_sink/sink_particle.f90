@@ -1246,6 +1246,7 @@ subroutine make_sink_from_clump(ilevel)
   integer ,dimension(1:nvector)::ind_grid_new,ind_cell_new
   integer ,dimension(1:ncpu)::ntot_sink_cpu
 #ifndef WITHOUTMPI
+  integer ::icpu, info
   integer ,dimension(1:ncpu)::ntot_sink_all
 #endif
   logical ::ok_free
