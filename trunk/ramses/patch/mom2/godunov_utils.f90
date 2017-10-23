@@ -74,12 +74,6 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      uu(k,ndim+2) = gamma*uu(k,ndim+2)
   end do
 
-  if(momentum_feedback)then
-     do k = 1, ncell
-       uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k))
-     end do
-  endif
-
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
@@ -100,6 +94,12 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
         uu(k,ndim+2)=uu(k,ndim+2)+abs(uu(k,idim+1))
      end do
   end do
+
+  if(momentum_feedback)then
+     do k = 1, ncell
+       uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k)/uu(k,1))
+     end do
+  endif
 
   ! Compute gravity strength ratio
   do k = 1, ncell
@@ -1034,10 +1034,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
 #if NDIM>2
      ecinl=ecinl+half*rl*qleft(i,5)**2
 #endif
-     etotl = el+ecinl
-     
-     !etotl = etotl+snleft(i)/(gamma-one)
-
+     etotl = el+ecinl     
 #if NENER>0
      do irad=1,nener
         eradl(irad)=qleft(i,2+ndim+irad)/(gamma_rad(irad)-one)
@@ -1066,9 +1063,6 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      ecinr=ecinr+half*rr*qright(i,5)**2
 #endif
      etotr = er+ecinr
-
-     !etotr = etotr+snright(i)/(gamma-one)
-
 #if NENER>0
      do irad=1,nener
         eradr(irad)=qright(i,2+ndim+irad)/(gamma_rad(irad)-one)
