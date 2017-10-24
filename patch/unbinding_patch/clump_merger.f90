@@ -1287,6 +1287,9 @@ subroutine write_clump_map
   character(LEN=5)::myidstring,nchar,ncharcpu
 
   nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
   do ind=1,twotondim
@@ -1327,7 +1330,8 @@ subroutine write_clump_map
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
         !peak_map
-        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',peak_nr
+        !added for patch: write also cell level
+        write(20,'(1PE18.9E2,A,1PE18.9E2,A,1PE18.9E2A,I4,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',levp(ipart),',',peak_nr
      end if
   end do
   close(20)
