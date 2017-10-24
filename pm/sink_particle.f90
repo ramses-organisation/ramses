@@ -1654,6 +1654,7 @@ subroutine true_max(x,y,z,ilevel)
   real(dp),dimension(1:ndim)::gradient,displacement
   real(dp),dimension(1:ndim,1:ndim)::hess,minor
   real(dp),dimension(1:nvector,1:ndim) :: xtest_temp
+  real(dp) :: smallreal = 1D-200
 
 #if NDIM==3
 
@@ -1751,7 +1752,7 @@ subroutine true_max(x,y,z,ilevel)
   do i=1,3
      do j=1,3
         numerator = gradient(j)*minor(i,j)
-        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*tiny(0.d0))
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*smallreal)
      end do
   end do
 
