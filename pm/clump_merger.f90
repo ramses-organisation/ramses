@@ -1276,6 +1276,9 @@ subroutine write_clump_map
   character(LEN=5)::myidstring,nchar,ncharcpu
 
   nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
   do ind=1,twotondim
