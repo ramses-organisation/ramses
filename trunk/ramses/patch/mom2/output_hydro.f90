@@ -69,6 +69,11 @@ subroutine backup_hydro(filename)
   integer,parameter::tag=1121
   integer::dummy_io,info2
 
+  real(dp)::dx,scale
+  integer::nx_loc
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+
   if(verbose)write(*,*)'Entering backup_hydro'
 
   ilun=ncpu+myid+10
@@ -94,6 +99,7 @@ subroutine backup_hydro(filename)
   write(ilun)nboundary
   write(ilun)gamma
   do ilevel=1,nlevelmax
+     dx=0.5D0**ilevel*scale
      do ibound=1,nboundary+ncpu
         if(ibound<=ncpu)then
            ncache=numbl(ibound,ilevel)
@@ -164,7 +170,7 @@ subroutine backup_hydro(filename)
                  end do
                  if(momentum_feedback.and.ivar.eq.9)then
                     do i=1,ncache
-                       xdp(i)=pstarold(ind_grid(i)+iskip)
+                       xdp(i)=pstarold(ind_grid(i)+iskip)*dx/dtnew(ilevel)
                     end do
                  endif
                  write(ilun)xdp

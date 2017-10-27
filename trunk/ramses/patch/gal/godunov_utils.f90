@@ -1036,8 +1036,6 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
 #endif
      etotl = el+ecinl
      
-     !etotl = etotl+snleft(i)/(gamma-one)
-
 #if NENER>0
      do irad=1,nener
         eradl(irad)=qleft(i,2+ndim+irad)/(gamma_rad(irad)-one)
@@ -1056,7 +1054,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      rr=max(qright(i,1),smallr)
      Pr=max(qright(i,3),rr*smallp)
      ur=    qright(i,2)
-
+     
      er=Pr*entho
      ecinr = half*rr*ur*ur
 #if NDIM>1
@@ -1066,8 +1064,6 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      ecinr=ecinr+half*rr*qright(i,5)**2
 #endif
      etotr = er+ecinr
-
-     !etotr = etotr+snright(i)/(gamma-one)
 
 #if NENER>0
      do irad=1,nener

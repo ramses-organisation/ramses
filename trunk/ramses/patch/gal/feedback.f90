@@ -401,7 +401,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            metallicity=max(metallicity,0.01)
            ! Check if cooling radius is not resolved
            if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**2/dteff(j)/6.0
+              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**2/dtnew(levelp(ind_part(j)))/6.0
            endif
         end do
 
