@@ -782,11 +782,11 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         ! Gather stellar momentum
         if(momentum_feedback)then
            do i=1,nexist
-              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))*dx/dtnew(ilevel)
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))*dx/dtnew(ilevel)/6.0
            end do
            ! Use straight injection for buffer cells
            do i=1,nbuffer
-              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))*dx/dtnew(ilevel)
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))*dx/dtnew(ilevel)/6.0
            end do
         end if
         

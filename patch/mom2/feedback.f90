@@ -168,7 +168,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
   real(dp)::p_SN,pressure,gas_density,metallicity
-  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit
+  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit,p_boost
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -237,7 +237,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=1.4*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=5.0*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
@@ -247,7 +247,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Critical density for momentum injection via SN for a resolved cooling radius
   ! and for solar metallicity
-  n_crit=100./scale_nH*(3.0*aexp*3.08d18/scale_l/dx_min/4.0)**2
+  !n_crit=100./scale_nH*(3.0*aexp*3.08d18/scale_l/dx_min/4.0)**2
+  n_crit=(20.0*aexp*3.08d18/(scale_l*dx_min*5.0))**(2.5)/scale_nH
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -391,6 +392,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      
         ! Momentum feedback from supernovae
         do j=1,np
+           p_boost = 1.0
            birth_time=tp(ind_part(j))
            gas_density=max(uold(indp(j),1),smallr)
            ! Compute metallicity for cooling
@@ -400,9 +402,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
+           p_boost = (gas_density*scale_nH)**(-0.15)*metallicity**(-0.15)
            ! Check if cooling radius is not resolved
            if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**3/6.0
+              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**3*p_boost
+              write(*,'(A20,I10,E24.8,E24.8,E24.8)'), 'pstar: yes, n>n_crit', n_SN(j), gas_density*scale_nH, metallicity, p_boost
+           endif
+           if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.lt.n_crit)then
+              write(*,'(A20,E24.8)'), 'pstar:  no, n<n_crit', gas_density*scale_nH
            endif
         end do
 
