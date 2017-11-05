@@ -779,7 +779,7 @@ subroutine output_frame()
                                 imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
-                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c
                                       if(method_frame(proj_ind).eq.'min')then
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
