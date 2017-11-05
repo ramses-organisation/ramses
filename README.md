@@ -14,13 +14,15 @@ Passing Interface (MPI) library.
 
 You can go to the user's guide in [PDF here][4] and in the [WIKI here][1].
 
-Check regularly the [automatic test page][2].
-
-Visit the code web site [here][3].
+Check regularly the [automatic test page][2]. Visit the code web site [here][3].
 
 Download the code by cloning the git repository using 
 ```
 $ git clone https://bitbucket.org/rteyssie/ramses
+```
+This is the development branch. To get the stable release do the following
+```
+$ git clone --branch stable_17_09 https://bitbucket.org/rteyssie/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 

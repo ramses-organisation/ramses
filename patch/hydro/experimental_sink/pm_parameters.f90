@@ -24,9 +24,11 @@ module pm_parameters
   real(dp)::cont_speed=0.                    ! Clump contraction rate
 
   character(LEN=15)::accretion_scheme='none' ! Sink accretion scheme; options: 'none', 'bondi'
-  logical::bondi_accretion=.false.
+  logical::bondi_accretion=.false.           ! NOT A NAMELIST PARAMETER
+  logical::bondi_use_vrel=.true.             ! Use v_rel^2 in the denominator of Bondi formula
 
   real(dp)::mass_sink_seed=0.0               ! Initial sink mass
+  real(dp)::mass_smbh_seed=0.0               ! Initial SMBH mass
   real(dp)::mass_merger_vel_check=-1.0       ! Threshold for velocity check in  merging; in Msun; default: don't check
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
@@ -50,6 +52,5 @@ module pm_parameters
   real(dp)::mass_clump_AGN=1.d10             ! Minimum mass of the clump for sink creation
 
   real(dp)::boost_threshold_density=0.1      ! Accretion boost threshold for Bondi
-
 
 end module pm_parameters
