@@ -1,3 +1,5 @@
+! This file includes no new subroutines, but some minor additions.
+! You can find them by searching for the keyword "added"
 #if NDIM==3
 subroutine compute_clump_properties(xx)
   use amr_commons
@@ -457,6 +459,8 @@ subroutine merge_clumps(action)
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
 
+  integer::mergelevel_max_global !added for patch
+
 #ifndef WITHOUTMPI
   integer::nmove_all,nsurvive_all,nzero_all
 #endif
@@ -631,6 +635,13 @@ subroutine merge_clumps(action)
 
   end do
   ! End loop over peak levels
+
+  !added for patch follwing 6 lines:
+  mergelevel_max=idepth-2 !last level has no more clumps, also idepth=idepth+1 still happens on last level.
+#ifndef WITHOUTMPI
+        call MPI_ALLREDUCE(mergelevel_max,mergelevel_max_global,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+        mergelevel_max=mergelevel_max_global
+#endif
 
   ! Compute maximum saddle density for each surviving clump
   ! Create new local duplicated peaks and update communicator
@@ -1319,7 +1330,8 @@ subroutine write_clump_map
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
         !peak_map
-        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',peak_nr
+        !added for patch: write also cell level
+        write(20,'(1PE18.9E2,A,1PE18.9E2,A,1PE18.9E2A,I4,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',levp(ipart),',',peak_nr
      end if
   end do
   close(20)

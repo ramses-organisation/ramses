@@ -1033,7 +1033,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
        & , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
   !-------------------------------------------------------------------------
-  if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
+  if(.not. metal) z = max(z_ave*0.02, 10.d-5)![m_metals/m_tot]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   call rt_units(scale_Np, scale_Fp)
