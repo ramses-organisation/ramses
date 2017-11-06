@@ -1256,7 +1256,6 @@ subroutine make_sink_from_clump(ilevel)
 #ifndef WITHOUTMPI
   integer ::icpu, info
   integer ,dimension(1:ncpu)::ntot_sink_all
-  integer ::info,icpu
 #endif
   logical ::ok_free
   real(dp)::d,u,v,w,e,factG,delta_d,v2
