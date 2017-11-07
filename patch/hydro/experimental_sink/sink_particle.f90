@@ -34,6 +34,9 @@ subroutine create_sink
 
   ! Remove all particle clouds around old sinks (including the central one)
   call kill_entire_cloud(1)
+#ifndef WITHOUTMPI
+  call synchronize_sink_info
+#endif
 
   ! DO NOT MODIFY FLAG2 BETWEEN CLUMP_FINDER AND MAKE_SINK_FROM_CLUMP
   if (create_sinks)then
@@ -902,7 +905,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            xsink_new(isink,1:3)=xsink_new(isink,1:3)+x_acc(1:3)
            vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
            lsink_new(isink,1:3)=lsink_new(isink,1:3)+l_acc(1:3)
-           delta_mass_new(isink)=delta_mass_new(isink)+m_acc_smbh
+           if(mass_smbh_seed>0.0)then
+              delta_mass_new(isink)=delta_mass_new(isink)+m_acc_smbh
+           else
+              delta_mass_new(isink)=delta_mass_new(isink)+m_acc
+           end if
 
            m_acc=m_acc+m_acc_smbh
            ! Accrete mass, momentum and gas total energy
@@ -986,6 +993,13 @@ subroutine compute_accretion_rate(write_sinks)
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
 
+     dMsink_overdt(isink)=0.0
+     dMsmbh_overdt(isink)=0.0
+     dMBHoverdt(isink)=0.0
+     dMBHoverdt_smbh(isink)=0.0
+     dMEDoverdt(isink)=0.0
+     dMEDoverdt_smbh(isink)=0.0
+
      ! Compute sink sphere average quantities
      density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
      do i=levelmin,nlevelmax
@@ -997,13 +1011,7 @@ subroutine compute_accretion_rate(write_sinks)
      mgas=density
      density=density/(volume+tiny(0.0_dp))
      if (volume<=0. .or. density<=0.)then
-        if(myid==1)print*,'something might be going wrong here...',volume,density,isink,idsink(isink),xsink(isink,1:ndim),write_sinks
-        dMsink_overdt(isink)=0.0
-        dMsmbh_overdt(isink)=0.0
-        dMBHoverdt(isink)=0.0
-        dMBHoverdt_smbh(isink)=0.0
-        dMEDoverdt(isink)=0.0
-        dMEDoverdt_smbh(isink)=0.0
+        if(myid==1)print*,'something might be going wrong here...',volume,density,isink,idsink(isink),xsink(isink,1:ndim)
         cycle
      endif
      ! Compute Bondi-Hoyle accretion rate in code units
@@ -2893,6 +2901,33 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
+!###############################################################################
+!###############################################################################
+!###############################################################################
+!###############################################################################
+#ifndef WITHOUTMPI
+subroutine synchronize_sink_info
+  use pm_commons
+  implicit none
+  !-----------------------------------------------------------------------------
+  ! This routine syncronizes sink variables across all CPUs if MPI is used.
+  ! This is done to prevent roundoff errors.
+  !-----------------------------------------------------------------------------
+  include 'mpif.h'
+  integer::info
+
+  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
+
+end subroutine synchronize_sink_info
+#endif
 !###############################################################################
 !###############################################################################
 !###############################################################################
