@@ -182,10 +182,13 @@ FUNCTION getCrosssection_Hui(lambda, species)
      getCrosssection_Hui=0.
      RETURN
   endif
-  if(species .eq. ixHI) then !H2
-     getCrosssection_Hui = 0.
-     if(E .lt. (ionEvs(1)+1.)) getCrosssection_Hui = 2.1d-19 !sln chg from 3.0d-22
-     return
+  if(species .eq. ixHI) then !H2 !sln ionization cs added, Abel1997 eqn A24
+    getCrosssection_Hui = 0.
+    if(E .ge. 11.2 .and. E .lt. 13.6) getCrosssection_Hui=2.1d-19!Sternberg2014
+    if(E .ge. 15.42 .and. E .lt. 16.5) getCrosssection_Hui=6.2e-18*E-9.4e-17
+    if(E .ge. 16.5 .and. E .lt. 17.7) getCrosssection_Hui=1.4e-18*E-1.48e-17    
+    if(E .ge. 17.7) getCrosssection_Hui=2.5e-14*E**(-2.71)
+    return
   endif
   if(species .eq. ixHII) then ! HI
      E0 = 4.298d-1 ; cs0 = 5.475d-14  ; P  = 2.963
@@ -199,7 +202,6 @@ FUNCTION getCrosssection_Hui(lambda, species)
      E0 = 1.720    ; cs0 = 1.369d-14  ; P  = 2.963
      ya = 32.88    ; yw  = 0          ; y0 = 0         ; y1 = 0
   endif
-
   if (species .ne. ixHI) then
      x = E/E0 - y0
      y = sqrt(x**2+y1**2)
@@ -207,7 +209,6 @@ FUNCTION getCrosssection_Hui(lambda, species)
      getCrosssection_Hui = &
           cs0 * ((x-1.)**2 + yw**2) * y**(0.5*P-5.5)/(1.+sqrt(y/ya))**P
   endif
-
 END FUNCTION getCrosssection_Hui
 
 
