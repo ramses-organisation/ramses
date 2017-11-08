@@ -31,7 +31,7 @@ subroutine clump_finder(create_output,keep_alive)
   integer(i8b)::ntest_all,nmove_tot,nzero_tot
   integer(i8b),dimension(1:ncpu)::ntest_cpu,ntest_cpu_all
   integer,dimension(1:ncpu)::npeaks_per_cpu_tot
-  logical :: verbose_all
+  logical::verbose_all=.false.
 
 #ifndef WITHOUTMPI
   integer(i8b)::nmove_all,nzero_all
@@ -293,8 +293,12 @@ subroutine clump_finder(create_output,keep_alive)
         write(*,*)"Output status of peak memory."
      endif
 
-     call MPI_ALLREDUCE(verbose, verbose_all, ncpu, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, info)
-     
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(verbose,verbose_all,ncpu,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+#else
+     verbose_all=verbose
+#endif
+
      if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
      if(create_output)then
