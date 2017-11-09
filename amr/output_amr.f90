@@ -17,7 +17,7 @@ subroutine dump_all
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filedir,filedirini,filecmd
-  integer::irec,ierr
+  integer::ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
