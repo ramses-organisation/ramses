@@ -1852,12 +1852,6 @@ subroutine update_sink(ilevel)
         ! Save the velocity
         vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
 
-        ! This is the kick-kick (half old half new timestep)
-        vsink(isink,1:ndim)=0.5D0*(dtnew(ilevel)+dteff)*fsink(isink,1:ndim)+vsink(isink,1:ndim)
-
-        ! Save the velocity
-        vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
-
         ! and this is the drift (only for the global sink variable)
         xsink(isink,1:ndim)=xsink(isink,1:ndim)+vsink(isink,1:ndim)*dtnew(ilevel)
         new_born(isink)=.false.
