@@ -318,6 +318,7 @@ end subroutine rho_from_current_level
 !##############################################################################
 !##############################################################################
 !##############################################################################
+
 subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
@@ -342,6 +343,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::ttt=0d0
+  ! Save type
+  type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -381,18 +384,27 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! Gather particle mass
+  ! Gather particle mass and family
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     fam(j) = typep(ind_part(j))
+     if (is_tracer(fam(j))) then
+        mmm(j)=0.0d0
+     else
+        mmm(j)=mp(ind_part(j))
+     end if
   end do
 
+  ! FIXME: should use mmm instead of mp, but gives different binary output
+  !        for no reason that I can think of
   if(ilevel==levelmin)then
      do j=1,np
         multipole(1)=multipole(1)+mp(ind_part(j))
+        ! multipole(1)=multipole(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
            multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+           ! multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -546,7 +558,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do ind=1,twotondim
 
      do j=1,np
-        ok(j)=igrid(j,ind)>0
+        ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
      end do
 
      do j=1,np
@@ -561,7 +573,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j).ne.0d0)then
+           ! check for non-DM (and non-tracer)
+           if ( ok(j) .and. is_not_DM(fam(j)) ) then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -569,7 +582,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      if(ilevel==cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j)==0d0)then
+           ! check for DM
+           if ( ok(j) .and. is_DM(fam(j)) ) then
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -586,20 +600,20 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      endif
 
-     ! Remove massive dark matter particle
+     ! Keep only DM particle with a mass below the mass cut
      if(mass_cut_refine>0.0)then
         do j=1,np
-           if(ttt(j)==0d0)then
-              ok(j)=ok(j).and.mmm(j)<mass_cut_refine
+           if ( is_DM(fam(j)) ) then
+              ok(j)=ok(j) .and. mmm(j) < mass_cut_refine
            endif
         end do
      endif
 
-     ! For low mass baryon particles
+     ! Rescale the mass by mass_sph for baryon particles
      if(star)then
         do j=1,np
-           if(ttt(j).ne.0.0)then
-              vol2(j)=vol2(j)*mmm(j)/mass_sph
+           if ( is_not_DM(fam(j)) ) then
+              vol2(j) = vol2(j)*mmm(j)/mass_sph
            endif
         end do
      endif
@@ -612,7 +626,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>=cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j).ne.0d0)then
+           if ( ok(j) .and. is_not_DM(fam(j)) ) then
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
@@ -622,7 +636,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! by setting particle number density above m_refine(ilevel)
      if(sink_refine)then
         do j=1,np
-           if(idp(ind_part(j))<0.)then
+           if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
@@ -1143,6 +1157,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::ttt=0d0
+  type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
@@ -1186,18 +1201,23 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! Gather particle mass
+  ! Gather particle mass & type
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     fam(j) = typep(ind_part(j))
+     if (is_tracer(fam(j))) then
+        mmm(j)=0.
+     else
+        mmm(j)=mp(ind_part(j))
+     end if
   end do
 
   if(ilevel==levelmin)then
      do j=1,np
-        multipole(1)=multipole(1)+mp(ind_part(j))
+        multipole(1)=multipole(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
-           multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+           multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -1392,7 +1412,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>cic_levelmax) then
         do j=1,np
-           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+           if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1400,7 +1420,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      if(ilevel==cic_levelmax)then
         do j=1,np
-           if(ok(j).and.(ttt(j)==0d0).and.(.not.abandoned(j)))then
+           if ( ok(j) .and. is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1424,7 +1444,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! Remove massive dark matter particle
      if(mass_cut_refine>0.0) then
         do j=1,np
-           if(ttt(j)==0d0.and.(.not.abandoned(j))) then
+           if ( is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               ok(j)=ok(j).and.mmm(j)<mass_cut_refine
            endif
         end do
@@ -1433,7 +1453,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! For low mass baryon particles
      if(star) then
         do j=1,np
-           if(ttt(j).ne.0.0.and.(.not.abandoned(j))) then
+           if ( is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               vol2(j)=vol2(j)*mmm(j)/mass_sph
            endif
         end do
@@ -1447,7 +1467,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>=cic_levelmax) then
         do j=1,np
-           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+           if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do

@@ -468,13 +468,19 @@ SUBROUTINE update_SED_group_props()
   sum_cse_cpu = 0d0
   t_sne_Gyr = t_sne / 1d3
   do i=1,npartmax
+     ! idp and tp are checked, but neither is_star nor is_DM.
+     ! So just keep it.
+     ! FIXME: debris particles!
      if(levelp(i).le.0 .or. idp(i).eq.0 .or. tp(i).eq.0.)                &
+     !if(levelp(i).le.0 .or. .NOT.is_star(typep(i)))                       &
         cycle ! not a star
      ! particle exists and is a star
      mass = mp(i)
      call getAgeGyr(tp(i), age)                         !     age = [Gyrs]
      if(age.gt.t_sne_Gyr) then
         ! Account for stellar mass loss - SED uses initial population mass
+        ! FIXME: This does not work for kinetic feedback, for which the mp
+        !        is always reduced by eta_sn
         mass = mass / (1d0-eta_sn)
      endif
      if(metal) then
@@ -612,8 +618,11 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
            do jpart = 1, npart1
               ! Save next particle       <--- Very important !!!
               next_part = nextp(ipart)
+              ! FIXME: should be a test on is_star
+              !        old versions included radiation from debris...
               !if(idp(ipart) .gt. 0 .and. tp(ipart) .ne. 0.d0) then
               if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
+              !if(is_star(typep(ipart))) then
                  npart2 = npart2+1     ! only stars
               endif
               ipart = next_part        ! Go to next particle
@@ -630,7 +639,10 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
               ! Save next particle      <--- Very important !!!
               next_part = nextp(ipart)
               ! Select only star particles
+              ! FIXME: should be a test on is_star
+              !        old versions included radiation from debris...
               if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
+              !if(is_star(typep(ipart))) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -1165,8 +1177,10 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      if(showSEDstats .and. nSEDgroups .gt. 0) then
         step_nPhot = step_nPhot+part_NpInp(j,1)*scale_nPhot
         step_nStar = step_nStar+dt_loc_Gyr*Gyr2sec/scale_t
+        ! step_mStar = step_mStar+mass * scale_msun             &
+        !      * dt_loc_Gyr * Gyr2sec / scale_t
         step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
-                                          * dt_loc_Gyr * Gyr2sec / scale_t
+             * dt_loc_Gyr * Gyr2sec / scale_t
      endif
 
      if( ok(j) )then
@@ -1751,4 +1765,3 @@ SUBROUTINE inp_1d(xax,nx,x,ix0,ix1,dx0,dx1)
   !ret = dx0 * table(ix1, :) + dx1 * table(ix0, :)
 
 END SUBROUTINE inp_1d
-

@@ -542,6 +542,13 @@ subroutine init_part
         ! Initial particle number
         npart=ipart
 
+        ! Get particle type from properties
+        do i = 1, npart
+           ! typep(i) = props2type(idp(i), tp(i), mp(i))
+           typep(i)%family = FAM_DM
+           typep(i)%tag = 0
+        end do
+
         ! Move particle according to Zeldovich approximation
         if(.not. read_pos)then
            xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
