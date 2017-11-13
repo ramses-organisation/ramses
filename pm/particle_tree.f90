@@ -890,8 +890,8 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
         do i=1,np
            reception(icpu,ilevel)%up(ind_com(i),current_property)=zp(ind_part(i))
         end do
+        current_property = current_property+1
      end if
-     current_property = current_property+1
   end if
 
   ! Remove particles from parent linked list
@@ -966,8 +966,8 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
         do i=1,np
            zp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
         end do
+        current_property = current_property+1
      end if
-     current_property = current_property+1
   end if
 
 end subroutine empty_comm

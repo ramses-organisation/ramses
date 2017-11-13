@@ -55,6 +55,9 @@ subroutine init_part
   character(LEN=5)::nchar,ncharcpu
 
   if(verbose)write(*,*)'Entering init_part'
+  
+  if(myid.eq.1)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
+  if(myid.eq.1)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
 
   if(allocated(xp))then
      if(verbose)write(*,*)'Initial conditions already set'
