@@ -12,6 +12,8 @@ subroutine rho_fine(ilevel,icount)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
+  real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 #endif
   integer::ilevel,icount
   !------------------------------------------------------------------
@@ -25,13 +27,8 @@ subroutine rho_fine(ilevel,icount)
   ! - cpu_map2 containing the refinement map due to particle
   !   number density criterion (quasi Lagrangian mesh).
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,info,nx_loc,ibound,idim
+  integer::iskip,icpu,ind,i,nx_loc,ibound
   real(dp)::dx,d_scale,scale,dx_loc,scalar
-  real(dp)::d0,m_refine_loc,dx_min,vol_min,mstar,msnk,nISM,nCOM
-  real(kind=8)::total,total_all,total2,total2_all,tms
-  real(kind=8),dimension(2)::totals_in,totals_out
-  logical::multigrid=.false.
-  real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return
@@ -341,19 +338,17 @@ subroutine multipole_from_current_level(ilevel)
   ! Arrays flag1 and flag2 are used as temporary work space.
   !------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ind,iskip,ibound
-  integer::i,j,ig,ip,npart1,npart2,next_part
+  integer::j,ig,ip,npart1,npart2,next_part
   real(dp)::dx
 
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
   !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  integer,dimension(1:nvector),save::ind_leaf,ind_split
-  integer ::ncache,ngrid,info,nx_loc
-  real(dp),dimension(1:nvector,1:ndim),save::xx
+  integer ::nx_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  integer ::nleaf,nsplit,ix,iy,iz,iskip_son,ind_son,ind_grid_son,ind_cell_son
-  real(kind=8)::vol,dx_loc,scale,vol_loc,mm
+  integer ::ix,iy,iz
+  real(kind=8)::dx_loc,scale,vol_loc
   real(dp),dimension(1:3)::skip_loc
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -548,6 +543,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::ttt=0d0
+  ! Save type
+  type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -587,18 +584,27 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! Gather particle mass
+  ! Gather particle mass and family
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     fam(j) = typep(ind_part(j))
+     if (is_tracer(fam(j))) then
+        mmm(j)=0.0d0
+     else
+        mmm(j)=mp(ind_part(j))
+     end if
   end do
 
+  ! FIXME: should use mmm instead of mp, but gives different binary output
+  !        for no reason that I can think of
   if(ilevel==levelmin)then
      do j=1,np
         multipole(1)=multipole(1)+mp(ind_part(j))
+        ! multipole(1)=multipole(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
            multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+           ! multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -752,7 +758,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do ind=1,twotondim
 
      do j=1,np
-        ok(j)=igrid(j,ind)>0
+        ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
         if(dice_init) ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
      end do
 
@@ -768,7 +774,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j).ne.0d0)then
+           ! check for non-DM (and non-tracer)
+           if ( ok(j) .and. is_not_DM(fam(j)) ) then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -776,7 +783,8 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      if(ilevel==cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j)==0d0)then
+           ! check for DM
+           if ( ok(j) .and. is_DM(fam(j)) ) then
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -793,20 +801,20 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      endif
 
-     ! Remove massive dark matter particle
+     ! Keep only DM particle with a mass below the mass cut
      if(mass_cut_refine>0.0)then
         do j=1,np
-           if(ttt(j)==0d0)then
-              ok(j)=ok(j).and.mmm(j)<mass_cut_refine
+           if ( is_DM(fam(j)) ) then
+              ok(j)=ok(j) .and. mmm(j) < mass_cut_refine
            endif
         end do
      endif
 
-     ! For low mass baryon particles
+     ! Rescale the mass by mass_sph for baryon particles
      if(star)then
         do j=1,np
-           if(ttt(j).ne.0.0)then
-              vol2(j)=vol2(j)*mmm(j)/mass_sph
+           if ( is_not_DM(fam(j)) ) then
+              vol2(j) = vol2(j)*mmm(j)/mass_sph
            endif
         end do
      endif
@@ -819,7 +827,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>=cic_levelmax)then
         do j=1,np
-           if(ok(j).and.ttt(j).ne.0d0)then
+           if ( ok(j) .and. is_not_DM(fam(j)) ) then
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
@@ -829,7 +837,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! by setting particle number density above m_refine(ilevel)
      if(sink_refine)then
         do j=1,np
-           if ( is_cloud(typep(ind_part(j))) ) then
+           if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
@@ -861,12 +869,12 @@ subroutine multipole_fine(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,icpu,ncache,igrid,ngrid,iskip,info,ibound,nx_loc
+  integer ::ind,i,ncache,igrid,ngrid,iskip,nx_loc
   integer ::idim,nleaf,nsplit,ix,iy,iz,iskip_son,ind_son,ind_grid_son,ind_cell_son
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf,ind_split
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector),save::dd
-  real(kind=8)::vol,dx,dx_loc,scale,vol_loc,mm
+  real(kind=8)::dx,dx_loc,scale,vol_loc,mm
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
 
@@ -991,6 +999,7 @@ subroutine multipole_fine(ilevel)
 
      end do
   enddo
+
   ! Update boundaries
   do idim=1,ndim+1
      call make_virtual_fine_dp(unew(1,idim),ilevel)
@@ -999,7 +1008,6 @@ subroutine multipole_fine(ilevel)
 111 format('   Entering multipole_fine for level',i2)
 
 end subroutine multipole_fine
-
 !###########################################################
 !###########################################################
 !###########################################################
@@ -1018,19 +1026,15 @@ subroutine ngp_amr_gas(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! the CIC scheme. Only cells that are in level ilevel
   ! are updated by the input particle list.
   !------------------------------------------------------------------
-  integer::j,ind,idim,nx_loc,iskip
+  integer::j,idim,nx_loc
   real(dp)::dx,dx_loc,scale
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
-  real(dp),dimension(1:nvector),save::vol2
-  real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
+  real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  real(dp),dimension(1:nvector),save::vol
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:nvector),save::vol_loc
@@ -1142,7 +1146,6 @@ subroutine cic_from_multipole(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  logical::multigrid
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
   ! by first reseting array rho to zero, then
@@ -1152,8 +1155,7 @@ subroutine cic_from_multipole(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer::ind,i,icpu,ncache,ngrid,iskip,ibound,igrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -1214,13 +1216,12 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
-  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::new_rho
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,ttt
+  real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -1456,6 +1457,7 @@ end subroutine cic_cell
 !##############################################################################
 !##############################################################################
 !##############################################################################
+#if NDIM==3
 subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use amr_parameters
@@ -1481,6 +1483,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::ttt=0d0
+  type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
@@ -1492,8 +1495,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      write(*,*)'TSC not supported for ndim neq 3'
      call clean_stop
   end if
-
-#if NDIM==3
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1526,18 +1527,23 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      end do
   end do
 
-  ! Gather particle mass
+  ! Gather particle mass & type
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     fam(j) = typep(ind_part(j))
+     if (is_tracer(fam(j))) then
+        mmm(j)=0.
+     else
+        mmm(j)=mp(ind_part(j))
+     end if
   end do
 
   if(ilevel==levelmin)then
      do j=1,np
-        multipole(1)=multipole(1)+mp(ind_part(j))
+        multipole(1)=multipole(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
-           multipole(idim+1)=multipole(idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+           multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -1732,7 +1738,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>cic_levelmax) then
         do j=1,np
-           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+           if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1740,7 +1746,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      if(ilevel==cic_levelmax)then
         do j=1,np
-           if(ok(j).and.(ttt(j)==0d0).and.(.not.abandoned(j)))then
+           if ( ok(j) .and. is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1764,7 +1770,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! Remove massive dark matter particle
      if(mass_cut_refine>0.0) then
         do j=1,np
-           if(ttt(j)==0d0.and.(.not.abandoned(j))) then
+           if ( is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               ok(j)=ok(j).and.mmm(j)<mass_cut_refine
            endif
         end do
@@ -1773,7 +1779,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! For low mass baryon particles
      if(star) then
         do j=1,np
-           if(ttt(j).ne.0.0.and.(.not.abandoned(j))) then
+           if ( is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               vol2(j)=vol2(j)*mmm(j)/mass_sph
            endif
         end do
@@ -1787,19 +1793,20 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      else if(ilevel>=cic_levelmax) then
         do j=1,np
-           if(ok(j).and.(ttt(j).ne.0d0).and.(.not.abandoned(j))) then
+           if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
      endif
 
   end do
-#endif
 end subroutine tsc_amr
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==3
 subroutine tsc_from_multipole(ilevel)
   use amr_commons
   use hydro_commons
@@ -1809,7 +1816,6 @@ subroutine tsc_from_multipole(ilevel)
   include 'mpif.h'
 #endif
   integer::ilevel
-  logical::multigrid
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
   ! by first reseting array rho to zero, then
@@ -1819,11 +1825,9 @@ subroutine tsc_from_multipole(ilevel)
   ! routine only set rho to zero. On the other hand, for the Multigrid
   ! solver, the restriction is necessary in any case.
   !-------------------------------------------------------------------
-  integer ::ind,i,j,icpu,ncache,ngrid,iskip,info,ibound,nx_loc
-  integer ::idim,nleaf,ix,iy,iz,igrid
+  integer::ind,i,icpu,ncache,ngrid,iskip,ibound
+  integer::igrid
   integer,dimension(1:nvector),save::ind_grid
-
-#if NDIM==3
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1865,14 +1869,16 @@ subroutine tsc_from_multipole(ilevel)
         call tsc_cell(ind_grid,ngrid,ilevel)
      end do
   end if
-#endif
+
 111 format('   Entering tsc_from_multipole for level',i2)
 
 end subroutine tsc_from_multipole
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==3
 subroutine tsc_cell(ind_grid,ngrid,ilevel)
   use amr_commons
   use poisson_commons
@@ -1883,13 +1889,12 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
-  integer ,dimension(1:nvector),save::ind_cell,ind_cell_father
+  integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  real(dp),dimension(1:nvector),save::new_rho
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,ttt
+  real(dp),dimension(1:nvector),save::mmm
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
@@ -1898,8 +1903,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
-
-#if NDIM==3
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -2078,7 +2081,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         end do
      end do
 
- ! Compute parent cell position
+     ! Compute parent cell position
      do idim=1,ndim
         do j=1,np
            icl(j,idim)=int(cl(j,idim))-2*igl(j,idim)
@@ -2140,8 +2143,8 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
 
   end do
   ! End loop over grid cells
-#endif
 end subroutine tsc_cell
+#endif
 !###########################################################
 !###########################################################
 !###########################################################

@@ -330,11 +330,11 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),1:ndim)
-              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
+              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)*scale
            endif
         end do
      end do
+     stop
   end if
 
   ! Compute neighboring grid index
@@ -691,7 +691,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(reception(icpu,ilevel)%fp(1:ncache,1:3))
+        allocate(reception(icpu,ilevel)%fp(1:ncache,1:4))
         allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -735,7 +735,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(emission(icpu,ilevel)%fp(1:ncache,1:3))
+        allocate(emission(icpu,ilevel)%fp(1:ncache,1:4))
         allocate(emission(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -745,7 +745,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*3
+        buf_count=ncache*4
         countrecv=countrecv+1
 #ifndef LONGINT
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
@@ -769,7 +769,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*3
+        buf_count=ncache*4
         countsend=countsend+1
 #ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
@@ -863,6 +863,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   do i=1,np
      reception(icpu,ilevel)%fp(ind_com(i),2)=levelp(ind_part(i))
      reception(icpu,ilevel)%fp(ind_com(i),3)=idp   (ind_part(i))
+     reception(icpu,ilevel)%fp(ind_com(i),4)=part2int(typep(ind_part(i)))
   end do
 
   ! Gather particle position and velocity
@@ -940,7 +941,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Compute parent grid index
   do i=1,np
-     igrid=emission(icpu,ilevel)%fp(ind_com(i),1)
+     igrid=int(emission(icpu,ilevel)%fp(ind_com(i),1), 4)
      ind_list(i)=emission(icpu,ilevel)%igrid(igrid)
   end do
 
@@ -950,8 +951,9 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Scatter particle level and identity
   do i=1,np
-     levelp(ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),2)
-     idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
+     levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
+     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     typep(ind_part(i)) = int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
   end do
 
   ! Scatter particle position and velocity

@@ -8,7 +8,10 @@ subroutine init_flow
   use dice_commons
   implicit none
 
-  integer::ilevel,ivar,i
+  integer::ilevel,ivar
+#ifdef SOLVERmhd
+  integer::i
+#endif
 
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
@@ -55,13 +58,14 @@ subroutine init_flow_fine(ilevel)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info,info2,dummy_io
 #endif
   integer::ilevel
 
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun
-  integer::ind,idim,ivar,ix,iy,iz,nx_loc
+  integer::ind,ivar,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
-  integer::buf_count,info,nvar_in
+  integer::buf_count
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -69,8 +73,6 @@ subroutine init_flow_fine(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector)       ,save::vv
-  real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:nvar),save::uu
   real(dp)::axlen
 
   real(dp),allocatable,dimension(:,:,:)::init_array
@@ -81,7 +83,6 @@ subroutine init_flow_fine(ilevel)
   character(LEN=5)::nchar,ncharvar
 
   integer,parameter::tag=1107
-  integer::dummy_io,info2
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -470,8 +471,11 @@ subroutine region_condinit(x,q,dx,nn)
   real(dp),dimension(1:nvector,1:nvar)::q
   real(dp),dimension(1:nvector,1:ndim)::x
 
-  integer::i,ivar,k
+  integer::i,k
   real(dp)::vol,r,xn,yn,zn,en
+#if NVAR > NDIM + 2
+  integer::ivar
+#endif
 
   ! Set some (tiny) default values in case n_region=0
   q(1:nn,1)=smallr
@@ -591,7 +595,7 @@ subroutine reset_uold(ilevel)
   ! This routine sets array uold to zero before calling
   ! the hydro scheme. uold is set to zero in virtual boundaries as well.
   !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,iskip
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -628,13 +632,13 @@ subroutine init_uold(ilevel)
   use hydro_commons
   use dice_commons
   implicit none
-  integer::ilevel,info
+  integer::ilevel
   !--------------------------------------------------------------------------
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,icpu,iskip,idim
-  real(dp)::d,u,v,w,e
+  integer::i,ivar,ind,icpu,iskip,idim
+  real(dp)::u,e
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -879,7 +883,7 @@ subroutine init_gas_cic(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:nvector),save::ethermal
   real(dp),dimension(1:nvector),save::vol_loc
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   ! Mesh spacing in that level
@@ -1106,7 +1110,7 @@ subroutine init_gas_ngp(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! the NGP scheme. Only cells that are in level ilevel
   ! are updated by the input particle list.
   !------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar
+  integer::i,j,idim,nx_loc
   real(dp)::dx,dx_loc,scale
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0

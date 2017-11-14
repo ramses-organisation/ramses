@@ -1292,9 +1292,16 @@ contains
                      if(metal) then
                        zp(ipart)  = zz(i)
                      endif
-                     typep(ipart)%family = FAM_STAR
-                     typep(ipart)%tag    = 0
                    endif
+                   if(type_index.gt.1)then
+                      if(star)then
+                         typep(ipart)%family = FAM_STAR
+                         typep(ipart)%tag    = 0
+                      end if
+                   else if(type_index.eq.1)then
+                      typep(ipart)%family = FAM_DM
+                      typep(ipart)%tag    = 0
+                   end if
                    up(ipart)      = uu(i)
                    if(ic_mask_ptype.gt.-1)then
                        if(ic_mask_ptype.eq.type_index-1)then
