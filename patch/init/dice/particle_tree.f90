@@ -9,6 +9,7 @@ subroutine init_tree
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------
   ! This subroutine build the particle linked list at the
@@ -17,7 +18,7 @@ subroutine init_tree
   ! the particle tree.
   !------------------------------------------------------
   integer::ipart,idim,i,nxny,ilevel
-  integer::npart1,info,icpu,nx_loc
+  integer::npart1,icpu,nx_loc
   logical::error
   real(dp),dimension(1:3)::xbound
   integer,dimension(1:nvector),save::ix,iy,iz
@@ -145,9 +146,12 @@ subroutine init_tree
      call merge_tree_fine(ilevel)
   end do
 
-  call kill_entire_cloud(1)
-
-  call create_cloud_from_sink
+#if NDIM==3
+  if(sink)then
+     if(nrestart.gt.0)call kill_entire_cloud(1)
+     call create_cloud_from_sink
+  endif
+#endif
 
   ! Sort particles down to levelmin
   do ilevel=1,levelmin-1
@@ -312,6 +316,8 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
+        i=MAX(i,0)
+        i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
         ok(j)=ok(j).or.i.ne.1
@@ -324,11 +330,11 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)
+              write(*,*)xp(ind_part(j),1:ndim)
+              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
            endif
+        end do
      end do
-  end do
-     stop
   end if
 
   ! Compute neighboring grid index
@@ -633,18 +639,18 @@ subroutine virtual_tree_fine(ilevel)
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.
   !-----------------------------------------------------------------------
-  integer::igrid,ipart,jpart,ncache_tot,next_part
-  integer::ip,ipcom,npart1,icpu,ncache
-  integer::info,buf_count,tag=101,tagf=102,tagu=102
-  integer::countsend,countrecv
 #ifndef WITHOUTMPI
+  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
+  integer::icpu,igrid,ipart,jpart
+  integer::info,buf_count,tagf=102,tagu=102
+  integer::countsend,countrecv
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
-#endif
-  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
-  logical::ok_free,ok_all
+  logical::ok_free
   integer::particle_data_width
+  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
