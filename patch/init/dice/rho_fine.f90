@@ -633,7 +633,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         dd(j,idim)=x(j,idim)+0.5D0
-        id(j,idim)=dd(j,idim)
+        id(j,idim)=int(dd(j,idim))
         dd(j,idim)=dd(j,idim)-id(j,idim)
         dg(j,idim)=1.0D0-dd(j,idim)
         ig(j,idim)=id(j,idim)-1
@@ -829,7 +829,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      ! by setting particle number density above m_refine(ilevel)
      if(sink_refine)then
         do j=1,np
-           if(idp(ind_part(j))<0.)then
+           if ( is_cloud(typep(ind_part(j))) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
@@ -1299,7 +1299,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do j=1,np
            dd(j,idim)=x(j,idim)+0.5D0
-           id(j,idim)=dd(j,idim)
+           id(j,idim)=int(dd(j,idim))
            dd(j,idim)=dd(j,idim)-id(j,idim)
            dg(j,idim)=1.0D0-dd(j,idim)
            ig(j,idim)=id(j,idim)-1

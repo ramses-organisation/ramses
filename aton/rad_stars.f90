@@ -64,7 +64,7 @@ subroutine compute_Srad_level(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if(is_star(typep(ipart)))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -81,7 +81,8 @@ subroutine compute_Srad_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if(is_star(typep(ipart)))then
+
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid

@@ -8,13 +8,12 @@ program log2col
   integer::nstep,ipos,jpos
   logical::ok
   character(LEN=4)::char4
-  character(LEN=5)::nchar,ncharcpu
   character(LEN=6)::char6
   character(LEN=9)::char9
   character(LEN=11)::char11
   character(LEN=12)::char12
   character(LEN=128)::nomfich,repository,outfich
-  character(LEN=128)::full_line,char
+  character(LEN=128)::full_line
   real::ekin,t,a,dt,epot,econs,mem_grid,mem_part
 
   call read_params
@@ -89,7 +88,7 @@ contains
     integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
-    LOGICAL       :: bad, ok
+    logical       :: bad, ok
 
     n = iargc()
     if (n < 4) then
@@ -155,4 +154,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-

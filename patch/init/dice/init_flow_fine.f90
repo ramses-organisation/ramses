@@ -1,4 +1,3 @@
-
 !################################################################
 !################################################################
 !################################################################
@@ -221,6 +220,7 @@ subroutine init_flow_fine(ilevel)
                  end if
               endif
 #endif
+
               open(ilun,file=filename,form='unformatted')
               rewind ilun
               read(ilun) ! skip first line

@@ -124,7 +124,11 @@ subroutine synchro_fine_static(ilevel)
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
            if(star) then
-              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
+                   ! & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
+                 ! FIXME: there should be a static_sink as well
                  npart2=npart2+1
               endif
            else
@@ -147,7 +151,11 @@ subroutine synchro_fine_static(ilevel)
            next_part=nextp(ipart)
            ! Select particles
            if(star) then
-              if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
+              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
+                   & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
+                   ! & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
+                 ! FIXME: what about sinks?
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -479,8 +487,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(sink)then
      do idim=1,ndim
         do j=1,np
-           isink=-idp(ind_part(j))
-           if(isink>0) then
+           if ( is_cloud(typep(ind_part(j))) ) then
+              isink=-idp(ind_part(j))
               if(.not. direct_force_sink(isink))then
                  fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
               endif
@@ -525,8 +533,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(sink)then
      do idim=1,ndim
         do j=1,np
-           isink=-idp(ind_part(j))
-           if(isink>0)then
+           if ( is_cloud(typep(ind_part(j))) ) then
+              isink=-idp(ind_part(j))
               ! Remember that vsink is half time step older than other particles
               vp(ind_part(j),idim)=vsink(isink,idim)
            endif

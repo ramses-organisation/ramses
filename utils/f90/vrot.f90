@@ -23,7 +23,7 @@ program vrot
   real(KIND=8)::h0,unit_l,unit_t,unit_d,total_hist,emission,velocity,nH
   integer::nx_sample=0,ny_sample=0
   integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
-  integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
+  integer::ncpu2,ndim2,nlevelmax2,nstep_coarse2
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,lmin,nboundary,ngrid_current
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom,ivel,nvel
@@ -44,7 +44,7 @@ program vrot
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering
   character(LEN=128)::nomfich,repository,outfich,filetype='bin'
-  logical::ok,ok_part,ok_cell,do_max
+  logical::ok,ok_cell,do_max
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list

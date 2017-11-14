@@ -6,7 +6,7 @@ program header
   ! f90 head_amr.f90 -o ~/bin/header
   !---------------------------------------------------------------------
   implicit none
-  integer::ncpu,ndim,npart,n
+  integer::ncpu,ndim,n
   integer::nx,ny,nz
   integer::nlevelmax
   integer::ngridmax,nstep_coarse
@@ -61,7 +61,6 @@ program header
 
 990 format(' Enter output number:',i6)
 991 format(' ncpu=',i6,' ndim=',i1,' nstep=',i6)
-992 format(' nx=',i3,' ny=',i3,' nz=',i3)
 993 format(' nlevelmax=',i3,' ngridmax=',i8)
 994 format(' t=',1pe10.3,' aexp=',1pe10.3,' hexp=',1pe10.3)
 995 format(' omega_m=',F6.3,' omega_l=',F6.3,' omega_k=',F6.3,' omega_b=',F6.3)
@@ -102,4 +101,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-
