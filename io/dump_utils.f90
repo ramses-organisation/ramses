@@ -13,7 +13,10 @@ module dump_utils
      module procedure real32dump
      module procedure real64dump
   end interface generic_dump
-  public :: generic_dump, dump_header_info
+
+  character(len=1), dimension(1:3), parameter :: dim_keys = ["x", "y", "z"]
+
+  public :: generic_dump, dump_header_info, dim_keys
 contains
 
   subroutine logicaldump(varname, ivar, data, unit_out, dump_info, unit_info)
@@ -131,6 +134,7 @@ contains
 
   subroutine dump_header_info(unit_info)
     integer, intent(in) :: unit_info
+    write(unit_info, '("# version: ", i2)') 1
     write(unit_info, '("# ", a, ", ", a, ", ", a)') 'ivar', 'variable_name', 'variable_type'
   end subroutine dump_header_info
 

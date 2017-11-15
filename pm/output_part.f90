@@ -1,7 +1,7 @@
-subroutine backup_part(filename, file_desc)
+subroutine backup_part(filename, filename_desc)
   use amr_commons
   use pm_commons
-  use dump_utils, only : generic_dump, dump_header_info
+  use dump_utils, only : generic_dump, dump_header_info, dim_keys
   use iso_fortran_env
 #ifndef WITHOUTMPI
   use mpi
@@ -11,7 +11,7 @@ subroutine backup_part(filename, file_desc)
   integer :: dummy_io, info2
   integer, parameter :: tag = 1122
 #endif
-  character(len=80) :: filename, file_desc
+  character(len=80) :: filename, filename_desc
 
   integer :: i, idim, unit_out, ipart
   character(len=80) :: fileloc
@@ -25,8 +25,6 @@ subroutine backup_part(filename, file_desc)
 
   integer :: unit_info, ivar
   logical :: dump_info
-
-  character(len=1), dimension(1:3) :: dim_keys = (/"x", "y", "z"/)
 
   if (verbose) write(*,*) 'Entering backup_part'
 
@@ -47,12 +45,12 @@ subroutine backup_part(filename, file_desc)
   call title(myid, nchar)
   fileloc = TRIM(filename) // TRIM(nchar)
   open(newunit=unit_out, file=TRIM(fileloc), form='unformatted')
-  dump_info = .false.
   if (myid == 1) then
-     open(newunit=unit_info, file=trim(file_desc), form='formatted')
-     write(unit_info, '("# version: ", i2)') 1
+     open(newunit=unit_info, file=trim(filename_desc), form='formatted')
      call dump_header_info(unit_info)
      dump_info = .true.
+  else
+     dump_info = .false.
   end if
 
   rewind(unit_out)
