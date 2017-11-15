@@ -1293,12 +1293,12 @@ contains
                        zp(ipart)  = zz(i)
                      endif
                    endif
-                   if(type_index.gt.1)then
+                   if(type_index.gt.2)then
                       if(star)then
                          typep(ipart)%family = FAM_STAR
                          typep(ipart)%tag    = 0
                       end if
-                   else if(type_index.eq.1)then
+                   else if(type_index.eq.2)then
                       typep(ipart)%family = FAM_DM
                       typep(ipart)%tag    = 0
                    end if
