@@ -137,10 +137,11 @@ subroutine backup_part(filename, file_desc)
   use pm_commons
   use dump_utils, only : generic_dump
   use iso_fortran_env
-#ifndef WITHOUTMPI
-  use mpi
-#endif
   implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  !implicit none
 #ifndef WITHOUTMPI
   integer :: dummy_io, info2
   integer, parameter :: tag = 1122
@@ -154,8 +155,6 @@ subroutine backup_part(filename, file_desc)
   integer(i8b), allocatable, dimension(:) :: ii8
   integer, allocatable, dimension(:) :: ll
   integer(int8), allocatable, dimension(:) :: ii1
-
-  character(len=1) :: strtype
 
   integer :: unit_info, ivar
   logical :: dump_info
