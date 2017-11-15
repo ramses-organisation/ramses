@@ -140,9 +140,6 @@ subroutine backup_part(filename, file_desc)
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-#endif
-  !implicit none
-#ifndef WITHOUTMPI
   integer :: dummy_io, info2
   integer, parameter :: tag = 1122
 #endif
