@@ -33,6 +33,6 @@ Projects the hydro values onto a fixed 2D-grid/3D-grid.
 
 Projects the particles values onto a fixed 2D-grid/3D-grid using CIC interpolation. Please note that the CIC is done at on the grid.
 
-## partlist
+## part2list
 
 Extracts the particles in a region of interest and dump them in a single binary file.
