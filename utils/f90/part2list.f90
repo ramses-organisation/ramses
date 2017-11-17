@@ -9,15 +9,13 @@ program part2cube
   implicit none
   integer :: ncpu, ndim, npart, i, j, k, icpu, ipos, n_frw, nstar
   integer :: ncpu2, npart2, ndim2, levelmin, levelmax, ilevel, iii
-  integer :: nx = 0, ny = 0, nz = 0, ix, iy, iz, ixp1, iyp1, izp1, idim, jdim, kdim, ncpu_read
-  real(real64) :: mtot, ddx, ddy, ddz, dex, dey, dez, t, time, time_tot, time_simu, weight
+  integer :: nx = 0, ny = 0, nz = 0, ncpu_read
+  real(real64) :: mtot, t, time, time_tot, time_simu, weight
   real(real64) :: xmin = 0, xmax = 1, ymin = 0, ymax = 1, zmin = 0, zmax = 1
   real(real64) :: aexp, omega_m, omega_l, omega_b, omega_k, h0, unit_l, unit_t, unit_d
   integer :: imin, imax, jmin, jmax, kmin, kmax, lmin
-  real(real64) :: xxmin, xxmax, yymin, yymax, zzmin, zzmax, dx, dy, dz, deltax
-  real(real32), dimension(:,:,:), allocatable :: toto
+  real(real64) :: deltax
   real(real64), dimension(:), allocatable :: aexp_frw, hexp_frw, tau_frw, t_frw
-  real(real64), dimension(:,:,:), allocatable :: cube
   real(real64), dimension(:,:), allocatable :: x, xout
   real(real64), dimension(:)  , allocatable :: m, age
   character(len=5) :: nchar, ncharcpu
@@ -207,7 +205,7 @@ program part2cube
                 & bound_key(impi  ) .gt. bounding_min(i)) then
               cpu_min(i) = impi
            end if
-           if (   bound_key(impi-1) .lt. bounding_max(i).and.&
+           if (   bound_key(impi-1) .lt. bounding_max(i) .and.&
                 & bound_key(impi  ).ge.bounding_max(i)) then
               cpu_max(i) = impi
            end if
@@ -394,7 +392,6 @@ contains
     implicit none
 
     integer       :: i, n
-    integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
 
