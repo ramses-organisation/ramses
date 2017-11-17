@@ -7,7 +7,7 @@ Here is a quick reference of what the scripts in the folder do.
 To compile, customize the `Makefile` to match your configuration (e.g. your compiler), then run
 
 	make
-	
+
 This will generate the binary files listed bellow. To cleanup, run
 
 	make clean
@@ -23,7 +23,7 @@ Computes a radial profile (in a cylindrical coordinate system) of the hydro file
 
 ## ramses2tipsy
 
-??
+Converts ramses data to gasoline (tipsy) data.
 
 ## amr2map/amr2cube
 
