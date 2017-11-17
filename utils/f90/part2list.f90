@@ -201,12 +201,12 @@ program part2cube
      cpu_min = 0; cpu_max = 0
      do impi = 1, ncpu
         do i = 1, ndom
-           if (   bound_key(impi-1).le.bounding_min(i) .and.&
+           if (   bound_key(impi-1) .le. bounding_min(i) .and.&
                 & bound_key(impi  ) .gt. bounding_min(i)) then
               cpu_min(i) = impi
            end if
            if (   bound_key(impi-1) .lt. bounding_max(i) .and.&
-                & bound_key(impi  ).ge.bounding_max(i)) then
+                & bound_key(impi  ) .ge. bounding_max(i)) then
               cpu_max(i) = impi
            end if
         end do
