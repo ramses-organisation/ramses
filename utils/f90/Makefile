@@ -2,12 +2,12 @@
 BINDIR=.
 
 # Ifort configuration
-# F90=ifort
-# FLAGS=-ffree-line-length-none
+F90=ifort
+FLAGS=-ffree-line-length-none
 
 # # Gfortran configuration
-F90=gfortran
-FLAGS=-ffree-line-length-none -std=f2008 -Ofast -g -fbacktrace
+# F90=gfortran
+# FLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall
 
 MODOBJ=random.o utils.o io_ramses.o
 
