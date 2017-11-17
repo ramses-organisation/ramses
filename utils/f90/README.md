@@ -4,7 +4,14 @@ Here is a quick reference of what the scripts in the folder do.
 
 ## Compiling
 
-To compile, customize the `Makefile` to match your configuration (e.g. your compiler).
+To compile, customize the `Makefile` to match your configuration (e.g. your compiler), then run
+
+	make
+	
+This will generate the binary files listed bellow. To cleanup, run
+
+	make clean
+
 
 ## amr2prof
 
