@@ -1,6 +1,6 @@
-program part2cube
+program part2list
   !--------------------------------------------------------------------------
-  ! This software computes projected density cubes.
+  ! This software extracts particle from a region.
   ! Version F90 by R. Teyssier le 01/04/01.
   ! Update for new tracers by C. Cadiou, M. Trebitsch, H. Choi, O. Snaith and R. Bieri
   !--------------------------------------------------------------------------
@@ -397,7 +397,7 @@ contains
 
     n = command_argument_count()
     if (n < 4) then
-       print *, 'usage: part2cube  -inp  input_dir'
+       print *, 'usage: part2list  -inp  input_dir'
        print *, '                  -out  output_file'
        print *, '                 [-xmi xmin] '
        print *, '                 [-xma xmax] '
@@ -410,7 +410,7 @@ contains
        print *, '                 [-nz  nz  ] '
        print *, '                 [-per flag] '
        print *, '                 [-str flag] '
-       print *, 'ex: part2cube -inp output_00001 -out cube.dat'// &
+       print *, 'ex: part2list -inp output_00001 -out list.dat'// &
             &   ' -xmi 0.1 -xma 0.7'
        stop
     end if
@@ -460,4 +460,4 @@ contains
 
   end subroutine read_params
 
-end program part2cube
+end program part2list
