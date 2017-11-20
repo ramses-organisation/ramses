@@ -47,34 +47,21 @@ contains
     integer,dimension(:),allocatable::cpu_cell,icell,jcell,kcell,ind_sort_cell
     real(kind=8),dimension(:),allocatable::order_cell,dcpu
 
-    integer::ndim,n,i,j,k,twotondim,ncoarse,type=0,domax=0,indcell
-    integer::ivar,nvar,ncpu,ncpuh,lmax=0,levelmin,ifirst,ilast,istart
-    integer::nx,ny,nz,ilevel,iidim,idim,jdim,kdim,igrid
-    integer::nlevelmax,ilevel1,ngrid1
-    integer::nlevelmaxs,nlevel,iout
-    integer::ind,ipos,ngrida,ngridh,ilevela,ilevelh
-    integer::ngridmax,nstep_coarse,icpu,ncpu_read
-    integer::nhx,nhy,ihx,ihy,ivar1,ivar2,itop
-    real::gamma,smallr,smallc,gammah
-    real::boxlen,boxlen2
-    real::t,aexp,hexp,t2,aexp2,hexp2
-    real::omega_m,omega_l,omega_k,omega_b
-    real::omega_m2,omega_l2,omega_k2,omega_b2
-    real::scale_l,scale_d,scale_t
-    real::metmax=0d0
-
-    integer::nx_sample=0,ny_sample=0,ngridtot
-    integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
-    integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
-    integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
-    integer::nx_full,ny_full,lmin,nboundary,ngrid_current
-    integer::ix,iy,iz,ndom,impi,bit_length,maxdom,ii,jj,kk
-    integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-    real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-    real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight
-    real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
-    real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,xx,yy,zz
-    real(KIND=8),dimension(:,:),allocatable::x,xg
+    integer::ndim,i,j,k,twotondim,indcell
+    integer::ivar,ncpu,lmax=0,levelmin,ifirst,ilast,istart
+    integer::nx,ny,nz,ilevel,igrid
+    integer::nlevelmax
+    integer::ind,ipos
+    integer::ngridmax,icpu,ncpu_read
+    integer::itop
+    real::boxlen
+    real::t
+    integer::ngridtot
+    integer::nvarh
+    integer::nboundary,ngrid_current
+    integer::ix,iy,iz,impi,bit_length,maxdom,ii,jj,kk
+    real(KIND=8)::dx,xx,yy,zz
+    real(KIND=8),dimension(:,:),allocatable::xg
     real(KIND=8),dimension(:,:,:),allocatable::var
     integer,dimension(:)  ,allocatable::idp,sontop
     integer,dimension(:,:),allocatable::son,ngridfile,ngridlevel,ngridbound
@@ -83,7 +70,7 @@ contains
     character(LEN=5)::nchar,ncharcpu
     character(LEN=80)::ordering
     character(LEN=128)::nomfich
-    logical::ok,ok_part,ok_cell,do_max
+    logical::ok
     real(kind=8),dimension(:),allocatable::bound_key,xdp
     logical,dimension(:),allocatable::cpu_read
     integer,dimension(:),allocatable::cpu_list
@@ -430,13 +417,13 @@ contains
     implicit none
 
     integer::ndummypart,ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,nvarh,ix,iy,iz,nmm
-    integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar,ngmax
+    integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot,ilevel,istart,ind,ivar
     integer::l,npartlocal,partcount,respart,denspartcount,nmin,nmax,pc,respc,indexcelltmp
-    integer::ncpu_read,icpu,ngridactual,resss,ii,jj,kk,icell,ilowdtot,ncpufull,indexcelltot
+    integer::ncpu_read,icpu,ngridactual,ii,jj,kk,icell,ilowdtot,ncpufull,indexcelltot
     real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,dl
     real(kind=8),dimension(1:3)::xc
     real(kind=8)::volume,facdens,xx,mdm
-    real(KIND=8)::partmass,averdens,rnpartlocal,massleft,masslefttot,distro
+    real(KIND=8)::partmass,averdens,rnpartlocal,massleft,masslefttot
     integer,dimension(1:ncpu)::cpu_list
 
     real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
@@ -453,9 +440,6 @@ contains
     integer ,dimension(1:1,1:IRandNumSize)::allseed
     integer ,dimension(1:IRandNumSize)::localseed
     integer::iseed=0,poisson
-
-
-    real(kind=8)::gxmin,gxmax,gymin,gymax,gzmin,gzmax
 
     ! Initialize random number generator
     call rans(1,iseed,allseed)
@@ -1846,15 +1830,13 @@ contains
 
     implicit none
 
-    integer::ncpu,ndim,lmax,lmin,nlevelmax,nx,ny,nz,ngrid_current,ix,iy,iz
-    integer::ipos,i,j,k,ngridmax,nboundary,twotondim,ngridtot
-    integer::l,nmin,nmax,ncpu_read,icpu
+    integer::ncpu,ndim,lmax,lmin
+    integer::ipos,i,j,k
+    integer::nmin,nmax,ncpu_read,icpu
     integer,dimension(1:ncpu)::cpu_list
-    real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax,boxlen,gamma,dx,xc,yc,zc,xx
+    real(kind=8)::xmin,xmax,ymin,ymax,zmin,zmax
 
-    real(KIND=8),dimension(1:3)::xbound=(/0d0,0d0,0d0/)
     character(LEN=128)::repository,nomfich
-    character(LEN=80)::ordering
     character(LEN=5)::ncharcpu,nchar
     real(kind=8),dimension(:),allocatable::xdp
     integer,dimension(:)  ,allocatable::idp
@@ -1866,12 +1848,8 @@ contains
     real(KIND=8),dimension(:,:),allocatable::xpart,vpart
     real(KIND=8),dimension(:),allocatable::mpart,age,met
 
-    character(LEN=5)::nn
     logical::metal,star,sink
 
-    integer ,dimension(1:1,1:IRandNumSize)::allseed
-    integer ,dimension(1:IRandNumSize)::localseed
-    integer::iseed=0,poisson
 
     npart_tot=0
     nsink_tot=0

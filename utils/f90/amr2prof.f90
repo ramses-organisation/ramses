@@ -15,7 +15,7 @@ program amr2prof
   integer::nhx,nhy,ihx,ihy,ivar1,ivar2
   integer::iseed=0,irad
   real::gamma,smallr,smallc,gammah
-  real::boxlen,boxlen2
+  real::boxlen
   real::t,aexp,hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
@@ -27,15 +27,15 @@ program amr2prof
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin,levelmax
   integer::ix,iy,iz,ixp1,iyp1,izp1,ndom,impi,bit_length,maxdom
-  integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-  real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  integer,dimension(1:8)::idom,jdom,kdom
+  real(KIND=8),dimension(1:8)::bounding_min
   real(KIND=8)::dkey,order_min,dmax,dummy,h0,dv
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rmin=1e-10,rmax=0.5
   real(KIND=8)::xcen=0.5,ycen=0.5,zcen=0.5
   real(KIND=8)::ucen=0.0,vcen=0.0,wcen=0.0
   real(KIND=8)::xx,yy,zz,uu,vv,ww,rr
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
-  real(KIND=8)::ddx,ddy,ddz,dex,dey,dez
+  real(KIND=8)::ddz,dex,dey,dez
   real(KIND=8)::unit_l,unit_t,unit_d,unit_m,unit_v
   real(KIND=8)::rad2,vol,rprev,nH,tt,hotcum
   real(KIND=8)::mcum,ucum,vcum,wcum,mcold
@@ -294,11 +294,9 @@ contains
     implicit none
 
     integer       :: i,n
-    integer       :: iargc
     character(len=4)   :: opt
     character(len=128) :: arg
-    LOGICAL       :: bad, ok
-    
+
     n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2prof -inp  input_dir'
