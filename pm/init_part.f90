@@ -878,7 +878,7 @@ end subroutine init_part
 #define TIME_END(ce) call SYSTEM_CLOCK(COUNT=ce)
 #define TIME_SPENT(cs,ce,cr) REAL((ce-cs)/cr)
 subroutine load_gadget
-  ! This routine only create DM particles
+  ! This routine only creates DM particles
   use amr_commons
   use pm_commons
   use gadgetreadfilemod

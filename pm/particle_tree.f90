@@ -146,8 +146,10 @@ subroutine init_tree
   end do
 
 #if NDIM==3
-  call kill_entire_cloud(1)
-  call create_cloud_from_sink
+  if(sink)then
+     call kill_entire_cloud(1)
+     call create_cloud_from_sink
+  endif
 #endif
 
   ! Sort particles down to levelmin
