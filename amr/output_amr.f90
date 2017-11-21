@@ -16,7 +16,7 @@ subroutine dump_all
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::filename,filename2,filedir,filedirini,filecmd
+  character(LEN=80)::filename,filename_desc,filedir,filedirini,filecmd
   integer::ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
@@ -79,10 +79,6 @@ subroutine dump_all
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
-        if(hydro)then
-           filename=TRIM(filedir)//'hydro_file_descriptor.txt'
-           call file_descriptor_hydro(filename)
-        end if
         if(cooling .and. .not. neq_chem)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
@@ -130,7 +126,8 @@ subroutine dump_all
      if(hydro)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup hydro'
         filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
-        call backup_hydro(filename)
+        filename_desc = trim(filedir)//'hydro_file_descriptor.txt'
+        call backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -141,7 +138,8 @@ subroutine dump_all
      if(rt.or.neq_chem)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
         filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
-        call rt_backup_hydro(filename)
+        filename_desc = trim(filedir) // 'rt_file_descriptor.txt'
+        call rt_backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -152,8 +150,8 @@ subroutine dump_all
      if(pic)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup part'
         filename=trim(filedir)//'part_'//trim(nchar)//'.out'
-        filename2=TRIM(filedir)//'part_file_descriptor.txt'
-        call backup_part(filename, filename2)
+        filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
+        call backup_part(filename, filename_desc)
         if(sink)then
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
            call backup_sink(filename)
