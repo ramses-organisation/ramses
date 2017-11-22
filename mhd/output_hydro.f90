@@ -1,14 +1,19 @@
-subroutine backup_hydro(filename)
+subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
+  use dump_utils, only : dump_header_info, generic_dump, dim_keys
+#ifndef WITHOUTMPI
+  use mpi
+#endif
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: dummy_io, info2
 #endif
-  character(LEN = 80) :: filename
+
+  character(len=80), intent(in) :: filename, filename_desc
 
   integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound
+  integer :: unit_out, unit_info
   real(dp) :: d, u, v, w, A, B, C, e
   integer, allocatable, dimension(:) :: ind_grid
   real(dp), allocatable, dimension(:) :: xdp
@@ -48,12 +53,12 @@ subroutine backup_hydro(filename)
      dump_info_flag = .false.
   end if
 
-  write(ilun) ncpu
-  write(ilun) nvar+3
-  write(ilun) ndim
-  write(ilun) nlevelmax
-  write(ilun) nboundary
-  write(ilun) gamma
+  write(unit_out) ncpu
+  write(unit_out) nvar+3
+  write(unit_out) ndim
+  write(unit_out) nlevelmax
+  write(unit_out) nboundary
+  write(unit_out) gamma
   do ilevel = 1, nlevelmax
      do ibound = 1, nboundary+ncpu
         if (ibound <= ncpu) then
@@ -63,8 +68,8 @@ subroutine backup_hydro(filename)
            ncache = numbb(ibound-ncpu, ilevel)
            istart = headb(ibound-ncpu, ilevel)
         end if
-        write(ilun) ilevel
-        write(ilun) ncache
+        write(unit_out) ilevel
+        write(unit_out) ncache
         if (ncache > 0) then
            allocate(ind_grid(1:ncache), xdp(1:ncache))
            ! Loop over level grids
@@ -77,7 +82,8 @@ subroutine backup_hydro(filename)
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
               do ivar = 1, 4
-                 if (ivar == 1) then ! Write density
+                 if (ivar == 1) then
+                    ! Write density
                     do i = 1, ncache
                        xdp(i) = uold(ind_grid(i)+iskip, 1)
                     end do
@@ -149,19 +155,23 @@ subroutine backup_hydro(filename)
               dump_info_flag = .false.
            end do
            deallocate(ind_grid, xdp)
+
         end if
      end do
   end do
-  close(ilun)
+  close(unit_out)
+
+  if (myid == 1) close(unit_info)
   ! Send the token
 #ifndef WITHOUTMPI
   if (IOGROUPSIZE > 0) then
-     if (mod(myid, IOGROUPSIZE) /= 0 .and. (myid .lt. ncpu)) then
+     if (mod(myid, IOGROUPSIZE) /= 0 .and.(myid .lt. ncpu)) then
         dummy_io = 1
         call MPI_SEND(dummy_io, 1, MPI_INTEGER, myid-1+1, tag, &
              & MPI_COMM_WORLD, info2)
      end if
   end if
 #endif
+
 
 end subroutine backup_hydro
