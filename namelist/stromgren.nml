@@ -42,8 +42,11 @@ slope_type=2
 riemann='hllc'
 /
 
-&PHYSICS_PARAMS
+&COOLING_PARAMS
 cooling=.false.
+/
+
+&UNITS_PARAMS
 units_density=1.66d-24
 units_time=3.1556926d13
 units_length=3.08568025d21

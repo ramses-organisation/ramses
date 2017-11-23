@@ -41,12 +41,18 @@ pressure_fix=.true.
 scheme='muscl'
 /
 
-&PHYSICS_PARAMS
+&COOLING_PARAMS
 cooling=.true.
 metal=.true.
+/
+
+&SF_PARAMS
 t_star=8.0
 n_star=0.1
 T2_star=1d4
+/
+
+&FEEDBACK_PARAMS
 eta_sn=0.1
 yield=0.1
 /
