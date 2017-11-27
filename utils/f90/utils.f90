@@ -1,5 +1,12 @@
 module utils
+  use iso_fortran_env
   implicit none
+
+#ifdef longint
+  integer, parameter :: i8b = 8
+#else
+  integer, parameter :: i8b = 4
+#endif
 
   interface hilbert3d
      subroutine hilbert3d_single(x,y,z,order,bit_length,npoint)
@@ -14,6 +21,38 @@ module utils
        real(kind=8),intent(out),dimension(1:npoint)::order
      end subroutine hilbert3d_vector
   end interface hilbert3d
+
+
+  interface quick_sort
+     subroutine quick_sort_int32(list, order, n)
+       use iso_fortran_env
+       integer, intent(in) :: n
+       integer(int32), dimension (1:n), intent(inout)  :: list
+       integer, dimension (1:n), intent(out)  :: order
+     end subroutine quick_sort_int32
+
+     subroutine quick_sort_int64(list, order, n)
+       use iso_fortran_env
+       integer, intent(in) :: n
+       integer(int64), dimension (1:n), intent(inout)  :: list
+       integer, dimension (1:n), intent(out)  :: order
+     end subroutine quick_sort_int64
+
+     subroutine quick_sort_real32(list, order, n)
+       use iso_fortran_env
+       integer, intent(in) :: n
+       real(real32), dimension (1:n), intent(inout)  :: list
+       integer, dimension (1:n), intent(out)  :: order
+     end subroutine quick_sort_real32
+
+     subroutine quick_sort_real64(list, order, n)
+       use iso_fortran_env
+       integer, intent(in) :: n
+       real(real64), dimension (1:n), intent(inout)  :: list
+       integer, dimension (1:n), intent(out)  :: order
+     end subroutine quick_sort_real64
+
+  end interface quick_sort
 
 contains
   !=======================================================================
@@ -247,6 +286,384 @@ subroutine hilbert3d_single(x,y,z,order,bit_length,npoint)
   order = tmporder(1)
 
 end subroutine hilbert3d_single
+
+subroutine quick_sort_int32(list, order, n)
+  use iso_fortran_env
+  implicit none
+
+  ! quick sort routine from:
+  ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
+  ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
+  ! modified by alan miller to include an associated integer array which gives
+  ! the positions of the elements in the original order.
+  integer, intent(in) :: n
+  integer(int32), dimension (1:n), intent(inout)  :: list
+  integer, dimension (1:n), intent(out)  :: order
+
+  ! local variable
+  integer :: i
+
+  do i = 1, n
+     order(i) = i
+  end do
+
+  call quick_sort_1(1, n)
+
+contains
+
+  recursive subroutine quick_sort_1(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    integer(int32)        :: reference, temp
+    integer, parameter  :: max_simple_sort_size = 6
+
+    if (right_end < left_end + max_simple_sort_size) then
+       ! use interchange sort for small lists
+       call interchange_sort(left_end, right_end)
+
+    else
+       ! use partition ("quick") sort
+       reference = list((left_end + right_end)/2)
+       i = left_end - 1; j = right_end + 1
+
+       do
+          ! scan list from left end until element >= reference is found
+          do
+             i = i + 1
+             if (list(i) >= reference) exit
+          end do
+          ! scan list from right end until element <= reference is found
+          do
+             j = j - 1
+             if (list(j) <= reference) exit
+          end do
+
+
+          if (i < j) then
+             ! swap two out-of-order elements
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          else if (i == j) then
+             i = i + 1
+             exit
+          else
+             exit
+          end if
+       end do
+
+       if (left_end < j) call quick_sort_1(left_end, j)
+       if (i < right_end) call quick_sort_1(i, right_end)
+    end if
+
+  end subroutine quick_sort_1
+
+  subroutine interchange_sort(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    integer(int32)        :: temp
+
+    do i = left_end, right_end - 1
+       do j = i+1, right_end
+          if (list(i) > list(j)) then
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          end if
+       end do
+    end do
+
+  end subroutine interchange_sort
+
+end subroutine quick_sort_int32
+
+subroutine quick_sort_int64(list, order, n)
+  use iso_fortran_env
+  implicit none
+
+  ! quick sort routine from:
+  ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
+  ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
+  ! modified by alan miller to include an associated integer array which gives
+  ! the positions of the elements in the original order.
+  integer, intent(in) :: n
+  integer(int64), dimension (1:n), intent(inout)  :: list
+  integer, dimension (1:n), intent(out)  :: order
+
+  ! local variable
+  integer :: i
+
+  do i = 1, n
+     order(i) = i
+  end do
+
+  call quick_sort_1(1, n)
+
+contains
+
+  recursive subroutine quick_sort_1(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    integer(int64)        :: reference, temp
+    integer, parameter  :: max_simple_sort_size = 6
+
+    if (right_end < left_end + max_simple_sort_size) then
+       ! use interchange sort for small lists
+       call interchange_sort(left_end, right_end)
+
+    else
+       ! use partition ("quick") sort
+       reference = list((left_end + right_end)/2)
+       i = left_end - 1; j = right_end + 1
+
+       do
+          ! scan list from left end until element >= reference is found
+          do
+             i = i + 1
+             if (list(i) >= reference) exit
+          end do
+          ! scan list from right end until element <= reference is found
+          do
+             j = j - 1
+             if (list(j) <= reference) exit
+          end do
+
+
+          if (i < j) then
+             ! swap two out-of-order elements
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          else if (i == j) then
+             i = i + 1
+             exit
+          else
+             exit
+          end if
+       end do
+
+       if (left_end < j) call quick_sort_1(left_end, j)
+       if (i < right_end) call quick_sort_1(i, right_end)
+    end if
+
+  end subroutine quick_sort_1
+
+  subroutine interchange_sort(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    integer(int64)      :: temp
+
+    do i = left_end, right_end - 1
+       do j = i+1, right_end
+          if (list(i) > list(j)) then
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          end if
+       end do
+    end do
+
+  end subroutine interchange_sort
+
+end subroutine quick_sort_int64
+
+subroutine quick_sort_real32(list, order, n)
+  use iso_fortran_env
+
+  implicit none
+
+  ! quick sort routine from:
+  ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
+  ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
+  ! modified by alan miller to include an associated integer array which gives
+  ! the positions of the elements in the original order.
+  integer, intent(in) :: n
+  real(real32), dimension (1:n), intent(inout)  :: list
+  integer, dimension (1:n), intent(out)  :: order
+
+  ! local variable
+  integer :: i
+
+  do i = 1, n
+     order(i) = i
+  end do
+
+  call quick_sort_1(1, n)
+
+contains
+
+  recursive subroutine quick_sort_1(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    real(real32)        :: reference, temp
+    integer, parameter  :: max_simple_sort_size = 6
+
+    if (right_end < left_end + max_simple_sort_size) then
+       ! use interchange sort for small lists
+       call interchange_sort(left_end, right_end)
+
+    else
+       ! use partition ("quick") sort
+       reference = list((left_end + right_end)/2)
+       i = left_end - 1; j = right_end + 1
+
+       do
+          ! scan list from left end until element >= reference is found
+          do
+             i = i + 1
+             if (list(i) >= reference) exit
+          end do
+          ! scan list from right end until element <= reference is found
+          do
+             j = j - 1
+             if (list(j) <= reference) exit
+          end do
+
+
+          if (i < j) then
+             ! swap two out-of-order elements
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          else if (i == j) then
+             i = i + 1
+             exit
+          else
+             exit
+          end if
+       end do
+
+       if (left_end < j) call quick_sort_1(left_end, j)
+       if (i < right_end) call quick_sort_1(i, right_end)
+    end if
+
+  end subroutine quick_sort_1
+
+  subroutine interchange_sort(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    real(real32)        :: temp
+
+    do i = left_end, right_end - 1
+       do j = i+1, right_end
+          if (list(i) > list(j)) then
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          end if
+       end do
+    end do
+
+  end subroutine interchange_sort
+
+end subroutine quick_sort_real32
+
+subroutine quick_sort_real64(list, order, n)
+  use iso_fortran_env
+
+  implicit none
+
+  ! quick sort routine from:
+  ! brainerd, w.s., goldberg, c.h. & adams, j.c. (1990) "programmer's guide to
+  ! fortran 90", mcgraw-hill  isbn 0-07-000248-7, pages 149-150.
+  ! modified by alan miller to include an associated integer array which gives
+  ! the positions of the elements in the original order.
+  integer, intent(in) :: n
+  real(real64), dimension (1:n), intent(inout)  :: list
+  integer, dimension (1:n), intent(out)  :: order
+
+  ! local variable
+  integer :: i
+
+  do i = 1, n
+     order(i) = i
+  end do
+
+  call quick_sort_1(1, n)
+
+contains
+
+  recursive subroutine quick_sort_1(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    real(real64)        :: reference, temp
+    integer, parameter  :: max_simple_sort_size = 6
+
+    if (right_end < left_end + max_simple_sort_size) then
+       ! use interchange sort for small lists
+       call interchange_sort(left_end, right_end)
+
+    else
+       ! use partition ("quick") sort
+       reference = list((left_end + right_end)/2)
+       i = left_end - 1; j = right_end + 1
+
+       do
+          ! scan list from left end until element >= reference is found
+          do
+             i = i + 1
+             if (list(i) >= reference) exit
+          end do
+          ! scan list from right end until element <= reference is found
+          do
+             j = j - 1
+             if (list(j) <= reference) exit
+          end do
+
+
+          if (i < j) then
+             ! swap two out-of-order elements
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          else if (i == j) then
+             i = i + 1
+             exit
+          else
+             exit
+          end if
+       end do
+
+       if (left_end < j) call quick_sort_1(left_end, j)
+       if (i < right_end) call quick_sort_1(i, right_end)
+    end if
+
+  end subroutine quick_sort_1
+
+  subroutine interchange_sort(left_end, right_end)
+
+    integer, intent(in) :: left_end, right_end
+
+    !     local variables
+    integer             :: i, j, itemp
+    real(real64)        :: temp
+
+    do i = left_end, right_end - 1
+       do j = i+1, right_end
+          if (list(i) > list(j)) then
+             temp = list(i); list(i) = list(j); list(j) = temp
+             itemp = order(i); order(i) = order(j); order(j) = itemp
+          end if
+       end do
+    end do
+
+  end subroutine interchange_sort
+
+end subroutine quick_sort_real64
 
 function dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
   implicit none

@@ -648,7 +648,7 @@ contains
     character(len=128) :: arg
     LOGICAL       :: bad, ok,blank_y,blank_z
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2cube  -inp  input_dir'
        print *, '                 -out  output_file'

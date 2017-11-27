@@ -47,7 +47,7 @@ program spg
 
   integer::info
   integer::narg
-  integer::iargc
+  
   real,dimension(:,:),allocatable::ics
   integer::ncode,bit_length
 
@@ -64,7 +64,7 @@ program spg
 
   !! Command line analysis
 
-  narg=iargc()
+  narg=command_argument_count()
   IF(narg .LT. 3)THEN
      write(*,*)'You should type: split_grafic input output ncpu'
      write(*,*)'where directory input should contain GRAFIC files'
@@ -73,12 +73,12 @@ program spg
      STOP
   END IF
 
-  CALL getarg(1,input)
-  CALL getarg(2,output)
-  CALL getarg(3,ncpu_string)
+  CALL get_command_argument(1,input)
+  CALL get_command_argument(2,output)
+  CALL get_command_argument(3,ncpu_string)
 
   if(narg.eq.4) then
-     CALL getarg(4,debug_string)
+     CALL get_command_argument(4,debug_string)
      read(debug_string,*) debug
      if(debug.eq.1) then
         verbose=.true.
