@@ -11,7 +11,8 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   integer::i,idim,ifixed,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type
-  real(dp)::scale,ek_bound
+  real(dp)::ek_bound
+  logical :: dummy
 #ifdef SOLVERmhd
   real(dp)::em_bound
 #endif
@@ -98,6 +99,9 @@ subroutine read_hydro_params(nml_ok)
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
 
+  ! Dummy namelist for physics
+  namelist/physics_params/ dummy
+
 #ifdef grackle
    namelist/grackle_params/use_grackle,grackle_with_radiative_cooling,grackle_primordial_chemistry,grackle_metal_cooling &
        & ,grackle_UVbackground,grackle_cmb_temperature_floor,grackle_h2_on_dust,grackle_photoelectric_heating &
@@ -119,6 +123,13 @@ subroutine read_hydro_params(nml_ok)
 101 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
   call clean_stop
 102 rewind(1)
+
+  ! Fail if physics params is found
+  read(1, NML=physics_params, end=110)
+  if (myid == 1) &
+       write(*, *) 'ERROR: the namelist contains the old `physics_params`. It has been depreciated in favor of the sections feedback_, cooling_, sf_ and units_params.'
+  call clean_stop
+110 rewind(1)
   if(nlevelmax>levelmin)read(1,NML=refine_params)
   rewind(1)
   if(hydro)read(1,NML=hydro_params)
@@ -496,4 +507,3 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
 end subroutine read_hydro_params
-
