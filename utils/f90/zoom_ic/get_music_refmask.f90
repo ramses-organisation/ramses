@@ -1,8 +1,8 @@
 program get_music_refmask
   !--------------------------------------------------------------------------
-  ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES.
-  ! Version F90 par R. Teyssier le 01/04/01.
+  ! Extract a mask to use in combination with MUSIC.
+  ! Version F90 by R. Teyssier on 01/04/01.
+  ! Modifier by C. Cadiou on 27/11/17.
   !--------------------------------------------------------------------------
   use utils
   implicit none
@@ -559,43 +559,6 @@ contains
 
       return
 
-    end subroutine read_params
+  end subroutine read_params
 
-  end program get_music_refmask
-
-!=======================================================================
-subroutine title(n,nchar)
-!=======================================================================
-  implicit none
-  integer::n
-  character(len=5)::nchar
-
-  character(len=1)::nchar1
-  character(len=2)::nchar2
-  character(len=3)::nchar3
-  character(len=4)::nchar4
-  character(len=5)::nchar5
-
-  if(n.ge.10000)then
-     write(nchar5,'(i5)') n
-     nchar = nchar5
-  elseif(n.ge.1000)then
-     write(nchar4,'(i4)') n
-     nchar = '0'//nchar4
-  elseif(n.ge.100)then
-     write(nchar3,'(i3)') n
-     nchar = '00'//nchar3
-  elseif(n.ge.10)then
-     write(nchar2,'(i2)') n
-     nchar = '000'//nchar2
-  else
-     write(nchar1,'(i1)') n
-     nchar = '0000'//nchar1
-  endif
-
-end subroutine title
-
-!================================================================
-!================================================================
-!================================================================
-!================================================================
+end program get_music_refmask
