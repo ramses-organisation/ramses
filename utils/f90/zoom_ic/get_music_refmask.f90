@@ -4,21 +4,15 @@ program get_music_refmask
   ! des particules de matiere noire d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
+  use utils
   implicit none
-#ifdef LONGINT
-  integer,parameter::i8b=8
-#else
-  integer,parameter::i8b=4
-#endif
-  integer::ncpu,ndim,npart,ngrid,n,i,j,k,icpu,ipos,nstar,nstart,inull,ico
-  integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel,ndark,ismooth
-  integer::nx=0,ny=0,ix,iy,iz,ixp1,iyp1,idim,jdim,ncpu_read
-  real(KIND=8)::mtot,ddx,ddy,dex,dey,t,soft,poty,mass,btime,unit_l,aexp,unit_t
+  integer::ncpu,ndim,npart,i,j,k,icpu,ipos,nstar,nstart,ico
+  integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel
+  integer::ncpu_read
+  real(KIND=8)::mtot,t,mass,btime,unit_l,aexp,unit_t
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,r,xc=0.5,yc=0.5,zc=0.5,rad=-1
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,ipart
-  real(KIND=8)::xxmin,xxmax,yymin,yymax,dy,deltax,fakeage
-  real(KIND=4),dimension(:,:),allocatable::toto
-  real(KIND=8),dimension(:,:),allocatable::map
+  real(KIND=8)::deltax
   real(KIND=8),dimension(:)  ,allocatable::x
   real(KIND=8),dimension(:)  ,allocatable::y
   real(KIND=8),dimension(:)  ,allocatable::z
@@ -28,7 +22,7 @@ program get_music_refmask
   real(KIND=8),dimension(:)  ,allocatable::m
   real(KIND=8),dimension(:)  ,allocatable::temp
   real(KIND=8),dimension(:)  ,allocatable::bt
-  real(KIND=8),dimension(:)  ,allocatable::tempx,tempy,tempz,tempvx,tempvy,tempvz,tempm,tempbt,tempr
+  real(KIND=8),dimension(:)  ,allocatable::tempx,tempy,tempz,tempvx,tempvy,tempvz,tempm,tempbt
   integer(i8b),allocatable,dimension(:)::tempid
   integer,allocatable,dimension(:)::temp2,indtempid
   integer(i8b),allocatable,dimension(:)::id
@@ -36,23 +30,19 @@ program get_music_refmask
   integer(i8b),allocatable,dimension(:)::idpart
   integer,allocatable,dimension(:)::indidpart
   integer::outputmode
-  real,allocatable,dimension(:,:,:)::imark
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::ordering,format_grille
-  character(LEN=80)::GMGM
+  character(LEN=80)::ordering
   character(LEN=128)::nomfich,repository,filetype='bin',grafic
-  character(LEN=128)::nomfich2,repository2, outputname
-  logical::ok,ok_part,periodic=.false.,star=.false.,okerode=.false.
-  integer::impi,ndom,bit_length,maxdom,idd
+  character(LEN=128)::repository2, outputname
+  logical::ok,ok_part,periodic=.false.
+  integer::impi,ndom,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dmax,vfact
+  real(KIND=8)::dkey,order_min,dmax
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
-  integer(kind=4)::np1,np2,np3
-  real::dx,dx2,x1o,x2o,x3o,astart,omegam,omegav,h0,x1or,x2or,x3or,dxor,omegak
 
   call read_params
 
@@ -97,9 +87,9 @@ program get_music_refmask
   read(10,'("unit_t      =",E23.15)')unit_t
 
   read(10,*)
-  read(10,'("ordering type=",A80)'),ordering
+  read(10,'("ordering type=",A80)') ordering
   read(10,*)
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,'(" ordering type=",A20)') TRIM(ordering)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
      allocate(bound_key(0:ncpu))
@@ -280,7 +270,6 @@ program get_music_refmask
      deallocate(temp2)
   enddo
 
-40 format(3e16.8)
 50 format(2I16)
   !Outputs IDs of selected particles
   ipart=0
@@ -341,7 +330,7 @@ program get_music_refmask
 
   npart = ipart
   allocate(indidpart(1:npart))
-  CALL quick_sort(idpart, indidpart, npart)
+  call quick_sort(idpart, indidpart, npart)
 
   !------- read IC data and match -----------
 
@@ -499,22 +488,20 @@ contains
       implicit none
 
       integer       :: i,n
-      integer       :: iargc
       character(len=4)   :: opt
       character(len=128) :: arg
-      LOGICAL       :: bad, ok
 
-      n = iargc()
+      n = command_argument_count()
       if (n < 4) then
-         print *, 'usage: geticref  -inf  input_dir_final_snapshot'
-         print *, '                 -ini  input_dir_first_snapshot'
-         print *, '                 [-out output_name] '
-         print *, '                 [-xc xc] '
-         print *, '                 [-yc yc] '
-         print *, '                 [-zc zc] '
-         print *, '                 [-rad rad] '
-         print *, '                 [-vel 0|1] output also velocity data'
-         print *, 'ex: geticref -inf output_00010 -ini output_00001 -xc 0.5 -yc 0.5 -zc 0.5 -rad 0.1'
+         print *, 'usage: get_music_refmask  -inf  input_dir_final_snapshot'
+         print *, '                          -ini  input_dir_first_snapshot'
+         print *, '                          [-out output_name] '
+         print *, '                          [-xc xc] '
+         print *, '                          [-yc yc] '
+         print *, '                          [-zc zc] '
+         print *, '                          [-rad rad] '
+         print *, '                          [-vel 0|1] output also velocity data'
+         print *, 'ex: get_music_refmask -inf output_00010 -ini output_00001 -xc 0.5 -yc 0.5 -zc 0.5 -rad 0.1'
          stop
       end if
 
@@ -522,12 +509,12 @@ contains
       outputmode = 0
 
       do i = 1,n,2
-         call getarg(i,opt)
+         call get_command_argument(i, opt)
          if (i == n) then
             print '("option ",a2," has no argument")', opt
             stop 2
          end if
-         call getarg(i+1,arg)
+         call get_command_argument(i+1, arg)
          select case (opt)
          case ('-inf')
             repository = trim(arg)
@@ -581,13 +568,13 @@ subroutine title(n,nchar)
 !=======================================================================
   implicit none
   integer::n
-  character*5::nchar
+  character(len=5)::nchar
 
-  character*1::nchar1
-  character*2::nchar2
-  character*3::nchar3
-  character*4::nchar4
-  character*5::nchar5
+  character(len=1)::nchar1
+  character(len=2)::nchar2
+  character(len=3)::nchar3
+  character(len=4)::nchar4
+  character(len=5)::nchar5
 
   if(n.ge.10000)then
      write(nchar5,'(i5)') n
@@ -612,189 +599,3 @@ end subroutine title
 !================================================================
 !================================================================
 !================================================================
-subroutine hilbert3d(x,y,z,order,bit_length,npoint)
-  implicit none
-
-  integer     ,INTENT(IN)                     ::bit_length,npoint
-  integer     ,INTENT(IN) ,dimension(1:npoint)::x,y,z
-  real(kind=8),INTENT(OUT),dimension(1:npoint)::order
-
-  logical,dimension(0:3*bit_length-1)::i_bit_mask
-  logical,dimension(0:1*bit_length-1)::x_bit_mask,y_bit_mask,z_bit_mask
-  integer,dimension(0:7,0:1,0:11)::state_diagram
-  integer::i,ip,cstate,nstate,b0,b1,b2,sdigit,hdigit
-
-  if(bit_length>bit_size(bit_length))then
-     write(*,*)'Maximum bit length=',bit_size(bit_length)
-     write(*,*)'stop in hilbert3d'
-     stop
-  endif
-
-  state_diagram = RESHAPE( (/   1, 2, 3, 2, 4, 5, 3, 5,&
-                            &   0, 1, 3, 2, 7, 6, 4, 5,&
-                            &   2, 6, 0, 7, 8, 8, 0, 7,&
-                            &   0, 7, 1, 6, 3, 4, 2, 5,&
-                            &   0, 9,10, 9, 1, 1,11,11,&
-                            &   0, 3, 7, 4, 1, 2, 6, 5,&
-                            &   6, 0, 6,11, 9, 0, 9, 8,&
-                            &   2, 3, 1, 0, 5, 4, 6, 7,&
-                            &  11,11, 0, 7, 5, 9, 0, 7,&
-                            &   4, 3, 5, 2, 7, 0, 6, 1,&
-                            &   4, 4, 8, 8, 0, 6,10, 6,&
-                            &   6, 5, 1, 2, 7, 4, 0, 3,&
-                            &   5, 7, 5, 3, 1, 1,11,11,&
-                            &   4, 7, 3, 0, 5, 6, 2, 1,&
-                            &   6, 1, 6,10, 9, 4, 9,10,&
-                            &   6, 7, 5, 4, 1, 0, 2, 3,&
-                            &  10, 3, 1, 1,10, 3, 5, 9,&
-                            &   2, 5, 3, 4, 1, 6, 0, 7,&
-                            &   4, 4, 8, 8, 2, 7, 2, 3,&
-                            &   2, 1, 5, 6, 3, 0, 4, 7,&
-                            &   7, 2,11, 2, 7, 5, 8, 5,&
-                            &   4, 5, 7, 6, 3, 2, 0, 1,&
-                            &  10, 3, 2, 6,10, 3, 4, 4,&
-                            &   6, 1, 7, 0, 5, 2, 4, 3 /), &
-                            & (/8 ,2, 12 /) )
-
-  do ip=1,npoint
-
-     ! convert to binary
-     do i=0,bit_length-1
-        x_bit_mask(i)=btest(x(ip),i)
-        y_bit_mask(i)=btest(y(ip),i)
-        z_bit_mask(i)=btest(z(ip),i)
-     enddo
-
-     ! interleave bits
-     do i=0,bit_length-1
-        i_bit_mask(3*i+2)=x_bit_mask(i)
-        i_bit_mask(3*i+1)=y_bit_mask(i)
-        i_bit_mask(3*i  )=z_bit_mask(i)
-     end do
-
-     ! build Hilbert ordering using state diagram
-     cstate=0
-     do i=bit_length-1,0,-1
-        b2=0 ; if(i_bit_mask(3*i+2))b2=1
-        b1=0 ; if(i_bit_mask(3*i+1))b1=1
-        b0=0 ; if(i_bit_mask(3*i  ))b0=1
-        sdigit=b2*4+b1*2+b0
-        nstate=state_diagram(sdigit,0,cstate)
-        hdigit=state_diagram(sdigit,1,cstate)
-        i_bit_mask(3*i+2)=btest(hdigit,2)
-        i_bit_mask(3*i+1)=btest(hdigit,1)
-        i_bit_mask(3*i  )=btest(hdigit,0)
-        cstate=nstate
-     enddo
-
-     ! save Hilbert key as double precision real
-     order(ip)=0.
-     do i=0,3*bit_length-1
-        b0=0 ; if(i_bit_mask(i))b0=1
-        order(ip)=order(ip)+dble(b0)*dble(2)**i
-     end do
-
-  end do
-
-end subroutine hilbert3d
-
-SUBROUTINE quick_sort(list,order,n)
-
-  ! Quick sort routine from:
-  ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
-  ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
-  ! Modified by Alan Miller to include an associated integer array which gives
-  ! the positions of the elements in the original order.
-  IMPLICIT NONE
-#ifdef LONGINT
-  integer,parameter::i8b=8
-#else
-  integer,parameter::i8b=4
-#endif
-
-  INTEGER :: n
-  INTEGER(i8b), DIMENSION (1:n), INTENT(INOUT)  :: list
-  INTEGER, DIMENSION (1:n), INTENT(OUT)  :: order
-
-  ! Local variable
-  INTEGER :: i
-
-  DO i = 1, n
-     order(i) = i
-  END DO
-
-  CALL quick_sort_1(1, n)
-
-CONTAINS
-
-  RECURSIVE SUBROUTINE quick_sort_1(left_end, right_end)
-
-    INTEGER, INTENT(IN) :: left_end, right_end
-
-    !     Local variables
-    INTEGER             :: i, j, itemp
-    INTEGER(i8b)        :: reference, temp
-    INTEGER, PARAMETER  :: max_simple_sort_size = 6
-
-    IF (right_end < left_end + max_simple_sort_size) THEN
-       ! Use interchange sort for small lists
-       CALL interchange_sort(left_end, right_end)
-
-    ELSE
-       ! Use partition ("quick") sort
-       reference = list((left_end + right_end)/2)
-       i = left_end - 1; j = right_end + 1
-
-       DO
-          ! Scan list from left end until element >= reference is found
-          DO
-             i = i + 1
-             IF (list(i) >= reference) EXIT
-          END DO
-          ! Scan list from right end until element <= reference is found
-          DO
-             j = j - 1
-             IF (list(j) <= reference) EXIT
-          END DO
-
-
-          IF (i < j) THEN
-             ! Swap two out-of-order elements
-             temp = list(i); list(i) = list(j); list(j) = temp
-             itemp = order(i); order(i) = order(j); order(j) = itemp
-          ELSE IF (i == j) THEN
-             i = i + 1
-             EXIT
-          ELSE
-             EXIT
-          END IF
-       END DO
-
-       IF (left_end < j) CALL quick_sort_1(left_end, j)
-       IF (i < right_end) CALL quick_sort_1(i, right_end)
-    END IF
-
-  END SUBROUTINE quick_sort_1
-
-
-  SUBROUTINE interchange_sort(left_end, right_end)
-
-    INTEGER, INTENT(IN) :: left_end, right_end
-
-    !     Local variables
-    INTEGER             :: i, j, itemp
-    INTEGER(i8b)        :: temp
-
-    DO i = left_end, right_end - 1
-       DO j = i+1, right_end
-          IF (list(i) > list(j)) THEN
-             temp = list(i); list(i) = list(j); list(j) = temp
-             itemp = order(i); order(i) = order(j); order(j) = itemp
-          END IF
-       END DO
-    END DO
-
-  END SUBROUTINE interchange_sort
-
-END SUBROUTINE quick_sort
-

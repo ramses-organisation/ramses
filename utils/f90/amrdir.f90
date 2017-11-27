@@ -11,14 +11,14 @@ program amrdir
   integer::iargc,ifout
   character(len=128)::arg
 
-  n = iargc()
+  n = command_argument_count()
   if (n.NE.2) then
      print *, 'usage: amrdir n1 n2'
      stop
   end if
-  call getarg(1,arg)
+  call get_command_argument(1,arg)
   read(arg,'(I8)')n1
-  call getarg(2,arg)
+  call get_command_argument(2,arg)
   read(arg,'(I8)')n2
 
   do ifout=n1,n2
@@ -65,4 +65,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-
