@@ -19,12 +19,12 @@ program header
   integer::iargc,ipos
   character(len=128)::arg
 
-  n = iargc()
+  n = command_argument_count()
   if (n.NE.1) then
      print *, 'usage: header output_dir'
      stop
   end if
-  call getarg(1,arg)
+  call get_command_argument(1,arg)
   nomdir=trim(arg)//'/'
   !-----------------------------------------------
   ! Lecture des fichiers outputs au format RAMSES

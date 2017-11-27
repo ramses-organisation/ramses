@@ -218,11 +218,11 @@ contains
       implicit none
 
       integer       :: i,n
-      integer       :: iargc
+      
       character(len=4)   :: opt
       character(len=128) :: arg
 
-      n = iargc()
+      n = command_argument_count()
       if (n < 4) then
          print *, 'usage: poshalo -inp ramses_input -pre hop_prefix'
          print *, 'ex: poshalo -inp output_00001 -pre zregroup'
@@ -230,12 +230,12 @@ contains
       end if
 
       do i = 1,n,2
-         call getarg(i,opt)
+         call get_command_argument(i,opt)
          if (i == n) then
             print '("option ",a4," has no argument")', opt
             stop 2
          end if
-         call getarg(i+1,arg)
+         call get_command_argument(i+1,arg)
          select case (opt)
          case ('-pre')
             directory = trim(arg)
@@ -296,4 +296,3 @@ subroutine title(n,nstring)
      nstring = '0000'//nchar1
   endif
 end subroutine title
-

@@ -40,7 +40,7 @@ program extract_grafic
   character*80,dimension(18)::filename
   logical::ok
 
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .NE. 2)THEN
      write(*,*)'You should type: a.out input output'
      write(*,*)'where directory input should contain GRAFIC files'
@@ -48,8 +48,8 @@ program extract_grafic
      STOP
   END IF
 
-  CALL getarg(1,input)
-  CALL getarg(2,output)
+  CALL get_command_argument(1,input)
+  CALL get_command_argument(2,output)
 
   !  SAFETY CONDITION
   if (input == output) then

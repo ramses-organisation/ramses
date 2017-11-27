@@ -57,7 +57,7 @@ subroutine read_params
   write(*,*)' '
 
   ! Read namelist filename from command line argument
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .LT. 1)THEN
      write(*,*)'You should type: hydro3d input.nml'
      write(*,*)'File input.nml should contain a parameter namelist'
@@ -183,4 +183,3 @@ subroutine read_params
 #endif
 
 end subroutine read_params
-
