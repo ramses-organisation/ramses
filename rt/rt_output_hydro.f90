@@ -10,11 +10,9 @@ subroutine rt_backup_hydro(filename, filename_desc)
   use rt_hydro_commons
   use rt_parameters
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
-#ifndef WITHOUTMPI
-  use mpi
-#endif
   implicit none
 #ifndef WITHOUTMPI
+  include 'mpif.h'
   integer :: dummy_io, info2
   integer, parameter :: tag = 1131
 #endif
