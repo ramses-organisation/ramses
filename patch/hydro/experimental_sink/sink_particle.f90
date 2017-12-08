@@ -220,6 +220,8 @@ subroutine create_cloud_from_sink
                     call add_list(ind_cloud,ind_grid,ok_true,1)
                     indp=ind_cloud(1)
                     idp(indp)=-isink
+                    typep(indp)%family=FAM_CLOUD
+                    typep(indp)%tag=0
                     levelp(indp)=levelmin
                     if (rr<=rmass)then
                        ! check if direct_force is turned on
@@ -301,7 +303,7 @@ subroutine kill_entire_cloud(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -317,7 +319,7 @@ subroutine kill_entire_cloud(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -400,7 +402,7 @@ subroutine collect_acczone_avg(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -417,7 +419,7 @@ subroutine collect_acczone_avg(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -621,7 +623,7 @@ subroutine grow_sink(ilevel,on_creation)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -637,7 +639,7 @@ subroutine grow_sink(ilevel,on_creation)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only sink particles
-              if(idp(ipart).lt.0)then
+              if(is_cloud(typep(ipart)))then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -1966,10 +1968,10 @@ subroutine upd_cloud(ind_part,np)
 
   ! Overwrite cloud particle mass with sink mass
   do j=1,np
-     isink=-idp(ind_part(j))
-     if(isink>0 .and. mp(ind_part(j))>0.)then
-        mp(ind_part(j))=msink(isink)/dble(ncloud_sink_massive)
-     endif
+     if ( is_cloud(typep(ind_part(j))) .and. mp(ind_part(j))>0.0d0 ) then
+        isink = -idp(ind_part(j))
+        mp(ind_part(j)) = msink(isink)/dble(ncloud_sink_massive)
+     end if
   end do
 
   ! Store velocity 
@@ -1983,9 +1985,9 @@ subroutine upd_cloud(ind_part,np)
   ! is going to be overwritten again before move
   do idim=1,ndim
      do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
-           new_vp(j,idim)=vsink(isink,idim)
+        if ( is_cloud(typep(ind_part(j))) ) then
+           isink = -idp(ind_part(j))
+           new_vp(j,idim) = vsink(isink,idim)
         end if
      end do
   end do
@@ -2010,8 +2012,8 @@ subroutine upd_cloud(ind_part,np)
   end do
   do idim=1,ndim
      do j=1,np
-        isink=-idp(ind_part(j))
-        if(isink>0)then
+        if ( is_cloud(typep(ind_part(j))) ) then
+           isink = -idp(ind_part(j))
            lev=level_p(j)
            new_xp(j,idim)=new_xp(j,idim)+sink_jump(isink,idim,lev)
         endif
