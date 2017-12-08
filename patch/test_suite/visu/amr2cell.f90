@@ -467,7 +467,7 @@ contains
     character(len=128) :: arg
     LOGICAL       :: bad, ok
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2cell  -inp  input_dir'
        print *, '                 -out  output_file'

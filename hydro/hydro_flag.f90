@@ -23,7 +23,11 @@ subroutine hydro_flag(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
+#ifdef SOLVERmhd
+  real(dp),dimension(1:nvector,1:nvar+3),save::uug,uum,uud
+#else
   real(dp),dimension(1:nvector,1:nvar),save::uug,uum,uud
+#endif
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -52,6 +56,12 @@ subroutine hydro_flag(ilevel)
        & err_grad_d==-1.0.and.&
        & err_grad_p==-1.0.and.&
        & err_grad_u==-1.0.and.&
+#ifdef SOLVERmhd
+       & err_grad_A==-1.0.and.&
+       & err_grad_B==-1.0.and.&
+       & err_grad_C==-1.0.and.&
+       & err_grad_B2==-1.0.and.&
+#endif
        & jeans_refine(ilevel)==-1.0 )return
 
 #ifdef RT
@@ -109,14 +119,22 @@ subroutine hydro_flag(ilevel)
         ! Loop over dimensions
         do idim=1,ndim
            ! Gather hydro variables
+#ifdef SOLVERmhd
+           do ivar=1,nvar+3
+#else
            do ivar=1,nvar
+#endif
               do i=1,ngrid
                  uug(i,ivar)=uold(indn(i,2*idim-1),ivar)
                  uum(i,ivar)=uold(ind_cell(i     ),ivar)
                  uud(i,ivar)=uold(indn(i,2*idim  ),ivar)
               end do
            end do
+#ifdef SOLVERmhd
+           call hydro_refine(uug,uum,uud,ok,ngrid,ilevel)
+#else
            call hydro_refine(uug,uum,uud,ok,ngrid)
+#endif
         end do
 
         if(poisson.and.jeans_refine(ilevel)>0.0)then
@@ -137,7 +155,6 @@ subroutine hydro_flag(ilevel)
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
-           !call geometry_refine(xx,ind_cell,ok,ngrid,ilevel)
            call geometry_refine(xx,ok,ngrid,ilevel)
         end if
 
@@ -186,6 +203,9 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
 #if NENER>0
   integer::irad
 #endif
+#ifdef SOLVERmhd
+  real(dp)::emag
+#endif
   pi = twopi / 2.
   factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
@@ -198,11 +218,19 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      dens = max(uold(indi,1),smallr)
      etherm = uold(indi,ndim+2)
      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
-#if NDIM > 1
+#if NDIM > 1 || SOLVERmhd
      etherm = etherm - 0.5d0*uold(indi,3)**2/dens
 #endif
-#if NDIM > 2
+#if NDIM > 2 || SOLVERmhd
      etherm = etherm - 0.5d0*uold(indi,4)**2/dens
+#endif
+#ifdef SOLVERmhd
+     ! the magnetic energy
+     emag =        (uold(indi,6)+uold(indi,nvar+1 ))**2
+     emag = emag + (uold(indi,7)+uold(indi,nvar+2))**2
+     emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
+     emag = emag / 8.d0
+     etherm = (etherm - emag)
 #endif
 #if NENER>0
      do irad=1,nener

@@ -22,7 +22,7 @@ subroutine adaptive_loop
   tt1=MPI_WTIME()
   ! for calculating total run time
   if (tstart.eq.0.0) then
-     tstart = MPI_WTIME(info)
+     tstart = MPI_WTIME()
   end if
 #endif
 

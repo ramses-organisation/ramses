@@ -219,12 +219,12 @@ contains
     implicit none
 
     integer       :: i,n
-    integer       :: iargc
+    
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2cut  -inp  input_dir'
        print *, '                -out  output_file'
@@ -246,12 +246,12 @@ contains
     end if
 
     do i = 1,n,2
-       call getarg(i,opt)
+       call get_command_argument(i,opt)
        if (i == n) then
           print '("option ",a2," has no argument")', opt
           stop 2
        end if
-       call getarg(i+1,arg)
+       call get_command_argument(i+1,arg)
        select case (opt)
        case ('-inp')
           repository = trim(arg)

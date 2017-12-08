@@ -32,8 +32,6 @@ subroutine compute_clump_properties(xx)
   real(dp)::tot_mass_tot
 #endif
 
-#if NDIM==3
-
   period(1)=(nx==1)
   period(2)=(ny==1)
   period(3)=(nz==1)
@@ -253,8 +251,6 @@ subroutine compute_clump_properties(xx)
 #endif
 
   end if
-
-#endif
 end subroutine compute_clump_properties
 !################################################################
 !################################################################
@@ -1276,6 +1272,9 @@ subroutine write_clump_map
   character(LEN=5)::myidstring,nchar,ncharcpu
 
   nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
   do ind=1,twotondim

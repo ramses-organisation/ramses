@@ -16,8 +16,8 @@ subroutine dump_all
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::filename,filedir,filedirini,filecmd
-  integer::irec,ierr
+  character(LEN=80)::filename,filename_desc,filedir,filedirini,filecmd
+  integer::ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -79,10 +79,6 @@ subroutine dump_all
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
-        if(hydro)then
-           filename=TRIM(filedir)//'hydro_file_descriptor.txt'
-           call file_descriptor_hydro(filename)
-        end if
         if(cooling .and. .not. neq_chem)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
@@ -130,7 +126,8 @@ subroutine dump_all
      if(hydro)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup hydro'
         filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
-        call backup_hydro(filename)
+        filename_desc = trim(filedir)//'hydro_file_descriptor.txt'
+        call backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -141,7 +138,8 @@ subroutine dump_all
      if(rt.or.neq_chem)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
         filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
-        call rt_backup_hydro(filename)
+        filename_desc = trim(filedir) // 'rt_file_descriptor.txt'
+        call rt_backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
@@ -151,8 +149,9 @@ subroutine dump_all
 
      if(pic)then
         if(myid==1.and.print_when_io) write(*,*)'Start backup part'
-        filename=TRIM(filedir)//'part_'//TRIM(nchar)//'.out'
-        call backup_part(filename)
+        filename=trim(filedir)//'part_'//trim(nchar)//'.out'
+        filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
+        call backup_part(filename, filename_desc)
         if(sink)then
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
            call backup_sink(filename)
@@ -504,54 +503,69 @@ subroutine output_header(filename)
   use pm_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  include "mpif.h"
   integer::info
 #endif
   character(LEN=80)::filename
 
   integer::ilun
-  integer(i8b)::npart_tot
   character(LEN=80)::fileloc
 #ifdef LONGINT
-  integer(i8b)::tmp_long
+  integer(i8b)::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+#else
+  integer::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
 #endif
+  integer :: ifam, ipart
 
   if(verbose)write(*,*)'Entering output_header'
-
-  ! Compute total number of particles
-#ifndef WITHOUTMPI
-#ifndef LONGINT
-  call MPI_ALLREDUCE(npart,npart_tot,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-  tmp_long=npart
-  call MPI_ALLREDUCE(tmp_long,npart_tot,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
-#endif
-#endif
-#ifdef WITHOUTMPI
-  npart_tot=npart
-#endif
-
   if(myid==1)then
-
-     ilun=myid+10
-
      ! Open file
      fileloc=TRIM(filename)
-     open(unit=ilun,file=fileloc,form='formatted')
+     open(newunit=ilun,file=fileloc,form='formatted')
+  end if
 
-     ! Write header information
-     write(ilun,*)'Total number of particles'
-     write(ilun,*)npart_tot
-     write(ilun,*)'Total number of dark matter particles'
-     write(ilun,*)npart_tot-nstar_tot
-     write(ilun,*)'Total number of star particles'
-     write(ilun,*)nstar_tot
-     write(ilun,*)'Total number of sink particles'
-     write(ilun,*)nsink
+  ! Compute total number of particles
+  ! Count number of particles
+  npart_family_loc = 0; npart_all_loc = 0
+  do ipart = 1, npartmax
+     ! Only used particles have a levelp > 0
+     if (levelp(ipart) > 0) then
+        npart_all_loc = npart_all_loc + 1
+        do ifam = -5, 5
+           if (typep(ipart)%family == ifam) then
+              npart_family_loc(ifam) = npart_family_loc(ifam) + 1
+           end if
+        end do
+     end if
+  end do
 
+#ifndef WITHOUTMPI
+#ifdef LONGINT
+  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+  call MPI_ALLREDUCE(npart_family_loc,npart_family,11,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(npart_all_loc,npart_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#else
+  npart_family = npart_family_loc
+  npart_all = npart_all_loc
+#endif
+
+  if (myid == 1) then
+     write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
+     do ifam = -NFAMILIES, NFAMILIES
+        write(ilun, '(a13, i10)') &
+             trim(particle_family_keys(ifam)), npart_family(ifam)
+     end do
+     write(ilun, '(a13, i10)') &
+          'undefined', npart_all - sum(npart_family)
+  end if
+
+  if (myid == 1) then
      ! Keep track of what particle fields are present
      write(ilun,*)'Particle fields'
-     write(ilun,'(a)',advance='no')'pos vel mass iord level '
+     write(ilun,'(a)',advance='no')'pos vel mass iord level family tag '
 #ifdef OUTPUT_PARTICLE_POTENTIAL
      write(ilun,'(a)',advance='no')'phi '
 #endif

@@ -13,10 +13,15 @@ subroutine init_time
 #ifndef WITHOUTMPI
   include 'mpif.h'
 #endif
-  integer::i,Nmodel,info
+  integer::i,Nmodel
   real(kind=8)::T2_sim
+#ifdef grackle
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::file_exists
+#ifndef WITHOUTMPI
+  integer::info
+#endif
+#endif
 
   if(nrestart==0)then
      if(cosmo)then
@@ -282,18 +287,14 @@ subroutine init_time
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
         z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
-        call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
-             & -1,2, &
-             & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
+        call rt_set_model(dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
              & dble(aexp_ini),T2_sim)
         T2_start=T2_sim
         if(nrestart==0)then
            if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
         end if
      else
-        call rt_set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
-             & -1,2, &
-             & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
+        call rt_set_model(dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
              & dble(aexp_ini),T2_sim)
      endif
   end if
@@ -319,7 +320,9 @@ subroutine init_file
   character(LEN=80)::filename
   logical::ok
   integer,parameter::tag=1116
+#ifndef WITHOUTMPI
   integer::dummy_io,info2
+#endif
 
   if(verbose)write(*,*)'Entering init_file'
 
@@ -365,8 +368,6 @@ subroutine init_file
            end if
         endif
 #endif
-
-
 
         dxini(ilevel)=dxini0
         xoff1(ilevel)=xoff10
@@ -439,7 +440,9 @@ subroutine init_cosmo
   TYPE(gadgetheadertype) :: gadgetheader
   integer::i
   integer,parameter::tag=1117
+#ifndef WITHOUTMPI
   integer::dummy_io,info2
+#endif
 
   if(verbose)write(*,*)'Entering init_cosmo'
 
@@ -472,7 +475,6 @@ subroutine init_cosmo
            endif
 #endif
 
-
            INQUIRE(file=filename,exist=ok)
            if(.not.ok)then
               if(myid==1)then
@@ -498,7 +500,6 @@ subroutine init_cosmo
               end if
            endif
 #endif
-
 
            dxini(ilevel)=dxini0
            xoff1(ilevel)=xoff10
@@ -837,7 +838,9 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
   end do
 
-!  write(*,666)-t
+  if(debug)then
+     write(*,666)-t
+  end if
   666 format(' Age of the Universe (in unit of 1/H0)=',1pe10.3)
 
   nskip=nstep/ntable

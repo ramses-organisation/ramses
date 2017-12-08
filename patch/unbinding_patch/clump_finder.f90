@@ -3063,7 +3063,7 @@ subroutine particle_unbinding(ipeak,final_round)
 
 
   !compute the potential for this peak on the points of the mass bin distances
-  call compute_phi(ipeak)
+  if (nclmppart(ipeak) > 0) call compute_phi(ipeak)
 
   !compute potential at the closest border from the center of mass
   phi_border=0.d0
@@ -3080,12 +3080,12 @@ subroutine particle_unbinding(ipeak,final_round)
     do ipart=1, nclmppart(ipeak)    ! loop over particle LL
       call get_local_peak_id(clmpidp(thispart),ipeak_test)
       if (ipeak_test==ipeak) then   ! if this particle needs to be checked for unbinding
-                      ! particle may be assigned to child clump
+                                    ! particle may be assigned to child clump
         candidates=candidates+1
         if(unbound(ipeak,thispart,phi_border)) then  
           !unbound(ipeak,thispart,phi_border) is a logical function. See below.
 
-          nunbound=nunbound+1            !counter
+          nunbound=nunbound+1                  !counter
           clmpidp(thispart)=new_peak(ipeak)    !update clump id
         end if
       end if
@@ -3100,7 +3100,7 @@ subroutine particle_unbinding(ipeak,final_round)
 
           niterunbound=niterunbound+1
           contributes(thispart) = .false.   ! particle doesn't contribute to
-                            ! clump properties
+                                            ! clump properties
         else
           hasatleastoneptcl(ipeak)=1 !there are contributing particles for this peak
         end if

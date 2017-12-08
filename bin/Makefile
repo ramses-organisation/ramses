@@ -94,10 +94,10 @@ endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
-VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
+VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o 
+MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o
 ifeq ($(GRACKLE),1)
 MODOBJ += grackle_parameters.o
 endif

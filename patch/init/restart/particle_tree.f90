@@ -685,7 +685,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(reception(icpu,ilevel)%fp(1:ncache,1:3))
+        allocate(reception(icpu,ilevel)%fp(1:ncache,1:4))
         allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do

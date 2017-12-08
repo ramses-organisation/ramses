@@ -779,7 +779,7 @@ subroutine output_frame()
                                 imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
-                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c
                                       if(method_frame(proj_ind).eq.'min')then
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
@@ -880,7 +880,7 @@ subroutine output_frame()
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
-              if((tp(j).eq.0d0).and.(kk.eq.ipart_start)) then
+              if((is_DM(typep(j))).and.(kk.eq.ipart_start)) then
                  if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
                     if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
@@ -888,14 +888,14 @@ subroutine output_frame()
                  endif
               endif
               ! Star particles
-              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+1)) then
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
-              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
                  if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0

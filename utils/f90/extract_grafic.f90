@@ -36,7 +36,7 @@ program extract_grafic
   character*80,dimension(14)::filename
   logical::cosmo_ics=.false.
 
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .NE. 2)THEN
      write(*,*)'You should type: a.out input output'
      write(*,*)'where directory input should contain GRAFIC files'
@@ -44,8 +44,8 @@ program extract_grafic
      STOP
   END IF
 
-  CALL getarg(1,input)
-  CALL getarg(2,output)
+  CALL get_command_argument(1,input)
+  CALL get_command_argument(2,output)
 
   !  SAFETY CONDITION
   if (input == output) then

@@ -42,7 +42,7 @@ scheme='muscl'
 slope_type=1
 /
 
-&PHYSICS_PARAMS
+&COOLING_PARAMS
 cooling=.false.
 /
 
