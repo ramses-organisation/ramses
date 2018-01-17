@@ -37,7 +37,6 @@ delta_rho=0.0
 
 &OUTPUT_PARAMS
 foutput=50
-fbackup=50
 noutput=4
 tout=0,0.2714,0.5428,0.691262,0.8142,1.0857,2.
 /

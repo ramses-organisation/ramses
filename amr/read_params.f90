@@ -31,7 +31,7 @@ subroutine read_params
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
-  namelist/output_params/noutput,foutput,fbackup,aout,tout &
+  namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse

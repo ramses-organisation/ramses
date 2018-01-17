@@ -33,7 +33,6 @@ initfile(1)='/home/ydubois/data'
 
 &OUTPUT_PARAMS
 foutput=1
-fbackup=50
 noutput=1
 tout=30.0
 /

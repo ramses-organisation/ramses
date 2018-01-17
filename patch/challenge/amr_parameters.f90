@@ -75,7 +75,6 @@ module amr_parameters
   integer::nrestart=0         ! New run or backup file number
   integer::nstepmax=1000000   ! Maximum number of time steps
   integer::ncontrol=1         ! Write control variables
-  integer::fbackup=1000000    ! Backup data to disk
   integer::nremap=0           ! Load balancing frequency (0: never)
 
   ! Output parameters

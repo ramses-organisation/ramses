@@ -31,7 +31,7 @@ subroutine read_params
        & ,bisec_tol,static,overload,cost_weighting,aton &
        & ,mond
   !~~~~~~~~~~ end ~~~~~~~~~~
-  namelist/output_params/noutput,foutput,fbackup,aout,tout &
+  namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen
