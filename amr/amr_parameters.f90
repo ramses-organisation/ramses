@@ -74,7 +74,6 @@ module amr_parameters
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
 
   ! Mesh parameters
-  integer::geom=1             ! 1: cartesian, 2: cylindrical, 3: spherical
   integer::nx=1,ny=1,nz=1     ! Number of coarse cells in each dimension
   integer::levelmin=1         ! Full refinement up to levelmin
   integer::nlevelmax=1        ! Maximum number of level

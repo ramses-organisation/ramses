@@ -19,7 +19,7 @@ subroutine read_params
   ! Namelist definitions
   !--------------------------------------------------
   namelist/run_params/cosmo,pic,poisson,hydro,verbose,debug &
-       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,static,geom
+       & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering,static
   namelist/output_params/noutput,foutput,fbackup,aout,tout
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen

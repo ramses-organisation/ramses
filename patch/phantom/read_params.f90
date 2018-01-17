@@ -28,7 +28,7 @@ subroutine read_params
   ! Added the "mond" parameter
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton &
+       & ,bisec_tol,static,overload,cost_weighting,aton &
        & ,mond
   !~~~~~~~~~~ end ~~~~~~~~~~
   namelist/output_params/noutput,foutput,fbackup,aout,tout &
