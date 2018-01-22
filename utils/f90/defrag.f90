@@ -27,7 +27,6 @@ program defrag
   character(len=128)::arg
 
   ! Mesh parameters
-  integer::geom=1             ! 1: cartesian, 2: cylindrical, 3: spherical
   integer::levelmin=1         ! Full refinement up to levelmin
   character(len=128)::ordering='hilbert'
   ! Cosmology
