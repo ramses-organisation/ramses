@@ -44,7 +44,6 @@ p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-fbackup=1000
 foutput=1000
 noutput=1
 tout=6d17
