@@ -92,7 +92,7 @@ subroutine compute_clump_properties(xx)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
 
         ! gas density
-        if(ivar_clump==0)then
+        if(ivar_clump==0 .or. ivar_clump==-1)then
            d=xx(icellp(ipart))
         else
            if(hydro)then
@@ -211,7 +211,7 @@ subroutine compute_clump_properties(xx)
            end do
 
            ! gas density
-           if(ivar_clump==0)then
+           if(ivar_clump==0 .or. ivar_clump==-1)then
               d=xx(icellp(ipart))
            else
               if(hydro)then
@@ -287,7 +287,7 @@ subroutine write_clump_properties(to_file)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)

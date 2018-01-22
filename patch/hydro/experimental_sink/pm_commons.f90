@@ -1,4 +1,5 @@
 module pm_commons
+
   use amr_parameters
   use pm_parameters
   use random
@@ -58,7 +59,7 @@ module pm_commons
   ! Global particle linked lists
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator
-  integer,dimension(IRandNumSize)    :: localseed=-1
+  integer,dimension(IRandNumSize) :: localseed=-1
 
   ! Particle types
   integer, parameter :: NFAMILIES=5
@@ -125,15 +126,19 @@ contains
     type(part_t), intent(in) :: typep
     is_not_DM = typep%family /= FAM_DM
   end function is_not_DM
+  
 
   pure function part2int (part)
     ! Convert a particle into an integer
     ! This saves some space e.g. when communicating
     integer :: part2int
     type(part_t), intent(in) :: part
+
     integer :: magic
+
     ! This is the largest value for integer(1)
     magic = 127
+
     part2int = int(part%family) * magic + int(part%tag)
   end function part2int
 
@@ -141,9 +146,12 @@ contains
     ! Convert from an index to particle type
     type(part_t) :: int2part
     integer, intent(in) :: index
+
     integer :: magic
+
     ! This is the largest value for integer(1)
     magic = 127
+
     int2part%family = int(index / magic, 1)
     int2part%tag = int(mod(index, magic), 1)
   end function int2part
@@ -177,5 +185,4 @@ contains
     end if
     props2type%tag = 0
   end function props2type
-
 end module pm_commons

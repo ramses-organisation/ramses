@@ -1691,7 +1691,7 @@ subroutine true_max(x,y,z,ilevel)
 
 
   counter=0
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      do i=-1,1
         do j=-1,1
            do k=-1,1
