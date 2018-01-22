@@ -271,6 +271,8 @@ program part2sfr
      read(1)m
      read(1)id
      read(1) ! Skip level
+     read(1) ! Skip family
+     read(1) ! Skip tag
      read(1)birth
      close(1)
 
@@ -299,9 +301,10 @@ program part2sfr
 
            npart_actual=npart_actual+1
            mtot=mtot+m(i)
-
-           ix=int(birth_date/15.*dble(nx))
-           sfr(ix)=sfr(ix)+m(i)*unit_m/2d33
+           if(birth_date>0.and.birth_date<15.)then
+              ix=int(birth_date/15.*dble(nx))
+              sfr(ix)=sfr(ix)+m(i)*unit_m/2d33
+           endif
 
         end if
 
