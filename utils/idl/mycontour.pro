@@ -131,9 +131,8 @@ ncolm1=ncol-1
 
 ; Log scaling
 if keyword_set(log) then begin
-    
-    pas=alog10(maxi/mini)/ncolm1
-    niv=mini*10^(pas*findgen(ncol))
+   pas=alog10(maxi/mini)/ncolm1
+   niv=mini*10^(pas*findgen(ncol))
 endif else begin
     pas=(maxi-mini)/ncolm1
     niv=findgen(ncol)*pas+mini
@@ -141,20 +140,16 @@ endelse
 
 ; Colors
 if keyword_set(clt) then loadct,clt
-n_colors=MIN([!d.n_colors,256])
-tvlct,255,255,255,n_colors-1
-tvlct,0,0,0,0
-cmax=n_colors-20.
-
-clr=(findgen(ncol)+1.)/float(ncol)*cmax+15
+tvlct,r,g,b,/get
+colors=findgen(ncol)
+for i=0,ncolm1 do begin
+   j=double(i)/double(ncol)*255.
+   colors(i)=r(j)+256L*g(j)+256L*256L*b(j)
+endfor
 if keyword_set(reverse) then begin
-   print,'Don''t forget to .r reverse'
-   clr2=reverse(clr)
-endif else begin
-   clr2=clr
-endelse
+   colors=reverse(colors)
+endif
 
-clr=clr2
 ; Color table versus values
 a=niv
 c=fltarr(3,ncol)
@@ -180,8 +175,8 @@ if keyword_set(table) then begin
     contour,/follow,/fill,levels=niv,c,b,a $
       ,title='!17Value/Color' $
       ,xr=[0,b[1]],yr=[min(a),max(a)],/xs,/ys,ticklen=0. $
-      ,xticks=1,xtickn=[' ',' '],c_colors=clr $
-      ,position=posleg,ylog=log,noerase=noerase
+      ,xticks=1,xtickn=[' ',' '] $
+      ,position=posleg,ylog=log,noerase=noerase,c_colors=colors
     
 ; Plot contours
     pos=[0.1,0.1,0.8,0.8]*sizewin+offswin
@@ -198,8 +193,8 @@ endif else begin
     pos=[0.1,0.1,max_x,max_y]*sizewin+offswin
 endelse
 contour,/follow,/fill,ext,x,y,levels=niv $
-  ,xr=[min(x),max(x)],yr=[min(y),max(y)],/xs,/ys,c_colors=clr $
-  ,position=pos,title='!17'+title $
+  ,xr=[min(x),max(x)],yr=[min(y),max(y)],/xs,/ys $
+  ,position=pos,title='!17'+title,c_colors=colors $
   ,xtitle=xtitle,ytitle=ytitle,/noerase
 
 end
