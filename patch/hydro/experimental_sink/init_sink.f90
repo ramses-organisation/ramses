@@ -26,6 +26,7 @@ subroutine init_sink
   allocate(msink(1:nsinkmax))
   allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
+  xsink=boxlen/2.
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
   allocate(delta_mass(1:nsinkmax))
@@ -315,4 +316,3 @@ subroutine compute_ncloud_sink
      end do
   end do
 end subroutine compute_ncloud_sink
-
