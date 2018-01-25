@@ -341,7 +341,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
   ! Save type
   type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
@@ -407,13 +406,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      end do
   end if
-
-  ! Gather particle birth epoch
-  if(star)then
-     do j=1,np
-        ttt(j)=tp(ind_part(j))
-     end do
-  endif
 
   ! Check for illegal moves
   error=.false.
@@ -1155,7 +1147,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:nvector),save::ttt=0d0
   type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
   real(dp),dimension(1:nvector,1:ndim),save::x,cl,cr,cc,wl,wr,wc
@@ -1220,13 +1211,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         end do
      end do
   end if
-
-  ! Gather particle birth epoch
-  if(star)then
-     do j=1,np
-        ttt(j)=tp(ind_part(j))
-     end do
-  endif
 
   ! Check for illegal moves
   abandoned(1:np)=.false.

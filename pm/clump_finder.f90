@@ -1353,6 +1353,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use clfind_commons
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
