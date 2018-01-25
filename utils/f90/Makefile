@@ -3,7 +3,7 @@ BINDIR=.
 
 # Ifort configuration
 F90=ifort
-CFLAGS=-Ofast -cpp
+CFLAGS=-Ofast -cpp -traceback
 
 # # Gfortran configuration
 #F90=gfortran

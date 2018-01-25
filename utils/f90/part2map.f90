@@ -498,6 +498,7 @@ program part2map
      end if
      deallocate(x,m)
      if(nstar>0)deallocate(age,id)
+     deallocate(family,tag)
   end do
   write(*,*)'Total mass=',mtot
   if(.not. star)write(*,*)'npart tot=',npart_actual
