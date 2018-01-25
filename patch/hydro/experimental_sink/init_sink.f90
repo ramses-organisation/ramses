@@ -10,15 +10,17 @@ subroutine init_sink
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::idim, isink, nsinkold
-  integer::ilun
-  real(dp)::xx1,xx2,xx3,vv1,vv2,vv3,mm1,mm2,ll1,ll2,ll3
-  real(dp),allocatable,dimension(:)::xdp
-  integer,allocatable,dimension(:)::isp
-  logical,allocatable,dimension(:)::nb
   logical::eof,ic_sink=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
+
+  integer::i
+  integer::sid,slevel
+  real(dp)::sm1,sx1,sx2,sx3,sv1,sv2,sv3,sl1,sl2,sl3
+  real(dp)::stform,sacc_rate,sacc_mass,srho_gas,sc2_gas,seps_sink,svg1,svg2,svg3,sm2
+  character::co
+  character(LEN=200)::comment_line
 
   ! Allocate all sink related quantities...
   allocate(idsink(1:nsinkmax))
@@ -105,23 +107,17 @@ subroutine init_sink
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-  ! Compute softening length from minimum cell spacing
-  call compute_ncloud_sink
-
+  ! Loading sinks from the restart
   if(nrestart>0)then
 
-     ilun=4*ncpu+myid+10
      call title(nrestart,nchar)
 
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/sink_'//TRIM(nchar)//'.out'
+        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/sink_'//TRIM(nchar)//'.csv'
      else
-        fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.out'
+        fileloc='output_'//TRIM(nchar)//'/sink_'//TRIM(nchar)//'.csv'
      endif
-
-     call title(myid,nchar)
-     fileloc=TRIM(fileloc)//TRIM(nchar)
 
      ! Wait for the token
 #ifndef WITHOUTMPI
@@ -133,45 +129,50 @@ subroutine init_sink
      endif
 #endif
 
-     open(unit=ilun,file=fileloc,form='unformatted')
-     rewind(ilun)
-     read(ilun)nsink
-     read(ilun)nindsink
-
-     if(nsink>0)then
-        allocate(xdp(1:nsink))
-        read(ilun)xdp ! Read sink mass
-        msink(1:nsink)=xdp
-        read(ilun)xdp ! Read sink birth epoch
-        tsink(1:nsink)=xdp
-        do idim=1,ndim
-           read(ilun)xdp ! Read sink position
-           xsink(1:nsink,idim)=xdp
-        end do
-        do idim=1,ndim
-           read(ilun)xdp ! Read sink velocity
-           vsink(1:nsink,idim)=xdp
-        end do
-        do idim=1,ndim
-           read(ilun)xdp ! Read sink angular momentum
-           lsink(1:nsink,idim)=xdp
-        end do
-        read(ilun)xdp ! Read sink accumulated rest mass energy
-        delta_mass(1:nsink)=xdp
-        allocate(isp(1:nsink))
-        read(ilun)isp ! Read sink index
-        idsink(1:nsink)=isp
-        deallocate(isp)
-        allocate(nb(1:nsink))
-        read(ilun)nb ! Read newborn boolean
-        new_born(1:nsink)=nb
-        deallocate(nb)
-        read(ilun)sinkint_level ! Read sink integration level
-        read(ilun)xdp ! Read smbh mass 
-        msmbh(1:nsink)=xdp
-        deallocate(xdp)
-     end if
-     close(ilun)
+     nsink=0
+     open(10,file=fileloc,form='formatted')
+     eof=.false.
+     ! scrolling over the comment lines
+     read(10,'(A200)')comment_line
+     read(10,'(A200)')comment_line
+     do
+        read(10,'(I10,20(A1,ES20.10),A1,I10)',end=102)sid,co, sm1,co,&
+                           sx1,co,sx2,co,sx3,co, &
+                           sv1,co,sv2,co,sv3,co, &
+                           sl1,co,sl2,co,sl3,co, &
+                           stform,co, sacc_rate,co, &
+                           sacc_mass,co, &
+                           srho_gas,co, sc2_gas,co, seps_sink,co, &
+                           svg1,co,svg2,co,svg3,co, &
+                           sm2,co,slevel
+        nsink=nsink+1
+        nindsink=nindsink+1
+        idsink(nsink)=sid
+        msink(nsink)=sm1
+        xsink(nsink,1)=sx1
+        xsink(nsink,2)=sx2
+        xsink(nsink,3)=sx3
+        vsink(nsink,1)=sv1
+        vsink(nsink,2)=sv2
+        vsink(nsink,3)=sv3
+        lsink(nsink,1)=sl1
+        lsink(nsink,2)=sl2
+        lsink(nsink,3)=sl3
+        tsink(nsink)=stform
+        dMBHoverdt(nsink)=sacc_rate
+        delta_mass(nsink)=sacc_mass
+        rho_gas(nsink)=srho_gas
+        c2sink(nsink)=sc2_gas
+        eps_sink(nsink)=seps_sink
+        vel_gas(nsink,1)=svg1
+        vel_gas(nsink,2)=svg2
+        vel_gas(nsink,3)=svg3
+        new_born(nsink)=.false. ! this is a restart
+        msmbh(nsink)=sm2
+        sinkint_level=slevel
+     end do
+102  continue
+     close(10)
 
      ! Send the token
 #ifndef WITHOUTMPI
@@ -184,11 +185,9 @@ subroutine init_sink
      endif
 #endif
 
-     ! Compute number of cloud particles within sink sphere
-     call compute_ncloud_sink
-
   end if
 
+  ! Loading sinks from the ICs (ic_sink or ic_sink_restart)
   if (nrestart>0)then
      nsinkold=nsink
      if(TRIM(initfile(levelmin)).NE.' ')then
@@ -234,25 +233,25 @@ subroutine init_sink
      open(10,file=filename,form='formatted')
      eof=.false.
      do
-        read(10,*,end=102)mm1,xx1,xx2,xx3,vv1,vv2,vv3,ll1,ll2,ll3,mm2
+        read(10,*,end=103)sm1,sx1,sx2,sx3,sv1,sv2,sv3,sl1,sl2,sl3,sm2
         nsink=nsink+1
         nindsink=nindsink+1
         idsink(nsink)=nindsink
-        msink(nsink)=mm1
-        xsink(nsink,1)=xx1+boxlen/2.0
-        xsink(nsink,2)=xx2+boxlen/2.0
-        xsink(nsink,3)=xx3+boxlen/2.0
-        vsink(nsink,1)=vv1
-        vsink(nsink,2)=vv2
-        vsink(nsink,3)=vv3
-        lsink(nsink,1)=ll1
-        lsink(nsink,2)=ll2
-        lsink(nsink,3)=ll3
+        msink(nsink)=sm1
+        xsink(nsink,1)=sx1+boxlen/2.0
+        xsink(nsink,2)=sx2+boxlen/2.0
+        xsink(nsink,3)=sx3+boxlen/2.0
+        vsink(nsink,1)=sv1
+        vsink(nsink,2)=sv2
+        vsink(nsink,3)=sv3
+        lsink(nsink,1)=sl1
+        lsink(nsink,2)=sl2
+        lsink(nsink,3)=sl3
         tsink(nsink)=t
-        new_born(nsink)=.true.
-        msmbh(nsink)=mm2
+        new_born(nsink)=.false. ! this is a restart
+        msmbh(nsink)=sm2
      end do
-102  continue
+103  continue
      close(10)
 
      ! Send the token
@@ -267,6 +266,9 @@ subroutine init_sink
 #endif
 
   end if
+
+  ! Compute number of cloud particles within sink sphere
+  call compute_ncloud_sink
 
   ! Output sink properties to screen
   if (myid==1.and.nsink-nsinkold>0)then
