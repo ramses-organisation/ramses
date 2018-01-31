@@ -11,18 +11,11 @@ subroutine output_frame()
   use rt_hydro_commons
 #endif
   implicit none
-#if NDIM > 1
 #ifndef WITHOUTMPI
   include "mpif.h"
-  integer::info,iframe
-  real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif
 
-#ifdef NOSYSTEM
-  integer::info2
-#endif
-
-  integer::ierr
+  integer::info,ierr,iframe
   integer,parameter::tag=100
 
   character(len=5)::istep_str
@@ -38,23 +31,20 @@ subroutine output_frame()
 #ifdef RT
   character(len=100)::rt_infofile
 #endif
-#if NVAR>5 || defined (RT)
-  character(LEN=5)::dummy
-  integer::ll
-#endif
   integer::ncache,iskip,ngrid,nlevelmax_frame
   integer::nframes,rt_nframes,imap,ipart_start
   integer::idim,ilun,nx_loc,ind,ix,iy,iz
-  integer::imin,imax,jmin,jmax,ii,jj,kk
+  integer::imin,imax,jmin,jmax,ii,jj,kk,ll
+  character(LEN=5)::dummy
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::xcen,ycen,zcen,delx,dely,delz,timer
-  real(dp)::xtmp,ytmp,theta_cam,phi_cam,fov_camera,dist_cam
+  real(dp)::xtmp,ytmp,ztmp,theta_cam,phi_cam,alpha,beta,fov_camera,dist_cam
   real(dp)::xleft_frame,xright_frame,yleft_frame,yright_frame,zleft_frame,zright_frame
-  real(dp)::xleft,xright,yleft,yright,xcentre,ycentre
+  real(dp)::xleft,xright,yleft,yright,zleft,zright,xcentre,ycentre,zcentre
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
-  real(dp)::xpf,ypf
-  real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
-  real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight=0
+  real(dp)::xpf,ypf,zpf
+  real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min,pers_corr
+  real(dp)::dx_cell,dy_cell,dz_cell,dvol,dx_proj,weight
   integer,dimension(1:nvector)::ind_grid,ind_cell
   logical,dimension(1:nvector)::ok
   real(dp),dimension(1:3)::skip_loc
@@ -62,13 +52,15 @@ subroutine output_frame()
   real(dp),dimension(1:nvector,1:ndim)::xx
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
+  real(kind=8),dimension(:),allocatable::data_single,data_single_all
   real(kind=8)::e,uvar
   real(kind=8)::pi=3.14159265359
-  integer::igrid,ilevel
+  real(dp),dimension(8)::xcube,ycube,zcube
+  integer::igrid,ilevel,icube,iline
   integer::i,j
   integer::proj_ind,nh_temp,nw_temp
-  real(dp)::xpc,ypc
-  logical::opened,cube_face=.true.
+  real(dp)::minx,maxx,miny,maxy,minz,maxz,xpc,ypc,d1,d2,d3,d4,l1,l2,l3,l4
+  logical::opened,cube_face
   character(len=1)::temp_string
   integer,dimension(6,8)::lind = reshape((/1, 2, 3, 4, 1, 3, 2, 4,    &
                                            5, 6, 7, 8, 5, 7, 6, 8,    &
@@ -91,13 +83,6 @@ subroutine output_frame()
                                        -1.1379163662e-27,-1.8221651341e-28,-1.6791574329e-29,-4.0655271535e-31, &
                                        1.6771769041e-31,3.3366386465e-32,2.6122101904e-33,-1.7749944262e-34,    &
                                        -6.6026967339e-35,3.9721180887e-36 /)
-#if NDIM>2
-  real(dp)::ztmp,alpha=0,beta=0,pers_corr
-  real(dp)::zleft,zright,zcentre,zpf
-  real(dp),dimension(8)::xcube,ycube,zcube
-  integer::icube,iline
-  real(dp)::minx=0,maxx=0,miny=0,maxy=0,minz=0,maxz=0,d1,d2,d3,d4,l1,l2,l3,l4
-#endif
 #ifdef RT
   character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
   real(kind=8),dimension(:,:,:),allocatable::rt_data_frame
@@ -112,6 +97,7 @@ subroutine output_frame()
  do proj_ind=1,LEN(trim(proj_axis))
   opened=.false.
 
+#if NDIM > 1
   if(imov<1)imov=1
   if(imov>imovout)return
 
@@ -124,7 +110,7 @@ subroutine output_frame()
   moviecmd = 'mkdir -p '//trim(moviedir)
   if(.not.withoutmkdir) then
 #ifdef NOSYSTEM
-     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)
+     if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info)
 #else
      if(myid==1)then
         call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
@@ -150,17 +136,14 @@ subroutine output_frame()
   moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
   moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
   moviefiles(3) = trim(moviedir)//'vy_'//trim(istep_str)//'.map'
-#ifdef SOLVERmhd
+#if NDIM>2
   moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
-  moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
-#else
+#endif
 #if NDIM==2
   moviefiles(4) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
 #endif
 #if NDIM>2
-  moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
   moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
-#endif
 #endif
 #if NVAR>5
   do ll=6,NVAR
@@ -254,19 +237,19 @@ subroutine output_frame()
       timer = t
   endif
   ! Compute frame boundaries
-!   if(proj_axis(proj_ind:proj_ind).eq.'x')then
-!     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
-!     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-!     zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-!   elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
-!     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-!     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-!     zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
-!   else
+  ! if(proj_axis(proj_ind:proj_ind).eq.'x')then
+  !   xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
+  !   ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
+  !   zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
+  ! elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+  !   xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
+  !   ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
+  !   zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
+  ! else
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
     ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
     zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-!   endif
+  !endif
   if(deltax_frame(proj_ind*2-1).eq.0d0 .and. deltay_frame(proj_ind*2-1).gt.0d0)then
      deltax_frame(proj_ind*2-1)=deltay_frame(proj_ind*2-1)*float(nw_frame)/float(nh_frame)
   endif
@@ -328,14 +311,14 @@ subroutine output_frame()
 
   ! Allocate image
   allocate(data_frame(1:nw_frame,1:nh_frame,1:nframes),stat=ierr)
-  if(ierr .ne. 0)then
-     write(*,*) 'Error - Movie frame allocation failed'
+if(ierr .ne. 0)then
+   write(*,*) 'Error - Movie frame allocation failed'
 #ifndef WITHOUTMPI
-     call MPI_ABORT(MPI_COMM_WORLD,1,info)
+   call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-     stop
+   stop
 #endif
-  endif
+endif
 #ifdef RT
   if(rt) then
      allocate(rt_data_frame(1:nw_frame,1:nh_frame,1:rt_nframes),stat=ierr)
@@ -459,17 +442,10 @@ subroutine output_frame()
                  endif
                  if((ok(i)).and.(ivar_frame(proj_ind)>0).and.(ivar_frame(proj_ind)<=nvar))then
                     uvar = uold(ind_cell(i),ivar_frame(proj_ind))
-#ifdef SOLVERmhd
-                    ! Scale temperature to K
-                    if(ivar_frame(proj_ind)==5)then
-                       e = 0.0d0
-                       do idim=1,3
-#else
                     ! Scale temperature to K
                     if(ivar_frame(proj_ind)==ndim+2)then
                        e = 0.0d0
                        do idim=1,ndim
-#endif
                           e = e+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
                        enddo
 #if NENER>0
@@ -478,8 +454,8 @@ subroutine output_frame()
                        enddo
 #endif
 #ifdef SOLVERmhd
-                       do idim=1,3
-                          e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
+                       do idim=1,ndim
+                          e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
                        enddo
 #endif
                        ! Pressure
@@ -489,13 +465,8 @@ subroutine output_frame()
                     if(ivar_frame(proj_ind)>1) uvar = uvar/uold(ind_cell(i),1)
                     ! Scale density to cm**-3
                     if(ivar_frame(proj_ind)==1) uvar = uvar*scale_nH
-#ifdef SOLVERmhd
-                    ! Scale velocities to km/s
-                    if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<5) uvar = uvar*scale_v/1e5
-#else
                     ! Scale velocities to km/s
                     if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<ndim+2) uvar = uvar*scale_v/1e5
-#endif
                     ok(i) = ok(i).and.(uvar.ge.varmin_frame(proj_ind))
                     ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                  endif
@@ -726,11 +697,7 @@ subroutine output_frame()
                                    ! Temperature map case
                                    if(kk==0)then
                                       e = 0.0d0
-#ifdef SOLVERmhd
-                                      do idim=1,3
-#else
                                       do idim=1,ndim
-#endif
                                          e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
                                       enddo
 #if NENER>0
@@ -739,13 +706,11 @@ subroutine output_frame()
                                       enddo
 #endif
 #ifdef SOLVERmhd
-                                      do idim=1,3
-                                         e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
+                                      do idim=1,ndim
+                                         e = e+0.125d0*(uold(ind_cell(i),idim+ndim+2)+uold(ind_cell(i),idim+nvar))**2
                                       enddo
-                                      uvar = (gamma-1.0)*(uold(ind_cell(i),5)-e)
-#else
-                                      uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
 #endif
+                                      uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
                                       uvar = uvar/uold(ind_cell(i),1)*scale_T2
                                    endif
                                    ! Density map case
@@ -779,7 +744,7 @@ subroutine output_frame()
                                 imap = 1
                                 do kk=1,NGROUPS
                                    if(rt_movie_vars(kk).eq.1) then
-                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c
+                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c*uold(ind_cell(i),1)
                                       if(method_frame(proj_ind).eq.'min')then
                                          rt_data_frame(ii,jj,imap) = &
                                          &   min(rt_data_frame(ii,jj,imap),uvar)
@@ -880,7 +845,7 @@ subroutine output_frame()
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
-              if((is_DM(typep(j))).and.(kk.eq.ipart_start)) then
+              if((tp(j).eq.0d0).and.(kk.eq.ipart_start)) then
                  if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
                     if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
@@ -888,14 +853,14 @@ subroutine output_frame()
                  endif
               endif
               ! Star particles
-              if((is_star(typep(j))).and.(kk.eq.ipart_start+1)) then
+              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
-              if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
+              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
                  if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0
@@ -1149,6 +1114,7 @@ subroutine output_frame()
 #ifdef RT
   if(rt) deallocate(rt_data_frame)
 #endif
+#endif
   ! Update counter
   if(proj_ind.eq.len(trim(proj_axis))) then
      ! Increase counter and skip frames if timestep is large
@@ -1160,8 +1126,7 @@ subroutine output_frame()
 
   nw_frame = nw_temp
   nh_frame = nh_temp
-  enddo
-#endif
+ enddo
 end subroutine output_frame
 
 subroutine set_movie_vars()
@@ -1169,28 +1134,22 @@ subroutine set_movie_vars()
 #ifdef RT
   use rt_parameters,only:rt_movie_vars
 #endif
-#if NVAR>5 || defined (RT)
-  character(LEN=5)::dummy
-  integer::ll
-#endif
-
   ! This routine sets the movie vars from textual form
+  integer::ll
+  character(LEN=5)::dummy
 
   if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
   if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
   if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
   if(ANY(movie_vars_txt=='vy   ')) movie_vars(3)=1
-#ifdef SOLVERmhd
+#if NDIM>2
   if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
-  if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
-#else
+#endif
 #if NDIM==2
   if(ANY(movie_vars_txt=='pres ')) movie_vars(4)=1
 #endif
 #if NDIM>2
-  if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
   if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
-#endif
 #endif
 #if NVAR>5
   do ll=6,NVAR

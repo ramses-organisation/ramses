@@ -66,11 +66,13 @@ subroutine thermal_feedback(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
   endif
+
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -95,7 +97,7 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -112,7 +114,7 @@ subroutine thermal_feedback(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -374,6 +376,42 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                 endif
                 ! Reduce star particle mass
                 mp(ind_part(j))=mp(ind_part(j))-mejecta
+                if(sf_log_properties) then
+                    write(ilun,'(I10)',advance='no') 1
+                    write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+                    do idim=1,ndim
+                        write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
+                    enddo
+                    do idim=1,ndim
+                        write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
+                    enddo
+                    write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
+                    do ivar=2,nvar
+                        if(ivar.eq.ndim+2)then
+                            e=0.0d0
+                            do idim=1,ndim
+                            e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                            enddo
+#if NENER>0
+                            do irad=0,nener-1
+                            e=e+unew(ind_cell(i),inener+irad)
+                            enddo
+#endif
+#ifdef SOLVERmhd
+                            do idim=1,ndim
+                            e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
+                            enddo
+#endif
+                            ! Temperature
+                            uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                        else
+                            uvar=unew(indp(j),ivar)
+                        endif
+                        write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
+                    enddo
+                    write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+                    write(ilun,'(A1)') ' '
+                endif
             endif
         end do
 
@@ -406,11 +444,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
             if(birth_time.ge.(current_time-t_sn_cont))then
                 pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
                 !write(*,'(A10,I10,E24.8,E24.8,E24.8,E24.8,E24.8)')'pstar: yes', n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-                if(sf_log_properties.and.n_SN(j).gt.0.5) then
-                    write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
-                    write(ilun,'(I10,E24.12,E24.12,E24.12,E24.12,E24.12)',advance='no') n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-                    write(ilun,'(A1)') ' '
-                endif
+                ! if(sf_log_properties.and.n_SN(j).gt.0.5) then
+                !     write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+                !     write(ilun,'(I10,E24.12,E24.12,E24.12,E24.12,E24.12)',advance='no') n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
+                !     write(ilun,'(A1)') ' '
+                ! endif
             endif
         end do
 
