@@ -1,7 +1,10 @@
 module pm_commons
+
   use amr_parameters
   use pm_parameters
   use random
+
+  implicit none
 
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)::msink,xmsink
@@ -56,7 +59,27 @@ module pm_commons
   ! Global particle linked lists
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator
-  integer,dimension(IRandNumSize)    :: localseed=-1
+  integer,dimension(IRandNumSize) :: localseed=-1
+
+  ! Particle types
+  integer, parameter :: NFAMILIES=5
+  integer(1),parameter :: FAM_DM=1, FAM_STAR=2, FAM_CLOUD=3, FAM_DEBRIS=4, FAM_OTHER=5, FAM_UNDEF=127
+  integer(1),parameter :: FAM_TRACER_GAS=0
+  integer(1),parameter :: FAM_TRACER_DM=-1, FAM_TRACER_STAR=-2, FAM_TRACER_CLOUD=-3, FAM_TRACER_DEBRIS=-4, FAM_TRACER_OTHER=-5
+
+  ! Customize here for particle tags within particle types (e.g. different kind of stars).
+  ! Note that the type should be integer(1) (1 byte integers) for memory concerns.
+  ! Also don't forget to create a function is_<type>_<tag>. See the wiki for a more complete example.
+  ! By default, the tag is always 0.
+
+  ! Particle keys for outputing. They should match the above particle
+  ! types, except for 'under' family
+  character(len=13), dimension(-NFAMILIES:NFAMILIES), parameter :: particle_family_keys = (/ &
+       ' other_tracer', 'debris_tracer', ' cloud_tracer', '  star_tracer', ' other_tracer', &
+       '   gas_tracer', &
+       '           DM', '         star', '        cloud', '       debris', '        other'/)
+
+  type(part_t), allocatable, dimension(:) :: typep  ! Particle type array
 
 contains
   function cross(a,b)
@@ -69,4 +92,97 @@ contains
     cross(3)=a(1)*b(2)-a(2)*b(1)
   end function cross
 
+  elemental logical pure function is_DM(typep)
+    type(part_t), intent(in) :: typep
+    is_DM = typep%family == FAM_DM
+  end function is_DM
+
+  elemental logical pure function is_star(typep)
+    type(part_t), intent(in) :: typep
+    is_star = typep%family == FAM_STAR
+  end function is_star
+
+  elemental logical pure function is_cloud(typep)
+    type(part_t), intent(in) :: typep
+    is_cloud = typep%family == FAM_CLOUD
+  end function is_cloud
+
+  elemental logical pure function is_debris(typep)
+    type(part_t), intent(in) :: typep
+    is_debris = typep%family == FAM_DEBRIS
+  end function is_debris
+
+  elemental logical pure function is_tracer(typep)
+    type(part_t), intent(in) :: typep
+    is_tracer = typep%family <= 0
+  end function is_tracer
+
+  elemental logical pure function is_not_tracer(typep)
+    type(part_t), intent(in) :: typep
+    is_not_tracer = typep%family > 0
+  end function is_not_tracer
+
+  elemental logical pure function is_not_DM(typep)
+    type(part_t), intent(in) :: typep
+    is_not_DM = typep%family /= FAM_DM
+  end function is_not_DM
+  
+
+  pure function part2int (part)
+    ! Convert a particle into an integer
+    ! This saves some space e.g. when communicating
+    integer :: part2int
+    type(part_t), intent(in) :: part
+
+    integer :: magic
+
+    ! This is the largest value for integer(1)
+    magic = 127
+
+    part2int = int(part%family) * magic + int(part%tag)
+  end function part2int
+
+  pure function int2part(index)
+    ! Convert from an index to particle type
+    type(part_t) :: int2part
+    integer, intent(in) :: index
+
+    integer :: magic
+
+    ! This is the largest value for integer(1)
+    magic = 127
+
+    int2part%family = int(index / magic, 1)
+    int2part%tag = int(mod(index, magic), 1)
+  end function int2part
+
+  function props2type(idpii, tpii, mpii)
+    use amr_commons
+    use pm_parameters, only : part_t
+
+    ! Converts from "old" ramses to "new" ramses
+    !
+    ! Here's the match, add yours here for backward compatibility purposes
+    ! DM     tpii == 0
+    ! stars  tpii != 0 and idpii > 0
+    ! sinks  tpii != 0 and idpii < 0
+    !
+    ! This is mostly for support of GRAFFIC I/O.
+    ! The reason we use idpii instead of idp is to prevent name clashes
+    real(dp), intent(in) :: tpii, mpii
+    integer, intent(in)  :: idpii
+
+    type(part_t) :: props2type
+
+    if (tpii == 0) then
+       props2type%family = FAM_DM
+    else if (idpii > 0) then
+       props2type%family = FAM_STAR
+    else if (idpii < 0) then
+       props2type%family = FAM_CLOUD
+    else if (mpii == 0) then
+       props2type%family = FAM_TRACER_GAS
+    end if
+    props2type%tag = 0
+  end function props2type
 end module pm_commons

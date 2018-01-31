@@ -271,6 +271,8 @@ program part2sfr
      read(1)m
      read(1)id
      read(1) ! Skip level
+     read(1) ! Skip family
+     read(1) ! Skip tag
      read(1)birth
      close(1)
 
@@ -299,9 +301,10 @@ program part2sfr
 
            npart_actual=npart_actual+1
            mtot=mtot+m(i)
-
-           ix=int(birth_date/15.*dble(nx))
-           sfr(ix)=sfr(ix)+m(i)*unit_m/2d33
+           if(birth_date>0.and.birth_date<15.)then
+              ix=int(birth_date/15.*dble(nx))
+              sfr(ix)=sfr(ix)+m(i)*unit_m/2d33
+           endif
 
         end if
 
@@ -331,12 +334,12 @@ contains
       implicit none
 
       integer       :: i,n
-      integer       :: iargc
+      
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
 
-      n = iargc()
+      n = command_argument_count()
       if (n < 4) then
          print *, 'usage: part2sfr  -inp  input_dir'
          print *, '                 -out  output_file'
@@ -354,12 +357,12 @@ contains
       end if
 
       do i = 1,n,2
-         call getarg(i,opt)
+         call get_command_argument(i,opt)
          if (i == n) then
             print '("option ",a2," has no argument")', opt
             stop 2
          end if
-         call getarg(i+1,arg)
+         call get_command_argument(i+1,arg)
          select case (opt)
          case ('-inp')
             repository = trim(arg)
@@ -638,7 +641,3 @@ function dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
   dadt = sqrt(dadt)
   return
 end function dadt
-
-
-
-

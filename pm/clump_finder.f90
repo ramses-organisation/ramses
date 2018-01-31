@@ -51,7 +51,7 @@ subroutine clump_finder(create_output,keep_alive)
   !---------------------------------------------------------------
   ! Compute rho from gas density or dark matter particles
   !---------------------------------------------------------------
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      do ilevel=levelmin_part,nlevelmax
         if(pic)call make_tree_fine(ilevel)
         if(poisson)call rho_only(ilevel)
@@ -71,7 +71,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   ntest=0
   do ilevel=levelmin,nlevelmax
-     if(ivar_clump==0)then ! action 1: count and flag
+     if(ivar_clump==0 .or. ivar_clump==-1)then ! action 1: count and flag
         call count_test_particle(rho(1),ilevel,0,1)
      else
         if(hydro)then      ! action 1: count and flag
@@ -109,7 +109,7 @@ subroutine clump_finder(create_output,keep_alive)
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call count_test_particle(rho(1),ilevel,nskip,2)
      else
         if(hydro)then
@@ -139,7 +139,7 @@ subroutine clump_finder(create_output,keep_alive)
   !-----------------------------------------------------------------------
   npeaks=0
   if(ntest>0)then
-     if(ivar_clump==0)then  ! case 1: count peaks
+     if(ivar_clump==0 .or. ivar_clump==-1)then  ! case 1: count peaks
         call count_peaks(rho(1),npeaks)
      else
         if(hydro)then       ! case 1: count peaks
@@ -189,7 +189,7 @@ subroutine clump_finder(create_output,keep_alive)
   max_dens=0.d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call flag_peaks(rho(1),nskip)
      else
         if(hydro)then
@@ -248,7 +248,7 @@ subroutine clump_finder(create_output,keep_alive)
      !------------------------------------------
      ! Compute the saddle point density matrix
      !------------------------------------------
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call saddlepoint_search(rho(1))
      else
         if(hydro)then
@@ -270,7 +270,7 @@ subroutine clump_finder(create_output,keep_alive)
      ! Compute clumps properties
      !------------------------------------------
      if(myid==1.and.clinfo)write(*,*)"Computing relevant clump properties."
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call compute_clump_properties(rho(1))
      else
         if(hydro)then
@@ -1252,8 +1252,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star) then
-                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1275,8 +1275,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star) then
-                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid
@@ -1353,6 +1353,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use clfind_commons
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
@@ -1411,7 +1412,19 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   ! Gather particle mass
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     if(ivar_clump==-1)then
+        if(is_star(typep(ind_part(j))))then
+           mmm(j)=mp(ind_part(j))
+        else
+           mmm(j)=0d0
+        end if
+     else if(ivar_clump==0)then
+        if(is_dm(typep(ind_part(j))))then
+           mmm(j)=mp(ind_part(j))
+        else
+           mmm(j)=0d0
+        end if
+     end if
   end do
 
   ! Check for illegal moves
@@ -1555,7 +1568,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   ! Update mass density field
   do ind=1,twotondim
      do j=1,np
-        ok(j)=igrid(j,ind)>0
+        ok(j)=(igrid(j,ind)>0) .and. is_not_tracer(typep(ind_part(j)))
      end do
      do j=1,np
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
@@ -1808,7 +1821,7 @@ subroutine tsc_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      do j=1,np
         if(.not.abandoned(j)) then
-           ok(j)=igrid(j,ind)>0
+           ok(j)=(igrid(j,ind)>0) .and. is_not_tracer(typep(ind_part(j)))
         end if
      end do
 

@@ -30,26 +30,24 @@ program spg
 
   real(kind=8),dimension(0:2048)::bound_key
   real(kind=8)::dx_loc,x_plan,y_plan,z_plan
-  real(kind=8),dimension(:,:),allocatable::plan
   real(kind=8),dimension(1,3)::x
 
   real(kind=8)::boxlen,dl
   integer::nlevelmax,icoarse_min,icoarse_max,nx_loc
-  integer::jcoarse_min,jcoarse_max,kcoarse_min,kcoarse_max,ind
-  real(kind=8),dimension(:),allocatable::order,order_min,order_max,order_plan,o
+  integer::jcoarse_min,jcoarse_max,kcoarse_min,kcoarse_max
   real(kind=8)::order_all_min,order_all_max
 
-  integer,dimension(:),allocatable::cpu_map,cpu_plan
+  integer,dimension(:),allocatable::cpu_plan
   integer,dimension(:,:),allocatable::cpu_plan_min,cpu_plan_max
 
-  integer::i1,i2,i3,il,ix,iy,iz,i,minunit,ifile,c
+  integer::i1,i2,ix,iy,iz,i,minunit,ifile,c
 
   real(kind=4)::x1o_loc,x2o_loc,x3o_loc
   integer::np1_loc,np2_loc,np3_loc
 
-  integer::nplan,info
+  integer::info
   integer::narg
-  integer::iargc
+  
   real,dimension(:,:),allocatable::ics
   integer::ncode,bit_length
 
@@ -66,7 +64,7 @@ program spg
 
   !! Command line analysis
 
-  narg=iargc()
+  narg=command_argument_count()
   IF(narg .LT. 3)THEN
      write(*,*)'You should type: split_grafic input output ncpu'
      write(*,*)'where directory input should contain GRAFIC files'
@@ -75,12 +73,12 @@ program spg
      STOP
   END IF
 
-  CALL getarg(1,input)
-  CALL getarg(2,output)
-  CALL getarg(3,ncpu_string)
+  CALL get_command_argument(1,input)
+  CALL get_command_argument(2,output)
+  CALL get_command_argument(3,ncpu_string)
 
   if(narg.eq.4) then
-     CALL getarg(4,debug_string)
+     CALL get_command_argument(4,debug_string)
      read(debug_string,*) debug
      if(debug.eq.1) then
         verbose=.true.
@@ -333,7 +331,7 @@ subroutine cmp_ordering(x,y,z,order)
   ! according to its position in space and for the chosen
   ! ordering. Position x are in user units.
   !-----------------------------------------------------
-  integer::i,ncode,bit_length,nx_loc
+  integer::ncode,bit_length,nx_loc
   integer,dimension(1)::ix,iy,iz
   real(kind=8),dimension(1)::xorder
   common /hilbertparam1/nx_loc,ncode,bit_length
@@ -488,4 +486,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-

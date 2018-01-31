@@ -39,7 +39,7 @@ program center_grafic
   character*80,dimension(18)::filename
   logical::ok,found
 
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .NE. 2)THEN
      write(*,*)'You should type: a.out input output'
      write(*,*)'where directory input should contain GRAFIC files'
@@ -47,8 +47,8 @@ program center_grafic
      STOP
   END IF
 
-  CALL getarg(1,input)
-  CALL getarg(2,output)
+  CALL get_command_argument(1,input)
+  CALL get_command_argument(2,output)
 
   !  SAFETY CONDITION
   if (input == output) then

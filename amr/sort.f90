@@ -194,7 +194,3 @@ CONTAINS
   END SUBROUTINE interchange_sort_dp
 
 END SUBROUTINE quick_sort_dp
-
-
-
-

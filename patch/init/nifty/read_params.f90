@@ -65,8 +65,8 @@ subroutine read_params
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton
-  namelist/output_params/noutput,foutput,fbackup,aout,tout &
+       & ,bisec_tol,static,overload,cost_weighting,aton
+  namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen
@@ -133,7 +133,7 @@ subroutine read_params
   call write_gitinfo
 
   ! Read namelist filename from command line argument
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .LT. 1)THEN
      write(*,*)'You should type: ramses3d input.nml [nrestart]'
      write(*,*)'File input.nml should contain a parameter namelist'
@@ -327,4 +327,3 @@ subroutine read_params
 #endif
 
 end subroutine read_params
-

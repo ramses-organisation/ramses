@@ -37,7 +37,6 @@ initfile(1)=''
 /
 
 &OUTPUT_PARAMS
-fbackup=30
 foutput=30
 noutput=2
 tout=0.0,21.0

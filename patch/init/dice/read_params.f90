@@ -69,25 +69,29 @@ subroutine read_params
   !--------------------------------------------------
   ! Local variables
   !--------------------------------------------------
-  integer::i,narg,iargc,ierr,levelmax
-  character(LEN=80)::infile
+  integer::i,narg,iargc,levelmax
+  character(LEN=80)::infile, info_file
   character(LEN=80)::cmdarg
+  character(LEN=5)::nchar
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
   real(kind=8)::delta_tout=0,tend=0
   real(kind=8)::delta_aout=0,aend=0
-  logical::nml_ok
+  logical::nml_ok, info_ok
   integer,parameter::tag=1134
-  integer::dummy_io,info2
+#ifndef WITHOUTMPI
+  integer::dummy_io,ierr,info2
+#endif
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton,nrestart_quad,restart_remap &
+       & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
-  namelist/output_params/noutput,foutput,fbackup,aout,tout &
-       & ,tend,delta_tout,aend,delta_aout,gadget_output
+  namelist/output_params/noutput,foutput,aout,tout &
+       & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse
   namelist/poisson_params/epsilon,gravity_type,gravity_params &
@@ -167,7 +171,7 @@ subroutine read_params
   call write_gitinfo
 
   ! Read namelist filename from command line argument
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .LT. 1)THEN
      write(*,*)'You should type: ramses3d input.nml [nrestart]'
      write(*,*)'File input.nml should contain a parameter namelist'
@@ -207,10 +211,12 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
+#if NVAR>NDIM+2
   allocate(remap_pscalar(1:nvar-(ndim+2)))
   do i=1,nvar-(ndim+2)
-     remap_pscalar(i) = i+(ndim+2)
+     remap_pscalar(i) = i+ndim+2
   enddo
+#endif
 
   open(1,file=infile)
   rewind(1)
@@ -240,6 +246,29 @@ subroutine read_params
      read(cmdarg,*) nrestart
   endif
 
+  if (myid==1 .and. nrestart .gt. 0) then
+     call title(nrestart,nchar)
+     info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+     inquire(file=info_file, exist=info_ok)
+     do while(.not. info_ok .and. nrestart .gt. 1)
+        nrestart = nrestart - 1
+        call title(nrestart,nchar)
+        info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+        inquire(file=info_file, exist=info_ok)
+     enddo
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+  if (nrestart .gt. 0 .and. .not. info_ok) then
+     if (myid==1) then
+         write(*,*) "Error: Could not find restart file"
+     endif
+     call clean_stop
+  endif
+
 #ifndef WITHOUTMPI
   call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 #endif
@@ -262,17 +291,17 @@ subroutine read_params
   endif
   noutput=MIN(noutput,MAXOUT)
   if(imovout>0) then
-     allocate(tmovout(1:imovout))
-     allocate(amovout(1:imovout))
+     allocate(tmovout(0:imovout))
+     allocate(amovout(0:imovout))
      tmovout=1d100
      amovout=1d100
      if(tendmov>0)then
-        do i=1,imovout
+        do i=0,imovout
            tmovout(i)=(tendmov-tstartmov)*dble(i)/dble(imovout)+tstartmov
         enddo
      endif
      if(aendmov>0)then
-        do i=1,imovout
+        do i=0,imovout
            amovout(i)=(aendmov-astartmov)*dble(i)/dble(imovout)+astartmov
         enddo
      endif
@@ -300,11 +329,11 @@ subroutine read_params
         if(myid==1)write(*,*)'Allocate some space for refinements !!!'
         nml_ok=.false.
      else
-        ngridmax=ngridtot/int(ncpu,kind=8)
+        ngridmax=int(ngridtot/int(ncpu,kind=8),kind=4)
      endif
   end if
   if(npartmax==0)then
-     npartmax=nparttot/int(ncpu,kind=8)
+     npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
   if(sink.and.(.not.pic))then
@@ -319,12 +348,13 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call rt_read_hydro_params(nml_ok)
+  call rt_read_hydro_params()
 #endif
+#if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
+#endif
   if (movie)call set_movie_vars
-
 
   close(1)
 
@@ -338,8 +368,6 @@ subroutine read_params
      end if
   endif
 #endif
-
-
 
   !-----------------
   ! Max size checks
@@ -399,4 +427,3 @@ subroutine read_params
 #endif
 
 end subroutine read_params
-
