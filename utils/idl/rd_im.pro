@@ -47,6 +47,9 @@ endif
 if not keyword_set(file) then return
 
 if keyword_set(verbose) then print,'Reading file ',trim(file)
+
+if not file_test(file) then return
+
 nx=0L & ny=0L
 t=0d0 & dx=0d0 & dy=0d0 & dz=0d0
 openr,1,file,/f77_unformatted,swap_endian=swap
