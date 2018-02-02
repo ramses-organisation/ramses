@@ -27,6 +27,7 @@ program part2birth
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
   logical::cosmo=.true.
+  integer(kind=1),dimension(:),allocatable::family,tag
 
   call read_params
 
@@ -169,6 +170,8 @@ program part2birth
      allocate(birth_date(1:npart2))
      allocate(id(1:npart2))
      allocate(x(1:npart2,1:ndim2))
+     allocate(family(1:npart2))
+     allocate(tag(1:npart2))
      ! Read position
      do i=1,ndim
         read(1)m
@@ -182,13 +185,13 @@ program part2birth
      read(1)m
      read(1)id
      read(1) ! Skip level
-     read(1) ! Skip family
-     read(1) ! Skip tag
+     read(1)family
+     read(1)tag
      read(1)birth
      close(1)
 
      do i=1,npart2
-        if(birth(i).ne.0.0)then
+        if(family(i)==2)then ! birth would allow the cloud particles to pass
            if(cosmo)then
               iii=1
               do while(tau_frw(iii)>birth(i).and.iii<n_frw)
@@ -213,6 +216,7 @@ program part2birth
      close(1)
      deallocate(x,m)
      deallocate(birth,id,birth_date)
+     deallocate(family,tag)
   end do
 
 contains
