@@ -59,7 +59,7 @@ print,tmin,tmax
 tt=tmin+FINDGEN(ny)/ny*(tmax-tmin)
 dd=dmin+FINDGEN(nx)/nx*(dmax-dmin)
 
-mycontour,image,dd,tt,ncont=200,/log,/tab
+mycontour,image,dd,tt,ncont=200,/log,min=1e-8
 return
 
 bad_luck:  print,'I/O Error, exiting...'
