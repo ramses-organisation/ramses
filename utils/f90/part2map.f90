@@ -395,7 +395,7 @@ program part2map
                     ok_part=.false.
                  endif
               else
-                 ! Darm matter
+                 ! Dark matter
                  if(family(i)==1)then
                     npart_actual=npart_actual+1
                  else
