@@ -212,7 +212,7 @@ program part2birth
      write(1)birth_date
      close(1)
      deallocate(x,m)
-     deallocate(birth,id)
+     deallocate(birth,id,birth_date)
   end do
 
 contains
