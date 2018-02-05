@@ -535,74 +535,74 @@ subroutine add_viscosity_source_terms(ilevel)
         end do
 
         ! Gather all neighboring velocities
-        ! do idim=1,ndim
-        !    id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
-        !    ih1=ncoarse+(id1-1)*ngridmax
-        !    do i=1,ngrid
-        !       if(igridn(i,ig1)>0)then
-        !          velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
-        !          dx_g(i,idim) = dx_loc
-        !       else
-        !          velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
-        !          dx_g(i,idim) = dx_loc*1.5_dp
-        !       end if
-        !    enddo
-        !    id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
-        !    ih2=ncoarse+(id2-1)*ngridmax
-        !    do i=1,ngrid
-        !       if(igridn(i,ig2)>0)then
-        !          veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
-        !          dx_d(i,idim)=dx_loc
-        !       else
-        !          veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
-        !          dx_d(i,idim)=dx_loc*1.5_dp
-        !       end if
-        !    enddo
-        ! end do
-        ! ! End loop over dimensions
+        do idim=1,ndim
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
+           ih1=ncoarse+(id1-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig1)>0)then
+                 velg(i,idim,1:ndim) = uold(igridn(i,ig1)+ih1,2:ndim+1)/max(uold(igridn(i,ig1)+ih1,1),smallr)
+                 dx_g(i,idim) = dx_loc
+              else
+                 velg(i,idim,1:ndim) = uold(ind_left(i,idim),2:ndim+1)/max(uold(ind_left(i,idim),1),smallr)
+                 dx_g(i,idim) = dx_loc*1.5_dp
+              end if
+           enddo
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig2)>0)then
+                 veld(i,idim,1:ndim)= uold(igridn(i,ig2)+ih2,2:ndim+1)/max(uold(igridn(i,ig2)+ih2,1),smallr)
+                 dx_d(i,idim)=dx_loc
+              else
+                 veld(i,idim,1:ndim)= uold(ind_right(i,idim),2:ndim+1)/max(uold(ind_right(i,idim),1),smallr)
+                 dx_d(i,idim)=dx_loc*1.5_dp
+              end if
+           enddo
+        end do
+        ! End loop over dimensions
 
-        ! ! Compute divu = Trace G
-        ! divu_loc(1:ngrid)=0.0d0
-        ! do idim=1,ndim
-        !    do i=1,ngrid
-        !       divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
-        !            &                    / (dx_g(i,idim)     +dx_d(i,idim))
-        !    enddo
-        ! end do
+        ! Compute divu = Trace G
+        divu_loc(1:ngrid)=0.0d0
+        do idim=1,ndim
+           do i=1,ngrid
+              divu_loc(i) = divu_loc(i) + (veld(i,idim,idim)-velg(i,idim,idim)) &
+                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
+           enddo
+        end do
 
-        ! ! Compute gradu = G
-        ! gradu_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
-        ! do idim=1,ndim
-        !    do jdim=1,ndim
-        !       do i=1,ngrid
-        !          gradu_loc(i,idim,jdim) = (veld(i,idim,jdim)-velg(i,idim,jdim)) &
-        !               &                 / (dx_g(i,idim)     +dx_d(i,idim))
-        !       enddo
-        !    enddo
-        ! end do
+        ! Compute gradu = G
+        gradu_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 gradu_loc(i,idim,jdim) = (veld(i,idim,jdim)-velg(i,idim,jdim)) &
+                      &                 / (dx_g(i,idim)     +dx_d(i,idim))
+              enddo
+           enddo
+        end do
 
-        ! ! Compute 0.5*(gradu+gradu^T) = E
-        ! E_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
-        ! do idim=1,ndim
-        !    do jdim=1,ndim
-        !       do i=1,ngrid
-        !          E_loc(i,idim,jdim) = 0.5*(gradu_loc(i,idim,jdim)+gradu_loc(i,jdim,idim))
-        !       enddo
-        !    enddo
-        ! end do
+        ! Compute 0.5*(gradu+gradu^T) = E
+        E_loc(1:ngrid,1:ndim,1:ndim)=0.0d0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 E_loc(i,idim,jdim) = 0.5*(gradu_loc(i,idim,jdim)+gradu_loc(i,jdim,idim))
+              enddo
+           enddo
+        end do
 
-        ! ! Compute turbulent viscosity dissipation function
-        ! phi_diss(1:ngrid)=0
-        ! do idim=1,ndim
-        !    do jdim=1,ndim
-        !       do i=1,ngrid
-        !          phi_diss(i) = phi_diss(i)+2.0*E_loc(i,idim,jdim)**2
-        !       enddo
-        !    enddo
-        ! enddo
-        ! do i=1,ngrid
-        !    phi_diss(i)=phi_diss(i)-2.0/3.0*divu_loc(i)**2
-        ! end do
+        ! Compute turbulent viscosity dissipation function
+        phi_diss(1:ngrid)=0
+        do idim=1,ndim
+           do jdim=1,ndim
+              do i=1,ngrid
+                 phi_diss(i) = phi_diss(i)+2.0*E_loc(i,idim,jdim)**2
+              enddo
+           enddo
+        enddo
+        do i=1,ngrid
+           phi_diss(i)=phi_diss(i)-2.0/3.0*divu_loc(i)**2
+        end do
 
         ! Add viscosity term at time t with half time step
         do i=1,ngrid
@@ -613,13 +613,14 @@ subroutine add_viscosity_source_terms(ilevel)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
            ! Implicit solution
-        !    unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
-        !         &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
-        !         & /(1.0+sigma/dx_loc*dtnew(ilevel))
-           unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
+           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
+                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
+                & /(1.0+sigma/dx_loc*dtnew(ilevel))
+        ! turbulence from SN
+        !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
 
            ! Stationary solution
-!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+        !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
         end do
         ! End loop over grids

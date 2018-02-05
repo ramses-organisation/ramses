@@ -470,7 +470,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
-     unew(indp(j),ivirial1)=unew(indp(j),ivirial1)+ethermal(j)*0.1
+    !  turbulent energy
+    !  unew(indp(j),ivirial1)=unew(indp(j),ivirial1)+ethermal(j)*0.1
 
      ! Update internal energy
      if(pressure_fix)then
