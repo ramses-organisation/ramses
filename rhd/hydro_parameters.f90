@@ -2,6 +2,11 @@ module hydro_parameters
   use amr_parameters
 
   ! Number of independant variables
+#ifndef NENER
+  integer,parameter::nener=0
+#else
+  integer,parameter::nener=NENER
+#endif
 #ifndef NVAR
   integer,parameter::nvar=5
 #else
