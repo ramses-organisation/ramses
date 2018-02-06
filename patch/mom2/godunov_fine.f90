@@ -392,6 +392,14 @@ subroutine add_pdv_source_terms(ilevel)
         end do
 #endif
 
+        if(momentum_feedback)then
+           ! Add +pdV term
+           do i=1,ngrid
+              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2) &
+                   & +pstarold(ind_cell(i))*divu_loc(i)*dx_loc
+           end do
+        endif
+
      enddo
      ! End loop over cells
   end do
@@ -608,9 +616,11 @@ subroutine add_viscosity_source_terms(ilevel)
            unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
                 &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
                 & /(1.0+sigma/dx_loc*dtnew(ilevel))
+        ! turbulence from SN
+        !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
 
            ! Stationary solution
-!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+        !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
         end do
         ! End loop over grids
@@ -774,14 +784,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         ! Gather stellar momentum
         if(momentum_feedback)then
            do i=1,nexist
-              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))*dx/dtnew(ilevel)/6.0
            end do
            ! Use straight injection for buffer cells
            do i=1,nbuffer
-              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))*dx/dtnew(ilevel)/6.0
            end do
         end if
-
+        
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -803,7 +813,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,ploc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface
