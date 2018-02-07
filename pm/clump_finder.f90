@@ -1909,7 +1909,7 @@ subroutine output_part_clump_id()
         ! halos who are not relevant clumps will not be recognised.
         
         ! if peak relevant:
-        if(halo_mass(local_peak_id) > mass_threshold*particle_mass) then
+        if(relevance(local_peak_id) > relevance_threshold .and. halo_mass(local_peak_id) > mass_threshold*particle_mass) then
            
            ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
            grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
@@ -1934,6 +1934,7 @@ subroutine output_part_clump_id()
               if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
               !go to next particle in this grid
               this_part = nextp(this_part)
+
            end do
         end if
         
