@@ -304,7 +304,7 @@ subroutine clump_finder(create_output,keep_alive)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
-        call output_part_clump_id()
+        if(pic)call output_part_clump_id()
      endif
 
   end if
