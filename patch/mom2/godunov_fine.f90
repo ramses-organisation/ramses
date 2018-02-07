@@ -396,7 +396,7 @@ subroutine add_pdv_source_terms(ilevel)
            ! Add +pdV term
            do i=1,ngrid
               unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2) &
-                   & +pstarold(ind_cell(i))*divu_loc(i)*dx_loc
+                   & +pstarold(ind_cell(i))*divu_loc(i)*dx_loc/6.0
            end do
         endif
 
