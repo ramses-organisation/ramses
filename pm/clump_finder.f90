@@ -1884,6 +1884,19 @@ subroutine output_part_clump_id()
   
   if(verbose) write(*,*) "Entered get_clumpparticles"
   
+  !get particle mass
+  if(ivar_clump==0)then
+    particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
+#ifndef WITHOUTMPI  
+    call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
+    particle_mass=particle_mass_tot  
+#endif
+  else
+    if(hydro)then
+      particle_mass=mass_sph
+    endif
+  endif
+
   !-----------------------------------------------------------
   ! Get particles from testcells into linked lists for clumps
   !-----------------------------------------------------------
@@ -1897,7 +1910,7 @@ subroutine output_part_clump_id()
      global_peak_id=flag2(icellp(itestcell))
      
      if (global_peak_id /= 0) then
-        
+
         ! get local peak id
         call get_local_peak_id(global_peak_id, local_peak_id)
         
@@ -1910,7 +1923,7 @@ subroutine output_part_clump_id()
         
         ! if peak relevant:
         if(relevance(local_peak_id) > relevance_threshold .and. halo_mass(local_peak_id) > mass_threshold*particle_mass) then
-           
+
            ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
            grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
            prtcls_in_grid = numbp(grid)          ! get number of particles in grid
