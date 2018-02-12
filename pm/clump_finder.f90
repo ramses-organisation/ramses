@@ -1868,13 +1868,10 @@ subroutine output_part_clump_id()
   character(len=5)  :: nchar,nchar2
 
   ! for looping over test cells and getting particle list
-  integer   :: itestcell, ipart,this_part, global_peak_id, local_peak_id, prtcls_in_grid
+  integer   :: itestcell, ipart,this_part, global_peak_id, prtcls_in_grid
 
   ! getting particles per peak
   integer   :: ind, grid
-
-  !getting particle mass
-  real(dp)  :: particle_mass, particle_mass_tot
 
   !getting in which cell of a grid a particle is
   integer   :: part_cell_ind,i,j,k
@@ -1883,19 +1880,6 @@ subroutine output_part_clump_id()
   integer   :: ipeak, new_peak_local_id, ilevel
   
   if(verbose) write(*,*) "Entered get_clumpparticles"
-  
-  !get particle mass
-  if(ivar_clump==0)then
-    particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
-#ifndef WITHOUTMPI  
-    call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
-    particle_mass=particle_mass_tot  
-#endif
-  else
-    if(hydro)then
-      particle_mass=mass_sph
-    endif
-  endif
 
   !-----------------------------------------------------------
   ! Get particles from testcells into linked lists for clumps
@@ -1911,46 +1895,31 @@ subroutine output_part_clump_id()
      
      if (global_peak_id /= 0) then
 
-        ! get local peak id
-        call get_local_peak_id(global_peak_id, local_peak_id)
+        ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
+        grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
+        prtcls_in_grid = numbp(grid)          ! get number of particles in grid
+        this_part=headp(grid)             ! get index of first particle
         
-        ! If peak ID is also a halo, there is no need for particle unbinding,
-        ! so there is no need for a linked list of particles.
-        ! This check is also important for the relevance conditions:
-        ! There are clumps that satisfy the halo mass condition, but do not
-        ! satisfy the clump relevance condition. If not separated, the
-        ! halos who are not relevant clumps will not be recognised.
-        
-        ! if peak relevant:
-        if(relevance(local_peak_id) > relevance_threshold .and. halo_mass(local_peak_id) > mass_threshold*particle_mass) then
+        ! If it is a halo: only assign particles the ID
+        ! loop over particles in grid
+        do ipart = 1, prtcls_in_grid
+            
+            !check cell index of particle so you loop only once over each
+            i=0
+            j=0
+            k=0
+            if(xg(grid,1)-xp(this_part,1)/boxlen+(nx-1)/2.0 .le. 0) i=1
+            if(xg(grid,2)-xp(this_part,2)/boxlen+(ny-1)/2.0 .le. 0) j=1
+            if(xg(grid,3)-xp(this_part,3)/boxlen+(nz-1)/2.0 .le. 0) k=1
+            
+            part_cell_ind=i+2*j+4*k+1
+            
+            !If index is correct, assign clump id to particle
+            if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
+            !go to next particle in this grid
+            this_part = nextp(this_part)
 
-           ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
-           grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
-           prtcls_in_grid = numbp(grid)          ! get number of particles in grid
-           this_part=headp(grid)             ! get index of first particle
-           
-           ! If it is a halo: only assign particles the ID
-           ! loop over particles in grid
-           do ipart = 1, prtcls_in_grid
-              
-              !check cell index of particle so you loop only once over each
-              i=0
-              j=0
-              k=0
-              if(xg(grid,1)-xp(this_part,1)/boxlen+(nx-1)/2.0 .le. 0) i=1
-              if(xg(grid,2)-xp(this_part,2)/boxlen+(ny-1)/2.0 .le. 0) j=1
-              if(xg(grid,3)-xp(this_part,3)/boxlen+(nz-1)/2.0 .le. 0) k=1
-              
-              part_cell_ind=i+2*j+4*k+1
-              
-              !If index is correct, assign clump id to particle
-              if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
-              !go to next particle in this grid
-              this_part = nextp(this_part)
-
-           end do
-        end if
-        
+        end do        
      end if   !global peak /=0
   end do   !loop over test cells
 
