@@ -1857,7 +1857,6 @@ subroutine output_part_clump_id()
   use clfind_commons    !unbinding stuff is all in here
   use pm_commons !using mp
   use amr_parameters
-  use hydro_commons !using mass_sph
   implicit none
 #ifndef WITHOUTMPI
   integer :: info
@@ -1874,17 +1873,12 @@ subroutine output_part_clump_id()
   integer   :: ind, grid
 
   !getting in which cell of a grid a particle is
-  integer   :: part_cell_ind,i,j,k
+  integer   :: part_cell_ind, i, j, k
 
-  !appending linked lists
-  integer   :: ipeak, new_peak_local_id, ilevel
-  
   if(verbose) write(*,*) "Entered get_clumpparticles"
 
   !-----------------------------------------------------------
-  ! Get particles from testcells into linked lists for clumps
-  !-----------------------------------------------------------
-  
+
   allocate(clmpidp(1:npartmax))
   allocate(clump_ids(1:npart))
 
@@ -1900,7 +1894,6 @@ subroutine output_part_clump_id()
         prtcls_in_grid = numbp(grid)          ! get number of particles in grid
         this_part=headp(grid)             ! get index of first particle
         
-        ! If it is a halo: only assign particles the ID
         ! loop over particles in grid
         do ipart = 1, prtcls_in_grid
             
