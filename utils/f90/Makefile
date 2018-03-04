@@ -15,7 +15,7 @@ MODOBJ=random.o utils.o io_ramses.o
 
 # Make all targets
 all: amr2prof amr2cylprof ramses2tipsy amr2map part2map part2prof \
-     part2cube part2list partcenter part2birth
+     part2cube part2list partcenter part2birth part2sfr
 
 amr2prof: $(MODOBJ) amr2prof.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
@@ -39,6 +39,8 @@ part2list: $(MODOBJ) utils.o part2list.f90
 partcenter: $(MODOBJ) utils.o partcenter.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 part2birth: $(MODOBJ) utils.o part2birth.f90
+	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
+part2sfr: $(MODOBJ) part2sfr.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 
 # Make a specific object file

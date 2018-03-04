@@ -1,4 +1,4 @@
-! These are modules for reading, integrating and interpolating RT-relevant
+/ These are modules for reading, integrating and interpolating RT-relevant
 ! values from spectral tables, specifically SED (spectral energy
 ! distrbution) tables for stellar particle sources, as functions of age
 ! and metallicity, and UV-spectrum tables, as functions of redshift.
@@ -895,7 +895,8 @@ SUBROUTINE write_SEDtable()
                 SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
                 SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
                 SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
-                SED_table(i,j,ip,9)
+                SED_table(i,j,ip,9),    SED_table(i,j,ip,10),            &
+                SED_table(i,j,ip,11) !sln 10 and 11
         end do
      end do
      close(10)
