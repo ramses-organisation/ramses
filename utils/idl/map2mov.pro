@@ -11,7 +11,7 @@ pro map2mov,imin,imax,colt=colt,type=type,min=min,max=max
   if not keyword_set(min)then begin
      case type of
         'dens': min=0.01
-        'temp': min=100.
+        'temp': min=3.
         else: print, 'unkown type' 
      endcase     
   endif
@@ -19,7 +19,7 @@ pro map2mov,imin,imax,colt=colt,type=type,min=min,max=max
   if not keyword_set(max)then begin
      case type of
         'dens': max=1e5
-        'temp': max=1e6
+        'temp': max=1e7
         else: print, 'unkown type' 
      endcase
   endif
