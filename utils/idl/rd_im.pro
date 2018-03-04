@@ -33,7 +33,7 @@
 ; 	Written by:	Romain Teyssier, 01/01/2003.
 ;                       e-mail: Romain.Teyssier@cea.fr
 ;-
-pro rd_im, image, file=file, swap=swap, verbose=verbose
+pro rd_im, image, file=file, swap=swap, verbose=verbose, header=header
 
 IF N_PARAMS() NE 1 THEN BEGIN
     PRINT, 'Wrong number of arguments'
@@ -59,6 +59,8 @@ readu,1,nx,ny
 image=fltarr(nx,ny)
 readu,1,image
 close,1
+
+if keyword_set(header) then header={t:t,dx:dx,dy:dy,dz:dz}
 
 return
 
