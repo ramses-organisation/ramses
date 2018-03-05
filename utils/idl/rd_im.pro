@@ -33,7 +33,7 @@
 ; 	Written by:	Romain Teyssier, 01/01/2003.
 ;                       e-mail: Romain.Teyssier@cea.fr
 ;-
-pro rd_im, image, file=file, swap=swap, verbose=verbose
+pro rd_im, image, file=file, swap=swap, verbose=verbose, header=header
 
 IF N_PARAMS() NE 1 THEN BEGIN
     PRINT, 'Wrong number of arguments'
@@ -54,11 +54,13 @@ nx=0L & ny=0L
 t=0d0 & dx=0d0 & dy=0d0 & dz=0d0
 openr,1,file,/f77_unformatted,swap_endian=swap
 readu,1,t,dx,dy,dz
-print,t,dx,dy,dz
+;print,t,dx,dy,dz
 readu,1,nx,ny
 image=fltarr(nx,ny)
 readu,1,image
 close,1
+
+header={t:t,dx:dx,dy:dy,dz:dz}
 
 return
 
