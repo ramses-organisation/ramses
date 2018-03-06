@@ -79,6 +79,7 @@ program sunset
   integer,dimension(:),allocatable::cpu_list
   integer::ilambda_min,ilambda_max,ifilter=6,itime,imetal,ilambda
   logical::cosmo=.true.,metal=.true.
+  integer(kind=1),dimension(:),allocatable::family,tag
 
   call read_params
 
@@ -571,6 +572,8 @@ program sunset
      allocate(z(1:npart2))
      allocate(x(1:npart2,1:ndim2))
      allocate(v(1:npart2,1:ndim2))
+     allocate(family(1:npart2))
+     allocate(tag(1:npart2))
      ! Read position
      do i=1,ndim
         read(1)m
@@ -585,6 +588,8 @@ program sunset
      read(1)m
      ! Read id
      read(1)id
+     read(1)family
+     read(1)tag
      read(1) ! Skip level
      ! Read birth date
      read(1)bdate
@@ -602,7 +607,7 @@ program sunset
              &   x(i,2)>=ymin.and.x(i,2)<ymax.and. &
              &   x(i,3)>=zmin.and.x(i,3)<zmax)
 
-        ok_part=ok_part.and.(bdate(i).ne.0.0d0)!.and.id(i).gt.0
+        ok_part=ok_part.and.(family(i).eq.2)!.and.id(i).gt.0
 
         if(ok_part)then
 
@@ -768,12 +773,12 @@ contains
     implicit none
 
     integer       :: i,n
-    integer       :: iargc
+    
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: sunset    -inp  input_dir'
        print *, '                 -out  output_file'
@@ -795,12 +800,12 @@ contains
     end if
 
     do i = 1,n,2
-       call getarg(i,opt)
+       call get_command_argument(i,opt)
        if (i == n) then
           print '("option ",a2," has no argument")', opt
           stop 2
        end if
-       call getarg(i+1,arg)
+       call get_command_argument(i+1,arg)
        select case (opt)
        case ('-inp')
           repository = trim(arg)
@@ -1086,7 +1091,3 @@ function dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
   dadt = sqrt(dadt)
   return
 end function dadt
-
-
-
-

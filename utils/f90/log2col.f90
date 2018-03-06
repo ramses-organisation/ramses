@@ -8,13 +8,12 @@ program log2col
   integer::nstep,ipos,jpos
   logical::ok
   character(LEN=4)::char4
-  character(LEN=5)::nchar,ncharcpu
   character(LEN=6)::char6
   character(LEN=9)::char9
   character(LEN=11)::char11
   character(LEN=12)::char12
   character(LEN=128)::nomfich,repository,outfich
-  character(LEN=128)::full_line,char
+  character(LEN=128)::full_line
   real::ekin,t,a,dt,epot,econs,mem_grid,mem_part
 
   call read_params
@@ -86,12 +85,12 @@ contains
     implicit none
 
     integer       :: i,n
-    integer       :: iargc
+    
     character(len=4)   :: opt
     character(len=128) :: arg
-    LOGICAL       :: bad, ok
+    logical       :: bad, ok
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: log2col -inp amrlog_file'
        print *, '               -out column_file'
@@ -101,12 +100,12 @@ contains
     end if
 
     do i = 1,n,2
-       call getarg(i,opt)
+       call get_command_argument(i,opt)
        if (i == n) then
           print '("option ",a2," has no argument")', opt
           stop 2
        end if
-       call getarg(i+1,arg)
+       call get_command_argument(i+1,arg)
        select case (opt)
        case ('-inp')
           repository = trim(arg)
@@ -155,4 +154,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-

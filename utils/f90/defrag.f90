@@ -27,7 +27,6 @@ program defrag
   character(len=128)::arg
 
   ! Mesh parameters
-  integer::geom=1             ! 1: cartesian, 2: cylindrical, 3: spherical
   integer::levelmin=1         ! Full refinement up to levelmin
   character(len=128)::ordering='hilbert'
   ! Cosmology
@@ -63,12 +62,12 @@ program defrag
   real(kind=8),allocatable,dimension(:)::bound_key,bound_key2
   real(kind=8)                         ::order_all_min,order_all_max
 
-  n = iargc()
+  n = command_argument_count()
   if (n.NE.1) then
      print *, 'usage: header backup_dir'
      stop
   end if
-  call getarg(1,arg)
+  call get_command_argument(1,arg)
   nomdir=trim(arg)//'/'
   !-----------------------------------------------
   ! Lecture des fichiers outputs au format RAMSES
@@ -480,4 +479,3 @@ subroutine title(n,nchar)
 
 
 end subroutine title
-

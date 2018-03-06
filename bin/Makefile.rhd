@@ -88,8 +88,11 @@ LIBS = $(LIBMPI)
 VPATH = $(PATCH):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o \
-         poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
+MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o
+ifeq ($(GRACKLE),1)
+MODOBJ += grackle_parameters.o
+endif
+MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
          clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o \

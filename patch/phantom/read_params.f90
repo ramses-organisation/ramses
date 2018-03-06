@@ -28,10 +28,10 @@ subroutine read_params
   ! Added the "mond" parameter
   namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
-       & ,bisec_tol,static,geom,overload,cost_weighting,aton &
+       & ,bisec_tol,static,overload,cost_weighting,aton &
        & ,mond
   !~~~~~~~~~~ end ~~~~~~~~~~
-  namelist/output_params/noutput,foutput,fbackup,aout,tout &
+  namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
        & ,npartmax,nparttot,nexpand,boxlen
@@ -119,7 +119,7 @@ subroutine read_params
   write(*,*)' '
 
   ! Read namelist filename from command line argument
-  narg = iargc()
+  narg = command_argument_count()
   IF(narg .LT. 1)THEN
      write(*,*)'You should type: ramses3d input.nml [nrestart]'
      write(*,*)'File input.nml should contain a parameter namelist'
@@ -308,4 +308,3 @@ if (clumpfind .or. sink)call read_clumpfind_params
 #endif
 
 end subroutine read_params
-

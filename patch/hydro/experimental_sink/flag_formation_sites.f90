@@ -274,9 +274,14 @@ end subroutine flag_formation_sites
 !################################################################
 !################################################################
 !################################################################
-subroutine compute_clump_properties_round2(xx)
+#if NDIM==3
+subroutine compute_clump_properties_round2
   use amr_commons
-  use hydro_commons, ONLY:uold,gamma,nvar,nener,smallr
+#if NENER>0
+  use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
+#else
+  use hydro_commons, ONLY:uold,gamma,nvar,smallr
+#endif
   use poisson_commons, ONLY:f
   use clfind_commons
   use pm_commons, ONLY:cont_speed
@@ -285,9 +290,6 @@ subroutine compute_clump_properties_round2(xx)
   use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
   use rt_hydro_commons, only:rtuold
   use rt_cooling_module, only:kappaAbs,kappaSc
-#endif
-#if NENER>0
-  use hydro_commons, ONLY:inener
 #endif
 
   implicit none
@@ -316,11 +318,16 @@ subroutine compute_clump_properties_round2(xx)
   real(dp),dimension(1:3)::B
 #endif
 #ifdef RT
-  integer::ig,iNp,irad
-  real(dp)::c_code,d0,ev_to_uu,kappa
-  real(dp)::scale_kappa,scale_Np,scale_Fp
+  integer::iNp, ig
+  real(dp)::scale_Np,scale_Fp,scale_kappa
+  real(dp)::kappa, c_code, ev_to_uu
   real(dp),dimension(1:nGroups,1:ndim)::Fp
   real(dp),dimension(1:nGroups)::Np2Ep_flux
+#endif
+
+#if NENER>0
+  integer :: irad,nener_offset
+  nener_offset = inener-1
 #endif
 
   ! Conversion factor from user units to cgs units
@@ -335,8 +342,6 @@ subroutine compute_clump_properties_round2(xx)
   scale_kappa=(scale_d*scale_l)**(-1.d0)
   c_code=c_cgs/scale_v
 #endif
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -459,7 +464,7 @@ subroutine compute_clump_properties_round2(xx)
         err=0.d0
 #if NENER>0
         do irad=1,nener
-           err=err+uold(icellp(ipart),inener-1+irad)
+           err=err+uold(icellp(ipart),nener_offset+irad)
         end do
 #endif
 
@@ -576,13 +581,14 @@ subroutine compute_clump_properties_round2(xx)
   end do
 
 
-#endif
 end subroutine compute_clump_properties_round2
+#endif
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
 subroutine trim_clumps
+#if NDIM==3
   use amr_commons
   use clfind_commons
   use pm_commons, only:ir_cloud
@@ -593,7 +599,6 @@ subroutine trim_clumps
   ! the accretion zone of the sink. Cells that are too far away from the peak
   ! are removed from the clump by setting flag2 to 0.
   !---------------------------------------------------------------------------
-
 #ifndef WITHOUTMPI
   integer::ilevel
 #endif
@@ -605,8 +610,6 @@ subroutine trim_clumps
   real(dp),dimension(1:3)::skip_loc,xcell,rrel
   real(dp),dimension(1:twotondim,1:3)::xc
   logical,dimension(1:ndim)::period
-
-#if NDIM==3
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -750,6 +753,7 @@ end subroutine jacobi
 !################################################################
 !################################################################
 !################################################################
+#if NDIM==3
 subroutine surface_int
   use amr_commons
   use hydro_commons
@@ -795,20 +799,23 @@ subroutine surface_int
 #endif
 
 end subroutine surface_int
+#endif
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
+#if NDIM==3
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
-  use clfind_commons, ONLY: center_of_mass,Psurf
-  use hydro_commons, ONLY: uold,gamma,smallr
 #ifdef SOLVERmhd
-  use clfind_commons, ONLY: MagPsurf,MagTsurf
-  use hydro_commons, ONLY: nvar
+  use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
+#else
+  use clfind_commons, ONLY: center_of_mass,Psurf
 #endif
 #if NENER>0
-  use hydro_commons, ONLY: nener,inener
+  use hydro_commons, ONLY: uold,gamma,nvar,nener,inener,smallr
+#else
+  use hydro_commons, ONLY: uold,gamma,nvar,smallr
 #endif
   implicit none
   integer::np,ilevel
@@ -821,7 +828,6 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   ! pressure onto these surfaces and integrates over the surface
   ! of the clumps.
   !------------------------------------------------------------
-
   integer::j,ind,nx_loc,i2,j2,k2,ix,iy,iz,idim,jdim,i3,j3,k3
   real(dp)::dx,dx_loc,scale,vol_loc
   integer ,dimension(1:nvector)::cell_index,cell_levl,clump_nr,indv,neigh_cl
@@ -833,23 +839,21 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   real(dp),dimension(1:3)::skip_loc,n
   logical ,dimension(1:nvector)::ok
   logical,dimension(1:ndim)::period
+
 #ifdef SOLVERmhd
   real(dp),dimension(1:nvector)::B_dot_n,B_dot_r,B2
   real(dp),dimension(1:nvector,1:3)::B
 #endif
-#ifdef RT
+
+#if NENER>0
   integer::irad
+  integer::nener_offset
+  nener_offset = inener-1
 #endif
 
   period(1)=(nx==1)
-#if NDIM>1
-  if(ndim>1)period(2)=(ny==1)
-#endif
-#if NDIM>2
-  if(ndim>2)period(3)=(nz==1)
-#endif
-
-#if NDIM==3
+  period(2)=(ny==1)
+  period(3)=(nz==1)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -893,7 +897,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 #endif
 #if NENER>0
      do irad=1,nener
-        err_cell(j)=err_cell(j)+uold(ind_cell(j),inener-1+irad)
+        err_cell(j)=err_cell(j)+uold(ind_cell(j),nener_offset+irad)
      end do
 #endif
      P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j)-emag_cell(j))
@@ -1176,7 +1180,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
         end do
      end do
   endif
-#endif
 
 end subroutine surface_int_np
+#endif
 

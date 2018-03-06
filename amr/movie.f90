@@ -273,9 +273,6 @@ subroutine output_frame()
   if(deltay_frame(proj_ind*2-1).eq.0d0 .and. deltax_frame(proj_ind*2-1).gt.0d0)then
      deltay_frame(proj_ind*2-1)=deltax_frame(proj_ind*2-1)*float(nh_frame)/float(nw_frame)
   endif
-  if(deltaz_frame(proj_ind*2-1).eq.0d0)then
-     deltaz_frame(proj_ind*2-1)=boxlen
-  endif
   delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
   delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp
@@ -880,7 +877,7 @@ subroutine output_frame()
         if(movie_vars(kk).eq.1)then
            if(star) then
               ! DM particles
-              if((tp(j).eq.0d0).and.(kk.eq.ipart_start)) then
+              if((is_DM(typep(j))).and.(kk.eq.ipart_start)) then
                  if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
                     if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
                  else
@@ -888,14 +885,14 @@ subroutine output_frame()
                  endif
               endif
               ! Star particles
-              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+1)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+1)) then
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
               endif
               ! Star particles luminosity in code units (luminosity over speed of light squared)
               ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
               ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
-              if((tp(j).ne.0d0).and.(kk.eq.ipart_start+2)) then
+              if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
                  if(log10((texp-tp(j))/yr)<6)then
                     log_lum = 3.2d0

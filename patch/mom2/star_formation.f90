@@ -107,6 +107,7 @@ subroutine star_formation(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
@@ -378,7 +379,7 @@ subroutine star_formation(ilevel)
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
-              ! Security to prevent more than 50% of gas depletion
+              ! Security to prevent more than 90% of gas depletion
               if (mgas > 0.9*mcell) then
                  nstar_corrected=int(0.9*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar
@@ -514,6 +515,8 @@ subroutine star_formation(ilevel)
            mp(ind_part(i))=n*mstar      ! Mass
            levelp(ind_part(i))=ilevel   ! Level
            idp(ind_part(i))=index_star  ! Star identity
+           typep(ind_part(i))%family=FAM_STAR                                     
+           typep(ind_part(i))%tag=0 
            xp(ind_part(i),1)=x
            xp(ind_part(i),2)=y
            xp(ind_part(i),3)=z
@@ -541,6 +544,7 @@ subroutine star_formation(ilevel)
                  endif
                  write(ilun,'(E24.12)',advance='no') uvar
               enddo
+              write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
               write(ilun,'(A1)') ' '
            endif
 
@@ -633,9 +637,7 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   ! If for some reasons they don't exist, the routine returns
   ! the input cell.
   !-----------------------------------------------------------------
-  integer::nxny,i,idim,j,iok,ind
-  integer,dimension(1:3)::ibound,iskip1,iskip2
-  integer,dimension(1:nvector,1:3),save::ix
+  integer::i,j,iok,ind
   integer,dimension(1:nvector),save::ind_grid_father,pos
   integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
   integer,dimension(1:nvector,1:twondim),save::icelln_ok

@@ -4,6 +4,7 @@ program amr2map
   ! variables hydro d'une simulation RAMSES.
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
+  use utils
   implicit none
   integer::ndim,n,i,j,k,twotondim,ncoarse,type=0,domax=0
   integer::ivar,nvar,ncpu,ncpuh,lmax=0,levelmin
@@ -132,7 +133,7 @@ program amr2map
   read(10,*)
 
   read(10,'(A14,A80)')GMGM,ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -688,12 +689,12 @@ contains
     implicit none
 
     integer       :: i,n
-    integer       :: iargc
+    
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-
-    n = iargc()
+    
+    n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2map   -inp  input_dir'
        print *, '                 -out  output_file'
@@ -726,12 +727,12 @@ contains
     end if
 
     do i = 1,n,2
-       call getarg(i,opt)
+       call get_command_argument(i,opt)
        if (i == n) then
           print '("option ",a2," has no argument")', opt
           stop 2
        end if
-       call getarg(i+1,arg)
+       call get_command_argument(i+1,arg)
        select case (opt)
        case ('-inp')
           repository = trim(arg)
@@ -773,130 +774,3 @@ contains
   end subroutine read_params
 
 end program amr2map
-
-!=======================================================================
-subroutine title(n,nchar)
-!=======================================================================
-  implicit none
-  integer::n
-  character*5::nchar
-
-  character*1::nchar1
-  character*2::nchar2
-  character*3::nchar3
-  character*4::nchar4
-  character*5::nchar5
-
-  if(n.ge.10000)then
-     write(nchar5,'(i5)') n
-     nchar = nchar5
-  elseif(n.ge.1000)then
-     write(nchar4,'(i4)') n
-     nchar = '0'//nchar4
-  elseif(n.ge.100)then
-     write(nchar3,'(i3)') n
-     nchar = '00'//nchar3
-  elseif(n.ge.10)then
-     write(nchar2,'(i2)') n
-     nchar = '000'//nchar2
-  else
-     write(nchar1,'(i1)') n
-     nchar = '0000'//nchar1
-  endif
-
-
-end subroutine title
-
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-subroutine hilbert3d(x,y,z,order,bit_length,npoint)
-  implicit none
-
-  integer     ,INTENT(IN)                     ::bit_length,npoint
-  integer     ,INTENT(IN) ,dimension(1:npoint)::x,y,z
-  real(kind=8),INTENT(OUT),dimension(1:npoint)::order
-
-  logical,dimension(0:3*bit_length-1)::i_bit_mask
-  logical,dimension(0:1*bit_length-1)::x_bit_mask,y_bit_mask,z_bit_mask
-  integer,dimension(0:7,0:1,0:11)::state_diagram
-  integer::i,ip,cstate,nstate,b0,b1,b2,sdigit,hdigit
-
-  if(bit_length>bit_size(bit_length))then
-     write(*,*)'Maximum bit length=',bit_size(bit_length)
-     write(*,*)'stop in hilbert3d'
-     stop
-  endif
-
-  state_diagram = RESHAPE( (/   1, 2, 3, 2, 4, 5, 3, 5,&
-                            &   0, 1, 3, 2, 7, 6, 4, 5,&
-                            &   2, 6, 0, 7, 8, 8, 0, 7,&
-                            &   0, 7, 1, 6, 3, 4, 2, 5,&
-                            &   0, 9,10, 9, 1, 1,11,11,&
-                            &   0, 3, 7, 4, 1, 2, 6, 5,&
-                            &   6, 0, 6,11, 9, 0, 9, 8,&
-                            &   2, 3, 1, 0, 5, 4, 6, 7,&
-                            &  11,11, 0, 7, 5, 9, 0, 7,&
-                            &   4, 3, 5, 2, 7, 0, 6, 1,&
-                            &   4, 4, 8, 8, 0, 6,10, 6,&
-                            &   6, 5, 1, 2, 7, 4, 0, 3,&
-                            &   5, 7, 5, 3, 1, 1,11,11,&
-                            &   4, 7, 3, 0, 5, 6, 2, 1,&
-                            &   6, 1, 6,10, 9, 4, 9,10,&
-                            &   6, 7, 5, 4, 1, 0, 2, 3,&
-                            &  10, 3, 1, 1,10, 3, 5, 9,&
-                            &   2, 5, 3, 4, 1, 6, 0, 7,&
-                            &   4, 4, 8, 8, 2, 7, 2, 3,&
-                            &   2, 1, 5, 6, 3, 0, 4, 7,&
-                            &   7, 2,11, 2, 7, 5, 8, 5,&
-                            &   4, 5, 7, 6, 3, 2, 0, 1,&
-                            &  10, 3, 2, 6,10, 3, 4, 4,&
-                            &   6, 1, 7, 0, 5, 2, 4, 3 /), &
-                            & (/8 ,2, 12 /) )
-
-  do ip=1,npoint
-
-     ! convert to binary
-     do i=0,bit_length-1
-        x_bit_mask(i)=btest(x(ip),i)
-        y_bit_mask(i)=btest(y(ip),i)
-        z_bit_mask(i)=btest(z(ip),i)
-     enddo
-
-     ! interleave bits
-     do i=0,bit_length-1
-        i_bit_mask(3*i+2)=x_bit_mask(i)
-        i_bit_mask(3*i+1)=y_bit_mask(i)
-        i_bit_mask(3*i  )=z_bit_mask(i)
-     end do
-
-     ! build Hilbert ordering using state diagram
-     cstate=0
-     do i=bit_length-1,0,-1
-        b2=0 ; if(i_bit_mask(3*i+2))b2=1
-        b1=0 ; if(i_bit_mask(3*i+1))b1=1
-        b0=0 ; if(i_bit_mask(3*i  ))b0=1
-        sdigit=b2*4+b1*2+b0
-        nstate=state_diagram(sdigit,0,cstate)
-        hdigit=state_diagram(sdigit,1,cstate)
-        i_bit_mask(3*i+2)=btest(hdigit,2)
-        i_bit_mask(3*i+1)=btest(hdigit,1)
-        i_bit_mask(3*i  )=btest(hdigit,0)
-        cstate=nstate
-     enddo
-
-     ! save Hilbert key as double precision real
-     order(ip)=0.
-     do i=0,3*bit_length-1
-        b0=0 ; if(i_bit_mask(i))b0=1
-        order(ip)=order(ip)+dble(b0)*dble(2)**i
-     end do
-
-  end do
-
-end subroutine hilbert3d
-!================================================================
-!================================================================
-!================================================================
-!================================================================

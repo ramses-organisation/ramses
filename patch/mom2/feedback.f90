@@ -66,11 +66,13 @@ subroutine thermal_feedback(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
   endif
+
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -95,7 +97,7 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -112,7 +114,7 @@ subroutine thermal_feedback(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) ) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -163,12 +165,12 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
-  real(dp)::SN_BOOST,mstar,dx_min,vol_min
+  real(dp)::mstar,dx_min,vol_min
   real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
   real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
   real(dp)::sigma_d,delta_x,tau_factor,rad_factor
   real(dp)::p_SN,pressure,gas_density,metallicity
-  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit
+  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit,p_boost,r_cool
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::error
@@ -177,7 +179,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  !integer ::n_SN
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
   integer,dimension(1:nvector),save::list1
@@ -231,14 +232,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
+  ESN=1d51/(10.*2d33)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
   M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=1.4*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=5.0*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
@@ -248,7 +249,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Critical density for momentum injection via SN for a resolved cooling radius
   ! and for solar metallicity
-  n_crit=100./scale_nH*(3.*3.08d18/scale_l/dx_min)**2
+  !n_crit=(30.0*aexp*3.08d18/(scale_l*dx_min))**(2.0)/scale_nH
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -350,61 +351,105 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Compute stellar mass loss and thermal feedback due to supernovae
-  if(f_w==0)then
-     do j=1,np
-        n_SN(j)=0
-        birth_time=tp(ind_part(j))
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
-           ! Guesstimate the initial star particle mass
-           mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
-           ! Compute the constant SN rate
-           n_dot=eta_sn*mpart_ini/M_SINGLE_SN/(t_sn_cont-t0)
-           ! Compute the mean SN count
-           avg_n=n_dot*dteff(j)
-           ! Draw a Poisson process for this mean
-           call poissdev(localseed,avg_n,n_SN(j))
-           ! Stellar mass loss
-           mejecta=n_SN(j)*M_SINGLE_SN
-           mloss(j)=mloss(j)+mejecta/vol_loc(j)
-           ! Thermal energy
-           ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
-           ! Metallicity
-           if(metal)then
-              zloss=yield+(1d0-yield)*zp(ind_part(j))
-              mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
-           endif
-           ! Reduce star particle mass
-           mp(ind_part(j))=mp(ind_part(j))-mejecta
-        endif
-     end do
+    if(f_w==0)then
+        do j=1,np
+            n_SN(j)=0
+            birth_time=tp(ind_part(j))
+            if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+                ! Guesstimate the initial star particle mass
+                mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
+                ! Compute the constant SN rate
+                n_dot=eta_sn*mpart_ini/M_SINGLE_SN/(t_sn_cont-t0)
+                ! Compute the mean SN count
+                avg_n=n_dot*dteff(j)
+                ! Draw a Poisson process for this mean
+                call poissdev(localseed,avg_n,n_SN(j))
+                ! Stellar mass loss
+                mejecta=n_SN(j)*M_SINGLE_SN
+                mloss(j)=mloss(j)+mejecta/vol_loc(j)
+                ! Thermal energy
+                ethermal(j)=ethermal(j)+mejecta*ESN/vol_loc(j)
+                ! Metallicity
+                if(metal)then
+                    zloss=yield+(1d0-yield)*zp(ind_part(j))
+                    mzloss(j)=mzloss(j)+mejecta*zloss/vol_loc(j)
+                endif
+                ! Reduce star particle mass
+                mp(ind_part(j))=mp(ind_part(j))-mejecta
+                if(sf_log_properties) then
+                    write(ilun,'(I10)',advance='no') 1
+                    write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+                    do idim=1,ndim
+                        write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
+                    enddo
+                    do idim=1,ndim
+                        write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
+                    enddo
+                    write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
+                    do ivar=2,nvar
+                        if(ivar.eq.ndim+2)then
+                            e=0.0d0
+                            do idim=1,ndim
+                            e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                            enddo
+#if NENER>0
+                            do irad=0,nener-1
+                            e=e+unew(ind_cell(i),inener+irad)
+                            enddo
+#endif
+#ifdef SOLVERmhd
+                            do idim=1,ndim
+                            e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
+                            enddo
+#endif
+                            ! Temperature
+                            uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                        else
+                            uvar=unew(indp(j),ivar)
+                        endif
+                        write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
+                    enddo
+                    write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+                    write(ilun,'(A1)') ' '
+                endif
+            endif
+        end do
 
      ! Photo-ionization thermal feedback
-     do j=1,np
+    do j=1,np
         birth_time=tp(ind_part(j))
         if(birth_time.ge.(current_time-t_sn_cont))then
-           pressure=max(uold(indp(j),1),smallr)*cs_H2_2
-           ethermal(j)=ethermal(j)+pressure
+            pressure=max(uold(indp(j),1),smallr)*cs_H2_2
+            ethermal(j)=ethermal(j)+pressure
         endif
-     end do
+    end do
 
      ! Use stellar momentum feedback
-     if(momentum_feedback)then
-
+    if(momentum_feedback)then
         ! Momentum feedback from supernovae
         do j=1,np
-           birth_time=tp(ind_part(j))
-           gas_density=max(uold(indp(j),1),smallr)
-           ! Compute metallicity for cooling
-           if(metal)then
-              metallicity=max(uold(indp(j),imetal),smallr)/gas_density/0.02
-           else
-              metallicity=z_ave
-           endif
-           metallicity=max(metallicity,0.01)
-           ! Check if cooling radius is not resolved
-           if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**3
-           endif
+            birth_time=tp(ind_part(j))
+            gas_density=max(uold(indp(j),1),smallr)
+            ! Compute metallicity for cooling
+            if(metal)then
+                metallicity=max(uold(indp(j),imetal),smallr)/gas_density/0.02
+            else
+                metallicity=z_ave
+            endif
+            metallicity=max(metallicity,0.01)
+            p_boost = (gas_density*scale_nH)**(-0.15)*metallicity**(-0.15)
+            ! Cooling radius
+            r_cool = 30.0 * 3.08d18 / scale_l * ( gas_density*scale_nH )**(-0.42)
+        !    if(birth_time.ge.(current_time-t_sn_cont).and.(gas_density*scale_nH).gt.1d-5)then
+            if(birth_time.ge.(current_time-t_sn_cont))then
+                pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
+                !write(*,'(A10,I10,E24.8,E24.8,E24.8,E24.8,E24.8)')'pstar: yes', n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
+                ! if(sf_log_properties.and.n_SN(j).gt.0.5) then
+                !     write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+                !     write(ilun,'(I10,E24.12,E24.12,E24.12,E24.12,E24.12)',advance='no') n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
+                !     write(ilun,'(A1)') ' '
+                ! endif
+            endif
         end do
 
      endif
@@ -425,6 +470,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+    !  turbulent energy
+    !  unew(indp(j),ivirial1)=unew(indp(j),ivirial1)+ethermal(j)*0.1
 
      ! Update internal energy
      if(pressure_fix)then

@@ -757,7 +757,7 @@ program amr2map
     namelist /size/ dir, xmin, xmax, ymin, ymax, zmin, zmax
     namelist /amr/ ascii, pdf, lmax, typ, maxval, maxrho, pdfmin, pdfmax, pdfn
 
-    n = iargc()
+    n = command_argument_count()
     if (n < 1) then
       print *, 'usage: amr2map -inp input_dir [-nml namelist] [-out suffix] [-ascii] [-pdf] '
       print *, ''
