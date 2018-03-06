@@ -54,13 +54,13 @@ nx=0L & ny=0L
 t=0d0 & dx=0d0 & dy=0d0 & dz=0d0
 openr,1,file,/f77_unformatted,swap_endian=swap
 readu,1,t,dx,dy,dz
-print,t,dx,dy,dz
+;print,t,dx,dy,dz
 readu,1,nx,ny
 image=fltarr(nx,ny)
 readu,1,image
 close,1
 
-if keyword_set(header) then header={t:t,dx:dx,dy:dy,dz:dz}
+header={t:t,dx:dx,dy:dy,dz:dz}
 
 return
 
