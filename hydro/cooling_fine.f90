@@ -63,7 +63,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_parameters, only: nGroups, iGroups
   use rt_hydro_commons
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
-       ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs, a_r,is_kIR_T,rt_vc
+       ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,a_r,is_kIR_T,rt_vc
 #endif
   implicit none
 #ifndef WITHOUTMPI
@@ -81,7 +81,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant=1.
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err,emag
+  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
@@ -95,13 +95,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp),dimension(nGroups, 1:nvector),save:: Np, Np_boost=0d0, dNpdt=0d0
   real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost=0d0, dFpdt
   real(dp),dimension(ndim, 1:nvector),save:: p_gas, u_gas
-  real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep, aexp_loc
+  real(kind=8)::f_trap, NIRtot, EIR_trapped, unit_tau, tau, Np2Ep
+  real(kind=8)::aexp_loc, f_dust, xHII
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux
-  real(kind=8),dimension(1:nvector),save::T2_new
-#endif
-#ifdef grackle
-  real(kind=8),dimension(1:nvector),save::T2_new
 #endif
 #if NENER>0
   integer::irad
@@ -231,8 +228,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            endif
            kIR = kIR*scale_d*scale_l           !  Convert to code units
            flux = rtuold(il,iNp+1:iNp+ndim)
+           xHII = uold(il,iIons-1+ixHII)/uold(il,1)
+           f_dust = (1.-xHII)                     ! No dust in ionised gas
            work = scale_v/c_cgs * kIR * sum(uold(il,2:ndim+1)*flux) &
-                * Zsolar(i) * dtnew(ilevel)       ! Eq A6
+                * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
 
            uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
                 + work * group_egy(iIR) &
@@ -608,7 +607,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               ! Set the IR opacity according to the rad. temperature:
               kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
            endif
-           tau = nH(i) * Zsolar(i) * unit_tau * kIR
+           f_dust = 1.-xion(ixHII,i)              ! No dust in ionised gas
+           tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kIR
            f_trap = 0d0             ! Fraction IR photons that are trapped
            if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0)
            ! Update streaming photons, trapped photons, and tot energy:
