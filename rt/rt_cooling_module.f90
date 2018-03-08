@@ -33,7 +33,7 @@ module rt_cooling_module
   real(dp)::Np_min, Np_frac, Fp_min, Fp_frac
 
   integer,parameter::iIR=1             !                    IR group index
-  integer::iPEH_group=1                ! Photoelectric heating group index
+  integer::iPEH_group=0                ! Photoelectric heating group index
   integer::iIRtrapVar=1                !  Trapped IR energy variable index
   ! Namelist parameters:
   logical::is_mu_H2=.false.
