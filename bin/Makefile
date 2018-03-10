@@ -14,7 +14,8 @@ EXEC = ramses
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
-GITREPO = $(shell git config --get remote.origin.url)
+GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
+GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
           -DSOLVER$(SOLVER)

@@ -39,7 +39,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 !-------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
-  use rt_parameters,only:nIons,iIons
+  use rt_parameters,only:nIons,iIons,isH2,isHe,ixHI,ixHII,ixHeII,ixHeIII
   use cooling_module,only:Y
   implicit none
   integer::ngrid
@@ -47,13 +47,13 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   integer::i, ind, iskip, idim, nleaf
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   integer,dimension(1:nvector),save::ind_cell, ind_leaf
-  real(dp)::nH, T2, ekk, err, emag, x, mu
-  real(dp),dimension(4)::phI_rates       ! Photoionization rates [s-1]
-  real(dp),dimension(6)::nSpec           !          Species abundances
+  real(dp)::nH, T2, ekk, err, emag, x, mu, Zsolar
+  real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
+  real(dp),dimension(7)::nSpec               !          Species abundances
 #if NENER>0
   integer::irad
 #endif
-  !-------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   pHI_rates(:)=0.0                   ! No UV background for the time being
@@ -76,6 +76,9 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
      do i=1,nleaf
         ! Compute rho
         nH = MAX(uold(ind_leaf(i),1),smallr)   !       Mass density of gas
+        Zsolar = z_ave                         ! Metallicity (solar units)
+        if(metal) &
+             Zsolar=(uold(ind_leaf(i),imetal)) / nH / 0.02
         ! Compute pressure from energy density
         T2 = uold(ind_leaf(i),ndim+2)          ! Energy density (kin+heat)
         ekk = 0.0d0                            !            Kinetic energy
@@ -101,16 +104,20 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         ! Compute nH in H/cc (number of H nuclei per cubic centimeter)
         nH = nH*scale_nH
 
-        call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec)
+        call cmp_Equilibrium_Abundances(T2,nH,pHI_rates,mu,nSpec,Zsolar)
 
-        ! update ionization states
-        x = nSpec(3)/(nSpec(2)+nSpec(3))                  !   HII fraction
-        uold(ind_leaf(i),iIons) = x*uold(ind_leaf(i),1)
-        if(Y .gt. 0.d0 .and. nIons .ge. 3) then
-           x = nSpec(5)/(nSpec(4)+nSpec(5)+nSpec(6))      !  HeII fraction
-           uold(ind_leaf(i),iIons+1) = x*uold(ind_leaf(i),1)
-           x = nSpec(6)/(nSpec(4)+nSpec(5)+nSpec(6))      ! HeIII fraction
-           uold(ind_leaf(i),iIons+2) = x*uold(ind_leaf(i),1)
+        ! UPDATE IONIZATION STATES
+        if(isH2) then ! For now, assume zero H2 at initialization
+           x = (2.*nSpec(2)+nSpec(3))/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI
+           uold(ind_leaf(i),iIons-1+ixHI) = x*uold(ind_leaf(i),1)
+        endif
+        x = nSpec(4)/(2.*nSpec(2)+nSpec(3)+nspec(4))        ! HII fraction
+        uold(ind_leaf(i),iIons-1+ixHII) = x*uold(ind_leaf(i),1)
+        if(Y .gt. 0.d0 .and. isHe) then
+           x = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7))      !  HeII fraction
+           uold(ind_leaf(i),iIons-1+ixHeII) = x*uold(ind_leaf(i),1)
+           x = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))      ! HeIII fraction
+           uold(ind_leaf(i),iIons-1+ixHeIII) = x*uold(ind_leaf(i),1)
         endif
       end do
 
@@ -138,9 +145,9 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim
   real(dp)::scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  real(dp)::scale_Np, scale_Fp, nH, T2, ekk, err, emag, mu, ss_factor
+  real(dp)::scale_Np,scale_Fp,nH,T2,ekk,err,emag,mu,Zsolar,ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
-  real(dp),dimension(6)::nSpec               !          Species abundances
+  real(dp),dimension(7)::nSpec               !          Species abundances
 #if NENER>0
   integer::irad
 #endif
@@ -158,8 +165,10 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
      end do
   end do
 
-
   nH = MAX(vars(1),smallr)                  !   Number density of gas [UU]
+
+  Zsolar = z_ave
+  if(metal) Zsolar=vars(imetal) / nH / 0.02 !    Metallicity (solar units)
 
   ! Compute pressure from energy density
   T2 = vars(ndim+2)                         ! Energy dens. (kin+heat) [UU]
@@ -189,17 +198,20 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   if(self_shielding) ss_factor = exp(-nH/1d-2)
   if(haardt_madau) phI_rates = phI_rates + UVrates(:,1) * ss_factor
 
-  call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec)
-  xion(1)=nSpec(3)/(nSpec(2)+nSpec(3))                    !   HII fraction
-  if(Y .gt. 0.d0 .and. nIons .ge. 3) then
-     xion(2) = nSpec(5)/(nSpec(4)+nSpec(5)+nSpec(6))      !  HeII fraction
-     xion(3) = nSpec(6)/(nSpec(4)+nSpec(5)+nSpec(6))      ! HeIII fraction
+  call cmp_Equilibrium_Abundances(T2, nH, pHI_rates, mu, nSpec, Zsolar)
+
+  if(isH2) xion(ixHI)=nSpec(3)/(2.*nSpec(2)+nSpec(3)+nSpec(4))!    HI frac
+  xion(ixHII)=nSpec(4)/(2.*nSpec(2)+nSpec(3)+nSpec(4))        !   HII frac
+  if(Y .gt. 0.d0 .and. isHe) then
+     xion(ixHeII) = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7)) !  HeII fraction
+     xion(ixHeIII) = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))! HeIII fraction
+
   endif
 
 END SUBROUTINE calc_equilibrium_xion
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE cmp_Equilibrium_Abundances(T2, nH, phI_rates, mu, nSpec)
+SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
 !-------------------------------------------------------------------------
   use amr_commons,only:dp
   use rt_cooling_module
@@ -207,20 +219,21 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2, nH, phI_rates, mu, nSpec)
   implicit none
   real(dp) ::T2,nH
   real(dp),dimension(nIons)::phI_rates
-  real(dp) ::mu
-  real(dp),dimension(1:6)::nSpec!-----------------------------------------
+  real(dp) ::mu,Zsolar
+  real(dp),dimension(1:7)::nSpec!-----------------------------------------
   real(dp) ::mu_old, err_mu, mu_left, mu_right, T, nTot
   integer :: niter
 !-------------------------------------------------------------------------
   ! Iteration to find mu                     ! n_E     = n_spec(1) ! e
-  err_mu=1.                                  ! n_HI    = n_spec(2) ! H
-  mu_left=0.5                                ! n_HII   = n_spec(3) ! H+
-  mu_right=1.3                               ! n_HEI   = n_spec(4) ! He
-  niter=0                                    ! n_HEII  = n_spec(5) ! He+
-  do while (err_mu > 1.d-4 .and. niter <= 50)! n_HEIII = n_spec(6) ! He++
+                                             ! n_H2    = n_spec(2) ! H2
+  err_mu=1.                                  ! n_HI    = n_spec(3) ! H
+  mu_left=0.5                                ! n_HII   = n_spec(4) ! H+
+  mu_right=2.3                               ! n_HEI   = n_spec(5) ! He
+  niter=0                                    ! n_HEII  = n_spec(6) ! He+
+  do while (err_mu > 1.d-4 .and. niter <= 50)! n_HEIII = n_spec(7) ! He++
      mu_old=0.5*(mu_left+mu_right)
      T = T2*mu_old
-     call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu)
+     call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu, Zsolar)
      err_mu = (mu-mu_old)/mu_old
      if(err_mu>0.)then
         mu_left =0.5*(mu_left+mu_right)
