@@ -166,7 +166,7 @@ END FUNCTION trapz1
 FUNCTION getCrosssection(lambda, species)
 
 ! Gives an atom-photon cross-section of given species at given wavelength,
-! as given by Hui and Gnedin (1997) for HI and He, and Avel97 for H2.
+! as given by Hui and Gnedin (1997) for HI and He, and Abel97 for H2.
 ! lambda  => Wavelength in angstrom
 ! species => ixHI (H2), ixHII (HI), ixHeII (HeI) or ixHeIII (HeII)
 ! returns :  photoionization or photodissociation cross-section in cm^2
