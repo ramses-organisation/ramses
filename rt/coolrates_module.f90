@@ -5,18 +5,21 @@ MODULE coolrates_module
   ! The rates are interpolated using cubic splines, and extrapolated in
   ! log-log space if temperature is above table boundaries.
   ! Joki Rosdahl and Andreas Bleuler, September 2015.
+  ! Nickerson, Teyssier, and Rosdahl, March 2018.
 
   use amr_parameters,only:dp
   implicit none
 
   private   ! default
-  public init_coolrates_tables, update_coolrates_tables, inp_coolrates_table &
-       , compCoolrate, tbl_alphaA_HII, tbl_alphaA_HeII, tbl_alphaA_HeIII    &
-       , tbl_alphaB_HII, tbl_alphaB_HeII, tbl_alphaB_HeIII, tbl_beta_HI     &
-       , tbl_beta_HeI, tbl_beta_HeII, tbl_cr_ci_HI, tbl_cr_ci_HeI           &
-       , tbl_cr_ci_HeII, tbl_cr_ce_HI, tbl_cr_ce_HeI, tbl_cr_ce_HeII        &
-       , tbl_cr_r_HII, tbl_cr_r_HeII, tbl_cr_r_HeIII, tbl_cr_bre            &
-       , tbl_cr_com, tbl_cr_die
+  public init_coolrates_tables, update_coolrates_tables                  &
+       , inp_coolrates_table, comp_Alpha_H2, compCoolrate                &
+       , tbl_alphaA_HII, tbl_alphaA_HeII, tbl_alphaA_HeIII               &
+       , tbl_alphaB_HII, tbl_alphaB_HeII, tbl_alphaB_HeIII, tbl_beta_HI  &
+       , tbl_beta_HeI, tbl_beta_HeII, tbl_cr_ci_HI, tbl_cr_ci_HeI        &
+       , tbl_cr_ci_HeII, tbl_cr_ce_HI, tbl_cr_ce_HeI, tbl_cr_ce_HeII     &
+       , tbl_cr_r_HII, tbl_cr_r_HeII, tbl_cr_r_HeIII, tbl_cr_bre         &
+       , tbl_cr_com, tbl_cr_die, tbl_beta_H2HI, tbl_beta_H2H2            &
+       , tbl_cr_H2HI, tbl_cr_H2H2
 
   ! Default cooling rates table parameters
   integer,parameter     :: nbinT  = 1001
@@ -57,6 +60,10 @@ MODULE coolrates_module
   type(coolrates_table),save::tbl_cr_bre ! Bremsstrahlung cooling rates
   type(coolrates_table),save::tbl_cr_com ! Compton cooling rates
   type(coolrates_table),save::tbl_cr_die ! Dielectronic cooling rates
+  type(coolrates_table),save::tbl_beta_H2HI ! Coll. dissociation rates
+  type(coolrates_table),save::tbl_beta_H2H2 ! Coll. dissociation rates
+  type(coolrates_table),save::tbl_cr_H2HI ! Collisional diss. cooling
+  type(coolrates_table),save::tbl_cr_H2H2 ! Collisional diss. cooling
 
 CONTAINS
 
@@ -131,6 +138,12 @@ SUBROUTINE init_coolrates_tables(aexp)
   call mpi_distribute_coolrates_table(tbl_cr_bre)
   call mpi_distribute_coolrates_table(tbl_cr_com)
   call mpi_distribute_coolrates_table(tbl_cr_die)
+
+  call mpi_distribute_coolrates_table(tbl_beta_H2HI)
+  call mpi_distribute_coolrates_table(tbl_beta_H2H2)
+  call mpi_distribute_coolrates_table(tbl_cr_H2HI)
+  call mpi_distribute_coolrates_table(tbl_cr_H2H2)
+
 #endif
 
   if(myid==0) print*,'Coolrates tables initialised '
@@ -147,7 +160,7 @@ SUBROUTINE update_coolrates_tables(aexp)
   integer :: ierr
 #endif
   real(dp) :: aexp
-  integer :: myid, ncpu, iT
+  integer:: myid, ncpu, iT
 !-------------------------------------------------------------------------
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
@@ -203,6 +216,9 @@ SUBROUTINE comp_table_rates(iT, aexp)
   implicit none
   integer::iT
   real(dp)::aexp, T, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
+  real(dp)::lowrleft,lowrright,lowr_hi,lowr_h2
+  real(dp)::lowvleft_hi,lowvright_hi,lowv_hi,lowv_h2
+  real(dp)::TT,fTT3,lowtot_hi,lowtot_h2,ltetot
   real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
   ! Rates are stored in non-log, while temperature derivatives (primes)
@@ -311,7 +327,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
 
      tbl_cr_r_HeII%rates(iT)   = 3.d-14 * laHeII**0.654 * kb * T
-     tbl_cr_r_HeII%primes(iT)   = 0.346                                  &
+     tbl_cr_r_HeII%primes(iT)  = 0.346                                   &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
      f = 1.d0+(laHeIII/0.541)**0.502
@@ -354,6 +370,64 @@ SUBROUTINE comp_table_rates(iT, aexp)
      tbl_cr_die%primes(iT) = (tbl_cr_die%rates(iT)*(564000.-1.5*T)       &
                               - f*94000.) /T**2 * T * log(10d0)
   endif
+
+  !BEGIN H2 STUFF --------------------------------------------------------
+
+  ! Collisional dissociation ground state (Dove&Mandy 1986)***************
+  tbl_Beta_H2HI%rates(iT) =                                              &
+       7.073d-19*(T**2.012)*exp(-5.179d4/T)/(1.d0+2.130d-5*T)**3.512
+  ! Collisional dissociation  ground state (Martin&Keogh&Mandy 1998y)
+  tbl_Beta_H2H2%rates(iT) = &
+       5.996d-30*(T**4.1881)*exp(-5.466d4/T)/(1.d0+6.761d-6*T)**5.6881
+  ! Prefer to use numerical prime, rather than analytic:
+  TT=T*1.0001
+  tbl_Beta_H2HI%primes(iT) =                                             &
+       7.073d-19*(TT**2.012)*exp(-5.179d4/TT)/(1.d0+2.130d-5*TT)**3.512
+  tbl_Beta_H2HI%primes(iT) = &
+       (tbl_Beta_H2HI%primes(iT) - tbl_Beta_H2HI%rates(iT)) &
+       / (0.0001*T) * T * log(10d0) ! last two terms for log-log
+  tbl_Beta_H2H2%primes(iT) = &
+      5.996d-30*(TT**4.1881)*exp(-5.466d4/TT)/(1.d0+6.761d-6*TT)**5.6881
+  tbl_Beta_H2H2%primes(iT) = &
+       (tbl_Beta_H2H2%primes(iT) - tbl_Beta_H2H2%rates(iT))              &
+       / (0.0001*T) * T * log(10d0) ! last two terms for log-log
+
+  ! Collisional H2 cooling************************************************
+  ! Hallenbach McKee (1979) + Halle Combes (2012) in cgs
+  lowrleft=1.25*exp(-1.70d2/T)*2.35d-14
+  lowrright=1.75*exp(-5.05d2/T)*6.97d-14
+  lowr_hi=lowrleft*gamma_hi(T,2.d0)+lowrright*gamma_hi(T,3.d0)
+  lowr_h2=lowrleft*gamma_h2(T,2.d0)+lowrright*gamma_h2(T,3.d0)
+  lowvleft_hi=exp(-5860.0/T)*8.09d-13*1.0d-12*sqrt(T)*exp(-1.0d3/T)
+  lowvright_hi=exp(-11720.0/T)*1.6d-12*1.6d-12*sqrt(T)*exp(-1.0*(4.0d2/T)**2)
+  lowv_hi=lowvleft_hi+lowvright_hi
+  lowv_h2=exp(-5860.0/T)*8.09d-13*1.4d-12*sqrt(T)*exp(-1.2d4/(T+1.2d3))
+
+  tbl_cr_H2HI%rates(iT)=lowr_hi+lowv_hi
+  tbl_cr_H2H2%rates(iT)=lowr_h2+lowv_h2
+
+  ! Collisional H2 cooling derivatives (calculated numerically)
+  TT=T*1.0001
+  lowrleft=1.25*exp(-1.70d2/TT)*2.35d-14
+  lowrright=1.75*exp(-5.05d2/TT)*6.97d-14
+  lowr_hi=lowrleft*gamma_hi(TT,2.d0)+lowrright*gamma_hi(TT,3.d0)
+  lowr_h2=lowrleft*gamma_h2(TT,2.d0)+lowrright*gamma_h2(TT,3.d0)
+  lowvleft_hi=exp(-5860.0/TT)*8.09d-13*1.0d-12*sqrt(TT)*exp(-1.0d3/TT)
+  lowvright_hi=exp(-11720.0/TT)*1.6d-12*1.6d-12*sqrt(TT)*exp(-1.0*(4.0d2/TT)**2)
+  lowv_hi=lowvleft_hi+lowvright_hi
+  lowv_h2=exp(-5860.0/TT)*8.09d-13*1.4d-12*sqrt(TT)*exp(-1.2d4/(TT+1.2d3))
+
+  tbl_cr_H2HI%primes(iT)=lowr_hi+lowv_hi
+  tbl_cr_H2HI%primes(iT) = &
+       (tbl_cr_H2HI%primes(iT) - tbl_cr_H2HI%rates(iT)) &
+       / (0.0001*T) * T * log(10d0) ! last two terms for log-log
+
+  tbl_cr_H2H2%primes(iT)=lowr_h2+lowv_h2
+  tbl_cr_H2H2%primes(iT) = &
+       (tbl_cr_H2H2%primes(iT) - tbl_cr_H2H2%rates(iT)) &
+       / (0.0001*T) * T * log(10d0) ! last two terms for log-log
+
+  !END H2 STUFF ----------------------------------------------------------
 
 END SUBROUTINE comp_table_rates
 
@@ -430,98 +504,171 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   beta =(fb-fa) * three_over_h2Table - (2d0*fprimea+fprimeb) * one_over_hTable
   gamma = (fprimea+fprimeb) * one_over_h2Table - (fb-fa) * two_over_h3Table
   inp_coolrates_table = fa+alpha*yy+beta*yy2+gamma*yy3
+  ! Only positive rates allowed (and spline can go negative):
+  inp_coolrates_table = max(0d0,inp_coolrates_table)
   if( present(retPrime) )                                                &
        retPrime = (alpha+2d0*beta*yy+3d0*gamma*yy2) / T * one_over_lnTen
 END FUNCTION inp_coolrates_table
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FUNCTION compCoolrate(T, ne, nHI, nHII, nHeI, nHeII, nHeIII, dcooldT)
+FUNCTION compCoolrate(T, ne, nN, nI, dcooldT)
 
 ! Compute cooling rate in a cell, using interpolation from cooling rate
 ! tables
 ! T        => Cell emperature [K]
-! xion     => Cell ionization fraction
-! nH       => Hydrogen number density [cm-3]  
-! dcooldT <=  Temperature derivative of the rate
-! dcooldx <=  Ionized fraction derivative of the rate
-! returns:  Resulting cooling rate [erg s-1 cm-3]
+! nN       => Neutral and molecular abundances for each ionisation species
+! nI       => Ionized and dissociated abundances for each species
+! dcooldT  <= Temperature derivative of the rate
+! dcooldx  <= Ionized fraction derivative of the rate
+! returns:    Cooling rate [erg s-1 cm-3]
 !-------------------------------------------------------------------------
-  implicit none  
-  real(dp)::T, ne, nHI, nHII, nHeI, nHeII, nHeIII
-  real(dp)::compCoolrate, dcooldT
-  !-----------------------------------------------------------------------
+  use rt_parameters,only: nIons, isH2, isHe, ixHI, ixHII, ixHeII, ixHeIII
+  implicit none
+  real(dp)::T, ne
+  real(dp),dimension(nIons)::nN,nI
+  real(dp)::compCoolrate, dcooldT !---------------------------------------
   real(dp),save::ci_HI,ci_HeI,ci_HeII
   real(dp),save::ci_HI_prime,ci_HeI_prime,ci_HeII_prime
+  real(dp),save::cr_H2HI,cr_H2H2,cr_H2HI_prime,cr_H2H2_prime
   real(dp),save::ce_HI,ce_HeI,ce_HeII
   real(dp),save::ce_HI_prime,ce_HeI_prime,ce_HeII_prime
   real(dp),save::r_HII,r_HeII,r_HeIII
   real(dp),save::r_HII_prime,r_HeII_prime,r_HeIII_prime
-  real(dp),save::bre, bre_prime, com, com_prime, die, die_prime
-  real(dp),save::ne_nHI, ne_nHII, ne_nHeI, ne_nHeII, ne_nHeIII
+  real(dp),save::bre, brefac, bre_prime, com, com_prime, die, die_prime
 !-------------------------------------------------------------------------
-  ne_nHI    = ne * nHI
-  ne_nHII   = ne * nHII
-  ne_nHeI   = ne * nHeI
-  ne_nHeII  = ne * nHeII
-  ne_nHeIII = ne * nHeIII
   ! Coll. Ionization Cooling
   ci_HI   = inp_coolrates_table(tbl_cr_ci_HI, T, ci_HI_prime)            &
-          * ne_nHI
-  ci_HeI  = inp_coolrates_table(tbl_cr_ci_HeI, T, ci_HeI_prime)          &
-          * ne_nHeI
-  ci_HeII = inp_coolrates_table(tbl_cr_ci_HeII, T, ci_HeII_prime)        &
-          * ne_nHeII
-  ci_HI_prime    = ci_HI_prime   * ne_nHI
-  ci_HeI_prime   = ci_HeI_prime  * ne_nHeI
-  ci_HeII_prime  = ci_HeII_prime * ne_nHeII
-
+          * ne * nN(ixHII) ! ne * nHI
+  ci_HI_prime = ci_HI_prime * ne * nN(ixHII)
   ! Collisional excitation cooling
   ce_HI   = inp_coolrates_table(tbl_cr_ce_HI, T, ce_HI_prime)            &
-          * ne_nHI
-  ce_HeI  = inp_coolrates_table(tbl_cr_ce_HeI, T, ce_HeI_prime)          &
-          * ne_nHeI
-  ce_HeII = inp_coolrates_table(tbl_cr_ce_HeII, T, ce_HeII_prime)        &
-          * ne_nHeII
-  ce_HI_prime    = ce_HI_prime   * ne_nHI
-  ce_HeI_prime   = ce_HeI_prime  * ne_nHeI
-  ce_HeII_prime  = ce_HeII_prime * ne_nHeII
-
+          * ne * nN(ixHII) ! ne * nHI
+  ce_HI_prime    = ce_HI_prime * ne * nN(ixHII)
   ! Recombination Cooling
-  r_HII   = inp_coolrates_table(tbl_cr_r_HII, T, r_HII_prime)            &
-          * ne_nHII
-  r_HeII  = inp_coolrates_table(tbl_cr_r_HeII, T, r_HeII_prime)          &
-          * ne_nHeII
-  r_HeIII = inp_coolrates_table(tbl_cr_r_HeIII, T, r_HeIII_prime)        &
-          * ne_nHeIII
-  r_HII_prime   = r_HII_prime   * ne_nHII
-  r_HeII_prime  = r_HeII_prime  * ne_nHeII
-  r_HeIII_prime = r_HeIII_prime * ne_nHeIII
+  r_HII = inp_coolrates_table(tbl_cr_r_HII, T, r_HII_prime)              &
+        * ne * nI(ixHII) ! ne * nHII
+  r_HII_prime   = r_HII_prime * ne * nI(ixHII)
+
+  if(isHe) then
+     ! Coll. Ionization Cooling
+     ci_HeI      = inp_coolrates_table(tbl_cr_ci_HeI, T, ci_HeI_prime)   &
+                 * ne * nN(ixHeII)  ! ne * nHeI
+     ci_HeI_prime= ci_HeI_prime  * ne * nN(ixHeII)
+     ci_HeII     = inp_coolrates_table(tbl_cr_ci_HeII, T, ci_HeII_prime) &
+                 * ne * nN(ixHeIII) ! ne * nHeII
+     ci_HeII_prime= ci_HeII_prime * ne * nN(ixHeIII)
+     ! Collisional excitation cooling
+     ce_HeI      = inp_coolrates_table(tbl_cr_ce_HeI, T, ce_HeI_prime)   &
+                 * ne * nN(ixHeII) ! ne * nHeI
+     ce_HeI_prime= ce_HeI_prime *ne*nN(ixHeII)
+     ce_HeII     = inp_coolrates_table(tbl_cr_ce_HeII, T, ce_HeII_prime) &
+                 * ne * nN(ixHeIII) ! ne * nHeII
+     ce_HeII_prime= ce_HeII_prime * ne * nN(ixHeIII)
+     ! Recombination Cooling
+     r_HeII      = inp_coolrates_table(tbl_cr_r_HeII, T, r_HeII_prime)   &
+                 * ne * nI(ixHeII) ! ne * nHeII
+     r_HeII_prime= r_HeII_prime * ne * nI(ixHeII)
+     r_HeIII     = inp_coolrates_table(tbl_cr_r_HeIII, T, r_HeIII_prime) &
+                 * ne * nI(ixHeIII) ! ne * nHeIII
+     r_HeIII_prime= r_HeIII_prime * ne * nI(ixHeIII)
+  endif
 
   ! Bremsstrahlung
-  bre  = inp_coolrates_table(tbl_cr_bre, T, bre_prime)                   &
-       * ne * (nHII + nHeII + 4. * nHeIII)
-  bre_prime = bre_prime  * ne * (nHII + nHeII + 4. * nHeIII)
+  bre    = inp_coolrates_table(tbl_cr_bre, T, bre_prime)
+  brefac = ne * nI(ixHII)
+  if(isHe) then
+     brefac = brefac + ne * ( nI(ixHeII) + 4. * nI(ixHeIII) )
+  endif
+  bre        = bre * brefac
+  bre_prime  = bre_prime * brefac
 
   ! Compton Cooling
   com       = inp_coolrates_table(tbl_cr_com, T, com_prime) * ne
   com_prime = com_prime * ne
 
   ! Dielectronic recombination cooling
-  die = inp_coolrates_table(tbl_cr_die, T, die_prime) * ne_nHeII
-  die_prime = die_prime * ne_nHeII
+  if(isHe) then
+     die       = inp_coolrates_table(tbl_cr_die, T, die_prime) &
+               * ne * nN(ixHeIII) ! ne * nHeII
+     die_prime = die_prime * ne * nN(ixHeIII)
+  endif
+
+  if(isH2) then
+     ! Collisional dissociation (H2) cooling
+     cr_H2HI       = inp_coolrates_table(tbl_cr_H2HI, T, cr_H2HI_prime)  &
+                   * nN(ixHI) * nN(ixHII) ! nH2 * nHI
+     cr_H2HI_prime = cr_H2HI_prime * nN(ixHI)*nN(ixHII)
+
+     cr_H2H2       = inp_coolrates_table(tbl_cr_H2H2, T, cr_H2H2_prime)  &
+                   * nN(ixHI)**2 ! nH2 * nH2
+     cr_H2H2_prime = cr_H2H2_prime * nN(ixHI)**2
+  endif
 
   ! Overall Cooling
-  compCoolrate  = ci_HI    + r_HII    + ce_HI    + com                   &
-                + ci_HeI   + r_HeII   + ce_HeI   + die                   &
-                + ci_HeII  + r_HeIII  + ce_HeII  + bre
+  compCoolrate          = ci_HI    + r_HII    + ce_HI    + com + bre
+  if(isHe) compCoolrate = compCoolrate                                   &
+                        + ci_HeI   + r_HeII   + ce_HeI                   &
+                        + ci_HeII  + r_HeIII  + ce_HeII  + die
+  if(isH2) compCoolrate = compCoolrate                                   &
+                        + cr_H2HI  + cr_H2H2
 
-  dCooldT       = ci_HI_prime   + r_HII_prime   + ce_HI_prime            &
-                + ci_HeI_prime  + r_HeII_prime  + ce_HeI_prime           &
-                + ci_HeII_prime + r_HeIII_prime + ce_HeII_prime          &
-                + bre_prime     + com_prime     + die_prime
-
+  dCooldT= ci_HI_prime + r_HII_prime + ce_HI_prime + com_prime + bre_prime
+  if(isHe) dCooldT = dCooldT                                             &
+                   + ci_HeI_prime  + r_HeII_prime  + ce_HeI_prime        &
+                   + ci_HeII_prime + r_HeIII_prime + ce_HeII_prime       &
+                   + die_prime
+  if(isH2) dCooldT = dCooldT                                             &
+                   + cr_H2HI_prime + cr_H2H2_prime
 
 END FUNCTION compCoolrate
 
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
+
+! Returns creation rate of H2 on dust [cm^3 s-1] (Hollenback & McKee 1979,
+! Draine and Bertoldi 1996) plus gas phase rate for low Z on H- assuming 
+! equilibrium abundances for H, as explained in the Appendix of McKee and
+! Krumholz (2012).
+! T           => Temperature [K]
+! Z           => Metallicity in Solar units
+! Can't easily tabulate this because of metallicity dependence
+!-------------------------------------------------------------------------
+  implicit none
+  real(dp),intent(in)::T,Z
+  real(dp)::comp_Alpha_H2,T2
+!-------------------------------------------------------------------------
+  T2=T/1d2
+  comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5) &
+                / (1.0+0.4*T2**0.5+0.2*T2+0.08*T2**2)                    &
+                + 8.0d-19*((T/1000.0)**0.88)      ! Zero metallicity limit
+  ! Zero above 2000 K:
+  comp_Alpha_H2 = comp_Alpha_H2 * exp(-T/2d3)
+END FUNCTION comp_Alpha_H2
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ELEMENTAL FUNCTION gamma_hi(T,J)
+  !-------------------------------------------------------------------------
+  implicit none
+  real(dp),intent(in)::T,J
+  real(dp)::gamma_hi, T3, jconsts
+  !-------------------------------------------------------------------------
+  T3 = T/1.d3
+  jconsts=0.33+0.9*exp(-1.0d0*((J-3.5d0)/0.9d0)**2)
+  gamma_hi = &
+       jconsts*(1.0d-11*sqrt(T3)/(1.0d0+60.0d0*T3**(-4)) + 1.0d-12*T3)
+
+END FUNCTION gamma_hi
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+ELEMENTAL FUNCTION gamma_h2(T,J)
+  !-------------------------------------------------------------------------
+  implicit none
+  real(dp),intent(in)::T,J
+  real(dp)::gamma_h2, T3, jconsts
+  !----------------------------------------------------------
+  T3 = T/1.d3
+  jconsts=(0.276*J**2)*exp(-1.0d0*(J/3.18d0)**1.7)
+  gamma_h2 = jconsts*(3.3d-12 +6.6d-12*T3)
+
+END FUNCTION gamma_h2
 
 END MODULE coolrates_module
