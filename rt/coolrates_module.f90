@@ -625,9 +625,10 @@ END FUNCTION compCoolrate
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
 
-! Returns creation rate of H2 on dust [cm^3 s-1] (Draine and Bertoldi 1996)
-! plus gas phase rate for low Z on H- assuming equilibrium abundances for H-
-! as explained in the Appendix of McKee and Krumholz (2012)
+! Returns creation rate of H2 on dust [cm^3 s-1] (Hollenback & McKee 1979,
+! Draine and Bertoldi 1996) plus gas phase rate for low Z on H- assuming 
+! equilibrium abundances for H, as explained in the Appendix of McKee and
+! Krumholz (2012).
 ! T           => Temperature [K]
 ! Z           => Metallicity in Solar units
 ! Can't easily tabulate this because of metallicity dependence
