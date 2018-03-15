@@ -442,8 +442,10 @@ program amr2map
               select case (type)
               case (-1)
                  map = icpu
+                 metmax=max(metmax,dble(icpu))
               case (0)
                  map = ilevel
+                 metmax=max(metmax,dble(ilevel))
               case (12) !! This is for H2 using HI and HII (ramses_rt patch mol)
                  if(action==0)then
                     map = (1.0-var(:,ind,8)-var(:,ind,9))*var(:,ind,1)
@@ -476,8 +478,10 @@ program amr2map
                          & ix<=grid(ilevel)%imax.and.&
                          & iy<=grid(ilevel)%jmax)then
                        if(action==2)then
-                          grid(ilevel)%map(ix,iy)=max(grid(ilevel)%map(ix,iy),map(i))
-                          grid(ilevel)%rho(ix,iy)=max(grid(ilevel)%rho(ix,iy),rho(i))
+                          if(weight>0.0d0)then
+                             grid(ilevel)%map(ix,iy)=max(grid(ilevel)%map(ix,iy),map(i))
+                             grid(ilevel)%rho(ix,iy)=max(grid(ilevel)%rho(ix,iy),rho(i))
+                          endif
                        else
                           grid(ilevel)%map(ix,iy)=grid(ilevel)%map(ix,iy)+map(i)*dxline*weight/(zzmax-zzmin)
                           grid(ilevel)%rho(ix,iy)=grid(ilevel)%rho(ix,iy)+rho(i)*dxline*weight/(zzmax-zzmin)
@@ -501,7 +505,7 @@ program amr2map
   end do
   ! End loop over cpu
 
-  if(type==0.OR.type>4)then
+  if(type==0.OR.type==1.OR.type>4)then
      write(*,*)'max val=',metmax
   endif
 
@@ -521,15 +525,11 @@ program amr2map
            i=int(xmin*ndom)+1
            j=int(ymin*ndom)+1
            if(action==2) then
-              grid(lmax)%map(ix,iy)=max(grid(lmax)%map(ix,iy), &
-                   & grid(ilevel)%map(i,j))
-              grid(lmax)%rho(ix,iy)=max(grid(lmax)%rho(ix,iy), &
-                   & grid(ilevel)%rho(i,j))
+              grid(lmax)%map(ix,iy)=max(grid(lmax)%map(ix,iy),grid(ilevel)%map(i,j))
+              grid(lmax)%rho(ix,iy)=max(grid(lmax)%rho(ix,iy),grid(ilevel)%rho(i,j))
            else
-              grid(lmax)%map(ix,iy)=grid(lmax)%map(ix,iy) + &
-                   & grid(ilevel)%map(i,j)
-              grid(lmax)%rho(ix,iy)=grid(lmax)%rho(ix,iy) + &
-                   & grid(ilevel)%rho(i,j)
+              grid(lmax)%map(ix,iy)=grid(lmax)%map(ix,iy) + grid(ilevel)%map(i,j)
+              grid(lmax)%rho(ix,iy)=grid(lmax)%rho(ix,iy) + grid(ilevel)%rho(i,j)
            endif
         end do
      end do
