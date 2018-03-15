@@ -34,7 +34,6 @@ hgal=`echo $rgal|awk '{print $1}'`
 
 dir=$2
 
-
 imsize=$r200
 xmi=`echo $xc $imsize|awk '{print $1-$2}'`
 xma=`echo $xc $imsize|awk '{print $1+$2}'`
@@ -43,8 +42,9 @@ yma=`echo $yc $imsize|awk '{print $1+$2}'`
 zmi=`echo $zc $imsize|awk '{print $1-$2}'`
 zma=`echo $zc $imsize|awk '{print $1+$2}'`
 
-part2map -inp output_$count -out dark_${count}_vir_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -dir ${dir}
-amr2map -inp output_$count -typ 1 -out dens_${count}_vir_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir}
+part2map -inp output_$count -out dark_${count}_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -dir ${dir}
+amr2map -inp output_$count -typ 1 -out dens_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir}
+amr2map -inp output_$count -typ 0 -out level_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir} -act 2
 
 #amr2map -inp output_$count -typ 5 -out temp_${count}_vir_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir}
 #amr2map -inp output_$count -typ 6 -out met_${count}_vir_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir}
