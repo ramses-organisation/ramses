@@ -515,8 +515,8 @@ subroutine star_formation(ilevel)
            mp(ind_part(i))=n*mstar      ! Mass
            levelp(ind_part(i))=ilevel   ! Level
            idp(ind_part(i))=index_star  ! Star identity
-           typep(ind_part(i))%family=FAM_STAR                                     
-           typep(ind_part(i))%tag=0 
+           typep(ind_part(i))%family=FAM_STAR
+           typep(ind_part(i))%tag=0
            xp(ind_part(i),1)=x
            xp(ind_part(i),2)=y
            xp(ind_part(i),3)=z
