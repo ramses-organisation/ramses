@@ -20,8 +20,10 @@ redshift=`echo $aexp|awk '{OFMT="%.2f"; print 1/$1-1}'`
 echo 'z='$redshift
 unit_l=`grep unit_l output_$count/info_* | cut -d = -f 2`
 echo 'unit_l='$unit_l
-boxlen=`echo $unit_l|awk '{OFMT="%.7e"; print $1/3.08e21}'`
-echo 'boxlen='$boxlen
+boxlen1=`grep boxlen output_$count/info_* | cut -d = -f 2`
+echo 'boxlen='$boxlen1
+boxlen=`echo $boxlen1 $unit_l|awk '{OFMT="%.7e"; print $1*$2/3.08e21}'`
+echo 'boxsize='$boxlen
 lmax=`grep levelmax output_$count/info_* | cut -d = -f 2`
 echo 'levelmax='$lmax
 

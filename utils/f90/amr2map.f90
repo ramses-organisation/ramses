@@ -453,6 +453,13 @@ program amr2map
                     map = 1.0-var(:,ind,8)-var(:,ind,9)
                  endif
                  metmax=max(metmax,maxval(1.0-var(:,ind,8)-var(:,ind,9)))
+              case (5) !! This is for temperature
+                 if(action==0)then
+                    map = var(:,ind,5)
+                 else
+                    map = var(:,ind,5)/var(:,ind,1)
+                 endif
+                 metmax=max(metmax,maxval(var(:,ind,type)))
               case default ! Hydro variable
                  if(action==0)then
                     map = var(:,ind,type)*var(:,ind,1)
