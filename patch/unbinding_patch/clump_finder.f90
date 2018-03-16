@@ -1941,13 +1941,14 @@ end subroutine tsc_only
 !###########################################################
 subroutine unbinding()
 
-  use amr_commons  !MPI stuff
-  use pm_commons
-  use clfind_commons !unbinding stuff
+  use amr_commons    ! MPI stuff
+  use pm_commons, only: npart, npartmax, levelp
+  use clfind_commons ! unbinding stuff
 
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
+  integer :: info
 #endif
 
   !------------------------------------------------------------
@@ -1958,7 +1959,7 @@ subroutine unbinding()
   ! clump's parents.
   !------------------------------------------------------------
 
-  integer           :: ipeak, info, ilevel, ipart, i
+  integer           :: ipeak, ilevel, ipart, i
   integer           :: loop_counter=0
   integer, dimension(1:npart) :: clump_ids
   character(LEN=80)     :: fileloc
@@ -1967,40 +1968,41 @@ subroutine unbinding()
 
 
 
+
+  !========================
+  ! Initial set-up
+  !========================
+
   !Logging/Announcing stuff
   if(myid==1) write(*,*) "Started unbinding."
 
 
-  !------------------------
-  ! Initial set-up
-  !------------------------
-
   !update boundary relevance
   call build_peak_communicator
   call boundary_peak_dp(relevance)
-  !call boundary_peak_int(new_peak) !already done in clump_finder, doesn't 
-                    !need an update
+  !call boundary_peak_int(new_peak) ! already done in clump_finder, doesn't 
+                                    ! need an update
   call boundary_peak_int(lev_peak)
 
   
-  ! set up constants/
-  GravConst=1d0   ! Gravitational constant
-  if(cosmo)GravConst=3d0/8d0/3.1415926*omega_m*aexp
+  ! set up constants and counters
+  GravConst=1d0      ! Gravitational constant
+  if(cosmo) GravConst=3d0/8d0/3.1415926*omega_m*aexp
 
-  periodical=(nx==1) !true if periodic
-  nunbound=0     !count unbound particles
-  candidates=0   !count unbinding candidates: Particles of child clumps
-           !that will be tested. If a particle is passed on to the
-           !parent clump, it will be counted twice.
+  periodical=(nx==1) ! true if periodic
+  nunbound=0         ! count unbound particles
+  candidates=0       ! count unbinding candidates: Particles of child clumps
+                     ! that will be tested. If a particle is passed on to the
+                     ! parent clump, it will be counted twice.
 
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 
 
 
-  !-------------------
+  !===================
   ! Gather particles 
-  !-------------------
+  !===================
 
   !Get particles in substructrue, create linked lists
   call get_clumpparticles()
@@ -2011,13 +2013,19 @@ subroutine unbinding()
 
 
 
-  !------------------
+  !==================
   ! Unbinding loop
-  !------------------
+  !==================
 
   ! go level by level
+  ! make sure it is done at least once
+  mergelevel_max = max(mergelevel_max, 1)
+
   do ilevel=0, mergelevel_max
-    !Start iteration loop 
+
+    !---------------------------------
+    ! Preparation for iteration loop 
+    !---------------------------------
 
     is_final_round=.true.
     if (iter_properties) is_final_round=.false.
@@ -2025,22 +2033,29 @@ subroutine unbinding()
     loop_again=.true.
     loop_counter=0
 
-    !reset values
-    to_iter = .true.
-    hasatleastoneptcl=1
+    ! reset values
+    to_iter = lev_peak==ilevel
+    hasatleastoneptcl=1 ! set array value to 1
 
+
+
+    !-------------------------
+    ! iteration per level
+    !-------------------------
 
     do while(loop_again)
-      loop_again = .false.  !set boolean whether to continue to false as default;
-                  !will get reset if conditions are met
+      loop_again = .false.  ! set boolean whether to continue to false as default;
+                            ! will get reset if conditions are met
 
       loop_counter=loop_counter+1
       niterunbound=0
 
-      !get particle based clump properties :
-      !Center of Mass, bulk velocity, particle furthest away from CoM
+      !-------------------------------------------------
+      ! get particle based clump properties :
+      ! bulk velocity, particle furthest away from CoM
+      !-------------------------------------------------
       is_first = (loop_counter==1)
-      call get_clump_properties_pb(ilevel,is_first)
+      call get_clump_properties_pb(is_first)
 
       if (loop_counter==repeat_max) loop_again=.false.
 
@@ -2051,38 +2066,58 @@ subroutine unbinding()
       loop_again=loop_again_global
 #endif
 
+      !-------------------------------
       ! get cumulative mass profiles
+      !-------------------------------
       call get_cmp(ilevel)
 
-      ! get closest border to the center of mass
-      if (saddle_pot) call get_closest_border(ilevel)
 
-      !UNBINDING LOOP
+      !-----------------------------------------
+      ! get closest border to the peak position
+      !-----------------------------------------
+      if (saddle_pot) call get_closest_border()
+
+
+      !---------------
+      ! Unbinding 
+      !---------------
       if (.not.loop_again) is_final_round=.true.
       do ipeak=1, hfree-1
+        ! don't apply to_iter here!
+        ! needs to be done in final round even if to_iter = .false.
         if (cmp_distances(ipeak,nmassbins)>0.0 .and. lev_peak(ipeak)==ilevel) then 
           ! use last cmp_distances as criterion because 
           ! that value is communicated across processing units
-          call particle_unbinding(ipeak,is_final_round)
+          call particle_unbinding(ipeak, is_final_round)
         end if
       end do
 
+
+
+      !------------------------
+      ! prepare for next round
+      !------------------------
+
       if (loop_again) then
-        !communicate whether peaks have remaining contributing particles
+        ! communicate whether peaks have remaining contributing particles
         call build_peak_communicator()
         call virtual_peak_int(hasatleastoneptcl,'max')
         call boundary_peak_int(hasatleastoneptcl)
+
         do ipeak=1,hfree-1
+
           !if peak has no contributing particles anymore
-          if (hasatleastoneptcl(ipeak)==0) to_iter(ipeak)=.false. !dont loop anymore over this peak
+          if (hasatleastoneptcl(ipeak)==0) then
+            to_iter(ipeak)=.false. !dont loop anymore over this peak
+          end if
         end do
       end if
 
 
+      !---------------------
+      ! Talk to me.
+      !---------------------
       if (clinfo .and. iter_properties) then 
-        !---------------------
-        ! Talk to me.
-        !---------------------
 
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(niterunbound, niterunbound_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
@@ -2108,7 +2143,9 @@ subroutine unbinding()
 
 
 
-
+  !================================
+  ! Talk to me when unbinding done
+  !================================
 
 
   if (clinfo) then
@@ -2126,9 +2163,9 @@ subroutine unbinding()
    
 
 
-  !-----------------
+  !=================
   ! Write output
-  !-----------------
+  !=================
 
   if(unbinding_formatted_output) call unbinding_write_formatted_output()
   
@@ -2138,6 +2175,7 @@ subroutine unbinding()
 
   open(unit=666,file=fileloc,form='unformatted')
   
+
   ipart=0
   do i=1,npartmax
     if(levelp(i)>0)then
@@ -2149,15 +2187,19 @@ subroutine unbinding()
   close(666)
 
 
-  !--------------------
+
+  !====================
+  ! Say good bye.
+  !====================
+  if(verbose.or.myid==1) write(*,*) "Finished unbinding."
+
+
+
+  !====================
   ! Deallocate arrays
-  !--------------------
+  !====================
   call deallocate_unbinding_arrays()
 
-  !--------------------
-  ! Say good bye.
-  !--------------------
-  if(verbose.or.myid==1) write(*,*) "Finished unbinding."
 
 end subroutine unbinding
 !######################################
@@ -2174,7 +2216,7 @@ subroutine get_clumpparticles()
 
   use amr_commons
   use clfind_commons    !unbinding stuff is all in here
-  use pm_commons !using mp
+  use pm_commons, only: numbp, headp, nextp, xp, mp
   use amr_parameters
   use hydro_commons !using mass_sph
   implicit none
@@ -2240,22 +2282,22 @@ subroutine get_clumpparticles()
       if (new_peak(local_peak_id)==global_peak_id) then
       
         !------------------
-        !Found a halo cell
+        ! Found a halo cell
         !------------------
 
         ! if peak relevant:
         if(halo_mass(local_peak_id) > mass_threshold*particle_mass) then
         
-          ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
+          ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1    ! get cell position
           grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
-          prtcls_in_grid = numbp(grid)          ! get number of particles in grid
-          this_part=headp(grid)             ! get index of first particle
+          prtcls_in_grid = numbp(grid)                    ! get number of particles in grid
+          this_part=headp(grid)                           ! get index of first particle
         
           ! If it is a halo: only assign particles the ID
           ! loop over particles in grid
           do ipart = 1, prtcls_in_grid
       
-            !check cell index of particle so you loop only once over each
+            ! check cell index of particle so you loop only once over each
             i=0
             j=0
             k=0
@@ -2265,9 +2307,9 @@ subroutine get_clumpparticles()
         
             part_cell_ind=i+2*j+4*k+1
             
-            !If index is correct, assign clump id to particle
+            ! If index is correct, assign clump id to particle
             if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
-            !go to next particle in this grid
+            ! go to next particle in this grid
              this_part = nextp(this_part)
           end do
         end if
@@ -2275,22 +2317,22 @@ subroutine get_clumpparticles()
       else != if not halo ID
 
         !---------------------
-        !Found a subhalo cell
+        ! Found a subhalo cell
         !---------------------
 
         if (relevance(local_peak_id) > relevance_threshold) then
           ! If clump isn't also halo: assign ID to particles,
           ! create linked particle list
           
-          ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
+          ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1    ! get cell position
           grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
-          prtcls_in_grid = numbp(grid)          ! get number of particles in grid
-          this_part=headp(grid)             ! get index of first particle
+          prtcls_in_grid = numbp(grid)                    ! get number of particles in grid
+          this_part=headp(grid)                           ! get index of first particle
 
            
-          !loop over particles in grid
+          ! loop over particles in grid
             do ipart=1, prtcls_in_grid
-              !check cell index of particle so you loop only once over each
+              ! check cell index of particle so you loop only once over each
               i=0
               j=0
               k=0
@@ -2302,26 +2344,26 @@ subroutine get_clumpparticles()
       
               ! If index is correct, assign clump id to particle
               if (part_cell_ind==ind) then
-                !assign peak ID
+                ! assign peak ID
                 clmpidp(this_part)=global_peak_id
-                !add particle to linked list of clumpparticles 
-                !check if already particles are assigned
+                ! add particle to linked list of clumpparticles 
+                ! check if already particles are assigned
                 if (nclmppart(local_peak_id)>0) then
-                  !append to the last particle of the list
+                  ! append to the last particle of the list
                   clmppart_next(clmppart_last(local_peak_id))=this_part
                 else
-                  !assign particle as first particle
-                  !for this peak of linked list 
+                  ! assign particle as first particle
+                  ! for this peak of linked list 
                   clmppart_first(local_peak_id)=this_part
                 end if
-                !update last particle for this clump
+                ! update last particle for this clump
                 nclmppart(local_peak_id)=nclmppart(local_peak_id)+1
                 clmppart_last(local_peak_id)=this_part
               end if    
-              !go to next particle in this grid
+              ! go to next particle in this grid
               this_part=nextp(this_part)
             end do
-        end if !if clump is relevant
+        end if   !if clump is relevant
       end if     !if clump or halo
     end if       !global peak /=0
   end do         !loop over test cells
@@ -2363,16 +2405,13 @@ end subroutine get_clumpparticles
 !########################################
 !########################################
 !########################################
-subroutine get_clump_properties_pb(ilevel,first)
+subroutine get_clump_properties_pb(first)
   use amr_commons
-  use pm_commons
+  use pm_commons, only: mp, xp, vp
   use clfind_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  logical, intent(in) :: first  !if it is the first time calculating
-  integer, intent(in) :: ilevel !clump level currently on
+
+  logical, intent(in) :: first  ! if it is the first time calculating
    
   !--------------------------------------------------------------------------
   ! This subroutine computes the particle-based properties of the clumps:
@@ -2381,16 +2420,18 @@ subroutine get_clump_properties_pb(ilevel,first)
   ! all peak IDs. If not, it will go level by level.
   !--------------------------------------------------------------------------
 
-  !particle furthest away
+  ! particle furthest away
   real(dp) :: distance, biggest
 
   ! iterators
-  integer :: ipeak, i, ipart
+  integer :: ipeak, i, ipart, parent_local_id
   integer :: thispart
+
   real(dp) :: vsq
   real(dp),dimension(1:3) :: period
-  real(dp),dimension(1:npeaks_max) :: clmp_vel_pb_old
+  real(dp),dimension(1:npeaks_max) :: clmp_vel_sq_pb_old
   logical :: check
+  
 
   if (verbose) write(*,*)"Entered get_clump_properties (particle based)"
 
@@ -2400,11 +2441,9 @@ subroutine get_clump_properties_pb(ilevel,first)
   !------------------------------------------------------------
 
   do ipeak=1, hfree-1
-    check = .not. first
-    check = check .and. lev_peak(ipeak) == ilevel
-    check = check .and. to_iter(ipeak)
+    check = (.not. first) .and. to_iter(ipeak)
     if (check) then
-      clmp_vel_pb_old(ipeak)=clmp_vel_pb(ipeak,1)**2+clmp_vel_pb(ipeak,2)**2+clmp_vel_pb(ipeak,3)**2
+      clmp_vel_sq_pb_old(ipeak)=clmp_vel_pb(ipeak,1)**2+clmp_vel_pb(ipeak,2)**2+clmp_vel_pb(ipeak,3)**2
       do i=1,3
         oldcom(ipeak,i)=clmp_com_pb(ipeak,i)
         oldvel(ipeak,i)=clmp_vel_pb(ipeak,i)
@@ -2414,9 +2453,9 @@ subroutine get_clump_properties_pb(ilevel,first)
     end if
 
     if (iter_properties .and. ipeak>npeaks) then  
-      !for communication: set virtual peak values=0
-      !so they won't contribute in the communication sum
-      !reset values
+      ! for communication: set virtual peak values=0
+      ! so they won't contribute in the communication sum
+      ! reset values
       do i=1,3
         clmp_vel_pb(ipeak,i)=0.0
         clmp_com_pb(ipeak,i)=0.0
@@ -2430,10 +2469,11 @@ subroutine get_clump_properties_pb(ilevel,first)
   ! GET CENTER OF MASS, CENTER OF MOMENTUM FRAME VELOCITY
   !------------------------------------------------------
 
-  do ipeak=1, hfree-1 !loop over all peaks
-    if (to_iter(ipeak).and.lev_peak(ipeak)==ilevel) then !if peak has particles and needs to be iterated over
+  do ipeak=1, hfree-1 ! loop over all peaks
 
-      !reset values
+    if (to_iter(ipeak)) then ! if peak has particles and needs to be iterated over
+
+      ! reset values
       do i=1,3
         clmp_vel_pb(ipeak,i)=0.0
         clmp_com_pb(ipeak,i)=0.0
@@ -2443,13 +2483,13 @@ subroutine get_clump_properties_pb(ilevel,first)
 
 
       if (hasatleastoneptcl(ipeak)>0 .and. nclmppart(ipeak)>0) then 
-        !if there is work to do on this processing unit for this peak
+        ! if there is work to do on this processing unit for this peak
 
         thispart=clmppart_first(ipeak)
         
-        do ipart=1, nclmppart(ipeak)       !while there is a particle linked list
-          if (contributes(thispart)) then    !if the particle should be considered
-            if (periodical) then !determine periodic correction
+        do ipart=1, nclmppart(ipeak)       ! while there is a particle linked list
+          if (contributes(thispart)) then  ! if the particle should be considered
+            if (periodical) then           ! determine periodic correction
               period=0.d0
               do i=1, 3
                 if (xp(thispart,i)-peak_pos(ipeak,i) > 0.5*boxlen)    period(i)=(-1.0)*boxlen
@@ -2463,10 +2503,10 @@ subroutine get_clump_properties_pb(ilevel,first)
               clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
             end do
           else
-            contributes(thispart)=.true. !reset value
+            contributes(thispart)=.true. ! reset value
           end if
-          thispart=clmppart_next(thispart) !go to next particle in linked list
-        end do ! loop over particles
+          thispart=clmppart_next(thispart) ! go to next particle in linked list
+        end do   ! loop over particles
       end if     ! there is work for this peak on this processor
     end if       ! peak needs to be looked at
   end do         ! loop over peaks
@@ -2478,39 +2518,38 @@ subroutine get_clump_properties_pb(ilevel,first)
   call build_peak_communicator
   do i=1,3
     call virtual_peak_dp(clmp_com_pb(1,i),'sum')  !collect
-    call boundary_peak_dp(clmp_com_pb(1,i))     !scatter
+    call boundary_peak_dp(clmp_com_pb(1,i))       !scatter
     call virtual_peak_dp(clmp_vel_pb(1,i),'sum')  !collect
-    call boundary_peak_dp(clmp_vel_pb(1,i))     !scatter
+    call boundary_peak_dp(clmp_vel_pb(1,i))       !scatter
   end do
-  call virtual_peak_dp(clmp_mass_pb,'sum')      !collect
-  call boundary_peak_dp(clmp_mass_pb)         !scatter
+  call virtual_peak_dp(clmp_mass_pb,'sum')        !collect
+  call boundary_peak_dp(clmp_mass_pb)             !scatter
 
 
   do ipeak=1, hfree-1
 
     check = to_iter(ipeak)
-    check = check .and. lev_peak(ipeak)==ilevel
     check = check .and. clmp_mass_pb(ipeak)>0
 
     if (check) then
-      !calculate actual CoM and center of momentum frame velocity
+      ! calculate actual CoM and center of momentum frame velocity
       do i=1,3
         clmp_com_pb(ipeak,i)=clmp_com_pb(ipeak,i)/clmp_mass_pb(ipeak)
         clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)/clmp_mass_pb(ipeak)
       end do
 
       !------------------------------------
-      !FIND PARTICLE FURTHEST AWAY FROM CoM
+      ! FIND PARTICLE FURTHEST AWAY FROM CoM
       !------------------------------------
       ! The maximal distance of a particle to the CoM is saved in the last
       ! cmp_distances array for every peak.
       if(nclmppart(ipeak)>0) then
         biggest=0.0
         thispart=clmppart_first(ipeak)
-        do ipart=1, nclmppart(ipeak) !while there is a particle linked list
+        do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
 
           period=0.d0
-          
+
           if (periodical) then
             do i=1, 3
               if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
@@ -2528,12 +2567,12 @@ subroutine get_clump_properties_pb(ilevel,first)
 
         end do
         if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
-      end if !to iterate
+      end if ! to iterate
     end if
-  end do ! over all peaks
+  end do     ! over all peaks
 
   !-------------------------------------------------
-  !communicate distance of particle furthest away
+  ! communicate distance of particle furthest away
   !-------------------------------------------------
   call build_peak_communicator
   call virtual_peak_dp(cmp_distances(1,nmassbins), 'max')
@@ -2546,21 +2585,23 @@ subroutine get_clump_properties_pb(ilevel,first)
   ! Check whether bulk velocity converged
   !-------------------------------------------------
 
-  if (iter_properties) then !if clump properties will be determined iteratively
+  if (iter_properties) then ! if clump properties will be determined iteratively
     do ipeak=1, hfree-1
 
+      call get_local_peak_id(new_peak(ipeak),parent_local_id )
+      ! is a halo-namegiver
       check = to_iter(ipeak)
-      check = check .and. lev_peak(ipeak)==ilevel
+      check = check .and. ipeak /= parent_local_id 
       check = check .and. cmp_distances(ipeak,nmassbins)>0.0
 
       if (check) then
         vsq=clmp_vel_pb(ipeak,1)**2+clmp_vel_pb(ipeak,2)**2+clmp_vel_pb(ipeak,3)**2
 
-        if ( abs( sqrt(clmp_vel_pb_old(ipeak)/vsq) - 1.0) < conv_limit ) then
+        if ( abs( sqrt(clmp_vel_sq_pb_old(ipeak)/vsq) - 1.0) < conv_limit ) then
           to_iter(ipeak) = .false. ! consider bulk velocity as converged
           !write(*,'(A8,I3,A15,I8,A6,E15.6E2,A5,E15.6E2,A7,E15.6E2,A9,E15.6E2)') &
           !& "#####ID", myid, "clump CONVERGED", ipeak+ipeak_start(myid), "old:", &
-          !& clmp_vel_pb_old(ipeak), "new:", vsq, "ratio",  abs( sqrt(clmp_vel_pb_old(ipeak)/vsq) - 1.0),&
+          !& clmp_vel_sq_pb_old(ipeak), "new:", vsq, "ratio",  abs( sqrt(clmp_vel_sq_pb_old(ipeak)/vsq) - 1.0),&
           !& "v_bulk=", sqrt(vsq)
         else
           loop_again=.true. !repeat
@@ -2580,7 +2621,7 @@ subroutine get_cmp(ilevel)
   use pm_commons
   use clfind_commons
   implicit none
-  integer, intent(in) :: ilevel 
+  integer, intent(in) :: ilevel ! needed for optional output
 
   !----------------------------
   !Get cumulative mass profiles
@@ -2623,7 +2664,6 @@ subroutine get_cmp(ilevel)
 
     !peak must have need to be reiterated
     check=to_iter(ipeak)
-    check=check.and.lev_peak(ipeak)==ilevel        !peak must have correct level
     check=check.and.nclmppart(ipeak)>0           !peak must have particles on this processor      
 
     !reset values
@@ -2713,11 +2753,10 @@ end subroutine get_cmp
 !########################################
 !########################################
 !########################################
-subroutine get_closest_border(ilevel)
+subroutine get_closest_border()
   use amr_commons
   use clfind_commons
   implicit none
-  integer, intent(in) :: ilevel
   !---------------------------------------------------------------------------
   ! Find closest border to centre of mass. Modified subroutine saddlepoint_search
   !---------------------------------------------------------------------------
@@ -2726,17 +2765,16 @@ subroutine get_closest_border(ilevel)
   integer,dimension(1:nvector)  ::  ind_cell
   logical,dimension(1:npeaks_max) ::  check
   
-  character(len=80) :: fileloc
-  character(len=5)  :: nchar, nchar2
+  ! character(len=80) :: fileloc
+  ! character(len=5)  :: nchar, nchar2
 
   if(verbose)write(*,*) "Entered get_closest_border"
 
   check=.false.
   do ipeak=1, hfree-1
 
-    check(ipeak)=cmp_distances(ipeak,nmassbins)>0.0 !peak must have particles somewhere
+    check(ipeak)=cmp_distances(ipeak,nmassbins)>0.0 ! peak must have particles somewhere
     check(ipeak)=check(ipeak).and.to_iter(ipeak)
-    check(ipeak)=check(ipeak).and.lev_peak(ipeak)==ilevel !peak must have correct level
 
     if(check(ipeak))  closest_border(ipeak) = 3.d0*boxlen**2 !reset value
   end do
@@ -2748,8 +2786,8 @@ subroutine get_closest_border(ilevel)
   !-------------------------
   ip=0
   do ipart=1,ntest
-    jlevel=levp(ipart) ! level
-    next_level=0 !level of next particle
+    jlevel=levp(ipart)  ! level
+    next_level=0        ! level of next particle
     if(ipart<ntest)next_level=levp(ipart+1)
 
     
@@ -2758,7 +2796,7 @@ subroutine get_closest_border(ilevel)
 
       call get_local_peak_id(global_peak_id,local_peak_id)
 
-      if(check(local_peak_id)) then !if testcell is of interest:
+      if(check(local_peak_id)) then ! if testcell is of interest:
         ip=ip+1
         ind_cell(ip)=icellp(ipart)
         if(ip==nvector .or. next_level /= jlevel)then
@@ -2784,20 +2822,20 @@ subroutine get_closest_border(ilevel)
   ! Write output
   !------------------------
 
-  if (unbinding_formatted_output) then
-    call title(ifout-1, nchar)
-    call title(myid, nchar2)
-
-    fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_closestborders.txt'//nchar2)
-    open(unit=666,file=fileloc,form='formatted')
-    if (ilevel==mergelevel_max) write(666,'(4A18)') "peak id", "x", "y", "z"
-    do ipart=1,npeaks
-      if(cmp_distances(ipart,nmassbins)>0.and.ilevel==mergelevel_max) then
-        write(666,'(I18,3E18.9E2)') ipart+ipeak_start(myid), closest_border(ipart)
-      end if
-    end do
-    close(666)
-  end if
+  ! if (unbinding_formatted_output) then
+  !   call title(ifout-1, nchar)
+  !   call title(myid, nchar2)
+  !
+  !   fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_closestborders.txt'//nchar2)
+  !   open(unit=666,file=fileloc,form='formatted')
+  !   if (ilevel==mergelevel_max) write(666,'(4A18)') "peak id", "x", "y", "z"
+  !   do ipart=1,npeaks
+  !     if(cmp_distances(ipart,nmassbins)>0.and.ilevel==mergelevel_max) then
+  !       write(666,'(I18,3E18.9E2)') ipart+ipeak_start(myid), closest_border(ipart)
+  !     end if
+  !   end do
+  !   close(666)
+  ! end if
 
 end subroutine get_closest_border
 !#####################################################
@@ -2807,9 +2845,9 @@ end subroutine get_closest_border
 subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   use amr_commons
   implicit none
-  integer,dimension(1:nvector),intent(in) ::ind_cell  !array of indices of cells that I want to check
-  integer,intent(in)            ::np      !number of actual cells in ind_cell
-  integer,intent(in)            ::jlevel    !cell level
+  integer,dimension(1:nvector),intent(in) :: ind_cell  ! array of indices of cells that I want to check
+  integer,intent(in)                      :: np        ! number of actual cells in ind_cell
+  integer,intent(in)                      :: jlevel    ! cell level
 
   !------------------------------------------------------------
   ! Modified subroutine neighborsearch
@@ -2866,9 +2904,9 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   
   ! some preliminary action...
   do j=1,np
-    indv(j)   = (ind_cell(j)-ncoarse-1)/ngridmax+1     ! cell position in grid
+    indv(j)   = (ind_cell(j)-ncoarse-1)/ngridmax+1         ! cell position in grid
     ind_grid(j) = ind_cell(j)-ncoarse-(indv(j)-1)*ngridmax ! grid index
-    clump_nr(j) = flag2(ind_cell(j))             ! save clump number
+    clump_nr(j) = flag2(ind_cell(j))                       ! save clump number
   end do 
 
 
@@ -2878,9 +2916,9 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   if(jlevel>levelmin)  ntestpos=ntestpos+2**ndim
   if(jlevel<nlevelmax) ntestpos=ntestpos+4**ndim
 
-  !================================
+  !===================================
   ! generate neighbors level jlevel-1
-  !================================
+  !===================================
   ntp=0
   if(jlevel>levelmin)then
     ! Generate 2x2x2  neighboring cells at level jlevel-1   
@@ -2897,9 +2935,9 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
     end do
   endif
 
-  !================================
+  !=====================================
   ! generate neighbors at level jlevel
-  !================================
+  !=====================================
   ! Generate 3x3x3 neighboring cells at level jlevel
   do k2=k2min,k2max
     do j2=j2min,j2max
@@ -2913,9 +2951,9 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
     end do
   end do
   
-  !===================================
+  !=====================================
   ! generate neighbors at level jlevel+1
-  !====================================
+  !=====================================
   if(jlevel<nlevelmax)then
     ! Generate 4x4x4 neighboring cells at level jlevel+1
     do k3=k3min,k3max
@@ -2943,7 +2981,7 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   do j=1,np
     ok=.false.
     do idim=1,ndim
-      !get real coordinates of neighbours
+      ! get real coordinates of neighbours
       xtest(1:ntestpos,idim)=(xg(ind_grid(j),idim)+xc(indv(j),idim)-skip_loc(idim))*scale+xrel(1:ntestpos,idim)
       if(jlevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
     end do
@@ -2951,18 +2989,18 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
     call get_cell_index_fast(neigh_cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,jlevel)
    
     do ipos=1,ntestpos
-      !make sure neighbour is a leaf cell
+      ! make sure neighbour is a leaf cell
       if(son(neigh_cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos)) then
         ok(ipos)=.true. 
       end if
     end do
    
-    !get position of the cell whose neighbours will be tested
+    ! get position of the cell whose neighbours will be tested
     do idim=1,ndim
       this_cellpos(idim)=(xg(ind_grid(j),idim)+xc(indv(j),idim)-skip_loc(idim))*scale
     end do
 
-    !check neighbors
+    ! check neighbors
 !if (myid==1) write(*,*) "ID 1 calling bordercheck for peak", clump_nr(j)
     call bordercheck(this_cellpos,clump_nr(j),xtest,neigh_cell_index,ok,ntestpos)
     ! bordercheck (this_cellpos=position of cell to test;
@@ -2986,28 +3024,28 @@ subroutine bordercheck(this_cellpos,clump_nr,xx,neigh_cell_index,ok,np)
   use amr_commons
   use clfind_commons
   implicit none
-  real(dp), dimension(1:np,1:ndim), intent(in)  :: xx     ! positions of neighbour cells
-  real(dp), dimension(1:ndim),    intent(in)  :: this_cellpos   ! position of test cell whose neighbours 
-                                  ! are to be tested
-  integer,  dimension(1:99),      intent(in)  :: neigh_cell_index ! cell index of neighbours
-  integer,              intent(in)  :: clump_nr   ! global peak ID of cell whose neighbours
-                                  ! will be tested
-  logical,  dimension(1:99),      intent(inout) :: ok     ! wether cell should be checkedre
-  integer,              intent(in)  :: np     ! number of neighbours to be looped over
+  real(dp), dimension(1:np,1:ndim), intent(in)  :: xx               ! positions of neighbour cells
+  real(dp), dimension(1:ndim),      intent(in)  :: this_cellpos     ! position of test cell whose neighbours 
+                                                                    ! are to be tested
+  integer,  dimension(1:99),        intent(in)  :: neigh_cell_index ! cell index of neighbours
+  integer,                          intent(in)  :: clump_nr         ! global peak ID of cell whose neighbours
+                                                                    ! will be tested
+  logical,  dimension(1:99),      intent(inout) :: ok               ! wether cell should be checkedre
+  integer,                          intent(in)  :: np               ! number of neighbours to be looped over
 
 
-  real(dp), dimension(1:99,1:ndim)  :: pos    ! position of border for each neighbour
-  integer,  dimension(1:99)     :: neigh_cl !clump number of neighbour,local peak id of neighbour
-  real(dp)              :: newsum
-  integer               :: i,j,ipeak
-  real(dp), dimension(1:3)      :: period
-
+  real(dp), dimension(1:99,1:ndim)  :: pos        ! position of border for each neighbour
+  integer,  dimension(1:99)         :: neigh_cl   ! clump number of neighbour,local peak id of neighbour
+  real(dp)                          :: newsum
+  integer                           :: i,j,ipeak
+  real(dp), dimension(1:3)          :: period
+  
 
   do j=1,np
-    neigh_cl(j)=flag2(neigh_cell_index(j))!index of the clump the neighboring cell is in 
+    neigh_cl(j)=flag2(neigh_cell_index(j)) ! index of the clump the neighboring cell is in 
 
-    ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
-    ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump. If neighbour not in clump, clump is still considered isolated.
+    ok(j)=ok(j).and. clump_nr/=0           ! temporary fix...
+    ok(j)=ok(j).and. neigh_cl(j)/=0        ! neighboring cell is in a clump. If neighbour not in clump, clump is still considered isolated.
     ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump 
   end do
 
@@ -3026,7 +3064,7 @@ subroutine bordercheck(this_cellpos,clump_nr,xx,neigh_cell_index,ok,np)
       end if
 
       do i=1, ndim
-        !the cells will be nighbours, so no need to compute two different periodic corrections
+        ! the cells will be nighbours, so no need to compute two different periodic corrections
         pos(j,i)=(xx(j,i)+period(i)+this_cellpos(i)+period(i))*0.5 
       end do
 
@@ -3044,28 +3082,28 @@ end subroutine bordercheck
 !########################################
 !########################################
 !########################################
-subroutine particle_unbinding(ipeak,final_round)
+subroutine particle_unbinding(ipeak, final_round)
   use amr_commons, only: dp
   use clfind_commons
 
   implicit none
-  integer, intent(in) :: ipeak  !peak to loop over
-  logical, intent(in) :: final_round !if it is the final round => whether to write
+  integer, intent(in) :: ipeak       ! peak to loop over
+  logical, intent(in) :: final_round ! if it is the final round => whether to write
   !--------------------------------------------------------------
-  !This subroutine loops over all particles in the linked list of
-  !peak ipeak and checks if they are bound.
+  ! This subroutine loops over all particles in the linked list of
+  ! peak ipeak and checks if they are bound.
   !--------------------------------------------------------------
 
   integer :: thispart, ipeak_test, ipart
-  real(dp):: phi_border !the potential at the border of the peak patch closest 
-              !to the center of mass
-  real(dp):: dist_border  !distance to the border
+  real(dp):: phi_border   ! the potential at the border of the peak patch closest 
+                          ! to the center of mass
+  real(dp):: dist_border  ! distance to the border
 
 
-  !compute the potential for this peak on the points of the mass bin distances
+  ! compute the potential for this peak on the points of the mass bin distances
   if (nclmppart(ipeak) > 0) call compute_phi(ipeak)
 
-  !compute potential at the closest border from the center of mass
+  ! compute potential at the closest border from the center of mass
   phi_border=0.d0
   if(saddle_pot) then
     dist_border=sqrt(closest_border(ipeak))
@@ -3078,7 +3116,7 @@ subroutine particle_unbinding(ipeak,final_round)
 
   if (final_round) then
     do ipart=1, nclmppart(ipeak)    ! loop over particle LL
-      call get_local_peak_id(clmpidp(thispart),ipeak_test)
+      call get_local_peak_id(clmpidp(thispart), ipeak_test)
       if (ipeak_test==ipeak) then   ! if this particle needs to be checked for unbinding
                                     ! particle may be assigned to child clump
         candidates=candidates+1
@@ -3096,7 +3134,7 @@ subroutine particle_unbinding(ipeak,final_round)
       hasatleastoneptcl(ipeak)=0       ! set to false
       do ipart=1, nclmppart(ipeak)     ! loop over particle LL
         if(unbound(ipeak,thispart,phi_border)) then  
-          !unbound(ipeak,thispart,phi_border) is a logical function. See below.
+          ! unbound(ipeak,thispart,phi_border) is a logical function. See below.
 
           niterunbound=niterunbound+1
           contributes(thispart) = .false.   ! particle doesn't contribute to
@@ -3162,18 +3200,18 @@ end function unbound
 !----------------------
 real(dp) function potential(ipeak,distance)
   !------------------------------------------------------------------
-  !This function interpolates the potential of a particle for given distance
-  !It returns (-1)*phi
+  ! This function interpolates the potential of a particle for given distance
+  ! It returns (-1)*phi (phi is expected to be <= 0 for gravity)
   !------------------------------------------------------------------
 
   integer, intent(in) :: ipeak
-  real(dp),intent(in) :: distance !is computed in function 'unbound', then passed
+  real(dp),intent(in) :: distance  ! is computed in function 'unbound', then passed
 
   integer :: ibin, thisbin
   real(dp) :: a,b
 
   ibin=1
-  !thisbin: the first cmp_distance which is greater than particle distance
+  ! thisbin: the first cmp_distance which is greater than particle distance
   thisbin=1
   do 
     if (distance<=cmp_distances(ipeak,ibin)) then
@@ -3204,14 +3242,14 @@ subroutine compute_phi(ipeak)
   real(dp) :: delta,add
   integer  :: i
 
-  !Writing unformatted output
+  ! Writing unformatted output
   character(len=5)  :: bins
   character(len=5)  :: peak
   !character(len=10) :: peak !in case there are too many (>1E6) peaks
   character(len=80) :: fileloc
   character(len=5)  :: nchar
 
-  !compute part of integral/sum for each bin
+  ! compute part of integral/sum for each bin
   phi_unb(nmassbins)=0.0
   do i=2,nmassbins
     delta=cmp_distances(ipeak,i)-cmp_distances(ipeak,i-1)
@@ -3224,18 +3262,18 @@ subroutine compute_phi(ipeak)
   !does not need to be done for i=nmassbins!
   add=-cmp(ipeak,nmassbins)/cmp_distances(ipeak,nmassbins)*GravConst !-G*M_tot/r_max
   do i=nmassbins-1,0,-1
-    phi_unb(i)=phi_unb(i)+phi_unb(i+1) !stopps at phi_unb(1)
+    phi_unb(i)=phi_unb(i)+phi_unb(i+1) ! stops at phi_unb(1)
     phi_unb(i+1)=phi_unb(i+1)+add
   end do
-  phi_unb(0)=phi_unb(0)+add !bypass division by 0, needed for interpolation.
+  phi_unb(0)=phi_unb(0)+add ! bypass division by 0, needed for interpolation.
 
 
   if (unbinding_formatted_output) then
-  !WARNING:
-  !Crashes if there are more than 10^6 peaks because it creates a file with ****** in the name,
-  !and multiple processes try to write into same file.
-  !This happens because the subroutine title() only goes up to 5 digits.
-  !Instead, switch to commented out part. (Also the other declaration for char peaks)
+  ! WARNING:
+  ! Crashes if there are more than 10^6 peaks because it creates a file with ****** in the name,
+  ! and multiple processes try to write into same file.
+  ! This happens because the subroutine title() only goes up to 5 digits.
+  ! Instead, switch to commented out part. (Also the other declaration for char peaks)
     if (ipeak<=npeaks) then
       !generate filename integers
       call title(ifout-1, nchar)
@@ -3304,7 +3342,7 @@ subroutine allocate_unbinding_arrays()
   phi_unb=0.d0
 
   if (saddle_pot) then
-    allocate(closest_border(1:npeaks_max)) !point of the closest border to CoM
+    allocate(closest_border(1:npeaks_max)) ! point of the closest border to CoM
     closest_border=3.d0*boxlen**2
   end if
 
@@ -3319,7 +3357,7 @@ subroutine allocate_unbinding_arrays()
   end if
 
   allocate(hasatleastoneptcl(1:npeaks_max))
-  hasatleastoneptcl=1 !initiate to yes
+  hasatleastoneptcl=1 ! initiate to yes
 
 
   !----------------------
@@ -3328,19 +3366,19 @@ subroutine allocate_unbinding_arrays()
   allocate(clmpidp(1:npartmax))
   clmpidp=0
 
-  allocate(clmppart_first(1:npeaks_max)) !linked lists containing particles 
+  allocate(clmppart_first(1:npeaks_max)) ! linked lists containing particles 
   clmppart_first=0
 
-  allocate(clmppart_last(1:npeaks_max)) !linked lists containing particles 
+  allocate(clmppart_last(1:npeaks_max))  ! linked lists containing particles 
   clmppart_last=0
 
-  allocate(clmppart_next(1:npartmax)) !linked lists containing particles 
+  allocate(clmppart_next(1:npartmax))    ! linked lists containing particles 
   clmppart_next=0
 
-  allocate(nclmppart(1:npeaks_max)) !linked lists containing particles 
+  allocate(nclmppart(1:npeaks_max))      ! linked lists containing particles 
   nclmppart=0
 
-  allocate(contributes(1:npartmax)) !particle contributes to clump properties or not
+  allocate(contributes(1:npartmax))      ! particle contributes to clump properties or not
   contributes=.true.
 
 
@@ -3404,15 +3442,15 @@ subroutine unbinding_write_formatted_output()
 
 
   ! set which output you want here:
-  particles=.true.  ! all particles: coordinates, velocity, clump ID
-  CoM=.true.      ! for all clumps which are not halo-namegivers:
-            ! clump id, PHEW peak position, particlebased Center
-            ! of Mass, maximal distance of particles to CoM
-  dist=.false.     ! mass bin distances
+  particles=.true.   ! all particles: coordinates, velocity, clump ID
+  CoM=.true.         ! for all clumps which are not halo-namegivers:
+                     ! clump id, PHEW peak position, particlebased Center
+                     ! of Mass, maximal distance of particles to CoM
+  dist=.false.       ! mass bin distances
   mass_prof=.false.  ! mass profiles; binning width is bin distances
 
 
-  !generate filename integers
+  ! generate filename integers
   call title(ifout-1, nchar)
   call title(myid, nchar2)
   
@@ -3433,7 +3471,9 @@ subroutine unbinding_write_formatted_output()
   end if
 
 
-  !CUMULATIVE MASS PROFILES
+  !------------------------------
+  ! CUMULATIVE MASS PROFILES
+  !------------------------------
   if (mass_prof) then
     if (logbins) then
       fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_CMP-log.txt'//nchar2)
@@ -3461,7 +3501,9 @@ subroutine unbinding_write_formatted_output()
 
 
 
-  !MASS PROFILE BIN DISTANCES
+  !------------------------------
+  ! MASS PROFILE BIN DISTANCES
+  !------------------------------
   if (dist) then
     fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_distances.txt'//nchar2)
 
@@ -3560,5 +3602,3 @@ end subroutine unbinding_formatted_particleoutput
 
 ! endif: NDIM == 3
 #endif
-
-
