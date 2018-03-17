@@ -1,0 +1,144 @@
+============================
+====  MERGERTREE PATCH  ====
+============================
+
+
+!!! IMPORTANT NOTE !!!
+This patch introduces two new files, because the file length got unruly.
+To use it, either add "unbinding.o merger_tree.o" to the PMOBJ variable in
+the Makefile, or copy-paste their content into an existing file, e.g.
+clump_finder.f90 or clump_merger.f90.
+Otherwise, you will get a compilation error along the lines of "undefined
+reference to subroutine unbinding"
+!!! IMPORTANT NOTE !!!
+
+
+This patch creates dark matter halo merger trees. Essentially, clumps as 
+identified by the clumpfinder PHEW between two snapshots are linked as 
+progenitors and descendants, if possible. Preferrably clumps between two 
+adjacent snapshots are linked, but if a descendant has no direct progenitor in 
+the adjacent snapshot, the program will try to find progenitors in older
+snapshots.
+
+This patch relies heavily on the unbinding patch (with some slight changes),
+and also introduces some new namelist parameters, which can be set in the 
+CLUMPFIND_PARAMS block:
+
+
+NAME                 DEFAULT VALUE   TYPE        FUNCTION
+
+make_mergertree =    .true.          logical     Turn making mergertree on or 
+                                                 off.
+                                                 make_mergertree = .true. 
+                                                 forces unbind = .true.
+
+nmost_bound =        250             integer     Up to how many particles per 
+                                                 clump to track between two 
+                                                 snapshots.
+
+max_past_snapshots = 0               integer     maximal number of past 
+                                                 snapshots to store. If = 0,
+                                                 all past merged progenitors
+                                                 will be stored.
+                                                                
+
+
+
+
+The merger trees are stored in output_XXXXX/mergertree.txtYYYYY files. The
+syntax is: 
+
+clump:          clump ID in the current output
+progenitor:     the progenitor clump ID in output "prog_outputnr"
+prog_outputnr:  the output number of when the progenitor was an alive clump
+case:           which case it was found (you can safely ignore this).
+
+If a clump has progenitor = 0, it means that no progenitor could be established
+and the clump is treated as newly formed.
+If a clump has a progenitor < 0, it means that this progenitor merged into this
+clump, but is not this clump's main progenitor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+============================
+= PARTICLE UNBINDING PATCH =
+============================
+
+
+The main routine (unbinding) is called in the clump_finder routine
+from the clump_finder.f90 after clump properties are written to file.
+
+The purpose of this patch is to identify unbound particles in clumps
+as identified by the clumpfinder and pass them on to the parent clumps,
+until the halo-namegiver clumps are reached.
+
+
+New namelist parameters for this pach:
+(Can be set in the CLUMPFIND_PARAMS block)
+
+NAME                        DEFAULT VALUE        FUNCTION
+unbind=                     .true.               Turn particle unbinding on or 
+                                                 off
+
+nmassbins=                  50                   Number of bins for the mass 
+                                                 binning of the cumulative
+                                                 mass profile. Any integer >1.
+
+logbins=                    .true.               use logarithmic binning 
+                                                 distances for cumulative mass
+                                                 profiles (and gravitational 
+                                                 potential of clumps).
+                                                 If false, the code  will use 
+                                                 linear binning distances.
+
+saddle_pot=                 .true.               Take neighbouring structures 
+                                                 into account; Cut potentiall
+                                                 off at closest saddle.
+
+unbinding_formatted_output= .false.              Create formatted output for 
+                                                 particles, cumulative mass
+                                                 profiles, binning distances, 
+                                                 particle based clump
+                                                 properties, gravitational 
+                                                 potential of substructure
+                                                 clumps 
+
+iter_properties=            .true.               whether to unbind multiple times 
+                                                 with updated clump properties
+                                                 determined by earlier unbindings
+
+conv_limit =                0.01                 convergence limit. If the 
+                                                 v_clump_old/v_clump_new < conv_limit,
+                                                 stop iterating for this clump. 
+                                                 (only used when iter_properties=.true.)
+
+repeat_max =                100                  maximal number of loops per level
+                                                 for iterative unbinding
+                                                 (in case a clump doesn't converge)
+                                                 (shouldn't happen)
+                                                 (only used when iter_properties=.true.)
+
+
+DIFFERENCES FROM UNBINDING PATCH:
+    - The clump's centre of mass/centre of potential is assumed to be the most densest point,
+      i.e. the peak position. It is not reiterated anymore.
+    - Particle linked lists are now also created for halo-namegiver clumps.
+    - Too small clumps, whose mass based on the sum of its particles' masses is too low, are 
+      now actively dissolved, i.e. their particles passed to their parent clump, or killed 
+      if no parent clump exists.
+    - Some functions within subroutines have been changed to be own subroutines, to be able to
+      be called from merger_tree.f90
+    - most bound particles will have negative clump ID. E.g. the most strongly bound particle
+      of clump 53 will have clump ID -53.
+
+        
