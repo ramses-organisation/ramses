@@ -34,8 +34,6 @@ subroutine compute_clump_properties(xx)
   real(dp)::tot_mass_tot
 #endif
 
-#if NDIM==3
-
   period(1)=(nx==1)
   period(2)=(ny==1)
   period(3)=(nz==1)
@@ -96,7 +94,7 @@ subroutine compute_clump_properties(xx)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
 
         ! gas density
-        if(ivar_clump==0)then
+        if(ivar_clump==0 .or. ivar_clump==-1)then
            d=xx(icellp(ipart))
         else
            if(hydro)then
@@ -215,7 +213,7 @@ subroutine compute_clump_properties(xx)
            end do
 
            ! gas density
-           if(ivar_clump==0)then
+           if(ivar_clump==0 .or. ivar_clump==-1)then
               d=xx(icellp(ipart))
            else
               if(hydro)then
@@ -255,8 +253,6 @@ subroutine compute_clump_properties(xx)
 #endif
 
   end if
-
-#endif
 end subroutine compute_clump_properties
 !################################################################
 !################################################################
@@ -293,7 +289,7 @@ subroutine write_clump_properties(to_file)
 
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
@@ -323,7 +319,10 @@ subroutine write_clump_properties(to_file)
   ! print results in descending order to screen/file
   rel_mass=0.
   n_rel=0
+
   if (to_file .eqv. .true.) then
+     ! first create directories
+     call create_output_dirs(ifout)
      ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -333,7 +332,7 @@ subroutine write_clump_properties(to_file)
         end if
      endif
 #endif
-     call title(ifout-1,nchar)
+     call title(ifout,nchar)
 
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
@@ -346,7 +345,7 @@ subroutine write_clump_properties(to_file)
      open(unit=ilun,file=fileloc,form='formatted')
 
      if(saddle_threshold>0)then
-        call title(ifout-1,nchar)
+        call title(ifout,nchar)
         if(IOGROUPSIZEREP>0)then
            call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
            fileloc=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/halo_'//TRIM(nchar)//'.txt')
@@ -1312,7 +1311,7 @@ subroutine write_clump_map
      endif
 #endif
 
-  call title(ifout-1,nchar)
+  call title(ifout,nchar)
   call title(myid,myidstring)
   if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)

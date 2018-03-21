@@ -2007,6 +2007,8 @@ subroutine unbinding()
   !Get particles in substructrue, create linked lists
   call get_clumpparticles()
 
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  call create_output_dirs(ifout)
   !write output if required. This gives the particle clump assignment as given
   !by PHEW.
   if (unbinding_formatted_output) call unbinding_formatted_particleoutput(.true.) 
@@ -2034,7 +2036,7 @@ subroutine unbinding()
     loop_counter=0
 
     ! reset values
-    to_iter = lev_peak==ilevel
+    to_iter = (lev_peak==ilevel)
     hasatleastoneptcl=1 ! set array value to 1
 
 
@@ -2125,16 +2127,20 @@ subroutine unbinding()
         niterunbound_tot=niterunbound
 #endif
         if (myid==1) then
-          write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, "particles at level", ilevel, "loop", loop_counter
+          write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
+            "particles at level", ilevel, "loop", loop_counter
         end if
       end if
 
 
-      if (.not. loop_again .and. clinfo .and. myid==1 .and. iter_properties .and. loop_counter < repeat_max) then
-        write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, "clump properties converged after ", loop_counter, "iterations."
+      if (.not. loop_again .and. clinfo .and. myid==1 .and. &
+        iter_properties .and. loop_counter < repeat_max) then
+        write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, &
+          "clump properties converged after ", loop_counter, "iterations."
       end if
 
-      if (loop_counter==repeat_max) write(*,'(A7,I5,A20,I5,A35)') "Level ", ilevel, "not converged after ", repeat_max, "iterations. Moving on to next step."
+      if (loop_counter==repeat_max) write(*,'(A7,I5,A20,I5,A35)') "Level ", ilevel, &
+        "not converged after ", repeat_max, "iterations. Moving on to next step."
 
     end do ! loop again for ilevel
 
@@ -2169,7 +2175,7 @@ subroutine unbinding()
 
   if(unbinding_formatted_output) call unbinding_write_formatted_output()
   
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   fileloc=TRIM('output_'//TRIM(nchar)//'/unbinding.out'//TRIM(nchar2))
 
@@ -2823,7 +2829,7 @@ subroutine get_closest_border()
   !------------------------
 
   ! if (unbinding_formatted_output) then
-  !   call title(ifout-1, nchar)
+  !   call title(ifout, nchar)
   !   call title(myid, nchar2)
   !
   !   fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_closestborders.txt'//nchar2)
@@ -3276,7 +3282,7 @@ subroutine compute_phi(ipeak)
   ! Instead, switch to commented out part. (Also the other declaration for char peaks)
     if (ipeak<=npeaks) then
       !generate filename integers
-      call title(ifout-1, nchar)
+      call title(ifout, nchar)
       call title(nmassbins,bins)
       call title(ipeak+ipeak_start(myid),peak)
       !write(peak,'(i10)') ipeak+ipeak_start ! in case of too many peaks
@@ -3451,7 +3457,7 @@ subroutine unbinding_write_formatted_output()
 
 
   ! generate filename integers
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   
   if(particles) call unbinding_formatted_particleoutput(.false.)
@@ -3562,7 +3568,7 @@ subroutine unbinding_formatted_particleoutput(before)
   if (before) then
 
     if (myid==1) then ! create before dir
-      call title(ifout-1,nchar)
+      call title(ifout,nchar)
       cmnd='mkdir -p output_'//TRIM(nchar)//'/before'
       call system(TRIM(cmnd))
     end if
@@ -3575,7 +3581,7 @@ subroutine unbinding_formatted_particleoutput(before)
 
 
   !generate filename
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
 
   if (before) then

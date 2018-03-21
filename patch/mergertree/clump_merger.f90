@@ -319,7 +319,10 @@ subroutine write_clump_properties(to_file)
   ! print results in descending order to screen/file
   rel_mass=0.
   n_rel=0
+
   if (to_file .eqv. .true.) then
+     ! first create directories
+     call create_output_dirs(ifout)
      ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -329,7 +332,7 @@ subroutine write_clump_properties(to_file)
         end if
      endif
 #endif
-     call title(ifout-1,nchar)
+     call title(ifout,nchar)
 
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
@@ -342,7 +345,7 @@ subroutine write_clump_properties(to_file)
      open(unit=ilun,file=fileloc,form='formatted')
 
      if(saddle_threshold>0)then
-        call title(ifout-1,nchar)
+        call title(ifout,nchar)
         if(IOGROUPSIZEREP>0)then
            call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
            fileloc=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/halo_'//TRIM(nchar)//'.txt')
@@ -1308,7 +1311,7 @@ subroutine write_clump_map
      endif
 #endif
 
-  call title(ifout-1,nchar)
+  call title(ifout,nchar)
   call title(myid,myidstring)
   if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
@@ -1371,7 +1374,6 @@ subroutine analyze_peak_memory
   hfree_all(myid)=hfree-npeaks
   sparse_all=0
   sparse_all(myid)=sparse_saddle_dens%used
-
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(npeak_all,npeak_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(coll_all,coll_tot,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)

@@ -286,6 +286,9 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  call create_output_dirs(ifout)
+
   call deallocate_unbinding_arrays(.true.)
 
   if (make_mergertree) then
@@ -304,7 +307,7 @@ subroutine unbinding()
 
   if(unbinding_formatted_output) call write_unbinding_formatted_output(.false.)
   
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   fileloc=TRIM('output_'//TRIM(nchar)//'/unbinding.out'//TRIM(nchar2))
 
@@ -1645,7 +1648,7 @@ subroutine write_unbinding_formatted_output(before)
   if (before) then
 
     if (myid==1) then ! create before dir
-      call title(ifout-1,nchar)
+      call title(ifout,nchar)
       cmnd='mkdir -p output_'//TRIM(nchar)//'/before'
       call system(TRIM(cmnd))
     end if
@@ -1658,7 +1661,7 @@ subroutine write_unbinding_formatted_output(before)
 
 
   !generate filename
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
 
   if (before) then
@@ -1670,7 +1673,7 @@ subroutine write_unbinding_formatted_output(before)
  
 
   open(unit=666, file=fileloc, form='formatted')
-  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp id", "mass", "pid"
+  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp_id", "mass", "pid"
   do i=1, npartmax
     if(levelp(i)>0) then
       write(666, '(6E18.9E2,I18,E18.9E2,I18)') xp(i,1), xp(i,2), xp(i,3), vp(i,1), vp(i,2), vp(i,3), clmpidp(i),mp(i),idp(i)
