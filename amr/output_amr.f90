@@ -56,12 +56,10 @@ subroutine dump_all
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
-#ifndef DEVELOPMENT
         filename=TRIM(filedir)//'makefile.txt'
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
-#endif
         if(cooling .and. .not. neq_chem)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
