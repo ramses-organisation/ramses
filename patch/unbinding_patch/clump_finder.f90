@@ -3468,7 +3468,7 @@ subroutine unbinding_write_formatted_output()
     fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_COM.txt'//nchar2)
   
     open(unit=666, file=fileloc, form='formatted')
-    write(666, '(A10,7A18)') "clmp id", "x", "y ", "z", "vx", "vy", "vz", "max_dist"
+    write(666, '(A10,7A18)') "clmp_id", "x", "y ", "z", "vx", "vy", "vz", "max_dist"
     do ipeak=1, npeaks
       if (clmp_mass_pb(ipeak)>0) then
         write(666,'(I10,7E18.9E2)') ipeak+ipeak_start(myid), clmp_com_pb(ipeak,1), clmp_com_pb(ipeak,2), clmp_com_pb(ipeak,3), clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2),clmp_vel_pb(ipeak,3), cmp_distances(ipeak, nmassbins)
@@ -3594,7 +3594,7 @@ subroutine unbinding_formatted_particleoutput(before)
  
 
   open(unit=666, file=fileloc, form='formatted')
-  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp id", "mass", "pid"
+  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp_id", "mass", "pid"
   do i=1, npartmax
     if(levelp(i)>0) then
       write(666, '(6E18.9E2,I18,E18.9E2,I18)') xp(i,1), xp(i,2), xp(i,3), vp(i,1), vp(i,2), vp(i,3), clmpidp(i),mp(i),idp(i)
