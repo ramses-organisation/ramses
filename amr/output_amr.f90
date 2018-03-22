@@ -33,13 +33,14 @@ subroutine dump_all
 
   if(ndim>1)then
 
-     call create_output_dirs(ifout-1)
      if(IOGROUPSIZEREP>0) then
         filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
      endif
+
+     call create_output_dirs(filedir)
 
      if(myid==1.and.print_when_io) write(*,*)'Start backup header'
      ! Output header: must be called by each process !
@@ -55,10 +56,12 @@ subroutine dump_all
      if(myid==1)then
         filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
         call output_info(filename)
+#ifndef DEVELOPMENT
         filename=TRIM(filedir)//'makefile.txt'
         call output_makefile(filename)
         filename=TRIM(filedir)//'patches.txt'
         call output_patch(filename)
+#endif
         if(cooling .and. .not. neq_chem)then
            filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
            call output_cool(filename)
@@ -655,26 +658,19 @@ end subroutine savegadget
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine create_output_dirs(output_number)
+subroutine create_output_dirs(filedir)
 
     use amr_commons
     implicit none
-    integer, intent(in) :: output_number
+    character(LEN=80), intent(in):: filedir
     integer :: ierr
-    character(LEN=5)::nchar, ncharcpu
-    character(LEN=80)::filedir,filedirini,filecmd
+    character(LEN=5) ::nchar, ncharcpu
+    character(LEN=80)::filedirini,filecmd
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer :: info
 #endif
 
-    call title(output_number, nchar)
-    if(IOGROUPSIZEREP>0) then
-       filedirini='output_'//TRIM(nchar)//'/'
-       filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
-    else
-       filedir='output_'//TRIM(nchar)//'/'
-    endif
 
     filecmd='mkdir -p '//TRIM(filedir)
 

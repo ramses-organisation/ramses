@@ -1962,7 +1962,7 @@ subroutine unbinding()
   integer           :: ipeak, ilevel, ipart, i
   integer           :: loop_counter=0
   integer, dimension(1:npart) :: clump_ids
-  character(LEN=80)     :: fileloc
+  character(LEN=80)     :: fileloc, filedir
   character(LEN=5)      :: nchar,nchar2
   logical           :: loop_again_global, is_final_round, is_first
 
@@ -1998,6 +1998,10 @@ subroutine unbinding()
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  call title(ifout, nchar)
+  filedir = 'output_'//TRIM(nchar)
+  call create_output_dirs(filedir)
 
 
   !===================
@@ -2007,8 +2011,6 @@ subroutine unbinding()
   !Get particles in substructrue, create linked lists
   call get_clumpparticles()
 
-  ! if there are no clumps yet, the output directories haven't been made yet.
-  call create_output_dirs(ifout)
   !write output if required. This gives the particle clump assignment as given
   !by PHEW.
   if (unbinding_formatted_output) call unbinding_formatted_particleoutput(.true.) 
@@ -2175,9 +2177,8 @@ subroutine unbinding()
 
   if(unbinding_formatted_output) call unbinding_write_formatted_output()
   
-  call title(ifout, nchar)
   call title(myid, nchar2)
-  fileloc=TRIM('output_'//TRIM(nchar)//'/unbinding.out'//TRIM(nchar2))
+  fileloc=TRIM(filedir)//'/unbinding.out'//TRIM(nchar2)
 
   open(unit=666,file=fileloc,form='unformatted')
   

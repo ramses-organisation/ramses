@@ -24,7 +24,7 @@ subroutine unbinding()
   integer           :: ipeak, ilevel, ipart, i, parent_local_id
   integer           :: loop_counter=0
   integer, dimension(1:npart) :: clump_ids
-  character(LEN=80)     :: fileloc
+  character(LEN=80)     :: fileloc, filedir
   character(LEN=5)      :: nchar,nchar2
   logical           :: loop_again_global, is_final_round, check
 
@@ -81,13 +81,15 @@ subroutine unbinding()
     endif
   endif
                     
-  
-                     
-                     
+                 
                      
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  call title(ifout, nchar)
+  filedir = 'output_'//TRIM(nchar)
+  call create_output_dirs(filedir)
 
 
   !===================
@@ -122,8 +124,6 @@ subroutine unbinding()
 
     ! reset values
     to_iter = (lev_peak==ilevel)
-
-
     hasatleastoneptcl=1 ! set array value to 1
 
 
@@ -286,9 +286,6 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
-  ! if there are no clumps yet, the output directories haven't been made yet.
-  call create_output_dirs(ifout)
-
   call deallocate_unbinding_arrays(.true.)
 
   if (make_mergertree) then
@@ -307,9 +304,8 @@ subroutine unbinding()
 
   if(unbinding_formatted_output) call write_unbinding_formatted_output(.false.)
   
-  call title(ifout, nchar)
   call title(myid, nchar2)
-  fileloc=TRIM('output_'//TRIM(nchar)//'/unbinding.out'//TRIM(nchar2))
+  fileloc=TRIM(filedir)//'/unbinding.out'//TRIM(nchar2)
 
   open(unit=666,file=fileloc,form='unformatted')
   
