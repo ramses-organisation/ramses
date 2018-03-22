@@ -274,7 +274,7 @@ subroutine write_clump_properties(to_file)
 
   integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,nx_loc
   real(dp)::rel_mass,rel_mass_tot,scale,particle_mass=0.
-  character(LEN=80)::fileloc
+  character(LEN=80)::fileloc,filedir
   character(LEN=5)::nchar,ncharcpu
   real(dp),dimension(1:npeaks)::peakd
   integer,dimension(1:npeaks)::ind_sort
@@ -317,7 +317,12 @@ subroutine write_clump_properties(to_file)
   ! print results in descending order to screen/file
   rel_mass=0.
   n_rel=0
+
   if (to_file .eqv. .true.) then
+     ! first create directories
+     call title(ifout,nchar)
+     filedir='output_'//TRIM(nchar)
+     call create_output_dirs(filedir)
      ! Wait for the token
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
@@ -327,25 +332,24 @@ subroutine write_clump_properties(to_file)
         end if
      endif
 #endif
-     call title(ifout-1,nchar)
 
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/clump_'//TRIM(nchar)//'.txt'
+        fileloc=TRIM(filedir)//'/group_'//TRIM(ncharcpu)//'/clump_'//TRIM(nchar)//'.txt'
      else
-        fileloc=TRIM('output_'//TRIM(nchar)//'/clump_'//TRIM(nchar)//'.txt')
+        fileloc=TRIM(filedir)//'/clump_'//TRIM(nchar)//'.txt'
      endif
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
      open(unit=ilun,file=fileloc,form='formatted')
 
      if(saddle_threshold>0)then
-        call title(ifout-1,nchar)
+        call title(ifout,nchar)
         if(IOGROUPSIZEREP>0)then
            call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-           fileloc=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/halo_'//TRIM(nchar)//'.txt')
+           fileloc=TRIM(filedir)//'/group_'//TRIM(ncharcpu)//'/halo_'//TRIM(nchar)//'.txt'
         else
-           fileloc=TRIM('output_'//TRIM(nchar)//'/halo_'//TRIM(nchar)//'.txt')
+           fileloc=TRIM(filedir)//'/halo_'//TRIM(nchar)//'.txt'
         endif
         call title(myid,nchar)
         fileloc=TRIM(fileloc)//TRIM(nchar)
@@ -1297,7 +1301,7 @@ subroutine write_clump_map
      endif
 #endif
 
-  call title(ifout-1,nchar)
+  call title(ifout,nchar)
   call title(myid,myidstring)
   if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
