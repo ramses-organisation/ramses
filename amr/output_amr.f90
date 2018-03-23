@@ -662,7 +662,6 @@ subroutine create_output_dirs(filedir)
     implicit none
     character(LEN=80), intent(in):: filedir
     integer :: ierr
-    character(LEN=5) ::nchar, ncharcpu
     character(LEN=80)::filedirini,filecmd
 #ifndef WITHOUTMPI
   include 'mpif.h'
