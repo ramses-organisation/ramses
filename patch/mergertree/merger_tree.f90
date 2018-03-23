@@ -3,28 +3,32 @@
 !
 !
 ! Contains:
-! subroutine make_merger_tree
+! subroutine make_merger_tree()
 ! subroutine process_progenitor_data()
 ! subroutine create_prog_desc_links()
 ! subroutine make_trees()
+!   contains subroutine find_main_desc()
+!            subroutine find_main_prog()
+!            subroutine add_new_pmprog()
+!            subroutine find_prog_in_older_snapshots()
 ! subroutine read_progenitor_data()
 ! subroutine write_trees()
 ! subroutine write_progenitor_data()
 ! subroutine get_local_prog_id()
 ! subroutine fill_matrix()
-!
-! subroutine deallocate_mergertree
+! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
-! subroutine dissolve_small_clumps
+! subroutine dissolve_small_clumps()
+!  countains subroutine get_exclusive_clump_mass()
 !--------------------------------------------------------
 
 
 
 #if NDIM == 3
 
-!===================================================
+!================================
 subroutine make_merger_tree()
-!===================================================
+!================================
 
   !-----------------------------------------
   ! This subroutine is the main routine for
@@ -393,9 +397,6 @@ subroutine create_prog_desc_links()
 
   integer :: iprog, ipart, ind, idesc, i
 
-  character (len=5) :: id_to_string, output_to_string
-  character (len=80) :: filename
-
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer, dimension(:), allocatable :: sendcount, receivecount
@@ -447,7 +448,7 @@ subroutine create_prog_desc_links()
   call MPI_ALLREDUCE(MPI_IN_PLACE, i, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD, ipart)
 #endif
 
-  if (myid == 1) write(*, '(A5,x,I9,x,A58)') " Found", i, "progenitor tracer particles that are not in clumps anymore."
+  if (myid == 1) write(*, '(A6,x,I9,x,A58)') " Found", i, "progenitor tracer particles that are not in clumps anymore."
   
   deallocate(tracers_loc_pid, tracer_loc_progids)
 
@@ -735,9 +736,9 @@ end subroutine create_prog_desc_links
 
 
 
-!============================================
+!===========================
 subroutine make_trees()
-!============================================
+!===========================
 
   !-----------------------------------------------------------------------
   ! Essentially, this routine makes the merger tree by first identifying
@@ -1025,9 +1026,9 @@ subroutine make_trees()
 
 
   contains 
-    !=========================================================
+    !==============================================
     subroutine find_main_desc(iprog, found_one)
-    !=========================================================
+    !==============================================
 
       !-------------------------------------------------
       ! Find the main descendant of progenitor iprog
@@ -1091,12 +1092,9 @@ subroutine make_trees()
 
 
 
-
-
-
-    !===================================================================
+    !===========================================================
     subroutine find_main_prog(ipeak, merit_desc, found_one)
-    !===================================================================
+    !===========================================================
 
       !-------------------------------------------------
       ! Find the main progenitor of descendant idesc
@@ -1686,14 +1684,6 @@ subroutine read_progenitor_data()
     deallocate(read_buffer)
 
 
-    if (myid==1) then
-      write(*,*) "PMPROGS:"
-      do iprog = 1, pmprog_free-1
-        write(*,*) "Prog:", pmprogs(iprog), "Galaxy:", pmprogs_galaxy(iprog)
-      enddo
-    endif
-
-
   endif ! npastprogs > 0
 
 end subroutine read_progenitor_data
@@ -1704,9 +1694,9 @@ end subroutine read_progenitor_data
 
 
 
-!============================================
+!=============================
 subroutine write_trees()
-!============================================
+!=============================
 
   !-------------------------------
   ! Write the tree to file
@@ -1820,9 +1810,9 @@ end subroutine write_trees
 
 
 
-!===================================================
+!======================================
 subroutine write_progenitor_data()
-!===================================================
+!======================================
 
   !--------------------------------------------
   ! This subroutine writes the formatted and
@@ -2153,9 +2143,9 @@ end subroutine write_progenitor_data
 
 
 
-!================================================
+!=================================================
 subroutine get_local_prog_id(global_id, local_id)
-!================================================
+!=================================================
   
   use clfind_commons
   implicit none
@@ -2280,9 +2270,9 @@ end subroutine fill_matrix
 
 
 
-!===================================================
+!======================================
 subroutine deallocate_mergertree()
-!===================================================
+!======================================
 
   !---------------------------------
   ! Deallocate arrays for mergertree
@@ -2345,9 +2335,9 @@ end subroutine deallocate_mergertree
 
 
 
-!===================================================
+!=====================================
 subroutine mark_tracer_particles()
-!===================================================
+!=====================================
 
   !------------------------------------------------------------------
   ! goes through all clumps
@@ -2418,9 +2408,9 @@ end subroutine mark_tracer_particles
 
 
 
-!=========================================================================
+!=======================================================
 subroutine dissolve_small_clumps(ilevel, for_halos)
-!=========================================================================
+!=======================================================
 
   !----------------------------------------------------------------------
   ! Dissolve clumps with too small mass into parents/nothing.
