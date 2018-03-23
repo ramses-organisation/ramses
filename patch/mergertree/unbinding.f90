@@ -289,7 +289,6 @@ subroutine unbinding()
   call deallocate_unbinding_arrays(.true.)
 
   if (make_mergertree) then
-    if (myid==1)write(*,*) "Calling merger tree"
     call make_merger_tree()
   endif
 
