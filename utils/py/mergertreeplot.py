@@ -51,8 +51,15 @@
 # is to help identifying them uniquely. If you nevertheless need/want to add
 # more colors, add them in class global_params.colorlist.
 # If a drawn clump doesn't have a direct progenitor, this will be signified by
-# a progenitor with clump ID 0. All other nodes will be labelled by the drawn
-# clump ID at that output step.
+# a progenitor with clump ID 0. It's supposed to signify that the clump has 
+# formed in the time between the last and this output. All other nodes will be 
+# labelled by the drawn clump ID at that output step.
+# If a clump re-emerges more than one timestep later, there will be some clump
+# ID's missing in the branch, as it skips a few output steps. Provided the
+# descenant that it appears to have been merged into and later re-emerges from
+# is in the tree, this will be symbolised by a dashed line. But it is possible
+# that such a descendant is not in this tree, so in some cases, there may be
+# gaps without the corresponding dashed lines.
 #
 # By default, this script creates an image called 
 #   "merger_tree_halo_<last_output_dir_nr>_<halo_nr>.png"
@@ -443,14 +450,14 @@ def _draw_tree(node, ax, colorlist):
     """
 
 
+    node.walked = True
     
-    # First go down straight lines along main progenitors
     for i, prog in enumerate(node.progs):
-        #  if node.is_main_prog[i]:
         # call actual drawing function
         _draw_tree_on_plot(node, prog, ax, colorlist)
         # call yourself recursively for the main progenitor
-        _draw_tree(prog, ax, colorlist)
+        if (not prog.walked) or prog.is_jumper:
+            _draw_tree(prog, ax, colorlist)
 
 
     # if you reached the leaves, just add the progenitor numbers
@@ -552,7 +559,7 @@ def _draw_tree_on_plot(node, prog, ax, colorlist):
             lw=1.5, 
             alpha=1)
 
-    t = ax.text(node.x.x, node.y, str(node.id),
+    ax.text(node.x.x, node.y, str(node.id),
             size=6,
             bbox=bbox_props,
             horizontalalignment = 'center',
@@ -604,18 +611,29 @@ def _get_plotcolors(color_index, colorlist):
 
 
 #=============================================================
-def _get_x(node, x_values):
+def _get_x(node, x_values, straight):
 #=============================================================
     """
     Assign x values for the plot to a node and its progenitors.
-    First descend down branches to determine the space required and
-    mark the nodes of the branch as walked over, so you get nice
-    straight lines for multisnapshot-jumpers.
-    For main progenitors, just inherit the x values.
+
+    Function summary:
+    if straight = True:
+        recursively descend down the line of main
+        progenitors, then return to where you left off.
+        Main progenitors inherit their descendants x object.
+    else:
+        if this node's progenitor hasn't been walked over already,
+        assign a new x-value to it. Then call this function 
+        recursively for all appropriate progenitors of this node 
+        with straight=True
+    For all appropriate progenitors:
+        call this function recursively for every appropriate
+        progenitor of this node with straight=False 
 
     Arguments:
         node:       class Node object to check for
         x_values:   list of _branch_x objects 
+        straight:   whether to go straight first
 
     returns:
         x_values:   list of _branch_x objects 
@@ -623,56 +641,56 @@ def _get_x(node, x_values):
     """
  
 
-    # First descend down branches, not straight lines,
-    # to fix the x coordinates of multisnapshot jumps
-    # remember, you're starting at the root and walking in negative y direction
+    # Loop over progenitors
     for i, prog in enumerate(node.progs):
-        if (not node.is_main_prog[i]) and (not prog.walked) and (not prog.is_jumper):
+        
+        if straight:
+            # Only go down main progenitors
+            if not prog.walked and node.is_main_prog[i]:
+                # Prog inherits descendant's x
+                prog.x = node.x
+                prog.walked = True
+                if prog.id > 0:
+                    # call yourself recursively
+                    x_values = _get_x(prog, x_values, straight=True)
+                # when you're done, return! Need to go down branches 
+                # from top to bottom!
+                return x_values
 
-            # if there is more than one merger at this y, add 
-            # previously determined branchindex
 
-            ids = (branch.id for branch in prog.start_of_branch.branches)
-            ids = list(ids)
-            ind = ids.index(prog.id)
+        else:
+            if (not node.is_main_prog[i]) and (not prog.is_jumper):
 
+                # if the progenitor doesn't have an x already, give it one
+                if not prog.walked:
+                    ids = (branch.id for branch in prog.start_of_branch.branches)
+                    ids = list(ids)
 
-            for bind, branchid in enumerate(ids):
-                # enforce to go by sorted branch list. The progenitorlist is
-                # not sorted!
-                if prog.id == branchid:
-
+                    bind = ids.index(prog.id)
                     new_x = _branch_x()
                     
                     # figure out which way to go
+                    x = x_values.index(node.x)
                     if bind%2==0: # go right
-                        for x, xval in enumerate(x_values):
-                            if xval == node.x:
-                                x_values = x_values[:x+1]+[new_x]+x_values[x+1:]
-                                prog.x = x_values[x+1]
-                                break
+                        x_values = x_values[:x+1]+[new_x]+x_values[x+1:]
+                        prog.x = x_values[x+1]
                     else: # go left
-                        for x, xval in enumerate(x_values):
-                            if xval == node.x:
-                                x_values = x_values[:x]+[new_x]+x_values[x:]
-                                prog.x = x_values[x]
-                                break
-                
+                        x_values = x_values[:x]+[new_x]+x_values[x:]
+                        prog.x = x_values[x]
 
                     prog.walked = True
 
+                # descend down branch along main progenitors only 
+                if prog.id > 0:
+                    x_values = _get_x(prog, x_values, straight=True)
 
-                    # call yourself recursively
-                    x_values = _get_x(prog, x_values)
 
-
-
-    # if it's its main prog, inherit x and color
-    for i, prog in enumerate(node.progs):
-        if node.is_main_prog[i] and (not prog.walked):
-            prog.x = node.x
-            prog.walked = True
-            x_values = _get_x(prog, x_values)
+    # When you're done going down straight lines, now check for progenitor's progenitors
+    # IMPORTANT: DO THIS ONLY AFTER PREVIOUS FOR LOOP IS DONE
+    for i,prog in enumerate(node.progs):
+        descend = (not prog.is_jumper) or node.is_main_prog[i]
+        if prog.id > 0 and descend:
+            x_values = _get_x(prog, x_values, straight=False)
 
 
 
@@ -1065,7 +1083,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys, params):
     # Now recursively sum up the number of branches
     # to know how much space to leave between them for plotting
     if params.verbose:
-        print "Handling branches."
+        print "Sorting branches."
     _sum_branches(tree[0][0])
 
     # lastly, sort the root's branches
@@ -1087,9 +1105,13 @@ def plot_tree(tree, yaxis_int, yaxis_phys, params):
         print "Assigning positions to nodes and branches."
 
     # give initial values for root and borders for axes
-    x_values = [_branch_x()] 
+    x_values = list([_branch_x()])
     tree[0][0].x = x_values[0]
-    x_values = _get_x(tree[0][0], x_values)
+
+    x_values = _get_x(tree[0][0], x_values, straight=True)
+    x_values = _get_x(tree[0][0], x_values, straight=False)
+
+
 
     # once you're done, assign actual integer values for nodes
     for i,x in enumerate(x_values):
@@ -1115,6 +1137,12 @@ def plot_tree(tree, yaxis_int, yaxis_phys, params):
     # create figure
     fig = plt.figure(facecolor='white')
     ax = fig.add_subplot(111)
+
+
+    # reset whether nodes have been walked for _draw_tree()
+    for level in tree:
+        for branch in level:
+            branch.walked = False
 
     # draw the tree
     _draw_tree(tree[0][0], ax, params.colorlist)
@@ -1154,10 +1182,8 @@ def plot_treeparticles(tree, yaxis_phys, params):
         nothing
     """
 
-    import gc
-
     if params.verbose:
-        print "Started plottin tree particles."
+        print "Started plotting tree particles."
 
 
     # for every output in the tree:
@@ -1193,7 +1219,6 @@ def plot_treeparticles(tree, yaxis_phys, params):
             _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors, params)
 
             del x, y, z, clumpid, clumps_in_tree, colors
-
    
 
     return
@@ -1227,7 +1252,6 @@ def read_mergertree_data(params):
 
     noutput = params.noutput
     ncpu = params.ncpu
-    lastdir = params.lastdir
     use_t = params.use_t
 
     if params.verbose:
@@ -1500,7 +1524,7 @@ def _save_fig(fig, params):
         print "saving figure as "+fig_path
 
     plt.savefig(fig_path, format='png', facecolor=fig.get_facecolor(), transparent=False, dpi=150)
-    print "\nSaved", fig_path, "\n\n"
+    print "\nSaved", fig_path, "\n"
 
 
     plt.close()
@@ -1526,7 +1550,6 @@ def _setup_plot_region(x, y, z, to_plot, params):
         borders :   tuple of borders:  (xmin, xmax, ymin, ymax, zmin, zmax)
     """
 
-    import numpy as np
       
     xmin = x[to_plot].min()
     xmax = x[to_plot].max()
@@ -1615,7 +1638,6 @@ def _sort_branch(branch):
         nothing
     """
             
-    from copy import deepcopy, copy
     import numpy as np
     import gc
 
@@ -1649,8 +1671,6 @@ def _sort_branch(branch):
 
         if needs_branchcount_sorting:
 
-            # make a copy of sorted list
-            branchlist_id_copy = copy(branchlist_id)
             all_branches = all_branches[sort_ind]
             
             # at least the next element is the same
@@ -1756,9 +1776,6 @@ def _tweak_particleplot(fig, time, borders, params):
     Returns:
         nothing
     """
-
-    import matplotlib.pyplot as plt
-    import numpy as np
 
     ax1, ax2, ax3 = fig.axes
 
@@ -2032,7 +2049,7 @@ def _walk_tree(node, root):
 
     return
 
-
+#!/usr/bin/python2
 
 
 #==============
@@ -2041,8 +2058,6 @@ def main():
     """
     Main function. Calls all the rest.
     """
-    from os import getcwd
-    from sys import argv
 
 
     #-----------------------
@@ -2112,6 +2127,11 @@ def main():
     #------------------------------
     if params.plotparticles:
         plot_treeparticles(tree, t, params)
+
+
+
+    return
+
 
 
 
