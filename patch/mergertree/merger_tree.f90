@@ -1,0 +1,2793 @@
+! Merger Tree patch. 
+!
+!
+! Contains:
+! subroutine make_merger_tree
+! subroutine process_progenitor_data()
+! subroutine create_prog_desc_links()
+! subroutine make_trees()
+! subroutine read_progenitor_data()
+! subroutine write_trees()
+! subroutine write_progenitor_data()
+! subroutine get_local_prog_id()
+! subroutine fill_matrix()
+!
+! subroutine deallocate_mergertree
+! subroutine mark_tracer_particles()
+! subroutine dissolve_small_clumps
+
+
+
+#if NDIM == 3
+
+!===================================================
+subroutine make_merger_tree()
+!===================================================
+  !=========================================
+  ! This subroutine is the main routine for
+  ! creating merger trees that calls all
+  ! others.
+  !=========================================
+  use clfind_commons 
+  use amr_commons
+
+  implicit none
+
+
+  !============================
+  ! Create mergertrees
+  !============================
+
+
+  if (ifout > 1) then 
+
+    ! Read in progenitor files
+    call read_progenitor_data()
+
+    if (nprogs > 0) then
+      ! Sort out progenitor data.
+      call process_progenitor_data()
+      
+      ! link progenitors and descendants
+      call create_prog_desc_links()
+
+      ! create trees
+      call make_trees()
+
+      ! write tree to file
+      call write_trees()
+
+    endif
+
+  endif
+
+
+
+
+
+
+
+  !----------------------------
+  ! Prepare for next round
+  !----------------------------
+
+  ! Mark tracer particles
+  call mark_tracer_particles()
+
+
+  ! write output
+  call write_progenitor_data()
+
+
+  ! Finish
+  call deallocate_mergertree()
+
+
+
+
+
+
+  !--------------------
+  ! Say good bye.
+  !--------------------
+  if(verbose.or.myid==1) write(*,*) "Finished making merger tree."
+
+
+
+end subroutine make_merger_tree
+
+
+
+
+
+
+
+
+
+
+
+
+!=====================================
+subroutine process_progenitor_data()
+!=====================================
+
+  !----------------------------------------------------
+  ! This subroutine processes the progenitor data:
+  !   - It finds which tracer particles are currently 
+  !     on this CPU
+  !   - It finds which CPU is owner of which progenitor, 
+  !     and communicates that info across all CPUs.
+  !   - Counts how many tracer particles of any
+  !     progenitor are on this processor, create cleaned
+  !     up list
+  !----------------------------------------------------
+
+  use clfind_commons
+  use amr_parameters, only: i8b
+  use pm_commons, only: idp, npartmax
+
+  implicit none
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer, dimension(:), allocatable :: local_owners_info
+#endif
+
+  integer(i8b), allocatable, dimension(:) :: idp_copy, galaxy_tracers_copy
+  integer, allocatable, dimension(:)      :: part_local_ind, sort_ind_past, dummy
+  real(dp), allocatable, dimension(:)     :: dummy_real
+  integer :: itrace, ipart, igalaxy, ipastprog, i, iprog
+
+  integer, dimension(:), allocatable :: tracers_local_pid_long, tracer_local_ids_long
+
+
+  if (verbose) write(*,*) " processing progenitor data."
+
+  itrace = 0; ipart = 0; igalaxy = 0; iprog = 0;
+
+  allocate(tracers_local_pid_long(1:nprogs*nmost_bound)) ! local particle id for tracers (room enough for all tracers)
+  allocate(tracer_local_ids_long(1:nprogs*nmost_bound)) ! local progenitor id for tracers (room enough for all tracers)
+  
+
+
+
+
+
+  !---------------------------------
+  ! Sort arrays for quick matching
+  !---------------------------------
+
+  ! Create copies of arrays you can't modify
+
+  allocate(idp_copy(1:npartmax))
+  idp_copy = idp
+
+  allocate(galaxy_tracers_copy(1:nprogs))
+  galaxy_tracers_copy = galaxy_tracers
+
+  if (nprogs > npastprogs) then
+    allocate(dummy(1:nprogs))
+  else
+    allocate(dummy(1:npastprogs))
+  endif
+  dummy = 1
+  allocate(dummy_real(1:npastprogs))
+
+  allocate(part_local_ind(1:npartmax))
+  part_local_ind = [(i, i = 1, npartmax)]
+
+  allocate(sort_ind_past(1:npastprogs))
+  sort_ind_past = [(i, i=1, npastprogs)]
+
+
+  ! Sort arrays for matching
+
+  call quick_sort_int_int(idp_copy, part_local_ind, npartmax)
+  call quick_sort_int_int(tracers_all, tracer_loc_progids_all, nprogs*nmost_bound)
+  call quick_sort_int_int(galaxy_tracers_copy, dummy, nprogs)
+
+  ! actually sort past progenitors by galaxy particle ID;
+  ! will be needed later for multi-snapshot progenitor search
+  call quick_sort_int_int(pmprogs_galaxy, sort_ind_past, npastprogs)
+
+  dummy(1:npastprogs) = pmprogs(1:npastprogs)
+  do i = 1, npastprogs
+    pmprogs(i) = dummy(sort_ind_past(i))
+  enddo
+
+  dummy(1:npastprogs) = pmprogs_t(1:npastprogs)
+  do i = 1, npastprogs
+    pmprogs_t(i) = dummy(sort_ind_past(i))
+  enddo
+
+  dummy_real(1:npastprogs) = pmprogs_mass(1:npastprogs)
+
+  do i = 1, npastprogs
+    pmprogs_mass(i) = dummy_real(sort_ind_past(i))
+  enddo
+
+  deallocate(dummy, dummy_real, sort_ind_past)
+
+
+
+
+  ! find starting indices
+  do i = 1, npartmax
+    if (idp_copy(i) > 0) then
+      ipart = i
+      exit
+    endif
+  enddo
+
+  do i = 1, nprogs*nmost_bound
+    if (tracers_all(i) > 0) then
+      itrace = i
+      exit
+    endif
+  enddo
+
+  igalaxy = 1
+  ipastprog = 1
+
+
+  ntracers = 0 
+
+
+  !--------------------------------------------------------------
+  ! Identify which progenitor tracer particles are on this CPU.
+  ! loop over all local particles and all progenitor particles.
+  ! at this point, both arrays are sorted.
+  ! Raise the array index of array which has lower particle ID 
+  ! to find matches.
+  !--------------------------------------------------------------
+
+  do while ( ipart <= npartmax)
+
+    !-------------------------------------------------------------------------------------
+    ! Check for tracers and past progenitor galaxies while itrace <= nprogs*nmost_bound 
+    !-------------------------------------------------------------------------------------
+
+    do while (itrace <= nprogs * nmost_bound .and. ipart <= npartmax) 
+      ! if particles aren't a match, raise the index where lower ID is
+      if (tracers_all(itrace) < idp_copy(ipart)) then
+        itrace = itrace + 1
+
+      else if (tracers_all(itrace) > idp_copy(ipart)) then
+        ! before raising local particle index, check whether you own a past progenitor
+        ! no need to check whether npastprogs > 0: arrays are allocated
+        ! (1:npastprogs+nprogs) to have extra space in case new progs
+        ! need to be added to the list
+        do while (ipastprog <= npastprogs)
+          if (pmprogs_galaxy(ipastprog) < idp_copy(ipart)) then
+              ipastprog = ipastprog + 1
+          else if (pmprogs_galaxy(ipastprog) == idp_copy(ipart)) then 
+            ! you found a match!
+            pmprogs_owner(ipastprog) = myid
+            ipastprog = ipastprog + 1
+          else  
+            exit
+          endif
+        enddo
+        ipart = ipart + 1
+
+
+      else
+        !---------------
+        ! found a match!
+        !---------------
+        iprog = tracer_loc_progids_all(itrace)
+        ! count the tracer for corresponding prog
+        ! add to list of this CPU
+        ntracers = ntracers + 1                                   ! count one more tracer on this cpu
+        tracers_local_pid_long(ntracers) = part_local_ind(ipart)  ! save local particle ID
+        tracer_local_ids_long(ntracers) = iprog                   ! save local prog ID it belongs to
+
+        ! check if found tracer is also a galaxy:
+        do while (igalaxy <= nprogs)
+          if (galaxy_tracers_copy(igalaxy) < tracers_all(itrace)) then
+            igalaxy = igalaxy + 1
+          else if (galaxy_tracers_copy(igalaxy) == tracers_all(itrace)) then
+            prog_owner(iprog) = myid
+            igalaxy = igalaxy + 1
+            exit
+          else
+            exit
+          endif
+        enddo
+
+        ipart = ipart + 1
+        itrace = itrace + 1
+      endif
+
+    enddo
+      
+
+    ! reset ipart in case it reached the limit in the previous loop
+    if (ipart>npartmax) ipart = npartmax
+
+    !---------------------------------------------------------------------------
+    ! If there are no more tracers to check for, check only for past galaxies
+    !---------------------------------------------------------------------------
+    do while (ipastprog <= npastprogs)
+      if (pmprogs_galaxy(ipastprog) < idp_copy(ipart)) then
+          ipastprog = ipastprog + 1
+      else if (pmprogs_galaxy(ipastprog) == idp_copy(ipart)) then 
+        ! you found a match!
+        pmprogs_owner(ipastprog) = myid
+        ipastprog = ipastprog + 1
+      else  
+        exit
+      endif
+    enddo
+
+    if (ipastprog > npastprogs) exit
+    ipart = ipart + 1
+
+  enddo
+
+
+  deallocate(idp_copy, galaxy_tracers_copy, part_local_ind)
+
+
+
+
+
+  ! Clean up local tracers information for this CPU:
+
+  allocate(tracers_loc_pid(1:ntracers))
+  allocate(tracer_loc_progids(1:ntracers))
+
+  tracers_loc_pid(1:ntracers) = tracers_local_pid_long(1:ntracers)
+  tracer_loc_progids(1:ntracers) = tracer_local_ids_long(1:ntracers)
+
+
+
+  ! Deallocate auxilliary arrays
+  deallocate(tracer_local_ids_long, tracers_local_pid_long)
+
+  ! Deallocate global arrays that aren't used anymore
+  deallocate(tracers_all) 
+  deallocate(tracer_loc_progids_all)
+  
+
+
+
+
+
+#ifndef WITHOUTMPI
+
+  !--------------------------------
+  ! communicate progenitor owners
+  !--------------------------------
+
+  ! first the actual progenitors
+  allocate(local_owners_info(1:nprogs)) ! progenitor owners array, local to each cpu
+  local_owners_info = prog_owner
+  call MPI_ALLREDUCE(local_owners_info, prog_owner, nprogs, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, i)
+  deallocate(local_owners_info)
+
+  ! then the past progenitors
+  allocate(local_owners_info(1:npastprogs)) ! progenitor owners array, local to each cpu
+  local_owners_info = pmprogs_owner(1:npastprogs)
+  call MPI_ALLREDUCE(local_owners_info, pmprogs_owner, npastprogs, MPI_INTEGER, MPI_MAX, MPI_COMM_WORLD, i)
+  deallocate(local_owners_info)
+#endif
+
+
+  return
+
+
+end subroutine process_progenitor_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+!=====================================
+subroutine create_prog_desc_links()
+!=====================================
+
+  !--------------------------------------------------------------------
+  ! Establishes connections between progenitors and descendants via
+  ! tracer particles, i.e. in which descendant they ended up.
+  ! Initialises p2d_links matrix, then all data are combined at the
+  ! progenitor owner's CPU.
+  !--------------------------------------------------------------------
+
+  use clfind_commons
+
+  implicit none
+
+  integer :: iprog, ipart, ind, idesc, i
+
+  character (len=5) :: id_to_string, output_to_string
+  character (len=80) :: filename
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer, dimension(:), allocatable :: sendcount, receivecount
+  integer, dimension(:), allocatable :: sendcount2, receivecount2
+  integer, dimension(:), allocatable :: sendbuf, recvbuf
+  integer, dimension(:), allocatable :: sendbuf2, recvbuf2
+  integer, dimension(:), allocatable :: send_displ, rec_displ
+  integer :: icpu, ind2, recndesc
+#endif
+
+  if (verbose) write(*,*) "linking progenitors and descendants."
+
+
+  !----------------------------
+  ! Initialise sparse matrix
+  !----------------------------
+
+  
+  allocate(p2d_links%first(1:nprogs))
+  p2d_links%first = 0
+  allocate(p2d_links%cnt(1:nprogs))
+  p2d_links%cnt = 0
+  allocate(p2d_links%clmp_id(1:10*npeaks_max))
+  p2d_links%clmp_id = 0
+  allocate(p2d_links%ntrace(1:10*npeaks_max))
+  p2d_links%ntrace = 0
+  allocate(p2d_links%next(1:10*npeaks_max))
+  p2d_links%next = 0
+
+
+
+
+
+
+  !----------------------------
+  ! Fill up matrix with values 
+  !----------------------------
+
+  i = 0
+  do ipart = 1, ntracers
+    ! If tracer is currently in a descendant clump, add it to list
+    if (clmpidp(tracers_loc_pid(ipart)) /= 0) then
+      call fill_matrix(tracer_loc_progids(ipart), clmpidp(tracers_loc_pid(ipart)), p2d_links, 1, 'add')
+    else
+      i = i + 1 !count how many zeros 
+    endif
+  enddo
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(MPI_IN_PLACE, i, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD, ipart)
+#endif
+
+  if (myid == 1) write(*, '(A5,x,I9,x,A58)') "Found", i, "progenitor tracer particles that are not in halos anymore."
+  
+  deallocate(tracers_loc_pid, tracer_loc_progids)
+
+
+
+
+
+                        ! TODO: temporary checks
+                        ! call title(ifout, output_to_string)
+                        ! call title(myid, id_to_string)
+                        ! filename = "output_"//output_to_string//"/MATRIXCHECK_P2D_BEFORE_COMM"//id_to_string//".txt"
+                        !
+                        ! open(unit=666, file=filename, form='formatted')
+                        ! write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE COMM ID", myid
+                        !
+                        ! do iprog = 1, nprogs
+                        !
+                        !   if (p2d_links%cnt(iprog) > 0) then
+                        !     write(666, '(4(A3,x,I9x),A5,x,E14.6,8x)', advance='no') &
+                        !       "P:", prog_id(iprog), "PL:", iprog, "C:", p2d_links%cnt(iprog), &
+                        !       "own", prog_owner(iprog), "mass", prog_mass(iprog)
+                        !
+                        !     ipart = p2d_links%first(iprog)
+                        !     do i = 1, p2d_links%cnt(iprog)
+                        !       write(666, '(A3,x,I9,x,A4,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipart), "ND:", p2d_links%ntrace(ipart)
+                        !       ipart = p2d_links%next(ipart)
+                        !     enddo
+                        !     write(666,*)
+                        !   endif
+                        !
+                        ! enddo
+                        ! close(666)
+                        !
+                        !
+
+
+
+
+
+
+
+
+#ifndef WITHOUTMPI
+  !===================================
+  ! Part 1: 
+  ! Send local progenitor data
+  ! to progenitor owners
+  !===================================
+
+
+
+  !----------------------------------------------------------------------------------
+  ! Find out how much stuff you need to send where
+  ! You'll send an array of the form:
+  ! prog_local_id (should be same everywhere), # descendants, descendant 1 ID, 
+  !   #tracers in desc1, descendant 2 ID, #tracers in desc 2, ...
+  !----------------------------------------------------------------------------------
+
+  allocate(sendcount(1:ncpu))
+  sendcount = 0
+  allocate(receivecount(1:ncpu))
+  receivecount = 0
+
+
+
+  do iprog = 1, nprogs
+    ! if progenitor has tracers on this cpu
+    if ( p2d_links%cnt(iprog)> 0 .and. prog_owner(iprog) /= myid) then
+      sendcount(prog_owner(iprog)) = sendcount(prog_owner(iprog)) + 2 + 2 * p2d_links%cnt(iprog)
+    endif
+  enddo
+
+
+
+
+  !---------------------------------
+  ! Share infos across processors
+  !---------------------------------
+
+  call MPI_ALLTOALL(sendcount, 1, MPI_INT, receivecount, 1, MPI_INT, MPI_COMM_WORLD, i)
+
+
+
+
+
+
+ 
+  !-------------------------
+  ! Send actual data
+  !-------------------------
+
+  allocate(sendbuf(1:sum(sendcount)))
+  allocate(recvbuf(1:sum(receivecount)))
+
+  ! Fill up sendbuffer
+  ind = 1
+  do icpu = 1, ncpu
+    if (icpu /= myid) then
+      do iprog = 1, nprogs
+
+        if (p2d_links%cnt(iprog) > 0 .and. prog_owner(iprog) == icpu) then
+
+          sendbuf(ind) = iprog
+          sendbuf(ind+1) = p2d_links%cnt(iprog)
+          ind = ind + 2
+
+          idesc = p2d_links%first(iprog)
+
+          !for each descendant:
+          do i = 1, p2d_links%cnt(iprog)
+            sendbuf(ind) = p2d_links%clmp_id(idesc)
+            sendbuf(ind+1) = p2d_links%ntrace(idesc)
+            idesc = p2d_links%next(idesc)
+            ind = ind + 2
+          enddo
+        endif
+      enddo
+    endif
+  enddo
+
+
+  allocate(send_displ(1:ncpu), rec_displ(1:ncpu))
+  send_displ = 0; rec_displ = 0;
+
+  do i = 2, ncpu
+    send_displ(i) = send_displ(i-1) + sendcount(i-1)
+    rec_displ(i) = rec_displ(i-1) + receivecount(i-1)
+  enddo
+
+  call MPI_ALLTOALLV(sendbuf, sendcount, send_displ, MPI_INT, &
+    recvbuf, receivecount, rec_displ, MPI_INT, MPI_COMM_WORLD, i)
+
+
+
+
+
+  !----------------------------------------------
+  ! Sum up newly arrived values if you are owner
+  !----------------------------------------------
+
+  ind = 1
+  do while (ind <= sum(receivecount))
+    iprog = recvbuf(ind)
+    recndesc = recvbuf(ind + 1)
+    ind = ind + 2
+    do idesc = 1, recndesc
+      call fill_matrix(iprog, recvbuf(ind), p2d_links, recvbuf(ind+1), 'add')
+      ind = ind + 2 ! skip 2: first is descendant ID, second is # particles
+    enddo
+  enddo
+
+
+
+
+
+
+
+
+
+
+
+  !=======================================
+  ! Part 2: 
+  ! Broadcast progenitor data from owners
+  ! to not-owner CPUs
+  !=======================================
+
+
+
+  !-----------------------------------------------
+  ! Find out how much to send where
+  ! Must be done second: Depends on how much data
+  ! you received. Same data structure to send.
+  !-----------------------------------------------
+
+  allocate(sendcount2(1:ncpu))
+  sendcount2 = 0
+  allocate(receivecount2(1:ncpu))
+  receivecount2 = 0
+
+  ind = 1
+  icpu = 1
+  do while (ind <= sum(receivecount))
+    if (icpu < ncpu) then
+      do while(ind > rec_displ(icpu+1))
+        icpu = icpu + 1
+        if (icpu == ncpu) exit
+      enddo
+    endif
+    iprog = recvbuf(ind)
+    recndesc = recvbuf(ind + 1)
+    sendcount2(icpu) = sendcount2(icpu) + 2 + 2*p2d_links%cnt(iprog)
+    ind = ind + 2 + 2 * recndesc
+  enddo
+
+
+
+  !---------------------------------
+  ! Share infos across processors
+  !---------------------------------
+
+  call MPI_ALLTOALL(sendcount2, 1, MPI_INT, receivecount2, 1, MPI_INT, MPI_COMM_WORLD, i)
+
+
+
+  !-------------------------
+  ! Send actual data
+  !-------------------------
+
+  allocate(sendbuf2(1:sum(sendcount2)))
+  allocate(recvbuf2(1:sum(receivecount2)))
+
+  ind = 1  ! index for previously received array; 
+           ! needed to identify which progenitor to send where
+  ind2 = 1 ! index for new array to send stuff
+  do while (ind <= sum(receivecount))
+    iprog = recvbuf(ind)
+    recndesc = recvbuf(ind+1) !needed to skip correctly to next iprog
+    ind = ind + 2 + 2 * recndesc
+
+    sendbuf2(ind2) = iprog
+    sendbuf2(ind2 + 1) = p2d_links%cnt(iprog)
+    ind2 = ind2 + 2
+
+    idesc = p2d_links%first(iprog)
+    ! write each descendant
+    do i = 1, p2d_links%cnt(iprog)
+      sendbuf2(ind2) = p2d_links%clmp_id(idesc)
+      sendbuf2(ind2+1) = p2d_links%ntrace(idesc)
+      idesc = p2d_links%next(idesc)
+      ind2 = ind2 + 2
+    enddo
+  enddo
+
+
+  send_displ = 0; rec_displ = 0;
+
+  do i = 2, ncpu
+    send_displ(i) = send_displ(i-1) + sendcount2(i-1)
+    rec_displ(i) = rec_displ(i-1) + receivecount2(i-1)
+  enddo
+
+  call MPI_ALLTOALLV(sendbuf2, sendcount2, send_displ, MPI_INT, &
+    recvbuf2, receivecount2, rec_displ, MPI_INT, MPI_COMM_WORLD, i)
+
+
+
+
+
+  !-----------------------------
+  ! Sum up newly arrived values
+  !-----------------------------
+
+  ind = 1
+  do while (ind <= sum(receivecount2))
+    iprog = recvbuf2(ind)
+    recndesc = recvbuf2(ind + 1)
+    ind = ind + 2
+    do idesc = 1, recndesc
+      call fill_matrix(iprog, recvbuf2(ind), p2d_links, recvbuf2(ind+1), 'set')
+      ind = ind + 2 ! skip 2: first is descendant ID, second is # particles
+    enddo
+  enddo
+
+
+
+
+  !-------------------
+  ! Cleanup
+  !-------------------
+
+  deallocate(sendcount, receivecount)
+  deallocate(sendcount2, receivecount2)
+  deallocate(sendbuf, recvbuf)
+  deallocate(sendbuf2, recvbuf2)
+  deallocate(send_displ, rec_displ)
+
+
+  ! end infdef WITHOUTMPI: No sending at all necessary.
+#endif 
+
+
+
+
+  !---------------------------------------
+  ! Create descendants-to-progs matrix
+  !---------------------------------------
+
+  allocate(d2p_links%first(1:npeaks_max))
+  d2p_links%first = 0
+  allocate(d2p_links%cnt(1:npeaks_max))
+  d2p_links%cnt = 0
+  allocate(d2p_links%clmp_id(1:10*npeaks_max))
+  d2p_links%clmp_id = 0
+  allocate(d2p_links%ntrace(1:10*npeaks_max))
+  d2p_links%ntrace = 0
+  allocate(d2p_links%next(1:10*npeaks_max))
+  d2p_links%next = 0
+
+
+  do iprog = 1, nprogs
+    ind = p2d_links%first(iprog)
+    do i = 1, p2d_links%cnt(iprog)
+      call get_local_peak_id(p2d_links%clmp_id(ind), idesc)
+      call fill_matrix(idesc, iprog, d2p_links, p2d_links%ntrace(ind), 'add')
+      ind = p2d_links%next(ind)
+    enddo
+  enddo
+
+
+
+                        ! TODO: Temporary checks
+                        ! call title(ifout, output_to_string)
+                        ! call title(myid, id_to_string)
+                        ! filename = "output_"//output_to_string//"/MATRIXCHECK_P2D"//id_to_string//".txt"
+                        !
+                        ! open(unit=666, file=filename, form='formatted')
+                        ! write(666,'(A20,x,I9)') "MATRIXCHECK ID", myid
+                        !
+                        ! do iprog = 1, nprogs
+                        !
+                        !   if (p2d_links%cnt(iprog) > 0) then
+                        !     write(666, '(3(A3,x,I9,x),8x)', advance='no') &
+                        !       "P:", prog_id(iprog),  "C:", p2d_links%cnt(iprog), "own", prog_owner(iprog)
+                        !
+                        !     ipart = p2d_links%first(iprog)
+                        !     do i = 1, p2d_links%cnt(iprog)
+                        !       write(666, '(A3,x,I9,x,A4,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipart), "ND:", p2d_links%ntrace(ipart)
+                        !       ipart = p2d_links%next(ipart)
+                        !     enddo
+                        !     write(666,*)
+                        !   endif
+                        !
+                        !   enddo
+                        !   close(666)
+
+
+
+
+
+
+
+
+  !-----------------------------------
+  ! Make sure you have necessary
+  ! clump data available on this cpu
+  !-----------------------------------
+
+  call build_peak_communicator()
+  call boundary_peak_dp(clmp_mass_exclusive(:))
+
+  return
+
+
+
+end subroutine create_prog_desc_links
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!============================================
+subroutine make_trees()
+!============================================
+
+  !-----------------------------------------------------
+  ! Essentially, this routine makes the merger tree
+  ! by first identifying main descendants for each
+  ! progenitor and main progenitors for each descendant
+  !-----------------------------------------------------
+
+
+  use clfind_commons
+
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer :: i
+#endif
+
+  real(dp), dimension(:), allocatable ::  merit_desc
+  real(dp), dimension(:), allocatable ::  merit_desc_copy
+
+  integer :: iprog, ipeak, idl
+  integer :: store_id
+  integer :: peakshift
+  ! real(dp):: merit_max, merit_calc, npart_desc, npart_prog
+
+  logical :: is_first, found
+
+
+  if (verbose) write(*,*) "ID", myid, "making trees."
+
+
+  allocate(main_desc(1:nprogs))
+  main_desc = 0
+  allocate(main_prog(1:npeaks_max))
+  main_prog = 0
+  allocate(merit_desc(1:npeaks_max))
+  merit_desc = 0
+  allocate(merit_desc_copy(1:npeaks_max))
+
+
+
+  call build_peak_communicator()
+  call boundary_peak_dp(clmp_mass_exclusive)
+
+  
+  !-----------------------------------------------
+  ! Determine main descendant for each progenitor
+  !-----------------------------------------------
+
+  do iprog = 1, nprogs
+    if (p2d_links%cnt(iprog)>0) call find_main_desc(iprog, found)
+  end do
+
+  ! no need to communicate results; data for every instance of prog is identical,
+  ! so it should give identical results
+
+
+
+
+  
+  !-----------------------------------------------
+  ! Determine main progenitor for each descendant
+  !-----------------------------------------------
+
+
+  do ipeak = 1, hfree-1
+    if (d2p_links%cnt(ipeak) > 0) then
+      call find_main_prog(ipeak, merit_desc, found)
+    endif
+  end do
+
+
+  ! Check whether there are better progenitor candidates 
+  ! on other processors
+
+  merit_desc_copy = merit_desc
+  call build_peak_communicator()
+  call virtual_peak_dp(merit_desc(:), 'max')
+  call boundary_peak_dp(merit_desc(:))
+
+  do ipeak = 1, hfree-1
+    if ( merit_desc_copy(ipeak) /= merit_desc(ipeak)) then
+      main_prog(ipeak) = 0
+    endif
+  enddo
+  
+  call virtual_peak_int(main_prog(:), 'max')
+  call boundary_peak_int(main_prog(:))
+
+
+
+
+  !------------------------------------------------------------------
+  ! Introduce peak shift:
+  ! Shift peak number of main progenitor from non-adjacent earlier
+  ! snapshots by a high number so that you can still use "max" for
+  ! communications
+  !------------------------------------------------------------------
+
+  peakshift = 100
+  do while (peakshift < ipeak_start(ncpu)+npeaks_max)
+    peakshift = peakshift * 10
+  enddo
+
+
+
+
+
+  !===============================================
+  ! Create tree:
+  ! Check progenitors for merging, identify true 
+  ! main descendant
+  !===============================================
+
+  ! TODO: CHECK COMMENTS
+
+  is_first = .true.
+  iprog = 1
+
+  do while (iprog <= nprogs)
+
+    if (is_first) store_id = main_desc(iprog)
+    is_first = .true.
+
+    if ( main_desc(iprog) > 0) then
+      call get_local_peak_id(main_desc(iprog), idl)
+      ! if this progenitor isn't the main progenitor of
+      ! its own main descendant, this might be a merger.
+      ! try finding another descendant first, maybe the
+      ! progenitor has fractured.
+      if (iprog /= main_prog(idl) .and. main_prog(idl) > 0) then
+
+        ! remove number of particles from list to find next best option
+        call fill_matrix(iprog, main_desc(iprog), p2d_links, -1, 'set')
+        call find_main_desc(iprog, found)
+
+        ! if you found another candidate:
+        if (found) then
+          is_first = .false.
+          iprog = iprog -1 ! check again
+        else
+          ! if nothing found, assume progenitor merged into descendant
+          main_desc(iprog) = store_id + peakshift
+          ! add it to the list of past merged progenitors
+          if (prog_owner(iprog) == myid) call add_new_pmprog(iprog)
+        endif
+
+      end if
+
+    endif ! this cpu is owner
+    iprog = iprog + 1
+
+  end do
+
+
+
+
+
+
+  !------------------------------------------------------------------------------------
+  ! Communicate results. All CPUs that have tracer particles of any progenitor
+  ! Have full data of that progenitor; But it might be that there is a descendant,
+  ! split among multiple CPU's, where some CPU's have progenitor data missing 
+  ! because they don't have any progenitor's particles on their domain.
+  !------------------------------------------------------------------------------------
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(MPI_IN_PLACE, main_desc, nprogs, MPI_INT, MPI_MAX, MPI_COMM_WORLD, i)
+#endif
+
+  do iprog = 1, nprogs
+    if (main_desc(iprog)>peakshift) main_desc(iprog) = -(main_desc(iprog)-peakshift) ! make it negative!
+  enddo
+
+
+
+
+
+
+  !==================================================
+  ! Create tree:
+  ! Check descendants for fracturing, identify main
+  ! descendant
+  !==================================================
+
+  to_iter = main_prog > 0
+  ipeak = 1
+  merit_desc = 0
+
+  do while (ipeak <= hfree-1)
+    if ( to_iter(ipeak) ) then ! if there is something to check for
+
+        to_iter(ipeak) = .false.
+        call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
+        ! abs needed here: mergers are signified by a negative main descendant ID
+        if (ipeak /= idl) then
+          ! if this descendant is not main descendant
+          ! of its own main progenitor
+          call fill_matrix(ipeak, main_prog(ipeak), d2p_links, -1, 'set')
+          call find_main_prog(ipeak, merit_desc, found)
+
+          if (found) then ! if you found another candidate
+            to_iter(ipeak) = .true.
+            ipeak = ipeak - 1 ! check again
+          else
+            main_prog(ipeak) = 0
+          endif
+
+        endif !ipeak /= idl
+    endif
+
+    ipeak = ipeak + 1
+  enddo
+
+
+
+  !---------------------------------------------
+  ! When all is said and done, send main prog
+  ! to non-virtual clumps for correct output
+  !---------------------------------------------
+
+#ifndef WITHOUTMPI
+    merit_desc_copy = merit_desc
+    call build_peak_communicator()
+    call virtual_peak_dp(merit_desc(:), 'max')
+    call boundary_peak_dp(merit_desc(:))
+
+    do ipeak = 1, hfree-1
+      if (merit_desc_copy(ipeak) /= merit_desc(ipeak)) main_prog(ipeak) = 0
+    enddo
+#endif
+
+
+  do ipeak = 1, hfree-1
+    if (main_prog(ipeak) > 0 ) then 
+      if(prog_owner(main_prog(ipeak)) /= myid) main_prog(ipeak) = 0
+    endif
+  enddo
+  call build_peak_communicator()
+  call virtual_peak_int(main_prog, 'max')
+  call boundary_peak_int(main_prog)
+
+
+
+
+
+
+  !------------------------------------------------------------------
+  ! If you still haven't found a progenitor for a descendant, 
+  ! try looking in previous, non-adjacent snapshots.
+  !------------------------------------------------------------------
+
+  ! reset merit
+  merit_desc = 0
+
+
+  to_iter = clmp_mass_exclusive > 0 .and. main_prog == 0
+
+  do ipeak = 1, hfree-1
+    if ( to_iter(ipeak) ) then !if there is something to check for
+        call find_prog_in_older_snapshots(ipeak, peakshift, merit_desc)
+    endif
+  enddo
+
+
+
+
+  !-------------------------------------------------------
+  ! Check that you found best candidate across processors
+  !-------------------------------------------------------
+
+  merit_desc_copy = merit_desc
+  call build_peak_communicator()
+  call virtual_peak_dp(merit_desc(:), 'min')
+  call boundary_peak_dp(merit_desc(:))
+
+  do ipeak = 1, hfree-1
+    if ( to_iter(ipeak) .and. merit_desc_copy(ipeak) /= merit_desc(ipeak) ) main_prog(ipeak) = 0
+  enddo
+
+
+  ! Communicate results
+  call virtual_peak_int(main_prog, 'max')
+  call boundary_peak_int(main_prog)
+
+  ! Mark progenitors from earlier snapshots as such
+  do ipeak = 1, hfree -1
+    if (to_iter(ipeak) .and. main_prog(ipeak) > peakshift ) then
+      main_prog(ipeak) = - (main_prog(ipeak)-peakshift)
+    endif
+  enddo
+
+
+
+
+
+
+  deallocate(merit_desc_copy)
+  deallocate(merit_desc)
+
+
+
+
+  contains 
+    !=========================================================
+    subroutine find_main_desc(iprog, found_one)
+    !=========================================================
+
+
+      !-------------------------------------------------
+      ! Find the main descendant of progenitor iprog
+      !-------------------------------------------------
+
+      use clfind_commons
+      
+      implicit none
+      integer, intent(in) :: iprog
+      logical, intent(out) :: found_one
+      real(dp):: merit_max, merit_calc, a 
+      integer :: merit_max_id
+
+      integer :: ind, i, idesc, idl
+      
+
+      merit_max = 0
+      merit_max_id = 0
+
+      ind = p2d_links%first(iprog)
+
+      ! loop over all descendants
+      do i = 1, p2d_links%cnt(iprog)
+        
+        ! if there are particles left 
+        ! (might have been removed during matching)
+        if (p2d_links%ntrace(ind) > 0) then
+          idesc = p2d_links%clmp_id(ind)
+          call get_local_peak_id(idesc, idl)
+
+          !calculate merit
+          a = abs(1 - clmp_mass_exclusive(idl)/prog_mass(iprog))
+          if (a<1d-100) a = 1d-100 ! don't devide by zero
+          merit_calc =  real(p2d_links%ntrace(ind)) / a**2
+
+          if (merit_calc > merit_max) then
+            merit_max = merit_calc
+            merit_max_id = idesc
+          end if
+        endif
+
+        ind = p2d_links%next(ind)
+
+      enddo
+
+      if (merit_max_id > 0) then
+        found_one = .true.
+        main_desc(iprog) = merit_max_id
+      else
+        found_one = .false.
+        main_desc(iprog) = -7
+        ! essentially this means there is no descendant for this progenitor.
+        ! should only be possible to happen in the first round of descendant finding.
+      end if
+
+
+      return
+
+    end subroutine find_main_desc
+
+
+
+
+
+
+
+
+    !===================================================================
+    subroutine find_main_prog(ipeak, merit_desc, found_one)
+    !===================================================================
+
+      !-------------------------------------------------
+      ! Find the main progenitor of descendant idesc
+      !-------------------------------------------------
+
+      use clfind_commons
+      
+      implicit none
+      integer, intent(in) :: ipeak
+      real(dp), dimension(1:npeaks_max), intent(inout):: merit_desc
+      logical, intent(out) :: found_one
+
+      real(dp):: merit_max, merit_calc, a 
+      integer :: merit_max_id
+
+      integer :: ind, i, iprog
+
+      merit_max = 0
+      merit_max_id = 0
+
+      ind = d2p_links%first(ipeak)
+
+      do i = 1, d2p_links%cnt(ipeak)
+        
+        iprog = d2p_links%clmp_id(ind)
+
+        if (d2p_links%ntrace(ind) > 0) then
+          !calculate merit
+          a = abs(1 - clmp_mass_exclusive(ipeak)/prog_mass(iprog))
+          if (a<1d-100) a = 1d-100 ! don't devide by zero
+          merit_calc = real(d2p_links%ntrace(ind))/a**2
+
+          ! old version:
+          ! npart_prog =  prog_mass(iprog) / partm_common
+          ! merit_calc =  real(d2p_links%ntrace(ind)) / npart_prog
+
+          if (merit_calc > merit_max) then
+            merit_max = merit_calc
+            merit_max_id = iprog
+          end if
+        endif
+
+        ind = d2p_links%next(ind)
+
+      enddo
+
+      if (merit_max_id > 0) then
+        main_prog(ipeak) = merit_max_id
+        merit_desc(ipeak) = merit_max
+        found_one = .true.
+      else
+        main_prog(ipeak) = 0
+        found_one = .false.
+      end if
+
+      return
+
+    end subroutine find_main_prog
+
+
+
+
+
+
+    !=====================================
+    subroutine add_new_pmprog(iprog)
+    !=====================================
+
+      !-----------------------------------------------------------
+      ! Add new progenitor to the list of past merged progenitors
+      !-----------------------------------------------------------
+
+      use clfind_commons
+
+      integer, intent(in) :: iprog ! local prog index to add
+
+      pmprogs(pmprog_free) = prog_id(iprog)
+      pmprogs_galaxy = galaxy_tracers(iprog)
+      pmprogs_t(pmprog_free) = ifout-1 ! prog merged into some desc at this timestep
+      pmprogs_owner(pmprog_free) = myid
+      pmprogs_mass(pmprog_free) = prog_mass(iprog)
+      pmprog_free = pmprog_free + 1
+      return
+
+ 
+
+    end subroutine add_new_pmprog
+
+
+    
+
+
+
+
+    !=====================================================================
+    subroutine find_prog_in_older_snapshots(ipeak, peakshift, merit_desc)
+    !=====================================================================
+
+      !--------------------------------------------------------
+      ! If no progenitor from adjacent snapshot has been found,
+      ! this subroutine looks for a possible progenitor in an
+      ! earlier snapshot.
+      ! Here, the merit is to be minimized: It is the binding
+      ! energy of possible candidates
+      !--------------------------------------------------------
+
+      use clfind_commons
+      use pm_commons, only: idp
+
+      implicit none
+
+      integer, intent(in) :: ipeak
+      integer, intent(in) :: peakshift
+      real(dp), intent(inout), dimension(1:npeaks_max) :: merit_desc
+
+      integer, dimension(:), allocatable :: particlelist   ! list of particle IDs of this clump
+      integer, dimension(:), allocatable :: canddts        ! list of progenitor candidates
+      real(dp),dimension(:), allocatable :: merit          ! merit of progenitor candidates
+      integer, dimension(:), allocatable :: part_local_ind ! local particle index for clumpparticles
+      integer :: ncand      ! number of candidates
+
+      integer :: ipart, thispart, iclump, ipastprog, lpid, merit_min_id
+      real(dp) :: merit_min
+
+
+      if (nclmppart(ipeak) > 0) then
+        !-------------
+        ! Set up
+        !-------------
+
+        ncand = 0
+
+        allocate(canddts(1:npastprogs_max))
+        allocate(merit(1:npastprogs_max))
+
+        allocate(particlelist(1:nclmppart(ipeak)))
+        particlelist = 0
+        allocate(part_local_ind(1:nclmppart(ipeak)))
+
+
+        ! Get particle ID list for this clump
+        thispart = clmppart_first(ipeak)
+        do ipart = 1, nclmppart(ipeak)
+          call get_local_peak_id(clmpidp(thispart), lpid)
+          if (ipeak == lpid) then
+            particlelist(ipart) = idp(thispart)
+            part_local_ind(ipart) = thispart
+          endif
+          thispart = clmppart_next(thispart)
+        enddo
+        
+        ! Sort the list for matching with galaxy particles
+        call quick_sort_int_int(particlelist, part_local_ind, nclmppart(ipeak))
+
+        ! Find starting values
+        iclump = 1
+        do ipart = 1, nclmppart(ipeak)
+          if (particlelist(ipart) > 0) then
+            iclump = ipart
+            exit
+          endif
+        enddo
+
+        ipastprog = 1
+
+
+
+        !----------------------
+        ! Find candidates
+        !----------------------
+
+        call compute_phi(ipeak)
+
+        do while (iclump <= nclmppart(ipeak) .and. ipastprog <= npastprogs)
+          
+          if (particlelist(iclump) < pmprogs_galaxy(ipastprog)) then
+            iclump = iclump + 1
+          else if (particlelist(iclump) > pmprogs_galaxy(ipastprog)) then
+            ipastprog = ipastprog + 1
+          else
+            ! Found a match!
+            ncand = ncand + 1
+            canddts(ncand) = ipastprog !store local ID
+            call eparttot(ipeak, part_local_ind(iclump), merit(ncand))
+            ipastprog = ipastprog + 1
+            iclump = iclump + 1
+          endif
+        enddo
+        
+
+
+        ! Find the one with actual minimal merit
+
+        merit_min_id = 0
+        merit_min = HUGE(0.d0)
+        do ipastprog = 1, ncand
+          if (merit(ipastprog) < merit_min) then
+            merit_min = merit(ipastprog)
+            merit_min_id = canddts(ipastprog)
+          endif
+        enddo
+
+        ! If there is one, store values
+        if (merit_min_id > 0) then
+          main_prog(ipeak) = pmprogs(merit_min_id) + peakshift
+          merit_desc(ipeak) = merit_min
+        endif
+
+        deallocate(particlelist, canddts, merit, part_local_ind)
+      endif
+
+      return
+
+    end subroutine find_prog_in_older_snapshots
+
+
+
+end subroutine make_trees
+
+
+
+
+
+
+
+
+
+
+
+
+
+!====================================
+subroutine read_progenitor_data()
+!====================================
+  
+  !---------------------------------
+  ! Reads in all progenitor data
+  !---------------------------------
+
+  use clfind_commons
+  use amr_commons
+
+  implicit none
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+
+
+  integer :: iprog, i
+
+  logical :: exists
+  integer :: prog_read, prog_read_local, startind, tracer_free, nprogs_to_read, progcount_to_read, np
+  integer, allocatable, dimension(:) :: read_buffer   ! temporary array for reading in data
+  real(dp),allocatable, dimension(:) :: read_buffer_2 ! temporary array for reading in data
+
+  character(LEN=80)     :: fileloc
+  character(LEN=5)      :: output_to_string
+
+
+#ifndef WITHOUTMPI
+  integer, dimension (1:MPI_STATUS_SIZE):: state
+  integer :: mpi_err, filehandle
+  integer, dimension(1:4) :: buf
+#endif
+
+
+  if (verbose) write(*,*) " Calling read progenitor data."
+
+  call title(ifout-1, output_to_string)
+  ! ifout -1: read from previous output!
+  nprogs = 0
+  nprogs_to_read = 0
+  progcount_to_read = 0
+
+
+
+
+
+
+  !========================
+  ! Read progenitor counts
+  !========================
+
+  if (myid == 1) then ! read in stuff
+    
+    !-------------------------------------------------------------
+    ! Current progenitor counts
+    ! Both of these count files need to be present in any case.
+    !-------------------------------------------------------------
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitorcount.dat')
+
+    ! check that file exists
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*, *) "ID", myid, "didn't find file ", fileloc
+      call clean_stop()
+    endif
+
+
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) nprogs, nprogs_to_read, progcount_to_read, npastprogs
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! read(666, '(2(I7,x))') nprogs, nprogs_to_read
+    close(666)
+
+
+  endif
+
+
+#ifndef WITHOUTMPI
+    buf = (/nprogs, progcount_to_read, nprogs_to_read, npastprogs/)
+    call MPI_BCAST(buf, 4, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_err)
+    nprogs = buf(1)
+    progcount_to_read = buf(2)
+    nprogs_to_read = buf(3)
+    npastprogs = buf(4)
+#endif
+  
+
+                      ! TODO: Temporary checks
+                      ! if (myid==1) then
+                      !   write(*,'(A28,x,I9,x,A15,x,I9,x,A12,x,I9,x,A3,x,I3)') &
+                      !     " READCHECK PROGCOUNTS: nprogs", nprogs,&
+                      !     "nprogs_to_read", nprogs_to_read,"npastprogs", npastprogs, "ID", myid
+                      ! endif
+
+
+
+
+
+  !==================================
+  ! READ CURRENT PROGENITOR DATA
+  !==================================
+
+  !---------------------------
+  ! Allocate arrays
+  !---------------------------
+
+  ! global arrays
+  allocate(prog_id(1:nprogs))
+  prog_id = 0       ! list of progenitor global IDs
+  prog_free = 1     ! first free local progenitor ID
+
+  allocate(prog_owner(1:nprogs))
+  prog_owner = -1
+
+  allocate(prog_mass(1:nprogs))
+  prog_mass = 0
+
+  allocate(tracers_all(1:nprogs*nmost_bound))
+  tracers_all = 0
+
+  allocate(galaxy_tracers(1:nprogs))
+
+  allocate(tracer_loc_progids_all(1:nprogs*nmost_bound))
+  tracer_loc_progids_all = 0
+  tracer_free = 1   ! first free local tracer index
+
+
+
+  if (nprogs > 0) then
+
+    !--------------------------------
+    ! Read progenitor particles
+    !--------------------------------
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data.dat')
+
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*,*) "ID", myid, "didn't find file ", fileloc
+      call clean_stop()
+    endif
+
+
+    allocate(read_buffer(1:progcount_to_read))
+
+#ifndef WITHOUTMPI
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, &
+      MPI_MODE_RDONLY, MPI_INFO_NULL,filehandle, mpi_err)
+    call MPI_FILE_READ(filehandle, read_buffer, &
+      progcount_to_read, MPI_INTEGER, state, mpi_err)
+    call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) read_buffer
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! i = 1
+    ! do iprog = 1, nprogs_to_read
+    !   write(*,*) "read ", i, i+250, iprog
+    !   read(666, '(251(I7,x))') read_buffer(i:i+250)
+    !   i = i + 251
+    ! enddo
+    close(666)
+#endif
+
+
+
+
+
+    !--------------------------------
+    ! Read progenitor masses
+    !--------------------------------
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass.dat')
+
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*, *) "ID", myid, "didn't find file ", fileloc
+      call clean_stop()
+    endif
+
+
+    allocate(read_buffer_2(1:nprogs_to_read))
+
+#ifndef WITHOUTMPI
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
+    call MPI_FILE_READ(filehandle, read_buffer_2, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
+    call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) read_buffer_2
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! do iprog = 1, nprogs_to_read
+    !   read(666, '(E14.6,x)') read_buffer_2(iprog)
+    ! enddo
+    close(666)
+#endif
+
+
+
+
+
+
+    !----------------------------------
+    ! Sort out the data you just read
+    !----------------------------------
+
+    tracer_free = 1
+
+    iprog = 1
+    startind = 1
+
+    do while (startind <= progcount_to_read)
+
+      prog_read = read_buffer(startind)
+      np = read_buffer(startind + 1)
+
+      ! get local instead global ID in prog_read (past tense "read")
+      call get_local_prog_id(prog_read, prog_read_local)
+
+      prog_mass(prog_read_local) = read_buffer_2(iprog)
+
+      do i = startind+2, startind+1+np
+        if (read_buffer(i) > 0) then
+          tracers_all(tracer_free) = read_buffer(i)               ! add new tracer particle
+          tracer_loc_progids_all(tracer_free) = prog_read_local   ! write which progenitor tracer belongs to
+          tracer_free = tracer_free + 1                           ! raise index for next tracer
+        else 
+          ! found a galaxy particle
+          tracers_all(tracer_free) = -read_buffer(i)              ! add new tracer particle
+          galaxy_tracers(prog_read_local) = -read_buffer(i)       ! add new galaxy tracer
+          tracer_loc_progids_all(tracer_free) = prog_read_local   ! write which progenitor tracer belongs to
+          tracer_free = tracer_free + 1                           ! raise index for next tracer
+        end if
+      enddo
+
+      iprog = iprog + 1
+      startind = startind + 2 + np
+
+    enddo
+
+    deallocate(read_buffer, read_buffer_2)
+
+
+  endif ! nprogs > 0
+
+
+
+
+
+
+
+
+
+
+  !========================================
+  ! READ PAST PROGENITOR DATA
+  !========================================
+  
+  !-------------------------
+  ! Allocate arrays
+  !-------------------------
+
+  ! overestimate size to fit new ones if necessary
+  npastprogs_max = npastprogs + nprogs
+  pmprog_free = npastprogs + 1
+
+
+  ! Past Merged Progenitors for multi-snapshot matching
+  allocate(pmprogs(1:npastprogs_max))
+  pmprogs = 0 
+
+  ! Current owner Merged Progenitors' galaxy particles
+  allocate(pmprogs_owner(1:npastprogs_max))
+  pmprogs_owner = 0
+
+  ! Past Merged Progenitors' galaxy particles
+  allocate(pmprogs_galaxy(1:npastprogs_max))
+  pmprogs_galaxy = 0
+
+  ! Time at which past progenitors have been merged (= ifout at merging time)
+  allocate(pmprogs_t(1:npastprogs_max))
+  pmprogs_t = 0
+
+  ! past merged progenitor mass
+  allocate(pmprogs_mass(1:npastprogs_max))
+  pmprogs_mass = 0
+
+
+  
+
+  if (npastprogs > 0) then
+
+    !-----------------------------
+    ! Read in data
+    !-----------------------------
+
+    allocate(read_buffer(1:3*npastprogs))
+
+      fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors.dat')
+
+#ifndef WITHOUTMPI
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, &
+      MPI_MODE_RDONLY, MPI_INFO_NULL,filehandle, mpi_err)
+    call MPI_FILE_READ(filehandle, read_buffer, &
+      npastprogs*3, MPI_INTEGER, state, mpi_err)
+    call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) read_buffer
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! i = 1
+    ! do iprog = 1, npastprogs
+    !   read(666, '(3(I7,x))') read_buffer(i:i+3)
+    !   write(*,*) "Read past prog", read_buffer(i)
+    !   i = i + 3
+    ! enddo
+    close(666)
+#endif
+
+
+
+
+    !---------------------------------
+    ! Read past progenitor's masses
+    !---------------------------------
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitor_mass.dat')
+
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*, *) "ID", myid, "didn't find file ", fileloc
+      call clean_stop()
+    endif
+
+
+
+#ifndef WITHOUTMPI
+    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
+    call MPI_FILE_READ(filehandle, pmprogs_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
+    call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) pmprogs_mass(1:npastprogs)
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! do iprog = 1, nprogs_to_read
+    !   read(666, '(E14.6,x)') read_buffer_2(iprog)
+    ! enddo
+    close(666)
+#endif
+
+
+
+
+
+    !----------------------------------
+    ! Sort out the data you just read
+    !----------------------------------
+
+    pmprog_free = 1
+    iprog = 1
+    do while (iprog <= 3*npastprogs)
+      pmprogs(pmprog_free) = read_buffer(iprog)
+      pmprogs_galaxy(pmprog_free) = read_buffer(iprog + 1)
+      pmprogs_t(pmprog_free) = read_buffer(iprog + 2)
+      iprog = iprog + 3
+      pmprog_free = pmprog_free + 1
+    enddo
+
+
+    deallocate(read_buffer)
+
+  endif ! npastprogs > 0
+
+end subroutine read_progenitor_data
+
+
+
+
+
+
+
+!============================================
+subroutine write_trees()
+!============================================
+
+  !-------------------------------
+  ! Write the tree to file
+  !-------------------------------
+
+  use clfind_commons
+
+  implicit none
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer :: err
+#endif
+
+  character (len=5)  :: dir, idnr
+  character (len=80) :: fileloc
+  integer:: ipeak, iprog, ipastprog, snapshot_nr
+
+  integer, dimension(1:nprogs) :: printed
+
+  if (verbose) write(*,*) " writing trees to file."
+
+  printed = 0
+
+  call title(ifout, dir)
+  call title(myid, idnr) 
+  fileloc=TRIM('output_'//TRIM(dir)//'/mergertree.txt'//TRIM(idnr))
+
+  open(unit=666,file=fileloc,form='formatted')
+  write(666, '(4(A15))') "clump", "progenitor", "prog outputnr", "case"
+
+  do ipeak = 1, npeaks
+    if (clmp_mass_exclusive(ipeak) > 0) then
+      
+
+      !----------------------
+      ! Adjacent link found
+      !----------------------
+      if (main_prog(ipeak) > 0 ) then
+        write(666,'(4(I15),x, E14.6)') &
+          ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), &
+          ifout-1, 1, clmp_mass_exclusive(ipeak)
+        printed(main_prog(ipeak)) = 1
+
+
+      !------------------------------
+      ! No link or new clump found
+      !------------------------------
+      else if (main_prog(ipeak) == 0) then
+        write(666,'(4(I15),x, E14.6)') &
+          ipeak+ipeak_start(myid), 0, &
+          ifout-1, 1, clmp_mass_exclusive(ipeak)
+
+
+      !----------------------------------------------
+      ! Progenitor from non-adjacent snapshot found
+      !----------------------------------------------
+      else 
+        ! First find its snapshot number
+        snapshot_nr = 0
+        do ipastprog = 1, npastprogs
+          if (pmprogs(ipastprog) == -main_prog(ipeak)) then
+            snapshot_nr = pmprogs_t(ipastprog)
+            pmprogs_owner(ipastprog) = 0
+            exit
+          endif
+        enddo
+
+        write(666,'(4(I15),x,E14.6)') &
+          ipeak+ipeak_start(myid), main_prog(ipeak), &
+          snapshot_nr, 3, clmp_mass_exclusive(ipeak)
+
+      endif
+    endif
+  end do
+
+
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(MPI_IN_PLACE, printed, nprogs, MPI_INT, MPI_SUM, MPI_COMM_WORLD, err)
+#endif
+
+
+  !-----------------------------
+  ! Merged progenitors
+  !-----------------------------
+  ! Print whatever hasn't been printed yet.
+  ! If a progenitor merged with another into a composite descendant, the non-main progenitor
+  ! will have a negative main descendant ID.
+  do iprog = 1, nprogs
+    if ( printed(iprog) == 0 .and. main_desc(iprog) /= 0 .and. prog_owner(iprog) == myid ) then
+      write(666, '(4(I15))') main_desc(iprog), prog_id(iprog), ifout-1, 4
+    endif
+  enddo
+
+
+  close(666)
+
+
+end subroutine write_trees
+
+
+
+
+
+
+!===================================================
+subroutine write_progenitor_data()
+!===================================================
+  !--------------------------------------------
+  ! This subroutine writes the formatted and
+  ! unformatted output needed for mergertrees.
+  !--------------------------------------------
+  use clfind_commons
+  use amr_commons
+  use pm_commons, only: idp
+
+  implicit none
+
+  integer :: ipeak, ipart, pind, startind, first_bound, partcount
+
+  integer :: ihalo, haloid
+  integer, allocatable, dimension(:)  :: particlelist, pastproglist
+  real(dp), allocatable, dimension(:) :: masslist, pastprogmasslist
+
+  character(LEN=80)     :: fileloc
+  character(LEN=5)      :: output_to_string, id_to_string 
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer, dimension (1:MPI_STATUS_SIZE):: state
+  integer :: mpi_err, filehandle, npastprogs_all
+  integer, dimension(1:4) :: buf
+#endif
+
+
+
+  !=======================================================
+  ! Write current clumps as progenitors for next snapshot 
+  !=======================================================
+
+  call title(ifout, output_to_string)
+  call title(myid, id_to_string)
+
+  !------------------------------------------------------------------------------
+  ! Prepare particle list
+  ! Format: haloID, [nmost_bound particle IDs, zeros until index nmost_bound ]
+  !------------------------------------------------------------------------------
+
+  ihalo = 0           ! count how many clumps you're actually writing 
+  progenitorcount = 0
+  pind = 1            ! index where to write
+
+  ! progenitorcount_written is local to each CPU at this point
+  ! and overestimated to surely have enough array length
+
+  allocate(particlelist(1:progenitorcount_written*(nmost_bound+2)))
+  allocate(masslist(1:progenitorcount_written))
+
+  if (progenitorcount_written > 0) then
+    particlelist = 0
+    masslist = 0
+
+    do ipeak = 1, hfree-1
+      !write only peaks that have most bound particles
+      if (clmp_mass_exclusive(ipeak) > 0 ) then
+
+        haloid = 0
+        first_bound = 0
+        partcount = 0
+        if (ipeak <= npeaks) progenitorcount = progenitorcount + 1 ! count only non-virtuals
+
+        do ipart = 1, nmost_bound
+          ! check if there are mostbound particles for this clump on this CPU 
+          if (most_bound_pid(ipeak, ipart) > 0) then
+            first_bound = ipart
+            haloid = -clmpidp(most_bound_pid(ipeak, ipart))
+            exit
+          endif
+        end do
+
+        if (first_bound > 0) then
+          ihalo = ihalo + 1
+
+          startind = pind
+          particlelist(startind) = haloid
+          pind = pind + 2
+          masslist(ihalo) = clmp_mass_exclusive(ipeak)
+
+          ! loop over mostbound particle list
+
+          do ipart = first_bound, nmost_bound
+            ! write only halos that have mbp on this proc
+            if (most_bound_pid(ipeak, ipart) > 0) then
+              partcount = partcount + 1
+              if (ipart == 1) then ! if galaxy particle: mark it
+                particlelist(pind) = -idp(most_bound_pid(ipeak, ipart))
+              else !if regular most bound particle
+                particlelist(pind) = idp(most_bound_pid(ipeak, ipart))
+              endif
+              pind = pind + 1
+
+            endif
+          enddo
+
+          particlelist(startind + 1) = partcount
+        endif
+      endif !clump mass > 0
+    enddo ! loop over clumps
+
+
+    ! reset written progenitorcount: Too small clumps might've 
+    ! been dissolved after being counted.
+    progenitorcount_written = pind-1
+
+  endif ! if there is potentially stuff to write
+
+
+
+
+  !--------------------------------
+  ! write mostbound particle list
+  !--------------------------------
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data.dat')
+
+#ifndef WITHOUTMPI
+  ! Need to call MPI routines even if this CPU has nothing to write!
+  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+    MPI_INFO_NULL, filehandle, mpi_err)
+  call MPI_FILE_WRITE_ORDERED(filehandle, particlelist, & 
+    progenitorcount_written, MPI_INTEGER, state, mpi_err) 
+  call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+  open(unit=666,file=fileloc,form='unformatted')
+  write(666) particlelist
+  close(666)
+  ! TODO: FORMAT
+  ! open(unit=666, file=fileloc, form='formatted')
+  ! do ipeak = 1, ihalo
+  !   do ipart=(ipeak-1)*(nmost_bound+1) + 1, (ipeak)*(nmost_bound+1)
+  !     write(666, '(I7,x)', advance='no') particlelist(ipart)
+  !   enddo
+  !   write(666,*)
+  ! enddo
+  ! close(666)
+#endif
+
+
+
+
+  !--------------------------------
+  ! write progenitor mass list
+  !--------------------------------
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass.dat')
+
+
+#ifndef WITHOUTMPI
+  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
+  call MPI_FILE_WRITE_ORDERED(filehandle, masslist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+  open(unit=666,file=fileloc,form='unformatted')
+  write(666) masslist
+  close(666)
+  !TODO: FORMAT
+  ! open(unit=666, file=fileloc, form='formatted')
+  ! do ipeak = 1, ihalo
+  !   write(666, '(E14.6,x)') masslist(ipeak)
+  ! enddo
+  ! close(666)
+#endif
+
+  deallocate(particlelist)
+  deallocate(masslist)
+
+
+
+
+
+
+  !========================================
+  ! Write past merged progenitors data
+  !========================================
+
+  !---------------------------------------------------------
+  ! Write past merged progenitor IDs, their galaxy particle
+  ! and their merging time
+  ! Format:
+  ! ID prog1, galaxy prog1, time prog1, ID prog2, ...
+  !---------------------------------------------------------
+
+  allocate(pastproglist(1:3*(pmprog_free - 1)))
+  pastproglist = 0
+  allocate(pastprogmasslist(1:3*(pmprog_free - 1)))
+  pastprogmasslist = 0
+
+  npastprogs_all = 0 ! count how many pmprogs you write. will be communicated later.
+  pind = 1
+
+  ! If the past merged progenitor was used, the owner was overwritten to 0.
+  ! Share that info before continuing.
+#ifndef WHITOUTMPI
+  if (npastprogs > 0) then
+    call MPI_ALLREDUCE(MPI_IN_PLACE, pmprogs_owner, npastprogs, &
+      MPI_INT, MPI_MIN, MPI_COMM_WORLD, ipeak)
+  endif
+#endif
+
+
+  if (pmprog_free > 1) then ! if you have stuff to write
+    do ipeak = 1, pmprog_free - 1
+
+      ! Only write if you own this progenitor
+      if (pmprogs_owner(ipeak)==myid) then 
+
+        ! Only write if the progenitor hasn't merged too long ago
+        if (max_past_snapshots > 0) then
+          if ((ifout - pmprogs_t(ipeak)) > max_past_snapshots) then
+            pastproglist(pind) = pmprogs(ipeak)
+            pastproglist(pind+1) = pmprogs_galaxy(ipeak)
+            pastproglist(pind+2) = pmprogs_t(ipeak)
+            pind = pind + 3
+            npastprogs_all = npastprogs_all + 1
+            pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
+          endif
+        else
+          pastproglist(pind) = pmprogs(ipeak)
+          pastproglist(pind+1) = pmprogs_galaxy(ipeak)
+          pastproglist(pind+2) = pmprogs_t(ipeak)
+          pind = pind + 3
+          npastprogs_all = npastprogs_all + 1
+          pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
+        endif
+      endif
+    enddo
+  endif
+
+  ! pind is henceforth the number of 
+  ! elements in the array to be written.
+  pind = pind-1
+
+
+
+
+  !-------------------------------------
+  ! Write past merged progenitors list
+  !-------------------------------------
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors.dat')
+
+#ifndef WITHOUTMPI
+  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, &
+    MPI_INFO_NULL, filehandle, mpi_err)
+  call MPI_FILE_WRITE_ORDERED(filehandle, pastproglist, & 
+    pind, MPI_INTEGER, state, mpi_err) 
+  call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+  open(unit=666,file=fileloc,form='unformatted')
+  write(666) pastproglist
+  close(666)
+  ! TODO: FORMAT
+  ! open(unit=666, file=fileloc, form='formatted')
+  ! ipart = 1
+  ! do while (ipart< pind)
+  !   write(666, '(3(I7,x))') pastproglist(ipart), pastproglist(ipart+1), pastproglist(ipart+2)
+  !   ipart = ipart + 3
+  ! enddo
+  ! close(666)
+#endif  
+
+
+
+
+  !-----------------------------------------
+  ! Write past merged progenitors mass list
+  !-----------------------------------------
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitor_mass.dat')
+
+#ifndef WITHOUTMPI
+  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
+  call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  call MPI_FILE_CLOSE(filehandle, mpi_err)
+#else
+  open(unit=666,file=fileloc,form='unformatted')
+  write(666) pastprogmasslist
+  close(666)
+  !TODO: FORMAT
+  ! open(unit=666, file=fileloc, form='formatted')
+  ! do ipeak = 1, ihalo
+  !   write(666, '(E14.6,x)') pastprogmasslist(ipeak)
+  ! enddo
+  ! close(666)
+#endif
+
+  deallocate(pastproglist, pastprogmasslist)
+
+
+
+
+
+  !======================================
+  ! Write number of progenitors to file
+  ! (both current and past)
+  !======================================
+
+#ifndef WITHOUTMPI
+  buf = (/progenitorcount, ihalo, progenitorcount_written, npastprogs_all/)
+  if (myid == 1) then
+    call MPI_REDUCE(MPI_IN_PLACE, buf, 4, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
+    progenitorcount = buf(1)
+    ihalo = buf(2)
+    progenitorcount_written = buf(3)
+    npastprogs_all = buf(4)
+  else
+    call MPI_REDUCE(buf, buf, 4, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, mpi_err)
+  endif
+#endif
+
+
+  if (myid == 1) then 
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitorcount.dat')
+    open(unit=666,file=fileloc,form='unformatted')
+    write(666) progenitorcount, ihalo, progenitorcount_written, npastprogs_all
+    !TODO: FORMAT
+    ! open(unit=666,file=fileloc,form='formatted')
+    ! write(666, '(2(I7,x))') progenitorcount, progenitorcount_written
+    close(666)
+  endif
+
+
+end subroutine write_progenitor_data
+
+
+
+
+
+
+
+
+
+
+
+!================================================
+subroutine get_local_prog_id(global_id, local_id)
+!================================================
+  
+  use clfind_commons
+  implicit none
+  integer, intent(in) :: global_id 
+  integer, intent(out) :: local_id 
+  integer :: i
+
+  !-------------------------------
+  ! Gets the local progenitor ID
+  ! given the global progenitor ID.
+  !-------------------------------
+
+
+
+  ! Check if prog is already included
+  do i = 1, prog_free
+    if (prog_id(i) == global_id) then
+      local_id = i
+      return
+    endif
+  enddo
+
+  !progenitor is not in there; Give him a new index
+  i = prog_free !save for later
+  prog_id(i) = global_id
+  prog_free = prog_free + 1
+  local_id = i
+  return
+
+
+end subroutine get_local_prog_id 
+
+
+
+
+
+
+
+
+
+
+
+
+!==================================================
+subroutine fill_matrix(key, tar, mat, np, act)
+!==================================================
+
+  !-----------------------------------------------
+  ! Counts that np tracer particles for the
+  ! clump key has been found in the clump target
+  ! and adds it to the matrix mat.
+  !
+  ! clump key:    local id for progenitor,
+  !               local id for descendant
+  ! clump target: local id for progenitor,
+  !               global id for descendant
+  ! act:          how to add the particles to matrix
+  !   act = 'add': add up
+  !   act = 'set': don't add, just set
+  !-----------------------------------------------
+
+  use clfind_commons
+
+  implicit none
+
+  integer, intent(in) :: key, tar, np
+  character(len=3), intent(in) ::  act
+  type(prog_desc_mat), intent(inout) :: mat
+
+  integer :: i, itar
+
+  if (mat%cnt(key) == 0) then
+    ! if there is no first value, 
+    ! add new first value
+    mat%first(key) = mat%mat_free_ind
+    mat%clmp_id(mat%mat_free_ind) = tar
+    mat%cnt(key) = mat%cnt(key) + 1
+
+    if (act=='add') then
+      mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
+    else if (act=='set') then
+      mat%ntrace(mat%mat_free_ind) = np
+    endif
+
+    mat%mat_free_ind = mat%mat_free_ind + 1
+    return
+
+  else
+    ! Try to find a match first
+    itar = mat%first(key)
+    do i = 1, mat%cnt(key)
+      ! If you found a match:
+      if (mat%clmp_id(itar) == tar) then
+        if (act=='add') then
+          mat%ntrace(itar) = mat%ntrace(itar) + np
+        else 
+          mat%ntrace(itar) = np
+        endif
+        return
+      endif
+
+      if (mat%next(itar) > 0) then
+        !cycle
+        itar = mat%next(itar)
+      else
+        exit
+      endif
+    enddo
+  endif
+
+
+
+
+  ! if you didn't find anything, add new value
+  mat%next(itar) = mat%mat_free_ind
+  mat%clmp_id(mat%mat_free_ind) = tar
+  mat%cnt(key) = mat%cnt(key) + 1
+  if (act=='add') then
+    mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
+  else if (act=='set') then
+    mat%ntrace(mat%mat_free_ind) = np
+  endif
+
+  mat%mat_free_ind = mat%mat_free_ind + 1
+  return
+
+end subroutine fill_matrix
+
+
+
+
+
+
+
+
+
+
+!===================================================
+subroutine deallocate_mergertree()
+!===================================================
+
+  !---------------------------------
+  ! Deallocate arrays for mergertree
+  !---------------------------------
+
+  use clfind_commons 
+  implicit none
+  
+
+  if (allocated(prog_id)) then
+    deallocate(prog_id)
+    deallocate(prog_owner)
+    deallocate(galaxy_tracers)
+    deallocate(prog_mass)
+  endif
+
+
+  if (allocated(p2d_links%first)) then
+    deallocate(p2d_links%first)
+    deallocate(p2d_links%cnt)
+    deallocate(p2d_links%ntrace)
+    deallocate(p2d_links%clmp_id)
+    deallocate(p2d_links%next)
+
+    deallocate(d2p_links%first)
+    deallocate(d2p_links%cnt)
+    deallocate(d2p_links%ntrace)
+    deallocate(d2p_links%clmp_id)
+    deallocate(d2p_links%next)
+
+    deallocate(main_prog)
+    deallocate(main_desc)
+  endif
+
+
+  if (allocated(pmprogs)) then
+    deallocate(pmprogs)
+    deallocate(pmprogs_owner)
+    deallocate(pmprogs_galaxy)
+    deallocate(pmprogs_t)
+    deallocate(pmprogs_mass)
+  endif
+
+
+  if (allocated(tracers_all)) then
+      deallocate(tracers_all)
+      deallocate(tracer_loc_progids_all)
+  endif
+   
+
+  deallocate(most_bound_energy)
+  deallocate(most_bound_pid)
+  deallocate(clmp_mass_exclusive)
+  ! deallocate(clmp_vel_exclusive)
+
+end subroutine deallocate_mergertree
+
+
+
+
+
+
+
+
+!===================================================
+subroutine mark_tracer_particles()
+!===================================================
+  !------------------------------------------------------------------
+  ! goes through all clumps
+  ! first determines most bound particles via mpi communications
+  ! then marks all most bound particles by making their clumpid 
+  ! negative
+  !------------------------------------------------------------------
+  use clfind_commons 
+  use amr_commons 
+  implicit none
+  
+  integer :: ipeak, ipart, i
+  real(dp), dimension(1:npeaks_max) :: temp_energy
+  temp_energy = HUGE(0.d0)
+
+
+
+  ! for each of nmost_bound particles
+  do ipart = 1, nmost_bound 
+
+    ! copy this particle of each clump in an array, communicate and find min
+    do ipeak = 1, hfree -1
+      temp_energy(ipeak) = most_bound_energy(ipeak, ipart)
+    end do
+
+    call build_peak_communicator()
+    call virtual_peak_dp(temp_energy(:), 'min')
+    call boundary_peak_dp(temp_energy(:))
+
+
+    do ipeak = 1, hfree -1
+      !need to check whether it is relevant clump. otherwise temp_energy == most_bound_energy = HUGE anyways
+      if (clmp_mass_exclusive(ipeak) > 0) then 
+
+        !if this is true minimal value for this peak
+        if (temp_energy(ipeak) == most_bound_energy(ipeak, ipart) ) then
+
+          ! mark particle if it is bound
+          if (most_bound_energy(ipeak, ipart) < 0) then
+            clmpidp(most_bound_pid(ipeak, ipart)) = - clmpidp(most_bound_pid(ipeak, ipart))
+          end if
+
+        else
+          ! move particle energy list one to the right
+          ! so you won't miss true minimum at later checks
+          !TODO: make group rearrangement: mostbound_energy(ipeak, ipart+1:nmost_bound) = mostbound_energy(ipeak, ipart:nmost_bound-1)
+
+          do i = nmost_bound, ipart + 1, -1
+            most_bound_energy(ipeak, i) = most_bound_energy(ipeak, i-1)
+            most_bound_pid(ipeak, i) = most_bound_pid(ipeak, i-1)
+          end do 
+
+          ! also reset value at this position
+          most_bound_energy(ipeak, ipart) = HUGE(0.d0)
+          most_bound_pid(ipeak, ipart) = 0
+
+        end if !true minimum
+      
+      end if !relevant clump
+
+    end do
+
+  end do
+
+
+
+end subroutine mark_tracer_particles
+
+
+
+
+
+
+
+
+
+
+
+!=========================================================================
+subroutine dissolve_small_clumps(ilevel, for_halos)
+!=========================================================================
+
+  !----------------------------------------------------------------------
+  ! Dissolve clumps with too small mass into parents/nothing.
+  ! Clump is required to have at least mass_threshold number of
+  ! its own particles.
+  !----------------------------------------------------------------------
+
+  use amr_commons 
+  use clfind_commons 
+
+  implicit none
+
+  integer, intent(in)    :: ilevel
+  logical, intent(in)    :: for_halos ! whether to do it for halos or for subhalos
+
+  integer       :: killed, appended
+  integer       :: ipeak, ipart, thispart, parent_local_id, particle_local_id
+
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+  integer, dimension(1:2) :: buf
+  integer :: info
+#endif 
+
+
+
+  !------------------------------------
+  ! Kill or append too small clumps
+  !------------------------------------
+
+  call get_exclusive_clump_mass(ilevel) !subroutine further below
+
+  killed = 0; appended = 0
+
+  do ipeak=1, hfree-1
+    if (lev_peak(ipeak) == ilevel) then
+
+      ! if there are too few particles in there, but at least 1 (i.e. don't do it for placeholders)
+      if (relevance(ipeak) > relevance_threshold .and. clmp_mass_exclusive(ipeak) < (mass_threshold * partm_common) ) then
+
+        call get_local_peak_id(new_peak(ipeak), parent_local_id)
+        if (ipeak == parent_local_id .and. for_halos) then
+
+          !--------------------------------
+          ! if clump is namegiver, kill it
+          !--------------------------------
+
+          if(ipeak <= npeaks) killed = killed + 1 !count only non-virtuals
+          
+          ! remove particles from clump
+          thispart = clmppart_first(ipeak)
+          do ipart = 1, nclmppart(ipeak)
+
+            call get_local_peak_id(clmpidp(thispart), particle_local_id)
+            if (particle_local_id == ipeak) then
+              clmpidp(thispart) = 0
+            end if
+            thispart = clmppart_next(thispart)
+
+          end do 
+
+          nclmppart(ipeak) = 0
+          clmp_mass_pb(ipeak) = 0
+          clmp_mass_exclusive(ipeak) = 0
+
+
+
+        else if (ipeak /= parent_local_id .and..not.for_halos) then
+          !---------------------------------------------------
+          ! if clump isn't namegiver, add particles to parent
+          !---------------------------------------------------
+
+          if(ipeak <= npeaks) appended = appended + 1 !count only non-virtuals
+
+          ! remove particles from clump
+          thispart = clmppart_first(ipeak)
+          do ipart = 1, nclmppart(ipeak)
+
+            call get_local_peak_id(clmpidp(thispart), particle_local_id)
+            if (particle_local_id == ipeak) then
+              clmpidp(thispart) = new_peak(ipeak)
+            end if
+            thispart = clmppart_next(thispart)
+
+          end do 
+
+          nclmppart(ipeak) = 0
+          clmp_mass_pb(ipeak) = 0
+          clmp_mass_exclusive(ipeak) = 0
+
+        end if !namegiver or not
+
+
+      end if !if too small
+    end if ! correct peak level
+  end do !all peaks
+
+
+
+
+
+  !---------------------------------------
+  ! speak to me
+  !---------------------------------------
+
+
+  killed_tot = killed_tot + killed
+  appended_tot = appended_tot + appended
+
+
+
+
+  if (for_halos) then
+
+#ifndef WITHOUTMPI
+    buf = (/killed_tot, appended_tot/)
+    if (myid == 1) then
+      call MPI_REDUCE(MPI_IN_PLACE, buf, 2, MPI_INTEGER,MPI_SUM, 0, MPI_COMM_WORLD, info)
+      killed_tot = buf(1)
+      appended_tot = buf(2)
+    else
+      call MPI_REDUCE(buf, buf, 2, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, info)
+    end if
+#endif
+
+    if(myid == 1) then
+      write(*,'(A43,I6,A14,I6,A18)') " Handling too small clumps TOTAL: Dissolved ", killed_tot, " halos; Merged ", appended_tot, " to their parents." 
+    endif
+
+    !reset values for next output step
+    killed_tot = 0
+    appended_tot = 0
+
+  end if
+
+
+
+
+  contains 
+    !==============================================
+    subroutine get_exclusive_clump_mass(ilevel)
+    !==============================================
+
+      use clfind_commons
+      use pm_commons, only: mp!, vp
+
+      implicit none
+      integer, intent(in) :: ilevel
+      integer :: ipeak, ipart, thispart!, i
+
+      !----------------------------------------------------
+      ! recompute clump properties after unbinding
+      !----------------------------------------------------
+
+      do ipeak=1, hfree-1 !loop over all peaks
+       
+        !reset values for virtual peaks to communicate multiple times
+        if (ipeak > npeaks) then
+          clmp_mass_exclusive(ipeak) = 0
+          ! clmp_vel_exclusive(ipeak,:) = 0
+        end if
+
+
+        if (lev_peak(ipeak) == ilevel ) then
+
+          clmp_mass_exclusive(ipeak) = 0
+          ! clmp_vel_exclusive(ipeak,:) = 0
+
+          if (nclmppart(ipeak) > 0 ) then
+            !if there is work to do on this processing unit for this peak
+            thispart=clmppart_first(ipeak)
+            
+            do ipart=1, nclmppart(ipeak)        !while there is a particle linked list
+              call get_local_peak_id(clmpidp(thispart), particle_local_id) 
+              if (particle_local_id == ipeak) then
+
+                clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
+                ! do i=1,3
+                !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
+                ! end do
+              end if
+
+              thispart=clmppart_next(thispart) ! go to next particle in linked list
+            end do   ! loop over particles
+          end if     ! clump has particles on this processor 
+        end if       ! there is work for this peak on this processor
+      end do         ! loop over peaks
+
+
+      !----------------------------------------------------------
+      ! communicate clump mass and velocity across processors
+      !----------------------------------------------------------
+      call build_peak_communicator
+      call virtual_peak_dp(clmp_mass_exclusive,'sum')       !collect
+      call boundary_peak_dp(clmp_mass_exclusive)            !scatter
+      ! do i=1,3
+      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  !collect
+      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       !scatter
+      ! end do
+
+      ! if (myid==2) write(*,*) "MASSTEST", clmp_mass_exclusive(3021-ipeak_start(2))
+    end subroutine get_exclusive_clump_mass 
+
+
+end subroutine dissolve_small_clumps 
+
+
+
+
+
+
+
+
+
+
+
+
+! endif: NDIM == 3
+#endif
+
+

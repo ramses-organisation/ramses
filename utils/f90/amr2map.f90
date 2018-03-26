@@ -6,7 +6,7 @@ program amr2map
   !--------------------------------------------------------------------------
   use utils
   implicit none
-  integer::ndim,n,i,j,k,twotondim,ncoarse,type=0,domax=0
+  integer::ndim,n,i,j,k,twotondim,ncoarse,type=0,action=0
   integer::ivar,nvar,ncpu,ncpuh,lmax=0,levelmin
   integer::nx,ny,nz,ilevel,iidim,idim,jdim,kdim,icell
   integer::nlevelmax,ilevel1,ngrid1
@@ -154,8 +154,6 @@ program amr2map
   endif
   write(*,*)'time=',t
   write(*,*)'Working resolution =',2**lmax
-  do_max=.false.
-  if(domax==1)do_max=.true.
   zzmax=1.0
   zzmin=0.0
   if(ndim>2)then
@@ -444,84 +442,31 @@ program amr2map
               select case (type)
               case (-1)
                  map = icpu
+                 metmax=max(metmax,dble(icpu))
               case (0)
                  map = ilevel
-              case (1) ! Density
-                 if(do_max)then
-                    map = var(:,ind,1)
-                 else
-                    map = var(:,ind,1)**2
-                 endif
-              case (2) ! Mass weighted x-velocity
-                 map = var(:,ind,2)*var(:,ind,1)
-              case (3) ! Mass weighted y-velocity
-                 map = var(:,ind,3)*var(:,ind,1)
-              case (4) ! Mass weighted z-velocity
-                 map = var(:,ind,4)*var(:,ind,1)
-              case (5) ! Pressure
-                 if(do_max)then
-                    map = var(:,ind,5)/var(:,ind,1)
-                 else
-                    map = var(:,ind,5)
-                 endif
-              case (6) ! Passive scalar
-                 if(do_max)then
-                    map = var(:,ind,6)
-                 else
-                    map = var(:,ind,6)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,6)))
-              case (7)
-                 if(do_max)then
-                    map = var(:,ind,7)
-                 else
-                    map = var(:,ind,7)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,7)))
-              case (8)
-                 if(do_max)then
-                    map = var(:,ind,8)
-                 else
-                    map = var(:,ind,8)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,8)))
-              case (9)
-                 if(do_max)then
-                    map = var(:,ind,9)
-                 else
-                    map = var(:,ind,9)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,9)))
-              case (10)
-                 if(do_max)then
-                    map = var(:,ind,10)
-                 else
-                    map = var(:,ind,10)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,10)))
-              case (11)
-                 if(do_max)then
-                    map = var(:,ind,11)
-                 else
-                    map = var(:,ind,11)*var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,11)))
+                 metmax=max(metmax,dble(ilevel))
               case (12) !! This is for H2 using HI and HII (ramses_rt patch mol)
-                 if(do_max)then
-                    map = 1.0-var(:,ind,8)-var(:,ind,9)
-                 else
+                 if(action==0)then
                     map = (1.0-var(:,ind,8)-var(:,ind,9))*var(:,ind,1)
+                 else
+                    map = 1.0-var(:,ind,8)-var(:,ind,9)
                  endif
                  metmax=max(metmax,maxval(1.0-var(:,ind,8)-var(:,ind,9)))
-!!$              case (8) !T/mu map
-!!$                 map = var(:,ind,5)*(scale_l/scale_t)**2/var(:,ind,1)/1.38d-16*1.66d-24
-!!$                 do_max=.true.
-!!$              case (9)
-!!$                 if(do_max)then
-!!$                    map = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
-!!$                 else
-!!$                    map = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
-!!$                 endif
+              case (5) !! This is for temperature
+                 if(action==0)then
+                    map = var(:,ind,5)
+                 else
+                    map = var(:,ind,5)/var(:,ind,1)
+                 endif
+                 metmax=max(metmax,maxval(var(:,ind,type)))
+              case default ! Hydro variable
+                 if(action==0)then
+                    map = var(:,ind,type)*var(:,ind,1)
+                 else
+                    map = var(:,ind,type)
+                 endif
+                 metmax=max(metmax,maxval(var(:,ind,type)))
               end select
               ! Store data map
               do i=1,ngrida
@@ -539,9 +484,11 @@ program amr2map
                          & iy>=grid(ilevel)%jmin.and.&
                          & ix<=grid(ilevel)%imax.and.&
                          & iy<=grid(ilevel)%jmax)then
-                       if(do_max)then
-                          grid(ilevel)%map(ix,iy)=max(grid(ilevel)%map(ix,iy),map(i))
-                          grid(ilevel)%rho(ix,iy)=max(grid(ilevel)%rho(ix,iy),rho(i))
+                       if(action==2)then
+                          if(weight>0.0d0)then
+                             grid(ilevel)%map(ix,iy)=max(grid(ilevel)%map(ix,iy),map(i))
+                             grid(ilevel)%rho(ix,iy)=max(grid(ilevel)%rho(ix,iy),rho(i))
+                          endif
                        else
                           grid(ilevel)%map(ix,iy)=grid(ilevel)%map(ix,iy)+map(i)*dxline*weight/(zzmax-zzmin)
                           grid(ilevel)%rho(ix,iy)=grid(ilevel)%rho(ix,iy)+rho(i)*dxline*weight/(zzmax-zzmin)
@@ -565,7 +512,7 @@ program amr2map
   end do
   ! End loop over cpu
 
-  if(type>=6)then
+  if(type==0.OR.type==1.OR.type>4)then
      write(*,*)'max val=',metmax
   endif
 
@@ -584,16 +531,12 @@ program amr2map
            ndom=2**ilevel
            i=int(xmin*ndom)+1
            j=int(ymin*ndom)+1
-           if(do_max) then
-              grid(lmax)%map(ix,iy)=max(grid(lmax)%map(ix,iy), &
-                   & grid(ilevel)%map(i,j))
-              grid(lmax)%rho(ix,iy)=max(grid(lmax)%rho(ix,iy), &
-                   & grid(ilevel)%rho(i,j))
+           if(action==2) then
+              grid(lmax)%map(ix,iy)=max(grid(lmax)%map(ix,iy),grid(ilevel)%map(i,j))
+              grid(lmax)%rho(ix,iy)=max(grid(lmax)%rho(ix,iy),grid(ilevel)%rho(i,j))
            else
-              grid(lmax)%map(ix,iy)=grid(lmax)%map(ix,iy) + &
-                   & grid(ilevel)%map(i,j)
-              grid(lmax)%rho(ix,iy)=grid(lmax)%rho(ix,iy) + &
-                   & grid(ilevel)%rho(i,j)
+              grid(lmax)%map(ix,iy)=grid(lmax)%map(ix,iy) + grid(ilevel)%map(i,j)
+              grid(lmax)%rho(ix,iy)=grid(lmax)%rho(ix,iy) + grid(ilevel)%rho(i,j)
            endif
         end do
      end do
@@ -611,10 +554,10 @@ program amr2map
         write(20)t, xxmax-xxmin, yymax-yymin, zzmax-zzmin
         write(20)imax-imin+1,jmax-jmin+1
         allocate(toto(imax-imin+1,jmax-jmin+1))
-        if(do_max)then
-           toto=grid(lmax)%map(imin:imax,jmin:jmax)
-        else
+        if(action==0)then
            toto=grid(lmax)%map(imin:imax,jmin:jmax)/grid(lmax)%rho(imin:imax,jmin:jmax)
+        else 
+           toto=grid(lmax)%map(imin:imax,jmin:jmax)
         endif
         write(20)toto
      else
@@ -628,10 +571,10 @@ program amr2map
            do j=0,ny_sample
               iy=int(dble(j)/dble(ny_sample)*dble(jmax-jmin+1))+jmin
               iy=min(iy,jmax)
-              if(do_max)then
-                 toto(i,j)=grid(lmax)%map(ix,iy)
-              else
+              if(action==0)then
                  toto(i,j)=grid(lmax)%map(ix,iy)/grid(lmax)%rho(ix,iy)
+              else
+                 toto(i,j)=grid(lmax)%map(ix,iy)
               endif
            end do
         end do
@@ -646,10 +589,10 @@ program amr2map
            do i=imin,imax
               xx=xxmin+(dble(i-imin)+0.5)/dble(imax-imin+1)*(xxmax-xxmin)
               yy=yymin+(dble(j-jmin)+0.5)/dble(jmax-jmin+1)*(yymax-yymin)
-              if(do_max)then
-                 write(20,*)xx,yy,grid(lmax)%map(i,j)
-              else
+              if(action==0)then
                  write(20,*)xx,yy,grid(lmax)%map(i,j)/grid(lmax)%rho(i,j)
+              else
+                 write(20,*)xx,yy,grid(lmax)%map(i,j)
               endif
            end do
            write(20,*) " "
@@ -663,10 +606,10 @@ program amr2map
            do j=0,ny_sample
               iy=int(dble(j)/dble(ny_sample)*dble(jmax-jmin+1))+jmin
               iy=min(iy,jmax)
-              if(do_max)then
-                 toto(i,j)=grid(lmax)%map(ix,iy)
-              else
+              if(action==0)then
                  toto(i,j)=grid(lmax)%map(ix,iy)/grid(lmax)%rho(ix,iy)
+              else
+                 toto(i,j)=grid(lmax)%map(ix,iy)
            endif
            end do
         end do
@@ -708,9 +651,13 @@ contains
        print *, '                 [-lma lmax] '
        print *, '                 [-typ type] '
        print *, '                 [-fil filetype] '
-       print *, '                 [-max maxi] '
+       print *, '                 [-act action] '
        print *, 'ex: amr2map -inp output_00001 -out map.dat'// &
             &   ' -dir z -xmi 0.1 -xma 0.7 -lma 12'
+       print *, ' '
+       print *, ' axis : "x" = choose x-axis for direction of projection'
+       print *, ' axis : "y" = choose y-axis for direction of projection'
+       print *, ' axis : "z" = choose z-axis for direction of projection (default)'
        print *, ' '
        print *, ' type :-1 = cpu number'
        print *, ' type : 0 = ref. level (default)'
@@ -721,8 +668,12 @@ contains
        print *, ' type : 5 = gas pressure'
        print *, ' type : 6 = gas metallicity'
        print *, ' '
-       print *, ' maxi : 0 = average along line of sight (default)'
-       print *, ' maxi : 1 = maximum along line of sight'
+       print *, ' filetype : "bin" = binary output file (default)'
+       print *, ' filetype : "ascii" = ascii output file'
+       print *, ' '
+       print *, ' action : 0 = mass-weighted average along line of sight (default)'
+       print *, ' action : 1 = volume-weighted average along line of sight'
+       print *, ' action : 2 = maximum along line of sight'
        stop
     end if
 
@@ -762,8 +713,8 @@ contains
           read (arg,*) type
        case ('-fil')
           read (arg,*) filetype
-       case ('-max')
-          read (arg,*) domax
+       case ('-act')
+          read (arg,*) action
        case default
           print '("unknown option ",a2," ignored")', opt
        end select
