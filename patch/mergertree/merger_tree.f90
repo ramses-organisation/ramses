@@ -39,7 +39,7 @@ subroutine make_merger_tree()
   !============================
 
 
-  if (ifout-2 > 0) then 
+  if (ifout > 1) then 
 
     ! Read in progenitor files
     call read_progenitor_data()
@@ -472,7 +472,7 @@ subroutine create_prog_desc_links()
 
 
                         ! TODO: temporary checks
-                        ! call title(ifout-1, output_to_string)
+                        ! call title(ifout, output_to_string)
                         ! call title(myid, id_to_string)
                         ! filename = "output_"//output_to_string//"/MATRIXCHECK_P2D_BEFORE_COMM"//id_to_string//".txt"
                         !
@@ -776,7 +776,7 @@ subroutine create_prog_desc_links()
 
 
                         ! TODO: Temporary checks
-                        ! call title(ifout -1, output_to_string)
+                        ! call title(ifout, output_to_string)
                         ! call title(myid, id_to_string)
                         ! filename = "output_"//output_to_string//"/MATRIXCHECK_P2D"//id_to_string//".txt"
                         !
@@ -1292,7 +1292,7 @@ subroutine make_trees()
 
       pmprogs(pmprog_free) = prog_id(iprog)
       pmprogs_galaxy = galaxy_tracers(iprog)
-      pmprogs_t(pmprog_free) = ifout-2 ! prog merged into some desc at this timestep
+      pmprogs_t(pmprog_free) = ifout-1 ! prog merged into some desc at this timestep
       pmprogs_owner(pmprog_free) = myid
       pmprogs_mass(pmprog_free) = prog_mass(iprog)
       pmprog_free = pmprog_free + 1
@@ -1483,8 +1483,8 @@ subroutine read_progenitor_data()
 
   if (verbose) write(*,*) " Calling read progenitor data."
 
-  call title(ifout-2, output_to_string)
-  ! ifout -2: read from previous output!
+  call title(ifout-1, output_to_string)
+  ! ifout -1: read from previous output!
   nprogs = 0
   nprogs_to_read = 0
   progcount_to_read = 0
@@ -1730,7 +1730,7 @@ subroutine read_progenitor_data()
   allocate(pmprogs_galaxy(1:npastprogs_max))
   pmprogs_galaxy = 0
 
-  ! Time at which past progenitors have been merged (= ifout-1 at merging time)
+  ! Time at which past progenitors have been merged (= ifout at merging time)
   allocate(pmprogs_t(1:npastprogs_max))
   pmprogs_t = 0
 
@@ -1861,7 +1861,7 @@ subroutine write_trees()
 
   printed = 0
 
-  call title(ifout-1, dir)
+  call title(ifout, dir)
   call title(myid, idnr) 
   fileloc=TRIM('output_'//TRIM(dir)//'/mergertree.txt'//TRIM(idnr))
 
@@ -1878,7 +1878,7 @@ subroutine write_trees()
       if (main_prog(ipeak) > 0 ) then
         write(666,'(4(I15),x, E14.6)') &
           ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), &
-          ifout-2, 1, clmp_mass_exclusive(ipeak)
+          ifout-1, 1, clmp_mass_exclusive(ipeak)
         printed(main_prog(ipeak)) = 1
 
 
@@ -1888,7 +1888,7 @@ subroutine write_trees()
       else if (main_prog(ipeak) == 0) then
         write(666,'(4(I15),x, E14.6)') &
           ipeak+ipeak_start(myid), 0, &
-          ifout-2, 1, clmp_mass_exclusive(ipeak)
+          ifout-1, 1, clmp_mass_exclusive(ipeak)
 
 
       !----------------------------------------------
@@ -1927,7 +1927,7 @@ subroutine write_trees()
   ! will have a negative main descendant ID.
   do iprog = 1, nprogs
     if ( printed(iprog) == 0 .and. main_desc(iprog) /= 0 .and. prog_owner(iprog) == myid ) then
-      write(666, '(4(I15))') main_desc(iprog), prog_id(iprog), ifout-2, 4
+      write(666, '(4(I15))') main_desc(iprog), prog_id(iprog), ifout-1, 4
     endif
   enddo
 
@@ -1977,7 +1977,7 @@ subroutine write_progenitor_data()
   ! Write current clumps as progenitors for next snapshot 
   !=======================================================
 
-  call title(ifout-1, output_to_string)
+  call title(ifout, output_to_string)
   call title(myid, id_to_string)
 
   !------------------------------------------------------------------------------
@@ -2155,7 +2155,7 @@ subroutine write_progenitor_data()
 
         ! Only write if the progenitor hasn't merged too long ago
         if (max_past_snapshots > 0) then
-          if ((ifout-1 - pmprogs_t(ipeak)) > max_past_snapshots) then
+          if ((ifout - pmprogs_t(ipeak)) > max_past_snapshots) then
             pastproglist(pind) = pmprogs(ipeak)
             pastproglist(pind+1) = pmprogs_galaxy(ipeak)
             pastproglist(pind+2) = pmprogs_t(ipeak)

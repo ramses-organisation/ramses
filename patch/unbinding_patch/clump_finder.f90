@@ -1962,7 +1962,7 @@ subroutine unbinding()
   integer           :: ipeak, ilevel, ipart, i
   integer           :: loop_counter=0
   integer, dimension(1:npart) :: clump_ids
-  character(LEN=80)     :: fileloc
+  character(LEN=80)     :: fileloc, filedir
   character(LEN=5)      :: nchar,nchar2
   logical           :: loop_again_global, is_final_round, is_first
 
@@ -1998,6 +1998,10 @@ subroutine unbinding()
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  call title(ifout, nchar)
+  filedir = 'output_'//TRIM(nchar)
+  call create_output_dirs(filedir)
 
 
   !===================
@@ -2034,7 +2038,7 @@ subroutine unbinding()
     loop_counter=0
 
     ! reset values
-    to_iter = lev_peak==ilevel
+    to_iter = (lev_peak==ilevel)
     hasatleastoneptcl=1 ! set array value to 1
 
 
@@ -2125,16 +2129,20 @@ subroutine unbinding()
         niterunbound_tot=niterunbound
 #endif
         if (myid==1) then
-          write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, "particles at level", ilevel, "loop", loop_counter
+          write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
+            "particles at level", ilevel, "loop", loop_counter
         end if
       end if
 
 
-      if (.not. loop_again .and. clinfo .and. myid==1 .and. iter_properties .and. loop_counter < repeat_max) then
-        write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, "clump properties converged after ", loop_counter, "iterations."
+      if (.not. loop_again .and. clinfo .and. myid==1 .and. &
+        iter_properties .and. loop_counter < repeat_max) then
+        write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, &
+          "clump properties converged after ", loop_counter, "iterations."
       end if
 
-      if (loop_counter==repeat_max) write(*,'(A7,I5,A20,I5,A35)') "Level ", ilevel, "not converged after ", repeat_max, "iterations. Moving on to next step."
+      if (loop_counter==repeat_max) write(*,'(A7,I5,A20,I5,A35)') "Level ", ilevel, &
+        "not converged after ", repeat_max, "iterations. Moving on to next step."
 
     end do ! loop again for ilevel
 
@@ -2169,9 +2177,8 @@ subroutine unbinding()
 
   if(unbinding_formatted_output) call unbinding_write_formatted_output()
   
-  call title(ifout-1, nchar)
   call title(myid, nchar2)
-  fileloc=TRIM('output_'//TRIM(nchar)//'/unbinding.out'//TRIM(nchar2))
+  fileloc=TRIM(filedir)//'/unbinding.out'//TRIM(nchar2)
 
   open(unit=666,file=fileloc,form='unformatted')
   
@@ -2823,7 +2830,7 @@ subroutine get_closest_border()
   !------------------------
 
   ! if (unbinding_formatted_output) then
-  !   call title(ifout-1, nchar)
+  !   call title(ifout, nchar)
   !   call title(myid, nchar2)
   !
   !   fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_closestborders.txt'//nchar2)
@@ -3276,7 +3283,7 @@ subroutine compute_phi(ipeak)
   ! Instead, switch to commented out part. (Also the other declaration for char peaks)
     if (ipeak<=npeaks) then
       !generate filename integers
-      call title(ifout-1, nchar)
+      call title(ifout, nchar)
       call title(nmassbins,bins)
       call title(ipeak+ipeak_start(myid),peak)
       !write(peak,'(i10)') ipeak+ipeak_start ! in case of too many peaks
@@ -3451,7 +3458,7 @@ subroutine unbinding_write_formatted_output()
 
 
   ! generate filename integers
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   
   if(particles) call unbinding_formatted_particleoutput(.false.)
@@ -3461,7 +3468,7 @@ subroutine unbinding_write_formatted_output()
     fileloc=TRIM('output_'//TRIM(nchar)//'/unb_form_out_COM.txt'//nchar2)
   
     open(unit=666, file=fileloc, form='formatted')
-    write(666, '(A10,7A18)') "clmp id", "x", "y ", "z", "vx", "vy", "vz", "max_dist"
+    write(666, '(A10,7A18)') "clmp_id", "x", "y ", "z", "vx", "vy", "vz", "max_dist"
     do ipeak=1, npeaks
       if (clmp_mass_pb(ipeak)>0) then
         write(666,'(I10,7E18.9E2)') ipeak+ipeak_start(myid), clmp_com_pb(ipeak,1), clmp_com_pb(ipeak,2), clmp_com_pb(ipeak,3), clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2),clmp_vel_pb(ipeak,3), cmp_distances(ipeak, nmassbins)
@@ -3562,7 +3569,7 @@ subroutine unbinding_formatted_particleoutput(before)
   if (before) then
 
     if (myid==1) then ! create before dir
-      call title(ifout-1,nchar)
+      call title(ifout,nchar)
       cmnd='mkdir -p output_'//TRIM(nchar)//'/before'
       call system(TRIM(cmnd))
     end if
@@ -3575,7 +3582,7 @@ subroutine unbinding_formatted_particleoutput(before)
 
 
   !generate filename
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
 
   if (before) then
@@ -3587,7 +3594,7 @@ subroutine unbinding_formatted_particleoutput(before)
  
 
   open(unit=666, file=fileloc, form='formatted')
-  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp id", "mass", "pid"
+  write(666, '(9A18)') "x", "y", "z", "vx", "vy", "vz", "clmp_id", "mass", "pid"
   do i=1, npartmax
     if(levelp(i)>0) then
       write(666, '(6E18.9E2,I18,E18.9E2,I18)') xp(i,1), xp(i,2), xp(i,3), vp(i,1), vp(i,2), vp(i,3), clmpidp(i),mp(i),idp(i)

@@ -1,4 +1,4 @@
-/ These are modules for reading, integrating and interpolating RT-relevant
+! These are modules for reading, integrating and interpolating RT-relevant
 ! values from spectral tables, specifically SED (spectral energy
 ! distrbution) tables for stellar particle sources, as functions of age
 ! and metallicity, and UV-spectrum tables, as functions of redshift.
