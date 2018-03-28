@@ -390,6 +390,7 @@ subroutine clump_finder(create_output,keep_alive)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
+        ! if(pic)call output_part_clump_id()
      endif
 
   end if
@@ -397,12 +398,12 @@ subroutine clump_finder(create_output,keep_alive)
 
 
 
-    !------------------------------------------
-    ! Added for patch:
-    ! Call particle unbinding
-    !------------------------------------------
-    
-    if(unbind) call unbinding()
+  !------------------------------------------
+  ! Added for patch:
+  ! Call particle unbinding
+  !------------------------------------------
+  
+  if(unbind) call unbinding()
 
 
 
@@ -676,6 +677,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:threetondim)::nbors_father_cells_pass
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
@@ -800,7 +802,8 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         if(ilevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
      end do
      grid(1)=ind_grid(j)
-     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
+     nbors_father_cells_pass=nbors_father_cells(j,1:threetondim)
+     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells_pass,ntestpos,ilevel)
 
      do ipos=1,ntestpos
         if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
@@ -909,7 +912,7 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
 
   integer::n,ilevel
   integer,dimension(1:nvector)::cell_index,cell_levl
-  real(dp),dimension(1:nvector,1:3),intent(in)::xpart
+  real(dp),dimension(1:nvector,1:3)::xpart
 
   !----------------------------------------------------------------------------
   ! This routine returns the index and level of the cell, (at maximum level
@@ -1947,4 +1950,97 @@ subroutine tsc_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   end do
 #endif
 end subroutine tsc_only
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+!######################################
+!######################################
+!######################################
+subroutine output_part_clump_id()
+  !---------------------------------------------------------------------------
+  ! This subroutine loops over all test cells and assigns all particles in a
+  ! testcell the peak ID the testcell has. 
+  !---------------------------------------------------------------------------
+  use amr_commons
+  use clfind_commons    !unbinding stuff is all in here
+  use pm_commons !using mp
+  use amr_parameters
+  implicit none
+  integer,dimension(:),allocatable::clump_ids
+  character(len=80) :: fileloc
+  character(len=5)  :: nchar,nchar2
+
+  ! for looping over test cells and getting particle list
+  integer   :: itestcell, ipart,this_part, global_peak_id, prtcls_in_grid
+
+  ! getting particles per peak
+  integer   :: ind, grid
+
+  !getting in which cell of a grid a particle is
+  integer   :: part_cell_ind, i, j, k
+
+  if(verbose) write(*,*) "Entered get_clumpparticles"
+
+  !-----------------------------------------------------------
+
+  allocate(clmpidp(1:npartmax))
+  allocate(clump_ids(1:npart))
+
+  clmpidp=0
+
+  do itestcell=1, ntest !loop over all test cells
+     global_peak_id=flag2(icellp(itestcell))
+     
+     if (global_peak_id /= 0) then
+
+        ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
+        grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
+        prtcls_in_grid = numbp(grid)          ! get number of particles in grid
+        this_part=headp(grid)             ! get index of first particle
+        
+        ! loop over particles in grid
+        do ipart = 1, prtcls_in_grid
+            
+            !check cell index of particle so you loop only once over each
+            i=0
+            j=0
+            k=0
+            if(xg(grid,1)-xp(this_part,1)/boxlen+(nx-1)/2.0 .le. 0) i=1
+            if(xg(grid,2)-xp(this_part,2)/boxlen+(ny-1)/2.0 .le. 0) j=1
+            if(xg(grid,3)-xp(this_part,3)/boxlen+(nz-1)/2.0 .le. 0) k=1
+            
+            part_cell_ind=i+2*j+4*k+1
+            
+            !If index is correct, assign clump id to particle
+            if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
+            !go to next particle in this grid
+            this_part = nextp(this_part)
+
+        end do        
+     end if   !global peak /=0
+  end do   !loop over test cells
+
+  call title(ifout-1, nchar)
+  call title(myid, nchar2)
+  fileloc=TRIM('output_'//TRIM(nchar)//'/id_clump.out'//TRIM(nchar2))
+  open(unit=666,file=fileloc,form='unformatted')
+  ipart=0
+  do i=1,npartmax
+    if(levelp(i)>0)then
+      ipart=ipart+1
+      clump_ids(ipart)=clmpidp(i)
+    end if
+  end do
+  write(666) clump_ids
+  close(666)
+
+  deallocate(clmpidp)
+  deallocate(clump_ids)
+
+end subroutine output_part_clump_id
+!########################################
+!########################################
+!########################################
+
 #endif
