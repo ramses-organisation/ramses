@@ -2108,6 +2108,8 @@ subroutine unbinding()
                                                       ! that will be tested. If a particle is passed on to the
                                                       ! parent clump, it will be counted twice.
 
+  mergelevel_max = max(0, mergelevel_max)             ! make sure you go at least once; if no subhalos exist,
+                                                      ! the initial mergelevel_max will be -1
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 

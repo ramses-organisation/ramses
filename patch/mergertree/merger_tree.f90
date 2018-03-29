@@ -870,7 +870,7 @@ subroutine make_trees()
   open(unit=666, file=filename, form='formatted')
   write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
   do ipeak = 1, hfree-1
-    if (d2p_links%cnt(iprog) > 0) then
+    if (d2p_links%cnt(ipeak) > 0) then
       write(666, '(2(A9,x,I9x),A7,x,E14.6,8x)', advance='no') &
         "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
          "mass:", clmp_mass_exclusive(ipeak)
@@ -1025,6 +1025,17 @@ subroutine make_trees()
   ! try looking in previous, non-adjacent snapshots.
   !------------------------------------------------------------------
 
+  ! first update all unbinding arrays in case you introduced new virtual peaks
+  do i = 1, nmassbins
+    call boundary_peak_dp(cmp(1,i))
+    call boundary_peak_dp(cmp_distances(1,i))
+  enddo
+  do i = 1, 3
+    call boundary_peak_dp(peak_pos(1,i))
+    call boundary_peak_dp(clmp_vel_pb(1,i))
+  enddo
+
+
   ! reset merit
   merit_desc = 0
 
@@ -1100,7 +1111,7 @@ subroutine make_trees()
   write(666,'(A30,x,I9)') "MATRIXCHECK AFTER TREE ID", myid
 
   do ipeak = 1, hfree-1
-    if (d2p_links%cnt(iprog) > 0) then
+    if (d2p_links%cnt(ipeak) > 0) then
       write(666, '(2(A9,x,I9x),A7,x,E14.6,8x)', advance='no') &
         "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
          "mass:", clmp_mass_exclusive(ipeak)
@@ -1307,9 +1318,9 @@ subroutine make_trees()
       integer, dimension(:), allocatable :: canddts        ! list of progenitor candidates
       real(dp),dimension(:), allocatable :: merit          ! merit of progenitor candidates
       integer, dimension(:), allocatable :: part_local_ind ! local particle index for clumpparticles
-      integer :: ncand      ! number of candidates
+      integer :: ncand                                     ! number of candidates
 
-      integer :: ipart, thispart, iclump, ipastprog, lpid, merit_min_id
+      integer :: ipart, thispart, iclump, ipastprog, lpcid, merit_min_id
       real(dp) :: merit_min
 
 
@@ -1331,8 +1342,8 @@ subroutine make_trees()
         ! Get particle ID list for this clump
         thispart = clmppart_first(ipeak)
         do ipart = 1, nclmppart(ipeak)
-          call get_local_peak_id(clmpidp(thispart), lpid)
-          if (ipeak == lpid) then
+          call get_local_peak_id(clmpidp(thispart), lpcid)
+          if (ipeak == lpcid) then
             particlelist(ipart) = idp(thispart)
             part_local_ind(ipart) = thispart
           endif
@@ -1380,7 +1391,6 @@ subroutine make_trees()
 
 
         ! Find the one with actual minimal merit
-
         merit_min_id = 0
         merit_min = HUGE(0.d0)
         do ipastprog = 1, ncand
@@ -2521,7 +2531,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
   logical, intent(in)    :: for_halos ! whether to do it for halos or for subhalos
 
   integer       :: killed, appended
-  integer       :: ipeak, ipart, thispart, parent_local_id, particle_local_id
+  integer       :: ipeak, ipart, thispart, particle_local_id
 
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -2569,14 +2579,12 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
           clmp_mass_pb(ipeak) = 0
           clmp_mass_exclusive(ipeak) = 0
 
-
-
         elseif (.not.is_namegiver(ipeak) .and. .not.for_halos) then
           !---------------------------------------------------
           ! if clump isn't namegiver, add particles to parent
           !---------------------------------------------------
 
-          if(ipeak <= npeaks) appended = appended + 1 !count only non-virtuals
+          if(ipeak <= npeaks) appended = appended + 1 ! count only non-virtuals
 
           ! remove particles from clump
           thispart = clmppart_first(ipeak)
@@ -2595,8 +2603,6 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
           clmp_mass_exclusive(ipeak) = 0
 
         endif !namegiver or not
-
-
       endif !if too small
     endif ! correct peak level
   enddo !all peaks
@@ -2673,10 +2679,10 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
           ! clmp_vel_exclusive(ipeak,:) = 0
 
           if (nclmppart(ipeak) > 0 ) then
-            !if there is work to do on this processing unit for this peak
+            ! if there is work to do on this processing unit for this peak
             thispart=clmppart_first(ipeak)
             
-            do ipart=1, nclmppart(ipeak)        !while there is a particle linked list
+            do ipart=1, nclmppart(ipeak)        ! while there is a particle linked list
               call get_local_peak_id(clmpidp(thispart), particle_local_id) 
               if (particle_local_id == ipeak) then
 

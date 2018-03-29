@@ -65,6 +65,10 @@ subroutine unbinding()
   progenitorcount_written = 0                         ! count halos that you'll write to file for mergertree
                      
   killed_tot = 0; appended_tot = 0;                   ! count how many too small clumps have been dissolved             
+  
+  mergelevel_max = max(0, mergelevel_max)             ! make sure you go at least once; if no subhalos exist,
+                                                      ! the initial mergelevel_max will be -1
+  
 
 
 
@@ -171,7 +175,7 @@ subroutine unbinding()
       !-------------------------------
       ! get cumulative mass profiles
       !-------------------------------
-      call get_cmp()
+      call get_cmp(.false.)
 
 
       !-----------------------------------------
@@ -297,6 +301,13 @@ subroutine unbinding()
   !=========================================
   ! After unbinding: Do merger tree stuff
   !=========================================
+
+  if (make_mergertree) then
+    ! first recompute cumulative mass profile and distances.
+    ! They might have changed when clumps have been dissolved.
+    to_iter = clmp_mass_exclusive > 0
+    call get_cmp(.true.)
+  endif
 
   call deallocate_unbinding_arrays(.true.)
 
@@ -674,19 +685,22 @@ end subroutine get_clump_properties_pb
 !###################################
 !###################################
 !###################################
-subroutine get_cmp()
+subroutine get_cmp(recompute_cmp)
 
   use amr_commons
   use pm_commons
   use clfind_commons
   implicit none
+  logical, intent(in) :: recompute_cmp
+  ! For mergertree: whether to recompute cmp and distances after unbinding
+  ! To account for dissolved clumps
 
   !------------------------------
   ! Get cumulative mass profiles
   !------------------------------
 
   integer  :: ipeak, i, ipart, levelmax
-  real(dp) :: r_null, distance
+  real(dp) :: r_null, distance, biggest
   integer  :: thispart
   real(dp),dimension(1:3) :: period
   logical  :: check
@@ -695,6 +709,10 @@ subroutine get_cmp()
   integer  :: levelmax_glob, info
   include 'mpif.h'
 #endif
+
+  !--------------------------
+  ! Prepare stuff
+
 
   if(verbose) write(*,*) "Entered get cumulative mass profiles"
 
@@ -716,12 +734,65 @@ subroutine get_cmp()
   endif
 
 
+  if (recompute_cmp) then
+    !------------------------------------
+    ! FIND PARTICLE FURTHEST AWAY FROM CoM
+    !------------------------------------
+    ! The maximal distance of a particle to the CoM is saved in the last
+    ! cmp_distances array for every peak.
+    do ipeak=1, hfree-1
 
+      check = to_iter(ipeak)
+      check = check .and. clmp_mass_pb(ipeak)>0
+      check = check .and. nclmppart(ipeak) > 0
+
+      if (check) then
+        biggest=0.0
+        thispart=clmppart_first(ipeak)
+        do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
+            period=0.d0
+            if (periodical) then
+              do i=1, 3
+                if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
+                if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
+              enddo
+            endif
+
+            distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
+              (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
+              (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
+
+            if(distance>biggest) biggest=distance ! save if it is biggest so far
+
+          thispart=clmppart_next(thispart)
+
+        enddo
+        if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
+      endif
+    enddo     ! over all peaks
+
+    !-------------------------------------------------
+    ! communicate distance of particle furthest away
+    !-------------------------------------------------
+    call build_peak_communicator
+    call virtual_peak_dp(cmp_distances(1,nmassbins), 'max')
+    call boundary_peak_dp(cmp_distances(1,nmassbins))
+  endif
+
+
+
+  !------------------------------------------
+  ! Compute cumulative mass binning distances
+  !------------------------------------------
+  ! The distances are not communicated later, but computed on each
+  ! processor independently, because each processor has all information it needs 
+  ! with cmp_distances(ipeak,nmassbins) and CoM
 
   do ipeak=1, hfree-1
 
     !peak must have need to be reiterated
     check=to_iter(ipeak)
+    check=check .and. clmp_mass_pb(ipeak)>0
     check=check.and.nclmppart(ipeak)>0           !peak must have particles on this processor      
 
     !reset values
@@ -733,13 +804,6 @@ subroutine get_cmp()
 
 
     if (check) then
-      !------------------------------------------
-      ! Compute cumulative mass binning distances
-      !------------------------------------------
-      ! The distances are not communicated later, but computed on each
-      ! processor independently, because each processor has all information it needs 
-      ! with cmp_distances(ipeak,nmassbins) and CoM
-
       if (logbins) then
         do i=1, nmassbins-1
           cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
@@ -1573,7 +1637,6 @@ subroutine deallocate_unbinding_arrays(before_mergertree)
 
   if (before_mergertree) then
 
-    deallocate(clmp_mass_pb)
 
     if(saddle_pot) deallocate(closest_border)
 
@@ -1584,6 +1647,7 @@ subroutine deallocate_unbinding_arrays(before_mergertree)
   else
 
     deallocate(to_iter)
+    deallocate(clmp_mass_pb)
     deallocate(clmp_vel_pb)
 
     deallocate(phi_unb)
