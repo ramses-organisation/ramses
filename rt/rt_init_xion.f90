@@ -107,8 +107,12 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         call cmp_Equilibrium_Abundances(T2,nH,pHI_rates,mu,nSpec,Zsolar)
 
         ! UPDATE IONIZATION STATES
-        if(isH2) then 
-           x = nSpec(3)/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI
+        if(isH2) then
+           if(nrestart==0 .and. cosmo) then !Prevent primordial H2 in cosmo sims 
+              x = (2.*nSpec(2)+nSpec(3))/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI
+           else
+              x = nSpec(3)/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI
+           endif
            uold(ind_leaf(i),iIons-1+ixHI) = x*uold(ind_leaf(i),1)
         endif
         x = nSpec(4)/(2.*nSpec(2)+nSpec(3)+nspec(4))        ! HII fraction
