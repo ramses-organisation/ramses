@@ -492,7 +492,7 @@ end subroutine get_clumpparticles
 !########################################
 subroutine get_clump_properties_pb(first)
   use amr_commons
-  use pm_commons, only: mp, xp, vp
+  use pm_commons, only: mp, vp
   use clfind_commons
   implicit none
 
@@ -504,9 +504,6 @@ subroutine get_clump_properties_pb(first)
   ! If it's called for the first time, it will compute the properties for
   ! all peak IDs. If not, it will go level by level.
   !--------------------------------------------------------------------------
-
-  ! particle furthest away
-  real(dp) :: distance, biggest
 
   ! iterators
   integer :: ipeak, i, ipart
@@ -559,7 +556,6 @@ subroutine get_clump_properties_pb(first)
       do i=1,3
         clmp_vel_pb(ipeak,i)=0.0
       enddo
-      cmp_distances(ipeak,nmassbins)=0.0
       clmp_mass_pb(ipeak)=0.0
 
 
@@ -603,48 +599,12 @@ subroutine get_clump_properties_pb(first)
     check = check .and. clmp_mass_pb(ipeak)>0
 
     if (check) then
-      ! calculate actual CoM and center of momentum frame velocity
+      ! calculate actual center of momentum frame velocity
       do i=1,3
         clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)/clmp_mass_pb(ipeak)
       enddo
-
-      !------------------------------------
-      ! FIND PARTICLE FURTHEST AWAY FROM CoM
-      !------------------------------------
-      ! The maximal distance of a particle to the CoM is saved in the last
-      ! cmp_distances array for every peak.
-      if(nclmppart(ipeak)>0) then
-        biggest=0.0
-        thispart=clmppart_first(ipeak)
-        do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-            period=0.d0
-            if (periodical) then
-              do i=1, 3
-                if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
-                if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
-              enddo
-            endif
-
-            distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
-              (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
-              (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
-
-            if(distance>biggest) biggest=distance ! save if it is biggest so far
-
-          thispart=clmppart_next(thispart)
-
-        enddo
-        if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
-      endif ! to iterate
     endif
   enddo     ! over all peaks
-
-  !-------------------------------------------------
-  ! communicate distance of particle furthest away
-  !-------------------------------------------------
-  call build_peak_communicator
-  call virtual_peak_dp(cmp_distances(1,nmassbins), 'max')
-  call boundary_peak_dp(cmp_distances(1,nmassbins))
 
 
 
@@ -748,23 +708,23 @@ subroutine get_cmp()
       biggest=0.0
       thispart=clmppart_first(ipeak)
       do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-          period=0.d0
-          if (periodical) then
-            do i=1, 3
-              if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
-              if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
-            enddo
-          endif
+        period=0.d0
+        if (periodical) then
+          do i=1, 3
+            if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
+            if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
+          enddo
+        endif
 
-          distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
-            (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
-            (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
+        distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
+          (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
+          (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
 
-          if(distance>biggest) biggest=distance ! save if it is biggest so far
+        if(distance>biggest) biggest=distance ! save if it is biggest so far
 
         thispart=clmppart_next(thispart)
-
       enddo
+
       if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
     endif
   enddo     ! over all peaks
@@ -773,8 +733,8 @@ subroutine get_cmp()
   ! communicate distance of particle furthest away
   !-------------------------------------------------
   call build_peak_communicator
-  call virtual_peak_dp(cmp_distances(1,nmassbins), 'max')
-  call boundary_peak_dp(cmp_distances(1,nmassbins))
+  call virtual_peak_dp(cmp_distances(:,nmassbins), 'max')
+  call boundary_peak_dp(cmp_distances(:,nmassbins))
 
 
 
@@ -1484,6 +1444,7 @@ subroutine potential(ipeak, distance, pot)
   ibin=1
   ! thisbin: the first cmp_distance which is greater than particle distance
   thisbin=1
+
   do 
     if (distance<=cmp_distances(ipeak,ibin)) then
       thisbin=ibin
