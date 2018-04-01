@@ -49,6 +49,10 @@ subroutine make_merger_tree()
   ! create trees only if progenitors might exist
   if (ifout > 1) then 
 
+    ! first allocate some global arrays for current peaks
+    allocate(main_prog(1:npeaks_max))
+    main_prog = 0
+
     ! Read in progenitor files
     call read_progenitor_data()
 
@@ -62,10 +66,11 @@ subroutine make_merger_tree()
       ! create trees
       call make_trees()
 
-      ! write tree to file
-      call write_trees()
-
     endif
+
+    ! write tree to file
+    call write_trees()
+
 
   endif
 
@@ -771,8 +776,6 @@ subroutine make_trees()
 
   allocate(main_desc(1:nprogs))
   main_desc = 0
-  allocate(main_prog(1:npeaks_max))
-  main_prog = 0
   allocate(merit_desc(1:npeaks_max))
   merit_desc = 0
   allocate(merit_desc_copy(1:npeaks_max))
@@ -851,13 +854,14 @@ subroutine make_trees()
   write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
   do iprog = 1, nprogs
     if (p2d_links%cnt(iprog) > 0) then
-      write(666, '(4(A9,x,I9x),A7,x,E14.6,8x)', advance='no') &
-        "Prog:", prog_id(iprog), "local id:", iprog, "# desc:", p2d_links%cnt(iprog), &
+      write(666, '(4(A10,x,I9x),A7,x,E14.6,8x)', advance='no') &
+        "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
         "owner:", prog_owner(iprog), "mass:", prog_mass(iprog)
 
       ipeak = p2d_links%first(iprog)
       do i = 1, p2d_links%cnt(iprog)
-        write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), "tracers:", p2d_links%ntrace(ipeak)
+        call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
+        write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl,"tracers:", p2d_links%ntrace(ipeak)
         ipeak = p2d_links%next(ipeak)
       enddo
       write(666,*)
@@ -1091,13 +1095,14 @@ subroutine make_trees()
 
   do iprog = 1, nprogs
     if (p2d_links%cnt(iprog) > 0) then
-      write(666, '(4(A9,x,I9x),A7,x,E14.6,8x)', advance='no') &
-        "Prog:", prog_id(iprog), "local id:", iprog, "# desc:", p2d_links%cnt(iprog), &
+      write(666, '(4(A10,x,I9x),A7,x,E14.6,8x)', advance='no') &
+        "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
         "owner:", prog_owner(iprog), "mass:", prog_mass(iprog)
 
       ipeak = p2d_links%first(iprog)
       do i = 1, p2d_links%cnt(iprog)
-        write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), "tracers:", p2d_links%ntrace(ipeak)
+        call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
+        write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl,"tracers:", p2d_links%ntrace(ipeak)
         ipeak = p2d_links%next(ipeak)
       enddo
       write(666,*)
@@ -1488,7 +1493,7 @@ subroutine read_progenitor_data()
     inquire(file=fileloc, exist=exists)
     if (.not.exists) then
       write(*, *) "ID", myid, "didn't find file ", fileloc
-      call clean_stop()
+      stop
     endif
 
 
@@ -1556,7 +1561,7 @@ subroutine read_progenitor_data()
     inquire(file=fileloc, exist=exists)
     if (.not.exists) then
       write(*,*) "ID", myid, "didn't find file ", fileloc
-      call clean_stop()
+      stop
     endif
 
 
@@ -1594,7 +1599,7 @@ subroutine read_progenitor_data()
     inquire(file=fileloc, exist=exists)
     if (.not.exists) then
       write(*, *) "ID", myid, "didn't find file ", fileloc
-      call clean_stop()
+      stop
     endif
 
 
@@ -1747,7 +1752,7 @@ subroutine read_progenitor_data()
     inquire(file=fileloc, exist=exists)
     if (.not.exists) then
       write(*, *) "ID", myid, "didn't find file ", fileloc
-      call clean_stop()
+      stop
     endif
 
 
@@ -2407,10 +2412,10 @@ subroutine deallocate_mergertree()
     deallocate(d2p_links%clmp_id)
     deallocate(d2p_links%next)
 
-    deallocate(main_prog)
     deallocate(main_desc)
   endif
 
+  if(ifout > 1) deallocate(main_prog)
 
   if (allocated(pmprogs)) then
     deallocate(pmprogs)
