@@ -37,6 +37,11 @@ subroutine clump_finder(create_output,keep_alive)
   integer(i8b)::nmove_all,nzero_all
 #endif
 
+  if (create_output) then
+    if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
+    if(nstep_coarse==0.and.nrestart>0)return
+  endif
+
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   ! When called from the create_sink, particles are all residing at level 1,
