@@ -22,8 +22,8 @@
 #                               plotted in the scatterplot
 #       -pp, --plotparticles    also create a plot of particles at each output,
 #                               marking the clumps in the tree with their colour
-#                               ! Needs the unb_form_out_particleoutput.txtXXXXX
-#                               files for this function ! 
+#                               ! Needs the unbinding_XXXXX.txtYYYYY  files for 
+#                               this function ! 
 #
 #       -v, --verbose           verbose: print more details of what you're doing
 #
@@ -1412,7 +1412,7 @@ def _read_particle_data(srcdir, params):
 #========================================
     """
     Reads in the particle data from directory srcdir.
-    NOTE: requires part_XXXXX.outYYYYY and unbinding.outYYYYY files
+    NOTE: requires part_XXXXX.outYYYYY and unbinding_XXXXX.outYYYYY files
 
     Parameters:
         srcdir:     String of directory where to read data from
@@ -1432,8 +1432,8 @@ def _read_particle_data(srcdir, params):
 
     srcdirlist = listdir(srcdir)
 
-    if 'unbinding.out00001' not in srcdirlist:
-        print "Couldn't find unbinding.out00001 in", srcdir
+    if 'unbinding_'+srcdir[-5:]+'.out00001' not in srcdirlist:
+        print "Couldn't find unbinding_"+srcdir[-5:]+".out00001 in", srcdir
         print "To plot particles, I require the unbinding output."
         quit()
 
@@ -1488,7 +1488,8 @@ def _read_particle_data(srcdir, params):
         y[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = partfiles[cpu].readReals('d')
         z[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = partfiles[cpu].readReals('d')
         
-        unbfile = srcdir+'/unbinding.out'+str(cpu+1).zfill(5)
+        srcfile = srcdir+'/part_'+srcdir[-5:]+'.out'+str(cpu+1).zfill(5)
+        unbfile = srcdir+'/unbinding_'+srcdir[-5:]+'.out'+str(cpu+1).zfill(5)
         unbffile = ff.FortranFile(unbfile)
 
         clumpid[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = unbffile.readInts()
@@ -2059,11 +2060,9 @@ def main():
     Main function. Calls all the rest.
     """
 
-
     #-----------------------
     # Set up
     #-----------------------
-
     params = global_params()
     params.read_cmdlineargs()
     params.get_output_info()
@@ -2129,9 +2128,7 @@ def main():
         plot_treeparticles(tree, t, params)
 
 
-
     return
-
 
 
 

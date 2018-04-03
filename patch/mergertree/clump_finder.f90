@@ -408,7 +408,7 @@ subroutine clump_finder(create_output,keep_alive)
   ! Call particle unbinding
   !------------------------------------------
   
-  if(unbind) call unbinding()
+  if(unbind.and.create_output) call unbinding()
 
 
 
