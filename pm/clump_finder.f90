@@ -37,6 +37,11 @@ subroutine clump_finder(create_output,keep_alive)
   integer(i8b)::nmove_all,nzero_all
 #endif
 
+  if (create_output) then
+    if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
+    if(nstep_coarse==0.and.nrestart>0)return
+  endif
+
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   ! When called from the create_sink, particles are all residing at level 1,
@@ -577,6 +582,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:threetondim)::nbors_father_cells_pass
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
@@ -701,7 +707,8 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         if(ilevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
      end do
      grid(1)=ind_grid(j)
-     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
+     nbors_father_cells_pass=nbors_father_cells(j,1:threetondim)
+     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells_pass,ntestpos,ilevel)
 
      do ipos=1,ntestpos
         if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
@@ -1858,10 +1865,6 @@ subroutine output_part_clump_id()
   use pm_commons !using mp
   use amr_parameters
   implicit none
-#ifndef WITHOUTMPI
-  integer :: info
-  include 'mpif.h'
-#endif
   integer,dimension(:),allocatable::clmpidp,clump_ids
   character(len=80) :: fileloc
   character(len=5)  :: nchar,nchar2
