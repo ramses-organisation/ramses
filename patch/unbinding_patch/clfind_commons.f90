@@ -99,7 +99,7 @@ module clfind_commons
   integer :: nmassbins=50
   logical :: logbins=.true.
 
-  real(dp),allocatable,dimension(:,:) :: cmp !cumulative mass profile, 
+  real(dp),allocatable,dimension(:,:) :: cmp !cumulative mass profile 
   real(dp),allocatable,dimension(:,:) :: cmp_distances !CMP distances
 
 
@@ -110,8 +110,8 @@ module clfind_commons
   !Potential stuff
   !----------------
 
-  !logical   :: mp_pot=.false.   !unbinding potential calc: consider enclosed mass as point source.
-  logical   :: saddle_pot=.true.!subtract the potential at the closest saddle of the CoM for unbinding
+  logical   :: saddle_pot=.true. !subtract the potential at the closest saddle of the CoM for unbinding
+                                 !=considering neighbours for the exclusive unbinding
 
 
   real(dp),allocatable,dimension(:)   :: phi_unb !gravitational potential phi
@@ -127,24 +127,23 @@ module clfind_commons
   !-------------------------
 
   logical   :: iter_properties=.true.  ! whether to repeat the unbinding with updated clump properties
-  real(dp)  :: conv_limit = 0.01          ! convergence factor. If the v_clump_old/v_clump_new < conv_limit,
-                                        ! stop iterating for this clump. 
-  integer   :: repeat_max = 100          ! maximal number of loops per level
-  logical   :: loop_again               ! if the loop needs to be redone (for a level)
+  real(dp)  :: conv_limit = 0.01       ! convergence factor. If the v_clump_old/v_clump_new < conv_limit,
+                                       ! stop iterating for this clump. 
+  integer   :: repeat_max = 100        ! maximal number of loops per level
+  logical   :: loop_again              ! if the loop needs to be redone (for a level)
 
 
-  logical,allocatable,dimension(:)    :: to_iter         ! whether to repeat the clump properties search
-                                                         ! on this peak ID
-  logical,allocatable,dimension(:)    :: contributes     ! whether the particle still contributes
-                                                         ! to the clump properties
+  logical,allocatable,dimension(:)    :: to_iter            ! whether to repeat the clump properties search
+                                                            ! on this peak ID
+  logical,allocatable,dimension(:)    :: is_namegiver       ! whether peak is namegiver
 
-  real(dp),allocatable,dimension(:,:) :: oldcom, oldvel     ! store old values: centre of mass, bulk velocits
-  real(dp),allocatable,dimension(:)   :: oldcmpd,oldm       ! particle furthest away from CoM
+
+  logical,allocatable,dimension(:)    :: contributes        ! whether the particle still contributes
+                                                            ! to the clump properties
+
   integer,allocatable,dimension(:)    :: hasatleastoneptcl  ! clump has at least 1 particle that contributes
 
-
-    ! debugging
-  integer :: testpeak
+  ! counters
   integer :: niterunbound, niterunbound_tot
 
 end module clfind_commons

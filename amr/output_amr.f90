@@ -16,7 +16,7 @@ subroutine dump_all
 #endif
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
-  character(LEN=80)::filename,filename_desc,filedir,filedirini
+  character(LEN=80)::filename,filename_desc,filedir
   integer::ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
@@ -34,7 +34,6 @@ subroutine dump_all
   if(ndim>1)then
 
      if(IOGROUPSIZEREP>0) then
-        filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
@@ -658,40 +657,44 @@ end subroutine savegadget
 !#########################################################################
 subroutine create_output_dirs(filedir)
 
-    use amr_commons
-    implicit none
-    character(LEN=80), intent(in):: filedir
-    integer :: ierr
-    character(LEN=5) ::nchar, ncharcpu
-    character(LEN=80)::filedirini,filecmd
+  use amr_commons
+  implicit none
+  character(LEN=80), intent(in):: filedir
+  integer :: ierr
+#ifdef NOSYSTEM
+  character(LEN=80)::filedirini
+#else
+  character(LEN=80)::filecmd
+#endif
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer :: info
 #endif
 
 
-    filecmd='mkdir -p '//TRIM(filedir)
+  filecmd='mkdir -p '//TRIM(filedir)
 
-    if (.not.withoutmkdir) then
+  if (.not.withoutmkdir) then
 #ifdef NOSYSTEM
-       call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
-       call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+    filedirini = filedir(1:13)
+    call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
+    call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
 #else
-       call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
-       if(ierr.ne.0 .and. ierr.ne.127)then
-          write(*,*) 'Error - Could not create ',trim(filedir),' error code=',ierr
+    call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
+    if(ierr.ne.0 .and. ierr.ne.127)then
+      write(*,*) 'Error - Could not create ',trim(filedir),' error code=',ierr
 #ifndef WITHOUTMPI
-          call MPI_ABORT(MPI_COMM_WORLD,1,info)
+      call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-          stop
-#endif
-       endif
+      stop
 #endif
     endif
+#endif
+  endif
 
 
 #ifndef WITHOUTMPI
-    call MPI_BARRIER(MPI_COMM_WORLD,info)
+  call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
 
 

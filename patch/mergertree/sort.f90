@@ -30,7 +30,7 @@ CONTAINS
 
     !     Local variables
     INTEGER             :: i, j, itemp
-    REAL(qdp)              :: reference, temp
+    REAL(qdp)           :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
 
     IF (right_end < left_end + max_simple_sort_size) THEN
@@ -179,7 +179,7 @@ CONTAINS
     INTEGER, INTENT(IN) :: left_end, right_end
 
     !     Local variables
-    INTEGER             :: i, j, itemp
+    INTEGER                :: i, j, itemp
     REAL(kind=8)           :: temp
 
     DO i = left_end, right_end - 1
@@ -200,14 +200,19 @@ END SUBROUTINE quick_sort_dp
 !########################################################################
 !########################################################################
 SUBROUTINE quick_sort_real_int(list, order, n)
+
+  !----------------------------------------------------------
+  ! Sort array of reals (list), rearrange array of integers
+  ! (order) in the same way.
+  !----------------------------------------------------------
+
   use amr_parameters, ONLY: dp
-  IMPLICIT NONE
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
   ! Fortran 90", McGraw-Hill  ISBN 0-07-000248-7, pages 149-150.
   ! Modified to sort the second given array by the same rules.
 
-
+  IMPLICIT NONE
   INTEGER :: n
   REAL(dp), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: order
@@ -218,12 +223,13 @@ SUBROUTINE quick_sort_real_int(list, order, n)
 CONTAINS
 
   RECURSIVE SUBROUTINE quick_sort_1_dp(left_end, right_end)
+    use amr_commons, only: dp
 
     INTEGER, INTENT(IN) :: left_end, right_end
 
     !     Local variables
     INTEGER             :: i, j, itemp
-    REAL(kind=8)        :: reference, temp
+    REAL(dp)            :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
 
     IF (right_end < left_end + max_simple_sort_size) THEN
@@ -259,6 +265,7 @@ CONTAINS
              EXIT
           END IF
        END DO
+
        IF (left_end < j) CALL quick_sort_1_dp(left_end, j)
        IF (i < right_end) CALL quick_sort_1_dp(i, right_end)
     END IF
@@ -267,12 +274,13 @@ CONTAINS
 
 
   SUBROUTINE interchange_sort_dp(left_end, right_end)
+    use amr_commons, only: dp
 
     INTEGER, INTENT(IN) :: left_end, right_end
 
     !     Local variables
     INTEGER             :: i, j, itemp
-    REAL(kind=8)           :: temp
+    REAL(dp)            :: temp
 
     DO i = left_end, right_end - 1
        DO j = i+1, right_end
@@ -292,7 +300,12 @@ END SUBROUTINE quick_sort_real_int
 !########################################################################
 !########################################################################
 SUBROUTINE quick_sort_int_int(list, order, n)
-  use amr_parameters, ONLY: dp
+
+  !------------------------------------------------------------
+  ! Sort array of integers (list), rearrange array of integers
+  ! (order) in the same way.
+  !------------------------------------------------------------
+  
   IMPLICIT NONE
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
