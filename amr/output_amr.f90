@@ -661,10 +661,9 @@ subroutine create_output_dirs(filedir)
   implicit none
   character(LEN=80), intent(in):: filedir
   integer :: ierr
+  character(LEN=80)::filecmd
 #ifdef NOSYSTEM
   character(LEN=80)::filedirini
-#else
-  character(LEN=80)::filecmd
 #endif
 #ifndef WITHOUTMPI
   include 'mpif.h'
