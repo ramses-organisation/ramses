@@ -302,13 +302,6 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
-  ! if (make_mergertree) then
-  !   ! first recompute cumulative mass profile and distances.
-  !   ! They might have changed when clumps have been dissolved.
-  !   to_iter = clmp_mass_exclusive > 0
-  !   call get_cmp(.true.)
-  ! endif
-
   call deallocate_unbinding_arrays(.true.)
 
   if (make_mergertree) then
@@ -327,7 +320,7 @@ subroutine unbinding()
   if(unbinding_formatted_output) call write_unbinding_formatted_output(.false.)
   
   call title(myid, nchar2)
-  fileloc=TRIM(filedir)//'/unbinding.out'//TRIM(nchar2)
+  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
 
   open(unit=666,file=fileloc,form='unformatted')
   
@@ -665,7 +658,6 @@ subroutine get_cmp()
   real(dp) :: r_null, distance, biggest
   integer  :: thispart
   real(dp),dimension(1:3) :: period
-  logical  :: check
    
 #ifndef WITHOUTMPI
   integer  :: levelmax_glob, info
@@ -747,18 +739,15 @@ subroutine get_cmp()
 
   do ipeak=1, hfree-1
 
-    !peak must have need to be reiterated
-    check=cmp_distances(ipeak, nmassbins)>0           
-
-    !reset values
-    if (check .or. ipeak > npeaks) then
+    ! reset values
+    if (cmp_distances(ipeak, nmassbins)>0.or. ipeak > npeaks) then
       do i = 1, nmassbins
         cmp(ipeak,i) = 0.0
       enddo
     endif
 
-
-    if (check) then
+    ! set up distances
+    if (cmp_distances(ipeak, nmassbins)>0) then
       if (logbins) then
         do i=1, nmassbins-1
           cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
