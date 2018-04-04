@@ -408,7 +408,7 @@ subroutine clump_finder(create_output,keep_alive)
   ! Call particle unbinding
   !------------------------------------------
   
-  if(unbind) call unbinding()
+  if(unbind.and.create_output) call unbinding()
 
 
 
@@ -2308,7 +2308,7 @@ subroutine unbinding()
   if(unbinding_formatted_output) call unbinding_write_formatted_output()
   
   call title(myid, nchar2)
-  fileloc=TRIM(filedir)//'/unbinding.out'//TRIM(nchar2)
+  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
 
   open(unit=666,file=fileloc,form='unformatted')
   
