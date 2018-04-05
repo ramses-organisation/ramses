@@ -299,7 +299,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
 #ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(verbose,verbose_all,ncpu,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(verbose,verbose_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
 #else
      verbose_all=verbose
 #endif
