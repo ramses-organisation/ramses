@@ -17,7 +17,7 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal
+  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal,t_sn_cont,current_time
   integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,ilun,idim
   real(dp),dimension(1:3)::skip_loc
@@ -76,6 +76,18 @@ subroutine thermal_feedback(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  ! Massive star lifetime from Myr to code units
+  if(use_proper_time)then
+    !  t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+    !  t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   ! Gather star particles only.
 
@@ -97,7 +109,7 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if ( is_star(typep(ipart)) ) then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -114,7 +126,7 @@ subroutine thermal_feedback(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if ( is_star(typep(ipart)) ) then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -239,7 +251,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=5.0*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=2.39*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+!   p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
@@ -355,7 +368,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         n_SN(j)=0
         birth_time=tp(ind_part(j))
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+        if(birth_time.lt.(current_time-t0))then
            ! Guesstimate the initial star particle mass
            mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
            ! Compute the constant SN rate
@@ -417,11 +430,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      
      ! Photo-ionization thermal feedback
      do j=1,np
-        birth_time=tp(ind_part(j))
-        if(birth_time.ge.(current_time-t_sn_cont))then
            pressure=max(uold(indp(j),1),smallr)*cs_H2_2
            ethermal(j)=ethermal(j)+pressure
-        endif
      end do
      
      ! Use stellar momentum feedback
@@ -437,18 +447,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           p_boost = (gas_density*scale_nH)**(-0.15)*metallicity**(-0.15)
+           p_boost = (gas_density*scale_nH/100.0)**(-0.160)*metallicity**(-0.137)
            ! Cooling radius
-           r_cool = 30.0 * 3.08d18 / scale_l * ( gas_density*scale_nH )**(-0.42)
-           !    if(birth_time.ge.(current_time-t_sn_cont).and.(gas_density*scale_nH).gt.1d-5)then
-           if(birth_time.ge.(current_time-t_sn_cont))then
+           r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * ( gas_density*scale_nH/100.0 )**(-0.42)
+           if(birth_time.lt.(current_time-t0))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
-              !write(*,'(A10,I10,E24.8,E24.8,E24.8,E24.8,E24.8)')'pstar: yes', n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-              ! if(sf_log_properties.and.n_SN(j).gt.0.5) then
-              !     write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
-              !     write(ilun,'(I10,E24.12,E24.12,E24.12,E24.12,E24.12)',advance='no') n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-              !     write(ilun,'(A1)') ' '
-              ! endif
            endif
         end do
         

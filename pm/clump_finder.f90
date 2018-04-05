@@ -1919,7 +1919,7 @@ subroutine output_part_clump_id()
      end if   !global peak /=0
   end do   !loop over test cells
 
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   fileloc=TRIM('output_'//TRIM(nchar)//'/id_clump.out'//TRIM(nchar2))
   open(unit=666,file=fileloc,form='unformatted')
