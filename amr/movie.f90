@@ -273,9 +273,6 @@ subroutine output_frame()
   if(deltay_frame(proj_ind*2-1).eq.0d0 .and. deltax_frame(proj_ind*2-1).gt.0d0)then
      deltay_frame(proj_ind*2-1)=deltax_frame(proj_ind*2-1)*float(nh_frame)/float(nw_frame)
   endif
-  if(deltaz_frame(proj_ind*2-1).eq.0d0)then
-     deltaz_frame(proj_ind*2-1)=boxlen
-  endif
   delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
   delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp

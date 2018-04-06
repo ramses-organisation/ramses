@@ -140,15 +140,19 @@ endelse
 
 ; Colors
 if keyword_set(clt) then loadct,clt
-tvlct,r,g,b,/get
-colors=findgen(ncol)
-for i=0,ncolm1 do begin
-   j=double(i)/double(ncol)*255.
-   colors(i)=r(j)+256L*g(j)+256L*256L*b(j)
-endfor
+n_colors=MIN([!d.n_colors,256])
+tvlct,255,255,255,n_colors-1
+tvlct,0,0,0,0
+cmax=n_colors-20.
+
+clr=(findgen(ncol)+1.)/float(ncol)*cmax+15
 if keyword_set(reverse) then begin
-   colors=reverse(colors)
-endif
+   print,'Don''t forget to .r reverse'
+   clr2=reverse(clr)
+endif else begin
+   clr2=clr
+endelse
+clr=clr2
 
 ; Color table versus values
 a=niv
@@ -175,7 +179,7 @@ if keyword_set(table) then begin
     contour,c,b,a $
             ,title='!17Value/Color' $
             ,xr=[0,b[1]],yr=[min(a),max(a)],/xs,/ys,ticklen=0. $
-            ,xticks=1,xtickn=[' ',' '],c_colors=colors $
+            ,xticks=1,xtickn=[' ',' '],c_colors=clr $
             ,position=posleg,ylog=log,noerase=noerase $
             ,/fill,/follow,levels=niv
     
@@ -195,7 +199,7 @@ endif else begin
 endelse
 contour,/follow,/fill,ext,x,y,levels=niv $
         ,xr=[min(x),max(x)],yr=[min(y),max(y)],/xs,/ys $
-        ,position=pos,title='!17'+title,c_colors=colors $
+        ,position=pos,title='!17'+title,c_colors=clr $
         ,xtitle=xtitle,ytitle=ytitle,/noerase
 
 end

@@ -51,6 +51,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   real(kind=8),dimension(:),allocatable:: xx, yy, f
   real(dp):: la0, la1
   integer :: i
+  !logical,optional::doPrint
 !-------------------------------------------------------------------------
   integrateSpectrum=0.
   if(N .le. 2) RETURN
@@ -120,35 +121,35 @@ END FUNCTION fdivLambda
 FUNCTION fSig(lambda, f, species)
   real(kind=8):: fSig, lambda, f
   integer :: species
-  fSig = f * getCrosssection_Hui(lambda,species)
+  fSig = f * getCrosssection(lambda,species)
 END FUNCTION fSig
 
 FUNCTION fSigLambda(lambda, f, species)
   real(kind=8):: fSigLambda, lambda, f
   integer :: species
-  fSigLambda = f * lambda * getCrosssection_Hui(lambda,species)
+  fSigLambda = f * lambda * getCrosssection(lambda,species)
 END FUNCTION fSigLambda
 
 FUNCTION fSigdivLambda(lambda, f, species)
   real(kind=8):: fSigdivLambda, lambda, f
   integer :: species
-  fSigdivLambda = f / lambda * getCrosssection_Hui(lambda,species)
+  fSigdivLambda = f / lambda * getCrosssection(lambda,species)
 END FUNCTION fSigdivLambda
 !_________________________________________________________________________
 
 !*************************************************************************
 FUNCTION trapz1(X,Y,N,cum)
 
-  ! Integrates function Y(X) along the whole interval 1..N, using a very
-  ! simple staircase method and returns the result.
-  ! Optionally, the culumative integral is returned in the cum argument.
-  !-------------------------------------------------------------------------
+! Integrates function Y(X) along the whole interval 1..N, using a very
+! simple staircase method and returns the result.
+! Optionally, the culumative integral is returned in the cum argument.
+!-------------------------------------------------------------------------
   integer :: N,i
   real(kind=8):: trapz1
   real(kind=8):: X(N),Y(N)
   real(kind=8),optional::cum(N)
   real(kind=8),allocatable::cumInt(:)
-  !-------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   trapz1=0.
   if (N.le.1) RETURN
   allocate(cumInt(N))
@@ -162,44 +163,52 @@ FUNCTION trapz1(X,Y,N,cum)
 END FUNCTION trapz1
 
 !*************************************************************************
-FUNCTION getCrosssection_Hui(lambda, species)
-  
-  ! Gives an atom-photon cross-section of given species at given wavelength,
-  ! as given by Hui and Gnedin (1997).
-  ! lambda  => Wavelength in angstrom
-  ! species => 1=HI, 2=HeI or 3=HeII
-  ! returns :  photoionization cross-section in cm^2
-  !------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs, eV_to_erg, ionEvs, hp
-  real(kind=8)      :: lambda, getCrosssection_Hui
+FUNCTION getCrosssection(lambda, species)
+
+! Gives an atom-photon cross-section of given species at given wavelength,
+! as given by Hui and Gnedin (1997) for HI and He, and Abel97 for H2.
+! lambda  => Wavelength in angstrom
+! species => ixHI (H2), ixHII (HI), ixHeII (HeI) or ixHeIII (HeII)
+! returns :  photoionization or photodissociation cross-section in cm^2
+!------------------------------------------------------------------------
+  use rt_parameters,only:c_cgs, eV_to_erg, ionEvs, hp, ixHI, ixHII      &
+                        ,ixHeII, ixHeIII
+  real(kind=8)      :: lambda, getCrosssection
   integer           :: species
   real(kind=8)      :: E0=1., cs0=0., P=1., ya=1., yw=0., y0=0., y1=1.
   real(kind=8)      :: E, x, y
-  !------------------------------------------------------------------------
+!------------------------------------------------------------------------
   E = hp * c_cgs/(lambda*1.d-8) / ev_to_erg         ! photon energy in ev
   if ( E .lt. ionEvs(species) ) then            ! below ionization energy
-     getCrosssection_Hui=0.
+     getCrosssection=0.
      RETURN
   endif
-  select case (species)
-  case (1) ! HI
-     E0 = 4.298d-1 ; cs0 = 5.475d-14    ; P  = 2.963
-     ya = 32.88    ; yw  = 0            ; y0 = 0         ; y1 = 0
-  case (2) ! HeI
-     E0 = 1.361d1    ; cs0 = 9.492d-16  ; P  = 3.188
-     ya = 1.469      ; yw  = 2.039      ; y0 = 0.4434    ; y1 = 2.136
-  case (3) ! HeII
-     E0 = 1.720      ; cs0 = 1.369d-14  ; P  = 2.963
-     ya = 32.88      ; yw  = 0          ; y0 = 0         ; y1 = 0
-  end select
-
+  if(species .eq. ixHI) then ! H2 ionization cs, Abel1997 eqn A24
+    getCrosssection = 0.
+    if(E .ge. 11.2  .and. E .lt. 13.6) getCrosssection=2.1d-19!Sternberg2014
+    if(E .ge. 15.42 .and. E .lt. 16.5) getCrosssection=6.2e-18*E-9.4e-17
+    if(E .ge. 16.5  .and. E .lt. 17.7) getCrosssection=1.4e-18*E-1.48e-17    
+    if(E .ge. 117.7) getCrosssection=2.5e-14*E**(-2.71)
+    RETURN
+  endif
+  if(species .eq. ixHII) then ! HI
+     E0 = 4.298d-1 ; cs0 = 5.475d-14  ; P  = 2.963
+     ya = 32.88    ; yw  = 0          ; y0 = 0         ; y1 = 0
+  endif
+  if(species .eq. ixHeII) then ! HeI
+     E0 = 1.361d1  ; cs0 = 9.492d-16  ; P  = 3.188
+     ya = 1.469    ; yw  = 2.039      ; y0 = 0.4434    ; y1 = 2.136
+  endif
+  if(species .eq. ixHeIII) then ! HeII
+     E0 = 1.720    ; cs0 = 1.369d-14  ; P  = 2.963
+     ya = 32.88    ; yw  = 0          ; y0 = 0         ; y1 = 0
+  endif
   x = E/E0 - y0
   y = sqrt(x**2+y1**2)
 
-  getCrosssection_Hui = &
+  getCrosssection = &
        cs0 * ((x-1.)**2 + yw**2) * y**(0.5*P-5.5)/(1.+sqrt(y/ya))**P
-
-END FUNCTION getCrosssection_Hui
+END FUNCTION getCrosssection
 
 
 END MODULE spectrum_integrator_module
@@ -266,7 +275,6 @@ SUBROUTINE init_SED_table()
   integer::locid,ncpu2
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
   integer,parameter::tag=1132
-
 !-------------------------------------------------------------------------
   if(myid==1) &
         write(*,*) 'Stars are photon emitting, so initializing SED table'
@@ -365,10 +373,10 @@ SUBROUTINE init_SED_table()
      tbl=0.
      pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
      do iz = 1, nzs                                     ! Loop metallicity
-     do ia = locid+1,nAges,ncpu2                                 ! Loop age
+     do ia = locid+1,nAges,ncpu2                                ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
-        do ii = 1,nIons                                     ! Loop species
+        do ii = 1,nIonsUsed                                ! Loop species
            tbl(ia,iz,2+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
            tbl(ia,iz,3+ii*2) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
         end do ! End species loop
@@ -402,7 +410,7 @@ SUBROUTINE init_SED_table()
         allocate(SED_ages(SED_nA))
         SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
      end if
-
+     
      ! Integrate the cumulative luminosities:
      SED_table(:,:,ip,2)=0.d0
      do iz = 1, SED_nZ ! Loop metallicity
@@ -528,7 +536,7 @@ SUBROUTINE update_SED_group_props()
         group_cse(ip,:) = sum_cse_all(ip,:) / sum_L_all(ip)
      else ! no stars -> assign zero-age zero-metallicity props
         group_egy(ip)       = SED_table(1,1,ip,3)
-        do ii=1,nIons
+        do ii=1,nIonsUsed
            group_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
            group_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
         enddo
@@ -614,7 +622,6 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
               ! Save next particle       <--- Very important !!!
               next_part = nextp(ipart)
               ! Select only star particles
-              !        old versions included radiation from debris...
               if(is_star(typep(ipart))) then
                  npart2 = npart2+1     ! only stars
               endif
@@ -632,7 +639,6 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
               ! Save next particle      <--- Very important !!!
               next_part = nextp(ipart)
               ! Select only star particles
-              !        old versions included radiation from debris...
               if(is_star(typep(ipart))) then
                  if(ig==0)then
                     ig=1
@@ -661,6 +667,9 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
      endif
   end do
   ! End loop over cpus
+
+  if(heat_unresolved_HII.gt.0) &
+       call heat_unresolved_HII_regions(ilevel,dtnew(ilevel))
 
 111 format('   Entering star_rt_feedback for level ',I2)
 #endif
@@ -799,7 +808,7 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   y0lg = log10(y(1));   y1lg = log10(y(ny))
 
   if(xint_log .lt. 0 .and. nx .gt. 1) then
-     new_nx=int(-xint_log)                             ! xint represents wanted
+     new_nx=int(-xint_log)                        ! xint represents wanted
      xint_log = (x1lg-x0lg)/(new_nx-1)            !     number of new bins
   else
      new_nx =int((x1lg-x0lg)/xint_log) + 1
@@ -892,7 +901,8 @@ SUBROUTINE write_SEDtable()
                 SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
                 SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
                 SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
-                SED_table(i,j,ip,9)
+                SED_table(i,j,ip,9),    SED_table(i,j,ip,10),            &
+                SED_table(i,j,ip,11)
         end do
      end do
      close(10)
@@ -1035,7 +1045,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
        & , scale_Fp, age, z=0., scale_inp, scale_Nphot, dt_Gyr           &
        & , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
-  !-------------------------------------------------------------------------
+!-------------------------------------------------------------------------
   if(.not. metal) z = max(z_ave*0.02, 10.d-5)![m_metals/m_tot]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -1087,7 +1097,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   do idim=1,ndim
      do j=1,np
         id(j,idim) = int(x(j,idim)) ! So id=0-5 is the cell (in the
-     end do                    ! 3x3x3 supercube) containing the star
+     end do                         ! 3x3x3 supercube) containing the star
   end do
 
   ! Compute parent grids
@@ -1171,7 +1181,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
         ! step_mStar = step_mStar+mass * scale_msun             &
         !      * dt_loc_Gyr * Gyr2sec / scale_t
         step_mStar = step_mStar+mp(ind_part(j)) * scale_msun             &
-             * dt_loc_Gyr * Gyr2sec / scale_t
+                                          * dt_loc_Gyr * Gyr2sec / scale_t
      endif
 
      if( ok(j) )then
@@ -1189,14 +1199,13 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
         end do
      else                                                  ! ilevel-1 cell
         do ip=1,nSEDgroups
-           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))  &
+           rtunew(indp(j),iGroups(ip)) = rtunew(indp(j),iGroups(ip))     &
                 + part_NpInp(j,ip) / vol_factor
         end do
      endif
   end do
 
 END SUBROUTINE star_RT_vsweep
-
 #endif
 END MODULE SED_module
 
@@ -1221,7 +1230,8 @@ MODULE UV_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
   use spectrum_integrator_module
-  use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, ionEVs, nGroups
+  use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, nIonsUsed, ionEVs  &
+                        ,nGroups
 
   implicit none
 
@@ -1332,7 +1342,6 @@ SUBROUTINE init_UV_background()
   endif
 #endif
 
-
   ! If mpi then share the UV integration between the cpus:
 #ifndef WITHOUTMPI
   call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
@@ -1352,7 +1361,7 @@ SUBROUTINE init_UV_background()
      if(myid==1) print*,'The UV background is homogeneous'
      allocate(UV_rates_table(UV_nz, nIons, 2))
      allocate(tbl(UV_nz, 2))
-     do ii = 1, nIons
+     do ii = 1, nIonsUsed
         tbl=0.
         do iz = locid+1,UV_nz,ncpu2
            tbl(iz,1)= getUV_Irate(Ls,UV(:,iz),nLs,ii)
@@ -1411,7 +1420,7 @@ SUBROUTINE init_UV_background()
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0.d0) cycle     ! Can't integrate zero fluxes
            tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)
-           do ii = 1,nIons
+           do ii = 1,nIonsUsed
               tbl(iz,1+ii*2)= getUVcsn( Ls,UV(:,iz),nLs,pL0,pL1,ii)
               tbl(iz,2+ii*2)= getUVcse( Ls,UV(:,iz),nLs,pL0,pL1,ii)
            end do
@@ -1455,6 +1464,7 @@ SUBROUTINE inp_UV_rates_table(z, ret, z_damp)
   ret=0. ; if(z .gt. UV_maxz) RETURN
   call inp_1d(UV_zeds, UV_nz, z, iz0, iz1, dz0, dz1)
   ret = dz0*UV_rates_table(iz1, :, :) + dz1*UV_rates_table(iz0, :, :)
+  ret = max(0d0,ret)                         ! Only positive rates allowed
   if (present(z_damp)) then
      if (z_damp) then
         zr_factor = 20d0*(z/z_reion)**6d0
@@ -1532,7 +1542,7 @@ SUBROUTINE update_UVsrc
   UV_fluxes_cgs(:)      = UVprops(:,1)
   UV_Nphot_cgs          = UV_fluxes_cgs/rt_c_cgs
   group_egy(iUVgroups)  = UVprops(:,2)
-  do i=1,nIons
+  do i=1,nIonsUsed
      group_csn(iUVgroups,i)  = UVprops(:,1+2*i)
      group_cse(iUVgroups,i)  = UVprops(:,2+2*i)
   enddo
@@ -1546,7 +1556,6 @@ SUBROUTINE update_UVsrc
   endif
 
 900 format (20f16.6)
-
 END SUBROUTINE update_UVsrc
 
 !*************************************************************************

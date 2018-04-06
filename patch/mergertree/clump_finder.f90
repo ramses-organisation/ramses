@@ -1,3 +1,89 @@
+!! Patch written by Mladen Ivkovic (mladen.ivkovic@uzh.ch)
+!! The main routine (unbinding) is called in the clump_finder routine
+!! from the clump_finder.f90 after clump properties are written to file.
+!! Changes in the clump_finder routines are marked by a "added for patch"
+!! comment so they're easier to find and track.
+
+!! New subroutines for this patch are:
+!!
+!! subroutine unbinding()
+!! subroutine get_clumpparticles()
+!! subroutine get_clump_properties_pb()
+!! subroutine get_cmp
+!! subroutine get_closest_border
+!! subroutine unbinding_neighborsearch
+!! subroutine bordercheck
+!! subroutine particle_unbinding()
+!!      contains function unbound
+!!      contains function potential
+!! subroutine compute_phi
+!! subroutine allocate_unbinding_arrays()
+!! subroutine deallocate_unbinding_arrays()
+!! subroutine unbinding_write_formatted_output()
+!! subroutine unbinding_formatted_particleoutput()
+
+
+
+!! New namelist parameters for this pach:
+!! (Can be set in the CLUMPFIND_PARAMS block)
+!!
+!! NAME                        DEFAULT VALUE        FUNCTION
+!! unbind=                     .true.               Turn particle unbinding on 
+!!                                                  or off
+!!
+!! nmassbins=                  50                   Number of bins for the mass 
+!!                                                  binning of the cumulative
+!!                                                  mass profile. Any integer >1.
+!!
+!! logbins=                    .true.               use logarithmic binning 
+!!                                                  distances for cumulative mass
+!!                                                  profiles (and gravitational 
+!!                                                  potential of clumps).
+!!                                                  If false, the code  will use 
+!!                                                  linear binning distances.
+!!
+!! saddle_pot=                 .true.               Take neighbouring structures 
+!!                                                  into account; Cut potentiall
+!!                                                  off at closest saddle.
+!!
+!! unbinding_formatted_output= .false.              Create formatted output for 
+!!                                                  particles, cumulative mass
+!!                                                  profiles, binning distances, 
+!!                                                  particle based clump
+!!                                                  properties, gravitational 
+!!                                                  potential of substructure
+!!                                                  clumps 
+!!
+!! iter_properties=            .true.               whether to unbind multiple times 
+!!                                                  with updated clump properties
+!!                                                  determined by earlier unbindings
+!!
+!! conv_limit =                0.01                 convergence limit. If the 
+!!                                                  v_clump_old/v_clump_new < conv_limit,
+!!                                                  stop iterating for this clump. 
+!!                                                  (only used when iter_properties=.true.)
+!!
+!! repeat_max =                100                  maximal number of loops per level
+!!                                                  for iterative unbinding
+!!                                                  (in case a clump doesn't converge)
+!!                                                  (shouldn't happen)
+!!                                                  (only used when iter_properties=.true.)
+
+
+
+
+
+
+
+
+
+!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$   CLUMP FINDER STARTS HERE    $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #if NDIM==3
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
@@ -309,10 +395,24 @@ subroutine clump_finder(create_output,keep_alive)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
-        if(pic)call output_part_clump_id()
+        ! if(pic)call output_part_clump_id()
      endif
 
   end if
+
+
+
+
+  !------------------------------------------
+  ! Added for patch:
+  ! Call particle unbinding
+  !------------------------------------------
+  
+  if(unbind.and.create_output) call unbinding()
+
+
+
+
 
   if (.not. keep_alive)then
      ! Deallocate test particle and peak arrays
@@ -875,11 +975,18 @@ subroutine read_clumpfind_params()
   include 'mpif.h'
 #endif
 
-  namelist/clumpfind_params/ivar_clump,&
+! added for patch: unbinding parameters, mergertree parameter
+  namelist/clumpfind_params/ivar_clump,& 
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
-       & n_clfind,rho_clfind,age_cut_clfind
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+       & n_clfind,rho_clfind,age_cut_clfind,&
+       !unbinding parameters
+       & unbind,nmassbins,logbins,unbinding_formatted_output, &
+       & saddle_pot,iter_properties,conv_limit, repeat_max, &
+       !mergertree parameters
+       & make_mergertree, nmost_bound, max_past_snapshots
+
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v  
 
   ! Read namelist file
   rewind(1)
@@ -1865,7 +1972,7 @@ subroutine output_part_clump_id()
   use pm_commons !using mp
   use amr_parameters
   implicit none
-  integer,dimension(:),allocatable::clmpidp,clump_ids
+  integer,dimension(:),allocatable::clump_ids
   character(len=80) :: fileloc
   character(len=5)  :: nchar,nchar2
 
