@@ -660,10 +660,11 @@ subroutine create_output_dirs(filedir)
   use amr_commons
   implicit none
   character(LEN=80), intent(in):: filedir
-  integer :: ierr
   character(LEN=80)::filecmd
 #ifdef NOSYSTEM
   character(LEN=80)::filedirini
+#else
+  integer :: ierr
 #endif
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -679,6 +680,7 @@ subroutine create_output_dirs(filedir)
     call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
     call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
 #else
+    ierr=1
     call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
     if(ierr.ne.0 .and. ierr.ne.127)then
       write(*,*) 'Error - Could not create ',trim(filedir),' error code=',ierr
