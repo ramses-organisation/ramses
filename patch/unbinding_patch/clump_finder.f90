@@ -385,7 +385,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
 #ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(verbose,verbose_all,ncpu,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(verbose,verbose_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
 #else
      verbose_all=verbose
 #endif
@@ -2023,7 +2023,7 @@ subroutine output_part_clump_id()
      end if   !global peak /=0
   end do   !loop over test cells
 
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   fileloc=TRIM('output_'//TRIM(nchar)//'/id_clump.out'//TRIM(nchar2))
   open(unit=666,file=fileloc,form='unformatted')
@@ -2325,10 +2325,6 @@ subroutine unbinding()
 
 
 
-  !====================
-  ! Say good bye.
-  !====================
-  if(verbose.or.myid==1) write(*,*) "Finished unbinding."
 
 
 
@@ -2337,6 +2333,15 @@ subroutine unbinding()
   !====================
   call deallocate_unbinding_arrays()
 
+
+
+  !====================
+  ! Say good bye.
+  !====================
+  if(verbose.or.myid==1) write(*,*) "Finished unbinding."
+
+
+  return
 
 end subroutine unbinding
 !######################################
@@ -2914,6 +2919,9 @@ subroutine get_closest_border()
 
   check=.false.
   do ipeak=1, hfree-1
+    ! hic sunt dracones
+    ! for some reason, changing the conditions for check leads to different results
+    ! for other ipeaks, so just leave it here I guess
     check(ipeak)=cmp_distances(ipeak,nmassbins)>0.0 ! peak must have particles somewhere
     check(ipeak)=check(ipeak).and.to_iter(ipeak)
     if(check(ipeak)) closest_border(ipeak) = HUGE(1.d0) !reset value
@@ -3266,7 +3274,11 @@ subroutine particle_unbinding(ipeak, final_round)
 
     if (final_round) then
       do ipart=1, nclmppart(ipeak)    ! loop over particle LL
-        call get_local_peak_id(clmpidp(thispart), ipeak_test)
+        if (clmpidp(thispart)>0) then
+          call get_local_peak_id(clmpidp(thispart), ipeak_test)
+        else
+          ipeak_test=0
+        endif
         if (ipeak_test==ipeak) then   ! if this particle needs to be checked for unbinding
                                       ! particle may be assigned to child clump
           candidates=candidates+1
@@ -3283,7 +3295,11 @@ subroutine particle_unbinding(ipeak, final_round)
       if (to_iter(ipeak)) then
         hasatleastoneptcl(ipeak)=0       ! set to false
         do ipart=1, nclmppart(ipeak)     ! loop over particle LL
-          call get_local_peak_id(clmpidp(thispart), ipeak_test)
+          if (clmpidp(thispart)>0) then
+            call get_local_peak_id(clmpidp(thispart), ipeak_test)
+          else
+            ipeak_test=0
+          endif
           if (ipeak_test==ipeak) then
             if(unbound(ipeak,thispart,phi_border)) then  
               ! unbound(ipeak,thispart,phi_border) is a logical function. See below.
@@ -3363,6 +3379,8 @@ real(dp) function potential(ipeak,distance)
   ! It returns (-1)*phi (phi is expected to be <= 0 for gravity)
   !------------------------------------------------------------------
 
+  use clfind_commons
+
   integer, intent(in) :: ipeak
   real(dp),intent(in) :: distance  ! is computed in function 'unbound', then passed
 
@@ -3371,15 +3389,24 @@ real(dp) function potential(ipeak,distance)
 
   ibin=1
   ! thisbin: the first cmp_distance which is greater than particle distance
-  thisbin=1
-  do 
+  thisbin=0
+
+  do while (ibin<=nmassbins)
     if (distance<=cmp_distances(ipeak,ibin)) then
       thisbin=ibin
       exit
-    else
-      ibin=ibin+1
     endif
+    ibin=ibin+1
   enddo
+
+  if (thisbin==0) then
+    ! for some reason, there can be minor differences in the distance calculation for intel compilers.
+    ! (they do optimisations that are not value-safe if not specified otherwise)
+    ! Don't crash, but report and assume it is outermost bin. 
+    write(*,'(A98,2(I9,x,A6,x),3E20.12)') "(precision?) error in unbinding potential: distance > cmp_distances(ipeak,nmassbins) for ipeak", &
+    ipeak, "on ID", myid, "diff:", cmp_distances(ipeak,nmassbins), distance, (distance-cmp_distances(ipeak, nmassbins))/distance
+    thisbin=nmassbins
+  endif
 
 
   a=(phi_unb(thisbin)-phi_unb(thisbin-1))/(cmp_distances(ipeak,thisbin)-cmp_distances(ipeak,thisbin-1))
@@ -3486,13 +3513,13 @@ subroutine allocate_unbinding_arrays()
   ! Clump properties
   !-------------------
   allocate(clmp_com_pb(1:npeaks_max,1:3))
-  clmp_com_pb=0.0
+  clmp_com_pb=0.d0
   allocate(clmp_vel_pb(1:npeaks_max,1:3))
-  clmp_vel_pb=0.0
+  clmp_vel_pb=0.d0
   allocate(clmp_mass_pb(1:npeaks_max))
-  clmp_mass_pb=0.0
+  clmp_mass_pb=0.d0
   allocate(cmp_distances(1:npeaks_max,0:nmassbins))
-  cmp_distances=0.0
+  cmp_distances=0.d0
   allocate(cmp(1:npeaks_max,0:nmassbins))
   cmp=0.d0
   ! careful with this! The first index of the second subscript
@@ -3569,6 +3596,8 @@ subroutine deallocate_unbinding_arrays()
   deallocate(clmppart_first)
   deallocate(clmppart_next)
   deallocate(nclmppart)
+
+  return
 
 end subroutine deallocate_unbinding_arrays
 !############################################

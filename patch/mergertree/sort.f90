@@ -215,7 +215,7 @@ SUBROUTINE quick_sort_real_int(list, order, n)
   IMPLICIT NONE
   INTEGER :: n
   REAL(dp), DIMENSION (1:n), INTENT(INOUT)  :: list
-  INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: order
+  INTEGER, DIMENSION (1:n), INTENT(INOUT)   :: order
 
 
   CALL quick_sort_1_dp(1, n)

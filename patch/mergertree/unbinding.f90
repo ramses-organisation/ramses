@@ -10,7 +10,8 @@ subroutine unbinding()
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer :: info
-  real(dp) :: partm_common_all
+  real(dp):: partm_common_all
+  logical :: loop_again_global
 #endif
 
   !------------------------------------------------------------
@@ -26,7 +27,7 @@ subroutine unbinding()
   integer, dimension(1:npart) :: clump_ids
   character(LEN=80)           :: fileloc, filedir
   character(LEN=5)            :: nchar,nchar2
-  logical                     :: loop_again_global, is_final_round, check
+  logical                     :: is_final_round, check
 
 
 
@@ -84,23 +85,24 @@ subroutine unbinding()
       partm_common=mass_sph
     endif
   endif
-                    
-                 
-                     
+
+
+
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
-
-  ! initialise constant part of is_namegiver array
-  do ipeak=1, npeaks
-    call get_local_peak_id(new_peak(ipeak), parent_local_id)
-    if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
-  enddo
-
 
   ! if there are no clumps yet, the output directories haven't been made yet.
   call title(ifout, nchar)
   filedir = 'output_'//TRIM(nchar)
   call create_output_dirs(filedir)
+
+  ! initialise constant part of is_namegiver array
+  do ipeak=1, npeaks
+    if (new_peak(ipeak)>0) then
+      call get_local_peak_id(new_peak(ipeak), parent_local_id)
+      if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
+    endif
+  enddo
 
 
   !===================
@@ -145,8 +147,10 @@ subroutine unbinding()
     hasatleastoneptcl=1 ! set array value to 1
 
     do ipeak=npeaks+1, hfree-1
-      call get_local_peak_id(new_peak(ipeak), parent_local_id)
-      if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
+      if (new_peak(ipeak) > 0) then
+        call get_local_peak_id(new_peak(ipeak), parent_local_id)
+        if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
+      endif
     enddo
 
 
@@ -302,8 +306,6 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
-  call deallocate_unbinding_arrays(.true.)
-
   if (make_mergertree) then
     call make_merger_tree()
   endif
@@ -336,6 +338,12 @@ subroutine unbinding()
   close(666)
 
 
+  !====================
+  ! Deallocate arrays
+  !====================
+  call deallocate_unbinding_arrays()
+
+
 
   !====================
   ! Say good bye.
@@ -343,12 +351,7 @@ subroutine unbinding()
   if(verbose.or.myid==1) write(*,*) "Finished unbinding."
 
 
-
-  !====================
-  ! Deallocate arrays
-  !====================
-  call deallocate_unbinding_arrays(.false.)
-
+  return
 
 end subroutine unbinding
 !######################################
@@ -391,7 +394,7 @@ subroutine get_clumpparticles()
   ! Get particles from testcells into linked lists for clumps
   !-----------------------------------------------------------
 
-  do itestcell=1, ntest !loop over all test cells
+  do itestcell=1, ntest ! loop over all test cells
     global_peak_id=flag2(icellp(itestcell))
 
     if (global_peak_id /= 0) then
@@ -408,7 +411,7 @@ subroutine get_clumpparticles()
         this_part=headp(grid)                           ! get index of first particle
 
 
-        !loop over particles in grid
+        ! loop over particles in grid
         do ipart=1, prtcls_in_grid
           !check cell index of particle so you loop only once over each
           i=0
@@ -584,8 +587,6 @@ subroutine get_clump_properties_pb(first)
     call boundary_peak_dp(clmp_vel_pb(1,i))       !scatter
   enddo
 
-
-
   do ipeak=1, hfree-1
 
     check = to_iter(ipeak)
@@ -613,7 +614,7 @@ subroutine get_clump_properties_pb(first)
       do ipeak=1, hfree-1
 
         check = to_iter(ipeak)
-        check = check .and..not.is_namegiver(ipeak)
+        check = check .and.(.not.is_namegiver(ipeak))
         check = check .and. clmp_mass_pb(ipeak)>0.0
 
         if (check) then
@@ -725,8 +726,9 @@ subroutine get_cmp()
   ! communicate distance of particle furthest away
   !-------------------------------------------------
   call build_peak_communicator
-  call virtual_peak_dp(cmp_distances(:,nmassbins), 'max')
-  call boundary_peak_dp(cmp_distances(:,nmassbins))
+  call virtual_peak_dp(cmp_distances(1,nmassbins), 'max')
+  call boundary_peak_dp(cmp_distances(1,nmassbins))
+
 
 
 
@@ -737,23 +739,17 @@ subroutine get_cmp()
   ! processor independently, because each processor has all information it needs 
   ! with cmp_distances(ipeak,nmassbins) and CoM
 
+  cmp = 0.d0
   do ipeak=1, hfree-1
-
-    ! reset values
-    if (cmp_distances(ipeak, nmassbins)>0.or. ipeak > npeaks) then
-      do i = 1, nmassbins
-        cmp(ipeak,i) = 0.0
-      enddo
-    endif
 
     ! set up distances
     if (cmp_distances(ipeak, nmassbins)>0) then
       if (logbins) then
         do i=1, nmassbins-1
-          cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
+          cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i,dp)/real(nmassbins,dp))
         enddo
       else !linear binnings
-        r_null=cmp_distances(ipeak,nmassbins)/real(nmassbins)
+        r_null=cmp_distances(ipeak,nmassbins)/real(nmassbins,dp)
         do i=0, nmassbins-1
           cmp_distances(ipeak,i)=r_null*i
         enddo
@@ -772,30 +768,27 @@ subroutine get_cmp()
       !---------------------------------------------
       thispart=clmppart_first(ipeak)
       do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-        if (contributes(thispart).or.is_namegiver(ipeak)) then
-          period=0.d0
-          if (periodical) then
-            do i=1, 3
-              if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen)  period(i)=(-1.0)*boxlen
-              if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
-            enddo
-          endif
-          distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
-            (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
-            (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
-          distance=sqrt(distance)
-
-
-          i=1
-          do 
-            if (distance<=cmp_distances(ipeak,i)) then
-              cmp(ipeak,i) = cmp(ipeak,i) + mp(thispart)
-              exit
-            else
-              i=i+1
-            endif
+        period=0.d0
+        if (periodical) then
+          do i=1, 3
+            if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen)  period(i)=(-1.0)*boxlen
+            if (xp(thispart,i)-peak_pos(ipeak,i)<(-0.5*boxlen)) period(i)=boxlen
           enddo
         endif
+        distance=(xp(thispart,1)+period(1)-peak_pos(ipeak,1))**2 + &
+          (xp(thispart,2)+period(2)-peak_pos(ipeak,2))**2 + &
+          (xp(thispart,3)+period(3)-peak_pos(ipeak,3))**2
+        distance=sqrt(distance)
+
+        i=1
+        do 
+          if (distance<=cmp_distances(ipeak,i)) then
+            cmp(ipeak,i) = cmp(ipeak,i) + mp(thispart)
+            exit
+          else
+            i=i+1
+          endif
+        enddo
 
         thispart=clmppart_next(thispart)
       enddo
@@ -1152,16 +1145,16 @@ subroutine particle_unbinding(ipeak, final_round)
   ! Of each clump.
   !--------------------------------------------------------------
 
-  integer :: thispart, ipeak_test, ipart, n, n_temp
+  integer :: thispart, ipeak_test, ipart, n
   real(dp):: phi_border   ! the potential at the border of the peak patch closest 
                           ! to the center of mass
-  real(dp):: dist_border  !distance to the border
+  real(dp):: dist_border  ! distance to the border
 
-  real(dp), dimension(:), allocatable:: particle_energy
+  real(dp),dimension(:), allocatable:: particle_energy
   integer, dimension(:), allocatable:: particle_energy_id
   real(dp) :: epart 
 
-  n=0; n_temp=0;
+  n=0;
 
 
   if (nclmppart(ipeak) > 0) then
@@ -1205,7 +1198,11 @@ subroutine particle_unbinding(ipeak, final_round)
         thispart=clmppart_first(ipeak)
 
         do ipart=1, nclmppart(ipeak)    ! loop over particle LL
-          call get_local_peak_id(clmpidp(thispart), ipeak_test)
+          if (clmpidp(thispart)>0) then
+            call get_local_peak_id(clmpidp(thispart), ipeak_test)
+          else
+            ipeak_test=0
+          endif
           if (ipeak_test==ipeak) then   ! if this particle needs to be checked for unbinding
                                         ! particle may be assigned to child/parent clump
             candidates=candidates+1
@@ -1228,36 +1225,20 @@ subroutine particle_unbinding(ipeak, final_round)
           thispart=clmppart_next(thispart)
         enddo
 
-
         if (make_mergertree) then
           ! sort particles by lowest energy
           ! sort the particle ID's accordingly
           call quick_sort_real_int(particle_energy, particle_energy_id, nclmppart(ipeak)) 
-          n_temp = min(nclmppart(ipeak), nmost_bound)
+          n = min(nclmppart(ipeak), nmost_bound)
          
-          ! find whether you really have only bound particles
-          if (particle_energy(n_temp) >= 0.0) then ! there are unbound particles before index n
-            do ipart = 1, n_temp
-              if (particle_energy(ipart) >= 0.0) then
-                n = ipart - 1
-                exit
-              endif
-            enddo
-          else
-            n = n_temp
-          endif
+          ! store bound and sorted particles
+          do ipart = 1, n
+            most_bound_energy(ipeak, ipart) = particle_energy(ipart)
+            most_bound_pid(ipeak, ipart) = particle_energy_id(ipart)
+          enddo
 
-
-          if (n > 0) then
-            ! store bound and sorted particles
-            do ipart = 1, n
-              most_bound_energy(ipeak, ipart) = particle_energy(ipart)
-              most_bound_pid(ipeak, ipart) = particle_energy_id(ipart)
-            enddo
-
-            ! count output  += 1
-            progenitorcount_written = progenitorcount_written + 1
-          endif
+          ! count output  += 1
+          progenitorcount_written = progenitorcount_written + 1
 
           deallocate(particle_energy_id, particle_energy)
         endif ! if make_mergertree
@@ -1279,7 +1260,11 @@ subroutine particle_unbinding(ipeak, final_round)
           thispart=clmppart_first(ipeak)
           
           do ipart=1, nclmppart(ipeak)     ! loop over particle LL
-            call get_local_peak_id(clmpidp(thispart),ipeak_test)
+            if (clmpidp(thispart)>0) then
+              call get_local_peak_id(clmpidp(thispart), ipeak_test)
+            else
+              ipeak_test=0
+            endif
             if (ipeak_test==ipeak) then
               call eparttot(ipeak, thispart, epart)
               epart = epart + phi_border
@@ -1314,7 +1299,11 @@ subroutine particle_unbinding(ipeak, final_round)
         thispart=clmppart_first(ipeak)
 
         do ipart=1, nclmppart(ipeak)    ! loop over particle LL
-          call get_local_peak_id(clmpidp(thispart),ipeak_test)
+          if (clmpidp(thispart)>0) then
+            call get_local_peak_id(clmpidp(thispart),ipeak_test)
+          else
+            ipeak_test = 0
+          endif
           if (ipeak_test==ipeak) then   ! if this particle needs to be checked for unbinding
                                         ! particle may be assigned to child/parent clump
             ! store the values for mergertrees
@@ -1328,34 +1317,16 @@ subroutine particle_unbinding(ipeak, final_round)
 
         ! sort particles by lowest energy
         call quick_sort_real_int(particle_energy, particle_energy_id, nclmppart(ipeak)) 
-        n_temp = min(nclmppart(ipeak), nmost_bound)
-       
-        ! find whether you really have only bound particles
-        if (particle_energy(n_temp) >= 0.0) then !there are unbound particles before index n
-          do ipart = 1, n_temp
-            if (particle_energy(ipart) >= 0.0) then
-              n = ipart - 1
-              exit
-            endif
-          enddo
-        else
-          n = n_temp
-        endif
+        n = min(nclmppart(ipeak), nmost_bound)
 
+        ! store bound and sorted particles
         do ipart = 1, n
-          most_bound_energy(ipeak,ipart) = particle_energy(ipart)
+          most_bound_energy(ipeak, ipart) = particle_energy(ipart)
           most_bound_pid(ipeak, ipart) = particle_energy_id(ipart)
         enddo
-        if (n > 0) then
-          ! store bound and sorted particles
-          do ipart = 1, n
-            most_bound_energy(ipeak, ipart) = particle_energy(ipart)
-            most_bound_pid(ipeak, ipart) = particle_energy_id(ipart)
-          enddo
 
-          ! count output  += 1 to estimate array sizes
-          progenitorcount_written = progenitorcount_written + 1
-        endif
+        ! count output  += 1 to estimate array sizes
+        progenitorcount_written = progenitorcount_written + 1
 
         deallocate(particle_energy_id, particle_energy)
 
@@ -1402,7 +1373,6 @@ subroutine eparttot(ipeak, part_ind, epart)
       (xp(part_ind,3)+period(3)-peak_pos(ipeak,3))**2
   distance=sqrt(distance)
 
-
   kinetic_energy=0.5*((vp(part_ind,1)-clmp_vel_pb(ipeak,1))**2 + &
       (vp(part_ind,2)-clmp_vel_pb(ipeak,2))**2 + &
       (vp(part_ind,3)-clmp_vel_pb(ipeak,3))**2)
@@ -1432,16 +1402,24 @@ subroutine potential(ipeak, distance, pot)
 
   ibin=1
   ! thisbin: the first cmp_distance which is greater than particle distance
-  thisbin=1
+  thisbin=0
 
-  do 
+  do while (ibin<=nmassbins)
     if (distance<=cmp_distances(ipeak,ibin)) then
       thisbin=ibin
       exit
-    else
-      ibin=ibin+1
     endif
+    ibin=ibin+1
   enddo
+
+  if (thisbin==0) then
+    ! for some reason, there can be minor differences in the distance calculation for intel compilers.
+    ! (they do optimisations that are not value-safe if not specified otherwise)
+    ! Don't crash, but report and assume it is outermost bin. 
+    write(*,'(A98,2(I9,x,A6,x),3E20.12)') "(precision?) error in unbinding potential: distance > cmp_distances(ipeak,nmassbins) for ipeak", &
+    ipeak, "on ID", myid, "diff:", cmp_distances(ipeak,nmassbins), distance, (distance-cmp_distances(ipeak, nmassbins))/distance
+    thisbin=nmassbins
+  endif
 
 
   a=(phi_unb(thisbin)-phi_unb(thisbin-1))/(cmp_distances(ipeak,thisbin)-cmp_distances(ipeak,thisbin-1))
@@ -1502,11 +1480,11 @@ subroutine allocate_unbinding_arrays()
   ! Clump properties
   !-------------------
   allocate(clmp_vel_pb(1:npeaks_max,1:3))
-  clmp_vel_pb=0.0
+  clmp_vel_pb=0.d0
   allocate(clmp_mass_pb(1:npeaks_max))
-  clmp_mass_pb=0.0
+  clmp_mass_pb=0.d0
   allocate(cmp_distances(1:npeaks_max,0:nmassbins))
-  cmp_distances=0.0
+  cmp_distances=0.d0
   allocate(cmp(1:npeaks_max,0:nmassbins))
   cmp=0.d0
   ! careful with this! The first index of the second subscript
@@ -1565,7 +1543,7 @@ subroutine allocate_unbinding_arrays()
     most_bound_pid = 0
 
     allocate(clmp_mass_exclusive(1:npeaks_max))
-    clmp_mass_exclusive = 0
+    clmp_mass_exclusive = 0.d0
 
     ! allocate(clmp_vel_exclusive(1:npeaks_max, 1:3))
     ! clmp_vel_exclusive = 0
@@ -1576,41 +1554,33 @@ end subroutine allocate_unbinding_arrays
 !########################################
 !########################################
 !########################################
-subroutine deallocate_unbinding_arrays(before_mergertree)
+subroutine deallocate_unbinding_arrays()
   use clfind_commons
   implicit none
 
-  logical, intent(in) :: before_mergertree
+  deallocate(clmp_vel_pb)
+  deallocate(clmp_mass_pb)
+  deallocate(cmp_distances)
+  deallocate(cmp)
+
+  deallocate(phi_unb)
+
+  if(saddle_pot) deallocate(closest_border)
+
+  deallocate(to_iter)
+
+  deallocate(hasatleastoneptcl)
+  deallocate(contributes)
+  deallocate(is_namegiver)
 
 
-  if (before_mergertree) then
+  deallocate(clmpidp)
+  deallocate(clmppart_last)
+  deallocate(clmppart_first)
+  deallocate(clmppart_next)
+  deallocate(nclmppart)
 
-
-    if(saddle_pot) deallocate(closest_border)
-
-    deallocate(hasatleastoneptcl)
-    deallocate(contributes)
-    deallocate(is_namegiver)
-
-  else
-
-    deallocate(to_iter)
-    deallocate(clmp_mass_pb)
-    deallocate(clmp_vel_pb)
-
-    deallocate(phi_unb)
-    deallocate(cmp)
-    deallocate(cmp_distances)
-
-    deallocate(clmpidp)
-    deallocate(clmppart_last)
-    deallocate(clmppart_first)
-    deallocate(clmppart_next)
-    deallocate(nclmppart)
-  endif
-
-
-
+  return
 
 end subroutine deallocate_unbinding_arrays
 !############################################
