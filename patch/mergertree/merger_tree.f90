@@ -751,14 +751,13 @@ subroutine make_trees()
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
-  integer :: i
 #endif
 
   real(dp), dimension(:), allocatable ::  merit_desc
   real(dp), dimension(:), allocatable ::  merit_desc_copy
   logical, dimension(:), allocatable  :: to_iter_prog
 
-  integer :: iprog, ipeak, idl
+  integer :: iprog, ipeak, idl, i
   integer :: store_id
   integer :: peakshift
 
@@ -772,7 +771,7 @@ subroutine make_trees()
 
 
 
-  if (verbose) write(*,*) "ID", myid, "making trees."
+  if (verbose) write(*,*) "making trees."
 
 
   !============================================
@@ -805,8 +804,31 @@ subroutine make_trees()
     if (p2d_links%cnt(iprog)>0) call find_main_desc(iprog, found)
   enddo
 
-  ! no need to communicate results; data for every instance of prog is identical,
-  ! so it should give identical results
+  ! initialise what needs to be checked before communication:
+  ! Otherwise, you'll introduce way too many virtual peaks for no reason.
+  ! (only processors that have progenitor particles on them might have 
+  ! reason to introduce virtual peaks of descendant candidates, all others
+  ! don't)
+  to_iter_prog = (main_desc > 0)
+
+#ifndef WITHOUTMPI
+    !-------------------------
+    ! Communicate results. 
+    !-------------------------
+    ! All CPUs that have tracer particles of any progenitor
+    ! have full data of that progenitor; But it might be that there is a descendant,
+    ! split among multiple CPU's, where some CPU's have missing progenitor data  
+    ! because they don't have any progenitor's particles on their domain. Such
+    ! descendants will need to know main_desc values which will otherwise be unknown.
+    ! First reset values: If you had a main_desc with a higher ID previously, you'll
+    ! get junk results. Unlike with descendants, keeping only main_desc of the owner 
+    ! CPU is safe, as all CPUs that have tracer particles of a progenitor have full 
+    ! data of that progenitor.
+    do iprog = 1, nprogs
+      if (prog_owner(iprog)/=myid) main_desc(iprog) = 0
+    enddo
+    call MPI_ALLREDUCE(MPI_IN_PLACE, main_desc, nprogs, MPI_INT, MPI_MAX, MPI_COMM_WORLD, i)
+#endif
 
 
 
@@ -818,6 +840,8 @@ subroutine make_trees()
   do ipeak = 1, hfree-1
     if (d2p_links%cnt(ipeak) > 0) then
       call find_main_prog(ipeak, merit_desc, found)
+      ! mark the progenitor candidate you used
+      if (found) call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
     endif
   enddo
 
@@ -830,8 +854,13 @@ subroutine make_trees()
   call boundary_peak_dp(merit_desc(:))
 
   do ipeak = 1, hfree-1
-    if ( merit_desc_copy(ipeak) /= merit_desc(ipeak)) then
-      main_prog(ipeak) = 0
+    if ( merit_desc_copy(ipeak) < merit_desc(ipeak)) then
+      ! unmark the peak you found so you can re-check it if necessary,
+      ! then reset main prog for comm
+      if (main_prog(ipeak) > 0) then
+        call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
+        main_prog(ipeak) = 0
+      endif
     endif
   enddo
   
@@ -839,15 +868,16 @@ subroutine make_trees()
   call boundary_peak_int(main_prog(:))
 #endif
 
+  ! initialise what needs to be checked.
+  to_iter = (main_prog > 0)
 
 
-  !------------------------------------------------------------------
+  !-------------------------
   ! Introduce peak shift:
+  !-------------------------
   ! Shift the peak of special cases like past merged progenitors as
   ! main progenitors and mergers by a high number so you still can
   ! use MAX reduction and know that they're special cases
-  !------------------------------------------------------------------
-
   peakshift = 10*(ipeak_start(ncpu)+npeaks_max)
 
  
@@ -911,13 +941,10 @@ subroutine make_trees()
   ! best guess.
   ! Then descendants are checked for having the correct main progenitor
   ! identified. If this isn't the case, the guess is moved to the next best
-  ! candidate (doesn't loop through all of them!), after which the entire loop
-  ! is restarted.
+  ! candidate (per iteration, it moves only to 1 next candidate), after which i
+  ! the entire loop is restarted.
   !------------------------------------------------------------------------------
 
-  ! initialise what needs to be checked. Both are arrays!
-  to_iter = (main_prog > 0)
-  to_iter_prog = (main_desc > 0)
 
   reiter = .true.
 
@@ -975,22 +1002,23 @@ subroutine make_trees()
         is_first = .true.
         to_iter_prog(iprog) = .false.
 
-        ! take abs(main_desc) as key: mergers will have negative main_desc, and
-        ! fill_matrix() will add a new descendant instead of inverting the correct one
-        call fill_matrix(p2d_links, iprog, abs(main_desc(iprog)), 0, 'inv')
         call find_main_desc(iprog, found)
 
         ! if you found another candidate:
         if (found) then
+          ! if found, then main_desc(iprog) > 0
           call get_local_peak_id(main_desc(iprog), idl)
           if (iprog/=main_prog(idl)) then
             ! if the new candidate still doesn't match:
             ! need to re-iterate
-            ! else: to_iter_prog is set to = .false. anyways
             to_iter_prog(iprog) = .true.
+            ! mark this descendant as already checked
+            call fill_matrix(p2d_links, iprog, main_desc(iprog), 0, 'inv')
             is_first = .false.
+            iprog = iprog - 1 ! check this iprog again
+          ! else
+          !   to_iter_prog(iprog) = .false. anyways
           endif
-          iprog = iprog - 1 ! check again
         else
           ! if nothing found, assume progenitor merged into descendant
           main_desc(iprog) = store_id + peakshift
@@ -1006,17 +1034,9 @@ subroutine make_trees()
 
 
 #ifndef WITHOUTMPI
-    !---------------------------------------------------------------------------------
-    ! Communicate results. All CPUs that have tracer particles of any progenitor
-    ! have full data of that progenitor; But it might be that there is a descendant,
-    ! split among multiple CPU's, where some CPU's have missing progenitor data  
-    ! because they don't have any progenitor's particles on their domain. Such
-    ! descendants will need to know main_desc values which will otherwise be unknown.
-    ! First reset values: If you had a main_desc with a higher ID previously, you'll
-    ! get junk results. Unlike with descendants, keeping only main_desc of the owner 
-    ! CPU is safe, as all CPUs that have tracer particles of a progenitor have full 
-    ! data of that progenitor.
-    !---------------------------------------------------------------------------------
+    !---------------------------
+    ! Communicate results. 
+    !---------------------------
     do iprog = 1, nprogs
       if (prog_owner(iprog)/=myid) main_desc(iprog) = 0
     enddo
@@ -1042,31 +1062,28 @@ subroutine make_trees()
       if ( to_iter(ipeak) ) then ! if there is something to check for
 
         to_iter(ipeak) = .false.
-        
         if (main_desc(main_prog(ipeak))/=0) then
           ! abs needed here: mergers are signified by a negative main descendant ID
           call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
         else
           idl=0
         endif
-        
         if (ipeak /= idl) then
           ! if this descendant is not main descendant
           ! of its own main progenitor, look for next best candidate
-          ! first reset value for current best fit
-          call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
-          ! now look for better candidate
           call find_main_prog(ipeak, merit_desc, found)
           if (.not.found) then 
             ! if you run out of candidates:
             main_prog(ipeak) = 0
           else 
+            ! mark the one you found
+            call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
             ! check this peak for matches again
             to_iter(ipeak) = .true.
             reiter = .true.
           endif
 
-        endif !ipeak /= idl
+        endif ! ipeak /= idl
       endif
     enddo
 
@@ -1085,7 +1102,7 @@ subroutine make_trees()
 
     do ipeak = 1, hfree-1
       ! if you didn't have the max, reset stuff
-      if (merit_desc_copy(ipeak) /= merit_desc(ipeak)) then
+      if (merit_desc_copy(ipeak) < merit_desc(ipeak)) then
         ! reset mark in matrix for later use
         call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
         ! reset value in array
@@ -1132,6 +1149,7 @@ subroutine make_trees()
   !---------------------------------------------------------------------------
   do iprog = 1, nprogs
     if (main_desc(iprog)<0) then
+      ! to avoid double entries, only the owner is allowed to add a prog to pmprogs
       if (prog_owner(iprog) == myid) call add_new_pmprog(iprog)
     endif
   enddo
@@ -1183,7 +1201,7 @@ subroutine make_trees()
   to_iter = (clmp_mass_exclusive > 0) .and. (main_prog == 0)
 
   do ipeak = 1, hfree-1
-    if ( to_iter(ipeak) ) then !if there is something to check for
+    if ( to_iter(ipeak) ) then ! if there is something to check for
         call find_prog_in_older_snapshots(ipeak, peakshift, merit_desc)
     endif
   enddo
@@ -1200,7 +1218,7 @@ subroutine make_trees()
   call boundary_peak_dp(merit_desc(:))
 
   do ipeak = 1, hfree-1
-    if ( to_iter(ipeak) .and. (merit_desc_copy(ipeak) /= merit_desc(ipeak)) ) main_prog(ipeak) = 0
+    if ( to_iter(ipeak) .and. (merit_desc_copy(ipeak) > merit_desc(ipeak)) ) main_prog(ipeak) = 0
   enddo
 
 
@@ -1274,7 +1292,8 @@ subroutine make_trees()
     !
     !   close(666)
     ! endif
-    !
+
+  return
 
 
 
@@ -1420,7 +1439,6 @@ subroutine make_trees()
 
 
 
-
     !=====================================
     subroutine add_new_pmprog(iprog)
     !=====================================
@@ -1444,8 +1462,6 @@ subroutine make_trees()
 
     end subroutine add_new_pmprog
 
-
-    
 
 
 
@@ -1826,10 +1842,6 @@ subroutine read_progenitor_data()
 
 
 
-
-
-
-
   !========================================
   ! READ PAST PROGENITOR DATA
   !========================================
@@ -2091,7 +2103,7 @@ subroutine write_progenitor_data()
 
   integer :: ipeak, ipart, pind, startind, first_bound, partcount
 
-  integer :: ihalo, haloid
+  integer :: ihalo, haloid, npastprogs_all
   integer, allocatable, dimension(:)  :: particlelist, pastproglist
   real(dp), allocatable, dimension(:) :: masslist, pastprogmasslist
 
@@ -2101,7 +2113,7 @@ subroutine write_progenitor_data()
 #ifndef WITHOUTMPI
   include 'mpif.h'
   integer, dimension (1:MPI_STATUS_SIZE):: state
-  integer :: mpi_err, filehandle, npastprogs_all
+  integer :: mpi_err, filehandle
   integer, dimension(1:4) :: buf
 #endif
 
@@ -2134,33 +2146,34 @@ subroutine write_progenitor_data()
     masslist = 0
 
     do ipeak = 1, hfree-1
-      !write only peaks that have most bound particles
+      ! write only peaks that have most bound particles
       if (clmp_mass_exclusive(ipeak) > 0 ) then
 
         haloid = 0
         first_bound = 0
         partcount = 0
         if (ipeak <= npeaks) progenitorcount = progenitorcount + 1 ! count only non-virtuals
-
+      
         do ipart = 1, nmost_bound
           ! check if there are mostbound particles for this clump on this CPU 
           if (most_bound_pid(ipeak, ipart) > 0) then
             first_bound = ipart
-            haloid = -clmpidp(most_bound_pid(ipeak, ipart))
+            ! most bound particles are marked with negative clump id!
+            haloid = abs(clmpidp(most_bound_pid(ipeak, ipart)))
             exit
           endif
         enddo
 
+        ! If there are mostbound particles on this CPU:
         if (first_bound > 0) then
           ihalo = ihalo + 1
 
-          startind = pind
-          particlelist(startind) = haloid
-          pind = pind + 2
-          masslist(ihalo) = clmp_mass_exclusive(ipeak)
+          startind = pind                               ! starting index to write in array
+          particlelist(startind) = haloid               ! store halo ID at [startind]
+          pind = pind + 2                               ! move first free index in array to be written to file
+          masslist(ihalo) = clmp_mass_exclusive(ipeak)  ! store mass at first free halo position
 
           ! loop over mostbound particle list
-
           do ipart = first_bound, nmost_bound
             ! write only halos that have mbp on this proc
             if (most_bound_pid(ipeak, ipart) > 0) then
@@ -2175,14 +2188,16 @@ subroutine write_progenitor_data()
             endif
           enddo
 
-          particlelist(startind + 1) = partcount
+          particlelist(startind + 1) = partcount        ! store number of particles written at [startind+1]
         endif
-      endif !clump mass > 0
+      endif ! clump mass > 0
     enddo ! loop over clumps
 
 
     ! reset written progenitorcount: Too small clumps might've 
     ! been dissolved after being counted.
+    ! furthermore, this is not the count of progenitors anymore, but
+    ! the total count of integers written.
     progenitorcount_written = pind-1
 
   endif ! if there is potentially stuff to write
@@ -2261,9 +2276,9 @@ subroutine write_progenitor_data()
   ! ID prog1, galaxy prog1, time prog1, ID prog2, ...
   !---------------------------------------------------------
 
-  allocate(pastproglist(1:3*(pmprog_free - 1)))
+  allocate(pastproglist(1:3*(pmprog_free-1)))
   pastproglist = 0
-  allocate(pastprogmasslist(1:3*(pmprog_free - 1)))
+  allocate(pastprogmasslist(1:3*(pmprog_free-1)))
   pastprogmasslist = 0
 
   npastprogs_all = 0 ! count how many pmprogs you write. will be communicated later.
@@ -2271,7 +2286,7 @@ subroutine write_progenitor_data()
 
   ! If the past merged progenitor was used, the owner was overwritten to 0.
   ! Share that info before continuing.
-#ifndef WHITOUTMPI
+#ifndef WITHOUTMPI
   if (npastprogs > 0) then
     call MPI_ALLREDUCE(MPI_IN_PLACE, pmprogs_owner, npastprogs, &
       MPI_INT, MPI_MIN, MPI_COMM_WORLD, ipeak)
@@ -2287,7 +2302,7 @@ subroutine write_progenitor_data()
 
         ! Only write if the progenitor hasn't merged too long ago
         if (max_past_snapshots > 0) then
-          if ((ifout - pmprogs_t(ipeak)) > max_past_snapshots) then
+          if ((ifout - pmprogs_t(ipeak)) <= max_past_snapshots) then
             pastproglist(pind+1) = pmprogs(ipeak)
             pastproglist(pind+2) = pmprogs_galaxy(ipeak)
             pastproglist(pind+3) = pmprogs_t(ipeak)
@@ -2403,10 +2418,6 @@ end subroutine write_progenitor_data
 
 
 
-
-
-
-
 !=================================================
 subroutine get_local_prog_id(global_id, local_id)
 !=================================================
@@ -2425,21 +2436,22 @@ subroutine get_local_prog_id(global_id, local_id)
 
 
   ! Check if prog is already included
-  do i = 1, prog_free
+  do i = 1, prog_free-1
     if (prog_id(i) == global_id) then
       local_id = i
       return
     endif
   enddo
 
-  !progenitor is not in there; Give him a new index
-  i = prog_free !save for later
+  ! progenitor is not in there; Give him a new index
+  i = prog_free ! save for later
   prog_id(i) = global_id
   prog_free = prog_free + 1
   local_id = i
   return
 
 end subroutine get_local_prog_id 
+
 
 
 
@@ -2554,7 +2566,6 @@ subroutine deallocate_mergertree()
   use clfind_commons 
   implicit none
   
-
   if (allocated(prog_id)) then
     deallocate(prog_id)
     deallocate(prog_owner)
@@ -2642,15 +2653,15 @@ subroutine mark_tracer_particles()
 
 
     do ipeak = 1, hfree -1
-      !need to check whether it is relevant clump. otherwise temp_energy == most_bound_energy = HUGE anyways
-      if (clmp_mass_exclusive(ipeak) > 0) then 
+      ! need to check whether it is relevant clump. otherwise temp_energy == most_bound_energy = HUGE anyways
+      if (clmp_mass_exclusive(ipeak) > 0.d0) then 
 
-        !if this is true minimal value for this peak
+        ! if this is true minimal value for this peak
         if (temp_energy(ipeak) == most_bound_energy(ipeak, ipart) ) then
 
           ! mark particle if it is bound
-          if (most_bound_energy(ipeak, ipart) < 0) then
-            clmpidp(most_bound_pid(ipeak, ipart)) = - clmpidp(most_bound_pid(ipeak, ipart))
+          if (most_bound_pid(ipeak,ipart) > 0) then
+            clmpidp(most_bound_pid(ipeak, ipart)) = -clmpidp(most_bound_pid(ipeak, ipart))
           endif
 
         else
@@ -2888,6 +2899,8 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
     end subroutine get_exclusive_clump_mass 
 
 end subroutine dissolve_small_clumps 
+
+
 
 ! #endif NDIM == 3
 #endif
