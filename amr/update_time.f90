@@ -205,6 +205,9 @@ subroutine update_time(ilevel)
   integer::ilevel
 
   real(dp)::dt,econs,mcons
+#ifdef SOLVERmhd
+  real(dp)::sqrt_aexp_prev
+#endif
   integer::i,itest
 
   ! Local constants
@@ -325,6 +328,10 @@ subroutine update_time(ilevel)
   t=t+dt
   nstep=nstep+1
   if(cosmo)then
+#ifdef SOLVERmhd
+     ! Keep for magnetic field expansion
+     sqrt_aexp_prev = SQRT(aexp)
+#endif
      ! Find neighboring times
      i=1
      do while(tau_frw(i)>t.and.i<n_frw)
@@ -337,6 +344,12 @@ subroutine update_time(ilevel)
           & hexp_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
      texp =    t_frw(i  )*(t-tau_frw(i-1))/(tau_frw(i  )-tau_frw(i-1))+ &
           &    t_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
+
+#ifdef SOLVERmhd
+     do i=1,ilevel
+       call update_cosmomag(i,SQRT(aexp)/sqrt_aexp_prev)
+     end do
+#endif
   else
      aexp = 1.0
      hexp = 0.0
