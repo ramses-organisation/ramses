@@ -182,7 +182,8 @@ module clfind_commons
 
 
 
-  real(dp), allocatable, dimension(:)   :: clmp_mass_exclusive
+  real(dp), allocatable, dimension(:)   :: clmp_mass_exclusive  ! exclusive clump mass, containing only bound particles
+  integer,  allocatable, dimension(:)   :: prog_outputnr        ! snapshot number of progenitor
   ! real(dp), allocatable, dimension(:,:) :: clmp_vel_exclusive
   integer  :: killed_tot, appended_tot ! count killed or appended clumps that were too small
   real(dp) :: partm_common

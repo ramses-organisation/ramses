@@ -46,12 +46,15 @@ subroutine make_merger_tree()
   !----------------------------
 
   if (myid==1)write(*,'(A31,x,I5)') " Calling merger tree for output", ifout
+
   ! create trees only if progenitors might exist
   if (ifout > 1) then 
 
     ! first allocate some global arrays for current peaks
     allocate(main_prog(1:npeaks_max))
     main_prog = 0
+    allocate(prog_outputnr(1:npeaks_max))
+    prog_outputnr = 0
 
     ! Read in progenitor files
     call read_progenitor_data()
@@ -785,6 +788,7 @@ subroutine make_trees()
 
   allocate(merit_desc_copy(1:npeaks_max))
   allocate(to_iter_prog(1:nprogs))
+  
 
 
   !-----------------------------------
@@ -801,7 +805,9 @@ subroutine make_trees()
   !-------------------------------------------------------------
 
   do iprog = 1, nprogs
-    if (p2d_links%cnt(iprog)>0) call find_main_desc(iprog, found)
+    if (p2d_links%cnt(iprog)>0) then
+      call find_main_desc(iprog, found)
+    endif
   enddo
 
   ! initialise what needs to be checked before communication:
@@ -809,7 +815,7 @@ subroutine make_trees()
   ! (only processors that have progenitor particles on them might have 
   ! reason to introduce virtual peaks of descendant candidates, all others
   ! don't)
-  to_iter_prog = (main_desc > 0)
+  to_iter_prog = (main_desc > 0) .and. (prog_owner == myid)
 
 #ifndef WITHOUTMPI
     !-------------------------
@@ -841,7 +847,9 @@ subroutine make_trees()
     if (d2p_links%cnt(ipeak) > 0) then
       call find_main_prog(ipeak, merit_desc, found)
       ! mark the progenitor candidate you used
-      if (found) call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
+      if (found) then
+        call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
+      endif
     endif
   enddo
 
@@ -1009,8 +1017,7 @@ subroutine make_trees()
           ! if found, then main_desc(iprog) > 0
           call get_local_peak_id(main_desc(iprog), idl)
           if (iprog/=main_prog(idl)) then
-            ! if the new candidate still doesn't match:
-            ! need to re-iterate
+            ! if the new candidate still doesn't match: need to re-iterate
             to_iter_prog(iprog) = .true.
             ! mark this descendant as already checked
             call fill_matrix(p2d_links, iprog, main_desc(iprog), 0, 'inv')
@@ -1061,7 +1068,6 @@ subroutine make_trees()
     do ipeak = 1, hfree-1
       if ( to_iter(ipeak) ) then ! if there is something to check for
 
-        to_iter(ipeak) = .false.
         if (main_desc(main_prog(ipeak))/=0) then
           ! abs needed here: mergers are signified by a negative main descendant ID
           call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
@@ -1078,9 +1084,6 @@ subroutine make_trees()
           else 
             ! mark the one you found
             call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
-            ! check this peak for matches again
-            to_iter(ipeak) = .true.
-            reiter = .true.
           endif
 
         endif ! ipeak /= idl
@@ -1102,7 +1105,7 @@ subroutine make_trees()
 
     do ipeak = 1, hfree-1
       ! if you didn't have the max, reset stuff
-      if (merit_desc_copy(ipeak) < merit_desc(ipeak)) then
+      if (merit_desc_copy(ipeak) < merit_desc(ipeak) .and. main_prog(ipeak)/=0) then
         ! reset mark in matrix for later use
         call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
         ! reset value in array
@@ -1114,17 +1117,28 @@ subroutine make_trees()
     call virtual_peak_int(main_prog, 'max')
     call boundary_peak_int(main_prog)
 
+    ! check whether you need to reiterate peak first, while you have data
+    ! synchronized globally
     do ipeak = 1, hfree-1
-      ! check whether you need to reiterate peak first, while you have data
-      ! synchronized globally
       if (to_iter(ipeak)) then
-        if (main_desc(main_prog(ipeak))/=0) then
-          ! abs needed here: mergers are signified by a negative main descendant ID
-          call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
+        ! If there still is a main progenitor after communications, 
+        ! check whether you still need to iterate
+        if (main_prog(ipeak)>0) then
+          if (main_desc(main_prog(ipeak))/=0) then
+            ! abs needed here: mergers are signified by a negative main descendant ID
+            call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
+          else
+            idl=0
+          endif
+          if (ipeak == idl) then
+            to_iter(ipeak) = .false.
+          else
+            reiter = .true.
+          endif
         else
-          idl=0
+          ! if there is no prog left after global sync, stop iterating this descendant.
+          to_iter(ipeak) = .false.
         endif
-        if (ipeak == idl) to_iter(ipeak) = .false.
       endif
     enddo
 
@@ -1148,90 +1162,131 @@ subroutine make_trees()
   ! After tree is made, add merged progenitors to past merged progenitors
   !---------------------------------------------------------------------------
   do iprog = 1, nprogs
-    if (main_desc(iprog)<0) then
-      ! to avoid double entries, only the owner is allowed to add a prog to pmprogs
-      if (prog_owner(iprog) == myid) call add_new_pmprog(iprog)
+    if (main_desc(iprog)<0 .and. prog_owner(iprog) == myid) then
+      call add_new_pmprog(iprog)
     endif
   enddo
 
 
-
-  !---------------------------------------------------------------------------------
-  ! update all necessary unbinding arrays in case you introduced new virtual peaks
-  !---------------------------------------------------------------------------------
-  do i = 1, nmassbins
-    call boundary_peak_dp(cmp(1,i))
-  enddo
-
-  do i = 1, 3
-    call boundary_peak_dp(peak_pos(1,i))
-    call boundary_peak_dp(clmp_vel_pb(1,i))
-  enddo
-
-  call boundary_peak_dp(cmp_distances(1,nmassbins))
-
-  ! recompute cumulative mass profile bin distances for virtual peaks
-  do ipeak=npeaks+1, hfree-1
-
-    ! set up distances
-    if (cmp_distances(ipeak, nmassbins)>0) then
-      if (logbins) then
-        do i=1, nmassbins-1
-          ! rmin is declared in clfind_commons
-          cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
-        enddo
-      else ! linear binnings
-        r_null=cmp_distances(ipeak,nmassbins)/real(nmassbins)
-        do i=0, nmassbins-1
-          cmp_distances(ipeak,i)=r_null*i
-        enddo
+  
+  ! first check if you have work to do and set up prog_outputnr
+  reiter = .false.
+  to_iter = .false.
+  do ipeak = 1, npeaks_max
+    if (clmp_mass_exclusive(ipeak) > 0) then
+      if (main_prog(ipeak)==0) then
+        ! if you still haven't got a progenitor, mark for checking
+        to_iter(ipeak) = .true.
+        reiter = .true.
+      else
+        ! otherwise, mark that this progenitor was an active clump in the last snapshot
+        prog_outputnr(ipeak) = ifout-1
       endif
     endif
   enddo
 
 
-
-  !------------------------------------------------------------------
-  ! If you still haven't found a progenitor for a descendant, 
-  ! try looking in previous, non-adjacent snapshots.
-  !------------------------------------------------------------------
-
-  ! reset merit and to_iter arrays
-  merit_desc = 0
-  to_iter = (clmp_mass_exclusive > 0) .and. (main_prog == 0)
-
-  do ipeak = 1, hfree-1
-    if ( to_iter(ipeak) ) then ! if there is something to check for
-        call find_prog_in_older_snapshots(ipeak, peakshift, merit_desc)
-    endif
-  enddo
+#ifndef WITHOUTMPI
+  ! check globally whether you need to reiterate treebuilding loop
+  call MPI_ALLREDUCE(MPI_IN_PLACE, reiter, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, i)
+#endif
 
 
+  if (reiter) then
+    !---------------------------------------------------------------------------------
+    ! update all necessary unbinding arrays in case you introduced new virtual peaks
+    !---------------------------------------------------------------------------------
+    do i = 1, nmassbins
+      call boundary_peak_dp(cmp(1,i))
+    enddo
+
+    do i = 1, 3
+      call boundary_peak_dp(peak_pos(1,i))
+      call boundary_peak_dp(clmp_vel_pb(1,i))
+    enddo
+
+    call boundary_peak_dp(cmp_distances(1,nmassbins))
+
+    ! recompute cumulative mass profile bin distances for virtual peaks
+    do ipeak=npeaks+1, hfree-1
+
+      ! set up distances only if you haven't yet
+      if (cmp_distances(ipeak, nmassbins-1)==0.d0) then
+        if (logbins) then
+          do i=1, nmassbins-1
+            ! rmin is declared in clfind_commons
+            cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
+          enddo
+        else ! linear binnings
+          r_null=cmp_distances(ipeak,nmassbins)/real(nmassbins)
+          do i=0, nmassbins-1
+            cmp_distances(ipeak,i)=r_null*i
+          enddo
+        endif
+      endif
+    enddo
 
 
-  !-------------------------------------------------------
-  ! Check that you found best candidate across processors
-  !-------------------------------------------------------
-  merit_desc_copy = merit_desc
-  ! Here the best candidate has the lowest merit value! 
-  call virtual_peak_dp(merit_desc(:), 'min')
-  call boundary_peak_dp(merit_desc(:))
 
-  do ipeak = 1, hfree-1
-    if ( to_iter(ipeak) .and. (merit_desc_copy(ipeak) > merit_desc(ipeak)) ) main_prog(ipeak) = 0
-  enddo
+    !------------------------------------------------------------------
+    ! If you still haven't found a progenitor for a descendant, 
+    ! try looking in previous, non-adjacent snapshots.
+    !------------------------------------------------------------------
+
+    ! reset merit and to_iter arrays
+    merit_desc = 0
+
+    do ipeak = 1, hfree-1
+      if ( to_iter(ipeak) ) then ! if there is something to check for
+          call find_prog_in_older_snapshots(ipeak, peakshift, merit_desc)
+      endif
+    enddo
 
 
-  ! Communicate results
-  call virtual_peak_int(main_prog, 'max')
-  call boundary_peak_int(main_prog)
 
-  ! Mark progenitors from earlier snapshots as such
-  do ipeak = 1, hfree -1
-    if (main_prog(ipeak) > peakshift ) then
-      main_prog(ipeak) = - (main_prog(ipeak)-peakshift)
-    endif
-  enddo
+
+    !-------------------------------------------------------
+    ! Check that you found best candidate across processors
+    !-------------------------------------------------------
+    merit_desc_copy = merit_desc
+    ! Here the best candidate has the lowest merit value! 
+    call virtual_peak_dp(merit_desc(:), 'min')
+    call boundary_peak_dp(merit_desc(:))
+
+    do ipeak = 1, hfree-1
+      if ( to_iter(ipeak)) then
+        if (merit_desc_copy(ipeak) > merit_desc(ipeak)) then
+          ! if you don't have the best candidate, reset
+          main_prog(ipeak) = 0
+          prog_outputnr(ipeak) = 0
+        else
+          if (prog_outputnr(ipeak)>0) then
+            ! overwrite pmprog as taken, get actual snapshot nr of pmprog. 
+            ! prog_outputnr(ipeak) contains the merit_min_id for this ipeak for this case!
+            pmprogs_owner(prog_outputnr(ipeak)) = 0 ! pmprogs will be written to file by owner. If no owner, it won't be written!
+            prog_outputnr(ipeak) = pmprogs_t(prog_outputnr(ipeak))
+          endif
+        endif
+      endif
+    enddo
+
+
+    ! Communicate results
+    call virtual_peak_int(main_prog, 'max')
+    call virtual_peak_int(prog_outputnr, 'max')
+    ! After this routine, only writing the trees to file is done.
+    ! virtual peaks need no knowledge of the results.
+    ! call boundary_peak_int(main_prog)
+    ! call boundary_peak_int(prog_outputnr)
+
+    ! Mark progenitors from earlier snapshots as such
+    do ipeak = 1, npeaks
+      if (main_prog(ipeak) > peakshift ) then
+        main_prog(ipeak) = - (main_prog(ipeak)-peakshift)
+      endif
+    enddo
+
+  endif ! to look for progs in older snapshots
 
 
 
@@ -1580,6 +1635,8 @@ subroutine make_trees()
         if (merit_min_id > 0) then
           main_prog(ipeak) = pmprogs(merit_min_id) + peakshift
           merit_desc(ipeak) = merit_min
+          ! abuse prog_outputnr to store merit_min_id temporarily
+          prog_outputnr(ipeak) = merit_min_id
         endif
 
         deallocate(particlelist, canddts, merit, part_local_ind)
@@ -1989,13 +2046,13 @@ subroutine write_trees()
 
   character (len=5)  :: dir, idnr
   character (len=80) :: fileloc
-  integer:: ipeak, iprog, ipastprog, snapshot_nr
+  integer:: ipeak, iprog
 
-  integer, dimension(1:nprogs) :: printed
+  logical, dimension(1:nprogs) :: printed
 
   if (verbose) write(*,*) " writing trees to file."
 
-  printed = 0
+  printed = .false.
 
   call title(ifout, dir)
   call title(myid, idnr) 
@@ -2014,15 +2071,14 @@ subroutine write_trees()
 
   do ipeak = 1, npeaks
     if (clmp_mass_exclusive(ipeak) > 0) then
-      
       !----------------------
       ! Adjacent link found
       !----------------------
       if (main_prog(ipeak) > 0 ) then
         write(666,'(4(I15))') &
           ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), &
-          ifout-1, 1
-        printed(main_prog(ipeak)) = 1
+          prog_outputnr(ipeak), 1
+        printed(main_prog(ipeak)) = .true.
 
 
       !------------------------------
@@ -2038,27 +2094,16 @@ subroutine write_trees()
       ! Progenitor from non-adjacent snapshot found
       !----------------------------------------------
       else 
-        ! First find its snapshot number
-        snapshot_nr = 0
-        do ipastprog = 1, npastprogs
-          if (pmprogs(ipastprog) == -main_prog(ipeak)) then
-            snapshot_nr = pmprogs_t(ipastprog)
-            pmprogs_owner(ipastprog) = 0
-            exit
-          endif
-        enddo
-
-        write(666,'(4(I15),x,E14.6)') &
+        write(666,'(4(I15))') &
           ipeak+ipeak_start(myid), main_prog(ipeak), &
-          snapshot_nr, 3, clmp_mass_exclusive(ipeak)
-
+          prog_outputnr(ipeak), 3
       endif
     endif
   enddo
 
 
 #ifndef WITHOUTMPI
-  call MPI_ALLREDUCE(MPI_IN_PLACE, printed, nprogs, MPI_INT, MPI_SUM, MPI_COMM_WORLD, err)
+  call MPI_ALLREDUCE(MPI_IN_PLACE, printed, nprogs, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, err)
 #endif
 
 
@@ -2071,7 +2116,7 @@ subroutine write_trees()
   ! If a progenitor merged with another into a composite descendant, the non-main progenitor
   ! will have a negative main descendant ID.
   do iprog = 1, nprogs
-    if ( printed(iprog) == 0 .and. main_desc(iprog) /= 0 .and. prog_owner(iprog) == myid ) then
+    if ( (.not.printed(iprog)) .and. main_desc(iprog) /= 0 .and. prog_owner(iprog) == myid ) then
       write(666, '(4(I15))') main_desc(iprog), prog_id(iprog), ifout-1, 4
     endif
   enddo
@@ -2462,18 +2507,19 @@ subroutine fill_matrix(mat, key, tar, np, act)
 !==================================================
 
   !----------------------------------------------------
-  ! Counts that np tracer particles for the
-  ! clump key has been found in the clump target
-  ! and adds it to the matrix mat.
+  ! Performs given operation on matrix elements of
+  ! prog-desc matrices.
   !
-  ! clump key:    local id for progenitor,
-  !               local id for descendant
-  ! clump target: local id for progenitor,
-  !               global id for descendant
-  ! act:          how to add the particles to matrix
+  ! clump key:    local id for progenitor (p2d_links),
+  !               local id for descendant (d2p_links)
+  ! clump target: local id for progenitor (p2d_links),
+  !               global id for descendant (d2p_links)
+  ! act:          what to do with matrix elements 
   !   act = 'add': add up
   !   act = 'set': don't add, just set
   !   act = 'inv': make value negative
+  !   'add' and 'set' will introduce new entries if
+  !   there wasn't one before, 'inv' won't.
   !----------------------------------------------------
 
   use clfind_commons
@@ -2486,22 +2532,22 @@ subroutine fill_matrix(mat, key, tar, np, act)
 
   integer :: i, itar
 
+  ! if there is no first value, 
+  ! add new first value
   if (mat%cnt(key) == 0) then
-    ! if there is no first value, 
-    ! add new first value
-    mat%first(key) = mat%mat_free_ind
-    mat%clmp_id(mat%mat_free_ind) = tar
-    mat%cnt(key) = mat%cnt(key) + 1
+    if (act/='inv') then
+      mat%first(key) = mat%mat_free_ind
+      mat%clmp_id(mat%mat_free_ind) = tar
+      mat%cnt(key) = mat%cnt(key) + 1
 
-    if (act=='add') then
-      mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
-    else if (act=='set') then
-      mat%ntrace(mat%mat_free_ind) = np
-    else if (act=='inv') then
-      mat%ntrace(mat%mat_free_ind) = - mat%ntrace(mat%mat_free_ind)
+      if (act=='add') then
+        mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
+      else if (act=='set') then
+        mat%ntrace(mat%mat_free_ind) = np
+      endif
+
+      mat%mat_free_ind = mat%mat_free_ind + 1
     endif
-
-    mat%mat_free_ind = mat%mat_free_ind + 1
     return
 
   else
@@ -2521,7 +2567,7 @@ subroutine fill_matrix(mat, key, tar, np, act)
       endif
 
       if (mat%next(itar) > 0) then
-        !cycle
+        ! cycle
         itar = mat%next(itar)
       else
         exit
@@ -2531,20 +2577,19 @@ subroutine fill_matrix(mat, key, tar, np, act)
 
 
 
-
   ! if you didn't find anything, add new value
-  mat%next(itar) = mat%mat_free_ind
-  mat%clmp_id(mat%mat_free_ind) = tar
-  mat%cnt(key) = mat%cnt(key) + 1
-  if (act=='add') then
-    mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
-  else if (act=='set') then
-    mat%ntrace(mat%mat_free_ind) = np
-  else if (act=='inv') then
-    mat%ntrace(mat%mat_free_ind) = - mat%ntrace(mat%mat_free_ind)
-  endif
+  if (act /= 'inv') then  
+    mat%next(itar) = mat%mat_free_ind
+    mat%clmp_id(mat%mat_free_ind) = tar
+    mat%cnt(key) = mat%cnt(key) + 1
+    if (act=='add') then
+      mat%ntrace(mat%mat_free_ind) = mat%ntrace(mat%mat_free_ind) + np
+    else if (act=='set') then
+      mat%ntrace(mat%mat_free_ind) = np
+    endif
 
-  mat%mat_free_ind = mat%mat_free_ind + 1
+    mat%mat_free_ind = mat%mat_free_ind + 1
+  endif
   return
 
 end subroutine fill_matrix
@@ -2590,7 +2635,10 @@ subroutine deallocate_mergertree()
     deallocate(main_desc)
   endif
 
-  if(ifout > 1) deallocate(main_prog)
+  if(ifout > 1) then
+    deallocate(main_prog)
+    deallocate(prog_outputnr)
+  endif
 
   if (allocated(pmprogs)) then
     deallocate(pmprogs)
