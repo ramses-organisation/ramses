@@ -6,9 +6,9 @@ subroutine star_formation(ilevel)
   use poisson_commons
   use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
   use random
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,info2,dummy_io
   integer,parameter::tag=1120
 #endif

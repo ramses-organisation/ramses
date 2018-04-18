@@ -1,10 +1,8 @@
 ! Call once per process.
 subroutine init_rad_boundary()
   use radiation_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::lattice_size
 
   if (rad_boundary_condition.eq.0) then
@@ -108,10 +106,8 @@ end subroutine
 
 subroutine cpu_mpi_boundary()
   use radiation_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   integer,dimension(6)::adjacent_cpu
   integer,dimension(6)::boundary_receive_request,boundary_send_request

@@ -17,9 +17,9 @@ SUBROUTINE read_hll_eigenvalues()
 !------------------------------------------------------------------------
   use amr_commons,only:myid
   use rt_parameters,only:hll_evals_file
+  use mpi_mod
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE,ncpu
-  include 'mpif.h'
   integer::dummy_io,info2
 #endif
   integer::i,j,ii,jj

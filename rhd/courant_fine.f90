@@ -2,10 +2,8 @@ subroutine courant_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Using the Courant-Friedrich-Levy stability condition,               !

@@ -738,9 +738,9 @@ end subroutine init_refmap
 subroutine init_refmap_fine(ilevel)
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer::dummy_io,info2
 #endif

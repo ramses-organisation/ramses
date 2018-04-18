@@ -10,10 +10,10 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
+  use mpi_mod
   implicit none
 #if NDIM > 1
 #ifndef WITHOUTMPI
-  include "mpif.h"
   integer::info,iframe
   real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif

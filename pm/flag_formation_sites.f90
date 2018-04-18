@@ -10,10 +10,8 @@ subroutine flag_formation_sites
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
   use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !=============================================================================
   ! This routine flags (flag2 = 1)  the cells where a sink is going to be formed
@@ -219,10 +217,8 @@ subroutine compute_clump_properties_round2
   use rt_cooling_module, only:kappaSc
 #endif
 
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects
@@ -704,10 +700,8 @@ subroutine surface_int
   use pm_commons
   use clfind_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !---------------------------------------------------------------
   ! Compute all the surface terms for virial analysis.
