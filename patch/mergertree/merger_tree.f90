@@ -19,7 +19,7 @@
 ! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
 ! subroutine dissolve_small_clumps()
-!  countains subroutine get_exclusive_clump_mass()
+!  contains subroutine get_exclusive_clump_mass()
 !--------------------------------------------------------
 
 
@@ -123,7 +123,7 @@ subroutine process_progenitor_data()
   !------------------------------------------------------
 
   use clfind_commons
-  use amr_parameters, only: i8b
+  use amr_parameters, only: i8b, dp
   use pm_commons, only: idp, npartmax
 
   implicit none
