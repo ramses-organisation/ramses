@@ -25,7 +25,7 @@ ifeq ($(GRACKLE),1)
 DEFINES += -Dgrackle
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
-DEFINES += -DOLD_MPI
+DEFINES += -DMPI_OLD
 endif
 #############################################################################
 # Fortran compiler options and directives
