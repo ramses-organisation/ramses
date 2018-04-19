@@ -26,15 +26,25 @@ two snapshots are linked as progenitors and descendants, if possible. Preferrabl
 snapshots are linked, but if a descendant has no direct progenitor in the adjacent snapshot, the program will try 
 to find progenitors in older snapshots.
 
+
+
+## Output
+
 The merger trees are stored in output_XXXXX/mergertree.txtYYYYY files. Each file contains 4 columns:
 
 * clump:          clump ID of a clump at this output number
 * progenitor:     the progenitor clump ID in output number "prog_outputnr"
 * prog_outputnr:  the output number of when the progenitor was an alive clump
-* case:           which case it was found (you can safely ignore this).
+* case:           which case it was found (was it jumper, merger, new clump... you can safely ignore this).
 
-If a clump has progenitor = 0, it means that no progenitor could be established and the clump is treated as newly formed.
-If a progenitor has a descendant < 0, it means that this progenitor merged into this clump, but is not this clump's main progenitor.
+**How to read the output:**
+
+* A clump > 0 has progenitor > 0: Standard case. A direct progenitor from the adjacent previous snapshot was identified for this clump.
+* A clump > 0 has progenitor = 0: no progenitor could be established and the clump is treated as newly formed.
+* A clump > 0 has progenitor < 0, it means that no direct progenitor could be found in the adjacent previous snapshot, but a progenitor was identified from an earlier, non-adjacent snapshot.
+* A clump < 0 has progenitor > 0: this progenitor merged into this clump, but is not this clump's main progenitor.
+* A clump < 0 has progenitor < 0: this shouldn't happen.
+
 
 
 
@@ -90,6 +100,7 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 ## Visualisation
 
 `ramses/utils/py/mergertreeplot.py` is a python 2 script to plot the merger trees as found by this patch. 
+ Details on options and usage are at the start of the script as a comment.
 
 
 
