@@ -186,8 +186,8 @@ module amr_parameters
   logical ::sf_compressive=.false. ! Advect compressive and solenoidal turbulence terms separately
 
   ! Output times
-  real(dp),dimension(1:MAXOUT)::aout=1.1       ! Output expansion factors
-  real(dp),dimension(1:MAXOUT)::tout=0.0       ! Output times
+  real(dp),dimension(1:MAXOUT)::aout=1.1        ! Output expansion factors
+  real(dp),dimension(1:MAXOUT)::tout=HUGE(1.0D0)! Output times
 
   ! Movie
   integer,parameter::NMOV=5
