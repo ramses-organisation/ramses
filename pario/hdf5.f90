@@ -10,7 +10,7 @@
 module ramses_hdf5
   use amr_commons,only:MPI_COMM_COMP,myid,pario_version,ramses_version
   use hdf5
-  use mpi
+  use mpi_mod
 
   implicit none
 

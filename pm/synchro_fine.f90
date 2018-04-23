@@ -1,9 +1,9 @@
 subroutine synchro_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -84,9 +84,9 @@ end subroutine synchro_fine
 subroutine synchro_fine_static(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel

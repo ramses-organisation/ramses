@@ -2,9 +2,9 @@ subroutine init_poisson
   use pm_commons
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info,info2,dummy_io
   integer,parameter::tag=1114
 #endif

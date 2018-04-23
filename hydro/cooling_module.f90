@@ -692,10 +692,8 @@ end function J0simple
 !=======================================================================
 subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
 !=======================================================================
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(kind=8)::nH_min,nH_max,T2_min,T2_max,aexp,tmp
   integer::nbin_n,nbin_T
   integer::i_n,i_T

@@ -6,10 +6,8 @@ SUBROUTINE rt_init_xion(ilevel)
 !-------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer:: ilevel
   integer:: ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save:: ind_grid

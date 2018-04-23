@@ -27,11 +27,8 @@ subroutine multigrid_fine(ilevel,icount)
    use amr_commons
    use poisson_commons
    use poisson_parameters
-
+   use mpi_mod
    implicit none
-#ifndef WITHOUTMPI
-   include "mpif.h"
-#endif
 
    integer, intent(in) :: ilevel,icount
 
@@ -278,10 +275,8 @@ end subroutine multigrid_fine
 recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
    use amr_commons
    use poisson_commons
+   use mpi_mod
    implicit none
-#ifndef WITHOUTMPI
-   include "mpif.h"
-#endif
 
    integer, intent(in) :: ifinelevel
    logical, intent(in) :: safe
@@ -365,10 +360,10 @@ end subroutine recursive_multigrid_coarse
 subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    use amr_commons
    use poisson_commons
+   use mpi_mod
    implicit none
 
 #ifndef WITHOUTMPI
-   include "mpif.h"
    integer, dimension (MPI_STATUS_SIZE, ncpu) :: statuses
 #endif
    type(communicator), intent(in) :: active_f_comm
@@ -1019,11 +1014,11 @@ end subroutine make_fine_bc_rhs
 subroutine make_virtual_mg_dp(ivar,ilevel)
   use amr_commons
   use poisson_commons
+  use mpi_mod
+
   implicit none
   integer::ilevel,ivar
-
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icell,icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
@@ -1083,11 +1078,11 @@ end subroutine make_virtual_mg_dp
 subroutine make_virtual_mg_int(ilevel)
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
   integer::ilevel
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icpu,i,j,ncache,iskip,step,icell
   integer::countsend,countrecv
@@ -1147,11 +1142,11 @@ end subroutine make_virtual_mg_int
 subroutine make_reverse_mg_dp(ivar,ilevel)
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
   integer::ilevel,ivar
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icell,icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
@@ -1212,11 +1207,11 @@ end subroutine make_reverse_mg_dp
 subroutine make_reverse_mg_int(ilevel)
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
   integer::ilevel
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icell
   integer::icpu,i,j,ncache,iskip,step
@@ -1281,10 +1276,9 @@ end subroutine make_reverse_mg_int
 subroutine dump_mg_levels(ilevel,idout)
    use amr_commons
    use poisson_commons
+   use mpi_mod
    implicit none
-#ifndef WITHOUTMPI
-   include 'mpif.h'
-#endif
+
    integer, intent(in) :: idout, ilevel
 
    character(len=24)  :: cfile

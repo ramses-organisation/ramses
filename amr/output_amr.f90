@@ -7,10 +7,8 @@ subroutine dump_all
   use pm_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
 #endif
@@ -194,9 +192,9 @@ subroutine backup_amr(filename)
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::dummy_io,info2
 #endif
   character(LEN=80)::filename
@@ -394,10 +392,8 @@ subroutine output_info(filename)
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   character(LEN=80)::filename
 
   integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom,ierr
@@ -481,9 +477,9 @@ subroutine output_header(filename)
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include "mpif.h"
   integer::info
 #endif
   character(LEN=80)::filename
@@ -569,9 +565,9 @@ subroutine savegadget(filename)
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer(i8b)::npart_loc
 #endif
@@ -656,7 +652,7 @@ end subroutine savegadget
 !#########################################################################
 !#########################################################################
 subroutine create_output_dirs(filedir)
-
+  use mpi_mod
   use amr_commons
   implicit none
   character(LEN=80), intent(in):: filedir
@@ -667,7 +663,6 @@ subroutine create_output_dirs(filedir)
   integer :: ierr
 #endif
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 
