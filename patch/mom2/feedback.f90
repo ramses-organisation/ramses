@@ -393,10 +393,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
     end do
     do j=1,np
-        kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+        kg(j,1)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
     end do
     do j=1,np
-        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,1)))
     end do
 
     ! Check if particles are entirely in level ilevel
@@ -415,16 +415,16 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     end do
     do j=1,np
         if(ok(j))then
-            icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+            icell(j,1)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
         end if
     end do
 
     ! Compute parent cell adresses
     do j=1,np
         if(ok(j))then
-            indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+            indp(j)=ncoarse+(icell(j,1)-1)*ngridmax+igrid(j)
         else
-            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,1))
             vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
         end if
     end do
