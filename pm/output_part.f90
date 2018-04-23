@@ -3,9 +3,9 @@ subroutine backup_part(filename, filename_desc)
   use pm_commons
   use dump_utils, only : generic_dump, dump_header_info, dim_keys
   use iso_fortran_env
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: dummy_io, info2
   integer, parameter :: tag = 1122
 #endif

@@ -24,9 +24,9 @@ end subroutine refine
 !###############################################################
 subroutine refine_coarse
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::nxny,i,j,k
@@ -331,9 +331,9 @@ end subroutine make_grid_coarse
 !###############################################################
 subroutine refine_fine(ilevel)
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel

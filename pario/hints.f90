@@ -5,7 +5,7 @@
 !TODO: faire attention au communicateur
 
 module hints
-  use mpi
+  use mpi_mod
 
   implicit none
 

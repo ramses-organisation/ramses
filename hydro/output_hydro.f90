@@ -2,9 +2,9 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: dummy_io, info2
 #endif
 

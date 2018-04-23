@@ -4,10 +4,8 @@ subroutine adaptive_loop
   use pm_commons
   use poisson_commons
   use cooling_module
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,idim,ivar,info,i
   real(dp)::tt1,tt2
 

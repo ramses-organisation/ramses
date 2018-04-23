@@ -5,10 +5,10 @@
 subroutine output_cone()
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
 
 #ifndef WITHOUTMPI
-#include "mpif.h"
   integer::info,info2,dummy_io
 #endif
 

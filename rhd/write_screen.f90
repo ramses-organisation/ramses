@@ -2,10 +2,8 @@ subroutine write_screen
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !
   integer::igrid,jgrid,ind,icpu,info
   integer::i,icell,ncell,ilevel,ncache

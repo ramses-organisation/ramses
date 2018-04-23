@@ -10,7 +10,7 @@ subroutine backup_hydro_send
   use amr_commons
   use hydro_commons
   use io_parameters
-  use mpi
+  use mpi_mod
   use timer
   implicit none
 
@@ -88,7 +88,7 @@ subroutine backup_hydro_recv
   use amr_commons
   use hydro_commons
   use io_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::count,ierr,src

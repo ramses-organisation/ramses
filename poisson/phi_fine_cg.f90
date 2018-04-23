@@ -6,9 +6,9 @@ subroutine phi_fine_cg(ilevel,icount)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel,icount

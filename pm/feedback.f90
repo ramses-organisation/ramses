@@ -7,9 +7,9 @@ subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info2,dummy_io
 #endif
   integer::ilevel
@@ -471,9 +471,9 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer,dimension(1:ncpu)::nSN_icpu_all
   real(dp),dimension(:),allocatable::mSN_all,sSN_all,ZSN_all
@@ -685,9 +685,9 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !------------------------------------------------------------------------
@@ -849,10 +849,8 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.
   !------------------------------------------------------------------------

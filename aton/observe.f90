@@ -18,10 +18,8 @@ subroutine observe_level(ilevel)
   use cooling_module
   use observe_commons
   use radiation_commons, ONLY: Erad
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   integer::i,ivar,idim,ind,ncache,igrid,iskip
   integer::info,nleaf,ngrid,nx_loc

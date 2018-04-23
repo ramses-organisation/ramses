@@ -1,10 +1,8 @@
 subroutine move_fine(ilevel)
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.
@@ -63,10 +61,8 @@ end subroutine move_fine
 subroutine move_fine_static(ilevel)
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.

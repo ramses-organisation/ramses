@@ -45,10 +45,8 @@ CONTAINS
 #ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
 #endif
-    IMPLICIT NONE
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
+    use mpi_mod
+  implicit none
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN):: ifile
@@ -130,10 +128,9 @@ CONTAINS
 #ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
 #endif
+    use mpi_mod
+
     IMPLICIT NONE
-#ifndef WITHOUTMPI
-    include 'mpif.h'
-#endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN) :: ifile
@@ -226,10 +223,9 @@ CONTAINS
 #ifndef WITHOUTMPI
     use amr_commons,only:myid,IOGROUPSIZE,ncpu
 #endif
+    use mpi_mod
+
     IMPLICIT NONE
-#ifndef WITHOUTMPI
-    include 'mpif.h'
-#endif
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN) :: ifile
@@ -303,4 +299,3 @@ CONTAINS
 
     END SUBROUTINE gadgetwritefile
 END MODULE gadgetreadfilemod
-

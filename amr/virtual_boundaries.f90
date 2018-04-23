@@ -299,10 +299,8 @@ end subroutine authorize_fine
 !################################################################
 subroutine make_virtual_coarse_int(xx)
   use amr_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer,dimension(1:ncoarse+ngridmax*twotondim)::xx
   !-----------------------------------------------------------
   ! This routine communicates virtual boundary conditions
@@ -358,9 +356,9 @@ end subroutine make_virtual_coarse_int
 !################################################################
 subroutine make_virtual_fine_dp(xx,ilevel)
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
 #endif
   integer::ilevel
@@ -444,9 +442,9 @@ end subroutine make_virtual_fine_dp
 !################################################################
 subroutine make_virtual_fine_int(xx,ilevel)
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
 #endif
   integer::ilevel
@@ -530,10 +528,8 @@ end subroutine make_virtual_fine_int
 !################################################################
 subroutine make_virtual_reverse_dp(xx,ilevel)
   use amr_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   ! -------------------------------------------------------------------
@@ -694,10 +690,8 @@ end subroutine make_virtual_reverse_dp
 !################################################################
 subroutine make_virtual_reverse_int(xx,ilevel)
   use amr_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   integer,dimension(1:ncoarse+ngridmax*twotondim)::xx
   ! -------------------------------------------------------------------
@@ -860,10 +854,8 @@ end subroutine make_virtual_reverse_int
 subroutine build_comm(ilevel)
   use amr_commons
   use poisson_commons, only: lookup_mg
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   ! -------------------------------------------------------------------
   ! This routine builds the communication structure for level ilevel.
