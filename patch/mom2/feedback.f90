@@ -203,7 +203,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::icell,kg
   real(dp),dimension(1:3)::skip_loc
 
-  integer::hra
+  integer ,dimension(1:nvector),save::hra
   real(dp),dimension(1:nvector,1:ndim),save::dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,igg,icg
 
@@ -332,12 +332,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
     end do
     
-    call ranf(localseed,RandNum)
-    hra = int(RandNum*8)+1
+    do j=1,np
+        call ranf(localseed,RandNum)
+        hra(j) = int(RandNum*8)+1
+    enddo
 
-        do j=1,np
-            igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra)))
-        end do
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
+    end do
 
     ! Check if particles are entirely in level ilevel
     ok(1:np)=.true.
@@ -371,9 +373,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     ! Compute parent cell adresses
     do j=1,np
         if(ok(j))then
-            indp(j)=ncoarse+(icell(j,hra)-1)*ngridmax+igrid(j)
+            indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
         else
-            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra))
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
             vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
         end if
     end do
@@ -1026,7 +1028,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  !ESN=(1d51/(10d0*2d33))/scale_v**2   !why is that here again? see 229
+  ESN=(1d51/(10d0*2d33))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn
@@ -1147,3 +1149,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   if(verbose)write(*,*)'Exiting Sedov_blast'
 
 end subroutine Sedov_blast
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
