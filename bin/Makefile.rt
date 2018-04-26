@@ -21,12 +21,13 @@ OLD_MPI_SUPPORT = 0
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
-GITREPO = $(shell git config --get remote.origin.url)
+GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
+GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
           -DNENER=$(NENER) -DSOLVER$(SOLVER) -DRT $(ATON_FLAGS)
 ifeq ($(OLD_MPI_SUPPORT),1)
-DEFINES += -DOLD_MPI
+DEFINES += -DMPI_OLD
 endif
 #############################################################################
 # Fortran compiler options and directives
