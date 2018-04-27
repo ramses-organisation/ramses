@@ -2,6 +2,7 @@
 
 cd bin
 cat Makefile.rt |\
+    sed 's/NDIM = 1/NDIM = 3/g' |\
     sed 's/NGROUPS = 0/NGROUPS = 3/g' |\
     sed 's/NIONS = 0/NIONS = 3/g' |\
     sed 's/^F90 =.*$/F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall/g' |\
