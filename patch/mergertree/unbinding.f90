@@ -5,10 +5,10 @@ subroutine unbinding()
   use pm_commons, only: mp, npart, npartmax, levelp
   use hydro_commons, ONLY:mass_sph
   use clfind_commons ! unbinding stuff
+  use mpi_mod
 
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
   real(dp):: partm_common_all
   logical :: loop_again_global
@@ -644,6 +644,7 @@ subroutine get_cmp()
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 
   !-----------------------------------------
@@ -662,7 +663,6 @@ subroutine get_cmp()
    
 #ifndef WITHOUTMPI
   integer  :: levelmax_glob, info
-  include 'mpif.h'
 #endif
 
   !--------------------------
@@ -1599,9 +1599,9 @@ subroutine write_unbinding_formatted_output(before)
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 

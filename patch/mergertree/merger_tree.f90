@@ -125,11 +125,11 @@ subroutine process_progenitor_data()
   use clfind_commons
   use amr_parameters, only: i8b, dp
   use pm_commons, only: idp, npartmax
+  use mpi_mod
 
   implicit none
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer, dimension(:), allocatable :: local_owners_info
 #endif
 
@@ -399,13 +399,13 @@ subroutine create_prog_desc_links()
   !--------------------------------------------------------------------
 
   use clfind_commons
+  use mpi_mod
 
   implicit none
 
   integer :: iprog, ipart, ind, idesc, i
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer, dimension(:), allocatable :: sendcount, receivecount
   integer, dimension(:), allocatable :: sendcount2, receivecount2
   integer, dimension(:), allocatable :: sendbuf, recvbuf
@@ -750,11 +750,9 @@ subroutine make_trees()
   !---------------------------------------------------------------------------
 
   use clfind_commons
+  use mpi_mod
 
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   real(dp), dimension(:), allocatable ::  merit_desc
   real(dp), dimension(:), allocatable ::  merit_desc_copy
@@ -1728,13 +1726,9 @@ subroutine read_progenitor_data()
 
   use clfind_commons
   use amr_commons
+  use mpi_mod
 
   implicit none
-
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-
 
   integer :: iprog, i
 
@@ -2099,11 +2093,11 @@ subroutine write_trees()
   !-------------------------------
 
   use clfind_commons
+  use mpi_mod
 
   implicit none
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: err
 #endif
 
@@ -2217,6 +2211,7 @@ subroutine write_progenitor_data()
   use clfind_commons
   use amr_commons
   use pm_commons, only: idp
+  use mpi_mod
 
   implicit none
 
@@ -2230,7 +2225,6 @@ subroutine write_progenitor_data()
   character(LEN=5)      :: output_to_string, id_to_string 
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer, dimension (1:MPI_STATUS_SIZE):: state
   integer :: mpi_err, filehandle
   integer, dimension(1:4) :: buf
@@ -2826,6 +2820,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
 
   use amr_commons 
   use clfind_commons 
+  use mpi_mod
 
   implicit none
 
@@ -2836,7 +2831,6 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
   integer       :: ipeak, ipart, thispart, particle_local_id
 
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer, dimension(1:2) :: buf
   integer :: info
 #endif 
