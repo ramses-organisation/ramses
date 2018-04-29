@@ -1,10 +1,8 @@
 subroutine init_hydro
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart,info
   integer::ncpu2,ndim2,nlevelmax2,nboundary2

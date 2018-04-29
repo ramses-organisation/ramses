@@ -24,7 +24,7 @@ end module io_parameters
 module io_commons
   use io_parameters
   use amr_parameters,only:MAXLINE
-  use mpi,only:mpi_offset_kind
+  use mpi_mod
 
   integer,allocatable,dimension(:,:,:)::numblio
   integer::count_out=0,count_bak=0
@@ -41,4 +41,3 @@ module io_commons
   logical,dimension(:),allocatable::outputs
 
 end module io_commons
-

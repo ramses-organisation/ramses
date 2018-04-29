@@ -1,5 +1,6 @@
 !=======================================================================
 real(kind=8) function wallclock()
+  use mpi_mod
   implicit none
 #ifdef WITHOUTMPI
   integer,      save :: tstart
@@ -11,9 +12,6 @@ real(kind=8) function wallclock()
 #endif
   logical,      save :: first_call=.true.
   real(kind=8), save :: norm, offset=0.
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !---------------------------------------------------------------------
   if (first_call) then
 #ifdef WITHOUTMPI
@@ -80,9 +78,9 @@ subroutine output_timer(write_file, filename)
   use amr_parameters
   use amr_commons
   use timer_m
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8) :: gtotal, avtime, rmstime
   real(kind=8), dimension(ncpu) :: vtime
   integer,      dimension(ncpu) :: all_ntimer
@@ -181,10 +179,9 @@ end subroutine
 !=======================================================================
 subroutine reset_timer
    use timer_m
+   use mpi_mod
    implicit none
-#ifndef WITHOUTMPI
-   include 'mpif.h'
-#endif
+
 !-----------------------------------------------------------------------
    do itimer = 1,ntimer
       time(itimer)=0.0
@@ -196,9 +193,9 @@ subroutine update_time(ilevel)
   use pm_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8)::ttend
   real(kind=8),save::ttstart=0
 #endif
@@ -370,9 +367,9 @@ subroutine clean_stop
   use amr_commons
   use poisson_commons
   use pm_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer :: ilevel
@@ -492,9 +489,9 @@ subroutine getmem(outmem)
   use amr_commons,only:IOGROUPSIZE
   use amr_commons,only:ncpu
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::dummy_io,info2
 #endif
   real(kind=4)::outmem

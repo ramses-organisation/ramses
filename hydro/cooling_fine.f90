@@ -5,10 +5,8 @@ subroutine cooling_fine(ilevel)
 #ifdef grackle
   use grackle_parameters
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-------------------------------------------------------------------
   ! Compute cooling for fine levels
@@ -65,10 +63,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,a_r,is_kIR_T,rt_vc
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 #if defined(grackle) && !defined(WITHOUTMPI)
   integer::info
 #endif
@@ -81,13 +77,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
   real(dp)::polytropic_constant=1.
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
-  real(kind=8),dimension(1:nvector),save::nH,T2,T2_new,delta_T2,ekk,err,emag
+  real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
 #ifdef RT
   integer::ii,ig,iNp,il
-  real(kind=8),dimension(1:nvector),save:: ekk_new
+  real(kind=8),dimension(1:nvector),save:: ekk_new,T2_new
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp)::scale_Np,scale_Fp,work,Npc,Npnew, kIR, E_rad, TR
   real(dp),dimension(1:ndim)::Fpnew

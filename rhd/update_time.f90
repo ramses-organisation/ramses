@@ -3,10 +3,8 @@ subroutine update_time(ilevel)
   use pm_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons,ttend,momcons
@@ -153,10 +151,8 @@ end subroutine update_time
 
 subroutine clean_stop
   use amr_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::info
 #ifndef WITHOUTMPI
   call MPI_FINALIZE(info)

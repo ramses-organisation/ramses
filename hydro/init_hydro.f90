@@ -4,9 +4,9 @@ subroutine init_hydro
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,info2,dummy_io
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar

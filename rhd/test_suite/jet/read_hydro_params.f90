@@ -1,10 +1,8 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   logical::nml_ok
   !--------------------------------------------------
   ! Local variables

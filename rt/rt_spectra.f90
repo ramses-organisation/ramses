@@ -187,7 +187,7 @@ FUNCTION getCrosssection(lambda, species)
     getCrosssection = 0.
     if(E .ge. 11.2  .and. E .lt. 13.6) getCrosssection=2.1d-19!Sternberg2014
     if(E .ge. 15.42 .and. E .lt. 16.5) getCrosssection=6.2e-18*E-9.4e-17
-    if(E .ge. 16.5  .and. E .lt. 17.7) getCrosssection=1.4e-18*E-1.48e-17    
+    if(E .ge. 16.5  .and. E .lt. 17.7) getCrosssection=1.4e-18*E-1.48e-17
     if(E .ge. 117.7) getCrosssection=2.5e-14*E**(-2.71)
     RETURN
   endif
@@ -257,9 +257,9 @@ SUBROUTINE init_SED_table()
   use amr_commons,only:myid
   use rt_parameters
   use spectrum_integrator_module
+  use mpi_mod
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE,ncpu
-  include 'mpif.h'
   real(kind=8),allocatable::tbl2(:,:,:)
   integer::dummy_io,info2,ierr
 #endif
@@ -410,7 +410,7 @@ SUBROUTINE init_SED_table()
         allocate(SED_ages(SED_nA))
         SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
      end if
-     
+
      ! Integrate the cumulative luminosities:
      SED_table(:,:,ip,2)=0.d0
      do iz = 1, SED_nZ ! Loop metallicity
@@ -442,8 +442,8 @@ SUBROUTINE update_SED_group_props()
   use pm_parameters
   use pm_commons
   use rt_parameters
+  use mpi_mod
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer :: i, ip, ii
@@ -1280,9 +1280,9 @@ SUBROUTINE init_UV_background()
   use amr_commons,only:myid
   use rt_parameters
   use SED_module
+  use mpi_mod
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE,ncpu
-  include 'mpif.h'
   real(kind=8),allocatable  :: tbl2(:,:)
   integer::dummy_io,info2,ierr
 #endif

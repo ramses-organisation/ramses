@@ -199,8 +199,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg,n_SN
+  integer ,dimension(1:nvector),save::igrid,indp,n_SN
+  integer ,dimension(1:nvector,1:twotondim),save::icell,kg
   real(dp),dimension(1:3)::skip_loc
+
+  integer ,dimension(1:nvector),save::hra
+  real(dp),dimension(1:nvector,1:ndim),save::dd,dg
+  integer ,dimension(1:nvector,1:ndim),save::ig,igg,icg
+
 #if NENER>0
   integer::irad
 #endif
@@ -295,55 +301,136 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! NGP at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim)=int(x(j,idim))
-     end do
-  end do
+  if(momentum_feedback)then
+    ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
+    do idim=1,ndim
+        do j=1,np
+            dd(j,idim)=x(j,idim)+0.5D0
+            id(j,idim)=int(dd(j,idim))
+            dd(j,idim)=dd(j,idim)-id(j,idim)
+            dg(j,idim)=1.0D0-dd(j,idim)
+            ig(j,idim)=id(j,idim)-1
+        end do
+    end do
 
-   ! Compute parent grids
-  do idim=1,ndim
-     do j=1,np
-        igd(j,idim)=id(j,idim)/2
-     end do
-  end do
-  do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
-  end do
-  do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
-  end do
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igg(j,idim)=ig(j,idim)/2
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
 
-  ! Check if particles are entirely in level ilevel
-  ok(1:np)=.true.
-  do j=1,np
-     ok(j)=ok(j).and.igrid(j)>0
-  end do
+    do j=1,np
+        kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,3)=1+igg(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,4)=1+igd(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,5)=1+igg(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,6)=1+igd(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
+        kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    
+    do j=1,np
+        call ranf(localseed,RandNum)
+        hra(j) = int(RandNum*8)+1
+    enddo
 
-  ! Compute parent cell position
-  do idim=1,ndim
-     do j=1,np
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
         if(ok(j))then
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
-        end if
-     end do
-  end do
-  do j=1,np
-     if(ok(j))then
-        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-     end if
-  end do
+            icg(j,idim)=ig(j,idim)-2*igg(j,idim)
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        endif
+        end do
+    end do
 
-  ! Compute parent cell adresses
-  do j=1,np
-     if(ok(j))then
-        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
-     else
-        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
-        vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
-     end if
-  end do
+    do j=1,np
+        if(ok(j))then
+        icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,4)=1+icd(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,5)=1+icg(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
+        icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        endif
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+
+  else
+    ! NGP at level ilevel
+    do idim=1,ndim
+        do j=1,np
+            id(j,idim)=int(x(j,idim))
+        end do
+    end do
+
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
+    do j=1,np
+        kg(j,1)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,1)))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
+            if(ok(j))then
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+            end if
+        end do
+    end do
+    do j=1,np
+        if(ok(j))then
+            icell(j,1)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        end if
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,1)-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,1))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+  endif
 
   ! Compute individual time steps
   do j=1,np
@@ -941,7 +1028,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  !ESN=(1d51/(10d0*2d33))/scale_v**2   !why is that here again? see 229
+  ESN=(1d51/(10d0*2d33))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn

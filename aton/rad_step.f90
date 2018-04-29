@@ -32,10 +32,8 @@ subroutine rad_step(time_step_user)
   use radiation_commons
   use cooling_module
   use timing
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   real(dp)::time_step_user  ! Hydro time step in user units.
   real(dp)::time_step_s     ! Hydro time step in seconds.
@@ -238,10 +236,8 @@ subroutine start_mpi(dx)
   use amr_commons
   use radiation_commons
   use data_common
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   real(kind=8)::dx
 
@@ -663,10 +659,8 @@ subroutine fill_hydro_from_cpu_field(dx)
   use hydro_commons
   use cooling_module
   use radiation_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   real(kind=8)::dx  ! Lattice spacing in metres.
 

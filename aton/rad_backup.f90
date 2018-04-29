@@ -2,10 +2,8 @@ subroutine backup_radiation(filename)
   use amr_commons
   use hydro_commons
   use radiation_commons, ONLY: Erad
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   character(LEN=80)::filename
 
   integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound,nvar_rad
@@ -91,10 +89,8 @@ end subroutine backup_radiation
 subroutine store_radiation(filename)
   use data_common
   use radiation_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   character(LEN=80)::filename
   integer::ilun
@@ -139,10 +135,8 @@ end subroutine store_radiation
 subroutine restore_radiation
   use data_common
   use radiation_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   integer::ilun
   character(LEN=5)::nchar,ncharcpu

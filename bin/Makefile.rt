@@ -16,13 +16,19 @@ SOLVER = hydro
 PATCH =
 EXEC = ramses
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
+# Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
+OLD_MPI_SUPPORT = 0
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
-GITREPO = $(shell git config --get remote.origin.url)
+GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
+GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS) -DNVAR=$(NVAR) \
           -DNENER=$(NENER) -DSOLVER$(SOLVER) -DRT $(ATON_FLAGS)
+ifeq ($(OLD_MPI_SUPPORT),1)
+DEFINES += -DMPI_OLD
+endif
 #############################################################################
 # Fortran compiler options and directives
 
@@ -81,7 +87,7 @@ LIBS = $(LIBMPI)
 VPATH = $(PATCH):../$(SOLVER):../aton:../rt:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o dump_utils.o poisson_parameters.o \
+MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o dump_utils.o poisson_parameters.o \
          poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
          clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o rt_parameters.o rt_hydro_commons.o coolrates_module.o \
          rt_spectra.o rt_cooling_module.o rt_flux_module.o

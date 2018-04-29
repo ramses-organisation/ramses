@@ -7,7 +7,7 @@
 subroutine comp_offsets_sizes_by_level()
   use amr_commons,only:mpi_comm_comp,myid,ncpu,nboundary,nlevelmax,numbb,numbl
   use io_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   ! The multiplier is used to increaze the size of ncache_max by this factor to determine the buffer size
@@ -72,7 +72,7 @@ end subroutine comp_offsets_sizes_by_level
 !Version with MPI
 module timer
   use amr_commons,only:myid,MPI_COMM_COMP
-  use mpi
+  use mpi_mod
 
   implicit none
 

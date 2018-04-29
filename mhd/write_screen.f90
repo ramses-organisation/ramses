@@ -5,8 +5,8 @@ subroutine write_screen
   use poisson_commons
   implicit none
 #if NDIM==1
+  use mpi_mod
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::igrid,jgrid,ind,icpu

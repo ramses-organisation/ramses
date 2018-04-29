@@ -35,8 +35,8 @@ end subroutine
 
 subroutine timer_start(timer)
   use timing
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   type(timer_state)::timer
   integer::info
 
@@ -45,8 +45,8 @@ end subroutine
 
 subroutine timer_stop(timer)
   use timing
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   type(timer_state)::timer
   real(kind=8)::end
   integer::info
@@ -60,8 +60,8 @@ end subroutine
 
 subroutine timer_inc_count(timer, delta)
   use timing
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   type(timer_state)::timer
   integer::delta
 
