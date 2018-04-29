@@ -744,7 +744,7 @@ subroutine make_trees()
   ! Secondly, a loop is performed until each descendant has found a main
   ! progenitor or has no more suitable candidates. In each step of the loop,
   ! all descendant candidates of all progenitors which still haven't found a
-  ! matching direct descendant are checkt for a match.
+  ! matching direct descendant are checked for a match.
   ! When the loop is over, all descendants that haven't got a main progenitor
   ! are checked for the possibility of containing a past merged progenitor.
   !---------------------------------------------------------------------------
@@ -758,15 +758,12 @@ subroutine make_trees()
 
   real(dp), dimension(:), allocatable ::  merit_desc
   real(dp), dimension(:), allocatable ::  merit_desc_copy
-  logical, dimension(:), allocatable  :: to_iter_prog
+  logical, dimension(:), allocatable  ::  to_iter_prog
 
-  integer :: iprog, ipeak, idl, i
-  integer :: store_id
+  integer :: iprog, ipeak, i
   integer :: peakshift
-
   real(dp):: r_null
-
-  logical :: is_first, found, reiter
+  logical :: found, reiter
 
   ! ! For debug
   ! character(len=80) :: filename
@@ -805,7 +802,7 @@ subroutine make_trees()
   !-------------------------------------------------------------
 
   do iprog = 1, nprogs
-    if (p2d_links%cnt(iprog)>0) then
+    if (prog_owner(iprog)==myid .and. p2d_links%cnt(iprog)>0) then
       call find_main_desc(iprog, found)
     endif
   enddo
@@ -830,9 +827,6 @@ subroutine make_trees()
     ! get junk results. Unlike with descendants, keeping only main_desc of the owner 
     ! CPU is safe, as all CPUs that have tracer particles of a progenitor have full 
     ! data of that progenitor.
-    do iprog = 1, nprogs
-      if (prog_owner(iprog)/=myid) main_desc(iprog) = 0
-    enddo
     call MPI_ALLREDUCE(MPI_IN_PLACE, main_desc, nprogs, MPI_INT, MPI_MAX, MPI_COMM_WORLD, i)
 #endif
 
@@ -960,196 +954,27 @@ subroutine make_trees()
 
     reiter = .false.
 
-    !----------------------------------------------------------------------
-    ! update to_iter_prog array for every loop: Check whether they still
-    ! need to be updated
-    !----------------------------------------------------------------------
+    ! check progenitors:
+    call search_main_desc_loop()
 
-    do iprog = 1, nprogs
-      if (to_iter_prog(iprog)) then
-        if (main_desc(iprog)>0) then
-          ! to_iter_prog(iprog): only re-check those that aren't finished
-          ! main_desc(iprog) > 0: only check those that aren't considered to have merged
-          ! (mergers need to be re-checked every time)
-          call get_local_peak_id(main_desc(iprog), idl) 
-          if (iprog==main_prog(idl)) then
-            to_iter_prog(iprog) = .false.
-          endif
-        endif
-      endif
-    enddo
-
-
-    !--------------------------------------------------------------
-    ! Check all candidates of still available progenitors. 
-    ! If no match is found, mark the progenitor as merged into the
-    ! best candidate.
-    !--------------------------------------------------------------
-
-    is_first = .true.
-    iprog = 1
-
-    do while (iprog <= nprogs)
-
-      if (to_iter_prog(iprog)) then
-        if (is_first) then
-          ! store id of best initial match; only for first iteration of each prog per loop
-          store_id = abs(main_desc(iprog))
-
-          ! reset values of all candidates for loop
-          ! candidates that have been checked already will get negative tracer numbers
-          if (p2d_links%cnt(iprog) > 0) then
-            ipeak = p2d_links%first(iprog)
-            do i = 1, p2d_links%cnt(iprog)
-              if (p2d_links%ntrace(ipeak) < 0) p2d_links%ntrace(ipeak)=-p2d_links%ntrace(ipeak)
-              ipeak = p2d_links%next(ipeak)
-            enddo
-          endif
-        endif
-
-        is_first = .true.
-        to_iter_prog(iprog) = .false.
-
-        call find_main_desc(iprog, found)
-
-        ! if you found another candidate:
-        if (found) then
-          ! if found, then main_desc(iprog) > 0
-          call get_local_peak_id(main_desc(iprog), idl)
-          if (iprog/=main_prog(idl)) then
-            ! if the new candidate still doesn't match: need to re-iterate
-            to_iter_prog(iprog) = .true.
-            ! mark this descendant as already checked
-            call fill_matrix(p2d_links, iprog, main_desc(iprog), 0, 'inv')
-            is_first = .false.
-            iprog = iprog - 1 ! check this iprog again
-          ! else
-          !   to_iter_prog(iprog) = .false. anyways
-          endif
-        else
-          ! if nothing found, assume progenitor merged into descendant
-          main_desc(iprog) = store_id + peakshift
-          ! check this one again next round
-          to_iter_prog(iprog) = .true.
-        endif
-
-      endif ! to_iter_prog
-      iprog = iprog + 1
-
-    enddo
-
-
+    ! Check descendants: 
+    call search_main_prog_loop(reiter)
 
 #ifndef WITHOUTMPI
-    !---------------------------
-    ! Communicate results. 
-    !---------------------------
-    do iprog = 1, nprogs
-      if (prog_owner(iprog)/=myid) main_desc(iprog) = 0
-    enddo
-    call MPI_ALLREDUCE(MPI_IN_PLACE, main_desc, nprogs, MPI_INT, MPI_MAX, MPI_COMM_WORLD, i)
-#endif
-
-    ! revert peakshift
-    do iprog = 1, nprogs
-      if (main_desc(iprog)>peakshift) main_desc(iprog) = -(main_desc(iprog)-peakshift) ! make it negative!
-    enddo
-
-
-
-
-    !------------------------------------------------------------
-    ! Check descendants. If no match found, try next best 
-    ! candidate.
-    !------------------------------------------------------------
-
-    merit_desc = 0 ! is array!
-
-    do ipeak = 1, hfree-1
-      if ( to_iter(ipeak) ) then ! if there is something to check for
-
-        if (main_desc(main_prog(ipeak))/=0) then
-          ! abs needed here: mergers are signified by a negative main descendant ID
-          call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
-        else
-          idl=0
-        endif
-        if (ipeak /= idl) then
-          ! if this descendant is not main descendant
-          ! of its own main progenitor, look for next best candidate
-          call find_main_prog(ipeak, merit_desc, found)
-          if (.not.found) then 
-            ! if you run out of candidates:
-            main_prog(ipeak) = 0
-          else 
-            ! mark the one you found
-            call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
-          endif
-
-        endif ! ipeak /= idl
-      endif
-    enddo
-
-
-
-#ifndef WITHOUTMPI
-    !---------------------------------------------
-    ! Communicate results
-    !---------------------------------------------
-
-    ! communicate merits, find max
-    merit_desc_copy = merit_desc
-    call build_peak_communicator()
-    call virtual_peak_dp(merit_desc(:), 'max')
-    call boundary_peak_dp(merit_desc(:))
-
-    do ipeak = 1, hfree-1
-      ! if you didn't have the max, reset stuff
-      if (merit_desc_copy(ipeak) < merit_desc(ipeak) .and. main_prog(ipeak)/=0) then
-        ! reset mark in matrix for later use
-        call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
-        ! reset value in array
-        main_prog(ipeak) = 0
-      endif
-    enddo
-
-    ! call build_peak_communicator()
-    call virtual_peak_int(main_prog, 'max')
-    call boundary_peak_int(main_prog)
-
-    ! check whether you need to reiterate peak first, while you have data
-    ! synchronized globally
-    do ipeak = 1, hfree-1
-      if (to_iter(ipeak)) then
-        ! If there still is a main progenitor after communications, 
-        ! check whether you still need to iterate
-        if (main_prog(ipeak)>0) then
-          if (main_desc(main_prog(ipeak))/=0) then
-            ! abs needed here: mergers are signified by a negative main descendant ID
-            call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
-          else
-            idl=0
-          endif
-          if (ipeak == idl) then
-            to_iter(ipeak) = .false.
-          else
-            reiter = .true.
-          endif
-        else
-          ! if there is no prog left after global sync, stop iterating this descendant.
-          to_iter(ipeak) = .false.
-        endif
-      endif
-    enddo
-
     ! check globally whether you need to reiterate treebuilding loop
     call MPI_ALLREDUCE(MPI_IN_PLACE, reiter, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, i)
 #endif
   enddo
-  !-------------------------
+  !----------------------------------------------------------------------------------
   ! End of treemaking loop
-  !-------------------------
+  ! now repeat part for progenitors one last time in case the match was found in
+  ! the last loop
+  !--------------------------------------------------------------------------------
  
+  call search_main_desc_loop()
+
+
+
 
 
 
@@ -1166,10 +991,11 @@ subroutine make_trees()
       call add_new_pmprog(iprog)
     endif
   enddo
-
-
   
+
   ! first check if you have work to do and set up prog_outputnr
+  ! abuse "reiter" to find out whether there is work to be done.
+  ! (it wont actually be done iteratively.)
   reiter = .false.
   to_iter = .false.
   do ipeak = 1, npeaks_max
@@ -1187,7 +1013,7 @@ subroutine make_trees()
 
 
 #ifndef WITHOUTMPI
-  ! check globally whether you need to reiterate treebuilding loop
+  ! check globally whether you have work to do; Otherwise, MPI will deadlock.
   call MPI_ALLREDUCE(MPI_IN_PLACE, reiter, 1, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, i)
 #endif
 
@@ -1646,6 +1472,243 @@ subroutine make_trees()
 
     end subroutine find_prog_in_older_snapshots
 
+
+
+
+
+    !=============================================
+    subroutine search_main_desc_loop()
+    !=============================================
+
+      !-----------------------------------------------------
+      ! This subroutine finds a main descant for all
+      ! progenitors during the treemaking loop.
+      ! For every progenitor that hasn't found a match yet,
+      ! it checks all possible candidates. If no candidate 
+      ! is found, assume progenitor is merged into best 
+      ! candidate.
+      ! Results are communicated globally in the end.
+      !-----------------------------------------------------
+      
+      use clfind_commons
+      implicit none
+
+      integer :: iprog, idl
+      logical :: is_first
+      integer :: store_id
+
+      !----------------------------------------------------------------------
+      ! update to_iter_prog array for every loop: Check whether they still
+      ! need to be updated
+      !----------------------------------------------------------------------
+
+
+      do iprog = 1, nprogs
+        if (to_iter_prog(iprog)) then
+          if (main_desc(iprog)>0) then
+            ! to_iter_prog(iprog): only re-check those that aren't finished
+            ! main_desc(iprog) > 0: only check those that aren't considered to have merged
+            ! (mergers need to be re-checked every time)
+            call get_local_peak_id(main_desc(iprog), idl) 
+            if (iprog==main_prog(idl)) then
+              to_iter_prog(iprog) = .false.
+            endif
+          endif
+        endif
+      enddo
+
+
+      !--------------------------------------------------------------
+      ! Check all candidates of still available progenitors. 
+      ! If no match is found, mark the progenitor as merged into the
+      ! best candidate.
+      !--------------------------------------------------------------
+
+      is_first = .true.
+      iprog = 1
+      store_id = 0
+
+      do while (iprog <= nprogs)
+
+        if (to_iter_prog(iprog)) then
+          if (is_first) then
+            ! store id of best initial match; only for first iteration of each prog per loop
+            store_id = abs(main_desc(iprog))
+
+            ! reset values of all candidates for loop
+            ! candidates that have been checked already will get negative tracer numbers
+            if (p2d_links%cnt(iprog) > 0) then
+              ipeak = p2d_links%first(iprog)
+              do i = 1, p2d_links%cnt(iprog)
+                if (p2d_links%ntrace(ipeak) < 0) p2d_links%ntrace(ipeak)=-p2d_links%ntrace(ipeak)
+                ipeak = p2d_links%next(ipeak)
+              enddo
+            endif
+          endif
+
+          is_first = .true.
+          to_iter_prog(iprog) = .false.
+
+          call find_main_desc(iprog, found)
+
+          ! if you found another candidate:
+          if (found) then
+            ! if found, then main_desc(iprog) > 0
+            call get_local_peak_id(main_desc(iprog), idl)
+            if (iprog/=main_prog(idl)) then
+              ! if the new candidate still doesn't match: need to re-iterate
+              to_iter_prog(iprog) = .true.
+              ! mark this descendant as already checked
+              call fill_matrix(p2d_links, iprog, main_desc(iprog), 0, 'inv')
+              is_first = .false.
+              iprog = iprog - 1 ! check this iprog again
+            ! else
+            !   to_iter_prog(iprog) = .false. anyways
+            endif
+          else
+            ! if nothing found, assume progenitor merged into descendant
+            main_desc(iprog) = store_id + peakshift
+            ! check this one again next round
+            to_iter_prog(iprog) = .true.
+          endif
+
+        endif ! to_iter_prog
+        iprog = iprog + 1
+
+      enddo
+
+
+
+#ifndef WITHOUTMPI
+      !---------------------------
+      ! Communicate results. 
+      !---------------------------
+      do iprog = 1, nprogs
+        if (prog_owner(iprog)/=myid) main_desc(iprog) = 0
+      enddo
+      call MPI_ALLREDUCE(MPI_IN_PLACE, main_desc, nprogs, MPI_INT, MPI_MAX, MPI_COMM_WORLD, i)
+#endif
+
+      ! revert peakshift
+      do iprog = 1, nprogs
+        if (main_desc(iprog)>peakshift) main_desc(iprog) = -(main_desc(iprog)-peakshift) ! make it negative!
+      enddo
+
+    end subroutine search_main_desc_loop
+
+
+
+
+
+    !=================================================
+    subroutine search_main_prog_loop(reiter)
+    !=================================================
+
+      !----------------------------------------------------
+      ! This subroutine finds a main progenitors for all 
+      ! descendants during the treemaking loop.
+      ! For evey descendant that hasn't found a match yet,
+      ! it checks only the next best candidate. If no
+      ! candidate is found, assume clump is newly formed.
+      ! Results are communicated globally in the end.
+      !----------------------------------------------------
+
+      use clfind_commons
+      implicit none
+
+      logical, intent(inout) :: reiter ! whether loop needs to be repeated.
+
+      integer :: ipeak, idl
+      logical :: found
+
+
+
+      merit_desc = 0 ! is array!
+
+      do ipeak = 1, hfree-1
+        if ( to_iter(ipeak) ) then ! if there is something to check for
+
+          if (main_desc(main_prog(ipeak))/=0) then
+            ! abs needed here: mergers are signified by a negative main descendant ID
+            call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
+          else
+            idl=0
+          endif
+          if (ipeak /= idl) then
+            ! if this descendant is not main descendant
+            ! of its own main progenitor, look for next best candidate
+            call find_main_prog(ipeak, merit_desc, found)
+            if (.not.found) then 
+              ! if you run out of candidates:
+              main_prog(ipeak) = 0
+            else 
+              ! mark the one you found
+              call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
+            endif
+
+          endif ! ipeak /= idl
+        endif
+      enddo
+
+
+
+#ifndef WITHOUTMPI
+      !---------------------------------------------
+      ! Communicate results
+      !---------------------------------------------
+
+      ! communicate merits, find max
+      merit_desc_copy = merit_desc
+      call build_peak_communicator()
+      call virtual_peak_dp(merit_desc(:), 'max')
+      call boundary_peak_dp(merit_desc(:))
+
+      do ipeak = 1, hfree-1
+        ! if you didn't have the max, reset stuff
+        if (merit_desc_copy(ipeak) < merit_desc(ipeak) .and. main_prog(ipeak)/=0) then
+          ! reset mark in matrix for later use
+          call fill_matrix(d2p_links, ipeak, main_prog(ipeak), 0, 'inv')
+          ! reset value in array
+          main_prog(ipeak) = 0
+        endif
+      enddo
+
+      ! call build_peak_communicator()
+      call virtual_peak_int(main_prog, 'max')
+      call boundary_peak_int(main_prog)
+
+      ! check whether you need to reiterate peak first, while you have data
+      ! synchronized globally
+      do ipeak = 1, hfree-1
+        if (to_iter(ipeak)) then
+          ! If there still is a main progenitor after communications, 
+          ! check whether you still need to iterate
+          if (main_prog(ipeak)>0) then
+            if (main_desc(main_prog(ipeak))/=0) then
+              ! abs needed here: mergers are signified by a negative main descendant ID
+              call get_local_peak_id(abs(main_desc(main_prog(ipeak))), idl)
+            else
+              idl=0
+            endif
+            if (ipeak == idl) then
+              to_iter(ipeak) = .false.
+            else
+              reiter = .true.
+            endif
+          else
+            ! if there is no prog left after global sync, stop iterating this descendant.
+            to_iter(ipeak) = .false.
+          endif
+        endif
+      enddo
+#endif
+
+
+
+
+    end subroutine search_main_prog_loop
+
+
 end subroutine make_trees
 
 
@@ -2059,7 +2122,11 @@ subroutine write_trees()
   fileloc=TRIM('output_'//TRIM(dir)//'/mergertree.txt'//TRIM(idnr))
 
   open(unit=666,file=fileloc,form='formatted')
-  write(666, '(4(A15))') "clump", "progenitor", "prog outputnr", "case"
+  write(666, '(3(A15),8(A18))') &
+    "clump", "progenitor", "prog outputnr", &
+    "desc excl mass", "desc excl npart", &
+    "desc x", "desc y", "desc z", &
+    "desc vx", "desc vy", "desc vz"
   !----------------------------------
   ! Possible cases:
   ! 1: adjacent link found
@@ -2075,9 +2142,11 @@ subroutine write_trees()
       ! Adjacent link found
       !----------------------
       if (main_prog(ipeak) > 0 ) then
-        write(666,'(4(I15))') &
-          ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), &
-          prog_outputnr(ipeak), 1
+        write(666,'(3(I15), 8(E18.10))') &
+          ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), prog_outputnr(ipeak), &
+          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
+          clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
         printed(main_prog(ipeak)) = .true.
 
 
@@ -2085,18 +2154,22 @@ subroutine write_trees()
       ! No link or new clump found
       !------------------------------
       else if (main_prog(ipeak) == 0) then
-        write(666,'(4(I15))') &
-          ipeak+ipeak_start(myid), 0, &
-          ifout-1, 2
+        write(666,'(3(I15), 8(E18.10))') &
+          ipeak+ipeak_start(myid), 0, ifout-1, &
+          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
+          clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
 
 
       !----------------------------------------------
       ! Progenitor from non-adjacent snapshot found
       !----------------------------------------------
       else 
-        write(666,'(4(I15))') &
-          ipeak+ipeak_start(myid), main_prog(ipeak), &
-          prog_outputnr(ipeak), 3
+        write(666,'(3(I15), 8(E18.10))') &
+          ipeak+ipeak_start(myid), main_prog(ipeak), prog_outputnr(ipeak), &
+          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
+          clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
       endif
     endif
   enddo
@@ -2117,7 +2190,8 @@ subroutine write_trees()
   ! will have a negative main descendant ID.
   do iprog = 1, nprogs
     if ( (.not.printed(iprog)) .and. main_desc(iprog) /= 0 .and. prog_owner(iprog) == myid ) then
-      write(666, '(4(I15))') main_desc(iprog), prog_id(iprog), ifout-1, 4
+      ! don't print desc data for this case. Just fill up with 0s
+      write(666, '(3(I15),8(I18))') main_desc(iprog), prog_id(iprog), ifout-1, 0,0,0,0,0,0,0,0 
     endif
   enddo
 
