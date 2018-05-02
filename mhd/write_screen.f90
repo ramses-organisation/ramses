@@ -3,9 +3,9 @@ subroutine write_screen
   use hydro_commons
   use pm_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #if NDIM==1
-  use mpi_mod
 #ifndef WITHOUTMPI
   integer::info
 #endif
