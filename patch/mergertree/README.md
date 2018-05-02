@@ -15,7 +15,7 @@
 operations. [The intel fortran compiler however doesn't necessarily use value-safe optimisations][1], which may 
 lead to errors. (The code doesn't crash, but will warn you that something's wrong.) The error should be small
 (~1e-16), and you may choose to ignore it. Otherwise, you might want to compile the code with the 
-`-fpe-model precise` flag.
+`-fp-model precise` flag.
 
 
 
