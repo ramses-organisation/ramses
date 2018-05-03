@@ -75,6 +75,7 @@ module rt_parameters
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
   integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
   integer::iHIIheat=6                  ! Var index for HII heating                       !
+  logical::cosmic_rays=.false.         ! Include cosmic ray ionisation                   !
 
   character(LEN=128)::hll_evals_file=''! File HLL eigenvalues                            !
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
