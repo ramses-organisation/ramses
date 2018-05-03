@@ -8,9 +8,9 @@ subroutine rt_init_hydro
   use hydro_commons
   use rt_hydro_commons
   use rt_parameters
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::dummy_io,info,info2
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar

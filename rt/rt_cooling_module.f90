@@ -872,7 +872,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
 ! nH         => Hydrogen density in cm^-3
 ! r_rad_spec => Photoionization rates [s-1] for H2, HI, HeI, HeII
 ! nSpec      <= Resulting species number densities
-! nTot       <= Resulting total number density (=sum of nSpec)  
+! nTot       <= Resulting total number density (=sum of nSpec)
 ! mu         <= Resulting average particle mass in units of proton mass
 ! Zsol       => Metallicity in Solar units
 !------------------------------------------------------------------------
@@ -995,7 +995,6 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 ! if_write_result : .true. pour ecrire l'evolution de la temperature
 !          et de n_e sur l'ecran.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
   use UV_module
   implicit none
   real(kind=8)::astart,aend,T2end,h,omegab,omega0,omegaL,ne,dasura
@@ -1270,10 +1269,8 @@ SUBROUTINE heat_unresolved_HII_regions(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   integer::ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid
@@ -1302,14 +1299,16 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 !------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
+#if NENER > 0
   use rt_parameters, only: nGroups,iGroups,heat_unresolved_HII,iHIIheat
+#else
+  use rt_parameters, only: nGroups,iGroups,heat_unresolved_HII
+#endif
   use rt_hydro_commons
   use rt_cooling_module, only: twopi, mH, rhoc, T2_min_fix, X
-  use cooling_module,only:X, Y
+  use cooling_module,only:X
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
 !------------------------------------------------------------------------
@@ -1322,7 +1321,10 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   real(kind=8),dimension(1:nvector),save::nH,T2,ekk,err,emag,lum
   real(kind=8),dimension(1:nvector),save::T2min,r_strom,r_stag
   real(kind=8)::dx,dx_cgs,scale,dx_half_cgs,vol_cgs
-  integer::ig,iNp,il,irad
+  integer::ig,iNp,il
+#if NENER > 0
+  integer::irad
+#endif
   real(dp),parameter::alphab = 2.6d-13 ! ~recombination rate in HII region
   real(dp),parameter::Tmu_ionised= 1.8d4  !      temperature in HII region
 
@@ -1528,4 +1530,3 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   ! End loop over cells
 
 END SUBROUTINE heat_unresolved_HII_regions_vsweep
-

@@ -1,9 +1,9 @@
 subroutine backup_sink(filename)
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,parameter::tag=1135
   integer::dummy_io,info2
 #endif

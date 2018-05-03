@@ -10,9 +10,9 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::mpi_err
 #endif
   integer::ilevel,icount
@@ -536,10 +536,8 @@ subroutine rt_step(ilevel)
   use rt_hydro_commons
   use UV_module
   use SED_module,     only: star_RT_feedback
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer, intent(in) :: ilevel
 
 !--------------------------------------------------------------------------

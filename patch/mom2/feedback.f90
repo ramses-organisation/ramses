@@ -17,7 +17,7 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal
+  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal,t_sn_cont,current_time
   integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
   integer::i,ig,ip,npart1,npart2,icpu,nx_loc,ilun,idim
   real(dp),dimension(1:3)::skip_loc
@@ -76,6 +76,18 @@ subroutine thermal_feedback(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  ! Massive star lifetime from Myr to code units
+  if(use_proper_time)then
+    !  t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+    !  t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   ! Gather star particles only.
 
@@ -97,7 +109,7 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if ( is_star(typep(ipart)) ) then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -114,7 +126,7 @@ subroutine thermal_feedback(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if ( is_star(typep(ipart)) ) then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -187,8 +199,14 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg,n_SN
+  integer ,dimension(1:nvector),save::igrid,indp,n_SN
+  integer ,dimension(1:nvector,1:twotondim),save::icell,kg
   real(dp),dimension(1:3)::skip_loc
+
+  integer ,dimension(1:nvector),save::hra
+  real(dp),dimension(1:nvector,1:ndim),save::dd,dg
+  integer ,dimension(1:nvector,1:ndim),save::ig,igg,icg
+
 #if NENER>0
   integer::irad
 #endif
@@ -239,7 +257,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=5.0*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=2.39*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+!   p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
@@ -282,55 +301,136 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! NGP at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim)=int(x(j,idim))
-     end do
-  end do
+  if(momentum_feedback)then
+    ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
+    do idim=1,ndim
+        do j=1,np
+            dd(j,idim)=x(j,idim)+0.5D0
+            id(j,idim)=int(dd(j,idim))
+            dd(j,idim)=dd(j,idim)-id(j,idim)
+            dg(j,idim)=1.0D0-dd(j,idim)
+            ig(j,idim)=id(j,idim)-1
+        end do
+    end do
 
-   ! Compute parent grids
-  do idim=1,ndim
-     do j=1,np
-        igd(j,idim)=id(j,idim)/2
-     end do
-  end do
-  do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
-  end do
-  do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
-  end do
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igg(j,idim)=ig(j,idim)/2
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
 
-  ! Check if particles are entirely in level ilevel
-  ok(1:np)=.true.
-  do j=1,np
-     ok(j)=ok(j).and.igrid(j)>0
-  end do
+    do j=1,np
+        kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,3)=1+igg(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,4)=1+igd(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,5)=1+igg(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,6)=1+igd(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
+        kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    
+    do j=1,np
+        call ranf(localseed,RandNum)
+        hra(j) = int(RandNum*8)+1
+    enddo
 
-  ! Compute parent cell position
-  do idim=1,ndim
-     do j=1,np
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
         if(ok(j))then
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
-        end if
-     end do
-  end do
-  do j=1,np
-     if(ok(j))then
-        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-     end if
-  end do
+            icg(j,idim)=ig(j,idim)-2*igg(j,idim)
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        endif
+        end do
+    end do
 
-  ! Compute parent cell adresses
-  do j=1,np
-     if(ok(j))then
-        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
-     else
-        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
-        vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
-     end if
-  end do
+    do j=1,np
+        if(ok(j))then
+        icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,4)=1+icd(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,5)=1+icg(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
+        icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        endif
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+
+  else
+    ! NGP at level ilevel
+    do idim=1,ndim
+        do j=1,np
+            id(j,idim)=int(x(j,idim))
+        end do
+    end do
+
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
+    do j=1,np
+        kg(j,1)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,1)))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
+            if(ok(j))then
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+            end if
+        end do
+    end do
+    do j=1,np
+        if(ok(j))then
+            icell(j,1)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        end if
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,1)-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,1))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+  endif
 
   ! Compute individual time steps
   do j=1,np
@@ -355,7 +455,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         n_SN(j)=0
         birth_time=tp(ind_part(j))
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+        if(birth_time.lt.(current_time-t0))then
            ! Guesstimate the initial star particle mass
            mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
            ! Compute the constant SN rate
@@ -417,11 +517,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      
      ! Photo-ionization thermal feedback
      do j=1,np
-        birth_time=tp(ind_part(j))
-        if(birth_time.ge.(current_time-t_sn_cont))then
            pressure=max(uold(indp(j),1),smallr)*cs_H2_2
            ethermal(j)=ethermal(j)+pressure
-        endif
      end do
      
      ! Use stellar momentum feedback
@@ -437,18 +534,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           p_boost = (gas_density*scale_nH)**(-0.15)*metallicity**(-0.15)
+           p_boost = (gas_density*scale_nH/100.0)**(-0.160)*metallicity**(-0.137)
            ! Cooling radius
-           r_cool = 30.0 * 3.08d18 / scale_l * ( gas_density*scale_nH )**(-0.42)
-           !    if(birth_time.ge.(current_time-t_sn_cont).and.(gas_density*scale_nH).gt.1d-5)then
-           if(birth_time.ge.(current_time-t_sn_cont))then
+           r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * ( gas_density*scale_nH/100.0 )**(-0.42)
+           if(birth_time.lt.(current_time-t0))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
-              !write(*,'(A10,I10,E24.8,E24.8,E24.8,E24.8,E24.8)')'pstar: yes', n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-              ! if(sf_log_properties.and.n_SN(j).gt.0.5) then
-              !     write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
-              !     write(ilun,'(I10,E24.12,E24.12,E24.12,E24.12,E24.12)',advance='no') n_SN(j), gas_density*scale_nH, metallicity, p_boost, dx_min/aexp*scale_l, r_cool*scale_l
-              !     write(ilun,'(A1)') ' '
-              ! endif
            endif
         end do
         
@@ -938,7 +1028,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  !ESN=(1d51/(10d0*2d33))/scale_v**2   !why is that here again? see 229
+  ESN=(1d51/(10d0*2d33))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn

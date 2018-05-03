@@ -4,10 +4,8 @@ subroutine init_amr
   use pm_commons
   use poisson_commons
   use bisection
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::i,idim,ncell,iskip,ind,ncache,ilevel,ibound,nboundary2
   integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
   integer::noutput2,iout2,ifout2,ilun

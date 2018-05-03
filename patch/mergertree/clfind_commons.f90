@@ -109,13 +109,12 @@ module clfind_commons
   !Potential stuff
   !----------------
 
-  !logical   :: mp_pot=.false.   !unbinding potential calc: consider enclosed mass as point source.
   logical   :: saddle_pot=.true. !subtract the potential at the closest saddle of the CoM for unbinding
+                                 !=considering neighbours for the exclusive unbinding
 
 
   real(dp),allocatable,dimension(:)   :: phi_unb !gravitational potential phi
   real(dp)  :: rmin=0.0
-                                !=considering neighbours for the exclusive unbinding
   real(dp)  :: GravConst        !gravitational Constant. =factG elsewhere.
   real(dp),allocatable,dimension(:)   :: closest_border ! closest border of clump to the center of mass
                                                         ! stores relative distance squared in each direction
@@ -132,19 +131,14 @@ module clfind_commons
   logical   :: loop_again              ! if the loop needs to be redone (for a level)
 
 
-  logical,allocatable,dimension(:)    :: to_iter         ! whether to repeat the clump properties search
-                                                         ! on this peak ID
-  logical,allocatable,dimension(:)    :: contributes     ! whether the particle still contributes
-                                                         ! to the clump properties
+  logical,allocatable,dimension(:)    :: to_iter           ! whether to repeat the clump properties search
+                                                           ! on this peak ID
+  logical,allocatable,dimension(:)    :: is_namegiver      ! whether peak is namegiver
+  logical,allocatable,dimension(:)    :: contributes       ! whether the particle still contributes
+                                                           ! to the clump properties
+  integer,allocatable,dimension(:)    :: hasatleastoneptcl ! clump has at least 1 particle that contributes
 
-  real(dp),allocatable,dimension(:,:) :: oldvel          ! store old values: centre of mass, bulk velocits
-  real(dp),allocatable,dimension(:)   :: oldcmpd,oldm       ! particle furthest away from CoM
-  integer,allocatable,dimension(:)    :: hasatleastoneptcl  ! clump has at least 1 particle that contributes
-
-
-
-    ! debugging
-  integer :: testpeak
+  ! counters
   integer :: niterunbound, niterunbound_tot
 
 
@@ -188,7 +182,8 @@ module clfind_commons
 
 
 
-  real(dp), allocatable, dimension(:)   :: clmp_mass_exclusive
+  real(dp), allocatable, dimension(:)   :: clmp_mass_exclusive  ! exclusive clump mass, containing only bound particles
+  integer,  allocatable, dimension(:)   :: prog_outputnr        ! snapshot number of progenitor
   ! real(dp), allocatable, dimension(:,:) :: clmp_vel_exclusive
   integer  :: killed_tot, appended_tot ! count killed or appended clumps that were too small
   real(dp) :: partm_common

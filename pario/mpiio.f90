@@ -5,7 +5,7 @@
 #ifdef MPIIO
 module ramses_mpiio
   use amr_commons,only:MPI_COMM_COMP
-  use mpi
+  use mpi_mod
 
   implicit none
 

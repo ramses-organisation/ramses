@@ -76,9 +76,9 @@ SUBROUTINE init_coolrates_tables(aexp)
 
 ! Initialise the cooling rates tables.
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: ierr
 #endif
   real(dp) :: aexp
@@ -161,9 +161,9 @@ END SUBROUTINE init_coolrates_tables
 SUBROUTINE update_coolrates_tables(aexp)
 ! Update cooling rates lookup tables which depend on aexp
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: ierr
 #endif
   real(dp) :: aexp
@@ -197,8 +197,8 @@ SUBROUTINE mpi_distribute_coolrates_table(table)
 ! entries on each cpu, but the whole table is acquired by summing those
 ! partial tables
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   type(coolrates_table)::table
   real(dp),dimension(:),allocatable :: table_mpi_sum
   integer::ierr
@@ -225,7 +225,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   real(dp)::aexp, T, T2, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
   real(dp)::lowrleft,lowrright,lowr_hi,lowr_h2
   real(dp)::lowvleft_hi,lowvright_hi,lowv_hi,lowv_h2
-  real(dp)::TT,fTT3,lowtot_hi,lowtot_h2,ltetot
+  real(dp)::TT
   real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
   ! Rates are stored in non-log, while temperature derivatives (primes)

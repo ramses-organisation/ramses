@@ -2,9 +2,9 @@ subroutine courant_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
 #endif

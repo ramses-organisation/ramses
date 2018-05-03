@@ -6,10 +6,8 @@
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------
   ! Allocate particle-based arrays.
   ! Read particles positions and velocities from grafic files
@@ -996,9 +994,9 @@ subroutine load_gadget
   use amr_commons
   use pm_commons
   use gadgetreadfilemod
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer,dimension(1:nvector)::cc
 #endif

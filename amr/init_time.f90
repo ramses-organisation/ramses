@@ -9,10 +9,8 @@ subroutine init_time
 #ifdef RT
   use rt_cooling_module
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::i,Nmodel
   real(kind=8)::T2_sim
 #ifdef grackle
@@ -306,10 +304,8 @@ subroutine init_file
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------
   ! Read geometrical parameters in the initial condition files.
   ! Initial conditions are supposed to be made by
@@ -420,10 +416,8 @@ subroutine init_cosmo
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
   ! in the initial condition files.

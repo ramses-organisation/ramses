@@ -4,9 +4,9 @@ subroutine clump_finder(create_output,keep_alive)
   use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   logical::create_output,keep_alive
@@ -36,6 +36,11 @@ subroutine clump_finder(create_output,keep_alive)
 #ifndef WITHOUTMPI
   integer(i8b)::nmove_all,nzero_all
 #endif
+
+  if (create_output) then
+    if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
+    if(nstep_coarse==0.and.nrestart>0)return
+  endif
 
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
@@ -294,7 +299,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
 #ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(verbose,verbose_all,ncpu,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(verbose,verbose_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
 #else
      verbose_all=verbose
 #endif
@@ -330,10 +335,8 @@ end subroutine clump_finder
 subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
@@ -410,10 +413,8 @@ end subroutine count_test_particle
 subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -457,10 +458,8 @@ end subroutine count_peaks
 subroutine flag_peaks(xx,ipeak)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -485,10 +484,8 @@ end subroutine flag_peaks
 subroutine propagate_flag(nmove,nzero)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::nmove,nzero
   !----------------------------------------------------------------------
   ! All cells above the threshold copy the flag2 value from their densest
@@ -512,10 +509,8 @@ end subroutine propagate_flag
 subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks**2 sized array of saddlepoint densities
@@ -577,6 +572,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:threetondim)::nbors_father_cells_pass
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
@@ -701,7 +697,8 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         if(ilevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
      end do
      grid(1)=ind_grid(j)
-     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
+     nbors_father_cells_pass=nbors_father_cells(j,1:threetondim)
+     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells_pass,ntestpos,ilevel)
 
      do ipos=1,ntestpos
         if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
@@ -863,10 +860,8 @@ end subroutine get_cell_index
 !#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   namelist/clumpfind_params/ivar_clump,&
        & relevance_threshold,density_threshold,&
@@ -1119,10 +1114,8 @@ subroutine rho_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
@@ -1858,10 +1851,6 @@ subroutine output_part_clump_id()
   use pm_commons !using mp
   use amr_parameters
   implicit none
-#ifndef WITHOUTMPI
-  integer :: info
-  include 'mpif.h'
-#endif
   integer,dimension(:),allocatable::clmpidp,clump_ids
   character(len=80) :: fileloc
   character(len=5)  :: nchar,nchar2
@@ -1916,7 +1905,7 @@ subroutine output_part_clump_id()
      end if   !global peak /=0
   end do   !loop over test cells
 
-  call title(ifout-1, nchar)
+  call title(ifout, nchar)
   call title(myid, nchar2)
   fileloc=TRIM('output_'//TRIM(nchar)//'/id_clump.out'//TRIM(nchar2))
   open(unit=666,file=fileloc,form='unformatted')
