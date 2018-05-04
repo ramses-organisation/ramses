@@ -149,7 +149,8 @@ module rt_parameters
 
   integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 
-  ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018):
-  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0 
-  integer::iLW=1 !Lyman-Werner photon group
+  ! H2 parameters ------------------------------------------------------------------------
+  ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
+  ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
+  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0 
 end module rt_parameters

@@ -550,8 +550,8 @@ contains
           cdex  = 1d-12 * (1.4 * exp(-18100. / (TK + 1200.)) * xH2       &
                 + exp(-1000. / TK) * dxion(ixHI))                        &
                 * sqrt(TK) * nH(icell) ![s-1]
-          Hrate = Hrate + 6.94 * dNp(iLW) * signc(iLW,ixHI) * 2.         & 
-                * ev_to_erg * cdex / (cdex + 2d-7) * nH(icell) * xH2
+          Hrate = Hrate + 6.94 * SUM(dNp(:) * signc(:,ixHI) * isLW(:))   & 
+                * 2. * ev_to_erg * cdex / (cdex + 2d-7) * nH(icell) * xH2
           !H2 formation heating, Omukai 2000
           ! and Hollenbach and McKee 1976, [erg cm-3 s-1]
           ncr   = 1d6 * TK**(-0.5)                                       &
@@ -572,7 +572,7 @@ contains
        if (cosmic_rays) then !CR heating [erg cm-3 s-1]
           !Glassgold 2012, ~10 ev/ionisation
           Hrate = Hrate + 10. * ev_to_erg                                &
-                * nH(icell) * ixHI * cosray_HI                     
+                * nH(icell) * xHI * cosray_HI                     
           if (isH2) Hrate = Hrate + 10. * ev_to_erg                      &
                           * nH(icell) * xH2 * cosray_H2    
           if (isHe) Hrate = Hrate + 10. * ev_to_erg                      &

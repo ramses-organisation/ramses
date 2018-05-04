@@ -238,11 +238,6 @@ SUBROUTINE read_rt_params(nml_ok)
                 , ixHI, ixHII, ixHeII, ixHeIII
   endif
 
-  if(isH2) then
-    if (rt_isIR) iLW = 2 !Finding Lyman-Werner band
-    ssh2(iLW) = 4d2 !H2 self-shielding factor
-  endif
-
   call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params
 
@@ -299,11 +294,15 @@ SUBROUTINE read_rt_groups(nml_ok)
      group_egy(igroup_HI)=12.44
   endif
   if(igroup_HII .gt. 0) then
+     group_csn(igroup_HII,ixHI)=5.0d-18 ! HI ionization by HI photons
+     group_cse(igroup_HII,ixHI)=5.3d-18
      group_csn(igroup_HII,ixHII)=3.007d-18                 ! HI ionization
      group_cse(igroup_HII,ixHII)=2.781d-18
      group_egy(igroup_HII)=18.85
   endif
   if(igroup_HeII .gt. 0) then
+     group_csn(igroup_HeII,ixHI)=2.9d-18 ! HI ionization by HeI photons
+     group_cse(igroup_HeII,ixHI)=2.8d-18
      group_csn(igroup_HeII,ixHII)=5.687d-19 ! HI ionization by HeI photons
      group_cse(igroup_HeII,ixHII)=5.042d-19
      group_csn(igroup_HeII,ixHeII)=4.478d-18              ! HeI ionization
@@ -311,6 +310,8 @@ SUBROUTINE read_rt_groups(nml_ok)
      group_egy(igroup_HeII)=35.079
   endif
   if(igroup_HeIII .gt. 0) then
+     group_csn(igroup_HeIII,ixHI)=4.1d-19 ! HI ionization by HeII photons
+     group_cse(igroup_HeIII,ixHI)=4.1d-19
      group_csn(igroup_HeIII,ixHII)=7.889d-20   ! HI ioniz. by HeII photons
      group_cse(igroup_HeIII,ixHII)=7.456d-20
      group_csn(igroup_HeIII,ixHeII)=1.197d-18 ! HeI ioniz. by HeII photons
@@ -335,6 +336,15 @@ SUBROUTINE read_rt_groups(nml_ok)
      print*,'WARNING! Some photon groups have zero or negative energy!'
      print*,'This could have unwanted effects, so be careful!!!'
      print*,'========================================================='
+  endif
+
+  if(isH2) then
+     do i=1,nGroups
+        if((groupL0(i) .ge. 11.2) .and. (groupL1(i) .le. 13.6)) then
+           ssh2(i) = 4d2 ! H2 self-shielding factor
+           isLW(i) = 1d0 ! Index for LW groups
+        endif
+    enddo
   endif
 
   call updateRTGroups_CoolConstants
