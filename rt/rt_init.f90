@@ -78,6 +78,7 @@ SUBROUTINE rt_init
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
   tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0
+
 END SUBROUTINE rt_init
 
 !*************************************************************************
@@ -235,6 +236,11 @@ SUBROUTINE read_rt_params(nml_ok)
      write(*,*) 'Number of ionization fractions is:',nIonsUsed
      write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
                 , ixHI, ixHII, ixHeII, ixHeIII
+  endif
+
+  if(isH2) then
+    if (rt_isIR) iLW = 2 !Finding Lyman-Werner band
+    ssh2(iLW) = 4d2 !H2 self-shielding factor
   endif
 
   call read_rt_groups(nml_ok)

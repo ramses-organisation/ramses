@@ -439,10 +439,8 @@ contains
 
        ! ABSORPTION/SCATTERING OF PHOTONS BY GAS
        do igroup=1,nGroups      ! -------------------Ionization absorbtion
-          phAbs(igroup) = SUM(nN(:)*signc(igroup,:)) ! s-1
+          phAbs(igroup) = SUM(nN(:)*signc(igroup,:)*ssh2(igroup)) ! s-1
        end do
-       ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018):
-       if(isH2) phAbs(ixHI)=phAbs(ixHI)*4d2 
        ! IR, optical and UV depletion by dust absorption: ----------------
        if(rt_isIR) & !IR scattering/abs on dust (abs after T update)
             phSc(iIR)  = phSc(iIR) + dustSc(iIR)
@@ -458,11 +456,11 @@ contains
           !       should not include PEH absorption when PEH is included.
           ! from Bakes and Tielens 1994 and Wolfire 2003
           G0  = group_egy_erg(iPEH_group)                                &
-                   * dNp(iPEH_group) * rt_c_cgs / 1.6d-3
+              * dNp(iPEH_group) * rt_c_cgs / 1.6d-3
           eff_peh = 4.87d-2                                              &
-                  / (1d0 + 4d-3 * (G0*sqrt(T2(icell))/ne*2.)**0.73)      &
-                  + 3.65d-2 * (T2(icell)/1d4)**0.7                       &
-                  / (1d0 + 2d-4 * (G0 * sqrt(T2(icell)) / ne*2. ))
+                  / (1d0 + 4d-3 * (G0*sqrt(TK)/ne*2.)**0.73)      &
+                  + 3.65d-2 * (TK/1d4)**0.7                       &
+                  / (1d0 + 2d-4 * (G0 * sqrt(TK) / ne*2. ))
           phAbs(iPEH_group) = phAbs(iPEH_group)                          &
                             + 8.125d-22 * eff_peh * rt_c_cgs * nH(icell) &
                             * Zsolar(icell) * f_dust
@@ -549,32 +547,32 @@ contains
        endif
        if(isH2) then 
           !UV pumping, Baczynski 2015
-          cdex  = 1d-12 * (1.4 * exp(-18100. / (T2(icell) + 1200.)) * xH2&
-                + exp(-1000. / T2(icell)) * dxion(ixHI))                 &
-                * sqrt(T2(icell)) * nH(icell) ![s-1]
-          Hrate = Hrate + 6.94 * dNp(1) * signc(1,1) * 2. * ev_to_erg    &
-                * cdex / (cdex + 2d-7) * nH(icell) * xH2
+          cdex  = 1d-12 * (1.4 * exp(-18100. / (TK + 1200.)) * xH2       &
+                + exp(-1000. / TK) * dxion(ixHI))                        &
+                * sqrt(TK) * nH(icell) ![s-1]
+          Hrate = Hrate + 6.94 * dNp(iLW) * signc(iLW,ixHI) * 2.         & 
+                * ev_to_erg * cdex / (cdex + 2d-7) * nH(icell) * xH2
           !H2 formation heating, Omukai 2000
           ! and Hollenbach and McKee 1976, [erg cm-3 s-1]
-          ncr   = 1d6 * T2(icell)**(-0.5)                                &
-                / (1.6 * dxion(ixHI) * exp(-(400. / T2(icell))**2)       & 
-                + 1.4 * xH2 * exp(-12000. / (T2(icell) + 1200.))) ![cm-3]
+          ncr   = 1d6 * TK**(-0.5)                                       &
+                / (1.6 * dxion(ixHI) * exp(-(400. / TK)**2)              & 
+                + 1.4 * xH2 * exp(-12000. / (TK + 1200.))) ![cm-3]
           Hrate = Hrate + ev_to_erg                                      & 
                 * ((0.2 + 4.2 / (1. + ncr / nH(icell)))                  &
-                * inp_coolrates_table(tbl_AlphaZ_H2,T2(icell))           &
+                * inp_coolrates_table(tbl_AlphaZ_H2,TK)                  &
                 * Zsolar(icell) * f_dust                                 &
                 * nH(icell)**2 * dxion(ixHI)                             &
                 + 3.53 / (1. + ncr/nH(icell))                            &
-                * inp_coolrates_table(tbl_AlphaGP_H2,T2(icell))          &
+                * inp_coolrates_table(tbl_AlphaGP_H2,TK)                 &
                 * nH(icell) * dxion(ixHI) * ne                           &
                 + 4.48 / (1.+ncr / nH(icell))                            &
-                * inp_coolrates_table(tbl_Beta_H3B,T2(icell))            &
+                * inp_coolrates_table(tbl_Beta_H3B,TK)                   &
                 * nH(icell)**3 * dxion(ixHI)**2 * (dxion(ixHI) + xH2/8.))
        endif
        if (cosmic_rays) then !CR heating [erg cm-3 s-1]
           !Glassgold 2012, ~10 ev/ionisation
           Hrate = Hrate + 10. * ev_to_erg                                &
-                * nH(icell) * dxion(ixHI) * cosray_HI                     
+                * nH(icell) * ixHI * cosray_HI                     
           if (isH2) Hrate = Hrate + 10. * ev_to_erg                      &
                           * nH(icell) * xH2 * cosray_H2    
           if (isHe) Hrate = Hrate + 10. * ev_to_erg                      &
