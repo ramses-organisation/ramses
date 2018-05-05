@@ -155,8 +155,9 @@ module clfind_commons
   ! Mergertree general
   !----------------------
 
-  logical :: make_mergertree = .true.   ! whether to make merger trees
-  integer :: nmost_bound = 250          ! maximal number of most bound particles to track
+  logical :: make_mergertree = .true.     ! whether to make merger trees
+  logical :: use_exclusive_mass = .false. ! whether to use exclusive or inclusive halo mass definition for treemaking
+  integer :: nmost_bound = 250            ! maximal number of most bound particles to track
 
   real(dp), allocatable, dimension(:,:) :: most_bound_energy    ! stores the energy of nmost_bound particles per peak
   integer,  allocatable, dimension(:,:) :: most_bound_pid       ! stores particle ID of nmost_bound particles per peak

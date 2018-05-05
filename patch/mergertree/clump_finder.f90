@@ -972,7 +972,8 @@ subroutine read_clumpfind_params()
        & unbind,nmassbins,logbins,unbinding_formatted_output, &
        & saddle_pot,iter_properties,conv_limit, repeat_max, &
        !mergertree parameters
-       & make_mergertree, nmost_bound, max_past_snapshots
+       & make_mergertree, nmost_bound, max_past_snapshots, &
+       & use_exclusive_mass
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v  
 

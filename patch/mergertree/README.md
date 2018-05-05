@@ -91,6 +91,13 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 |                               |                           |          |                                                   |
 | `max_past_snapshots =`        | `0`                       | integer  | maximal number of past snapshots to store. If = 0,|
 |                               |                           |          | all past merged progenitors will be stored.       |
+|                               |                           |          |                                                   |
+| `use_exclusive_mass=`         | `.false.`                 | logical  | how to define clump mass: If false, all           |
+|                               |                           |          | substructure of a clump is considered part of     |
+|                               |                           |          | its mass. Otherwise, use only particles that are  |
+|                               |                           |          | bound to the clump itself (excluding main haloes: |
+|                               |                           |          | main haloes always consist of all the particles   |
+|                               |                           |          | within them)                                      |
 
 
 

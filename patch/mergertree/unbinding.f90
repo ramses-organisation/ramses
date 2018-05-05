@@ -270,9 +270,6 @@ subroutine unbinding()
   enddo !loop over levels
 
 
-  ! After the loop: Dissolve too small halos
-  if (make_mergertree) call dissolve_small_clumps(0, .true.)
-  
 
 
 
@@ -306,11 +303,43 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
+
+  ! After the loop: Dissolve too small halos, sum up masses if necessary
   if (make_mergertree) then
+    call dissolve_small_clumps(0, .true.)
+  
+
+    if (.not. use_exclusive_mass) then
+      do ilevel = 0, mergelevel_max
+
+        ! reset virtual mass for comms
+        do ipeak = npeaks+1, hfree-1
+          clmp_mass_pb(ipeak) = 0.d0
+        enddo
+
+        do ipeak = 1, npeaks
+          if (lev_peak(ipeak)== ilevel) then
+            if (clmp_mass_exclusive(ipeak) > 0 .and. .not. is_namegiver(ipeak)) then
+              call get_local_peak_id(new_peak(ipeak), parent_local_id)
+              if (.not. is_namegiver(parent_local_id)) then ! namegivers already take all particles in get_clumpproperties()
+                clmp_mass_pb(parent_local_id) = clmp_mass_pb(parent_local_id) + clmp_mass_pb(ipeak)
+              endif 
+            endif
+          endif
+        enddo
+
+        ! communicate
+        call virtual_peak_dp(clmp_mass_pb(:), 'sum')
+        call boundary_peak_dp(clmp_mass_pb(:))
+
+      enddo
+    endif
+
+    ! Now call mergertree
     call make_merger_tree()
+
   endif
-
-
+ 
 
 
 

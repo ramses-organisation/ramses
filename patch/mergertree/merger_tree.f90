@@ -721,6 +721,7 @@ subroutine create_prog_desc_links()
 
   call build_peak_communicator()
   call boundary_peak_dp(clmp_mass_exclusive(:))
+  if (use_exclusive_mass) call boundary_peak_dp(clmp_mass_pb(:))
 
   return
 
@@ -792,6 +793,7 @@ subroutine make_trees()
   !-----------------------------------
   call build_peak_communicator()
   call boundary_peak_dp(clmp_mass_exclusive)
+  if (use_exclusive_mass) call boundary_peak_dp(clmp_mass_pb(:))
 
 
   
@@ -1193,7 +1195,7 @@ subroutine make_trees()
       implicit none
       integer, intent(in) :: iprog
       logical, intent(out) :: found_one
-      real(dp):: merit_max, merit_calc, a 
+      real(dp):: merit_max, merit_calc, a, clumpmass 
       integer :: merit_max_id
 
       integer :: ind, i, idesc, idl
@@ -1213,12 +1215,19 @@ subroutine make_trees()
           idesc = p2d_links%clmp_id(ind)
           call get_local_peak_id(idesc, idl)
 
-          ! calculate merits
-          if (clmp_mass_exclusive(idl) > prog_mass(iprog)) then
-            a = abs(1 - clmp_mass_exclusive(idl)/prog_mass(iprog))
+          if (use_exclusive_mass) then
+            clumpmass = clmp_mass_exclusive(idl)
           else
-            a = abs(1 - prog_mass(iprog)/clmp_mass_exclusive(idl))
+            clumpmass = clmp_mass_pb(idl)
           endif
+
+          ! calculate merits
+          if (clumpmass > prog_mass(iprog)) then
+            a = abs(1 - clumpmass/prog_mass(iprog))
+          else
+            a = abs(1 - prog_mass(iprog)/clumpmass)
+          endif
+
           if (a<1d-100) a = 1d-100 ! don't devide by zero
           merit_calc =  real(p2d_links%ntrace(ind)) / a**2
 
@@ -1266,7 +1275,7 @@ subroutine make_trees()
       real(dp), dimension(1:npeaks_max), intent(inout):: merit_desc
       logical, intent(out) :: found_one
 
-      real(dp):: merit_max, merit_calc, a 
+      real(dp):: merit_max, merit_calc, a, clumpmass
       integer :: merit_max_id
 
       integer :: ind, i, iprog
@@ -1281,11 +1290,18 @@ subroutine make_trees()
         iprog = d2p_links%clmp_id(ind)
 
         if (d2p_links%ntrace(ind) > 0) then
-          ! calculate merit
-          if (clmp_mass_exclusive(ipeak) > prog_mass(iprog)) then
-            a = abs(1 - clmp_mass_exclusive(ipeak)/prog_mass(iprog))
+
+          if (use_exclusive_mass) then
+            clumpmass = clmp_mass_exclusive(ipeak)
           else
-            a = abs(1 - prog_mass(iprog)/clmp_mass_exclusive(ipeak))
+            clumpmass = clmp_mass_pb(ipeak)
+          endif
+
+          ! calculate merit
+          if (clumpmass > prog_mass(iprog)) then
+            a = abs(1 - clumpmass/prog_mass(iprog))
+          else
+            a = abs(1 - prog_mass(iprog)/clumpmass)
           endif
           if (a<1d-100) a = 1d-100 ! don't devide by zero
           merit_calc = real(d2p_links%ntrace(ind))/a**2
@@ -2104,6 +2120,7 @@ subroutine write_trees()
   character (len=5)  :: dir, idnr
   character (len=80) :: fileloc
   integer:: ipeak, iprog
+  real(dp) :: npartclump, clumpmass
 
   logical, dimension(1:nprogs) :: printed
 
@@ -2132,13 +2149,21 @@ subroutine write_trees()
 
   do ipeak = 1, npeaks
     if (clmp_mass_exclusive(ipeak) > 0) then
+
+      if (use_exclusive_mass) then
+        clumpmass = clmp_mass_exclusive(ipeak)
+      else
+        clumpmass = clmp_mass_pb(ipeak)
+      endif
+      npartclump = clumpmass/partm_common
+
       !----------------------
       ! Adjacent link found
       !----------------------
       if (main_prog(ipeak) > 0 ) then
         write(666,'(3(I15), 8(E18.10))') &
           ipeak+ipeak_start(myid), prog_id(main_prog(ipeak)), prog_outputnr(ipeak), &
-          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          clumpmass, npartclump,&
           peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
           clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
         printed(main_prog(ipeak)) = .true.
@@ -2150,7 +2175,7 @@ subroutine write_trees()
       else if (main_prog(ipeak) == 0) then
         write(666,'(3(I15), 8(E18.10))') &
           ipeak+ipeak_start(myid), 0, ifout-1, &
-          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          clumpmass, npartclump,&
           peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
           clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
 
@@ -2161,7 +2186,7 @@ subroutine write_trees()
       else 
         write(666,'(3(I15), 8(E18.10))') &
           ipeak+ipeak_start(myid), main_prog(ipeak), prog_outputnr(ipeak), &
-          clmp_mass_exclusive(ipeak), clmp_mass_exclusive(ipeak)/partm_common,&
+          clumpmass, npartclump,&
           peak_pos(ipeak,1), peak_pos(ipeak,2), peak_pos(ipeak,3), &
           clmp_vel_pb(ipeak,1), clmp_vel_pb(ipeak,2), clmp_vel_pb(ipeak,3)
       endif
@@ -2281,10 +2306,14 @@ subroutine write_progenitor_data()
         if (first_bound > 0) then
           ihalo = ihalo + 1
 
-          startind = pind                               ! starting index to write in array
-          particlelist(startind) = haloid               ! store halo ID at [startind]
-          pind = pind + 2                               ! move first free index in array to be written to file
-          masslist(ihalo) = clmp_mass_exclusive(ipeak)  ! store mass at first free halo position
+          startind = pind                                 ! starting index to write in array
+          particlelist(startind) = haloid                 ! store halo ID at [startind]
+          pind = pind + 2                                 ! move first free index in array to be written to file
+          if (use_exclusive_mass) then
+            masslist(ihalo) = clmp_mass_exclusive(ipeak)  ! store mass at first free halo position
+          else
+            masslist(ihalo) = clmp_mass_pb(ipeak)
+          endif
 
           ! loop over mostbound particle list
           do ipart = first_bound, nmost_bound
@@ -2564,7 +2593,6 @@ subroutine get_local_prog_id(global_id, local_id)
   return
 
 end subroutine get_local_prog_id 
-
 
 
 
