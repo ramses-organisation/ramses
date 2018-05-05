@@ -389,12 +389,12 @@ class global_params:
         self.label_clumps = True
         return
 
-    def set_outputfilename(self):
+    def set_outputfilename(self, outnr):
         if self.plotparticles:
-            self.set_prefix()
+            self.set_prefix(outnr)
 
         # output filename for image
-        self.outputfilename = self.prefix+"merger_tree_"+self.lastdir[-5:]+"_halo_"+str(self.halo)
+        self.outputfilename = self.prefix+"merger_tree_"+str(outnr).zfill(5)+"_halo_"+str(self.halo)
         return
         
     def set_pdf(self):
@@ -405,10 +405,10 @@ class global_params:
         self.plotparticles = True
         return
 
-    def set_prefix(self):
+    def set_prefix(self, outnr):
         import  os
         # get subdirectory name
-        self.prefix = 'merger_tree_'+str(self.lastdirnr).zfill(5)+'_halo_'+str(self.halo)+'/'
+        self.prefix = 'merger_tree_'+str(outnr).zfill(5)+'_halo_'+str(self.halo)+'/'
         # create subdirectory if it doesn't exist
         if not os.path.exists(self.prefix):
             os.makedirs(self.prefix)
@@ -861,13 +861,12 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t, para
             startind = np.argmin(np.absolute(t))
             params.start = startind
 
-    if startind > 0: # rename file
-        params.outputfilename = params.prefix+"merger_tree_"+str(outputnrs[startind]).zfill(5)+"_halo_"+str(halo)
-
-    if params.verbose:
-        print "Snapshot of the tree root is", outputnrs[startind]
+        if params.verbose:
+            print "Snapshot of the tree root is", outputnrs[startind]
 
 
+    # set filename
+    params.set_outputfilename(outputnrs[startind])
 
     #---------------------------------------------------------------------
     # Handle jumpers: Find out whether they'll eventually really merge
@@ -1375,6 +1374,8 @@ def plot_treeparticles(tree, yaxis_phys, params):
         print "Started plotting tree particles."
 
 
+    outnrs = range(params.lastdirnr-params.start, params.lastdirnr-params.start-len(tree), -1)
+
     # for every output in the tree:
     for i,out in enumerate(tree):
 
@@ -1389,7 +1390,7 @@ def plot_treeparticles(tree, yaxis_phys, params):
         # if there is work to be done
         if len(clumps_in_tree) > 0:
 
-            outnr = params.lastdirnr - i
+            outnr = outnrs[i]
             srcdir = 'output_'+str(outnr).zfill(5)
 
             # read in particles of this output
@@ -2267,7 +2268,6 @@ def _tweak_treeplot(fig, yaxis_int, yaxis_phys, borders, params):
 
     import matplotlib.pyplot as plt
 
-
     #-----------------
     # preparation
     #-----------------
@@ -2439,8 +2439,6 @@ def _walk_tree(node, root):
 
 
 
-
-
 #==============
 def main():
 #==============
@@ -2449,14 +2447,12 @@ def main():
     """
 
 
-
     #-----------------------
     # Set up
     #-----------------------
     params = global_params()
     params.read_cmdlineargs()
     params.get_output_info()
-    params.set_outputfilename()
 
     if params.verbose:
         params.print_params()
