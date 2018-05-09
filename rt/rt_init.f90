@@ -340,7 +340,8 @@ SUBROUTINE read_rt_groups(nml_ok)
 
   if(isH2) then
      do i=1,nGroups
-        if((groupL0(i) .ge. 11.2) .and. (groupL1(i) .le. 13.6)) then
+        if((groupL0(i) .ge. 11.2) .and. (groupL1(i) .le. 13.6)          &
+           .and. (groupL0(i) .le. 13.6) .and. (groupL1(i) .ge. 11.2))then
            ssh2(i) = 4d2 ! H2 self-shielding factor
            isLW(i) = 1d0 ! Index for LW groups
         endif
