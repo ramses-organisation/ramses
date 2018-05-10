@@ -111,6 +111,77 @@ end subroutine set_unew
 !###########################################################
 !###########################################################
 !###########################################################
+subroutine scale_cosmomag(ind_cell,exp_scale)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ind_cell
+  !--------------------------------------------------------------------------
+  ! This routine updates magnetic field to scale with cosmic expansion
+  !--------------------------------------------------------------------------
+  real(dp)::A,B,C,exp_scale,e_mag
+
+  ! Compute old e_mag 
+  A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
+  B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
+  C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
+  e_mag=0.5*(A**2+B**2+C**2)
+  
+  ! Remove from internal energy
+  unew(ind_cell,5) = unew(ind_cell,5) - e_mag
+  
+  ! Rescale B
+  unew(ind_cell,6:8) = unew(ind_cell,6:8) * exp_scale
+  unew(ind_cell,nvar+1:nvar+3) = unew(ind_cell,nvar+1:nvar+3) * exp_scale
+  
+  ! Compute new e_mag
+  A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
+  B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
+  C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
+  e_mag=0.5*(A**2+B**2+C**2)
+      
+  ! Add back to internal energy
+  unew(ind_cell,5) = unew(ind_cell,5) + e_mag
+end subroutine scale_cosmomag
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine update_cosmomag(ilevel,exp_scale)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ilevel
+  !--------------------------------------------------------------------------
+  ! This routine updates magnetic field to scale with cosmic expansion
+  !--------------------------------------------------------------------------
+  integer::i,ind,iskip,ind_cell,icpu,ncache
+  real(dp)::exp_scale
+
+  do ind=1,twotondim
+    iskip=ncoarse+(ind-1)*ngridmax
+    
+    ! Update the active cells
+    do i=1,active(ilevel)%ngrid
+      ind_cell = active(ilevel)%igrid(i)+iskip
+      call scale_cosmomag(ind_cell,exp_scale)
+    end do
+    
+    ! Do the same for reception cells
+    do icpu=1,ncpu
+      do i=1,reception(icpu,ilevel)%ngrid
+        ind_cell = reception(icpu,ilevel)%igrid(i)+iskip
+        call scale_cosmomag(ind_cell,exp_scale)
+      end do
+    end do
+  end do
+end subroutine update_cosmomag
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 subroutine set_uold(ilevel)
   use amr_commons
   use hydro_commons

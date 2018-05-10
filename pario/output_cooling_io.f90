@@ -12,7 +12,7 @@ subroutine output_cool_recv
   use amr_commons
   use cooling_module,only:if_species_abundances
   use io_commons
-  use mpi
+  use mpi_mod
   implicit none
   character(LEN=MAXLINE)::filename
   character(LEN=5)::nchar,iochar

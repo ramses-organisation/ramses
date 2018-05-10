@@ -1,5 +1,6 @@
 !=======================================================================
 real(kind=8) function wallclock()
+  use mpi_mod
   implicit none
 #ifdef WITHOUTMPI
   integer,      save :: tstart
@@ -11,9 +12,6 @@ real(kind=8) function wallclock()
 #endif
   logical,      save :: first_call=.true.
   real(kind=8), save :: norm, offset=0.
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !---------------------------------------------------------------------
   if (first_call) then
 #ifdef WITHOUTMPI
@@ -80,9 +78,9 @@ subroutine output_timer(write_file, filename)
   use amr_parameters
   use amr_commons
   use timer_m
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8) :: gtotal, avtime, rmstime
   real(kind=8), dimension(ncpu) :: vtime
   integer,      dimension(ncpu) :: all_ntimer
@@ -181,10 +179,9 @@ end subroutine
 !=======================================================================
 subroutine reset_timer
    use timer_m
+   use mpi_mod
    implicit none
-#ifndef WITHOUTMPI
-   include 'mpif.h'
-#endif
+
 !-----------------------------------------------------------------------
    do itimer = 1,ntimer
       time(itimer)=0.0
@@ -196,15 +193,18 @@ subroutine update_time(ilevel)
   use pm_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8)::ttend
   real(kind=8),save::ttstart=0
 #endif
   integer::ilevel
 
   real(dp)::dt,econs,mcons
+#ifdef SOLVERmhd
+  real(dp)::sqrt_aexp_prev
+#endif
   integer::i,itest
 
   ! Local constants
@@ -325,6 +325,10 @@ subroutine update_time(ilevel)
   t=t+dt
   nstep=nstep+1
   if(cosmo)then
+#ifdef SOLVERmhd
+     ! Keep for magnetic field expansion
+     sqrt_aexp_prev = SQRT(aexp)
+#endif
      ! Find neighboring times
      i=1
      do while(tau_frw(i)>t.and.i<n_frw)
@@ -337,6 +341,12 @@ subroutine update_time(ilevel)
           & hexp_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
      texp =    t_frw(i  )*(t-tau_frw(i-1))/(tau_frw(i  )-tau_frw(i-1))+ &
           &    t_frw(i-1)*(t-tau_frw(i  ))/(tau_frw(i-1)-tau_frw(i  ))
+
+#ifdef SOLVERmhd
+     do i=1,ilevel
+       call update_cosmomag(i,SQRT(aexp)/sqrt_aexp_prev)
+     end do
+#endif
   else
      aexp = 1.0
      hexp = 0.0
@@ -357,9 +367,9 @@ subroutine clean_stop
   use amr_commons
   use poisson_commons
   use pm_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer :: ilevel
@@ -479,9 +489,9 @@ subroutine getmem(outmem)
   use amr_commons,only:IOGROUPSIZE
   use amr_commons,only:ncpu
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::dummy_io,info2
 #endif
   real(kind=4)::outmem

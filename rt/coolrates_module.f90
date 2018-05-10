@@ -12,14 +12,15 @@ MODULE coolrates_module
 
   private   ! default
   public init_coolrates_tables, update_coolrates_tables                  &
-       , inp_coolrates_table, comp_Alpha_H2, compCoolrate                &
-       , tbl_alphaA_HII, tbl_alphaA_HeII, tbl_alphaA_HeIII               &
-       , tbl_alphaB_HII, tbl_alphaB_HeII, tbl_alphaB_HeIII, tbl_beta_HI  &
-       , tbl_beta_HeI, tbl_beta_HeII, tbl_cr_ci_HI, tbl_cr_ci_HeI        &
-       , tbl_cr_ci_HeII, tbl_cr_ce_HI, tbl_cr_ce_HeI, tbl_cr_ce_HeII     &
-       , tbl_cr_r_HII, tbl_cr_r_HeII, tbl_cr_r_HeIII, tbl_cr_bre         &
-       , tbl_cr_com, tbl_cr_die, tbl_beta_H2HI, tbl_beta_H2H2            &
-       , tbl_cr_H2HI, tbl_cr_H2H2
+       , inp_coolrates_table, compCoolrate                               &
+       , tbl_alphaZ_H2, tbl_alphaGP_H2, tbl_alphaA_HII, tbl_alphaA_HeII  &
+       , tbl_alphaA_HeIII, tbl_alphaB_HII, tbl_alphaB_HeII               &
+       , tbl_alphaB_HeIII, tbl_beta_HI, tbl_beta_HeI, tbl_beta_HeII      & 
+       , tbl_cr_ci_HI, tbl_cr_ci_HeI, tbl_cr_ci_HeII, tbl_cr_ce_HI       &
+       , tbl_cr_ce_HeI, tbl_cr_ce_HeII, tbl_cr_r_HII, tbl_cr_r_HeII      &
+       , tbl_cr_r_HeIII, tbl_cr_bre, tbl_cr_com, tbl_cr_die              &
+       , tbl_beta_H2HI, tbl_beta_H2H2, tbl_cr_H2HI, tbl_cr_H2H2          &
+       , tbl_beta_H3B
 
   ! Default cooling rates table parameters
   integer,parameter     :: nbinT  = 1001
@@ -39,6 +40,8 @@ MODULE coolrates_module
      real(dp),dimension(nbinT)::primes = 0d0
   end type coolrates_table
 
+  type(coolrates_table),save::tbl_alphaZ_H2  ! H2 dust grain formation 
+  type(coolrates_table),save::tbl_alphaGP_H2 ! H2 gas-phase formation 
   type(coolrates_table),save::tbl_alphaA_HII ! Case A rec. coefficients
   type(coolrates_table),save::tbl_alphaA_HeII
   type(coolrates_table),save::tbl_alphaA_HeIII
@@ -62,6 +65,7 @@ MODULE coolrates_module
   type(coolrates_table),save::tbl_cr_die ! Dielectronic cooling rates
   type(coolrates_table),save::tbl_beta_H2HI ! Coll. dissociation rates
   type(coolrates_table),save::tbl_beta_H2H2 ! Coll. dissociation rates
+  type(coolrates_table),save::tbl_beta_H3B ! Coll. dissociation rates
   type(coolrates_table),save::tbl_cr_H2HI ! Collisional diss. cooling
   type(coolrates_table),save::tbl_cr_H2H2 ! Collisional diss. cooling
 
@@ -72,9 +76,9 @@ SUBROUTINE init_coolrates_tables(aexp)
 
 ! Initialise the cooling rates tables.
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: ierr
 #endif
   real(dp) :: aexp
@@ -111,6 +115,8 @@ SUBROUTINE init_coolrates_tables(aexp)
 
   ! Distribute the complete table between cpus ---------------------------
 #ifndef WITHOUTMPI
+  call mpi_distribute_coolrates_table(tbl_alphaZ_H2)
+  call mpi_distribute_coolrates_table(tbl_alphaGP_H2)
   call mpi_distribute_coolrates_table(tbl_alphaA_HII)
   call mpi_distribute_coolrates_table(tbl_alphaA_HeII)
   call mpi_distribute_coolrates_table(tbl_alphaA_HeIII)
@@ -141,6 +147,7 @@ SUBROUTINE init_coolrates_tables(aexp)
 
   call mpi_distribute_coolrates_table(tbl_beta_H2HI)
   call mpi_distribute_coolrates_table(tbl_beta_H2H2)
+  call mpi_distribute_coolrates_table(tbl_beta_H3B)
   call mpi_distribute_coolrates_table(tbl_cr_H2HI)
   call mpi_distribute_coolrates_table(tbl_cr_H2H2)
 
@@ -154,9 +161,9 @@ END SUBROUTINE init_coolrates_tables
 SUBROUTINE update_coolrates_tables(aexp)
 ! Update cooling rates lookup tables which depend on aexp
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: ierr
 #endif
   real(dp) :: aexp
@@ -190,8 +197,8 @@ SUBROUTINE mpi_distribute_coolrates_table(table)
 ! entries on each cpu, but the whole table is acquired by summing those
 ! partial tables
 !-------------------------------------------------------------------------
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   type(coolrates_table)::table
   real(dp),dimension(:),allocatable :: table_mpi_sum
   integer::ierr
@@ -215,10 +222,10 @@ SUBROUTINE comp_table_rates(iT, aexp)
   use rt_parameters,only:rt_OTSA
   implicit none
   integer::iT
-  real(dp)::aexp, T, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
+  real(dp)::aexp, T, T2, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
   real(dp)::lowrleft,lowrright,lowr_hi,lowr_h2
   real(dp)::lowvleft_hi,lowvright_hi,lowv_hi,lowv_h2
-  real(dp)::TT,fTT3,lowtot_hi,lowtot_h2,ltetot
+  real(dp)::TT
   real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
   ! Rates are stored in non-log, while temperature derivatives (primes)
@@ -229,6 +236,22 @@ SUBROUTINE comp_table_rates(iT, aexp)
 
   T = 10d0**T_lookup(iT)
 
+  ! Creation rate of H2 on dust [cm3 s-1] (functio of T from--------------
+  ! Hollenback & McKee 1979, average rate between Habart 2004 dense PDRs 
+  ! and Jura 1974 diffuse ISM) 
+  ! When using, must multiply by Z*f_dust
+  T2 = T/1d2
+  f = (1.0+0.4*sqrt(T2)+0.2*T2+0.08*T2**2)                    
+  tbl_alphaZ_H2%rates(iT)   = 9.0d-17 * sqrt(T2) / f 
+  tbl_alphaZ_H2%primes(iT)  = (-0.12*T2**2 - 0.1*T2 + 0.5) / f           &
+                            * log(10d0) * tbl_alphaZ_H2%rates(iT)             
+
+  ! Gas phase formation rate rate for H2 on H- [cm3 s-1] assuming--------- 
+  ! equilibrium abundances for H-, as explained in the Appendix of 
+  ! McKee and Krumholz (2012)
+  tbl_alphaGP_H2%rates(iT)  = 8.0d-19*(T/1000.0)**0.88 
+  tbl_alphaGP_H2%primes(iT) = 0.88                                       &
+                            * log(10d0) * tbl_alphaGP_H2%rates(iT) 
   ! Case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)-------------
   lambda = 315614./T                                ! 2.d0 * 157807.d0 / T
   f = 1.d0+(lambda/0.522)**0.47
@@ -373,12 +396,16 @@ SUBROUTINE comp_table_rates(iT, aexp)
 
   !BEGIN H2 STUFF --------------------------------------------------------
 
-  ! Collisional dissociation ground state (Dove&Mandy 1986)***************
+  ! Collisional dissociation ground state (Dove&Mandy 1986) [cm3 s-1]
   tbl_Beta_H2HI%rates(iT) =                                              &
        7.073d-19*(T**2.012)*exp(-5.179d4/T)/(1.d0+2.130d-5*T)**3.512
-  ! Collisional dissociation  ground state (Martin&Keogh&Mandy 1998y)
+  ! Col dissociation ground state (Martin&Keogh&Mandy 1998)  [cm3 s-1]
   tbl_Beta_H2H2%rates(iT) = &
        5.996d-30*(T**4.1881)*exp(-5.466d4/T)/(1.d0+6.761d-6*T)**5.6881
+  ! Three body H2 formation 3H -> H2 + H (Forrey 2013) [cm6 s-1]
+  ! For H2+2H -> 2H2 use Beta_H3B/8 (Palla 1983)
+  tbl_Beta_H3B%rates(iT) = &
+       6d-32*T**(-0.25)+2d-31*T**(-0.5)
   ! Prefer to use numerical prime, rather than analytic:
   TT=T*1.0001
   tbl_Beta_H2HI%primes(iT) =                                             &
@@ -390,6 +417,11 @@ SUBROUTINE comp_table_rates(iT, aexp)
       5.996d-30*(TT**4.1881)*exp(-5.466d4/TT)/(1.d0+6.761d-6*TT)**5.6881
   tbl_Beta_H2H2%primes(iT) = &
        (tbl_Beta_H2H2%primes(iT) - tbl_Beta_H2H2%rates(iT))              &
+       / (0.0001*T) * T * log(10d0) ! last two terms for log-log
+  tbl_Beta_H3B%primes(iT) = & 
+       6d-32*TT**(-0.25)+2d-31*TT**(-0.5)
+  tbl_Beta_H3B%primes(iT) = &
+       (tbl_Beta_H3B%primes(iT) - tbl_Beta_H3B%rates(iT))              &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log
 
   ! Collisional H2 cooling************************************************
@@ -621,29 +653,6 @@ FUNCTION compCoolrate(T, ne, nN, nI, dcooldT)
                    + cr_H2HI_prime + cr_H2H2_prime
 
 END FUNCTION compCoolrate
-
-!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-ELEMENTAL FUNCTION comp_Alpha_H2(T,Z)
-
-! Returns creation rate of H2 on dust [cm^3 s-1] (Hollenback & McKee 1979,
-! Draine and Bertoldi 1996) plus gas phase rate for low Z on H- assuming 
-! equilibrium abundances for H, as explained in the Appendix of McKee and
-! Krumholz (2012).
-! T           => Temperature [K]
-! Z           => Metallicity in Solar units
-! Can't easily tabulate this because of metallicity dependence
-!-------------------------------------------------------------------------
-  implicit none
-  real(dp),intent(in)::T,Z
-  real(dp)::comp_Alpha_H2,T2
-!-------------------------------------------------------------------------
-  T2=T/1d2
-  comp_Alpha_H2 =  Z * 6.0d-18*(T**0.5) &
-                / (1.0+0.4*T2**0.5+0.2*T2+0.08*T2**2)                    &
-                + 8.0d-19*((T/1000.0)**0.88)      ! Zero metallicity limit
-  ! Zero above 2000 K:
-  comp_Alpha_H2 = comp_Alpha_H2 * exp(-T/2d3)
-END FUNCTION comp_Alpha_H2
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ELEMENTAL FUNCTION gamma_hi(T,J)

@@ -11,7 +11,7 @@ subroutine backup_poisson_send
   use poisson_commons
   use io_parameters
   use timer
-  use mpi
+  use mpi_mod
   implicit none
 
   integer,parameter::tag=TAG_BAK_POI
@@ -65,7 +65,7 @@ subroutine backup_poisson_recv
   use amr_commons
   use io_commons
   use pm_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer,parameter::tag=TAG_BAK_POI

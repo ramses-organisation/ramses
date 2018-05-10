@@ -75,6 +75,7 @@ module rt_parameters
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
   integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
   integer::iHIIheat=6                  ! Var index for HII heating                       !
+  logical::cosmic_rays=.false.         ! Include cosmic ray ionisation                   !
 
   character(LEN=128)::hll_evals_file=''! File HLL eigenvalues                            !
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
@@ -148,4 +149,8 @@ module rt_parameters
 
   integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 
+  ! H2 parameters ------------------------------------------------------------------------
+  ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
+  ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
+  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0 
 end module rt_parameters
