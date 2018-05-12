@@ -310,14 +310,19 @@ subroutine unbinding()
   
 
     if (.not. use_exclusive_mass) then
+
+      ! reset mass: clmp_mass_pb is not updated after unbinding;
+      ! which particles are bound in the end is not included in there.
+      ! There might've been some changes. Fix this now.
+      clmp_mass_pb(1:npeaks) = clmp_mass_exclusive(1:npeaks)
+
       do ilevel = 0, mergelevel_max
 
-        ! reset virtual mass for comms
-        do ipeak = npeaks+1, hfree-1
-          clmp_mass_pb(ipeak) = 0.d0
-        enddo
+        ! First reset virtual's mass for comms
+        clmp_mass_pb(npeaks+1:hfree-1) = 0.d0
 
         do ipeak = 1, npeaks
+          ! only do this part for non-virtuals as "source", otherwise you'll get wrong additions!
           if (lev_peak(ipeak)== ilevel) then
             if (clmp_mass_exclusive(ipeak) > 0 .and. .not. is_namegiver(ipeak)) then
               call get_local_peak_id(new_peak(ipeak), parent_local_id)
@@ -522,7 +527,7 @@ subroutine get_clump_properties_pb(first)
   implicit none
 
   logical, intent(in) :: first  ! if it is the first time calculating
-   
+
   !--------------------------------------------------------------------------
   ! This subroutine computes the particle-based properties of the clumps:
   ! namely the center of mass and the clump's velocity.
@@ -1241,8 +1246,8 @@ subroutine particle_unbinding(ipeak, final_round)
 
             !check if unbound
             if(epart >= 0) then  
-              nunbound=nunbound+1                  !counter
-              clmpidp(thispart)=new_peak(ipeak)    !update clump id
+              nunbound=nunbound+1                  ! counter
+              clmpidp(thispart)=new_peak(ipeak)    ! update clump id
             else
               if (make_mergertree) then
                 ! store the values for mergertrees
@@ -1305,6 +1310,8 @@ subroutine particle_unbinding(ipeak, final_round)
               else
                 hasatleastoneptcl(ipeak)=1 ! there are contributing particles for this peak
               endif
+            else
+              contributes(thispart) = .false.
             endif
             thispart=clmppart_next(thispart)
           enddo

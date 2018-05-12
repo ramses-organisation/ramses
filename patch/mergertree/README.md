@@ -86,13 +86,13 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 | `make_mergertree =`           | `.true.`                  | logical  | Turn making mergertree on or off.                 |
 |                               |                           |          | `make_mergertree = .true.` sets `unbind = .true.` |
 |                               |                           |          |                                                   |
-| `nmost_bound = `              | `250`                     | integer  | Up to how many particles per clump to track       |
+| `nmost_bound = `              | `200`                     | integer  | Up to how many particles per clump to track       |
 |                               |                           |          | between two snapshots.                            |
 |                               |                           |          |                                                   |
 | `max_past_snapshots =`        | `0`                       | integer  | maximal number of past snapshots to store. If = 0,|
 |                               |                           |          | all past merged progenitors will be stored.       |
 |                               |                           |          |                                                   |
-| `use_exclusive_mass=`         | `.false.`                 | logical  | how to define clump mass: If false, all           |
+| `use_exclusive_mass=`         | `.true.`                  | logical  | how to define clump mass: If false, all           |
 |                               |                           |          | substructure of a clump is considered part of     |
 |                               |                           |          | its mass. Otherwise, use only particles that are  |
 |                               |                           |          | bound to the clump itself (excluding main haloes: |

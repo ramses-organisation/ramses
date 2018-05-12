@@ -156,25 +156,25 @@ module clfind_commons
   !----------------------
 
   logical :: make_mergertree = .true.     ! whether to make merger trees
-  logical :: use_exclusive_mass = .false. ! whether to use exclusive or inclusive halo mass definition for treemaking
-  integer :: nmost_bound = 250            ! maximal number of most bound particles to track
+  logical :: use_exclusive_mass = .true.  ! whether to use exclusive or inclusive halo mass definition for treemaking
+  integer :: nmost_bound = 200            ! maximal number of most bound particles to track
 
-  real(dp), allocatable, dimension(:,:) :: most_bound_energy    ! stores the energy of nmost_bound particles per peak
-  integer,  allocatable, dimension(:,:) :: most_bound_pid       ! stores particle ID of nmost_bound particles per peak
+  real(dp), allocatable, dimension(:,:) :: most_bound_energy      ! stores the energy of nmost_bound particles per peak
+  integer,  allocatable, dimension(:,:) :: most_bound_pid         ! stores particle ID of nmost_bound particles per peak
 
-  integer,  allocatable, dimension(:)   :: prog_id              ! global ID of progenitors
-  integer,  allocatable, dimension(:)   :: prog_owner           ! CPU that owns the progenitor
-  real(dp), allocatable, dimension(:)   :: prog_mass            ! list of progenitors masses
-  integer,  allocatable, dimension(:)   :: tracers_all          ! list of progenitor tracers (global particle IDs) of all progs
+  integer,  allocatable, dimension(:)   :: prog_id                ! global ID of progenitors
+  integer,  allocatable, dimension(:)   :: prog_owner             ! CPU that owns the progenitor
+  real(dp), allocatable, dimension(:)   :: prog_mass              ! list of progenitors masses
+  integer,  allocatable, dimension(:)   :: tracers_all            ! list of progenitor tracers (global particle IDs) of all progs
   integer,  allocatable, dimension(:)   :: tracers_loc_pid        ! list of progenitor tracers (local particle IDs)
   integer,  allocatable, dimension(:)   :: tracer_loc_progids_all ! list of progenitor IDs for tracers (local prog ID) of all progs
   integer,  allocatable, dimension(:)   :: tracer_loc_progids     ! list of progenitor IDs for tracers (local prog ID)
-                                                                ! only on this CPU
-  integer,  allocatable, dimension(:)   :: galaxy_tracers       ! list of active galaxy tracers 
-                                                                ! (the absolutely most bound  particle of progenitor) 
-  integer,  allocatable, dimension(:)   :: main_prog            ! main progenitor of each descendant 
-  integer,  allocatable, dimension(:)   :: main_desc            ! main descendant of each progenitor
-                                                                ! (the absolutely most bound  particle of progenitor) 
+                                                                  ! only on this CPU
+  integer,  allocatable, dimension(:)   :: galaxy_tracers         ! list of active galaxy tracers 
+                                                                  ! (the absolutely most bound  particle of progenitor) 
+  integer,  allocatable, dimension(:)   :: main_prog              ! main progenitor of each descendant 
+  integer,  allocatable, dimension(:)   :: main_desc              ! main descendant of each progenitor
+                                                                  ! (the absolutely most bound  particle of progenitor) 
   integer :: progenitorcount = 0 ! count the number of clumps that will be progenitors
   integer :: progenitorcount_written = 0 ! count the number of progenitors for output
   integer :: nprogs = 0          ! number of progenitors read in/to work with for creating tree

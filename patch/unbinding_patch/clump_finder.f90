@@ -3296,6 +3296,8 @@ subroutine particle_unbinding(ipeak, final_round)
             else
               hasatleastoneptcl(ipeak)=1 !there are contributing particles for this peak
             endif
+          else
+            contributes(thispart) = .false.
           endif
           thispart=clmppart_next(thispart)
         enddo

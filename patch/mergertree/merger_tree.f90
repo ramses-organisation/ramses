@@ -3014,7 +3014,6 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
               if (clmpidp(thispart) > 0) then
                 call get_local_peak_id(clmpidp(thispart), particle_local_id) 
                 if (particle_local_id == ipeak) then
-
                   clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
                   ! do i=1,3
                   !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
