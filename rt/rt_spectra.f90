@@ -884,7 +884,12 @@ SUBROUTINE write_SEDtable()
 
 ! Write the SED properties to a file (this is just in debugging, to check
 ! if the SEDs are being read correctly).
+! Photon group properties: age [Gyr], metal mass fraction, 
+! luminosity [photons s-1 Msun-1], cumulative luminosity [photons Msun-1], 
+! group energy [ergs], csn_HX [cm2], cse_HX [cm2], where HX=H2, HI, HeI,
+! and HeII ionising/dissociation groups, H2 optional
 !-------------------------------------------------------------------------
+  use rt_parameters,only:isH2
   character(len=128)::filename
   integer::ip, i, j
 !-------------------------------------------------------------------------
@@ -895,14 +900,24 @@ SUBROUTINE write_SEDtable()
 
      do j = 1,SED_nz
         do i = 1,SED_nA
-           write(10,900)                                                 &
-                SED_ages(i)        ,    SED_zeds(j)        ,             &
-                SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
-                SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
-                SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
-                SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
-                SED_table(i,j,ip,9),    SED_table(i,j,ip,10),            &
-                SED_table(i,j,ip,11)
+           if(isH2) then
+              write(10,900)                                                 &
+                   SED_ages(i)        ,    SED_zeds(j)        ,             &
+                   SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
+                   SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
+                   SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
+                   SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
+                   SED_table(i,j,ip,9),    SED_table(i,j,ip,10),            &
+                   SED_table(i,j,ip,11)
+           else
+              write(10,900)                                                 &
+                   SED_ages(i)        ,    SED_zeds(j)        ,             &
+                   SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
+                   SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
+                   SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
+                   SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
+                   SED_table(i,j,ip,9)
+           endif           
         end do
      end do
      close(10)
