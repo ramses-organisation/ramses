@@ -80,13 +80,14 @@ subroutine star_formation(ilevel)
   if(sf_log_properties.and.ifout.gt.1) then
      call title(ifout-1,nchar)
      if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
      endif
      filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
-     ilun=myid+10
+     ilun=myid+103
      call title(myid,nchar)
      fileloc=TRIM(filename)//TRIM(nchar)
      ! Wait for the token
