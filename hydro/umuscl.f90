@@ -168,10 +168,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
     call consup(uin,flux,divu,dt,ngrid)
   endif
 
-  if(momentum_feedback)then
-     call stellar_momentum(pin,flux,dx,dy,dz,dt,ngrid)
-  endif
-
 end subroutine unsplit
 !###########################################################
 !###########################################################
