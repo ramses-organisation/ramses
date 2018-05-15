@@ -38,7 +38,7 @@ module rt_parameters
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
   real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
-  real(dp),parameter::ionEv_HI    = 12.27
+  real(dp),parameter::ionEv_HI    = 11.20
   real(dp),parameter::ionEv_HII   = 13.60
   real(dp),parameter::ionEv_HeII  = 24.59
   real(dp),parameter::ionEv_HeIII = 54.42

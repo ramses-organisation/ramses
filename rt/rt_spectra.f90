@@ -188,7 +188,7 @@ FUNCTION getCrosssection(lambda, species)
     if(E .ge. 11.2  .and. E .lt. 13.6) getCrosssection=2.1d-19!Sternberg2014
     if(E .ge. 15.42 .and. E .lt. 16.5) getCrosssection=6.2e-18*E-9.4e-17
     if(E .ge. 16.5  .and. E .lt. 17.7) getCrosssection=1.4e-18*E-1.48e-17
-    if(E .ge. 117.7) getCrosssection=2.5e-14*E**(-2.71)
+    if(E .ge. 17.7) getCrosssection=2.5e-14*E**(-2.71)
     RETURN
   endif
   if(species .eq. ixHII) then ! HI
@@ -887,11 +887,11 @@ SUBROUTINE write_SEDtable()
 ! Photon group properties: age [Gyr], metal mass fraction, 
 ! luminosity [photons s-1 Msun-1], cumulative luminosity [photons Msun-1], 
 ! group energy [ergs], csn_HX [cm2], cse_HX [cm2], where HX=H2, HI, HeI,
-! and HeII ionising/dissociation groups, H2 optional
+! and HeII; H2 and He are optional
 !-------------------------------------------------------------------------
-  use rt_parameters,only:isH2
+  use rt_parameters,only: nIons
   character(len=128)::filename
-  integer::ip, i, j
+  integer::ip, i, j, k
 !-------------------------------------------------------------------------
   do ip=1,nSEDgroups
      write(filename,'(A, I1, A)') 'SEDtable', ip, '.list'
@@ -900,30 +900,24 @@ SUBROUTINE write_SEDtable()
 
      do j = 1,SED_nz
         do i = 1,SED_nA
-           if(isH2) then
-              write(10,900)                                                 &
-                   SED_ages(i)        ,    SED_zeds(j)        ,             &
-                   SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
-                   SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
-                   SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
-                   SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
-                   SED_table(i,j,ip,9),    SED_table(i,j,ip,10),            &
-                   SED_table(i,j,ip,11)
-           else
-              write(10,900)                                                 &
-                   SED_ages(i)        ,    SED_zeds(j)        ,             &
-                   SED_table(i,j,ip,1),    SED_table(i,j,ip,2),             &
-                   SED_table(i,j,ip,3),    SED_table(i,j,ip,4),             &
-                   SED_table(i,j,ip,5),    SED_table(i,j,ip,6),             &
-                   SED_table(i,j,ip,7),    SED_table(i,j,ip,8),             &
-                   SED_table(i,j,ip,9)
-           endif           
+           write(10,900,advance='no')                                    &
+                 SED_ages(i)        ,    SED_zeds(j)        ,            &
+                 SED_table(i,j,ip,1),    SED_table(i,j,ip,2),            &
+                 SED_table(i,j,ip,3)
+           if(nIons .gt. 1) then
+             do k = 1,nIons-1
+                 write(10,901,advance='no')                              &
+                       SED_table(i,j,ip,2+2*k), SED_table(i,j,ip,3+2*k)
+              enddo
+           endif
+           write(10,901)                                                 &
+                 SED_table(i,j,ip,2+2*nIons), SED_table(i,j,ip,3+2*nIons)
         end do
      end do
      close(10)
   end do
-900 format (ES15.4, ES15.4, ES15.4, ES15.4, f15.4                        &
-           ,ES15.4, ES15.4, ES15.4, ES15.4, ES15.4, ES15.4)
+900 format (ES15.4, ES15.4, ES15.4, ES15.4, f15.4)
+901 format (ES15.4, ES15.4)
 
 END SUBROUTINE write_SEDtable
 
