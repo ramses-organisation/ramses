@@ -289,43 +289,49 @@ SUBROUTINE read_rt_groups(nml_ok)
   ! Default groups are all blackbodies at 10^5 Kelvin:
   group_csn=0d0 ; group_cse=0d0 ; group_egy=0d0         ! Default all zero
   if(igroup_HI .gt. 0) then
-     if(ixHI .gt. 0) then
-        group_csn(igroup_HI,ixHI)=2.1d-19                     ! H2 dissociation
+     if(ixHI .gt. 0) then                                ! H2 dissociation
+        group_csn(igroup_HI,ixHI)=2.1d-19
         group_cse(igroup_HI,ixHI)=2.1d-19
      endif  
      group_egy(igroup_HI)=12.44
   endif
   if(igroup_HII .gt. 0) then
-     if(ixHI .gt. 0) then
-        group_csn(igroup_HII,ixHI)=5.0d-18 ! H2 ionization by HI photons
+     if(ixHI .gt. 0) then                   ! H2 ionization by HI photons
+        group_csn(igroup_HII,ixHI)=5.0d-18
         group_cse(igroup_HII,ixHI)=5.3d-18
      endif
-     group_csn(igroup_HII,ixHII)=3.007d-18                 ! HI ionization
+     group_csn(igroup_HII,ixHII)=3.007d-18                ! HI ionization
      group_cse(igroup_HII,ixHII)=2.781d-18
      group_egy(igroup_HII)=18.85
   endif
   if(igroup_HeII .gt. 0) then
-     if(ixHI .gt. 0) then
-        group_csn(igroup_HeII,ixHI)=2.9d-18 ! H2 ionization by HeI photons
+     if(ixHI .gt. 0) then                  ! H2 ionization by HeI photons
+        group_csn(igroup_HeII,ixHI)=2.9d-18
         group_cse(igroup_HeII,ixHI)=2.8d-18
      endif
-     group_csn(igroup_HeII,ixHII)=5.687d-19 ! HI ionization by HeI photons
+     group_csn(igroup_HeII,ixHII)=5.687d-19! HI ionization by HeI photons
      group_cse(igroup_HeII,ixHII)=5.042d-19
-     group_csn(igroup_HeII,ixHeII)=4.478d-18              ! HeI ionization
-     group_cse(igroup_HeII,ixHeII)=4.130d-18
+     if(ixHeII .gt. 0) then                              ! HeI ionization
+        group_csn(igroup_HeII,ixHeII)=4.478d-18   
+        group_cse(igroup_HeII,ixHeII)=4.130d-18
+     endif
      group_egy(igroup_HeII)=35.079
   endif
   if(igroup_HeIII .gt. 0) then
-     if(ixHI .gt. 0) then
-        group_csn(igroup_HeIII,ixHI)=4.1d-19 ! H2 ionization by HeII photons
+     if(ixHI .gt. 0) then                 ! H2 ionization by HeII photons
+        group_csn(igroup_HeIII,ixHI)=4.1d-19 
         group_cse(igroup_HeIII,ixHI)=4.1d-19
      endif
-     group_csn(igroup_HeIII,ixHII)=7.889d-20   ! HI ioniz. by HeII photons
+     group_csn(igroup_HeIII,ixHII)=7.889d-20  ! HI ioniz. by HeII photons
      group_cse(igroup_HeIII,ixHII)=7.456d-20
-     group_csn(igroup_HeIII,ixHeII)=1.197d-18 ! HeI ioniz. by HeII photons
-     group_cse(igroup_HeIII,ixHeII)=1.142d-18
-     group_csn(igroup_HeIII,ixHeIII)=1.055d-18           ! HeII ionization
-     group_cse(igroup_HeIII,ixHeIII)=1.001d-18
+     if(ixHeII .gt. 0) then                  ! HeI ioniz. by HeII photons
+        group_csn(igroup_HeIII,ixHeII)=1.197d-18 
+        group_cse(igroup_HeIII,ixHeII)=1.142d-18
+     endif
+     if(ixHeIII .gt. 0) then                            ! HeII ionization
+        group_csn(igroup_HeIII,ixHeIII)=1.055d-18     
+        group_cse(igroup_HeIII,ixHeIII)=1.001d-18
+     endif
      group_egy(igroup_HeIII)=65.666
   endif
 #endif
