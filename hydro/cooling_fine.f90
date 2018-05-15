@@ -96,6 +96,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp),dimension(nDim, nDim):: tEdd ! Eddington tensor
   real(dp),dimension(nDim):: flux
 #endif
+#ifdef grackle
+  real(kind=8),dimension(1:nvector),save:: T2_new
+#endif
 #if NENER>0
   integer::irad
 #endif
