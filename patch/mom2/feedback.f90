@@ -6,9 +6,10 @@ subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info2,dummy_io
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
@@ -17,10 +18,9 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal,t_sn_cont,current_time
-  integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,ilun,idim
-  real(dp),dimension(1:3)::skip_loc
+  real(dp)::t0,t_sn_cont,current_time
+  integer::igrid,jgrid,ipart,jpart,next_part,ivar
+  integer::ig,ip,npart1,npart2,icpu,ilun=0,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -175,25 +175,21 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun
+  integer::i,j,idim,nx_loc,ivar,ilun=0
   real(kind=8)::RandNum
   real(dp)::mstar,dx_min,vol_min
-  real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
-  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
-  real(dp)::sigma_d,delta_x,tau_factor,rad_factor
+  real(dp)::t0,ESN,mejecta,zloss,e,uvar
+  real(dp)::msne_min,mstar_max,FRAC_NT
   real(dp)::p_SN,pressure,gas_density,metallicity
   real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit,p_boost,r_cool
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  logical::error
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mloss,mzloss,ethermal,ekinetic,dteff
   real(dp),dimension(1:nvector),save::vol_loc
@@ -600,11 +596,10 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
-  integer::nSN_tot_all
+  integer::info
   integer,dimension(1:ncpu)::nSN_icpu_all
   real(dp),dimension(:),allocatable::mSN_all,sSN_all,ZSN_all
   real(dp),dimension(:,:),allocatable::xSN_all,vSN_all
@@ -617,15 +612,15 @@ subroutine kinetic_feedback
   !----------------------------------------------------------------------
   ! local constants
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
-  integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
+  integer::nSN,nSN_loc,nSN_tot,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::current_time
-  real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar
+  real(dp)::scale,dx_min,vol_min,mstar
   integer::nx_loc
   integer,dimension(:),allocatable::ind_part,ind_grid
   logical,dimension(:),allocatable::ok_free
-  integer ,dimension(:),allocatable::indSN
+  integer,dimension(:),allocatable::indSN
   real(dp),dimension(:),allocatable::mSN,sSN,ZSN,m_gas,vol_gas,ekBlast
   real(dp),dimension(:,:),allocatable::xSN,vSN,u_gas,dq
 
@@ -680,7 +675,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -740,7 +735,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  iSN=iSN+1
                  xSN(iSN,1)=xp(ipart,1)
                  xSN(iSN,2)=xp(ipart,2)
@@ -764,7 +759,7 @@ subroutine kinetic_feedback
   ! End loop over levels
 
   ! Remove GMC particle
-  IF(nSN_loc>0)then
+  if(nSN_loc>0)then
      ok_free=.true.
      call remove_list(ind_part,ind_grid,ok_free,nSN_loc)
      call add_free_cond(ind_part,ok_free,nSN_loc)
@@ -815,27 +810,28 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------------------------
   ! This routine average the hydro quantities inside the SN bubble
   !------------------------------------------------------------------------
-  integer::ilevel,ncache,nSN,j,iSN,ind,ix,iy,iz,ngrid,iskip
-  integer::i,nx_loc,igrid,info
+  integer::ilevel,ncache,nSN,iSN,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::x,y,z,dr_SN,d,u,v,w,ek,u2,v2,w2,dr_cell
+  real(dp)::x,y,z,dr_SN,u,v,w,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ,dimension(1:nSN)::ind_blast
-  real(dp),dimension(1:nSN)::mSN,m_gas,vol_gas,ekBlast
-  real(dp),dimension(1:nSN,1:3)::xSN,vSN,u_gas,dq,u2Blast
+  real(dp),dimension(1:nSN)::vol_gas,ekBlast
+  real(dp),dimension(1:nSN,1:3)::xSN,dq,u2Blast
 #ifndef WITHOUTMPI
-  real(dp),dimension(1:nSN)::m_gas_all,vol_gas_all,ekBlast_all
-  real(dp),dimension(1:nSN,1:3)::u_gas_all,dq_all,u2Blast_all
+  real(dp),dimension(1:nSN)::vol_gas_all,ekBlast_all
+  real(dp),dimension(1:nSN,1:3)::dq_all,u2Blast_all
 #endif
   logical ,dimension(1:nvector),save::ok
 
@@ -978,23 +974,21 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.
   !------------------------------------------------------------------------
-  integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
-  integer::i,nx_loc,igrid,info,ncache
+  integer::ilevel,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN,mstar,eta_sn2,msne_min,mstar_max
+  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,u,v,w,ESN,mstar,eta_sn2,msne_min,mstar_max
   real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,vol_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nSN)::mSN,sSN,ZSN,m_gas,p_gas,d_gas,d_metal,vol_gas,uSedov,ekBlast
-  real(dp),dimension(1:nSN,1:3)::xSN,vSN,u_gas,dq
+  real(dp),dimension(1:nSN)::mSN,sSN,ZSN,p_gas,d_gas,d_metal,vol_gas,uSedov,ekBlast
+  real(dp),dimension(1:nSN,1:3)::xSN,vSN,dq
   integer ,dimension(1:nSN)::indSN
   logical ,dimension(1:nvector),save::ok
 

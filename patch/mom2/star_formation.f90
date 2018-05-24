@@ -9,9 +9,11 @@ subroutine star_formation(ilevel)
   use poisson_commons
   use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
   use random
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info,info2,dummy_io
+  integer,parameter::tag=1120
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -29,37 +31,36 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot,ilun
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc,idim
-  integer ::ntot,ntot_all,info,nstar_corrected,ncell
-  logical ::ok_free,ok_all
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
+  integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
+  integer ::ntot,ntot_all,nstar_corrected
+  logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg
-  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
-  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
-  real(dp)::ul,ur,fl,fr,trgv,alpha0
-  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
-  real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
+  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,uvar
+  real(dp)::alpha0
+  real(dp)::sigma2
   real(dp)::birth_epoch,factG,M2
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
-  real(kind=8)::RandNum,GaussNum,PoissMean
+  real(kind=8)::PoissMean
   real(dp),parameter::pi=0.5*twopi
-  integer,parameter::tag=1120
-  integer::dummy_io,info2
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
-  real(dp)::mdebris
-  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell2,nstar
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::list_debris,ind_debris
-  integer ,dimension(1:nvector,0:twondim)::ind_nbor
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
   logical::file_exist
+#ifdef SOLVERmhd
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+#endif
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
