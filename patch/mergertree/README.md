@@ -26,16 +26,26 @@ two snapshots are linked as progenitors and descendants, if possible. Preferrabl
 snapshots are linked, but if a descendant has no direct progenitor in the adjacent snapshot, the program will try 
 to find progenitors in older snapshots.
 
+Optionally, it can create mock galaxy catalogues. Using a parametrised SHAM stellar-mass-halo-mass relation, the
+most bound particle of each clump is assigned a stellar mass. Once a subhalo is merged, the galaxy, now an orphan,
+is still being tracked until the end of the simulation.
 
 
-## Output
 
-The merger trees are stored in output_XXXXX/mergertree.txtYYYYY files. Each file contains 4 columns:
+## Mergertree Output
 
-* clump:          clump ID of a clump at this output number
-* progenitor:     the progenitor clump ID in output number "prog_outputnr"
-* prog_outputnr:  the output number of when the progenitor was an alive clump
-* case:           which case it was found (was it jumper, merger, new clump... you can safely ignore this).
+The merger trees are stored in output_XXXXX/mergertree_XXXXX.txtYYYYY files. Each file contains 11 columns:
+
+* clump:            clump ID of a clump at this output number
+* progenitor:       the progenitor clump ID in output number "prog_outputnr"
+* prog_outputnr:    the output number of when the progenitor was an alive clump
+* desc mass:        mass of the current clump. 
+* desc npart:       number of particles of the current clump. 
+* desc x,y,z:       x, y, z position of current clump.
+* desc vx, vy, vz:  x, y, z velocities of current clump.
+
+desc_mass and desc_npart will be either inclusive or exclusive, depending on how you set the `use_exclusive_mass` parameter. 
+(See below for details)
 
 **How to read the output:**
 
@@ -46,6 +56,15 @@ The merger trees are stored in output_XXXXX/mergertree.txtYYYYY files. Each file
 * A clump < 0 has progenitor < 0: this shouldn't happen.
 
 
+
+
+## Mock Galaxy Output
+
+The mock galaxy output is stored in output_XXXXX/galaxies_XXXXX.txtYYYYY files. Every file contains 5 columns:
+
+* Associated clump: Provided this is not an orphan galaxy, the clump ID in which this galaxy is. Orphan galaxies have associated clump = 0
+* Stellar Mass:     The galaxy's stellar mass in units of solar mass.
+* x, y, z:          position of the galaxy.
 
 
 
@@ -74,6 +93,11 @@ past merged progenitors are traced via 1 particle ("galaxy particle"), the past 
 "galaxy particle" that is also assigned as a particle of a descendant will be considered the main progenitor of the
 descendant under consideration.
 
+Mock galaxy catalogues are created using a parametrised SHAM relation between (sub)halo mass and stellar mass adapted
+from [Behroozi, Wechsler and Conroy 2013][3]. Once a subhalo merges into another clump, its (orphan) galaxy is still 
+being tracked for a user-specified number of snapshots (`max_past_snapshots` paarameter below) by tracking what was the 
+last identifiable most bound particle of that subhalo.
+
 
 
 ## New namelist parameters for this pach
@@ -91,13 +115,19 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 |                               |                           |          |                                                   |
 | `max_past_snapshots =`        | `0`                       | integer  | maximal number of past snapshots to store. If = 0,|
 |                               |                           |          | all past merged progenitors will be stored.       |
+|                               |                           |          | If `make_mock_galaxies=.true.`, it will also      |
+|                               |                           |          | limit the number of snapshots for which orphan    |
+|                               |                           |          | galaxies are tracked.                             |
 |                               |                           |          |                                                   |
-| `use_exclusive_mass=`         | `.true.`                  | logical  | how to define clump mass: If false, all           |
+| `use_exclusive_mass =`        | `.true.`                  | logical  | how to define clump mass: If false, all           |
 |                               |                           |          | substructure of a clump is considered part of     |
 |                               |                           |          | its mass. Otherwise, use only particles that are  |
 |                               |                           |          | bound to the clump itself (excluding main haloes: |
 |                               |                           |          | main haloes always consist of all the particles   |
 |                               |                           |          | within them)                                      |
+|                               |                           |          |                                                   |
+| `make_mock_galaxies =`        | `.true.`                  | logical  | whether to also create mock galaxy catalogues     |
+|                               |                           |          | on the fly.                                       |
 
 
 
@@ -224,3 +254,4 @@ Can be set in the `CLUMPFIND_PARAMS` block
 
 [1]: https://www.nccs.nasa.gov/images/FloatingPoint_consistency.pdf
 [2]: https://drive.google.com/file/d/0B7IyoMUxCr-3V3NFSVFjY1lMbk0
+[3]: https://arxiv.org/pdf/1207.6105.pdf 

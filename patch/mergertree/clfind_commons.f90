@@ -72,27 +72,27 @@ module clfind_commons
 
 
   !----------------------------
-  !Particle unbinding related
+  ! Particle unbinding related
   !----------------------------
 
-  logical :: unbinding_formatted_output=.false.         !write unformatted output by request
+  logical :: unbinding_formatted_output=.false.                 ! write unformatted output by request
 
-  integer :: nunbound, nunbound_tot, candidates, candidates_tot !counters
-  integer :: mergelevel_max                             !deepest merging level
-  integer, allocatable, dimension(:)  :: clmppart_first !first particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: clmppart_last  !last particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: clmppart_next  !next particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: nclmppart      !number of particle in particle linked list for each peak id
-  
-  integer, allocatable,dimension(:)   :: clmpidp        ! ID of peak particle is in
-  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb    ! particle based center of mass, clump velocity
-  real(dp),allocatable,dimension(:)   :: clmp_mass_pb   ! particle based clump mass
-  logical                             :: periodical
+  integer :: nunbound, nunbound_tot, candidates, candidates_tot ! counters
+  integer :: mergelevel_max                                     ! deepest merging level
+  integer, allocatable, dimension(:)  :: clmppart_first         ! first particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: clmppart_last          ! last particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: clmppart_next          ! next particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: nclmppart              ! number of particle in particle linked list for each peak id
+
+  integer, allocatable,dimension(:)   :: clmpidp                ! ID of peak particle is in
+  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb            ! particle based center of mass, clump velocity
+  real(dp),allocatable,dimension(:)   :: clmp_mass_pb           ! particle based clump mass
+  logical                             :: periodical             ! if simulation is periodical
   
 
 
   !-----------
-  !mass bins
+  ! mass bins
   !-----------
 
   integer :: nmassbins=50
@@ -105,24 +105,24 @@ module clfind_commons
 
 
 
-  !----------------
-  !Potential stuff
-  !----------------
+  !-----------------
+  ! Potential stuff
+  !-----------------
 
-  logical   :: saddle_pot=.true. !subtract the potential at the closest saddle of the CoM for unbinding
-                                 !=considering neighbours for the exclusive unbinding
+  logical   :: saddle_pot=.true. ! subtract the potential at the closest saddle of the CoM for unbinding
+                                 ! =considering neighbours for the exclusive unbinding
 
 
-  real(dp),allocatable,dimension(:)   :: phi_unb !gravitational potential phi
+  real(dp),allocatable,dimension(:)   :: phi_unb        ! gravitational potential phi
   real(dp)  :: rmin=0.0
-  real(dp)  :: GravConst        !gravitational Constant. =factG elsewhere.
+  real(dp)  :: GravConst                                ! gravitational Constant. =factG elsewhere.
   real(dp),allocatable,dimension(:)   :: closest_border ! closest border of clump to the center of mass
                                                         ! stores relative distance squared in each direction
                                                         ! (x^2+y^2+z^2)
   
-  !-------------------------
-  !Repeated unbinding stuff
-  !-------------------------
+  !--------------------------
+  ! Repeated unbinding stuff
+  !--------------------------
 
   logical   :: iter_properties=.true.  ! whether to repeat the unbinding with updated clump properties
   real(dp)  :: conv_limit = 0.01       ! convergence factor. If the v_clump_old/v_clump_new < conv_limit,
@@ -174,12 +174,12 @@ module clfind_commons
                                                                   ! (the absolutely most bound  particle of progenitor) 
   integer,  allocatable, dimension(:)   :: main_prog              ! main progenitor of each descendant 
   integer,  allocatable, dimension(:)   :: main_desc              ! main descendant of each progenitor
-                                                                  ! (the absolutely most bound  particle of progenitor) 
-  integer :: progenitorcount = 0 ! count the number of clumps that will be progenitors
-  integer :: progenitorcount_written = 0 ! count the number of progenitors for output
-  integer :: nprogs = 0          ! number of progenitors read in/to work with for creating tree
-  integer :: prog_free = 1       ! first free progenitor local index
-  integer :: ntracers = 0        ! number of tracers on this CPU
+
+  integer :: progenitorcount = 0          ! count the number of clumps that will be progenitors
+  integer :: progenitorcount_written = 0  ! count the number of progenitors for output
+  integer :: nprogs = 0                   ! number of progenitors read in/to work with for creating tree
+  integer :: prog_free = 1                ! first free progenitor local index
+  integer :: ntracers = 0                 ! number of tracers on this CPU
 
 
 
@@ -240,6 +240,106 @@ module clfind_commons
 
 
 
+
+
+
+
+!#####################################################################################
+!#######################                        ######################################
+!#######################   MOCK GALAXIES        ######################################
+!#######################                        ######################################
+!#####################################################################################
+
+
+  logical :: make_mock_galaxies = .true.  ! whether to make galaxies
+
+  real(dp), allocatable, dimension(:) :: m_peak, a_peak             ! peak mass and expansion factor at time of mass peak
+  real(dp), allocatable, dimension(:) :: prog_m_peak, prog_a_peak   ! peak mass and expansion factor for progenitors
+  real(dp), allocatable, dimension(:) :: pmprogs_stellar_mass       ! stellar mass of past merged progenitors
+
+  integer, allocatable, dimension(:)  :: orphans_local_pid          ! local particle id of orphans
+  integer, allocatable, dimension(:)  :: prog_galaxy_local_id       ! local particle id of progenitor galaxies
+
+
+contains
+
+  !=====================================================
+  real(dp) function stellar_mass(m, a)
+  !=====================================================
+
+    use amr_commons, ONLY: dp,omega_m,h0,aexp,boxlen_ini
+    use cooling_module, ONLY: rhoc
+    !-----------------------------------------------------------
+    ! Computes stellar mass given peak mass and expansion
+    ! factor a at time when clump had peak mass using a 
+    ! parametric SHAM relation taken from
+    ! Behroozi, Wechsler & Conroy 2013
+    ! DOI:	                10.1088/0004-637X/770/1/57
+    ! Bibliographic Code:	  2013ApJ...770...57B
+    ! http://adsabs.harvard.edu/abs/2013ApJ...770...57B 
+    !-----------------------------------------------------------
+    
+    implicit none
+    real(dp), intent(in) :: m ! mass
+    real(dp), intent(in) :: a ! expansion factor 
+
+    real(dp) :: euler = 2.7182818284590
+    real(dp) :: log10_2 = 0.301029995663981 ! log_10(2)
+    real(dp) :: M_Sol = 1.998E33            ! solar mass in g
+    real(dp) :: scale_m, scale_d, scale_l
+
+    real(dp) :: M_10    =   11.514 
+    real(dp) :: M_1a    = -  1.793
+    real(dp) :: M_1z    = -  0.251
+    real(dp) :: e_0     = -  1.777
+    real(dp) :: e_a     = -  0.006
+    real(dp) :: e_z     =    0.000
+    real(dp) :: e_a2    = -  0.119
+    real(dp) :: alpha_0 = -  1.412
+    real(dp) :: alpha_a =    0.731
+    real(dp) :: delta_0 =    3.508 
+    real(dp) :: delta_a =    2.608
+    real(dp) :: delta_z = -  0.043
+    real(dp) :: gamma_0 =    0.316 
+    real(dp) :: gamma_a =    1.319 
+    real(dp) :: gamma_z =    0.279
+
+    real(dp) :: nu
+    real(dp) :: loge
+    real(dp) :: alpha
+    real(dp) :: delta
+    real(dp) :: gam
+    real(dp) :: logM1
+
+    real(dp) :: z, f0
+
+    z = 1.D0/a - 1
+
+    scale_d = omega_m * rhoc *(h0/100.)**2 / aexp**3
+    scale_l = aexp * boxlen_ini * 3.08d24 / (h0/100)
+    scale_m = scale_d * scale_l**3 / M_Sol ! get mass in units of M_Sol
+
+    nu = exp(-4.d0*a**2)
+    logM1 = M_10    + nu*(M_1a   *(a-1)  + M_1z*z)
+    loge  = e_0     + nu*(e_a    *(a-1)  + e_z*z ) + e_a2*(a-1)
+    alpha = alpha_0 + nu*(alpha_a*(a-1))
+    delta = delta_0 + nu*(delta_a*(a-1)            + delta_z*z)
+    gam   = gamma_0 + nu*(gamma_a*(a-1)            + gamma_z*z)
+
+    f0 = -log10_2 + delta*log10_2**gam/(1.d0 + euler)
+    stellar_mass = 10**(loge+logM1 + f(log10(m*scale_m)-logM1)- f0) / 0.7* (h0/100)
+
+
+  contains
+
+    real(dp) function f(x)
+      real(dp), intent(in) :: x
+      f = -log10(10**(alpha*x) + 1) + delta*log10(1.d0+exp(x))**gam/(1.D0 + exp(10**(-x)))
+    end function f
+
+
+
+  end function stellar_mass
 
 
 

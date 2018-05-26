@@ -14,6 +14,7 @@
 ! subroutine read_progenitor_data()
 ! subroutine write_trees()
 ! subroutine write_progenitor_data()
+! subroutine make_galaxies()
 ! subroutine get_local_prog_id()
 ! subroutine fill_matrix()
 ! subroutine deallocate_mergertree()
@@ -71,8 +72,11 @@ subroutine make_merger_tree()
 
     endif
 
-    ! write tree to file
-    call write_trees()
+
+    if (npeaks_tot > 0) then
+      ! write tree to file
+      call write_trees()
+    endif
 
   endif
 
@@ -83,10 +87,17 @@ subroutine make_merger_tree()
   ! Prepare for next round
   !----------------------------
 
-  ! Mark tracer particles
-  call mark_tracer_particles()
+  if (npeaks_tot > 0) then
+    ! Mark tracer particles
+    call mark_tracer_particles()
 
-  ! write output
+    ! make mock galaxies
+    if (make_mock_galaxies) then
+      call make_galaxies()
+    endif
+  endif
+
+  ! write progenitor output in any case
   call write_progenitor_data()
 
   ! Finish
@@ -175,6 +186,12 @@ subroutine process_progenitor_data()
   allocate(tracer_local_ids_long(1:nprogs*nmost_bound))  ! local progenitor id for tracers (room enough for all tracers)
 
 
+  if (make_mock_galaxies) then
+    allocate(orphans_local_pid(1:npastprogs+nprogs))
+    orphans_local_pid = 0
+    allocate(prog_galaxy_local_id(1:nprogs))
+    prog_galaxy_local_id = 0
+  endif
 
 
   !---------------------------------
@@ -201,7 +218,12 @@ subroutine process_progenitor_data()
   enddo
 
   dummy_real(1:npastprogs) = pmprogs_mass(1:npastprogs)
+  do i = 1, npastprogs
+    pmprogs_mass(i) = dummy_real(sort_ind_past(i))
+  enddo
 
+
+  dummy_real(1:npastprogs) = pmprogs_stellar_mass(1:npastprogs)
   do i = 1, npastprogs
     pmprogs_mass(i) = dummy_real(sort_ind_past(i))
   enddo
@@ -269,6 +291,7 @@ subroutine process_progenitor_data()
           else if (pmprogs_galaxy(ipastprog) == idp_copy(ipart)) then 
             ! you found a match!
             pmprogs_owner(ipastprog) = myid
+            if (make_mock_galaxies) orphans_local_pid(ipastprog) = part_local_ind(ipart)
             ipastprog = ipastprog + 1
           else  
             exit
@@ -294,6 +317,7 @@ subroutine process_progenitor_data()
             igalaxy = igalaxy + 1
           else if (galaxy_tracers_copy(igalaxy) == tracers_all(itrace)) then
             prog_owner(iprog) = myid
+            if (make_mock_galaxies) prog_galaxy_local_id(iprog) = part_local_ind(ipart)   ! store local ID of galaxy particle
             igalaxy = igalaxy + 1
             exit
           else
@@ -320,6 +344,7 @@ subroutine process_progenitor_data()
       else if (pmprogs_galaxy(ipastprog) == idp_copy(ipart)) then 
         ! you found a match!
         pmprogs_owner(ipastprog) = myid
+        if (make_mock_galaxies) orphans_local_pid(ipastprog) = part_local_ind(ipart)
         ipastprog = ipastprog + 1
       else  
         exit
@@ -1351,6 +1376,10 @@ subroutine make_trees()
       pmprogs_t(pmprog_free) = ifout-1 ! prog was active clump for the last time at this timestep 
       pmprogs_owner(pmprog_free) = myid
       pmprogs_mass(pmprog_free) = prog_mass(iprog)
+      if (make_mock_galaxies) then
+        orphans_local_pid(pmprog_free) = prog_galaxy_local_id(iprog)
+        pmprogs_stellar_mass(pmprog_free) = stellar_mass(prog_m_peak(iprog), prog_a_peak(iprog))
+      endif
       pmprog_free = pmprog_free + 1
 
       return
@@ -1752,6 +1781,7 @@ subroutine read_progenitor_data()
   integer :: prog_read, prog_read_local, startind, tracer_free, nprogs_to_read, progcount_to_read, np
   integer, allocatable, dimension(:) :: read_buffer   ! temporary array for reading in data
   real(dp),allocatable, dimension(:) :: read_buffer_2 ! temporary array for reading in data
+  real(dp),allocatable, dimension(:) :: read_buffer_macc, read_buffer_aacc ! temporary array for reading in mock galaxy data
 
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string
@@ -1848,7 +1878,16 @@ subroutine read_progenitor_data()
   tracer_loc_progids_all = 0
   tracer_free = 1   ! first free local tracer index
 
-
+  if (make_mock_galaxies) then
+    i = nprogs
+  else
+    ! just to prevent "may be uninitialized" warnings
+    i = 1
+  endif
+  allocate(prog_m_peak(1:i))
+  prog_m_peak = 0
+  allocate(prog_a_peak(1:i))
+  prog_a_peak = 0
 
 
   if (nprogs > 0) then
@@ -1877,13 +1916,6 @@ subroutine read_progenitor_data()
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) read_buffer
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! i = 1
-    ! do iprog = 1, nprogs_to_read
-    !   write(*,*) "read ", i, i+250, iprog
-    !   read(666, '(251(I7,x))') read_buffer(i:i+250)
-    !   i = i + 251
-    ! enddo
     close(666)
 #endif
 
@@ -1905,18 +1937,32 @@ subroutine read_progenitor_data()
 
 
     allocate(read_buffer_2(1:nprogs_to_read))
+    if (make_mock_galaxies) then
+      i = nprogs_to_read
+    else
+      ! just to prevent "may be uninitialized" warnings
+      i = 1
+    endif
+    allocate(read_buffer_macc(1:i))
+    read_buffer_macc = 0
+    allocate(read_buffer_aacc(1:i))
+    read_buffer_aacc = 0
 
 #ifndef WITHOUTMPI
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
     call MPI_FILE_READ(filehandle, read_buffer_2, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
+    if (make_mock_galaxies) then
+      call MPI_FILE_READ(filehandle, read_buffer_macc, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
+      call MPI_FILE_READ(filehandle, read_buffer_aacc, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
+    endif
     call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) read_buffer_2
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! do iprog = 1, nprogs_to_read
-    !   read(666, '(E14.6,x)') read_buffer_2(iprog)
-    ! enddo
+    if (make_mock_galaxies) then
+      read(666) read_buffer_macc
+      read(666) read_buffer_aacc
+    endif
     close(666)
 #endif
 
@@ -1943,6 +1989,10 @@ subroutine read_progenitor_data()
       call get_local_prog_id(prog_read, prog_read_local)
 
       prog_mass(prog_read_local) = read_buffer_2(iprog)
+      if (make_mock_galaxies) then
+        prog_m_peak(prog_read_local) = read_buffer_macc(iprog)
+        prog_a_peak(prog_read_local) = read_buffer_aacc(iprog)
+      endif
 
       do i = startind+2, startind+1+np
         if (read_buffer(i) > 0) then
@@ -1964,6 +2014,7 @@ subroutine read_progenitor_data()
     enddo
 
     deallocate(read_buffer, read_buffer_2)
+    if (make_mock_galaxies) deallocate(read_buffer_macc, read_buffer_aacc)
 
   endif ! nprogs > 0
 
@@ -2006,6 +2057,13 @@ subroutine read_progenitor_data()
   pmprogs_mass = 0
 
 
+  ! mock galaxy stuff
+  if (make_mock_galaxies) then
+    allocate(pmprogs_stellar_mass(1:npastprogs_max))
+    pmprogs_stellar_mass = 0
+  endif
+
+
   
 
   if (npastprogs > 0) then
@@ -2027,13 +2085,6 @@ subroutine read_progenitor_data()
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) read_buffer
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! i = 1
-    ! do iprog = 1, npastprogs
-    !   read(666, '(3(I7,x))') read_buffer(i:i+3)
-    !   write(*,*) "Read past prog", read_buffer(i)
-    !   i = i + 3
-    ! enddo
     close(666)
 #endif
 
@@ -2057,14 +2108,16 @@ subroutine read_progenitor_data()
 #ifndef WITHOUTMPI
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
     call MPI_FILE_READ(filehandle, pmprogs_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
+    if (make_mock_galaxies) then
+      call MPI_FILE_READ(filehandle, pmprogs_stellar_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
+    endif
     call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) pmprogs_mass(1:npastprogs)
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! do iprog = 1, nprogs_to_read
-    !   read(666, '(E14.6,x)') read_buffer_2(iprog)
-    ! enddo
+    if (make_mock_galaxies) then
+      read(666) pmprogs_stellar_mass(1:npastprogs)
+    endif
     close(666)
 #endif
 
@@ -2130,12 +2183,12 @@ subroutine write_trees()
 
   call title(ifout, dir)
   call title(myid, idnr) 
-  fileloc=TRIM('output_'//TRIM(dir)//'/mergertree.txt'//TRIM(idnr))
+  fileloc=TRIM('output_'//TRIM(dir)//'/mergertree_'//TRIM(dir)//'.txt'//TRIM(idnr))
 
   open(unit=666,file=fileloc,form='formatted')
   write(666, '(3(A15),8(A18))') &
     "clump", "progenitor", "prog outputnr", &
-    "desc excl mass", "desc excl npart", &
+    "desc mass", "desc npart", &
     "desc x", "desc y", "desc z", &
     "desc vx", "desc vy", "desc vz"
   !----------------------------------
@@ -2245,6 +2298,9 @@ subroutine write_progenitor_data()
   integer :: ihalo, haloid, npastprogs_all
   integer, allocatable, dimension(:)  :: particlelist, pastproglist
   real(dp), allocatable, dimension(:) :: masslist, pastprogmasslist
+  real(dp), allocatable, dimension(:) :: mpeaklist ! mass at accretion for subhalos
+  real(dp), allocatable, dimension(:) :: apeaklist ! expansion factor a at accretion for subhalos
+  real(dp), allocatable, dimension(:) :: pastprogstellarmasslist ! stellar masses of past merged progs
 
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string, id_to_string 
@@ -2277,11 +2333,23 @@ subroutine write_progenitor_data()
   ! and overestimated to surely have enough array length
 
   allocate(particlelist(1:progenitorcount_written*(nmost_bound+2)))
+  particlelist = 0
   allocate(masslist(1:progenitorcount_written))
+  masslist = 0
+
+  if (make_mock_galaxies) then
+    ipart = progenitorcount_written
+  else
+    ! just to prevent "may be uninitialized" warnings
+    ipart = 1
+  endif
+  allocate(mpeaklist(1:ipart))
+  mpeaklist = 0
+  allocate(apeaklist(1:ipart))
+  apeaklist = 0
+    
 
   if (progenitorcount_written > 0) then
-    particlelist = 0
-    masslist = 0
 
     do ipeak = 1, hfree-1
       ! write only peaks that have most bound particles
@@ -2314,6 +2382,12 @@ subroutine write_progenitor_data()
           else
             masslist(ihalo) = clmp_mass_pb(ipeak)
           endif
+
+          if (make_mock_galaxies) then                    ! store mass and a_exp at accretion
+            mpeaklist(ihalo) = m_peak(ipeak)
+            apeaklist(ihalo) = a_peak(ipeak)
+          endif
+
 
           ! loop over mostbound particle list
           do ipart = first_bound, nmost_bound
@@ -2364,14 +2438,6 @@ subroutine write_progenitor_data()
   open(unit=666,file=fileloc,form='unformatted')
   write(666) particlelist
   close(666)
-  ! open(unit=666, file=fileloc, form='formatted')
-  ! do ipeak = 1, ihalo
-  !   do ipart=(ipeak-1)*(nmost_bound+1) + 1, (ipeak)*(nmost_bound+1)
-  !     write(666, '(I7,x)', advance='no') particlelist(ipart)
-  !   enddo
-  !   write(666,*)
-  ! enddo
-  ! close(666)
 #endif
 
 
@@ -2387,20 +2453,24 @@ subroutine write_progenitor_data()
 #ifndef WITHOUTMPI
   call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
   call MPI_FILE_WRITE_ORDERED(filehandle, masslist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  if (make_mock_galaxies) then
+    call MPI_FILE_WRITE_ORDERED(filehandle, mpeaklist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
+    call MPI_FILE_WRITE_ORDERED(filehandle, apeaklist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  endif
   call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
   open(unit=666,file=fileloc,form='unformatted')
   write(666) masslist
+  if (make_mock_galaxies) then
+    write(666) mpeaklist
+    write(666) apeaklist
+  endif
   close(666)
-  ! open(unit=666, file=fileloc, form='formatted')
-  ! do ipeak = 1, ihalo
-  !   write(666, '(E14.6,x)') masslist(ipeak)
-  ! enddo
-  ! close(666)
 #endif
 
   deallocate(particlelist)
   deallocate(masslist)
+  if (make_mock_galaxies) deallocate(mpeaklist, apeaklist)
 
 
 
@@ -2420,8 +2490,19 @@ subroutine write_progenitor_data()
 
   allocate(pastproglist(1:3*(pmprog_free-1)))
   pastproglist = 0
-  allocate(pastprogmasslist(1:3*(pmprog_free-1)))
+  allocate(pastprogmasslist(1:(pmprog_free-1)))
   pastprogmasslist = 0
+
+  if (make_mock_galaxies) then
+    ipart = (pmprog_free-1)
+  else
+    ! this is only to prevent "may be uninitialized" warnings
+    ipart = 1
+  endif
+  allocate(pastprogstellarmasslist(1:ipart))
+  pastprogstellarmasslist = 0
+
+
 
   npastprogs_all = 0 ! count how many pmprogs you write. will be communicated later.
   pind = 0
@@ -2451,6 +2532,9 @@ subroutine write_progenitor_data()
             pind = pind + 3
             npastprogs_all = npastprogs_all + 1
             pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
+            if (make_mock_galaxies) then
+              pastprogstellarmasslist(npastprogs_all) = pmprogs_stellar_mass(ipeak)
+            endif
           endif
         else
           pastproglist(pind+1) = pmprogs(ipeak)
@@ -2459,6 +2543,9 @@ subroutine write_progenitor_data()
           pind = pind + 3
           npastprogs_all = npastprogs_all + 1
           pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
+          if (make_mock_galaxies) then
+            pastprogstellarmasslist(npastprogs_all) = pmprogs_stellar_mass(ipeak)
+          endif
         endif
       endif
     enddo
@@ -2486,13 +2573,6 @@ subroutine write_progenitor_data()
   open(unit=666,file=fileloc,form='unformatted')
   write(666) pastproglist
   close(666)
-  ! open(unit=666, file=fileloc, form='formatted')
-  ! ipart = 1
-  ! do while (ipart< pind)
-  !   write(666, '(3(I7,x))') pastproglist(ipart), pastproglist(ipart+1), pastproglist(ipart+2)
-  !   ipart = ipart + 3
-  ! enddo
-  ! close(666)
 #endif  
 
 
@@ -2506,16 +2586,18 @@ subroutine write_progenitor_data()
 #ifndef WITHOUTMPI
   call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
   call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  if (make_mock_galaxies) then
+    call MPI_FILE_WRITE_ORDERED(filehandle, pastprogstellarmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
+  endif
   call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
   open(unit=666,file=fileloc,form='unformatted')
   write(666) pastprogmasslist
+  if (make_mock_galaxies) then
+    write(666) pastprogmasslist
+    write(666) pastprogmasslist
+  endif
   close(666)
-  ! open(unit=666, file=fileloc, form='formatted')
-  ! do ipeak = 1, ihalo
-  !   write(666, '(E14.6,x)') pastprogmasslist(ipeak)
-  ! enddo
-  ! close(666)
 #endif
 
   deallocate(pastproglist, pastprogmasslist)
@@ -2553,6 +2635,128 @@ subroutine write_progenitor_data()
   endif
 
 end subroutine write_progenitor_data
+
+
+
+
+
+!===========================================
+subroutine make_galaxies()
+!===========================================
+  
+  !---------------------------------------------------
+  ! This subroutine assigns stellar masses to haloes,
+  ! subhaloes and orphans and writes it to file.
+  !---------------------------------------------------
+
+  use clfind_commons
+  use pm_commons, only: xp
+
+  implicit none
+  integer               :: ipeak, mbpart, iprog
+  real(dp)              :: m_to_use, a_to_use
+  character(LEN=80)     :: fileloc
+  character(LEN=5)      :: output_to_string, id_to_string 
+
+
+  allocate(a_peak(1:npeaks_max))
+  a_peak = 0
+  allocate(m_peak(1:npeaks_max))
+  m_peak = 0
+
+
+
+  !----------------------------------------
+  ! get masses and a_exp for all clumps
+  !----------------------------------------
+
+  do ipeak = 1, npeaks
+    if (clmp_mass_exclusive(ipeak) > 0) then
+      if (is_namegiver(ipeak)) then
+        ! main halo: track peak mass
+        if (main_prog(ipeak) > 0) then
+          if (clmp_mass_pb(ipeak) > prog_m_peak(main_prog(ipeak))) then
+            m_peak(ipeak) = clmp_mass_pb(ipeak)
+            a_peak(ipeak) = aexp
+          else
+            m_peak(ipeak) = prog_m_peak(main_prog(ipeak))
+            a_peak(ipeak) = prog_a_peak(main_prog(ipeak))
+          endif
+        else
+          ! if no progenitor data available: store new
+          m_peak(ipeak) = clmp_mass_pb(ipeak)
+          a_peak(ipeak) = aexp
+        endif
+      else
+        ! if satellite and has a progenitor:
+        if (main_prog(ipeak) > 0) then
+          m_peak(ipeak) = prog_m_peak(main_prog(ipeak))
+          a_peak(ipeak) = prog_a_peak(main_prog(ipeak))
+        else
+          m_peak(ipeak) = clmp_mass_pb(ipeak)
+          a_peak(ipeak) = aexp
+        endif
+      endif
+    endif
+  enddo
+
+#ifndef WHITOUTMPI
+  call boundary_peak_dp(m_peak)
+  call boundary_peak_dp(a_peak)
+#endif
+
+
+  !--------------------------
+  ! Prepare file
+  !--------------------------
+
+  call title(ifout, output_to_string)
+  call title(myid, id_to_string)
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/galaxies_'//TRIM(output_to_string)//'.txt'//TRIM(id_to_string))
+
+  open(unit=666,file=fileloc,form='formatted')
+  write(666,'(5(A20,x))') "Associated clump", "Stellar Mass [M_Sol]", "x", "y", "z"
+
+  !--------------------------
+  ! Write currently active
+  !--------------------------
+
+  do ipeak = 1, hfree-1
+    if (clmp_mass_exclusive(ipeak)>0) then
+      ! only do stuff if you have the most bound particle here
+      if (most_bound_pid(ipeak, 1)>0) then 
+        mbpart = most_bound_pid(ipeak,1) ! get local index of most bound particle
+        if(is_namegiver(ipeak)) then
+          m_to_use = clmp_mass_pb(ipeak)
+          a_to_use = aexp
+        else
+          m_to_use = m_peak(ipeak)
+          a_to_use = a_peak(ipeak)
+        endif
+        write(666, '(I20,x,4(E20.12,x))') -clmpidp(mbpart), stellar_mass(m_to_use, a_to_use), xp(mbpart,1:3)
+      endif
+    endif
+  enddo
+
+
+  !--------------------------
+  ! Write orphans
+  !--------------------------
+
+  do iprog = 1, pmprog_free-1
+    if (pmprogs_owner(iprog)==myid) then
+      mbpart = orphans_local_pid(iprog)
+      write(666, '(I20,x,4(E20.12,x))') 0, pmprogs_stellar_mass(iprog), xp(mbpart,1:3)
+    endif
+  enddo
+
+
+
+  close(666)
+
+
+end subroutine make_galaxies
 
 
 
@@ -2706,55 +2910,77 @@ subroutine deallocate_mergertree()
 
   use clfind_commons 
   implicit none
-  
-  if (allocated(prog_id)) then
+
+
+  if (ifout > 1) then
+
+    deallocate(main_prog)
+    deallocate(prog_outputnr)
+
     deallocate(prog_id)
     deallocate(prog_owner)
     deallocate(galaxy_tracers)
     deallocate(prog_mass)
-  endif
 
-
-  if (allocated(p2d_links%first)) then
-    deallocate(p2d_links%first)
-    deallocate(p2d_links%cnt)
-    deallocate(p2d_links%ntrace)
-    deallocate(p2d_links%clmp_id)
-    deallocate(p2d_links%next)
-
-    deallocate(d2p_links%first)
-    deallocate(d2p_links%cnt)
-    deallocate(d2p_links%ntrace)
-    deallocate(d2p_links%clmp_id)
-    deallocate(d2p_links%next)
-
-    deallocate(main_desc)
-  endif
-
-  if(ifout > 1) then
-    deallocate(main_prog)
-    deallocate(prog_outputnr)
-  endif
-
-  if (allocated(pmprogs)) then
     deallocate(pmprogs)
     deallocate(pmprogs_owner)
     deallocate(pmprogs_galaxy)
     deallocate(pmprogs_t)
     deallocate(pmprogs_mass)
-  endif
+
+    if (make_mock_galaxies) then
+      deallocate(prog_m_peak)
+      deallocate(prog_a_peak)
+      deallocate(pmprogs_stellar_mass)
+    endif
 
 
-  if (allocated(tracers_all)) then
-      deallocate(tracers_all)
+    if (nprogs > 0) then
+
+      deallocate(p2d_links%first)
+      deallocate(p2d_links%cnt)
+      deallocate(p2d_links%ntrace)
+      deallocate(p2d_links%clmp_id)
+      deallocate(p2d_links%next)
+
+      deallocate(d2p_links%first)
+      deallocate(d2p_links%cnt)
+      deallocate(d2p_links%ntrace)
+      deallocate(d2p_links%clmp_id)
+      deallocate(d2p_links%next)
+     
+      deallocate(main_desc)
+
+
+
+      if (make_mock_galaxies) then
+        deallocate(prog_galaxy_local_id)
+        deallocate(orphans_local_pid)
+      endif
+
+
+
+    else
+      deallocate(tracers_all) 
       deallocate(tracer_loc_progids_all)
+    endif
+
+
   endif
-   
+
+
+  if (npeaks_tot > 0 .and. make_mock_galaxies) deallocate(m_peak, a_peak)
+  
 
   deallocate(most_bound_energy)
   deallocate(most_bound_pid)
   deallocate(clmp_mass_exclusive)
   ! deallocate(clmp_vel_exclusive)
+
+
+
+
+
 
 end subroutine deallocate_mergertree
 

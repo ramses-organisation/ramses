@@ -333,12 +333,14 @@ subroutine unbinding()
           endif
         enddo
 
-        ! communicate
+        ! communicate: gather only, no need to scatter to virtuals, they will be reset immediately
         call virtual_peak_dp(clmp_mass_pb(:), 'sum')
-        call boundary_peak_dp(clmp_mass_pb(:))
 
       enddo
     endif
+
+    ! now scatter to virtuals
+    call boundary_peak_dp(clmp_mass_pb(:))
 
     ! Now call mergertree
     call make_merger_tree()

@@ -973,7 +973,7 @@ subroutine read_clumpfind_params()
        & saddle_pot,iter_properties,conv_limit, repeat_max, &
        !mergertree parameters
        & make_mergertree, nmost_bound, max_past_snapshots, &
-       & use_exclusive_mass
+       & use_exclusive_mass, make_mock_galaxies
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v  
 
