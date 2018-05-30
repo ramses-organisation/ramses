@@ -7,9 +7,9 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer(kind=8)::n_step
   integer::info,tot_pt
   real(kind=8)::tt1,tt2,muspt,muspt_this_step,wallsec,dumpsec

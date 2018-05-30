@@ -14,9 +14,9 @@ subroutine load_balance
 #endif
 #endif
   use bisection
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   !------------------------------------------------
   ! This routine performs parallel load balancing.
   !------------------------------------------------
@@ -274,9 +274,9 @@ subroutine cmp_new_cpu_map
   use amr_commons
   use pm_commons
   use bisection
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !---------------------------------------------------
@@ -699,10 +699,10 @@ end subroutine cmp_dommap
 subroutine cmp_ordering(x,order,nn)
   use amr_parameters
   use amr_commons
+  use mpi_mod
   implicit none
   integer ::nn
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   real(dp),dimension(1:nvector,1:ndim)::x
@@ -807,9 +807,9 @@ end subroutine cmp_ordering
 subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   use amr_parameters
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer ::nn

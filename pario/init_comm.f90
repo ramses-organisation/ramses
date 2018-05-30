@@ -7,7 +7,7 @@
 ! This subroutine is executed by every process
 subroutine init_comm
   use amr_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::color_iogroup,color_comp,i,ierr

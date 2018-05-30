@@ -10,7 +10,7 @@ subroutine backup_part_send
   use amr_commons
   use pm_commons
   use io_parameters
-  use mpi
+  use mpi_mod
   use timer
   implicit none
 
@@ -117,7 +117,7 @@ subroutine backup_part_recv
   use amr_commons
   use io_commons
   use pm_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer,parameter::tag=TAG_BAK_PAR

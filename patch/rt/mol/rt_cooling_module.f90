@@ -59,19 +59,9 @@ module rt_cooling_module
 CONTAINS
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
-     ,normfacJ0_in, zreioniz_in, correct_cooling, realistic_ne, h        &
-     ,omegab, omega0, omegaL, astart_sim, T2_sim)
+SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
 ! Initialize cooling. All these parameters are unused at the moment and
 ! are only there for the original cooling-module.
-! Nmodel(integer)     =>     Model for UV background and metals
-! J0in_in  (dble)     => Default UV intensity
-! J0min_in (dble)     => Minimum UV intensity
-! alpha_in (dble)     => Slope of the UV spectrum
-! zreioniz_in (dble)  => Reionization redshift
-! normfacJ0_in (dble) => Normalization factor fot a Harrdt&Madau UV model
-! correct_cooling (integer) => Cooling correction
-! realistic_ne (integer) => Use realistic electron density at high z?
 ! h (dble)            => H0/100
 ! omegab (dble)       => Omega baryons
 ! omega0 (dble)       => Omega materal total
@@ -79,12 +69,11 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
 ! astart_sim (dble)   => Redshift at which we start the simulation
 ! T2_sim (dble)      <=  Starting temperature in simulation?
 !-------------------------------------------------------------------------
+  use amr_commons, ONLY: myid
   use UV_module
-  !use coolrates_module,only: init_coolrates_tables
-  real(kind=8) :: J0in_in, zreioniz_in, J0min_in, alpha_in, normfacJ0_in
+  use coolrates_module,only: init_coolrates_tables
   real(kind=8) :: astart_sim, T2_sim, h, omegab, omega0, omegaL
-  integer  :: Nmodel, correct_cooling, realistic_ne
-  real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu, ne
+  real(kind=8) :: astart=0.0001, aend, dasura, T2end=T2_min_fix, mu=1., ne
 !-------------------------------------------------------------------------
   if(myid==1) write(*,*) &
        '==================RT momentum pressure is turned ON=============='
@@ -93,22 +82,22 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   if(myid==1 .and. rt_isIRtrap) write(*,*) &
        '=========IR trapping is turned ON=============='
   ! do initialization
-  if(Y .le. 0.) isHe=.false.
+  isHe=.true. ; if(Y .le. 0.) isHe=.false.
   T_MIN           = 0.1                  !                      Minimum T2
   T_FRAC          = 0.1
 
-  x_MIN           = 1.d-20               !    Minimum ionization fractions
-  x_FM            = 1.d-6                !  Min at which to consider frac.
+  x_MIN           = 1.d-6                 !    Minimum ionization fractions
   x_FRAC          = 0.1
 
+  if(ish2) then !sln
+    x_MIN           = 1.d-20               !    Minimum ionization fractions
+    x_FM            = 1.d-6                !  Min at which to consider frac.
+  endif
   Np_MIN = 1.d-13                        !            Photon density floor
   Np_FRAC = 0.2
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
   Fp_FRAC = 0.5
-
-  ! Print out indexes of ionisation fractions
-  if(myid==1) print*,'ix=',ixHI,ixHII,ixHeII,ixHeIII
 
   ! Calculate initial temperature
   if (astart_sim < astart) then
@@ -136,6 +125,7 @@ SUBROUTINE rt_set_model(Nmodel, J0in_in, J0min_in, alpha_in              &
   T2_sim=T2end
 
 END SUBROUTINE rt_set_model
+
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE update_UVrates(aexp)

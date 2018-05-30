@@ -1,10 +1,8 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   logical::nml_ok
   !--------------------------------------------------
   ! Local variables
@@ -32,10 +30,10 @@ subroutine read_hydro_params(nml_ok)
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
        & ,d_bound,u_bound,v_bound,w_bound,p_bound
-  namelist/physics_params/cooling,haardt_madau,metal,isothermal,bondi &
+  namelist/physics_params/cooling,haardt_madau,metal,isothermal &
        & ,t_star,n_star,T2_star,g_star,del_star,eps_star &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w &
-       & ,J21,a_spec,z_ave,z_reion,n_sink,bondi
+       & ,J21,a_spec,z_ave,z_reion,n_sink
 
   ! Read namelist file
   rewind(1)

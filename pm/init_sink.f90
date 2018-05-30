@@ -2,9 +2,9 @@ subroutine init_sink
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
 #endif

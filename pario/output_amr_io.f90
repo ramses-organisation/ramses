@@ -14,7 +14,7 @@ subroutine backup_amr_send
   use io_parameters
   use pm_commons
   use timer
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::idx,ierr
@@ -192,7 +192,7 @@ subroutine backup_amr_recv
   use hydro_commons
   use io_commons
   use pm_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::count,i,idx,ierr,src
@@ -400,7 +400,7 @@ subroutine output_info_send
   use hydro_commons
   use io_parameters
   use pm_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer,parameter::tag=TAG_OUT_INF
@@ -451,7 +451,7 @@ subroutine output_info_recv
   use hydro_commons
   use io_commons
   use pm_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::ilun,icpu,ierr,idom

@@ -1,10 +1,8 @@
 subroutine move_fine(ilevel)
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.
@@ -63,10 +61,8 @@ end subroutine move_fine
 subroutine move_fine_static(ilevel)
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.
@@ -96,9 +92,7 @@ subroutine move_fine_static(ilevel)
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
            if(star) then
-              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   ! & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
                    & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then                 
                  ! FIXME: there should be a static_sink as well
                  ! FIXME: what about debris?
@@ -124,9 +118,7 @@ subroutine move_fine_static(ilevel)
            next_part=nextp(ipart)
            ! Select particles
            if(star) then
-              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   ! & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
                    & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
                  ! FIXME: there should be a static_sink as well
                  ! FIXME: what about debris?

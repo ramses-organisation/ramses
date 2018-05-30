@@ -8,10 +8,8 @@ subroutine create_sink
   use pm_commons
   use hydro_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !----------------------------------------------------------------------------
   ! sink creation routine
   ! -remove all cloud particles, keep only global sink arrays
@@ -135,10 +133,8 @@ subroutine create_cloud_from_sink
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !----------------------------------------------------------------------
   ! This routine creates the whole cloud of particles for each sink,
@@ -333,9 +329,9 @@ subroutine collect_acczone_avg(ilevel)
   use pm_commons
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -572,9 +568,9 @@ subroutine grow_sink(ilevel,on_creation)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -933,10 +929,8 @@ subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   logical::write_sinks
 
   !------------------------------------------------------------------------
@@ -1112,10 +1106,8 @@ subroutine print_sink_properties(dMEDoverdt,rho_inf,r2)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:nsinkmax)::dMEDoverdt
   integer::i,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
@@ -1305,9 +1297,9 @@ subroutine make_sink_from_clump(ilevel)
   use hydro_commons
   use poisson_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,icpu
 #endif
   integer::ilevel
@@ -1691,7 +1683,7 @@ subroutine true_max(x,y,z,ilevel)
 
 
   counter=0
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      do i=-1,1
         do j=-1,1
            do k=-1,1
@@ -1780,10 +1772,8 @@ subroutine update_sink(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2261,9 +2251,9 @@ subroutine f_gas_sink(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
  integer::ilevel
@@ -2454,10 +2444,8 @@ end subroutine f_gas_sink
 subroutine f_sink_sink
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! In this subroutine the sink-sink force contribution are calculated by direct
   ! n^2 - summation. A plummer-sphere with radius 4 cells is used for softening
@@ -2659,10 +2647,8 @@ subroutine count_clouds(ilevel,action)
   use pm_commons
   use amr_commons
   use poisson_commons, only:rho
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   character(len=15)::action
 
@@ -3145,9 +3131,9 @@ end subroutine get_cell_center
 subroutine count_parts
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
 

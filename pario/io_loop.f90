@@ -6,7 +6,7 @@
 subroutine io_loop
   use amr_commons
   use io_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer::i,ierr,ilun=ILUN_IO,size,type_oper
@@ -272,7 +272,7 @@ end subroutine io_loop
 subroutine local_output
   use amr_commons
   use io_commons
-  use mpi
+  use mpi_mod
   implicit none
 
   integer ierr

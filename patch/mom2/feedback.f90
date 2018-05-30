@@ -6,9 +6,10 @@ subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info2,dummy_io
 #endif
   integer::ilevel
   !------------------------------------------------------------------------
@@ -17,10 +18,9 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,scale,dx_min,vsn,rdebris,ethermal
-  integer::igrid,jgrid,ipart,jpart,next_part,dummy_io,info2,ivar
-  integer::i,ig,ip,npart1,npart2,icpu,nx_loc,ilun,idim
-  real(dp),dimension(1:3)::skip_loc
+  real(dp)::t0,t_sn_cont,current_time
+  integer::igrid,jgrid,ipart,jpart,next_part,ivar
+  integer::ig,ip,npart1,npart2,icpu,ilun=0,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -66,14 +66,28 @@ subroutine thermal_feedback(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
      endif
   endif
 
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  ! Massive star lifetime from Myr to code units
+  if(use_proper_time)then
+    !  t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     current_time=texp
+  else
+    !  t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t_sn_cont=20.*1d6*(365.*24.*3600.)/scale_t
+     current_time=t
+  endif
 
   ! Gather star particles only.
 
@@ -95,7 +109,7 @@ subroutine thermal_feedback(ilevel)
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -112,7 +126,7 @@ subroutine thermal_feedback(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select only star particles
-              if(idp(ipart).gt.0.and.tp(ipart).ne.0)then
+              if ( is_star(typep(ipart)) .and. tp(ipart).ge.(current_time-t_sn_cont)) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -161,33 +175,34 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun
+  integer::i,j,idim,nx_loc,ivar,ilun=0
   real(kind=8)::RandNum
-  real(dp)::SN_BOOST,mstar,dx_min,vol_min
-  real(dp)::xxx,mmm,t0,ESN,mejecta,zloss,e,uvar
-  real(dp)::ERAD,RAD_BOOST,tauIR,eta_sig,msne_min,mstar_max,eta_sn2,FRAC_NT
-  real(dp)::sigma_d,delta_x,tau_factor,rad_factor
+  real(dp)::mstar,dx_min,vol_min
+  real(dp)::t0,ESN,mejecta,zloss,e,uvar
+  real(dp)::msne_min,mstar_max,FRAC_NT
   real(dp)::p_SN,pressure,gas_density,metallicity
-  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit
+  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit,p_boost,r_cool
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  logical::error
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  !integer ::n_SN
   ! Particle based arrays
-  integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mloss,mzloss,ethermal,ekinetic,dteff
   real(dp),dimension(1:nvector),save::vol_loc
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg,n_SN
+  integer ,dimension(1:nvector),save::igrid,indp,n_SN
+  integer ,dimension(1:nvector,1:twotondim),save::icell,kg
   real(dp),dimension(1:3)::skip_loc
+
+  integer ,dimension(1:nvector),save::hra
+  real(dp),dimension(1:nvector,1:ndim),save::dd,dg
+  integer ,dimension(1:nvector,1:ndim),save::ig,igg,icg
+
 #if NENER>0
   integer::irad
 #endif
@@ -231,14 +246,15 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=2.0*1d51/(10.*2d33)/scale_v**2 !double the energy
+  ESN=1d51/(10.*2d33)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
   M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=1.4*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=2.39*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+!   p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
@@ -248,7 +264,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Critical density for momentum injection via SN for a resolved cooling radius
   ! and for solar metallicity
-  n_crit=100./scale_nH*(3.*3.08d18/scale_l/dx_min)**2
+  !n_crit=(30.0*aexp*3.08d18/(scale_l*dx_min))**(2.0)/scale_nH
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -281,55 +297,136 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! NGP at level ilevel
-  do idim=1,ndim
-     do j=1,np
-        id(j,idim)=int(x(j,idim))
-     end do
-  end do
+  if(momentum_feedback)then
+    ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
+    do idim=1,ndim
+        do j=1,np
+            dd(j,idim)=x(j,idim)+0.5D0
+            id(j,idim)=int(dd(j,idim))
+            dd(j,idim)=dd(j,idim)-id(j,idim)
+            dg(j,idim)=1.0D0-dd(j,idim)
+            ig(j,idim)=id(j,idim)-1
+        end do
+    end do
 
-   ! Compute parent grids
-  do idim=1,ndim
-     do j=1,np
-        igd(j,idim)=id(j,idim)/2
-     end do
-  end do
-  do j=1,np
-     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
-  end do
-  do j=1,np
-     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
-  end do
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igg(j,idim)=ig(j,idim)/2
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
 
-  ! Check if particles are entirely in level ilevel
-  ok(1:np)=.true.
-  do j=1,np
-     ok(j)=ok(j).and.igrid(j)>0
-  end do
+    do j=1,np
+        kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
+        kg(j,3)=1+igg(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,4)=1+igd(j,1)+3*igd(j,2)+9*igg(j,3)
+        kg(j,5)=1+igg(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,6)=1+igd(j,1)+3*igg(j,2)+9*igd(j,3)
+        kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
+        kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    
+    do j=1,np
+        call ranf(localseed,RandNum)
+        hra(j) = int(RandNum*8)+1
+    enddo
 
-  ! Compute parent cell position
-  do idim=1,ndim
-     do j=1,np
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
         if(ok(j))then
-           icd(j,idim)=id(j,idim)-2*igd(j,idim)
-        end if
-     end do
-  end do
-  do j=1,np
-     if(ok(j))then
-        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-     end if
-  end do
+            icg(j,idim)=ig(j,idim)-2*igg(j,idim)
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        endif
+        end do
+    end do
 
-  ! Compute parent cell adresses
-  do j=1,np
-     if(ok(j))then
-        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
-     else
-        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
-        vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
-     end if
-  end do
+    do j=1,np
+        if(ok(j))then
+        icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
+        icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,4)=1+icd(j,1)+2*icd(j,2)+4*icg(j,3)
+        icell(j,5)=1+icg(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
+        icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
+        icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        endif
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+
+  else
+    ! NGP at level ilevel
+    do idim=1,ndim
+        do j=1,np
+            id(j,idim)=int(x(j,idim))
+        end do
+    end do
+
+    ! Compute parent grids
+    do idim=1,ndim
+        do j=1,np
+            igd(j,idim)=id(j,idim)/2
+        end do
+    end do
+    do j=1,np
+        kg(j,1)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+    end do
+    do j=1,np
+        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,1)))
+    end do
+
+    ! Check if particles are entirely in level ilevel
+    ok(1:np)=.true.
+    do j=1,np
+        ok(j)=ok(j).and.igrid(j)>0
+    end do
+
+    ! Compute parent cell position
+    do idim=1,ndim
+        do j=1,np
+            if(ok(j))then
+            icd(j,idim)=id(j,idim)-2*igd(j,idim)
+            end if
+        end do
+    end do
+    do j=1,np
+        if(ok(j))then
+            icell(j,1)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+        end if
+    end do
+
+    ! Compute parent cell adresses
+    do j=1,np
+        if(ok(j))then
+            indp(j)=ncoarse+(icell(j,1)-1)*ngridmax+igrid(j)
+        else
+            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,1))
+            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+        end if
+    end do
+  endif
 
   ! Compute individual time steps
   do j=1,np
@@ -354,7 +451,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         n_SN(j)=0
         birth_time=tp(ind_part(j))
-        if(birth_time.lt.(current_time-t0).and.birth_time.ge.(current_time-t_sn_cont))then
+        if(birth_time.lt.(current_time-t0))then
            ! Guesstimate the initial star particle mass
            mpart_ini=mp(ind_part(j))/(1.0-eta_sn*(current_time-t0-birth_time)/(t_sn_cont-t0))
            ! Compute the constant SN rate
@@ -375,21 +472,53 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif
            ! Reduce star particle mass
            mp(ind_part(j))=mp(ind_part(j))-mejecta
+           if(sf_log_properties) then
+              write(ilun,'(I10)',advance='no') 1
+              write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
+              do idim=1,ndim
+                 write(ilun,'(E24.12)',advance='no') xp(ind_part(j),idim)
+              enddo
+              do idim=1,ndim
+                 write(ilun,'(E24.12)',advance='no') vp(ind_part(j),idim)
+              enddo
+              write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
+              do ivar=2,nvar
+                 if(ivar.eq.ndim+2)then
+                    e=0.0d0
+                    do idim=1,ndim
+                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                    enddo
+#if NENER>0
+                    do irad=0,nener-1
+                       e=e+unew(ind_cell(i),inener+irad)
+                    enddo
+#endif
+#ifdef SOLVERmhd
+                    do idim=1,ndim
+                       e=e+0.125d0*(unew(ind_cell(i),idim+ndim+2)+unew(ind_cell(i),idim+nvar))**2
+                    enddo
+#endif
+                    ! Temperature
+                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                 else
+                    uvar=unew(indp(j),ivar)
+                 endif
+                 write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
+              enddo
+              write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+              write(ilun,'(A1)') ' '
+           endif
         endif
      end do
-
+     
      ! Photo-ionization thermal feedback
      do j=1,np
-        birth_time=tp(ind_part(j))
-        if(birth_time.ge.(current_time-t_sn_cont))then
            pressure=max(uold(indp(j),1),smallr)*cs_H2_2
            ethermal(j)=ethermal(j)+pressure
-        endif
      end do
-
+     
      ! Use stellar momentum feedback
      if(momentum_feedback)then
-
         ! Momentum feedback from supernovae
         do j=1,np
            birth_time=tp(ind_part(j))
@@ -401,14 +530,16 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           ! Check if cooling radius is not resolved
-           if(birth_time.ge.(current_time-t_sn_cont).and.gas_density.ge.n_crit)then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)/dx_loc**3
+           p_boost = (gas_density*scale_nH/100.0)**(-0.160)*metallicity**(-0.137)
+           ! Cooling radius
+           r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * ( gas_density*scale_nH/100.0 )**(-0.42)
+           if(birth_time.lt.(current_time-t0))then
+              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif
         end do
-
+        
      endif
-
+     
   endif
 
   ! Update hydro variables due to feedback
@@ -425,6 +556,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
+    !  turbulent energy
+    !  unew(indp(j),ivirial1)=unew(indp(j),ivirial1)+ethermal(j)*0.1
 
      ! Update internal energy
      if(pressure_fix)then
@@ -463,11 +596,10 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
-  integer::nSN_tot_all
+  integer::info
   integer,dimension(1:ncpu)::nSN_icpu_all
   real(dp),dimension(:),allocatable::mSN_all,sSN_all,ZSN_all
   real(dp),dimension(:,:),allocatable::xSN_all,vSN_all
@@ -480,15 +612,15 @@ subroutine kinetic_feedback
   !----------------------------------------------------------------------
   ! local constants
   integer::ip,icpu,igrid,jgrid,npart1,npart2,ipart,jpart,next_part
-  integer::nSN,nSN_loc,nSN_tot,info,iSN,ilevel,ivar
+  integer::nSN,nSN_loc,nSN_tot,iSN,ilevel,ivar
   integer,dimension(1:ncpu)::nSN_icpu
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,t0
   real(dp)::current_time
-  real(dp)::scale,dx_min,vol_min,nISM,nCOM,d0,mstar
+  real(dp)::scale,dx_min,vol_min,mstar
   integer::nx_loc
   integer,dimension(:),allocatable::ind_part,ind_grid
   logical,dimension(:),allocatable::ok_free
-  integer ,dimension(:),allocatable::indSN
+  integer,dimension(:),allocatable::indSN
   real(dp),dimension(:),allocatable::mSN,sSN,ZSN,m_gas,vol_gas,ekBlast
   real(dp),dimension(:,:),allocatable::xSN,vSN,u_gas,dq
 
@@ -543,7 +675,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  npart2=npart2+1
               endif
               ipart=next_part  ! Go to next particle
@@ -603,7 +735,7 @@ subroutine kinetic_feedback
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              if(idp(ipart).le.0.and. tp(ipart).lt.(current_time-t0))then
+              if ( is_debris(typep(ipart)) .and. tp(ipart).lt.(current_time-t0) ) then
                  iSN=iSN+1
                  xSN(iSN,1)=xp(ipart,1)
                  xSN(iSN,2)=xp(ipart,2)
@@ -627,7 +759,7 @@ subroutine kinetic_feedback
   ! End loop over levels
 
   ! Remove GMC particle
-  IF(nSN_loc>0)then
+  if(nSN_loc>0)then
      ok_free=.true.
      call remove_list(ind_part,ind_grid,ok_free,nSN_loc)
      call add_free_cond(ind_part,ok_free,nSN_loc)
@@ -678,27 +810,28 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------------------------
   ! This routine average the hydro quantities inside the SN bubble
   !------------------------------------------------------------------------
-  integer::ilevel,ncache,nSN,j,iSN,ind,ix,iy,iz,ngrid,iskip
-  integer::i,nx_loc,igrid,info
+  integer::ilevel,ncache,nSN,iSN,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::x,y,z,dr_SN,d,u,v,w,ek,u2,v2,w2,dr_cell
+  real(dp)::x,y,z,dr_SN,u,v,w,u2,v2,w2,dr_cell
   real(dp)::scale,dx,dxx,dyy,dzz,dx_min,dx_loc,vol_loc,rmax2,rmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   integer ,dimension(1:nSN)::ind_blast
-  real(dp),dimension(1:nSN)::mSN,m_gas,vol_gas,ekBlast
-  real(dp),dimension(1:nSN,1:3)::xSN,vSN,u_gas,dq,u2Blast
+  real(dp),dimension(1:nSN)::vol_gas,ekBlast
+  real(dp),dimension(1:nSN,1:3)::xSN,dq,u2Blast
 #ifndef WITHOUTMPI
-  real(dp),dimension(1:nSN)::m_gas_all,vol_gas_all,ekBlast_all
-  real(dp),dimension(1:nSN,1:3)::u_gas_all,dq_all,u2Blast_all
+  real(dp),dimension(1:nSN)::vol_gas_all,ekBlast_all
+  real(dp),dimension(1:nSN,1:3)::dq_all,u2Blast_all
 #endif
   logical ,dimension(1:nvector),save::ok
 
@@ -841,23 +974,21 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.
   !------------------------------------------------------------------------
-  integer::ilevel,j,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
-  integer::i,nx_loc,igrid,info,ncache
+  integer::ilevel,iSN,nSN,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid,ncache
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,d,u,v,w,ek,u_r,ESN,mstar,eta_sn2,msne_min,mstar_max
+  real(dp)::x,y,z,dx,dxx,dyy,dzz,dr_SN,u,v,w,ESN,mstar,eta_sn2,msne_min,mstar_max
   real(dp)::scale,dx_min,dx_loc,vol_loc,rmax2,rmax,vol_min
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:nSN)::mSN,sSN,ZSN,m_gas,p_gas,d_gas,d_metal,vol_gas,uSedov,ekBlast
-  real(dp),dimension(1:nSN,1:3)::xSN,vSN,u_gas,dq
+  real(dp),dimension(1:nSN)::mSN,sSN,ZSN,p_gas,d_gas,d_metal,vol_gas,uSedov,ekBlast
+  real(dp),dimension(1:nSN,1:3)::xSN,vSN,dq
   integer ,dimension(1:nSN)::indSN
   logical ,dimension(1:nvector),save::ok
 
@@ -891,7 +1022,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
   mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  !ESN=(1d51/(10d0*2d33))/scale_v**2   !why is that here again? see 229
+  ESN=(1d51/(10d0*2d33))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn

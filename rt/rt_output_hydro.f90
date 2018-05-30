@@ -1,7 +1,6 @@
-! RT patch: RT variables are output as they are and not divided by gas
-!          density. Also there are checks on zero division to avoid
-!          floating point exceptions.
-!          Also added call to output_rtInfo.
+! Outputting of radiation variables and groups info
+!
+
 !************************************************************************
 subroutine rt_backup_hydro(filename, filename_desc)
 
@@ -10,9 +9,9 @@ subroutine rt_backup_hydro(filename, filename_desc)
   use rt_hydro_commons
   use rt_parameters
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: dummy_io, info2
   integer, parameter :: tag = 1131
 #endif
@@ -235,13 +234,13 @@ SUBROUTINE output_rt_stats
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
+  use mpi_mod
   implicit none
   integer(8) :: max_all, tot_all, cells_all, loopCodes_tot
   integer(8) :: loopCodes_all(20)
   real(dp) :: step_nPhot_all, step_nStar_all, step_mStar_all
   real(dp) :: scale_l, scale_t, scale_d, scale_v, scale_nh, scale_T2
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 !-------------------------------------------------------------------------
@@ -274,7 +273,7 @@ SUBROUTINE output_rt_stats
      max_cool_loopcnt = 0; tot_cool_loopcnt = 0; n_cool_cells = 0; loopCodes(:) = 0
   end if ! output_coolstats
 111 format(' Coolstats: Avg. # loops = ', f21.6, ', max. # loops = ', I10, ', rt_adv = ', L)
-112 format(' Subcycling codes [Np, Fp, T, Npd, Td, xH, xHe]% = ', 7(f7.3, ''))
+112 format(' Subcycling codes [Np, Fp, T, Npd, Td, xHII, xe, xH2]% = ', 8(f7.3, ''))
 
   ! Stellar rt feedback statistics:
   if (showSEDstats .and. rt_star) then

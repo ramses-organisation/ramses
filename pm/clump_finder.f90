@@ -4,9 +4,9 @@ subroutine clump_finder(create_output,keep_alive)
   use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   logical::create_output,keep_alive
@@ -37,6 +37,11 @@ subroutine clump_finder(create_output,keep_alive)
   integer(i8b)::nmove_all,nzero_all
 #endif
 
+  if (create_output) then
+    if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
+    if(nstep_coarse==0.and.nrestart>0)return
+  endif
+
   if(verbose.and.myid==1)write(*,*)' Entering clump_finder'
 
   ! When called from the create_sink, particles are all residing at level 1,
@@ -51,7 +56,7 @@ subroutine clump_finder(create_output,keep_alive)
   !---------------------------------------------------------------
   ! Compute rho from gas density or dark matter particles
   !---------------------------------------------------------------
-  if(ivar_clump==0)then
+  if(ivar_clump==0 .or. ivar_clump==-1)then
      do ilevel=levelmin_part,nlevelmax
         if(pic)call make_tree_fine(ilevel)
         if(poisson)call rho_only(ilevel)
@@ -71,7 +76,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   ntest=0
   do ilevel=levelmin,nlevelmax
-     if(ivar_clump==0)then ! action 1: count and flag
+     if(ivar_clump==0 .or. ivar_clump==-1)then ! action 1: count and flag
         call count_test_particle(rho(1),ilevel,0,1)
      else
         if(hydro)then      ! action 1: count and flag
@@ -109,7 +114,7 @@ subroutine clump_finder(create_output,keep_alive)
   itest=0
   nskip=ntest_cpu(myid)-ntest
   do ilevel=levelmin,nlevelmax
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call count_test_particle(rho(1),ilevel,nskip,2)
      else
         if(hydro)then
@@ -139,7 +144,7 @@ subroutine clump_finder(create_output,keep_alive)
   !-----------------------------------------------------------------------
   npeaks=0
   if(ntest>0)then
-     if(ivar_clump==0)then  ! case 1: count peaks
+     if(ivar_clump==0 .or. ivar_clump==-1)then  ! case 1: count peaks
         call count_peaks(rho(1),npeaks)
      else
         if(hydro)then       ! case 1: count peaks
@@ -189,7 +194,7 @@ subroutine clump_finder(create_output,keep_alive)
   max_dens=0.d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call flag_peaks(rho(1),nskip)
      else
         if(hydro)then
@@ -248,7 +253,7 @@ subroutine clump_finder(create_output,keep_alive)
      !------------------------------------------
      ! Compute the saddle point density matrix
      !------------------------------------------
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call saddlepoint_search(rho(1))
      else
         if(hydro)then
@@ -270,7 +275,7 @@ subroutine clump_finder(create_output,keep_alive)
      ! Compute clumps properties
      !------------------------------------------
      if(myid==1.and.clinfo)write(*,*)"Computing relevant clump properties."
-     if(ivar_clump==0)then
+     if(ivar_clump==0 .or. ivar_clump==-1)then
         call compute_clump_properties(rho(1))
      else
         if(hydro)then
@@ -294,7 +299,7 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
 #ifndef WITHOUTMPI
-     call MPI_ALLREDUCE(verbose,verbose_all,ncpu,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(verbose,verbose_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
 #else
      verbose_all=verbose
 #endif
@@ -304,6 +309,7 @@ subroutine clump_finder(create_output,keep_alive)
      if(create_output)then
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
+        if(pic)call output_part_clump_id()
      endif
 
   end if
@@ -329,10 +335,8 @@ end subroutine clump_finder
 subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
@@ -409,10 +413,8 @@ end subroutine count_test_particle
 subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -456,10 +458,8 @@ end subroutine count_peaks
 subroutine flag_peaks(xx,ipeak)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -484,10 +484,8 @@ end subroutine flag_peaks
 subroutine propagate_flag(nmove,nzero)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::nmove,nzero
   !----------------------------------------------------------------------
   ! All cells above the threshold copy the flag2 value from their densest
@@ -511,10 +509,8 @@ end subroutine propagate_flag
 subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks**2 sized array of saddlepoint densities
@@ -576,6 +572,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   real(dp),dimension(1:3)::skip_loc
   logical ,dimension(1:nvector)::okpeak
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  integer ,dimension(1:threetondim)::nbors_father_cells_pass
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
@@ -700,7 +697,8 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         if(ilevel>levelmin)xtest(1:twotondim,idim)=xtest(1:twotondim,idim)+xc(indv(j),idim)*scale
      end do
      grid(1)=ind_grid(j)
-     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells(j,1:threetondim),ntestpos,ilevel)
+     nbors_father_cells_pass=nbors_father_cells(j,1:threetondim)
+     call get_cell_index_fast(cell_index,cell_levl,xtest,ind_grid(j),nbors_father_cells_pass,ntestpos,ilevel)
 
      do ipos=1,ntestpos
         if(son(cell_index(ipos))==0.and.cell_levl(ipos)==test_levl(ipos))ok(ipos)=.true.
@@ -862,10 +860,8 @@ end subroutine get_cell_index
 !#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   namelist/clumpfind_params/ivar_clump,&
        & relevance_threshold,density_threshold,&
@@ -1118,10 +1114,8 @@ subroutine rho_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
@@ -1252,9 +1246,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star) then
-                 ! FIXME: wait for Pawel and Andreas
-                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1276,9 +1269,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star) then
-                 ! FIXME: wait for Pawel and Andreas
-                 if((t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid
@@ -1355,6 +1347,7 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use clfind_commons
   implicit none
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
@@ -1413,7 +1406,19 @@ subroutine cic_only(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   ! Gather particle mass
   do j=1,np
-     mmm(j)=mp(ind_part(j))
+     if(ivar_clump==-1)then
+        if(is_star(typep(ind_part(j))))then
+           mmm(j)=mp(ind_part(j))
+        else
+           mmm(j)=0d0
+        end if
+     else if(ivar_clump==0)then
+        if(is_dm(typep(ind_part(j))))then
+           mmm(j)=mp(ind_part(j))
+        else
+           mmm(j)=0d0
+        end if
+     end if
   end do
 
   ! Check for illegal moves
@@ -1833,4 +1838,93 @@ end subroutine tsc_only
 !###########################################################
 !###########################################################
 !###########################################################
+!######################################
+!######################################
+!######################################
+subroutine output_part_clump_id()
+  !---------------------------------------------------------------------------
+  ! This subroutine loops over all test cells and assigns all particles in a
+  ! testcell the peak ID the testcell has. 
+  !---------------------------------------------------------------------------
+  use amr_commons
+  use clfind_commons    !unbinding stuff is all in here
+  use pm_commons !using mp
+  use amr_parameters
+  implicit none
+  integer,dimension(:),allocatable::clmpidp,clump_ids
+  character(len=80) :: fileloc
+  character(len=5)  :: nchar,nchar2
+
+  ! for looping over test cells and getting particle list
+  integer   :: itestcell, ipart,this_part, global_peak_id, prtcls_in_grid
+
+  ! getting particles per peak
+  integer   :: ind, grid
+
+  !getting in which cell of a grid a particle is
+  integer   :: part_cell_ind, i, j, k
+
+  if(verbose) write(*,*) "Entered get_clumpparticles"
+
+  !-----------------------------------------------------------
+
+  allocate(clmpidp(1:npartmax))
+  allocate(clump_ids(1:npart))
+
+  clmpidp=0
+
+  do itestcell=1, ntest !loop over all test cells
+     global_peak_id=flag2(icellp(itestcell))
+     
+     if (global_peak_id /= 0) then
+
+        ind=(icellp(itestcell)-ncoarse-1)/ngridmax+1  ! get cell position
+        grid=icellp(itestcell)-ncoarse-(ind-1)*ngridmax ! get grid index
+        prtcls_in_grid = numbp(grid)          ! get number of particles in grid
+        this_part=headp(grid)             ! get index of first particle
+        
+        ! loop over particles in grid
+        do ipart = 1, prtcls_in_grid
+            
+            !check cell index of particle so you loop only once over each
+            i=0
+            j=0
+            k=0
+            if(xg(grid,1)-xp(this_part,1)/boxlen+(nx-1)/2.0 .le. 0) i=1
+            if(xg(grid,2)-xp(this_part,2)/boxlen+(ny-1)/2.0 .le. 0) j=1
+            if(xg(grid,3)-xp(this_part,3)/boxlen+(nz-1)/2.0 .le. 0) k=1
+            
+            part_cell_ind=i+2*j+4*k+1
+            
+            !If index is correct, assign clump id to particle
+            if (part_cell_ind==ind) clmpidp(this_part)=global_peak_id
+            !go to next particle in this grid
+            this_part = nextp(this_part)
+
+        end do        
+     end if   !global peak /=0
+  end do   !loop over test cells
+
+  call title(ifout, nchar)
+  call title(myid, nchar2)
+  fileloc=TRIM('output_'//TRIM(nchar)//'/id_clump.out'//TRIM(nchar2))
+  open(unit=666,file=fileloc,form='unformatted')
+  ipart=0
+  do i=1,npartmax
+    if(levelp(i)>0)then
+      ipart=ipart+1
+      clump_ids(ipart)=clmpidp(i)
+    end if
+  end do
+  write(666) clump_ids
+  close(666)
+
+  deallocate(clmpidp)
+  deallocate(clump_ids)
+
+end subroutine output_part_clump_id
+!########################################
+!########################################
+!########################################
+
 #endif

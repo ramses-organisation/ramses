@@ -1,16 +1,15 @@
 program part2birth
   use utils
   !--------------------------------------------------------------------------
-  ! Ce programme calcule la carte de densite surfacique projetee
-  ! des particules de matiere noire d'une simulation RAMSES.
+  ! This program converts birth times of star particles to Gyr and saves
+  ! as `birth` files for an output of RAMSES simulation 
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
   integer::ncpu,ndim,npart,i,j,k,icpu,ipos,nstar
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,iii
-  integer::nx=0,ncpu_read,n_frw
+  integer::ncpu_read,n_frw
   real(KIND=8)::mtot,time,time_tot,time_simu
-  real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::age
   integer::npart_actual
   real(KIND=8)::boxlen
@@ -19,16 +18,16 @@ program part2birth
   real(KIND=8),dimension(:,:),allocatable::x
   real(KIND=8),dimension(:)  ,allocatable::m,birth,birth_date
   integer,dimension(:)  ,allocatable::id
-  character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering
-  character(LEN=128)::nomfich,repository,outfich,filetype='ascii'
+  character(LEN=128)::nomfich,repository
   logical::ok
   integer::impi
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
   logical::cosmo=.true.
+  integer(kind=1),dimension(:),allocatable::family,tag
 
   call read_params
 
@@ -75,8 +74,8 @@ program part2birth
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
 
-  read(10,'("ordering type=",A80)')ordering
-  write(*,'(" ordering type=",A20)')TRIM(ordering)
+  read(10,'("ordering type=",A80)'),ordering
+  write(*,'(" ordering type=",A20)'),TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -171,6 +170,8 @@ program part2birth
      allocate(birth_date(1:npart2))
      allocate(id(1:npart2))
      allocate(x(1:npart2,1:ndim2))
+     allocate(family(1:npart2))
+     allocate(tag(1:npart2))
      ! Read position
      do i=1,ndim
         read(1)m
@@ -184,11 +185,13 @@ program part2birth
      read(1)m
      read(1)id
      read(1) ! Skip level
+     read(1)family
+     read(1)tag
      read(1)birth
      close(1)
 
      do i=1,npart2
-        if(birth(i).ne.0.0)then
+        if(family(i)==2)then ! birth would allow the cloud particles to pass
            if(cosmo)then
               iii=1
               do while(tau_frw(iii)>birth(i).and.iii<n_frw)
@@ -212,16 +215,18 @@ program part2birth
      write(1)birth_date
      close(1)
      deallocate(x,m)
-     deallocate(birth,id)
-     deallocate(birth_date)
+     deallocate(birth,id,birth_date)
+     deallocate(family,tag)
   end do
 
 contains
 
   subroutine read_params
+
       implicit none
 
       integer       :: i,n
+      
       character(len=4)   :: opt
       character(len=128) :: arg
 
@@ -242,26 +247,6 @@ contains
          select case (opt)
          case ('-inp')
             repository = trim(arg)
-         case ('-out')
-            outfich = trim(arg)
-         case ('-dir')
-            proj = trim(arg)
-         case ('-xmi')
-            read (arg,*) xmin
-         case ('-xma')
-            read (arg,*) xmax
-         case ('-ymi')
-            read (arg,*) ymin
-         case ('-yma')
-            read (arg,*) ymax
-         case ('-zmi')
-            read (arg,*) zmin
-         case ('-zma')
-            read (arg,*) zmax
-         case ('-nx')
-            read (arg,*) nx
-         case ('-fil')
-            filetype = trim(arg)
          case default
             print '("unknown option ",a2," ignored")', opt
          end select

@@ -7,9 +7,9 @@ subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info2,dummy_io
 #endif
   integer::ilevel
@@ -19,7 +19,7 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ivar
-  integer::ig,ip,npart1,npart2,icpu,ilun=0,idim
+  integer::ig,ip,npart1,npart2,icpu,ilun,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -29,13 +29,14 @@ subroutine thermal_feedback(ilevel)
   if(sf_log_properties) then
      call title(ifout-1,nchar)
      if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
      endif
      filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
-     ilun=myid+10
+     ilun=myid+103
      call title(myid,nchar)
      fileloc=TRIM(filename)//TRIM(nchar)
      ! Wait for the token
@@ -162,7 +163,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun=0
+  integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
   real(dp)::SN_BOOST,mstar,dx_min,vol_min
   real(dp)::t0,ESN,mejecta,zloss,e,uvar
@@ -187,7 +188,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::irad
 #endif
 
-  if(sf_log_properties) ilun=myid+10
+  if(sf_log_properties) ilun=myid+103
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -471,9 +472,9 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer,dimension(1:ncpu)::nSN_icpu_all
   real(dp),dimension(:),allocatable::mSN_all,sSN_all,ZSN_all
@@ -685,9 +686,9 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !------------------------------------------------------------------------
@@ -849,10 +850,8 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.
   !------------------------------------------------------------------------

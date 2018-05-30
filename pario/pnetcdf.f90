@@ -5,7 +5,7 @@
 #ifdef PNETCDF
 module ramses_pnetcdf
   use amr_commons,only:MPI_COMM_COMP,myid,pario_version,ramses_version
-  use mpi
+  use mpi_mod
   use pnetcdf
   implicit none
 

@@ -11,15 +11,21 @@ SOLVER = hydro
 PATCH = 
 GRACKLE = 0
 EXEC = ramses
+# Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
+OLD_MPI_SUPPORT = 0
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
-GITREPO = $(shell git config --get remote.origin.url)
+GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
+GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
           -DSOLVER$(SOLVER)
 ifeq ($(GRACKLE),1)
 DEFINES += -Dgrackle
+endif
+ifeq ($(OLD_MPI_SUPPORT),1)
+DEFINES += -DMPI_OLD
 endif
 #############################################################################
 # Fortran compiler options and directives
@@ -97,7 +103,7 @@ LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o
+MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o
 ifeq ($(GRACKLE),1)
 MODOBJ += grackle_parameters.o
 endif

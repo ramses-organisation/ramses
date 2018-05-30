@@ -29,9 +29,9 @@ subroutine rt_init_flow_fine(ilevel)
   use amr_commons
   use rt_hydro_commons
   use rt_cooling_module
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
  integer::dummy_io,info2
 #endif

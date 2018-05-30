@@ -10,9 +10,9 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::mpi_err
 #endif
   integer::ilevel,icount
@@ -146,14 +146,15 @@ recursive subroutine amr_step(ilevel,icount)
            call defrag
         endif
 
-        call dump_all
-
         ! Run the clumpfinder, (produce output, don't keep arrays alive on output)
         ! CAREFUL: create_output is used to destinguish between the case where
         ! the clumpfinder is called from create_sink or directly from amr_step.
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
+
+        call dump_all
+
 
         ! Dump lightcone
         if(lightcone .and. ndim==3) call output_cone()
@@ -535,10 +536,8 @@ subroutine rt_step(ilevel)
   use rt_hydro_commons
   use UV_module
   use SED_module,     only: star_RT_feedback
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer, intent(in) :: ilevel
 
 !--------------------------------------------------------------------------

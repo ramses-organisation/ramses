@@ -29,10 +29,8 @@ subroutine init_flow_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
 
   integer::i,icell,igrid,ncache,iskip,ngrid,ilun

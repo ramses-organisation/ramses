@@ -1,9 +1,9 @@
 subroutine synchro_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -84,9 +84,9 @@ end subroutine synchro_fine
 subroutine synchro_fine_static(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel
@@ -124,10 +124,8 @@ subroutine synchro_fine_static(ilevel)
            ! Save next particle   <--- Very important !!!
            next_part=nextp(ipart)
            if(star) then
-              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
                    & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
-                   ! & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
                  ! FIXME: there should be a static_sink as well
                  npart2=npart2+1
               endif
@@ -151,10 +149,8 @@ subroutine synchro_fine_static(ilevel)
            next_part=nextp(ipart)
            ! Select particles
            if(star) then
-              ! if((.not.static_dm.and.tp(ipart).eq.0).or.(.not.static_stars.and.tp(ipart).ne.0)) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
                    & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
-                   ! & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
                  ! FIXME: what about sinks?
                  if(ig==0)then
                     ig=1

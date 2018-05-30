@@ -9,9 +9,11 @@ subroutine star_formation(ilevel)
   use poisson_commons
   use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
   use random
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info,info2,dummy_io
+  integer,parameter::tag=1120
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -29,37 +31,36 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot,ilun
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc,idim
-  integer ::ntot,ntot_all,info,nstar_corrected,ncell
-  logical ::ok_free,ok_all
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
+  integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
+  integer ::ntot,ntot_all,nstar_corrected
+  logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg
-  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
-  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
-  real(dp)::ul,ur,fl,fr,trgv,alpha0
-  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
-  real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
+  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,uvar
+  real(dp)::alpha0
+  real(dp)::sigma2
   real(dp)::birth_epoch,factG,M2
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
-  real(kind=8)::RandNum,GaussNum,PoissMean
+  real(kind=8)::PoissMean
   real(dp),parameter::pi=0.5*twopi
-  integer,parameter::tag=1120
-  integer::dummy_io,info2
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
-  real(dp)::mdebris
-  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell2,nstar
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::list_debris,ind_debris
-  integer ,dimension(1:nvector,0:twondim)::ind_nbor
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
   logical::file_exist
+#ifdef SOLVERmhd
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+#endif
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
@@ -107,6 +108,7 @@ subroutine star_formation(ilevel)
               write(ilun,'(A1,I1,A2)',advance='no') 'u',ivar,'  '
            endif
         enddo
+        write(ilun,'(A5)',advance='no') 'tag  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status="old", position="append", action="write", form='formatted')
@@ -288,24 +290,20 @@ subroutine star_formation(ilevel)
                        CASE (1)
                           ! Virial parameter
                           alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          M2 = max(sigma2/cs2,1.0)
+                          M2 = max(sigma2/cs2,4.0)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-!Michael                          zeta      = 0.3
-!Michael                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
                           b_turb = 0.4
-                          ! Best fit values to the Multi-ff KM model (Hydro)
-                          phi_t     = 1.0/eps_star !0.49
-                          phi_x     = 1.12 !0.19
+                          ! Best fit values Multi-ff KM to PN11
+                          phi_t     = 2.6044503 !1.0/eps_star !0.49
+                          phi_x     = 0.6803737 !1.12 !0.19
                           sigs      = log(1.0+(b_turb**2)*(M2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star/(2.0*phi_t))*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
                           alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-!Michael                          zeta      = 0.3
-!Michael                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
                           b_turb = 0.4
                           ! Best fit values to the Multi-ff PN model (Hydro)
                           phi_t     = 0.49
@@ -378,7 +376,7 @@ subroutine star_formation(ilevel)
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
-              ! Security to prevent more than 50% of gas depletion
+              ! Security to prevent more than 90% of gas depletion
               if (mgas > 0.9*mcell) then
                  nstar_corrected=int(0.9*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar
@@ -514,6 +512,8 @@ subroutine star_formation(ilevel)
            mp(ind_part(i))=n*mstar      ! Mass
            levelp(ind_part(i))=ilevel   ! Level
            idp(ind_part(i))=index_star  ! Star identity
+           typep(ind_part(i))%family=FAM_STAR
+           typep(ind_part(i))%tag=0
            xp(ind_part(i),1)=x
            xp(ind_part(i),2)=y
            xp(ind_part(i),3)=z
@@ -541,6 +541,7 @@ subroutine star_formation(ilevel)
                  endif
                  write(ilun,'(E24.12)',advance='no') uvar
               enddo
+              write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
               write(ilun,'(A1)') ' '
            endif
 
@@ -633,9 +634,7 @@ subroutine getnbor(ind_cell,ind_father,ncell,ilevel)
   ! If for some reasons they don't exist, the routine returns
   ! the input cell.
   !-----------------------------------------------------------------
-  integer::nxny,i,idim,j,iok,ind
-  integer,dimension(1:3)::ibound,iskip1,iskip2
-  integer,dimension(1:nvector,1:3),save::ix
+  integer::i,j,iok,ind
   integer,dimension(1:nvector),save::ind_grid_father,pos
   integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
   integer,dimension(1:nvector,1:twondim),save::icelln_ok

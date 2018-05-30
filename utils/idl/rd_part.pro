@@ -264,11 +264,14 @@ for jcpu=0,ncpu-1 do begin
         id=lonarr(npartp)
         readu,1,id
         part.id(i1:i2)=id
+        ; read levels but ignore
         readu,1,id
-        part.family(i1:i2)=id
-        readu,1,id
-        part.tag(i1:i2)=id
-        readu,1,id
+        ll=bytarr(npartp)
+        readu,1,ll
+        part.family(i1:i2)=ll
+        readu,1,ll
+        part.tag(i1:i2)=ll
+
         if(nstar gt 0)then begin
             if keyword_set(time) then begin 
                 readu,1,xx

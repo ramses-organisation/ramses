@@ -32,11 +32,19 @@ module rt_parameters
 #ifdef NIONS
   integer,parameter::nIons=NIONS                      ! # of ion species (set in Makefile)
 #else
-  integer,parameter::nIons=3                        !                     Hii, Heii, Heiii
+  integer,parameter::nIons=3                        !   HII and optionally HI, HeII, HeIII
 #endif
+  integer::nIonsUsed=0                              ! # species used (as opposed to alloc)
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
-  real(dp),parameter,dimension(nIons)::ionEvs=(/13.60d0, 24.59d0, 54.42d0/)
+  real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
+  real(dp),parameter::ionEv_HI    = 11.20
+  real(dp),parameter::ionEv_HII   = 13.60
+  real(dp),parameter::ionEv_HeII  = 24.59
+  real(dp),parameter::ionEv_HeIII = 54.42
+  logical::isHe=.true.                             !     He ionization fractions tracked?
+  logical::isH2=.false.                             !                          H2 tracked?
+  integer::ixHI=0, ixHII=0, ixHeII=0, ixHeIII=0     !      Indexes of ionization fractions
 
   ! RT_PARAMS namelist--------------------------------------------------------------------
   logical::rt_advect=.false.           ! Advection of photons?                           !
@@ -65,6 +73,9 @@ module rt_parameters
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
   real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
+  integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
+  integer::iHIIheat=6                  ! Var index for HII heating                       !
+  logical::cosmic_rays=.false.         ! Include cosmic ray ionisation                   !
 
   character(LEN=128)::hll_evals_file=''! File HLL eigenvalues                            !
   character(LEN=128)::sed_dir=''       ! Dir containing stellar energy distributions     !
@@ -138,4 +149,8 @@ module rt_parameters
 
   integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 
+  ! H2 parameters ------------------------------------------------------------------------
+  ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
+  ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
+  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0 
 end module rt_parameters

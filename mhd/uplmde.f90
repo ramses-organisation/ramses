@@ -5,9 +5,9 @@
 subroutine diffusion
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::ilevel,icycle,nsubdiff

@@ -10,10 +10,10 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
+  use mpi_mod
   implicit none
 #if NDIM > 1
 #ifndef WITHOUTMPI
-  include "mpif.h"
   integer::info,iframe
   real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif
@@ -272,9 +272,6 @@ subroutine output_frame()
   endif
   if(deltay_frame(proj_ind*2-1).eq.0d0 .and. deltax_frame(proj_ind*2-1).gt.0d0)then
      deltay_frame(proj_ind*2-1)=deltax_frame(proj_ind*2-1)*float(nh_frame)/float(nw_frame)
-  endif
-  if(deltaz_frame(proj_ind*2-1).eq.0d0)then
-     deltaz_frame(proj_ind*2-1)=boxlen
   endif
   delx=deltax_frame(proj_ind*2-1)+deltax_frame(proj_ind*2)/aexp
   dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp

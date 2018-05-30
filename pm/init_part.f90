@@ -1,4 +1,4 @@
-subroutine init_part
+ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
@@ -6,10 +6,8 @@ subroutine init_part
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------------
   ! Allocate particle-based arrays.
   ! Read particles positions and velocities from grafic files
@@ -32,7 +30,9 @@ subroutine init_part
   integer(i8b),allocatable,dimension(:)::isp8
   integer(1),allocatable,dimension(:)::ii1
   real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
+  integer(i8b),allocatable,dimension(:,:)::init_plane_id
   real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
+  integer(i8b),allocatable,dimension(:,:,:)::init_array_id
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(kind=8),dimension(1:nvector)::mm
   type(part_t)::tmppart
@@ -48,14 +48,14 @@ subroutine init_part
   integer::ibuf,tagu=102
   integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 #endif
-  logical::error,keep_part,eof,read_pos=.false.,ok
-  character(LEN=80)::filename,filename_x
+  logical::error,keep_part,eof,read_pos=.false.,ok,read_ids=.false.
+  character(LEN=80)::filename,filename_x, filename_id
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
 
   if(verbose)write(*,*)'Entering init_part'
-  
+
   if(myid.eq.1)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
   if(myid.eq.1)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
 
@@ -261,6 +261,13 @@ contains
   subroutine load_grafic
     ! Read data in the grafic format. The particle type is derived
     ! following conversion rules (see pm_commons:props2type)
+    ! Grafic format for Ramses assumes the following unit for particles:
+    ! - Header lengths (boxszie, pixel size...) in comoving Mpc
+    ! - Velocities in proper km s**-1 (file ic_velc*)
+    ! - Displacements from cell centers in comoving Mpc/h
+    !    (file ic_posc* if present, if not generated through Zeldovich approximation)
+    ! - Ids in int or long int
+    !    (file ic_particle_ids if present, if not generated internally)
 
     !----------------------------------------------------
     ! Reading initial conditions GRAFIC2 multigrid arrays
@@ -370,6 +377,14 @@ contains
        end if
        allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
        allocate(init_plane_x(1:n1(ilevel),1:n2(ilevel)))
+
+       filename_id=TRIM(initfile(ilevel))//'/ic_particle_ids'
+       INQUIRE(file=filename_id,exist=read_ids)
+       if(read_ids) then
+         if(myid==1)write(*,*)'Reading particle ids from file '//TRIM(filename_id)
+         allocate(init_plane_id(1:n1(ilevel),1:n2(ilevel)))
+         allocate(init_array_id(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
+       end if
 
        ! Loop over input variables
        do idim=1,ndim
@@ -490,6 +505,36 @@ contains
                 if(myid==1)close(10)
              end if
 
+             if(read_ids) then
+                if(myid==1)then
+                   open(10,file=filename_id,form='unformatted')
+                   rewind 10
+                   read(10) ! skip first line
+                end if
+                do i3=1,n3(ilevel)
+                   if(myid==1)then
+                      if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
+                      read(10)((init_plane_id(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
+                   else
+                      init_plane_id=0.0
+                   endif
+                   buf_count=n1(ilevel)*n2(ilevel)
+#ifndef WITHOUTMPI
+#ifndef LONGINT
+                   call MPI_BCAST(init_plane_id,buf_count,MPI_INTEGER,0,MPI_COMM_WORLD,info)
+#else
+                   call MPI_BCAST(init_plane_id,buf_count,MPI_INTEGER8,0,MPI_COMM_WORLD,info)
+#endif
+#endif
+                   if(active(ilevel)%ngrid>0)then
+                      if(i3.ge.i3_min.and.i3.le.i3_max)then
+                         init_array_id(i1_min:i1_max,i2_min:i2_max,i3) = &
+                              & init_plane_id(i1_min:i1_max,i2_min:i2_max)
+                      end if
+                   endif
+                end do
+                if(myid==1)close(10)
+              end if
           endif
 
           if(active(ilevel)%ngrid>0)then
@@ -535,6 +580,9 @@ contains
                          else
                             xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
                             dispmax=max(dispmax,abs(init_array_x(i1,i2,i3)/dx))
+                          if (read_ids) then
+                            idp(ipart) = init_array_id(i1,i2,i3)
+                          end if
                          endif
                       end if
                    end do
@@ -552,6 +600,12 @@ contains
           deallocate(init_array,init_array_x)
        end if
        deallocate(init_plane,init_plane_x)
+
+       if(read_ids) then
+         deallocate(init_plane_id)
+         deallocate(init_array_id)
+       end if
+
 
        if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 
@@ -600,7 +654,7 @@ contains
        ncache=sendbuf(icpu)
        if(ncache>0)then
           allocate(emission(icpu,1)%up(1:ncache,1:twondim+1))
-          allocate(emission(icpu,1)%fp(1:ncache,1:1))
+          allocate(emission(icpu,1)%fp(1:ncache,1:2))
        end if
     end do
 
@@ -622,13 +676,14 @@ contains
           emission(icpu,1)%up(ibuf,5)=vp(ipart,2)
           emission(icpu,1)%up(ibuf,6)=vp(ipart,3)
           emission(icpu,1)%up(ibuf,7)=mp(ipart)
-
           emission(icpu,1)%fp(ibuf,1)=part2int(typep(ipart))
+          emission(icpu,1)%fp(ibuf,2)=idp(ipart)
        else
           jpart=jpart+1
           xp(jpart,1:3)=xp(ipart,1:3)
           vp(jpart,1:3)=vp(ipart,1:3)
           mp(jpart)    =mp(ipart)
+          idp(jpart)    =idp(ipart)
        endif
     end do
 
@@ -655,7 +710,7 @@ contains
        ncache=recvbuf(icpu)
        if(ncache>0)then
           allocate(reception(icpu,1)%up(1:ncache,1:twondim+1))
-          allocate(reception(icpu,1)%fp(1:ncache,1:1))
+          allocate(reception(icpu,1)%fp(1:ncache,1:2))
        end if
     end do
 
@@ -686,6 +741,52 @@ contains
        end if
     end do
 
+    ! Wait for full completion of receives
+    call MPI_WAITALL(countrecv,reqrecv,statuses,info)
+
+    ! Wait for full completion of sends
+    call MPI_WAITALL(countsend,reqsend,statuses,info)
+
+    ! Taking care of int values
+    ! Receive particles
+    countrecv=0
+    do icpu=1,ncpu
+       ncache=recvbuf(icpu)
+       if(ncache>0)then
+          buf_count=ncache * 2
+          countrecv=countrecv+1
+#ifndef LONGINT
+          call MPI_IRECV(reception(icpu,1)%fp,buf_count, &
+                & MPI_INTEGER,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
+          call MPI_IRECV(reception(icpu,1)%fp,buf_count, &
+                & MPI_INTEGER8,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
+
+       end if
+    end do
+
+    ! Send particles
+    countsend=0
+    do icpu=1,ncpu
+       ncache=sendbuf(icpu)
+       if(ncache>0)then
+          buf_count=ncache * 2
+          countsend=countsend+1
+#ifndef LONGINT
+                    call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
+                          & MPI_INTEGER,icpu-1,&
+                          & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
+                    call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
+                          & MPI_INTEGER8,icpu-1,&
+                          & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
+       end if
+    end do
+
 
     ! Wait for full completion of receives
     call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -704,6 +805,7 @@ contains
           vp(jpart,2)=reception(icpu,1)%up(ibuf,5)
           vp(jpart,3)=reception(icpu,1)%up(ibuf,6)
           mp(jpart)  =reception(icpu,1)%up(ibuf,7)
+          idp(jpart)  =reception(icpu,1)%fp(ibuf,2)
        end do
     end do
 
@@ -715,15 +817,23 @@ contains
        vp(ipart,1)=0d0
        vp(ipart,2)=0d0
        vp(ipart,3)=0d0
-       mp(ipart)  =0d0
+       mp(ipart)=0d0
+       idp(ipart)=0
     end do
 
     npart=jpart
 
     ! Deallocate communicators
     do icpu=1,ncpu
-       if(sendbuf(icpu)>0)deallocate(emission(icpu,1)%up)
-       if(recvbuf(icpu)>0)deallocate(reception(icpu,1)%up)
+       if(sendbuf(icpu)>0) then
+        deallocate(emission(icpu,1)%up)
+        deallocate(emission(icpu,1)%fp)
+       end if
+
+       if(recvbuf(icpu)>0)then
+         deallocate(reception(icpu,1)%up)
+         deallocate(reception(icpu,1)%fp)
+       end if
     end do
 
     write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
@@ -751,27 +861,29 @@ contains
     end if
 
     ! Compute particle initial identity
-    npart_cpu=0; npart_all=0
-    npart_cpu(myid)=npart
+    if(.not.read_ids) then
+      npart_cpu=0; npart_all=0
+      npart_cpu(myid)=npart
 #ifndef WITHOUTMPI
 #ifndef LONGINT
-    call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+      call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-    call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
+      call MPI_ALLREDUCE(npart_cpu,npart_all,ncpu,MPI_INTEGER8,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
-    npart_cpu(1)=npart_all(1)
+      npart_cpu(1)=npart_all(1)
 #endif
-    do icpu=2,ncpu
-       npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
-    end do
-    if(myid==1)then
-       do ipart=1,npart
-          idp(ipart)=ipart
-       end do
-    else
-       do ipart=1,npart
-          idp(ipart)=npart_cpu(myid-1)+ipart
-       end do
+      do icpu=2,ncpu
+         npart_cpu(icpu)=npart_cpu(icpu-1)+npart_all(icpu)
+      end do
+      if(myid==1)then
+         do ipart=1,npart
+            idp(ipart)=ipart
+         end do
+      else
+         do ipart=1,npart
+            idp(ipart)=npart_cpu(myid-1)+ipart
+         end do
+      end if
     end if
 
   end subroutine load_grafic
@@ -882,9 +994,9 @@ subroutine load_gadget
   use amr_commons
   use pm_commons
   use gadgetreadfilemod
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   integer,dimension(1:nvector)::cc
 #endif

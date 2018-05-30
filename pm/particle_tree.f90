@@ -5,9 +5,9 @@
 subroutine init_tree
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !------------------------------------------------------
@@ -627,10 +627,8 @@ end subroutine merge_tree_fine
 subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.

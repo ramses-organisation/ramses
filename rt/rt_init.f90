@@ -21,8 +21,20 @@ SUBROUTINE rt_init
   nvar_count = ichem-1     ! # of non-rt vars: rho u v w p (z) (delay) (x)
   if(rt_isIRtrap) &
      iIRtrapVar = inener  ! Trapped rad. stored in nonthermal pressure var
+  if(heat_unresolved_HII .eq. 2) then
+     ! Using NENER for unresolved HII region heating
+     iHIIheat=inener
+     if(rt_isIRtrap) iHIIheat=inener+1
+     if(nener.lt.iHIIheat-inener+1) then
+        if(myid==1) then
+           write(*,*) 'Need more NENER FOR HEATING HII REGIONS'
+           write(*,*) 'STOPPING'
+        endif
+        call clean_stop
+     endif
+  endif
   iIons=nvar_count+1         !      Starting index of ionisation fractions
-  nvar_count = nvar_count+3  !                                # hydro vars
+  nvar_count = nvar_count+NIONS  !                            # hydro vars
 
   if(nvar_count .gt. nvar) then
      if(myid==1) then
@@ -37,7 +49,6 @@ SUBROUTINE rt_init
 
   if(rt_star .or. sedprops_update .ge. 0) &
      call init_SED_table    ! init stellar energy distribution properties
-
   if(rt .and. .not. hydro) then
      if(myid==1) then
         write(*,*) 'hydro must be turned on when running radiative transfer.'
@@ -64,10 +75,10 @@ SUBROUTINE rt_init
   end do
   if(trim(rt_flux_scheme).eq.'hll') rt_use_hll=.true.
   if(rt_use_hll) call read_hll_eigenvalues
-
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
   tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0
+
 END SUBROUTINE rt_init
 
 !*************************************************************************
@@ -121,7 +132,7 @@ END SUBROUTINE adaptive_rt_c_update
 
 
 !*************************************************************************
-SUBROUTINE read_rt_params()
+SUBROUTINE read_rt_params(nml_ok)
 
 ! Read rt_params namelist
 !-------------------------------------------------------------------------
@@ -132,6 +143,8 @@ SUBROUTINE read_rt_params()
   use UV_module
   use SED_module
   implicit none
+  logical::nml_ok
+  integer::iCount
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
@@ -140,9 +153,10 @@ SUBROUTINE read_rt_params()
        & ,SED_isEgy, rt_output_coolstats, hll_evals_file                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
-       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp                  &
-       & ,is_mu_H2,rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost     &
-       & ,rt_isoPress, rt_isIRtrap, rt_movie_vars                        &
+       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, is_mu_H2,isHe   &
+       & ,isH2, rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost        &
+       & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
+       & ,cosmic_rays                                                    &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
@@ -185,13 +199,50 @@ SUBROUTINE read_rt_params()
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
   if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
 
-  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true. 
-  call read_rt_groups()
+  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true.
 
+  ! Set number of used ionisation fractions, indexes of ionization
+  ! fractions, and ionization energies, and check if we have enough
+  ! ionization variables (NIONS)
+  iCount=0
+  if(isH2) then
+     iCount=iCount+1
+     ixHI=iCount    ; ionEvs(ixHI)=ionEv_HI
+  endif
+  iCount=iCount+1    ; ixHII=iCount   ; ionEvs(ixHII)=ionEv_HII
+  if(isHe) then
+     iCount=iCount+1 ; ixHeII=iCount  ; ionEvs(ixHeII)=ionEv_HeII
+     iCount=iCount+1 ; ixHeIII=iCount ; ionEvs(ixHeIII)=ionEv_HeIII
+  endif
+  nIonsUsed = iCount
+  if(nIonsUsed .gt. NIONS) then
+     if(myid==1) then
+        write(*,*) 'Not enough variables for ionization fractions'
+        write(*,*) 'Have NIONS=',NIONS
+        write(*,*) 'Need NIONS=',nIonsUsed
+        write(*,*) 'STOPPING!'
+     endif
+     call clean_stop
+  endif
+  if(nIonsUsed .lt. NIONS) then
+     if(myid==1) then
+        write(*,*) 'Too many variables for ionization fractions'
+        write(*,*) 'Have NIONS=',NIONS
+        write(*,*) 'Need NIONS=',nIonsUsed
+        write(*,*) 'Probably no harm, so still continuing...'
+     endif
+  endif
+  if(myid==1) then
+     write(*,*) 'Number of ionization fractions is:',nIonsUsed
+     write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
+                , ixHI, ixHII, ixHeII, ixHeIII
+  endif
+
+  call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
-SUBROUTINE read_rt_groups()
+SUBROUTINE read_rt_groups(nml_ok)
 
 ! Read rt_groups namelist
 !-------------------------------------------------------------------------
@@ -200,7 +251,8 @@ SUBROUTINE read_rt_groups()
   use rt_cooling_module
   use SED_module
   implicit none
-  integer::i
+  logical::nml_ok
+  integer::i,igroup_HI=0, igroup_HII=0, igroup_HeII=0, igroup_HeIII=0
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
        & , groupL0, groupL1, kappaAbs, kappaSc
@@ -215,25 +267,73 @@ SUBROUTINE read_rt_groups()
      return
   endif
 #if NGROUPS>0
-  !   Use ionization energies for HI, HeI, HeII as default group intervals
-  groupL0(1:min(nGroups,3))=ionEvs(1:min(nGroups,3))!Lower interval bounds
-  groupL1(1:min(nGroups,2))=ionEvs(2:min(nGroups+1,3)) !      Upper bounds
-  groupL1(min(nGroups,3))=0.                        ! Upper bound=infinity
+  !  Use H2, HI, HeI, HeII ionization energies  as default group intervals
+  groupL0(1:min(nGroups,nIons))=ionEvs(1:min(nGroups,nIons))! Lower bounds
+  groupL1(1:min(nGroups,nIons-1))=ionEvs(2:min(nGroups+1,nIons)) !   Upper
+  groupL1(min(nGroups,nIons))=0.                    ! Upper bound=infinity
 
-  ! Default groups are all blackbodies at E5 Kelvin
-  group_csn(1,:)=(/3.007d-18, 0d0, 0d0/)   ! Avg photoion. c-section (cm2)
-  group_cse(1,:)=(/2.781d-18, 0d0, 0d0/)   !     Weighted  c-section (cm2)
-  group_egy(1)  =18.85                     !        Avg photon Energy (eV)
-#endif
-#if NGROUPS>1
-  if(nGroups .ge. 2) group_csn(2,:)=(/5.687d-19, 4.478d-18, 0d0/)
-  if(nGroups .ge. 2) group_cse(2,:)=(/5.042d-19, 4.130d-18, 0d0/)
-  if(nGroups .ge. 2) group_egy(2)  = 35.079
-#endif
-#if NGROUPS>2
-  if(nGroups .ge. 3) group_csn(3,:)=(/7.889d-20, 1.197d-18, 1.055d-18/)
-  if(nGroups .ge. 3) group_cse(3,:)=(/7.456d-20, 1.142d-18, 1.001d-18/)
-  if(nGroups .ge. 3) group_egy(3)  =65.666
+  i=0
+  if(isH2) then ! Set index for H2 dissociating group
+     i=i+1 ; igroup_HI=i
+  endif
+  if(i .lt. nGroups) then ! Set index for HI ionizing group
+     i=i+1 ; igroup_HII=i
+  endif
+  if(i .lt. nGroups .and. isHe) then ! Set index for HeI ionizing group
+     i=i+1 ; igroup_HeII=i
+  endif
+  if(i .lt. nGroups .and. isHe) then ! Set index for HeII ionizing group
+     i=i+1 ; igroup_HeIII=i
+  endif
+
+  ! Default groups are all blackbodies at 10^5 Kelvin:
+  group_csn=0d0 ; group_cse=0d0 ; group_egy=0d0         ! Default all zero
+  if(igroup_HI .gt. 0) then
+     if(ixHI .gt. 0) then                                ! H2 dissociation
+        group_csn(igroup_HI,ixHI)=2.1d-19
+        group_cse(igroup_HI,ixHI)=2.1d-19
+     endif  
+     group_egy(igroup_HI)=12.44
+  endif
+  if(igroup_HII .gt. 0) then
+     if(ixHI .gt. 0) then                   ! H2 ionization by HI photons
+        group_csn(igroup_HII,ixHI)=5.0d-18
+        group_cse(igroup_HII,ixHI)=5.3d-18
+     endif
+     group_csn(igroup_HII,ixHII)=3.007d-18                ! HI ionization
+     group_cse(igroup_HII,ixHII)=2.781d-18
+     group_egy(igroup_HII)=18.85
+  endif
+  if(igroup_HeII .gt. 0) then
+     if(ixHI .gt. 0) then                  ! H2 ionization by HeI photons
+        group_csn(igroup_HeII,ixHI)=2.9d-18
+        group_cse(igroup_HeII,ixHI)=2.8d-18
+     endif
+     group_csn(igroup_HeII,ixHII)=5.687d-19! HI ionization by HeI photons
+     group_cse(igroup_HeII,ixHII)=5.042d-19
+     if(ixHeII .gt. 0) then                              ! HeI ionization
+        group_csn(igroup_HeII,ixHeII)=4.478d-18   
+        group_cse(igroup_HeII,ixHeII)=4.130d-18
+     endif
+     group_egy(igroup_HeII)=35.079
+  endif
+  if(igroup_HeIII .gt. 0) then
+     if(ixHI .gt. 0) then                 ! H2 ionization by HeII photons
+        group_csn(igroup_HeIII,ixHI)=4.1d-19 
+        group_cse(igroup_HeIII,ixHI)=4.1d-19
+     endif
+     group_csn(igroup_HeIII,ixHII)=7.889d-20  ! HI ioniz. by HeII photons
+     group_cse(igroup_HeIII,ixHII)=7.456d-20
+     if(ixHeII .gt. 0) then                  ! HeI ioniz. by HeII photons
+        group_csn(igroup_HeIII,ixHeII)=1.197d-18 
+        group_cse(igroup_HeIII,ixHeII)=1.142d-18
+     endif
+     if(ixHeIII .gt. 0) then                            ! HeII ionization
+        group_csn(igroup_HeIII,ixHeIII)=1.055d-18     
+        group_cse(igroup_HeIII,ixHeIII)=1.001d-18
+     endif
+     group_egy(igroup_HeIII)=65.666
+  endif
 #endif
 
   do i=1,min(nIons,nGroups)
@@ -250,6 +350,16 @@ SUBROUTINE read_rt_groups()
      print*,'WARNING! Some photon groups have zero or negative energy!'
      print*,'This could have unwanted effects, so be careful!!!'
      print*,'========================================================='
+  endif
+
+  if(isH2) then
+     do i=1,nGroups
+        if((groupL0(i) .ge. 11.2) .and. (groupL1(i) .le. 13.6)          &
+           .and. (groupL0(i) .le. 13.6) .and. (groupL1(i) .ge. 11.2))then
+           ssh2(i) = 4d2 ! H2 self-shielding factor
+           isLW(i) = 1d0 ! Index for LW groups
+        endif
+    enddo
   endif
 
   call updateRTGroups_CoolConstants
@@ -373,9 +483,7 @@ SUBROUTINE add_UV_background(ilevel)
   use hydro_commons
   use rt_hydro_commons
   implicit none
-  integer::ilevel
-  integer::i,igrid,ncache,iskip,ngrid,j
-  integer::ind,ic,ig
+  integer::ilevel,i,igrid,ncache,iskip,ngrid,j,ind,ic,ig
   integer ,dimension(1:nvector),save::ind_grid
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
             ,scale_fp,efactor,nH

@@ -13,7 +13,7 @@ subroutine godunov_fine(ilevel)
   ! hydro solver. On entry, hydro variables are gathered from array uold.
   ! On exit, unew has been updated.
   !--------------------------------------------------------------------------
-  integer::i,ivar,igrid,ncache,ngrid
+  integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -46,8 +46,11 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,iskip
   real(dp)::d,u,v,w,e
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -126,9 +129,12 @@ subroutine set_uold(ilevel)
   ! This routine sets array uold to its new value unew
   ! after the hydro step.
   !---------------------------------------------------------
-  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell
+  integer::i,ivar,ind,iskip,nx_loc,ind_cell
   real(dp)::scale,d,u,v,w
-  real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx,fact,d_old
+  real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -213,7 +219,7 @@ subroutine add_gravity_source_terms(ilevel)
   ! with only half a time step. Only the momentum and the
   ! total energy are modified in array unew.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,iskip,nx_loc,ind_cell
+  integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
 
   if(numbtot(1,ilevel)==0)return
@@ -266,7 +272,7 @@ subroutine add_pdv_source_terms(ilevel)
   ! This routine adds the pdV source term to the internal
   ! energy equation and to the non-thermal energy equations.
   !---------------------------------------------------------
-  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
+  integer::i,ind,iskip,nx_loc,ind_cell1
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
   integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold
@@ -277,6 +283,9 @@ subroutine add_pdv_source_terms(ilevel)
   real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
   real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
   real(dp),dimension(1:nvector),save::divu_loc
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -392,6 +401,14 @@ subroutine add_pdv_source_terms(ilevel)
         end do
 #endif
 
+        if(momentum_feedback)then
+           ! Add +pdV term
+           do i=1,ngrid
+              unew(ind_cell(i),ndim+2)=unew(ind_cell(i),ndim+2) &
+                   & +pstarold(ind_cell(i))*divu_loc(i)*dx_loc/6.0
+           end do
+        endif
+
      enddo
      ! End loop over cells
   end do
@@ -458,13 +475,12 @@ subroutine add_viscosity_source_terms(ilevel)
   ! with only half a time step. Only the momentum and the
   ! total energy are modified in array unew.
   !--------------------------------------------------------------------------
-  integer::i,ivar,irad,ind,iskip,nx_loc,ind_cell1
+  integer::i,ind,iskip,nx_loc
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,d,u,v,w,eold,dx_min
-  real(dp)::Kturb,sigma,d_old,decay_rate,cs,cs_TH,current_time,t0
+  real(dp)::scale,dx,dx_loc,dx_min
+  real(dp)::Kturb,sigma,d_old
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  integer::ipart,jpart,next_part,npart1,npart2
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -473,6 +489,10 @@ subroutine add_viscosity_source_terms(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
   real(dp),dimension(1:nvector),save::divu_loc,phi_diss
   real(dp),dimension(1:nvector,1:ndim,1:ndim),save::gradu_loc,E_loc
+
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -484,8 +504,6 @@ subroutine add_viscosity_source_terms(ilevel)
   dx_min=(0.5**levelmax)*scale
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  cs_TH=1000.*1d5/scale_v
 
   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
@@ -604,13 +622,15 @@ subroutine add_viscosity_source_terms(ilevel)
            Kturb=uold(ind_cell(i),ivirial1)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
-           ! Implicit solution
+        ! Implicit solution
            unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
                 &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
                 & /(1.0+sigma/dx_loc*dtnew(ilevel))
+        ! Turbulence from SN
+        !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
 
-           ! Stationary solution
-!           unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+        ! Stationary solution
+        !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
         end do
         ! End loop over grids
@@ -648,8 +668,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim),save::g1=0.0d0
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::g2=0.0d0
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
@@ -660,7 +678,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
 
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer
+  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
@@ -774,14 +792,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         ! Gather stellar momentum
         if(momentum_feedback)then
            do i=1,nexist
-              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
+              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))*dx/dtnew(ilevel)/6.0
            end do
            ! Use straight injection for buffer cells
            do i=1,nbuffer
-              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
+              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))*dx/dtnew(ilevel)/6.0
            end do
         end if
-
+        
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
@@ -803,7 +821,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
-  call unsplit(uloc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  call unsplit(uloc,ploc,gloc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface
