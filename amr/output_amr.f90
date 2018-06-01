@@ -229,7 +229,7 @@ subroutine backup_amr(filename)
   !-----------------------------------
   ! Output amr grid in file
   !-----------------------------------
-  ilun=myid+10
+  ilun=myid+103
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 

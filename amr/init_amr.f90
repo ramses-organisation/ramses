@@ -261,7 +261,7 @@ subroutine init_amr
     if(nrestart_quad.eq.nrestart) allocate(bound_key_restart(0:ndomain))
 #endif
 
-     ilun=myid+10
+     ilun=myid+103
      call title(nrestart,nchar)
 
      if(IOGROUPSIZEREP>0)then
