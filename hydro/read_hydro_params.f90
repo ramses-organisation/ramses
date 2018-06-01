@@ -116,11 +116,11 @@ subroutine read_hydro_params(nml_ok)
 
   ! Read namelist file
   rewind(1)
-  read(1,NML=init_params,END=101)
-  goto 102
-101 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
+  read(1,NML=init_params,END=121)
+  goto 122
+121 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
   call clean_stop
-102 rewind(1)
+122 rewind(1)
 
   ! Fail if physics params is found
   read(1, NML=physics_params, end=110)

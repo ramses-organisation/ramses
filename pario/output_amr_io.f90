@@ -231,7 +231,7 @@ subroutine backup_amr_recv
                    MPI_COMM_IOGROUP,MPI_STATUS_IGNORE,ierr)
 
      ! Generate filename
-     ilun=myid_world+10
+     ilun=myid_world+103
      call title(count_bak,nchar)
      call title(iogroup2comp(src),cpuchar)
      call title(myid_io,iochar)
@@ -466,7 +466,7 @@ subroutine output_info_recv
   ndomain = msg(13)
 
   ! Generate filename
-  ilun=100
+  ilun=105
   call title(count_bak,nchar)
   call title(myid_io,iochar)
   filename='ionode_'//TRIM(iochar)//'/process_00001/'

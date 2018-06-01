@@ -149,7 +149,7 @@ SUBROUTINE output_rtInfo(filename)
 !------------------------------------------------------------------------
   if (verbose) write(*,*)'Entering output_rtInfo'
 
-  ilun = myid+10
+  ilun = myid+103
 
   ! Conversion factor from user units to cgs units
   call rt_units(scale_np, scale_pf)

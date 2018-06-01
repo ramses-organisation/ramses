@@ -185,7 +185,7 @@ subroutine init_flow_fine(ilevel)
            ! Reading the existing file
            if(myid==1)write(*,*)'Reading file '//TRIM(filename)
            if(multiple)then
-              ilun=ncpu+myid+10
+              ilun=ncpu+myid+103
 
               ! Wait for the token
 #ifndef WITHOUTMPI

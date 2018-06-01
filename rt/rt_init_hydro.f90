@@ -54,7 +54,7 @@ subroutine rt_init_hydro
   !--------------------------------
   ! For a restart, read rt file
   !--------------------------------
-  ilun=ncpu+myid+10
+  ilun=ncpu+myid+103
   call title(nrestart,nchar)
 
   if(IOGROUPSIZEREP>0)then

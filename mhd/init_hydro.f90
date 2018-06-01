@@ -44,7 +44,7 @@ subroutine init_hydro
   ! For a restart, read hydro file
   !--------------------------------
   if(nrestart>0)then
-     ilun=ncpu+myid+10
+     ilun=ncpu+myid+103
      call title(nrestart,nchar)
      if(IOGROUPSIZEREP>0)then
         call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
