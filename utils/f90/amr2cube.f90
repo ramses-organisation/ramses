@@ -28,7 +28,8 @@ program amr2cube
   integer::ix,iy,iz,ixp1,iyp1,izp1,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dmax,dummy
+  real(KIND=4)::dummy
+  real(KIND=8)::dkey,order_min,dmax
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
   real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz
