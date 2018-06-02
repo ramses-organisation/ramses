@@ -65,11 +65,16 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = mpif90
-#FFLAGS = -cpp $(DEFINES) -DNOSYSTEM
+#FFLAGS = -cpp -fast $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = mpif90
-#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM
+#FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
+
+# --- MPI, cray syntax, high optimisation -----------
+# --- NOTE: 03 is slower, hfp3 is too aggresive
+#F90 = ftn
+#FFLAGS = -eZ $(DEFINES) -DCRAY -O2 -hfp2 -g
 
 #############################################################################
 MOD = mod
@@ -127,7 +132,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 #############################################################################
 write_gitinfo.o: FORCE
 	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' -DGITHASH=\'"$(GITHASH)"\' \
--DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
+ -DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
 	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
 	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
@@ -138,6 +143,6 @@ write_patch.o: FORCE
 	$(F90) $(FFLAGS) -c $^ -o $@
 FORCE:
 #############################################################################
-clean :
-	rm *.o *.$(MOD)
+clean:
+	rm -f *.o *.$(MOD) *.i
 #############################################################################

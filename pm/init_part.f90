@@ -93,7 +93,7 @@
 
   if(nrestart>0)then
 
-     ilun=2*ncpu+myid+10
+     ilun=2*ncpu+myid+103
      call title(nrestart,nchar)
 
      if(IOGROUPSIZEREP>0)then
@@ -417,7 +417,7 @@ contains
           if(myid==1)write(*,*)'Reading file '//TRIM(filename)
 
           if(multiple)then
-             ilun=myid+10
+             ilun=myid+103
              ! Wait for the token
 #ifndef WITHOUTMPI
              if(IOGROUPSIZE>0) then
@@ -907,7 +907,7 @@ contains
           if(myid==1)then
              jpart=0
              do i=1,nvector
-                read(10,*,end=100)xx1,xx2,xx3,vv1,vv2,vv3,mm1
+                read(10,*,end=111)xx1,xx2,xx3,vv1,vv2,vv3,mm1
                 jpart=jpart+1
                 indglob=indglob+1
                 xx(i,1)=xx1+boxlen/2.0
@@ -922,7 +922,7 @@ contains
                 tmppart%tag    = 0
                 pp(i  )=part2int(tmppart)
              end do
-100          continue
+111          continue
              if(jpart<nvector)eof=.true.
           endif
           buf_count=nvector*3
