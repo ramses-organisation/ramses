@@ -75,8 +75,8 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, cray syntax, high optimisation -----------
 # --- NOTE: 03 is slower, hfp3 is too aggresive
-F90 = ftn
-FFLAGS = -eZ $(DEFINES) -DCRAY -O2 -hfp2 -g
+#F90 = ftn
+#FFLAGS = -eZ $(DEFINES) -DCRAY -O2 -hfp2 -g
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
