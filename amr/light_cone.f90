@@ -54,7 +54,7 @@ subroutine output_cone()
   Lbox=boxlen_ini/hubin
   observer=(/Lbox/2.0,Lbox/2.0,Lbox/2.0/)
 
-  ilun=3*ncpu+myid+10
+  ilun=3*ncpu+myid+103
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping lightcone'

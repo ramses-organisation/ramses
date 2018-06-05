@@ -167,7 +167,7 @@ subroutine rt_init_flow_fine(ilevel)
               endif
 #endif
 
-              ilun=ncpu+myid+10
+              ilun=ncpu+myid+103
               open(ilun,file=filename,form='unformatted')
               rewind ilun
               read(ilun) ! skip first line

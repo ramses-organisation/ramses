@@ -21,7 +21,7 @@ subroutine output_cool_recv
   real(kind=8),dimension(:),allocatable::data
 
   ! Generate filename
-  ilun=myid_world+10
+  ilun=myid_world+103
   call title(count_bak,nchar)
   call title(myid_io,iochar)
   filename='ionode_'//TRIM(iochar)//'/process_00001/'

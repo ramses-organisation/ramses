@@ -4,15 +4,18 @@ program ramses
   ! Read run parameters
   call read_params
 
+#ifndef CRAY
   ! Set signal handler
   call set_signal_handler
+#endif
 
   ! Start time integration
   call adaptive_loop
 
 end program ramses
 
-! sets the hook to catch signal 10
+#ifndef CRAY
+! sets the hook to catch signal 10, doesn't work with CRAY
 subroutine set_signal_handler
   implicit none
   external output_signal
@@ -42,4 +45,4 @@ subroutine output_signal
   output_now = .true.
 
 end subroutine output_signal
-
+#endif
