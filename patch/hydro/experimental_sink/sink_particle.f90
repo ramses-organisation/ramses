@@ -1077,7 +1077,7 @@ subroutine compute_accretion_rate(write_sinks)
         end if
      end if
 
-     if(msink(isink).ge.max_mass_nsc*2e33/scale_m)dMsink_overdt(isink)=0.0
+     if(msink(isink).ge.max_mass_nsc*2e33/scale_m.and.mass_smbh_seed>0.0)dMsink_overdt(isink)=0.0
 
   end do
 
