@@ -2,20 +2,19 @@ subroutine init_sink
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  integer::idim, isink, nsinkold
+  integer::isink, nsinkold
   logical::eof,ic_sink=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
 
-  integer::i
   integer::sid,slevel
   real(dp)::sm1,sx1,sx2,sx3,sv1,sv2,sv3,sl1,sl2,sl3
   real(dp)::stform,sacc_rate,sacc_mass,srho_gas,sc2_gas,seps_sink,svg1,svg2,svg3,sm2
@@ -136,7 +135,7 @@ subroutine init_sink
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,20(A1,ES20.10),A1,I10)',end=102)sid,co, sm1,co,&
+        read(10,'(I10,20(A1,ES20.10),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &
@@ -171,7 +170,7 @@ subroutine init_sink
         msmbh(nsink)=sm2
         sinkint_level=slevel
      end do
-102  continue
+104  continue
      close(10)
 
      ! Send the token

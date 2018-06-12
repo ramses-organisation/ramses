@@ -8,10 +8,8 @@ subroutine create_sink
   use pm_commons
   use hydro_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !-----------------------------------------------------------------------------
   ! sink creation routine
@@ -131,10 +129,8 @@ subroutine create_cloud_from_sink
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !-----------------------------------------------------------------------------
   ! This routine creates the whole cloud of particles for each sink,
@@ -359,9 +355,9 @@ subroutine collect_acczone_avg(ilevel)
   use pm_commons
   use amr_commons
   use poisson_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !-----------------------------------------------------------------------------
@@ -579,9 +575,9 @@ subroutine grow_sink(ilevel,on_creation)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !-----------------------------------------------------------------------------
@@ -873,7 +869,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               m_acc     =dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
               m_acc_smbh=dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
 
-              if(agn)then
+              if(agn.and.msink(isink).gt.0)then
                  acc_ratio=dMsmbh_overdt(isink)/(4.*3.1415926*6.67d-8*msmbh(isink)*1.66d-24/(0.1*6.652d-25*3d10)*scale_t)
                  if (chi_switch > 0.0) then
                     if (acc_ratio > chi_switch) then
@@ -962,10 +958,8 @@ subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   logical::write_sinks
 
   !-----------------------------------------------------------------------------
@@ -1083,6 +1077,8 @@ subroutine compute_accretion_rate(write_sinks)
         end if
      end if
 
+     if(msink(isink).ge.max_mass_nsc*2e33/scale_m)dMsink_overdt(isink)=0.0
+
   end do
 
   if (write_sinks)then
@@ -1140,10 +1136,8 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMEDoverdt_smbh
   integer::i,isink,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
@@ -1240,11 +1234,8 @@ subroutine make_sink_from_clump(ilevel)
   use hydro_commons
   use poisson_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  integer::ilevel
 
   !-----------------------------------------------------------------------------
   ! This routine uses creates a sink in every cell which was flagged (flag2)
@@ -1252,6 +1243,7 @@ subroutine make_sink_from_clump(ilevel)
   ! The true RAMSES particle is NOT produced here...
   !-----------------------------------------------------------------------------
 
+  integer ::ilevel
   integer ::ncache,nnew,ivar,ngrid,index_sink,index_sink_tot
   integer ::igrid,ix,iy,iz,ind,i,iskip,isink,nx_loc
   integer ::ntot,ntot_all
@@ -1681,10 +1673,8 @@ subroutine update_sink(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
 
   !-----------------------------------------------------------------------------
@@ -2110,15 +2100,16 @@ subroutine f_gas_sink(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-  integer::info
-#endif
+
   !-----------------------------------------------------------------------------
   ! In this subroutine the sink-gas force contributions are calculated.
   ! A plummer-sphere with radius ssoft is used for softening
   !-----------------------------------------------------------------------------
+#ifndef WITHOUTMPI
+  integer::info
+#endif
   integer ::ilevel
   integer ::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
   integer ::nx_loc,idim
@@ -2293,10 +2284,9 @@ end subroutine f_gas_sink
 subroutine f_sink_sink
   use amr_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
+
   !-----------------------------------------------------------------------------
   ! In this subroutine the sink-sink force contribution are calculated by direct
   ! n^2 - summation. A plummer-sphere with radius 4 cells is used for softening
@@ -2385,7 +2375,7 @@ subroutine read_sink_params()
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
-       epsilon_kin,chi_switch,kin_mass_loading,bondi_use_vrel,smbh,agn
+       epsilon_kin,chi_switch,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -2742,6 +2732,7 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
   use poisson_commons
   use hydro_commons, ONLY: nvar,uold
   implicit none
+
   !-----------------------------------------------------------------------------
   ! This routine returns the CIC cells and volumes for np particles.
   !-----------------------------------------------------------------------------
@@ -2864,6 +2855,7 @@ subroutine set_uold_sink(ilevel)
   use hydro_commons
   use poisson_commons
   implicit none
+
   !-----------------------------------------------------------------------------
   ! This routine sets array uold to its new value unew after the hydro step
   !-----------------------------------------------------------------------------
@@ -2909,12 +2901,12 @@ end subroutine set_uold_sink
 #ifndef WITHOUTMPI
 subroutine synchronize_sink_info
   use pm_commons
+  use mpi_mod
   implicit none
   !-----------------------------------------------------------------------------
   ! This routine syncronizes sink variables across all CPUs if MPI is used.
   ! This is done to prevent roundoff errors.
   !-----------------------------------------------------------------------------
-  include 'mpif.h'
   integer::info
 
   call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
