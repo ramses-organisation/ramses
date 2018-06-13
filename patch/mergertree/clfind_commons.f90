@@ -261,6 +261,9 @@ module clfind_commons
   integer, allocatable, dimension(:)  :: prog_galaxy_local_id       ! local particle id of progenitor galaxies
 
 
+  logical :: seed_set = .false. ! whether seed for random scatter is set
+
+
 contains
 
   !=====================================================
@@ -303,15 +306,21 @@ contains
     real(dp) :: gamma_0 =    0.316 
     real(dp) :: gamma_a =    1.319 
     real(dp) :: gamma_z =    0.279
+    real(dp) :: xi_0    =    0.218
+    real(dp) :: xi_a    = -  0.023
 
     real(dp) :: nu
     real(dp) :: loge
     real(dp) :: alpha
     real(dp) :: delta
     real(dp) :: gam
+    real(dp) :: xi, sig
     real(dp) :: logM1
 
     real(dp) :: z, f0
+
+    integer :: n, clock, i
+    integer, dimension(:), allocatable:: seed
 
     z = 1.D0/a - 1
 
@@ -326,8 +335,39 @@ contains
     delta = delta_0 + nu*(delta_a*(a-1)            + delta_z*z)
     gam   = gamma_0 + nu*(gamma_a*(a-1)            + gamma_z*z)
 
+    !-----------------
+    ! get scatter
+    !-----------------
+  
+    ! set unique seed for every task if necessary
+    if (.not.seed_set) then
+      call random_seed(size=n)
+      allocate(seed(n))
+      call system_clock(count=clock)
+      seed = clock + myid + 53*[(n-i, i=1, n)]
+      call random_seed(put=seed)
+      deallocate(seed)
+      seed_set = .true.
+    endif
+
+
+    call random_number(xi)      ! temporarily store random number in xi
+    call random_number(sig)     ! get sign
+    if (sig > 0.5d0) then
+      sig = -1.d0
+    else
+      sig = 1.d0
+    endif
+
+    xi = sig*xi*(xi_0 + xi_a * (a-1))
+
+
+    !-------------------------------
+    ! finally, get stellar mass
+    !-------------------------------
     f0 = -log10_2 + delta*log10_2**gam/(1.d0 + euler)
-    stellar_mass = 10**(loge+logM1 + f(log10(m*scale_m)-logM1)- f0) / 0.7* (h0/100)
+    stellar_mass = 10**(loge+logM1 + f(log10(m*scale_m)-logM1)- f0 + xi) / 0.7* (h0/100)
+    ! /0.7 * (h0/100) : parametrisation in paper was done with h=0.7; change it to currently used h
 
 
   contains
