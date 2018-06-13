@@ -90,9 +90,9 @@ subroutine clump_finder(create_output,keep_alive)
   use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   logical::create_output,keep_alive
@@ -435,10 +435,8 @@ end subroutine clump_finder
 subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
@@ -515,10 +513,8 @@ end subroutine count_test_particle
 subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -562,10 +558,8 @@ end subroutine count_peaks
 subroutine flag_peaks(xx,ipeak)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -590,10 +584,8 @@ end subroutine flag_peaks
 subroutine propagate_flag(nmove,nzero)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::nmove,nzero
   !----------------------------------------------------------------------
   ! All cells above the threshold copy the flag2 value from their densest
@@ -617,10 +609,8 @@ end subroutine propagate_flag
 subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks**2 sized array of saddlepoint densities
@@ -970,10 +960,8 @@ end subroutine get_cell_index
 !#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
 ! added for patch: unbinding parameters
   namelist/clumpfind_params/ivar_clump,& 
@@ -1230,10 +1218,8 @@ subroutine rho_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
@@ -2062,10 +2048,10 @@ subroutine unbinding()
   use amr_commons    ! MPI stuff
   use pm_commons, only: npart, npartmax, levelp
   use clfind_commons ! unbinding stuff
+  use mpi_mod
 
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 
@@ -2361,11 +2347,11 @@ subroutine get_clumpparticles()
   use pm_commons, only: numbp, headp, nextp, xp, mp
   use amr_parameters
   use hydro_commons         !using mass_sph
+  use mpi_mod
   implicit none
   
 #ifndef WITHOUTMPI
   integer :: info
-  include 'mpif.h'
 #endif
   ! for looping over test cells and getting particle list
   integer   :: itestcell, ipart,this_part, global_peak_id, local_peak_id, prtcls_in_grid 
@@ -2762,6 +2748,7 @@ subroutine get_cmp(ilevel)
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   integer, intent(in) :: ilevel ! needed for optional output
 
@@ -2777,7 +2764,6 @@ subroutine get_cmp(ilevel)
    
 #ifndef WITHOUTMPI
   integer  :: levelmax_glob, info
-  include 'mpif.h'
 #endif
 
   if(verbose) write(*,*) "Entered get cumulative mass profiles"
@@ -3310,6 +3296,8 @@ subroutine particle_unbinding(ipeak, final_round)
             else
               hasatleastoneptcl(ipeak)=1 !there are contributing particles for this peak
             endif
+          else
+            contributes(thispart) = .false.
           endif
           thispart=clmppart_next(thispart)
         enddo
@@ -3727,9 +3715,9 @@ subroutine unbinding_formatted_particleoutput(before)
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 
