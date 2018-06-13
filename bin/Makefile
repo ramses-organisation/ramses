@@ -8,7 +8,7 @@ NPRE = 8
 NVAR = 5
 NENER = 0
 SOLVER = hydro
-PATCH = 
+PATCH =
 GRACKLE = 0
 EXEC = ramses
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
@@ -73,6 +73,10 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 #F90 = mpif90
 #FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
 
+# --- MPI, cray syntax, high optimisation -----------
+# --- NOTE: 03 is slower, hfp3 is too aggresive
+#F90 = ftn
+#FFLAGS = -eZ $(DEFINES) -DCRAY -O2 -hfp2 -g
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
@@ -144,7 +148,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 #############################################################################
 write_gitinfo.o: FORCE
 	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' -DGITHASH=\'"$(GITHASH)"\' \
- -DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@		
+ -DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
 	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
 	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
@@ -158,5 +162,5 @@ write_patch.o: FORCE
 FORCE:
 #############################################################################
 clean:
-	rm -f *.o *.$(MOD)
+	rm -f *.o *.$(MOD) *.i
 #############################################################################

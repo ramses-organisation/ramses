@@ -10,9 +10,9 @@ subroutine flag_formation_sites
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
   use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::tag=101,info,icpu
 #endif
 
@@ -87,7 +87,7 @@ subroutine flag_formation_sites
         dist2=sum(rrel**2)
         if (dist2<(2.*ir_cloud*dx_min/aexp)**2)then
            occupied(i)=1
-           if(verbose)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
+           if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
         end if
      end do
   end do
@@ -289,14 +289,12 @@ subroutine compute_clump_properties_round2
 #ifdef RT
   use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
   use rt_hydro_commons, only:rtuold
-  use rt_cooling_module, only:kappaAbs,kappaSc
+  use rt_cooling_module, only:kappaSc
 #endif
 
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
+
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects
   ! more information like binding energies, etc, that can not be created by
@@ -760,10 +758,8 @@ subroutine surface_int
   use pm_commons
   use clfind_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
   !---------------------------------------------------------------
   ! Compute all the surface terms for virial analysis.

@@ -150,7 +150,7 @@ subroutine backup_part_recv
      end if
 
      ! Generate filename
-     ilun=myid_world+10
+     ilun=myid_world+103
      call title(count_bak,nchar)
      call title(iogroup2comp(src),cpuchar)
      call title(myid_io,iochar)
