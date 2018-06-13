@@ -87,7 +87,7 @@ subroutine flag_formation_sites
         dist2=sum(rrel**2)
         if (dist2<(2.*ir_cloud*dx_min/aexp)**2)then
            occupied(i)=1
-           if(verbose)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
+           if(clinfo)write(*,*)'CPU # ',myid,'blocked clump # ',i+ipeak_start(myid),' for sink production because of sink # ',idsink(j)
         end if
      end do
   end do
@@ -294,6 +294,7 @@ subroutine compute_clump_properties_round2
 
   use mpi_mod
   implicit none
+
   !----------------------------------------------------------------------------
   ! This subroutine performs another loop over all particles and collects
   ! more information like binding energies, etc, that can not be created by
