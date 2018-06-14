@@ -5,10 +5,10 @@ subroutine unbinding()
   use pm_commons, only: mp, npart, npartmax, levelp
   use hydro_commons, ONLY:mass_sph
   use clfind_commons ! unbinding stuff
+  use mpi_mod
 
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
   real(dp):: partm_common_all
   logical :: loop_again_global
@@ -270,9 +270,6 @@ subroutine unbinding()
   enddo !loop over levels
 
 
-  ! After the loop: Dissolve too small halos
-  if (make_mergertree) call dissolve_small_clumps(0, .true.)
-  
 
 
 
@@ -306,11 +303,50 @@ subroutine unbinding()
   ! After unbinding: Do merger tree stuff
   !=========================================
 
+
+  ! After the loop: Dissolve too small halos, sum up masses if necessary
   if (make_mergertree) then
+    call dissolve_small_clumps(0, .true.)
+  
+
+    if (.not. use_exclusive_mass) then
+
+      ! reset mass: clmp_mass_pb is not updated after unbinding;
+      ! which particles are bound in the end is not included in there.
+      ! There might've been some changes. Fix this now.
+      clmp_mass_pb(1:npeaks) = clmp_mass_exclusive(1:npeaks)
+
+      do ilevel = 0, mergelevel_max
+
+        ! First reset virtual's mass for comms
+        clmp_mass_pb(npeaks+1:hfree-1) = 0.d0
+
+        do ipeak = 1, npeaks
+          ! only do this part for non-virtuals as "source", otherwise you'll get wrong additions!
+          if (lev_peak(ipeak)== ilevel) then
+            if (clmp_mass_exclusive(ipeak) > 0 .and. .not. is_namegiver(ipeak)) then
+              call get_local_peak_id(new_peak(ipeak), parent_local_id)
+              if (.not. is_namegiver(parent_local_id)) then ! namegivers already take all particles in get_clumpproperties()
+                clmp_mass_pb(parent_local_id) = clmp_mass_pb(parent_local_id) + clmp_mass_pb(ipeak)
+              endif 
+            endif
+          endif
+        enddo
+
+        ! communicate: gather only, no need to scatter to virtuals, they will be reset immediately
+        call virtual_peak_dp(clmp_mass_pb(:), 'sum')
+
+      enddo
+    endif
+
+    ! now scatter to virtuals
+    call boundary_peak_dp(clmp_mass_pb(:))
+
+    ! Now call mergertree
     call make_merger_tree()
+
   endif
-
-
+ 
 
 
 
@@ -493,7 +529,7 @@ subroutine get_clump_properties_pb(first)
   implicit none
 
   logical, intent(in) :: first  ! if it is the first time calculating
-   
+
   !--------------------------------------------------------------------------
   ! This subroutine computes the particle-based properties of the clumps:
   ! namely the center of mass and the clump's velocity.
@@ -644,6 +680,7 @@ subroutine get_cmp()
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 
   !-----------------------------------------
@@ -662,7 +699,6 @@ subroutine get_cmp()
    
 #ifndef WITHOUTMPI
   integer  :: levelmax_glob, info
-  include 'mpif.h'
 #endif
 
   !--------------------------
@@ -1212,8 +1248,8 @@ subroutine particle_unbinding(ipeak, final_round)
 
             !check if unbound
             if(epart >= 0) then  
-              nunbound=nunbound+1                  !counter
-              clmpidp(thispart)=new_peak(ipeak)    !update clump id
+              nunbound=nunbound+1                  ! counter
+              clmpidp(thispart)=new_peak(ipeak)    ! update clump id
             else
               if (make_mergertree) then
                 ! store the values for mergertrees
@@ -1276,6 +1312,8 @@ subroutine particle_unbinding(ipeak, final_round)
               else
                 hasatleastoneptcl(ipeak)=1 ! there are contributing particles for this peak
               endif
+            else
+              contributes(thispart) = .false.
             endif
             thispart=clmppart_next(thispart)
           enddo
@@ -1599,9 +1637,9 @@ subroutine write_unbinding_formatted_output(before)
   use amr_commons
   use pm_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer :: info
 #endif
 
