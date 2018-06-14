@@ -5,10 +5,10 @@
 subroutine init_tree
   use pm_commons
   use amr_commons
+  use mpi_mod
   use dice_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !------------------------------------------------------
@@ -148,7 +148,7 @@ subroutine init_tree
 
 #if NDIM==3
   if(sink)then
-     if(nrestart.gt.0)call kill_entire_cloud(1)
+     call kill_entire_cloud(1)
      call create_cloud_from_sink
   endif
 #endif
@@ -316,8 +316,6 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
-        i=MAX(i,0)
-        i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
         ok(j)=ok(j).or.i.ne.1
@@ -630,11 +628,9 @@ end subroutine merge_tree_fine
 subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   use dice_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.
