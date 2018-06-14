@@ -5,9 +5,9 @@ subroutine compute_clump_properties(xx)
   use amr_commons
   use hydro_commons, ONLY:uold
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -263,9 +263,9 @@ subroutine write_clump_properties(to_file)
   use pm_commons,ONLY:mp
   use hydro_commons,ONLY:mass_sph
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,parameter::tag=1101
   integer::dummy_io,info,info2
 #endif
@@ -438,10 +438,10 @@ end subroutine write_clump_properties
 subroutine merge_clumps(action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   character(len=9)::action
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !---------------------------------------------------------------------------
@@ -1008,9 +1008,9 @@ end subroutine get_local_peak_cpu
 subroutine build_peak_communicator
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,ipeak,icpu
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
   integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
@@ -1067,11 +1067,11 @@ end subroutine build_peak_communicator
 subroutine virtual_peak_int(xx,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   integer,dimension(1:npeaks_max)::xx
   character(len=3)::action
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
@@ -1113,12 +1113,11 @@ end subroutine virtual_peak_int
 subroutine virtual_peak_dp(xx,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   real(dp),dimension(1:npeaks_max)::xx
   character(len=3)::action
-
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
@@ -1160,9 +1159,9 @@ end subroutine virtual_peak_dp
 subroutine virtual_saddle_max
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,icpu
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
@@ -1203,10 +1202,10 @@ end subroutine virtual_saddle_max
 subroutine boundary_peak_int(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   integer,dimension(1:npeaks_max)::xx
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer,allocatable,dimension(:)::int_peak_send_buf,int_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
@@ -1235,11 +1234,10 @@ end subroutine boundary_peak_int
 subroutine boundary_peak_dp(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
   real(dp),dimension(1:npeaks_max)::xx
-
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   real(kind=8),allocatable,dimension(:)::dp_peak_send_buf,dp_peak_recv_buf
   integer::ipeak,icpu,info,j
   integer,dimension(1:ncpu)::ipeak_alltoall
@@ -1268,9 +1266,9 @@ end subroutine boundary_peak_dp
 subroutine write_clump_map
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::dummy_io,info2
   integer,parameter::tag=1102
 #endif
@@ -1356,9 +1354,9 @@ end subroutine write_clump_map
 subroutine analyze_peak_memory
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   integer::i,j
