@@ -8,10 +8,10 @@ subroutine rho_fine(ilevel,icount)
   use hydro_commons
   use poisson_commons
   use cooling_module
+  use mpi_mod
   use dice_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
   real(kind=8),dimension(1:ndim+1)::multipole_in,multipole_out
 #endif
@@ -855,10 +855,8 @@ subroutine multipole_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
@@ -1141,10 +1139,8 @@ subroutine cic_from_multipole(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)
@@ -1811,10 +1807,8 @@ subroutine tsc_from_multipole(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-------------------------------------------------------------------
   ! This routine compute array rho (source term for Poisson equation)

@@ -54,10 +54,10 @@ subroutine init_flow_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+  use mpi_mod
   use dice_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info,info2,dummy_io
 #endif
   integer::ilevel
@@ -210,7 +210,7 @@ subroutine init_flow_fine(ilevel)
            ! Reading the existing file
            if(myid==1)write(*,*)'Reading file '//TRIM(filename)
            if(multiple)then
-              ilun=ncpu+myid+10
+              ilun=ncpu+myid+103
 
               ! Wait for the token
 #ifndef WITHOUTMPI
@@ -473,7 +473,7 @@ subroutine region_condinit(x,q,dx,nn)
 
   integer::i,k
   real(dp)::vol,r,xn,yn,zn,en
-#if NVAR > NDIM + 2
+#if NVAR > NDIM + 2 || NENER > 0
   integer::ivar
 #endif
 
