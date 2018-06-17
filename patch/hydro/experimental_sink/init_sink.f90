@@ -247,7 +247,7 @@ subroutine init_sink
         lsink(nsink,2)=sl2
         lsink(nsink,3)=sl3
         tsink(nsink)=t
-        new_born(nsink)=.false. ! this is a restart
+        new_born(nsink)=.true.
         msmbh(nsink)=sm2
      end do
 103  continue
