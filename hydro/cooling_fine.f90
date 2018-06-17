@@ -426,7 +426,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         my_grackle_fields%grid_rank = gr_rank
         my_grackle_fields%grid_dx = dx_loc
 
-        iresult = solve_chemistry(my_grackle_units, my_grackle_fields, dtnew(ilevel))
+        iresult = solve_chemistry(my_grackle_units, my_grackle_fields, %VAL(dtnew(ilevel)))
         if(iresult.eq.0)then
             write(*,*) 'Grackle: error in solve_chemistry'
 #ifndef WITHOUTMPI
