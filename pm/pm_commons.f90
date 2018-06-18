@@ -136,7 +136,7 @@ contains
     type(part_t), intent(in) :: part
 
     ! This is the largest value for integer(1)
-    integer, parameter :: a = 127, b = 2*a
+    integer, parameter :: a = 128, b = 2*a
 
     part2int = (int(part%family) + a) * b + (int(part%tag) + a)
   end function part2int
@@ -147,7 +147,7 @@ contains
     integer, intent(in) :: index
 
     ! This is the largest value for integer(1)
-    integer, parameter :: a = 127, b = 2*a
+    integer, parameter :: a = 128, b = 2*a
 
     int2part%family = int(index / b - a, 1)
     int2part%tag = int(mod(index, b) - a, 1)
