@@ -3,6 +3,7 @@ subroutine init_sink
   use pm_commons
   use clfind_commons
   use mpi_mod
+  use amr_parameters, only:levelmin
   implicit none
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
@@ -168,8 +169,8 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
-        sinkint_level=slevel
      end do
+     sinkint_level=slevel
 104  continue
      close(10)
 
@@ -247,9 +248,10 @@ subroutine init_sink
         lsink(nsink,2)=sl2
         lsink(nsink,3)=sl3
         tsink(nsink)=t
-        new_born(nsink)=.false. ! this is a restart
+        new_born(nsink)=.false.
         msmbh(nsink)=sm2
      end do
+     sinkint_level=levelmin
 103  continue
      close(10)
 
