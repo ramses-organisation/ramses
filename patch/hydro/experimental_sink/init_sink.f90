@@ -169,8 +169,8 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
-        sinkint_level=slevel
      end do
+     sinkint_level=slevel
 104  continue
      close(10)
 
@@ -250,8 +250,8 @@ subroutine init_sink
         tsink(nsink)=t
         new_born(nsink)=.false.
         msmbh(nsink)=sm2
-        sinkint_level=levelmin
      end do
+     sinkint_level=levelmin
 103  continue
      close(10)
 
