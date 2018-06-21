@@ -722,6 +722,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   use amr_commons
   use pm_commons
   use hydro_commons
+#ifdef RT
+  use rt_hydro_commons,only: rtunew
+  use rt_parameters,only: nGroups, iGroups, group_egy, rt_AGN, group_egy_AGNfrac
+#endif
   implicit none
   !-----------------------------------------------------------------------------
   ! This routine is called by subroutine grow_sink. It performs accretion
@@ -740,6 +744,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 #endif
 #if NENER>0
   integer::irad
+#endif
+#ifdef RT
+  integer::igroup
+  real(dp)::scale_Np,scale_Fp
+  real(dp)::scale_vol,scale_evtocode,dert,Np_inj
 #endif
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc,m_acc_smbh
@@ -784,7 +793,13 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   ! Compute volume of each cloud particle
   dx_cloud=dx_min/2.0 ! factor of 2 hard-coded
-  vol_cloud=dx_cloud**ndim
+  vol_cloud=dx_cloud**3
+
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+  scale_vol=scale_l**3
+  scale_evtocode=1.60217646d-12/(scale_d*scale_l**5/scale_t**2)
+#endif
 
   ! Jet geometry safety net
   cone_opening = max(tiny(0.0),cone_opening)
@@ -925,6 +940,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            end do
 
            ! AGN feedback
+           ! Only for sinks that could accreate.
+           ! Can deposit thermal dump or/and momentum kicks (and/or radiation if RT used).
            if( .not. on_creation)then
               if(agn)then
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
@@ -943,6 +960,15 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                        end if
                     end if
                  end if
+#ifdef RT                 
+                 if(rt_AGN)then
+                    dert=0.1d0*delta_mass(isink)*(3d10/scale_v)**2
+                    do igroup=1,nGroups
+                       Np_inj=dert * group_egy_AGNfrac(igroup) / (scale_evtocode*group_egy(igroup)) / (vol_loc*scale_vol) / scale_Np*weight/volume
+                       rtunew(indp(j,ind),iGroups(igroup))=rtunew(indp(j,ind),iGroups(igroup))+Np_inj
+                    enddo
+                 end if
+#endif
               end if
            end if
         endif

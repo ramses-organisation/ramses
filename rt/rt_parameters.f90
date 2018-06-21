@@ -52,6 +52,7 @@ module rt_parameters
   real(dp)::rt_Tconst=-1               ! If pos. use this value for all T-depend. rates  !
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
+  logical::rt_AGN=.false.              ! Activate radiation from sink particles on central cloud !
   real(dp)::rt_esc_frac=1.d0           ! Escape fraction of light from stellar particles !
   logical::rt_is_init_xion=.false.     ! Initialize ionization from T profile?           !
   character(LEN=10)::rt_flux_scheme='glf'                                                !
@@ -90,6 +91,7 @@ module rt_parameters
   integer,dimension(nGroups)::iGroups=1                          ! Start indices of groups
   real(dp),dimension(nGroups,nIons)::group_csn=0, group_cse=0    !    Cross sections (cm2)
   real(dp),dimension(nGroups)::group_egy=0                       !  Avg photon energy (ev)
+  real(dp),dimension(nGroups)::group_egy_AGNfrac=0               !  Fraction of AGN energy
   real(dp),dimension(nGroups)::groupL0=13.60                     ! Wavelength lower limits
   real(dp),dimension(nGroups)::groupL1=0                         ! Wavelength upper limits
   integer,dimension(nIons)::spec2group=0                 !Ion -> group # in recombinations
