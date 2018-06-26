@@ -128,32 +128,28 @@ contains
   end function is_not_DM
   
 
-  pure function part2int (part)
+  elemental function part2int (part)
     ! Convert a particle into an integer
     ! This saves some space e.g. when communicating
     integer :: part2int
     type(part_t), intent(in) :: part
 
-    integer :: magic
-
     ! This is the largest value for integer(1)
-    magic = 127
+    integer, parameter :: a = 128, b = 2*a
 
-    part2int = int(part%family) * magic + int(part%tag)
+    part2int = (int(part%family) + a) * b + (int(part%tag) + a)
   end function part2int
 
-  pure function int2part(index)
+  elemental function int2part(index)
     ! Convert from an index to particle type
     type(part_t) :: int2part
     integer, intent(in) :: index
 
-    integer :: magic
-
     ! This is the largest value for integer(1)
-    magic = 127
+    integer, parameter :: a = 128, b = 2*a
 
-    int2part%family = int(index / magic, 1)
-    int2part%tag = int(mod(index, magic), 1)
+    int2part%family = int(index / b - a, 1)
+    int2part%tag = int(mod(index, b) - a, 1)
   end function int2part
 
   function props2type(idpii, tpii, mpii)
