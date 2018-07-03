@@ -9,10 +9,8 @@ subroutine init_time
 #ifdef RT
   use rt_cooling_module
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::i,Nmodel
   real(kind=8)::T2_sim
 #ifdef grackle
@@ -149,7 +147,7 @@ subroutine init_time
      !Set initial expansion factor (for internal units).
      !Set expansion factor to 1 for non-cosmological simulation
      ! Safety for GRACKLE initialisation
-     my_grackle_units%a_value = MAX(aexp_ini,0.0625)
+     my_grackle_units%a_value = aexp_ini
 
      if(cosmo) then
         my_grackle_units%comoving_coordinates = 1
@@ -306,10 +304,8 @@ subroutine init_file
   use amr_commons
   use hydro_commons
   use pm_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------
   ! Read geometrical parameters in the initial condition files.
   ! Initial conditions are supposed to be made by
@@ -420,12 +416,9 @@ subroutine init_cosmo
   use hydro_commons
   use pm_commons
   use gadgetreadfilemod
+  use mpi_mod
   use dice_commons
-
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !------------------------------------------------------
   ! Read cosmological and geometrical parameters
   ! in the initial condition files.

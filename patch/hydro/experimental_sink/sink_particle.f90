@@ -203,9 +203,9 @@ subroutine create_cloud_from_sink
            rr=sqrt(sum(xrel**2))
            if(rr<=rmax)then
               do isink=1,nsink
-                 xtest(1,1:3)=xsink(isink,1:3)+xrel(1:3)
+                 xtest(1,1:ndim)=xsink(isink,1:ndim)+xrel(1:ndim)
                  in_box=.true.
-                 do idim=1,3
+                 do idim=1,ndim
                     if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
                     if (period(idim) .and. xtest(1,idim)<0.)    xtest(1,idim)=xtest(1,idim)+boxlen
                     if (xtest(1,idim)<0.0 .or. xtest(1,idim)>boxlen)in_box=.false.
@@ -223,7 +223,7 @@ subroutine create_cloud_from_sink
                     if (rr<=rmass)then
                        ! check if direct_force is turned on
                        if(mass_sink_direct_force .ge. 0.0)then
-                          if(msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**3))then
+                          if(msink(isink)<mass_sink_direct_force*2d33/(scale_d*scale_l**ndim))then
                              mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                           else
                              mp(indp)=0.
@@ -234,8 +234,8 @@ subroutine create_cloud_from_sink
                     else
                        mp(indp)        = 0.0d0
                     end if
-                    xp(indp,1:3)       = xtest(1,1:3)
-                    vp(indp,1:3)       = vsink(isink,1:3)
+                    xp(indp,1:ndim)       = xtest(1,1:ndim)
+                    vp(indp,1:ndim)       = vsink(isink,1:ndim)
                     tp(indp)           = tsink(isink)     ! Birth epoch
                  end if
               end do
@@ -247,7 +247,7 @@ subroutine create_cloud_from_sink
   sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
-        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**ndim))
      end do
   else
      do isink=1,nsink
@@ -486,14 +486,13 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-#if NDIM==3
   integer::j,nx_loc,isink,idim,ind
 #if NENER>0
   integer::irad
 #endif
   real(dp)::d,e,v2
   real(dp)::scale,weight,dx_cloud,vol_cloud
-  real(dp),dimension(1:3)::vv
+  real(dp),dimension(1:ndim)::vv
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -503,6 +502,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim)::vol
   logical, dimension(1:nvector,1:twotondim)::ok
 
+#if NDIM==3
   ! Compute volume of each cloud particle
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
@@ -558,7 +558,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            ! Compute sink average quantities
            wvol(isink)=wvol(isink)+weight
            wden(isink)=wden(isink)+weight*d
-           wmom(isink,1:3)=wmom(isink,1:3)+weight*d*vv(1:3)
+           wmom(isink,1:ndim)=wmom(isink,1:ndim)+weight*d*vv(1:ndim)
            weth(isink)=weth(isink)+weight*d*e
 
         endif
@@ -666,7 +666,7 @@ subroutine grow_sink(ilevel,on_creation)
      call MPI_ALLREDUCE(msmbh_new,msmbh_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(xsink_new,xsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-     call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
      msink_all=msink_new
@@ -693,7 +693,7 @@ subroutine grow_sink(ilevel,on_creation)
         ! Accrete to sink variables in the frame of the initial sink position
         xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)/(msink(isink)+msmbh(isink))
         vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)/(msink(isink)+msmbh(isink))
-        lsink(isink,1:3)=lsink(isink,1:3)+lsink_all(isink,1:3)-cross(xsink_all(isink,1:ndim),vsink_all(isink,1:ndim))/(msink(isink)+msmbh(isink))
+        lsink(isink,1:ndim)=lsink(isink,1:ndim)+lsink_all(isink,1:ndim)-cross(xsink_all(isink,1:ndim),vsink_all(isink,1:ndim))/(msink(isink)+msmbh(isink))
      
         ! Store jump in new sink coordinates
         do lev=levelmin,nlevelmax
@@ -722,6 +722,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   use amr_commons
   use pm_commons
   use hydro_commons
+#ifdef RT
+  use rt_hydro_commons,only: rtunew
+  use rt_parameters,only: nGroups, iGroups, group_egy, rt_AGN, group_egy_AGNfrac
+#endif
   implicit none
   !-----------------------------------------------------------------------------
   ! This routine is called by subroutine grow_sink. It performs accretion
@@ -741,6 +745,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 #if NENER>0
   integer::irad
 #endif
+#ifdef RT
+  integer::igroup
+  real(dp)::scale_Np,scale_Fp
+  real(dp)::scale_vol,scale_evtocode,dert,Np_inj
+#endif
   real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc,m_acc_smbh
   ! Grid based arrays
@@ -750,14 +759,14 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! Particle based arrays
   logical,dimension(1:nvector,1:twotondim)::ok
   integer ,dimension(1:nvector,1:twotondim)::indp
-  real(dp),dimension(1:3)::vv
+  real(dp),dimension(1:ndim)::vv
 
-  real(dp),dimension(1:3)::r_rel,v_rel,x_acc,p_acc,l_acc
+  real(dp),dimension(1:ndim)::r_rel,v_rel,x_acc,p_acc,l_acc
   real(dp)::fbk_ener_AGN,fbk_mom_AGN,r_len
   logical,dimension(1:ndim)::period
 
   real(dp)::tan_theta,cone_dist,orth_dist
-  real(dp),dimension(1:3)::cone_dir
+  real(dp),dimension(1:ndim)::cone_dir
   real(dp)::acc_ratio,v_AGN
 
 #if NDIM==3
@@ -785,6 +794,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! Compute volume of each cloud particle
   dx_cloud=dx_min/2.0 ! factor of 2 hard-coded
   vol_cloud=dx_cloud**ndim
+
+#ifdef RT
+  call rt_units(scale_Np, scale_Fp)
+  scale_vol=scale_l**ndim
+  scale_evtocode=1.60217646d-12/(scale_d*scale_l**5/scale_t**2)
+#endif
 
   ! Jet geometry safety net
   cone_opening = max(tiny(0.0),cone_opening)
@@ -834,7 +849,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            isink=-idp(ind_part(j))
 
            ! Reference frame relative to the sink position
-           r_rel(1:3)=xx(j,1:3,ind)-xsink(isink,1:3)
+           r_rel(1:ndim)=xx(j,1:ndim,ind)-xsink(isink,1:ndim)
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)r_rel(idim)=r_rel(idim)-boxlen
               if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
@@ -842,7 +857,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            r_len=sqrt(sum(r_rel**2))
 
            ! Reference frame relative to the sink velocity
-           v_rel(1:3)=vv(1:3)-vsink(isink,1:3)
+           v_rel(1:ndim)=vv(1:ndim)-vsink(isink,1:ndim)
 
            ! Cloud particle CIC weight
            weight=vol_cloud*vol(j,ind)
@@ -858,8 +873,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            if (on_creation)then
               if (new_born(isink))then
                  ! on sink creation, new sinks
-                 m_acc     =mass_sink_seed*2d33/(scale_d*scale_l**3)*weight/volume*d/density
-                 m_acc_smbh=mass_smbh_seed*2d33/(scale_d*scale_l**3)*weight/volume*d/density
+                 m_acc     =mass_sink_seed*2d33/(scale_d*scale_l**ndim)*weight/volume*d/density
+                 m_acc_smbh=mass_smbh_seed*2d33/(scale_d*scale_l**ndim)*weight/volume*d/density
               else
                  ! on sink creation, preexisting sinks
                  m_acc     =0.0
@@ -892,20 +907,20 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            m_acc_smbh=max(m_acc_smbh,0.0_dp)               
 
            ! Accreted relative center of mass
-           x_acc(1:3)=(m_acc+m_acc_smbh)*r_rel(1:3)
+           x_acc(1:ndim)=(m_acc+m_acc_smbh)*r_rel(1:ndim)
 
            ! Accreted relative momentum
-           p_acc(1:3)=(m_acc+m_acc_smbh)*v_rel(1:3)
+           p_acc(1:ndim)=(m_acc+m_acc_smbh)*v_rel(1:ndim)
           
            ! Accreted relative angular momentum
-           l_acc(1:3)=(m_acc+m_acc_smbh)*cross(r_rel(1:3),v_rel(1:3))
+           l_acc(1:ndim)=(m_acc+m_acc_smbh)*cross(r_rel(1:ndim),v_rel(1:ndim))
            
            ! Add accreted properties to sink variables
            msink_new(isink)=msink_new(isink)+m_acc
            msmbh_new(isink)=msmbh_new(isink)+m_acc_smbh
-           xsink_new(isink,1:3)=xsink_new(isink,1:3)+x_acc(1:3)
-           vsink_new(isink,1:3)=vsink_new(isink,1:3)+p_acc(1:3)
-           lsink_new(isink,1:3)=lsink_new(isink,1:3)+l_acc(1:3)
+           xsink_new(isink,1:ndim)=xsink_new(isink,1:ndim)+x_acc(1:ndim)
+           vsink_new(isink,1:ndim)=vsink_new(isink,1:ndim)+p_acc(1:ndim)
+           lsink_new(isink,1:ndim)=lsink_new(isink,1:ndim)+l_acc(1:ndim)
            if(mass_smbh_seed>0.0)then
               delta_mass_new(isink)=delta_mass_new(isink)+m_acc_smbh
            else
@@ -915,8 +930,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            m_acc=m_acc+m_acc_smbh
            ! Accrete mass, momentum and gas total energy
            unew(indp(j,ind),1)=unew(indp(j,ind),1)-m_acc/vol_loc
-           unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)-m_acc*vv(1:3)/vol_loc
-           unew(indp(j,ind),5)=unew(indp(j,ind),5)-m_acc*e/vol_loc
+           unew(indp(j,ind),2:ndim+1)=unew(indp(j,ind),2:ndim+1)-m_acc*vv(1:ndim)/vol_loc
+           unew(indp(j,ind),ndim+2)=unew(indp(j,ind),ndim+2)-m_acc*e/vol_loc
            ! Note that we do not accrete magnetic fields and non-thermal energies.
 
            ! Accrete passive scalars
@@ -925,24 +940,35 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            end do
 
            ! AGN feedback
+           ! Only for sinks that could accreate.
+           ! Can deposit thermal dump or/and momentum kicks (and/or radiation if RT used).
            if( .not. on_creation)then
               if(agn)then
                  if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
                     if(AGN_fbk_frac_ener.gt.0.0)then ! thermal AGN feedback
-                       unew(indp(j,ind),5)=unew(indp(j,ind),5)+fbk_ener_AGN/vol_loc
+                       unew(indp(j,ind),ndim+2)=unew(indp(j,ind),ndim+2)+fbk_ener_AGN/vol_loc
                     end if
 
                     if(AGN_fbk_frac_mom.gt.0.0)then ! momentum AGN feedback
                        ! checking if particle is in cone
-                       cone_dir(1:3)=lsink(isink,1:3)/sqrt(sum(lsink(isink,1:3)**2))
-                       cone_dist=sum(r_rel(1:3)*cone_dir(1:3))
-                       orth_dist=sqrt(sum((r_rel(1:3)-cone_dist*cone_dir(1:3))**2))
+                       cone_dir(1:ndim)=lsink(isink,1:ndim)/sqrt(sum(lsink(isink,1:ndim)**2))
+                       cone_dist=sum(r_rel(1:ndim)*cone_dir(1:ndim))
+                       orth_dist=sqrt(sum((r_rel(1:ndim)-cone_dist*cone_dir(1:ndim))**2))
                        if (orth_dist.le.abs(cone_dist)*tan_theta)then
-                          unew(indp(j,ind),2:4)=unew(indp(j,ind),2:4)+fbk_mom_AGN*r_rel(1:3)/(r_len)/vol_loc
-                          unew(indp(j,ind),5)=unew(indp(j,ind),5)+sum(fbk_mom_AGN*r_rel(1:3)/(r_len)*vv(1:3))/vol_loc
+                          unew(indp(j,ind),2:ndim+1)=unew(indp(j,ind),2:ndim+1)+fbk_mom_AGN*r_rel(1:ndim)/(r_len)/vol_loc
+                          unew(indp(j,ind),ndim+2)=unew(indp(j,ind),ndim+2)+sum(fbk_mom_AGN*r_rel(1:ndim)/(r_len)*vv(1:ndim))/vol_loc
                        end if
                     end if
                  end if
+#ifdef RT                 
+                 if(rt_AGN)then
+                    dert=0.1d0*delta_mass(isink)*(3d10/scale_v)**2
+                    do igroup=1,nGroups
+                       Np_inj=dert * group_egy_AGNfrac(igroup) / (scale_evtocode*group_egy(igroup)) / (vol_loc*scale_vol) / scale_Np*weight/volume
+                       rtunew(indp(j,ind),iGroups(igroup))=rtunew(indp(j,ind),iGroups(igroup))+Np_inj
+                    enddo
+                 end if
+#endif
               end if
            end if
         endif
@@ -973,7 +999,7 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp)::factG,d_star,boost
   real(dp)::r2,vrel2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf,v_bondi
   real(dp)::r2_smbh,rho_inf_smbh
-  real(dp),dimension(1:3)::velocity
+  real(dp),dimension(1:ndim)::velocity
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMEDoverdt_smbh
   real(dp)::T2_gas,delta_mass_min
 
@@ -983,7 +1009,7 @@ subroutine compute_accretion_rate(write_sinks)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**3d0
+  scale_m=scale_d*scale_l**ndim
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax/aexp
@@ -1004,7 +1030,7 @@ subroutine compute_accretion_rate(write_sinks)
      do i=levelmin,nlevelmax
         density=density+weighted_density(isink,i)
         ethermal=ethermal+weighted_ethermal(isink,i)
-        velocity(1:3)=velocity(1:3)+weighted_momentum(isink,i,1:3)
+        velocity(1:ndim)=velocity(1:ndim)+weighted_momentum(isink,i,1:ndim)
         volume=volume+weighted_volume(isink,i)
      end do
      mgas=density
@@ -1020,11 +1046,11 @@ subroutine compute_accretion_rate(write_sinks)
         boost=abs(acc_sink_boost)
      end if
 
-     velocity(1:3)=velocity(1:3)/(density*volume+tiny(0.0_dp))
+     velocity(1:ndim)=velocity(1:ndim)/(density*volume+tiny(0.0_dp))
      ethermal=ethermal/(density*volume+tiny(0.0_dp))
      c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
      c2sink(isink)=c2
-     vrel2=SUM((velocity(1:3)-vsink(isink,1:3))**2)
+     vrel2=SUM((velocity(1:ndim)-vsink(isink,1:ndim))**2)
      if(bondi_use_vrel)then
         v_bondi=sqrt(c2+vrel2)
      else
@@ -1113,7 +1139,7 @@ contains
     lambda_c    = 0.25 * exp(1.5)
     !     Deal with the off-the-table cases
     if (x .le. XMIN) then
-       bondi_alpha = lambda_c / sqrt(2. * x**3)
+       bondi_alpha = lambda_c / sqrt(2. * x**ndim)
     else if (x .ge. XMAX) then
        bondi_alpha = exp(1./x)
     else
@@ -1143,7 +1169,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::l_abs,l_max,factG,scale,dx_min
   real(dp)::r2,rho_inf
-  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:ndim)::skip_loc
 
   ! Gravitational constant
   factG=1d0
@@ -1152,15 +1178,15 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   ! Mesh spacing in that level
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_min=0.5D0**nlevelmax*scale/aexp
 
   ! Scaling factors
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**3d0
+  scale_m=scale_d*scale_l**ndim
 
   if (smbh) then
      if(myid==1.and.nsink>0)then
@@ -1260,8 +1286,8 @@ subroutine make_sink_from_clump(ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(dp),dimension(1:nvar)::z
-  real(dp),dimension(1:3)::skip_loc,x
-  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:ndim)::skip_loc,x
+  real(dp),dimension(1:twotondim,1:ndim)::xc
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -1269,6 +1295,7 @@ subroutine make_sink_from_clump(ilevel)
   integer ::irad
 #endif
 
+#if NDIM==3
   if(verbose)write(*,*)'entering make_sink_from_clump for level ',ilevel
 
   ! Gravitational constant
@@ -1279,9 +1306,9 @@ subroutine make_sink_from_clump(ilevel)
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
@@ -1310,8 +1337,6 @@ subroutine make_sink_from_clump(ilevel)
   msink_new=0d0; msmbh_new=0d0
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
   tsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born_new=.false.
-
-#if NDIM==3
 
   ! Count number of new sinks (flagged cells)
   ntot=0
@@ -1457,11 +1482,11 @@ subroutine make_sink_from_clump(ilevel)
 
               ! Store properties of the new sink
               tsink_new(index_sink)=birth_epoch
-              xsink_new(index_sink,1:3)=x(1:3)
+              xsink_new(index_sink,1:ndim)=x(1:ndim)
               vsink_new(index_sink,1)=u
               vsink_new(index_sink,2)=v
               vsink_new(index_sink,3)=w
-              lsink_new(index_sink,1:3)=0
+              lsink_new(index_sink,1:ndim)=0
               new_born_new(index_sink)=.true.
 
               ! Convert back to conservative variable
@@ -1612,7 +1637,7 @@ subroutine true_max(x,y,z,ilevel)
   gradient(2)=0.5*(cube3(0,1,0)-cube3(0,-1,0))/dx_loc
   gradient(3)=0.5*(cube3(0,0,1)-cube3(0,0,-1))/dx_loc
 
-  if (maxval(abs(gradient(1:3)))==0.)return
+  if (maxval(abs(gradient(1:ndim)))==0.)return
 
   ! Compute hessian
   hess(1,1)=(cube3(1,0,0)+cube3(-1,0,0)-2*cube3(0,0,0))/dx_loc**2.
@@ -1644,15 +1669,15 @@ subroutine true_max(x,y,z,ilevel)
 
   ! Displacement of the true max from the cell center
   displacement=0.
-  do i=1,3
-     do j=1,3
+  do i=1,ndim
+     do j=1,ndim
         numerator = gradient(j)*minor(i,j)
         if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*tiny(0.d0))
      end do
   end do
 
   ! Clipping the displacement in order to keep max in the cell
-  disp_max=maxval(abs(displacement(1:3)))
+  disp_max=maxval(abs(displacement(1:ndim)))
   if (disp_max > dx_loc*0.499999)then
      displacement(1)=displacement(1)/disp_max*dx_loc*0.499999
      displacement(2)=displacement(2)/disp_max*dx_loc*0.499999
@@ -1688,7 +1713,7 @@ subroutine update_sink(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dteff,dx_loc,scale,dx_min
   real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom
-  real(dp),dimension(1:3)::xcom,vcom,lcom,r_rel
+  real(dp),dimension(1:ndim)::xcom,vcom,lcom,r_rel
   logical,dimension(1:ndim)::period
 
 #if NDIM==3
@@ -1724,7 +1749,7 @@ subroutine update_sink(ilevel)
         do jsink=isink+1,nsink
 
            ! Compute relative distance
-           r_rel(1:3)=xsink(jsink,1:3)-xsink(isink,1:3)
+           r_rel(1:ndim)=xsink(jsink,1:ndim)-xsink(isink,1:ndim)
            do idim=1,ndim
               if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
               if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
@@ -1742,7 +1767,7 @@ subroutine update_sink(ilevel)
               merge_flag=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
-              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**3)) then
+              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*2d33/(scale_d*scale_l**ndim)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge_flag=merge_flag .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
               end if
@@ -1760,21 +1785,21 @@ subroutine update_sink(ilevel)
                     write(*,*)'> Merging sink ',idsink(jsink),' into sink ',idsink(isink)
                     if(verbose_AGN)then
                        write(*,*)'>> Sink #1: ',idsink(isink)
-                       write(*,*)msink(isink)*2d33/(scale_d*scale_l**3)
-                       write(*,*)xsink(isink,1:3)
+                       write(*,*)msink(isink)*2d33/(scale_d*scale_l**ndim)
+                       write(*,*)xsink(isink,1:ndim)
                        write(*,*)'>> Sink #2: ',idsink(jsink)
-                       write(*,*)msink(jsink)*2d33/(scale_d*scale_l**3)
-                       write(*,*)xsink(jsink,1:3)
+                       write(*,*)msink(jsink)*2d33/(scale_d*scale_l**ndim)
+                       write(*,*)xsink(jsink,1:ndim)
                     endif
                  endif
 
                  ! Set new values of remaining sink (keep one with larger index)
                  ! Compute centre of mass quantities
                  mcom     =(msink(isink)+msink(jsink))
-                 xcom(1:3)=xsink(isink,1:3)+msink(jsink)*r_rel(1:3)/mcom
-                 vcom(1:3)=(msink(isink)*vsink(isink,1:3)+msink(jsink)*vsink(jsink,1:3))/mcom
-                 lcom(1:3)=msink(isink)*cross((xsink(isink,1:3)-xcom(1:3)),vsink(isink,1:3)-vcom(1:3))+ &
-                      &    msink(jsink)*cross((xsink(jsink,1:3)-xcom(1:3)),vsink(jsink,1:3)-vcom(1:3))
+                 xcom(1:ndim)=xsink(isink,1:ndim)+msink(jsink)*r_rel(1:ndim)/mcom
+                 vcom(1:ndim)=(msink(isink)*vsink(isink,1:ndim)+msink(jsink)*vsink(jsink,1:ndim))/mcom
+                 lcom(1:ndim)=msink(isink)*cross((xsink(isink,1:ndim)-xcom(1:ndim)),vsink(isink,1:ndim)-vcom(1:ndim))+ &
+                      &    msink(jsink)*cross((xsink(jsink,1:ndim)-xcom(1:ndim)),vsink(jsink,1:ndim)-vcom(1:ndim))
 
                  ! Reset jump in old sink coordinates
                  do lev=levelmin,nlevelmax
@@ -1782,14 +1807,14 @@ subroutine update_sink(ilevel)
                  end do
 
                  ! Compute merged quantities
-                 msink(isink)      = mcom
-                 msmbh(isink)      = msmbh(isink)+msmbh(jsink)
-                 delta_mass(isink) = delta_mass(isink)+delta_mass(jsink)
-                 xsink(isink,1:3)  = xcom(1:3)
-                 vsink(isink,1:3)  = vcom(1:3)
-                 lsink(isink,1:3)  = lcom(1:3)+lsink(isink,1:3)+lsink(jsink,1:3)
-                 tsink(isink)      = min(tsink(isink),tsink(jsink))
-                 idsink(isink)     = min(idsink(isink),idsink(jsink))
+                 msink(isink)        = mcom
+                 msmbh(isink)        = msmbh(isink)+msmbh(jsink)
+                 delta_mass(isink)   = delta_mass(isink)+delta_mass(jsink)
+                 xsink(isink,1:ndim) = xcom(1:ndim)
+                 vsink(isink,1:ndim) = vcom(1:3)
+                 lsink(isink,1:dim)  = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
+                 tsink(isink)        = min(tsink(isink),tsink(jsink))
+                 idsink(isink)       = min(idsink(isink),idsink(jsink))
 
                  ! Store jump in new sink coordinates
                  do lev=levelmin,nlevelmax
@@ -1872,10 +1897,10 @@ subroutine update_cloud(ilevel)
   integer::ilevel
 
   !-----------------------------------------------------------------------------
-  ! update sink cloud particle properties
-  ! -the particles are moved whenever the level of the grid they sit in is updated
-  ! -the amount of drift they get is according to their levelp
-  ! -since this is happening on the way down, at level ilevel all particles with
+  ! Update sink cloud particle properties
+  ! - the particles are moved whenever the level of the grid they sit in is updated
+  ! - the amount of drift they get is according to their levelp
+  ! - since this is happening on the way down, at level ilevel all particles with
   ! level >= ilevel will be moved. Therefore, the sink_jump for all levels >= ilevel
   ! is set to zero on exit.
   !-----------------------------------------------------------------------------
@@ -2065,9 +2090,9 @@ subroutine clean_merged_sinks
         do j=i,nsink
            msink(j)=msink(j+1)
            msmbh(j)=msmbh(j+1)
-           xsink(j,1:3)=xsink(j+1,1:3)
-           vsink(j,1:3)=vsink(j+1,1:3)
-           lsink(j,1:3)=lsink(j+1,1:3)
+           xsink(j,1:ndim)=xsink(j+1,1:ndim)
+           vsink(j,1:ndim)=vsink(j+1,1:ndim)
+           lsink(j,1:ndim)=lsink(j+1,1:ndim)
            new_born(j)=new_born(j+1)
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
@@ -2077,9 +2102,9 @@ subroutine clean_merged_sinks
         ! Whipe last position in the sink list
         msink(nsink+1)=0.
         msmbh(nsink+1)=0.
-        xsink(nsink+1,1:3)=0.
-        vsink(nsink+1,1:3)=0.
-        lsink(nsink+1,1:3)=0.
+        xsink(nsink+1,1:ndim)=0.
+        vsink(nsink+1,1:ndim)=0.
+        lsink(nsink+1,1:ndim)=0.
         new_born(nsink+1)=.false.
         tsink(nsink+1)=0.
         idsink(nsink+1)=0
@@ -2114,8 +2139,8 @@ subroutine f_gas_sink(ilevel)
   integer ::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz,isink
   integer ::nx_loc,idim
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,factG
-  real(dp),dimension(1:twotondim,1:3)::xc
-  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:ndim)::xc
+  real(dp),dimension(1:ndim)::skip_loc
 
   logical ,dimension(1:nvector)::ok
   integer ,dimension(1:nvector)::ind_grid,ind_cell
@@ -2134,9 +2159,9 @@ subroutine f_gas_sink(ilevel)
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
@@ -2148,9 +2173,9 @@ subroutine f_gas_sink(ilevel)
      iz=(ind-1)/4
      iy=(ind-1-4*iz)/2
      ix=(ind-1-2*iy-4*iz)
-     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
-     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
-     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
   rho_tff=0.
@@ -2201,7 +2226,7 @@ subroutine f_gas_sink(ilevel)
 
               ! Relative position and distance
               d2=0.d0
-              do idim=1,3
+              do idim=1,ndim
                  do i=1,ngrid
                     ! zero order Ewald sum
                     ff(i,idim)=xsink(isink,idim)-xx(i,idim)
@@ -2244,7 +2269,7 @@ subroutine f_gas_sink(ilevel)
 
         d_min=d_min**0.5
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4./3.*3.1415926*d_min**3))
+        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4./3.*3.1415926*d_min**ndim))
 
      end if !end if direct force
   end do !end loop over sinks
@@ -2505,16 +2530,16 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,kg
   real(dp),dimension(1:nvector,1:ndim),save::x0
-  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:ndim)::skip_loc
   real(dp),dimension(1:twotondim,1:ndim)::xc
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  skip_loc(1)=dble(icoarse_min)
+  skip_loc(2)=dble(jcoarse_min)
+  skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
@@ -2524,12 +2549,8 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      iy=(ind-1-4*iz)/2
      ix=(ind-1-2*iy-4*iz)
      xc(ind,1)=(dble(ix)-0.5D0)*dx
-#if NDIM>1
      xc(ind,2)=(dble(iy)-0.5D0)*dx
-#endif
-#if NDIM>2
      xc(ind,3)=(dble(iz)-0.5D0)*dx
-#endif
   end do
 
   ! Lower left corner of 3x3x3 grid-cube
@@ -2588,21 +2609,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   end do
 
   ! Compute cloud volumes
-#if NDIM==1
-  do j=1,np
-     vol(j,1)=dg(j,1)
-     vol(j,2)=dd(j,1)
-  end do
-#endif
-#if NDIM==2
-  do j=1,np
-     vol(j,1)=dg(j,1)*dg(j,2)
-     vol(j,2)=dd(j,1)*dg(j,2)
-     vol(j,3)=dg(j,1)*dd(j,2)
-     vol(j,4)=dd(j,1)*dd(j,2)
-  end do
-#endif
-#if NDIM==3
   do j=1,np
      vol(j,1)=dg(j,1)*dg(j,2)*dg(j,3)
      vol(j,2)=dd(j,1)*dg(j,2)*dg(j,3)
@@ -2613,7 +2619,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      vol(j,7)=dg(j,1)*dd(j,2)*dd(j,3)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
-#endif
 
   ! Compute parent grids
   do idim=1,ndim
@@ -2622,21 +2627,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
         igd(j,idim)=id(j,idim)/2
      end do
   end do
-#if NDIM==1
-  do j=1,np
-     kg(j,1)=1+igg(j,1)
-     kg(j,2)=1+igd(j,1)
-  end do
-#endif
-#if NDIM==2
-  do j=1,np
-     kg(j,1)=1+igg(j,1)+3*igg(j,2)
-     kg(j,2)=1+igd(j,1)+3*igg(j,2)
-     kg(j,3)=1+igg(j,1)+3*igd(j,2)
-     kg(j,4)=1+igd(j,1)+3*igd(j,2)
-  end do
-#endif
-#if NDIM==3
   do j=1,np
      kg(j,1)=1+igg(j,1)+3*igg(j,2)+9*igg(j,3)
      kg(j,2)=1+igd(j,1)+3*igg(j,2)+9*igg(j,3)
@@ -2647,7 +2637,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
      kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
   end do
-#endif
   do ind=1,twotondim
      do j=1,np
         igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
@@ -2672,21 +2661,7 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
         icd(j,idim)=id(j,idim)-2*igd(j,idim)
      end do
   end do
-#if NDIM==1
-  do j=1,np
-     icell(j,1)=1+icg(j,1)
-     icell(j,2)=1+icd(j,1)
-  end do
-#endif
-#if NDIM==2
-  do j=1,np
-     icell(j,1)=1+icg(j,1)+2*icg(j,2)
-     icell(j,2)=1+icd(j,1)+2*icg(j,2)
-     icell(j,3)=1+icg(j,1)+2*icd(j,2)
-     icell(j,4)=1+icd(j,1)+2*icd(j,2)
-  end do
-#endif
-#if NDIM==3
+
   do j=1,np
      icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
      icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
@@ -2697,7 +2672,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
      icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
      icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
   end do
-#endif
 
 
   do ind=1,twotondim

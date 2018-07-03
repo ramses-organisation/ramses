@@ -90,9 +90,9 @@ subroutine clump_finder(create_output,keep_alive)
   use poisson_commons, ONLY:rho
   use clfind_commons
   use hydro_commons
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   logical::create_output,keep_alive
@@ -435,10 +435,8 @@ end subroutine clump_finder
 subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
 
@@ -515,10 +513,8 @@ end subroutine count_test_particle
 subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -562,10 +558,8 @@ end subroutine count_peaks
 subroutine flag_peaks(xx,ipeak)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !----------------------------------------------------------------------
@@ -590,10 +584,8 @@ end subroutine flag_peaks
 subroutine propagate_flag(nmove,nzero)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::nmove,nzero
   !----------------------------------------------------------------------
   ! All cells above the threshold copy the flag2 value from their densest
@@ -617,10 +609,8 @@ end subroutine propagate_flag
 subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
   ! subroutine which creates a npeaks**2 sized array of saddlepoint densities
@@ -970,10 +960,8 @@ end subroutine get_cell_index
 !#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
 
 ! added for patch: unbinding parameters, mergertree parameter
   namelist/clumpfind_params/ivar_clump,& 
@@ -984,7 +972,8 @@ subroutine read_clumpfind_params()
        & unbind,nmassbins,logbins,unbinding_formatted_output, &
        & saddle_pot,iter_properties,conv_limit, repeat_max, &
        !mergertree parameters
-       & make_mergertree, nmost_bound, max_past_snapshots
+       & make_mergertree, nmost_bound, max_past_snapshots, &
+       & use_exclusive_mass, make_mock_galaxies
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v  
 
@@ -1233,10 +1222,8 @@ subroutine rho_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using

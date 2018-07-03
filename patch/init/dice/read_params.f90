@@ -61,15 +61,13 @@ subroutine read_params
   use pm_parameters
   use poisson_parameters
   use hydro_parameters
+  use mpi_mod
   use dice_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !--------------------------------------------------
   ! Local variables
   !--------------------------------------------------
-  integer::i,narg,iargc,levelmax
+  integer::i,narg,levelmax
   character(LEN=80)::infile, info_file
   character(LEN=80)::cmdarg
   character(LEN=5)::nchar

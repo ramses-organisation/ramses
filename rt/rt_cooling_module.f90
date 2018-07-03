@@ -332,7 +332,7 @@ contains
     real(dp),save:: dUU, fracMax, x_tot
     real(dp),save:: mu, TK, nHe, ne, neInit, Hrate
     real(dp):: xHI,dxHI, xH2=0d0,dXH2=0d0, xHeI,dxHeI
-    real(dp),save:: Crate, dCdT2, X_nHkb, rate, dRate, cr, de
+    real(dp),save:: Crate, dCdT2, X_nHkb, rate, dRate, cr, de=0d0
     real(dp),save:: photoRate, metal_tot, metal_prime, ss_factor, f_dust
     integer,save:: iion,igroup,idim
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs

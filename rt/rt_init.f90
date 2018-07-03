@@ -64,6 +64,7 @@ SUBROUTINE rt_init
   if(rt .and. .not.rt_otsa) rt_advect=.true.
   if(rt .and. rt_nsource .gt. 0) rt_advect=.true.
   if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
+  if(rt .and. rt_AGN ) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
@@ -170,7 +171,9 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_exp_source, rt_src_group                                    &
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
-       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound
+       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
+       & ,rt_movie_vars                                                  &
+       & ,rt_AGN
 
 
   ! Set default initialisation of ionisation states:
@@ -255,7 +258,7 @@ SUBROUTINE read_rt_groups(nml_ok)
   integer::i,igroup_HI=0, igroup_HII=0, igroup_HeII=0, igroup_HeIII=0
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
-       & , groupL0, groupL1, kappaAbs, kappaSc
+       & , groupL0, groupL1, kappaAbs, kappaSc, group_egy_AGNfrac
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
           & ,I2, " ion species")') nGroups, nIons
