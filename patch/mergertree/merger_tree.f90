@@ -223,7 +223,7 @@ subroutine process_progenitor_data()
   enddo
 
 
-  dummy_real(1:npastprogs) = pmprogs_stellar_mass(1:npastprogs)
+  dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
   do i = 1, npastprogs
     pmprogs_mass(i) = dummy_real(sort_ind_past(i))
   enddo
@@ -1378,7 +1378,7 @@ subroutine make_trees()
       pmprogs_mass(pmprog_free) = prog_mass(iprog)
       if (make_mock_galaxies) then
         orphans_local_pid(pmprog_free) = prog_galaxy_local_id(iprog)
-        pmprogs_stellar_mass(pmprog_free) = stellar_mass(prog_m_peak(iprog), prog_a_peak(iprog))
+        pmprogs_mpeak(pmprog_free) = prog_mpeak(iprog)
       endif
       pmprog_free = pmprog_free + 1
 
@@ -1779,9 +1779,9 @@ subroutine read_progenitor_data()
 
   logical :: exists
   integer :: prog_read, prog_read_local, startind, tracer_free, nprogs_to_read, progcount_to_read, np
-  integer, allocatable, dimension(:) :: read_buffer   ! temporary array for reading in data
-  real(dp),allocatable, dimension(:) :: read_buffer_2 ! temporary array for reading in data
-  real(dp),allocatable, dimension(:) :: read_buffer_macc, read_buffer_aacc ! temporary array for reading in mock galaxy data
+  integer, allocatable, dimension(:) :: read_buffer      ! temporary array for reading in data
+  real(dp),allocatable, dimension(:) :: read_buffer_2    ! temporary array for reading in data
+  real(dp),allocatable, dimension(:) :: read_buffer_mpeak ! temporary array for reading in mock galaxy data
 
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string
@@ -1884,10 +1884,8 @@ subroutine read_progenitor_data()
     ! just to prevent "may be uninitialized" warnings
     i = 1
   endif
-  allocate(prog_m_peak(1:i))
-  prog_m_peak = 0
-  allocate(prog_a_peak(1:i))
-  prog_a_peak = 0
+  allocate(prog_mpeak(1:i))
+  prog_mpeak = 0
 
 
   if (nprogs > 0) then
@@ -1937,31 +1935,28 @@ subroutine read_progenitor_data()
 
 
     allocate(read_buffer_2(1:nprogs_to_read))
+
+    ! just to prevent "may be uninitialized" warnings
     if (make_mock_galaxies) then
       i = nprogs_to_read
     else
-      ! just to prevent "may be uninitialized" warnings
       i = 1
     endif
-    allocate(read_buffer_macc(1:i))
-    read_buffer_macc = 0
-    allocate(read_buffer_aacc(1:i))
-    read_buffer_aacc = 0
+    allocate(read_buffer_mpeak(1:i))
+    read_buffer_mpeak = 0
 
 #ifndef WITHOUTMPI
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
     call MPI_FILE_READ(filehandle, read_buffer_2, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
     if (make_mock_galaxies) then
-      call MPI_FILE_READ(filehandle, read_buffer_macc, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
-      call MPI_FILE_READ(filehandle, read_buffer_aacc, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
+      call MPI_FILE_READ(filehandle, read_buffer_mpeak, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
     endif
     call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) read_buffer_2
     if (make_mock_galaxies) then
-      read(666) read_buffer_macc
-      read(666) read_buffer_aacc
+      read(666) read_buffer_mpeak
     endif
     close(666)
 #endif
@@ -1990,8 +1985,7 @@ subroutine read_progenitor_data()
 
       prog_mass(prog_read_local) = read_buffer_2(iprog)
       if (make_mock_galaxies) then
-        prog_m_peak(prog_read_local) = read_buffer_macc(iprog)
-        prog_a_peak(prog_read_local) = read_buffer_aacc(iprog)
+        prog_mpeak(prog_read_local) = read_buffer_mpeak(iprog)
       endif
 
       do i = startind+2, startind+1+np
@@ -2014,7 +2008,7 @@ subroutine read_progenitor_data()
     enddo
 
     deallocate(read_buffer, read_buffer_2)
-    if (make_mock_galaxies) deallocate(read_buffer_macc, read_buffer_aacc)
+    if (make_mock_galaxies) deallocate(read_buffer_mpeak)
 
   endif ! nprogs > 0
 
@@ -2059,8 +2053,8 @@ subroutine read_progenitor_data()
 
   ! mock galaxy stuff
   if (make_mock_galaxies) then
-    allocate(pmprogs_stellar_mass(1:npastprogs_max))
-    pmprogs_stellar_mass = 0
+    allocate(pmprogs_mpeak(1:npastprogs_max))
+    pmprogs_mpeak = 0
   endif
 
 
@@ -2109,14 +2103,14 @@ subroutine read_progenitor_data()
     call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
     call MPI_FILE_READ(filehandle, pmprogs_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
     if (make_mock_galaxies) then
-      call MPI_FILE_READ(filehandle, pmprogs_stellar_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
+      call MPI_FILE_READ(filehandle, pmprogs_mpeak(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
     endif
     call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
     open(unit=666,file=fileloc,form='unformatted')
     read(666) pmprogs_mass(1:npastprogs)
     if (make_mock_galaxies) then
-      read(666) pmprogs_stellar_mass(1:npastprogs)
+      read(666) pmprogs_mpeak(1:npastprogs)
     endif
     close(666)
 #endif
@@ -2299,8 +2293,7 @@ subroutine write_progenitor_data()
   integer, allocatable, dimension(:)  :: particlelist, pastproglist
   real(dp), allocatable, dimension(:) :: masslist, pastprogmasslist
   real(dp), allocatable, dimension(:) :: mpeaklist ! mass at accretion for subhalos
-  real(dp), allocatable, dimension(:) :: apeaklist ! expansion factor a at accretion for subhalos
-  real(dp), allocatable, dimension(:) :: pastprogstellarmasslist ! stellar masses of past merged progs
+  real(dp), allocatable, dimension(:) :: pastprogmpeaklist ! stellar masses of past merged progs
 
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string, id_to_string 
@@ -2345,9 +2338,6 @@ subroutine write_progenitor_data()
   endif
   allocate(mpeaklist(1:ipart))
   mpeaklist = 0
-  allocate(apeaklist(1:ipart))
-  apeaklist = 0
-    
 
   if (progenitorcount_written > 0) then
 
@@ -2384,8 +2374,7 @@ subroutine write_progenitor_data()
           endif
 
           if (make_mock_galaxies) then                    ! store mass and a_exp at accretion
-            mpeaklist(ihalo) = m_peak(ipeak)
-            apeaklist(ihalo) = a_peak(ipeak)
+            mpeaklist(ihalo) = mpeak(ipeak)
           endif
 
 
@@ -2455,7 +2444,6 @@ subroutine write_progenitor_data()
   call MPI_FILE_WRITE_ORDERED(filehandle, masslist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
   if (make_mock_galaxies) then
     call MPI_FILE_WRITE_ORDERED(filehandle, mpeaklist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
-    call MPI_FILE_WRITE_ORDERED(filehandle, apeaklist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
   endif
   call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
@@ -2463,14 +2451,13 @@ subroutine write_progenitor_data()
   write(666) masslist
   if (make_mock_galaxies) then
     write(666) mpeaklist
-    write(666) apeaklist
   endif
   close(666)
 #endif
 
   deallocate(particlelist)
   deallocate(masslist)
-  if (make_mock_galaxies) deallocate(mpeaklist, apeaklist)
+  if (make_mock_galaxies) deallocate(mpeaklist)
 
 
 
@@ -2493,14 +2480,14 @@ subroutine write_progenitor_data()
   allocate(pastprogmasslist(1:(pmprog_free-1)))
   pastprogmasslist = 0
 
+  ! this is only to prevent "may be uninitialized" warnings
   if (make_mock_galaxies) then
     ipart = (pmprog_free-1)
   else
-    ! this is only to prevent "may be uninitialized" warnings
     ipart = 1
   endif
-  allocate(pastprogstellarmasslist(1:ipart))
-  pastprogstellarmasslist = 0
+  allocate(pastprogmpeaklist(1:ipart))
+  pastprogmpeaklist = 0
 
 
 
@@ -2533,7 +2520,7 @@ subroutine write_progenitor_data()
             npastprogs_all = npastprogs_all + 1
             pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
             if (make_mock_galaxies) then
-              pastprogstellarmasslist(npastprogs_all) = pmprogs_stellar_mass(ipeak)
+              pastprogmpeaklist(npastprogs_all) = pmprogs_mpeak(ipeak)
             endif
           endif
         else
@@ -2544,7 +2531,7 @@ subroutine write_progenitor_data()
           npastprogs_all = npastprogs_all + 1
           pastprogmasslist(npastprogs_all) = pmprogs_mass(ipeak)
           if (make_mock_galaxies) then
-            pastprogstellarmasslist(npastprogs_all) = pmprogs_stellar_mass(ipeak)
+            pastprogmpeaklist(npastprogs_all) = pmprogs_mpeak(ipeak)
           endif
         endif
       endif
@@ -2587,7 +2574,7 @@ subroutine write_progenitor_data()
   call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
   call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
   if (make_mock_galaxies) then
-    call MPI_FILE_WRITE_ORDERED(filehandle, pastprogstellarmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
+    call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmpeaklist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
   endif
   call MPI_FILE_CLOSE(filehandle, mpi_err)
 #else
@@ -2595,7 +2582,7 @@ subroutine write_progenitor_data()
   write(666) pastprogmasslist
   if (make_mock_galaxies) then
     write(666) pastprogmasslist
-    write(666) pastprogmasslist
+    write(666) pastprogmpeaklist
   endif
   close(666)
 #endif
@@ -2654,15 +2641,13 @@ subroutine make_galaxies()
 
   implicit none
   integer               :: ipeak, mbpart, iprog
-  real(dp)              :: m_to_use, a_to_use
+  real(dp)              :: m_to_use, alpha, gam, delta, xi, loge, logM1, scale_m
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string, id_to_string 
 
 
-  allocate(a_peak(1:npeaks_max))
-  a_peak = 0
-  allocate(m_peak(1:npeaks_max))
-  m_peak = 0
+  allocate(mpeak(1:npeaks_max))
+  mpeak = 0
 
 
 
@@ -2675,34 +2660,28 @@ subroutine make_galaxies()
       if (is_namegiver(ipeak)) then
         ! main halo: track peak mass
         if (main_prog(ipeak) > 0) then
-          if (clmp_mass_pb(ipeak) > prog_m_peak(main_prog(ipeak))) then
-            m_peak(ipeak) = clmp_mass_pb(ipeak)
-            a_peak(ipeak) = aexp
+          if (clmp_mass_pb(ipeak) >= prog_mpeak(main_prog(ipeak))) then
+            mpeak(ipeak) = clmp_mass_pb(ipeak)
           else
-            m_peak(ipeak) = prog_m_peak(main_prog(ipeak))
-            a_peak(ipeak) = prog_a_peak(main_prog(ipeak))
+            mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
           endif
         else
           ! if no progenitor data available: store new
-          m_peak(ipeak) = clmp_mass_pb(ipeak)
-          a_peak(ipeak) = aexp
+          mpeak(ipeak) = clmp_mass_pb(ipeak)
         endif
       else
         ! if satellite and has a progenitor:
         if (main_prog(ipeak) > 0) then
-          m_peak(ipeak) = prog_m_peak(main_prog(ipeak))
-          a_peak(ipeak) = prog_a_peak(main_prog(ipeak))
+          mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
         else
-          m_peak(ipeak) = clmp_mass_pb(ipeak)
-          a_peak(ipeak) = aexp
+          mpeak(ipeak) = clmp_mass_pb(ipeak)
         endif
       endif
     endif
   enddo
 
 #ifndef WHITOUTMPI
-  call boundary_peak_dp(m_peak)
-  call boundary_peak_dp(a_peak)
+  call boundary_peak_dp(mpeak)
 #endif
 
 
@@ -2722,6 +2701,8 @@ subroutine make_galaxies()
   ! Write currently active
   !--------------------------
 
+  call calc_stellar_mass_params(alpha, gam, delta, loge, logM1, xi, scale_m)
+
   do ipeak = 1, hfree-1
     if (clmp_mass_exclusive(ipeak)>0) then
       ! only do stuff if you have the most bound particle here
@@ -2729,12 +2710,11 @@ subroutine make_galaxies()
         mbpart = most_bound_pid(ipeak,1) ! get local index of most bound particle
         if(is_namegiver(ipeak)) then
           m_to_use = clmp_mass_pb(ipeak)
-          a_to_use = aexp
         else
-          m_to_use = m_peak(ipeak)
-          a_to_use = a_peak(ipeak)
+          m_to_use = mpeak(ipeak)
         endif
-        write(666, '(I20,x,4(E20.12,x))') -clmpidp(mbpart), stellar_mass(m_to_use, a_to_use), xp(mbpart,1:3)
+        write(666, '(I20,x,4(E20.12,x))') -clmpidp(mbpart), &
+          stellar_mass(m_to_use,alpha,gam,delta,loge,logM1,xi,scale_m), xp(mbpart,1:3)
       endif
     endif
   enddo
@@ -2747,7 +2727,8 @@ subroutine make_galaxies()
   do iprog = 1, pmprog_free-1
     if (pmprogs_owner(iprog)==myid) then
       mbpart = orphans_local_pid(iprog)
-      write(666, '(I20,x,4(E20.12,x))') 0, pmprogs_stellar_mass(iprog), xp(mbpart,1:3)
+      write(666, '(I20,x,4(E20.12,x))') 0, &
+        stellar_mass(pmprogs_mpeak(iprog),alpha,gam,delta,loge,logM1,xi,scale_m), xp(mbpart,1:3)
     endif
   enddo
 
@@ -2929,9 +2910,8 @@ subroutine deallocate_mergertree()
     deallocate(pmprogs_mass)
 
     if (make_mock_galaxies) then
-      deallocate(prog_m_peak)
-      deallocate(prog_a_peak)
-      deallocate(pmprogs_stellar_mass)
+      deallocate(prog_mpeak)
+      deallocate(pmprogs_mpeak)
     endif
 
 
@@ -2969,7 +2949,7 @@ subroutine deallocate_mergertree()
   endif
 
 
-  if (npeaks_tot > 0 .and. make_mock_galaxies) deallocate(m_peak, a_peak)
+  if (npeaks_tot > 0 .and. make_mock_galaxies) deallocate(mpeak)
   
 
   deallocate(most_bound_energy)
