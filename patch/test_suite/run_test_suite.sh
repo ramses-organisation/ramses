@@ -145,10 +145,10 @@ make_clean[${itest}]=true;
 del_files[${itest}]="output_*";
 
 itest=$((itest + 1)); # Test 4
-testdir[${itest}]="smbh_bondi";
-testname[${itest}]="smbh_bondi";
+testdir[${itest}]="smbh-bondi";
+testname[${itest}]="smbh-bondi";
 testpatch[${itest}]="../patch/hydro/experimental_sink";
-testlist[${itest}]="smbh_bondi.nml";
+testlist[${itest}]="smbh-bondi.nml";
 ndim[${itest}]=3;
 nvar[${itest}]=6;
 solver[${itest}]="hydro";

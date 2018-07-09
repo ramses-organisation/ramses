@@ -27,8 +27,8 @@ p_region=8.69869d-9       ! 1000 K
 &AMR_PARAMS
 levelmin=6
 levelmax=7
-ngridmax=1500000
-npartmax=15000
+ngridmax=350000
+npartmax=2200
 nexpand=4,4,4
 boxlen=1. ! kpc
 /
