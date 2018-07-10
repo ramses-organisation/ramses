@@ -1,7 +1,9 @@
 #!/bin/bash
 
-../visu/amr2map -inp output_00002 -out data1.dat -typ 1 -fil ascii;
+# process output/log for comparison and plotting 
+echo $(python smbh-bondi-comp.py)
 
-echo $(python smbh-bondi-comp.py) > data.dat
+# make the plot
+#echo $(python plot-smbh-bondi.py)
 
 exit;
