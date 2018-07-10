@@ -1717,9 +1717,11 @@ subroutine make_trees()
 
       ! In case you added new virtual peaks in the last loop, add them to list to work with.
       ! Otherwise, infinite loops might happen.
-      do ipeak = hfreestart, hfree-1
-        to_iter(ipeak) = .true.
-      enddo
+      if (hfree-1 > hfreestart .and. hfreestart>0) then
+        do ipeak = hfreestart, hfree-1
+          to_iter(ipeak) = .true.
+        enddo
+      endif
 #endif
 
     end subroutine search_main_prog_loop
