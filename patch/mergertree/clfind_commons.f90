@@ -253,43 +253,34 @@ module clfind_commons
 
   logical :: make_mock_galaxies = .true.  ! whether to make galaxies
 
-  real(dp), allocatable, dimension(:) :: m_peak, a_peak             ! peak mass and expansion factor at time of mass peak
-  real(dp), allocatable, dimension(:) :: prog_m_peak, prog_a_peak   ! peak mass and expansion factor for progenitors
-  real(dp), allocatable, dimension(:) :: pmprogs_stellar_mass       ! stellar mass of past merged progenitors
+  real(dp), allocatable, dimension(:) :: mpeak                      ! peak mass and expansion factor at time of mass peak
+  real(dp), allocatable, dimension(:) :: prog_mpeak                 ! peak mass and expansion factor for progenitors
+  real(dp), allocatable, dimension(:) :: pmprogs_mpeak              ! stellar mass of past merged progenitors
 
   integer, allocatable, dimension(:)  :: orphans_local_pid          ! local particle id of orphans
   integer, allocatable, dimension(:)  :: prog_galaxy_local_id       ! local particle id of progenitor galaxies
 
 
-  logical :: seed_set = .false. ! whether seed for random scatter is set
 
 
 contains
 
-  !=====================================================
-  real(dp) function stellar_mass(m, a)
-  !=====================================================
 
+  !================================================================================
+  subroutine calc_stellar_mass_params(alpha, gam, delta, loge, logM1, xi, scale_m)
+  !================================================================================
+    !-----------------------------------------
+    ! This subroutine computes the parameters
+    ! for the stellar mass at the current
+    ! snapshot (current redshift)
+    !-----------------------------------------
     use amr_commons, ONLY: dp,omega_m,h0,aexp,boxlen_ini
     use cooling_module, ONLY: rhoc
-    !-----------------------------------------------------------
-    ! Computes stellar mass given peak mass and expansion
-    ! factor a at time when clump had peak mass using a 
-    ! parametric SHAM relation taken from
-    ! Behroozi, Wechsler & Conroy 2013
-    ! DOI:	                10.1088/0004-637X/770/1/57
-    ! Bibliographic Code:	  2013ApJ...770...57B
-    ! http://adsabs.harvard.edu/abs/2013ApJ...770...57B 
-    !-----------------------------------------------------------
-    
     implicit none
-    real(dp), intent(in) :: m ! mass
-    real(dp), intent(in) :: a ! expansion factor 
+    real(dp), intent(out) :: alpha, gam, delta, loge, logM1, xi, scale_m
 
-    real(dp) :: euler = 2.7182818284590
-    real(dp) :: log10_2 = 0.301029995663981 ! log_10(2)
-    real(dp) :: M_Sol = 1.998E33            ! solar mass in g
-    real(dp) :: scale_m, scale_d, scale_l
+    real(dp)      :: M_Sol    = 1.998d33  ! solar mass in g
+    logical, save :: seed_set = .false.   ! whether seed for random scatter is set
 
     real(dp) :: M_10    =   11.514 
     real(dp) :: M_1a    = -  1.793
@@ -309,36 +300,29 @@ contains
     real(dp) :: xi_0    =    0.218
     real(dp) :: xi_a    = -  0.023
 
-    real(dp) :: nu
-    real(dp) :: loge
-    real(dp) :: alpha
-    real(dp) :: delta
-    real(dp) :: gam
-    real(dp) :: xi, sig
-    real(dp) :: logM1
-
-    real(dp) :: z, f0
-
+    real(dp) :: nu, z, scale_d, scale_l
     integer :: n, clock, i
     integer, dimension(:), allocatable:: seed
 
-    z = 1.D0/a - 1
 
     scale_d = omega_m * rhoc *(h0/100.)**2 / aexp**3
     scale_l = aexp * boxlen_ini * 3.08d24 / (h0/100)
     scale_m = scale_d * scale_l**3 / M_Sol ! get mass in units of M_Sol
 
-    nu = exp(-4.d0*a**2)
-    logM1 = M_10    + nu*(M_1a   *(a-1)  + M_1z*z)
-    loge  = e_0     + nu*(e_a    *(a-1)  + e_z*z ) + e_a2*(a-1)
-    alpha = alpha_0 + nu*(alpha_a*(a-1))
-    delta = delta_0 + nu*(delta_a*(a-1)            + delta_z*z)
-    gam   = gamma_0 + nu*(gamma_a*(a-1)            + gamma_z*z)
+    z = 1.d0/aexp - 1
 
-    !-----------------
-    ! get scatter
-    !-----------------
-  
+    nu = exp(-4.d0*aexp**2)
+    logM1 = M_10    + nu*(M_1a   *(aexp-1)  + M_1z*z)
+    loge  = e_0     + nu*(e_a    *(aexp-1)  + e_z*z ) + e_a2*(aexp-1)
+    alpha = alpha_0 + nu*(alpha_a*(aexp-1))
+    delta = delta_0 + nu*(delta_a*(aexp-1)            + delta_z*z)
+    gam   = gamma_0 + nu*(gamma_a*(aexp-1)            + gamma_z*z)
+
+
+
+    !-------------------------
+    ! get seed for scatter
+    !-------------------------
     ! set unique seed for every task if necessary
     if (.not.seed_set) then
       call random_seed(size=n)
@@ -350,35 +334,48 @@ contains
       seed_set = .true.
     endif
 
-
-    call random_number(xi)      ! temporarily store random number in xi
-    call random_number(sig)     ! get sign
-    if (sig > 0.5d0) then
-      sig = -1.d0
-    else
-      sig = 1.d0
-    endif
-
-    xi = sig*xi*(xi_0 + xi_a * (a-1))
+    xi = (xi_0 + xi_a * (aexp-1))
+  end subroutine calc_stellar_mass_params
 
 
-    !-------------------------------
-    ! finally, get stellar mass
-    !-------------------------------
+
+
+  !=============================================================================
+  real(dp) function stellar_mass(m, alpha, gam, delta, loge, logM1, xi, scale_m)
+  !=============================================================================
+    !-----------------------------------------------------------
+    ! Computes stellar mass given peak mass and expansion
+    ! factor a at time when clump had peak mass using a 
+    ! parametric SHAM relation taken from
+    ! Behroozi, Wechsler & Conroy 2013
+    ! DOI:	                10.1088/0004-637X/770/1/57
+    ! Bibliographic Code:	  2013ApJ...770...57B
+    ! http://adsabs.harvard.edu/abs/2013ApJ...770...57B 
+    !-----------------------------------------------------------
+    use amr_commons, ONLY: dp
+    implicit none
+    real(dp), intent(in) :: m ! mass
+    real(dp), intent(in) :: alpha, gam, delta, loge, logM1, xi, scale_m ! parameters computed by subroutine
+
+    real(dp) :: euler   = 2.7182818284590
+    real(dp) :: log10_2 = 0.301029995663981 ! log_10(2)
+
+    real(dp) :: f0, fm, logMM1, sig, xi_scale
+
+    call random_number(xi_scale)  ! temporarily store random number in xi
+    call random_number(sig)       ! get sign
+    if (sig > 0.5d0) xi_scale = -xi_scale
+
+
+    ! get f(0)
     f0 = -log10_2 + delta*log10_2**gam/(1.d0 + euler)
-    stellar_mass = 10**(loge+logM1 + f(log10(m*scale_m)-logM1)- f0 + xi) / 0.7* (h0/100)
-    ! /0.7 * (h0/100) : parametrisation in paper was done with h=0.7; change it to currently used h
+    ! get log M/M1
+    logMM1 = log10(m*scale_m)-logM1
+    ! get f(log M/M1)
+    fm = -log10(10.d0**(alpha*logMM1) + 1) + &
+      delta*log10(1.d0+exp(logMM1))**gam/(1.d0 + exp(10.d0**(-logMM1)))
 
-
-  contains
-
-    real(dp) function f(x)
-      real(dp), intent(in) :: x
-      f = -log10(10**(alpha*x) + 1) + delta*log10(1.d0+exp(x))**gam/(1.D0 + exp(10**(-x)))
-    end function f
-
-
-
+    stellar_mass = 10.d0**(loge+logM1 + fm - f0 + xi_scale*xi)
   end function stellar_mass
 
 

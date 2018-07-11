@@ -1812,7 +1812,7 @@ subroutine update_sink(ilevel)
                  delta_mass(isink)   = delta_mass(isink)+delta_mass(jsink)
                  xsink(isink,1:ndim) = xcom(1:ndim)
                  vsink(isink,1:ndim) = vcom(1:3)
-                 lsink(isink,1:dim)  = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
+                 lsink(isink,1:ndim)  = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
                  tsink(isink)        = min(tsink(isink),tsink(jsink))
                  idsink(isink)       = min(idsink(isink),idsink(jsink))
 

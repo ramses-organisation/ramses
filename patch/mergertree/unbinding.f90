@@ -309,7 +309,9 @@ subroutine unbinding()
     call dissolve_small_clumps(0, .true.)
   
 
-    if (.not. use_exclusive_mass) then
+    if (.not. use_exclusive_mass .or. make_mock_galaxies) then
+      ! recompute clmp_mass_pb if necessary
+      ! clmp_mass_pb will only be needed in any of the two cases in the if-condition
 
       ! reset mass: clmp_mass_pb is not updated after unbinding;
       ! which particles are bound in the end is not included in there.
