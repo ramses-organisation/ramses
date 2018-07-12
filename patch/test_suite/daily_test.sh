@@ -167,7 +167,7 @@ while true ; do
 	        git pull;
 
             # Call Python script to update the wikifile
-            python $RAMSESDIR/update_testpage.py
+            python $RAMSESDIR/update_testpage.py ${WIKIFILE} ${WIKISTOREDIR}
 
             # Upload results to bitbucket
             git add ${WIKIFILE} ${WIKISTOREDIR}/${DATE}.log ${WIKISTOREDIR}/${DATE}.pdf >> $LOGFILE;

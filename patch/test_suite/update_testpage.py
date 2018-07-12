@@ -1,3 +1,4 @@
+import sys
 import glob
 from datetime import date, timedelta
 
@@ -52,7 +53,7 @@ def extract_test_info(filename):
     return compile_date, last_commit, passed
 
 
-def rebuild_wiki(logs):
+def rebuild_wiki(logs, wiki):
     """Rebuilts the AutoTests.md wiki file from scratch"""
 
     dates = []
@@ -69,7 +70,7 @@ def rebuild_wiki(logs):
 
     # buld a new wiki md file
     entries = []
-    with open('AutoTests.md', 'w') as wikifile:
+    with open(wiki, 'w') as wikifile:
         wikifile.write('# RAMSES Daily Test\n')
         wikifile.write('\n')
         wikifile.write('This page contains the test results from the RAMSES test suite which is run daily. The test pipeline was provided by Neil Vaytet with fixes/expansions by Pawel Biernacki.\n')
@@ -84,32 +85,35 @@ def rebuild_wiki(logs):
     return
 
 
-def add_last_entry(logfile):
+def add_last_entry(logfile, wiki):
     """Finds last logfile, extracts the test info and adds it to the wiki"""
 
     # gather info on the last test
     when, commit, passed = extract_test_info(logfile)
 
     # read the content of wiki
-    with open('AutoTests.md', 'w') as wikifile:
+    with open(wiki, 'w') as wikifile:
         wiki_contents = wikifile.readlines()
 
     # insert the latest test after the header
     wiki_contents.insert(6, wiki_entry(when, commit, passed))
 
     # write the updated content of the wiki
-    with open('AutoTests.md', 'w') as wikifile:
+    with open(wiki, 'w') as wikifile:
         wiki_contents = ''.join(wiki_contents)
         wikifile.write(wiki_contents)
 
 
 def main():
 
+    wikidir = sys.argv[0]
+    wikifile = sys.argv[1]
+
     # gather all the log files
-    logs =  glob.glob('daily_tests/201*.log')
+    logs =  glob.glob(wikidir+'/201*.log')
 
     # rebuild_wiki(logs)
-    add_last_entry(logs[-1])
+    add_last_entry(logs[-1], wikifile)
 
 
 if __name__ == '__main__':
