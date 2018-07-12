@@ -181,7 +181,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::t0,ESN,mejecta,zloss,e,uvar
   real(dp)::msne_min,mstar_max,FRAC_NT
   real(dp)::p_SN,pressure,gas_density,metallicity
-  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,n_crit,p_boost,r_cool
+  real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,p_boost,r_cool
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   ! Grid based arrays
@@ -253,18 +253,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  p_SN=2.39*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
-!   p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+  p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.0
-
-  ! Critical density for momentum injection via SN for a resolved cooling radius
-  ! and for solar metallicity
-  !n_crit=(30.0*aexp*3.08d18/(scale_l*dx_min))**(2.0)/scale_nH
 
 #if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
@@ -532,7 +527,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            metallicity=max(metallicity,0.01)
            p_boost = (gas_density*scale_nH/100.0)**(-0.160)*metallicity**(-0.137)
            ! Cooling radius
-           r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * ( gas_density*scale_nH/100.0 )**(-0.42)
+           r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * (gas_density*scale_nH/100.0)**(-0.42)
            if(birth_time.lt.(current_time-t0))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif
