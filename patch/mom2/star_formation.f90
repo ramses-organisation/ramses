@@ -290,15 +290,16 @@ subroutine star_formation(ilevel)
                        CASE (1)
                           ! Virial parameter
                           alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
-                          M2        = max(sigma2/cs2,4.0)
+                          M2        = max(sigma2/cs2,1.0)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
                           b_turb    = 0.4
-                          ! Fudge factors,          !Always use: eps_star = 0.5
-                          phi_t     = 1.91     !KM: 1.91, Best-fit to PN: 2.6044503, F+K fit: 2.04
-                          phi_x     = 1.12     !KM: 1.12, Best-fit to PN: 0.6803737, F+K fit: 0.19
+                          ! Fudge for alpha dependence (KM 2005).
+                          phi_x     = 1.12
+                          ! The prefered value for eps_star = 1.0,
+                          ! which represents the theoretical maximum efficiency.
                           sigs      = log(1.0+(b_turb**2)*(M2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
-                          sfr_ff(i) = (eps_star/(2.0*phi_t))*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        ! Multi-ff PN model
                        CASE (2)
