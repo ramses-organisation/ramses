@@ -54,11 +54,12 @@ def extract_test_info(filename):
     return compile_date, last_commit, passed
 
 
-def rebuild_wiki(logs, wiki):
+def rebuild_wiki(logs, wiki, max_months=12):
     """Rebuilts the AutoTests.md wiki file from scratch"""
 
     row = ''
     prev_month = 99
+    num_months = 0
     dates = []
     commits = []
     successes = []
@@ -76,28 +77,30 @@ def rebuild_wiki(logs, wiki):
         commits.append(last_commit)
         successes.append(passed)
 
+    today = datetime.today()
+    today = date(today.year, today.month, today.day)
     x=len(dates)
     for i in xrange(x):
         current = dates[~i]
-        if prev_month != current.month:
-            if i == 0:
-                months.append(dates[~i-current.day+1:])
-                commits2.append(commits[~i-current.day+1:])
-                successes2.append(successes[~i-current.day+1:])
-                prev_month = current.month
+        if (today - current).days < 365:
+            if prev_month != current.month:
+                if i == 0:
+                    months.append(dates[~i-current.day+1:])
+                    commits2.append(commits[~i-current.day+1:])
+                    successes2.append(successes[~i-current.day+1:])
+                    prev_month = current.month
 
-            else:
-                months.append(dates[~i-current.day+1:~i+1])
-                commits2.append(commits[~i-current.day+1:~i+1])
-                successes2.append(successes[~i-current.day+1:~i+1])
-                prev_month = current.month
-
+                else:
+                    months.append(dates[~i-current.day+1:~i+1])
+                    commits2.append(commits[~i-current.day+1:~i+1])
+                    successes2.append(successes[~i-current.day+1:~i+1])
+                    prev_month = current.month
 
     # buld a new wiki md file
     with open(wiki, 'w') as wikifile:
         wikifile.write('# RAMSES Daily Test\n')
         wikifile.write('\n')
-        wikifile.write('This page contains the test results from the RAMSES test suite which is run daily. The test pipeline was provided by Neil Vaytet with fixes/expansions by Pawel Biernacki.\n')
+        wikifile.write('This page contains the test results for the last year from the RAMSES test suite, which is run daily. The test pipeline was provided by Neil Vaytet with fixes/expansions by Pawel Biernacki.\n')
         wikifile.write('\n')
         # table entries
 
