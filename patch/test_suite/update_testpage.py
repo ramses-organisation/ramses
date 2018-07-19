@@ -10,22 +10,26 @@ MonthsDict = {'Jan': 1, 'Feb': 2, 'Mar': 3,
 
 MonthsDictReverse = dict((v, k) for k, v in MonthsDict.iteritems())
 
+
 def wiki_entry(date, commit, success):
     """Format extracted info as a Markdown table entry"""
 
+    commit_url = 'https://bitbucket.org/rteyssie/ramses/commits/'
     # format wiki entry
-    pdf_string = ('[pdf](daily_tests/{year}-{month:02}-{day:02}.pdf)'
-                  .format(year=date.year, month=date.month, day=date.day))
-    log_string = ('[log](daily_tests/{year}-{month:02}-{day:02}.log)'
-                  .format(year=date.year, month=date.month, day=date.day))
-    commit_string = ('[{short_hash}](https://bitbucket.org/rteyssie/ramses/commits/{long_hash})'
-            .format(short_hash=commit[0:7], long_hash=commit))
+    pdf_str = ('[pdf](daily_tests/{year}-{month:02}-{day:02}.pdf)'
+               .format(year=date.year, month=date.month, day=date.day))
+    log_str = ('[log](daily_tests/{year}-{month:02}-{day:02}.log)'
+               .format(year=date.year, month=date.month, day=date.day))
+    commit_str = ('[{short_hash}]({commit_url}{long_hash})'
+                  .format(commit_url=commit_url,
+                          short_hash=commit[0:7],
+                          long_hash=commit))
     if success:
-        success_string = '![ok](ok.png)'
+        success_str = '![ok](ok.png)'
     else:
-        success_string = '![fail](fail.png)'
+        success_str = '![fail](fail.png)'
 
-    return str(date)+' '+pdf_string+' '+log_string+' '+commit_string+' '+success_string+' |'
+    return str(date)+' '+pdf_str+' '+log_str+' '+commit_str+' '+success_str+' |'
 
 
 def extract_test_info(filename):
@@ -54,47 +58,48 @@ def extract_test_info(filename):
     return compile_date, last_commit, passed
 
 
-def rebuild_wiki(logs, wiki, max_months=12):
+def rebuild_wiki(logs, wiki):
     """Rebuilts the AutoTests.md wiki file from scratch"""
 
     row = ''
     prev_month = 99
-    num_months = 0
-    dates = []
-    commits = []
-    successes = []
-
+    all_dates = []
+    all_commits = []
+    all_successes = []
 
     months = []
-    commits2 = []
-    successes2 = []
+    month_commits = []
+    month_successes = []
 
     # process logs
     for logname in logs:
         compile_date, last_commit, passed = extract_test_info(logname)
 
-        dates.append(compile_date)
-        commits.append(last_commit)
-        successes.append(passed)
+        all_dates.append(compile_date)
+        all_commits.append(last_commit)
+        all_successes.append(passed)
 
     today = datetime.today()
     today = date(today.year, today.month, today.day)
-    x=len(dates)
-    for i in xrange(x):
-        current = dates[~i]
+
+    for i in xrange(len(all_dates)):
+        # getting the current day of the wiki
+        current = all_dates[~i]
+        # setting the limit
         if (today - current).days < 365:
             if prev_month != current.month:
-                if i == 0:
-                    months.append(dates[~i-current.day+1:])
-                    commits2.append(commits[~i-current.day+1:])
-                    successes2.append(successes[~i-current.day+1:])
-                    prev_month = current.month
-
+                if i == 0:  # edge case
+                    months.append(all_dates[~i-current.day+1:])
+                    month_commits.append(all_commits[~i-current.day+1:])
+                    month_successes.append(all_successes[~i-current.day+1:])
                 else:
-                    months.append(dates[~i-current.day+1:~i+1])
-                    commits2.append(commits[~i-current.day+1:~i+1])
-                    successes2.append(successes[~i-current.day+1:~i+1])
-                    prev_month = current.month
+                    months.append(all_dates[~i-current.day+1:~i+1])
+                    month_commits.append(all_commits[~i-current.day+1:~i+1])
+                    month_successes.append(all_successes[~i-current.day+1:~i+1])
+
+                prev_month = current.month
+
+    del all_dates, all_commits, all_successes
 
     # buld a new wiki md file
     with open(wiki, 'w') as wikifile:
@@ -113,16 +118,21 @@ def rebuild_wiki(logs, wiki, max_months=12):
                 if months[j][i].month != last.month:
                     continue
 
+                # set the header of the table for the month
                 if new_month:
-                    wikifile.write('# %s %d' % (MonthsDictReverse[last.month], last.year))
+                    wikifile.write('# {} {:d}'
+                                   .format(MonthsDictReverse[last.month],
+                                           last.year))
                     wikifile.write('\n\n')
                     wikifile.write('| Mon | Tue | Wed | Thu | Fri | Sat | Sun |\n')
-                    wikifile.write('| ---:| ---:| ---:| ---:| ---:| ---:| ---:|\n')
+                    wikifile.write('|'+7*' ---: |'+'\n')
                     row = ''
                     for _ in xrange(current.weekday()+1):
                         row += '| '
 
-                row += wiki_entry(months[j][i], commits2[j][i], successes2[j][i])
+                row += wiki_entry(months[j][i],
+                                  month_commits[j][i],
+                                  month_successes[j][i])
 
                 # taking care of missing data
                 if i+1 < len(months[j]):
@@ -135,11 +145,13 @@ def rebuild_wiki(logs, wiki, max_months=12):
                         else:
                             row += (day_diff-1)*'| '
 
+                # if Sunday or end of the month
                 if current.weekday() == 6 or i+1 == len(months[j]):
                     row += '\n'
                     wikifile.write(row)
                     row = ''
 
+                # add spacing between months
                 if i+1 == len(months[j]):
                     wikifile.write(3*'\n')
 
@@ -148,33 +160,13 @@ def rebuild_wiki(logs, wiki, max_months=12):
     return
 
 
-
-def add_last_entry(logfile, wiki):
-    """Finds last logfile, extracts the test info and adds it to the wiki"""
-
-    # gather info on the last test
-    when, commit, passed = extract_test_info(logfile)
-
-    # read the content of wiki
-    with open(wiki, 'r') as wikifile:
-        wiki_contents = wikifile.readlines()
-
-    # insert the latest test after the header
-    wiki_contents.insert(6, wiki_entry(when, commit, passed))
-
-    # write the updated content of the wiki
-    with open(wiki, 'w') as wikifile:
-        wiki_contents = ''.join(wiki_contents)
-        wikifile.write(wiki_contents)
-
-
 def main():
 
     wikidir = sys.argv[1]
     wikifile = sys.argv[2]
 
     # gather all the log files
-    logs =  glob.glob(wikidir+'daily_tests/201*.log')
+    logs = glob.glob(wikidir+'daily_tests/201*.log')
 
     rebuild_wiki(logs, wikidir+'/'+wikifile)
 
