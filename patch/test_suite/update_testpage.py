@@ -1,6 +1,6 @@
 import sys
 import glob
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
 
 MonthsDict = {'Jan': 1, 'Feb': 2, 'Mar': 3,
@@ -8,6 +8,7 @@ MonthsDict = {'Jan': 1, 'Feb': 2, 'Mar': 3,
               'Jul': 7, 'Aug': 8, 'Sep': 9,
               'Oct': 10, 'Nov': 11, 'Dec': 12}
 
+MonthsDictReverse = dict((v, k) for k, v in MonthsDict.iteritems())
 
 def wiki_entry(date, commit, success):
     """Format extracted info as a Markdown table entry"""
@@ -24,7 +25,7 @@ def wiki_entry(date, commit, success):
     else:
         success_string = '![fail](fail.png)'
 
-    return '| '+str(date)+' | '+pdf_string+' | '+log_string+' | '+commit_string+' | '+success_string+' |\n'
+    return str(date)+' '+pdf_string+' '+log_string+' '+commit_string+' '+success_string+' |'
 
 
 def extract_test_info(filename):
@@ -56,9 +57,16 @@ def extract_test_info(filename):
 def rebuild_wiki(logs, wiki):
     """Rebuilts the AutoTests.md wiki file from scratch"""
 
+    row = ''
+    prev_month = 99
     dates = []
     commits = []
     successes = []
+
+
+    months = []
+    commits2 = []
+    successes2 = []
 
     # process logs
     for logname in logs:
@@ -68,21 +76,75 @@ def rebuild_wiki(logs, wiki):
         commits.append(last_commit)
         successes.append(passed)
 
+    x=len(dates)
+    for i in xrange(x):
+        current = dates[~i]
+        if prev_month != current.month:
+            if i == 0:
+                months.append(dates[~i-current.day+1:])
+                commits2.append(commits[~i-current.day+1:])
+                successes2.append(successes[~i-current.day+1:])
+                prev_month = current.month
+
+            else:
+                months.append(dates[~i-current.day+1:~i+1])
+                commits2.append(commits[~i-current.day+1:~i+1])
+                successes2.append(successes[~i-current.day+1:~i+1])
+                prev_month = current.month
+
+
     # buld a new wiki md file
-    entries = []
     with open(wiki, 'w') as wikifile:
         wikifile.write('# RAMSES Daily Test\n')
         wikifile.write('\n')
         wikifile.write('This page contains the test results from the RAMSES test suite which is run daily. The test pipeline was provided by Neil Vaytet with fixes/expansions by Pawel Biernacki.\n')
         wikifile.write('\n')
-        wikifile.write('| date | pdf | log | commit | result |\n')
-        wikifile.write('| ---:|:---:|:---:|:---:|:---:|\n')
         # table entries
-        for i in xrange(len(dates)):
-            entry = wiki_entry(dates[~i], commits[~i], successes[~i])
-            wikifile.write(entry)
+
+        for j in xrange(len(months)):
+            new_month = True
+            for i in xrange(len(months[j])):
+                current = months[j][i]
+                last = months[j][-1]
+
+                if months[j][i].month != last.month:
+                    continue
+
+                if new_month:
+                    wikifile.write('# %s %d' % (MonthsDictReverse[last.month], last.year))
+                    wikifile.write('\n')
+                    wikifile.write('| Mon | Tue | Wed | Thu | Fri | Sat | Sun |\n')
+                    wikifile.write('| ---:| ---:| ---:| ---:| ---:| ---:| ---:|\n')
+                    row = ''
+                    for _ in xrange(current.weekday()+1):
+                        row += '| '
+
+                row += wiki_entry(months[j][i], commits2[j][i], successes2[j][i])
+
+                # taking care of missing data
+                if i+1 < len(months[j]):
+                    day_diff = months[j][i+1].day-current.day
+                    if day_diff > 1:
+                        if day_diff-1 >= 6-current.weekday():
+                            row += (6-current.weekday()-1)*'| '
+                            row += '\n'
+                            row += (day_diff-(6-current.weekday()))*'| '
+                        else:
+                            row += (day_diff-1)*'| '
+
+                if current.weekday() == 6 or i+1 == len(months[j]):
+                    row += '\n'
+                    wikifile.write(row)
+                    row = ''
+
+                if i+1 == len(months[j]):
+                    wikifile.write('\n')
+                    wikifile.write('\n')
+
+                new_month = False
 
     return
+
 
 
 def add_last_entry(logfile, wiki):
@@ -112,8 +174,7 @@ def main():
     # gather all the log files
     logs =  glob.glob(wikidir+'daily_tests/201*.log')
 
-    # rebuild_wiki(logs, wikifile)
-    add_last_entry(logs[-1], wikifile)
+    rebuild_wiki(logs, wikidir+'/'+wikifile)
 
 
 if __name__ == '__main__':
