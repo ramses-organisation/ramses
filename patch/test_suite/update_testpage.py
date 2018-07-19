@@ -112,7 +112,7 @@ def rebuild_wiki(logs, wiki):
 
                 if new_month:
                     wikifile.write('# %s %d' % (MonthsDictReverse[last.month], last.year))
-                    wikifile.write('\n')
+                    wikifile.write('\n\n')
                     wikifile.write('| Mon | Tue | Wed | Thu | Fri | Sat | Sun |\n')
                     wikifile.write('| ---:| ---:| ---:| ---:| ---:| ---:| ---:|\n')
                     row = ''
@@ -138,8 +138,7 @@ def rebuild_wiki(logs, wiki):
                     row = ''
 
                 if i+1 == len(months[j]):
-                    wikifile.write('\n')
-                    wikifile.write('\n')
+                    wikifile.write(3*'\n')
 
                 new_month = False
 
