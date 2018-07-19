@@ -35,9 +35,9 @@ def extract_test_info(filename):
         last_commit = 7*'?'
 
         # figure out the date from the filename
-        compile_date = date(int(filename[12:16]),
-                            int(filename[17:19]),
-                            int(filename[20:22]))
+        compile_date = date(int(filename[-14:-10]),
+                            int(filename[-9:-7]),
+                            int(filename[-6:-4]))
 
         for line in infile:
             if 'compile' in line:
@@ -92,7 +92,7 @@ def add_last_entry(logfile, wiki):
     when, commit, passed = extract_test_info(logfile)
 
     # read the content of wiki
-    with open(wiki, 'w') as wikifile:
+    with open(wiki, 'r') as wikifile:
         wiki_contents = wikifile.readlines()
 
     # insert the latest test after the header
@@ -106,13 +106,13 @@ def add_last_entry(logfile, wiki):
 
 def main():
 
-    wikidir = sys.argv[0]
-    wikifile = sys.argv[1]
+    wikidir = sys.argv[1]
+    wikifile = sys.argv[2]
 
     # gather all the log files
-    logs =  glob.glob(wikidir+'/201*.log')
+    logs =  glob.glob(wikidir+'daily_tests/201*.log')
 
-    # rebuild_wiki(logs)
+    # rebuild_wiki(logs, wikifile)
     add_last_entry(logs[-1], wikifile)
 
 
