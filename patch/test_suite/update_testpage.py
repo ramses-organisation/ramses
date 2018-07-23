@@ -166,7 +166,7 @@ def main():
     wikifile = sys.argv[2]
 
     # gather all the log files
-    logs = glob.glob(wikidir+'daily_tests/201*.log')
+    logs = sorted(glob.glob(wikidir+'/daily_tests/201*.log'))
 
     rebuild_wiki(logs, wikidir+'/'+wikifile)
 
