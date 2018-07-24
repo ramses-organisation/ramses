@@ -2543,7 +2543,6 @@ def _walk_tree(node, root):
 
     return
 
-#!/usr/bin/python2
 
 
 #==============
