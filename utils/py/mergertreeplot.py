@@ -2543,3 +2543,94 @@ def _walk_tree(node, root):
 
     return
 
+#!/usr/bin/python2
+
+
+#==============
+def main():
+#==============
+    """
+    Main function. Calls all the rest.
+    """
+
+    #-----------------------
+    # Set up
+    #-----------------------
+    params = global_params()
+    params.read_cmdlineargs()
+    params.get_output_info()
+
+    if params.verbose:
+        params.print_params()
+
+
+
+    #----------------
+    # read in data
+    #----------------
+    descendants, progenitors, progenitor_outputnrs, outputnrs, t = read_mergertree_data(params)
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    #--------------------
+    # Debug mode:
+    #--------------------
+
+    # In case you want to test stuff out, uncomment the following few lines. They contain
+    # dummy arrays for testing. The data doesn't need to be read in anymore, but will
+    # be overwritten in case you still read it in.
+
+    #  progenitors =           [ [202], [201,  150], [ 186, 263,   9], [182, 166], \
+    #                          [   1,    2,   3,   4], [5,  6,  7, 8,  9, 10, 11, 12], \
+    #                          [13, 14, 15, 16, 17, 18, 19, 20] ]
+    #  descendants =           [ [203], [202, -202], [-201, 201, 150], [186, 263], \
+    #                          [-166, -166, 182, 166], [4, -2, -1, 1, -3,  2, -4,  3], \
+    #                          [5,  6,  7, 8,  9, 10, 11, 12] ]
+    #
+    #  params.noutput = len(progenitors)
+    #  progenitor_outputnrs =  [ [  7], [  6,    6], [   5,   5,   2], [  4,   4], \
+    #                          [   3,    3,   3,   3], [2,  2,  2, 2,  2,  2,  2,  2], \
+    #                          [1,  1,  1, 1,  1,  1,  1,  1]]
+    #  t = [ params.noutput-x for x in range(params.noutput) ]
+    #  outputnrs = t
+    #  params.halo= 203
+    #  params.lastdir = 'output_00008'
+    #  params.lastdirnr = 8
+    #  params.plotparticles = False
+
+    #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
+
+    #------------------
+    # Make tree
+    #------------------
+    tree = make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t, params)
+    del progenitors
+    del descendants
+    del progenitor_outputnrs
+
+
+    #------------------
+    # Plot the tree
+    #------------------
+    plot_tree(tree, outputnrs, t, params)
+
+    #------------------------------
+    # If needed: Plot particles
+    #------------------------------
+    if params.plotparticles:
+        plot_treeparticles(tree, t, params)
+
+
+    return
+
+
+
+
+
+
+#===============================
+if __name__ == "__main__":
+#===============================
+    
+    main()
+
