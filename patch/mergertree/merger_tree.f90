@@ -2681,7 +2681,7 @@ subroutine make_galaxies()
   !---------------------------------------------------
 
   use clfind_commons
-  use pm_commons, only: xp
+  use pm_commons, only: xp, idp
 
   implicit none
   integer               :: ipeak, mbpart, iprog
@@ -2742,7 +2742,7 @@ subroutine make_galaxies()
   fileloc=TRIM('output_'//TRIM(output_to_string)//'/galaxies_'//TRIM(output_to_string)//'.txt'//TRIM(id_to_string))
 
   open(unit=666,file=fileloc,form='formatted')
-  write(666,'(5(A20,x))') "Associated clump", "Stellar Mass [M_Sol]", "x", "y", "z"
+  write(666,'(6(A20,x))') "Associated clump", "Stellar Mass [M_Sol]", "x", "y", "z", "Galaxy Particle ID"
 
   !--------------------------
   ! Write currently active
@@ -2760,9 +2760,9 @@ subroutine make_galaxies()
         else
           m_to_use = mpeak(ipeak)
         endif
-        write(666, '(I20,x,4(E20.12,x))') -clmpidp(mbpart), &
+        write(666, '(I20,x,4(E20.12,x),I20)') -clmpidp(mbpart), &
           stellar_mass(m_to_use,alpha,gam,delta,loge,logM1,xi,scale_m), &
-          xp(mbpart,1), xp(mbpart,2), xp(mbpart,3)
+          xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
       endif
     endif
   enddo
@@ -2775,9 +2775,9 @@ subroutine make_galaxies()
   do iprog = 1, pmprog_free-1
     if (pmprogs_owner(iprog)==myid) then
       mbpart = orphans_local_pid(iprog)
-      write(666, '(I20,x,4(E20.12,x))') 0, &
+      write(666, '(I20,x,4(E20.12,x),I20)') 0, &
         stellar_mass(pmprogs_mpeak(iprog),alpha,gam,delta,loge,logM1,xi,scale_m),& 
-        xp(mbpart,1), xp(mbpart,2), xp(mbpart,3)
+        xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
     endif
   enddo
 
