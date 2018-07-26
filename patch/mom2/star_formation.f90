@@ -289,33 +289,33 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
-                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          M2 = max(sigma2/cs2,4.0)
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          M2        = max(sigma2/cs2,1.0)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          b_turb = 0.4
-                          ! Best fit values Multi-ff KM to PN11
-                          phi_t     = 2.6044503 !1.0/eps_star !0.49
-                          phi_x     = 0.6803737 !1.12 !0.19
+                          b_turb    = 0.4
+                          ! Fudge for alpha dependence (KM 2005).
+                          phi_x     = 1.12
+                          ! The prefered value for eps_star = 1.0,
+                          ! which represents the theoretical maximum efficiency.
                           sigs      = log(1.0+(b_turb**2)*(M2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
-                          sfr_ff(i) = (eps_star/(2.0*phi_t))*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
-                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          b_turb = 0.4
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          b_turb    = 0.4
                           ! Best fit values to the Multi-ff PN model (Hydro)
-                          phi_t     = 0.49
+                          phi_t     = 1.0/0.49
                           theta     = 0.97
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star/(2.0*phi_t))*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        ! Virial criterion threshold a la Hopkins
                        CASE (3)
-!                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0       = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           if(alpha0<1.0) then
                              sfr_ff(i) = eps_star
                           else
