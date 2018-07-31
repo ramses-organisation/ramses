@@ -62,9 +62,10 @@ desc_mass and desc_npart will be either inclusive or exclusive, depending on how
 
 The mock galaxy output is stored in output_XXXXX/galaxies_XXXXX.txtYYYYY files. Every file contains 5 columns:
 
-* Associated clump: Provided this is not an orphan galaxy, the clump ID in which this galaxy is. Orphan galaxies have associated clump = 0
-* Stellar Mass:     The galaxy's stellar mass in units of solar mass.
-* x, y, z:          position of the galaxy.
+* Associated clump:    Provided this is not an orphan galaxy, the clump ID in which this galaxy is. Orphan galaxies have associated clump = 0
+* Stellar Mass:        The galaxy's stellar mass in units of solar mass.
+* x, y, z:             position of the galaxy.
+* Galaxy Particle ID : The ID of the particle this galaxy is attributed to.
 
 
 

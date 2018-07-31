@@ -656,10 +656,11 @@ subroutine create_output_dirs(filedir)
   use amr_commons
   implicit none
   character(LEN=80), intent(in):: filedir
-  character(LEN=80)::filecmd
 #ifdef NOSYSTEM
   character(LEN=80)::filedirini
+  integer :: info_sys
 #else
+  character(LEN=80)::filecmd
   integer :: ierr
 #endif
 #ifndef WITHOUTMPI
@@ -667,14 +668,14 @@ subroutine create_output_dirs(filedir)
 #endif
 
 
-  filecmd='mkdir -p '//TRIM(filedir)
 
   if (.not.withoutmkdir) then
 #ifdef NOSYSTEM
     filedirini = filedir(1:13)
-    call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
-    call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+    call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info_sys)
+    call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info_sys)
 #else
+    filecmd='mkdir -p '//TRIM(filedir)
     ierr=1
     call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
     if(ierr.ne.0 .and. ierr.ne.127)then
