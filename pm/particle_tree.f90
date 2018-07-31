@@ -315,6 +315,8 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do j=1,np
         i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
+        i=MAX(i,0)
+        i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
         ok(j)=ok(j).or.i.ne.1
@@ -327,7 +329,8 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)*scale
+              write(*,*)xp(ind_part(j),1:ndim)
+              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
            endif
         end do
      end do
@@ -929,7 +932,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
      levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
      idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
-     typep(ind_part(i)) = int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
+     typep(ind_part(i)) =int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
   end do
 
   ! Scatter particle position and velocity
