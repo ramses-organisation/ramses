@@ -62,8 +62,6 @@ subroutine dump_all
            call output_cool(filename)
         end if
         if(sink)then
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.info'
-           call output_sink(filename)
            filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
            call output_sink_csv(filename)
         endif
@@ -131,8 +129,8 @@ subroutine dump_all
         filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
         call backup_part(filename, filename_desc)
         if(sink)then
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
-           call backup_sink(filename)
+           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
+           call output_sink_csv(filename)
         end if
 #ifndef WITHOUTMPI
         if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
