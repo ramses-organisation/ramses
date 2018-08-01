@@ -16,7 +16,7 @@ subroutine create_sink
   ! -remove all cloud particles, keep only global sink arrays
   ! -call clumpfinder for potential relevant peaks
   ! -flag peaks which are eligible for sink formation (flag 2)
-  ! -new sink particles are created 
+  ! -new sink particles are created
   ! -new cloud particles are created
   ! -cloud particles are scattered to grid
   ! -accretion routine is called (with on_creation=.true.)
@@ -154,7 +154,7 @@ subroutine create_cloud_from_sink
   integer ::info
   integer ::nsink_min,nsink_max
 #endif
-  
+
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -256,7 +256,6 @@ subroutine create_cloud_from_sink
   endif
 
 end subroutine create_cloud_from_sink
-#endif
 !###############################################################################
 !###############################################################################
 !###############################################################################
@@ -361,7 +360,7 @@ subroutine collect_acczone_avg(ilevel)
   integer::info
 #endif
   !-----------------------------------------------------------------------------
-  ! This routine is used to collect all relevant information to compute the 
+  ! This routine is used to collect all relevant information to compute the
   ! the accretion rates. The information is collected level-by-level when
   ! going down in the call tree (leafs at the bottom), while accretion is
   ! performed on the way up.
@@ -502,7 +501,6 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim)::vol
   logical, dimension(1:nvector,1:twotondim)::ok
 
-#if NDIM==3
   ! Compute volume of each cloud particle
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
@@ -565,7 +563,6 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-#endif
 end subroutine collect_acczone_avg_np
 !###############################################################################
 !###############################################################################
@@ -594,8 +591,6 @@ subroutine grow_sink(ilevel,on_creation)
 
   if(accretion_scheme=='none'.and.(.not.on_creation))return
   if(verbose)write(*,111)ilevel
-
-#if NDIM==3
 
   ! Compute sink accretion rates
   call compute_accretion_rate(.false.)
@@ -694,7 +689,7 @@ subroutine grow_sink(ilevel,on_creation)
         xsink(isink,1:ndim)=xsink(isink,1:ndim)+xsink_all(isink,1:ndim)/(msink(isink)+msmbh(isink))
         vsink(isink,1:ndim)=vsink(isink,1:ndim)+vsink_all(isink,1:ndim)/(msink(isink)+msmbh(isink))
         lsink(isink,1:ndim)=lsink(isink,1:ndim)+lsink_all(isink,1:ndim)-cross(xsink_all(isink,1:ndim),vsink_all(isink,1:ndim))/(msink(isink)+msmbh(isink))
-     
+
         ! Store jump in new sink coordinates
         do lev=levelmin,nlevelmax
            sink_jump(isink,1:ndim,lev)=sink_jump(isink,1:ndim,lev)+xsink(isink,1:ndim)
@@ -710,7 +705,6 @@ subroutine grow_sink(ilevel,on_creation)
 
   end do
 
-#endif
 111 format('   Entering grow_sink for level ',I2)
 
 end subroutine grow_sink
@@ -768,8 +762,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:ndim)::cone_dir
   real(dp)::acc_ratio,v_AGN
-
-#if NDIM==3
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -903,18 +895,18 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               end if
            end if
 
-           m_acc     =max(m_acc,0.0_dp)               
-           m_acc_smbh=max(m_acc_smbh,0.0_dp)               
+           m_acc     =max(m_acc,0.0_dp)
+           m_acc_smbh=max(m_acc_smbh,0.0_dp)
 
            ! Accreted relative center of mass
            x_acc(1:ndim)=(m_acc+m_acc_smbh)*r_rel(1:ndim)
 
            ! Accreted relative momentum
            p_acc(1:ndim)=(m_acc+m_acc_smbh)*v_rel(1:ndim)
-          
+
            ! Accreted relative angular momentum
            l_acc(1:ndim)=(m_acc+m_acc_smbh)*cross(r_rel(1:ndim),v_rel(1:ndim))
-           
+
            ! Add accreted properties to sink variables
            msink_new(isink)=msink_new(isink)+m_acc
            msmbh_new(isink)=msmbh_new(isink)+m_acc_smbh
@@ -960,7 +952,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                        end if
                     end if
                  end if
-#ifdef RT                 
+#ifdef RT
                  if(rt_AGN)then
                     dert=0.1d0*delta_mass(isink)*(3d10/scale_v)**2
                     do igroup=1,nGroups
@@ -974,7 +966,6 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
         endif
      end do
   end do
-#endif
 end subroutine accrete_sink
 !###############################################################################
 !###############################################################################
@@ -1081,8 +1072,8 @@ subroutine compute_accretion_rate(write_sinks)
         if(bondi_accretion)dMsmbh_overdt(isink)=dMBHoverdt_smbh(isink)
         if(eddington_limit)dMsmbh_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt_smbh(isink))
         dMsink_overdt(isink)=max(0.d0,dMBHoverdt(isink)-dMsmbh_overdt(isink))
-     end if 
-     
+     end if
+
      ! Store average quantities for diagnostics
      eps_sink(isink)=ethermal
      rho_gas(isink)=density
@@ -1204,7 +1195,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
                 & ,dMEDoverdt(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
                 & ,msmbh(isink)*scale_m/2d33 &
                 & ,dMBHoverdt_smbh(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
-                & ,dMEDoverdt_smbh(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) & 
+                & ,dMEDoverdt_smbh(isink)*scale_m/scale_t/(2d33/(365.*24.*3600.)) &
                 & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/2d33
         end do
         write(*,'(" ============================================================================================")')
@@ -1994,7 +1985,7 @@ subroutine upd_cloud(ind_part,np)
      end if
   end do
 
-  ! Store velocity 
+  ! Store velocity
   do idim=1,ndim
      do j=1,np
         new_vp(j,idim) = vp(ind_part(j),idim)
@@ -2444,7 +2435,7 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  
+
   ! Check for accretion scheme
   if (accretion_scheme=='bondi')bondi_accretion=.true.
 
@@ -2868,6 +2859,7 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
+#endif
 !###############################################################################
 !###############################################################################
 !###############################################################################
