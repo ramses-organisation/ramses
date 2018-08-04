@@ -116,5 +116,5 @@ acc_sink_boost=1.0 ! 1 is no boost
 T2_min=0 ! always blast
 AGN_fbk_frac_ener=0.0
 AGN_fbk_frac_mom=0.0
-chi_switch=0.0
+AGN_fbk_mode_switch_threshold=0.0
 /

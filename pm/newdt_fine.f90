@@ -13,24 +13,17 @@ subroutine newdt_fine(ilevel)
 #endif
   integer::ilevel
   !-----------------------------------------------------------
-  ! This routine compute the time step using 3 constraints:
+  ! This routine compute the time step using 4 constraints:
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp
   ! 4- maximum step time for ATON
-  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas
-  ! This routine also compute the particle kinetic energy.
+  ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
   integer::npart1,ip
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
-#if NDIM==3
-  integer::ilev,isink,levelmin_isink,limiting_sink
-  real(kind=8)::dt_acc_min
-  real(dp)::dt_fact,limiting_dt_fact
-  logical::highest_level
-#endif
   real(dp)::tff,fourpi,threepi2
 #ifdef ATON
   real(dp)::aton_time_step,dt_aton
@@ -129,48 +122,6 @@ subroutine newdt_fine(ilevel)
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-#if NDIM==3
-     ! timestep restrictions due to sink
-     if(sink .and. nsink>0) then
-        ! determine if on highest active level...
-        if (ilevel==nlevelmax)then
-           highest_level=.true.
-        else if (numbtot(1,ilevel+1)==0)then
-           highest_level=.true.
-        else
-           highest_level=.false.
-        end if
-
-        if (highest_level)then
-           call compute_accretion_rate(.false.)
-           ! timestep due to sink accretion
-           dt_acc_min=huge(0._dp)
-           do isink=1,nsink
-
-              levelmin_isink=nlevelmax
-              do ilev=nlevelmax,levelmin,-1
-                 if (level_sink(isink,ilev))levelmin_isink=ilev
-              end do
-
-              dt_fact=1.
-              do ilev=levelmin_isink,ilevel-1
-                 dt_fact=dt_fact*nsubcycle(ilev)
-              end do
-
-              if (dt_acc(isink)/dt_fact<dt_acc_min)then
-                 dt_acc_min=dt_acc(isink)/dt_fact
-                 limiting_sink=isink
-                 limiting_dt_fact=dt_fact
-              end if
-
-           end do
-           if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
-              write(*,'(A10,2X,F10.6,2X,A20,2X,I10)')'dt_acc/dt',dt_acc_min/dtnew(ilevel),'limited by sink:',limiting_sink
-           end if
-           dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
-        end if
-     end if
-#endif
   end if
 
   if(hydro)call courant_fine(ilevel)
