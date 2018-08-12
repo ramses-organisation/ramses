@@ -2702,30 +2702,38 @@ subroutine make_galaxies()
   ! get masses and a_exp for all clumps
   !----------------------------------------
 
-  do ipeak = 1, npeaks
-    if (clmp_mass_exclusive(ipeak) > 0) then
-      if (is_namegiver(ipeak)) then
-        ! main halo: track peak mass
-        if (main_prog(ipeak) > 0) then
-          if (clmp_mass_pb(ipeak) >= prog_mpeak(main_prog(ipeak))) then
-            mpeak(ipeak) = clmp_mass_pb(ipeak)
+  write(*,*) npeaks, npeaks_max, nprogs, npastprogs
+
+  if (nprogs == 0) then
+    ! Might happen e.g. with dice, where there are haloes starting with first snapshot.
+    ! Then no progenitor arrays are allocated at this point.
+    mpeak(1:npeaks) = clmp_mass_pb(1:npeaks)
+  else
+    do ipeak = 1, npeaks
+      if (clmp_mass_exclusive(ipeak) > 0) then
+        if (is_namegiver(ipeak)) then
+          ! main halo: track peak mass
+          if (main_prog(ipeak) > 0) then
+            if (clmp_mass_pb(ipeak) >= prog_mpeak(main_prog(ipeak))) then
+              mpeak(ipeak) = clmp_mass_pb(ipeak)
+            else
+              mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
+            endif
           else
-            mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
+            ! if no progenitor data available: store new
+            mpeak(ipeak) = clmp_mass_pb(ipeak)
           endif
         else
-          ! if no progenitor data available: store new
-          mpeak(ipeak) = clmp_mass_pb(ipeak)
-        endif
-      else
-        ! if satellite and has a progenitor:
-        if (main_prog(ipeak) > 0) then
-          mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
-        else
-          mpeak(ipeak) = clmp_mass_pb(ipeak)
+          ! if satellite and has a progenitor:
+          if (main_prog(ipeak) > 0) then
+            mpeak(ipeak) = prog_mpeak(main_prog(ipeak))
+          else
+            mpeak(ipeak) = clmp_mass_pb(ipeak)
+          endif
         endif
       endif
-    endif
-  enddo
+    enddo
+  endif
 
 #ifndef WHITOUTMPI
   call boundary_peak_dp(mpeak)
