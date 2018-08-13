@@ -2702,8 +2702,6 @@ subroutine make_galaxies()
   ! get masses and a_exp for all clumps
   !----------------------------------------
 
-  write(*,*) npeaks, npeaks_max, nprogs, npastprogs
-
   if (nprogs == 0) then
     ! Might happen e.g. with dice, where there are haloes starting with first snapshot.
     ! Then no progenitor arrays are allocated at this point.
