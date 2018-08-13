@@ -47,11 +47,17 @@ directories are stored.
                             clumps you plotted in the scatterplot
 
     -m, --movie             if creating particle plots (-pp flag), create
-                            images for a 'movie': No axis labels, plot only
-                            x-y plane instead of all 3 planes, annotate plot
-                            with only snapshot number, use matplotlib.scatter
-                            for nicer plot instead of mpl_scatter_density
-                            (makes it slower)
+                            particle plots for a 'movie': Plot only x-y plane 
+                            instead of all 3 planes, annotate plot with only 
+                            snapshot number, use matplotlib.scatter for nicer 
+                            plot instead of mpl_scatter_density (this makes the 
+                            plotting slower).
+                            If you want to disable axis labelling, you can do
+                            so manually in the _tweak_particleplot(...) 
+                            function (look for "TODO" comment).
+                            If you want to have a fixed axis rane, you can do
+                            so manually in the _plot_particles(...) function
+                            (look for "TODO" comment).
 
     -nc, --no-colors        don't plot lines in different colors, only thin
                             black lines.
@@ -1165,12 +1171,12 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
         if not params.use_t:
             # find output closest to z=0
             startind = np.argmin(np.absolute(t))
-            params.start = startind
         else:
             print "Since you're using -t, I can't find the z=0 directory."
 
         if params.verbose:
             print "Snapshot of the tree root is", outputnrs[startind]
+    params.start = startind
 
 
     # set filename
@@ -1457,13 +1463,18 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
     try:
 
         if params.movie:
+
+            msize = 4
+            alpha = 0.5
+            lw = 0
+
             try: 
                 ax1.scatter(x[to_plot], y[to_plot], 
                     c=params.colorlist[0], 
                     zorder=0,
-                    s=2,
-                    alpha=0.5,
-                    lw=0)
+                    s=msize,
+                    alpha=alpha,
+                    lw=lw)
             except ValueError:
                 # in case there were no particles to plot:
                 print "No particles outside of tree were found to be plotted."
@@ -1475,8 +1486,8 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
                 ax1.scatter(x[to_plot], y[to_plot], 
                     c=params.colorlist[colorarray[i]], 
                     zorder=1,
-                    s=2,
-                    lw=0,
+                    s=msize,
+                    lw=lw,
                     alpha=0.7)
 
 
@@ -1701,7 +1712,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     _draw_tree(tree[0][0], ax, strategy)
 
     # Tweak the plot
-    _tweak_treeplot(fig, yaxis_int[:len(tree)+1], yaxis_phys[:len(tree)+1], borders)
+    _tweak_treeplot(fig, yaxis_int, yaxis_phys, borders)
     
     # Save the figure
     _save_fig(fig, strategy)
@@ -1838,6 +1849,11 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
 
     mask = galid>0
 
+    msize = 200
+    lw = 2
+    ec = 'black'
+
+
     for i,g in enumerate(galid[mask]):
         for j,c in enumerate(clumps_in_tree):
             if g == c:
@@ -1846,29 +1862,33 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
                 if params.movie:
                     ax.scatter(xg[mask][i],yg[mask][i],
                         marker="*",
-                        s=50,
+                        s=msize,
                         facecolor=color,
                         edgecolor='black',
-                        lw=0.5)
+                        lw=lw,
+                        zorder=4)
                 else:
                     ax1.scatter(xg[mask][i],yg[mask][i],
                         marker="*",
-                        s=50,
+                        s=msize,
                         facecolor=color,
                         edgecolor='black',
-                        lw=0.5)
+                        lw=lw,
+                        zorder=4)
                     ax2.scatter(yg[mask][i],zg[mask][i],
                         marker="*",
-                        s=50,
+                        s=msize,
                         facecolor=color,
                         edgecolor='black',
-                        lw=0.5)
+                        lw=lw,
+                        zorder=4)
                     ax3.scatter(xg[mask][i],zg[mask][i],
                         marker="*",
-                        s=50,
+                        s=msize,
                         facecolor=color,
                         edgecolor='black',
-                        lw=0.5)
+                        lw=lw,
+                        zorder=4)
 
                 break
 
@@ -1900,29 +1920,33 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
 
         ax.scatter(xg[to_plot],yg[to_plot],
             marker="*",
-            s=50,
+            s=msize,
             facecolor='black',
             edgecolor='black',
-            lw=0.5)
+            lw=lw,
+            zorder=4)
     else:
         ax1.scatter(xg[to_plot],yg[to_plot],
             marker="*",
-            s=50,
+            s=msize,
             facecolor='black',
             edgecolor='black',
-            lw=0.4)
+            lw=lw,
+            zorder=4)
         ax2.scatter(yg[to_plot],zg[to_plot],
             marker="*",
-            s=50,
+            s=msize,
             facecolor='black',
             edgecolor='black',
-            lw=0.4)
+            lw=lw,
+            zorder=4)
         ax3.scatter(xg[to_plot],zg[to_plot],
             marker="*",
-            s=50,
+            s=msize,
             facecolor='black',
             edgecolor='black',
-            lw=0.4)
+            lw=lw,
+            zorder=4)
 
     return
 
@@ -2086,8 +2110,6 @@ def read_mergertree_data():
     time = np.zeros(noutput)
 
     dir_template = 'output_'
-
-
 
 
     #---------------------------
@@ -2684,6 +2706,23 @@ def _tweak_particleplot(fig, time, borders, outnr):
     else:
         ax1, ax2, ax3 = fig.axes
 
+    xmin, xmax, ymin, ymax, zmin, zmax = borders
+
+    #-------------------
+    # set axes limits
+    #-------------------
+
+    ax1.set_xlim([xmin, xmax])
+    ax1.set_ylim([ymin, ymax])
+
+    if not params.movie:
+        ax2.set_xlim([ymin, ymax])
+        ax2.set_ylim([zmin, zmax])
+
+        ax3.set_xlim([xmin, xmax])
+        ax3.set_ylim([zmin, zmax])
+
+
 
     #------------------------------------------
     # set tick params (especially digit size)
@@ -2696,8 +2735,8 @@ def _tweak_particleplot(fig, time, borders, outnr):
     # TODO: If you want to remove ticks for the particle plots in movie mode,
     # Do it here:
     #  else:
-    #      ax1.set_xticks=([])
-    #      ax1.set_xticklabels=([])
+    #      ax1.get_yaxis().set_visible(False)
+    #      ax1.get_xaxis().set_visible(False)
     
 
 
@@ -2750,31 +2789,17 @@ def _tweak_particleplot(fig, time, borders, outnr):
     else:
         plt.sca(ax1)
         plt.annotate(str(outnr),
-            xy=(0.95, 0.95),
-            xycoords='axes fraction',
+            xy=(xmax*0.99, ymax*0.99),
+            xycoords='data',
             fontsize=18,
-            backgroundcolor='white'
+            backgroundcolor='white',
+            horizontalalignment='right',
+            verticalalignment='top'
             )
 
         plt.tight_layout()
 
 
-
-    #-------------------
-    # set axes limits
-    #-------------------
-
-    xmin, xmax, ymin, ymax, zmin, zmax = borders
-
-    ax1.set_xlim([xmin, xmax])
-    ax1.set_ylim([ymin, ymax])
-
-    if not params.movie:
-        ax2.set_xlim([ymin, ymax])
-        ax2.set_ylim([zmin, zmax])
-
-        ax3.set_xlim([xmin, xmax])
-        ax3.set_ylim([zmin, zmax])
 
 
 
