@@ -275,13 +275,14 @@ contains
     ! for the stellar mass at the current
     ! snapshot (current redshift)
     !-----------------------------------------
-    use amr_commons, ONLY: dp,omega_m,h0,aexp,boxlen_ini
+    use amr_commons, ONLY: dp,aexp
     use cooling_module, ONLY: rhoc
     implicit none
     real(dp), intent(out) :: alpha, gam, delta, loge, logM1, xi, scale_m
 
     real(dp)      :: M_Sol    = 1.998d33  ! solar mass in g
     logical, save :: seed_set = .false.   ! whether seed for random scatter is set
+    real(dp)      :: junk1, junk2, junk3, junk4
 
     real(dp) :: M_10    =   11.514 
     real(dp) :: M_1a    = -  1.793
@@ -305,9 +306,7 @@ contains
     integer :: n, clock, i
     integer, dimension(:), allocatable:: seed
 
-
-    scale_d = omega_m * rhoc *(h0/100.)**2 / aexp**3
-    scale_l = aexp * boxlen_ini * 3.08d24 / (h0/100)
+    call units(scale_l,junk1,scale_d,junk2,junk3,junk4)
     scale_m = scale_d * scale_l**3 / M_Sol ! get mass in units of M_Sol
 
     z = 1.d0/aexp - 1
@@ -318,7 +317,6 @@ contains
     alpha = alpha_0 + nu*(alpha_a*(aexp-1))
     delta = delta_0 + nu*(delta_a*(aexp-1)            + delta_z*z)
     gam   = gamma_0 + nu*(gamma_a*(aexp-1)            + gamma_z*z)
-
 
 
     !-------------------------
