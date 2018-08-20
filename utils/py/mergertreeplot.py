@@ -24,16 +24,40 @@ directories are stored.
      If compiling the .tex file fails due to memory restrictions, try adding
      "\RequirePackage{luatex85}" as the first line and compile with lualatex.
 
+     If you're trying to plot a really big tree, the resulting image might not
+     be very good and require some manual tinkering in the plotting settings. 
+     In this case, I recommend using the -wb and -fb flags to write and read 
+     the tree, once it has been created, to speed up things (See debugging 
+     options for details).
+
 
 
 -------------
  Options:
 -------------
 
+    -g, --galaxy            if creating particle plots (-pp flag), also plot
+                            the current galaxies in the clumps as small stars
+                            Galaxies with host clumps will be the same colour
+                            as the clump, orphans will be black.
+
     -h, --help              print this help message
 
     -lc, --label-clumps     if creating particle plots (-pp flag), label the
                             clumps you plotted in the scatterplot
+
+    -m, --movie             if creating particle plots (-pp flag), create
+                            particle plots for a 'movie': Plot only x-y plane 
+                            instead of all 3 planes, annotate plot with only 
+                            snapshot number, use matplotlib.scatter for nicer 
+                            plot instead of mpl_scatter_density (this makes the 
+                            plotting slower).
+                            If you want to disable axis labelling, you can do
+                            so manually in the _tweak_particleplot(...) 
+                            function (look for "TODO" comment).
+                            If you want to have a fixed axis rane, you can do
+                            so manually in the _plot_particles(...) function
+                            (look for "TODO" comment).
 
     -nc, --no-colors        don't plot lines in different colors, only thin
                             black lines.
@@ -50,9 +74,9 @@ directories are stored.
                             If you only want a TeX file without compilation, 
                             use -T or --tex instead.
 
-    -p, --pretty            create an image that gives little information, but
-                            looks pretty. This flag simply activates the 
-                            following flags: 
+    -p, --pretty            create an image of the tree that gives little 
+                            information, but looks pretty. This flag simply 
+                            activates the following flags: 
                                 --no-labels 
                                 --no-jumper-diagonals
                                 --tex
@@ -60,9 +84,12 @@ directories are stored.
 
     -pp, --plotparticles    also create a plot of particles at each output,
                             marking the clumps in the tree with their colour
-                            WARNING:    Needs the unbinding_XXXXX.outYYYYY
-                            WARNING:    files and the mpl-scatter-density
-                            WARNING:    library for this function
+                             WARNING:    Needs the unbinding_XXXXX.outYYYYY
+                             WARNING:    files and the mpl-scatter-density
+                             WARNING:    library for this function.
+                             WARNING:    The current implementation is not
+                             WARNING:    suitable to create plots of large
+                             WARNING:    simulations.
 
     -s <output_nr>          don't start at output_XXXXX directory where z=0,
     --start_at <output_nr>  but at given output_<output_nr>.
@@ -72,7 +99,7 @@ directories are stored.
                             in this output directory.
 
     -t, --use-time          use time instead of redshift for y label.
-                            For non-cosmo runs, you NEED to use this, unless
+                            For  non-cosmo runs, you NEED to use this, unless
                             you want z=0 everywhere. (In case you forgot,
                             you will be warned.)
                             if you used the -pp flag, not using the -t flag
@@ -82,8 +109,8 @@ directories are stored.
     -T, --tex               save image as a tikz file for LaTeX instead of a
                             png image. Image will be saved as .tex instead
                             of .png, the filename will be the same.
-                            WARNING: Needs the matplotlib2tikz library for
-                            WARNING: this function
+                             WARNING: Needs the matplotlib2tikz library for
+                             WARNING: this function
 
     -v, --verbose           verbose: print more details of what you're doing
 
@@ -243,9 +270,11 @@ class global_params:
         """
 
         self.from_backup    = False # whether to read in data from backup instead of generating new tree
+        self.galaxies       = False # whether to draw little stars for galaxies of clumps
         self.halo           = 0     # the root halo for which to plot for
         self.label_clumps   = False # whether to label clumps in particle plots
         self.lastdir        = ''    # last output directory
+        self.movie          = False # whether to create particle plots pretty for movies.
         self.ncpu           = 0     # how many processors were used for simulation run
         self.nocolors       = False # whether to use only black lines
         self.nojumperdraw   = False # whether to draw apparent mergers for jumpers
@@ -269,10 +298,15 @@ class global_params:
         self.accepted_args = {
             '-fb':                  self.set_read_backup,
             '--from-backup':        self.set_read_backup,
+            '-g':                   self.set_galaxies,
+            '--galaxy':             self.set_galaxies,
+            '--galaxies':           self.set_galaxies,
             '-h':                   self.print_help,
             '--help':               self.print_help,
             '-lc':                  self.set_clumplabels,
             '--label-clumps' :      self.set_clumplabels,
+            '-m':                   self.set_movie,
+            '--movie':              self.set_movie,
             '-nc':                  self.set_nocolors,
             '--no-colors':          self.set_nocolors,
             '-njd':                 self.set_nojumperdraw,
@@ -454,7 +488,7 @@ class global_params:
             nothing
         """
 
-        print " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print " ==================================================================="
         print 
         print " Started mergertreeplot.py"
         print " Working parameters are:"
@@ -489,6 +523,7 @@ class global_params:
         print '{0:45}{1:}'.format(          " Particles will be plotted?",              self.plotparticles)
         if self.plotparticles:
             print '{0:45}{1:}'.format(      " Clumps in particle plots will be labelled?", self.label_clumps)
+            print '{0:45}{1:}'.format(      " Formatting/annotating image for movie?",  self.movie)
 
 
         print
@@ -497,7 +532,7 @@ class global_params:
 
 
         print
-        print " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        print " ==================================================================="
 
         return
 
@@ -509,6 +544,14 @@ class global_params:
 
     def set_clumplabels(self):
         self.label_clumps = True
+        return
+    
+    def set_galaxies(self):
+        self.galaxies = True
+        return
+
+    def set_movie(self):
+        self.movie = True
         return
     
     def set_notreeclumplabels(self):
@@ -1128,12 +1171,12 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
         if not params.use_t:
             # find output closest to z=0
             startind = np.argmin(np.absolute(t))
-            params.start = startind
         else:
             print "Since you're using -t, I can't find the z=0 directory."
 
         if params.verbose:
             print "Snapshot of the tree root is", outputnrs[startind]
+    params.start = startind
 
 
     # set filename
@@ -1307,19 +1350,22 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
 
 
 
-#======================================================================
-def _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors):
-#======================================================================
+#===========================================================================
+def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
+#===========================================================================
     """
     This function plots the particles for this output. Is meant
     to be called for every output by the plot_treeparticles function.
 
     Parameters:
-        x, y, z:        numpy arrays of particle positions
-        clumpid:        numpy arrays of particle clump IDs [list of integers]
+        partdata:       list containing numpy arrays of particle positions, clump
+                        IDs and particle IDs. (If params.galaxies=False, idp=None)
+        galaxydata:     list containing numpy arrays of galaxy positions, clump
+                        IDs and particle IDs. (If params.galaxies=False, all=None)
         time:           time or redshift of output
         clumps_in_tree: list of clumps in tree at this output
         colors:         the colors of clumps in trees [list of integers]
+        outnr:          current snapshot number
 
     Returns:
         nothing
@@ -1333,21 +1379,30 @@ def _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors):
     if params.verbose:
         print "Creating particle figure"
 
+    x = partdata[0]
+    y = partdata[1]
+    z = partdata[2]
+    clumpid = partdata[3]
 
 
     #---------------------------
     # Set up figure
     #---------------------------
 
-    fig = plt.figure(facecolor='white', figsize=(15,6), dpi=150)
+    if params.movie:
+        fig = plt.figure(facecolor='white',figsize=(8,8), dpi=150)
+        ax1 = fig.add_subplot(111)
 
-    # add subplots on fixed positions
-    gs = gridspec.GridSpec(1, 3,
-                       width_ratios=[1, 1, 1], height_ratios=[1],
-                       left=0.04, bottom=0.13, right=0.98, top=0.9, wspace=0.12,)
-    ax1 = fig.add_subplot(gs[0], aspect='equal', projection='scatter_density')
-    ax2 = fig.add_subplot(gs[1], aspect='equal', projection='scatter_density')
-    ax3 = fig.add_subplot(gs[2], aspect='equal', projection='scatter_density')
+    else:
+        fig = plt.figure(facecolor='white', figsize=(15,6), dpi=150)
+
+        # add subplots on fixed positions
+        gs = gridspec.GridSpec(1, 3,
+                           width_ratios=[1, 1, 1], height_ratios=[1],
+                           left=0.04, bottom=0.13, right=0.98, top=0.9, wspace=0.12,)
+        ax1 = fig.add_subplot(gs[0], aspect='equal', projection='scatter_density')
+        ax2 = fig.add_subplot(gs[1], aspect='equal', projection='scatter_density')
+        ax3 = fig.add_subplot(gs[2], aspect='equal', projection='scatter_density')
 
 
 
@@ -1357,17 +1412,35 @@ def _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors):
 
     to_plot_all = np.array(x.shape, dtype='bool')
     to_plot_all = False
-    colorarray = np.zeros(x.shape, dtype='int')
+
+    if params.movie:
+        colorarray = ["" for i in clumps_in_tree]
+    else:
+        colorarray = np.zeros(x.shape, dtype='int')
+
 
     for i,clump in enumerate(clumps_in_tree):
         is_this_clump = (clumpid == clump)
         to_plot_all = np.logical_or(to_plot_all,is_this_clump)
         fc, ec = _get_plotcolors(colors[i])
-        colorarray[is_this_clump] = fc
+        if params.movie:
+            colorarray[i] = fc
+        else:
+            colorarray[is_this_clump] = fc
    
     borders = _setup_plot_region(x, y, z, to_plot_all)
     xmin, xmax, ymin, ymax, zmin, zmax = borders
 
+
+    # TODO: Comment out for general usage
+    # If you want to manually set up axis limits, then do it here:
+    #  xmin = 400
+    #  xmax = 800
+    #  ymin = 300
+    #  ymax = 700
+    #  zmin = 0         # don't forget to include big enough zmin/zmax!
+    #  zmax = 1000
+    #  borders = (xmin, xmax, ymin, ymax, zmin, zmax) # overwrite borders for later use
 
 
     # reset to_plot here!
@@ -1384,96 +1457,130 @@ def _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors):
     # Actual plotting
     #---------------------------
 
-    # set up colormap
-    bounds=np.linspace(0, len(params.colorlist), len(params.colorlist)+1)
-    cmap=mc.ListedColormap(params.colorlist, name='My colormap')
-    norm=mc.BoundaryNorm(bounds, len(params.colorlist))
-
-
-
     # first plot particles not in tree
     to_plot = to_plot_all & (clumpid==0)
 
     try:
-        ax1.scatter_density(x[to_plot], y[to_plot], c=colorarray[to_plot], 
-            cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
-        ax2.scatter_density(y[to_plot], z[to_plot], c=colorarray[to_plot], 
-            cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
-        ax3.scatter_density(x[to_plot], z[to_plot], c=colorarray[to_plot], 
-            cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
+
+        if params.movie:
+
+            msize = 4
+            alpha = 0.5
+            lw = 0
+
+            try: 
+                ax1.scatter(x[to_plot], y[to_plot], 
+                    c=params.colorlist[0], 
+                    zorder=0,
+                    s=msize,
+                    alpha=alpha,
+                    lw=lw)
+            except ValueError:
+                # in case there were no particles to plot:
+                print "No particles outside of tree were found to be plotted."
+
+
+            # now plot particles in tree
+            for i, c in enumerate(clumps_in_tree):
+                to_plot = to_plot_all & (clumpid==c)
+                ax1.scatter(x[to_plot], y[to_plot], 
+                    c=params.colorlist[colorarray[i]], 
+                    zorder=1,
+                    s=msize,
+                    lw=lw,
+                    alpha=0.7)
+
+
+        else: # not movie
+
+            # set up colormap
+            bounds=np.linspace(0, len(params.colorlist), len(params.colorlist)+1)
+            cmap=mc.ListedColormap(params.colorlist, name='My colormap')
+            norm=mc.BoundaryNorm(bounds, len(params.colorlist))
+
+
+            try:
+                ax1.scatter_density(x[to_plot], y[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
+                ax2.scatter_density(y[to_plot], z[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
+                ax3.scatter_density(x[to_plot], z[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
+            except ValueError:
+                # in case there were no particles to plot:
+                print "No particles outside of tree were found to be plotted."
+        
+
+
+            # now plot particles in tree
+            for i, c in enumerate(clumps_in_tree):
+                to_plot = to_plot_all & (clumpid==c)
+                ax1.scatter_density(x[to_plot], y[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
+                ax2.scatter_density(y[to_plot], z[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
+                ax3.scatter_density(x[to_plot], z[to_plot], c=colorarray[to_plot], 
+                    cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
+
+
+                if params.label_clumps: 
+                    #------------------------
+                    # create clump labels
+                    #------------------------
+                    inner, outer = _get_plotcolors(colors[i])
+                    fc = params.colorlist[inner]
+                    ec = params.colorlist[outer]
+
+                    bbox_props = dict(boxstyle="round,pad=0.15", 
+                            fc=fc, 
+                            ec=ec,
+                            lw=1.5, 
+                            alpha=1)
+
+                    xc = np.mean(x[to_plot])
+                    yc = np.mean(y[to_plot])
+                    zc = np.mean(z[to_plot])
+
+                    ax1.text(xc, yc, str(c),
+                        size=6,
+                        bbox=bbox_props,
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
+                    ax2.text(yc, zc, str(c),
+                        size=6,
+                        bbox=bbox_props,
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
+                    ax3.text(xc, zc, str(c),
+                        size=6,
+                        bbox=bbox_props,
+                        horizontalalignment='center',
+                        verticalalignment='center',
+                        )
+
+
     except ValueError:
-        # in case there were no particles to plot:
-        print "No particles outside of tree were found to be plotted."
-    
+        #in case there were no particles to plot:
+        print "WARNING: ValueError while plotting clump", c, "raised."
+        print "WARNING: Maybe clump has no particles for some reason?"
+        print "WARNING: Or are you playing around with the code?"
+        acceptable_answer = False
+        while not acceptable_answer:
+            answer = raw_input("Do you still want to continue? (y/n) ")
+            if (answer == 'y'):
+                acceptable_answer = True
+                break
+            elif (answer == 'n'):
+                print "Exiting."
+                quit()
+            else:
+                print "Please answer with 'y' or 'n'"
 
 
-    # now plot particles in tree
-    for i, c in enumerate(clumps_in_tree):
-        try:
-            to_plot = to_plot_all & (clumpid==c)
-            ax1.scatter_density(x[to_plot], y[to_plot], c=colorarray[to_plot], 
-                cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
-            ax2.scatter_density(y[to_plot], z[to_plot], c=colorarray[to_plot], 
-                cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
-            ax3.scatter_density(x[to_plot], z[to_plot], c=colorarray[to_plot], 
-                cmap=cmap, norm=norm, dpi=72, alpha=1, zorder=1)
-
-
-            if params.label_clumps: 
-                #------------------------
-                # create clump labels
-                #------------------------
-                inner, outer = _get_plotcolors(colors[i])
-                fc = params.colorlist[inner]
-                ec = params.colorlist[outer]
-
-                bbox_props = dict(boxstyle="round,pad=0.15", 
-                        fc=fc, 
-                        ec=ec,
-                        lw=1.5, 
-                        alpha=1)
-
-                xc = np.mean(x[to_plot])
-                yc = np.mean(y[to_plot])
-                zc = np.mean(z[to_plot])
-
-                ax1.text(xc, yc, str(c),
-                    size=6,
-                    bbox=bbox_props,
-                    horizontalalignment='center',
-                    verticalalignment='center',
-                    )
-                ax2.text(yc, zc, str(c),
-                    size=6,
-                    bbox=bbox_props,
-                    horizontalalignment='center',
-                    verticalalignment='center',
-                    )
-                ax3.text(xc, zc, str(c),
-                    size=6,
-                    bbox=bbox_props,
-                    horizontalalignment='center',
-                    verticalalignment='center',
-                    )
-
-        except ValueError:
-            #in case there were no particles to plot:
-            print "WARNING: ValueError while plotting clump", c, "raised."
-            print "WARNING: Maybe clump has no particles for some reason?"
-            print "WARNING: Or are you playing around with the code?"
-            acceptable_answer = False
-            while not acceptable_answer:
-                answer = raw_input("Do you still want to continue? (y/n) ")
-                if (answer == 'y'):
-                    acceptable_answer = True
-                    break
-                elif (answer == 'n'):
-                    print "Exiting."
-                    quit()
-                else:
-                    print "Please answer with 'y' or 'n'"
-
-
+    if params.galaxies:
+        _plot_galaxies(fig, galaxydata, clumps_in_tree, colors, borders)
 
 
 
@@ -1483,8 +1590,7 @@ def _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors):
     # Tweak and save figure
     #-------------------------------
     
-    _tweak_particleplot(fig, time, borders)
-
+    _tweak_particleplot(fig, time, borders, outnr)
 
     _save_fig(fig, plotparticles=True)
 
@@ -1606,7 +1712,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     _draw_tree(tree[0][0], ax, strategy)
 
     # Tweak the plot
-    _tweak_treeplot(fig, yaxis_int[:len(tree)+1], yaxis_phys[:len(tree)+1], borders)
+    _tweak_treeplot(fig, yaxis_int, yaxis_phys, borders)
     
     # Save the figure
     _save_fig(fig, strategy)
@@ -1628,7 +1734,7 @@ def plot_treeparticles(tree, yaxis_phys):
     Calls _plot_particles for every output in the tree.
     NOTE: This function assumes that the colors for the tree have
     already been assigned and takes the same color of the node
-    for the particles / clump labels..
+    for the particles / clump labels.
 
     Parameters:
         tree:       list of list of class Node objects containing the tree
@@ -1641,7 +1747,11 @@ def plot_treeparticles(tree, yaxis_phys):
 
     if params.verbose:
         print
+        print
+        print "======================================================================"
+        print
         print "Started plotting tree particles."
+        print
 
 
     outnrs = range(params.lastdirnr-params.start, params.lastdirnr-params.start-len(tree), -1)
@@ -1666,6 +1776,14 @@ def plot_treeparticles(tree, yaxis_phys):
             # read in particles of this output
             x, y, z, clumpid = _read_particle_data(srcdir)
 
+            if params.galaxies:
+                xg, yg, zg, gid = _read_galaxy_data(srcdir)
+            else:
+                xg = None
+                yg = None
+                zg = None
+                gid = None
+
             # get time/redshift
             time = yaxis_phys[i]
 
@@ -1676,10 +1794,159 @@ def plot_treeparticles(tree, yaxis_phys):
                 params.outputfilename = params.prefix+'particleplot_'+str(outnr).zfill(5)
 
             # plot the particles
-            _plot_particles(x, y, z, clumpid, time, clumps_in_tree, colors)
+            partdata =   [x,  y,  z,  clumpid]
+            galaxydata = [xg, yg, zg, gid    ]
+
+            _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr)
 
             del x, y, z, clumpid, clumps_in_tree, colors
    
+
+    return
+
+
+
+
+
+
+#======================================================================
+def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
+#======================================================================
+    """
+    Plots the galaxies.
+
+    Parameters:
+
+        fig:            matplotlib figure object
+        galaxydata:     list of numpy arrays containing galaxy positions and IDs
+        clumps_in_tree: list of clumps currently in tree
+        colors:         x-value of clump in tree, used to determine its color
+        borders:        list of plot borders (xmin, xmax, ...)
+
+    Returns:
+        Nothing
+    """
+
+    #---------------------------------
+    # Non-Orphans
+    #---------------------------------
+
+    if params.verbose:
+        print "Plotting galaxies with associated clumps."
+
+    xmin, xmax, ymin, ymax, zmin, zmax = borders
+
+    if params.movie:
+        ax = fig.axes[0]
+    else:
+        ax1, ax2, ax3 = fig.axes
+
+
+    xg = galaxydata[0]
+    yg = galaxydata[1]
+    zg = galaxydata[2]
+    galid = galaxydata[3]
+
+    mask = galid>0
+
+    msize = 200
+    lw = 2
+    ec = 'black'
+
+
+    for i,g in enumerate(galid[mask]):
+        for j,c in enumerate(clumps_in_tree):
+            if g == c:
+                color = params.colorlist[_get_plotcolors(colors[j])[0]]
+
+                if params.movie:
+                    ax.scatter(xg[mask][i],yg[mask][i],
+                        marker="*",
+                        s=msize,
+                        facecolor=color,
+                        edgecolor='black',
+                        lw=lw,
+                        zorder=4)
+                else:
+                    ax1.scatter(xg[mask][i],yg[mask][i],
+                        marker="*",
+                        s=msize,
+                        facecolor=color,
+                        edgecolor='black',
+                        lw=lw,
+                        zorder=4)
+                    ax2.scatter(yg[mask][i],zg[mask][i],
+                        marker="*",
+                        s=msize,
+                        facecolor=color,
+                        edgecolor='black',
+                        lw=lw,
+                        zorder=4)
+                    ax3.scatter(xg[mask][i],zg[mask][i],
+                        marker="*",
+                        s=msize,
+                        facecolor=color,
+                        edgecolor='black',
+                        lw=lw,
+                        zorder=4)
+
+                break
+
+
+
+
+    #-------------------------------
+    # Orphans
+    #-------------------------------
+
+
+    # Find which orphans are supposed to be plotted
+    to_plot = galid == 0
+    to_plot = to_plot & ((xg <= xmax) & (xg >= xmin))
+    to_plot = to_plot & ((yg <= ymax) & (yg >= ymin))
+    to_plot = to_plot & ((zg <= zmax) & (zg >= zmin))
+
+    if params.verbose:
+        count = 0
+        unique, counts = np.unique(to_plot, return_counts=True)
+        for i,u in enumerate(unique):
+            if u==True:
+                count=counts[i]
+                break
+        print "Plotting ", count, "orphan galaxies."
+
+
+    if params.movie:
+
+        ax.scatter(xg[to_plot],yg[to_plot],
+            marker="*",
+            s=msize,
+            facecolor='black',
+            edgecolor='black',
+            lw=lw,
+            zorder=4)
+    else:
+        ax1.scatter(xg[to_plot],yg[to_plot],
+            marker="*",
+            s=msize,
+            facecolor='black',
+            edgecolor='black',
+            lw=lw,
+            zorder=4)
+        ax2.scatter(yg[to_plot],zg[to_plot],
+            marker="*",
+            s=msize,
+            facecolor='black',
+            edgecolor='black',
+            lw=lw,
+            zorder=4)
+        ax3.scatter(xg[to_plot],zg[to_plot],
+            marker="*",
+            s=msize,
+            facecolor='black',
+            edgecolor='black',
+            lw=lw,
+            zorder=4)
 
     return
 
@@ -1722,12 +1989,90 @@ def read_backup():
 
 
 
+#======================================
+def _read_galaxy_data(srcdir):
+#======================================
+    """ 
+    reads in galaxy data as written by the mergertree patch.
+    NOTE: requires galaxies_XXXXX.txtYYYYY files.
+
+    parameters:
+        srcdir:         Path of output_XXXXX directory to work with
+
+    returns:
+        xg, yg, zg:     numpy arrays of x,y,z positions of galaxies
+        galid:          numpy array of associated clump IDs of galaxies.
+                        if element = 0, then galaxy is orphan.
+    """ 
+
+    import warnings
+    import gc
+    from os import listdir
+
+    if params.verbose:
+        print "Reading in galaxy data."
+
+    srcdirlist = listdir(srcdir)
+
+    if 'galaxies_'+srcdir[-5:]+'.txt00001' not in srcdirlist:
+        print "Couldn't find galaxies_"+srcdir[-5:]+".txt00001 in", srcdir
+        print "To plot particles, I require the galaxies output."
+        print "use mergertreeplot.py -h or --help to print help message."
+        quit()
+
+    # create lists where to store stuff
+    dir_template = 'output_'
+
+
+    xlist = [0]*params.ncpu
+    ylist = [0]*params.ncpu
+    zlist = [0]*params.ncpu
+    idlist = [0]*params.ncpu
+    idplist = [0]*params.ncpu
+
+    i = 0
+
+    for cpu in range(params.ncpu):
+        srcfile = srcdir+'/galaxies_'+srcdir[-5:]+'.txt'+str(cpu+1).zfill(5)
+        
+        data = np.atleast_2d(np.loadtxt(srcfile, usecols=[0,2,3,4], skiprows=1, dtype='float'))
+
+
+        if data.shape[1] > 0 :
+            
+            idlist[i]  = data[:,0].astype('int')
+            xlist[i]   = data[:,1]
+            ylist[i]   = data[:,2]
+            zlist[i]   = data[:,3]
+            i+=1
+
+    if i > 0:
+        xg     = np.concatenate(xlist[:i])
+        yg     = np.concatenate(ylist[:i])
+        zg     = np.concatenate(zlist[:i])
+        galid  = np.concatenate(idlist[:i])
+
+    else:
+        xg = None
+        yg = None
+        zg = None
+        galid = None
+        print "Didn't find any galaxy data in files. Setting params.galaxies = False and continuing"
+        params.galaxies = False
+
+    return xg, yg, zg, galid
+
+
+
+
+
+
 #===================================
 def read_mergertree_data():
 #===================================
-    """
+    """ 
     reads in mergertree data as written by the mergertree patch.
-    NOTE: requires mergertree.txtYYYYY files.
+    NOTE: requires mergertree_XXXXX.txtYYYYY files.
     Reads in all available data, as snapshots past z=0 will also be necessary.
     The script will figure out where to start in make_tree(...)
 
@@ -1765,8 +2110,6 @@ def read_mergertree_data():
     time = np.zeros(noutput)
 
     dir_template = 'output_'
-
-
 
 
     #---------------------------
@@ -1891,7 +2234,7 @@ def read_mergertree_data():
 #========================================
 def _read_particle_data(srcdir):
 #========================================
-    """
+    """ 
     Reads in the particle data from directory srcdir.
     NOTE: requires part_XXXXX.outYYYYY and unbinding_XXXXX.outYYYYY files
 
@@ -1967,8 +2310,7 @@ def _read_particle_data(srcdir):
         x[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = partfiles[cpu].readReals('d')
         y[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = partfiles[cpu].readReals('d')
         z[start_ind[cpu]:start_ind[cpu]+nparts[cpu]] = partfiles[cpu].readReals('d')
-        
-        srcfile = srcdir+'/part_'+srcdir[-5:]+'.out'+str(cpu+1).zfill(5)
+
         unbfile = srcdir+'/unbinding_'+srcdir[-5:]+'.out'+str(cpu+1).zfill(5)
         unbffile = ff.FortranFile(unbfile)
 
@@ -2050,7 +2392,8 @@ def _save_fig(fig, strategy="default", plotparticles=False):
 
 
 
-    print "\nSaved", fig_path
+    print "Saved", fig_path
+    print
     plt.close()
    
     return
@@ -2342,7 +2685,7 @@ def _sum_branches(node):
 
 
 #==========================================================
-def _tweak_particleplot(fig, time, borders):
+def _tweak_particleplot(fig, time, borders, outnr):
 #==========================================================
     """
     Tweak the particle plot. Set ticks, background color, 
@@ -2352,21 +2695,48 @@ def _tweak_particleplot(fig, time, borders):
         fig:            figure object
         time:           time or redshift of output
         borders:        tuple of plot edges: xmin, xmax, ..., zmin, zmax
+        outnr:          current snapshot number
 
     Returns:
         nothing
     """
 
-    ax1, ax2, ax3 = fig.axes
+    if params.movie:
+        ax1 = fig.axes[0]
+    else:
+        ax1, ax2, ax3 = fig.axes
+
+    xmin, xmax, ymin, ymax, zmin, zmax = borders
+
+    #-------------------
+    # set axes limits
+    #-------------------
+
+    ax1.set_xlim([xmin, xmax])
+    ax1.set_ylim([ymin, ymax])
+
+    if not params.movie:
+        ax2.set_xlim([ymin, ymax])
+        ax2.set_ylim([zmin, zmax])
+
+        ax3.set_xlim([xmin, xmax])
+        ax3.set_ylim([zmin, zmax])
+
 
 
     #------------------------------------------
     # set tick params (especially digit size)
     #------------------------------------------
 
-    ax1.tick_params(axis='both', which='major', labelsize=8,top=5)
-    ax2.tick_params(axis='both', which='major', labelsize=8,top=5)
-    ax3.tick_params(axis='both', which='major', labelsize=8,top=5)
+    if not params.movie:
+        ax1.tick_params(axis='both', which='major', labelsize=8,top=5)
+        ax2.tick_params(axis='both', which='major', labelsize=8,top=5)
+        ax3.tick_params(axis='both', which='major', labelsize=8,top=5)
+    # TODO: If you want to remove ticks for the particle plots in movie mode,
+    # Do it here:
+    #  else:
+    #      ax1.get_yaxis().set_visible(False)
+    #      ax1.get_xaxis().set_visible(False)
     
 
 
@@ -2375,60 +2745,61 @@ def _tweak_particleplot(fig, time, borders):
     # label axes
     #--------------
 
-    ax1.set_xlabel(r'x', labelpad=4, family='serif',size=12)
-    ax1.set_ylabel(r'y', labelpad=4, family='serif',size=12)
+    if not params.movie:
 
-    ax2.set_xlabel(r'y', labelpad=4, family='serif',size=12)
-    ax2.set_ylabel(r'z', labelpad=4, family='serif',size=12)
+        ax1.set_xlabel(r'x', labelpad=4, family='serif',size=12)
+        ax1.set_ylabel(r'y', labelpad=4, family='serif',size=12)
 
-    ax3.set_xlabel(r'x', labelpad=4, family='serif',size=12)
-    ax3.set_ylabel(r'z', labelpad=4, family='serif',size=12)
+        ax2.set_xlabel(r'y', labelpad=4, family='serif',size=12)
+        ax2.set_ylabel(r'z', labelpad=4, family='serif',size=12)
+
+        ax3.set_xlabel(r'x', labelpad=4, family='serif',size=12)
+        ax3.set_ylabel(r'z', labelpad=4, family='serif',size=12)
 
 
 
 
-    #--------------
-    # Add title
-    #--------------
+        #--------------
+        # Add title
+        #--------------
 
-    title = "Particles in tree at output "+str(int(params.outputfilename[-5:]))+"; "
+        title = "Particles in tree at output "+str(int(params.outputfilename[-5:]))+"; "
 
-    if params.use_t:
-        title += "t = "
+        if params.use_t:
+            title += "t = "
+        else:
+            title += "z = "
+
+       
+        # pad the time/redshift with zeros at the end
+        num = str(round(time, 3))
+        if (round(time, 3)) < 0:
+            # one longer for negative z
+            end = 7
+        else:
+            end = 6
+        while len(num) < end:
+            num += '0'
+        title += num
+
+        fig.suptitle(title, family='serif', size=18)
+
+
+
     else:
-        title += "z = "
+        plt.sca(ax1)
+        plt.annotate(str(outnr),
+            xy=(xmax*0.99, ymax*0.99),
+            xycoords='data',
+            fontsize=18,
+            backgroundcolor='white',
+            horizontalalignment='right',
+            verticalalignment='top'
+            )
 
-   
-    # pad the time/redshift with zeros at the end
-    num = str(round(time, 3))
-    if (round(time, 3)) < 0:
-        # one longer for negative z
-        end = 7
-    else:
-        end = 6
-    while len(num) < end:
-        num += '0'
-    title += num
-
-    fig.suptitle(title, family='serif', size=18)
+        plt.tight_layout()
 
 
-
-
-    #-------------------
-    # set axes limits
-    #-------------------
-
-    xmin, xmax, ymin, ymax, zmin, zmax = borders
-
-    ax1.set_xlim([xmin, xmax])
-    ax1.set_ylim([ymin, ymax])
-
-    ax2.set_xlim([ymin, ymax])
-    ax2.set_ylim([zmin, zmax])
-
-    ax3.set_xlim([xmin, xmax])
-    ax3.set_ylim([zmin, zmax])
 
 
 
@@ -2439,16 +2810,17 @@ def _tweak_particleplot(fig, time, borders):
     #------------------------
     try:
         ax1.set_axis_bgcolor('aliceblue')
-        ax2.set_axis_bgcolor('aliceblue')
-        ax3.set_axis_bgcolor('aliceblue')
+        if not params.movie:
+            ax2.set_axis_bgcolor('aliceblue')
+            ax3.set_axis_bgcolor('aliceblue')
     except AttributeError:
         ax1.set_facecolor('aliceblue')
-        ax2.set_facecolor('aliceblue')
-        ax3.set_facecolor('aliceblue')
-
-
+        if not params.movie:
+            ax2.set_facecolor('aliceblue')
+            ax3.set_facecolor('aliceblue')
 
     return
+
 
 
 
@@ -2508,6 +2880,7 @@ def _tweak_texfile(data, standalone):
         data = before + keyword + add + after
 
     return data
+
 
 
 
@@ -2667,6 +3040,7 @@ def _tweak_treeplot(fig, yaxis_int, yaxis_phys, borders):
     plt.tight_layout()
 
     return
+
 
 
 
