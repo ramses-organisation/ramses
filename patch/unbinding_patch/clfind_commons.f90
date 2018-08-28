@@ -49,8 +49,9 @@ module clfind_commons
   integer,allocatable,dimension(:)::peak_cell,peak_cell_level
   integer,allocatable,dimension(:)::n_cells,n_cells_halo,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
+  integer,allocatable,dimension(:)::form,form_all
   logical,allocatable,dimension(:)::contracting
-!  integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
+  real(dp),allocatable,dimension(:,:)::table_properties
 
   ! Cell-above-the-threshold properties
   real(dp),allocatable,dimension(:)::denp ! Density of the cells
@@ -72,28 +73,28 @@ module clfind_commons
 
 
   !----------------------------
-  !Particle unbinding related
+  ! Particle unbinding related
   !----------------------------
 
-  logical :: unbinding_formatted_output=.false.         !write unformatted output by request
+  logical :: unbinding_formatted_output=.false.                 ! write unformatted output by request
 
-  integer :: nunbound, nunbound_tot, candidates, candidates_tot !counters
-  integer :: mergelevel_max                             !deepest merging level
-  integer, allocatable, dimension(:)  :: clmppart_first !first particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: clmppart_last  !last particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: clmppart_next  !next particle in particle linked list for each peak id
-  integer, allocatable, dimension(:)  :: nclmppart      !number of particle in particle linked list for each peak id
-  
-  integer, allocatable,dimension(:)   :: clmpidp                   ! ID of peak particle is in
-  real(dp),allocatable,dimension(:,:) :: clmp_com_pb,clmp_vel_pb   ! particle based center of mass, clump velocity
-  real(dp),allocatable,dimension(:)   :: clmp_mass_pb              ! particle based clump mass
+  integer :: nunbound, nunbound_tot, candidates, candidates_tot ! counters
+  integer :: mergelevel_max                                     ! deepest merging level
+  integer, allocatable, dimension(:)  :: clmppart_first         ! first particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: clmppart_last          ! last particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: clmppart_next          ! next particle in particle linked list for each peak id
+  integer, allocatable, dimension(:)  :: nclmppart              ! number of particle in particle linked list for each peak id
+
+  integer, allocatable,dimension(:)   :: clmpidp                ! ID of peak particle is in
+  real(dp),allocatable,dimension(:,:) :: clmp_com_pb,clmp_vel_pb! particle based center of mass, clump velocity
+  real(dp),allocatable,dimension(:)   :: clmp_mass_pb           ! particle based clump mass
+  logical                             :: periodical             ! if simulation is periodical
   !real(dp),allocatable,dimension(:,:) :: periodicity_correction
-  logical                             :: periodical
   
 
 
   !-----------
-  !mass bins
+  ! mass bins
   !-----------
 
   integer :: nmassbins=50
@@ -106,25 +107,24 @@ module clfind_commons
 
 
 
-  !----------------
-  !Potential stuff
-  !----------------
+  !-----------------
+  ! Potential stuff
+  !-----------------
 
-  logical   :: saddle_pot=.true. !subtract the potential at the closest saddle of the CoM for unbinding
-                                 !=considering neighbours for the exclusive unbinding
+  logical   :: saddle_pot=.true. ! subtract the potential at the closest saddle of the CoM for unbinding
+                                 ! =considering neighbours for the exclusive unbinding
 
 
-  real(dp),allocatable,dimension(:)   :: phi_unb !gravitational potential phi
+  real(dp),allocatable,dimension(:)   :: phi_unb        ! gravitational potential phi
   real(dp)  :: rmin=0.0
-                                !=considering neighbours for the exclusive unbinding
-  real(dp)  :: GravConst        !gravitational Constant. =factG elsewhere.
+  real(dp)  :: GravConst                                ! gravitational Constant. =factG elsewhere.
   real(dp),allocatable,dimension(:)   :: closest_border ! closest border of clump to the center of mass
                                                         ! stores relative distance squared in each direction
                                                         ! (x^2+y^2+z^2)
   
-  !-------------------------
-  !Repeated unbinding stuff
-  !-------------------------
+  !---------------------------
+  ! Iterative unbinding stuff
+  !---------------------------
 
   logical   :: iter_properties=.true.  ! whether to repeat the unbinding with updated clump properties
   real(dp)  :: conv_limit = 0.01       ! convergence factor. If the v_clump_old/v_clump_new < conv_limit,
@@ -133,9 +133,9 @@ module clfind_commons
   logical   :: loop_again              ! if the loop needs to be redone (for a level)
 
 
-  logical,allocatable,dimension(:)    :: to_iter            ! whether to repeat the clump properties search
-                                                            ! on this peak ID
-  logical,allocatable,dimension(:)    :: is_namegiver       ! whether peak is namegiver
+  logical,allocatable,dimension(:)    :: to_iter           ! whether to repeat the clump properties search
+                                                           ! on this peak ID
+  logical,allocatable,dimension(:)    :: is_namegiver      ! whether peak is namegiver
 
 
   logical,allocatable,dimension(:)    :: contributes        ! whether the particle still contributes
