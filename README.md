@@ -20,9 +20,9 @@ Download the code by cloning the git repository using
 ```
 $ git clone https://bitbucket.org/rteyssie/ramses
 ```
-This is the development branch. To get the stable release do the following
+This is the development branch. To get the last stable release do the following
 ```
-$ git clone --branch stable_17_09 https://bitbucket.org/rteyssie/ramses
+$ git clone --branch stable_18_09 https://bitbucket.org/rteyssie/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 
