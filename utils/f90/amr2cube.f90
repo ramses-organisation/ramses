@@ -570,7 +570,7 @@ program amr2cube
      write(*,*)'Writing file '//TRIM(nomfich)
      open(unit=20,file=nomfich,form='unformatted')
      dummy=0.0
-     write(20)imax-imin+1,jmax-jmin+1,kmax-kmin+1,boxlen*dx,dummy,dummy,dummy,dummy,dummy,dummy,dummy
+     write(20)imax-imin+1,jmax-jmin+1,kmax-kmin+1,real(boxlen*dx,kind=4),dummy,dummy,dummy,dummy,dummy,dummy,dummy
      do iz=kmin,kmax
         write(20)((real(grid(lmax)%cube(ix,iy,iz)),ix=imin,imax),iy=jmin,jmax)
      end do
