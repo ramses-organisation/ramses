@@ -14,7 +14,7 @@ program amr2cube
   integer::ngridmax,nstep_coarse,icpu,ncpu_read
   integer::nhx,nhy,ihx,ihy,ivar1,ivar2
   real::gamma,smallr,smallc,gammah
-  real::boxlen,boxlen2
+  real(kind=8)::boxlen,boxlen2
   real::t,aexp,hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
