@@ -5,10 +5,11 @@
 subroutine init_tree
   use pm_commons
   use amr_commons
+  use mpi_mod
   use restart_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info
 #endif
   !------------------------------------------------------
   ! This subroutine build the particle linked list at the
@@ -17,7 +18,7 @@ subroutine init_tree
   ! the particle tree.
   !------------------------------------------------------
   integer::ipart,idim,i,nxny,ilevel
-  integer::npart1,info,icpu,nx_loc
+  integer::npart1,icpu,nx_loc
   logical::error
   real(dp),dimension(1:3)::xbound
   integer,dimension(1:nvector),save::ix,iy,iz
@@ -145,9 +146,12 @@ subroutine init_tree
      call merge_tree_fine(ilevel)
   end do
 
-  call kill_entire_cloud(1)
-
-  call create_cloud_from_sink
+#if NDIM==3
+  if(sink)then
+     call kill_entire_cloud(1)
+     call create_cloud_from_sink
+  endif
+#endif
 
   ! Sort particles down to levelmin
   do ilevel=1,levelmin-1
@@ -310,8 +314,10 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ok(1:np)=.false.
   do idim=1,ndim
      do j=1,np
-        i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+        i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
+        i=MAX(i,0)
+        i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
         ok(j)=ok(j).or.i.ne.1
@@ -322,12 +328,13 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      write(*,*)'A particle has moved outside allowed boundaries'
      do idim=1,ndim
         do j=1,np
-           i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+           i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)
+              write(*,*)xp(ind_part(j),1:ndim)
+              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
            endif
+        end do
      end do
-  end do
      stop
   end if
 
@@ -624,27 +631,25 @@ end subroutine merge_tree_fine
 subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   use restart_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.
   !-----------------------------------------------------------------------
-  integer::igrid,ipart,jpart,ncache_tot,next_part
-  integer::ip,ipcom,npart1,icpu,ncache
-  integer::info,buf_count,tag=101,tagf=102,tagu=102
-  integer::countsend,countrecv
 #ifndef WITHOUTMPI
+  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
+  integer::icpu,igrid,ipart,jpart
+  integer::info,buf_count,tagf=102,tagu=102
+  integer::countsend,countrecv
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
-#endif
-  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
-  logical::ok_free,ok_all
+  logical::ok_free
   integer::particle_data_width
+  integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -729,7 +734,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(emission(icpu,ilevel)%fp(1:ncache,1:3))
+        allocate(emission(icpu,ilevel)%fp(1:ncache,1:4))
         allocate(emission(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -739,7 +744,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*3
+        buf_count=ncache*4
         countrecv=countrecv+1
 #ifndef LONGINT
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
@@ -763,7 +768,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*3
+        buf_count=ncache*4
         countsend=countsend+1
 #ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
@@ -857,6 +862,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   do i=1,np
      reception(icpu,ilevel)%fp(ind_com(i),2)=levelp(ind_part(i))
      reception(icpu,ilevel)%fp(ind_com(i),3)=idp   (ind_part(i))
+     reception(icpu,ilevel)%fp(ind_com(i),4)=part2int(typep(ind_part(i)))
   end do
 
   ! Gather particle position and velocity
@@ -930,7 +936,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Compute parent grid index
   do i=1,np
-     igrid=emission(icpu,ilevel)%fp(ind_com(i),1)
+     igrid=int(emission(icpu,ilevel)%fp(ind_com(i),1), 4)
      ind_list(i)=emission(icpu,ilevel)%igrid(igrid)
   end do
 
@@ -940,8 +946,9 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Scatter particle level and identity
   do i=1,np
-     levelp(ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),2)
-     idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
+     levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
+     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     typep(ind_part(i)) =int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
   end do
 
   ! Scatter particle position and velocity
