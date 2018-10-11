@@ -253,7 +253,6 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Stellar momentum injection from cgs to code units
   ! and for solar metallicity
-  ! p_SN=1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
   p_SN=1.11*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
 
   ! Photoionization momentum injection from cgs to code units
@@ -526,10 +525,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           ! p_boost = (gas_density*scale_nH/100.0)**(-0.160)*metallicity**(-0.137)
            p_boost = (gas_density*scale_nH/100.0)**(-0.190)*metallicity**(-0.114)
            ! Cooling radius
-           ! r_cool = 3.0 * 3.08d18 / scale_l * metallicity**(-0.082) * (gas_density*scale_nH/100.0)**(-0.42)
            r_cool = 6.3 * 3.08d18 / scale_l * metallicity**(-0.05) * (gas_density*scale_nH/100.0)**(-0.42)
            if(birth_time.lt.(current_time-t0) .and. r_cool.lt.(4.0*dx_min/aexp))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
