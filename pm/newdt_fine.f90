@@ -48,7 +48,7 @@ subroutine newdt_fine(ilevel)
      if (sink)then
         tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
      else
-        tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+smallr))
      end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
