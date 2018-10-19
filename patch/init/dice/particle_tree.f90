@@ -314,8 +314,10 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ok(1:np)=.false.
   do idim=1,ndim
      do j=1,np
-        i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+        i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
+        i=MAX(i,0)
+        i=MIN(i,2)
         ind_son(j)=ind_son(j)+i*3**(idim-1)
         ! Check if particle has escaped from its parent grid
         ok(j)=ok(j).or.i.ne.1
@@ -326,9 +328,10 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      write(*,*)'A particle has moved outside allowed boundaries'
      do idim=1,ndim
         do j=1,np
-           i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+           i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)*scale
+              write(*,*)xp(ind_part(j),1:ndim)
+              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
            endif
         end do
      end do
