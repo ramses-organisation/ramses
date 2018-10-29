@@ -170,8 +170,8 @@ subroutine init_sink
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
      end do
-     sinkint_level=slevel
 104  continue
+     sinkint_level=slevel
      close(10)
 
      ! Send the token
