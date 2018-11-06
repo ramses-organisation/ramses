@@ -12,10 +12,16 @@
    (Don't include the unbinding patch as well, all you need is in this directory!) 
 
  * Some parts of the code (e.g. binning particles in mass profiles of halos) rely on consistent floating-point
-operations. [The intel fortran compiler however doesn't necessarily use value-safe optimisations][1], which may 
-lead to errors. (The code doesn't crash, but will warn you that something's wrong.) The error should be small
-(~1e-16), and you may choose to ignore it. Otherwise, you might want to compile the code with the 
-`-fp-model precise` flag.
+ operations. [The (intel) fortran compiler however doesn't necessarily use value-safe optimisations][1], which may 
+ lead to errors. (The code doesn't crash, but will warn you that something's wrong.) The error should be small
+ (~1e-16), and you may choose to ignore it. Otherwise, you might want to compile the code with the 
+ `-fp-model precise` flag for intel, or the appropriate flag for the compiler you'd like to use.
+
+ * For accurate merger trees, consider running your simulation for a handful (I used 3) snapshots more than you actually need to make sure past merging events are actually mergers, not just two clumps too close to each other to be recognized as distinct clumps. You'll also need to check in these "extra snapshots" later whether any clump re-emerged later.
+
+ * I'm not really able to predict how much memory the patch will need, because it will accumulate orphan galaxies over the simulation. It shouldn't be much, but obviously will depend on how big of a simulation you are trying to run. It never was a significant amount of memory when I tried it with 512^3 particles, but I'd keep that in mind if you have memory issues. 
+
+ * For anything else regarding this patch, feel free to contact Mladen Ivkovic (mladen.ivkovic [at] hotmail DOT com)
 
 
 
