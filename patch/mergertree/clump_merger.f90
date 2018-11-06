@@ -1,3 +1,4 @@
+! Patch notice:
 ! This file includes no new subroutines, but some minor additions.
 ! You can find them by searching for the keyword "added"
 #if NDIM==3
