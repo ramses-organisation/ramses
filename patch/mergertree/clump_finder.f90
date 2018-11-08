@@ -1,89 +1,3 @@
-!! Patch written by Mladen Ivkovic (mladen.ivkovic@uzh.ch)
-!! The main routine (unbinding) is called in the clump_finder routine
-!! from the clump_finder.f90 after clump properties are written to file.
-!! Changes in the clump_finder routines are marked by a "added for patch"
-!! comment so they're easier to find and track.
-
-!! New subroutines for this patch are:
-!!
-!! subroutine unbinding()
-!! subroutine get_clumpparticles()
-!! subroutine get_clump_properties_pb()
-!! subroutine get_cmp
-!! subroutine get_closest_border
-!! subroutine unbinding_neighborsearch
-!! subroutine bordercheck
-!! subroutine particle_unbinding()
-!!      contains function unbound
-!!      contains function potential
-!! subroutine compute_phi
-!! subroutine allocate_unbinding_arrays()
-!! subroutine deallocate_unbinding_arrays()
-!! subroutine unbinding_write_formatted_output()
-!! subroutine unbinding_formatted_particleoutput()
-
-
-
-!! New namelist parameters for this pach:
-!! (Can be set in the CLUMPFIND_PARAMS block)
-!!
-!! NAME                        DEFAULT VALUE        FUNCTION
-!! unbind=                     .true.               Turn particle unbinding on 
-!!                                                  or off
-!!
-!! nmassbins=                  50                   Number of bins for the mass 
-!!                                                  binning of the cumulative
-!!                                                  mass profile. Any integer >1.
-!!
-!! logbins=                    .true.               use logarithmic binning 
-!!                                                  distances for cumulative mass
-!!                                                  profiles (and gravitational 
-!!                                                  potential of clumps).
-!!                                                  If false, the code  will use 
-!!                                                  linear binning distances.
-!!
-!! saddle_pot=                 .true.               Take neighbouring structures 
-!!                                                  into account; Cut potentiall
-!!                                                  off at closest saddle.
-!!
-!! unbinding_formatted_output= .false.              Create formatted output for 
-!!                                                  particles, cumulative mass
-!!                                                  profiles, binning distances, 
-!!                                                  particle based clump
-!!                                                  properties, gravitational 
-!!                                                  potential of substructure
-!!                                                  clumps 
-!!
-!! iter_properties=            .true.               whether to unbind multiple times 
-!!                                                  with updated clump properties
-!!                                                  determined by earlier unbindings
-!!
-!! conv_limit =                0.01                 convergence limit. If the 
-!!                                                  v_clump_old/v_clump_new < conv_limit,
-!!                                                  stop iterating for this clump. 
-!!                                                  (only used when iter_properties=.true.)
-!!
-!! repeat_max =                100                  maximal number of loops per level
-!!                                                  for iterative unbinding
-!!                                                  (in case a clump doesn't converge)
-!!                                                  (shouldn't happen)
-!!                                                  (only used when iter_properties=.true.)
-
-
-
-
-
-
-
-
-
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$   CLUMP FINDER STARTS HERE    $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #if NDIM==3
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
@@ -408,7 +322,7 @@ subroutine clump_finder(create_output,keep_alive)
   ! Call particle unbinding
   !------------------------------------------
   
-  if(unbind.and.create_output) call unbinding()
+  if(unbind.and.create_output.and.pic) call unbinding()
 
 
 

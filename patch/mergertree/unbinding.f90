@@ -39,7 +39,6 @@ subroutine unbinding()
   !Logging/Announcing stuff
   if(myid==1) write(*,*) "Started unbinding."
 
-
   !update boundary relevance
   call build_peak_communicator
   call boundary_peak_dp(relevance)

@@ -7,15 +7,23 @@
    `unbinding.o merger_tree.o` to the `PMOBJ` variable in the Makefile, or copy-paste their content into an existing 
    file, e.g. `clump_finder.f90` or `clump_merger.f90`. Otherwise, you will get a compilation error along the lines 
    of "undefined reference to subroutine unbinding"
+
+ * To make merger trees, you'll first need to identify clumps on the fly in the simulation. To activate the clump finder, add `clumpfind=.true.` in your `&RUN_PARAMS` namelist block. More details about clumpfind parameters can be found [here][4]
    
  * This patch relies heavily on the unbinding patch with some slight changes which are described below. 
    (Don't include the unbinding patch as well, all you need is in this directory!) 
 
  * Some parts of the code (e.g. binning particles in mass profiles of halos) rely on consistent floating-point
-operations. [The intel fortran compiler however doesn't necessarily use value-safe optimisations][1], which may 
-lead to errors. (The code doesn't crash, but will warn you that something's wrong.) The error should be small
-(~1e-16), and you may choose to ignore it. Otherwise, you might want to compile the code with the 
-`-fp-model precise` flag.
+ operations. [The (intel) fortran compiler however doesn't necessarily use value-safe optimisations][1], which may 
+ lead to errors. (The code doesn't crash, but will warn you that something's wrong.) The error should be small
+ (~1e-16), and you may choose to ignore it. Otherwise, you might want to compile the code with the 
+ `-fp-model precise` flag for intel, or the appropriate flag for the compiler you'd like to use.
+
+ * For accurate merger trees, consider running your simulation for a handful (I used 3) snapshots more than you actually need to make sure past merging events are actually mergers, not just two clumps too close to each other to be recognized as distinct clumps. You'll also need to check in these "extra snapshots" later whether any clump re-emerged later.
+
+ * I'm not really able to predict how much memory the patch will need, because it will accumulate orphan galaxies over the simulation. It shouldn't be much, but obviously will depend on how big of a simulation you are trying to run. It never was a significant amount of memory (< 10Mb) when I tried it with 512^3 particles, but I'd keep that in mind if you have memory issues. 
+
+ * For anything else regarding this patch, feel free to contact Mladen Ivkovic (mladen.ivkovic [at] hotmail DOT com)
 
 
 
@@ -256,3 +264,4 @@ Can be set in the `CLUMPFIND_PARAMS` block
 [1]: https://www.nccs.nasa.gov/images/FloatingPoint_consistency.pdf
 [2]: https://drive.google.com/file/d/0B7IyoMUxCr-3V3NFSVFjY1lMbk0
 [3]: https://arxiv.org/pdf/1207.6105.pdf 
+[4]: https://bitbucket.org/rteyssie/ramses/wiki/PHEW

@@ -19,7 +19,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
-  ! unless you check all consequences first                           !
+  ! unless you check all consequences first.                          !
   !-------------------------------------------------------------------!
   integer::i,idim,ivar
   logical::ok_defrag,output_now_all
