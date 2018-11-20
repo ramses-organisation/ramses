@@ -1,7 +1,7 @@
 subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: Mpc2cm
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   !-----------------------------------------------------------------------
   ! Conversion factors from user units into cgs units

@@ -717,7 +717,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   use amr_commons
   use pm_commons
   use hydro_commons
-  use constants
+  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_t
 #ifdef RT
   use rt_hydro_commons,only: rtunew
   use rt_parameters,only: nGroups, iGroups, group_egy, rt_AGN, group_egy_AGNfrac
@@ -977,7 +977,7 @@ subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T
   use mpi_mod
   implicit none
   logical::write_sinks
@@ -1156,7 +1156,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: twopi, M_sun, pc2cm, yr2sec
   use mpi_mod
   implicit none
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMEDoverdt_smbh
@@ -1255,7 +1255,7 @@ subroutine make_sink_from_clump(ilevel)
   use hydro_commons
   use poisson_commons
   use clfind_commons
-  use constants
+  use constants, only: 
   use mpi_mod
   implicit none
 
@@ -1690,7 +1690,7 @@ subroutine update_sink(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
-  use constants
+  use constants, only: twopi, M_sun, yr2sec
   use mpi_mod
   implicit none
   integer::ilevel
@@ -2117,7 +2117,7 @@ subroutine f_gas_sink(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use constants
+  use constants, only: pi, twopi
   use mpi_mod
   implicit none
 
@@ -2302,7 +2302,7 @@ end subroutine f_gas_sink
 subroutine f_sink_sink
   use amr_commons
   use pm_commons
-  use constants
+  use constants, only: twopi
   use mpi_mod
   implicit none
 

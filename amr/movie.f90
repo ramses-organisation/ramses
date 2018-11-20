@@ -10,7 +10,7 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
-  use constants
+  use constants, only: pi, c_cgs, L_sun, M_sun, yr2sec
   use mpi_mod
   implicit none
 #if NDIM > 1

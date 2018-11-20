@@ -154,7 +154,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use pm_commons
   use hydro_commons
   use random
-  use constants
+  use constants, only: M_sun, Myr2sec, pc2cm
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -688,7 +688,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: pc2cm
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -853,7 +853,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: M_sun, pc2cm
   use mpi_mod
   implicit none
   !------------------------------------------------------------------------

@@ -5,7 +5,7 @@ subroutine star_formation(ilevel)
   use hydro_commons
   use poisson_commons
   use cooling_module, ONLY: XH=>X
-  use constants
+  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi
   use random
   use mpi_mod
   implicit none

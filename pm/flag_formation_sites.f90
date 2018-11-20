@@ -10,7 +10,7 @@ subroutine flag_formation_sites
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
   use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
-  use constants
+  use constants, only: pi, twopi, M_sun
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -291,7 +291,7 @@ subroutine compute_clump_properties_round2
   use rt_parameters, only: nGroups,iGroups,group_egy
   use rt_hydro_commons, only:rtuold
   use rt_cooling_module, only:kappaSc
-  use constants
+  use constants, only: pi
 #endif
 
   use mpi_mod
