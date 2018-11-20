@@ -903,6 +903,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    use amr_commons
    use pm_commons
    use poisson_commons
+   use constants, only: twopi
    implicit none
    integer, intent(in) :: ilevel,icount
 
@@ -926,7 +927,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    ! Set constants
    nx_loc = icoarse_max-icoarse_min+1
    scale  = boxlen/dble(nx_loc)
-   fourpi = 4.D0*ACOS(-1.0D0)*scale
+   fourpi = 2*twopi*scale
    if(cosmo) fourpi = 1.5D0*omega_m*aexp*scale
 
    dx  = 0.5d0**ilevel

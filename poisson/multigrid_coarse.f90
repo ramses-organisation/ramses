@@ -39,6 +39,7 @@ subroutine multigrid_coarse(ilevel,icount)
   use pm_commons
   use poisson_commons
   use mpi_mod
+  use constants, only: twopi
   implicit none
 #ifndef WITHOUTMPI
   integer :: info
@@ -70,7 +71,7 @@ subroutine multigrid_coarse(ilevel,icount)
   ! Divide by 4PI
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=4.D0*ACOS(-1.0D0)*scale
+  fourpi=2*twopi*scale
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -229,7 +230,7 @@ subroutine multigrid_coarse(ilevel,icount)
   ! Multiply by 4PI
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=4.D0*ACOS(-1.0D0)*scale
+  fourpi=2*twopi*scale
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
