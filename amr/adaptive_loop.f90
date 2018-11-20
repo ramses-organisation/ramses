@@ -205,7 +205,7 @@ subroutine adaptive_loop
               output_now=.true.
               if(myid==1) write(*,*) 'Dumping snapshot before walltime runs out'
               ! Now set walltime to a negative number so we don't keep printing outputs
-              walltime_hrs = -1.d0
+              walltime_hrs = -1d0
            endif
         endif
      endif

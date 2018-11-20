@@ -75,7 +75,7 @@ module amr_parameters
   real(dp)::t_star =0.0D0     ! Star formation time scale in Gyr
   real(dp)::T2_star=0.0D0     ! Typical ISM temperature
   real(dp)::g_star =1.6D0     ! Typical ISM polytropic index
-  real(dp)::del_star=2.D2     ! Minimum overdensity to define ISM
+  real(dp)::del_star=2d2     ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0.0D0     ! Supernova mass fraction
   real(dp)::yield  =0.0D0     ! Supernova yield
   real(dp)::f_w    =1.0D1     ! Wind loading factor

@@ -595,9 +595,9 @@ subroutine savegadget(filename)
   header%npart = 0
   header%npart(2) = npart
   header%mass = 0
-  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1.d10
+  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1d10
   header%time = aexp
-  header%redshift = 1.d0/aexp-1.d0
+  header%redshift = 1d0/aexp-1d0
   header%flag_sfr = 0
   header%nparttotal = 0
 #ifndef LONGINT

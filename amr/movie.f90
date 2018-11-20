@@ -281,9 +281,9 @@ subroutine output_frame()
   if(cosmo) then
      if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = aendmov
      if(tend_phi_camera(proj_ind).le.0d0) tend_phi_camera(proj_ind) = aendmov
-     theta_cam  = theta_camera(proj_ind)*pi/180.d0                                                                                 &
+     theta_cam  = theta_camera(proj_ind)*pi/180d0                                                                                 &
                 +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180./(aendmov-astartmov)
-     phi_cam    = phi_camera(proj_ind)*pi/180.d0                                                                                   &
+     phi_cam    = phi_camera(proj_ind)*pi/180d0                                                                                   &
                 +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(aendmov-astartmov)
      dist_cam   = dist_camera(proj_ind)+min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*ddist_camera(proj_ind)/(aendmov-astartmov)
   else

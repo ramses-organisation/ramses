@@ -175,14 +175,14 @@ subroutine init_mond
 
    ! Scale a0 if it is provided in SI units
    if (a0<0 .and. a0_ms2>0) then
-      a0 = a0_ms2*100.d0 / scale_l * scale_t**2  ! converts from [cm s^-2]  into  [kpc / [user time unit]^2]
+      a0 = a0_ms2*100d0 / scale_l * scale_t**2  ! converts from [cm s^-2]  into  [kpc / [user time unit]^2]
    elseif (a0_ms2<0 .and. a0<0 .and. mond) then
-      a0_ms2 = a0/100.d0 * scale_l / scale_t**2
+      a0_ms2 = a0/100d0 * scale_l / scale_t**2
       if (myid==1) write(*,*) ' ERROR: a0 parameter missing'
       call clean_stop
    endif
 
-   a0_i = 1.d0 / a0
+   a0_i = 1d0 / a0
    if (myid==1) then
       write(*,'(" Initializing MOND extension: a0 = ", E11.4, " m/s^2")') a0_ms2
       write(*,'("                                 = ", E11.4, " [user length unit]/[user time unit]^2")') a0
@@ -932,8 +932,8 @@ subroutine compute_pdm_density_at_fine_levels(ilevel,icount)
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
   h_i = 1.0D0/dx
-  h4_i = 1.0D0/(4.D0 * dx)
-  h24_i = 1.0D0/(24.D0 * dx)
+  h4_i = 1.0D0/(4d0 * dx)
+  h24_i = 1.0D0/(24d0 * dx)
   c1 = 27.0d0/24.0d0/dx
   c2 =  1.0d0/24.0d0/dx
   c3 =  1.0d0/24.0d0/dx

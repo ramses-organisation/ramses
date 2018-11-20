@@ -47,9 +47,9 @@ module hydro_parameters
   real(dp)::err_grad_d=-1.0d0  ! Density gradient
   real(dp)::err_grad_u=-1.0d0  ! Velocity gradient
   real(dp)::err_grad_p=-1.0d0  ! Pressure gradient
-  real(dp)::floor_d=1.d-10     ! Density floor
-  real(dp)::floor_u=1.d-10     ! Velocity floor
-  real(dp)::floor_p=1.d-10     ! Pressure floor
+  real(dp)::floor_d=1d-10     ! Density floor
+  real(dp)::floor_u=1d-10     ! Velocity floor
+  real(dp)::floor_p=1d-10     ! Pressure floor
   real(dp)::mass_sph=0.0d0     ! mass_sph
 #if NENER>0
   real(dp),dimension(1:NENER)::err_grad_prad=-1

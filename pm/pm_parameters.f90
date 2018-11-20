@@ -39,23 +39,23 @@ module pm_parameters
   real(dp)::AGN_fbk_frac_ener=1              ! Fraction of AGN feedback released as thermal blast
   real(dp)::AGN_fbk_frac_mom=0               ! Fraction of AGN feedback released as momentum injection
 
-  real(dp)::T2_min=1.d7                      ! Minimum temperature of the gas to trigger AGN blast; in K
-  real(dp)::T2_max=1.d9                      ! Maximum allowed temperature of the AGN blast; in K
-  real(dp)::T2_AGN=1.d12                     ! AGN blast temperature; in K
+  real(dp)::T2_min=1d7                      ! Minimum temperature of the gas to trigger AGN blast; in K
+  real(dp)::T2_max=1d9                      ! Maximum allowed temperature of the AGN blast; in K
+  real(dp)::T2_AGN=1d12                     ! AGN blast temperature; in K
 
-  real(dp)::cone_opening=180.d0              ! Outflow cone opening angle; in deg
+  real(dp)::cone_opening=180d0              ! Outflow cone opening angle; in deg
   real(dp)::epsilon_kin=1                    ! Efficiency of kinetic feedback
   real(dp)::kin_mass_loading=100d0           ! Mass loading of the jet
   real(dp)::AGN_fbk_mode_switch_threshold=0.01d0 ! M_Bondi/M_Edd ratio to switch between feedback modes
                                                  ! if rate gt <value> is thermal, else is momentum;
                                                  ! if <value> le 0 then not active
 
-  real(dp)::mass_halo_AGN=1.d10              ! Minimum mass of the halo for sink creation
-  real(dp)::mass_clump_AGN=1.d10             ! Minimum mass of the clump for sink creation
+  real(dp)::mass_halo_AGN=1d10              ! Minimum mass of the halo for sink creation
+  real(dp)::mass_clump_AGN=1d10             ! Minimum mass of the clump for sink creation
 
   real(dp)::boost_threshold_density=0.1d0    ! Accretion boost threshold for Bondi
 
-  real(dp)::max_mass_nsc=1.d15               ! Maximum mass of the Nuclear Star Cluster (msink)
+  real(dp)::max_mass_nsc=1d15               ! Maximum mass of the Nuclear Star Cluster (msink)
 
   type part_t
      ! We store these two things contiguously in memory

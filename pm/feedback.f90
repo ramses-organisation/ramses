@@ -228,10 +228,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1.d51/(10.d0*M_sun)/scale_v**2
+  ESN=1d51/(10d0*M_sun)/scale_v**2
 
   ! Life time radiation specific energy from cgs to code units
-  ERAD=1.d53/(10.d0*M_sun)/scale_v**2
+  ERAD=1d53/(10d0*M_sun)/scale_v**2
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -413,7 +413,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! For IR radiation trapping,
   ! we use a fixed length to estimate the column density of gas
-  delta_x=200.d0*pc2cm
+  delta_x=200d0*pc2cm
   if(metal)then
      tau_factor=kappa_IR*delta_x*scale_d/0.02d0
   else
@@ -430,7 +430,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         tauIR=tau_factor*max(uold(indp(j),1),smallr)
      endif
      if(uold(indp(j),1)*scale_nH > 10.)then
-        RAD_BOOST=rad_factor*(1.d0-exp(-tauIR))
+        RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
      else
         RAD_BOOST=0
      endif
@@ -446,7 +446,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),3)=unew(indp(j),3)+mloss(j)*vp(ind_part(j),2)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
-          & ethermal(j)*(1.d0+RAD_BOOST)
+          & ethermal(j)*(1d0+RAD_BOOST)
   end do
 
   ! Add metals

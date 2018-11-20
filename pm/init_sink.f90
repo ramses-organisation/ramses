@@ -73,30 +73,30 @@ subroutine init_sink
   allocate(xsink_new(1:nsinkmax,1:ndim))
   allocate(xsink_all(1:nsinkmax,1:ndim))
   allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
-  sink_jump=0.d0
+  sink_jump=0d0
   allocate(dMsink_overdt(1:nsinkmax))
   allocate(dMBHoverdt(1:nsinkmax))
   allocate(dMsmbh_overdt(1:nsinkmax))
   allocate(dMBHoverdt_smbh(1:nsinkmax))
   allocate(eps_sink(1:nsinkmax))
-  eps_sink=0.d0
+  eps_sink=0d0
   allocate(volume_gas(1:nsinkmax))
-  volume_gas=0.d0
+  volume_gas=0d0
   allocate(vel_gas(1:nsinkmax,1:ndim))
-  vel_gas=0.d0
+  vel_gas=0d0
   allocate(rho_gas(1:nsinkmax))
-  rho_gas=0.d0
+  rho_gas=0d0
   allocate(c2sink(1:nsinkmax))
   allocate(weighted_density(1:nsinkmax,1:nlevelmax))
-  weighted_density = 0.d0
+  weighted_density = 0d0
   allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
-  weighted_volume = 0.d0
+  weighted_volume = 0d0
   allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
-  weighted_ethermal = 0.d0
+  weighted_ethermal = 0d0
   allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
-  weighted_momentum = 0.d0
+  weighted_momentum = 0d0
   allocate(weighted_divergence(1:nsinkmax,1:nlevelmax))
-  weighted_divergence = 0.d0
+  weighted_divergence = 0d0
   allocate(oksink_new(1:nsinkmax))
   allocate(oksink_all(1:nsinkmax))
   allocate(idsink_sort(1:nsinkmax))

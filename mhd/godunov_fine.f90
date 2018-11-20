@@ -560,7 +560,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   real(dp)::dx,scale,oneontwotondim
   real(dp)::dflux,weight
 
-  oneontwotondim = 1.d0/dble(twotondim)
+  oneontwotondim = 1d0/dble(twotondim)
 
   ! Mesh spacing in that level
   nx_loc=icoarse_max-icoarse_min+1

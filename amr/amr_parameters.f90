@@ -260,9 +260,9 @@ module amr_parameters
   real(dp),dimension(1:MAXREGION)   ::x_center=0
   real(dp),dimension(1:MAXREGION)   ::y_center=0
   real(dp),dimension(1:MAXREGION)   ::z_center=0
-  real(dp),dimension(1:MAXREGION)   ::length_x=1.d10
-  real(dp),dimension(1:MAXREGION)   ::length_y=1.d10
-  real(dp),dimension(1:MAXREGION)   ::length_z=1.d10
+  real(dp),dimension(1:MAXREGION)   ::length_x=1d10
+  real(dp),dimension(1:MAXREGION)   ::length_y=1d10
+  real(dp),dimension(1:MAXREGION)   ::length_z=1d10
   real(dp),dimension(1:MAXREGION)   ::exp_region=2
 
   ! Boundary conditions parameters

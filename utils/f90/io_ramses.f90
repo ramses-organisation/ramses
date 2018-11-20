@@ -449,9 +449,9 @@ contains
 !!! Compute gas particle mass
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    partmass=0.d0
-    averdens=0.d0
-    volume=0.d0
+    partmass=0d0
+    averdens=0d0
+    volume=0d0
     indexcelltot=0
     ndummypart=0
 
@@ -487,7 +487,7 @@ contains
        call title(icpu,ncharcpu)
 
        nfake(k)=0
-       partm(k)=0.d0
+       partm(k)=0d0
        indexcell(k)=0
        levmaxlev(k)=-100
 
@@ -734,7 +734,7 @@ contains
     pc=0
     partcount=0
     denspartcount=0
-    masslefttot=0.d0
+    masslefttot=0d0
     ilowdtot=0
 
     do k=1,ncpu_read
@@ -798,9 +798,9 @@ contains
        read(10)
        read(10)
 
-       massleft=0.d0
+       massleft=0d0
        ilowd(k)=0
-       mleft(k)=0.d0
+       mleft(k)=0d0
        locind(k)=0
 
        ! Loop over levels
@@ -1743,7 +1743,7 @@ contains
        end if
 
        if(star.or.sink)then
-          if(age(i)==0.d0.and.idpart(i)>0&
+          if(age(i)==0d0.and.idpart(i)>0&
                & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
                & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
                & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
@@ -1752,7 +1752,7 @@ contains
        end if
 
        if(star.or.sink)then
-          if(age(i)/=0.d0.and.idpart(i)>0&
+          if(age(i)/=0d0.and.idpart(i)>0&
                & .and.xmin<=xcc(1).and.xcc(1)<=xmax&
                & .and.ymin<=xcc(2).and.xcc(2)<=ymax&
                & .and.zmin<=xcc(3).and.xcc(3)<=zmax)then
@@ -1767,8 +1767,8 @@ contains
     allocate(idout(1:npart_actual))
     allocate(ageout(1:npart_actual))
     allocate(metout(1:npart_actual))
-    ageout=0.d0
-    metout=0.d0
+    ageout=0d0
+    metout=0d0
 
     ipa=0
     do i=1,npart_tot
@@ -1991,13 +1991,13 @@ contains
        end if
 
        if(star.or.sink)then
-          if(age(i)==0.d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
+          if(age(i)==0d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
                & xmin<=xcc(1).and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax&
                & .and.zmin<=xcc(3).and.xcc(3)<=zmax)ndm_actual=ndm_actual+1
        end if
 
        if(star.or.sink)then
-          if(age(i)/=0.d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
+          if(age(i)/=0d0.and.idpart(i)>0.and.lmin<=levpart(i).and.levpart(i)<=lmax.and.&
                & xmin<=xcc(1).and.xcc(1)<=xmax.and.ymin<=xcc(2).and.xcc(2)<=ymax&
                & .and.zmin<=xcc(3).and.xcc(3)<=zmax)nstar_actual=nstar_actual+1
        end if
@@ -2009,8 +2009,8 @@ contains
     allocate(idout(1:npart_actual))
     allocate(ageout(1:npart_actual))
     allocate(metout(1:npart_actual))
-    ageout=0.d0
-    metout=0.d0
+    ageout=0d0
+    metout=0d0
 
     ipa=0
     do i=1,npart_tot

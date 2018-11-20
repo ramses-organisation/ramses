@@ -120,14 +120,14 @@ SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
      if(ff.gt.0.)then
         costheta=f/ff
      else
-        costheta=0.d0
+        costheta=0d0
      endif
-     if(np>0.d0)then
+     if(np>0d0)then
         ff=ff/rt_c/np
      else
         ff=0.0d0
      endif
-     ff=max(min(ff,1.d0),0.d0)
+     ff=max(min(ff,1d0),0d0)
      do id=1, ndim
         costheta(id)=max(min(costheta(id),1d0),-1d0)
      end do
@@ -226,25 +226,25 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
 
         Np =   uin(n, i, j, k, iP0)      !          Photon density in cell
         pflux= uin(n, i, j, k, iP0+1:iP0+ndim)  !       Photon flux vector
-        if(Np .lt. 0.d0) then
+        if(Np .lt. 0d0) then
           write(*,*)'negative photon density in cmp_eddington. -EXITING-'
           call clean_stop
         endif
         F(n,i,j,k,1,1:nDim)= pflux            !   First col is photon flux
         ! Rest is Eddington tensor...initalize it to zero
-        F(n,i,j,k,2:ndim+1,1:nDim) = 0.d0
+        F(n,i,j,k,2:ndim+1,1:nDim) = 0d0
         Np_c_sq = Np*rt_c2*Np
-        if(Np_c_sq .eq. 0.d0) cycle           !Zero density => no pressure
+        if(Np_c_sq .eq. 0d0) cycle           !Zero density => no pressure
 
         pflux_sq = sum(pflux**2)              !  Sq. photon flux magnitude
-        u(:) = 0.d0                           !           Flux unit vector
-        if(pflux_sq .gt. 0.d0) u(:) = pflux/sqrt(pflux_sq)
+        u(:) = 0d0                           !           Flux unit vector
+        if(pflux_sq .gt. 0d0) u(:) = pflux/sqrt(pflux_sq)
         pflux_sq = pflux_sq/Np_c_sq           !      Reduced flux, squared
-        chi = max(4.d0-3.d0*pflux_sq, 0.d0)   !           Eddington factor
-        chi = (3.d0+ 4.d0*pflux_sq)/(5.d0 + 2.d0*sqrt(chi))
+        chi = max(4d0-3d0*pflux_sq, 0d0)   !           Eddington factor
+        chi = (3d0+ 4d0*pflux_sq)/(5d0 + 2d0*sqrt(chi))
 
-        iterm = (1.d0-chi)/2.d0               !    Identity term in tensor
-        oterm = (3.d0*chi-1.d0)/2.d0          !         Outer product term
+        iterm = (1d0-chi)/2d0               !    Identity term in tensor
+        oterm = (3d0*chi-1d0)/2d0          !         Outer product term
         do p = 1, ndim
            do q = 1, ndim
               F(n,i,j,k,p+1,q) = oterm * u(p) * u(q)
@@ -280,15 +280,15 @@ FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
 !------------------------------------------------------------------------
   if(rt_use_hll) then
      div=lplus-lminus
-     !if(div .le. 1.d-20) then
-     !   cmp_face=0.d0
+     !if(div .le. 1d-20) then
+     !   cmp_face=0d0
      !   print *,'eigenvalue problem: ',lminus,lplus
      !   return
      !endif
      cmp_face =                                                          &
           ( lplus*fdn - lminus*fup + lplus*lminus*rt_c*( uup-udn )) / div
   else
-     cmp_face = ( fdn + fup - rt_c*( uup-udn )) / 2.d0
+     cmp_face = ( fdn + fup - rt_c*( uup-udn )) / 2d0
   endif
   return
 END FUNCTION cmp_face

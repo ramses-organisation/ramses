@@ -1027,7 +1027,7 @@ subroutine load_gadget
      call gadgetreadheader(filename, 0, gadgetheader, ok)
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
-     gadgetvfact = sqrt(aexp) / gadgetheader%boxsize * aexp / 100.d0
+     gadgetvfact = sqrt(aexp) / gadgetheader%boxsize * aexp / 100d0
 #ifndef LONGINT
      allparticles=int(gadgetheader%nparttotal(2),kind=8)
 #else

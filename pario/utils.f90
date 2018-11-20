@@ -16,7 +16,7 @@ subroutine comp_offsets_sizes_by_level()
   integer(kind=mpi_offset_kind)::size_loc,offset,sz
   integer(kind=mpi_offset_kind),dimension(nlevelmax,ncpu)::sizes_loc_by_level
 
-  if(multiplier<1.d0) print*,'Warning: multiplier should be greater or equal to 1.0d0'
+  if(multiplier<1d0) print*,'Warning: multiplier should be greater or equal to 1.0d0'
 
   !Compute indices and variable sizes
   size_loc=0

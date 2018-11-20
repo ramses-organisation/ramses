@@ -130,7 +130,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
-     polytropic_constant=2.d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
+     polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
           & twopi*6.67d-8*scale_d*(scale_t/scale_l)**2
   endif
 
@@ -224,12 +224,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               end do
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:
-              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1.d3)
+              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
            endif
            kIR = kIR*scale_d*scale_l           !  Convert to code units
            flux = rtuold(il,iNp+1:iNp+ndim)
            xHII = uold(il,iIons-1+ixHII)/uold(il,1)
-           f_dust = (1.d0-xHII)                     ! No dust in ionised gas
+           f_dust = (1d0-xHII)                     ! No dust in ionised gas
            work = scale_v/c_cgs * kIR * sum(uold(il,2:ndim+1)*flux) &
                 * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
 
@@ -552,7 +552,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         t_blast=t_diss*Myr2sec
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
-           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0.d0)
+           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0d0)
         end do
      endif
 
@@ -605,12 +605,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               end do
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:
-              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1.d3)
+              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
            endif
-           f_dust = 1.d0-xion(ixHII,i)              ! No dust in ionised gas
+           f_dust = 1d0-xion(ixHII,i)              ! No dust in ionised gas
            tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kIR
            f_trap = 0d0             ! Fraction IR photons that are trapped
-           if(tau .gt. 0d0) f_trap = min(max(exp(-1.d0/tau), 0.d0), 1.d0)
+           if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0)
            ! Update streaming photons, trapped photons, and tot energy:
            rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
            rtuold(il,iNp+1:iNp+ndim) = &            ! Limit streaming flux
@@ -650,20 +650,20 @@ subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)
   real(dp)::iterm,oterm,Np_c_sq,Fp_sq,fred_sq,chi
   integer::p,q
 !------------------------------------------------------------------------
-  if(Npc .le. 0.d0) then
+  if(Npc .le. 0d0) then
      write(*,*)'negative photon density in cmp_Eddington_tensor. -EXITING-'
      call clean_stop
   endif
-  T_Edd(:,:) = 0.d0
+  T_Edd(:,:) = 0d0
   Np_c_sq = Npc**2
   Fp_sq = sum(Fp**2)              !  Sq. photon flux magnitude
-  u(:) = 0.d0                           !           Flux unit vector
-  if(Fp_sq .gt. 0.d0) u(:) = Fp/sqrt(Fp_sq)
+  u(:) = 0d0                           !           Flux unit vector
+  if(Fp_sq .gt. 0d0) u(:) = Fp/sqrt(Fp_sq)
   fred_sq = Fp_sq/Np_c_sq           !      Reduced flux, squared
-  chi = max(4.d0-3.d0*fred_sq, 0.d0)   !           Eddington factor
-  chi = (3.d0+ 4.d0*fred_sq)/(5.d0 + 2.d0*sqrt(chi))
-  iterm = (1.d0-chi)/2.d0               !    Identity term in tensor
-  oterm = (3.d0*chi-1.d0)/2.d0          !         Outer product term
+  chi = max(4d0-3d0*fred_sq, 0d0)   !           Eddington factor
+  chi = (3d0+ 4d0*fred_sq)/(5d0 + 2d0*sqrt(chi))
+  iterm = (1d0-chi)/2d0               !    Identity term in tensor
+  oterm = (3d0*chi-1d0)/2d0          !         Outer product term
   do p = 1, ndim
      do q = 1, ndim
         T_Edd(p,q) = oterm * u(p) * u(q)

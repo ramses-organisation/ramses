@@ -130,8 +130,8 @@ subroutine barotrop(ilevel)
 
 !   write(*,*) 'barotrop'
 !   write(*,*) 'temp, rho_ad ',temp, rho_ad
-  rho_ad = 1.d10 * 2.2 * 1.64d-24         !in g cm^-3
-  rho_ad = rho_ad / 2.d33 * (3.08d18)**3  !normalise in code units (solar mass, pc)
+  rho_ad = 1d10 * 2.2 * 1.64d-24         !in g cm^-3
+  rho_ad = rho_ad / 2d33 * (3.08d18)**3  !normalise in code units (solar mass, pc)
   rho_ad = f_rho_ad * rho_ad              !f_rho_ad is readed in the .nml
 
   ! Loop over all AMR linked lists (including physical boundaries).
@@ -190,7 +190,7 @@ subroutine barotrop(ilevel)
               if(ndim>2)w=uold(ind_cell(i),4)/d
 
 
-              e = temp*( 1.D0 + (d/rho_ad)**0.6666666 ) / (gamma-1.D0)
+              e = temp*( 1d0 + (d/rho_ad)**0.6666666 ) / (gamma-1d0)
 
               uold(ind_cell(i),ndim+2) =  d*(e + 0.5*(u**2+v**2+w**2))
 

@@ -163,14 +163,14 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,ip,1) = max(smallp, qm(l,i,j,k,ip,1))
 
               velsq=qp(l,i,j,k,2,1)*qp(l,i,j,k,2,1)+qp(l,i,j,k,3,1)*qp(l,i,j,k,3,1)+qp(l,i,j,k,4,1)*qp(l,i,j,k,4,1)
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
               endif
 
 
               velsq=qm(l,i,j,k,2,1)*qm(l,i,j,k,2,1)+qm(l,i,j,k,3,1)*qm(l,i,j,k,3,1)+qm(l,i,j,k,4,1)*qm(l,i,j,k,4,1)
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,:,1)=q(l,i,j,k,:)
                  qm(l,i,j,k,:,1)=q(l,i,j,k,:)
               endif
@@ -362,14 +362,14 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
 
 
               velsq=qp(l,i,j,k,2,2)*qp(l,i,j,k,2,2)+qp(l,i,j,k,3,2)*qp(l,i,j,k,3,2)+qp(l,i,j,k,4,2)*qp(l,i,j,k,4,2)
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
               endif
 
 
               velsq=qm(l,i,j,k,2,2)*qm(l,i,j,k,2,2)+qm(l,i,j,k,3,2)*qm(l,i,j,k,3,2)+qm(l,i,j,k,4,2)*qm(l,i,j,k,4,2)
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,:,2)=q(l,i,j,k,:)
                  qm(l,i,j,k,:,2)=q(l,i,j,k,:)
               endif

@@ -245,7 +245,7 @@ subroutine create_cloud_from_sink
      end do
   end do
 
-  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0.d0
+  sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0d0
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
         direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*M_sun/(scale_d*scale_l**ndim))
@@ -598,7 +598,7 @@ subroutine grow_sink(ilevel,on_creation)
 
   ! Reset new sink variables
   msink_new=0d0; msmbh_new=0d0
-  xsink_new=0.d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
+  xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -797,8 +797,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   ! Jet geometry safety net
   cone_opening = max(tiny(0.0d0),cone_opening)
-  cone_opening = min(cone_opening, 180.d0)
-  tan_theta = tan(pi/180.d0*cone_opening/2) ! tangent of half of the opening angle
+  cone_opening = min(cone_opening, 180d0)
+  tan_theta = tan(pi/180d0*cone_opening/2) ! tangent of half of the opening angle
 
   ! Get cloud particle CIC weights
   do idim=1,ndim
@@ -879,7 +879,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               m_acc_smbh=dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
 
               if(agn.and.msink(isink).gt.0)then
-                 acc_ratio=dMsmbh_overdt(isink)/(4.d0*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t)
+                 acc_ratio=dMsmbh_overdt(isink)/(4d0*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t)
                  if (AGN_fbk_mode_switch_threshold > 0.0) then
                     if (acc_ratio > AGN_fbk_mode_switch_threshold) then
                        ! Eddington ratio higher than AGN_fbk_mode_switch_threshold -> energy
@@ -893,7 +893,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  end if
                  v_AGN = (2*0.1d0*epsilon_kin/kin_mass_loading)**0.5d0*c_cgs ! in cm/s
                  fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
-                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1.d0-cos(pi/180*cone_opening/2)) ! mass-weighted
+                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1d0-cos(pi/180*cone_opening/2)) ! mass-weighted
               end if
            end if
 
@@ -1020,7 +1020,7 @@ subroutine compute_accretion_rate(write_sinks)
      dMEDoverdt_smbh(isink)=0
 
      ! Compute sink sphere average quantities
-     density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
+     density=0d0; volume=0d0; velocity=0d0; ethermal=0d0
      do i=levelmin,nlevelmax
         density=density+weighted_density(isink,i)
         ethermal=ethermal+weighted_ethermal(isink,i)
@@ -1042,7 +1042,7 @@ subroutine compute_accretion_rate(write_sinks)
 
      velocity(1:ndim)=velocity(1:ndim)/(density*volume+tiny(0.0_dp))
      ethermal=ethermal/(density*volume+tiny(0.0_dp))
-     c2=MAX((gamma-1.0d0)*ethermal,smallc**2)*boost**(-2.d0/3.d0)
+     c2=MAX((gamma-1.0d0)*ethermal,smallc**2)*boost**(-2d0/3d0)
      c2sink(isink)=c2
      vrel2=SUM((velocity(1:ndim)-vsink(isink,1:ndim))**2)
      if(bondi_use_vrel)then
@@ -1074,7 +1074,7 @@ subroutine compute_accretion_rate(write_sinks)
         dMEDoverdt_smbh(isink)=4*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t
         if(bondi_accretion)dMsmbh_overdt(isink)=dMBHoverdt_smbh(isink)
         if(eddington_limit)dMsmbh_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt_smbh(isink))
-        dMsink_overdt(isink)=max(0.d0,dMBHoverdt(isink)-dMsmbh_overdt(isink))
+        dMsink_overdt(isink)=max(0d0,dMBHoverdt(isink)-dMsmbh_overdt(isink))
      end if
 
      ! Store average quantities for diagnostics
@@ -1133,14 +1133,14 @@ contains
     lambda_c    = exp(1.5d0) / 4
     !     Deal with the off-the-table cases
     if (x .le. XMIN) then
-       bondi_alpha = lambda_c / sqrt(2.d0 * x**ndim)
+       bondi_alpha = lambda_c / sqrt(2d0 * x**ndim)
     else if (x .ge. XMAX) then
-       bondi_alpha = exp(1.d0/x)
+       bondi_alpha = exp(1d0/x)
     else
        !     We are on the table
        idx = floor ((NTABLE-1) * log(x/XMIN) / log(XMAX/XMIN))
        xtable = exp(log(XMIN) + idx*log(XMAX/XMIN)/(NTABLE-1))
-       xtablep1 = exp(log(XMIN) + (idx+1)*log(XMAX/XMIN)/(NTABLE-1.d0))
+       xtablep1 = exp(log(XMIN) + (idx+1)*log(XMAX/XMIN)/(NTABLE-1d0))
        alpha_exp = log(x/xtable) / log(xtablep1/xtable)
        !     Note the extra +1s below because of fortran 1 offset arrays
        bondi_alpha = alphatable(idx+1) * (alphatable(idx+2)/alphatable(idx+1))**alpha_exp
@@ -1463,7 +1463,7 @@ subroutine make_sink_from_clump(ilevel)
               call true_max(x(1),x(2),x(3),nlevelmax)
 
               ! Give a tiny bit of mass to the sink...
-              delta_d=d*1.d-10
+              delta_d=d*1d-10
               msink_new(index_sink)=delta_d*vol_loc
               msmbh_new(index_sink)=delta_d*vol_loc
               delta_mass_new(index_sink)=msmbh_new(index_sink)
@@ -1652,11 +1652,11 @@ subroutine true_max(x,y,z,ilevel)
   minor(2,2)=hess(1,1)*hess(3,3)-hess(1,3)*hess(3,1)
   minor(3,3)=hess(1,1)*hess(2,2)-hess(1,2)*hess(2,1)
 
-  minor(1,2)=-1.d0*(hess(2,1)*hess(3,3)-hess(2,3)*hess(3,1))
+  minor(1,2)=-1d0*(hess(2,1)*hess(3,3)-hess(2,3)*hess(3,1))
   minor(2,1)=minor(1,2)
   minor(1,3)=hess(2,1)*hess(3,2)-hess(2,2)*hess(3,1)
   minor(3,1)=minor(1,3)
-  minor(2,3)=-1.d0*(hess(1,1)*hess(3,2)-hess(1,2)*hess(3,1))
+  minor(2,3)=-1d0*(hess(1,1)*hess(3,2)-hess(1,2)*hess(3,1))
   minor(3,2)=minor(2,3)
 
   ! Displacement of the true max from the cell center
@@ -1664,7 +1664,7 @@ subroutine true_max(x,y,z,ilevel)
   do i=1,ndim
      do j=1,ndim
         numerator = gradient(j)*minor(i,j)
-        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.d0*numerator*tiny(0.d0))
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10d0*numerator*tiny(0d0))
      end do
   end do
 
@@ -1766,7 +1766,7 @@ subroutine update_sink(ilevel)
               end if
 
               ! Merging based on sink age
-              if (merging_timescale>0.d0)then
+              if (merging_timescale>0d0)then
                  iyoung=(t-tsink(isink)<t_larson1)
                  jyoung=(t-tsink(jsink)<t_larson1)
                  merge_flag=merge_flag .and. (iyoung .or. jyoung)
@@ -1954,7 +1954,7 @@ subroutine update_cloud(ilevel)
      end do
   end if
 
-  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0.d0
+  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0d0
 
 111 format('   Entering update_cloud for level ',I2)
 
@@ -2062,7 +2062,7 @@ subroutine clean_merged_sinks
 
   mergers=0
   do j=1,nsink
-     if (msink(j)<=0.d0)then ! if sink has been merged to another one
+     if (msink(j)<=0d0)then ! if sink has been merged to another one
          mergers=mergers+1
          msink(j)=-10
      end if
@@ -2218,7 +2218,7 @@ subroutine f_gas_sink(ilevel)
               end do
 
               ! Relative position and distance
-              d2=0.d0
+              d2=0d0
               do idim=1,ndim
                  do i=1,ngrid
                     ! zero order Ewald sum
@@ -2262,7 +2262,7 @@ subroutine f_gas_sink(ilevel)
 
         d_min=d_min**0.5d0
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4.d0/3.d0*pi*d_min**ndim))
+        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4d0/3d0*pi*d_min**ndim))
 
      end if !end if direct force
   end do !end loop over sinks
@@ -2332,8 +2332,8 @@ subroutine f_sink_sink
   do isink=1,nsink
      if(msink(isink)>0.0)then
         if (direct_force_sink(isink))then
-           d2=0.d0
-           ff=0.d0
+           d2=0d0
+           ff=0d0
            do idim=1,ndim
               ! Compute relative position and distances
               if (period(idim))then
@@ -2480,7 +2480,7 @@ subroutine read_sink_params()
 
   if (merging_timescale > 0.)then
      cty=scale_t/yr2sec
-     cont_speed=-1.d0/(merging_timescale/cty)
+     cont_speed=-1d0/(merging_timescale/cty)
   end if
 
   ! Check for periodic boundary conditions

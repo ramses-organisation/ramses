@@ -241,7 +241,7 @@ subroutine interpol_hydro(u1,u2,nn)
 #endif
 
   ! volume fraction of a fine cell realtive to a coarse cell
-  oneover_twotondim=1.D0/dble(twotondim)
+  oneover_twotondim=1d0/dble(twotondim)
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -462,7 +462,7 @@ subroutine compute_limiter_central(a,w,nn)
      do ind=1,twotondim
         xxc = xc(ind,idim)
         do i=1,nn
-           corner(i)=ac(i,ind)+2.D0*w(i,idim)*xxc
+           corner(i)=ac(i,ind)+2d0*w(i,idim)*xxc
         end do
         do i=1,nn
            ac(i,ind)=corner(i)

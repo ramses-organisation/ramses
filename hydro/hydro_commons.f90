@@ -17,10 +17,10 @@ module const
   real(dp)::two = 2
   real(dp)::three = 3
   real(dp)::four = 4
-  real(dp)::two3rd = 2/3.d0
-  real(dp)::half = 1/2.d0
-  real(dp)::third = 1/3.d0
-  real(dp)::forth = 1/4.d0
-  real(dp)::sixth = 1/6.d0
+  real(dp)::two3rd = 2/3d0
+  real(dp)::half = 1/2d0
+  real(dp)::third = 1/3d0
+  real(dp)::forth = 1/4d0
+  real(dp)::sixth = 1/6d0
 end module const
 

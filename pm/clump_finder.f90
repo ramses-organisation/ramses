@@ -109,7 +109,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   if (ntest>0) then
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
-     denp=0.d0; levp=0; imaxp=0; icellp=0
+     denp=0d0; levp=0; imaxp=0; icellp=0
   endif
   itest=0
   nskip=ntest_cpu(myid)-ntest
@@ -191,7 +191,7 @@ subroutine clump_finder(create_output,keep_alive)
   allocate(max_dens(npeaks_max))
   allocate(peak_cell(npeaks_max))
   allocate(peak_cell_level(npeaks_max))
-  max_dens=0.d0; peak_cell=0; peak_cell_level=0;
+  max_dens=0d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0 .or. ivar_clump==-1)then
@@ -829,9 +829,9 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
   ind_cell=0
   igrid0=son(1+icoarse_min+jcoarse_min*nx+kcoarse_min*nx*ny)
   do i=1,n
-     xx = xpart(i,1)/boxlen + (nx-1)/2.d0
-     yy = xpart(i,2)/boxlen + (ny-1)/2.d0
-     zz = xpart(i,3)/boxlen + (nz-1)/2.d0
+     xx = xpart(i,1)/boxlen + (nx-1)/2d0
+     yy = xpart(i,2)/boxlen + (ny-1)/2d0
+     zz = xpart(i,3)/boxlen + (nz-1)/2d0
 
      if(xx<0.)xx=xx+dble(nx)
      if(xx>dble(nx))xx=xx-dble(nx)
@@ -1248,8 +1248,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1271,8 +1271,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid

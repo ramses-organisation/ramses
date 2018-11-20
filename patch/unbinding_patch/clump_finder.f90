@@ -195,7 +195,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   if (ntest>0) then
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
-     denp=0.d0; levp=0; imaxp=0; icellp=0
+     denp=0d0; levp=0; imaxp=0; icellp=0
   endif
   itest=0
   nskip=ntest_cpu(myid)-ntest
@@ -277,7 +277,7 @@ subroutine clump_finder(create_output,keep_alive)
   allocate(max_dens(npeaks_max))
   allocate(peak_cell(npeaks_max))
   allocate(peak_cell_level(npeaks_max))
-  max_dens=0.d0; peak_cell=0; peak_cell_level=0;
+  max_dens=0d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0 .or. ivar_clump==-1)then
@@ -1350,8 +1350,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1373,8 +1373,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid
@@ -2569,7 +2569,7 @@ subroutine get_clump_properties_pb(first)
   !------------------------------------------------------------
 
 
-  period = 0.d0
+  period = 0d0
   if (.not. first) clmp_vel_sq_pb_old = 0
 
   do ipeak=1, hfree-1
@@ -2616,7 +2616,7 @@ subroutine get_clump_properties_pb(first)
         do ipart=1, nclmppart(ipeak)       ! while there is a particle linked list
           if (contributes(thispart)) then  ! if the particle should be considered
             if (periodical) then           ! determine periodic correction
-              period=0.d0
+              period=0d0
               do i=1, 3
                 if (xp(thispart,i)-peak_pos(ipeak,i) > 0.5*boxlen)    period(i)=(-1.0)*boxlen
                 if (xp(thispart,i)-peak_pos(ipeak,i) < (-0.5*boxlen)) period(i)=boxlen
@@ -2672,7 +2672,7 @@ subroutine get_clump_properties_pb(first)
         biggest=0.0
         thispart=clmppart_first(ipeak)
         do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-            period=0.d0
+            period=0d0
             if (periodical) then
               do i=1, 3
                 if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
@@ -2835,7 +2835,7 @@ subroutine get_cmp(ilevel)
       thispart=clmppart_first(ipeak)
       do ipart=1, nclmppart(ipeak)!while there is a particle linked list
         if (contributes(thispart)) then
-          period=0.d0
+          period=0d0
           if (periodical) then
             do i=1, 3
               if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen)  period(i)=(-1.0)*boxlen
@@ -2910,7 +2910,7 @@ subroutine get_closest_border()
     ! for other ipeaks, so just leave it here I guess
     check(ipeak)=cmp_distances(ipeak,nmassbins)>0.0 ! peak must have particles somewhere
     check(ipeak)=check(ipeak).and.to_iter(ipeak)
-    if(check(ipeak)) closest_border(ipeak) = HUGE(1.d0) !reset value
+    if(check(ipeak)) closest_border(ipeak) = HUGE(1d0) !reset value
   enddo
 
 
@@ -3190,7 +3190,7 @@ subroutine bordercheck(this_cellpos,clump_nr,xx,neigh_cell_index,ok,np)
   do j=1,np
     if(ok(j))then ! if all criteria met, you've found a neighbour cell that belongs to a different clump 
 
-      period=0.d0
+      period=0d0
       if (periodical) then
         do i=1, ndim
           if (xx(j,i)-peak_pos(ipeak,i) > 0.5*boxlen)    period(i)=(-1.0)*boxlen
@@ -3245,7 +3245,7 @@ subroutine particle_unbinding(ipeak, final_round)
     call compute_phi(ipeak)
 
     ! compute potential at the closest border from the center of mass
-    phi_border=0.d0
+    phi_border=0d0
     ! compute potential at the closest border from the center of mass
     if(saddle_pot) then
       dist_border=sqrt(closest_border(ipeak))
@@ -3331,7 +3331,7 @@ logical function unbound(ipeak, part_ind, phi_border)
   real(dp),dimension(1:3) :: period
   integer :: i
 
-  period=0.d0
+  period=0d0
   if (periodical) then
     do i=1, ndim
       if (xp(part_ind,i)-peak_pos(ipeak,i) > 0.5*boxlen   ) period(i)=(-1.0)*boxlen
@@ -3501,25 +3501,25 @@ subroutine allocate_unbinding_arrays()
   ! Clump properties
   !-------------------
   allocate(clmp_com_pb(1:npeaks_max,1:3))
-  clmp_com_pb=0.d0
+  clmp_com_pb=0d0
   allocate(clmp_vel_pb(1:npeaks_max,1:3))
-  clmp_vel_pb=0.d0
+  clmp_vel_pb=0d0
   allocate(clmp_mass_pb(1:npeaks_max))
-  clmp_mass_pb=0.d0
+  clmp_mass_pb=0d0
   allocate(cmp_distances(1:npeaks_max,0:nmassbins))
-  cmp_distances=0.d0
+  cmp_distances=0d0
   allocate(cmp(1:npeaks_max,0:nmassbins))
-  cmp=0.d0
+  cmp=0d0
   ! careful with this! The first index of the second subscript
   ! of the cumulative mass aray (index 0) is there for reference
   ! for the enclosed mass interpolation.
 
   allocate(phi_unb(0:nmassbins)) ! array where to store the potential
-  phi_unb=0.d0
+  phi_unb=0d0
 
   if (saddle_pot) then
     allocate(closest_border(1:npeaks_max)) ! point of the closest border to CoM
-    closest_border=3.d0*boxlen**2
+    closest_border=3d0*boxlen**2
   endif
 
   allocate(to_iter(1:npeaks_max)) ! peak needs to be checked or not

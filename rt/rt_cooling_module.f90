@@ -22,7 +22,7 @@ module rt_cooling_module
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux,
 
-  real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
+  real(dp),parameter::T2_min_fix=1d-2           !     Min temperature [K]
 
   ! cosmic ray ionisation rates, primary and secondary
   ! for HeI ionisation, use Glover 2010 cosray_HeI = 1.1 * cosray_HI
@@ -88,10 +88,10 @@ SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
   T_FRAC          = 0.1
 
   x_FRAC          = 0.1
-  x_MIN           = 1.d-20               !    Minimum ionization fractions
-  x_FM            = 1.d-6                !  Min at which to consider frac.
+  x_MIN           = 1d-20               !    Minimum ionization fractions
+  x_FM            = 1d-6                !  Min at which to consider frac.
 
-  Np_MIN = 1.d-13                        !            Photon density floor
+  Np_MIN = 1d-13                        !            Photon density floor
   Np_FRAC = 0.2
 
   Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
@@ -207,7 +207,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
      group_egy_erg(1:nGroups) = group_egy(1:nGroups) * eV2erg
      if(rt_isIR) then
         group_egy_ratio(1:nGroups) = group_egy(1:nGroups) / group_egy(iIR)
-        one_over_egy_IR_erg = 1.d0 / group_egy_erg(iIR)
+        one_over_egy_IR_erg = 1d0 / group_egy_erg(iIR)
      endif
   endif
 #endif
@@ -219,24 +219,24 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
      indact(i) = i                   !      Set up indexes of active cells
      ! Ensure all state vars are legal:
      T2(i) = MAX(T2(i), T2_min_fix)
-     xion(1:nIons,i) = MIN(MAX(xion(1:nIons,i), x_MIN),1.d0)
+     xion(1:nIons,i) = MIN(MAX(xion(1:nIons,i), x_MIN),1d0)
      if(isH2) then
         ! Ensure the total hydrogen fraction is 1:
-        if(xion(ixHI,i)+xion(ixHII,i) .gt. 1.d0) then
+        if(xion(ixHI,i)+xion(ixHII,i) .gt. 1d0) then
            if(xion(ixHI,i) .gt. xion(ixHII,i)) then
-              xion(ixHI,i)=1.d0-xion(ixHII,i)
+              xion(ixHI,i)=1d0-xion(ixHII,i)
            else
-              xion(ixHII,i)=1.d0-xion(ixHI,i)
+              xion(ixHII,i)=1d0-xion(ixHI,i)
            endif
         endif ! total hydrogen fraction
      endif ! isH2
      if(isHe) then                                        ! Helium species
         ! Ensure the total helium fraction is 1:
-        if(xion(ixHeII,i)+xion(ixHeIII,i) .gt. 1.d0) then
+        if(xion(ixHeII,i)+xion(ixHeIII,i) .gt. 1d0) then
            if(xion(ixHeII,i) .gt. xion(ixHeIII,i)) then
-              xion(ixHeII,i)=1.d0-xion(ixHeIII,i)
+              xion(ixHeII,i)=1d0-xion(ixHeIII,i)
            else
-              xion(ixHeIII,i)=1.d0-xion(ixHeII,i)
+              xion(ixHeIII,i)=1d0-xion(ixHeII,i)
            endif
         endif
      endif ! isHe
@@ -414,13 +414,13 @@ contains
 
        ! EMISSION FROM GAS
        if(.not. rt_OTSA .and. rt_advect) then ! ----------- Rec. radiation
-          if(isH2) alpha(ixHI) = 0.d0 ! H2 emits no rec. radiation
+          if(isH2) alpha(ixHI) = 0d0 ! H2 emits no rec. radiation
           alpha(ixHII) = inp_coolrates_table(tbl_alphaA_HII, TK) &
                        - inp_coolrates_table(tbl_alphaB_HII, TK)
           if(isHe) then
              ! alpha(2) A-B becomes negative around 1K, hence the max
              alpha(ixHeII) = &
-                  MAX(0.d0,inp_coolrates_table(tbl_alphaA_HeII,TK)       &
+                  MAX(0d0,inp_coolrates_table(tbl_alphaA_HeII,TK)       &
                           -inp_coolrates_table(tbl_alphaB_HeII, TK))
              alpha(ixHeIII) = inp_coolrates_table(tbl_alphaA_HeIII, TK)  &
                             - inp_coolrates_table(tbl_alphaB_HeIII, TK)
@@ -466,11 +466,11 @@ contains
           dNp(igroup)= MAX(smallNp,                                      &
                         (ddt(icell)*(recRad(igroup)+dNpdt(igroup,icell)) &
                                     +dNp(igroup))                        &
-                        / (1.d0+ddt(icell)*phAbs(igroup)))
+                        / (1d0+ddt(icell)*phAbs(igroup)))
 
           dUU = ABS(dNp(igroup)-Np(igroup,icell))                        &
                 /(Np(igroup,icell)+Np_MIN) * one_over_Np_FRAC
-          if(dUU .gt. 1.d0) then
+          if(dUU .gt. 1d0) then
              code=1 ;   RETURN                        ! ddt(icell) too big
           endif
           fracMax=MAX(fracMax,dUU)      ! To check if ddt can be increased
@@ -485,7 +485,7 @@ contains
           do idim=1,nDim
              dUU = ABS(dFp(idim,igroup)-Fp(idim,igroup,icell))           &
                   / (ABS(Fp(idim,igroup,icell))+Fp_MIN) * one_over_Fp_FRAC
-             if(dUU .gt. 1.d0) then
+             if(dUU .gt. 1d0) then
                 code=2 ;   RETURN                     ! ddt(icell) too big
              endif
              fracMax=MAX(fracMax,dUU)   ! To check if ddt can be increased
@@ -575,7 +575,7 @@ contains
        endif
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
-       metal_tot=0.d0 ; metal_prime=0.d0             ! Metal cooling
+       metal_tot=0d0 ; metal_prime=0d0             ! Metal cooling
        if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
@@ -673,7 +673,7 @@ contains
     if(cosmic_rays) cr = cr + cosray_HI * dxHI
     de = alpha(ixHII) * ne                          !          Destruction
     dxion(ixHII) = (cr*ddt(icell)+dxion(ixHII))/(1.+de*ddt(icell))
-    dxion(ixHII) = MIN(MAX(dxion(ixHII), x_MIN),1.d0)
+    dxion(ixHII) = MIN(MAX(dxion(ixHII), x_MIN),1d0)
     ! Atomic conservation of H *******************************************
     if(newAtomicCons) then
        x_tot = 2.*dxH2 + dxHI + dxion(ixHII)
@@ -1049,7 +1049,7 @@ FUNCTION HsurH0(z,omega0,omegaL,OmegaR)
   implicit none
   real(kind=8) :: HsurH0,z,omega0,omegaL,omegaR
 !-------------------------------------------------------------------------
-  HsurH0=sqrt(Omega0*(1.d0+z)**3+OmegaR*(1.d0+z)**2+OmegaL)
+  HsurH0=sqrt(Omega0*(1d0+z)**3+OmegaR*(1d0+z)**2+OmegaL)
 END FUNCTION HsurH0
 
 !=========================================================================
@@ -1211,7 +1211,7 @@ FUNCTION getMu(xion, Tmu)
   if(isHe) xHeIII=xion(ixHeIII)
   getMu = 1./(X*(0.5+0.5*xHI+1.5*xHII) + 0.25*Y*(1.+xHeII+2.*xHeIII))
   if(is_kIR_T .or. is_mu_H2) &
-       getMu = getMu + exp(-1.d0*(Tmu/Tmu_dissoc)**2) * (2.33-getMu)
+       getMu = getMu + exp(-1d0*(Tmu/Tmu_dissoc)**2) * (2.33-getMu)
 END FUNCTION getMu
 
 
@@ -1248,7 +1248,7 @@ SUBROUTINE reduce_flux(Fp, cNp)
   real(dp):: cNp, fred
 !------------------------------------------------------------------------
   fred = sqrt(sum(Fp**2))/cNp
-  if(fred .gt. 1.d0) Fp = Fp/fred
+  if(fred .gt. 1d0) Fp = Fp/fred
 END SUBROUTINE reduce_flux
 
 

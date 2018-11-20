@@ -539,12 +539,12 @@ subroutine region_condinit(x,q,dx,nn)
         ! Compute CIC weights relative to region center
         do i=1,nn
            xn=1; yn=1; zn=1
-           xn=max(1.d0-abs(x(i,1)-x_center(k))/dx, 0.0_dp)
+           xn=max(1d0-abs(x(i,1)-x_center(k))/dx, 0.0_dp)
 #if NDIM>1
-           yn=max(1.d0-abs(x(i,2)-y_center(k))/dx, 0.0_dp)
+           yn=max(1d0-abs(x(i,2)-y_center(k))/dx, 0.0_dp)
 #endif
 #if NDIM>2
-           zn=max(1.d0-abs(x(i,3)-z_center(k))/dx, 0.0_dp)
+           zn=max(1d0-abs(x(i,3)-z_center(k))/dx, 0.0_dp)
 #endif
            r=xn*yn*zn
            ! If cell lies within CIC cloud,

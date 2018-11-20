@@ -210,7 +210,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
   ! compute the size of the pixel
-  tail_pix = boxlen / (2.d0)**ilevel
+  tail_pix = boxlen / (2d0)**ilevel
   do i=1,ncell
      indi = ind_cell(i)
      ! the thermal energy
@@ -228,7 +228,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      emag =        (uold(indi,6)+uold(indi,nvar+1 ))**2
      emag = emag + (uold(indi,7)+uold(indi,nvar+2))**2
      emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
-     emag = emag / 8.d0
+     emag = emag / 8d0
      etherm = (etherm - emag)
 #endif
 #if NENER>0
