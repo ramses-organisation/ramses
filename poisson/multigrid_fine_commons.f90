@@ -94,7 +94,7 @@ subroutine multigrid_fine(ilevel,icount)
       ! Convert volume fraction to mask value
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
-         active_mg(icpu,ilevel-1)%u(:,4)=2d0*active_mg(icpu,ilevel-1)%u(:,4)-1d0
+         active_mg(icpu,ilevel-1)%u(:,4)=2*active_mg(icpu,ilevel-1)%u(:,4)-1d0
       end do
 
       ! Check active mask state
@@ -128,7 +128,7 @@ subroutine multigrid_fine(ilevel,icount)
          ! Convert volume fraction to mask value
          do icpu=1,ncpu
             if(active_mg(icpu,ifine-1)%ngrid==0) cycle
-            active_mg(icpu,ifine-1)%u(:,4)=2d0*active_mg(icpu,ifine-1)%u(:,4)-1d0
+            active_mg(icpu,ifine-1)%u(:,4)=2*active_mg(icpu,ifine-1)%u(:,4)-1d0
          end do
 
          ! Check active mask state

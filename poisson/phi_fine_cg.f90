@@ -61,7 +61,7 @@ subroutine phi_fine_cg(ilevel,icount)
   !===============================
   ! Compute right-hand side norm
   !===============================
-  rhs_norm=0.d0
+  rhs_norm=0
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
@@ -613,7 +613,7 @@ subroutine make_multipole_phi(ilevel)
 
         else
            do i=1,ngrid
-               phi(ind_cell(i))=0d0
+               phi(ind_cell(i))=0
            end do
         endif
 

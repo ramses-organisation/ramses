@@ -85,7 +85,7 @@ subroutine multigrid_coarse(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0d0
+           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
