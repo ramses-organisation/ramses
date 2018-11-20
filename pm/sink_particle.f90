@@ -798,7 +798,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! Jet geometry safety net
   cone_opening = max(tiny(0.0),cone_opening)
   cone_opening = min(cone_opening, 180.d0)
-  tan_theta = tan(pi/180.*cone_opening/2) ! tangent of half of the opening angle
+  tan_theta = tan(pi/180.d0*cone_opening/2) ! tangent of half of the opening angle
 
   ! Get cloud particle CIC weights
   do idim=1,ndim
@@ -845,8 +845,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            ! Reference frame relative to the sink position
            r_rel(1:ndim)=xx(j,1:ndim,ind)-xsink(isink,1:ndim)
            do idim=1,ndim
-              if (period(idim) .and. r_rel(idim)>boxlen*0.5)r_rel(idim)=r_rel(idim)-boxlen
-              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5d0)r_rel(idim)=r_rel(idim)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5d0))r_rel(idim)=r_rel(idim)+boxlen
            end do
            r_len=sqrt(sum(r_rel**2))
 
@@ -879,7 +879,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               m_acc_smbh=dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
 
               if(agn.and.msink(isink).gt.0)then
-                 acc_ratio=dMsmbh_overdt(isink)/(4.*pi*factG_in_cgs*msmbh(isink)*mH/(0.1*sigma_T*c_cgs)*scale_t)
+                 acc_ratio=dMsmbh_overdt(isink)/(4.d0*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t)
                  if (AGN_fbk_mode_switch_threshold > 0.0) then
                     if (acc_ratio > AGN_fbk_mode_switch_threshold) then
                        ! Eddington ratio higher than AGN_fbk_mode_switch_threshold -> energy
@@ -891,9 +891,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                        AGN_fbk_frac_mom = 1.0
                     end if
                  end if
-                 v_AGN = (2*0.1*epsilon_kin/kin_mass_loading)**0.5*c_cgs ! in cm/s
+                 v_AGN = (2*0.1d0*epsilon_kin/kin_mass_loading)**0.5d0*c_cgs ! in cm/s
                  fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
-                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1-cos(pi/180.*cone_opening/2)) ! mass-weighted
+                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1.d0-cos(pi/180*cone_opening/2)) ! mass-weighted
               end if
            end if
 
@@ -1042,7 +1042,7 @@ subroutine compute_accretion_rate(write_sinks)
 
      velocity(1:ndim)=velocity(1:ndim)/(density*volume+tiny(0.0_dp))
      ethermal=ethermal/(density*volume+tiny(0.0_dp))
-     c2=MAX((gamma-1.0)*ethermal,smallc**2)*boost**(-2./3.)
+     c2=MAX((gamma-1.0d0)*ethermal,smallc**2)*boost**(-2.d0/3.d0)
      c2sink(isink)=c2
      vrel2=SUM((velocity(1:ndim)-vsink(isink,1:ndim))**2)
      if(bondi_use_vrel)then
@@ -1055,13 +1055,13 @@ subroutine compute_accretion_rate(write_sinks)
      r2=(factG*msink(isink)/v_bondi**2)**2
 
      ! Extrapolate to rho_inf
-     rho_inf=density/(bondi_alpha(ir_cloud*0.5*dx_min/(r2+tiny(0.0_dp))**0.5))
+     rho_inf=density/(bondi_alpha(ir_cloud*0.5d0*dx_min/(r2+tiny(0.0_dp))**0.5d0))
 
      ! Compute Bondi-Hoyle accretion rate in code units
-     dMBHoverdt(isink)=4.*pi*rho_inf*r2*v_bondi
+     dMBHoverdt(isink)=4*pi*rho_inf*r2*v_bondi
 
      ! Compute Eddington accretion rate in code units
-     dMEDoverdt(isink)=4.*pi*factG_in_cgs*msink(isink)*mH/(0.1*sigma_T*c_cgs)*scale_t
+     dMEDoverdt(isink)=4*pi*factG_in_cgs*msink(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t
 
      ! Compute final sink accretion rate
      if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
@@ -1069,9 +1069,9 @@ subroutine compute_accretion_rate(write_sinks)
 
      if(smbh.and.mass_smbh_seed>0.0)then
         r2_smbh=(factG*msmbh(isink)/v_bondi**2)**2
-        rho_inf_smbh=density/(bondi_alpha(ir_cloud*0.5*dx_min/(r2_smbh+tiny(0.0_dp))**0.5))
-        dMBHoverdt_smbh(isink)=4.*pi*rho_inf_smbh*r2_smbh*v_bondi
-        dMEDoverdt_smbh(isink)=4.*pi*factG_in_cgs*msmbh(isink)*mH/(0.1*sigma_T*c_cgs)*scale_t
+        rho_inf_smbh=density/(bondi_alpha(ir_cloud*0.5d0*dx_min/(r2_smbh+tiny(0.0_dp))**0.5d0))
+        dMBHoverdt_smbh(isink)=4*pi*rho_inf_smbh*r2_smbh*v_bondi
+        dMEDoverdt_smbh(isink)=4*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t
         if(bondi_accretion)dMsmbh_overdt(isink)=dMBHoverdt_smbh(isink)
         if(eddington_limit)dMsmbh_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt_smbh(isink))
         dMsink_overdt(isink)=max(0.d0,dMBHoverdt(isink)-dMsmbh_overdt(isink))
@@ -1130,17 +1130,17 @@ contains
          2.53827, 2.34854, 2.18322, 2.03912, 1.91344, 1.80378, 1.70804, &
          1.62439 /)
     !     Define a constant that appears in these formulae
-    lambda_c    = 0.25 * exp(1.5)
+    lambda_c    = exp(1.5) / 4
     !     Deal with the off-the-table cases
     if (x .le. XMIN) then
-       bondi_alpha = lambda_c / sqrt(2. * x**ndim)
+       bondi_alpha = lambda_c / sqrt(2.d0 * x**ndim)
     else if (x .ge. XMAX) then
-       bondi_alpha = exp(1./x)
+       bondi_alpha = exp(1.d0/x)
     else
        !     We are on the table
        idx = floor ((NTABLE-1) * log(x/XMIN) / log(XMAX/XMIN))
        xtable = exp(log(XMIN) + idx*log(XMAX/XMIN)/(NTABLE-1))
-       xtablep1 = exp(log(XMIN) + (idx+1)*log(XMAX/XMIN)/(NTABLE-1))
+       xtablep1 = exp(log(XMIN) + (idx+1)*log(XMAX/XMIN)/(NTABLE-1.d0))
        alpha_exp = log(x/xtable) / log(xtablep1/xtable)
        !     Note the extra +1s below because of fortran 1 offset arrays
        bondi_alpha = alphatable(idx+1) * (alphatable(idx+2)/alphatable(idx+1))**alpha_exp
@@ -1230,7 +1230,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
         write(*,'(" =============================================================================================================================================")')
         do i=nsink,1,-1
            isink=idsink_sort(i)
-           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5
+           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5d0
            l_max=msink(isink)*sqrt(factG*msink(isink)/(dble(ir_cloud)*dx_min))*(dble(ir_cloud)*dx_min)
            write(*,'(I5,10(2X,1PE12.5))')&
                 & idsink(isink),&
@@ -1625,9 +1625,9 @@ subroutine true_max(x,y,z,ilevel)
   end if
 
   ! Compute gradient
-  gradient(1)=0.5*(cube3(1,0,0)-cube3(-1,0,0))/dx_loc
-  gradient(2)=0.5*(cube3(0,1,0)-cube3(0,-1,0))/dx_loc
-  gradient(3)=0.5*(cube3(0,0,1)-cube3(0,0,-1))/dx_loc
+  gradient(1)=0.5d0*(cube3(1,0,0)-cube3(-1,0,0))/dx_loc
+  gradient(2)=0.5d0*(cube3(0,1,0)-cube3(0,-1,0))/dx_loc
+  gradient(3)=0.5d0*(cube3(0,0,1)-cube3(0,0,-1))/dx_loc
 
   if (maxval(abs(gradient(1:ndim)))==0.)return
 
@@ -1652,11 +1652,11 @@ subroutine true_max(x,y,z,ilevel)
   minor(2,2)=hess(1,1)*hess(3,3)-hess(1,3)*hess(3,1)
   minor(3,3)=hess(1,1)*hess(2,2)-hess(1,2)*hess(2,1)
 
-  minor(1,2)=-1.*(hess(2,1)*hess(3,3)-hess(2,3)*hess(3,1))
+  minor(1,2)=-1.d0*(hess(2,1)*hess(3,3)-hess(2,3)*hess(3,1))
   minor(2,1)=minor(1,2)
   minor(1,3)=hess(2,1)*hess(3,2)-hess(2,2)*hess(3,1)
   minor(3,1)=minor(1,3)
-  minor(2,3)=-1.*(hess(1,1)*hess(3,2)-hess(1,2)*hess(3,1))
+  minor(2,3)=-1.d0*(hess(1,1)*hess(3,2)-hess(1,2)*hess(3,1))
   minor(3,2)=minor(2,3)
 
   ! Displacement of the true max from the cell center
@@ -1664,7 +1664,7 @@ subroutine true_max(x,y,z,ilevel)
   do i=1,ndim
      do j=1,ndim
         numerator = gradient(j)*minor(i,j)
-        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.*numerator*tiny(0.d0))
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10.d0*numerator*tiny(0.d0))
      end do
   end do
 
@@ -1744,8 +1744,8 @@ subroutine update_sink(ilevel)
            ! Compute relative distance
            r_rel(1:ndim)=xsink(jsink,1:ndim)-xsink(isink,1:ndim)
            do idim=1,ndim
-              if (period(idim) .and. r_rel(idim)>boxlen*0.5)   r_rel(idim)=r_rel(idim)-boxlen
-              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5))r_rel(idim)=r_rel(idim)+boxlen
+              if (period(idim) .and. r_rel(idim)>boxlen*0.5d0)   r_rel(idim)=r_rel(idim)-boxlen
+              if (period(idim) .and. r_rel(idim)<boxlen*(-0.5d0))r_rel(idim)=r_rel(idim)+boxlen
            end do
            rr=sum(r_rel**2)
 
@@ -2225,8 +2225,8 @@ subroutine f_gas_sink(ilevel)
                     ! zero order Ewald sum
                     ff(i,idim)=xsink(isink,idim)-xx(i,idim)
                     if (period(idim))then
-                       if(ff(i,idim)>0.5*boxlen)ff(i,idim)=ff(i,idim)-boxlen
-                       if(ff(i,idim)<-0.5*boxlen)ff(i,idim)=ff(i,idim)+boxlen
+                       if(ff(i,idim)>0.5d0*boxlen)ff(i,idim)=ff(i,idim)-boxlen
+                       if(ff(i,idim)<-0.5d0*boxlen)ff(i,idim)=ff(i,idim)+boxlen
                     end if
                     d2(i)=d2(i)+ff(i,idim)**2
                  end do
@@ -2261,9 +2261,9 @@ subroutine f_gas_sink(ilevel)
            end do !end loop over cells
         end do !end loop over grids
 
-        d_min=d_min**0.5
+        d_min=d_min**0.5d0
         d_min=max(ssoft,d_min)
-        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4./3.*pi*d_min**ndim))
+        rho_tff=max(rho_tff,max(msink(isink),msum_overlap(isink))/(4.d0/3.d0*pi*d_min**ndim))
 
      end if !end if direct force
   end do !end loop over sinks
@@ -2341,8 +2341,8 @@ subroutine f_sink_sink
                  do jsink=1,nsink
                     if (direct_force_sink(jsink))then
                        ff(jsink,idim)=xsink(jsink,idim)-xsink(isink,idim)
-                       if(ff(jsink,idim)>0.5*boxlen)ff(jsink,idim)=ff(jsink,idim)-boxlen
-                       if(ff(jsink,idim)<-0.5*boxlen)ff(jsink,idim)=ff(jsink,idim)+boxlen
+                       if(ff(jsink,idim)>0.5d0*boxlen)ff(jsink,idim)=ff(jsink,idim)-boxlen
+                       if(ff(jsink,idim)<-0.5d0*boxlen)ff(jsink,idim)=ff(jsink,idim)+boxlen
                        d2(jsink)=d2(jsink)+ff(jsink,idim)**2
                     end if
                  end do
@@ -2468,8 +2468,8 @@ subroutine read_sink_params()
            if(myid==1)write(*,*)'No value for T2_star given. Do not know what to do...'
            call clean_stop
         else
-           dx_min=0.5**nlevelmax*scale
-           d_sink=T2_star/scale_T2 *pi/16./(dx_min**2)
+           dx_min=0.5d0**nlevelmax*scale
+           d_sink=T2_star/scale_T2 *pi/16/(dx_min**2)
            if(myid==1)write(*,*)'d_sink = ',d_sink
            if(myid==1)write(*,*)'rho_sink = ',d_sink*scale_d
            if(myid==1)write(*,*)'n_sink = ',d_sink*scale_nH
@@ -2481,7 +2481,7 @@ subroutine read_sink_params()
 
   if (merging_timescale > 0.)then
      cty=scale_t/yr2sec
-     cont_speed=-1./(merging_timescale/cty)
+     cont_speed=-1.d0/(merging_timescale/cty)
   end if
 
   ! Check for periodic boundary conditions
@@ -2582,7 +2582,7 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
 
   do idim=1,ndim
      do j=1,np
-        if (x(j,idim)<0.5 .or. x(j,idim)>5.5)then
+        if (x(j,idim)<0.5d0 .or. x(j,idim)>5.5)then
            print*,'particle outside allowed boundary for cic_get_cell'
            print*,x(j,1:ndim)
            if (x(j,idim)<0. .or. x(j,idim)>6.)then
