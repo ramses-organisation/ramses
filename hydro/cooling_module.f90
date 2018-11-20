@@ -25,21 +25,13 @@
 !=============================================================================
 module cooling_module
   use amr_parameters
+  use constants
   implicit none
   logical :: verbose_cooling=.false.
 
   real(kind=8),parameter ::smallnum_cooling= 1d-30
-  real(kind=8),parameter ::twopi   = 6.2831853d0
-  real(kind=8),parameter ::hplanck = 6.6262000d-27
-  real(kind=8),parameter ::eV      = 1.6022000d-12
-  real(kind=8),parameter ::kB      = 1.3806200d-16
-  real(kind=8),parameter ::clight  = 2.9979250d+10
-  real(kind=8),parameter ::Gyr     = 3.1536000d+16
   real(kind=8)           ::X       = 0.76
   real(kind=8)           ::Y       = 0.24
-  real(kind=8),parameter ::rhoc    = 1.8800000d-29
-  real(kind=8),parameter ::mH      = 1.6600000d-24
-  real(kind=8),parameter ::mu_mol  = 1.2195D0
   integer,parameter::HI      = 1
   integer,parameter::HEI     = 2
   integer,parameter::HEII    = 3
@@ -1401,7 +1393,7 @@ function J_nu(e,J0)
   implicit none
   real(kind=8) :: e,J_nu,e_L,J0,Jloc
   Jloc = max(J0,J0min)
-  e_L  = 13.598*eV
+  e_L  = 13.598*eV2erg
   J_nu = Jloc*(e_L/e)
   return
 end function J_nu
@@ -1411,9 +1403,9 @@ function sigma_rad(e,ispec)
   implicit none
   integer::ispec
   real(kind=8)::sigma_rad,e,e_i,xxx,alph
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   xxx = e/e_i
   alph = sqrt(xxx-1.0d0)
   sigma_rad=0.0
@@ -1430,9 +1422,9 @@ function taux_rad(ispec,J0)
   implicit none
   integer::ispec
   real(kind=8) :: J0,taux_rad,e_i,e,de,error,integ
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   integ = 0.0d0
   e = e_i
   de = e/100.D0
@@ -1527,9 +1519,9 @@ function heat_rad(ispec,J0)
   implicit none
   integer::ispec
   real(kind=8) :: J0,heat_rad,e_i,e,de,error,integ
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   integ = 0.0d0
   e = e_i
   de = e/100.D0

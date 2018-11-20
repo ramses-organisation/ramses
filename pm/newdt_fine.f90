@@ -6,6 +6,7 @@ subroutine newdt_fine(ilevel)
 #ifdef RT
   use rt_parameters, ONLY: rt_advect, rt_nsubcycle
 #endif
+  use constants, ONLY: pi
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -35,7 +36,7 @@ subroutine newdt_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  threepi2=3.0d0*ACOS(-1.0d0)**2
+  threepi2=3.0d0*pi**2
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
@@ -43,7 +44,7 @@ subroutine newdt_fine(ilevel)
   ! Maximum time step
   dtnew(ilevel)=boxlen/smallc
   if(poisson.and.gravity_type<=0)then
-     fourpi=4.0d0*ACOS(-1.0d0)
+     fourpi=4.0d0*pi
      if(cosmo)fourpi=1.5d0*omega_m*aexp
      if (sink)then
         tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))

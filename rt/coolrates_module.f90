@@ -15,7 +15,7 @@ MODULE coolrates_module
        , inp_coolrates_table, compCoolrate                               &
        , tbl_alphaZ_H2, tbl_alphaGP_H2, tbl_alphaA_HII, tbl_alphaA_HeII  &
        , tbl_alphaA_HeIII, tbl_alphaB_HII, tbl_alphaB_HeII               &
-       , tbl_alphaB_HeIII, tbl_beta_HI, tbl_beta_HeI, tbl_beta_HeII      & 
+       , tbl_alphaB_HeIII, tbl_beta_HI, tbl_beta_HeI, tbl_beta_HeII      &
        , tbl_cr_ci_HI, tbl_cr_ci_HeI, tbl_cr_ci_HeII, tbl_cr_ce_HI       &
        , tbl_cr_ce_HeI, tbl_cr_ce_HeII, tbl_cr_r_HII, tbl_cr_r_HeII      &
        , tbl_cr_r_HeIII, tbl_cr_bre, tbl_cr_com, tbl_cr_die              &
@@ -40,8 +40,8 @@ MODULE coolrates_module
      real(dp),dimension(nbinT)::primes = 0d0
   end type coolrates_table
 
-  type(coolrates_table),save::tbl_alphaZ_H2  ! H2 dust grain formation 
-  type(coolrates_table),save::tbl_alphaGP_H2 ! H2 gas-phase formation 
+  type(coolrates_table),save::tbl_alphaZ_H2  ! H2 dust grain formation
+  type(coolrates_table),save::tbl_alphaGP_H2 ! H2 gas-phase formation
   type(coolrates_table),save::tbl_alphaA_HII ! Case A rec. coefficients
   type(coolrates_table),save::tbl_alphaA_HeII
   type(coolrates_table),save::tbl_alphaA_HeIII
@@ -220,13 +220,13 @@ SUBROUTINE comp_table_rates(iT, aexp)
 ! Fill in index iTK in all rates tables.
 !-------------------------------------------------------------------------
   use rt_parameters,only:rt_OTSA
+  use constants,only:kB
   implicit none
   integer::iT
   real(dp)::aexp, T, T2, Ta, T5, lambda, f, hf, laHII, laHeII, laHeIII
   real(dp)::lowrleft,lowrright,lowr_hi,lowr_h2
   real(dp)::lowvleft_hi,lowvright_hi,lowv_hi,lowv_h2
   real(dp)::TT
-  real(dp),parameter::kb=1.3806d-16        ! Boltzmann constant [ergs K-1]
 !-------------------------------------------------------------------------
   ! Rates are stored in non-log, while temperature derivatives (primes)
   ! are stored in dRate/dlogT (= dRate/dT * T * ln(10)).
@@ -237,21 +237,21 @@ SUBROUTINE comp_table_rates(iT, aexp)
   T = 10d0**T_lookup(iT)
 
   ! Creation rate of H2 on dust [cm3 s-1] (functio of T from--------------
-  ! Hollenback & McKee 1979, average rate between Habart 2004 dense PDRs 
-  ! and Jura 1974 diffuse ISM) 
+  ! Hollenback & McKee 1979, average rate between Habart 2004 dense PDRs
+  ! and Jura 1974 diffuse ISM)
   ! When using, must multiply by Z*f_dust
   T2 = T/1d2
-  f = (1.0+0.4*sqrt(T2)+0.2*T2+0.08*T2**2)                    
-  tbl_alphaZ_H2%rates(iT)   = 9.0d-17 * sqrt(T2) / f 
+  f = (1.0+0.4*sqrt(T2)+0.2*T2+0.08*T2**2)
+  tbl_alphaZ_H2%rates(iT)   = 9.0d-17 * sqrt(T2) / f
   tbl_alphaZ_H2%primes(iT)  = (-0.12*T2**2 - 0.1*T2 + 0.5) / f           &
-                            * log(10d0) * tbl_alphaZ_H2%rates(iT)             
+                            * log(10d0) * tbl_alphaZ_H2%rates(iT)
 
-  ! Gas phase formation rate rate for H2 on H- [cm3 s-1] assuming--------- 
-  ! equilibrium abundances for H-, as explained in the Appendix of 
+  ! Gas phase formation rate rate for H2 on H- [cm3 s-1] assuming---------
+  ! equilibrium abundances for H-, as explained in the Appendix of
   ! McKee and Krumholz (2012)
-  tbl_alphaGP_H2%rates(iT)  = 8.0d-19*(T/1000.0)**0.88 
+  tbl_alphaGP_H2%rates(iT)  = 8.0d-19*(T/1000.0)**0.88
   tbl_alphaGP_H2%primes(iT) = 0.88                                       &
-                            * log(10d0) * tbl_alphaGP_H2%rates(iT) 
+                            * log(10d0) * tbl_alphaGP_H2%rates(iT)
   ! Case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)-------------
   lambda = 315614./T                                ! 2.d0 * 157807.d0 / T
   f = 1.d0+(lambda/0.522)**0.47
@@ -349,7 +349,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
      tbl_cr_r_HII%primes(iT)   = (-0.965 + 1.35389*(f-1.)/f)             &
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
 
-     tbl_cr_r_HeII%rates(iT)   = 3.d-14 * laHeII**0.654 * kb * T
+     tbl_cr_r_HeII%rates(iT)   = 3.d-14 * laHeII**0.654 * kB * T
      tbl_cr_r_HeII%primes(iT)  = 0.346                                   &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
@@ -363,7 +363,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
      tbl_cr_r_HII%primes(iT)   = (-0.97 + 1.39827*(f-1.)/f)              &
                                * log(10d0) * tbl_cr_r_HII%rates(iT)
 
-     tbl_cr_r_HeII%rates(iT)   = 1.26d-14 * laHeII**0.75 * kb * T
+     tbl_cr_r_HeII%rates(iT)   = 1.26d-14 * laHeII**0.75 * kB * T
      tbl_cr_r_HeII%primes(iT)  = 0.25                                    &
                                * log(10d0) * tbl_cr_r_HeII%rates(iT)
 
@@ -418,7 +418,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   tbl_Beta_H2H2%primes(iT) = &
        (tbl_Beta_H2H2%primes(iT) - tbl_Beta_H2H2%rates(iT))              &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log
-  tbl_Beta_H3B%primes(iT) = & 
+  tbl_Beta_H3B%primes(iT) = &
        6d-32*TT**(-0.25)+2d-31*TT**(-0.5)
   tbl_Beta_H3B%primes(iT) = &
        (tbl_Beta_H3B%primes(iT) - tbl_Beta_H3B%rates(iT))              &

@@ -61,7 +61,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_parameters, only: nGroups, iGroups
   use rt_hydro_commons
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
-       ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,a_r,is_kIR_T,rt_vc
+       ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
+  use constants, only: a_r
 #endif
   use mpi_mod
   implicit none
@@ -137,7 +138,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NGROUPS>0
   if(rt_isIRtrap) then
      ! For conversion from photon number density to photon energy density:
-     Np2Ep = scale_Np * group_egy(iIR) * ev_to_erg                       &
+     Np2Ep = scale_Np * group_egy(iIR) * eV2erg                       &
            * rt_pressBoost / scale_d / scale_v**2
   endif
 #endif
@@ -212,14 +213,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(is_kIR_T) then                        ! kIR depends on T_rad
               ! For rad. temperature,  weigh the energy in each group by
               ! its opacity over IR opacity (derived from IR temperature)
-              E_rad = group_egy(iIR) * ev_to_erg * NIRtot * scale_Np
+              E_rad = group_egy(iIR) * eV2erg * NIRtot * scale_Np
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
                  if(i .ne. iIR)                                          &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
-                            * ev_to_erg * scale_Np
+                            * eV2erg * scale_Np
               end do
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:
@@ -234,7 +235,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
            uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
                 + work * group_egy(iIR) &
-                * ev_to_erg / scale_d / scale_v**2 / scale_l**3
+                * eV2erg / scale_d / scale_v**2 / scale_l**3
 
            rtuold(il,iNp) = rtuold(il,iNp) - work !Remove from rad density
            rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
@@ -489,7 +490,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         if(rt_vc) then ! Photon work: subtract from the IR ONLY radiation
            do i=1,nleaf
               Np(iIR,i) = Np(iIR,i) + (ekk(i) - ekk_new(i))              &
-                   /scale_d/scale_v**2 / group_egy(iIR) / ev_to_erg
+                   /scale_d/scale_v**2 / group_egy(iIR) / eV2erg
            end do
         endif
 #endif
@@ -593,14 +594,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(is_kIR_T) then                        ! kIR depends on T_rad
               ! For rad. temperature,  weigh the energy in each group by
               ! its opacity over IR opacity (derived from IR temperature)
-              E_rad = group_egy(iIR) * ev_to_erg * NIRtot * scale_Np
+              E_rad = group_egy(iIR) * eV2erg * NIRtot * scale_Np
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
                  if(i .ne. iIR)                                          &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
-                            * ev_to_erg * scale_Np
+                            * eV2erg * scale_Np
               end do
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:

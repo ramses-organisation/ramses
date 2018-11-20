@@ -1,5 +1,6 @@
 module rt_parameters
   use hydro_parameters
+  use constants
 
 #ifdef NGROUPS
   integer,parameter::nGroups=NGROUPS          ! # of photon groups (set in Makefile)
@@ -9,15 +10,8 @@ module rt_parameters
   integer,parameter::nRTvar=nGroups*(1+ndim) ! # of RT variables (photon density and flux)
 
   real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
-  real(dp),parameter::c_cgs=2.9979250d+10                  ! Actual lightspeed in [cm s-1]
   real(dp)::rt_c_cgs=c_cgs                                 !   Reduced lightspeed [cm s-1]
   real(dp),parameter::one_over_c_cgs=3.335640484668562d-11 !         Save some computation
-  real(dp),parameter::m_sun=1.9891d33               ! Solar mass [g], for SED calculations
-  real(dp),parameter::eV_to_erg=1.6022d-12          !        eV to erg conversion constant
-  real(dp), parameter:: Gyr2sec = 3.15569d+16       !       Gyr to sec conversion constant
-  real(dp), parameter:: Myr2sec = 3.15569d+13       !       Myr to sec conversion constant
-  real(dp), parameter:: sec2Gyr = 3.16888d-17       !       sec to Gyr conversion constant
-  real(dp),parameter:: hp=6.6262d-27                !            Planck const   [erg sec ]
   real(dp),allocatable,dimension(:,:)::lambda1,lambda4                   ! HLL eigenvalues
 #ifndef NPRE
   real(dp),parameter::smallNp=1d-30                 !               Minimum photon density
@@ -154,5 +148,5 @@ module rt_parameters
   ! H2 parameters ------------------------------------------------------------------------
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
   ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
-  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0 
+  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0
 end module rt_parameters

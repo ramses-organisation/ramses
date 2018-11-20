@@ -959,7 +959,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   current_property = current_property+1
 #endif
 
-  ! Scatter particle birth eopch
+  ! Scatter particle birth epoch
   if(star.or.sink)then
      do i=1,np
         tp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)

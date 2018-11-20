@@ -10,6 +10,7 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
+  use constants
   use mpi_mod
   implicit none
 #if NDIM > 1
@@ -63,7 +64,6 @@ subroutine output_frame()
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8)::e,uvar
-  real(kind=8)::pi=3.14159265359
   integer::igrid,ilevel
   integer::i,j
   integer::proj_ind,nh_temp,nw_temp
@@ -78,7 +78,7 @@ subroutine output_frame()
                                            2, 4, 6, 8, 2, 6, 4, 8 /)  &
                                            ,shape(lind),order=(/2,1/))
   integer::npoly
-  real(dp)::msol,lumsol,yr,clight,log_lum
+  real(dp)::msol,lumsol,year,log_lum
   real(dp),dimension(46)::lum_poly = (/-5.6801548098e+05,5.9946628460e+05,-2.3731255261e+05,3.8560177896e+04,   &
                                        -5.6808026741e+02,-4.1194896342e+02,-5.4456684492e+00,4.4307467151e+00,  &
                                        4.2381242791e-01,-1.0831618977e-02,-6.2879957495e-03,-6.4348257709e-04,  &
@@ -231,11 +231,10 @@ subroutine output_frame()
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  msol   = 2D33/(scale_d*scale_l**3)
-  clight = 2.99792458D10
-  lumsol = 3.828D33*(scale_t/(clight*scale_v)**2)
-  yr     = (365.*24.*3600.)/scale_t
-  if(cosmo) yr = yr*aexp**2
+  msol   = M_sun/(scale_d*scale_l**3)
+  lumsol = L_sun*(scale_t/(c_cgs*scale_v)**2)
+  year   = yr2sec/scale_t
+  if(cosmo) year = year*aexp**2
 
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -894,14 +893,14 @@ subroutine output_frame()
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
               if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
-                 if(log10((texp-tp(j))/yr)<6)then
+                 if(log10((texp-tp(j))/year)<6)then
                     log_lum = 3.2d0
-                 else if(log10((texp-tp(j))/yr)>9)then
-                    log_lum = log10((texp-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
+                 else if(log10((texp-tp(j))/year)>9)then
+                    log_lum = log10((texp-tp(j))/year)*(-9.79362D-01)+9.08855D+00
                  else
                     log_lum = 0d0
                     do npoly=1,size(lum_poly)
-                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
+                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/year))**(npoly-1)
                     enddo
                  endif
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol

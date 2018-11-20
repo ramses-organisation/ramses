@@ -2,8 +2,9 @@ subroutine init_sink
   use amr_commons
   use pm_commons
   use clfind_commons
-  use mpi_mod
   use amr_parameters, only:levelmin
+  use constants, only:M_sun
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
@@ -285,7 +286,7 @@ subroutine init_sink
   ! Set direct force boolean
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
-        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*M_sun/(scale_d*scale_l**3))
      end do
   else
      do isink=1,nsink

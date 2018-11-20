@@ -8,26 +8,21 @@ module rt_cooling_module
   use cooling_module,only:X, Y
   use rt_parameters
   use coolrates_module
+  use constants
   implicit none
 
   private   ! default
 
   public rt_set_model, rt_solve_cooling, update_UVrates, cmp_chem_eq     &
-         , getMu, is_mu_H2, X, Y, rhoc, kB, mH, T2_min_fix, twopi        &
+         , getMu, is_mu_H2, X, Y, T2_min_fix                             &
          , signc, sigec, PHrate, UVrates, rt_isIR, kappaAbs, kappaSc     &
          , is_kIR_T, iIR, rt_isIRtrap, iIRtrapVar, rt_pressBoost         &
-         , rt_isoPress, rt_T_rad, rt_vc, a_r, iPEH_group
+         , rt_isoPress, rt_T_rad, rt_vc, iPEH_group
 
   ! NOTE: T2=T/mu
   ! Np = photon density, Fp = photon flux,
 
-  real(dp),parameter::rhoc      = 1.88000d-29    !  Crit. density [g cm-3]
-  real(dp),parameter::mH        = 1.66000d-24    !         H atom mass [g]
-  real(dp),parameter::kB        = 1.38062d-16    ! Boltzm.const. [erg K-1]
-  real(dp),parameter::a_r       = 7.5657d-15   ! Rad.const. [erg cm-3 K-4]
-  real(dp),parameter::mu_mol    = 1.2195D0
   real(dp),parameter::T2_min_fix=1.d-2           !     Min temperature [K]
-  real(dp),parameter::twopi     = 6.2831853d0    !            Two times pi
 
   ! cosmic ray ionisation rates, primary and secondary
   ! for HeI ionisation, use Glover 2010 cosray_HeI = 1.1 * cosray_HI
@@ -209,7 +204,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   one_over_x_FRAC = 1d0 / x_FRAC
 #if NGROUPS>0
   if(rt .and. nGroups .gt. 0) then
-     group_egy_erg(1:nGroups) = group_egy(1:nGroups) * ev_to_erg
+     group_egy_erg(1:nGroups) = group_egy(1:nGroups) * eV2erg
      if(rt_isIR) then
         group_egy_ratio(1:nGroups) = group_egy(1:nGroups) / group_egy(iIR)
         one_over_egy_IR_erg = 1.d0 / group_egy_erg(iIR)
@@ -338,7 +333,7 @@ contains
     real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
     real(dp),dimension(nGroups),save:: dustSc, kAbs_loc,kSc_loc
     real(dp),save:: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
-    real(dp),save:: G0, eff_peh, cdex, ncr 
+    real(dp),save:: G0, eff_peh, cdex, ncr
     logical::newAtomicCons=.true.
     !---------------------------------------------------------------------
     dt_ok=.false.
@@ -450,7 +445,7 @@ contains
        end do
 
        if(iPEH_group .gt. 0) then
-          ! Photoelectric absorption: the effective PEH cross section 
+          ! Photoelectric absorption: the effective PEH cross section
           ! is photoelectric heating rate / habing flux
           ! Note: as this absorption is done separately, kappaAbs
           !       should not include PEH absorption when PEH is included.
@@ -540,24 +535,24 @@ contains
        endif
        if(haardt_madau) Hrate= Hrate + SUM(nN(:)*UVrates(:,2)) * ss_factor
        if(iPEH_group .gt. 0 .and. rt_advect) then
-          ! Photoelectric heating Bakes & Tielens 1994 
+          ! Photoelectric heating Bakes & Tielens 1994
           ! and Wolfire 2003, [erg cm-3 s-1]
-          Hrate = Hrate + 1.3d-24 * eff_peh * G0 * nH(icell)             & 
-                * Zsolar(icell) * f_dust 
+          Hrate = Hrate + 1.3d-24 * eff_peh * G0 * nH(icell)             &
+                * Zsolar(icell) * f_dust
        endif
-       if(isH2) then 
+       if(isH2) then
           !UV pumping, Baczynski 2015
           cdex  = 1d-12 * (1.4 * exp(-18100. / (TK + 1200.)) * xH2       &
                 + exp(-1000. / TK) * dxion(ixHI))                        &
                 * sqrt(TK) * nH(icell) ![s-1]
-          Hrate = Hrate + 6.94 * SUM(dNp(:) * signc(:,ixHI) * isLW(:))   & 
-                * 2. * ev_to_erg * cdex / (cdex + 2d-7) * nH(icell) * xH2
+          Hrate = Hrate + 6.94 * SUM(dNp(:) * signc(:,ixHI) * isLW(:))   &
+                * 2. * eV2erg * cdex / (cdex + 2d-7) * nH(icell) * xH2
           !H2 formation heating, Omukai 2000
           ! and Hollenbach and McKee 1976, [erg cm-3 s-1]
           ncr   = 1d6 * TK**(-0.5)                                       &
-                / (1.6 * dxion(ixHI) * exp(-(400. / TK)**2)              & 
+                / (1.6 * dxion(ixHI) * exp(-(400. / TK)**2)              &
                 + 1.4 * xH2 * exp(-12000. / (TK + 1200.))) ![cm-3]
-          Hrate = Hrate + ev_to_erg                                      & 
+          Hrate = Hrate + eV2erg                                         &
                 * ((0.2 + 4.2 / (1. + ncr / nH(icell)))                  &
                 * inp_coolrates_table(tbl_AlphaZ_H2,TK)                  &
                 * Zsolar(icell) * f_dust                                 &
@@ -571,17 +566,17 @@ contains
        endif
        if (cosmic_rays) then !CR heating [erg cm-3 s-1]
           !Glassgold 2012, ~10 ev/ionisation
-          Hrate = Hrate + 10. * ev_to_erg                                &
-                * nH(icell) * xHI * cosray_HI                     
-          if (isH2) Hrate = Hrate + 10. * ev_to_erg                      &
-                          * nH(icell) * xH2 * cosray_H2    
-          if (isHe) Hrate = Hrate + 10. * ev_to_erg                      &
+          Hrate = Hrate + 10. * eV2erg                                   &
+                * nH(icell) * xHI * cosray_HI
+          if (isH2) Hrate = Hrate + 10. * eV2erg                      &
+                          * nH(icell) * xH2 * cosray_H2
+          if (isHe) Hrate = Hrate + 10. * eV2erg                      &
                           * nHe * xHeI * 1.1 * cosray_HI
        endif
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0.d0 ; metal_prime=0.d0             ! Metal cooling
-       if(Zsolar(icell) .gt. 0d0) & 
+       if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
        X_nHkb= X/(1.5 * nH(icell) * kB)            ! Multiplication factor
@@ -646,7 +641,7 @@ contains
                    + inp_coolrates_table(tbl_Beta_H3B,TK) * nH(icell)**2 &
                    * dxion(ixHI) * (dxion(ixHI) + xH2/ 8.)
        beta(ixHI)  = inp_coolrates_table(tbl_Beta_H2HI, TK) * dxion(ixHI)&
-                   + inp_coolrates_table(tbl_Beta_H2H2, TK) * xH2 
+                   + inp_coolrates_table(tbl_Beta_H2H2, TK) * xH2
        cr = alpha(ixHI) * dxion(ixHI)                        ! H2 Creation
        photoRate=0.
        if(rt) photoRate = SUM(signc(:,ixHI)*dNp)
@@ -675,7 +670,7 @@ contains
     if(isH2) dxion(ixHI)=dxHI
     ! Update xHII*********************************************************
     cr = (beta(ixHII)*ne+photoRate)*dxHI            !             Creation
-    if(cosmic_rays) cr = cr + cosray_HI * dxHI   
+    if(cosmic_rays) cr = cr + cosray_HI * dxHI
     de = alpha(ixHII) * ne                          !          Destruction
     dxion(ixHII) = (cr*ddt(icell)+dxion(ixHII))/(1.+de*ddt(icell))
     dxion(ixHII) = MIN(MAX(dxion(ixHII), x_MIN),1.d0)
@@ -733,7 +728,7 @@ contains
        ! Creation = recombination of HeII and electrons
        cr = alpha(ixHeII) * ne * dXion(ixHeII)
        ! Destruction = collisional ionization+photoionization of HeI
-       de = beta(ixHeII) * ne 
+       de = beta(ixHeII) * ne
        if(cosmic_rays) de = de + 1.1 * cosray_HI
        if(rt) de = de + SUM(signc(:,ixHeII)*dNp)
        if(haardt_madau) de = de + UVrates(ixHeII,1) * ss_factor
@@ -931,7 +926,7 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
         f_dust = 1d0-n_HII/nH
         C_H2   = aZ_H2 * nH * Zsol * f_dust                              &
                + aGP_H2 * n_E_min                                        &
-               + b_H3B * n_HI * (n_HI + n_H2/ 8.)  
+               + b_H3B * n_HI * (n_HI + n_H2/ 8.)
         D_H2   = b_H2HI * n_HI + b_H2H2 * n_H2 + g_H2 ! H2 destr. (s-1)
         if(cosmic_rays) D_H2 = D_H2 + cosray_H2
         f_H2   = C_H2 / max(D_H2,1d-50)         ! Cre/Destr [unitless]
@@ -1236,7 +1231,7 @@ SUBROUTINE updateRTGroups_CoolConstants()
   sigec=group_cse*rt_c_cgs                                    ! [cm3 s-1]
   do iP=1,nGroups
      do iI=1,nIons               ! Photoheating rates for photons on ions
-        PHrate(iP,iI) =  ev_to_erg * &        ! See eq (19) in Aubert(08)
+        PHrate(iP,iI) =  eV2erg * &        ! See eq (19) in Aubert(08)
              (sigec(iP,iI) * group_egy(iP) - signc(iP,iI)*ionEvs(iI))
         PHrate(iP,iI) = max(PHrate(iP,iI),0d0) !      No negative heating
      end do
@@ -1303,8 +1298,9 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   use rt_parameters, only: nGroups,iGroups,heat_unresolved_HII
 #endif
   use rt_hydro_commons
-  use rt_cooling_module, only: twopi, mH, rhoc, T2_min_fix, X
+  use rt_cooling_module, only:T2_min_fix, X
   use cooling_module,only:X
+  use constants,only:pi, twopi, factG_in_cgs,  mH, rhoc
   use mpi_mod
   implicit none
   integer::ilevel,ngrid
@@ -1348,7 +1344,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
      polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
-          & (twopi)*6.67e-8*scale_d*(scale_t/scale_l)**2
+          & twopi*factG_in_cgs*scale_d*(scale_t/scale_l)**2
   endif
 
   ! Loop over cells
@@ -1453,7 +1449,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      end do
 
      ! 3: COMPUTE LOCAL STROMGREN RADIUS =================================
-     stromgren_const = 3d0/4d0/3.1415926/alphab
+     stromgren_const = 3d0/4d0/pi/alphab
      do i=1,nleaf
         r_strom(i) = (stromgren_const * lum(i) / nH(i)**2)**0.3333333334
      end do

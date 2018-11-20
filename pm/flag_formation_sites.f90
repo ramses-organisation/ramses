@@ -10,6 +10,7 @@ subroutine flag_formation_sites
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
   use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
+  use constants
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -50,7 +51,7 @@ subroutine flag_formation_sites
 
   ! Gravitational constant
   factG=1d0
-  if(cosmo)factG=3d0/8d0/3.1415926*omega_m*aexp
+  if(cosmo)factG=3d0/4d0/twopi*omega_m*aexp
 
   ! Loop over sinks and mark all clumps which are already occupied by a sink
   allocate(occupied(1:npeaks_max),form(1:npeaks_max))
@@ -141,11 +142,11 @@ subroutine flag_formation_sites
         ! Halo must have no existing sink
         ok=ok.and.occupied(jj)==0
         ! Halo mass has to be larger than some threshold
-        ok=ok.and.halo_mass(jj)>mass_halo_AGN*2d33/(scale_d*scale_l**3.0)
+        ok=ok.and.halo_mass(jj)>mass_halo_AGN*M_sun/(scale_d*scale_l**3.0)
         ! 4-cell ball mass has to be larger than some threshold
-        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*2d33/(scale_d*scale_l**3.0)
+        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*M_sun/(scale_d*scale_l**3.0)
         ! 4-cell ball av. density has to be larger that SF threshold
-        ok=ok.and.clump_mass4(jj)/(4./3.*ACOS(-1.d0)*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
+        ok=ok.and.clump_mass4(jj)/(4./3.*pi*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
         ! Peak density has to be larger than star formation thresold
         !ok=ok.and.max_dens(jj)>10.0*n_star/scale_nH
         !ok=ok.and.max_dens(jj)>n_star/scale_nH
@@ -177,7 +178,7 @@ subroutine flag_formation_sites
         ! Peak has to be dense enough
         ok=ok.and.max_dens(jj)>d_sink
         ! Clump has to be massive enough
-        ok=ok.and.clump_mass4(jj)>mass_sink_seed*2d33/(scale_d*scale_l**3.0)
+        ok=ok.and.clump_mass4(jj)>mass_sink_seed*M_sun/(scale_d*scale_l**3.0)
 !!$        ! Clump has to be contracting
 !!$        ok=ok.and.contracting(jj)
 !!$        ! Clump has to be virialized
@@ -185,7 +186,7 @@ subroutine flag_formation_sites
         ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
         ok=ok.and.(kinetic_support(jj)<-grav_term(jj))
 !!$        ! Avoid formation of crazy spins
-!!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*2d33/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
+!!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*M_sun/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
         ! Clumps should not be thermally supported against gravity
         ok=ok.and.(thermal_support(jj)<-grav_term(jj))
         ! Then create a sink at the peak position
@@ -228,7 +229,7 @@ subroutine flag_formation_sites
              & ,real(clump_velocity(j,1)*scale_v/1d5,kind=dp)&
              & ,real(clump_velocity(j,2)*scale_v/1d5,kind=dp)&
              & ,real(clump_velocity(j,3)*scale_v/1d5,kind=dp)&
-             & ,real(clump_mass(j)*scale_m/2d33,kind=dp)&
+             & ,real(clump_mass(j)*scale_m/M_sun,kind=dp)&
              & ,real(max_dens(j)*scale_d,kind=dp)&
              & ,real(sqrt(kinetic_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
              & ,real(sqrt(thermal_support(j)/(clump_mass(j)+tiny(1.d0)))*scale_v/1d5,kind=dp)&
@@ -287,9 +288,10 @@ subroutine compute_clump_properties_round2
   use pm_commons, ONLY:cont_speed
   use pm_parameters
 #ifdef RT
-  use rt_parameters, only: nGroups,ev_to_erg,iGroups,group_egy,c_cgs
+  use rt_parameters, only: nGroups,iGroups,group_egy
   use rt_hydro_commons, only:rtuold
   use rt_cooling_module, only:kappaSc
+  use constants
 #endif
 
   use mpi_mod
@@ -333,9 +335,9 @@ subroutine compute_clump_properties_round2
 
 #ifdef RT
   call rt_units(scale_Np, scale_Fp)
-  ev_to_uu=ev_to_erg/(scale_d * scale_l**3 * scale_v**2)
+  ev_to_uu=eV2erg/(scale_d * scale_l**3 * scale_v**2)
   do ig=1,nGroups
-     Np2Ep_flux(ig)=(scale_Fp * group_egy(ig) * ev_to_erg)/(scale_d * scale_v**3)
+     Np2Ep_flux(ig)=(scale_Fp * group_egy(ig) * eV2erg)/(scale_d * scale_v**3)
   end do
   scale_kappa=(scale_d*scale_l)**(-1.d0)
   c_code=c_cgs/scale_v

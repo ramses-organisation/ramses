@@ -38,7 +38,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
 ! species=> ion species, used as an argument in fx
 ! func   => Function which is integrated (of X, Y, species)
 !-------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs,eV_to_erg, hp
+  use constants,only:c_cgs, eV2erg, hplanck
   real(kind=8):: integrateSpectrum, X(N), Y(N), e0, e1
   integer :: N, species
   interface
@@ -57,8 +57,8 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   if(N .le. 2) RETURN
   ! Convert energy interval to wavelength interval
   la0 = X(1) ; la1 = X(N)
-  if(e1.gt.0) la0 = max(la0, 1.d8 * hp * c_cgs / e1 / eV_to_erg)
-  if(e0.gt.0) la1 = min(la1, 1.d8 * hp * c_cgs / e0 / eV_to_erg)
+  if(e1.gt.0) la0 = max(la0, 1.d8 * hplanck * c_cgs / e1 / eV2erg)
+  if(e0.gt.0) la1 = min(la1, 1.d8 * hplanck * c_cgs / e0 / eV2erg)
   if(la0 .ge. la1) RETURN
   ! If we get here, the [la0, la1] inverval is completely within X
   allocate(xx(N)) ; allocate(yy(N)) ; allocate(f(N))
@@ -171,14 +171,14 @@ FUNCTION getCrosssection(lambda, species)
 ! species => ixHI (H2), ixHII (HI), ixHeII (HeI) or ixHeIII (HeII)
 ! returns :  photoionization or photodissociation cross-section in cm^2
 !------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs, eV_to_erg, ionEvs, hp, ixHI, ixHII      &
-                        ,ixHeII, ixHeIII
+  use rt_parameters,only:ionEvs, ixHI, ixHII, ixHeII, ixHeIII
+  use constants,only:c_cgs, eV2erg, hplanck
   real(kind=8)      :: lambda, getCrosssection
   integer           :: species
   real(kind=8)      :: E0=1., cs0=0., P=1., ya=1., yw=0., y0=0., y1=1.
   real(kind=8)      :: E, x, y
 !------------------------------------------------------------------------
-  E = hp * c_cgs/(lambda*1.d-8) / ev_to_erg         ! photon energy in ev
+  E = hplanck * c_cgs/(lambda*1.d-8) / eV2erg         ! photon energy in ev
   if ( E .lt. ionEvs(species) ) then            ! below ionization energy
      getCrosssection=0.
      RETURN
@@ -491,7 +491,7 @@ SUBROUTINE update_SED_group_props()
      else
         Z = max(z_ave*0.02, 10.d-5)                     ! [m_metals/m_tot]
      endif
-     call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 m_sun-1]
+     call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 M_sun-1]
      call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [ev]
      do ii=1,nIons
         call inp_SED_table(age, Z, 2+2*ii, .true., csn_star(:,ii))! [cm^2]
@@ -689,12 +689,12 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
 ! returns: Photon luminosity in, [# s-1 Msun-1],
 !                             or [eV s-1 Msun-1] if SED_isEgy=true
 !-------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs, hp, ev_to_erg, SED_isEgy
+  use rt_parameters,only:SED_isEgy
   use spectrum_integrator_module
+  use constants,only:L_sun, c_cgs, hplanck, eV2erg
   real(kind=8):: getSEDLuminosity, X(n), Y(n), e0, e1
   integer :: N, species
-  real(kind=8),parameter :: const=1.0e-8/hp/c_cgs
-  real(kind=8),parameter :: Lsun=3.8256d33 ! Solar luminosity [erg/s]
+  real(kind=8),parameter :: const=1.0e-8/hplanck/c_cgs
   ! const is a div by ph energy => ph count.  1e-8 is a conversion into
   ! cgs, since wly=[angstrom] h=[erg s-1], c=[cm s-1]
 !-------------------------------------------------------------------------
@@ -702,11 +702,11 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   if(.not. SED_isEgy) then               !  Photon number per sec per Msun
      getSEDLuminosity = const &
           * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
-     getSEDLuminosity = getSEDLuminosity*Lsun  ! Scale by solar luminosity
+     getSEDLuminosity = getSEDLuminosity*L_sun  ! Scale by solar luminosity
   else                             ! SED_isEgy=true -> eV per sec per Msun
      getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
      ! Scale by solar lum and convert to eV (bc group energies are in eV)
-     getSEDLuminosity = getSEDLuminosity/eV_to_erg*Lsun
+     getSEDLuminosity = getSEDLuminosity/eV2erg*L_sun
   endif
 END FUNCTION getSEDLuminosity
 
@@ -717,11 +717,11 @@ FUNCTION getSEDEgy(X, Y, N, e0, e1)
 ! Y(X). Assumes X is in Angstroms and Y is energy weight per angstrom
 ! (not photon count).
 !-------------------------------------------------------------------------
-  use rt_parameters,only:c_cgs, eV_to_erg, hp
+  use constants,only:c_cgs, eV2erg, hplanck
   use spectrum_integrator_module
   real(dp):: getSEDEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
-  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg! energy conversion
+  real(dp),parameter :: const=1.d8*hplanck*c_cgs/eV2erg! energy conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
   norm         = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
@@ -884,8 +884,8 @@ SUBROUTINE write_SEDtable()
 
 ! Write the SED properties to a file (this is just in debugging, to check
 ! if the SEDs are being read correctly).
-! Photon group properties: age [Gyr], metal mass fraction, 
-! luminosity [photons s-1 Msun-1], cumulative luminosity [photons Msun-1], 
+! Photon group properties: age [Gyr], metal mass fraction,
+! luminosity [photons s-1 Msun-1], cumulative luminosity [photons Msun-1],
 ! group energy [ergs], csn_HX [cm2], cse_HX [cm2], where HX=H2, HI, HeI,
 ! and HeII; H2 and He are optional
 !-------------------------------------------------------------------------
@@ -1070,9 +1070,9 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   scale = boxlen/dble(nx_loc) ! usually scale == 1
   dx_loc = dx*scale
   vol_loc = dx_loc**ndim
-  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun
+  scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / M_sun
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
-  scale_msun = scale_d * scale_l**ndim / m_sun
+  scale_msun = scale_d * scale_l**ndim / M_sun
   t_sne_Gyr = t_sne / 1d3
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
@@ -1239,8 +1239,8 @@ MODULE UV_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
   use spectrum_integrator_module
-  use rt_parameters,only:c_cgs, eV_to_erg, hp, nIons, nIonsUsed, ionEVs  &
-                        ,nGroups
+  use rt_parameters,only:nIons, nIonsUsed, ionEVs, nGroups
+  use constants,only:pi, c_cgs, eV2erg, hplanck
 
   implicit none
 
@@ -1270,7 +1270,6 @@ MODULE UV_module
   real(dp),allocatable,dimension(:,:,:)::UV_groups_table
   ! The tables do not have constant redshift intervals, so we need to
   ! first locate the correct interval when doing interpolation.
-  real(dp),parameter::fourPi=12.566371
   ! ----------------------------------------------------------------------
 
 CONTAINS
@@ -1579,7 +1578,7 @@ FUNCTION getUV_Irate(X, Y, N, species)
   real(kind=8):: getUV_Irate, X(N), Y(N)
   integer :: N, species
 !-------------------------------------------------------------------------
-  getUV_Irate = fourPi *  &
+  getUV_Irate = 4*pi *  &
            integrateSpectrum(X,Y,N,dble(ionEvs(species)),X(N),species,fsig)
 END FUNCTION getUV_Irate
 
@@ -1591,8 +1590,8 @@ FUNCTION getUV_Hrate(X, Y, N, species)
 !-------------------------------------------------------------------------
   real(kind=8):: getUV_Hrate, X(N), Y(N), e0
   integer :: N, species
-  real(kind=8),parameter :: const1=fourPi*1.d8*hp*c_cgs
-  real(kind=8),parameter :: const2=fourPi*eV_to_erg
+  real(kind=8),parameter :: const1=4*pi*1.d8*hplanck*c_cgs
+  real(kind=8),parameter :: const2=4*pi*eV2erg
 !-------------------------------------------------------------------------
   e0=ionEvs(species)
   getUV_Hrate = &
@@ -1611,7 +1610,7 @@ FUNCTION getUVFlux(X, Y, N, e0, e1)
   integer :: N, species
 !-------------------------------------------------------------------------
   species          = 1                   ! irrelevant but must be included
-  getUVflux = fourPi*integrateSpectrum(X, Y, N, e0, e1, species, f1)
+  getUVflux = 4*pi*integrateSpectrum(X, Y, N, e0, e1, species, f1)
 END FUNCTION getUVflux
 
 !*************************************************************************
@@ -1621,7 +1620,7 @@ FUNCTION getUVEgy(X, Y, N, e0, e1)
 !-------------------------------------------------------------------------
   real(dp):: getUVEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
-  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg    ! unit conversion
+  real(dp),parameter :: const=1.d8*hplanck*c_cgs/eV2erg    ! unit conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
   norm         = integrateSpectrum(X, Y, N, e0, e1, species, f1)

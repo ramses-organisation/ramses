@@ -154,6 +154,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use pm_commons
   use hydro_commons
   use random
+  use constants
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -211,26 +212,26 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
 
   ! Compute stochastic boost to account for target GMC mass
-  SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
+  SN_BOOST=MAX(mass_gmc*M_sun/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*Myr2sec/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*Myr2sec/scale_t
      current_time=t
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*2d33)/scale_v**2
+  ESN=1d51/(10.*M_sun)/scale_v**2
 
   ! Life time radiation specific energy from cgs to code units
-  ERAD=1d53/(10.*2d33)/scale_v**2
+  ERAD=1d53/(10.*M_sun)/scale_v**2
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -412,7 +413,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! For IR radiation trapping,
   ! we use a fixed length to estimate the column density of gas
-  delta_x=200.*3d18
+  delta_x=200.*pc2cm
   if(metal)then
      tau_factor=kappa_IR*delta_x*scale_d/0.02
   else
@@ -472,6 +473,7 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
+  use constants, only:Myr2sec
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -525,10 +527,10 @@ subroutine kinetic_feedback
   ! Lifetime of Giant Molecular Clouds from Myr to code units
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*Myr2sec/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*Myr2sec/scale_t
      current_time=t
   endif
 
@@ -686,6 +688,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -727,7 +730,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
@@ -850,6 +853,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants
   use mpi_mod
   implicit none
   !------------------------------------------------------------------------
@@ -885,7 +889,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
@@ -895,10 +899,10 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  ESN=(1d51/(10d0*2d33))/scale_v**2
+  ESN=(1d51/(10d0*M_sun))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn

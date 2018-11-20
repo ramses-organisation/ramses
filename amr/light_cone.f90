@@ -466,6 +466,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   !            allocated correctly arrays posout,velout,zout.
   !===========================================================================
   use amr_parameters, ONLY: nvector
+  use constants, ONLY: pi
   implicit none
   logical :: justcount,verbose
   integer :: npart,npartout
@@ -479,16 +480,12 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: rot(3,3),rotm1(3,3),dist1,dist2
   real(kind=8) :: xcoordfr,ycoordfr,zcoordfr,xcoord,ycoord,zcoord
   real(kind=8) :: tany,tanz,dist,vxfr,vyfr,vzfr,dxtest1,dxtest2,facnorm
-  real(kind=8) :: pi
   real(kind=8) :: small=1d-5
 
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
 
   if (verbose) write(*,*) 'Entering perform_my_selection'
-
-  ! pi=3.14159
-  pi=acos(-1.0d0)
 
   ! Initialize cosmological parameters
   call init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)

@@ -4,7 +4,8 @@ subroutine star_formation(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
+  use cooling_module, ONLY: XH=>X
+  use constants
   use random
   use mpi_mod
   implicit none
@@ -44,7 +45,6 @@ subroutine star_formation(ilevel)
   real(kind=8)::mlost,mtot
 #endif
   real(kind=8)::PoissMean
-  real(dp),parameter::pi=0.5*twopi
   real(dp),dimension(1:3)::skip_loc
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
   real(dp)::mdebris
@@ -142,8 +142,8 @@ subroutine star_formation(ilevel)
 
   ! Star formation time scale from Gyr to code units
   ! SFR apply here for long lived stars only
-  t0=t_star*(1d9*365.*24.*3600.)/scale_t
-  trel=sf_trelax*1d6*(365.*24.*3600.)/scale_t
+  t0=t_star*Gyr2sec/scale_t
+  trel=sf_trelax*Myr2sec/scale_t
 
   ! ISM density threshold from H/cc to code units
   nISM = n_star

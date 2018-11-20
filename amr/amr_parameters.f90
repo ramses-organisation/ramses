@@ -284,14 +284,14 @@ module amr_parameters
   integer ,dimension(1:MAXBOUND)    ::kbound_max=0
   logical                           ::no_inflow=.false.
 
-  !Number of processes sharing one token
-  !Only one process can write at a time in an I/O group
+  ! Number of processes sharing one token
+  ! Only one process can write at a time in an I/O group
   integer::IOGROUPSIZE=0           ! Main snapshot
   integer::IOGROUPSIZECONE=0       ! Lightcone
   integer::IOGROUPSIZEREP=0        ! Subfolder size
-  logical::withoutmkdir=.false.    !If true mkdir should be done before the run
-  logical::print_when_io=.false.   !If true print when IO
-  logical::synchro_when_io=.false. !If true synchronize when IO
+  logical::withoutmkdir=.false.    ! If true mkdir should be done before the run
+  logical::print_when_io=.false.   ! If true print when IO
+  logical::synchro_when_io=.false. ! If true synchronize when IO
 
 
 
