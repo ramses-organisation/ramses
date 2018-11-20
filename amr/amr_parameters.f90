@@ -113,7 +113,7 @@ module amr_parameters
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0
   real(dp)::thetaz_cone=12.5d0
-  real(dp)::zmax_cone=2
+  real(dp)::zmax_cone=2d0
 
   ! Cosmology and physical parameters
   real(dp)::boxlen_ini               ! Box size in h-1 Mpc
@@ -234,19 +234,19 @@ module amr_parameters
   character(len=5),dimension(0:NVAR+3)::movie_vars_txt=''
 #endif
 
-  ! Refinement parameters for each level
-  real(dp),dimension(1:MAXLEVEL)::m_refine =-1 ! Lagrangian threshold
-  real(dp),dimension(1:MAXLEVEL)::r_refine =-1 ! Radius of refinement region
-  real(dp),dimension(1:MAXLEVEL)::x_refine = 0 ! Center of refinement region
-  real(dp),dimension(1:MAXLEVEL)::y_refine = 0 ! Center of refinement region
-  real(dp),dimension(1:MAXLEVEL)::z_refine = 0 ! Center of refinement region
+                                                 ! Refinement parameters for each level
+  real(dp),dimension(1:MAXLEVEL)::m_refine =-1   ! Lagrangian threshold
+  real(dp),dimension(1:MAXLEVEL)::r_refine =-1   ! Radius of refinement region
+  real(dp),dimension(1:MAXLEVEL)::x_refine = 0   ! Center of refinement region
+  real(dp),dimension(1:MAXLEVEL)::y_refine = 0   ! Center of refinement region
+  real(dp),dimension(1:MAXLEVEL)::z_refine = 0   ! Center of refinement region
   real(dp),dimension(1:MAXLEVEL)::exp_refine = 2 ! Exponent for distance
-  real(dp),dimension(1:MAXLEVEL)::a_refine = 1 ! Ellipticity (Y/X)
-  real(dp),dimension(1:MAXLEVEL)::b_refine = 1 ! Ellipticity (Z/X)
-  real(dp)::var_cut_refine=-1 ! Threshold for variable-based refinement
-  real(dp)::mass_cut_refine=-1 ! Mass threshold for particle-based refinement
-  integer::ivar_refine=-1 ! Variable index for refinement
-  logical::sink_refine=.false. ! Fully refine on sink particles
+  real(dp),dimension(1:MAXLEVEL)::a_refine = 1   ! Ellipticity (Y/X)
+  real(dp),dimension(1:MAXLEVEL)::b_refine = 1   ! Ellipticity (Z/X)
+  real(dp)::var_cut_refine=-1                    ! Threshold for variable-based refinement
+  real(dp)::mass_cut_refine=-1                   ! Mass threshold for particle-based refinement
+  integer::ivar_refine=-1                        ! Variable index for refinement
+  logical::sink_refine=.false.                   ! Fully refine on sink particles
 
   ! Initial condition files for each level
   logical::multiple=.false.
