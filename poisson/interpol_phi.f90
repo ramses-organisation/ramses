@@ -47,9 +47,9 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
 
   ! Compute fraction of timesteps for interpolation
   if (dtold(ilevel-1)> 0)then
-     tfrac=1.0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
+     tfrac=1.0d0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
   else
-     tfrac=0.
+     tfrac=0.d0
   end if
 
   ! Mesh size at level ilevel

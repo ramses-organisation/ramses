@@ -156,8 +156,8 @@ subroutine authorize_fine(ilevel)
                do i=1,ngrid
                   ! Test if cell overlaps the cpu
                   test=.true.
-                  xmin=xx(i,:)-0.5*dx_loc
-                  xmax=xx(i,:)+0.5*dx_loc
+                  xmin=xx(i,:)-0.5d0*dx_loc
+                  xmax=xx(i,:)+0.5d0*dx_loc
                   do idim=1,ndim
                      ! This needs to be a >=, not a >, to precisely match the
                      ! ordering/=case for refinement flagging
@@ -183,8 +183,8 @@ subroutine authorize_fine(ilevel)
                  do i=1,ngrid
                     ! Test if cell overlaps the cpu with new cpu map
                     test=.true.
-                    xmin=xx(i,:)-0.5*dx_loc
-                    xmax=xx(i,:)+0.5*dx_loc
+                    xmin=xx(i,:)-0.5d0*dx_loc
+                    xmax=xx(i,:)+0.5d0*dx_loc
                     do idim=1,ndim
                        ! This needs to be a >=, not a >, to precisely match the
                        ! ordering/=case for refinement flagging

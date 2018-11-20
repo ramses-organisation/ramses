@@ -57,7 +57,7 @@ subroutine flag_formation_sites
   allocate(occupied(1:npeaks_max),form(1:npeaks_max))
   occupied=0
   form=0
-  pos=0.0
+  pos=0
   if(myid==1 .and. clinfo .and. nsink>0)write(*,*)'Looping over ',nsink,' sinks and marking neighboring clumps'
 
   ! Block clumps (halo done later) that contain a sink for formation
@@ -122,7 +122,7 @@ subroutine flag_formation_sites
   ! -> criteria to be chosen depend on the physics
   ! -> this routine can be patched
   !------------------------------------------------------------------------------
-  pos=0.0
+  pos=0
   flag2=0
 
   ! Sort clumps by peak density in ascending order
@@ -142,13 +142,13 @@ subroutine flag_formation_sites
         ! Halo must have no existing sink
         ok=ok.and.occupied(jj)==0
         ! Halo mass has to be larger than some threshold
-        ok=ok.and.halo_mass(jj)>mass_halo_AGN*M_sun/(scale_d*scale_l**3.0)
+        ok=ok.and.halo_mass(jj)>mass_halo_AGN*M_sun/(scale_d*scale_l**3)
         ! 4-cell ball mass has to be larger than some threshold
-        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*M_sun/(scale_d*scale_l**3.0)
+        ok=ok.and.clump_mass4(jj)>mass_clump_AGN*M_sun/(scale_d*scale_l**3)
         ! 4-cell ball av. density has to be larger that SF threshold
-        ok=ok.and.clump_mass4(jj)/(4./3.*pi*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
+        ok=ok.and.clump_mass4(jj)/(4.d0/3.d0*pi*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
         ! Peak density has to be larger than star formation thresold
-        !ok=ok.and.max_dens(jj)>10.0*n_star/scale_nH
+        !ok=ok.and.max_dens(jj)>10.0d0*n_star/scale_nH
         !ok=ok.and.max_dens(jj)>n_star/scale_nH
         ! Then create a sink at the peak position
         if (ok)then
@@ -170,15 +170,15 @@ subroutine flag_formation_sites
          end if
      else
         ! Clump has to be peaky enough
-        ok=ok.and.relevance(jj)>0.
+        ok=ok.and.relevance(jj)>0
         ! Clump has to contain at least one cell
-        ok=ok.and.n_cells(jj)>0.
+        ok=ok.and.n_cells(jj)>0
         ! Clmup must have no existing sink
         ok=ok.and.occupied(jj)==0
         ! Peak has to be dense enough
         ok=ok.and.max_dens(jj)>d_sink
         ! Clump has to be massive enough
-        ok=ok.and.clump_mass4(jj)>mass_sink_seed*M_sun/(scale_d*scale_l**3.0)
+        ok=ok.and.clump_mass4(jj)>mass_sink_seed*M_sun/(scale_d*scale_l**3)
 !!$        ! Clump has to be contracting
 !!$        ok=ok.and.contracting(jj)
 !!$        ! Clump has to be virialized
@@ -186,7 +186,7 @@ subroutine flag_formation_sites
         ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
         ok=ok.and.(kinetic_support(jj)<-grav_term(jj))
 !!$        ! Avoid formation of crazy spins
-!!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*M_sun/(scale_d*scale_l**3.0)/(ir_cloud*dx_min/aexp))
+!!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*M_sun/(scale_d*scale_l**3)/(ir_cloud*dx_min/aexp))
         ! Clumps should not be thermally supported against gravity
         ok=ok.and.(thermal_support(jj)<-grav_term(jj))
         ! Then create a sink at the peak position
@@ -306,7 +306,7 @@ subroutine compute_clump_properties_round2
   integer::grid,nx_loc,ix,iy,iz,ind,idim
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(dp)::d,vol,ekk,err,etot,p,T2
-  real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0.,A2=0.,A3=0.
+  real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0, A2=0, A3=0
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::vd,xcell,xpeak,rrel,vrel,fgrav,skip_loc,frad
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -433,7 +433,7 @@ subroutine compute_clump_properties_round2
         ! Cell kinetic energy
         ekk=0.d0
         do i=1,3
-           ekk=ekk+0.5*d*vd(i)**2
+           ekk=ekk+0.5d0*d*vd(i)**2
         end do
 
         ! Cell radiation flux
@@ -452,7 +452,7 @@ subroutine compute_clump_properties_round2
 #endif
 
         ! Cell magnetic energy and magnetic pressure
-        emag=0.d0; pmag=0.0d0
+        emag=0; pmag=0
 #ifdef SOLVERmhd
         do i=1,3
            emag=emag+0.5d0*B(i)**2
@@ -548,7 +548,7 @@ subroutine compute_clump_properties_round2
 #endif
 
   ! Second time derivative of I
-  Icl_dd(1:npeaks)=2.*(grav_term(1:npeaks)+rad_term(1:npeaks)&
+  Icl_dd(1:npeaks)=2*(grav_term(1:npeaks)+rad_term(1:npeaks)&
        -Psurf(1:npeaks)-MagPsurf(1:npeaks)+MagTsurf(1:npeaks)&
        +kinetic_support(1:npeaks)+thermal_support(1:npeaks)+magnetic_support(1:npeaks))
 
@@ -694,13 +694,13 @@ subroutine jacobi(A,x,err2)
 
   n=3
   ! x is identity matrix initially
-  x = 0.0
+  x = 0
   do i=1,n
-     x(i,i) = 1.0
+     x(i,i) = 1
   end do
 
   ! sum all squared off-diagonal elements
-  b2 = 0.0
+  b2 = 0
   do i=1,n
      do j=1,n
         if (i.ne.j) b2 = b2 + A(i,j)**2
@@ -713,20 +713,20 @@ subroutine jacobi(A,x,err2)
   endif
 
   ! average for off-diagonal elements /2
-  bar = 0.5*b2/9.
+  bar = 0.5d0*b2/9.d0
 
   do while (b2 > err2)
      do i=1,n-1
         do j=i+1,n
            if (A(j,i)**2 <= bar) cycle  ! do not touch small elements
            dummy=b2
-           b2 = b2 - 2.0*A(j,i)**2
-           bar = max(0.5*b2/9.,0.) !deal with weird optimized arithmetics...
+           b2 = b2 - 2*A(j,i)**2
+           bar = max(0.5d0*b2/9.d0,0.d0) !deal with weird optimized arithmetics...
            ! calculate coefficient c and s for Givens matrix
-           beta = (A(j,j)-A(i,i))/(2.0*A(j,i))
-           coeff = 0.5*beta*(1.0+beta**2)**(-0.5)
-           s = (max(0.5+coeff,0.0))**0.5
-           c = (max(0.5-coeff,0.0))**0.5
+           beta = (A(j,j)-A(i,i))/(2*A(j,i))
+           coeff = 0.5d0*beta*(1.0d0+beta**2)**(-0.5d0)
+           s = (max(0.5d0+coeff,0.0d0))**0.5d0
+           c = (max(0.5d0-coeff,0.0d0))**0.5d0
            ! update rows i and j
            do k=1,n
               cs =  c*A(i,k)+s*A(j,k)
@@ -884,7 +884,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 
      ! compute pressure in cell
      do jdim=1,ndim
-        ekk_cell(j)=ekk_cell(j)+0.5*uold(ind_cell(j),jdim+1)**2
+        ekk_cell(j)=ekk_cell(j)+0.5d0*uold(ind_cell(j),jdim+1)**2
      end do
      ekk_cell(j)=ekk_cell(j)/max(uold(ind_cell(j),1),smallr)
 
@@ -898,7 +898,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
         err_cell(j)=err_cell(j)+uold(ind_cell(j),nener_offset+irad)
      end do
 #endif
-     P_cell(j)=(gamma-1.0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j)-emag_cell(j))
+     P_cell(j)=(gamma-1.d0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j)-emag_cell(j))
   end do
 
   do j=1,np
@@ -932,23 +932,23 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                  xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc
 
                  if (clump_nr(j)>0)then
-                    r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc*0.5&
+                    r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i2-1)*dx_loc*0.5d0&
                          -center_of_mass(loc_clump_nr(j),1)
 
-                    if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                    if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
+                    if (period(1) .and. r(j,1)>boxlen*0.5d0)r(j,1)=r(j,1)-boxlen
+                    if (period(1) .and. r(j,1)<boxlen*(-0.5d0))r(j,1)=r(j,1)+boxlen
 
-                    r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5&
+                    r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j2-1)*dx_loc*0.5d0&
                          -center_of_mass(loc_clump_nr(j),2)
 
-                    if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                    if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
+                    if (period(2) .and. r(j,2)>boxlen*0.5d0)r(j,2)=r(j,2)-boxlen
+                    if (period(2) .and. r(j,2)<boxlen*(-0.5d0))r(j,2)=r(j,2)+boxlen
 
-                    r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5&
+                    r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k2-1)*dx_loc*0.5d0&
                          -center_of_mass(loc_clump_nr(j),3)
 
-                    if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                    if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
+                    if (period(3) .and. r(j,3)>boxlen*0.5d0)r(j,3)=r(j,3)-boxlen
+                    if (period(3) .and. r(j,3)<boxlen*(-0.5d0))r(j,3)=r(j,3)+boxlen
 
                  endif
               end do
@@ -1008,9 +1008,9 @@ subroutine surface_int_np(ind_cell,np,ilevel)
               do j=1,np
                  if (ok(j))then
 
-                    ekk_neigh=0.d0
+                    ekk_neigh=0
                     do jdim=1,ndim
-                       ekk_neigh=ekk_neigh+0.5*uold(cell_index(j),jdim+1)**2
+                       ekk_neigh=ekk_neigh+0.5d0*uold(cell_index(j),jdim+1)**2
                     end do
                     ekk_neigh=ekk_neigh/max(uold(cell_index(j),1),smallr)
 
@@ -1026,7 +1026,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                        err_neigh=err_neigh+uold(cell_index(j),nener_offset+irad)
                     end do
 #endif
-                    P_neigh=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
+                    P_neigh=(gamma-1.0d0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
 
                     ! add to the actual terms for the virial analysis
                     Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh + P_cell(j)) * r_dot_n(j) * dx_loc**2
@@ -1052,40 +1052,40 @@ subroutine surface_int_np(ind_cell,np,ilevel)
            do i3=0,3
               if((k3-1.5)**2+(j3-1.5)**2+(i3-1.5)**2==2.75)then !check whether common face exists
 
-                 n=0.
-                 if (k3==0)n(3)=-1.d0
-                 if (k3==3)n(3)=1.d0
-                 if (j3==0)n(2)=-1.d0
-                 if (j3==3)n(2)=1.d0
-                 if (i3==0)n(1)=-1.d0
-                 if (i3==3)n(1)=1.d0
-                 if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong lenght'
+                 n=0
+                 if (k3==0)n(3)=-1
+                 if (k3==3)n(3)= 1
+                 if (j3==0)n(2)=-1
+                 if (j3==3)n(2)= 1
+                 if (i3==0)n(1)=-1
+                 if (i3==3)n(1)= 1
+                 if (n(1)**2+n(2)**2+n(3)**2/=1)print*,'n has wrong length'
 
-                 r=0.d0
+                 r=0
                  do j=1,np
 
-                    xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0
-                    xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0
-                    xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0
+                    xtest(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5d0)*dx_loc/2
+                    xtest(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5d0)*dx_loc/2
+                    xtest(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5d0)*dx_loc/2
 
                     if (clump_nr(j)>0)then
-                       r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5)*dx_loc/2.0*0.5&
+                       r(j,1)=(xg(ind_grid(j),1)+xc(indv(j),1)-skip_loc(1))*scale+(i3-1.5d0)*dx_loc/4&
                             -center_of_mass(loc_clump_nr(j),1)
 
-                       if (period(1) .and. r(j,1)>boxlen*0.5)r(j,1)=r(j,1)-boxlen
-                       if (period(1) .and. r(j,1)<boxlen*(-0.5))r(j,1)=r(j,1)+boxlen
+                       if (period(1) .and. r(j,1)>boxlen*0.5d0)r(j,1)=r(j,1)-boxlen
+                       if (period(1) .and. r(j,1)<boxlen*(-0.5d0))r(j,1)=r(j,1)+boxlen
 
-                       r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5)*dx_loc/2.0*0.5&
+                       r(j,2)=(xg(ind_grid(j),2)+xc(indv(j),2)-skip_loc(2))*scale+(j3-1.5d0)*dx_loc/4&
                             -center_of_mass(loc_clump_nr(j),2)
 
-                       if (period(2) .and. r(j,2)>boxlen*0.5)r(j,2)=r(j,2)-boxlen
-                       if (period(2) .and. r(j,2)<boxlen*(-0.5))r(j,2)=r(j,2)+boxlen
+                       if (period(2) .and. r(j,2)>boxlen*0.5d0)r(j,2)=r(j,2)-boxlen
+                       if (period(2) .and. r(j,2)<boxlen*(-0.5d0))r(j,2)=r(j,2)+boxlen
 
-                       r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5)*dx_loc/2.0*0.5&
+                       r(j,3)=(xg(ind_grid(j),3)+xc(indv(j),3)-skip_loc(3))*scale+(k3-1.5d0)*dx_loc/4&
                             -center_of_mass(loc_clump_nr(j),3)
 
-                       if (period(3) .and. r(j,3)>boxlen*0.5)r(j,3)=r(j,3)-boxlen
-                       if (period(3) .and. r(j,3)<boxlen*(-0.5))r(j,3)=r(j,3)+boxlen
+                       if (period(3) .and. r(j,3)>boxlen*0.5d0)r(j,3)=r(j,3)-boxlen
+                       if (period(3) .and. r(j,3)<boxlen*(-0.5d0))r(j,3)=r(j,3)+boxlen
 
                     endif
                  end do
@@ -1094,7 +1094,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                  ok=.false.
                  do j=1,np
                     ! check wether neighbor is in a leaf cell at the right level
-                    if(son(cell_index(j))==0.and.cell_levl(j)==(ilevel+1))ok(j)=.true.
+                    if(son(cell_index(j))==0 .and. cell_levl(j)==(ilevel+1))ok(j)=.true.
                  end do
 
                  do j=1,np
@@ -1147,7 +1147,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 
                        ekk_neigh=0.d0
                        do jdim=1,ndim
-                          ekk_neigh=ekk_neigh+0.5*uold(cell_index(j),jdim+1)**2
+                          ekk_neigh=ekk_neigh+0.5d0*uold(cell_index(j),jdim+1)**2
                        end do
                        ekk_neigh=ekk_neigh/max(uold(cell_index(j),1),smallr)
 
@@ -1163,7 +1163,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                           err_neigh=err_neigh+uold(cell_index(j),nener_offset+irad)
                        end do
 #endif
-                       P_neigh=(gamma-1.0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
+                       P_neigh=(gamma-1.0d0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
 
                        ! add to the actual terms for the virial analysis
                        Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh + P_cell(j)) * r_dot_n(j) * 0.25d0 * dx_loc**2

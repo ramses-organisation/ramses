@@ -341,7 +341,7 @@ subroutine cmp_new_cpu_map
   npart_sub=0
   ncell_sub=0
   ncell_loc=1
-  dx=1.0*scale
+  dx=1.0d0*scale
   do iz=0,nz-1
   do iy=0,ny-1
   do ix=0,nx-1
@@ -736,24 +736,24 @@ subroutine cmp_ordering(x,order,nn)
 #if NDIM>1
   if(ordering=='angular')then
      ! Angular domain decomposition
-     xc=boxlen/2.
-     yc=boxlen/2.
+     xc=boxlen/2
+     yc=boxlen/2
 #if NDIM>2
-     zc=boxlen/2.
+     zc=boxlen/2
 #endif
      do i=1,nn
-        xx=x(i,1)-xc+1d-10
+        xx=x(i,1)-xc+1.d-10
         yy=x(i,2)-yc
 #if NDIM>2
         zz=x(i,3)
 #endif
         if(xx>0.)then
-           order(i)=atan(yy/xx)+acos(-1.)/2.
+           order(i)=atan(yy/xx)+acos(-1.d0)/2.d0
         else
-           order(i)=atan(yy/xx)+acos(-1.)*3./2.
+           order(i)=atan(yy/xx)+acos(-1.d0)*3.d0/2.d0
         endif
 #if NDIM>2
-        if(zz.gt.zc)order(i)=order(i)+2.*acos(-1.)
+        if(zz.gt.zc)order(i)=order(i)+2.d0*acos(-1.d0)
 #endif
      end do
   end if
@@ -834,7 +834,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   real(kind=8)::zz,zc
 #endif
   real(kind=8)::scale,bscaleloc,bscale
-  real(qdp)::dkey,oneqdp=1.0
+  real(qdp)::dkey,oneqdp=1
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -853,61 +853,61 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   if(ordering=='angular')then
      ! Angular domain decomposition
      dxx=0.5d0*dx
-     xc=boxlen/2.
-     yc=boxlen/2.
+     xc=boxlen/2
+     yc=boxlen/2
 #if NDIM>2
-     zc=boxlen/2.
+     zc=boxlen/2
 #endif
      do i=1,nn
         if(dx==boxlen)then
-           order_min(i)=0.
-           order_max(i)=4.*acos(-1.)
+           order_min(i)=0
+           order_max(i)=4.d0*acos(-1.d0)
         else
            ! x- y-
            yy=x(i,2)-yc-dxx
            xx=x(i,1)-xc-dxx
            if(xx.ge.0.)then
               xx=xx+1d-10
-              theta1=atan(yy/xx)+acos(-1.)/2.
+              theta1=atan(yy/xx)+acos(-1.d0)/2
            else
               xx=xx-1d-10
-              theta1=atan(yy/xx)+acos(-1.)*3./2.
+              theta1=atan(yy/xx)+acos(-1.d0)*3.d0/2.d0
            endif
            ! x+ y-
            xx=x(i,1)-xc+dxx
            if(xx.gt.0.)then
               xx=xx+1d-10
-              theta2=atan(yy/xx)+acos(-1.)/2.
+              theta2=atan(yy/xx)+acos(-1.d0)/2
            else
               xx=xx-1d-10
-              theta2=atan(yy/xx)+acos(-1.)*3./2.
+              theta2=atan(yy/xx)+acos(-1.d0)*3.d0/2.d0
            endif
 
            ! x+ y+
            yy=x(i,2)-yc+dxx
            if(xx.gt.0.)then
               xx=xx+1d-10
-              theta3=atan(yy/xx)+acos(-1.)/2.
+              theta3=atan(yy/xx)+acos(-1.d0)/2.d0
            else
               xx=xx-1d-10
-              theta3=atan(yy/xx)+acos(-1.)*3./2.
+              theta3=atan(yy/xx)+acos(-1.d0)*3.d0/2.d0
            endif
            ! x- y+
            xx=x(i,1)-xc-dxx
            if(xx.ge.0.)then
               xx=xx+1d-10
-              theta4=atan(yy/xx)+acos(-1.)/2.
+              theta4=atan(yy/xx)+acos(-1.d0)/2.d0
            else
               xx=xx-1d-10
-              theta4=atan(yy/xx)+acos(-1.)*3./2.
+              theta4=atan(yy/xx)+acos(-1.d0)*3.d0/2.d0
            endif
            order_min(i)=min(theta1,theta2,theta3,theta4)
            order_max(i)=max(theta1,theta2,theta3,theta4)
 #if NDIM>2
            zz=x(i,3)
            if(zz.gt.zc)then
-              order_min(i)=order_min(i)+2.*acos(-1.)
-              order_max(i)=order_max(i)+2.*acos(-1.)
+              order_min(i)=order_min(i)+2.d0*acos(-1.d0)
+              order_max(i)=order_max(i)+2.d0*acos(-1.d0)
            endif
 #endif
         endif

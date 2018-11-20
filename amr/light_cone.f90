@@ -38,8 +38,8 @@ subroutine output_cone()
 
   if(nstep_coarse.lt.2)return
 
-  z2=1./aexp_old-1.
-  z1=1./aexp-1.
+  z2=1/aexp_old-1.d0
+  z1=1/aexp-1.d0
 
   if(z2.gt.zmax_cone)return
   if(abs(z2-z1)<1d-6)return

@@ -29,7 +29,7 @@ subroutine init_sink
   allocate(msink(1:nsinkmax))
   allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
-  xsink=boxlen/2.
+  xsink=boxlen/2
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
   allocate(delta_mass(1:nsinkmax))
@@ -41,7 +41,7 @@ subroutine init_sink
   allocate(fsink(1:nsinkmax,1:ndim))
 
   allocate(msum_overlap(1:nsinkmax))
-  msum_overlap=0.0
+  msum_overlap=0
   allocate(rho_sink_tff(levelmin:nlevelmax))
 
   ! Temporary sink variables
@@ -239,9 +239,9 @@ subroutine init_sink
         nindsink=nindsink+1
         idsink(nsink)=nindsink
         msink(nsink)=sm1
-        xsink(nsink,1)=sx1+boxlen/2.0
-        xsink(nsink,2)=sx2+boxlen/2.0
-        xsink(nsink,3)=sx3+boxlen/2.0
+        xsink(nsink,1)=sx1+boxlen/2
+        xsink(nsink,2)=sx2+boxlen/2
+        xsink(nsink,3)=sx3+boxlen/2
         vsink(nsink,1)=sv1
         vsink(nsink,2)=sv2
         vsink(nsink,3)=sv3
@@ -308,11 +308,11 @@ subroutine compute_ncloud_sink
   ncloud_sink=0
   ncloud_sink_massive=0
   do kk=-2*ir_cloud,2*ir_cloud
-     zz=dble(kk)/2.0
+     zz=dble(kk)/2
      do jj=-2*ir_cloud,2*ir_cloud
-        yy=dble(jj)/2.0
+        yy=dble(jj)/2
         do ii=-2*ir_cloud,2*ir_cloud
-           xx=dble(ii)/2.0
+           xx=dble(ii)/2
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
            if(rr<=dble(ir_cloud_massive))ncloud_sink_massive=ncloud_sink_massive+1

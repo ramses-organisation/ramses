@@ -62,7 +62,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_hydro_commons
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
-  use constants, only: a_r
+  use constants, only: a_r, Myr2sec
 #endif
   use mpi_mod
   implicit none
@@ -76,7 +76,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer::i,ind,iskip,idim,nleaf,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
-  real(dp)::polytropic_constant=1.
+  real(dp)::polytropic_constant=1
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
@@ -122,16 +122,16 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 
   ! Typical ISM density in H/cc
-  nISM = n_star; nCOM=0d0
+  nISM = n_star; nCOM=0
   if(cosmo)then
-     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*X/mH
+     nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*X/mH
   endif
   nISM = MAX(nCOM,nISM)
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
-     polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
-          & (twopi)*6.67e-8*scale_d*(scale_t/scale_l)**2
+     polytropic_constant=2.d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
+          & twopi*6.67d-8*scale_d*(scale_t/scale_l)**2
   endif
 
 #ifdef RT
@@ -173,7 +173,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute metallicity in solar units
      if(metal)then
         do i=1,nleaf
-           Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/0.02
+           Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/0.02d0
         end do
      else
         do i=1,nleaf
@@ -214,7 +214,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               ! For rad. temperature,  weigh the energy in each group by
               ! its opacity over IR opacity (derived from IR temperature)
               E_rad = group_egy(iIR) * eV2erg * NIRtot * scale_Np
-              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)     ! IR temp.
+              TR = max(0d0, (E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
                  if(i .ne. iIR)                                          &
@@ -222,14 +222,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
               end do
-              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! Rad. temp.
+              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:
-              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
+              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1.d3)
            endif
            kIR = kIR*scale_d*scale_l           !  Convert to code units
            flux = rtuold(il,iNp+1:iNp+ndim)
            xHII = uold(il,iIons-1+ixHII)/uold(il,1)
-           f_dust = (1.-xHII)                     ! No dust in ionised gas
+           f_dust = (1.d0-xHII)                     ! No dust in ionised gas
            work = scale_v/c_cgs * kIR * sum(uold(il,2:ndim+1)*flux) &
                 * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
 
@@ -254,7 +254,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
      do idim=1,ndim
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5*uold(ind_leaf(i),idim+1)**2/nH(i)
+           ekk(i)=ekk(i)+0.5d0*uold(ind_leaf(i),idim+1)**2/nH(i)
         end do
      end do
      do i=1,nleaf
@@ -278,7 +278,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
 #endif
      do i=1,nleaf
-        T2(i)=(gamma-1.0)*(T2(i)-ekk(i)-err(i)-emag(i))
+        T2(i)=(gamma-1.0d0)*(T2(i)-ekk(i)-err(i)-emag(i))
      end do
 
      ! Compute T2=T/mu in Kelvin
@@ -294,7 +294,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute radiation boost factor
      if(self_shielding)then
         do i=1,nleaf
-           boost(i)=MAX(exp(-nH(i)/0.01),1.0D-20)
+           boost(i)=MAX(exp(-nH(i)/0.01d0),1.0D-2)
         end do
 #ifdef ATON
      else if (aton) then
@@ -305,7 +305,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
      else
         do i=1,nleaf
-           boost(i)=1.0
+           boost(i)=1
         end do
      endif
 
@@ -318,7 +318,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         end do
      else
         do i=1,nleaf
-           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0)
+           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
         end do
      endif
      !==========================================
@@ -416,12 +416,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(metal)then
               gr_metal_density(i) = uold(ind_leaf(i),imetal)
            else
-              gr_metal_density(i) = uold(ind_leaf(i),1)*0.02*z_ave
+              gr_metal_density(i) = uold(ind_leaf(i),1)*0.02d0*z_ave
            endif
-           gr_energy(i) = T2(i)/(scale_T2*(gamma-1.0))
+           gr_energy(i) = T2(i)/(scale_T2*(gamma-1.0d0))
            gr_HI_density(i) = X*gr_density(i)
-           gr_HeI_density(i) = (1.0-X)*gr_density(i)
-           gr_DI_density(i) = 2.0*3.4e-5*gr_density(i)
+           gr_HeI_density(i) = (1.0d0-X)*gr_density(i)
+           gr_DI_density(i) = 2*3.4d-5*gr_density(i)
         enddo
         ! Update grid properties
         my_grackle_fields%grid_rank = gr_rank
@@ -438,7 +438,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
 
         do i = 1, nleaf
-           T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0)
+           T2_new(i) = gr_energy(i)*scale_T2*(gamma-1.0d0)
         end do
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      else
@@ -507,11 +507,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(cooling.or.neq_chem)then
         ! Compute net energy sink
         do i=1,nleaf
-           delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0)
+           delta_T2(i) = delta_T2(i)*nH(i)/scale_T2/(gamma-1.0d0)
         end do
         ! Compute initial fluid internal energy
         do i=1,nleaf
-           T2(i) = T2(i)*nH(i)/scale_T2/(gamma-1.0)
+           T2(i) = T2(i)*nH(i)/scale_T2/(gamma-1.0d0)
         end do
         ! Turn off cooling in blast wave regions
         if(delayed_cooling)then
@@ -526,7 +526,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute polytrope internal energy
      do i=1,nleaf
-        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0)
+        T2min(i) = T2min(i)*nH(i)/scale_T2/(gamma-1.0d0)
      end do
 
      ! Update fluid internal energy
@@ -549,10 +549,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Update delayed cooling switch
      if(delayed_cooling)then
-        t_blast=t_diss*1d6*(365.*24.*3600.)
+        t_blast=t_diss*Myr2sec
         damp_factor=exp(-dtcool/t_blast)
         do i=1,nleaf
-           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0d0)
+           uold(ind_leaf(i),idelay)=max(uold(ind_leaf(i),idelay)*damp_factor,0.d0)
         end do
      endif
 
@@ -595,7 +595,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               ! For rad. temperature,  weigh the energy in each group by
               ! its opacity over IR opacity (derived from IR temperature)
               E_rad = group_egy(iIR) * eV2erg * NIRtot * scale_Np
-              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)     ! IR temp.
+              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
                  if(i .ne. iIR)                                          &
@@ -603,14 +603,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
               end do
-              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! Rad. temp.
+              TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)   ! Rad. temp.
               ! Set the IR opacity according to the rad. temperature:
-              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
+              kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1.d3)
            endif
-           f_dust = 1.-xion(ixHII,i)              ! No dust in ionised gas
+           f_dust = 1.d0-xion(ixHII,i)              ! No dust in ionised gas
            tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kIR
            f_trap = 0d0             ! Fraction IR photons that are trapped
-           if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0)
+           if(tau .gt. 0d0) f_trap = min(max(exp(-1.d0/tau), 0.d0), 1.d0)
            ! Update streaming photons, trapped photons, and tot energy:
            rtuold(il,iNp) = max(smallnp,(1d0-f_trap) * NIRtot) ! Streaming
            rtuold(il,iNp+1:iNp+ndim) = &            ! Limit streaming flux

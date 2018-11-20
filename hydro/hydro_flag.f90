@@ -187,7 +187,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use cooling_module, ONLY: twopi
+  use constants, only: pi
   implicit none
   integer::ncell,ilevel
   integer,dimension(1:nvector)::ind_cell
@@ -198,7 +198,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   ! P. Hennebelle 03/11/2005
   !-------------------------------------------------
   integer::i,indi
-  real(dp)::lamb_jeans,tail_pix,pi,n_jeans
+  real(dp)::lamb_jeans,tail_pix,n_jeans
   real(dp)::dens,tempe,etherm,factG
 #if NENER>0
   integer::irad
@@ -206,7 +206,6 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
 #ifdef SOLVERmhd
   real(dp)::emag
 #endif
-  pi = twopi / 2.
   factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
@@ -238,7 +237,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      end do
 #endif
      ! the temperature
-     tempe =  etherm / dens * (gamma -1.0)
+     tempe =  etherm / dens * (gamma - 1.0d0)
      ! prevent numerical crash due to negative temperature
      tempe = max(tempe,smallc**2)
      ! compute the Jeans length (remember G=1)

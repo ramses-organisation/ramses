@@ -196,11 +196,11 @@ subroutine create_cloud_from_sink
   rmass=dble(ir_cloud_massive)*dx_min
 
   do kk=-2*ir_cloud,2*ir_cloud
-     xrel(3)=dble(kk)*dx_min/2.0
+     xrel(3)=dble(kk)*dx_min/2
      do jj=-2*ir_cloud,2*ir_cloud
-        xrel(2)=dble(jj)*dx_min/2.0
+        xrel(2)=dble(jj)*dx_min/2
         do ii=-2*ir_cloud,2*ir_cloud
-           xrel(1)=dble(ii)*dx_min/2.0
+           xrel(1)=dble(ii)*dx_min/2
            rr=sqrt(sum(xrel**2))
            if(rr<=rmax)then
               do isink=1,nsink
@@ -227,13 +227,13 @@ subroutine create_cloud_from_sink
                           if(msink(isink)<mass_sink_direct_force*M_sun/(scale_d*scale_l**ndim))then
                              mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                           else
-                             mp(indp)=0.
+                             mp(indp)=0
                           endif
                        else
                           mp(indp)=msink(isink)/dble(ncloud_sink_massive)
                        endif
                     else
-                       mp(indp)        = 0.0d0
+                       mp(indp)        = 0
                     end if
                     xp(indp,1:ndim)       = xtest(1,1:ndim)
                     vp(indp,1:ndim)       = vsink(isink,1:ndim)
@@ -505,7 +505,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Compute volume of each cloud particle
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_cloud=(0.5D0**nlevelmax)*scale/aexp/2.0 ! factor of 2 hard-coded
+  dx_cloud=(0.5D0**nlevelmax)*scale/aexp/2 ! factor of 2 hard-coded
   vol_cloud=dx_cloud**ndim
 
   ! Copy cloud particle coordinates
@@ -786,7 +786,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   vol_min=dx_min**ndim
 
   ! Compute volume of each cloud particle
-  dx_cloud=dx_min/2.0 ! factor of 2 hard-coded
+  dx_cloud=dx_min/2 ! factor of 2 hard-coded
   vol_cloud=dx_cloud**ndim
 
 #ifdef RT
@@ -796,7 +796,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 #endif
 
   ! Jet geometry safety net
-  cone_opening = max(tiny(0.0),cone_opening)
+  cone_opening = max(tiny(0.0d0),cone_opening)
   cone_opening = min(cone_opening, 180.d0)
   tan_theta = tan(pi/180.d0*cone_opening/2) ! tangent of half of the opening angle
 
@@ -871,8 +871,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc_smbh=mass_smbh_seed*M_sun/(scale_d*scale_l**ndim)*weight/volume*d/density
               else
                  ! on sink creation, preexisting sinks
-                 m_acc     =0.0
-                 m_acc_smbh=0.0
+                 m_acc     =0
+                 m_acc_smbh=0
               end if
            else
               m_acc     =dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
@@ -883,12 +883,12 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  if (AGN_fbk_mode_switch_threshold > 0.0) then
                     if (acc_ratio > AGN_fbk_mode_switch_threshold) then
                        ! Eddington ratio higher than AGN_fbk_mode_switch_threshold -> energy
-                       AGN_fbk_frac_ener = 1.0
-                       AGN_fbk_frac_mom = 0.0
+                       AGN_fbk_frac_ener = 1
+                       AGN_fbk_frac_mom = 0
                     else
                        ! Eddington ratio lower than AGN_fbk_mode_switch_threshold -> momentum
-                       AGN_fbk_frac_ener = 0.0
-                       AGN_fbk_frac_mom = 1.0
+                       AGN_fbk_frac_ener = 0
+                       AGN_fbk_frac_mom = 1
                     end if
                  end if
                  v_AGN = (2*0.1d0*epsilon_kin/kin_mass_loading)**0.5d0*c_cgs ! in cm/s
@@ -1012,12 +1012,12 @@ subroutine compute_accretion_rate(write_sinks)
   ! Compute sink particle accretion rate by averaging contributions from all levels
   do isink=1,nsink
 
-     dMsink_overdt(isink)=0.0
-     dMsmbh_overdt(isink)=0.0
-     dMBHoverdt(isink)=0.0
-     dMBHoverdt_smbh(isink)=0.0
-     dMEDoverdt(isink)=0.0
-     dMEDoverdt_smbh(isink)=0.0
+     dMsink_overdt(isink)=0
+     dMsmbh_overdt(isink)=0
+     dMBHoverdt(isink)=0
+     dMBHoverdt_smbh(isink)=0
+     dMEDoverdt(isink)=0
+     dMEDoverdt_smbh(isink)=0
 
      ! Compute sink sphere average quantities
      density=0.d0; volume=0.d0; velocity=0.d0; ethermal=0d0
@@ -1112,7 +1112,7 @@ contains
   REAL(dp) function bondi_alpha(x)
     implicit none
     REAL(dp) x
-    REAL(dp), PARAMETER :: XMIN=0.01, xMAX=2.0
+    REAL(dp), PARAMETER :: XMIN=0.01d0, xMAX=2.0d0
     INTEGER, PARAMETER :: NTABLE=51
     REAL(dp) lambda_c, xtable, xtablep1, alpha_exp
     integer idx
@@ -1130,7 +1130,7 @@ contains
          2.53827, 2.34854, 2.18322, 2.03912, 1.91344, 1.80378, 1.70804, &
          1.62439 /)
     !     Define a constant that appears in these formulae
-    lambda_c    = exp(1.5) / 4
+    lambda_c    = exp(1.5d0) / 4
     !     Deal with the off-the-table cases
     if (x .le. XMIN) then
        bondi_alpha = lambda_c / sqrt(2.d0 * x**ndim)
@@ -1632,15 +1632,15 @@ subroutine true_max(x,y,z,ilevel)
   if (maxval(abs(gradient(1:ndim)))==0.)return
 
   ! Compute hessian
-  hess(1,1)=(cube3(1,0,0)+cube3(-1,0,0)-2*cube3(0,0,0))/dx_loc**2.
-  hess(2,2)=(cube3(0,1,0)+cube3(0,-1,0)-2*cube3(0,0,0))/dx_loc**2.
-  hess(3,3)=(cube3(0,0,1)+cube3(0,0,-1)-2*cube3(0,0,0))/dx_loc**2.
+  hess(1,1)=(cube3(1,0,0)+cube3(-1,0,0)-2*cube3(0,0,0))/dx_loc**2
+  hess(2,2)=(cube3(0,1,0)+cube3(0,-1,0)-2*cube3(0,0,0))/dx_loc**2
+  hess(3,3)=(cube3(0,0,1)+cube3(0,0,-1)-2*cube3(0,0,0))/dx_loc**2
 
-  hess(1,2)=0.25*(cube3(1,1,0)+cube3(-1,-1,0)-cube3(1,-1,0)-cube3(-1,1,0))/dx_loc**2.
+  hess(1,2)=0.25d0*(cube3(1,1,0)+cube3(-1,-1,0)-cube3(1,-1,0)-cube3(-1,1,0))/dx_loc**2
   hess(2,1)=hess(1,2)
-  hess(1,3)=0.25*(cube3(1,0,1)+cube3(-1,0,-1)-cube3(1,0,-1)-cube3(-1,0,1))/dx_loc**2.
+  hess(1,3)=0.25d0*(cube3(1,0,1)+cube3(-1,0,-1)-cube3(1,0,-1)-cube3(-1,0,1))/dx_loc**2
   hess(3,1)=hess(1,3)
-  hess(2,3)=0.25*(cube3(0,1,1)+cube3(0,-1,-1)-cube3(0,1,-1)-cube3(0,-1,1))/dx_loc**2.
+  hess(2,3)=0.25d0*(cube3(0,1,1)+cube3(0,-1,-1)-cube3(0,1,-1)-cube3(0,-1,1))/dx_loc**2
   hess(3,2)=hess(2,3)
 
   ! Determinant
@@ -1660,7 +1660,7 @@ subroutine true_max(x,y,z,ilevel)
   minor(3,2)=minor(2,3)
 
   ! Displacement of the true max from the cell center
-  displacement=0.
+  displacement=0
   do i=1,ndim
      do j=1,ndim
         numerator = gradient(j)*minor(i,j)
@@ -1671,9 +1671,9 @@ subroutine true_max(x,y,z,ilevel)
   ! Clipping the displacement in order to keep max in the cell
   disp_max=maxval(abs(displacement(1:ndim)))
   if (disp_max > dx_loc*0.499999)then
-     displacement(1)=displacement(1)/disp_max*dx_loc*0.499999
-     displacement(2)=displacement(2)/disp_max*dx_loc*0.499999
-     displacement(3)=displacement(3)/disp_max*dx_loc*0.499999
+     displacement(1)=displacement(1)/disp_max*dx_loc*0.499999d0
+     displacement(2)=displacement(2)/disp_max*dx_loc*0.499999d0
+     displacement(3)=displacement(3)/disp_max*dx_loc*0.499999d0
   end if
 
   x=x+displacement(1)
@@ -1815,10 +1815,10 @@ subroutine update_sink(ilevel)
                  end do
 
                  ! Zero mass of the sink that was merged in
-                 msink(jsink)=0.
-                 msmbh(jsink)=0.
-                 msum_overlap(jsink)=0.
-                 delta_mass(jsink)=0.
+                 msink(jsink)=0
+                 msmbh(jsink)=0
+                 msum_overlap(jsink)=0
+                 delta_mass(jsink)=0
 
               end if
            end if
@@ -1828,7 +1828,7 @@ subroutine update_sink(ilevel)
 
   ! Updating sink positions
 
-  fsink=0.
+  fsink=0
   call f_sink_sink
 
   vsold(1:nsink,1:ndim,ilevel)=vsnew(1:nsink,1:ndim,ilevel)
@@ -2064,7 +2064,7 @@ subroutine clean_merged_sinks
   do j=1,nsink
      if (msink(j)<=0.d0)then ! if sink has been merged to another one
          mergers=mergers+1
-         msink(j)=-10.
+         msink(j)=-10
      end if
   end do
 
@@ -2093,16 +2093,15 @@ subroutine clean_merged_sinks
         end do
 
         ! Whipe last position in the sink list
-        msink(nsink+1)=0.
-        msmbh(nsink+1)=0.
-        xsink(nsink+1,1:ndim)=0.
-        vsink(nsink+1,1:ndim)=0.
-        lsink(nsink+1,1:ndim)=0.
+        msink(nsink+1)=0
+        msmbh(nsink+1)=0
+        xsink(nsink+1,1:ndim)=0
+        vsink(nsink+1,1:ndim)=0
+        lsink(nsink+1,1:ndim)=0
         new_born(nsink+1)=.false.
-        tsink(nsink+1)=0.
+        tsink(nsink+1)=0
         idsink(nsink+1)=0
-        msum_overlap(nsink+1)=0.
-
+        msum_overlap(nsink+1)=0
      else
         i=i+1
      end if
@@ -2172,9 +2171,9 @@ subroutine f_gas_sink(ilevel)
      xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  rho_tff=0.
+  rho_tff=0
 
-  fsink_new=0.
+  fsink_new=0
 
   period(1)=(nx==1)
   period(2)=(ny==1)
@@ -2239,7 +2238,7 @@ subroutine f_gas_sink(ilevel)
 
               ! Compute sqrt(1/(ssoft**2+d2(i))) to save time
               do i=1,ngrid
-                 denom(i)=(ssoft**2+d2(i))**(-1.5)
+                 denom(i)=(ssoft**2+d2(i))**(-1.5d0)
               end do
 
               ! Compute gas acceleration due to sink
@@ -2358,7 +2357,7 @@ subroutine f_sink_sink
            ! Compute acceleration
            do jsink=1,nsink
               if (direct_force_sink(jsink))then
-                 ff(jsink,1:ndim)=factG*msink(jsink)/(ssoft**2+d2(jsink))**1.5*ff(jsink,1:ndim)
+                 ff(jsink,1:ndim)=factG*msink(jsink)/(ssoft**2+d2(jsink))**1.5d0*ff(jsink,1:ndim)
               end if
            end do
            do jsink=1,nsink
@@ -2493,7 +2492,7 @@ subroutine read_sink_params()
   end if
 
   if(mass_merger_vel_check<0.)then
-     mass_merger_vel_check=0.0
+     mass_merger_vel_check=0
   end if
 
 end subroutine read_sink_params
@@ -2727,16 +2726,16 @@ subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilev
 
   call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
-  fluid_var(1:np,1:nvar)=0._dp
+  fluid_var(1:np,1:nvar)=0
 
   if (ilevel_only)then
      do ind=1,twotondim
         do j=1,np
-           if(.not. ok(j,ind))vol(j,ind)=0.
+           if(.not. ok(j,ind))vol(j,ind)=0
         end do
      end do
 
-     vol_tot(1:np)=0._dp
+     vol_tot(1:np)=0
      do ind=1,twotondim
         do j=1,np
            vol_tot(j)=vol_tot(j)+vol(j,ind)
@@ -2807,7 +2806,7 @@ subroutine set_unew_sink(ilevel)
      do ivar=1,nvar
 #endif
         do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
         end do
      end do
   end do

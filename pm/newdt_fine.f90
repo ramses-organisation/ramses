@@ -47,14 +47,14 @@ subroutine newdt_fine(ilevel)
      fourpi=4.0d0*pi
      if(cosmo)fourpi=1.5d0*omega_m*aexp
      if (sink)then
-        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
+        tff=sqrt(threepi2/8/fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
      else
-        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+smallr))
+        tff=sqrt(threepi2/8/fourpi/(rho_max(ilevel)+smallr))
      end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
   if(cosmo)then
-     dtnew(ilevel)=MIN(dtnew(ilevel),0.1/hexp)
+     dtnew(ilevel)=MIN(dtnew(ilevel),0.1d0/hexp)
   end if
 
 #ifdef ATON
@@ -71,8 +71,8 @@ subroutine newdt_fine(ilevel)
   ! Maximum time step for radiative transfer
   if(rt_advect)then
      call get_rt_courant_coarse(dt_rt)
-     dtnew(ilevel) = 0.99999 * &
-          MIN(dtnew(ilevel), dt_rt/2.0**(ilevel-levelmin) * rt_nsubcycle)
+     dtnew(ilevel) = 0.99999d0 * &
+          MIN(dtnew(ilevel), dt_rt/2**(ilevel-levelmin) * rt_nsubcycle)
      if(static) RETURN
   endif
 #endif
@@ -80,7 +80,7 @@ subroutine newdt_fine(ilevel)
   if(pic) then
 
      dt_all=dtnew(ilevel); dt_loc=dt_all
-     ekin_all=0.0; ekin_loc=0.0
+     ekin_all=0; ekin_loc=0
 
      ! Compute maximum time step on active region
      if(numbl(myid,ilevel)>0)then

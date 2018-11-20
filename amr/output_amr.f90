@@ -590,7 +590,7 @@ subroutine savegadget(filename)
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
-  gadgetvfact = 100.0 * boxlen_ini / aexp / SQRT(aexp)
+  gadgetvfact = 100 * boxlen_ini / aexp / SQRT(aexp)
 
   header%npart = 0
   header%npart(2) = npart
@@ -610,7 +610,7 @@ subroutine savegadget(filename)
   header%boxsize = boxlen_ini
   header%omega0 = omega_m
   header%omegalambda = omega_l
-  header%hubbleparam = h0/100.0
+  header%hubbleparam = h0/100
   header%flag_stellarage = 0
   header%flag_metals = 0
   header%totalhighword = 0

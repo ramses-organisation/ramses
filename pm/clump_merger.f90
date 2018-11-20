@@ -15,9 +15,9 @@ subroutine compute_clump_properties(xx)
   ! all necessary peak-patch properties are computed
   !----------------------------------------------------------------------------
   integer::ipart,grid,peak_nr,ilevel,global_peak_id,ipeak,plevel
-  real(dp)::zero=0.
+  real(dp)::zero=0
   !variables needed temporarily store cell properties
-  real(dp)::d=0.,vol=0.
+  real(dp)::d=0, vol=0
   ! variables related to the size of a cell on a given level
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp),dimension(1:nlevelmax)::volume
@@ -273,7 +273,7 @@ subroutine write_clump_properties(to_file)
   !---------------------------------------------------------------------------
 
   integer::i,j,jj,ilun,ilun2,n_rel,n_rel_tot,nx_loc
-  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass=0.
+  real(dp)::rel_mass,rel_mass_tot,scale,particle_mass=0
   character(LEN=80)::fileloc,filedir
   character(LEN=5)::nchar,ncharcpu
   real(dp),dimension(1:npeaks)::peakd
@@ -288,7 +288,7 @@ subroutine write_clump_properties(to_file)
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   if(ivar_clump==0 .or. ivar_clump==-1)then
-     particle_mass=MINVAL(mp, MASK=(mp.GT.0.))
+     particle_mass=MINVAL(mp, MASK=(mp > 0))
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(particle_mass,particle_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_MIN,MPI_COMM_WORLD,info)
      particle_mass=particle_mass_tot
@@ -315,7 +315,7 @@ subroutine write_clump_properties(to_file)
   end if
 
   ! print results in descending order to screen/file
-  rel_mass=0.
+  rel_mass=0
   n_rel=0
 
   if (to_file .eqv. .true.) then
@@ -452,7 +452,7 @@ subroutine merge_clumps(action)
   integer::current,nmove,ipeak,jpeak,iter
   integer::nsurvive,nzero,idepth
   integer::ilev,global_peak_id
-  real(dp)::value_iij,zero=0.,relevance_peak
+  real(dp)::value_iij,zero=0,relevance_peak
   integer,dimension(1:npeaks_max)::alive,ind_sort
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
@@ -613,7 +613,7 @@ subroutine merge_clumps(action)
         current=sparse_saddle_dens%first(ipeak) ! first element of line ipeak
         do while(current>0) ! walk the line
            j=sparse_saddle_dens%col(current)
-           if(alive(ipeak)==0.OR.alive(j)==0)then
+           if(alive(ipeak)==0 .or. alive(j)==0)then
               call set_value(ipeak,j,zero,sparse_saddle_dens)
            endif
            current=sparse_saddle_dens%next(current)
@@ -681,7 +681,7 @@ subroutine merge_clumps(action)
            end if
            relevance(ipeak)=relevance_peak
         else
-           relevance(ipeak)=0.
+           relevance(ipeak)=0
         endif
      end do
 
@@ -731,7 +731,7 @@ subroutine merge_clumps(action)
      end do
 
      ! Compute halo masses
-     halo_mass=0.0
+     halo_mass=0
      n_cells_halo=0
      do ipeak=1,npeaks
         merge_to=ind_halo(ipeak)
@@ -769,7 +769,7 @@ subroutine get_max(i,mat)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   integer::current,icol
 
-  mat%maxval(i)=0.
+  mat%maxval(i)=0
   mat%maxloc(i)=0
 
   ! walk the line...
@@ -867,7 +867,7 @@ subroutine allocate_peak_patch_arrays
   !------------------------------------------------
   ! Initialize all peak based arrays for clump finder
   !------------------------------------------------
-  lev_peak=0; new_peak=0; ind_halo=0; relevance=1.
+  lev_peak=0; new_peak=0; ind_halo=0; relevance=1
 
 
 end subroutine allocate_peak_patch_arrays

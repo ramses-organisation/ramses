@@ -209,7 +209,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
             end do
          else ! PERFORM SCAN
             if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) then
-               active_mg(myid,ilevel)%u(icell_mg,3)=0.0
+               active_mg(myid,ilevel)%u(icell_mg,3)=0
                cycle
             end if
             do idim=1,ndim

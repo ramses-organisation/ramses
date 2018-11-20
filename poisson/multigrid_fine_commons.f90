@@ -33,7 +33,7 @@ subroutine multigrid_fine(ilevel,icount)
    integer, intent(in) :: ilevel,icount
 
    integer, parameter  :: MAXITER  = 10
-   real(dp), parameter :: SAFE_FACTOR = 0.5
+   real(dp), parameter :: SAFE_FACTOR = 0.5d0
 
    integer :: ifine, i, iter, icpu
    logical :: allmasked

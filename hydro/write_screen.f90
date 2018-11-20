@@ -211,7 +211,7 @@ subroutine write_screen
      end do
      do i=1,ncell
         ddd=MAX(dd(ind_sort(i)),smallr)
-        ppp=MAX((gamma-1.0)*ei(ind_sort(i)),ddd*smallp)
+        ppp=MAX((gamma-1.0d0)*ei(ind_sort(i)),ddd*smallp)
         if(poisson)then
         write(*,113) &
              & ll(ind_sort(i)),  &

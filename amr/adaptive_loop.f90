@@ -14,7 +14,7 @@ subroutine adaptive_loop
   integer::info,tot_pt
   real(kind=8)::tt1,tt2,muspt,muspt_this_step,wallsec,dumpsec
   real(kind=4)::real_mem,real_mem_tot
-  real(kind=8),save::tstart=0.0
+  real(kind=8),save::tstart=0
 #endif
   integer::ilevel,idim,ivar
 
@@ -53,7 +53,7 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again
 
 #ifndef WITHOUTMPI
-  muspt=0.
+  muspt=0
   tot_pt=-1
   tt2=MPI_WTIME()
   if(myid==1)write(*,*)'Time elapsed since startup:',tt2-tt1
@@ -184,7 +184,7 @@ subroutine adaptive_loop
         call getmem(real_mem)
         call MPI_ALLREDUCE(real_mem,real_mem_tot,1,MPI_REAL,MPI_MAX,MPI_COMM_WORLD,info)
         if(myid==1)then
-           if (tot_pt==0) muspt=0. ! dont count first timestep
+           if (tot_pt==0) muspt=0 ! dont count first timestep
            n_step = int(numbtot(1,levelmin),kind=8)*twotondim
            do ilevel=levelmin+1,nlevelmax
              n_step = n_step + int(numbtot(1,ilevel),kind=8)*product(nsubcycle(levelmin:ilevel-1))*(twotondim-1)
@@ -199,13 +199,13 @@ subroutine adaptive_loop
            write(*,*)'Total running time:', NINT((tt2-tstart)*100.0)*0.01,'s'
         endif
         if(walltime_hrs.gt.0d0) then
-           wallsec = walltime_hrs*3600.     ! Convert from hours to seconds
-           dumpsec = minutes_dump*60.       ! Convert minutes before end to seconds
+           wallsec = walltime_hrs*3600     ! Convert from hours to seconds
+           dumpsec = minutes_dump*60       ! Convert minutes before end to seconds
            if(wallsec-dumpsec.lt.tt2-tstart) then
               output_now=.true.
               if(myid==1) write(*,*) 'Dumping snapshot before walltime runs out'
               ! Now set walltime to a negative number so we don't keep printing outputs
-              walltime_hrs = -1d0
+              walltime_hrs = -1.d0
            endif
         endif
      endif

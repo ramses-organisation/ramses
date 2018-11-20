@@ -343,7 +343,7 @@ subroutine interpol_hydro(u1,u2,nn)
 
         !correct total momentum keeping the slope fixed
         do idim=1,ndim
-           mom(1:nn)=0.
+           mom(1:nn)=0
            do ind=1,twotondim
               do i=1,nn
                  ! total momentum in children
@@ -401,10 +401,10 @@ subroutine compute_limiter_minmod(a,w,nn)
 
   do idim=1,ndim
      do i=1,nn
-        diff_left=0.5*(a(i,2*idim)-a(i,0))
-        diff_right=0.5*(a(i,0)-a(i,2*idim-1))
+        diff_left=0.5d0*(a(i,2*idim)-a(i,0))
+        diff_right=0.5d0*(a(i,0)-a(i,2*idim-1))
         if(diff_left*diff_right<=0.0)then
-           minmod=0.0
+           minmod=0
         else
            minmod=MIN(ABS(diff_left),ABS(diff_right)) &
                 &   *diff_left/ABS(diff_left)
