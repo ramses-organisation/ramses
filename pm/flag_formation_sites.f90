@@ -291,7 +291,7 @@ subroutine compute_clump_properties_round2
   use rt_parameters, only: nGroups,iGroups,group_egy
   use rt_hydro_commons, only:rtuold
   use rt_cooling_module, only:kappaSc
-  use constants, only: pi
+  use constants, only: pi, c_cgs, ev2erg
 #endif
 
   use mpi_mod
