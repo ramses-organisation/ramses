@@ -743,7 +743,7 @@ function coord_distance(zz,Omega0,OmegaL,OmegaR,coverH0)
   real(kind=8) :: z,res,coord_distance,zz
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
   z=abs(zz)
-  call qromb(0.d0,z,res,omega0,omegaL,OmegaR)
+  call qromb(0d0,z,res,omega0,omegaL,OmegaR)
   coord_distance=coverH0*res
   if (zz.lt.0) coord_distance=-coord_distance
 end function coord_distance
@@ -755,7 +755,7 @@ function funcE(z,Omega0,OmegaL,OmegaR)
   real(kind=8) :: funcE,z,HsurH0
   real(kind=8) :: omega0,omegaL,OmegaR
 
-  funcE=1.d0/HsurH0(z,Omega0,OmegaL,OmegaR)
+  funcE=1d0/HsurH0(z,Omega0,OmegaL,OmegaR)
 end function funcE
 
 !===========================================================================
@@ -763,7 +763,7 @@ function HsurH0(z,omega0,omegaL,OmegaR)
   !===========================================================================
   implicit none
   real(kind=8) :: z,omega0,omegaL,OmegaR,HsurH0
-  HsurH0=sqrt(Omega0*(1.d0+z)**3+OmegaR*(1.d0+z)**2+OmegaL)
+  HsurH0=sqrt(Omega0*(1d0+z)**3+OmegaR*(1d0+z)**2+OmegaL)
 end function HsurH0
 
 
@@ -773,7 +773,7 @@ SUBROUTINE qromb(a,b,ss,omega0,omegaL,OmegaR)
   implicit none
   INTEGER :: JMAX,JMAXP,K,KM
   REAL(kind=8) :: a,b,ss,EPS,omega0,omegaL,OmegaR
-  PARAMETER (EPS=1.d-6, JMAX=20, JMAXP=JMAX+1, K=5, KM=K-1)
+  PARAMETER (EPS=1d-6, JMAX=20, JMAXP=JMAX+1, K=5, KM=K-1)
   !  USES polint,trapzd
   INTEGER :: j
   REAL(kind=8) :: dss,h(JMAXP),s(JMAXP)
@@ -781,7 +781,7 @@ SUBROUTINE qromb(a,b,ss,omega0,omegaL,OmegaR)
   do j=1,JMAX
      call trapzd(a,b,s(j),j,omega0,omegaL,OmegaR)
      if (j.ge.K) then
-        call polint(h(j-KM),s(j-KM),K,0.d0,ss,dss)
+        call polint(h(j-KM),s(j-KM),K,0d0,ss,dss)
         if (abs(dss).le.EPS*abs(ss)) return
      endif
      s(j+1)=s(j)

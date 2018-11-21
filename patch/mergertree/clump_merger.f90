@@ -47,9 +47,9 @@ subroutine compute_clump_properties(xx)
 
   min_dens=huge(zero)
   n_cells=0; n_cells_halo=0
-  halo_mass=0d0; clump_mass=0.d0; clump_vol=0.d0
-  center_of_mass=0.d0; clump_velocity=0.d0
-  peak_pos=0.d0
+  halo_mass=0d0; clump_mass=0d0; clump_vol=0d0
+  center_of_mass=0d0; clump_velocity=0d0
+  peak_pos=0d0
 
   if(verbose)write(*,*)'Entering compute clump properties'
   !------------------------------------------
@@ -196,7 +196,7 @@ subroutine compute_clump_properties(xx)
 
   ! For periodic boxes, recompute center of mass relative to peak position
   if(periodic)then
-     center_of_mass=0.d0;
+     center_of_mass=0d0;
      do ipart=1,ntest
         global_peak_id=flag2(icellp(ipart))
         if (global_peak_id /=0 ) then

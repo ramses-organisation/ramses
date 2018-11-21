@@ -173,7 +173,7 @@ subroutine write_screen
 
                        ! Compute the Lorentz factor
                        u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-                       lor = (1.0d0+u2)**(1.d0/2.d0)
+                       lor = (1.0d0+u2)**(1d0/2d0)
 
                        ! Compute the density
                        qq(icell,1) = D/lor
@@ -184,18 +184,18 @@ subroutine write_screen
                        qq(icell,4) = Mz/R
 
                        ! Compute pressure
-                       Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
+                       Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
                        if (eos .eq. 'TM') then
                           rho=qq(icell,1)
                           qq(icell,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                        else
-                          qq(icell,5)=(gamma-1.d0)/gamma*Xsi
+                          qq(icell,5)=(gamma-1d0)/gamma*Xsi
                        endif
 
 
 
                     endif
-                    if ((qq(icell,1)<0.d0).or.(qq(icell,5)<0.d0).or.E<0.d0 ) then
+                    if ((qq(icell,1)<0d0).or.(qq(icell,5)<0d0).or.E<0d0 ) then
                        write(*,*) 'negative pressure or density output'
                        stop
                     endif

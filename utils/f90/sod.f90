@@ -5,8 +5,8 @@ program sphericaloverdensity
   ! Ce programme doit lire en input les fichiers suivants:
   !          - un fichier resultat RAMSES:    part_00600.out
   ! Il genere en output les fichiers suivants:
-  !          - un fichier fonction de masse:  mf_sod_00600.dat
-  !          - un fichier structure:          st_sod_00600.dat
+  !          - un fichier fonction de masse:  mf_sod_00600dat
+  !          - un fichier structure:          st_sod_00600dat
   ! E. Audit, R. Teyssier
   ! Meudon, le 30/05/96.
   !---------------------------------------------------------------------

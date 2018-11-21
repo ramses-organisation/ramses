@@ -82,7 +82,7 @@ subroutine hilbert2d(x,y,order,bit_length,npoint)
      enddo
 
      ! save Hilbert key as double precision real
-     order(ip)=0.
+     order(ip)=0
      do i=0,2*bit_length-1
         b0=0 ; if(i_bit_mask(i))b0=1
 #ifdef QUADHILBERT
@@ -176,7 +176,7 @@ subroutine hilbert3d(x,y,z,order,bit_length,npoint)
      enddo
 
      ! save Hilbert key as double precision real
-     order(ip)=0.
+     order(ip)=0
      do i=0,3*bit_length-1
         b0=0 ; if(i_bit_mask(i))b0=1
 #ifdef QUADHILBERT

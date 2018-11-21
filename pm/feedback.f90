@@ -154,7 +154,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use pm_commons
   use hydro_commons
   use random
-  use constants
+  use constants, only: M_sun, Myr2sec, pc2cm
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -228,10 +228,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*M_sun)/scale_v**2
+  ESN=1d51/(10d0*M_sun)/scale_v**2
 
   ! Life time radiation specific energy from cgs to code units
-  ERAD=1d53/(10.*M_sun)/scale_v**2
+  ERAD=1d53/(10d0*M_sun)/scale_v**2
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -341,7 +341,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if(sf_imf)then
               if(mp(ind_part(j)).le.mstar_max)then
                  if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
-                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
+                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0
               endif
            endif
            ! Stellar mass loss
@@ -383,7 +383,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  if(ivar.eq.ndim+2)then
                     e=0.0d0
                     do idim=1,ndim
-                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                       e=e+0.5d0*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
                     enddo
 #if NENER>0
                     do irad=0,nener-1
@@ -396,7 +396,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                     enddo
 #endif
                     ! Temperature
-                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                    uvar=(gamma-1.0d0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
                  else
                     uvar=unew(indp(j),ivar)
                  endif
@@ -413,9 +413,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! For IR radiation trapping,
   ! we use a fixed length to estimate the column density of gas
-  delta_x=200.*pc2cm
+  delta_x=200d0*pc2cm
   if(metal)then
-     tau_factor=kappa_IR*delta_x*scale_d/0.02
+     tau_factor=kappa_IR*delta_x*scale_d/0.02d0
   else
      tau_factor=kappa_IR*delta_x*scale_d*z_ave
   endif
@@ -432,13 +432,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(uold(indp(j),1)*scale_nH > 10.)then
         RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
      else
-        RAD_BOOST=0.0
+        RAD_BOOST=0
      endif
 
      ! Specific kinetic energy of the star
-     ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
-          &          +vp(ind_part(j),2)**2 &
-          &          +vp(ind_part(j),3)**2)
+     ekinetic(j)=0.5d0*(vp(ind_part(j),1)**2 &
+          &            +vp(ind_part(j),2)**2 &
+          &            +vp(ind_part(j),3)**2)
 
      ! Update hydro variable in NGP cell
      unew(indp(j),1)=unew(indp(j),1)+mloss(j)
@@ -585,7 +585,7 @@ subroutine kinetic_feedback
   ! Allocate arrays for the position and the mass of the SN
   allocate(xSN(1:nSN_tot,1:3),vSN(1:nSN_tot,1:3))
   allocate(mSN(1:nSN_tot),sSN(1:nSN_tot),ZSN(1:nSN_tot))
-  xSN=0.;vSN=0.;mSN=0.;sSN=0.;ZSN=0.
+  xSN=0; vSN=0; mSN=0; sSN=0; ZSN=0
   ! Allocate arrays for particles index and parent grid
   if(nSN_loc>0)then
      allocate(ind_part(1:nSN_loc),ind_grid(1:nSN_loc),ok_free(1:nSN_loc))
@@ -688,7 +688,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: pc2cm
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -735,7 +735,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   rmax2=rmax*rmax
 
   ! Initialize the averaged variables
-  vol_gas=0.0;dq=0.0;u2Blast=0.0;ekBlast=0.0;ind_blast=-1
+  vol_gas=0; dq=0; u2Blast=0; ekBlast=0; ind_blast=-1
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax
@@ -853,7 +853,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants
+  use constants, only: M_sun, pc2cm
   use mpi_mod
   implicit none
   !------------------------------------------------------------------------
@@ -909,7 +909,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
      if(sf_imf)then
         if(mSN(iSN).le.mstar_max)then
            if(mSN(iSN).ge.msne_min) eta_sn2 = eta_ssn
-           if(mSN(iSN).lt.msne_min) eta_sn2 = 0.0
+           if(mSN(iSN).lt.msne_min) eta_sn2 = 0
         endif
      endif
      if(vol_gas(iSN)>0d0)then
@@ -991,7 +991,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
                        uold(ind_cell(i),3)=uold(ind_cell(i),3)+d_gas(iSN)*v
                        uold(ind_cell(i),4)=uold(ind_cell(i),4)+d_gas(iSN)*w
                        ! Finally update the total energy of the gas
-                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
+                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5d0*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
                     endif
                  end do
               endif
@@ -1014,7 +1014,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
            uold(indSN(iSN),2)=uold(indSN(iSN),2)+d_gas(iSN)*u
            uold(indSN(iSN),3)=uold(indSN(iSN),3)+d_gas(iSN)*v
            uold(indSN(iSN),4)=uold(indSN(iSN),4)+d_gas(iSN)*w
-           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5*(u*u+v*v+w*w)+p_gas(iSN)
+           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5d0*(u*u+v*v+w*w)+p_gas(iSN)
            if(metal)uold(indSN(iSN),imetal)=uold(indSN(iSN),imetal)+d_metal(iSN)
         endif
      endif

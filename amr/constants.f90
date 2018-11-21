@@ -3,7 +3,7 @@ module constants
 
   ! Numerical constants
   real(dp),parameter ::twopi        = 6.2831853d0
-  real(dp),parameter ::pi           = twopi/2.d0
+  real(dp),parameter ::pi           = twopi/2d0
 
   real(dp),parameter ::mu_mol       = 1.2195d0
 

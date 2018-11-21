@@ -25,7 +25,7 @@ subroutine rho_ana(x,d,dx,ncell)
   xmass=gravity_params(2) ! Point mass coordinates
   ymass=gravity_params(3)
   zmass=gravity_params(4)
-  dmass=1.0/(emass*(1.0+emass)**2)
+  dmass=1.0d0/(emass*(1.0d0+emass)**2)
 
   do i=1,ncell
      rx=0.0d0; ry=0.0d0; rz=0.0d0
@@ -37,7 +37,7 @@ subroutine rho_ana(x,d,dx,ncell)
      rz=x(i,3)-zmass
 #endif
      rr=sqrt(rx**2+ry**2+rz**2)
-     dd=1.0/(rr*(1.0+rr)**2)
+     dd=1.0d0/(rr*(1.0d0+rr)**2)
      d(i)=MIN(dd,dmass)
   end do
 

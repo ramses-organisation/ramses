@@ -115,7 +115,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         endif
         x = nSpec(4)/(2.*nSpec(2)+nSpec(3)+nspec(4))        ! HII fraction
         uold(ind_leaf(i),iIons-1+ixHII) = x*uold(ind_leaf(i),1)
-        if(Y .gt. 0.d0 .and. isHe) then
+        if(Y .gt. 0d0 .and. isHe) then
            x = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7))      !  HeII fraction
            uold(ind_leaf(i),iIons-1+ixHeII) = x*uold(ind_leaf(i),1)
            x = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))      ! HeIII fraction
@@ -204,7 +204,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
 
   if(isH2) xion(ixHI)=nSpec(3)/(2.*nSpec(2)+nSpec(3)+nSpec(4))!    HI frac
   xion(ixHII)=nSpec(4)/(2.*nSpec(2)+nSpec(3)+nSpec(4))        !   HII frac
-  if(Y .gt. 0.d0 .and. isHe) then
+  if(Y .gt. 0d0 .and. isHe) then
      xion(ixHeII) = nSpec(6)/(nSpec(5)+nSpec(6)+nSpec(7)) !  HeII fraction
      xion(ixHeIII) = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))! HeIII fraction
 
@@ -232,7 +232,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   mu_left=0.5                                ! n_HII   = n_spec(4) ! H+
   mu_right=2.3                               ! n_HEI   = n_spec(5) ! He
   niter=0                                    ! n_HEII  = n_spec(6) ! He+
-  do while (err_mu > 1.d-4 .and. niter <= 50)! n_HEIII = n_spec(7) ! He++
+  do while (err_mu > 1d-4 .and. niter <= 50)! n_HEIII = n_spec(7) ! He++
      mu_old=0.5*(mu_left+mu_right)
      T = T2*mu_old
      call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu, Zsolar)

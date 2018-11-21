@@ -57,7 +57,7 @@ subroutine gravana(x,f,dx,ncell)
 
   ! NFW
   if(gravity_type==3)then
-     cnfw = 6./(Mvir/1.d14)**.2
+     cnfw = 6./(Mvir/1d14)**.2
      Mvirphu = Mvir*1.99d33
      rvir = (3./4./pi*Mvirphu/(overdensity*1.89d-29*0.65**2))**0.333
      xmass=0.5*boxlen

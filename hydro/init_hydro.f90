@@ -184,7 +184,7 @@ subroutine init_hydro
                     end do
 #endif
                  else
-                    xx(i)=0.
+                    xx(i)=0
                  end if
                     uold(ind_grid(i)+iskip,ndim+2)=xx(i)
                  end do

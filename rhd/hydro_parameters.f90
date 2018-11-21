@@ -39,9 +39,9 @@ module hydro_parameters
   real(dp)::err_grad_u=-1.0  ! Velocity gradient
   real(dp)::err_grad_p=-1.0  ! Pressure gradient
   real(dp)::err_grad_lor=-1.0  ! Lorentz factor gradient
-  real(dp)::floor_d=1.d-10   ! Density floor
-  real(dp)::floor_u=1.d-10   ! Velocity floor
-  real(dp)::floor_p=1.d-10   ! Pressure floor
+  real(dp)::floor_d=1d-10   ! Density floor
+  real(dp)::floor_u=1d-10   ! Velocity floor
+  real(dp)::floor_p=1d-10   ! Pressure floor
   real(dp)::mass_sph=0.0D0   ! mass_sph
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1.0
 
@@ -59,8 +59,8 @@ module hydro_parameters
   character(LEN=10)::eos='constant'
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
-  real(dp)::smallc=1.d-10
-  real(dp)::smallr=1.d-10
+  real(dp)::smallc=1d-10
+  real(dp)::smallr=1d-10
   character(LEN=10)::scheme='muscl'
   character(LEN=10)::riemann='llf'
 

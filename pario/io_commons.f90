@@ -32,7 +32,7 @@ module io_commons
   character(LEN=MAXLINE)::scratchdir='.',permdir='.'
   character(LEN=MAXLINE),dimension(:),allocatable::filelist
 
-  real(kind=8),parameter::multiplier=1.3 ! Size multiplier to determine buffer_size from ncache_max
+  real(kind=8),parameter::multiplier=1.3d0 ! Size multiplier to determine buffer_size from ncache_max
   integer::ncache_max
   integer::buffer_size
   integer(kind=mpi_offset_kind)::size_max

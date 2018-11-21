@@ -5,7 +5,7 @@ subroutine star_formation(ilevel)
   use hydro_commons
   use poisson_commons
   use cooling_module, ONLY: XH=>X
-  use constants
+  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi
   use random
   use mpi_mod
   implicit none
@@ -37,7 +37,7 @@ subroutine star_formation(ilevel)
   real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
   real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
   real(dp)::ul,ur,fl,fr,trgv,alpha0
-  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp=0.3
+  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp=0.3d0
   real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
   real(dp)::birth_epoch,factG
   real(kind=8)::mlost_all,mtot_all
@@ -148,7 +148,7 @@ subroutine star_formation(ilevel)
   ! ISM density threshold from H/cc to code units
   nISM = n_star
   if(cosmo)then
-     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*XH/mH
+     nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*XH/mH
      nISM = MAX(nCOM,nISM)
   endif
   d0   = nISM/scale_nH
@@ -285,16 +285,16 @@ subroutine star_formation(ilevel)
                  endif
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
-                 T2        = (gamma-1.0)*uold(ind_cell(i),5)*scale_T2
+                 T2        = (gamma-1.0d0)*uold(ind_cell(i),5)*scale_T2
                  ! Correct from polytrope
-                 T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0d0)
                  T2        = T2-T_poly
                  ! Compute sound speed squared
-                 cs2       = (gamma-1.0)*uold(ind_cell(i),5)
+                 cs2       = (gamma-1.0d0)*uold(ind_cell(i),5)
                  ! prevent numerical crash due to negative temperature
                  cs2       = max(cs2,smallc**2)
                  ! Correct from polytrope
-                 cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0d0)
                  cs2       = cs2-cs2_poly
                  ! We need to estimate the norm of the gradient of the velocity field in the cell (tensor of 2nd rank)
                  ! i.e. || A ||^2 = trace( A A^T) where A = grad vec(v) is the tensor.
@@ -437,91 +437,91 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
-                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
+                          alpha0    = (5.0d0*sigma2)/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          if(pcomp*ndim-1.0.eq.0d0) then
-                             zeta   = 0.5
+                          if(pcomp*ndim-1.0d0 == 0d0) then
+                             zeta   = 0.5d0
                           else
-                             zeta   = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                             zeta   = ((pcomp-1.0d0)+sqrt((pcomp**2-pcomp)*(1.0d0-ndim)))/(pcomp*ndim-1.0d0)
                           endif
-                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
+                          b_turb    = 1.0d0+(1.0d0/ndim-1.0d0)*zeta
 #ifdef SOLVERmhd
                           ! Best fit values to the Multi-ff KM model (MHD)
-                          phi_t     = 0.46
-                          phi_x     = 0.17
-                          A         = 0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
-                          B         = 0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
-                          C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
-                          emag      = 0.5*(A**2+B**2+C**2)
+                          phi_t     = 0.46d0
+                          phi_x     = 0.17d0
+                          A         = 0.5d0*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
+                          B         = 0.5d0*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
+                          C         = 0.5d0*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+                          emag      = 0.5d0*(A**2+B**2+C**2)
                           beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
-                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
-                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2)/(1.0+1.0/beta))
+                          sigs      = log(1.0d0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0d0))
+                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2)/(1.0d0+1.0d0/beta))
 #else
                           ! Best fit values to the Multi-ff KM model (Hydro)
-                          phi_t     = 0.49
-                          phi_x     = 0.19
-                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
+                          phi_t     = 0.49d0
+                          phi_x     = 0.19d0
+                          sigs      = log(1.0d0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2.0d0)*exp(3.0d0/8.0d0*sigs)*(2.0d0-erfc_pre_f08((sigs-scrit)/sqrt(2.0d0*sigs)))
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
-                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
+                          alpha0    = (5.0d0*sigma2)/(pi*factG*d*dx_loc**2)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          if(pcomp*ndim-1.0.eq.0d0) then
-                             zeta   = 0.5
+                          if(pcomp*ndim-1.0d0 == 0d0) then
+                             zeta   = 0.5d0
                           else
-                             zeta   = ((pcomp-1.0)+sqrt((pcomp**2-pcomp)*(1.0-ndim)))/(pcomp*ndim-1.0)
+                             zeta   = ((pcomp-1.0d0)+sqrt((pcomp**2-pcomp)*(1.0d0-ndim)))/(pcomp*ndim-1.0d0)
                           endif
-                          b_turb    = 1.0+(1.0/ndim-1.0)*zeta
+                          b_turb    = 1.0d0+(1.0d0/ndim-1.0d0)*zeta
 #ifdef SOLVERmhd
                           ! Best fit values to the Multi-ff PN model (MHD)
-                          phi_t     = 0.47
-                          theta     = 1.00
-                          A         = 0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
-                          B         = 0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
-                          C         = 0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
-                          emag      = 0.5*(A**2+B**2+C**2)
+                          phi_t     = 0.47d0
+                          theta     = 1.00d0
+                          A         = (uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))/2
+                          B         = (uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))/2
+                          C         = (uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))/2
+                          emag      = (A**2+B**2+C**2)/2
                           beta      = uold(ind_cell(i),5)*d/max(emag,smallc**2*smallr)
-                          fbeta     = ((1+0.925*beta**(-3.0/2.0))**(2.0/3.0))/((1+1.0/beta)**2)
-                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0))
-                          scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2)*fbeta)
+                          fbeta     = ((1+0.925d0*beta**(-3.0d0/2.0d0))**(2.0d0/3.0d0))/((1.0d0+1.0d0/beta)**2)
+                          sigs      = log(1.0d0+(b_turb**2)*(sigma2/cs2)*beta/(beta+1.0d0))
+                          scrit     = log(0.067d0/(theta**2)*alpha0*(sigma2/cs2)*fbeta)
 #else
                           ! Best fit values to the Multi-ff PN model (Hydro)
-                          phi_t     = 0.49
-                          theta     = 0.97
-                          sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
-                          scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
+                          phi_t     = 0.49d0
+                          theta     = 0.97d0
+                          sigs      = log(1.0d0+(b_turb**2)*(sigma2/cs2))
+                          scrit     = log(0.067d0/(theta**2)*alpha0*(sigma2/cs2))
 #endif
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc_pre_f08((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star*phi_t/2)*exp(3.0d0/8.0d0*sigs)*(2.0d0-erfc_pre_f08((sigs-scrit)/sqrt(2.0d0*sigs)))
                        ! Virial criterion simple model
                        CASE (3)
                           ! Laplacian rho
-                          lapld     =       ((d1+d)/2.0)-2.0*d+((d2+d)/2.0)
-                          lapld     = lapld+((d3+d)/2.0)-2.0*d+((d4+d)/2.0)
-                          lapld     = lapld+((d5+d)/2.0)-2.0*d+((d6+d)/2.0)
-                          lapld     = lapld/(dx_loc/2.0)**2
+                          lapld     =       ((d1+d)/2)-2*d+((d2+d)/2)
+                          lapld     = lapld+((d3+d)/2)-2*d+((d4+d)/2)
+                          lapld     = lapld+((d5+d)/2)-2*d+((d6+d)/2)
+                          lapld     = lapld/(dx_loc/2)**2
                           alpha0    = (trgv-cs2*lapld/d)/(4*pi*factG*d)
                           if(alpha0<1.0.and.lapld<0.0) then
                              sfr_ff(i) = eps_star
                           else
-                             sfr_ff(i) = 0.0
+                             sfr_ff(i) = 0
                              ok(i)     = .false.
                           endif
                        ! Padoan 2012 "a simple SF law"
                        CASE (4)
                           ! Feedback efficiency
-                          t_dyn     = dx_loc/(2.0*sqrt(sigma2+cs2))
-                          t_ff      = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
-                          sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
+                          t_dyn     = dx_loc/(2*sqrt(sigma2+cs2))
+                          t_ff      = 0.5427d0*sqrt(1/(factG*max(d,smallr)))
+                          sfr_ff(i) = eps_star*exp(-1.6d0*t_ff/t_dyn)
                        ! Hopkins 2013
                        CASE (5)
-                          alpha0    = 0.5*(divv2+curlv2)/(factG*d)
+                          alpha0    = 0.5d0*(divv2+curlv2)/(factG*d)
                           if(alpha0<1.0) then
                              sfr_ff(i) = eps_star
                           else
-                             sfr_ff(i) = 0.0
+                             sfr_ff(i) = 0
                              ok(i)     = .false.
                           endif
                        END SELECT
@@ -536,11 +536,11 @@ subroutine star_formation(ilevel)
            end do
            ! Temperature criterion
            do i=1,ngrid
-              T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
+              T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0d0)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
-              T_poly=T2_star*(nH/nISM)**(g_star-1.0)
+              T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
               T2=T2-T_poly
-              if(T2>2e4)ok(i)=.false.
+              if(T2>2d4)ok(i)=.false.
            end do
         endif
         ! Geometrical criterion
@@ -558,20 +558,20 @@ subroutine star_formation(ilevel)
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
               ! Free fall time of an homogeneous sphere
-              tstar= .5427*sqrt(1.0/(factG*max(d,smallr)))
+              tstar= .5427d0*sqrt(1.0d0/(factG*max(d,smallr)))
               if(.not.sf_virial) sfr_ff(i) = eps_star
               ! Gas mass to be converted into stars
               mgas=dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
               ! Poisson mean
               PoissMean=mgas/mstar
-              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel),1.0)
+              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel), 1.0d0)
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
               ! Security to prevent more than 90% of gas depletion
-              if (mgas > 0.9*mcell) then
-                 nstar_corrected=int(0.9*mcell/mstar)
+              if (mgas > 0.9d0*mcell) then
+                 nstar_corrected=int(0.9d0*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar
                  nstar(i)=nstar_corrected
               endif
@@ -725,7 +725,7 @@ subroutine star_formation(ilevel)
            ! Set GMC particle variables
            if(f_w>0)then
               ! Compute GMC mass without more than 50% of gas depletion
-              mdebris=min(f_w*n*mstar,0.5*d*vol_loc-n*mstar)
+              mdebris=min(f_w*n*mstar,0.5d0*d*vol_loc-n*mstar)
               ! Add supernova ejecta
               mdebris=mdebris+eta_sn*n*mstar
               ! Remove ejecta from the long lived star mass
@@ -760,7 +760,7 @@ subroutine star_formation(ilevel)
               do ivar=2,nvar
                  if(ivar.eq.ndim+2)then
                     ! Temperature
-                    uvar=(gamma-1.0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
+                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
                  else
                     uvar=uold(ind_cell_new(i),ivar)
                  endif
@@ -779,7 +779,7 @@ subroutine star_formation(ilevel)
            if(flag2(ind_cell(i))>0)then
               n=flag2(ind_cell(i))
               d=uold(ind_cell(i),1)
-              uold(ind_cell(i),1)=max(d-n*dstar*(1.0+f_w),0.5*d)
+              uold(ind_cell(i),1)=max(d-n*dstar*(1.0d0+f_w),0.5d0*d)
            endif
         end do
 
@@ -951,7 +951,7 @@ function erfc_pre_f08(x)
   y = x*x
   y = exp(-y)*x*(p7/(y+q7)+p6/(y+q6) + p5/(y+q5)+p4/(y+q4)+p3/(y+q3) &
        &       + p2/(y+q2)+p1/(y+q1)+p0/(y+q0))
-  if (x < ph) y = y+2d0/(exp(pv*x)+1.0)
+  if (x < ph) y = y+2.0d0/(exp(pv*x)+1.0d0)
   erfc_pre_f08 = y
 
   return

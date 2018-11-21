@@ -39,7 +39,7 @@ module amr_commons
 
   ! Initial conditions parameters from grafic
   integer                  ::nlevelmax_part
-  real(dp)                 ::aexp_ini=10.
+  real(dp)                 ::aexp_ini=10
   real(dp),dimension(1:MAXLEVEL)::dfact=1.0d0,astart
   real(dp),dimension(1:MAXLEVEL)::vfact
   real(dp),dimension(1:MAXLEVEL)::xoff1,xoff2,xoff3,dxini
@@ -131,9 +131,9 @@ module amr_commons
 
   ! Units specified by the user in the UNITS_PARAMS namelist for non-cosmo runs.
   ! These values shouldn't be used directly. Instead call units() in amr/units.f90.
-  real(dp)::units_density=1.0  ! [g/cm^3]
-  real(dp)::units_time=1.0     ! [seconds]
-  real(dp)::units_length=1.0   ! [cm]
+  real(dp)::units_density=1.0d0  ! [g/cm^3]
+  real(dp)::units_time=1.0d0     ! [seconds]
+  real(dp)::units_length=1.0d0   ! [cm]
 
 end module amr_commons
 

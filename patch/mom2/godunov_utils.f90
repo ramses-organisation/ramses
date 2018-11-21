@@ -244,9 +244,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   ! Ionization state (only Hydrogen)
   if(rt_err_grad_xHII >= 0.) then !---------------------------------------
      do k=1,nn
-        dg=min(1.d0,max(0.d0,ug(k,iIons)))
-        dm=min(1.d0,max(0.d0,um(k,iIons)))
-        dd=min(1.d0,max(0.d0,ud(k,iIons)))
+        dg=min(1d0,max(0d0,ug(k,iIons)))
+        dm=min(1d0,max(0d0,um(k,iIons)))
+        dd=min(1d0,max(0d0,ud(k,iIons)))
         error=2.0d0*MAX( &
              & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &
              & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
@@ -257,9 +257,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   ! Neutral state (only Hydrogen)
   if(rt_err_grad_xHI  >= 0.) then !---------------------------------------
      do k=1,nn
-        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))
-        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))
-        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))
+        dg=min(1d0,max(0d0,1d0 - ug(k,iIons)))
+        dm=min(1d0,max(0d0,1d0 - um(k,iIons)))
+        dd=min(1d0,max(0d0,1d0 - ud(k,iIons)))
         error=2.0d0*MAX( &
              & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &
              & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )
@@ -354,7 +354,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
      end do
      n_new=0
      do i=1,n
-        if(uo(i)>1.d-06)then
+        if(uo(i)>1d-06)then
            n_new=n_new+1
            ind2(n_new)=ind (i)
            po  (n_new)=pold(i)
@@ -362,7 +362,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
      end do
      j=n_new
      do i=1,n
-        if(uo(i)<=1.d-06)then
+        if(uo(i)<=1d-06)then
            n_new=n_new+1
            ind2(n_new)=ind (i)
            po  (n_new)=pold(i)

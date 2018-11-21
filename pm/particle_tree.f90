@@ -502,7 +502,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         xxx=(xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx
-        ok(j)=ok(j) .and. (xxx >= 0.d0 .and. xxx < 2.0d0)
+        ok(j)=ok(j) .and. (xxx >= 0d0 .and. xxx < 2.0d0)
      end do
   end do
 

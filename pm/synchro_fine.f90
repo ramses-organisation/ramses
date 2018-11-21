@@ -21,7 +21,7 @@ subroutine synchro_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   if(sink)then
-     fsink_new=0.
+     fsink_new=0
   endif
 
   ! Synchronize velocity using CIC
@@ -104,7 +104,7 @@ subroutine synchro_fine_static(ilevel)
   if(verbose)write(*,111)ilevel
 
   if(sink)then
-     fsink_new=0.
+     fsink_new=0
   endif
 
   ! Synchronize velocity using CIC

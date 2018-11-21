@@ -180,8 +180,8 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -842,7 +842,7 @@ subroutine cic_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -1191,7 +1191,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do j=1,np
      fam(j) = typep(ind_part(j))
      if (is_tracer(fam(j))) then
-        mmm(j)=0.
+        mmm(j)=0
      else
         mmm(j)=mp(ind_part(j))
      end if
@@ -1503,7 +1503,7 @@ subroutine tsc_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
