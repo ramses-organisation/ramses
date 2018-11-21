@@ -61,7 +61,7 @@ subroutine phi_ana(rr,pp,ngrid)
   integer :: i
   real(dp):: fourpi
 
-  fourpi=4.D0*ACOS(-1.0D0)
+  fourpi=4d0*ACOS(-1.0D0)
 
 #if NDIM==1
   do i=1,ngrid

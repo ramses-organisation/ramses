@@ -561,7 +561,7 @@ subroutine rt_step(ilevel)
      i_substep = i_substep + 1
      call get_rt_courant_coarse(dt_rt)
      ! Temporarily change timestep length to rt step:
-     dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+     dtnew(ilevel) = MIN(t_left, dt_rt/2**(ilevel-levelmin))
      t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel

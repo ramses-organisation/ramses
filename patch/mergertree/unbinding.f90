@@ -320,7 +320,7 @@ subroutine unbinding()
       do ilevel = 0, mergelevel_max
 
         ! First reset virtual's mass for comms
-        clmp_mass_pb(npeaks+1:hfree-1) = 0.d0
+        clmp_mass_pb(npeaks+1:hfree-1) = 0d0
 
         do ipeak = 1, npeaks
           ! only do this part for non-virtuals as "source", otherwise you'll get wrong additions!
@@ -556,7 +556,7 @@ subroutine get_clump_properties_pb(first)
   !------------------------------------------------------------
 
 
-  period = 0.d0
+  period = 0d0
   if (.not. first) clmp_vel_sq_pb_old = 0
 
   do ipeak=1, hfree-1
@@ -738,7 +738,7 @@ subroutine get_cmp()
       biggest=0.0
       thispart=clmppart_first(ipeak)
       do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-        period=0.d0
+        period=0d0
         if (periodical) then
           do i=1, 3
             if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen) period(i)=(-1.0)*boxlen
@@ -776,7 +776,7 @@ subroutine get_cmp()
   ! processor independently, because each processor has all information it needs 
   ! with cmp_distances(ipeak,nmassbins) and CoM
 
-  cmp = 0.d0
+  cmp = 0d0
   do ipeak=1, hfree-1
 
     ! set up distances
@@ -805,7 +805,7 @@ subroutine get_cmp()
       !---------------------------------------------
       thispart=clmppart_first(ipeak)
       do ipart=1, nclmppart(ipeak) ! while there is a particle linked list
-        period=0.d0
+        period=0d0
         if (periodical) then
           do i=1, 3
             if (xp(thispart,i)-peak_pos(ipeak,i)>0.5*boxlen)  period(i)=(-1.0)*boxlen
@@ -877,7 +877,7 @@ subroutine get_closest_border()
     check(ipeak)=check(ipeak).and.to_iter(ipeak)
     ! save some work: only check for non-namegivers
     check(ipeak)=check(ipeak).and..not.is_namegiver(ipeak)
-    if(check(ipeak)) closest_border(ipeak) = HUGE(1.d0) !reset value
+    if(check(ipeak)) closest_border(ipeak) = HUGE(1d0) !reset value
   enddo
 
 
@@ -1138,7 +1138,7 @@ subroutine bordercheck(this_cellpos,clump_nr,xx,neigh_cell_index,ok,np)
   do j=1,np
     if(ok(j))then ! if all criteria met, you've found a neighbour cell that belongs to a different clump 
 
-      period=0.d0
+      period=0d0
       if (periodical) then
         do i=1, ndim
           if (xx(j,i)-peak_pos(ipeak,i) > 0.5*boxlen)    period(i)=(-1.0)*boxlen
@@ -1203,7 +1203,7 @@ subroutine particle_unbinding(ipeak, final_round)
     !-----------------------------------------------
     ! If not namegiver
     !-----------------------------------------------
-    phi_border=0.d0
+    phi_border=0d0
     if (.not. is_namegiver(ipeak)) then
 
       ! compute potential at the closest border from the center of mass
@@ -1225,7 +1225,7 @@ subroutine particle_unbinding(ipeak, final_round)
 
         if (make_mergertree) then
           allocate(particle_energy(1:nclmppart(ipeak)))
-          particle_energy = HUGE(0.d0)
+          particle_energy = HUGE(0d0)
           allocate(particle_energy_id(1:nclmppart(ipeak)))
           particle_energy_id = 0
         endif
@@ -1330,7 +1330,7 @@ subroutine particle_unbinding(ipeak, final_round)
         ! store energy and particle clump ID in a list
 
         allocate(particle_energy(1:nclmppart(ipeak)))
-        particle_energy = HUGE(0.d0)
+        particle_energy = HUGE(0d0)
         allocate(particle_energy_id(1:nclmppart(ipeak)))
         particle_energy_id = 0
 
@@ -1399,7 +1399,7 @@ subroutine eparttot(ipeak, part_ind, epart)
   real(dp),dimension(1:3) :: period
   integer :: i
 
-  period=0.d0
+  period=0d0
   if (periodical) then
     do i=1, ndim
       if (xp(part_ind,i)-peak_pos(ipeak,i) > 0.5*boxlen   ) period(i)=(-1.0)*boxlen
@@ -1519,23 +1519,23 @@ subroutine allocate_unbinding_arrays()
   ! Clump properties
   !-------------------
   allocate(clmp_vel_pb(1:npeaks_max,1:3))
-  clmp_vel_pb=0.d0
+  clmp_vel_pb=0d0
   allocate(clmp_mass_pb(1:npeaks_max))
-  clmp_mass_pb=0.d0
+  clmp_mass_pb=0d0
   allocate(cmp_distances(1:npeaks_max,0:nmassbins))
-  cmp_distances=0.d0
+  cmp_distances=0d0
   allocate(cmp(1:npeaks_max,0:nmassbins))
-  cmp=0.d0
+  cmp=0d0
   ! careful with this! The first index of the second subscript
   ! of the cumulative mass aray (index 0) is there for reference
   ! for the enclosed mass interpolation.
 
   allocate(phi_unb(0:nmassbins)) ! array where to store the potential
-  phi_unb=0.d0
+  phi_unb=0d0
 
   if (saddle_pot) then
     allocate(closest_border(1:npeaks_max)) ! point of the closest border to CoM
-    closest_border=3.d0*boxlen**2
+    closest_border=3d0*boxlen**2
   endif
 
   allocate(to_iter(1:npeaks_max)) ! peak needs to be checked or not
@@ -1576,13 +1576,13 @@ subroutine allocate_unbinding_arrays()
 
   if (make_mergertree) then
     allocate(most_bound_energy(1:npeaks_max, 1:nmost_bound))
-    most_bound_energy = HUGE(0.d0)
+    most_bound_energy = HUGE(0d0)
 
     allocate(most_bound_pid(1:npeaks_max, 1:nmost_bound))
     most_bound_pid = 0
 
     allocate(clmp_mass_exclusive(1:npeaks_max))
-    clmp_mass_exclusive = 0.d0
+    clmp_mass_exclusive = 0d0
 
     ! allocate(clmp_vel_exclusive(1:npeaks_max, 1:3))
     ! clmp_vel_exclusive = 0

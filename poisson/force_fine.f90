@@ -7,6 +7,7 @@ subroutine force_fine(ilevel,icount)
   use pm_commons
   use poisson_commons
   use mpi_mod
+  use constants, only : twopi
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -142,9 +143,9 @@ subroutine force_fine(ilevel,icount)
   !----------------------------------------------
   ! Compute gravity potential and maximum density
   !----------------------------------------------
-  rho_loc =0.0; rho_all =0.0
-  epot_loc=0.0; epot_all=0.0
-  fourpi=4.0D0*ACOS(-1.0D0)
+  rho_loc =0; rho_all =0
+  epot_loc=0; epot_all=0
+  fourpi=2*twopi
   if(cosmo)fourpi=1.5D0*omega_m*aexp
   fact=-dx_loc**ndim/fourpi/2.0D0
 

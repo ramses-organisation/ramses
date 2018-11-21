@@ -1,5 +1,6 @@
 module rt_parameters
   use hydro_parameters
+  use constants
 
 #ifdef NGROUPS
   integer,parameter::nGroups=NGROUPS          ! # of photon groups (set in Makefile)
@@ -9,15 +10,8 @@ module rt_parameters
   integer,parameter::nRTvar=nGroups*(1+ndim) ! # of RT variables (photon density and flux)
 
   real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
-  real(dp),parameter::c_cgs=2.9979250d+10                  ! Actual lightspeed in [cm s-1]
   real(dp)::rt_c_cgs=c_cgs                                 !   Reduced lightspeed [cm s-1]
   real(dp),parameter::one_over_c_cgs=3.335640484668562d-11 !         Save some computation
-  real(dp),parameter::m_sun=1.9891d33               ! Solar mass [g], for SED calculations
-  real(dp),parameter::eV_to_erg=1.6022d-12          !        eV to erg conversion constant
-  real(dp), parameter:: Gyr2sec = 3.15569d+16       !       Gyr to sec conversion constant
-  real(dp), parameter:: Myr2sec = 3.15569d+13       !       Myr to sec conversion constant
-  real(dp), parameter:: sec2Gyr = 3.16888d-17       !       sec to Gyr conversion constant
-  real(dp),parameter:: hp=6.6262d-27                !            Planck const   [erg sec ]
   real(dp),allocatable,dimension(:,:)::lambda1,lambda4                   ! HLL eigenvalues
 #ifndef NPRE
   real(dp),parameter::smallNp=1d-30                 !               Minimum photon density
@@ -53,7 +47,7 @@ module rt_parameters
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
   logical::rt_AGN=.false.              ! Activate radiation from sink particles on central cloud !
-  real(dp)::rt_esc_frac=1.d0           ! Escape fraction of light from stellar particles !
+  real(dp)::rt_esc_frac=1d0           ! Escape fraction of light from stellar particles !
   logical::rt_is_init_xion=.false.     ! Initialize ionization from T profile?           !
   character(LEN=10)::rt_flux_scheme='glf'                                                !
   logical::rt_use_hll=.false.          ! Use hll flux (or the default glf)               !
@@ -61,18 +55,18 @@ module rt_parameters
   real(dp)::rt_courant_factor=0.8d0    ! Courant factor for RT timesteps                 !
   logical::rt_refine=.false.           ! Refine on RT-related conditions?                !
   real(dp)::rt_err_grad_n=-1.0         ! Photon number density gradient for refinement   !
-  real(dp)::rt_floor_n=1.d-10          ! Photon number density floor for refinement      !
+  real(dp)::rt_floor_n=1d-10          ! Photon number density floor for refinement      !
   real(dp)::rt_err_grad_xHI=-1.0       ! Ionization state gradient for refinement        !
   real(dp)::rt_err_grad_xHII=-1.0      ! Ionization state gradient for refinement        !
   real(dp)::rt_refine_aexp=-1.0        ! Start a for RT gradient refinement              !
-  real(dp)::rt_floor_xHI=1.d-10        ! Ionization state floor for refinement           !
-  real(dp)::rt_floor_xHII=1.d-10       ! Ionization state floor for refinement           !
-  real(dp)::rt_c_fraction=1.d0         ! Actual lightspeed fraction for RT lightspeed    !
+  real(dp)::rt_floor_xHI=1d-10        ! Ionization state floor for refinement           !
+  real(dp)::rt_floor_xHII=1d-10       ! Ionization state floor for refinement           !
+  real(dp)::rt_c_fraction=1d0         ! Actual lightspeed fraction for RT lightspeed    !
   integer::rt_nsubcycle=1              ! Maximum number of RT-steps during one hydro/    !
                                        ! gravity/etc timestep                            !
   logical::rt_otsa=.true.              ! Use on-the-spot approximation                   !
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
-  real(dp)::rt_UVsrc_nHmax=-1.d0       ! Density threshold for UV emission               !
+  real(dp)::rt_UVsrc_nHmax=-1d0       ! Density threshold for UV emission               !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
   integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
   integer::iHIIheat=6                  ! Var index for HII heating                       !
@@ -154,5 +148,5 @@ module rt_parameters
   ! H2 parameters ------------------------------------------------------------------------
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
   ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
-  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0 
+  real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0
 end module rt_parameters

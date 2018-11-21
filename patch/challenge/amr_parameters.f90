@@ -108,7 +108,7 @@ module amr_parameters
   real(dp)::T2_star=0.0D0     ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6D0     ! Typical ISM polytropic index
   real(dp)::jeans_ncells=-1   ! Jeans polytropic EOS
-  real(dp)::del_star=2.D2     ! Minimum overdensity to define ISM
+  real(dp)::del_star=2d2     ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0.0D0     ! Supernova mass fraction
   real(dp)::yield  =0.0D0     ! Supernova yield
   real(dp)::f_ek   =1.0D0     ! Supernovae kinetic energy fraction (only between 0 and 1)

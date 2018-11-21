@@ -310,7 +310,7 @@ SUBROUTINE getProperTime(tau,tproper)
   implicit none
   real(dp)::tau, tproper
   integer::i
-  if(.not. cosmo .or. tau .eq. 0.d0) then ! this might happen quite often
+  if(.not. cosmo .or. tau .eq. 0d0) then ! this might happen quite often
      tproper = tau
      return
   endif

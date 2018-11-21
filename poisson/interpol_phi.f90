@@ -24,10 +24,10 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   real(dp),dimension(1:8)::bbbb
 
   ! CIC method constants
-  aa = 1.0D0/4.0D0**ndim
-  bb = 3.0D0*aa
-  cc = 9.0D0*aa
-  dd = 27.D0*aa
+  aa = 1d0/4d0**ndim
+  bb = 3*aa
+  cc = 9*aa
+  dd = 27*aa
   bbbb(:)  =(/aa ,bb ,bb ,cc ,bb ,cc ,cc ,dd/)
 
   ! Sampling positions in the 3x3x3 father cell cube
@@ -47,9 +47,9 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
 
   ! Compute fraction of timesteps for interpolation
   if (dtold(ilevel-1)> 0)then
-     tfrac=1.0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
+     tfrac=1d0*dtnew(ilevel)/dtold(ilevel-1)*(icount-1)
   else
-     tfrac=0.
+     tfrac=0
   end if
 
   ! Mesh size at level ilevel
@@ -59,7 +59,7 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   ! Third order phi interpolation
   do ind=1,twotondim
      do i=1,ncell
-        phi_int(i,ind)=0d0
+        phi_int(i,ind)=0
      end do
      do ind_average=1,twotondim
         ind_father=ccc(ind_average,ind)

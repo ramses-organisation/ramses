@@ -35,7 +35,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
   pi=3.14
   Mvirphu = Mvir*1.99d33
   rvir = (3./4./pi*Mvirphu/(overdensity*1.89d-29*0.65**2))**0.333
-  cnfw = 6./(Mvir/1.d14)**.2
+  cnfw = 6./(Mvir/1d14)**.2
   eta0 = 0.00676*(cnfw-6.5)**2+0.206*(cnfw-6.5)+2.48
   gammaKS = 1.15+0.01*(cnfw-6.5)
   d_init = 0.1*overdensity*1.89d-29*.65**2&

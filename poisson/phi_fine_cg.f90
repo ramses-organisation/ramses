@@ -7,6 +7,7 @@ subroutine phi_fine_cg(ilevel,icount)
   use pm_commons
   use poisson_commons
   use mpi_mod
+  use constants, only: twopi
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -25,7 +26,7 @@ subroutine phi_fine_cg(ilevel,icount)
   integer::idx
   real(dp)::error,error_ini
   real(dp)::dx2,fourpi,scale,oneoversix,fact,fact2
-  real(dp)::r2_old=0.,alpha_cg,beta_cg
+  real(dp)::r2_old=0,alpha_cg,beta_cg
   real(kind=8)::r2,pAp,rhs_norm
 #ifndef WITHOUTMPI
   real(kind=8) :: rhs_norm_all, pAp_all, r2_all
@@ -40,7 +41,7 @@ subroutine phi_fine_cg(ilevel,icount)
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=4.D0*ACOS(-1.0D0)*scale
+  fourpi=2*twopi
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
@@ -60,7 +61,7 @@ subroutine phi_fine_cg(ilevel,icount)
   !===============================
   ! Compute right-hand side norm
   !===============================
-  rhs_norm=0.d0
+  rhs_norm=0
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
@@ -113,7 +114,7 @@ subroutine phi_fine_cg(ilevel,icount)
      ! Compute beta factor
      !====================================
      if(iter==1)then
-        beta_cg=0.
+        beta_cg=0
      else
         beta_cg=r2/r2_old
      end if
@@ -212,6 +213,7 @@ subroutine cmp_residual_cg(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use constants, only: twopi
   implicit none
   integer::ilevel,icount
   !------------------------------------------------------------------
@@ -234,7 +236,7 @@ subroutine cmp_residual_cg(ilevel,icount)
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=4.D0*ACOS(-1.0D0)*scale
+  fourpi=2*twopi
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
@@ -402,7 +404,7 @@ subroutine cmp_Ap_cg(ilevel)
               if(igridn(i,ig1)>0)then
                  phig(i,idim)=f(igridn(i,ig1)+ih1,2)
               else
-                 phig(i,idim)=0.
+                 phig(i,idim)=0
               end if
            end do
            id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
@@ -411,7 +413,7 @@ subroutine cmp_Ap_cg(ilevel)
               if(igridn(i,ig2)>0)then
                  phid(i,idim)=f(igridn(i,ig2)+ih2,2)
               else
-                 phid(i,idim)=0.
+                 phid(i,idim)=0
               end if
            end do
         end do
@@ -477,11 +479,11 @@ subroutine make_initial_phi(ilevel,icount)
               ind_cell(i)=iskip+ind_grid(i)
            end do
            do i=1,ngrid
-              phi(ind_cell(i))=0.0d0
+              phi(ind_cell(i))=0
            end do
            do idim=1,ndim
               do i=1,ngrid
-                 f(ind_cell(i),idim)=0.0
+                 f(ind_cell(i),idim)=0
               end do
            end do
         end do
@@ -506,7 +508,7 @@ subroutine make_initial_phi(ilevel,icount)
            end do
            do idim=1,ndim
               do i=1,ngrid
-                 f(ind_cell(i),idim)=0.0
+                 f(ind_cell(i),idim)=0
               end do
            end do
         end do
@@ -525,11 +527,10 @@ subroutine make_multipole_phi(ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use constants, only: twopi
   implicit none
   integer::ilevel
-  !
-  !
-  !
+
   integer::idim
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip,nx_loc,ix,iy,iz
@@ -552,7 +553,7 @@ subroutine make_multipole_phi(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  fourpi=4.D0*ACOS(-1.0D0)
+  fourpi=2*twopi
   boxlen2=boxlen**2
   eps=dx_loc
 
@@ -612,7 +613,7 @@ subroutine make_multipole_phi(ilevel)
 
         else
            do i=1,ngrid
-               phi(ind_cell(i))=0d0
+               phi(ind_cell(i))=0
            end do
         endif
 

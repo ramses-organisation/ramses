@@ -11,7 +11,7 @@ real(kind=8) function wallclock()
   real(kind=8)       :: tcur
 #endif
   logical,      save :: first_call=.true.
-  real(kind=8), save :: norm, offset=0.
+  real(kind=8), save :: norm, offset=0
   !---------------------------------------------------------------------
   if (first_call) then
 #ifdef WITHOUTMPI
@@ -52,7 +52,7 @@ subroutine findit (label)
   ntimer = ntimer+1
   itimer = ntimer
   labels(itimer) = label
-  time(itimer) = 0.
+  time(itimer) = 0
 end subroutine
 end module
 !=======================================================================
@@ -184,7 +184,7 @@ subroutine reset_timer
 
 !-----------------------------------------------------------------------
    do itimer = 1,ntimer
-      time(itimer)=0.0
+      time(itimer)=0
    end do
 end subroutine
 !=======================================================================
@@ -348,8 +348,8 @@ subroutine update_time(ilevel)
      end do
 #endif
   else
-     aexp = 1.0
-     hexp = 0.0
+     aexp = 1
+     hexp = 0
      texp = t
   end if
 
@@ -533,7 +533,7 @@ subroutine getmem(outmem)
 
 
   if (read_status < 0)then
-     outmem=0.
+     outmem=0
      if (myid==1 .and. read_status .ne. -1000)write(*,*)'Problem in checking free memory'
   else
      ind=300
@@ -560,7 +560,7 @@ SUBROUTINE getProperTime(tau,tproper)
   implicit none
   real(dp)::tau, tproper
   integer::i
-  if(.not. cosmo .or. tau .eq. 0.d0) then ! this might happen quite often
+  if(.not. cosmo .or. tau .eq. 0d0) then ! this might happen quite often
      tproper = tau
      return
   endif
@@ -578,16 +578,16 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
 !------------------------------------------------------------------------
   use amr_commons
   use pm_commons
+  use constants,only: Gyr2sec
   implicit none
   real(dp):: t_birth_proper, age
-  real(dp), parameter:: yr = 3.15569d+07
   real(dp),save:: scale_t_Gyr
   logical,save::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-     scale_t_Gyr = (scale_t/aexp**2)/yr/1.e9
+     scale_t_Gyr = (scale_t/aexp**2)/Gyr2sec
      scale_init=.true.
   endif
   age = (texp - t_birth_proper) * scale_t_Gyr

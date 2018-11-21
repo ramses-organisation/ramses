@@ -102,7 +102,7 @@ subroutine backup_hydro(filename)
 
                  ! Compute the Lorentz factor
                  u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-                 lor = (1.0d0+u2)**(1.d0/2.d0)
+                 lor = (1.0d0+u2)**(1d0/2d0)
 
                  ! Compute the density
                  qq(i,1) = D/lor
@@ -113,16 +113,16 @@ subroutine backup_hydro(filename)
                  qq(i,4) = Mz/R
 
                  ! Compute pressure
-                 Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
+                 Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
 
                  if (eos .eq. 'TM') then
                     rho=qq(i,1)
                     qq(i,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                  else
-                    qq(i,5)=(gamma-1.d0)/gamma*Xsi
+                    qq(i,5)=(gamma-1d0)/gamma*Xsi
                  endif
               endif
-              if ((qq(i,1)<0.d0) .or.((qq(i,5)<0.d0))) then
+              if ((qq(i,1)<0d0) .or.((qq(i,5)<0d0))) then
 
                  write(*,*) 'negative pressure or density output'
               endif

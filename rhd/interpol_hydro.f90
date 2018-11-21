@@ -153,13 +153,13 @@ subroutine upl(ind_cell,ncell)
 
                  ! Compute the Lorentz factor
                  v2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-                 lor = (1.0d0+v2)**(1.d0/2.d0)
+                 lor = (1.0d0+v2)**(1d0/2d0)
 
                  ! Compute the density
                  qd = D/lor
 
                  ! Compute pressure
-                 Xsi=((R-D)-v2/(lor+1.d0)*D)/lor**2
+                 Xsi=((R-D)-v2/(lor+1d0)*D)/lor**2
 
                  if (eos .eq. 'TM') then
                     qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
@@ -167,11 +167,11 @@ subroutine upl(ind_cell,ncell)
                     tau=qp/qd
                     eint(i)=3d0/2d0*tau+3d0/2d0*(tau**2+4d0/9d0)**(1d0/2d0)-1d0
                  else
-                    qp=(gamma-1.d0)/gamma*Xsi
+                    qp=(gamma-1d0)/gamma*Xsi
                  ! Compute child internal energy (eint)
-                    eint(i)= qp/qd/(gamma-1.d0)
+                    eint(i)= qp/qd/(gamma-1d0)
                  endif
-                 if ((qd<0.d0).or.(qp<0.d0).or.E<0.d0) then
+                 if ((qd<0d0).or.(qp<0d0).or.E<0d0) then
                     write(*,*) 'negative pressure or density interpol hydro'
 !                    write(*,*),qp,qd,D,M,E
                     stop
@@ -317,13 +317,13 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
 
            ! Compute the Lorentz factor
            v2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-           lor = (1.0d0+v2)**(1.d0/2.d0)
+           lor = (1.0d0+v2)**(1d0/2d0)
 
            ! Compute the density
            qd = D/lor
 
            ! Compute pressure
-           Xsi=((R-D)-v2/(lor+1.d0)*D)/lor**2
+           Xsi=((R-D)-v2/(lor+1d0)*D)/lor**2
 
            if (eos .eq. 'TM') then
               qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
@@ -331,12 +331,12 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
               tau=qp/qd
               u1(i,j,5)=3d0/2d0*tau+3d0/2d0*(tau**2+4d0/9d0)**(1d0/2d0)-1d0
            else
-              qp=(gamma-1.d0)/gamma*Xsi
+              qp=(gamma-1d0)/gamma*Xsi
               ! Compute child internal energy (eint)
-              u1(i,j,5)= qp/qd/(gamma-1.d0)
+              u1(i,j,5)= qp/qd/(gamma-1d0)
            endif
 
-           if ((qd<0.d0).or.(qp<0.d0).or. (E<0.d0)) then
+           if ((qd<0d0).or.(qp<0d0).or. (E<0d0)) then
               write(*,*) 'negative pressure or density interpol hydro'
               stop
            endif
@@ -525,7 +525,7 @@ subroutine compute_limiter_central(a,w,nn)
      do ind=1,twotondim
         xxc = xc(ind,idim)
         do i=1,nn
-           corner(i)=ac(i,ind)+2.D0*w(i,idim)*xxc
+           corner(i)=ac(i,ind)+2d0*w(i,idim)*xxc
         end do
         do i=1,nn
            ac(i,ind)=corner(i)

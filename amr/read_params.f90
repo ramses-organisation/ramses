@@ -326,14 +326,14 @@ subroutine read_params
   do i=1,levelmin-1
      nexpand   (i)= 1
      nsubcycle (i)= 1
-     r_refine  (i)=-1.0
-     a_refine  (i)= 1.0
-     b_refine  (i)= 1.0
-     x_refine  (i)= 0.0
-     y_refine  (i)= 0.0
-     z_refine  (i)= 0.0
-     m_refine  (i)=-1.0
-     exp_refine(i)= 2.0
+     r_refine  (i)=-1
+     a_refine  (i)= 1
+     b_refine  (i)= 1
+     x_refine  (i)= 0
+     y_refine  (i)= 0
+     z_refine  (i)= 0
+     m_refine  (i)=-1
+     exp_refine(i)= 2
      initfile  (i)= ' '
   end do
 

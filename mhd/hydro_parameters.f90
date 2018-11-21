@@ -52,13 +52,13 @@ module hydro_parameters
   real(dp)::err_grad_B=-1.0  ! By gradient
   real(dp)::err_grad_C=-1.0  ! Bz gradient
   real(dp)::err_grad_B2=-1.0 ! B L2 norm gradient
-  real(dp)::floor_d=1.d-10   ! Density floor
-  real(dp)::floor_u=1.d-10   ! Velocity floor
-  real(dp)::floor_p=1.d-10   ! Pressure floor
-  real(dp)::floor_A=1.d-10   ! Bx floor
-  real(dp)::floor_B=1.d-10   ! By floor
-  real(dp)::floor_C=1.d-10   ! Bz floor
-  real(dp)::floor_b2=1.d-10  ! B L2 norm floor
+  real(dp)::floor_d=1d-10   ! Density floor
+  real(dp)::floor_u=1d-10   ! Velocity floor
+  real(dp)::floor_p=1d-10   ! Pressure floor
+  real(dp)::floor_A=1d-10   ! Bx floor
+  real(dp)::floor_B=1d-10   ! By floor
+  real(dp)::floor_C=1d-10   ! Bz floor
+  real(dp)::floor_b2=1d-10  ! B L2 norm floor
   real(dp)::mass_sph=0.0D0   ! mass_sph
 #if NENER>0
   real(dp),dimension(1:NENER)::err_grad_prad=-1.0
@@ -93,8 +93,8 @@ module hydro_parameters
   real(dp),dimension(1:512)::gamma_rad=1.33333333334d0
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
-  real(dp)::smallc=1.d-10
-  real(dp)::smallr=1.d-10
+  real(dp)::smallc=1d-10
+  real(dp)::smallr=1d-10
   real(dp)::eta_mag=0.0d0
   character(LEN=10)::scheme='muscl'
   character(LEN=10)::riemann='llf'

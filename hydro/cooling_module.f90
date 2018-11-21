@@ -25,21 +25,13 @@
 !=============================================================================
 module cooling_module
   use amr_parameters
+  use constants
   implicit none
   logical :: verbose_cooling=.false.
 
   real(kind=8),parameter ::smallnum_cooling= 1d-30
-  real(kind=8),parameter ::twopi   = 6.2831853d0
-  real(kind=8),parameter ::hplanck = 6.6262000d-27
-  real(kind=8),parameter ::eV      = 1.6022000d-12
-  real(kind=8),parameter ::kB      = 1.3806200d-16
-  real(kind=8),parameter ::clight  = 2.9979250d+10
-  real(kind=8),parameter ::Gyr     = 3.1536000d+16
-  real(kind=8)           ::X       = 0.76
-  real(kind=8)           ::Y       = 0.24
-  real(kind=8),parameter ::rhoc    = 1.8800000d-29
-  real(kind=8),parameter ::mH      = 1.6600000d-24
-  real(kind=8),parameter ::mu_mol  = 1.2195D0
+  real(kind=8)           ::X       = 0.76d0
+  real(kind=8)           ::Y       = 0.24d0
   integer,parameter::HI      = 1
   integer,parameter::HEI     = 2
   integer,parameter::HEII    = 3
@@ -47,10 +39,10 @@ module cooling_module
   ! Les parametres de la table par defaut
   integer,parameter     :: nbin_T_fix=101
   integer,parameter     :: nbin_n_fix=161
-  real(kind=8),parameter:: nH_min_fix=1.d-10
-  real(kind=8),parameter:: nH_max_fix=1.d+6
-  real(kind=8),parameter:: T2_min_fix=1.d-2
-  real(kind=8),parameter:: T2_max_fix=1.d+9
+  real(kind=8),parameter:: nH_min_fix=1d-10
+  real(kind=8),parameter:: nH_max_fix=1d+6
+  real(kind=8),parameter:: T2_min_fix=1d-2
+  real(kind=8),parameter:: T2_max_fix=1d+9
 
   type cooling_table
      integer::n1
@@ -75,7 +67,7 @@ module cooling_module
   ! Utilisation de table%n_spec si necessaire
   logical, parameter :: if_species_abundances=.true.
   ! Facteur correctif de Theuns et al.
-  real(kind=8),parameter :: dumfac_ion_theuns=2.d0
+  real(kind=8),parameter :: dumfac_ion_theuns=2d0
   real(kind=8),parameter :: dumfac_rec_theuns=0.75D0  ! idem
   real(kind=8) :: dumfac_ion=dumfac_ion_theuns
   real(kind=8) :: dumfac_rec=dumfac_rec_theuns
@@ -90,18 +82,18 @@ module cooling_module
   logical :: courty=.true.  ! Default model
 
   ! Si teyssier ou theuns :
-  real(kind=8) :: J0in=1.d-22  ! J0 default
-  real(kind=8) :: J0min=1.d-29 ! Valeur minimale du J0
+  real(kind=8) :: J0in=1d-22  ! J0 default
+  real(kind=8) :: J0min=1d-29 ! Valeur minimale du J0
   logical :: force_j0_one=.false. ! Force constant UV bkg
   ! (saturation a grand redshift)
-  real(kind=8) :: aexp_ref=0.0001
+  real(kind=8) :: aexp_ref=0.0001d0
   real(kind=8) :: J0min_ref=2.77168510365299962D-25 ! J0min_ref precalcule pour
   ! H0=70, omegab=0.04, omega0=0.3, omegaL=0.7
   logical :: high_z_realistic_ne=.true. ! Calcul du J0min de telle sorte
   ! que le n_e soit realiste a grand z. J0min=J0min_ref/(aexp/aexp_ref)^2
-  real(kind=8) :: alpha=1.d0   ! J(nu) \propto nu^{-alpha}
+  real(kind=8) :: alpha=1d0   ! J(nu) \propto nu^{-alpha}
   ! Si madau ou weinbergint :
-  real(kind=8) :: normfacJ0=0.74627   ! Facteur de normalisation pour J0
+  real(kind=8) :: normfacJ0=0.74627d0   ! Facteur de normalisation pour J0
   ! pour un J(nu,z) de type haardt et Madau
   ! Ce facteur la est celui utilise par Dave et al. pour LCDM
   ! Sauvegarde des termes de cooling/heating dans les
@@ -155,27 +147,27 @@ module cooling_module
   real(kind=8) :: zreioniz=8.5d0
   integer,parameter :: Nordercourty=7
   ! Ordre+1 du polynome d'interpolation (NE PAS CHANGER)
-  real(kind=8) :: coefcourty(0:Nordercourty,6)= reshape( &
-                      (/ -13.5857,  1.24475,    0.187739, &
-                        -0.430409, 0.152544,  -0.0246448, &
-                         0.00192622, -5.89772e-05, &
-                        -14.0242,  1.99211,   -0.490766, &
-                        -0.122646, 0.0776501, -0.0146310, &
-                         0.00123335, -3.96066e-05, &
-                        -15.6627,  0.128240,   1.65633, &
-                        -1.23799,  0.372157,  -0.0561687, &
-                         0.00422696, -0.000126344, &
-                        -24.8422,  1.50750,   -0.0699428, &
-                        -0.308682, 0.122196,  -0.0205179, &
-                         0.00163695, -5.08050e-05, &
-                        -25.0252,  1.79577,   -0.159054, &
-                        -0.300924, 0.125343,  -0.0214598, &
-                         0.00173377, -5.43576e-05, &
-                        -26.4168,  0.0479454,  1.70948, &
-                        -1.26395,  0.378922,  -0.0570957, &
-                         0.00428897, -0.000127909 /),(/Nordercourty+1,6/) )
-  real(kind=8),dimension(6)    :: coef_fit= (/ 20., 20., 20., 20., 20., 20. /)
-  integer,dimension(6) :: beta_fit= (/  6,   6,   8,   6,   6,  8  /)
+  real(kind=8) :: coefcourty(0:Nordercourty,6)= reshape(           &
+                      (/-13.5857d0,     1.24475d0,    0.187739d0,  &
+                        -0.430409d0,    0.152544d0,  -0.0246448d0, &
+                         0.00192622d0, -5.89772d-05,               &
+                        -14.0242d0,     1.99211d0,   -0.490766d0,  &
+                        -0.122646d0,    0.0776501d0, -0.0146310d0, &
+                         0.00123335d0, -3.96066d-05,               &
+                        -15.6627d0,     0.128240d0,   1.65633d0,   &
+                        -1.23799d0,     0.372157d0,  -0.0561687d0, &
+                         0.00422696d0, -0.000126344d0,             &
+                        -24.8422d0,     1.50750d0,   -0.0699428d0, &
+                        -0.308682d0,    0.122196d0,  -0.0205179d0, &
+                         0.00163695d0, -5.08050d-05,               &
+                        -25.0252d0,     1.79577d0,   -0.159054d0,  &
+                        -0.300924d0,    0.125343d0,  -0.0214598d0, &
+                         0.00173377d0, -5.43576d-05,               &
+                        -26.4168d0,     0.0479454d0,  1.70948d0,   &
+                        -1.26395d0,     0.378922d0,  -0.0570957d0, &
+                         0.00428897d0, -0.000127909d0 /),(/Nordercourty+1,6/) )
+  real(kind=8), dimension(6) :: coef_fit= 20
+  integer, dimension(6)      :: beta_fit = 6
 
 contains
 !=======================================================================
@@ -193,11 +185,11 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
 !                  6 : Courty
 !                 -1 : defaut defini dans le module
 ! J0in_in (dble) : valeur du J0 utilisee pour Teyssier et Theuns
-!            Exemple : J0in_in=1.d-22
+!            Exemple : J0in_in=1d-22
 !            J0in_in <= 0 utilise le defaut defini dans le module
 ! J0min_in (dble) : valeur du J0min ou J0min_ref (voir option realistic_ne)
 !            utilisee dans tous les modeles a grand redshift
-!            Exemple : J0min_in=1.d-29
+!            Exemple : J0min_in=1d-29
 !            J0min_in <= 0 utilise le defaut defini dans le module
 ! alpha_in (dble) : valeur de l'indice spectral du J(nu) \propto nu^{-alpha}
 !            Exemple : alpha=1.
@@ -275,8 +267,8 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   if (alpha_in > 0.0) alpha=alpha_in
   if (normfacJ0_in > 0.0) normfacJ0=normfacJ0_in
   if (correct_cooling == 0) then
-     dumfac_ion=1.d0
-     dumfac_rec=1.d0
+     dumfac_ion=1d0
+     dumfac_rec=1d0
   elseif (correct_cooling == 1) then
      dumfac_ion=dumfac_ion_theuns
      dumfac_rec=dumfac_rec_theuns
@@ -286,13 +278,13 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
      STOP
   endif
   if (realistic_ne == 0) then
-     astart=5.d-4
+     astart=5d-4
      high_z_realistic_ne=.false.
-     if (J0min_in > 0.d0) J0min=J0min_in
+     if (J0min_in > 0d0) J0min=J0min_in
   elseif (realistic_ne == 1) then
      astart=aexp_ref
      high_z_realistic_ne=.true.
-     if (J0min_in > 0.d0) J0min_ref=J0min_in
+     if (J0min_in > 0d0) J0min_ref=J0min_in
   elseif (realistic_ne == 2) then
      astart=aexp_ref
      high_z_realistic_ne=.true.
@@ -312,7 +304,7 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   ! Calcul de la temperature initiale
   aend=astart_sim
   dasura=0.02d0
-  minus1=-1.0
+  minus1=-1
   call evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL,minus1,T2end,mu,ne,.false.)
   if (verbose_cooling) write(*,*) 'Starting temperature in K :',T2end*mu
   T2_sim=T2end
@@ -403,7 +395,7 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
   nH_com = omegab*rhoc*h**2*X/mH
   do while (aexp < aend)
      daexp = dasura*aexp
-     dt_cool=daexp/(aexp*100.*h*3.2408608e-20*HsurH0(1.0/aexp-1.,omega0,omegaL,1.-omega0-omegaL))
+     dt_cool=daexp/(aexp*100*h*3.2408608d-20*HsurH0(1/aexp-1d0,omega0,omegaL,1d0-omega0-omegaL))
 
      nH = nH_com/aexp**3
      T2_old = T2_com/aexp**2
@@ -412,22 +404,22 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
      call set_rates(t_rad_spec,h_rad_spec,aexp)
 
      ! Iteration to find new T2
-     err_T2=1.
-     T2_left=1.d-2
-     T2_right=1.d8
+     err_T2=1d0
+     T2_left=1d-2
+     T2_right=1d8
      niter=0
-     coeff = 2.*nH*X/3./kB
-     coeff2 = 2.*X/3./kB
-     do while (err_T2 > 1.d-10.and.niter <= 100)
-        T2=0.5*(T2_left+T2_right)
+     coeff = 2d0*nH*X/3d0/kB
+     coeff2 = 2d0*X/3d0/kB
+     do while (err_T2 > 1d-10.and.niter <= 100)
+        T2=0.5d0*(T2_left+T2_right)
         call cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu,aexp,n_spec)
         diff = coeff*(heat_tot-cool_tot) + coeff2*(heat_com-cool_com) + (T2_old-T2)/dt_cool
         if(diff>0.)then
-           T2_left =0.5*(T2_left+T2_right)
+           T2_left =0.5d0*(T2_left+T2_right)
            T2_right=T2_right
         else
            T2_left =T2_left
-           T2_right=0.5*(T2_left+T2_right)
+           T2_right=0.5d0*(T2_left+T2_right)
         end if
         err_T2=abs(T2_right-T2_left)/T2_left
         niter=niter+1
@@ -457,21 +449,21 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   ne_to_find=1.2d-5*xval ! From the book of Peebles p. 173
   astart=aexp_ref
   aend=MIN(0.05d0,0.5d0/(1d0+zreioniz)) ! Always end before reionization
-  dasura=0.05
-  err_J0min=1.
+  dasura=0.05d0
+  err_J0min=1d0
   J0min_left=1d-20
   J0min_right=1d-30
   niter=0
-  do while (err_J0min > 1.d-3 .and. niter <= 100)
-     J0min_in=0.5*(J0min_left+J0min_right)
+  do while (err_J0min > 1d-3 .and. niter <= 100)
+     J0min_in=0.5d0*(J0min_left+J0min_right)
      call evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL,J0min_in,T2end,mu,ne,if_write_result)
      diff=ne-ne_to_find
-     if (diff>0.d0) then
-        J0min_left=0.5*(J0min_left+J0min_right)
+     if (diff>0d0) then
+        J0min_left=0.5d0*(J0min_left+J0min_right)
         J0min_right=J0min_right
      else
         J0min_left=J0min_left
-        J0min_right=0.5*(J0min_left+J0min_right)
+        J0min_right=0.5d0*(J0min_left+J0min_right)
      endif
      err_J0min=abs(J0min_right-J0min_left)/J0min_left
      niter=niter+1
@@ -622,8 +614,8 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
 
         else
 
-           lambda=1.42*1d-27*sqrt(tau(ind(i)))*1.1
-           lambda_prime=lambda/2./tau(ind(i))
+           lambda=1.42d0*1d-27*sqrt(tau(ind(i)))*1.1d0
+           lambda_prime=lambda/2d0/tau(ind(i))
 
         endif
 
@@ -676,16 +668,16 @@ function J0simple(aexp)
 ! Le J0 dans le cas teyssier ou theuns
 !=======================================================================
   real(kind=8) :: J0simple,aexp
-  if (aexp .lt. 1.d0/(1d0+zreioniz)) then
-     J0simple=0.d0
-  elseif (aexp .lt. 1.d0/4.d0)then
-     J0simple=4.d0*aexp
-  elseif (aexp .lt. 1.d0/3.d0)then
-     J0simple=1.d0
+  if (aexp .lt. 1d0/(1d0+zreioniz)) then
+     J0simple=0d0
+  elseif (aexp .lt. 1d0/4d0)then
+     J0simple=4d0*aexp
+  elseif (aexp .lt. 1d0/3d0)then
+     J0simple=1d0
   else
-     J0simple=1.d0/(3.*aexp)**3
+     J0simple=1d0/(3d0*aexp)**3
   endif
-  if(force_j0_one)J0simple=1.0
+  if(force_j0_one)J0simple=1.0d0
   J0simple=max(J0simple*J0in,J0min)
   return
 end function J0simple
@@ -775,18 +767,18 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   call set_rates(t_rad_spec,h_rad_spec,aexp)
 
   ! Create the table
-  table%mu=0.0
-  table%cool=0.0
-  table%heat=0.0
-  table%cool_com=0.0
-  table%heat_com=0.0
-  table%metal=0.0
-  table%cool_prime=0.0
-  table%heat_prime=0.0
-  table%cool_com_prime=0.0
-  table%heat_com_prime=0.0
-  table%metal_prime=0.0
-  if (if_species_abundances) table%n_spec=0.0
+  table%mu=0
+  table%cool=0
+  table%heat=0
+  table%cool_com=0
+  table%heat_com=0
+  table%metal=0
+  table%cool_prime=0
+  table%heat_prime=0
+  table%cool_com_prime=0
+  table%heat_com_prime=0
+  table%metal_prime=0
+  if (if_species_abundances) table%n_spec=0
   do i_n = myid+1,nbin_n,ncpu
      call iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   end do
@@ -846,7 +838,7 @@ subroutine set_rates(t_rad_spec,h_rad_spec,aexp)
   real(kind=8),dimension(1:3) :: t_rad_spec,h_rad_spec
   real(kind=8) :: J0,z,aexp
 
-  z=1.d0/aexp-1.D0
+  z=1d0/aexp-1d0
   if (high_z_realistic_ne) J0min=J0min_ref/(aexp/aexp_ref)**2
   if (teyssier) then
      J0=J0simple(aexp)
@@ -865,7 +857,7 @@ subroutine set_rates(t_rad_spec,h_rad_spec,aexp)
      h_rad_spec(HEI ) = heat_rad_theuns(HEI ,J0)
      h_rad_spec(HEII) = heat_rad_theuns(HEII,J0)
   elseif (madau) then
-     z=1.d0/aexp-1.D0
+     z=1d0/aexp-1d0
      t_rad_spec(HI  ) = taux_rad_madau(HI  ,z)
      t_rad_spec(HEI ) = taux_rad_madau(HEI ,z)
      t_rad_spec(HEII) = taux_rad_madau(HEII,z)
@@ -919,10 +911,10 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
      ! Compute cooling and heating derivatives
      T2_eps=10d0**(table%T2(i_T)+0.01d0)
      call cmp_cooling(T2_eps,nH,t_rad_spec,h_rad_spec,cool_tot_eps,heat_tot_eps,cool_com_eps,heat_com_eps,mu_eps,aexp,n_spec_eps)
-     table%cool_prime(i_n,i_T)=(log10(cool_tot_eps)-log10(cool_tot))/0.01
-     table%heat_prime(i_n,i_T)=(log10(heat_tot_eps)-log10(heat_tot))/0.01
-     table%cool_com_prime(i_n,i_T)=(log10(cool_com_eps)-log10(cool_com))/0.01
-     table%heat_com_prime(i_n,i_T)=(log10(heat_com_eps)-log10(heat_com))/0.01
+     table%cool_prime(i_n,i_T)=(log10(cool_tot_eps)-log10(cool_tot))/0.01d0
+     table%heat_prime(i_n,i_T)=(log10(heat_tot_eps)-log10(heat_tot))/0.01d0
+     table%cool_com_prime(i_n,i_T)=(log10(cool_com_eps)-log10(cool_com))/0.01d0
+     table%heat_com_prime(i_n,i_T)=(log10(heat_com_eps)-log10(heat_com))/0.01d0
      ! Compute metal contribution for solar metallicity
      call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
      table%metal(i_n,i_T)=log10(metal_tot)
@@ -1043,7 +1035,7 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
        & 0.0000000 /)
   real(kind=8)::TT,lTT,deltaT,lcool1,lcool2,lcool1_prime,lcool2_prime
   real(kind=8)::ZZ,deltaZ
-  real(kind=8)::c1=0.4,c2=10.0,TT0=1d5,TTC=1d6,alpha1=0.15
+  real(kind=8)::c1=0.4d0,c2=10.0d0,TT0=1d5,TTC=1d6,alpha1=0.15d0
   real(kind=8)::ux,g_courty,f_courty=1d0,g_courty_prime,f_courty_prime
   integer::iT,iZ
 
@@ -1055,9 +1047,9 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
   ! on metal cooling (calibrated using CLOUDY).
   if(madau.or.weinbergint.or.courty)then
      if(ZZ.le.0.0.or.ZZ.ge.z_courty(50))then
-        ux=0.0
+        ux=0
      else
-        iZ=1+int(ZZ/z_courty(50)*49.)
+        iZ=1+int(ZZ/z_courty(50)*49)
         iZ=min(iZ,49)
         iZ=max(iZ,1)
         deltaZ=z_courty(iZ+1)-z_courty(iZ)
@@ -1075,14 +1067,14 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
 !  if(lTT.ge.temperature_sd93(91))then
   if(lTT.ge.temperature_cc07(91))then
      metal_tot=1d-100
-     metal_prime=0d0
+     metal_prime=0
   else if(lTT.ge.1.0)then
-     lcool1=-100d0
-     lcool1_prime=0d0
+     lcool1=-100
+     lcool1_prime=0
 !      if(lTT.ge.temperature_sd93(1))then
       if(lTT.ge.temperature_cc07(1))then
 !        iT=1+int((lTT-temperature_sd93(1))/(temperature_sd93(91)-temperature_sd93(1))*90.0)
-        iT=1+int((lTT-temperature_cc07(1))/(temperature_cc07(91)-temperature_cc07(1))*90.0)
+        iT=1+int((lTT-temperature_cc07(1))/(temperature_cc07(91)-temperature_cc07(1))*90)
         iT=min(iT,90)
         iT=max(iT,1)
 !        deltaT=temperature_sd93(iT+1)-temperature_sd93(iT)
@@ -1097,8 +1089,8 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
                     & + excess_prime_cc07(iT)*(temperature_cc07(iT+1)-lTT)/deltaT
      endif
      ! Fine structure cooling from infrared lines
-     lcool2=-31.522879+2.0*lTT-20.0/TT-TT*4.342944d-5
-     lcool2_prime=2d0+(20d0/TT-TT*4.342944d-5)*log(10d0)
+     lcool2=-31.522879d0+2*lTT-20.0d0/TT-TT*4.342944d-5
+     lcool2_prime=2d0+(20/TT-TT*4.342944d-5)*log(10d0)
      ! Total metal cooling and temperature derivative
      metal_tot=10d0**lcool1+10d0**lcool2
      metal_prime=(10d0**lcool1*lcool1_prime+10d0**lcool2*lcool2_prime)/metal_tot
@@ -1106,7 +1098,7 @@ subroutine cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
      metal_tot=metal_tot*f_courty
   else
      metal_tot=1d-100
-     metal_prime=0d0
+     metal_prime=0
   endif
 
 end subroutine cmp_metals
@@ -1125,21 +1117,21 @@ subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,he
   integer::niter
 
   ! Iteration to find mu
-  err_mu=1.
-  mu_left=0.5
-  mu_right=1.3
+  err_mu=1
+  mu_left=0.5d0
+  mu_right=1.3d0
   niter=0
-  do while (err_mu > 1.d-4 .and. niter <= 50)
-     mu_old=0.5*(mu_left+mu_right)
+  do while (err_mu > 1d-4 .and. niter <= 50)
+     mu_old=0.5d0*(mu_left+mu_right)
      T = T2*mu_old
      call cmp_chem_eq(T,nH,t_rad_spec,n_spec,n_TOT,mu)
      err_mu = (mu-mu_old)/mu_old
      if(err_mu>0.)then
-        mu_left =0.5*(mu_left+mu_right)
+        mu_left =0.5d0*(mu_left+mu_right)
         mu_right=mu_right
      else
         mu_left =mu_left
-        mu_right=0.5*(mu_left+mu_right)
+        mu_right=0.5d0*(mu_left+mu_right)
      end if
      err_mu=ABS(err_mu)
      niter=niter+1
@@ -1230,8 +1222,8 @@ subroutine cmp_chem_eq(T,n_H,t_rad_spec,n_spec,n_TOT,mu)
   real(kind=8)::t_ion2_HI,t_ion2_HEI,t_ion2_HEII
   real(kind=8)::x1,err_nE
 
-  xx=(1.-Y)
-  yy=Y/(1.-Y)/4.
+  xx=(1d0-Y)
+  yy=Y/(1d0-Y)/4d0
 
   t_rad_HI   = t_rad_spec(HI)
   t_rec_HI   = taux_rec  (HI,T)
@@ -1246,13 +1238,13 @@ subroutine cmp_chem_eq(T,n_H,t_rad_spec,n_spec,n_TOT,mu)
   t_ion_HEII = taux_ion  (HEII,T)
 
   n_E = n_H
-  err_nE = 1.
+  err_nE = 1
 
-  do while(err_nE > 1.d-8)
+  do while(err_nE > 1d-8)
 
-     t_ion2_HI   = t_ion_HI   + t_rad_HI  /MAX(n_E,1e-15*n_H)
-     t_ion2_HEI  = t_ion_HEI  + t_rad_HEI /MAX(n_E,1e-15*n_H)
-     t_ion2_HEII = t_ion_HEII + t_rad_HEII/MAX(n_E,1e-15*n_H)
+     t_ion2_HI   = t_ion_HI   + t_rad_HI  /MAX(n_E,1d-15*n_H)
+     t_ion2_HEI  = t_ion_HEI  + t_rad_HEI /MAX(n_E,1d-15*n_H)
+     t_ion2_HEII = t_ion_HEII + t_rad_HEII/MAX(n_E,1d-15*n_H)
 
      n_HI  = t_rec_HI/(t_ion2_HI+t_rec_HI)*n_H
      n_HII = t_ion2_HI/(t_ion2_HI+t_rec_HI)*n_H
@@ -1263,8 +1255,8 @@ subroutine cmp_chem_eq(T,n_H,t_rad_spec,n_spec,n_TOT,mu)
      n_HEII  = yy*t_ion2_HEI *t_rec_HEII/x1*n_H
      n_HEI   = yy*t_rec_HEII *t_rec_HEI /x1*n_H
 
-     err_nE = ABS((n_E - (n_HII + n_HEII + 2.*n_HEIII))/n_H)
-     n_E = 0.5*n_E+0.5*(n_HII + n_HEII + 2.*n_HEIII)
+     err_nE = ABS((n_E - (n_HII + n_HEII + 2*n_HEIII))/n_H)
+     n_E = 0.5d0*n_E+0.5d0*(n_HII + n_HEII + 2*n_HEIII)
 
   end do
 
@@ -1284,10 +1276,10 @@ function cool_bre(ispec,T)
   implicit none
   integer::ispec
   real(kind=8)   ::T,cool_bre
-  cool_bre = 0.0
-  if(ispec==HI  )cool_bre = 1.42D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3.D0))
-  if(ispec==HEI )cool_bre = 1.42D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3.D0))
-  if(ispec==HEII)cool_bre = 5.68D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3.D0))
+  cool_bre = 0
+  if(ispec==HI  )cool_bre = 1.42D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3d0))
+  if(ispec==HEI )cool_bre = 1.42D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3d0))
+  if(ispec==HEII)cool_bre = 5.68D-27*sqrt(T)*(1.1D0+0.34D0*exp(-(5.5D0-log10(T))**2 /3d0))
   return
 end function cool_bre
 !=======================================================================
@@ -1296,11 +1288,11 @@ function cool_exc(ispec,T)
   implicit none
   integer::ispec
   real(kind=8)   ::T,cool_exc,T5
-  T5=1.d-5*T
-  cool_exc = 0.0
-  if(ispec==HI  )cool_exc = 7.50D-19/(1.+sqrt(T5))              *exp(-118348.D0/T)
-  if(ispec==HEI )cool_exc = 9.10D-27/(1.+sqrt(T5))/(T**0.1687D0)*exp(-13179.D0/T)
-  if(ispec==HEII)cool_exc = 5.54D-17/(1.+sqrt(T5))/(T**0.397D0 )*exp(-473638.D0/T)
+  T5=1d-5*T
+  cool_exc = 0
+  if(ispec==HI  )cool_exc = 7.50D-19/(1d0+sqrt(T5))              *exp(-118348d0/T)
+  if(ispec==HEI )cool_exc = 9.10D-27/(1d0+sqrt(T5))/(T**0.1687D0)*exp(-13179d0/T)
+  if(ispec==HEII)cool_exc = 5.54D-17/(1d0+sqrt(T5))/(T**0.397D0 )*exp(-473638d0/T)
   return
 end function cool_exc
 !=======================================================================
@@ -1310,12 +1302,12 @@ function cool_rec(ispec,T)
   integer::ispec
   real(kind=8)   ::T,cool_rec
   real(kind=8)   ::T3, T6
-  T3 = 1.d-03*T
-  T6 = 1.d-06*T
-  cool_rec = 0.0
-  if(ispec==HI  )cool_rec = 8.70D-27*SQRT(T)/T3**(0.2D0)/(1.D0+T6**0.7D0)
+  T3 = 1d-03*T
+  T6 = 1d-06*T
+  cool_rec = 0
+  if(ispec==HI  )cool_rec = 8.70D-27*SQRT(T)/T3**(0.2d0)/(1d0+T6**0.7D0)
   if(ispec==HEI )cool_rec = 1.55D-26*T**0.3647D0
-  if(ispec==HEII)cool_rec = 3.48D-26*SQRT(T)/T3**(0.2D0)/(1.D0+T6**0.7D0)
+  if(ispec==HEII)cool_rec = 3.48D-26*SQRT(T)/T3**(0.2d0)/(1d0+T6**0.7D0)
   return
 end function cool_rec
 !=======================================================================
@@ -1323,7 +1315,7 @@ function cool_die(T)
 !=======================================================================
   implicit none
   real(kind=8) :: T,cool_die
-  cool_die=1.24D-13*T**(-1.5D0)*exp(-470000.D0/T)*(1.D0+0.3D0*exp(-94000.D0/T))
+  cool_die=1.24D-13*T**(-1.5D0)*exp(-470000d0/T)*(1d0+0.3D0*exp(-94000d0/T))
   return
 end function cool_die
 !=======================================================================
@@ -1333,12 +1325,12 @@ function taux_rec(ispec,T)
   integer::ispec
   real(kind=8)   ::T,taux_rec
   real(kind=8)   ::T3, T6
-  T3 = 1.d-03*T
-  T6 = 1.d-06*T
-  taux_rec = 0.0
-  if(ispec==HI  )taux_rec = dumfac_rec*8.40e-11/SQRT(T)/T3**(0.2)/(1.+T6**0.7)
-  if(ispec==HEI )taux_rec = 1.50e-10/T**0.6353+taux_die(T)
-  if(ispec==HEII)taux_rec = 3.36e-10/SQRT(T)/T3**(0.2)/(1.+T6**0.7)
+  T3 = 1d-03*T
+  T6 = 1d-06*T
+  taux_rec = 0
+  if(ispec==HI  )taux_rec = dumfac_rec*8.40d-11/SQRT(T)/T3**(0.2d0)/(1d0+T6**0.7d0)
+  if(ispec==HEI )taux_rec = 1.50d-10/T**0.6353d0+taux_die(T)
+  if(ispec==HEII)taux_rec = 3.36d-10/SQRT(T)/T3**(0.2d0)/(1d0+T6**0.7d0)
   return
 end function taux_rec
 !=======================================================================
@@ -1346,7 +1338,7 @@ function taux_die(T)
 !=======================================================================
   implicit none
   real(kind=8) :: T,taux_die
-  taux_die=1.9D-3*T**(-1.5D0)*exp(-470000.D0/T)*(1.D0+0.3D0*exp(-94000.D0/T))
+  taux_die=1.9D-3*T**(-1.5D0)*exp(-470000d0/T)*(1d0+0.3D0*exp(-94000d0/T))
   return
 end function taux_die
 !=======================================================================
@@ -1356,11 +1348,11 @@ function cool_ion(ispec,T)
   integer::ispec
   real(kind=8)   ::T,cool_ion
   real(kind=8)   ::T5
-  T5 = 1.d-05*T
-  cool_ion = 0.0
-  if(ispec==HI  )cool_ion = dumfac_ion*1.27D-21*SQRT(T)/(1.+SQRT(T5))*EXP(-157809.1D0/T)
-  if(ispec==HEI )cool_ion = dumfac_ion*9.38D-22*SQRT(T)/(1.+SQRT(T5))*EXP(-285335.4D0/T)
-  if(ispec==HEII)cool_ion = dumfac_ion*4.95D-22*SQRT(T)/(1.+SQRT(T5))*EXP(-631515.0D0/T)
+  T5 = 1d-05*T
+  cool_ion = 0
+  if(ispec==HI  )cool_ion = dumfac_ion*1.27D-21*SQRT(T)/(1d0+SQRT(T5))*EXP(-157809.1D0/T)
+  if(ispec==HEI )cool_ion = dumfac_ion*9.38D-22*SQRT(T)/(1d0+SQRT(T5))*EXP(-285335.4D0/T)
+  if(ispec==HEII)cool_ion = dumfac_ion*4.95D-22*SQRT(T)/(1d0+SQRT(T5))*EXP(-631515.0D0/T)
   return
 end function cool_ion
 !=======================================================================
@@ -1377,7 +1369,7 @@ function heat_compton(T,aexp)
   implicit none
   real(kind=8) ::T,aexp,heat_compton
   real(kind=8) ::T5
-  T5 = 1.d-05*T
+  T5 = 1d-05*T
   heat_compton=5.406D-36*2.726D0/aexp**5
   return
 end function heat_compton
@@ -1388,11 +1380,11 @@ function taux_ion(ispec,T)
   integer::ispec
   real(kind=8)   :: T,taux_ion
   real(kind=8)   :: T5
-  T5 = 1.d-05*T
-  taux_ion = 0.0
-  if(ispec==HI  )taux_ion = dumfac_ion*5.85D-11*SQRT(T)/(1.+SQRT(T5))*EXP(-157809.1D0/T)
-  if(ispec==HEI )taux_ion = dumfac_ion*2.38D-11*SQRT(T)/(1.+SQRT(T5))*EXP(-285335.4D0/T)
-  if(ispec==HEII)taux_ion = dumfac_ion*5.68D-12*SQRT(T)/(1.+SQRT(T5))*EXP(-631515.0D0/T)
+  T5 = 1d-05*T
+  taux_ion = 0
+  if(ispec==HI  )taux_ion = dumfac_ion*5.85D-11*SQRT(T)/(1d0+SQRT(T5))*EXP(-157809.1D0/T)
+  if(ispec==HEI )taux_ion = dumfac_ion*2.38D-11*SQRT(T)/(1d0+SQRT(T5))*EXP(-285335.4D0/T)
+  if(ispec==HEII)taux_ion = dumfac_ion*5.68D-12*SQRT(T)/(1d0+SQRT(T5))*EXP(-631515.0D0/T)
   return
 end function taux_ion
 !=======================================================================
@@ -1401,7 +1393,7 @@ function J_nu(e,J0)
   implicit none
   real(kind=8) :: e,J_nu,e_L,J0,Jloc
   Jloc = max(J0,J0min)
-  e_L  = 13.598*eV
+  e_L  = 13.598d0*eV2erg
   J_nu = Jloc*(e_L/e)
   return
 end function J_nu
@@ -1411,17 +1403,17 @@ function sigma_rad(e,ispec)
   implicit none
   integer::ispec
   real(kind=8)::sigma_rad,e,e_i,xxx,alph
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   xxx = e/e_i
   alph = sqrt(xxx-1.0d0)
-  sigma_rad=0.0
-  if(ispec==HI  )sigma_rad = 6.30D-18/xxx**4*exp(4.D0-4.D0*atan(alph)/alph) &
-       &                             /(1.D0-exp(-twopi/alph))
+  sigma_rad=0
+  if(ispec==HI  )sigma_rad = 6.30D-18/xxx**4*exp(4d0-4d0*atan(alph)/alph) &
+       &                             /(1d0-exp(-twopi/alph))
   if(ispec==HEI )sigma_rad = 7.42D-18*(1.66D0/xxx**2.05D0-0.66D0/xxx**3.05D0)
-  if(ispec==HEII)sigma_rad = 1.58D-18/xxx**4*exp(4.D0-4.D0*atan(alph)/alph) &
-       &                             /(1.D0-exp(-twopi/alph))
+  if(ispec==HEII)sigma_rad = 1.58D-18/xxx**4*exp(4d0-4d0*atan(alph)/alph) &
+       &                             /(1d0-exp(-twopi/alph))
   return
 end function sigma_rad
 !=======================================================================
@@ -1430,16 +1422,16 @@ function taux_rad(ispec,J0)
   implicit none
   integer::ispec
   real(kind=8) :: J0,taux_rad,e_i,e,de,error,integ
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   integ = 0.0d0
   e = e_i
-  de = e/100.D0
-  error = 1.D0
-  do while(error>1.d-6)
+  de = e/100d0
+  error = 1d0
+  do while(error>1d-6)
      e = e + de
-     de = e/100.D0
+     de = e/100d0
      error = 2.0d0*twopi*J_nu(e,J0)*sigma_rad(e,ispec)*de/e
      integ = integ + error
      error = error/abs(integ)
@@ -1453,8 +1445,8 @@ function taux_rad_madau(ispec,z)
   implicit none
   integer :: ispec
   real(kind=8) :: z,taux_rad_madau,tt
-  taux_rad_madau=0.d0
-  if (z < 15.d0) then
+  taux_rad_madau=0d0
+  if (z < 15d0) then
      if (ispec==HI  ) taux_rad_madau=normfacJ0*exp(-31.04D0+2.795D0*z-0.5589D0*z**2)
      if (ispec==HEI ) taux_rad_madau=normfacJ0*exp(-31.08D0+2.822D0*z-0.5664D0*z**2)
      if (ispec==HEII) taux_rad_madau=normfacJ0*exp(-34.30D0+1.826D0*z-0.3899D0*z**2)
@@ -1469,12 +1461,12 @@ function taux_rad_weinbergint(ispec,z)
   implicit none
   integer :: ispec,i,iweinb
   real(kind=8) :: z,zz,taux_rad_weinbergint,hh,tt
-  taux_rad_weinbergint=0.d0
+  taux_rad_weinbergint=0d0
   if (z < 8.5d0) then
      if (ispec==HI  ) iweinb=1
      if (ispec==HEI ) iweinb=2
      if (ispec==HEII) iweinb=3
-     hh=0.d0
+     hh=0d0
      zz=max(z,1.0d-15)
      do i=1,Norderweinberg
         hh=hh+coefweinberg(i,iweinb)*zz**(i-1)
@@ -1491,11 +1483,11 @@ function taux_rad_theuns(ispec,J0)
   implicit none
   integer :: ispec
   real(kind=8) :: J0,taux_rad_theuns
-  taux_rad_theuns=0.0
-  if (ispec==HI  ) taux_rad_theuns=1.26D10*J0/(3.D0+alpha)
+  taux_rad_theuns=0
+  if (ispec==HI  ) taux_rad_theuns=1.26D10*J0/(3d0+alpha)
   if (ispec==HEI ) taux_rad_theuns=1.48D10*J0*0.553D0**alpha &
                      & *(1.66D0/(alpha+2.05D0)-0.66D0/(alpha+3.05D0))
-  if (ispec==HEII) taux_rad_theuns=3.34D9*J0*0.249D0**alpha/(3.D0+alpha)
+  if (ispec==HEII) taux_rad_theuns=3.34D9*J0*0.249D0**alpha/(3d0+alpha)
   return
 end function taux_rad_theuns
 !=======================================================================
@@ -1504,18 +1496,18 @@ function taux_rad_courty(ispec,z)
   implicit none
   integer :: ispec,i,iweinb
   real(kind=8) :: z,zz,taux_rad_courty,hh,tt,hhreion
-  taux_rad_courty=0.d0
+  taux_rad_courty=0d0
   if (z < zreioniz) then
      if (ispec==HI  ) iweinb=1
      if (ispec==HEI ) iweinb=2
      if (ispec==HEII) iweinb=3
-     hh=0.d0
+     hh=0d0
      zz=max(z,1.0d-15)
      do i=0,Nordercourty
         hh=hh+coefcourty(i,iweinb)*zz**i
      enddo
      hhreion=coef_fit(iweinb)*(zz/zreioniz)**beta_fit(iweinb)
-     taux_rad_courty=10.**(hh-hhreion)
+     taux_rad_courty=10**(hh-hhreion)
   endif
   tt=taux_rad_theuns(ispec,J0min)
   taux_rad_courty=max(tt,taux_rad_courty)
@@ -1527,17 +1519,17 @@ function heat_rad(ispec,J0)
   implicit none
   integer::ispec
   real(kind=8) :: J0,heat_rad,e_i,e,de,error,integ
-  if(ispec==HI  )e_i = 13.598D0*eV
-  if(ispec==HEI )e_i = 24.587D0*eV
-  if(ispec==HEII)e_i = 54.416D0*eV
+  if(ispec==HI  )e_i = 13.598D0*eV2erg
+  if(ispec==HEI )e_i = 24.587D0*eV2erg
+  if(ispec==HEII)e_i = 54.416D0*eV2erg
   integ = 0.0d0
   e = e_i
-  de = e/100.D0
-  error = 1.D0
-  do while(error>1.d-6)
+  de = e/100d0
+  error = 1d0
+  do while(error>1d-6)
      e = e + de
-     de = e/100.D0
-     error = 2.0d0*twopi*J_nu(e,J0)*sigma_rad(e,ispec)*(e/e_i-1.D0)*de/e
+     de = e/100d0
+     error = 2.0d0*twopi*J_nu(e,J0)*sigma_rad(e,ispec)*(e/e_i-1d0)*de/e
      integ = integ + error
      error=error/abs(integ)
   end do
@@ -1550,8 +1542,8 @@ function heat_rad_madau(ispec,z)
   implicit none
   integer :: ispec
   real(kind=8) :: z,heat_rad_madau,tt
-  heat_rad_madau=0.d0
-  if (z < 15.d0) then
+  heat_rad_madau=0d0
+  if (z < 15d0) then
      if (ispec==HI  ) heat_rad_madau=normfacJ0*exp(-56.62D0+2.788D0*z-0.5594D0*z**2)
      if (ispec==HEI ) heat_rad_madau=normfacJ0*exp(-56.06D0+2.800D0*z-0.5532D0*z**2)
      if (ispec==HEII) heat_rad_madau=normfacJ0*exp(-58.67D0+1.888D0*z-0.3947D0*z**2)
@@ -1570,14 +1562,14 @@ function heat_rad_weinbergint(ispec,z)
      if (ispec==HI  ) iweinb=4
      if (ispec==HEI ) iweinb=5
      if (ispec==HEII) iweinb=6
-     hh=0.d0
+     hh=0d0
      zz=max(z,1.0d-15)
      do i=1,Norderweinberg
         hh=hh+coefweinberg(i,iweinb)*zz**(i-1)
      enddo
      heat_rad_weinbergint=normfacJ0*exp(hh)
   else
-     heat_rad_weinbergint=0.d0
+     heat_rad_weinbergint=0d0
   endif
   tt=heat_rad_theuns(ispec,J0min)
   if (heat_rad_weinbergint < tt) heat_rad_weinbergint=tt
@@ -1589,11 +1581,11 @@ function heat_rad_theuns(ispec,J0)
   implicit none
   integer :: ispec
   real(kind=8) :: J0,heat_rad_theuns
-  heat_rad_theuns=0.0
-  if (ispec==HI  ) heat_rad_theuns=(2.91D-1*J0/(2.D0+alpha))/(3.D0+alpha)
+  heat_rad_theuns=0
+  if (ispec==HI  ) heat_rad_theuns=(2.91D-1*J0/(2d0+alpha))/(3d0+alpha)
   if (ispec==HEI ) heat_rad_theuns=5.84D-1*J0*0.553D0**alpha* &
                  & (1.66D0/(alpha+1.05D0)-2.32D0/(alpha+2.05D0)+0.66D0/(alpha+3.05D0))
-  if (ispec==HEII) heat_rad_theuns=(2.92D-1*J0*0.249D0**alpha/(2.D0+alpha))/(3.D0+alpha)
+  if (ispec==HEII) heat_rad_theuns=(2.92D-1*J0*0.249D0**alpha/(2d0+alpha))/(3d0+alpha)
   return
 end function heat_rad_theuns
 !=======================================================================
@@ -1602,18 +1594,18 @@ function heat_rad_courty(ispec,z)
   implicit none
   integer :: ispec,i,iweinb
   real(kind=8) :: z,zz,heat_rad_courty,hh,tt,hhreion
-  heat_rad_courty=0.d0
+  heat_rad_courty=0d0
   if (z < zreioniz) then
      if (ispec==HI  ) iweinb=4
      if (ispec==HEI ) iweinb=5
      if (ispec==HEII) iweinb=6
-     hh=0.d0
+     hh=0d0
      zz=max(z,1.0d-15)
      do i=0,Nordercourty
         hh=hh+coefcourty(i,iweinb)*zz**i
      enddo
      hhreion=coef_fit(iweinb)*(zz/zreioniz)**beta_fit(iweinb)
-     heat_rad_courty=10.**(hh-hhreion)
+     heat_rad_courty=10**(hh-hhreion)
   endif
   tt=heat_rad_theuns(ispec,J0min)
   heat_rad_courty=max(tt,heat_rad_courty)
@@ -1624,7 +1616,7 @@ function HsurH0(z,omega0,omegaL,OmegaR)
 !=======================================================================
   implicit none
   real(kind=8) :: HsurH0,z,omega0,omegaL,omegaR
-  HsurH0=sqrt(Omega0*(1.d0+z)**3+OmegaR*(1.d0+z)**2+OmegaL)
+  HsurH0=sqrt(Omega0*(1d0+z)**3+OmegaR*(1d0+z)**2+OmegaL)
 end function HsurH0
 
 end module cooling_module

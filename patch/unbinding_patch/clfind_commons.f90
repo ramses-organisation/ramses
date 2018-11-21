@@ -11,11 +11,11 @@ module clfind_commons
   real(dp)::tot_mass
   real(dp)::relevance_threshold=2.0
   real(dp)::density_threshold=-1.0d0
-  real(dp)::saddle_threshold=-1.d0
-  real(dp)::rho_clfind=-1.d0
-  real(dp)::n_clfind=-1.d0
-  real(dp)::mass_threshold=0.d0
-  real(dp)::age_cut_clfind=0.d0
+  real(dp)::saddle_threshold=-1d0
+  real(dp)::rho_clfind=-1d0
+  real(dp)::n_clfind=-1d0
+  real(dp)::mass_threshold=0d0
+  real(dp)::age_cut_clfind=0d0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
   logical::unbind=.true. !##### NEW HERE

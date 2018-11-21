@@ -521,25 +521,25 @@ subroutine geometry_refine(xx,ok,ncell,ilevel)
         xn=0.0d0; yn=0.0d0; zn=0.0d0
         xn=abs(xx(i,1)-xr)
         if(cosmo .and. xn>0.5) then
-           xn=1.0-xn
+           xn=1.0d0-xn
         endif
         xn=2.0d0*xn/rr
 #if NDIM > 1
         yn=abs(xx(i,2)-yr)
         if(cosmo .and. yn>0.5) then
-           yn=1.0-yn
+           yn=1.0d0-yn
         endif
         yn=2.0d0*yn/(aa*rr)
 #endif
 #if NDIM >2
         zn=abs(xx(i,3)-zr)
         if(cosmo .and. zn>0.5) then
-           zn=1.0-zn
+           zn=1.0d0-zn
         endif
         zn=2.0d0*zn/(bb*rr)
 #endif
         if(er<10)then
-           r=(xn**er+yn**er+zn**er)**(1.0/er)
+           r=(xn**er+yn**er+zn**er)**(1/er)
         else
            r=max(xn,yn,zn)
         end if
@@ -895,7 +895,7 @@ subroutine init_refmap_fine(ilevel)
         if(myid==1)then
            read(10) ((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
         else
-           init_plane=0.0
+           init_plane=0
         endif
         buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI

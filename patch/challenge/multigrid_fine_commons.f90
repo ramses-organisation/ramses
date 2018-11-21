@@ -927,7 +927,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    ! Set constants
    nx_loc = icoarse_max-icoarse_min+1
    scale  = boxlen/dble(nx_loc)
-   fourpi = 4.D0*ACOS(-1.0D0)*scale
+   fourpi = 4d0*ACOS(-1.0D0)*scale
    if(cosmo) fourpi = 1.5D0*omega_m*aexp*scale
 
    dx  = 0.5d0**ilevel
