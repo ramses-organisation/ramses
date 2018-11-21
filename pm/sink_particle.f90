@@ -717,7 +717,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   use amr_commons
   use pm_commons
   use hydro_commons
-  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_t
+  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_t, ev2erg
 #ifdef RT
   use rt_hydro_commons,only: rtunew
   use rt_parameters,only: nGroups, iGroups, group_egy, rt_AGN, group_egy_AGNfrac
