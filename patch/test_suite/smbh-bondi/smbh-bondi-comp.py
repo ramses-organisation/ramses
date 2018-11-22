@@ -38,7 +38,7 @@ def extract_acc_rates():
                 rates.append(float(line[20:33]))
 
     with open('data4plot.dat', 'w') as outfile:
-        for i in xrange(len(rates)):
+        for i in range(len(rates)):
             outfile.write('{:e} {:e}\n'.format(times[i+1], rates[i]))
 
     return
