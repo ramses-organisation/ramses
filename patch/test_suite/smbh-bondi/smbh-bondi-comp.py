@@ -5,7 +5,7 @@ def extract_comparison_data():
     """Extract data necesary for comparison
     i.e. the final accretion rate from output_00002"""
 
-    with open('output_00002/sink_00002.csv') as infile:
+    with open('output_00002/sink_00002.csv', 'r') as infile:
         for line in infile:
             if line.split(' ')[1] != '#':
                 with open('data.dat', 'w') as outfile:
@@ -21,13 +21,13 @@ def extract_acc_rates():
     times = []
     rates = []
 
-    with open('smbh-bondi.nml') as nml:
+    with open('smbh-bondi.nml', 'r') as nml:
         for line in nml:
             # loading unit of time from the namelist
             if line[0:10] == 'units_time':
                 unit_t = float(line.split(' ')[-4].replace('d', 'e'))
 
-    with open('log') as logfile:
+    with open('log', 'r') as logfile:
         for line in logfile:
             # reading in the timestep
             # and scaling to kyr
@@ -38,7 +38,7 @@ def extract_acc_rates():
                 rates.append(float(line[20:33]))
 
     with open('data4plot.dat', 'w') as outfile:
-        for i in xrange(len(rates)):
+        for i in range(len(rates)):
             outfile.write('{:e} {:e}\n'.format(times[i+1], rates[i]))
 
     return
