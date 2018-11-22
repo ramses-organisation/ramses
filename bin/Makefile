@@ -31,7 +31,7 @@ endif
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
+F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
 FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
