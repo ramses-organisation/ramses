@@ -31,7 +31,7 @@ endif
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g
+F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
 FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- No MPI, tau ----------------------------------
@@ -54,12 +54,12 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
-# --- MPI, gfortran DEBUG syntax ------------------------------ 
+# --- MPI, gfortran DEBUG syntax ------------------------------
 #F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall
-#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)    
+#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
@@ -80,7 +80,7 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
-#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT 
+#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = ftn
@@ -90,7 +90,7 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI =
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---
@@ -107,7 +107,7 @@ LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o
+MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o constants.o
 ifeq ($(GRACKLE),1)
 MODOBJ += grackle_parameters.o
 endif

@@ -48,7 +48,7 @@ subroutine condinit(x,u,dx,nn)
         h=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
      endif
      ! Lorentz factor
-     lor=(1.-(q(i,2)**2+q(i,3)**2+q(i,4)**2))**(-1.d0/2.d0)
+     lor=(1.-(q(i,2)**2+q(i,3)**2+q(i,4)**2))**(-1d0/2d0)
 
      ! proper density  -> density in lab frame
      u(i,1)= q(i,1)*lor

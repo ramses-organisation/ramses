@@ -115,7 +115,7 @@ subroutine phi_ana(rr,pp,ngrid)
   real(dp)::constant
 
 #if NDIM==1
-  fourpi=4.D0*ACOS(-1.0D0)
+  fourpi=4d0*ACOS(-1.0D0)
   constant = multipole(1)*fourpi/2d0
   do i=1,ngrid
      pp(i)=constant*rr(i)

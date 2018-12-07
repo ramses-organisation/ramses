@@ -31,7 +31,7 @@ subroutine make_boundary_force(ilevel)
 
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  skip_loc=[0, 0, 0]
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
@@ -179,6 +179,7 @@ end subroutine make_boundary_force
 subroutine make_boundary_phi(ilevel)
   use amr_commons
   use poisson_commons
+  use constants, only: twopi
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
@@ -200,16 +201,16 @@ subroutine make_boundary_phi(ilevel)
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
+  fourpi = 2*twopi
 
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  skip_loc=[0, 0, 0]
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  fourpi=4.D0*ACOS(-1.0D0)
   boxlen2=boxlen**2
 
   ! Set position of cell centers relative to grid center
@@ -248,7 +249,7 @@ subroutine make_boundary_phi(ilevel)
            end do
 
            ! Rescale position from code units to user units
-           rr(1:ngrid)=0d0
+           rr(1:ngrid)=0
            do idim=1,ndim
               do i=1,ngrid
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
@@ -319,7 +320,7 @@ subroutine make_boundary_mask(ilevel)
 
            ! Set mask to -1d0
            do i=1,ngrid
-              f(ind_cell(i),3)=-1d0
+              f(ind_cell(i),3)=-1
            end do
 
         end do

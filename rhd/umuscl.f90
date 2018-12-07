@@ -257,7 +257,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               else
                  entho = gamma/(gamma-one)
                  h     = 1.0d0+entho*p/r   !enthalpy
-                 kappa = entho*1.d0/r      !dh/dp
+                 kappa = entho*1d0/r      !dh/dp
                  chi   = -entho*p/r**2     !dh/dr
               endif
               f=lorsq*(-h+h*r*kappa+r*chi*velsq) !normalizing factor
@@ -322,12 +322,12 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,ip,1) = max(smallp, qm(l,i,j,k,ip,1))
 
               velsq=qp(l,i,j,k,iu,1)*qp(l,i,j,k,iu,1)+qp(l,i,j,k,iv,1)*qp(l,i,j,k,iv,1)+qp(l,i,j,k,iw,1)*qp(l,i,j,k,iw,1)
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
               endif
               velsq=qm(l,i,j,k,iu,1)**2+qm(l,i,j,k,iv,1)**2+qm(l,i,j,k,iw,1)**2
-              if (velsq>1.d0) then
+              if (velsq>1d0) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
               endif
@@ -409,7 +409,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               w = q(l,i,j,k,iw)
               p = q(l,i,j,k,ip)
 
-              velsq=u**2+v**2+w**2 ; lorsq=1.d0/(1.d0-velsq) ; lor=sqrt(lorsq)
+              velsq=u**2+v**2+w**2 ; lorsq=1d0/(1d0-velsq) ; lor=sqrt(lorsq)
               vtot=sqrt(u**2+v**2+w**2)
 
               ! Cell centered TVD slopes in X direction
@@ -438,7 +438,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               else
                  entho = gamma/(gamma-one)
                  h     = 1.0d0+entho*p/r   !enthalpy
-                 kappa = entho*1.d0/r      !dh/dp
+                 kappa = entho*1d0/r      !dh/dp
                  chi   = -entho*p/r**2     !dh/dr
               endif
 
@@ -550,28 +550,28 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               qm(l,i,j,k,ip,2) = max(smallp, qm(l,i,j,k,ip,2))
 
               velsq=qp(l,i,j,k,iu,1)**2+qp(l,i,j,k,iv,1)**2+qp(l,i,j,k,iw,1)**2
-              if ((velsq>1.d0) .or.(qp(l,i,j,k,ir,1)<0.d0).or.(qp(l,i,j,k,ip,1)<0.d0)) then
+              if ((velsq>1d0) .or.(qp(l,i,j,k,ir,1)<0d0).or.(qp(l,i,j,k,ip,1)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
               endif
               velsq=qm(l,i,j,k,iu,1)**2+qm(l,i,j,k,iv,1)**2+qm(l,i,j,k,iw,1)**2
-              if ((velsq>1.d0).or.(qm(l,i,j,k,ir,1)<0.d0).or.(qm(l,i,j,k,ip,1)<0.d0)) then
+              if ((velsq>1d0).or.(qm(l,i,j,k,ir,1)<0d0).or.(qm(l,i,j,k,ip,1)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
               endif
               velsq=qp(l,i,j,k,iu,2)**2+qp(l,i,j,k,iv,2)**2+qp(l,i,j,k,iw,2)**2
-              if ((velsq>1.d0) .or.(qp(l,i,j,k,ir,2)<0.d0).or.(qp(l,i,j,k,ip,2)<0.d0)) then
+              if ((velsq>1d0) .or.(qp(l,i,j,k,ir,2)<0d0).or.(qp(l,i,j,k,ip,2)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
               endif
               velsq=qm(l,i,j,k,iu,2)**2+qm(l,i,j,k,iv,2)**2+qm(l,i,j,k,iw,2)**2
-              if ((velsq>1.d0)  .or.(qm(l,i,j,k,ir,2)<0.d0).or.(qm(l,i,j,k,ip,2)<0.d0)) then
+              if ((velsq>1d0)  .or.(qm(l,i,j,k,ir,2)<0d0).or.(qm(l,i,j,k,ip,2)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -685,7 +685,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               dpz = half * dq(l,i,j,k,ip,3)
 
               ! Source terms (including transverse derivatives)
-              velsq=u**2+v**2+w**2 ; lorsq=1.d0/(1.d0-velsq) ; lor=sqrt(lorsq)
+              velsq=u**2+v**2+w**2 ; lorsq=1d0/(1d0-velsq) ; lor=sqrt(lorsq)
               vtot=sqrt(u**2+v**2+w**2)
 
               if (eos .eq. 'TM') then
@@ -697,7 +697,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               else
                  entho = gamma/(gamma-one)
                  h     = 1.0d0+entho*p/r   !enthalpy
-                 kappa = entho*1.d0/r      !dh/dp
+                 kappa = entho*1d0/r      !dh/dp
                  chi   = -entho*p/r**2     !dh/dr
               endif
 
@@ -832,7 +832,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
 
 
               velsq=qp(l,i,j,k,iu,1)**2+qp(l,i,j,k,iv,1)**2+qp(l,i,j,k,iw,1)**2
-              if ((velsq>1.d0) .or.(qp(l,i,j,k,ir,1)<0.d0).or.(qp(l,i,j,k,ip,1)<0.d0)) then
+              if ((velsq>1d0) .or.(qp(l,i,j,k,ir,1)<0d0).or.(qp(l,i,j,k,ip,1)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -846,7 +846,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               endif
 
               velsq=qm(l,i,j,k,iu,1)**2+qm(l,i,j,k,iv,1)**2+qm(l,i,j,k,iw,1)**2
-              if ((velsq>1.d0).or.(qm(l,i,j,k,ir,1)<0.d0).or.(qm(l,i,j,k,ip,1)<0.d0)) then
+              if ((velsq>1d0).or.(qm(l,i,j,k,ir,1)<0d0).or.(qm(l,i,j,k,ip,1)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -861,7 +861,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               endif
 
               velsq=qp(l,i,j,k,iu,2)**2+qp(l,i,j,k,iv,2)**2+qp(l,i,j,k,iw,2)**2
-              if ((velsq>1.d0) .or.(qp(l,i,j,k,ir,2)<0.d0).or.(qp(l,i,j,k,ip,2)<0.d0)) then
+              if ((velsq>1d0) .or.(qp(l,i,j,k,ir,2)<0d0).or.(qp(l,i,j,k,ip,2)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -875,7 +875,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               endif
 
               velsq=qm(l,i,j,k,iu,2)**2+qm(l,i,j,k,iv,2)**2+qm(l,i,j,k,iw,2)**2
-              if ((velsq>1.d0)  .or.(qm(l,i,j,k,ir,2)<0.d0).or.(qm(l,i,j,k,ip,2)<0.d0)) then
+              if ((velsq>1d0)  .or.(qm(l,i,j,k,ir,2)<0d0).or.(qm(l,i,j,k,ip,2)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -889,7 +889,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               endif
 
               velsq=qp(l,i,j,k,iu,3)**2+qp(l,i,j,k,iv,3)**2+qp(l,i,j,k,iw,3)**2
-              if ((velsq>1.d0) .or.(qp(l,i,j,k,ir,2)<0.d0).or.(qp(l,i,j,k,ip,2)<0.d0)) then
+              if ((velsq>1d0) .or.(qp(l,i,j,k,ir,2)<0d0).or.(qp(l,i,j,k,ip,2)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -903,7 +903,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               endif
 
               velsq=qm(l,i,j,k,iu,3)**2+qm(l,i,j,k,iv,3)**2+qm(l,i,j,k,iw,3)**2
-              if ((velsq>1.d0)  .or.(qm(l,i,j,k,ir,3)<0.d0).or.(qm(l,i,j,k,ip,3)<0.d0)) then
+              if ((velsq>1d0)  .or.(qm(l,i,j,k,ir,3)<0d0).or.(qm(l,i,j,k,ip,3)<0d0)) then
                  qp(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qm(l,i,j,k,ir:ip,1)=q(l,i,j,k,ir:ip)
                  qp(l,i,j,k,ir:ip,2)=q(l,i,j,k,ir:ip)
@@ -1124,7 +1124,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
 
                 ! Compute the Lorentz factor
                 u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-                lor = (1.0d0+u2)**(1.d0/2.d0)
+                lor = (1.0d0+u2)**(1d0/2d0)
 
                 ! Compute the density
                 q(l,i,j,k,1) = D/lor
@@ -1135,22 +1135,22 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
                 q(l,i,j,k,4) = Mz/R!max(1.0e-10,Mz/R)
 
                 ! Compute pressure
-                Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
+                Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
                 if (eos .eq. 'TM') then
                    rho=q(l,i,j,k,1)
                    q(l,i,j,k,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                 else
-                   q(l,i,j,k,5)=(gamma-1.d0)/gamma*Xsi
+                   q(l,i,j,k,5)=(gamma-1d0)/gamma*Xsi
                 endif
              endif
-             if ((q(l,i,j,k,1)<0.d0).or.(q(l,i,j,k,5)<0.d0).or.E<0.d0) then
+             if ((q(l,i,j,k,1)<0d0).or.(q(l,i,j,k,5)<0d0).or.E<0d0) then
                 write(*,*) 'negative pressure or density'
                 stop
              endif
 
              ! Passive scalar
              do n = 6, nvar
-                oneonrho = 1.d0/q(l,i,j,k,1)
+                oneonrho = 1d0/q(l,i,j,k,1)
                 q(l,i,j,k,n) = uin(l,i,j,k,n)*oneonrho/lor
              end do
              tau=q(l,i,j,k,5)/q(l,i,j,k,1)
@@ -1533,15 +1533,15 @@ subroutine Newton_Raphson_Mignone(D,M,E,gamma,R)
   real(dp)::D,E,Eprim,M,gamma
 
   !initial guess
-  Delta = 16.0d0*E**2-12.d0*M**2
-  R = (4.d0*E+sqrt(Delta))/6.d0
+  Delta = 16.0d0*E**2-12d0*M**2
+  R = (4d0*E+sqrt(Delta))/6d0
   !Switch to prime variables
   R=R-D ; Eprim=E-D
   !NR loop
   epsilon=1.
-  do while (abs(epsilon)>1.d-10)
+  do while (abs(epsilon)>1d-10)
      epsilon=f_Mignone(R,D,M,Eprim,gamma)/f_prim_Mignone(R,D,M,Eprim,gamma)/R
-     R=R*(1.d0-epsilon)
+     R=R*(1d0-epsilon)
   enddo
 
 
@@ -1600,10 +1600,10 @@ function f_prim_Mignone(R,D,M,Eprim,gamma)
      dpdR=dpdxsi*dxsidR+dpdrho*drhodR
   else
 
-     dpdR=(gamma-1.d0)/gamma
-     dpdR=dpdR*(1.d0+M**2/(R+D)**2*(1.d0-D*lor/(R+D)))
+     dpdR=(gamma-1d0)/gamma
+     dpdR=dpdR*(1d0+M**2/(R+D)**2*(1d0-D*lor/(R+D)))
   endif
-  f_prim_Mignone=1.d0-dpdR
+  f_prim_Mignone=1d0-dpdR
   return
 end function f_prim_Mignone
 

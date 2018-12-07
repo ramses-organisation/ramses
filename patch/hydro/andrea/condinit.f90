@@ -34,7 +34,7 @@ subroutine condinit(x,u,dx,nn)
   pi=3.141592
   Mvirphu = Mvir*1.99d33
   rvir = (3./4./pi*Mvirphu/(overdensity*1.89d-29*0.65**2))**0.333
-  cnfw = 6./(Mvir/1.d14)**.2
+  cnfw = 6./(Mvir/1d14)**.2
   eta0 = 0.00676*(cnfw-6.5)**2+0.206*(cnfw-6.5)+2.48
   gammaKS = 1.15+0.01*(cnfw-6.5)
   d_init = 0.1*overdensity*1.89d-29*.65**2&
@@ -46,7 +46,7 @@ subroutine condinit(x,u,dx,nn)
   xmass=0.5*boxlen
   ymass=0.5*boxlen
   zmass=0.5*boxlen
-  Mdot_BH=2.d72*d_init/(5./3.*p_init/d_init)**1.5
+  Mdot_BH=2d72*d_init/(5./3.*p_init/d_init)**1.5
 
   do i=1,nn
      rx=0.0d0; ry=0.0d0; rz=0.0d0

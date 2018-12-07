@@ -42,7 +42,7 @@ subroutine boundana(x,u,dx,ibound,ncell)
            d =.1d0
            p =0.01d0
            h=1.0d0+gamma/(gamma-1.0d0)*p/d
-           lor=(1.-(vx**2+vy**2+vz**2))**(-1.d0/2.d0)
+           lor=(1.-(vx**2+vy**2+vz**2))**(-1d0/2d0)
 
            U(i,1) = d*lor
            U(i,2) = lor**2*d*h*vx

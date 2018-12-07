@@ -30,8 +30,8 @@ subroutine init_time
         if(initfile(levelmin).ne.' '.and.filetype.eq.'grafic')then
            call init_file
         endif
-        t=0.0
-        aexp=1.0
+        t=0
+        aexp=1
      end if
   end if
 
@@ -45,7 +45,7 @@ subroutine init_time
      ! Compute Friedman model look up table
      if(myid==1)write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
-          & 1.d-6,dble(aexp_ini), &
+          & 1d-6,dble(aexp_ini), &
           & aexp_frw,hexp_frw,tau_frw,t_frw,n_frw)
 
      ! Compute initial conformal time
@@ -152,7 +152,7 @@ subroutine init_time
      if(cosmo) then
         my_grackle_units%comoving_coordinates = 1
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         ! Approximate initial temperature
         T2_start=1.356d-2/aexp_ini**2
         if(nrestart==0)then
@@ -232,10 +232,10 @@ subroutine init_time
         endif
         if(cosmo)then
            ! Reonization redshift has to be later than starting redshift
-           z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+           z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
            call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
                 & -1,2, &
-                & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
+                & dble(h0/100),dble(omega_b),dble(omega_m),dble(omega_l), &
                 & dble(aexp_ini),T2_sim)
            T2_start=T2_sim
            if(nrestart==0)then
@@ -244,7 +244,7 @@ subroutine init_time
         else
            call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
                 & -1,2, &
-                & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
+                & dble(70d0/100d0),0.04d0,0.3d0,0.7d0, &
                 & dble(aexp_ini),T2_sim)
         endif
      end if
@@ -258,7 +258,7 @@ subroutine init_time
      endif
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
@@ -284,7 +284,7 @@ subroutine init_time
      endif
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         call rt_set_model(dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
              & dble(aexp_ini),T2_sim)
         T2_start=T2_sim
@@ -446,7 +446,7 @@ subroutine init_cosmo
   SELECT CASE (filetype)
   case ('grafic', 'ascii')
      ! Reading initial conditions parameters only
-     aexp=2.0
+     aexp=2
      nlevelmax_part=levelmin-1
      do ilevel=levelmin,nlevelmax
         if(initfile(ilevel).ne.' ')then
@@ -533,7 +533,7 @@ subroutine init_cosmo
      end if
 
      ! Compute box length in the initial conditions in units of h-1 Mpc
-     boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100.)
+     boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100)
 
   CASE ('gadget')
      if (verbose) write(*,*)'Reading in gadget format from '//TRIM(initfile(levelmin))
@@ -553,7 +553,7 @@ subroutine init_cosmo
      endif
      omega_m = gadgetheader%omega0
      omega_l = gadgetheader%omegalambda
-     h0 = gadgetheader%hubbleparam * 100.d0
+     h0 = gadgetheader%hubbleparam * 100d0
      boxlen_ini = gadgetheader%boxsize
      aexp = gadgetheader%time
      aexp_ini = aexp
@@ -564,7 +564,7 @@ subroutine init_cosmo
      xoff1(levelmin)=0
      xoff2(levelmin)=0
      xoff3(levelmin)=0
-     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100))
 
   CASE DEFAULT
      write(*,*) 'Unsupported input format '//filetype
@@ -578,7 +578,7 @@ subroutine init_cosmo
      write(*,'(" omega_m=",F7.3," omega_l=",F7.3," omega_b=",F7.3)')omega_m,omega_l,omega_b
      write(*,'(" box size=",1pe10.3," h-1 Mpc")')boxlen_ini
   end if
-  omega_k=1.d0-omega_l-omega_m
+  omega_k=1d0-omega_l-omega_m
 
   ! Compute linear scaling factor between aexp and astart(ilevel)
   do ilevel=levelmin,nlevelmax_part
@@ -631,8 +631,8 @@ contains
     real(dp)::fy
     real(dp)::y,a
 
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
-    fy=1.d0/y**1.5d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
+    fy=1d0/y**1.5d0
 
     return
   end function fy
@@ -649,7 +649,7 @@ contains
        write(*,*)'a=',a
        call clean_stop
     end if
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
     if(y .lt. 0.0D0)then
        write(*,*)'y=',y
        call clean_stop
@@ -672,7 +672,7 @@ contains
 !!$    a=1.e-7
 !!$    niter=0
 !!$10  niter=niter+1
-!!$    da=(d1/d1a(a)-1.d0)/fpeebl(a)*a
+!!$    da=(d1/d1a(a)-1d0)/fpeebl(a)*a
 !!$    a=a+da
 !!$    if (abs(da).gt.1.0e-8.and.niter.lt.10) go to 10
 !!$    ad1=a
@@ -686,9 +686,9 @@ contains
     real(dp) :: fact,y,eps
 
     eps=1.0d-6
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
     fact=rombint(eps,a,eps)
-    fpeebl=(omega_l*a*a-0.5d0*omega_m/a)/y - 1.d0 + a*fy(a)/fact
+    fpeebl=(omega_l*a*a-0.5d0*omega_m/a)/y - 1d0 + a*fy(a)/fact
     return
   end function fpeebl
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -796,12 +796,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 
@@ -814,10 +814,10 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
   nskip=nstep/ntable
 
-  axp_t = 1.d0
-  t = 0.d0
-  axp_tau = 1.d0
-  tau = 0.d0
+  axp_t = 1d0
+  t = 0d0
+  axp_tau = 1d0
+  tau = 0d0
   nstep = 0
   nout=0
   t_out(nout)=t
@@ -829,12 +829,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 

@@ -36,7 +36,7 @@
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(kind=8),dimension(1:nvector)::mm
   type(part_t)::tmppart
-  real(kind=8)::dispmax=0.0
+  real(kind=8)::dispmax=0
 #ifndef WITHOUTMPI
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::cc
@@ -56,8 +56,8 @@
 
   if(verbose)write(*,*)'Entering init_part'
 
-  if(myid.eq.1)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
-  if(myid.eq.1)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
+  if(verbose)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
+  if(verbose)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
 
   if(allocated(xp))then
      if(verbose)write(*,*)'Initial conditions already set'
@@ -76,14 +76,14 @@
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0;
+  xp=0; vp=0; mp=0; levelp=0; idp=0
   typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0
   if(star.or.sink)then
      allocate(tp(npartmax))
-     tp=0.0
+     tp=0
      if(metal)then
         allocate(zp(npartmax))
-        zp=0.0
+        zp=0
      end if
   end if
 
@@ -204,7 +204,7 @@
 #endif
      ! Get nlevelmax_part from cosmological inital conditions
      if(cosmo)then
-        min_mdm_cpu = 1.0
+        min_mdm_cpu = 1
         do ipart=1,npart2
            ! Get dark matter only
            if (is_DM(typep(ipart))) then
@@ -221,7 +221,7 @@
         ilevel = 1
         do while(.true.)
            mm1 = 0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
-           if((mm1.GT.0.90*min_mdm_all).AND.(mm1.LT.1.10*min_mdm_all))then
+           if((mm1 >  0.90d0*min_mdm_all).AND.(mm1 < 1.10d0*min_mdm_all))then
               nlevelmax_part = ilevel
               exit
            endif
@@ -462,7 +462,7 @@ contains
                    if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                    read(10)((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                 else
-                   init_plane=0.0
+                   init_plane=0
                 endif
                 buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -489,7 +489,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_x(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_x=0.0
+                      init_plane_x=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -516,7 +516,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_id(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_id=0.0
+                      init_plane_id=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -903,16 +903,16 @@ contains
        eof=.false.
 
        do while (.not.eof)
-          xx=0.0
+          xx=0
           if(myid==1)then
              jpart=0
              do i=1,nvector
                 read(10,*,end=111)xx1,xx2,xx3,vv1,vv2,vv3,mm1
                 jpart=jpart+1
                 indglob=indglob+1
-                xx(i,1)=xx1+boxlen/2.0
-                xx(i,2)=xx2+boxlen/2.0
-                xx(i,3)=xx3+boxlen/2.0
+                xx(i,1)=xx1+boxlen/2
+                xx(i,2)=xx2+boxlen/2
+                xx(i,3)=xx3+boxlen/2
                 vv(i,1)=vv1
                 vv(i,2)=vv2
                 vv(i,3)=vv3
@@ -1027,7 +1027,7 @@ subroutine load_gadget
      call gadgetreadheader(filename, 0, gadgetheader, ok)
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
-     gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+     gadgetvfact = sqrt(aexp) / gadgetheader%boxsize * aexp / 100d0
 #ifndef LONGINT
      allparticles=int(gadgetheader%nparttotal(2),kind=8)
 #else

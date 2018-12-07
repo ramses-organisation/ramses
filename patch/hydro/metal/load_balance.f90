@@ -352,7 +352,7 @@ subroutine cmp_new_cpu_map
               if(cpu_map(ind_cell(i))==myid.and.son(ind_cell(i))==0)then
                  ncell    =ncell    +1
                  ncell_loc=ncell_loc+1
-                 flag1(ncell)=icost+int(dble(numbp(father(ind_grid(i))))/8.d0)
+                 flag1(ncell)=icost+int(dble(numbp(father(ind_grid(i))))/8d0)
                  hilbert_key(ncell)=order_max(ncell_loc)
               end if
               end do

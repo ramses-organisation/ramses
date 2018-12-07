@@ -103,7 +103,7 @@ subroutine init_part
      allocate(acc_lum(1:nsinkmax))
      acc_lum=0.
      allocate(lsink(1:nsinkmax,1:3))
-     lsink=0.d0
+     lsink=0d0
      allocate(level_sink(1:nsinkmax))
      allocate(delta_mass(1:nsinkmax))
      ! Temporary sink variables
@@ -135,7 +135,7 @@ subroutine init_part
      allocate(xsink_new(1:nsinkmax,1:ndim))
      allocate(xsink_all(1:nsinkmax,1:ndim))
      allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
-     sink_jump=0.d0
+     sink_jump=0d0
      allocate(level_sink_all(1:nsinkmax))
      allocate(level_sink_new(1:nsinkmax))
      allocate(dMsink_overdt(1:nsinkmax))
@@ -1168,7 +1168,7 @@ subroutine load_gadget
               vp(ipart,1)=vel(1, i) * gadgetvfact
               vp(ipart,2)=vel(2, i) * gadgetvfact
               vp(ipart,3)=vel(3, i) * gadgetvfact
-              mp(ipart)    = 1.d0/gadgetheader%nparttotal(2)
+              mp(ipart)    = 1d0/gadgetheader%nparttotal(2)
               levelp(ipart)=levelmin
               idp(ipart)   =ids(i)
 #ifndef WITHOUTMPI

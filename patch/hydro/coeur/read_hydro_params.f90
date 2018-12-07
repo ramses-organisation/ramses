@@ -179,10 +179,10 @@ subroutine read_hydro_params(nml_ok)
   phi_plum  = 0.
   rot_plum  = 0.
   DO i=1,np
-     mass_plum = mass_plum + (i*ksi)**2*ksi / (1.d0 + (i*ksi)**2)
-     phi_plum  = phi_plum  + (i*ksi)   *ksi / (1.d0 + (i*ksi)**2) * mass_plum
+     mass_plum = mass_plum + (i*ksi)**2*ksi / (1d0 + (i*ksi)**2)
+     phi_plum  = phi_plum  + (i*ksi)   *ksi / (1d0 + (i*ksi)**2) * mass_plum
      ! assume solid body rotation
-     rot_plum  = rot_plum  + (i*ksi)**4*ksi / (1.d0 + (i*ksi)**2)
+     rot_plum  = rot_plum  + (i*ksi)**4*ksi / (1d0 + (i*ksi)**2)
   ENDDO
   ! density in the center (in solar mass per pc^3)
   rho_c = Mc / (4.*pi) / r0**3 / mass_plum
@@ -191,14 +191,14 @@ subroutine read_hydro_params(nml_ok)
   ! the ratio between Etherm and Egrav is an input parameter
   E_therm = alpha*E_grav
   ! the central pressure is given by Etherm
-  P_c = E_therm / (4.d0*pi*r0**3) / mass_plum
+  P_c = E_therm / (4d0*pi*r0**3) / mass_plum
   ! the external pressure
   Pext = P_c / ( 1. + (rcut/r0)**2 )
   ! calculate the temperature. Will be used in barotrop.f90
   temp = P_c / rho_c
   ! calculate the density at which the gas becomes adiabatic (used in barotrop.f90)
-  rho_ad = 1.d10 * 2.2 * 1.64d-24         !in g cm^-3
-  rho_ad = rho_ad / 2.d33 * (3.08d18)**3  !normalise in code units (solar mass, pc)
+  rho_ad = 1d10 * 2.2 * 1.64d-24         !in g cm^-3
+  rho_ad = rho_ad / 2d33 * (3.08d18)**3  !normalise in code units (solar mass, pc)
   rho_ad = f_rho_ad * rho_ad              !f_rho_ad is readed in the .nml
   ! calculate the rotational energy, beta_rot is an input parameter
   E_rot = beta_rot*E_grav

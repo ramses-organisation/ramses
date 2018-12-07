@@ -620,7 +620,7 @@ implicit none
         call Newton_Raphson_Mignone(D,M,E,gamma,R)
         ! Compute the Lorentz factor
         u2  = M**2.0d0/(R**2.0d0-M**2.0d0)
-        lor = (1.0d0+u2)**(1.d0/2.d0)
+        lor = (1.0d0+u2)**(1d0/2d0)
 
         ! Compute the density
         q(k,1) = D/lor
@@ -631,15 +631,15 @@ implicit none
         q(k,4) = Mz/R
 
         ! Compute pressure
-        Xsi=((R-D)-u2/(lor+1.d0)*D)/lor**2
+        Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
         if (eos .eq. 'TM') then
            rho=q(k,1)
            q(k,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
         else
-           q(k,5)=(gamma-1.d0)/gamma*Xsi
+           q(k,5)=(gamma-1d0)/gamma*Xsi
         endif
      endif
-     if ((q(k,1)<0.d0).or.(q(k,5)<0.d0).or.E<0.d0) then
+     if ((q(k,1)<0d0).or.(q(k,5)<0d0).or.E<0d0) then
         write(*,*) 'negative pressure or density ctoprim 2'
         stop
      endif

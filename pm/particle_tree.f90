@@ -502,7 +502,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         xxx=(xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx
-        ok(j)=ok(j) .and. (xxx >= 0.d0 .and. xxx < 2.0d0)
+        ok(j)=ok(j) .and. (xxx >= 0d0 .and. xxx < 2.0d0)
      end do
   end do
 
@@ -959,7 +959,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   current_property = current_property+1
 #endif
 
-  ! Scatter particle birth eopch
+  ! Scatter particle birth epoch
   if(star.or.sink)then
      do i=1,np
         tp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)

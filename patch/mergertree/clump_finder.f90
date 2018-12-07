@@ -1,89 +1,3 @@
-!! Patch written by Mladen Ivkovic (mladen.ivkovic@uzh.ch)
-!! The main routine (unbinding) is called in the clump_finder routine
-!! from the clump_finder.f90 after clump properties are written to file.
-!! Changes in the clump_finder routines are marked by a "added for patch"
-!! comment so they're easier to find and track.
-
-!! New subroutines for this patch are:
-!!
-!! subroutine unbinding()
-!! subroutine get_clumpparticles()
-!! subroutine get_clump_properties_pb()
-!! subroutine get_cmp
-!! subroutine get_closest_border
-!! subroutine unbinding_neighborsearch
-!! subroutine bordercheck
-!! subroutine particle_unbinding()
-!!      contains function unbound
-!!      contains function potential
-!! subroutine compute_phi
-!! subroutine allocate_unbinding_arrays()
-!! subroutine deallocate_unbinding_arrays()
-!! subroutine unbinding_write_formatted_output()
-!! subroutine unbinding_formatted_particleoutput()
-
-
-
-!! New namelist parameters for this pach:
-!! (Can be set in the CLUMPFIND_PARAMS block)
-!!
-!! NAME                        DEFAULT VALUE        FUNCTION
-!! unbind=                     .true.               Turn particle unbinding on 
-!!                                                  or off
-!!
-!! nmassbins=                  50                   Number of bins for the mass 
-!!                                                  binning of the cumulative
-!!                                                  mass profile. Any integer >1.
-!!
-!! logbins=                    .true.               use logarithmic binning 
-!!                                                  distances for cumulative mass
-!!                                                  profiles (and gravitational 
-!!                                                  potential of clumps).
-!!                                                  If false, the code  will use 
-!!                                                  linear binning distances.
-!!
-!! saddle_pot=                 .true.               Take neighbouring structures 
-!!                                                  into account; Cut potentiall
-!!                                                  off at closest saddle.
-!!
-!! unbinding_formatted_output= .false.              Create formatted output for 
-!!                                                  particles, cumulative mass
-!!                                                  profiles, binning distances, 
-!!                                                  particle based clump
-!!                                                  properties, gravitational 
-!!                                                  potential of substructure
-!!                                                  clumps 
-!!
-!! iter_properties=            .true.               whether to unbind multiple times 
-!!                                                  with updated clump properties
-!!                                                  determined by earlier unbindings
-!!
-!! conv_limit =                0.01                 convergence limit. If the 
-!!                                                  v_clump_old/v_clump_new < conv_limit,
-!!                                                  stop iterating for this clump. 
-!!                                                  (only used when iter_properties=.true.)
-!!
-!! repeat_max =                100                  maximal number of loops per level
-!!                                                  for iterative unbinding
-!!                                                  (in case a clump doesn't converge)
-!!                                                  (shouldn't happen)
-!!                                                  (only used when iter_properties=.true.)
-
-
-
-
-
-
-
-
-
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$   CLUMP FINDER STARTS HERE    $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$                               $$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-!$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 #if NDIM==3
 subroutine clump_finder(create_output,keep_alive)
   use amr_commons
@@ -195,7 +109,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   if (ntest>0) then
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
-     denp=0.d0; levp=0; imaxp=0; icellp=0
+     denp=0d0; levp=0; imaxp=0; icellp=0
   endif
   itest=0
   nskip=ntest_cpu(myid)-ntest
@@ -277,7 +191,7 @@ subroutine clump_finder(create_output,keep_alive)
   allocate(max_dens(npeaks_max))
   allocate(peak_cell(npeaks_max))
   allocate(peak_cell_level(npeaks_max))
-  max_dens=0.d0; peak_cell=0; peak_cell_level=0;
+  max_dens=0d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0 .or. ivar_clump==-1)then
@@ -408,7 +322,7 @@ subroutine clump_finder(create_output,keep_alive)
   ! Call particle unbinding
   !------------------------------------------
   
-  if(unbind.and.create_output) call unbinding()
+  if(unbind.and.create_output.and.pic) call unbinding()
 
 
 
@@ -716,7 +630,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   do j=1,np
      indv(j)=(ind_cell(j)-ncoarse-1)/ngridmax+1 ! cell position in grid
      ind_grid(j)=ind_cell(j)-ncoarse-(indv(j)-1)*ngridmax ! grid index
-     density_max(j)=xx(ind_cell(j))*1.0001 ! get cell density (1.0001 probably not necessary)
+     density_max(j)=xx(ind_cell(j))*1.0001d0 ! get cell density (1.0001 probably not necessary)
      ind_max(j)=ind_cell(j) !save cell index
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
@@ -769,9 +683,9 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         do j3=j3min,j3max
            do i3=i3min,i3max
               ntp=ntp+1
-              xrel(ntp,1)=(i3-1.5)*dx_loc/2.0
-              xrel(ntp,2)=(j3-1.5)*dx_loc/2.0
-              xrel(ntp,3)=(k3-1.5)*dx_loc/2.0
+              xrel(ntp,1)=(i3-1.5d0)*dx_loc/2
+              xrel(ntp,2)=(j3-1.5d0)*dx_loc/2
+              xrel(ntp,3)=(k3-1.5d0)*dx_loc/2
               test_levl(ntp)=ilevel+1
            end do
         end do
@@ -881,7 +795,7 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
      ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
      ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
-     av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell
+     av_dens(j)=(xx(cell_index(j))+xx(ind_cell))/2 !average density of cell and neighbor cell
   end do
   do j=1,np
      if(ok(j))then ! if all criteria met, replace saddle density array value
@@ -927,9 +841,9 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
   ind_cell=0
   igrid0=son(1+icoarse_min+jcoarse_min*nx+kcoarse_min*nx*ny)
   do i=1,n
-     xx = xpart(i,1)/boxlen + (nx-1)/2.0
-     yy = xpart(i,2)/boxlen + (ny-1)/2.0
-     zz = xpart(i,3)/boxlen + (nz-1)/2.0
+     xx = xpart(i,1)/boxlen + (nx-1)/2d0
+     yy = xpart(i,2)/boxlen + (ny-1)/2d0
+     zz = xpart(i,3)/boxlen + (nz-1)/2d0
 
      if(xx<0.)xx=xx+dble(nx)
      if(xx>dble(nx))xx=xx-dble(nx)
@@ -969,7 +883,7 @@ subroutine read_clumpfind_params()
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,age_cut_clfind,&
        !unbinding parameters
-       & unbind,nmassbins,logbins,unbinding_formatted_output, &
+       & unbind,nmassbins,logbins, &
        & saddle_pot,iter_properties,conv_limit, repeat_max, &
        !mergertree parameters
        & make_mergertree, nmost_bound, max_past_snapshots, &
@@ -1010,7 +924,7 @@ subroutine read_clumpfind_params()
         call clean_stop
      else if (rho_clfind<0. .and. n_clfind <0.)then  !not enough information
         if (sink)then
-           density_threshold=d_sink/10.
+           density_threshold=d_sink/10
            if(myid==1)write(*,*)'You did not specify a threshold for the clump finder. '
            if(myid==1)write(*,*)'Setting it to sink threshold / 10. !'
         else
@@ -1059,14 +973,14 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  skip_loc=0
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  one_over_dx=1./dx
-  one_over_scale=1./scale
+  one_over_dx=1/dx
+  one_over_scale=1/scale
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim
@@ -1299,7 +1213,7 @@ subroutine rho_only(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -1354,8 +1268,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1377,8 +1291,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid

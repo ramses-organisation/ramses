@@ -34,8 +34,8 @@ module merger_parameters!{{{
   ! - Column #1 : radius (in pc)                                              !
   ! - Column #2 : circular velocity (in km/s)                                 !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-  character(len=256)::Vcirc_dat_file1='Vcirc1.dat'
-  character(len=256)::Vcirc_dat_file2='Vcirc2.dat'
+  character(len=256)::Vcirc_dat_file1='Vcirc1dat'
+  character(len=256)::Vcirc_dat_file2='Vcirc2dat'
   ! Galactic global velocities, given in km/s in namelist,
   ! then converted in user unit.
   real(dp), dimension(3)::Vgal1 = 0.0D0

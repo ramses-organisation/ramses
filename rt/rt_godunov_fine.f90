@@ -115,7 +115,7 @@ SUBROUTINE rt_set_uold(ilevel)
            Npc=rtuold(icell,iGroups(ig))*rt_c
            ! Reduced flux, should always be .le. 1
            fred = sqrt(sum((rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim))**2))/Npc
-           if(fred .gt. 1.d0) then ! Too big so normalize flux to one
+           if(fred .gt. 1d0) then ! Too big so normalize flux to one
               rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim) &
                    = rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim)/fred
            endif
@@ -177,7 +177,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   integer::ind_nbor
   real(dp)::dx8,maxDist
 !------------------------------------------------------------------------
-  oneontwotondim = 1.d0/dble(twotondim) ! 1/8 in 3D
+  oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
 
   ! Mesh spacing
   nx_loc=icoarse_max-icoarse_min+1    ! =1
@@ -323,7 +323,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         if(rt_is_outflow_bound) then
            do i=1,nexist
               if (rt_per_bnd(ind_exist(i))) then
-                 uloc(ind_exist(i),i3,j3,k3,1:nrtvar) =  0.D0
+                 uloc(ind_exist(i),i3,j3,k3,1:nrtvar) =  0d0
               else
                  do ivar=1,nrtvar
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
@@ -333,7 +333,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            end do
            do i=1,nbuffer
               if (rt_per_bnd(ind_nexist(i))) then
-                 uloc(ind_nexist(i),i3,j3,k3,1:nrtvar) =  0.D0
+                 uloc(ind_nexist(i),i3,j3,k3,1:nrtvar) =  0d0
               else
                  do ivar=1,nrtvar
                     uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)

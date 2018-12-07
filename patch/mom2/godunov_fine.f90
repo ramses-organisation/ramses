@@ -685,7 +685,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,scale,oneontwotondim
 
-  oneontwotondim = 1.d0/dble(twotondim)
+  oneontwotondim = 1d0/dble(twotondim)
 
   ! Mesh spacing in that level
   nx_loc=icoarse_max-icoarse_min+1

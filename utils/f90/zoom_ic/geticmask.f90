@@ -685,8 +685,8 @@ contains
     real(kind=8)::fy
     real(kind=8)::y,a
 
-    y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
-    fy=1.d0/y**1.5d0
+    y=omegam*(1d0/a-1d0) + omegav*(a*a-1d0) + 1d0
+    fy=1d0/y**1.5d0
 
     return
   end function fy
@@ -699,9 +699,9 @@ contains
     real(kind=8) :: fact,y,eps
 
     eps=1.0d-6
-    y=omegam*(1.d0/a-1.d0) + omegav*(a*a-1.d0) + 1.d0
+    y=omegam*(1d0/a-1d0) + omegav*(a*a-1d0) + 1d0
     fact=rombint(eps,a,eps)
-    fpeebl=(omegav*a*a-0.5d0*omegam/a)/y - 1.d0 + a*fy(a)/fact
+    fpeebl=(omegav*a*a-0.5d0*omegam/a)/y - 1d0 + a*fy(a)/fact
     return
   end function fpeebl
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

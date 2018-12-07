@@ -46,12 +46,12 @@ subroutine condinit(x,u,dx,nn)
 #endif
   ! kinetic energy
   u(1:nn,ndim+2)=0.0d0
-  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5*q(1:nn,1)*q(1:nn,2)**2
+  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5d0*q(1:nn,1)*q(1:nn,2)**2
 #if NDIM>1
-  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5*q(1:nn,1)*q(1:nn,3)**2
+  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5d0*q(1:nn,1)*q(1:nn,3)**2
 #endif
 #if NDIM>2
-  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5*q(1:nn,1)*q(1:nn,4)**2
+  u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5d0*q(1:nn,1)*q(1:nn,4)**2
 #endif
   ! thermal pressure -> total fluid energy
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+q(1:nn,ndim+2)/(gamma-1.0d0)
