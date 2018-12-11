@@ -87,9 +87,9 @@ contains
 
       tmp_imin=0; tmp_imax=0
       tmp_imin(1)=1; tmp_imax(1)=ncpu
-      tmp_bxmin(1,:)=0.0; tmp_bxmax(1,:)=scale
+      tmp_bxmin(1,:)=0; tmp_bxmax(1,:)=scale
 
-      l_limit(1)=0.0; u_limit(1)=1.0
+      l_limit(1)=0; u_limit(1)=1
       cur_levelstart=1; nc=0; dir=1; cur_cell=0
 
       if(update) then
@@ -186,8 +186,8 @@ contains
                   if(skip(i)) cycle
                   ! check whether wall position is compatible with bounding box
                   if( bisec_wall(cur_cell)<=tmp_bxmin(cur_cell,dir) .or. bisec_wall(cur_cell)>=tmp_bxmax(cur_cell,dir) ) then
-                     bisec_wall(cur_cell) = round_to_bisec_res( 0.5 * (tmp_bxmin(cur_cell,dir) + &
-                                                                          tmp_bxmax(cur_cell,dir) ) )
+                     bisec_wall(cur_cell) = round_to_bisec_res( 0.5d0 * (tmp_bxmin(cur_cell,dir) + &
+                                                                         tmp_bxmax(cur_cell,dir) ) )
                   end if
 
                   ! get local load for left subcell knowing current wall pos
@@ -298,7 +298,7 @@ contains
 
          ! CHILDREN CREATION AND LEAF PROCESSING
          ! this is done at every level, including the very last one (for leaf processing)
-         walls=0.0
+         walls=0
          children_and_leaves: do i=1,nc
             cur_cell = cur_levelstart + (i-1)
             if (tmp_imax(cur_cell)==0) cycle
@@ -498,7 +498,7 @@ contains
       bisec_ind_cell=0
       ncell=0
       ncell_loc=1
-      dx=1.0*scale
+      dx=1.0d0*scale
       do iz=0,nz-1
       do iy=0,ny-1
       do ix=0,nx-1

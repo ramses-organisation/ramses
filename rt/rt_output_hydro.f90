@@ -277,7 +277,7 @@ SUBROUTINE output_rt_stats
 
   ! Stellar rt feedback statistics:
   if (showSEDstats .and. rt_star) then
-     step_nPhot_all = 0.d0 ; step_nStar_all = 0.d0 ; ; step_mStar_all = 0.d0
+     step_nPhot_all = 0d0 ; step_nStar_all = 0d0 ; ; step_mStar_all = 0d0
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(step_nPhot,           step_nPhot_all,  1,        &
           MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
@@ -293,7 +293,7 @@ SUBROUTINE output_rt_stats
      if (myid .eq. 1)                                                     &
           write(*, 113) step_nPhot, tot_nPhot, step_nStar/dtnew(levelmin)&
           , step_mStar/dtnew(levelmin), dtnew(levelmin)*scale_t/(3.15569d7)
-     step_nPhot = 0.d0 ; step_nStar = 0.d0 ; step_mStar = 0.d0
+     step_nPhot = 0d0 ; step_nStar = 0d0 ; step_mStar = 0d0
   end if
 113 format(' SED feedback(phot/step/1d50, phot/tot/1d50, *, */Msun , dt[yr])= '  &
                                                              , 10(1pe9.2))

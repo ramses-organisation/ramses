@@ -78,7 +78,7 @@ SUBROUTINE rt_init
   if(rt_use_hll) call read_hll_eigenvalues
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
-  tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0
+  tot_nPhot=0d0 ;  step_nPhot=0d0; step_nStar=0d0; step_mStar=0d0
 
 END SUBROUTINE rt_init
 
@@ -119,7 +119,7 @@ SUBROUTINE adaptive_rt_c_update(ilevel, dt)
   dx=0.5D0**ilevel*scale
 
   ! new lightspeed
-  rt_c = dx/3.d0/dt * rt_courant_factor
+  rt_c = dx/3d0/dt * rt_courant_factor
   rt_c2 = rt_c**2
 
   ! new ligtspeed in cgs
@@ -202,7 +202,7 @@ SUBROUTINE read_rt_params(nml_ok)
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
   if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
 
-  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true.
+  if(rt_Tconst .ge. 0d0) rt_isTconst=.true.
 
   ! Set number of used ionisation fractions, indexes of ionization
   ! fractions, and ionization energies, and check if we have enough

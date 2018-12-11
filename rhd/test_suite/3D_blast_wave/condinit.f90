@@ -51,7 +51,7 @@ subroutine condinit(x,u,dx,nn)
      ! specific enthalpy
      h=1.0d0+gamma/(gamma-1.0d0)*q(i,5)/q(i,1)
      ! Lorentz factor
-     lor=(1.-(q(i,2)**2+q(i,3)**2+q(i,4)**2))**(-1.d0/2.d0)
+     lor=(1.-(q(i,2)**2+q(i,3)**2+q(i,4)**2))**(-1d0/2d0)
 
      ! proper density  -> density in lab frame
      u(i,1)= q(i,1)*lor

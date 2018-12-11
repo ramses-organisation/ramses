@@ -39,14 +39,14 @@ subroutine gas_ana
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
 
-  maxi_dens=0.d0
-  mini_dens=huge(0.d0)
+  maxi_dens=0d0
+  mini_dens=huge(0d0)
 
-  xx=5.d-1; yy=5.d-1; zz=5.d-1
-  vx=0.d0; vy=0.d0; vz=0.d0
+  xx=5d-1; yy=5d-1; zz=5d-1
+  vx=0d0; vy=0d0; vz=0d0
 
-  m=0.d0; m_tot=0.d0
-  v_rms=0.d0; v_rms_tot=0.d0
+  m=0d0; m_tot=0d0
+  v_rms=0d0; v_rms_tot=0d0
 
   do ilevel=levelmin,nlevelmax
      if (numbtot(1,ilevel)/=0)then
@@ -141,8 +141,8 @@ subroutine gas_ana
 
   allocate(hist(1:nbins))
   allocate(hist_tot(1:nbins))
-  hist=0.d0
-  hist_tot=0.d0
+  hist=0d0
+  hist_tot=0d0
 
 
   do ilevel=levelmin,nlevelmax
@@ -219,7 +219,7 @@ subroutine gas_ana
 #if NDIM>2
                        vz=dble(uold(ind_cell(i),4))/(v_sound)
 #endif
-                       v_rms=v_rms+(vx**2.d0+vy**2.d0+vz**2.d0)*vol_loc/d
+                       v_rms=v_rms+(vx**2d0+vy**2d0+vz**2d0)*vol_loc/d
                        m=m+vol_loc*d
                        ! log(rho) PDF
                        hist_ind=1+int((log10(d)-l_min)/width*nbins)
@@ -256,7 +256,7 @@ subroutine gas_ana
 #ifdef WITHOUTMPI
   v_rms_tot=v_rms
 #endif
-v_rms_tot=(v_rms_tot/m_tot)**5.d-1
+v_rms_tot=(v_rms_tot/m_tot)**5d-1
   !---------------------------------
   ! write textfile
   !---------------------------------
@@ -300,8 +300,8 @@ subroutine read_gas_analytics_params()
   read(1,NML=gas_analytics_params,END=101)
   goto 102
 101 if(myid==1)write(*,*)' You did not setup &GAS_ANALYTICS_PARAMS in parameter file. Defaults will be used...'
-  ana_xmi=0.d0; ana_ymi=0.d0; ana_zmi=0.d0
-  ana_xma=1.d0; ana_yma=1.d0; ana_zma=1.d0
+  ana_xmi=0d0; ana_ymi=0d0; ana_zmi=0d0
+  ana_xma=1d0; ana_yma=1d0; ana_zma=1d0
   nbins=1000
 102 rewind(1)
 end subroutine read_gas_analytics_params

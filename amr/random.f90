@@ -30,10 +30,10 @@ module random
   integer,dimension( IRandNumSize ) :: &
        & DefaultSeed = (/ 3281, 4041, 595, 2376 /)
   real(kind=8),dimension( IRandNumSize ) :: &
-       & Divisor = (/281474976710656.0,68719476736.0,16777216.0,4096.0/)
+       & Divisor = (/281474976710656.0d0,68719476736.0d0,16777216.0d0,4096.0d0/)
 
   integer :: IGauss = 0
-  real(kind=8) :: GaussBak = 0.0d0
+  real(kind=8) :: GaussBak = 0
 
 contains
   !=======================================================================
@@ -80,7 +80,7 @@ contains
        end do
     else
        call gaussdev(Seed,GaussNum)
-       GaussNum=GaussNum*sqrt(AverNum)-0.5+AverNum
+       GaussNum=GaussNum*sqrt(AverNum)-0.5d0+AverNum
        if(GaussNum<=0.0d0)GaussNum=0.0d0
        PoissNum=nint(GaussNum)
     endif

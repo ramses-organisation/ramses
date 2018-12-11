@@ -432,7 +432,7 @@ subroutine output_info_send
   msg(9)  = scale_d
   msg(10) = scale_t
   msg(11) = h0
-  msg(12) = nstep_coarse+0.1 !Not very clean but useful (one less message)
+  msg(12) = nstep_coarse+0.1d0 !Not very clean but useful (one less message)
   msg(13) = ndomain
 
   call MPI_SEND(msg,size(msg),MPI_DOUBLE_PRECISION,0,tag,MPI_COMM_IOGROUP,ierr)

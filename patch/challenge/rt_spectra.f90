@@ -58,8 +58,8 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func, doPrint)
   if(N .le. 2) RETURN
   ! Convert energy interval to wavelength interval
   la0 = X(1) ; la1 = X(N)
-  if(e1.gt.0) la0 = max(la0, 1.d8 * hp * c_cgs / e1 / eV_to_erg)
-  if(e0.gt.0) la1 = min(la1, 1.d8 * hp * c_cgs / e0 / eV_to_erg)
+  if(e1.gt.0) la0 = max(la0, 1d8 * hp * c_cgs / e1 / eV_to_erg)
+  if(e0.gt.0) la1 = min(la1, 1d8 * hp * c_cgs / e0 / eV_to_erg)
   if(la0 .ge. la1) RETURN
   ! If we get here, the [la0, la1] inverval is completely within X
   allocate(xx(N)) ; allocate(yy(N)) ; allocate(f(N))
@@ -152,10 +152,10 @@ FUNCTION trapz1(X,Y,N,cum)
   real(kind=8),allocatable::cumInt(:)
 !-------------------------------------------------------------------------
   allocate(cumInt(N))
-  cumInt(:)=0.d0
+  cumInt(:)=0d0
   if (N.le.1) RETURN
   do i=2,N
-     cumInt(i)= cumInt(i-1) + abs(X(i)-X(i-1)) * (Y(i)+Y(i-1)) / 2.d0
+     cumInt(i)= cumInt(i-1) + abs(X(i)-X(i-1)) * (Y(i)+Y(i-1)) / 2d0
   end do
   trapz1 = cumInt(N)
   if(present(cum)) cum=cumInt
@@ -176,7 +176,7 @@ FUNCTION getCrosssection_Hui(lambda, species)
   integer           :: species
   real(kind=8)      :: E, E0, cs0, P, ya, yw, y0, y1, x, y
 !------------------------------------------------------------------------
-  E = hp * c_cgs/(lambda*1.d-8) / ev_to_erg         ! photon energy in ev
+  E = hp * c_cgs/(lambda*1d-8) / ev_to_erg         ! photon energy in ev
   if ( E .lt. ionEvs(species) ) then            ! below ionization energy
      getCrosssection_Hui=0.
      RETURN
@@ -406,7 +406,7 @@ SUBROUTINE init_SED_table()
   SED_lgZ0 = log10(SED_Zeds(1))                  ! Interpolation intervals
   SED_lgA0 = log10(rebAges(1))
   allocate(SED_ages(SED_nA))
-  SED_ages(1)=0.d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
+  SED_ages(1)=0d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
 
   deallocate(SEDs) ; deallocate(tbl)
   deallocate(ages) ; deallocate(rebAges)
@@ -469,9 +469,9 @@ SUBROUTINE update_SED_group_props()
      mass = mp(i)
      call getAgeGyr(tp(i), age)                         !     age = [Gyrs]
      if(metal) then
-        Z = max(zp(i), 10.d-5)                          ! [m_metals/m_tot]
+        Z = max(zp(i), 10d-5)                          ! [m_metals/m_tot]
      else
-        Z = max(z_ave*0.02, 10.d-5)                     ! [m_metals/m_tot]
+        Z = max(z_ave*0.02, 10d-5)                     ! [m_metals/m_tot]
      endif
      call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 m_sun-1]
      call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [ev]
@@ -602,8 +602,8 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
            do jpart = 1, npart1
               ! Save next particle       <--- Very important !!!
               next_part = nextp(ipart)
-              !if(idp(ipart) .gt. 0 .and. tp(ipart) .ne. 0.d0) then
-              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
+              !if(idp(ipart) .gt. 0 .and. tp(ipart) .ne. 0d0) then
+              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0d0) then
                  npart2 = npart2+1     ! only stars
               endif
               ipart = next_part        ! Go to next particle
@@ -620,7 +620,7 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
               ! Save next particle      <--- Very important !!!
               next_part = nextp(ipart)
               ! Select only star particles
-              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0.d0) then
+              if(idp(ipart) .ne. 0 .and. tp(ipart) .ne. 0d0) then
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
@@ -709,7 +709,7 @@ FUNCTION getSEDEgy(X, Y, N, e0, e1)
   use spectrum_integrator_module
   real(dp):: getSEDEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
-  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg! energy conversion
+  real(dp),parameter :: const=1d8*hp*c_cgs/eV_to_erg! energy conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
   norm         = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
@@ -805,7 +805,7 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   do i = 0, new_nx-1                              !  initialize the x-axis
      new_lgx(i+1) = x0lg + i*xint_log
   end do
-  new_x=10.d0**new_lgx
+  new_x=10d0**new_lgx
 
   if(yint_log .lt. 0 .and. ny .gt. 1) then        ! yint represents wanted
      new_ny=-yint_log                             !     number of new bins
@@ -817,7 +817,7 @@ SUBROUTINE rebin_log(xint_log, yint_log,                                 &
   do j = 0, new_ny-1                              !      ...and the y-axis
      new_lgy(j+1) = y0lg + j*yint_log
   end do
-  new_y=10.d0**new_lgy
+  new_y=10d0**new_lgy
 
   ! Initialize new_data and find values for each point in it
   allocate(new_data(new_nx, new_ny, nz))
@@ -1034,7 +1034,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
             , dt_loc_Gyr, scale_msun
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
 !-------------------------------------------------------------------------
-  if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
+  if(.not. metal) z = log10(max(z_ave*0.02, 10d-5))![log(m_metals/m_tot)]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   call rt_units(scale_Np, scale_Fp)
@@ -1050,7 +1050,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   dx_loc = dx*scale
   vol_loc = dx_loc**ndim
   scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun
-  scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
+  scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1d50
   scale_msun = scale_d * scale_l**ndim / m_sun
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
@@ -1125,7 +1125,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
 
   ! Compute parent cell adress and particle radiation contribution
   do j = 1, np
-     if(metal)z= max(zp(ind_part(j)), 10.d-5)      !      [m_metals/m_tot]
+     if(metal)z= max(zp(ind_part(j)), 10d-5)      !      [m_metals/m_tot]
      call getAgeGyr(tp(ind_part(j)), age)          !  End-of-dt age [Gyrs]
      ! Possibilities:     Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
@@ -1159,7 +1159,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
         end do
      endif
      !begin debug
-     !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1.d11) then
+     !     if(rtunew(indp(j),iGroups(1))*scale_np*rt_c_cgs .gt.1d11) then
      !        write(*,777),ilevel, myid, rtunew(indp(j),                   &
      !           iGroups(1))*scale_np*rt_c_cgs, &
      !             irad(j,1), irad(j,2),                                 &
@@ -1221,7 +1221,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
             , dt_loc_Gyr, scale_msun
 !-------------------------------------------------------------------------
-  if(.not. metal) z = log10(max(z_ave*0.02, 10.d-5))![log(m_metals/m_tot)]
+  if(.not. metal) z = log10(max(z_ave*0.02, 10d-5))![log(m_metals/m_tot)]
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   call rt_units(scale_np, scale_Fp)
@@ -1237,7 +1237,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
   dx_loc = dx*scale
   vol_loc = dx_loc**ndim
   scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun
-  scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
+  scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1d50
   scale_msun = scale_d * scale_l**ndim / m_sun
 
   ! Lower left corners of parent grid
@@ -1269,7 +1269,7 @@ SUBROUTINE star_RT_vsweep_pp(ind_grid, ind_part, ind_grid_part, ng, np,  &
 
   ! Compute parent cell adress and particle effective mass
   do j = 1, np
-     if(metal) z = max(zp(ind_part(j)), 10.d-5)   !       [m_metals/m_tot]
+     if(metal) z = max(zp(ind_part(j)), 10d-5)   !       [m_metals/m_tot]
      call getAgeGyr(tp(ind_part(j)), age)         !   End-of-dt age [Gyrs]
      !Possibilities:      Born i) before dt, ii) within dt, iii) after dt:
      dt_loc_Gyr = max(min(dt_Gyr, age), 0.)
@@ -1476,7 +1476,7 @@ SUBROUTINE init_UV_background()
   !       cross sections as the next-highest redshift.                   !
 
   ! Propagated UV background----------------------------------------------
-  if(rt_UVsrc_nHmax .gt. 0.d0) then ! UV propagation from diffuse cells--
+  if(rt_UVsrc_nHmax .gt. 0d0) then ! UV propagation from diffuse cells--
      if(myid==1) print*,'The UV background is propagated'
      if(myid==1 .and. rt_UV_hom) then
           print*,'ATT: UV background is BOTH homogeneous and propagated'
@@ -1505,7 +1505,7 @@ SUBROUTINE init_UV_background()
         pL1 = groupL1(nSEDgroups+ip) !
         do iz = locid+1,UV_nz,ncpu
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
-           if(tbl(iz,1) .eq. 0.d0) cycle     ! Can't integrate zero fluxes
+           if(tbl(iz,1) .eq. 0d0) cycle     ! Can't integrate zero fluxes
            tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)
            do ii = 1,nIons
               tbl(iz,1+ii*2)= getUVcsn( Ls,UV(:,iz),nLs,pL0,pL1,ii)
@@ -1519,7 +1519,7 @@ SUBROUTINE init_UV_background()
         tbl = tbl2
         deallocate(tbl2)
 #endif
-        if(tbl(UV_nz,1) .eq. 0.d0) &            !                Zero flux
+        if(tbl(UV_nz,1) .eq. 0d0) &            !                Zero flux
              tbl(UV_nz,2:)=tbl(UV_nz-1,2:)
         UV_groups_table(:,ip,:)=tbl
      end do
@@ -1644,14 +1644,14 @@ FUNCTION getUV_Hrate(X, Y, N, species)
 !-------------------------------------------------------------------------
   real(kind=8):: getUV_Hrate, X(N), Y(N), e0
   integer :: N, species
-  real(kind=8),parameter :: const1=fourPi*1.d8*hp*c_cgs
+  real(kind=8),parameter :: const1=fourPi*1d8*hp*c_cgs
   real(kind=8),parameter :: const2=fourPi*eV_to_erg
 !-------------------------------------------------------------------------
   e0=ionEvs(species)
   getUV_Hrate = &
-        const1*integrateSpectrum(X,Y,N, e0, 0.d0, species, fsigDivLambda)&
+        const1*integrateSpectrum(X,Y,N, e0, 0d0, species, fsigDivLambda)&
        -const2*ionEvs(species) *                                         &
-               integrateSpectrum(X,Y,N, e0, 0.d0, species, fsig)
+               integrateSpectrum(X,Y,N, e0, 0d0, species, fsig)
 END FUNCTION getUV_Hrate
 
 !*************************************************************************
@@ -1674,7 +1674,7 @@ FUNCTION getUVEgy(X, Y, N, e0, e1)
 !-------------------------------------------------------------------------
   real(dp):: getUVEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
-  real(dp),parameter :: const=1.d8*hp*c_cgs/eV_to_erg    ! unit conversion
+  real(dp),parameter :: const=1d8*hp*c_cgs/eV_to_erg    ! unit conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
   norm         = integrateSpectrum(X, Y, N, e0, e1, species, f1)

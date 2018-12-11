@@ -154,6 +154,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use pm_commons
   use hydro_commons
   use random
+  use constants, only: M_sun, Myr2sec, pc2cm
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -211,26 +212,26 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
 
   ! Compute stochastic boost to account for target GMC mass
-  SN_BOOST=MAX(mass_gmc*2d33/(scale_d*scale_l**3)/mstar,1d0)
+  SN_BOOST=MAX(mass_gmc*M_sun/(scale_d*scale_l**3)/mstar,1d0)
 
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*Myr2sec/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*Myr2sec/scale_t
      current_time=t
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*2d33)/scale_v**2
+  ESN=1d51/(10d0*M_sun)/scale_v**2
 
   ! Life time radiation specific energy from cgs to code units
-  ERAD=1d53/(10.*2d33)/scale_v**2
+  ERAD=1d53/(10d0*M_sun)/scale_v**2
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -340,7 +341,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if(sf_imf)then
               if(mp(ind_part(j)).le.mstar_max)then
                  if(mp(ind_part(j)).ge.msne_min) eta_sn2 = eta_ssn
-                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0.0
+                 if(mp(ind_part(j)).lt.msne_min) eta_sn2 = 0
               endif
            endif
            ! Stellar mass loss
@@ -382,7 +383,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  if(ivar.eq.ndim+2)then
                     e=0.0d0
                     do idim=1,ndim
-                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                       e=e+0.5d0*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
                     enddo
 #if NENER>0
                     do irad=0,nener-1
@@ -395,7 +396,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                     enddo
 #endif
                     ! Temperature
-                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                    uvar=(gamma-1.0d0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
                  else
                     uvar=unew(indp(j),ivar)
                  endif
@@ -412,9 +413,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! For IR radiation trapping,
   ! we use a fixed length to estimate the column density of gas
-  delta_x=200.*3d18
+  delta_x=200d0*pc2cm
   if(metal)then
-     tau_factor=kappa_IR*delta_x*scale_d/0.02
+     tau_factor=kappa_IR*delta_x*scale_d/0.02d0
   else
      tau_factor=kappa_IR*delta_x*scale_d*z_ave
   endif
@@ -431,13 +432,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(uold(indp(j),1)*scale_nH > 10.)then
         RAD_BOOST=rad_factor*(1d0-exp(-tauIR))
      else
-        RAD_BOOST=0.0
+        RAD_BOOST=0
      endif
 
      ! Specific kinetic energy of the star
-     ekinetic(j)=0.5*(vp(ind_part(j),1)**2 &
-          &          +vp(ind_part(j),2)**2 &
-          &          +vp(ind_part(j),3)**2)
+     ekinetic(j)=0.5d0*(vp(ind_part(j),1)**2 &
+          &            +vp(ind_part(j),2)**2 &
+          &            +vp(ind_part(j),3)**2)
 
      ! Update hydro variable in NGP cell
      unew(indp(j),1)=unew(indp(j),1)+mloss(j)
@@ -472,6 +473,7 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
+  use constants, only:Myr2sec
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -525,10 +527,10 @@ subroutine kinetic_feedback
   ! Lifetime of Giant Molecular Clouds from Myr to code units
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*Myr2sec/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*Myr2sec/scale_t
      current_time=t
   endif
 
@@ -583,7 +585,7 @@ subroutine kinetic_feedback
   ! Allocate arrays for the position and the mass of the SN
   allocate(xSN(1:nSN_tot,1:3),vSN(1:nSN_tot,1:3))
   allocate(mSN(1:nSN_tot),sSN(1:nSN_tot),ZSN(1:nSN_tot))
-  xSN=0.;vSN=0.;mSN=0.;sSN=0.;ZSN=0.
+  xSN=0; vSN=0; mSN=0; sSN=0; ZSN=0
   ! Allocate arrays for particles index and parent grid
   if(nSN_loc>0)then
      allocate(ind_part(1:nSN_loc),ind_grid(1:nSN_loc),ok_free(1:nSN_loc))
@@ -686,6 +688,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants, only: pc2cm
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -727,12 +730,12 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
   ! Initialize the averaged variables
-  vol_gas=0.0;dq=0.0;u2Blast=0.0;ekBlast=0.0;ind_blast=-1
+  vol_gas=0; dq=0; u2Blast=0; ekBlast=0; ind_blast=-1
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax
@@ -850,6 +853,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants, only: M_sun, pc2cm
   use mpi_mod
   implicit none
   !------------------------------------------------------------------------
@@ -885,7 +889,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
@@ -895,17 +899,17 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  ESN=(1d51/(10d0*2d33))/scale_v**2
+  ESN=(1d51/(10d0*M_sun))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn
      if(sf_imf)then
         if(mSN(iSN).le.mstar_max)then
            if(mSN(iSN).ge.msne_min) eta_sn2 = eta_ssn
-           if(mSN(iSN).lt.msne_min) eta_sn2 = 0.0
+           if(mSN(iSN).lt.msne_min) eta_sn2 = 0
         endif
      endif
      if(vol_gas(iSN)>0d0)then
@@ -987,7 +991,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
                        uold(ind_cell(i),3)=uold(ind_cell(i),3)+d_gas(iSN)*v
                        uold(ind_cell(i),4)=uold(ind_cell(i),4)+d_gas(iSN)*w
                        ! Finally update the total energy of the gas
-                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
+                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5d0*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
                     endif
                  end do
               endif
@@ -1010,7 +1014,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
            uold(indSN(iSN),2)=uold(indSN(iSN),2)+d_gas(iSN)*u
            uold(indSN(iSN),3)=uold(indSN(iSN),3)+d_gas(iSN)*v
            uold(indSN(iSN),4)=uold(indSN(iSN),4)+d_gas(iSN)*w
-           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5*(u*u+v*v+w*w)+p_gas(iSN)
+           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5d0*(u*u+v*v+w*w)+p_gas(iSN)
            if(metal)uold(indSN(iSN),imetal)=uold(indSN(iSN),imetal)+d_metal(iSN)
         endif
      endif

@@ -1045,7 +1045,7 @@ subroutine make_trees()
     do ipeak=npeaks+1, hfree-1
 
       ! set up distances only if you haven't yet
-      if (cmp_distances(ipeak, nmassbins-1)==0.d0) then
+      if (cmp_distances(ipeak, nmassbins-1)==0d0) then
         if (logbins) then
           do i=1, nmassbins-1
             ! rmin is declared in clfind_commons
@@ -1464,7 +1464,7 @@ subroutine make_trees()
 
         ! Find the one with actual minimal merit
         merit_min_id = 0
-        merit_min = HUGE(0.d0)
+        merit_min = HUGE(0d0)
         do ipastprog = 1, ncand
           if (merit(ipastprog) < merit_min) then
             merit_min = merit(ipastprog)
@@ -3023,7 +3023,7 @@ subroutine mark_tracer_particles()
   
   integer                           :: ipeak, ipart, i
   real(dp), dimension(1:npeaks_max) :: temp_energy
-  temp_energy = HUGE(0.d0)
+  temp_energy = HUGE(0d0)
 
 
 
@@ -3042,7 +3042,7 @@ subroutine mark_tracer_particles()
 
     do ipeak = 1, hfree -1
       ! need to check whether it is relevant clump. otherwise temp_energy == most_bound_energy = HUGE anyways
-      if (clmp_mass_exclusive(ipeak) > 0.d0) then 
+      if (clmp_mass_exclusive(ipeak) > 0d0) then 
 
         ! if this is true minimal value for this peak
         if (temp_energy(ipeak) == most_bound_energy(ipeak, ipart) ) then
@@ -3062,7 +3062,7 @@ subroutine mark_tracer_particles()
           enddo 
 
           ! also reset value at this position
-          most_bound_energy(ipeak, ipart) = HUGE(0.d0)
+          most_bound_energy(ipeak, ipart) = HUGE(0d0)
           most_bound_pid(ipeak, ipart) = 0
 
         endif !true minimum

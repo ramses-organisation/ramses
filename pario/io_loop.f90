@@ -22,10 +22,10 @@ subroutine io_loop
   real(kind=8)::t1,t2,t3,t4
   integer,dimension(MPI_STATUS_SIZE)::stat
 
-  KB=1024.d0
-  MB=KB*1024.d0
-  GB=MB*1024.d0
-  TB=GB*1024.d0
+  KB=1024d0
+  MB=KB*1024d0
+  GB=MB*1024d0
+  TB=GB*1024d0
 
   error=.false.
 

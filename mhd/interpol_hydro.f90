@@ -813,7 +813,7 @@ subroutine compute_limiter_central(a,w,nn)
      do ind=1,twotondim
         xxc = xc(ind,idim)
         do i=1,nn
-           corner(i)=ac(i,ind)+2.D0*w(i,idim)*xxc
+           corner(i)=ac(i,ind)+2d0*w(i,idim)*xxc
         end do
         do i=1,nn
            ac(i,ind)=corner(i)

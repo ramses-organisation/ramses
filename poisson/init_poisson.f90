@@ -26,10 +26,10 @@ subroutine init_poisson
   allocate(phi (1:ncell))
   allocate(phi_old (1:ncell))
   allocate(f   (1:ncell,1:3))
-  rho=0.0D0; phi=0.0D0; f=0.0D0
+  rho=0; phi=0; f=0
   if(cic_levelmax>0)then
      allocate(rho_top(1:ncell))
-     rho_top=0d0
+     rho_top=0
   endif
 
   !------------------------------------------------------

@@ -46,7 +46,7 @@ program output2tipsy_v2
 
   integer::ndummy=64,ndummypart,nmin,nmax,nold,nnold,ndummyold
   integer::partcount,respart,denspartcount
-  real(KIND=8)::dummy,partmass,volume,facdens=0.d0,averdens
+  real(KIND=8)::dummy,partmass,volume,facdens=0d0,averdens
   integer::delm=0,levelsel
 
   integer::npart,nstar_tot,nsink,npart_tot,nsink_tot
@@ -308,12 +308,12 @@ program output2tipsy_v2
         !     write(66,*)varp(i,1)
      end do
      do i=1,nmax-nmin+1
-        if(varp(i,1)>facdens*averdens)write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1)
-        !     write(*,*)varp(i,5)/(dble(gamma)-1.d0)/varp(i,1)
+        if(varp(i,1)>facdens*averdens)write(66,*)varp(i,5)/(gamma-1d0)/varp(i,1)
+        !     write(*,*)varp(i,5)/(dble(gamma)-1d0)/varp(i,1)
      end do
      if(nvarh>=6)then
         do i=1,nmax-nmin+1
-           if(varp(i,1)>facdens*averdens)write(66,*)0.d0
+           if(varp(i,1)>facdens*averdens)write(66,*)0d0
         end do
         do i=1,nmax-nmin+1
            if(varp(i,1)>facdens*averdens)write(66,*)varp(i,6)
@@ -329,7 +329,7 @@ program output2tipsy_v2
 
      mdm=1d30
      do i=1,npart_actual
-        if(idpart(i)>=0.and.age(i)==0.d0)mdm=min(mdm,mpart(i))
+        if(idpart(i)>=0.and.age(i)==0d0)mdm=min(mdm,mpart(i))
      end do
      mdm=mdm*omega_b/(omega_m-omega_b)
 
@@ -361,15 +361,15 @@ program output2tipsy_v2
      do i=1,npart_actual
         if((.not.star).and.(.not.sink))write(66,*)mpart(i)
         if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)mpart(i)
-        if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)mpart(i)
+        if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)mpart(i)
         if((.not.star).and.(.not.sink))write(55,*)idpart(i)
         if((.not.star).and.(sink).and.idpart(i)>0)write(55,*)idpart(i)
-        if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(55,*)idpart(i)
+        if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(55,*)idpart(i)
      enddo
      if(star.and.nstar_actual>0)then
         do i=1,npart_actual
-           if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)mpart(i)
-           if(age(i)/=0.d0.and.idpart(i)>0)write(55,*)idpart(i)
+           if(age(i)/=0d0.and.idpart(i)>0)write(66,*)mpart(i)
+           if(age(i)/=0d0.and.idpart(i)>0)write(55,*)idpart(i)
         enddo
      endif
      do i=1,nmax-nmin+1
@@ -378,11 +378,11 @@ program output2tipsy_v2
      do i=1,npart_actual
         if((.not.star).and.(.not.sink))write(66,*)xpart(i,1)
         if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)xpart(i,1)
-        if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)xpart(i,1)
+        if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)xpart(i,1)
      enddo
      if(star.and.nstar_actual>0)then
         do i=1,npart_actual
-           if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)xpart(i,1)
+           if(age(i)/=0d0.and.idpart(i)>0)write(66,*)xpart(i,1)
         enddo
      endif
      do i=1,nmax-nmin+1
@@ -391,11 +391,11 @@ program output2tipsy_v2
      do i=1,npart_actual
         if((.not.star).and.(.not.sink))write(66,*)xpart(i,2)
         if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)xpart(i,2)
-        if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)xpart(i,2)
+        if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)xpart(i,2)
      enddo
      if(star.and.nstar_actual>0)then
         do i=1,npart_actual
-           if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)xpart(i,2)
+           if(age(i)/=0d0.and.idpart(i)>0)write(66,*)xpart(i,2)
         enddo
      endif
 
@@ -405,11 +405,11 @@ program output2tipsy_v2
   do i=1,npart_actual
      if((.not.star).and.(.not.sink))write(66,*)xpart(i,3)
      if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)xpart(i,3)
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)xpart(i,3)
+     if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)xpart(i,3)
   enddo
   if(star.and.nstar_actual>0)then
      do i=1,npart_actual
-        if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)xpart(i,3)
+        if(age(i)/=0d0.and.idpart(i)>0)write(66,*)xpart(i,3)
      enddo
   endif
 
@@ -419,11 +419,11 @@ program output2tipsy_v2
   do i=1,npart_actual
      if((.not.star).and.(.not.sink))write(66,*)vpart(i,1)
      if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)vpart(i,1)
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)vpart(i,1)
+     if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)vpart(i,1)
   enddo
   if(star.and.nstar_actual>0)then
      do i=1,npart_actual
-        if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)vpart(i,1)
+        if(age(i)/=0d0.and.idpart(i)>0)write(66,*)vpart(i,1)
      enddo
   endif
 
@@ -433,11 +433,11 @@ program output2tipsy_v2
   do i=1,npart_actual
      if((.not.star).and.(.not.sink))write(66,*)vpart(i,2)
      if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)vpart(i,2)
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)vpart(i,2)
+     if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)vpart(i,2)
   enddo
   if(star.and.nstar_actual>0)then
      do i=1,npart_actual
-        if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)vpart(i,2)
+        if(age(i)/=0d0.and.idpart(i)>0)write(66,*)vpart(i,2)
      enddo
   endif
 
@@ -447,15 +447,15 @@ program output2tipsy_v2
   do i=1,npart_actual
      if((.not.star).and.(.not.sink))write(66,*)vpart(i,3)
      if((.not.star).and.(sink).and.idpart(i)>0)write(66,*)vpart(i,3)
-     if((star.or.sink).and.age(i)==0.d0.and.idpart(i)>0)write(66,*)vpart(i,3)
+     if((star.or.sink).and.age(i)==0d0.and.idpart(i)>0)write(66,*)vpart(i,3)
   enddo
   if(star.and.nstar_actual>0)then
      do i=1,npart_actual
-        if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)vpart(i,3)
+        if(age(i)/=0d0.and.idpart(i)>0)write(66,*)vpart(i,3)
      enddo
   endif
 
-  dummy=0.d0
+  dummy=0d0
   do i=1,ndm_actual
      write(66,*)dummy
   end do
@@ -467,7 +467,7 @@ program output2tipsy_v2
      if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,1)
   end do
   do i=1,nmax-nmin+1
-     if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1)
+     if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,5)/(gamma-1d0)/varp(i,1)
   end do
 
   do i=1,nmax-nmin+1
@@ -481,7 +481,7 @@ program output2tipsy_v2
   if(star.and.nstar_actual>0)then
      if(metal)then
         do i=1,npart_actual
-           if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)met(i)
+           if(age(i)/=0d0.and.idpart(i)>0)write(66,*)met(i)
         end do
      else
         do i=1,nstar_actual
@@ -489,7 +489,7 @@ program output2tipsy_v2
         end do
      end if
      do i=1,npart_actual
-        if(age(i)/=0.d0.and.idpart(i)>0)write(66,*)age(i)
+        if(age(i)/=0d0.and.idpart(i)>0)write(66,*)age(i)
      end do
   end if
 

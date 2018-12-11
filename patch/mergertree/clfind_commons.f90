@@ -9,13 +9,13 @@ module clfind_commons
   integer,allocatable,dimension(:)::npeaks_per_cpu
   integer,allocatable,dimension(:)::ipeak_start
   real(dp)::tot_mass
-  real(dp)::relevance_threshold=2.0
-  real(dp)::density_threshold=-1.0d0
-  real(dp)::saddle_threshold=-1.d0
-  real(dp)::rho_clfind=-1.d0
-  real(dp)::n_clfind=-1.d0
-  real(dp)::mass_threshold=0.d0
-  real(dp)::age_cut_clfind=0.d0
+  real(dp)::relevance_threshold=2
+  real(dp)::density_threshold=-1
+  real(dp)::saddle_threshold=-1
+  real(dp)::rho_clfind=-1
+  real(dp)::n_clfind=-1
+  real(dp)::mass_threshold=0
+  real(dp)::age_cut_clfind=0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
   logical::unbind=.true. !##### NEW HERE
@@ -76,8 +76,6 @@ module clfind_commons
   ! Particle unbinding related
   !----------------------------
 
-  logical :: unbinding_formatted_output=.false.                 ! write unformatted output by request
-
   integer :: nunbound, nunbound_tot, candidates, candidates_tot ! counters
   integer :: mergelevel_max                                     ! deepest merging level
   integer, allocatable, dimension(:)  :: clmppart_first         ! first particle in particle linked list for each peak id
@@ -86,8 +84,11 @@ module clfind_commons
   integer, allocatable, dimension(:)  :: nclmppart              ! number of particle in particle linked list for each peak id
 
   integer, allocatable,dimension(:)   :: clmpidp                ! ID of peak particle is in
-  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb            ! particle based center of mass, clump velocity
+  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb            ! particle based clump velocity
   real(dp),allocatable,dimension(:)   :: clmp_mass_pb           ! particle based clump mass
+#ifdef UNBINDINGCOM
+  real(dp),allocatable,dimension(:,:) :: clmp_com_pb            ! particle based center of mass
+#endif
   logical                             :: periodical             ! if simulation is periodical
   
 
@@ -309,9 +310,9 @@ contains
     call units(scale_l,junk1,scale_d,junk2,junk3,junk4)
     scale_m = scale_d * scale_l**3 / M_Sol ! get mass in units of M_Sol
 
-    z = 1.d0/aexp - 1
+    z = 1d0/aexp - 1
 
-    nu = exp(-4.d0*aexp**2)
+    nu = exp(-4d0*aexp**2)
     logM1 = M_10    + nu*(M_1a   *(aexp-1)  + M_1z*z)
     loge  = e_0     + nu*(e_a    *(aexp-1)  + e_z*z ) + e_a2*(aexp-1)
     alpha = alpha_0 + nu*(alpha_a*(aexp-1))
@@ -367,14 +368,14 @@ contains
 
 
     ! get f(0)
-    f0 = -log10_2 + delta*log10_2**gam/(1.d0 + euler)
+    f0 = -log10_2 + delta*log10_2**gam/(1d0 + euler)
     ! get log M/M1
     logMM1 = log10(m*scale_m)-logM1
     ! get f(log M/M1)
-    fm = -log10(10.d0**(alpha*logMM1) + 1) + &
-      delta*log10(1.d0+exp(logMM1))**gam/(1.d0 + exp(10.d0**(-logMM1)))
+    fm = -log10(10d0**(alpha*logMM1) + 1) + &
+      delta*log10(1d0+exp(logMM1))**gam/(1d0 + exp(10d0**(-logMM1)))
 
-    stellar_mass = 10.d0**(loge+logM1 + fm - f0 + xi_scale*xi)
+    stellar_mass = 10d0**(loge+logM1 + fm - f0 + xi_scale*xi)
   end function stellar_mass
 
 

@@ -8,7 +8,7 @@ module poisson_parameters
   integer ::gravity_type=0
 
   ! Gravity parameters
-  real(dp),dimension(1:10)::gravity_params=0.0
+  real(dp),dimension(1:10)::gravity_params=0
 
   ! Maximum level for CIC dark matter interpolation
   integer :: cic_levelmax=0

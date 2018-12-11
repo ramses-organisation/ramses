@@ -1052,7 +1052,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     end do
                  else
                     do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0.0
+                       dq(l,i,j,k,n,1) = 0
                     end do
                  end if
               else if(slope_type==6)then ! unstable
@@ -1060,13 +1060,13 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     do l = 1, ngrid
                        dlft = (q(l,i,j,k,n)-q(l,i-1,j,k,n))
                        drgt = (q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       slop = 0.5*(dlft+drgt)
+                       slop = 0.5d0*(dlft+drgt)
                        dlim = slop
                        dq(l,i,j,k,n,1) = dlim
                     end do
                  else
                     do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0.0
+                       dq(l,i,j,k,n,1) = 0
                     end do
                  end if
               else if(slope_type==7)then ! van Leer
@@ -1076,7 +1076,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
@@ -1183,7 +1183,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                        end if
                  end do
                  ! slopes in second coordinate direction
@@ -1193,7 +1193,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
-                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               end do
@@ -1402,7 +1402,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
                  ! slopes in second coordinate direction
@@ -1412,7 +1412,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
-                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
                  ! slopes in third coordinate direction
@@ -1422,7 +1422,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,3)=zero
                     else
-                       dq(l,i,j,k,n,3)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               end do

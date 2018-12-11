@@ -33,7 +33,7 @@ subroutine multigrid_fine(ilevel,icount)
    integer, intent(in) :: ilevel,icount
 
    integer, parameter  :: MAXITER  = 10
-   real(dp), parameter :: SAFE_FACTOR = 0.5
+   real(dp), parameter :: SAFE_FACTOR = 0.5d0
 
    integer :: ifine, i, iter, icpu
    logical :: allmasked
@@ -94,7 +94,7 @@ subroutine multigrid_fine(ilevel,icount)
       ! Convert volume fraction to mask value
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
-         active_mg(icpu,ilevel-1)%u(:,4)=2d0*active_mg(icpu,ilevel-1)%u(:,4)-1d0
+         active_mg(icpu,ilevel-1)%u(:,4)=2*active_mg(icpu,ilevel-1)%u(:,4)-1d0
       end do
 
       ! Check active mask state
@@ -128,7 +128,7 @@ subroutine multigrid_fine(ilevel,icount)
          ! Convert volume fraction to mask value
          do icpu=1,ncpu
             if(active_mg(icpu,ifine-1)%ngrid==0) cycle
-            active_mg(icpu,ifine-1)%u(:,4)=2d0*active_mg(icpu,ifine-1)%u(:,4)-1d0
+            active_mg(icpu,ifine-1)%u(:,4)=2*active_mg(icpu,ifine-1)%u(:,4)-1d0
          end do
 
          ! Check active mask state
@@ -903,6 +903,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    use amr_commons
    use pm_commons
    use poisson_commons
+   use constants, only: twopi
    implicit none
    integer, intent(in) :: ilevel,icount
 
@@ -926,7 +927,7 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    ! Set constants
    nx_loc = icoarse_max-icoarse_min+1
    scale  = boxlen/dble(nx_loc)
-   fourpi = 4.D0*ACOS(-1.0D0)*scale
+   fourpi = 2*twopi*scale
    if(cosmo) fourpi = 1.5D0*omega_m*aexp*scale
 
    dx  = 0.5d0**ilevel

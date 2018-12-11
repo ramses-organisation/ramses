@@ -10,6 +10,7 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
+  use constants, only: pi, c_cgs, L_sun, M_sun, yr2sec
   use mpi_mod
   implicit none
 #if NDIM > 1
@@ -63,7 +64,6 @@ subroutine output_frame()
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8)::e,uvar
-  real(kind=8)::pi=3.14159265359
   integer::igrid,ilevel
   integer::i,j
   integer::proj_ind,nh_temp,nw_temp
@@ -78,19 +78,19 @@ subroutine output_frame()
                                            2, 4, 6, 8, 2, 6, 4, 8 /)  &
                                            ,shape(lind),order=(/2,1/))
   integer::npoly
-  real(dp)::msol,lumsol,yr,clight,log_lum
-  real(dp),dimension(46)::lum_poly = (/-5.6801548098e+05,5.9946628460e+05,-2.3731255261e+05,3.8560177896e+04,   &
-                                       -5.6808026741e+02,-4.1194896342e+02,-5.4456684492e+00,4.4307467151e+00,  &
-                                       4.2381242791e-01,-1.0831618977e-02,-6.2879957495e-03,-6.4348257709e-04,  &
-                                       -8.7868432521e-06,6.6149289040e-06,1.0739840644e-06,8.1516389787e-08,    &
-                                       -4.9767430769e-10,-1.0869960505e-09,-1.7184492747e-10,-1.5168404854e-11, &
-                                       -4.3154482167e-13,1.1515161236e-13,2.5427591874e-14,3.0240690024e-15,    &
-                                       2.1644677501e-16,5.4516441993e-19,-2.6382406892e-18,-4.8388838089e-19,   &
-                                       -5.4310814625e-20,-3.7196590586e-21,1.6452219840e-23,5.0868990738e-23,   &
-                                       9.0947242158e-24,1.0014439287e-24,6.3725561865e-26,-1.6122919369e-27,    &
-                                       -1.1379163662e-27,-1.8221651341e-28,-1.6791574329e-29,-4.0655271535e-31, &
-                                       1.6771769041e-31,3.3366386465e-32,2.6122101904e-33,-1.7749944262e-34,    &
-                                       -6.6026967339e-35,3.9721180887e-36 /)
+  real(dp)::msol,lumsol,year,log_lum
+  real(dp),dimension(46)::lum_poly = (/-5.6801548098d+05,5.9946628460d+05,-2.3731255261d+05,3.8560177896d+04,   &
+                                       -5.6808026741d+02,-4.1194896342d+02,-5.4456684492d+00,4.4307467151d+00,  &
+                                       4.2381242791d-01,-1.0831618977d-02,-6.2879957495d-03,-6.4348257709d-04,  &
+                                       -8.7868432521d-06,6.6149289040d-06,1.0739840644d-06,8.1516389787d-08,    &
+                                       -4.9767430769d-10,-1.0869960505d-09,-1.7184492747d-10,-1.5168404854d-11, &
+                                       -4.3154482167d-13,1.1515161236d-13,2.5427591874d-14,3.0240690024d-15,    &
+                                       2.1644677501d-16,5.4516441993d-19,-2.6382406892d-18,-4.8388838089d-19,   &
+                                       -5.4310814625d-20,-3.7196590586d-21,1.6452219840d-23,5.0868990738d-23,   &
+                                       9.0947242158d-24,1.0014439287d-24,6.3725561865d-26,-1.6122919369d-27,    &
+                                       -1.1379163662d-27,-1.8221651341d-28,-1.6791574329d-29,-4.0655271535d-31, &
+                                       1.6771769041d-31,3.3366386465d-32,2.6122101904d-33,-1.7749944262d-34,    &
+                                       -6.6026967339d-35,3.9721180887d-36 /)
 #if NDIM>2
   real(dp)::ztmp,alpha=0,beta=0,pers_corr
   real(dp)::zleft,zright,zcentre,zpf
@@ -231,11 +231,10 @@ subroutine output_frame()
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  msol   = 2D33/(scale_d*scale_l**3)
-  clight = 2.99792458D10
-  lumsol = 3.828D33*(scale_t/(clight*scale_v)**2)
-  yr     = (365.*24.*3600.)/scale_t
-  if(cosmo) yr = yr*aexp**2
+  msol   = M_sun/(scale_d*scale_l**3)
+  lumsol = L_sun*(scale_t/(c_cgs*scale_v)**2)
+  year   = yr2sec/scale_t
+  if(cosmo) year = year*aexp**2
 
   ! Local constants
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -282,9 +281,9 @@ subroutine output_frame()
   if(cosmo) then
      if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = aendmov
      if(tend_phi_camera(proj_ind).le.0d0) tend_phi_camera(proj_ind) = aendmov
-     theta_cam  = theta_camera(proj_ind)*pi/180.                                                                                 &
+     theta_cam  = theta_camera(proj_ind)*pi/180d0                                                                                 &
                 +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*dtheta_camera(proj_ind)*pi/180./(aendmov-astartmov)
-     phi_cam    = phi_camera(proj_ind)*pi/180.                                                                                   &
+     phi_cam    = phi_camera(proj_ind)*pi/180d0                                                                                   &
                 +min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(aendmov-astartmov)
      dist_cam   = dist_camera(proj_ind)+min(max(aexp-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*ddist_camera(proj_ind)/(aendmov-astartmov)
   else
@@ -894,14 +893,14 @@ subroutine output_frame()
               ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
               if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
                  ! Polynome is poorly constrained on high and low ends
-                 if(log10((texp-tp(j))/yr)<6)then
+                 if(log10((texp-tp(j))/year)<6)then
                     log_lum = 3.2d0
-                 else if(log10((texp-tp(j))/yr)>9)then
-                    log_lum = log10((texp-tp(j))/yr)*(-9.79362D-01)+9.08855D+00
+                 else if(log10((texp-tp(j))/year)>9)then
+                    log_lum = log10((texp-tp(j))/year)*(-9.79362D-01)+9.08855D+00
                  else
                     log_lum = 0d0
                     do npoly=1,size(lum_poly)
-                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/yr))**(npoly-1)
+                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/year))**(npoly-1)
                     enddo
                  endif
                  data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol

@@ -56,7 +56,7 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
 # --- MPI, pgf90 syntax ------------------------------
@@ -80,7 +80,7 @@ FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI =
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---
@@ -92,7 +92,7 @@ LIBS = $(LIBMPI)
 VPATH = $(PATCH):../$(SOLVER):../aton:../rt:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o dump_utils.o poisson_parameters.o \
+MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o constants.o \
          poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
          clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o rt_parameters.o rt_hydro_commons.o coolrates_module.o \
          rt_spectra.o rt_cooling_module.o rt_flux_module.o

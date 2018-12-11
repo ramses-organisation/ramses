@@ -171,7 +171,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
   ! compute the size of the pixel
-  tail_pix = boxlen / (2.d0)**ilevel
+  tail_pix = boxlen / (2d0)**ilevel
   do i=1,ncell
      indi = ind_cell(i)
      ! the thermal energy

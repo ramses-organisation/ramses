@@ -27,7 +27,7 @@ program part2prof
   real(KIND=8)::xxmin,xxmax,yymin,yymax,dx,dy,deltax,boxlen
   real(KIND=8)::aexp,t,omega_m,omega_l,omega_b,omega_k,h0
   real(KIND=8)::unit_l,unit_t,unit_d,unit_m,unit_v
-  real(KIND=8)::rad2,vol,rprev,facdens=0.d0,partmass,averdens
+  real(KIND=8)::rad2,vol,rprev,facdens=0d0,partmass,averdens
   real(KIND=8)::mcumstar,ucumstar,vcumstar,wcumstar,lxcumstar,lycumstar,lzcumstar
   real(KIND=8)::mcumcdm,ucumcdm,vcumcdm,wcumcdm,lxcumcdm,lycumcdm,lzcumcdm
   real(kind=8)::mcumgas,ucumgas,vcumgas,wcumgas,lxcumgas,lycumgas,lzcumgas
@@ -132,7 +132,7 @@ program part2prof
      ! Compute Friedman model look up table
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
-          & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
+          & 1d-6,1d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
 
      ! Find neighboring expansion factors
      i=1
@@ -318,9 +318,9 @@ program part2prof
         close(1)
 
         allocate(age2(1:npart2))
-        age2=0.d0
+        age2=0d0
 
-        mstarmin=1.d30
+        mstarmin=1d30
         do i=1,npart2
            if(age(i).ne.0.0d0.and.id(i)>0)then
               rad2=(x(i,1)-xcstar)**2+(x(i,2)-ycstar)**2+(x(i,3)-zcstar)**2
@@ -330,7 +330,7 @@ program part2prof
            else if(id(i)>0) then
               rad2=(x(i,1)-xcen)**2+(x(i,2)-ycen)**2+(x(i,3)-zcen)**2
            else if(id(i)<=0) then
-              rad2=1.d30
+              rad2=1d30
            endif
            ok_part=(rad2<rmax**2)
            if(ok_part)then
@@ -371,7 +371,7 @@ program part2prof
                  prof(irad,ilxstar)=prof(irad,ilxstar)+m(i)*(yys*wws-zzs*vvs)
                  prof(irad,ilystar)=prof(irad,ilystar)-m(i)*(xxs*wws-zzs*uus)
                  prof(irad,ilzstar)=prof(irad,ilzstar)+m(i)*(xxs*vvs-yys*uus)
-                 if(age2(i).le.5.d8)then
+                 if(age2(i).le.5d8)then
                     sfr(irad)=sfr(irad)+m(i)
                  end if
               else if(id(i)>0) then
@@ -396,7 +396,7 @@ program part2prof
            else if(id(i)>0) then
               rad2=(x(i,1)-xcen)**2+(x(i,2)-ycen)**2+(x(i,3)-zcen)**2
            else if(id(i)<=0) then
-              rad2=1.d30
+              rad2=1d30
            endif
            ok_part=(rad2<rmax**2)
            if(ok_part.and.m(i).gt.mdm) then
@@ -416,7 +416,7 @@ program part2prof
      ucumcdm=0d0; vcumcdm=0d0; wcumcdm=0d0
      lxcumstar=0d0; lycumstar=0d0; lzcumstar=0d0
      lxcumcdm=0d0; lycumcdm=0d0; lzcumcdm=0d0
-     cumy=0.d0
+     cumy=0d0
      do irad=1,nrad
         mcumstar=mcumstar+prof(irad,idstar)
         ucumstar=ucumstar+prof(irad,iustar)
@@ -454,9 +454,9 @@ program part2prof
         prof(irad,ilycumcdm)=lycumcdm
         prof(irad,ilzcumcdm)=lzcumcdm
 
-        cumsfr(irad)=cumy/5.d8
+        cumsfr(irad)=cumy/5d8
 
-        write(10,999)r(irad)*unit_l/3.08d21,sfr(irad)*unit_m/(2d33*5.d8),cumy*unit_m/(2.d33*5.d8),sfr(irad)/(5.d8*prof(irad,idstar)),cumy/(5.d8*mcumstar)
+        write(10,999)r(irad)*unit_l/3.08d21,sfr(irad)*unit_m/(2d33*5d8),cumy*unit_m/(2d33*5d8),sfr(irad)/(5d8*prof(irad,idstar)),cumy/(5d8*mcumstar)
 
      end do
 
@@ -905,12 +905,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 
@@ -922,10 +922,10 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
   nskip=nstep/ntable
 
-  axp_t = 1.d0
-  t = 0.d0
-  axp_tau = 1.d0
-  tau = 0.d0
+  axp_t = 1d0
+  t = 0d0
+  axp_tau = 1d0
+  tau = 0d0
   nstep = 0
   nout=0
   t_out(nout)=t
@@ -937,12 +937,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 

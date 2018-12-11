@@ -109,7 +109,7 @@ subroutine clump_finder(create_output,keep_alive)
   !------------------------------------------------------------------------
   if (ntest>0) then
      allocate(denp(ntest),levp(ntest),imaxp(ntest),icellp(ntest))
-     denp=0.d0; levp=0; imaxp=0; icellp=0
+     denp=0d0; levp=0; imaxp=0; icellp=0
   endif
   itest=0
   nskip=ntest_cpu(myid)-ntest
@@ -191,7 +191,7 @@ subroutine clump_finder(create_output,keep_alive)
   allocate(max_dens(npeaks_max))
   allocate(peak_cell(npeaks_max))
   allocate(peak_cell_level(npeaks_max))
-  max_dens=0.d0; peak_cell=0; peak_cell_level=0;
+  max_dens=0d0; peak_cell=0; peak_cell_level=0;
   flag2=0
   if(ntest>0)then
      if(ivar_clump==0 .or. ivar_clump==-1)then
@@ -618,7 +618,7 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
   do j=1,np
      indv(j)=(ind_cell(j)-ncoarse-1)/ngridmax+1 ! cell position in grid
      ind_grid(j)=ind_cell(j)-ncoarse-(indv(j)-1)*ngridmax ! grid index
-     density_max(j)=xx(ind_cell(j))*1.0001 ! get cell density (1.0001 probably not necessary)
+     density_max(j)=xx(ind_cell(j))*1.0001d0 ! get cell density (1.0001 probably not necessary)
      ind_max(j)=ind_cell(j) !save cell index
      if (action.ge.4)clump_nr(j)=flag2(ind_cell(j)) ! save clump number
   end do
@@ -671,9 +671,9 @@ subroutine neighborsearch(xx,ind_cell,ind_max,np,count,ilevel,action)
         do j3=j3min,j3max
            do i3=i3min,i3max
               ntp=ntp+1
-              xrel(ntp,1)=(i3-1.5)*dx_loc/2.0
-              xrel(ntp,2)=(j3-1.5)*dx_loc/2.0
-              xrel(ntp,3)=(k3-1.5)*dx_loc/2.0
+              xrel(ntp,1)=(i3-1.5d0)*dx_loc/2
+              xrel(ntp,2)=(j3-1.5d0)*dx_loc/2
+              xrel(ntp,3)=(k3-1.5d0)*dx_loc/2
               test_levl(ntp)=ilevel+1
            end do
         end do
@@ -783,7 +783,7 @@ subroutine saddlecheck(xx,ind_cell,cell_index,clump_nr,ok,np)
      ok(j)=ok(j).and. clump_nr/=0 ! temporary fix...
      ok(j)=ok(j).and. neigh_cl(j)/=0 !neighboring cell is in a clump
      ok(j)=ok(j).and. neigh_cl(j)/=clump_nr !neighboring cell is in another clump
-     av_dens(j)=(xx(cell_index(j))+xx(ind_cell))*0.5 !average density of cell and neighbor cell
+     av_dens(j)=(xx(cell_index(j))+xx(ind_cell))/2 !average density of cell and neighbor cell
   end do
   do j=1,np
      if(ok(j))then ! if all criteria met, replace saddle density array value
@@ -829,9 +829,9 @@ subroutine get_cell_index(cell_index,cell_levl,xpart,ilevel,n)
   ind_cell=0
   igrid0=son(1+icoarse_min+jcoarse_min*nx+kcoarse_min*nx*ny)
   do i=1,n
-     xx = xpart(i,1)/boxlen + (nx-1)/2.0
-     yy = xpart(i,2)/boxlen + (ny-1)/2.0
-     zz = xpart(i,3)/boxlen + (nz-1)/2.0
+     xx = xpart(i,1)/boxlen + (nx-1)/2d0
+     yy = xpart(i,2)/boxlen + (ny-1)/2d0
+     zz = xpart(i,3)/boxlen + (nz-1)/2d0
 
      if(xx<0.)xx=xx+dble(nx)
      if(xx>dble(nx))xx=xx-dble(nx)
@@ -904,7 +904,7 @@ subroutine read_clumpfind_params()
         call clean_stop
      else if (rho_clfind<0. .and. n_clfind <0.)then  !not enough information
         if (sink)then
-           density_threshold=d_sink/10.
+           density_threshold=d_sink/10
            if(myid==1)write(*,*)'You did not specify a threshold for the clump finder. '
            if(myid==1)write(*,*)'Setting it to sink threshold / 10. !'
         else
@@ -953,14 +953,14 @@ subroutine get_cell_index_fast(indp,cell_lev,xpart,ind_grid,nbors_father_cells,n
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  skip_loc=0
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  one_over_dx=1./dx
-  one_over_scale=1./scale
+  one_over_dx=1/dx
+  one_over_scale=1/scale
 
   ! Cells center position relative to grid center position
   do ind=1,twotondim
@@ -1193,7 +1193,7 @@ subroutine rho_only(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -1248,8 +1248,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     npart2=npart2+1
                  endif
               ! All particles
@@ -1271,8 +1271,8 @@ subroutine rho_only_level(ilevel)
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
               ! Select stars younger than age_cut_clfind
-              if(age_cut_clfind>0.d0 .and. star .and. use_proper_time) then
-                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0.d0)) then
+              if(age_cut_clfind>0d0 .and. star .and. use_proper_time) then
+                 if((is_star(typep(ipart))).and.(t-tp(ipart).lt.age_cut_clfind).and.(tp(ipart).ne.0d0)) then
                     if(ig==0)then
                        ig=1
                        ind_grid(ig)=igrid

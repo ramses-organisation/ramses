@@ -145,7 +145,7 @@ program halo_evolution
   deallocate(v_group)
   deallocate(w_group)
 
-  !2.d) Extracting particle ids
+  !2d) Extracting particle ids
 
   npart=0
   do icpu=1,ncpu
@@ -422,7 +422,7 @@ program halo_evolution
         end if
      end do
 
-     !5.d)Extract halo properties for this list of halos from the .pos file
+     !5d)Extract halo properties for this list of halos from the .pos file
 
      allocate(group_id_4(1:ngroup_2))
      allocate(n_group(1:ngroup_2))

@@ -2,8 +2,9 @@ subroutine init_sink
   use amr_commons
   use pm_commons
   use clfind_commons
-  use mpi_mod
   use amr_parameters, only:levelmin
+  use constants, only:M_sun
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
@@ -28,7 +29,7 @@ subroutine init_sink
   allocate(msink(1:nsinkmax))
   allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
-  xsink=boxlen/2.
+  xsink=boxlen/2
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
   allocate(delta_mass(1:nsinkmax))
@@ -40,7 +41,7 @@ subroutine init_sink
   allocate(fsink(1:nsinkmax,1:ndim))
 
   allocate(msum_overlap(1:nsinkmax))
-  msum_overlap=0.0
+  msum_overlap=0
   allocate(rho_sink_tff(levelmin:nlevelmax))
 
   ! Temporary sink variables
@@ -72,30 +73,30 @@ subroutine init_sink
   allocate(xsink_new(1:nsinkmax,1:ndim))
   allocate(xsink_all(1:nsinkmax,1:ndim))
   allocate(sink_jump(1:nsinkmax,1:ndim,levelmin:nlevelmax))
-  sink_jump=0.d0
+  sink_jump=0d0
   allocate(dMsink_overdt(1:nsinkmax))
   allocate(dMBHoverdt(1:nsinkmax))
   allocate(dMsmbh_overdt(1:nsinkmax))
   allocate(dMBHoverdt_smbh(1:nsinkmax))
   allocate(eps_sink(1:nsinkmax))
-  eps_sink=0.d0
+  eps_sink=0d0
   allocate(volume_gas(1:nsinkmax))
-  volume_gas=0.d0
+  volume_gas=0d0
   allocate(vel_gas(1:nsinkmax,1:ndim))
-  vel_gas=0.d0
+  vel_gas=0d0
   allocate(rho_gas(1:nsinkmax))
-  rho_gas=0.d0
+  rho_gas=0d0
   allocate(c2sink(1:nsinkmax))
   allocate(weighted_density(1:nsinkmax,1:nlevelmax))
-  weighted_density = 0.d0
+  weighted_density = 0d0
   allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
-  weighted_volume = 0.d0
+  weighted_volume = 0d0
   allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
-  weighted_ethermal = 0.d0
+  weighted_ethermal = 0d0
   allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
-  weighted_momentum = 0.d0
+  weighted_momentum = 0d0
   allocate(weighted_divergence(1:nsinkmax,1:nlevelmax))
-  weighted_divergence = 0.d0
+  weighted_divergence = 0d0
   allocate(oksink_new(1:nsinkmax))
   allocate(oksink_all(1:nsinkmax))
   allocate(idsink_sort(1:nsinkmax))
@@ -146,7 +147,6 @@ subroutine init_sink
                            svg1,co,svg2,co,svg3,co, &
                            sm2,co,slevel
         nsink=nsink+1
-        nindsink=nindsink+1
         idsink(nsink)=sid
         msink(nsink)=sm1
         xsink(nsink,1)=sx1
@@ -172,6 +172,7 @@ subroutine init_sink
      end do
 104  continue
      sinkint_level=slevel
+     nindsink=idsink(nsink)
      close(10)
 
      ! Send the token
@@ -238,9 +239,9 @@ subroutine init_sink
         nindsink=nindsink+1
         idsink(nsink)=nindsink
         msink(nsink)=sm1
-        xsink(nsink,1)=sx1+boxlen/2.0
-        xsink(nsink,2)=sx2+boxlen/2.0
-        xsink(nsink,3)=sx3+boxlen/2.0
+        xsink(nsink,1)=sx1+boxlen/2
+        xsink(nsink,2)=sx2+boxlen/2
+        xsink(nsink,3)=sx3+boxlen/2
         vsink(nsink,1)=sv1
         vsink(nsink,2)=sv2
         vsink(nsink,3)=sv3
@@ -285,7 +286,7 @@ subroutine init_sink
   ! Set direct force boolean
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
-        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*2d33/(scale_d*scale_l**3))
+        direct_force_sink(isink)=(msink(isink) .ge. mass_sink_direct_force*M_sun/(scale_d*scale_l**3))
      end do
   else
      do isink=1,nsink
@@ -307,11 +308,11 @@ subroutine compute_ncloud_sink
   ncloud_sink=0
   ncloud_sink_massive=0
   do kk=-2*ir_cloud,2*ir_cloud
-     zz=dble(kk)/2.0
+     zz=dble(kk)/2
      do jj=-2*ir_cloud,2*ir_cloud
-        yy=dble(jj)/2.0
+        yy=dble(jj)/2
         do ii=-2*ir_cloud,2*ir_cloud
-           xx=dble(ii)/2.0
+           xx=dble(ii)/2
            rr=sqrt(xx*xx+yy*yy+zz*zz)
            if(rr<=dble(ir_cloud))ncloud_sink=ncloud_sink+1
            if(rr<=dble(ir_cloud_massive))ncloud_sink_massive=ncloud_sink_massive+1

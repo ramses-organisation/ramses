@@ -48,7 +48,7 @@ subroutine init_time
      ! Compute Friedman model look up table
      if(myid==1)write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
-          & 1.d-6,dble(aexp_ini), &
+          & 1d-6,dble(aexp_ini), &
           & aexp_frw,hexp_frw,tau_frw,t_frw,n_frw)
 
      ! Compute initial conformal time
@@ -346,7 +346,7 @@ subroutine init_cosmo
      endif
      omega_m = gadgetheader%omega0
      omega_l = gadgetheader%omegalambda
-     h0 = gadgetheader%hubbleparam * 100.d0
+     h0 = gadgetheader%hubbleparam * 100d0
      boxlen_ini = gadgetheader%boxsize
      aexp = gadgetheader%time
      aexp_ini = aexp
@@ -378,7 +378,7 @@ subroutine init_cosmo
      omega_m = gadgetheader%omega0
      omega_l = gadgetheader%omegalambda
      if(hydro)omega_b=0.0469388
-     h0 = gadgetheader%hubbleparam * 100.d0
+     h0 = gadgetheader%hubbleparam * 100d0
      boxlen_ini = gadgetheader%boxsize/1e3
      aexp = gadgetheader%time
      aexp_ini = aexp
@@ -404,7 +404,7 @@ subroutine init_cosmo
      write(*,'(" omega_m=",F7.3," omega_l=",F7.3)')omega_m,omega_l
      write(*,'(" box size=",1pe10.3," h-1 Mpc")')boxlen_ini
   end if
-  omega_k=1.d0-omega_l-omega_m
+  omega_k=1d0-omega_l-omega_m
 
   ! Compute linear scaling factor between aexp and astart(ilevel)
   do ilevel=levelmin,nlevelmax_part
@@ -457,8 +457,8 @@ contains
     real(dp)::fy
     real(dp)::y,a
 
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
-    fy=1.d0/y**1.5d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
+    fy=1d0/y**1.5d0
 
     return
   end function fy
@@ -475,7 +475,7 @@ contains
        write(*,*)'a=',a
        call clean_stop
     end if
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
     if(y .lt. 0.0D0)then
        write(*,*)'y=',y
        call clean_stop
@@ -498,7 +498,7 @@ contains
 !!$    a=1.e-7
 !!$    niter=0
 !!$10  niter=niter+1
-!!$    da=(d1/d1a(a)-1.d0)/fpeebl(a)*a
+!!$    da=(d1/d1a(a)-1d0)/fpeebl(a)*a
 !!$    a=a+da
 !!$    if (abs(da).gt.1.0e-8.and.niter.lt.10) go to 10
 !!$    ad1=a
@@ -512,9 +512,9 @@ contains
     real(dp) :: fact,y,eps
 
     eps=1.0d-6
-    y=omega_m*(1.d0/a-1.d0) + omega_l*(a*a-1.d0) + 1.d0
+    y=omega_m*(1d0/a-1d0) + omega_l*(a*a-1d0) + 1d0
     fact=rombint(eps,a,eps)
-    fpeebl=(omega_l*a*a-0.5d0*omega_m/a)/y - 1.d0 + a*fy(a)/fact
+    fpeebl=(omega_l*a*a-0.5d0*omega_m/a)/y - 1d0 + a*fy(a)/fact
     return
   end function fpeebl
   !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -622,12 +622,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 
@@ -638,10 +638,10 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
   nskip=nstep/ntable
 
-  axp_t = 1.d0
-  t = 0.d0
-  axp_tau = 1.d0
-  tau = 0.d0
+  axp_t = 1d0
+  t = 0d0
+  axp_tau = 1d0
+  tau = 0d0
   nstep = 0
   nout=0
   t_out(nout)=t
@@ -653,12 +653,12 @@ subroutine friedman(O_mat_0,O_vac_0,O_k_0,alpha,axp_min, &
 
      nstep = nstep + 1
      dtau = alpha * axp_tau / dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)
-     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2.d0
+     axp_tau_pre = axp_tau - dadtau(axp_tau,O_mat_0,O_vac_0,O_k_0)*dtau/2d0
      axp_tau = axp_tau - dadtau(axp_tau_pre,O_mat_0,O_vac_0,O_k_0)*dtau
      tau = tau - dtau
 
      dt = alpha * axp_t / dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
-     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2.d0
+     axp_t_pre = axp_t - dadt(axp_t,O_mat_0,O_vac_0,O_k_0)*dt/2d0
      axp_t = axp_t - dadt(axp_t_pre,O_mat_0,O_vac_0,O_k_0)*dt
      t = t - dt
 
