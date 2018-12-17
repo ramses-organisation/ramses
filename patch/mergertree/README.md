@@ -13,13 +13,13 @@ Important notes
 
  * To make merger trees or use particle unbinding, you'll first need to identify clumps on-the-fly in the simulation. To activate the clump finder, add `clumpfind=.true.` in your `&RUN_PARAMS` namelist block. More details about clumpfind parameters can be found [here][4]. For dark matter only simulations, you should probably use the following `&CLUMPFIND_PARAMS` in your parameter file:
 
- ```
-	 &CLUMPFIND_PARAMS
-	relevance_threshold=3
-	density_threshold=1e-8
-	saddle_threshold=1e-8
+```
+        &CLUMPFIND_PARAMS
+        relevance_threshold=3
+        density_threshold=1e-8
+        saddle_threshold=1e-8
 
- ```
+```
 
  * Some parts of the code (e.g. binning particles in mass profiles of halos) rely on consistent floating-point  operations. 
  [The (intel) fortran compiler however doesn't necessarily use value-safe optimisations][1], which may  lead to errors. 
@@ -61,8 +61,6 @@ It will write unformatted output in `output_XXXXX/unbinding_XXXXX.outYYYYY` file
 any other backup files in `ramses`, containing the assigned clump IDs of every particle after unbinding. The
 clump IDs correspond to the clump IDs as used in the `halo_XXXXX.txtYYYYY` and `clump_XXXXX.txtYYYYY` files. 
 If a particle has clump ID 0, it wasn't found to be in any clump.
-
-More details can be found [here][2].
 
 
 
