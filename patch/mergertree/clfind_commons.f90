@@ -9,13 +9,13 @@ module clfind_commons
   integer,allocatable,dimension(:)::npeaks_per_cpu
   integer,allocatable,dimension(:)::ipeak_start
   real(dp)::tot_mass
-  real(dp)::relevance_threshold=2.0
-  real(dp)::density_threshold=-1.0d0
-  real(dp)::saddle_threshold=-1d0
-  real(dp)::rho_clfind=-1d0
-  real(dp)::n_clfind=-1d0
-  real(dp)::mass_threshold=0d0
-  real(dp)::age_cut_clfind=0d0
+  real(dp)::relevance_threshold=2
+  real(dp)::density_threshold=-1
+  real(dp)::saddle_threshold=-1
+  real(dp)::rho_clfind=-1
+  real(dp)::n_clfind=-1
+  real(dp)::mass_threshold=0
+  real(dp)::age_cut_clfind=0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
   logical::unbind=.true. !##### NEW HERE
@@ -76,8 +76,6 @@ module clfind_commons
   ! Particle unbinding related
   !----------------------------
 
-  logical :: unbinding_formatted_output=.false.                 ! write unformatted output by request
-
   integer :: nunbound, nunbound_tot, candidates, candidates_tot ! counters
   integer :: mergelevel_max                                     ! deepest merging level
   integer, allocatable, dimension(:)  :: clmppart_first         ! first particle in particle linked list for each peak id
@@ -86,8 +84,11 @@ module clfind_commons
   integer, allocatable, dimension(:)  :: nclmppart              ! number of particle in particle linked list for each peak id
 
   integer, allocatable,dimension(:)   :: clmpidp                ! ID of peak particle is in
-  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb            ! particle based center of mass, clump velocity
+  real(dp),allocatable,dimension(:,:) :: clmp_vel_pb            ! particle based clump velocity
   real(dp),allocatable,dimension(:)   :: clmp_mass_pb           ! particle based clump mass
+#ifdef UNBINDINGCOM
+  real(dp),allocatable,dimension(:,:) :: clmp_com_pb            ! particle based center of mass
+#endif
   logical                             :: periodical             ! if simulation is periodical
   
 

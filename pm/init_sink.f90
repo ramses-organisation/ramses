@@ -147,7 +147,6 @@ subroutine init_sink
                            svg1,co,svg2,co,svg3,co, &
                            sm2,co,slevel
         nsink=nsink+1
-        nindsink=nindsink+1
         idsink(nsink)=sid
         msink(nsink)=sm1
         xsink(nsink,1)=sx1
@@ -173,6 +172,7 @@ subroutine init_sink
      end do
 104  continue
      sinkint_level=slevel
+     nindsink=idsink(nsink)
      close(10)
 
      ! Send the token
