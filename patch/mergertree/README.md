@@ -14,10 +14,10 @@ Important notes
  * To make merger trees or use particle unbinding, you'll first need to identify clumps on-the-fly in the simulation. To activate the clump finder, add `clumpfind=.true.` in your `&RUN_PARAMS` namelist block. More details about clumpfind parameters can be found [here][4]. For dark matter only simulations, you should probably use the following `&CLUMPFIND_PARAMS` in your parameter file:
 
 ```
-        &CLUMPFIND_PARAMS
-        relevance_threshold=3
-        density_threshold=1e-8
-        saddle_threshold=1e-8
+    &CLUMPFIND_PARAMS
+    relevance_threshold=3
+    density_threshold=80
+    saddle_threshold=200
 
 ```
 
