@@ -460,7 +460,7 @@ subroutine merge_clumps(action)
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
 
-  integer::mergelevel_max_global !added for patch
+  integer::mergelevel_max_global ! added for patch
 
 #ifndef WITHOUTMPI
   integer::nmove_all,nsurvive_all,nzero_all
@@ -637,7 +637,7 @@ subroutine merge_clumps(action)
   end do
   ! End loop over peak levels
 
-  !added for patch follwing 6 lines:
+  ! added for patch follwing 6 lines:
   mergelevel_max=idepth-2 !last level has no more clumps, also idepth=idepth+1 still happens on last level.
 #ifndef WITHOUTMPI
         call MPI_ALLREDUCE(mergelevel_max,mergelevel_max_global,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
