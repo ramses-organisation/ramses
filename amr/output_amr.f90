@@ -680,7 +680,7 @@ subroutine create_output_dirs(filedir)
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef withoutmpi
-        call mpi_abort(mpi_comm_world,1,info)
+        call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
         stop
 #endif
