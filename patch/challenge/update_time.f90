@@ -104,7 +104,7 @@ subroutine update_time(ilevel)
            write(*,*)'Total elapsed time:',ttend-ttstart
 #endif
         endif
-        call clean_stop
+        call clean_end
      end if
 
   end if
