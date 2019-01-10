@@ -152,19 +152,4 @@ subroutine init_poisson
 
 end subroutine init_poisson
 
-subroutine deallocate_poisson
-  use poisson_commons
-  implicit none
 
-  if(allocated(lookup_mg)) deallocate(lookup_mg)
-  if(allocated(safe_mode)) deallocate(safe_mode)
-  if(allocated(active_mg)) deallocate(active_mg)
-  if(allocated(emission_mg)) deallocate(emission_mg)
-  
-  ! cell-centred variables
-  if(allocated(rho)) deallocate(rho)
-  if(allocated(phi)) deallocate(phi)
-  if(allocated(phi_old)) deallocate(phi_old)
-  if(allocated(f)) deallocate(f)
-
-end subroutine deallocate_poisson 

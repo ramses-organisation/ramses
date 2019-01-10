@@ -1820,25 +1820,3 @@ subroutine load_gadget
   write(*,*)'npart=',npart,'/',npartmax
 
 end subroutine load_gadget
-
-subroutine deallocate_pm
-  use pm_commons
-  use amr_commons, only: pic
-  implicit none
-
-  if(pic)then
-     if(allocated(headp)) deallocate(headp)
-     if(allocated(tailp)) deallocate(tailp)
-     if(allocated(numbp)) deallocate(numbp)
-
-     ! init_part.f90 - in general, BIG deallocations
-     if(allocated(idp)) deallocate(idp)
-     if(allocated(nextp)) deallocate(nextp)
-     if(allocated(prevp)) deallocate(prevp)
-     if(allocated(levelp)) deallocate(levelp)
-     if(allocated(mp)) deallocate(mp)
-     if(allocated(vp)) deallocate(vp)
-     if(allocated(xp)) deallocate(xp)
-  endif
-
-end subroutine deallocate_pm
