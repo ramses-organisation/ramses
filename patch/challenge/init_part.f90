@@ -1141,16 +1141,15 @@ subroutine deallocate_pm
      if(allocated(headp)) deallocate(headp)
      if(allocated(tailp)) deallocate(tailp)
      if(allocated(numbp)) deallocate(numbp)
+
+     ! init_part.f90 - in general, BIG deallocations
+     if(allocated(idp)) deallocate(idp)
+     if(allocated(nextp)) deallocate(nextp)
+     if(allocated(prevp)) deallocate(prevp)
+     if(allocated(levelp)) deallocate(levelp)
+     if(allocated(mp)) deallocate(mp)
+     if(allocated(vp)) deallocate(vp)
+     if(allocated(xp)) deallocate(xp)
   endif
-
-  ! init_part.f90 - in general, BIG deallocations
-  if(allocated(idp)) deallocate(idp)
-  if(allocated(nextp)) deallocate(nextp)
-  if(allocated(prevp)) deallocate(prevp)
-  if(allocated(levelp)) deallocate(levelp)
-  if(allocated(mp)) deallocate(mp)
-  if(allocated(vp)) deallocate(vp)
-  if(allocated(xp)) deallocate(xp)
-
 
 end subroutine deallocate_pm
