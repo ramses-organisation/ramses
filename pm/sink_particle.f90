@@ -1599,9 +1599,7 @@ subroutine true_max(x,y,z,ilevel)
   do ioft=0, threetondim-1, nvector
      n=min(threetondim-ioft, nvector)
      do i=1,n
-        do j=1, ndim
-           xtest_copy(i,j) = xtest(ioft+i,j)
-        enddo
+       xtest_copy(i,1:ndim) = xtest(ioft+i,1:ndim)
      enddo
      call get_cell_index(cell_index(ioft+1:ioft+n), cell_lev(ioft+1:ioft+n), &
           &  xtest_copy, ilevel, n)
