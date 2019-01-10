@@ -3,9 +3,6 @@ subroutine clean_end
   !---------------------------
   ! Properly end the run. 
   !---------------------------
-  ! use amr_commons
-  ! use poisson_commons
-  ! use pm_commons
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -31,9 +28,6 @@ subroutine clean_stop
   ! This subroutine brings the program to a halt after
   ! an error.
   !-----------------------------------------------------
-  use amr_commons
-  use poisson_commons
-  use pm_commons
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
