@@ -658,7 +658,7 @@ subroutine create_output_dirs(filedir)
   character(LEN=80)::filedirini
   integer :: info_sys
 #else
-  character(LEN=80)::filecmd 
+  character(LEN=80)::filecmd
   integer :: ierr
 #endif
 #ifndef WITHOUTMPI
