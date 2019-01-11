@@ -101,7 +101,7 @@ subroutine update_time(ilevel)
            write(*,*)'Total elapsed time:',ttend-ttstart
 #endif
         endif
-        call clean_stop
+        call clean_end
      end if
 
   end if
@@ -148,20 +148,3 @@ subroutine update_time(ilevel)
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
 
 end subroutine update_time
-
-subroutine clean_stop
-  use amr_commons
-  use mpi_mod
-  implicit none
-  integer::info
-#ifndef WITHOUTMPI
-  call MPI_FINALIZE(info)
-#endif
-  stop
-end subroutine clean_stop
-
-
-
-
-
-
