@@ -1,5 +1,15 @@
-!--------------------------------------------------------
-! Merger Tree patch. See README for more information.
+!-----------------------------------------------------------------
+! This file contains the routines for the merger tree patch.
+! See README for more information.
+!
+! There are two optional preprocessing definitions for this patch
+! only:
+! -DUNBINDINGCOM
+!   use (and iteratively determine) the center of mass as the
+!   center of clumps
+! -DMTREEDEBUG
+!   create a lot of formatted output to help debugging the merger
+!   tree routines.
 !
 !
 ! Contains:
@@ -20,9 +30,12 @@
 ! subroutine fill_matrix()
 ! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
-! subroutine dissolve_small_clumps()
-!  contains subroutine get_exclusive_clump_mass()
-!--------------------------------------------------------
+! subroutine mtreedebug_filename()
+! subroutine mtreedebug_matrixcheck_prog()
+! subroutine mtreedebug_matrixcheck_desc()
+! subroutine mtreedebug_dump_unbinding_data()
+! subroutine mtreedebug_dump_written_progenitor_data()
+!-----------------------------------------------------------------
 
 
 
@@ -766,10 +779,6 @@ subroutine make_trees()
   real(dp):: r_null
   logical :: found, reiter
 
-  ! For debug
-  ! character(len=80) :: filename
-  ! character(len=5)  :: id_to_string, output_to_string
-
   if (verbose) write(*,*) "making trees."
 
 
@@ -882,54 +891,10 @@ subroutine make_trees()
   peakshift = 10*(ipeak_start(ncpu)+npeaks_max)
 
  
-    !-----------------------------------------------------------------------------------------------------
-    ! if (debug) then
-    ! call title(ifout, output_to_string)
-    ! call title(myid, id_to_string)
-    ! filename = "output_"//output_to_string//"/MATRIXCHECK_PROG_BEFORE_TREE"//id_to_string//".txt"
-    ! open(unit=666, file=filename, form='formatted')
-    ! write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
-    ! do iprog = 1, nprogs
-    !   if (p2d_links%cnt(iprog) > 0) then
-    !     write(666, '(4(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !       "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
-    !       "owner:", prog_owner(iprog), "mass:", prog_mass(iprog), "main desc:", main_desc(iprog)
-    !
-    !     ipeak = p2d_links%first(iprog)
-    !     do i = 1, p2d_links%cnt(iprog)
-    !       call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
-    !       write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl, &
-    !         "tracers:", p2d_links%ntrace(ipeak)
-    !       ipeak = p2d_links%next(ipeak)
-    !     enddo
-    !     write(666,*)
-    !   endif
-    !
-    ! enddo
-    ! close(666)
-    !
-    ! filename = "output_"//output_to_string//"/MATRIXCHECK_DESC_BEFORE_TREE"//id_to_string//".txt"
-    ! open(unit=666, file=filename, form='formatted')
-    ! write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
-    ! do ipeak = 1, hfree-1
-    !   if (d2p_links%cnt(ipeak) > 0) then
-    !     write(666, '(2(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !       "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
-    !        "mass:", clmp_mass_exclusive(ipeak), "main prog:", main_prog(ipeak)
-    !
-    !     iprog = d2p_links%first(ipeak)
-    !     do i = 1, d2p_links%cnt(ipeak)
-    !       write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", d2p_links%clmp_id(iprog), &
-    !         "tracers:", d2p_links%ntrace(iprog)
-    !       iprog = d2p_links%next(iprog)
-    !     enddo
-    !     write(666,*)
-    !   endif
-    !
-    ! enddo
-    ! close(666)
-    ! endif
-    !-----------------------------------------------------------------------------------------------------
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_prog(.true.)
+  call mtreedebug_matrixcheck_desc(.true.)
+#endif
 
 
   !==================================
@@ -1130,59 +1095,11 @@ subroutine make_trees()
   deallocate(to_iter_prog)
 
 
-    !-----------------------------------------------------------------------------------------------------
-    ! if (debug) then
-    !   call title(ifout, output_to_string)
-    !   call title(myid, id_to_string)
-    !   filename = "output_"//output_to_string//"/MATRIXCHECK_PROG_AFTER_TREE"//id_to_string//".txt"
-    !   open(unit=666, file=filename, form='formatted')
-    !   write(666,'(A30,x,I9)') "MATRIXCHECK AFTER TREE ID", myid
-    !
-    !   do iprog = 1, nprogs
-    !     if (p2d_links%cnt(iprog) > 0) then
-    !       write(666, '(4(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !         "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
-    !         "owner:", prog_owner(iprog), "mass:", prog_mass(iprog), "main desc:", main_desc(iprog)
-    !
-    !       ipeak = p2d_links%first(iprog)
-    !       do i = 1, p2d_links%cnt(iprog)
-    !         call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
-    !         write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), &
-    !           idl,"tracers:", p2d_links%ntrace(ipeak)
-    !         ipeak = p2d_links%next(ipeak)
-    !       enddo
-    !       write(666,*)
-    !     endif
-    !   enddo
-    !
-    !   close(666)
-    !
-    !   filename = "output_"//output_to_string//"/MATRIXCHECK_DESC_AFTER_TREE"//id_to_string//".txt"
-    !   open(unit=666, file=filename, form='formatted')
-    !   write(666,'(A30,x,I9)') "MATRIXCHECK AFTER TREE ID", myid
-    !
-    !   do ipeak = 1, hfree-1
-    !     if (d2p_links%cnt(ipeak) > 0) then
-    !       write(666, '(2(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !         "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
-    !          "mass:", clmp_mass_exclusive(ipeak), "main prog", main_prog(ipeak)
-    !
-    !       iprog = d2p_links%first(ipeak)
-    !       do i = 1, d2p_links%cnt(ipeak)
-    !         write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", d2p_links%clmp_id(iprog), &
-    !           "tracers:", d2p_links%ntrace(iprog)
-    !         iprog = d2p_links%next(iprog)
-    !       enddo
-    !       write(666,*)
-    !     endif
-    !   enddo
-    !
-    !   close(666)
-    ! endif
-    !-----------------------------------------------------------------------------------------------------
-
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_prog(.false.)
+  call mtreedebug_matrixcheck_desc(.false.)
+#endif
   return
-
 
 
 
@@ -2355,7 +2272,10 @@ subroutine write_progenitor_data()
   integer                                :: mpi_err, filehandle
   integer, dimension(1:4)                :: buf
 #endif
-
+#ifdef MTREEDEBUG
+  integer :: plist_int ! total number of integers written in particlelist
+  integer :: mlist_int ! total number of elements written in masslist
+#endif
 
 
   !=======================================================
@@ -2459,7 +2379,10 @@ subroutine write_progenitor_data()
 
   endif ! if there is potentially stuff to write
 
-
+#ifdef MTREEDEBUG
+  plist_int = progenitorcount_written
+  mlist_int = ihalo
+#endif
 
   !--------------------------------
   ! write mostbound particle list
@@ -2504,6 +2427,12 @@ subroutine write_progenitor_data()
   endif
   close(666)
 #endif
+
+
+#ifdef MTREEDEBUG
+  call mtreedebug_dump_written_progenitor_data(particlelist, progenitorcount_written, masslist, mpeaklist, ihalo)
+#endif
+
 
   deallocate(particlelist)
   deallocate(masslist)
@@ -3077,212 +3006,230 @@ end subroutine mark_tracer_particles
 
 
 
-!=======================================================
-subroutine dissolve_small_clumps(ilevel, for_halos)
-!=======================================================
 
-  !----------------------------------------------------------------------
-  ! Dissolve clumps with too small mass into parents/nothing.
-  ! Clump is required to have at least mass_threshold number of
-  ! its own particles.
-  !----------------------------------------------------------------------
+#ifdef MTREEDEBUG
+
+!====================================================================================
+subroutine mtreedebug_filename(namestring, filename)
+!====================================================================================
+  !--------------------------------------------------
+  ! generate a filename for debugging output
+  ! it will add 'namestring' to a specific prefix
+  !--------------------------------------------------
+  use amr_commons, only: myid, ifout
+  implicit none
+  character(len=100), intent(out) :: filename
+  character(len=*), intent(in)    :: namestring
+  character(len=5)                :: id_to_string, output_to_string
+
+  call title(ifout, output_to_string)
+  call title(myid, id_to_string)
+  filename = TRIM("output_"//output_to_string//"/debug_mtree-"//TRIM(namestring)//".txt"//id_to_string)
+
+end subroutine mtreedebug_filename
+
+
+
+!==============================================
+subroutine mtreedebug_matrixcheck_prog(before)
+!==============================================
 
   use amr_commons 
-  use clfind_commons 
-  use mpi_mod
-
+  use clfind_commons
   implicit none
+  logical, intent(in) :: before
+  integer :: iprog, idl, ipeak, i
+  character(len=100) :: fname
 
-  integer, intent(in) :: ilevel
-  logical, intent(in) :: for_halos ! whether to do it for halos or for subhalos
-
-  integer :: killed, appended
-  integer :: ipeak, ipart, thispart, particle_local_id
-
-#ifndef WITHOUTMPI
-  integer, dimension(1:2) :: buf
-  integer                 :: info
-#endif 
-
-
-
-  !------------------------------------
-  ! Kill or append too small clumps
-  !------------------------------------
-
-  call get_exclusive_clump_mass(ilevel) ! subroutine further below
-
-  killed = 0; appended = 0
-
-  do ipeak=1, hfree-1
-    if (lev_peak(ipeak) == ilevel) then
-
-      ! if there are too few particles in there, but at least 1 (i.e. don't do it for noise)
-      if (relevance(ipeak) > relevance_threshold .and. clmp_mass_exclusive(ipeak) < (mass_threshold * partm_common) ) then
-
-        if (is_namegiver(ipeak) .and. for_halos) then
-
-          !--------------------------------
-          ! if clump is namegiver, kill it
-          !--------------------------------
-
-          if(ipeak <= npeaks) killed = killed + 1 ! count only non-virtuals
-          
-          ! remove particles from clump
-          thispart = clmppart_first(ipeak)
-          do ipart = 1, nclmppart(ipeak)
-
-            if (clmpidp(thispart) > 0) then
-              call get_local_peak_id(clmpidp(thispart), particle_local_id)
-              if (particle_local_id == ipeak) then
-                clmpidp(thispart) = 0
-              endif
-            endif
-            thispart = clmppart_next(thispart)
-
-          enddo 
-
-          nclmppart(ipeak) = 0
-          clmp_mass_pb(ipeak) = 0
-          clmp_mass_exclusive(ipeak) = 0
-
-        elseif (.not.is_namegiver(ipeak) .and. .not.for_halos) then
-          !---------------------------------------------------
-          ! if clump isn't namegiver, add particles to parent
-          !---------------------------------------------------
-
-          if(ipeak <= npeaks) appended = appended + 1 ! count only non-virtuals
-
-          ! remove particles from clump
-          thispart = clmppart_first(ipeak)
-          do ipart = 1, nclmppart(ipeak)
-
-            if (clmpidp(thispart) > 0) then
-              call get_local_peak_id(clmpidp(thispart), particle_local_id)
-              if (particle_local_id == ipeak) then
-                clmpidp(thispart) = new_peak(ipeak)
-              endif
-            endif
-            thispart = clmppart_next(thispart)
-
-          enddo 
-
-          nclmppart(ipeak) = 0
-          clmp_mass_pb(ipeak) = 0
-          clmp_mass_exclusive(ipeak) = 0
-
-        endif ! namegiver or not
-      endif ! if too small
-    endif ! correct peak level
-  enddo ! all peaks
-
-
-
-
-
-  !---------------------------------------
-  ! speak to me
-  !---------------------------------------
-
-
-  killed_tot = killed_tot + killed
-  appended_tot = appended_tot + appended
-
-
-
-
-  if (for_halos) then
-
-#ifndef WITHOUTMPI
-    buf = (/killed_tot, appended_tot/)
-    if (myid == 1) then
-      call MPI_REDUCE(MPI_IN_PLACE, buf, 2, MPI_INTEGER,MPI_SUM, 0, MPI_COMM_WORLD, info)
-      killed_tot = buf(1)
-      appended_tot = buf(2)
-    else
-      call MPI_REDUCE(buf, buf, 2, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, info)
-    endif
-#endif
-
-    if(myid == 1) then
-      write(*,'(A39,I16,A14,I16,A18)') " Handling too small clumps: Dissolved ", killed_tot, &
-          " halos; Merged ", appended_tot, " to their parents." 
-    endif
-
-    !reset values for next output step
-    killed_tot = 0
-    appended_tot = 0
-
+  if (mtreedebug_no_matrix_dump_prog) return
+  
+  if (before) then
+    call mtreedebug_filename('MATRIXCHECK_PROG_BEFORE_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK PROG BEFORE LOOP ID", myid
+  else
+    call mtreedebug_filename('MATRIXCHECK_PROG_AFTER_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK PROG AFTER LOOP ID", myid
   endif
 
+  write(666, '(6A14)') "Prog", "local id", "nr of desc", "owner", "mass", "main desc"
+
+  do iprog = 1, nprogs
+    if (p2d_links%cnt(iprog) > 0) then
+      write(666, '(4I14,E14.6,I14, A5)', advance='no') &
+        prog_id(iprog), iprog, p2d_links%cnt(iprog), &
+        prog_owner(iprog), prog_mass(iprog), main_desc(iprog), ' ||| '
+
+      ipeak = p2d_links%first(iprog)
+      do i = 1, p2d_links%cnt(iprog)
+        call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
+        write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl, &
+          "tracers:", p2d_links%ntrace(ipeak)
+        ipeak = p2d_links%next(ipeak)
+      enddo
+      write(666,*)
+    endif
+  enddo
+  close(666)
+end subroutine mtreedebug_matrixcheck_prog 
 
 
 
-  contains 
-    !==============================================
-    subroutine get_exclusive_clump_mass(ilevel)
-    !==============================================
+!==============================================
+subroutine mtreedebug_matrixcheck_desc(before)
+!==============================================
 
-      use clfind_commons
-      use pm_commons, only: mp!, vp
+  use amr_commons 
+  use clfind_commons
+  implicit none
+  logical, intent(in) :: before ! whether you're printing before or after treemaking
+  integer :: iprog, ipeak, i
+  character(len=100) :: fname
 
-      implicit none
-      integer, intent(in) :: ilevel
-      integer             :: ipeak, ipart, thispart!, i
+  if (mtreedebug_no_matrix_dump_prog) return
 
-      !----------------------------------------------------
-      ! recompute clump properties after unbinding
-      !----------------------------------------------------
+  if (before) then
+    call mtreedebug_filename('MATRIXCHECK_DESC_BEFORE_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK DESC BEFORE LOOP ID", myid
+  else
+    call mtreedebug_filename('MATRIXCHECK_DESC_AFTER_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK DESC AFTER LOOP ID", myid
+  endif
 
-      do ipeak=1, hfree-1 !loop over all peaks
-       
-        !reset values for virtual peaks to communicate multiple times
-        if (ipeak > npeaks) then
-          clmp_mass_exclusive(ipeak) = 0
-          ! clmp_vel_exclusive(ipeak,:) = 0
-        endif
+  write(666, '(6A14)') "Desc", "nr of progs", "mass", "main prog"
 
-        if (lev_peak(ipeak) == ilevel ) then
-
-          clmp_mass_exclusive(ipeak) = 0
-          ! clmp_vel_exclusive(ipeak,:) = 0
-
-          if (nclmppart(ipeak) > 0 ) then
-            ! if there is work to do on this processing unit for this peak
-            thispart=clmppart_first(ipeak)
-            
-            do ipart=1, nclmppart(ipeak)        ! while there is a particle linked list
-              if (clmpidp(thispart) > 0) then
-                call get_local_peak_id(clmpidp(thispart), particle_local_id) 
-                if (particle_local_id == ipeak) then
-                  clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
-                  ! do i=1,3
-                  !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) ! get velocity sum
-                  ! enddo
-                endif
-              endif
-
-              thispart=clmppart_next(thispart) ! go to next particle in linked list
-            enddo   ! loop over particles
-          endif     ! clump has particles on this processor 
-        endif       ! there is work for this peak on this processor
-      enddo         ! loop over peaks
+  do ipeak = 1, hfree-1
+    if (d2p_links%cnt(ipeak) > 0) then
+      write(666, '(2I14,E14.6,I14, A5)', advance='no') &
+        ipeak, d2p_links%cnt(ipeak), clmp_mass_exclusive(ipeak), &
+        main_prog(ipeak),  ' ||| '
 
 
-      !----------------------------------------------------------
-      ! communicate clump mass and velocity across processors
-      !----------------------------------------------------------
-      call build_peak_communicator
-      call virtual_peak_dp(clmp_mass_exclusive,'sum')       ! collect
-      call boundary_peak_dp(clmp_mass_exclusive)            ! scatter
-      ! do i=1,3
-      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  ! collect
-      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       ! scatter
-      ! enddo
+      iprog = d2p_links%first(ipeak)
+      do i = 1, d2p_links%cnt(ipeak)
+        write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", & 
+          d2p_links%clmp_id(iprog), "tracers:", d2p_links%ntrace(iprog)
+        iprog = d2p_links%next(iprog)
+      enddo
+      write(666,*)
+    endif
 
-    end subroutine get_exclusive_clump_mass 
+  enddo
+  close(666)
+end subroutine mtreedebug_matrixcheck_desc 
 
-end subroutine dissolve_small_clumps 
+
+!============================================================
+subroutine mtreedebug_dump_unbinding_data(filename_add)
+!============================================================
+
+  use amr_commons
+  use clfind_commons
+  use pm_commons, only: idp
+
+  implicit none
+  character(len=*) :: filename_add  ! string to be added to filename, so you can
+                                    ! create unique files from anywhere in unbinding
+  integer :: ipeak, i, ipart, npart_loc
+
+  integer, allocatable, dimension(:) :: global_id, npartstot
+  character(len=100)   :: fname
+
+  if ( mtreedebug_no_unbinding_dump ) return
+
+
+  allocate(global_id(1:npeaks_max))
+  global_id = 0
+  allocate(npartstot(1:npeaks_max))
+  npartstot = 0
+
+  do ipeak=1, npeaks
+    global_id(ipeak) = ipeak+ipeak_start(myid)
+  enddo
+  npartstot = nclmppart
+  call boundary_peak_int(global_id(:))
+  call virtual_peak_int(npartstot, 'sum')
+  call boundary_peak_int(npartstot)
+
+  call mtreedebug_filename('unbinding_dump_'//TRIM(filename_add), fname)
+
+  open(666, file=fname, form='formatted')
+  
+  write(666, '(A, I5)') 'Unbinding Data dump ID', myid
+  write(666, '(2A12,x,A16,x,A12,x,A18,x,A12,x,A12,x,A12,x,A12)') "Clump ID", "local ID", 'is halo correct?', &
+    "parent", "excl mass", "nparts comp", "nparts tot", "nparts local", 'nclmppart'
+
+  do ipeak=1, hfree-1
+    if (nclmppart(ipeak)>0) then
+      npart_loc = 0
+      ipart = clmppart_first(ipeak)
+      do i = 1, nclmppart(ipeak)
+        if (global_id(ipeak) == clmpidp(ipart)) npart_loc = npart_loc + 1
+        ipart = clmppart_next(ipart)
+      enddo
+
+      write(666,'(2I12,x,L16,x,I12,x,E18.12,x,I12,x,I12,x,I12,x,I12)') global_id(ipeak), ipeak, &
+        is_namegiver(ipeak) .eqv. (global_id(ipeak)==new_peak(ipeak)), &
+        new_peak(ipeak), clmp_mass_exclusive(ipeak), &
+        int(clmp_mass_exclusive(ipeak)/partm_common+0.5), npartstot(ipeak), npart_loc, nclmppart(ipeak)
+
+    endif
+  enddo
+  
+  close(666)
+  deallocate(global_id)
+
+end subroutine mtreedebug_dump_unbinding_data
+
+!==================================================================================================================
+subroutine mtreedebug_dump_written_progenitor_data(particlelist, plist_int, masslist, mpeaklist, mlist_int)
+!==================================================================================================================
+
+  use amr_commons
+  use clfind_commons
+  implicit none
+  integer, intent(in) :: plist_int, mlist_int
+  integer, dimension(1:plist_int), intent(in) :: particlelist
+  real(dp), dimension(1:mlist_int), intent(in) :: masslist, mpeaklist
+  character(len=100) fname
+  integer :: i, ipart, id, np, iprog
+
+  call mtreedebug_filename('WRITTEN_PROGENITOR_DATA', fname)
+  open(unit=666, form='formatted', file=fname)
+  write(666, '(A, I5)') "WRITTEN PROGENITOR DATA ID", myid
+  write(666, '(6A12)') "Clump ID", "mass", "peak mass", "np","Galaxy?", "Particles"
+  ! is only galaxy if <0
+
+  i = 1
+  iprog = 1 
+  do while (i <= plist_int)
+    id = particlelist(i)
+    np = particlelist(i+1)
+    write(*,*) 'ID', myid, i, id, np, i+2+np, plist_int
+    if (make_mock_galaxies) then
+      write(666, '(I12,2E12.4,I12)', advance='no') id, masslist(iprog), mpeaklist(iprog), np
+    else
+      write(666, '(I12,E12.4,A12,I12)', advance='no') id, masslist(iprog), "------", np
+    endif
+
+    do ipart = i+2, i+1+np
+      write(666, '(I12)', advance='no') particlelist(ipart)
+    enddo
+    write(666, *)
+
+    iprog = iprog + 1
+    i = i + 2 + np
+  enddo
+  close(666)
+  
+end subroutine mtreedebug_dump_written_progenitor_data
+
+
+! #endif for MTREEDEBUG
+#endif
 
 
 
