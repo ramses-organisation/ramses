@@ -668,23 +668,25 @@ subroutine create_output_dirs(filedir)
 
 
   if (.not.withoutmkdir) then
+    if (myid==1) then
 #ifdef NOSYSTEM
-    filedirini = filedir(1:13)
-    call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info_sys)
-    call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info_sys)
+      filedirini = filedir(1:13)
+      call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info_sys)
+      call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info_sys)
 #else
-    filecmd='mkdir -p '//TRIM(filedir)
-    ierr=1
-    call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
-    if(ierr.ne.0 .and. ierr.ne.127)then
-      write(*,*) 'Error - Could not create ',trim(filedir),' error code=',ierr
+      filecmd='mkdir -p '//TRIM(filedir)
+      ierr=1
+      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr)
+      if(ierr.ne.0 .and. ierr.ne.127)then
+        write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+        call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-      stop
+        stop
+#endif
+      endif
 #endif
     endif
-#endif
   endif
 
 

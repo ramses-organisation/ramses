@@ -461,7 +461,7 @@ subroutine create_prog_desc_links()
     if (clmpidp(tracers_loc_pid(ipart)) /= 0) then
       call fill_matrix(p2d_links, tracer_loc_progids(ipart), clmpidp(tracers_loc_pid(ipart)), 1, 'add')
     else
-      i = i + 1 !count how many zeros 
+      i = i + 1 ! count how many zeros 
     endif
   enddo
 
@@ -537,7 +537,7 @@ subroutine create_prog_desc_links()
 
           idesc = p2d_links%first(iprog)
 
-          !for each descendant:
+          ! for each descendant:
           do i = 1, p2d_links%cnt(iprog)
             sendbuf(ind) = p2d_links%clmp_id(idesc)
             sendbuf(ind+1) = p2d_links%ntrace(idesc)
@@ -3065,12 +3065,9 @@ subroutine mark_tracer_particles()
           most_bound_energy(ipeak, ipart) = HUGE(0d0)
           most_bound_pid(ipeak, ipart) = 0
 
-        endif !true minimum
-      
-      endif !relevant clump
-
+        endif ! true minimum
+      endif ! relevant clump
     enddo
-
   enddo
 
 end subroutine mark_tracer_particles
@@ -3113,7 +3110,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
   ! Kill or append too small clumps
   !------------------------------------
 
-  call get_exclusive_clump_mass(ilevel) !subroutine further below
+  call get_exclusive_clump_mass(ilevel) ! subroutine further below
 
   killed = 0; appended = 0
 
@@ -3129,7 +3126,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
           ! if clump is namegiver, kill it
           !--------------------------------
 
-          if(ipeak <= npeaks) killed = killed + 1 !count only non-virtuals
+          if(ipeak <= npeaks) killed = killed + 1 ! count only non-virtuals
           
           ! remove particles from clump
           thispart = clmppart_first(ipeak)
@@ -3174,10 +3171,10 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
           clmp_mass_pb(ipeak) = 0
           clmp_mass_exclusive(ipeak) = 0
 
-        endif !namegiver or not
-      endif !if too small
+        endif ! namegiver or not
+      endif ! if too small
     endif ! correct peak level
-  enddo !all peaks
+  enddo ! all peaks
 
 
 
@@ -3208,7 +3205,8 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
 #endif
 
     if(myid == 1) then
-      write(*,'(A43,I10,A14,I10,A18)') " Handling too small clumps TOTAL: Dissolved ", killed_tot, " halos; Merged ", appended_tot, " to their parents." 
+      write(*,'(A39,I16,A14,I16,A18)') " Handling too small clumps: Dissolved ", killed_tot, &
+          " halos; Merged ", appended_tot, " to their parents." 
     endif
 
     !reset values for next output step
@@ -3259,7 +3257,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
                 if (particle_local_id == ipeak) then
                   clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
                   ! do i=1,3
-                  !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
+                  !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) ! get velocity sum
                   ! enddo
                 endif
               endif
@@ -3275,11 +3273,11 @@ subroutine dissolve_small_clumps(ilevel, for_halos)
       ! communicate clump mass and velocity across processors
       !----------------------------------------------------------
       call build_peak_communicator
-      call virtual_peak_dp(clmp_mass_exclusive,'sum')       !collect
-      call boundary_peak_dp(clmp_mass_exclusive)            !scatter
+      call virtual_peak_dp(clmp_mass_exclusive,'sum')       ! collect
+      call boundary_peak_dp(clmp_mass_exclusive)            ! scatter
       ! do i=1,3
-      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  !collect
-      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       !scatter
+      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  ! collect
+      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       ! scatter
       ! enddo
 
     end subroutine get_exclusive_clump_mass 
