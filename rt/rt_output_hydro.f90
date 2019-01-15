@@ -293,7 +293,7 @@ SUBROUTINE output_rt_stats
      tot_nPhot = tot_nPhot + step_nPhot
      if (myid .eq. 1)                                                     &
           write(*, 113) step_nPhot, tot_nPhot, step_nStar/dtnew(levelmin)&
-          , step_mStar/dtnew(levelmin), dtnew(levelmin)*scale_t/(yr2sec)
+          , step_mStar/dtnew(levelmin), dtnew(levelmin)*scale_t/yr2sec
      step_nPhot = 0d0 ; step_nStar = 0d0 ; step_mStar = 0d0
   end if
 113 format(' SED feedback(phot/step/1d50, phot/tot/1d50, *, */Msun , dt[yr])= '  &
