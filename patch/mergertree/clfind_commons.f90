@@ -269,12 +269,17 @@ module clfind_commons
 !====================================================================
 
   
-  logical :: mtreedebug_no_matrix_dump_prog = .false. ! don't dump matrices for progenitors
-  logical :: mtreedebug_no_matrix_dump_desc = .false. ! don't dump matrices for descendants
-  logical :: mtreedebug_no_unbinding_dump   = .false. ! don't write individual particle IDs in unbinding dumps
-  ! logical :: mtreedebug_unbinding_no_part   = .false. ! don't write individual particle IDs in unbinding dumps
-
 #ifdef MTREEDEBUG
+
+  logical :: mtreedebug_no_matrix_dump_prog         = .false. ! don't dump matrices for progenitors
+  logical :: mtreedebug_no_matrix_dump_desc         = .false. ! don't dump matrices for descendants
+  logical :: mtreedebug_no_unbinding_dump           = .false. ! don't dump unbinding data
+  logical :: mtreedebug_no_unbinding_particle_dump  = .true.  ! don't write individual particle IDs in unbinding dumps
+  logical :: mtreedebug_no_progdata_dump            = .false. ! don't write progenitor data dump
+  logical :: mtreedebug_no_progdata_particle_dump   = .false. ! don't write individual particle IDs in progenitor data dumps
+  logical :: mtreedebug_no_pmprogdata_dump          = .false. ! don't write past merged progenitor data dump
+  logical :: mtreedebug_no_pmprogdata_particle_dump = .false. ! don't write individual particle IDs in past merged progenitor data dumps
+  logical :: mtreedebug_no_mostbound_lists          = .false. ! don't dump most_bound particle lists
 
 #endif
 
@@ -397,4 +402,3 @@ contains
 
 
 end module clfind_commons
-

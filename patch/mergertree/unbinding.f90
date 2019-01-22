@@ -9,7 +9,8 @@
 !   center of clumps
 ! -DMTREEDEBUG
 !   create a lot of formatted output to help debugging the merger
-!   tree routines.
+!   tree routines. Don't use this unless you're fighting bugs, it
+!   will create a looooot of otherwise unnecessary output.
 !
 ! Contains:
 !   subroutine unbinding()
@@ -220,7 +221,7 @@ subroutine unbinding()
       !-------------------------------
       ! get cumulative mass profiles
       !-------------------------------
-      call get_cmp_iter(is_final_round)
+      call get_cmp_iter()
 #endif
 
 
@@ -1857,7 +1858,7 @@ subroutine dissolve_small_clumps(ilevel, for_halos, initial_cleanup)
     do ipeak=1, hfree-1
       if (lev_peak(ipeak) == ilevel) then
 
-        ! if there are too few particles in there, but at least 1 (i.e. don't do it for noise)
+        ! if there are too few particles in there and clump is relevant (don't do unnecessary things for irrelevant stuff)
         ! for initial cleanup, look at inclusive clump mass, not exclusive
         if (relevance(ipeak) > relevance_threshold .and. clmp_mass_pb(ipeak) < (mass_threshold * partm_common) ) then
 
