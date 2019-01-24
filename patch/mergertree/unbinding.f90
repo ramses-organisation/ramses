@@ -682,13 +682,13 @@ subroutine get_clump_properties_pb(first, ilevel)
             endif
 
             do i=1,3
-              clmp_com_pb(ipeak,i)=clmp_com_pb(ipeak,i)+(xp(thispart,i)+period(i))*mp(thispart) !get center of mass sum       
+              clmp_com_pb(ipeak,i)=clmp_com_pb(ipeak,i)+(xp(thispart,i)+period(i))*mp(thispart) ! get center of mass sum       
             enddo
 #endif            
 
             clmp_mass_pb(ipeak)=clmp_mass_pb(ipeak)+mp(thispart)
             do i=1,3
-              clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
+              clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)+vp(thispart,i)*mp(thispart) ! get velocity sum
             enddo
           else
             contributes(thispart)=.true.   ! reset value
@@ -1874,11 +1874,11 @@ subroutine dissolve_small_clumps(ilevel, for_halos, initial_cleanup)
             do ipart = 1, nclmppart(ipeak)
 
               if (clmpidp(thispart) > 0) then
-                ! check that you're not removing particles of children
-                call get_local_peak_id(clmpidp(thispart), particle_local_id)
-                if (particle_local_id == ipeak) then
-                  clmpidp(thispart) = 0
-                endif
+                ! no need to check that you're not removing particles of children:
+                ! clmp_mass_pb at the first iteration includes all children particles as well
+                ! so if halo has too little mass, children will as well
+                ! otherwise, children's particles might be re-added to parent later
+                clmpidp(thispart) = 0
               endif
               thispart = clmppart_next(thispart)
 

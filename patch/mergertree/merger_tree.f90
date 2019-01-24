@@ -844,6 +844,9 @@ subroutine make_trees()
 #endif
 
 
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_prog(.true.)
+#endif
 
   
   !-------------------------------------------------------------
@@ -898,7 +901,6 @@ subroutine make_trees()
 
  
 #ifdef MTREEDEBUG
-  call mtreedebug_matrixcheck_prog(.true.)
   call mtreedebug_matrixcheck_desc(.true.)
 #endif
 
