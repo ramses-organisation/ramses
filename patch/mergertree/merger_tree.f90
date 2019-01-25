@@ -1823,8 +1823,8 @@ subroutine read_progenitor_data()
   endif
 
   open(unit=666,file=fileloc,form='unformatted')
-  read(666) np
-  read(666) progcount_to_read
+  read(666) np                  ! number of unique progenitors in this file
+  read(666) progcount_to_read   ! number of integers that needs to be read
   if (progcount_to_read>0) then
     allocate(read_buffer_int(1:progcount_to_read))
     read(666) read_buffer_int
@@ -1842,7 +1842,7 @@ subroutine read_progenitor_data()
   ! Read progenitor masses
   !--------------------------------
 
-  if (np > 0) then 
+  if (progcount_to_read > 0) then 
 
     fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
 
@@ -1853,7 +1853,7 @@ subroutine read_progenitor_data()
     endif
 
     open(unit=666,file=fileloc,form='unformatted')
-    read(666) nprogs_to_read
+    read(666) nprogs_to_read    ! number of progenitors, virtual and not, in this file
     allocate(read_buffer_real(1:nprogs_to_read))
     read(666) read_buffer_real
     if (make_mock_galaxies) then
@@ -1886,6 +1886,7 @@ subroutine read_progenitor_data()
 
 
   ! Communicate progenitor data
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   call MPI_ALLGATHER(progcount_to_read, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
   ! overwrite progcount_to_read with total number of integers in common array
@@ -1901,6 +1902,7 @@ subroutine read_progenitor_data()
 
 
   ! Communicate progenitor masses
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   call MPI_ALLGATHER(nprogs_to_read, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
   ! overwrite progcount_to_read with total number of integers in common array
@@ -2046,7 +2048,7 @@ subroutine read_progenitor_data()
   fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors_data_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
 
   open(unit=666,file=fileloc,form='unformatted')
-  read(666) np
+  read(666) np ! number of integers that need to be read
   if (np > 0) then
     allocate(read_buffer_int(1:np))
     read(666) read_buffer_int
@@ -2072,10 +2074,9 @@ subroutine read_progenitor_data()
     endif
 
     open(unit=666,file=fileloc,form='unformatted')
-    read(666) npastprogs
+    read(666) npastprogs ! number of pmprog masses in this file; also the number of unique pmprogs in this file.
     if (npastprogs>0) then
       allocate(read_buffer_real(1:npastprogs))
-      ! read(666) pmprogs_mass(1:npastprogs)
       read(666) read_buffer_real
       if (make_mock_galaxies) then
         allocate(read_buffer_mpeak(1:npastprogs))
@@ -2105,6 +2106,7 @@ subroutine read_progenitor_data()
 #ifndef WITHOUTMPI
 
   ! Communicate past merged progenitor data
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   call MPI_ALLGATHER(np, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
   ! overwrite progcount_to_read with total number of integers in common array
@@ -2116,13 +2118,15 @@ subroutine read_progenitor_data()
   enddo
 
   allocate(buffer_int_all(1:progcount_to_read))
-  call MPI_ALLGATHERV(read_buffer_int, recvcount(myid), MPI_INT, buffer_int_all, recvcount, displacements, MPI_INT, MPI_COMM_WORLD, mpi_err)
+  call MPI_ALLGATHERV(read_buffer_int, recvcount(myid), MPI_INT, &
+    buffer_int_all, recvcount, displacements, MPI_INT, MPI_COMM_WORLD, mpi_err)
 
 
-  ! Communicate progenitor masses
+  ! Communicate past merged progenitor masses
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   call MPI_ALLGATHER(npastprogs, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
-  ! overwrite progcount_to_read with total number of integers in common array
+  ! overwrite npastprogs with total number of integers in common array
   npastprogs = sum(recvcount)
 
   displacements=0
