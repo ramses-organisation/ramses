@@ -264,6 +264,25 @@ module clfind_commons
 
 
 
+!====================================================================
+! ADDITIONAL VARIABLES FOR MERGERTREE/UNBINDING DEBUGGING
+!====================================================================
+
+  
+#ifdef MTREEDEBUG
+
+  logical :: mtreedebug_no_matrix_dump_prog         = .false. ! don't dump matrices for progenitors
+  logical :: mtreedebug_no_matrix_dump_desc         = .false. ! don't dump matrices for descendants
+  logical :: mtreedebug_no_unbinding_dump           = .false. ! don't dump unbinding data
+  logical :: mtreedebug_no_unbinding_particle_dump  = .true.  ! don't write individual particle IDs in unbinding dumps
+  logical :: mtreedebug_no_progdata_dump            = .false. ! don't write progenitor data dump
+  logical :: mtreedebug_no_progdata_particle_dump   = .false. ! don't write individual particle IDs in progenitor data dumps
+  logical :: mtreedebug_no_pmprogdata_dump          = .false. ! don't write past merged progenitor data dump
+  logical :: mtreedebug_no_pmprogdata_particle_dump = .false. ! don't write individual particle IDs in past merged progenitor data dumps
+  logical :: mtreedebug_no_mostbound_lists          = .false. ! don't dump most_bound particle lists
+
+#endif
+
 
 contains
 
@@ -360,7 +379,8 @@ contains
     real(dp) :: euler   = 2.7182818284590
     real(dp) :: log10_2 = 0.301029995663981 ! log_10(2)
 
-    real(dp) :: f0, fm, logMM1, sig, xi_scale
+    integer, parameter :: quadp = selected_real_kind(16) ! need quad precision for some exponents...
+    real(quadp) :: f0, fm, logMM1, sig, xi_scale
 
     call random_number(xi_scale)  ! temporarily store random number in xi
     call random_number(sig)       ! get sign
@@ -373,13 +393,12 @@ contains
     logMM1 = log10(m*scale_m)-logM1
     ! get f(log M/M1)
     fm = -log10(10d0**(alpha*logMM1) + 1) + &
-      delta*log10(1d0+exp(logMM1))**gam/(1d0 + exp(10d0**(-logMM1)))
+      delta*log10(1d0+exp(logMM1))**gam/(1d0 + exp(10**(-logMM1)))
 
-    stellar_mass = 10d0**(loge+logM1 + fm - f0 + xi_scale*xi)
+    stellar_mass = 10d0**DBLE(loge+logM1 + fm - f0 + xi_scale*xi) ! explicitly convert back to double precision
   end function stellar_mass
 
 
 
 
 end module clfind_commons
-
