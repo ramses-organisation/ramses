@@ -2010,8 +2010,8 @@ subroutine dissolve_small_clumps(ilevel, for_halos, initial_cleanup)
 #endif
 
     if(myid == 1) then
-      write(*,'(A39,I16,A14,I16,A18)') " Handling too small clumps: Dissolved ", killed_tot, &
-          " halos; Merged ", appended_tot, " to their parents."
+      write(*,'(A39,I12,A8)')  " Handling too small clumps: Dissolved ", killed_tot,   " halos;" 
+      write(*,'(A39,I12,A19)') "                               Merged ", appended_tot, " to their parents."
     endif
 
     ! reset values for next output step
