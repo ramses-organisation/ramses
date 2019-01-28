@@ -10,10 +10,8 @@
 
 ## This is the [ramses](https://bitbucket.org/rteyssie/ramses) bitbucket repository.
 
-Ramses is an open source code to model astrophysical systems, featuring self-gravitating, magnetised, compressible,
-radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree. 
-[ramses](https://bitbucket.org/rteyssie/ramses) is written in  Fortran 90 and is making intensive use of the Message 
-Passing Interface (MPI) library.
+Ramses is an open source code to model astrophysical systems, featuring self-gravitating, magnetised, compressible, radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree. 
+[ramses](https://bitbucket.org/rteyssie/ramses) is written in  Fortran 90 and is making intensive use of the Message Passing Interface (MPI) library.
 
 You can go to the user's guide in [PDF here][4] and in the [WIKI here][1].
 
