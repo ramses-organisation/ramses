@@ -347,6 +347,30 @@ subroutine unbinding()
    
 
 
+  !=================
+  ! Write output
+  !=================
+
+  call title(myid, nchar2)
+  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
+
+  open(unit=666,file=fileloc,form='unformatted')
+  
+  ipart=0
+  do i=1,npartmax
+    if(levelp(i)>0)then
+      ipart=ipart+1
+      clump_ids(ipart)=clmpidp(i)
+    endif
+  enddo
+  write(666) clump_ids
+  close(666)
+
+  ! create_output = .true., otherwise unbdinging() wouldn't have been called
+  if(particlebased_clump_output)then
+    if(myid==1)write(*,*)"Outputing clump properties to disc."
+    call write_clump_properties(.true.)
+  endif
 
 
 
@@ -356,7 +380,6 @@ subroutine unbinding()
   !=========================================
   ! After unbinding: Do merger tree stuff
   !=========================================
-
 
   ! After the loop: Dissolve too small halos, sum up masses if necessary
   if (make_mergertree) then
@@ -408,27 +431,6 @@ subroutine unbinding()
  
 
 
-
-
-  !=================
-  ! Write output
-  !=================
-
-  call title(myid, nchar2)
-  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
-
-  open(unit=666,file=fileloc,form='unformatted')
-  
-
-  ipart=0
-  do i=1,npartmax
-    if(levelp(i)>0)then
-      ipart=ipart+1
-      clump_ids(ipart)=clmpidp(i)
-    endif
-  enddo
-  write(666) clump_ids
-  close(666)
 
 
   !====================
