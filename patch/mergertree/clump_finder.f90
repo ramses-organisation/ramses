@@ -304,12 +304,6 @@ subroutine clump_finder(create_output,keep_alive)
      verbose_all=verbose
 #endif
 
-     !------------------------------------------
-     ! Added for patch:
-     ! Call particle unbinding
-     !------------------------------------------
-     if(unbind.and.create_output.and.pic) call unbinding()
-
      if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
      if(create_output.and..not.particlebased_clump_output)then
@@ -324,6 +318,13 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
   end if
+
+  !-----------------------------------------------------------------
+  ! Added for patch: Call particle unbinding (and mergertree stuff)
+  ! Call it even for npeaks_tot = 0, mergertrees need to know that
+  ! there are no progenitors to work with
+  !------------------------------------------------------------------
+  if(unbind.and.create_output.and.pic) call unbinding()
 
 
 
