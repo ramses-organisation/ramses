@@ -105,6 +105,10 @@ Can be set in the `CLUMPFIND_PARAMS` block
 |-------------------------------|---------------------------|----------|---------------------------------------------------|
 | `unbind=`                     | `.true. `                 | logical  | Turn particle unbinding on or off                 |
 |                               |                           |          |                                                   |
+| `particlebased_clump_output=` | `.false.`                 | logical  | write resulting clump properties based on         |
+|                               |                           |          | particles after unbinding, not default cell-based |
+|                               |                           |          | properties                                        |
+|                               |                           |          |                                                   |
 | `nmassbins=`                  | `50`                      | integer  | Number of bins for the mass binning of the        |
 |                               |                           |          | cumulative mass profile. Any integer > 1.         |
 |                               |                           |          |                                                   |
@@ -128,18 +132,6 @@ Can be set in the `CLUMPFIND_PARAMS` block
 |                               |                           |          | unbinding (in case a clump doesn't converge)      |
 |                               |                           |          | (shouldn't happen)                                |
 |                               |                           |          | (only used when `iter_properties=.true.`)         |
-
-
-## differences when merger trees are made or not
-
-By setting  `make_mergertree = .true.` in the `&CLUMPFIND_PARAMS`, you can turn the creation of merger trees on or off.
-This however introduces some small changes in the results of the particle unbinding:
-
-- Too small clumps, whose mass based on the sum of its particles' masses is too low, are now actively dissolved, 
-  i.e. their particles passed to their parent clump, or killed if no parent clump exists. (Clumps with less 
-  particles than the mass threshold were possible because of the CIC interpolation)
-- the most tightly bound particles will have negative clump ID, e.g. the most strongly bound particle  of clump 53 will have 
-  clump ID -53.
 
 
 
