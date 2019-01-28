@@ -410,9 +410,6 @@ subroutine process_progenitor_data()
   deallocate(tracer_loc_progids_all)
   
 
-!todo temp
-write(*,*) "pmprog owner before comm ID", myid, pmprogs_owner
-
 
 #ifndef WITHOUTMPI
   !--------------------------------
@@ -2235,14 +2232,6 @@ subroutine read_progenitor_data()
 
   endif ! npastprogs > 0
 
-! todo: temp
-write(*,*) "ID", myid, "PASTPROGDATA1", pmprogs
-! write(*,*) "ID", myid, "PASTPROGDATA2", pmprogs_galaxy
-! write(*,*) "ID", myid, "PASTPROGDATA3", pmprogs_t
-! write(*,*) "ID", myid, "PASTPROGDATA4", pmprogs_owner
-! write(*,*) "ID", myid, "PASTPROGDATA5", pmprogs_mass
-! write(*,*) "ID", myid, "PASTPROGDATA6", pmprogs_mpeak
-! write(*,*) "ID", myid, "PASTPROGDATA7", pmprog_free
 end subroutine read_progenitor_data
 
 
