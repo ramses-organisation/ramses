@@ -235,10 +235,12 @@ subroutine process_progenitor_data()
     pmprogs_mass(i) = dummy_real(sort_ind_past(i))
   enddo
 
-  dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
-  do i = 1, npastprogs
-    pmprogs_mass(i) = dummy_real(sort_ind_past(i))
-  enddo
+  if (make_mock_galaxies) then
+    dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
+    do i = 1, npastprogs
+      pmprogs_mass(i) = dummy_real(sort_ind_past(i))
+    enddo
+  endif
 
   deallocate(dummy, dummy_real, sort_ind_past)
 
@@ -1958,7 +1960,8 @@ subroutine read_progenitor_data()
 
 #endif
   
-  deallocate(read_buffer_int, read_buffer_real, read_buffer_mpeak)
+  deallocate(read_buffer_int, read_buffer_real)
+  if (make_mock_galaxies) deallocate(read_buffer_mpeak)
 
 
 
@@ -1994,13 +1997,9 @@ subroutine read_progenitor_data()
   tracer_free = 1   ! first free local tracer index
 
   if (make_mock_galaxies) then
-    i = nprogs
-  else
-    ! just to prevent "may be uninitialized" warnings
-    i = 1
+    allocate(prog_mpeak(1:i))
+    prog_mpeak = 0
   endif
-  allocate(prog_mpeak(1:i))
-  prog_mpeak = 0
 
 
   if (nprogs > 0) then
