@@ -362,42 +362,88 @@ subroutine write_clump_properties(to_file)
 
   if (to_file .or. myid==1)then
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
-          '        rho-               rho+               rho_av             mass_cl            relevance   '
+            '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
-        write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
-             '        rho+               mass      '
+       write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
+            '        rho+               mass      '
      endif
   end if
 
   do j=npeaks,1,-1
      jj=ind_sort(j)
-     if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
-        write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
-             jj+ipeak_start(myid)&
-             ,lev_peak(jj)&
-             ,new_peak(jj)&
-             ,n_cells(jj)&
-             ,peak_pos(jj,1)&
-             ,peak_pos(jj,2)&
-             ,peak_pos(jj,3)&
-             ,min_dens(jj)&
-             ,max_dens(jj)&
-             ,clump_mass(jj)/clump_vol(jj)&
-             ,clump_mass(jj)&
-             ,relevance(jj)
-        rel_mass=rel_mass+clump_mass(jj)
-        n_rel=n_rel+1
+     if (particlebased_clump_output) then ! write particle based data
+        if (relevance(jj) > relevance_threshold .and. clmp_mass_pb(jj) > mass_threshold*particle_mass)then
+           write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+               jj+ipeak_start(myid)&
+               ,lev_peak(jj)&
+               ,new_peak(jj)&
+               ,n_cells(jj)&
+#ifdef UNBINDINGCOM
+               ,clmp_com_pb(jj,1)&
+               ,clmp_com_pb(jj,2)&
+               ,clmp_com_pb(jj,3)&
+#else
+               ,peak_pos(jj,1)&
+               ,peak_pos(jj,2)&
+               ,peak_pos(jj,3)&
+#endif
+               ,min_dens(jj)&
+               ,max_dens(jj)&
+               ,clmp_mass_pb(jj)/clump_vol(jj)&
+               ,clmp_mass_pb(jj)&
+               ,relevance(jj)
+          rel_mass=rel_mass+clmp_mass_exclusive(jj)
+          n_rel=n_rel+1
+       endif
+     else ! write cell based data
+        if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
+           write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+               jj+ipeak_start(myid)&
+               ,lev_peak(jj)&
+               ,new_peak(jj)&
+               ,n_cells(jj)&
+               ,peak_pos(jj,1)&
+               ,peak_pos(jj,2)&
+               ,peak_pos(jj,3)&
+               ,min_dens(jj)&
+               ,max_dens(jj)&
+               ,clump_mass(jj)/clump_vol(jj)&
+               ,clump_mass(jj)&
+               ,relevance(jj)
+          rel_mass=rel_mass+clump_mass(jj)
+          n_rel=n_rel+1
+        endif
      end if
+
      if(saddle_threshold>0)then
-        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-           write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
-                jj+ipeak_start(myid)&
-                ,n_cells_halo(jj)&
-                ,peak_pos(jj,1)&
-                ,peak_pos(jj,2)&
-                ,peak_pos(jj,3)&
-                ,max_dens(jj)&
-                ,halo_mass(jj)
+        if (particlebased_clump_output) then ! write particle based data
+           if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.clmp_mass_pb(jj) > mass_threshold*particle_mass)then
+              write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
+                  jj+ipeak_start(myid)&
+                  ,n_cells_halo(jj)&
+#ifdef UNBINDINGCOM
+                  ,clmp_com_pb(jj,1)&
+                  ,clmp_com_pb(jj,2)&
+                  ,clmp_com_pb(jj,3)&
+#else
+                  ,peak_pos(jj,1)&
+                  ,peak_pos(jj,2)&
+                  ,peak_pos(jj,3)&
+#endif
+                  ,max_dens(jj)&
+                  ,clmp_mass_pb(jj)
+           endif
+        else
+           if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+              write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
+                  jj+ipeak_start(myid)&
+                  ,n_cells_halo(jj)&
+                  ,peak_pos(jj,1)&
+                  ,peak_pos(jj,2)&
+                  ,peak_pos(jj,3)&
+                  ,max_dens(jj)&
+                  ,halo_mass(jj)
+           endif
         endif
      endif
   end do

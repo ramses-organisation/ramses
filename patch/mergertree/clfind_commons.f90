@@ -76,6 +76,8 @@ module clfind_commons
   ! Particle unbinding related
   !----------------------------
 
+  logical :: particlebased_clump_output = .false.               ! write resulting clump properties based on particles after
+                                                                ! unbinding, not default cell-based properties
   integer :: nunbound, nunbound_tot, candidates, candidates_tot ! counters
   integer :: mergelevel_max                                     ! deepest merging level
   integer, allocatable, dimension(:)  :: clmppart_first         ! first particle in particle linked list for each peak id
