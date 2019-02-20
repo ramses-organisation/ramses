@@ -1,3 +1,36 @@
+!-----------------------------------------------------------------
+! This file contains the routines for particle unbinding.
+! See README for more information.
+!
+! There are two optional preprocessing definitions for this patch
+! only:
+! -DUNBINDINGCOM
+!   use (and iteratively determine) the center of mass as the
+!   center of clumps
+! -DMTREEDEBUG
+!   create a lot of formatted output to help debugging the merger
+!   tree routines. Don't use this unless you're fighting bugs, it
+!   will create a looooot of otherwise unnecessary output.
+!
+! Contains:
+!   subroutine unbinding()
+!   subroutine get_clumpparticles()
+!   subroutine get_clump_properties_pb()
+!   subroutine get_cmp_iter()
+!   subroutine get_cmp_noiter()
+!   subroutine get_closest_border()
+!   subroutine unbinding_neighborsearch()
+!   subroutine bordercheck()
+!   subroutine particle_unbinding()
+!   subroutine eparttot()
+!   subroutine potential()
+!   subroutine compute_phi()
+!   subroutine dissolve_small_clumps()
+!     contains subroutine get_exclusive_clump_mass()
+!   subroutine allocate_unbinding_arrays()
+!   subroutine deallocate_unbinding_arrays()
+!-----------------------------------------------------------------
+
 #if NDIM==3
 subroutine unbinding()
 
@@ -7,6 +40,7 @@ subroutine unbinding()
   use clfind_commons ! unbinding stuff
   use mpi_mod
 
+!
   implicit none
 #ifndef WITHOUTMPI
   integer :: info
@@ -49,6 +83,13 @@ subroutine unbinding()
     call boundary_peak_dp(peak_pos(1,i))
   enddo
 
+#ifdef MTREEDEBUG
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  ! if MTREEDEBUG, you'll need the directory for file dumps.
+  call title(ifout, nchar)
+  filedir = 'output_'//TRIM(nchar)
+  call create_output_dirs(filedir)
+#endif
 
 
   ! set up constants and counters
@@ -90,241 +131,283 @@ subroutine unbinding()
   ! allocate necessary arrays
   call allocate_unbinding_arrays()
 
-  ! if there are no clumps yet, the output directories haven't been made yet.
-  call title(ifout, nchar)
-  filedir = 'output_'//TRIM(nchar)
-  call create_output_dirs(filedir)
 
-  ! initialise constant part of is_namegiver array
-  do ipeak=1, npeaks
-    if (new_peak(ipeak)>0) then
-      call get_local_peak_id(new_peak(ipeak), parent_local_id)
-      if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
-    endif
-  enddo
+  if (npeaks_tot > 0) then
 
-
-  !===================
-  ! Gather particles 
-  !===================
-
-  ! Get particles in substructrue, create linked lists
-  call get_clumpparticles()
-
-
-#ifndef UNBINDINGCOM
-  !-------------------------------
-  ! get cumulative mass profiles
-  !-------------------------------
-  call get_cmp_noiter()
-#endif
-
- 
-
-  !==================
-  ! Unbinding loop
-  !==================
-
-  ! go level by level
-  do ilevel=0, mergelevel_max
-
-    !---------------------------------
-    ! Preparation for iteration loop 
-    !---------------------------------
-
-    is_final_round=.true.
-    if (iter_properties) is_final_round=.false.
-    
-    loop_again=.true.
-    loop_counter=0
-
-    ! reset values
-    ! WARNING: Here to_iter doesn't include whether it is a namegiver!!
-    to_iter = (lev_peak==ilevel)
-    hasatleastoneptcl=1 ! set array value to 1
-
-    do ipeak=npeaks+1, hfree-1
-      if (new_peak(ipeak) > 0) then
+    ! initialise constant part of is_namegiver array
+    do ipeak=1, npeaks
+      if (new_peak(ipeak)>0) then
         call get_local_peak_id(new_peak(ipeak), parent_local_id)
         if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
       endif
     enddo
 
 
-    !-------------------------
-    ! iteration per level
-    !-------------------------
+    !===================
+    ! Gather particles 
+    !===================
 
-    do while(loop_again)
-      loop_again = .false.  ! set boolean whether to continue to false as default;
-                            ! will get reset if conditions are met
+    ! Get particles in substructure, create linked lists
+    call get_clumpparticles()
 
-      loop_counter=loop_counter+1
-      niterunbound=0
 
-      !--------------------------------------------------------
-      ! get particle based clump properties :
-      ! bulk velocity, particle furthest away from clump center
-      ! This subroutine determines whether to loop again
-      !--------------------------------------------------------
-      call get_clump_properties_pb(loop_counter==1)
-
-      ! forcibly stop loop if necessary
-      if (loop_counter==repeat_max) loop_again=.false.
-
-#ifndef WITHOUTMPI
-      !sync with other processors wheter you need to repeat loop
-      call MPI_ALLREDUCE(loop_again, loop_again_global, 1, MPI_LOGICAL, MPI_LOR,MPI_COMM_WORLD, info)
-      loop_again=loop_again_global
+#ifndef UNBINDINGCOM
+    !-------------------------------
+    ! get cumulative mass profiles
+    !-------------------------------
+    call get_cmp_noiter()
+#endif
+#ifdef MTREEDEBUG
+    call mtreedebug_dump_unbinding_data('init')
 #endif
 
-#ifdef UNBINDINGCOM
-      !-------------------------------
-      ! get cumulative mass profiles
-      !-------------------------------
-      call get_cmp_iter()
-#endif
+   
 
+    !==================
+    ! Unbinding loop
+    !==================
 
-      !-----------------------------------------
-      ! get closest border to the peak position
-      !-----------------------------------------
-      if (saddle_pot) call get_closest_border()
+    ! go level by level
+    do ilevel=0, mergelevel_max
 
+      !---------------------------------
+      ! Preparation for iteration loop 
+      !---------------------------------
 
+      is_final_round=.true.
+      if (iter_properties) is_final_round=.false.
+      
+      loop_again=.true.
+      loop_counter=0
 
-      !---------------
-      ! Unbinding 
-      !---------------
-      if (.not.loop_again) is_final_round=.true.
+      ! reset values
+      ! WARNING: Here to_iter doesn't include whether it is a namegiver!!
+      to_iter = (lev_peak==ilevel)
+      hasatleastoneptcl=1 ! set array value to 1
 
-      do ipeak=1, hfree-1
-        ! don't apply to_iter here!
-        ! needs to be done in final round even if to_iter = .false.
-        check = clmp_mass_pb(ipeak)>0.0 .and. lev_peak(ipeak) == ilevel
-        if (check) then
-          call particle_unbinding(ipeak, is_final_round)
+      do ipeak=npeaks+1, hfree-1
+        if (new_peak(ipeak) > 0) then
+          call get_local_peak_id(new_peak(ipeak), parent_local_id)
+          if (ipeak == parent_local_id) is_namegiver(ipeak) = .true.
         endif
       enddo
 
 
+      !-------------------------
+      ! iteration per level
+      !-------------------------
 
-      !------------------------
-      ! prepare for next round
-      !------------------------
+      do while(loop_again)
+        loop_again = .false.  ! set boolean whether to continue to false as default;
+                              ! will get reset if conditions are met
 
-      if (loop_again) then
-        ! communicate whether peaks have remaining contributing particles
-        call build_peak_communicator()
-        call virtual_peak_int(hasatleastoneptcl,'max')
-        call boundary_peak_int(hasatleastoneptcl)
+        loop_counter=loop_counter+1
+        niterunbound=0
 
-        do ipeak=1,hfree-1
-          ! if peak has no contributing particles anymore
-          if (hasatleastoneptcl(ipeak)==0) then
-            to_iter(ipeak)=.false. !dont loop anymore over this peak
+        !--------------------------------------------------------
+        ! get particle based clump properties :
+        ! bulk velocity, particle furthest away from clump center
+        ! This subroutine determines whether to loop again
+        !--------------------------------------------------------
+        call get_clump_properties_pb(loop_counter==1, ilevel)
+
+        ! forcibly stop loop if necessary
+        if (loop_counter==repeat_max) loop_again=.false.
+
+#ifndef WITHOUTMPI
+        ! sync with other processors whether you need to repeat loop
+        call MPI_ALLREDUCE(loop_again, loop_again_global, 1, MPI_LOGICAL, MPI_LOR,MPI_COMM_WORLD, info)
+        loop_again=loop_again_global
+#endif
+
+        if (.not.loop_again) is_final_round=.true.
+
+#ifdef UNBINDINGCOM
+        !-------------------------------
+        ! get cumulative mass profiles
+        !-------------------------------
+        call get_cmp_iter()
+#endif
+
+
+        !-----------------------------------------
+        ! get closest border to the peak position
+        !-----------------------------------------
+        if (saddle_pot) call get_closest_border()
+
+
+
+        !---------------
+        ! Unbinding 
+        !---------------
+
+        do ipeak=1, hfree-1
+          ! don't apply to_iter here!
+          ! needs to be done in final round even if to_iter = .false.
+          check = clmp_mass_pb(ipeak)>0.0 .and. lev_peak(ipeak) == ilevel
+          if (check) then
+            call particle_unbinding(ipeak, is_final_round)
           endif
-
-          if (loop_counter == 1) then ! only do this for first round
-            if(is_namegiver(ipeak)) then 
-              ! Don't iterate over halo-namegivers.
-              ! Only set here to false and not earlier, so they'll be considered
-              ! every first time the loop over levels starts.
-              to_iter(ipeak) = .false. ! don't iterate over halo namegivers 
-            endif 
-          endif
-
         enddo
 
-      else ! if it is final round
-      
-        if(make_mergertree) call dissolve_small_clumps(ilevel, .false.)
-      
-      endif
 
 
-      !---------------------
-      ! Talk to me.
-      !---------------------
-      if (clinfo) then
-#ifndef WITHOUTMPI
-          call MPI_ALLREDUCE(niterunbound, niterunbound_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
-#else
-          niterunbound_tot=niterunbound
-#endif
-        if (iter_properties .and. myid==1) then
-          if (loop_again) then 
-            write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
-              "particles at level", ilevel, "loop", loop_counter
+        !------------------------
+        ! prepare for next round
+        !------------------------
 
-          else ! do not loop again
+        if (loop_again) then
+          ! communicate whether peaks have remaining contributing particles
+          call build_peak_communicator()
+          call virtual_peak_int(hasatleastoneptcl,'max')
+          call boundary_peak_int(hasatleastoneptcl)
 
-            if (loop_counter < repeat_max) then
-              write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
-                "particles at level", ilevel, "loop", loop_counter
-              write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, &
-                "clump properties converged after ", loop_counter, "iterations."
-            else
-               write(*,'(A15,I5,A20,I5,A35)') "WARNING: Level ", ilevel, &
-                 "not converged after ", repeat_max, "iterations. Moving on to next step."
+          do ipeak=1,hfree-1
+            ! if peak has no contributing particles anymore
+            if (hasatleastoneptcl(ipeak)==0) then
+              to_iter(ipeak)=.false. ! don't loop anymore over this peak
             endif
 
-          endif   ! loop again
-        endif     ! iter properties
+            if (loop_counter == 1) then ! only do this for first round
+              if(is_namegiver(ipeak)) then 
+                ! Don't iterate over halo-namegivers.
+                ! Only set here to false and not earlier, so they'll be considered
+                ! every first time the loop over levels starts.
+                to_iter(ipeak) = .false. ! don't iterate over halo namegivers 
+              endif 
+            endif
 
-        if (.not. iter_properties .and. myid==1) then
-          write(*,'(A10,I10,A30,I5)') " Unbound", niterunbound_tot, &
-            "particles at level", ilevel
+          enddo
+
+        else ! if it is final round
+        
+          if(make_mergertree) call dissolve_small_clumps(ilevel, .false., .false.)
+        
         endif
 
-      endif       ! clinfo
 
-
-
-    enddo ! loop again for ilevel
-
-  enddo ! loop over levels
-
-
-
-
-
-  !================================
-  ! Talk to me when unbinding done
-  !================================
-
-
-  if (clinfo) then
+        !---------------------
+        ! Talk to me.
+        !---------------------
+        if (clinfo) then
 #ifndef WITHOUTMPI
-    call MPI_ALLREDUCE(nunbound, nunbound_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
-    call MPI_ALLREDUCE(candidates, candidates_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
+            call MPI_ALLREDUCE(niterunbound, niterunbound_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
 #else
-    nunbound_tot=nunbound
-    candidates_tot=candidates
+            niterunbound_tot=niterunbound
 #endif
-    if (myid==1) then
-      write(*,'(A6,I10,A30,I10,A12)') " Found", nunbound_tot, "unbound particles out of ", candidates_tot, " candidates"
+          if (iter_properties .and. myid==1) then
+            if (loop_again) then 
+              write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
+                "particles at level", ilevel, "loop", loop_counter
+
+            else ! do not loop again
+
+              if (loop_counter < repeat_max) then
+                write(*,'(A10,I10,A30,I5,A7,I5)') " Unbound", niterunbound_tot, &
+                  "particles at level", ilevel, "loop", loop_counter
+                write(*, '(A7,I5,A35,I5,A12)') "Level ", ilevel, &
+                  "clump properties converged after ", loop_counter, "iterations."
+              else
+                 write(*,'(A15,I5,A20,I5,A35)') "WARNING: Level ", ilevel, &
+                   "not converged after ", repeat_max, "iterations. Moving on to next step."
+              endif
+
+            endif   ! loop again
+          endif     ! iter properties
+
+          if (.not. iter_properties .and. myid==1) then
+            write(*,'(A10,I10,A30,I5)') " Unbound", niterunbound_tot, &
+              "particles at level", ilevel
+          endif
+
+        endif       ! clinfo
+
+
+
+      enddo ! loop again for ilevel
+
+    enddo ! loop over levels
+
+
+
+
+
+    !================================
+    ! Talk to me when unbinding done
+    !================================
+
+
+    if (clinfo) then
+#ifndef WITHOUTMPI
+      call MPI_ALLREDUCE(nunbound, nunbound_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
+      call MPI_ALLREDUCE(candidates, candidates_tot, 1, MPI_INTEGER, MPI_SUM,MPI_COMM_WORLD, info)
+#else
+      nunbound_tot=nunbound
+      candidates_tot=candidates
+#endif
+      if (myid==1) then
+        write(*,'(A6,I10,A30,I10,A12)') " Found", nunbound_tot, "unbound particles out of ", candidates_tot, " candidates"
+      endif
     endif
-  endif
-   
 
-
-
-
-
-
-
-
-  !=========================================
-  ! After unbinding: Do merger tree stuff
-  !=========================================
-
-
-  ! After the loop: Dissolve too small halos, sum up masses if necessary
-  if (make_mergertree) then
-    call dissolve_small_clumps(0, .true.)
   
+  ! After the loop: Dissolve too small halos (namegivers)
+  call dissolve_small_clumps(0, .true., .false.)
 
+
+  else ! if npeaks_tot == 0
+    if(myid==1) write(*,*) "I have no clumps to work with. Skipping unbinding."
+  endif
+
+
+
+
+
+
+  !=================
+  ! Write output
+  !=================
+
+#ifndef MTREEDEBUG
+  ! if there are no clumps yet, the output directories haven't been made yet.
+  ! if not MTREEDEBUG, the directories haven't been necessary yet.
+  call title(ifout, nchar)
+  filedir = 'output_'//TRIM(nchar)
+  call create_output_dirs(filedir)
+#endif
+
+  call title(myid, nchar2)
+  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
+
+  open(unit=666,file=fileloc,form='unformatted')
+  
+  ipart=0
+  do i=1,npartmax
+    if(levelp(i)>0)then
+      ipart=ipart+1
+      clump_ids(ipart)=clmpidp(i)
+    endif
+  enddo
+  write(666) clump_ids
+  close(666)
+
+  ! create_output = .true., otherwise unbdinging() wouldn't have been called
+  if(particlebased_clump_output.and.npeaks_tot>0)then
+    if(myid==1)write(*,*)"Outputing clump properties to disc."
+    call write_clump_properties(.true.)
+  endif
+
+
+
+
+
+
+  !=========================================
+  ! After unbinding: Do mergertree stuff
+  !=========================================
+
+  if (make_mergertree) then
+    ! sum up masses if necessary 
     if (.not. use_exclusive_mass .or. make_mock_galaxies) then
       ! recompute clmp_mass_pb if necessary
       ! clmp_mass_pb will only be needed in any of the two cases in the if-condition
@@ -360,34 +443,15 @@ subroutine unbinding()
     ! now scatter to virtuals
     call boundary_peak_dp(clmp_mass_pb(:))
 
+#ifdef MTREEDEBUG
+    call mtreedebug_dump_unbinding_data('after')
+#endif
+
     ! Now call mergertree
     call make_merger_tree()
 
   endif
- 
 
-
-
-
-  !=================
-  ! Write output
-  !=================
-
-  call title(myid, nchar2)
-  fileloc=TRIM(filedir)//'/unbinding_'//TRIM(nchar)//'.out'//TRIM(nchar2)
-
-  open(unit=666,file=fileloc,form='unformatted')
-  
-
-  ipart=0
-  do i=1,npartmax
-    if(levelp(i)>0)then
-      ipart=ipart+1
-      clump_ids(ipart)=clmpidp(i)
-    endif
-  enddo
-  write(666) clump_ids
-  close(666)
 
 
   !====================
@@ -520,7 +584,7 @@ subroutine get_clumpparticles()
           if(ipeak/=new_peak_local_id) then 
             ! It might happen that the parent peak doesn't have a 
             ! particle linked list yet (on this processor).
-            if (nclmppart(new_peak_local_id)>0) then !particle ll exists
+            if (nclmppart(new_peak_local_id)>0) then ! particle ll exists
               clmppart_next(clmppart_last(new_peak_local_id))=clmppart_first(ipeak)
             else
               clmppart_first(new_peak_local_id)=clmppart_first(ipeak)
@@ -538,7 +602,7 @@ end subroutine get_clumpparticles
 !########################################
 !########################################
 !########################################
-subroutine get_clump_properties_pb(first)
+subroutine get_clump_properties_pb(first, ilevel)
   use amr_commons
 #ifdef UNBINDINGCOM
   use pm_commons, only: mp, vp, xp
@@ -549,6 +613,7 @@ subroutine get_clump_properties_pb(first)
   implicit none
 
   logical, intent(in) :: first  ! if it is the first time calculating
+  integer, intent(in) :: ilevel ! current clump level
 
   !--------------------------------------------------------------------------
   ! This subroutine computes the particle-based properties of the clumps:
@@ -640,13 +705,13 @@ subroutine get_clump_properties_pb(first)
             endif
 
             do i=1,3
-              clmp_com_pb(ipeak,i)=clmp_com_pb(ipeak,i)+(xp(thispart,i)+period(i))*mp(thispart) !get center of mass sum       
+              clmp_com_pb(ipeak,i)=clmp_com_pb(ipeak,i)+(xp(thispart,i)+period(i))*mp(thispart) ! get center of mass sum       
             enddo
 #endif            
 
             clmp_mass_pb(ipeak)=clmp_mass_pb(ipeak)+mp(thispart)
             do i=1,3
-              clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
+              clmp_vel_pb(ipeak,i)=clmp_vel_pb(ipeak,i)+vp(thispart,i)*mp(thispart) ! get velocity sum
             enddo
           else
             contributes(thispart)=.true.   ! reset value
@@ -662,19 +727,31 @@ subroutine get_clump_properties_pb(first)
   ! communicate clump mass and velocity across processors
   !----------------------------------------------------------------------
   call build_peak_communicator
-  call virtual_peak_dp(clmp_mass_pb,'sum')        !collect
-  call boundary_peak_dp(clmp_mass_pb)             !scatter
+  call virtual_peak_dp(clmp_mass_pb,'sum')        ! collect
+  call boundary_peak_dp(clmp_mass_pb)             ! scatter
   do i=1,3
 #ifdef UNBINDINGCOM
-    call virtual_peak_dp(clmp_com_pb(1,i),'sum')  !collect
-    call boundary_peak_dp(clmp_com_pb(1,i))       !scatter
+    call virtual_peak_dp(clmp_com_pb(1,i),'sum')  ! collect
+    call boundary_peak_dp(clmp_com_pb(1,i))       ! scatter
 #endif
-    call virtual_peak_dp(clmp_vel_pb(1,i),'sum')  !collect
-    call boundary_peak_dp(clmp_vel_pb(1,i))       !scatter
+    call virtual_peak_dp(clmp_vel_pb(1,i),'sum')  ! collect
+    call boundary_peak_dp(clmp_vel_pb(1,i))       ! scatter
   enddo
 
-  do ipeak=1, hfree-1
 
+  !----------------------------------------------------------------------
+  ! Cleanup: Dissolve clumps that are too small to start with
+  !----------------------------------------------------------------------
+  if (first) then
+    call dissolve_small_clumps(ilevel, .false., .true.)
+  endif
+
+
+  !----------------------------------------------------------------------
+  ! Now compute the actual clump properties of the remaining clumps
+  !----------------------------------------------------------------------
+
+  do ipeak=1, hfree-1
     check = to_iter(ipeak)
     check = check .and. clmp_mass_pb(ipeak)>0
 
@@ -715,7 +792,7 @@ subroutine get_clump_properties_pb(first)
           thispart=clmppart_next(thispart)
 
         enddo
-        if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
+        if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) ! write if you have a result
       endif ! to iterate
 #endif
 
@@ -759,7 +836,7 @@ subroutine get_clump_properties_pb(first)
             ! & clmp_vel_sq_pb_old(ipeak), "new:", vsq, "ratio",  abs( sqrt(clmp_vel_sq_pb_old(ipeak)/vsq) - 1.0),&
             ! & "v_bulk=", sqrt(vsq)
           else
-            loop_again=.true. !repeat
+            loop_again=.true. ! repeat
           endif
         endif
       enddo
@@ -779,7 +856,6 @@ subroutine get_cmp_iter()
   use clfind_commons
   use mpi_mod
   implicit none
-
   !-------------------------------------------------------------
   ! Get cumulative mass profiles with the center of the clump
   ! set as the center of mass of the clump. The center of mass
@@ -799,7 +875,7 @@ subroutine get_cmp_iter()
   if(verbose) write(*,*) "Entered get cumulative mass profiles"
 
   if (logbins) then
-    !get minimal distance:
+    ! get minimal distance:
     levelmax=0
     do i=1,nlevelmax
        if(numbtot(1,i)>0) levelmax=levelmax+1
@@ -820,17 +896,16 @@ subroutine get_cmp_iter()
 
   do ipeak=1, hfree-1
 
-    !peak must have need to be reiterated
-    check=to_iter(ipeak)
-    check=check.and.nclmppart(ipeak)>0           !peak must have particles on this processor      
+    ! peak must have need to be reiterated
+    check=to_iter(ipeak)                         ! =.true. for namegivers for the first computation
+    check=check.and.nclmppart(ipeak)>0           ! peak must have particles on this processor
 
-    !reset values
+    ! reset values
     if (check .or. ipeak > npeaks) then
       do i = 1, nmassbins
         cmp(ipeak,i) = 0.0
       enddo
     endif
-
 
     if (check) then
       !------------------------------------------
@@ -844,7 +919,7 @@ subroutine get_cmp_iter()
         do i=1, nmassbins-1
           cmp_distances(ipeak,i)=rmin*(cmp_distances(ipeak,nmassbins)/rmin)**(real(i)/real(nmassbins))
         enddo
-      else !linear binnings
+      else ! linear binnings
         r_null=cmp_distances(ipeak,nmassbins)/real(nmassbins)
         do i=0, nmassbins-1
           cmp_distances(ipeak,i)=r_null*i
@@ -863,7 +938,7 @@ subroutine get_cmp_iter()
       ! calculate particle distance to CoM
       !---------------------------------------------
       thispart=clmppart_first(ipeak)
-      do ipart=1, nclmppart(ipeak)!while there is a particle linked list
+      do ipart=1, nclmppart(ipeak)! while there is a particle linked list
         if (contributes(thispart)) then
           period=0d0
           if (periodical) then
@@ -949,7 +1024,7 @@ subroutine get_cmp_noiter()
   if(verbose) write(*,*) "Entered get cumulative mass profiles"
 
   if (logbins) then
-    !get minimal distance:
+    ! get minimal distance:
     levelmax=0
     do i=1,nlevelmax
        if(numbtot(1,i)>0) levelmax=levelmax+1
@@ -994,7 +1069,7 @@ subroutine get_cmp_noiter()
         thispart=clmppart_next(thispart)
       enddo
 
-      if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) !write if you have a result
+      if (biggest>0.0) cmp_distances(ipeak,nmassbins)=sqrt(biggest) ! write if you have a result
     endif
   enddo     ! over all peaks
 
@@ -1443,7 +1518,6 @@ subroutine particle_unbinding(ipeak, final_round)
     ! compute the potential for this peak on the points of the mass bin distances
     call compute_phi(ipeak)
 
-
     !-----------------------------------------------
     ! If not namegiver
     !-----------------------------------------------
@@ -1737,7 +1811,6 @@ subroutine compute_phi(ipeak)
   real(dp) :: delta,add
   integer  :: i
 
-
   ! compute part of integral/sum for each bin
   phi_unb(nmassbins)=0.0
   do i=2,nmassbins
@@ -1747,8 +1820,8 @@ subroutine compute_phi(ipeak)
   delta=cmp_distances(ipeak,1)-cmp_distances(ipeak,0)
   phi_unb(0)=-0.5*GravConst*(cmp(ipeak,1)/cmp_distances(ipeak,1)**2)*delta
 
-  !sum bins up
-  !does not need to be done for i=nmassbins!
+  ! sum bins up
+  ! does not need to be done for i=nmassbins!
   add=-cmp(ipeak,nmassbins)/cmp_distances(ipeak,nmassbins)*GravConst !-G*M_tot/r_max
   do i=nmassbins-1,0,-1
     phi_unb(i)=phi_unb(i)+phi_unb(i+1) ! stops at phi_unb(1)
@@ -1758,9 +1831,295 @@ subroutine compute_phi(ipeak)
 
 
 end subroutine compute_phi 
-!###############################################
-!###############################################
-!###############################################
+!######################################################################
+!######################################################################
+!######################################################################
+subroutine dissolve_small_clumps(ilevel, for_halos, initial_cleanup)
+
+  !----------------------------------------------------------------------
+  ! Dissolve clumps with too small mass into parents/nothing.
+  ! Clump is required to have at least mass_threshold number of
+  ! its own particles.
+  ! If mass_threshold <= 2, not removing clumps can be dangerous and 
+  ! lead to floating point exceptions and crashes further down in the 
+  ! code when computing clump properties.
+  !----------------------------------------------------------------------
+
+  use amr_commons
+  use clfind_commons
+  use mpi_mod
+
+  implicit none
+
+  integer, intent(in) :: ilevel
+  logical, intent(in) :: for_halos ! whether to do it for halos or for subhalos
+  logical, intent(in) :: initial_cleanup ! if it's the initial cleanup
+  integer :: killed, appended
+  integer :: ipeak, ipart, thispart, particle_local_id
+
+#ifndef WITHOUTMPI
+  integer, dimension(1:2) :: buf
+  integer                 :: info
+#endif
+
+
+
+  !------------------------------------
+  ! Kill or append too small clumps
+  !------------------------------------
+
+  if (.not. initial_cleanup) call get_exclusive_clump_mass(ilevel) ! subroutine further below
+
+  killed = 0; appended = 0
+
+  if (initial_cleanup) then
+    ! remove all clumps that have no chance of having at least
+    ! mass_threshold number of particles. Particle linked lists
+    ! have been appended to parent clumps, so there should be no
+    ! danger there. No need to care whether it's a namegiver or not.
+
+    do ipeak=1, hfree-1
+      if (lev_peak(ipeak) == ilevel) then
+
+        ! if there are too few particles in there and clump is relevant (don't do unnecessary things for irrelevant stuff)
+        ! for initial cleanup, look at inclusive clump mass, not exclusive
+        if ( relevance(ipeak)    > relevance_threshold             .and. &
+             clmp_mass_pb(ipeak) < (mass_threshold * partm_common) .and. &
+             clmp_mass_pb(ipeak) > 0) then
+
+          if (is_namegiver(ipeak)) then
+            !--------------------------------
+            ! if clump is namegiver, kill it
+            !--------------------------------
+
+            if(ipeak <= npeaks) killed = killed + 1 ! count only non-virtuals
+            
+            ! remove particles from clump
+            thispart = clmppart_first(ipeak)
+            do ipart = 1, nclmppart(ipeak)
+
+              if (clmpidp(thispart) > 0) then
+                ! no need to check that you're not removing particles of children:
+                ! clmp_mass_pb at the first iteration includes all children particles as well
+                ! so if halo has too little mass, children will as well
+                ! otherwise, children's particles might be re-added to parent later
+                clmpidp(thispart) = 0
+              endif
+              thispart = clmppart_next(thispart)
+
+            enddo
+
+            nclmppart(ipeak) = 0
+            clmp_mass_pb(ipeak) = 0
+            clmp_mass_exclusive(ipeak) = 0
+
+          else
+            !--------------------------------------------------
+            ! if clump isn't namegiver, append it to parent
+            !--------------------------------------------------
+            if(ipeak <= npeaks) appended = appended + 1 ! count only non-virtuals
+
+            ! remove particles from clump
+            thispart = clmppart_first(ipeak)
+            do ipart = 1, nclmppart(ipeak)
+
+              if (clmpidp(thispart) > 0) then
+                call get_local_peak_id(clmpidp(thispart), particle_local_id)
+                if (particle_local_id == ipeak) then
+                  clmpidp(thispart) = new_peak(ipeak)
+                endif
+              endif
+              thispart = clmppart_next(thispart)
+
+            enddo
+
+            nclmppart(ipeak) = 0
+            clmp_mass_pb(ipeak) = 0
+            clmp_mass_exclusive(ipeak) = 0
+
+          endif ! namegiver or not
+        endif ! if too small
+      endif ! correct peak level
+    enddo ! all peaks
+
+
+
+  else ! not initial cleanup
+    do ipeak=1, hfree-1
+      if (lev_peak(ipeak) == ilevel) then
+
+        ! if there are too few particles in there, but at least 1 (i.e. don't do it for noise)
+        if (relevance(ipeak)           > relevance_threshold             .and. &
+            clmp_mass_exclusive(ipeak) < (mass_threshold * partm_common) .and. &
+            clmp_mass_exclusive(ipeak) > 0) then
+
+          if (is_namegiver(ipeak) .and. for_halos) then
+            !--------------------------------
+            ! if clump is namegiver, kill it
+            !--------------------------------
+
+            if(ipeak <= npeaks) killed = killed + 1 ! count only non-virtuals
+            
+            ! remove particles from clump
+            thispart = clmppart_first(ipeak)
+            do ipart = 1, nclmppart(ipeak)
+
+              if (clmpidp(thispart) > 0) then
+                call get_local_peak_id(clmpidp(thispart), particle_local_id)
+                if (particle_local_id == ipeak) then
+                  clmpidp(thispart) = 0
+                endif
+              endif
+              thispart = clmppart_next(thispart)
+
+            enddo
+
+            nclmppart(ipeak) = 0
+            clmp_mass_pb(ipeak) = 0
+            clmp_mass_exclusive(ipeak) = 0
+
+          elseif (.not.is_namegiver(ipeak) .and. .not.for_halos) then
+            !---------------------------------------------------
+            ! if clump isn't namegiver, add particles to parent
+            !---------------------------------------------------
+
+            if(ipeak <= npeaks) appended = appended + 1 ! count only non-virtuals
+
+            ! remove particles from clump
+            thispart = clmppart_first(ipeak)
+            do ipart = 1, nclmppart(ipeak)
+
+              if (clmpidp(thispart) > 0) then
+                call get_local_peak_id(clmpidp(thispart), particle_local_id)
+                if (particle_local_id == ipeak) then
+                  clmpidp(thispart) = new_peak(ipeak)
+                endif
+              endif
+              thispart = clmppart_next(thispart)
+
+            enddo
+
+            nclmppart(ipeak) = 0
+            clmp_mass_pb(ipeak) = 0
+            clmp_mass_exclusive(ipeak) = 0
+
+          endif ! namegiver or not
+        endif ! if too small
+      endif ! correct peak level
+    enddo ! all peaks
+  endif ! initial cleanup
+
+
+
+
+  !---------------------------------------
+  ! speak to me
+  !---------------------------------------
+
+
+  killed_tot = killed_tot + killed
+  appended_tot = appended_tot + appended
+
+
+
+
+  if (for_halos) then
+    ! this is the last time this routine is called for this snapshot. Write some
+    ! infos.
+
+#ifndef WITHOUTMPI
+    buf = (/killed_tot, appended_tot/)
+    if (myid == 1) then
+      call MPI_REDUCE(MPI_IN_PLACE, buf, 2, MPI_INTEGER,MPI_SUM, 0, MPI_COMM_WORLD, info)
+      killed_tot = buf(1)
+      appended_tot = buf(2)
+    else
+      call MPI_REDUCE(buf, buf, 2, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, info)
+    endif
+#endif
+
+    if(myid == 1) then
+      write(*,'(A39,I12,A8)')  " Handling too small clumps: Dissolved ", killed_tot,   " halos;" 
+      write(*,'(A39,I12,A19)') "                               Merged ", appended_tot, " to their parents."
+    endif
+
+    ! reset values for next output step
+    killed_tot = 0
+    appended_tot = 0
+
+  endif
+
+
+
+
+  contains
+    !==============================================
+    subroutine get_exclusive_clump_mass(ilevel)
+    !==============================================
+
+      use clfind_commons
+      use pm_commons, only: mp!, vp
+
+      implicit none
+      integer, intent(in) :: ilevel
+      integer             :: ipeak, ipart, thispart!, i
+
+      !----------------------------------------------------
+      ! recompute clump properties after unbinding
+      !----------------------------------------------------
+
+      do ipeak=1, hfree-1 ! loop over all peaks
+ 
+        ! reset values for virtual peaks to communicate multiple times
+        if (ipeak > npeaks) then
+          clmp_mass_exclusive(ipeak) = 0
+          ! clmp_vel_exclusive(ipeak,:) = 0
+        endif
+
+        if (lev_peak(ipeak) == ilevel ) then
+
+          clmp_mass_exclusive(ipeak) = 0
+          ! clmp_vel_exclusive(ipeak,:) = 0
+
+          if (nclmppart(ipeak) > 0 ) then
+            ! if there is work to do on this processing unit for this peak
+            thispart=clmppart_first(ipeak)
+            
+            do ipart=1, nclmppart(ipeak)        ! while there is a particle linked list
+              if (clmpidp(thispart) > 0) then
+                call get_local_peak_id(clmpidp(thispart), particle_local_id)
+                if (particle_local_id == ipeak) then
+                  clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
+                  ! do i=1,3
+                  !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) ! get velocity sum
+                  ! enddo
+                endif
+              endif
+
+              thispart=clmppart_next(thispart) ! go to next particle in linked list
+            enddo   ! loop over particles
+          endif     ! clump has particles on this processor
+        endif       ! there is work for this peak on this processor
+      enddo         ! loop over peaks
+
+
+      !----------------------------------------------------------
+      ! communicate clump mass and velocity across processors
+      !----------------------------------------------------------
+      call build_peak_communicator
+      call virtual_peak_dp(clmp_mass_exclusive,'sum')       ! collect
+      call boundary_peak_dp(clmp_mass_exclusive)            ! scatter
+      ! do i=1,3
+      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  ! collect
+      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       ! scatter
+      ! enddo
+
+    end subroutine get_exclusive_clump_mass
+
+end subroutine dissolve_small_clumps
+
+
+
 subroutine allocate_unbinding_arrays()
   use clfind_commons
   use pm_commons, only:npartmax
@@ -1889,7 +2248,5 @@ end subroutine deallocate_unbinding_arrays
 !############################################
 !############################################
 !############################################
-
-
 ! endif: NDIM == 3
 #endif

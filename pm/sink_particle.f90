@@ -1573,8 +1573,10 @@ subroutine true_max(x,y,z,ilevel)
   real(dp)::det,dx,dx_loc,scale,disp_max,numerator
   real(dp),dimension(-1:1,-1:1,-1:1)::cube3
   real(dp),dimension(1:threetondim,1:ndim)::xtest
+  real(dp),dimension(1:nvector,1:ndim)::xtest_copy
   real(dp),dimension(1:ndim)::gradient,displacement
   real(dp),dimension(1:ndim,1:ndim)::hess,minor
+  real(dp)::smallreal=1d-100
 
 #if NDIM==3
 
@@ -1597,8 +1599,11 @@ subroutine true_max(x,y,z,ilevel)
 
   do ioft=0, threetondim-1, nvector
      n=min(threetondim-ioft, nvector)
+     do i=1,n
+       xtest_copy(i,1:ndim) = xtest(ioft+i,1:ndim)
+     enddo
      call get_cell_index(cell_index(ioft+1:ioft+n), cell_lev(ioft+1:ioft+n), &
-          &  xtest(ioft+1:ioft+n,1:ndim), ilevel, n)
+          &  xtest_copy, ilevel, n)
   end do
 
   counter=0
@@ -1664,7 +1669,7 @@ subroutine true_max(x,y,z,ilevel)
   do i=1,ndim
      do j=1,ndim
         numerator = gradient(j)*minor(i,j)
-        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+10d0*numerator*tiny(0d0))
+        if(numerator>0) displacement(i)=displacement(i)-numerator/(det+smallreal*numerator)
      end do
   end do
 

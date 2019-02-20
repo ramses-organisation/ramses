@@ -1,5 +1,16 @@
-!--------------------------------------------------------
-! Merger Tree patch. See README for more information.
+!-----------------------------------------------------------------
+! This file contains the routines for the merger tree patch.
+! See README for more information.
+!
+! There are two optional preprocessing definitions for this patch
+! only:
+! -DUNBINDINGCOM
+!   use (and iteratively determine) the center of mass as the
+!   center of clumps
+! -DMTREEDEBUG
+!   create a lot of formatted output to help debugging the merger
+!   tree routines. Don't use this unless you're fighting bugs, it
+!   will create a looooot of otherwise unnecessary output.
 !
 !
 ! Contains:
@@ -20,9 +31,17 @@
 ! subroutine fill_matrix()
 ! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
-! subroutine dissolve_small_clumps()
-!  contains subroutine get_exclusive_clump_mass()
-!--------------------------------------------------------
+! #ifdef MTREEDEBUG:
+! subroutine mtreedebug_filename()
+! subroutine mtreedebug_matrixcheck_prog()
+! subroutine mtreedebug_matrixcheck_desc()
+! subroutine mtreedebug_dump_unbinding_data()
+! subroutine mtreedebug_dump_written_progenitor_data()
+! subroutine mtreedebug_dump_written_past_merged_progenitor_data()
+! subroutine mtreedebug_dump_prog_metadata()
+! subroutine mtreedebug_dump_mostbound_lists()
+! #endif
+!-----------------------------------------------------------------
 
 
 
@@ -216,10 +235,12 @@ subroutine process_progenitor_data()
     pmprogs_mass(i) = dummy_real(sort_ind_past(i))
   enddo
 
-  dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
-  do i = 1, npastprogs
-    pmprogs_mass(i) = dummy_real(sort_ind_past(i))
-  enddo
+  if (make_mock_galaxies) then
+    dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
+    do i = 1, npastprogs
+      pmprogs_mass(i) = dummy_real(sort_ind_past(i))
+    enddo
+  endif
 
   deallocate(dummy, dummy_real, sort_ind_past)
 
@@ -246,6 +267,7 @@ subroutine process_progenitor_data()
     endif
   enddo
 
+
   igalaxy = 1
   ipastprog = 1
 
@@ -262,7 +284,7 @@ subroutine process_progenitor_data()
   ! to find matches.
   !--------------------------------------------------------------
 
-  do while ( ipart <= npartmax)
+  do while (ipart <= npartmax)
 
     !-------------------------------------------------------------------------------------
     ! Check for tracers and past progenitor galaxies while itrace <= nprogs*nmost_bound 
@@ -290,8 +312,8 @@ subroutine process_progenitor_data()
             exit
           endif
         enddo
-        ipart = ipart + 1
 
+        ipart = ipart + 1
 
       else
         !----------------
@@ -314,6 +336,23 @@ subroutine process_progenitor_data()
             igalaxy = igalaxy + 1
             exit
           else
+            exit
+          endif
+        enddo
+
+        ! before raising local particle index, check whether you own a past progenitor
+        ! no need to check whether npastprogs > 0: arrays are allocated
+        ! (1:npastprogs+nprogs) to have extra space in case new progs
+        ! need to be added to the list
+        do while (ipastprog <= npastprogs)
+          if (pmprogs_galaxy(ipastprog) < idp_copy(ipart)) then
+              ipastprog = ipastprog + 1
+          else if (pmprogs_galaxy(ipastprog) == idp_copy(ipart)) then 
+            ! you found a match!
+            pmprogs_owner(ipastprog) = myid
+            if (make_mock_galaxies) orphans_local_pid(ipastprog) = part_local_ind(ipart)
+            ipastprog = ipastprog + 1
+          else  
             exit
           endif
         enddo
@@ -345,8 +384,8 @@ subroutine process_progenitor_data()
     enddo
 
     if (ipastprog > npastprogs) exit
-    ipart = ipart + 1
 
+    ipart = ipart + 1
   enddo
 
 
@@ -372,7 +411,6 @@ subroutine process_progenitor_data()
   deallocate(tracers_all) 
   deallocate(tracer_loc_progids_all)
   
-
 
 
 #ifndef WITHOUTMPI
@@ -461,7 +499,7 @@ subroutine create_prog_desc_links()
     if (clmpidp(tracers_loc_pid(ipart)) /= 0) then
       call fill_matrix(p2d_links, tracer_loc_progids(ipart), clmpidp(tracers_loc_pid(ipart)), 1, 'add')
     else
-      i = i + 1 !count how many zeros 
+      i = i + 1 ! count how many zeros 
     endif
   enddo
 
@@ -537,7 +575,7 @@ subroutine create_prog_desc_links()
 
           idesc = p2d_links%first(iprog)
 
-          !for each descendant:
+          ! for each descendant:
           do i = 1, p2d_links%cnt(iprog)
             sendbuf(ind) = p2d_links%clmp_id(idesc)
             sendbuf(ind+1) = p2d_links%ntrace(idesc)
@@ -766,10 +804,6 @@ subroutine make_trees()
   real(dp):: r_null
   logical :: found, reiter
 
-  ! For debug
-  ! character(len=80) :: filename
-  ! character(len=5)  :: id_to_string, output_to_string
-
   if (verbose) write(*,*) "making trees."
 
 
@@ -829,6 +863,9 @@ subroutine make_trees()
 #endif
 
 
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_prog(.true.)
+#endif
 
   
   !-------------------------------------------------------------
@@ -882,54 +919,9 @@ subroutine make_trees()
   peakshift = 10*(ipeak_start(ncpu)+npeaks_max)
 
  
-    !-----------------------------------------------------------------------------------------------------
-    ! if (debug) then
-    ! call title(ifout, output_to_string)
-    ! call title(myid, id_to_string)
-    ! filename = "output_"//output_to_string//"/MATRIXCHECK_PROG_BEFORE_TREE"//id_to_string//".txt"
-    ! open(unit=666, file=filename, form='formatted')
-    ! write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
-    ! do iprog = 1, nprogs
-    !   if (p2d_links%cnt(iprog) > 0) then
-    !     write(666, '(4(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !       "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
-    !       "owner:", prog_owner(iprog), "mass:", prog_mass(iprog), "main desc:", main_desc(iprog)
-    !
-    !     ipeak = p2d_links%first(iprog)
-    !     do i = 1, p2d_links%cnt(iprog)
-    !       call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
-    !       write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl, &
-    !         "tracers:", p2d_links%ntrace(ipeak)
-    !       ipeak = p2d_links%next(ipeak)
-    !     enddo
-    !     write(666,*)
-    !   endif
-    !
-    ! enddo
-    ! close(666)
-    !
-    ! filename = "output_"//output_to_string//"/MATRIXCHECK_DESC_BEFORE_TREE"//id_to_string//".txt"
-    ! open(unit=666, file=filename, form='formatted')
-    ! write(666,'(A30,x,I9)') "MATRIXCHECK BEFORE TREE ID", myid
-    ! do ipeak = 1, hfree-1
-    !   if (d2p_links%cnt(ipeak) > 0) then
-    !     write(666, '(2(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !       "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
-    !        "mass:", clmp_mass_exclusive(ipeak), "main prog:", main_prog(ipeak)
-    !
-    !     iprog = d2p_links%first(ipeak)
-    !     do i = 1, d2p_links%cnt(ipeak)
-    !       write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", d2p_links%clmp_id(iprog), &
-    !         "tracers:", d2p_links%ntrace(iprog)
-    !       iprog = d2p_links%next(iprog)
-    !     enddo
-    !     write(666,*)
-    !   endif
-    !
-    ! enddo
-    ! close(666)
-    ! endif
-    !-----------------------------------------------------------------------------------------------------
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_desc(.true.)
+#endif
 
 
   !==================================
@@ -1086,7 +1078,7 @@ subroutine make_trees()
     call boundary_peak_dp(merit_desc(:))
 
     do ipeak = 1, hfree-1
-      if ( to_iter(ipeak)) then
+      if (to_iter(ipeak)) then
         if (merit_desc_copy(ipeak) > merit_desc(ipeak)) then
           ! if you don't have the best candidate, reset
           main_prog(ipeak) = 0
@@ -1130,59 +1122,11 @@ subroutine make_trees()
   deallocate(to_iter_prog)
 
 
-    !-----------------------------------------------------------------------------------------------------
-    ! if (debug) then
-    !   call title(ifout, output_to_string)
-    !   call title(myid, id_to_string)
-    !   filename = "output_"//output_to_string//"/MATRIXCHECK_PROG_AFTER_TREE"//id_to_string//".txt"
-    !   open(unit=666, file=filename, form='formatted')
-    !   write(666,'(A30,x,I9)') "MATRIXCHECK AFTER TREE ID", myid
-    !
-    !   do iprog = 1, nprogs
-    !     if (p2d_links%cnt(iprog) > 0) then
-    !       write(666, '(4(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !         "Prog:", prog_id(iprog), "local id: ", iprog, "# desc:", p2d_links%cnt(iprog), &
-    !         "owner:", prog_owner(iprog), "mass:", prog_mass(iprog), "main desc:", main_desc(iprog)
-    !
-    !       ipeak = p2d_links%first(iprog)
-    !       do i = 1, p2d_links%cnt(iprog)
-    !         call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
-    !         write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), &
-    !           idl,"tracers:", p2d_links%ntrace(ipeak)
-    !         ipeak = p2d_links%next(ipeak)
-    !       enddo
-    !       write(666,*)
-    !     endif
-    !   enddo
-    !
-    !   close(666)
-    !
-    !   filename = "output_"//output_to_string//"/MATRIXCHECK_DESC_AFTER_TREE"//id_to_string//".txt"
-    !   open(unit=666, file=filename, form='formatted')
-    !   write(666,'(A30,x,I9)') "MATRIXCHECK AFTER TREE ID", myid
-    !
-    !   do ipeak = 1, hfree-1
-    !     if (d2p_links%cnt(ipeak) > 0) then
-    !       write(666, '(2(A10,x,I9x),A7,x,E14.6,x,A10,x,I9,8x)', advance='no') &
-    !         "Desc:", ipeak, "# progs:", d2p_links%cnt(ipeak), &
-    !          "mass:", clmp_mass_exclusive(ipeak), "main prog", main_prog(ipeak)
-    !
-    !       iprog = d2p_links%first(ipeak)
-    !       do i = 1, d2p_links%cnt(ipeak)
-    !         write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", d2p_links%clmp_id(iprog), &
-    !           "tracers:", d2p_links%ntrace(iprog)
-    !         iprog = d2p_links%next(iprog)
-    !       enddo
-    !       write(666,*)
-    !     endif
-    !   enddo
-    !
-    !   close(666)
-    ! endif
-    !-----------------------------------------------------------------------------------------------------
-
+#ifdef MTREEDEBUG
+  call mtreedebug_matrixcheck_prog(.false.)
+  call mtreedebug_matrixcheck_desc(.false.)
+#endif
   return
-
 
 
 
@@ -1855,80 +1799,183 @@ subroutine read_progenitor_data()
   integer           :: nprogs_to_read, progcount_to_read, np
   integer           :: iprog, i
   character(LEN=80) :: fileloc
-  character(LEN=5)  :: output_to_string
+  character(LEN=5)  :: output_to_string, id_to_string
   logical           :: exists
 
-  integer, allocatable, dimension(:) :: read_buffer       ! temporary array for reading in data
-  real(dp),allocatable, dimension(:) :: read_buffer_2     ! temporary array for reading in data
+  integer, allocatable, dimension(:) :: read_buffer_int   ! temporary array for reading in data
+  real(dp),allocatable, dimension(:) :: read_buffer_real  ! temporary array for reading in data
   real(dp),allocatable, dimension(:) :: read_buffer_mpeak ! temporary array for reading in mock galaxy data
+  integer, allocatable, dimension(:) :: buffer_int_all    ! collective data 
+  real(dp),allocatable, dimension(:) :: buffer_real_all   ! collective data 
+  real(dp),allocatable, dimension(:) :: buffer_mpeak_all  ! collective data 
 
 #ifndef WITHOUTMPI
-  integer, dimension (1:MPI_STATUS_SIZE) :: state
-  integer, dimension(1:4)                :: buf
-  integer                                :: mpi_err, filehandle
+  integer                            :: mpi_err
+  integer, allocatable, dimension(:) :: recvcount, displacements
 #endif
 
   if (verbose) write(*,*) " Calling read progenitor data."
 
   call title(ifout-1, output_to_string)
+  call title(myid, id_to_string)
   ! ifout -1: read from previous output!
   nprogs = 0
   nprogs_to_read = 0
   progcount_to_read = 0
 
 
-
-  !========================
-  ! Read progenitor counts
-  !========================
-
-  if (myid == 1) then ! read in stuff
-    
-    !-------------------------------------------------------------
-    ! Current progenitor counts
-    ! Both of these count files need to be present in any case.
-    !-------------------------------------------------------------
-
-    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitorcount.dat')
-
-    ! check that file exists
-    inquire(file=fileloc, exist=exists)
-    if (.not.exists) then
-      write(*, *) "ID", myid, "didn't find file ", fileloc
-      stop
-    endif
-
-
-    open(unit=666,file=fileloc,form='unformatted')
-    read(666) nprogs, nprogs_to_read, progcount_to_read, npastprogs
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! read(666, '(2(I7,x))') nprogs, nprogs_to_read
-    close(666)
-
-
-  endif
-
-
-#ifndef WITHOUTMPI
-  buf = (/nprogs, progcount_to_read, nprogs_to_read, npastprogs/)
-  call MPI_BCAST(buf, 4, MPI_INTEGER, 0, MPI_COMM_WORLD, mpi_err)
-  nprogs = buf(1)
-  progcount_to_read = buf(2)
-  nprogs_to_read = buf(3)
-  npastprogs = buf(4)
-#endif
-  
-
-
-
-
   !==================================
   ! READ CURRENT PROGENITOR DATA
   !==================================
 
+
+  !--------------------------------
+  ! Read progenitor particles
+  !--------------------------------
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
+
+  inquire(file=fileloc, exist=exists)
+  if (.not.exists) then
+    write(*,*) "ID", myid, "didn't find file ", fileloc
+    call clean_stop
+  endif
+
+  open(unit=666,file=fileloc,form='unformatted')
+  read(666) np                  ! number of unique progenitors in this file
+  read(666) progcount_to_read   ! number of integers that needs to be read
+  if (progcount_to_read>0) then
+    allocate(read_buffer_int(1:progcount_to_read))
+    read(666) read_buffer_int
+  else
+    ! safety measure
+    allocate(read_buffer_int(1:1))
+    read_buffer_int = 0
+  endif
+  close(666)
+
+
+
+
+  !--------------------------------
+  ! Read progenitor masses
+  !--------------------------------
+
+  if (progcount_to_read > 0) then 
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
+
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*, *) "ID", myid, "didn't find file ", fileloc
+      call clean_stop
+    endif
+
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) nprogs_to_read    ! number of progenitors, virtual and not, in this file
+    allocate(read_buffer_real(1:nprogs_to_read))
+    read(666) read_buffer_real
+    if (make_mock_galaxies) then
+      allocate(read_buffer_mpeak(1:nprogs_to_read))
+      read(666) read_buffer_mpeak
+    endif
+    close(666)
+  
+  else
+    
+    ! safety measure
+    allocate(read_buffer_real(1:1))
+    read_buffer_real = 0
+    if (make_mock_galaxies) then
+      allocate(read_buffer_mpeak(1:1))
+      read_buffer_mpeak = 0
+    endif
+
+  endif
+
+
+
+  !-------------------------------
+  ! Share the data you just read
+  !-------------------------------
+
+#ifndef WITHOUTMPI
+  allocate(recvcount(1:ncpu))
+  allocate(displacements(1:ncpu))
+
+
+  ! Communicate progenitor data
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  call MPI_ALLGATHER(progcount_to_read, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
+  ! overwrite progcount_to_read with total number of integers in common array
+  progcount_to_read = sum(recvcount)
+
+  displacements=0
+  do i=1, ncpu-1
+    displacements(i+1) = displacements(i) + recvcount(i)
+  enddo
+
+  allocate(buffer_int_all(1:progcount_to_read))
+  call MPI_ALLGATHERV(read_buffer_int, recvcount(myid), MPI_INT, buffer_int_all, recvcount, displacements, MPI_INT, MPI_COMM_WORLD, mpi_err)
+
+
+  ! Communicate progenitor masses
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  call MPI_ALLGATHER(nprogs_to_read, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
+  ! overwrite progcount_to_read with total number of integers in common array
+  nprogs_to_read = sum(recvcount)
+
+  displacements=0
+  do i=1, ncpu-1
+    displacements(i+1) = displacements(i) + recvcount(i)
+  enddo
+
+  allocate(buffer_real_all(1:nprogs_to_read))
+  call MPI_ALLGATHERV(read_buffer_real, recvcount(myid), MPI_DOUBLE, &
+    buffer_real_all, recvcount, displacements,  MPI_DOUBLE, MPI_COMM_WORLD, mpi_err)
+
+
+  if (make_mock_galaxies) then
+    allocate(buffer_mpeak_all(1:nprogs_to_read))
+    call MPI_ALLGATHERV(read_buffer_mpeak, recvcount(myid), MPI_DOUBLE, &
+      buffer_mpeak_all, recvcount, displacements, MPI_DOUBLE, MPI_COMM_WORLD, mpi_err)
+  endif
+
+#else
+
+  allocate(buffer_int_all(1:progcount_to_read))
+  buffer_int_all = read_buffer_int
+  allocate(buffer_real_all(1:nprogs_to_read))
+  buffer_real_all = read_buffer_real
+  if (make_mock_galaxies) then
+    allocate(buffer_mpeak_all(1:nprogs_to_read))
+    buffer_mpeak_all = read_buffer_mpeak
+  else
+    ! safety measure
+    allocate(buffer_mpeak_all(1:1))
+    buffer_mpeak_all = 0
+  endif
+
+#endif
+  
+  deallocate(read_buffer_int, read_buffer_real)
+  if (make_mock_galaxies) deallocate(read_buffer_mpeak)
+
+
+
+
   !---------------------------
   ! Allocate arrays
   !---------------------------
+
+  ! Communicate how many progenitors you have in total for clean array allocation
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(np, nprogs, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD, mpi_err)
+#else
+  nprogs = np
+#endif
 
   allocate(prog_id(1:nprogs))
   prog_id = 0       ! list of progenitor global IDs
@@ -1950,90 +1997,12 @@ subroutine read_progenitor_data()
   tracer_free = 1   ! first free local tracer index
 
   if (make_mock_galaxies) then
-    i = nprogs
-  else
-    ! just to prevent "may be uninitialized" warnings
-    i = 1
+    allocate(prog_mpeak(1:i))
+    prog_mpeak = 0
   endif
-  allocate(prog_mpeak(1:i))
-  prog_mpeak = 0
 
 
   if (nprogs > 0) then
-
-    !--------------------------------
-    ! Read progenitor particles
-    !--------------------------------
-
-    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data.dat')
-
-    inquire(file=fileloc, exist=exists)
-    if (.not.exists) then
-      write(*,*) "ID", myid, "didn't find file ", fileloc
-      stop
-    endif
-
-
-    allocate(read_buffer(1:progcount_to_read))
-
-#ifndef WITHOUTMPI
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, &
-      MPI_MODE_RDONLY, MPI_INFO_NULL,filehandle, mpi_err)
-    call MPI_FILE_READ(filehandle, read_buffer, &
-      progcount_to_read, MPI_INTEGER, state, mpi_err)
-    call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
-    open(unit=666,file=fileloc,form='unformatted')
-    read(666) read_buffer
-    close(666)
-#endif
-
-
-
-
-
-    !--------------------------------
-    ! Read progenitor masses
-    !--------------------------------
-
-    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass.dat')
-
-    inquire(file=fileloc, exist=exists)
-    if (.not.exists) then
-      write(*, *) "ID", myid, "didn't find file ", fileloc
-      stop
-    endif
-
-
-    allocate(read_buffer_2(1:nprogs_to_read))
-
-    ! just to prevent "may be uninitialized" warnings
-    if (make_mock_galaxies) then
-      i = nprogs_to_read
-    else
-      i = 1
-    endif
-    allocate(read_buffer_mpeak(1:i))
-    read_buffer_mpeak = 0
-
-#ifndef WITHOUTMPI
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
-    call MPI_FILE_READ(filehandle, read_buffer_2, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
-    if (make_mock_galaxies) then
-      call MPI_FILE_READ(filehandle, read_buffer_mpeak, nprogs_to_read, MPI_DOUBLE_PRECISION, state, mpi_err)
-    endif
-    call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
-    open(unit=666,file=fileloc,form='unformatted')
-    read(666) read_buffer_2
-    if (make_mock_galaxies) then
-      read(666) read_buffer_mpeak
-    endif
-    close(666)
-#endif
-
-
-
 
     !----------------------------------
     ! Sort out the data you just read
@@ -2045,26 +2014,26 @@ subroutine read_progenitor_data()
 
     do while (startind <= progcount_to_read)
 
-      prog_read = read_buffer(startind)
-      np = read_buffer(startind + 1)
+      prog_read = buffer_int_all(startind)
+      np = buffer_int_all(startind + 1)
 
       ! get local instead global ID in prog_read (past tense "read")
       call get_local_prog_id(prog_read, prog_read_local)
 
-      prog_mass(prog_read_local) = read_buffer_2(iprog)
+      prog_mass(prog_read_local) = buffer_real_all(iprog)
       if (make_mock_galaxies) then
-        prog_mpeak(prog_read_local) = read_buffer_mpeak(iprog)
+        prog_mpeak(prog_read_local) = buffer_mpeak_all(iprog)
       endif
 
       do i = startind+2, startind+1+np
-        if (read_buffer(i) > 0) then
-          tracers_all(tracer_free) = read_buffer(i)               ! add new tracer particle
+        if (buffer_int_all(i) > 0) then
+          tracers_all(tracer_free) = buffer_int_all(i)            ! add new tracer particle
           tracer_loc_progids_all(tracer_free) = prog_read_local   ! write which progenitor tracer belongs to
           tracer_free = tracer_free + 1                           ! raise index for next tracer
         else 
           ! found a galaxy particle
-          tracers_all(tracer_free) = -read_buffer(i)              ! add new tracer particle
-          galaxy_tracers(prog_read_local) = -read_buffer(i)       ! add new galaxy tracer
+          tracers_all(tracer_free) = -buffer_int_all(i)           ! add new tracer particle
+          galaxy_tracers(prog_read_local) = -buffer_int_all(i)    ! add new galaxy tracer
           tracer_loc_progids_all(tracer_free) = prog_read_local   ! write which progenitor tracer belongs to
           tracer_free = tracer_free + 1                           ! raise index for next tracer
         endif
@@ -2075,10 +2044,10 @@ subroutine read_progenitor_data()
 
     enddo
 
-    deallocate(read_buffer, read_buffer_2)
-    if (make_mock_galaxies) deallocate(read_buffer_mpeak)
-
   endif ! nprogs > 0
+
+  deallocate(buffer_int_all, buffer_real_all)
+  if (make_mock_galaxies) deallocate(buffer_mpeak_all)
 
 
 
@@ -2086,13 +2055,143 @@ subroutine read_progenitor_data()
   !========================================
   ! READ PAST PROGENITOR DATA
   !========================================
+
+  !-----------------------------
+  ! Read in data
+  !-----------------------------
+
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors_data_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
+
+  open(unit=666,file=fileloc,form='unformatted')
+  read(666) np ! number of integers that need to be read
+  if (np > 0) then
+    allocate(read_buffer_int(1:np))
+    read(666) read_buffer_int
+  else
+    allocate(read_buffer_int(1:1))
+    read_buffer_int = 0
+  endif
+  close(666)
+
+
+  !---------------------------------
+  ! Read past progenitor's masses
+  !---------------------------------
+
+  if (np > 0) then
+
+    fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors_mass_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
+
+    inquire(file=fileloc, exist=exists)
+    if (.not.exists) then
+      write(*, *) "ID", myid, "didn't find file ", fileloc
+      call clean_stop
+    endif
+
+    open(unit=666,file=fileloc,form='unformatted')
+    read(666) npastprogs ! number of pmprog masses in this file; also the number of unique pmprogs in this file.
+    allocate(read_buffer_real(1:npastprogs))
+    read(666) read_buffer_real
+    if (make_mock_galaxies) then
+      allocate(read_buffer_mpeak(1:npastprogs))
+      read(666) read_buffer_mpeak 
+    endif
+    close(666)
+
+  else 
+
+    ! safety measure
+    npastprogs = 0
+    allocate(read_buffer_real(1:1))
+    read_buffer_real = 0
+    if (make_mock_galaxies) then
+      allocate(read_buffer_mpeak(1:npastprogs))
+      read_buffer_mpeak = 0
+    endif
+
+  endif
+
+
+
+  !-------------------------------
+  ! Share the data you just read
+  !-------------------------------
+
+#ifndef WITHOUTMPI
+
+  ! Communicate past merged progenitor data
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  call MPI_ALLGATHER(np, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
+  ! overwrite progcount_to_read with total number of integers in common array
+  progcount_to_read = sum(recvcount)
+
+  displacements=0
+  do i=1, ncpu-1
+    displacements(i+1) = displacements(i) + recvcount(i)
+  enddo
+
+  allocate(buffer_int_all(1:progcount_to_read))
+  call MPI_ALLGATHERV(read_buffer_int, recvcount(myid), MPI_INT, &
+    buffer_int_all, recvcount, displacements, MPI_INT, MPI_COMM_WORLD, mpi_err)
+
+
+  ! Communicate past merged progenitor masses
+  !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  call MPI_ALLGATHER(npastprogs, 1, MPI_INT, recvcount, 1, MPI_INT, MPI_COMM_WORLD, mpi_err)
+  ! overwrite npastprogs with total number of integers in common array
+  npastprogs = sum(recvcount)
+
+  displacements=0
+  do i=1, ncpu-1
+    displacements(i+1) = displacements(i) + recvcount(i)
+  enddo
+
+  ! overestimate size to fit new ones if necessary
+  npastprogs_max = npastprogs + nprogs
+
+  ! past merged progenitor mass
+  allocate(pmprogs_mass(1:npastprogs_max))
+  pmprogs_mass = 0
+
+  call MPI_ALLGATHERV(read_buffer_real, recvcount(myid), MPI_DOUBLE,&
+    pmprogs_mass, recvcount, displacements, MPI_DOUBLE, MPI_COMM_WORLD, mpi_err)
+
+  if (make_mock_galaxies) then
+    allocate(pmprogs_mpeak(1:npastprogs_max))
+    pmprogs_mpeak = 0
+
+    call MPI_ALLGATHERV(read_buffer_mpeak, recvcount(myid), MPI_DOUBLE, &
+      pmprogs_mpeak, recvcount, displacements, MPI_DOUBLE, MPI_COMM_WORLD, mpi_err)
+  endif
+
+#else
+
+  ! overestimate size to fit new ones if necessary
+  npastprogs_max = npastprogs + nprogs
+
+  allocate(pmprogs_mass(1:npastprogs_max))
+  pmprogs_mass = 0
+  pmprogs(1:npastprogs) = read_buffer_real(1:npastprogs)
+
+  if (make_mock_galaxies) then
+    allocate(pmprogs_mpeak(1:npastprogs_max))
+    pmprogs_mpeak = 0
+    pmprogs_mpeak = read_buffer_mpeak(1:npastprogs)
+  endif
+
+#endif
   
+
+
+
+
+ 
   !-------------------------
   ! Allocate arrays
   !-------------------------
 
-  ! overestimate size to fit new ones if necessary
-  npastprogs_max = npastprogs + nprogs
   pmprog_free = npastprogs + 1
 
   ! Past Merged Progenitors for multi-snapshot matching
@@ -2111,69 +2210,8 @@ subroutine read_progenitor_data()
   allocate(pmprogs_t(1:npastprogs_max))
   pmprogs_t = 0
 
-  ! past merged progenitor mass
-  allocate(pmprogs_mass(1:npastprogs_max))
-  pmprogs_mass = 0
-
-  ! mock galaxy stuff
-  if (make_mock_galaxies) then
-    allocate(pmprogs_mpeak(1:npastprogs_max))
-    pmprogs_mpeak = 0
-  endif
-  
 
   if (npastprogs > 0) then
-
-    !-----------------------------
-    ! Read in data
-    !-----------------------------
-
-    allocate(read_buffer(1:3*npastprogs))
-
-      fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors.dat')
-
-#ifndef WITHOUTMPI
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, &
-      MPI_MODE_RDONLY, MPI_INFO_NULL,filehandle, mpi_err)
-    call MPI_FILE_READ(filehandle, read_buffer, &
-      npastprogs*3, MPI_INTEGER, state, mpi_err)
-    call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
-    open(unit=666,file=fileloc,form='unformatted')
-    read(666) read_buffer
-    close(666)
-#endif
-
-
-    !---------------------------------
-    ! Read past progenitor's masses
-    !---------------------------------
-
-    fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitor_mass.dat')
-
-    inquire(file=fileloc, exist=exists)
-    if (.not.exists) then
-      write(*, *) "ID", myid, "didn't find file ", fileloc
-      stop
-    endif
-
-#ifndef WITHOUTMPI
-    call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_RDONLY, MPI_INFO_NULL, filehandle, mpi_err)
-    call MPI_FILE_READ(filehandle, pmprogs_mass(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
-    if (make_mock_galaxies) then
-      call MPI_FILE_READ(filehandle, pmprogs_mpeak(1:npastprogs), npastprogs, MPI_DOUBLE_PRECISION, state, mpi_err)
-    endif
-    call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
-    open(unit=666,file=fileloc,form='unformatted')
-    read(666) pmprogs_mass(1:npastprogs)
-    if (make_mock_galaxies) then
-      read(666) pmprogs_mpeak(1:npastprogs)
-    endif
-    close(666)
-#endif
-
-
 
     !----------------------------------
     ! Sort out the data you just read
@@ -2182,14 +2220,14 @@ subroutine read_progenitor_data()
     pmprog_free = 1
     iprog = 1
     do while (iprog <= 3*npastprogs)
-      pmprogs(pmprog_free) = read_buffer(iprog)
-      pmprogs_galaxy(pmprog_free) = read_buffer(iprog + 1)
-      pmprogs_t(pmprog_free) = read_buffer(iprog + 2)
+      pmprogs(pmprog_free) = buffer_int_all(iprog)
+      pmprogs_galaxy(pmprog_free) = buffer_int_all(iprog + 1)
+      pmprogs_t(pmprog_free) = buffer_int_all(iprog + 2)
       iprog = iprog + 3
       pmprog_free = pmprog_free + 1
     enddo
 
-    deallocate(read_buffer)
+    deallocate(buffer_int_all)
 
   endif ! npastprogs > 0
 
@@ -2351,9 +2389,12 @@ subroutine write_progenitor_data()
   integer           :: ihalo, haloid, npastprogs_all
 
 #ifndef WITHOUTMPI
-  integer, dimension (1:MPI_STATUS_SIZE) :: state
-  integer                                :: mpi_err, filehandle
+  integer                                :: mpi_err
+#endif
+
+#ifdef MTREEDEBUG
   integer, dimension(1:4)                :: buf
+  call mtreedebug_dump_mostbound_lists()
 #endif
 
 
@@ -2459,26 +2500,16 @@ subroutine write_progenitor_data()
 
   endif ! if there is potentially stuff to write
 
-
-
   !--------------------------------
   ! write mostbound particle list
   !--------------------------------
 
-  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data.dat')
-
-#ifndef WITHOUTMPI
-  ! Need to call MPI routines even if this CPU has nothing to write!
-  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, &
-    MPI_INFO_NULL, filehandle, mpi_err)
-  call MPI_FILE_WRITE_ORDERED(filehandle, particlelist, & 
-    progenitorcount_written, MPI_INTEGER, state, mpi_err) 
-  call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_data_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
   open(unit=666,file=fileloc,form='unformatted')
+  write(666) progenitorcount
+  write(666) progenitorcount_written
   write(666) particlelist
   close(666)
-#endif
 
 
 
@@ -2487,23 +2518,21 @@ subroutine write_progenitor_data()
   ! write progenitor mass list
   !--------------------------------
 
-  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass.dat')
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitor_mass_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
 
-#ifndef WITHOUTMPI
-  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
-  call MPI_FILE_WRITE_ORDERED(filehandle, masslist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
-  if (make_mock_galaxies) then
-    call MPI_FILE_WRITE_ORDERED(filehandle, mpeaklist, ihalo, MPI_DOUBLE_PRECISION, state, mpi_err) 
-  endif
-  call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
   open(unit=666,file=fileloc,form='unformatted')
+  write(666) ihalo
   write(666) masslist
   if (make_mock_galaxies) then
     write(666) mpeaklist
   endif
   close(666)
+
+
+#ifdef MTREEDEBUG
+  call mtreedebug_dump_written_progenitor_data(particlelist, progenitorcount_written, masslist, mpeaklist, ihalo)
 #endif
+
 
   deallocate(particlelist)
   deallocate(masslist)
@@ -2538,7 +2567,7 @@ subroutine write_progenitor_data()
   pastprogmpeaklist = 0
 
 
-  npastprogs_all = 0 ! count how many pmprogs you write. will be communicated later.
+  npastprogs_all = 0 ! count how many pmprogs you write. 
   pind = 0
 
   ! If the past merged progenitor was used, the owner was overwritten to 0.
@@ -2593,19 +2622,12 @@ subroutine write_progenitor_data()
   ! Write past merged progenitors list
   !-------------------------------------
 
-  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors.dat')
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors_data_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
 
-#ifndef WITHOUTMPI
-  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, &
-    MPI_INFO_NULL, filehandle, mpi_err)
-  call MPI_FILE_WRITE_ORDERED(filehandle, pastproglist, & 
-    pind, MPI_INTEGER, state, mpi_err) 
-  call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
   open(unit=666,file=fileloc,form='unformatted')
+  write(666) pind
   write(666) pastproglist
   close(666)
-#endif  
 
 
 
@@ -2613,23 +2635,19 @@ subroutine write_progenitor_data()
   !-----------------------------------------
   ! Write past merged progenitors mass list
   !-----------------------------------------
-  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitor_mass.dat')
+  fileloc=TRIM('output_'//TRIM(output_to_string)//'/past_merged_progenitors_mass_'//TRIM(output_to_string)//'.dat'//TRIM(id_to_string))
 
-#ifndef WITHOUTMPI
-  call MPI_FILE_OPEN(MPI_COMM_WORLD, fileloc, MPI_MODE_WRONLY + MPI_MODE_CREATE, MPI_INFO_NULL, filehandle, mpi_err)
-  call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmasslist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
-  if (make_mock_galaxies) then
-    call MPI_FILE_WRITE_ORDERED(filehandle, pastprogmpeaklist, npastprogs_all, MPI_DOUBLE_PRECISION, state, mpi_err) 
-  endif
-  call MPI_FILE_CLOSE(filehandle, mpi_err)
-#else
   open(unit=666,file=fileloc,form='unformatted')
+  write(666) npastprogs_all
   write(666) pastprogmasslist
   if (make_mock_galaxies) then
-    write(666) pastprogmasslist
     write(666) pastprogmpeaklist
   endif
   close(666)
+
+#ifdef MTREEDEBUG
+  call  mtreedebug_dump_written_past_merged_progenitor_data(pastproglist, pind,& 
+  pastprogmasslist, pastprogmpeaklist, npastprogs_all)
 #endif
 
   deallocate(pastproglist, pastprogmasslist)
@@ -2641,6 +2659,10 @@ subroutine write_progenitor_data()
   ! Write number of progenitors to file
   ! (both current and past)
   !======================================
+
+#ifdef MTREEDEBUG
+  buf = (/progenitorcount, ihalo, progenitorcount_written, npastprogs_all/)
+  call mtreedebug_dump_prog_metadata(buf, .false.)
 
 #ifndef WITHOUTMPI
   buf = (/progenitorcount, ihalo, progenitorcount_written, npastprogs_all/)
@@ -2655,15 +2677,8 @@ subroutine write_progenitor_data()
   endif
 #endif
 
-
-  if (myid == 1) then 
-    fileloc=TRIM('output_'//TRIM(output_to_string)//'/progenitorcount.dat')
-    open(unit=666,file=fileloc,form='unformatted')
-    write(666) progenitorcount, ihalo, progenitorcount_written, npastprogs_all
-    ! open(unit=666,file=fileloc,form='formatted')
-    ! write(666, '(2(I7,x))') progenitorcount, progenitorcount_written
-    close(666)
-  endif
+  if (myid==1) call mtreedebug_dump_prog_metadata(buf, .true.) 
+#endif
 
 end subroutine write_progenitor_data
 
@@ -3065,12 +3080,9 @@ subroutine mark_tracer_particles()
           most_bound_energy(ipeak, ipart) = HUGE(0d0)
           most_bound_pid(ipeak, ipart) = 0
 
-        endif !true minimum
-      
-      endif !relevant clump
-
+        endif ! true minimum
+      endif ! relevant clump
     enddo
-
   enddo
 
 end subroutine mark_tracer_particles
@@ -3080,211 +3092,374 @@ end subroutine mark_tracer_particles
 
 
 
-!=======================================================
-subroutine dissolve_small_clumps(ilevel, for_halos)
-!=======================================================
 
-  !----------------------------------------------------------------------
-  ! Dissolve clumps with too small mass into parents/nothing.
-  ! Clump is required to have at least mass_threshold number of
-  ! its own particles.
-  !----------------------------------------------------------------------
+#ifdef MTREEDEBUG
+
+!=========================================================
+subroutine mtreedebug_filename(namestring, filename)
+!=========================================================
+  !--------------------------------------------------
+  ! generate a filename for debugging output
+  ! it will add 'namestring' to a specific prefix
+  !--------------------------------------------------
+  use amr_commons, only: myid, ifout
+  implicit none
+  character(len=100), intent(out) :: filename
+  character(len=*), intent(in)    :: namestring
+  character(len=5)                :: id_to_string, output_to_string
+
+  call title(ifout, output_to_string)
+  call title(myid, id_to_string)
+  filename = TRIM("output_"//output_to_string//"/debug_mtree-"//TRIM(namestring)//".txt"//id_to_string)
+
+end subroutine mtreedebug_filename
+
+
+
+!==============================================
+subroutine mtreedebug_matrixcheck_prog(before)
+!==============================================
 
   use amr_commons 
-  use clfind_commons 
-  use mpi_mod
-
+  use clfind_commons
   implicit none
+  logical, intent(in) :: before
+  integer :: iprog, idl, ipeak, i
+  character(len=100) :: fname
 
-  integer, intent(in) :: ilevel
-  logical, intent(in) :: for_halos ! whether to do it for halos or for subhalos
-
-  integer :: killed, appended
-  integer :: ipeak, ipart, thispart, particle_local_id
-
-#ifndef WITHOUTMPI
-  integer, dimension(1:2) :: buf
-  integer                 :: info
-#endif 
-
-
-
-  !------------------------------------
-  ! Kill or append too small clumps
-  !------------------------------------
-
-  call get_exclusive_clump_mass(ilevel) !subroutine further below
-
-  killed = 0; appended = 0
-
-  do ipeak=1, hfree-1
-    if (lev_peak(ipeak) == ilevel) then
-
-      ! if there are too few particles in there, but at least 1 (i.e. don't do it for noise)
-      if (relevance(ipeak) > relevance_threshold .and. clmp_mass_exclusive(ipeak) < (mass_threshold * partm_common) ) then
-
-        if (is_namegiver(ipeak) .and. for_halos) then
-
-          !--------------------------------
-          ! if clump is namegiver, kill it
-          !--------------------------------
-
-          if(ipeak <= npeaks) killed = killed + 1 !count only non-virtuals
-          
-          ! remove particles from clump
-          thispart = clmppart_first(ipeak)
-          do ipart = 1, nclmppart(ipeak)
-
-            if (clmpidp(thispart) > 0) then
-              call get_local_peak_id(clmpidp(thispart), particle_local_id)
-              if (particle_local_id == ipeak) then
-                clmpidp(thispart) = 0
-              endif
-            endif
-            thispart = clmppart_next(thispart)
-
-          enddo 
-
-          nclmppart(ipeak) = 0
-          clmp_mass_pb(ipeak) = 0
-          clmp_mass_exclusive(ipeak) = 0
-
-        elseif (.not.is_namegiver(ipeak) .and. .not.for_halos) then
-          !---------------------------------------------------
-          ! if clump isn't namegiver, add particles to parent
-          !---------------------------------------------------
-
-          if(ipeak <= npeaks) appended = appended + 1 ! count only non-virtuals
-
-          ! remove particles from clump
-          thispart = clmppart_first(ipeak)
-          do ipart = 1, nclmppart(ipeak)
-
-            if (clmpidp(thispart) > 0) then
-              call get_local_peak_id(clmpidp(thispart), particle_local_id)
-              if (particle_local_id == ipeak) then
-                clmpidp(thispart) = new_peak(ipeak)
-              endif
-            endif
-            thispart = clmppart_next(thispart)
-
-          enddo 
-
-          nclmppart(ipeak) = 0
-          clmp_mass_pb(ipeak) = 0
-          clmp_mass_exclusive(ipeak) = 0
-
-        endif !namegiver or not
-      endif !if too small
-    endif ! correct peak level
-  enddo !all peaks
-
-
-
-
-
-  !---------------------------------------
-  ! speak to me
-  !---------------------------------------
-
-
-  killed_tot = killed_tot + killed
-  appended_tot = appended_tot + appended
-
-
-
-
-  if (for_halos) then
-
-#ifndef WITHOUTMPI
-    buf = (/killed_tot, appended_tot/)
-    if (myid == 1) then
-      call MPI_REDUCE(MPI_IN_PLACE, buf, 2, MPI_INTEGER,MPI_SUM, 0, MPI_COMM_WORLD, info)
-      killed_tot = buf(1)
-      appended_tot = buf(2)
-    else
-      call MPI_REDUCE(buf, buf, 2, MPI_INTEGER, MPI_SUM, 0, MPI_COMM_WORLD, info)
-    endif
-#endif
-
-    if(myid == 1) then
-      write(*,'(A43,I10,A14,I10,A18)') " Handling too small clumps TOTAL: Dissolved ", killed_tot, " halos; Merged ", appended_tot, " to their parents." 
-    endif
-
-    !reset values for next output step
-    killed_tot = 0
-    appended_tot = 0
-
+  if (mtreedebug_no_matrix_dump_prog) return
+  
+  if (before) then
+    call mtreedebug_filename('MATRIXCHECK_PROG_BEFORE_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK PROG BEFORE LOOP ID", myid
+  else
+    call mtreedebug_filename('MATRIXCHECK_PROG_AFTER_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK PROG AFTER LOOP ID", myid
   endif
 
+  write(666, '(6A14)') "Prog", "local id", "nr of desc", "owner", "mass", "main desc"
+
+  do iprog = 1, nprogs
+    if (p2d_links%cnt(iprog) > 0) then
+      write(666, '(4I14,E14.6,I14, A5)', advance='no') &
+        prog_id(iprog), iprog, p2d_links%cnt(iprog), &
+        prog_owner(iprog), prog_mass(iprog), main_desc(iprog), ' ||| '
+
+      ipeak = p2d_links%first(iprog)
+      do i = 1, p2d_links%cnt(iprog)
+        call get_local_peak_id(p2d_links%clmp_id(ipeak), idl)
+        write(666, '(A3,x,2(I9,x),A9,x,I9)', advance='no') "D:", p2d_links%clmp_id(ipeak), idl, &
+          "tracers:", p2d_links%ntrace(ipeak)
+        ipeak = p2d_links%next(ipeak)
+      enddo
+      write(666,*)
+    endif
+  enddo
+  close(666)
+end subroutine mtreedebug_matrixcheck_prog 
 
 
 
-  contains 
-    !==============================================
-    subroutine get_exclusive_clump_mass(ilevel)
-    !==============================================
+!==============================================
+subroutine mtreedebug_matrixcheck_desc(before)
+!==============================================
 
-      use clfind_commons
-      use pm_commons, only: mp!, vp
+  use amr_commons 
+  use clfind_commons
+  implicit none
+  logical, intent(in) :: before ! whether you're printing before or after treemaking
+  integer :: iprog, ipeak, i
+  character(len=100) :: fname
 
-      implicit none
-      integer, intent(in) :: ilevel
-      integer             :: ipeak, ipart, thispart!, i
+  if (mtreedebug_no_matrix_dump_prog) return
 
-      !----------------------------------------------------
-      ! recompute clump properties after unbinding
-      !----------------------------------------------------
+  if (before) then
+    call mtreedebug_filename('MATRIXCHECK_DESC_BEFORE_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK DESC BEFORE LOOP ID", myid
+  else
+    call mtreedebug_filename('MATRIXCHECK_DESC_AFTER_LOOP', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666,'(A30,x,I9)') "MATRIXCHECK DESC AFTER LOOP ID", myid
+  endif
 
-      do ipeak=1, hfree-1 !loop over all peaks
-       
-        !reset values for virtual peaks to communicate multiple times
-        if (ipeak > npeaks) then
-          clmp_mass_exclusive(ipeak) = 0
-          ! clmp_vel_exclusive(ipeak,:) = 0
+  write(666, '(6A14)') "Desc", "nr of progs", "mass", "main prog"
+
+  do ipeak = 1, hfree-1
+    if (d2p_links%cnt(ipeak) > 0) then
+      write(666, '(2I14,E14.6,I14, A5)', advance='no') &
+        ipeak, d2p_links%cnt(ipeak), clmp_mass_exclusive(ipeak), &
+        main_prog(ipeak),  ' ||| '
+
+
+      iprog = d2p_links%first(ipeak)
+      do i = 1, d2p_links%cnt(ipeak)
+        write(666, '(A3,x,I9,x,A9,x,I9)', advance='no') "P:", & 
+          d2p_links%clmp_id(iprog), "tracers:", d2p_links%ntrace(iprog)
+        iprog = d2p_links%next(iprog)
+      enddo
+      write(666,*)
+    endif
+
+  enddo
+  close(666)
+end subroutine mtreedebug_matrixcheck_desc 
+
+
+
+!============================================================
+subroutine mtreedebug_dump_unbinding_data(filename_add)
+!============================================================
+
+  use amr_commons
+  use clfind_commons
+  use pm_commons, only: idp
+
+  implicit none
+  character(len=*) :: filename_add  ! string to be added to filename, so you can
+                                    ! create unique files from anywhere in unbinding
+  integer :: ipeak, i, ipart, npart_loc
+
+  integer, allocatable, dimension(:) :: global_id, npartstot
+  character(len=100)   :: fname
+
+  if ( mtreedebug_no_unbinding_dump ) return
+
+
+  allocate(global_id(1:npeaks_max))
+  global_id = 0
+  allocate(npartstot(1:npeaks_max))
+  npartstot = 0
+
+  do ipeak=1, npeaks
+    global_id(ipeak) = ipeak+ipeak_start(myid)
+  enddo
+  npartstot = nclmppart
+  call boundary_peak_int(global_id(:))
+  call virtual_peak_int(npartstot, 'sum')
+  call boundary_peak_int(npartstot)
+
+  call mtreedebug_filename('unbinding_dump_'//TRIM(filename_add), fname)
+
+  open(666, file=fname, form='formatted')
+  
+  write(666, '(A, I5, A, I10)') 'Unbinding Data dump ID', myid, ' npeaks', npeaks
+  write(666, '(2A12,x,A16,x,A12,x,A18,x,A12,x,A12,x,A12,x,A12)') "Clump ID", "local ID", "is halo correct?", &
+    "parent", "excl mass", "nparts comp", "npartsown_l", "nclmppart", "nclmpparttot"
+
+  do ipeak=1, hfree-1
+    if (nclmppart(ipeak)>0) then
+      npart_loc = 0
+      ipart = clmppart_first(ipeak)
+      do i = 1, nclmppart(ipeak)
+        if (global_id(ipeak) == clmpidp(ipart)) npart_loc = npart_loc + 1
+        ipart = clmppart_next(ipart)
+      enddo
+
+      if (.not. mtreedebug_no_unbinding_particle_dump) then
+        write(666,'(2I12,x,L16,x,I12,x,E18.11,x,I12,x,I12,x,I12,x,I12)', advance='no') &
+          global_id(ipeak), ipeak, is_namegiver(ipeak) .eqv. (global_id(ipeak)==new_peak(ipeak)), &
+          new_peak(ipeak), clmp_mass_exclusive(ipeak), int(clmp_mass_exclusive(ipeak)/partm_common+0.5), &
+          npart_loc, nclmppart(ipeak), npartstot(ipeak)
+
+        ipart = clmppart_first(ipeak)
+        do i=1, nclmppart(ipeak)
+          if (global_id(ipeak) == clmpidp(ipart)) write(666, '(I12)', advance='no') idp(ipart) 
+          ipart = clmppart_next(ipart)
+        enddo
+        write(666, *)
+      else
+        write(666,'(2I12,x,L16,x,I12,x,E18.11,x,I12,x,I12,x,I12,x,I12)') &
+          global_id(ipeak), ipeak, is_namegiver(ipeak) .eqv. (global_id(ipeak)==new_peak(ipeak)), &
+          new_peak(ipeak), clmp_mass_exclusive(ipeak), int(clmp_mass_exclusive(ipeak)/partm_common+0.5), &
+          npart_loc, nclmppart(ipeak), npartstot(ipeak)
+      endif
+
+    endif
+  enddo
+  
+  close(666)
+  deallocate(global_id)
+
+end subroutine mtreedebug_dump_unbinding_data
+
+
+
+
+
+!==================================================================================================================
+subroutine mtreedebug_dump_written_progenitor_data(particlelist, plist_int, masslist, mpeaklist, mlist_int)
+!==================================================================================================================
+
+  use amr_commons
+  use clfind_commons
+  implicit none
+  integer, intent(in) :: plist_int, mlist_int
+  integer, dimension(1:plist_int), intent(in) :: particlelist
+  real(dp), dimension(1:mlist_int), intent(in) :: masslist, mpeaklist
+  character(len=100) :: fname
+  integer :: i, ipart, id, np, iprog
+
+  if (mtreedebug_no_progdata_dump) return
+
+
+  call mtreedebug_filename('WRITTEN_PROGENITOR_DATA', fname)
+  open(unit=666, form='formatted', file=fname)
+  write(666, '(A, I5)') "WRITTEN PROGENITOR DATA ID", myid
+  write(666, '(6A12)') "Clump ID", "mass", "peak mass", "np","Galaxy?", "Particles"
+  ! is only galaxy if <0
+
+  i = 1
+  iprog = 1 
+  do while (i <= plist_int)
+    id = particlelist(i)
+    np = particlelist(i+1)
+    if (make_mock_galaxies) then
+      write(666, '(I12,2E12.4,I12)', advance='no') id, masslist(iprog), mpeaklist(iprog), np
+    else
+      write(666, '(I12,E12.4,A12,I12)', advance='no') id, masslist(iprog), "------", np
+    endif
+
+    if (.not. mtreedebug_no_progdata_particle_dump) then
+      do ipart = i+2, i+1+np
+        write(666, '(I12)', advance='no') particlelist(ipart)
+      enddo
+      write(666, *)
+    endif
+
+    iprog = iprog + 1
+    i = i + 2 + np
+  enddo
+  close(666)
+  
+end subroutine mtreedebug_dump_written_progenitor_data
+
+
+
+!==================================================================================================================
+subroutine mtreedebug_dump_written_past_merged_progenitor_data(&
+  particlelist, plist_int, masslist, mpeaklist, mlist_int)
+!==================================================================================================================
+
+  use amr_commons
+  use clfind_commons
+  implicit none
+  integer, intent(in) :: plist_int, mlist_int
+  integer, dimension(1:plist_int), intent(in) :: particlelist
+  real(dp), dimension(1:mlist_int), intent(in) :: masslist, mpeaklist
+  character(len=100) :: fname
+  integer :: i, id, iprog, gal, st
+
+  if (mtreedebug_no_pmprogdata_dump) return
+
+
+  call mtreedebug_filename('WRITTEN_PAST_MERGED_PROGENITOR_DATA', fname)
+  open(unit=666, form='formatted', file=fname)
+  write(666, '(A, I5)') "WRITTEN PAST MERGED PROGENITOR DATA ID", myid
+  write(666, '(5A12)') "ID", "mass", "peak mass", "Galaxy", "Snapshot"
+  ! is only galaxy if <0
+
+  i = 1
+  iprog = 1 
+  do while (i <= plist_int)
+    id = particlelist(i)
+    gal = particlelist(i+1)
+    st = particlelist(i+2)
+    if (make_mock_galaxies) then
+      write(666, '(I12,2E12.4,I12,I12)') id, masslist(iprog), mpeaklist(iprog), gal, st
+    else
+      write(666, '(I12,E12.4,A12,I12,I12)') id, masslist(iprog), "------", gal, st
+    endif
+
+    iprog = iprog + 1
+    i = i + 3
+  enddo
+  close(666)
+  
+end subroutine mtreedebug_dump_written_past_merged_progenitor_data
+
+
+!=========================================================
+subroutine mtreedebug_dump_prog_metadata(buf, collective)
+!=========================================================
+
+  implicit none
+  integer, dimension(1:4), intent(in) :: buf
+  logical, intent(in) :: collective ! whether it's after MPI reduce or not
+  character(len=100) :: fname
+
+  if (collective) then
+    call mtreedebug_filename('prog_collective_metadata', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666, '(4A20)') "nprogs_tot", "total written progs", "prog integers written", "n_pmprogs"
+  else
+    call mtreedebug_filename('prog_metadata', fname)
+    open(unit=666, file=fname, form='formatted')
+    write(666, '(4A20)') "nonvirtual progs", "total progs", "prog integers written", "n_pmprogs"
+  endif
+
+  write(666, '(4I20)') buf(1), buf(2), buf(3), buf(4)
+  close(666)
+
+end subroutine mtreedebug_dump_prog_metadata
+
+
+!===============================================
+subroutine mtreedebug_dump_mostbound_lists()
+!===============================================
+
+  use amr_commons
+  use clfind_commons
+  use pm_commons, only: idp
+  implicit none
+  character(len=100) :: fname
+  integer :: ipart, haloid, partcount, first_bound, ipeak, gal, temp
+
+  if (mtreedebug_no_mostbound_lists) return 
+
+  call mtreedebug_filename('mostbound_particles', fname)
+  open(unit=666, file=fname, form='formatted')
+  write(666, '(4A12)') "Clump_ID", "partcount", "first_bound", "galaxy" 
+
+  do ipeak=1, hfree-1
+    if (clmp_mass_exclusive(ipeak)>0) then
+      haloid = -1
+      first_bound = -1
+      partcount = 0
+
+      do ipart=1, nmost_bound
+        if (most_bound_pid(ipeak, ipart) > 0) then
+          first_bound = ipart
+          haloid = abs(clmpidp(most_bound_pid(ipeak, ipart)))
+          exit
         endif
+      enddo
+      
+      do ipart=1, nmost_bound
+        if (most_bound_pid(ipeak, ipart) > 0) partcount = partcount + 1
+      enddo
 
-        if (lev_peak(ipeak) == ilevel ) then
+      gal = 0
+      if (first_bound == 1) gal = -idp(most_bound_pid(ipeak, 1))
+      if (first_bound == -1) first_bound = nclmppart(ipeak)
+      write(666, '(4I12)', advance='no') haloid, partcount, first_bound, gal
+      do ipart=1, nmost_bound
+        temp = most_bound_pid(ipeak, ipart)
+        if (temp > 0) temp = idp(most_bound_pid(ipeak, ipart))
+        write(666, '(I12)', advance='no') temp
+      enddo
+      write(666, '(A)') ""
+    endif
+  enddo
 
-          clmp_mass_exclusive(ipeak) = 0
-          ! clmp_vel_exclusive(ipeak,:) = 0
+  close(666)
 
-          if (nclmppart(ipeak) > 0 ) then
-            ! if there is work to do on this processing unit for this peak
-            thispart=clmppart_first(ipeak)
-            
-            do ipart=1, nclmppart(ipeak)        ! while there is a particle linked list
-              if (clmpidp(thispart) > 0) then
-                call get_local_peak_id(clmpidp(thispart), particle_local_id) 
-                if (particle_local_id == ipeak) then
-                  clmp_mass_exclusive(ipeak)=clmp_mass_exclusive(ipeak)+mp(thispart)
-                  ! do i=1,3
-                  !   clmp_vel_exclusive(ipeak,i)=clmp_vel_exclusive(ipeak,i)+vp(thispart,i)*mp(thispart) !get velocity sum
-                  ! enddo
-                endif
-              endif
+end subroutine mtreedebug_dump_mostbound_lists
 
-              thispart=clmppart_next(thispart) ! go to next particle in linked list
-            enddo   ! loop over particles
-          endif     ! clump has particles on this processor 
-        endif       ! there is work for this peak on this processor
-      enddo         ! loop over peaks
-
-
-      !----------------------------------------------------------
-      ! communicate clump mass and velocity across processors
-      !----------------------------------------------------------
-      call build_peak_communicator
-      call virtual_peak_dp(clmp_mass_exclusive,'sum')       !collect
-      call boundary_peak_dp(clmp_mass_exclusive)            !scatter
-      ! do i=1,3
-      !   call virtual_peak_dp(clmp_vel_exclusive(1,i),'sum')  !collect
-      !   call boundary_peak_dp(clmp_vel_exclusive(1,i))       !scatter
-      ! enddo
-
-    end subroutine get_exclusive_clump_mass 
-
-end subroutine dissolve_small_clumps 
+! #endif for MTREEDEBUG
+#endif
 
 
 
