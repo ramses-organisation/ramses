@@ -257,6 +257,7 @@ SUBROUTINE init_SED_table()
   use amr_commons,only:myid
   use rt_parameters
   use spectrum_integrator_module
+  use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE,ncpu
@@ -366,7 +367,11 @@ SUBROUTINE init_SED_table()
   locid=0
   ncpu2=1
 #endif
-
+  if(groupL0(1).lt.hplanck*c_cgs/(Ls(nLs)*1e-8*eV2erg)) then
+     if(myid==1) write(*,*)'The maximum wavelength in the SED is shorter &
+        than the lowest radiation energy. Exiting!'
+     call clean_stop
+  endif   
   ! Perform SED integration of luminosity, csn and egy per (age,Z) bin----
   allocate(tbl(nAges,nZs,nv))
   do ip = 1,nSEDgroups                                ! Loop photon groups
