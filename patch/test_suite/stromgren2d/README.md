@@ -1,6 +1,6 @@
 * Test name: `stromgren2d`
 * Dimension: `2`
 * Solver: `hydro`
-* Comparison: md5sum of the sink output (`output_00002/sink_00002.csv`) at the end of the run
+* Comparison: md5sum of the amr2map denisty map of output_00046 
 * Purpose: Testing the RT implementation
 * Keywords: RT, Stromgren 
