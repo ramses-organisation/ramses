@@ -38,6 +38,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
 ! species=> ion species, used as an argument in fx
 ! func   => Function which is integrated (of X, Y, species)
 !-------------------------------------------------------------------------
+  use amr_commons,only:myid
   use constants,only:c_cgs, eV2erg, hplanck
   real(kind=8):: integrateSpectrum, X(N), Y(N), e0, e1
   integer :: N, species
@@ -60,7 +61,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   if(e1.gt.0) la0 = max(la0, 1d8 * hplanck * c_cgs / e1 / eV2erg)
   if(e0.gt.0) la1 = min(la1, 1d8 * hplanck * c_cgs / e0 / eV2erg)
   if(la0 .ge. la1) then
-     if(myid==1) print* 'There energy limits do not overlap &
+     if(myid==1) print*,'There energy limits do not overlap &
         with SED range, so stopping'
      call clean_stop
   endif 
