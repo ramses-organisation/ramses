@@ -34,10 +34,11 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
 ! X      => Wavelengths [angstrom]
 ! Y      => Spectral luminosity per angstrom at wavelenghts [XX A-1]
 ! N      => Length of X and Y
-! e0,e1  => Integrated interval [ev]
+! e0,e1  => Integrated interval [eV]
 ! species=> ion species, used as an argument in fx
 ! func   => Function which is integrated (of X, Y, species)
 !-------------------------------------------------------------------------
+  use amr_commons,only:myid
   use constants,only:c_cgs, eV2erg, hplanck
   real(kind=8):: integrateSpectrum, X(N), Y(N), e0, e1
   integer :: N, species
@@ -59,7 +60,11 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   la0 = X(1) ; la1 = X(N)
   if(e1.gt.0) la0 = max(la0, 1d8 * hplanck * c_cgs / e1 / eV2erg)
   if(e0.gt.0) la1 = min(la1, 1d8 * hplanck * c_cgs / e0 / eV2erg)
-  if(la0 .ge. la1) RETURN
+  if(la0 .ge. la1) then
+     if(myid==1) print*,'There energy limits do not overlap &
+        with SED range, so stopping'
+     call clean_stop
+  endif 
   ! If we get here, the [la0, la1] inverval is completely within X
   allocate(xx(N)) ; allocate(yy(N)) ; allocate(f(N))
   xx =  la0   ;   yy =  0.   ;   f = 0.
@@ -178,7 +183,7 @@ FUNCTION getCrosssection(lambda, species)
   real(kind=8)      :: E0=1., cs0=0., P=1., ya=1., yw=0., y0=0., y1=1.
   real(kind=8)      :: E, x, y
 !------------------------------------------------------------------------
-  E = hplanck * c_cgs/(lambda*1d-8) / eV2erg         ! photon energy in ev
+  E = hplanck * c_cgs/(lambda*1d-8) / eV2erg         ! photon energy in eV
   if ( E .lt. ionEvs(species) ) then            ! below ionization energy
      getCrosssection=0.
      RETURN
@@ -257,6 +262,7 @@ SUBROUTINE init_SED_table()
   use amr_commons,only:myid
   use rt_parameters
   use spectrum_integrator_module
+  use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
   use amr_commons,only:IOGROUPSIZE,ncpu
@@ -492,7 +498,7 @@ SUBROUTINE update_SED_group_props()
         Z = max(z_ave*0.02, 10d-5)                     ! [m_metals/m_tot]
      endif
      call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 M_sun-1]
-     call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [ev]
+     call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [eV]
      do ii=1,nIons
         call inp_SED_table(age, Z, 2+2*ii, .true., csn_star(:,ii))! [cm^2]
         call inp_SED_table(age, Z, 3+2*ii, .true., cse_star(:,ii))! [cm^2]
@@ -1266,7 +1272,7 @@ MODULE UV_module
   ! UV Np indexes among solve_cooling vars:
   integer,allocatable::iUVgroups(:),iUVvars_cool(:)
   ! Table of photon group props (UV_nz, nUVgroups, 1+2*nIons):
-  !(z, group, flux [#/cm2/s]: nIons*csn [cm-2]: nIons*egy [ev])
+  !(z, group, flux [#/cm2/s]: nIons*csn [cm-2]: nIons*egy [eV])
   real(dp),allocatable,dimension(:,:,:)::UV_groups_table
   ! The tables do not have constant redshift intervals, so we need to
   ! first locate the correct interval when doing interpolation.
@@ -1486,7 +1492,7 @@ SUBROUTINE inp_UV_groups_table(z, ret, z_damp)
 ! Compute UV properties by interpolation from table.
 ! z    => Redshift
 ! ret <=  [nGroups,1+2*nIons) interpolated values of all UV properties.
-!         1=ph. flux [#/cm2/s], 2*i=group_csn[cm-2], 1+2*i=group_egy [ev]
+!         1=ph. flux [#/cm2/s], 2*i=group_csn[cm-2], 1+2*i=group_egy [eV]
 ! z_damp=> Optional. If set and true, the UV rates are expoenentially
 !          damped according to the difference z-z_reion (i.e. strong
 !          damping if z > z_reion, and a gradual decrease in the damping
