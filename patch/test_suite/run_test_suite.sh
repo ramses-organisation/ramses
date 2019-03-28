@@ -115,7 +115,10 @@ testpatch[${itest}]="";
 testlist[${itest}]="sod-tube.nml";
 ndim[${itest}]=1;
 nvar[${itest}]=5;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="hydro";
+rt[${itest}]=false;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="";
@@ -127,7 +130,10 @@ testpatch[${itest}]="../mhd";
 testlist[${itest}]="imhd-tube.nml";
 ndim[${itest}]=1;
 nvar[${itest}]=8;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="mhd";
+rt[${itest}]=false;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="";
@@ -139,7 +145,10 @@ testpatch[${itest}]="../patch/test_suite/orszag-tang";
 testlist[${itest}]="orszag-tang.nml";
 ndim[${itest}]=2;
 nvar[${itest}]=8;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="mhd";
+rt[${itest}]=false;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="output_*";
@@ -151,7 +160,25 @@ testpatch[${itest}]="";
 testlist[${itest}]="smbh-bondi.nml";
 ndim[${itest}]=3;
 nvar[${itest}]=6;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="hydro";
+rt[${itest}]=false;
+flags[${itest}]="";
+make_clean[${itest}]=true;
+del_files[${itest}]="output_*";
+
+itest=$((itest + 1)); # Test 5
+testdir[${itest}]="stromgren2d";
+testname[${itest}]="stromgren2d";
+testpatch[${itest}]="";
+testlist[${itest}]="stromgren2d.nml";
+ndim[${itest}]=2;
+nvar[${itest}]=8;
+ngroups[${itest}]=3;
+nions[${itest}]=3;
+solver[${itest}]="hydro";
+rt[${itest}]=true;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="output_*";
@@ -290,10 +317,18 @@ for ((i=0;i<$ntests;i++)); do
    # Compile source
    echo "Compiling source";
    echo "Compiling source" >> $LOGFILE;
-   if $VERBOSE ; then
-      make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} ${flags[n]};
+   if ${rt[n]} ; then
+       if $VERBOSE ; then
+          make -f Makefile.rt EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]};
+       else
+          { make -f Makefile.rt EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       fi
    else
-      { make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       if $VERBOSE ; then
+          make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]};
+       else
+          { make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       fi
    fi
 
    # Run tests
