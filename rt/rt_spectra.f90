@@ -328,6 +328,11 @@ SUBROUTINE init_SED_table()
      read(10,'(e14.6)') zs(i)
   end do
   close(10)
+  if(nzs.lt.2)then
+     if(myid==1) print*,'At least 2 metallicity bins are needed for &
+         correct interpolation, so stopping'
+     call clean_stop
+  endif
   ! READ AGE BINS---------------------------------------------------------
   open(unit=10,file=fAges,status='old',form='formatted')
   read(10,'(i8)') nAges
@@ -336,6 +341,11 @@ SUBROUTINE init_SED_table()
      read(10,'(e14.6)') ages(i)
   end do
   close(10)
+  if(nAges.lt.2)then
+     if(myid==1) print*,'At least 2 age bins are needed for &
+         correct interpolation, so stopping'
+     call clean_stop
+  endif
   ages = ages*1.e-9                       !         Convert from yr to Gyr
   if(ages(1) .ne. 0.) ages(1) = 0.
   ! READ SEDS-------------------------------------------------------------
