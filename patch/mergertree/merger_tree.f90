@@ -1997,7 +1997,7 @@ subroutine read_progenitor_data()
   tracer_free = 1   ! first free local tracer index
 
   if (make_mock_galaxies) then
-    allocate(prog_mpeak(1:i))
+    allocate(prog_mpeak(1:nprogs))
     prog_mpeak = 0
   endif
 
