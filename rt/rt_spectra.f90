@@ -328,6 +328,7 @@ SUBROUTINE init_SED_table()
      read(10,'(e14.6)') zs(i)
   end do
   close(10)
+  if(nzs.eq.1)is_SED_single_Z=.true.
   ! READ AGE BINS---------------------------------------------------------
   open(unit=10,file=fAges,status='old',form='formatted')
   read(10,'(i8)') nAges
@@ -336,6 +337,10 @@ SUBROUTINE init_SED_table()
      read(10,'(e14.6)') ages(i)
   end do
   close(10)
+  if(nAges.lt.2)then
+      if(myid==1) print*,'WARNING! Only one age bin found - check if &
+                          interpolated values make sense'
+  endif
   ages = ages*1.e-9                       !         Convert from yr to Gyr
   if(ages(1) .ne. 0.) ages(1) = 0.
   ! READ SEDS-------------------------------------------------------------
@@ -351,6 +356,11 @@ SUBROUTINE init_SED_table()
   end do
   close(10)
 
+  ! Do not interpolate and update SEDs if single metallicity and age
+  if(nZs.eq.1 .and. nAges<3)then
+     SED_nZ=1
+     sedprops_update=-1
+  end if
 
   ! Send the token
 #ifndef WITHOUTMPI
@@ -968,10 +978,16 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
      da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )
      da1= min( max(  (SED_ages(ia+1)-age)/da,       0. ), 1.          )
 
-     iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
-     dz = sed_Zeds(iz+1)-SED_Zeds(iz)
-     dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
-     dz1= min( max(  (SED_Zeds(iz+1)-Z)/dz,         0. ),  1.         )
+     if(is_SED_single_Z)then
+        iz = 1
+        dz0= 0.0d0
+        dz1= 1.0d0
+     else
+        iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
+        dz = sed_Zeds(iz+1)-SED_Zeds(iz)
+        dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
+        dz1= min( max(  (SED_Zeds(iz+1)-Z)/dz,         0. ),  1.         )
+     endif
 
      if (abs(da0+da1-1.0d0) > 1.0d-5 .or. abs(dz0+dz1-1.0d0) > 1.0d-5) then
         write(*,*) 'Screwed up the sed interpolation ... '
