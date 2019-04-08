@@ -415,15 +415,15 @@ contains
        ! EMISSION FROM GAS
        if(.not. rt_OTSA .and. rt_advect) then ! ----------- Rec. radiation
           if(isH2) alpha(ixHI) = 0d0 ! H2 emits no rec. radiation
-          alpha(ixHII) = inp_coolrates_table(tbl_alphaA_HII, TK) &
-                       - inp_coolrates_table(tbl_alphaB_HII, TK)
+          alpha(ixHII) = inp_coolrates_table(tbl_alphaA_HII, TK,.false.) &
+                       - inp_coolrates_table(tbl_alphaB_HII, TK,.false.)
           if(isHe) then
              ! alpha(2) A-B becomes negative around 1K, hence the max
              alpha(ixHeII) = &
-                  MAX(0d0,inp_coolrates_table(tbl_alphaA_HeII,TK)       &
-                          -inp_coolrates_table(tbl_alphaB_HeII, TK))
-             alpha(ixHeIII) = inp_coolrates_table(tbl_alphaA_HeIII, TK)  &
-                            - inp_coolrates_table(tbl_alphaB_HeIII, TK)
+                  MAX(0d0,inp_coolrates_table(tbl_alphaA_HeII,TK,.false.) &
+                          -inp_coolrates_table(tbl_alphaB_HeII, TK,.false.))
+             alpha(ixHeIII) = inp_coolrates_table(tbl_alphaA_HeIII, TK,.false.) &
+                            - inp_coolrates_table(tbl_alphaB_HeIII, TK,.false.)
           endif
           do iion=1,nIonsUsed
              if(spec2group(iion) .gt. 0) &  ! Contribution of ion -> group
@@ -554,14 +554,14 @@ contains
                 + 1.4 * xH2 * exp(-12000. / (TK + 1200.))) ![cm-3]
           Hrate = Hrate + eV2erg                                         &
                 * ((0.2 + 4.2 / (1. + ncr / nH(icell)))                  &
-                * inp_coolrates_table(tbl_AlphaZ_H2,TK)                  &
+                * inp_coolrates_table(tbl_AlphaZ_H2,TK,.false.)          &
                 * Zsolar(icell) * f_dust                                 &
                 * nH(icell)**2 * dxion(ixHI)                             &
                 + 3.53 / (1. + ncr/nH(icell))                            &
-                * inp_coolrates_table(tbl_AlphaGP_H2,TK)                 &
+                * inp_coolrates_table(tbl_AlphaGP_H2,TK,.false.)         &
                 * nH(icell) * dxion(ixHI) * ne                           &
                 + 4.48 / (1.+ncr / nH(icell))                            &
-                * inp_coolrates_table(tbl_Beta_H3B,TK)                   &
+                * inp_coolrates_table(tbl_Beta_H3B,TK,.false.)           &
                 * nH(icell)**3 * dxion(ixHI)**2 * (dxion(ixHI) + xH2/8.))
        endif
        if (cosmic_rays) then !CR heating [erg cm-3 s-1]
@@ -635,13 +635,14 @@ contains
     ! Update xH2**********************************************************
     dxH2=xH2
     if(isH2) then
-       alpha(ixHI) = inp_coolrates_table(tbl_AlphaZ_H2, TK)              &
+       alpha(ixHI) = inp_coolrates_table(tbl_AlphaZ_H2, TK,.false.)      &
                    * Zsolar(icell) * f_dust * nH(icell)                  &
-                   + inp_coolrates_table(tbl_AlphaGP_H2,TK) * ne         &
-                   + inp_coolrates_table(tbl_Beta_H3B,TK) * nH(icell)**2 &
-                   * dxion(ixHI) * (dxion(ixHI) + xH2/ 8.)
-       beta(ixHI)  = inp_coolrates_table(tbl_Beta_H2HI, TK) * dxion(ixHI)&
-                   + inp_coolrates_table(tbl_Beta_H2H2, TK) * xH2
+                   + inp_coolrates_table(tbl_AlphaGP_H2,TK,.false.) * ne &
+                   + inp_coolrates_table(tbl_Beta_H3B,TK,.false.)        &
+                   * nH(icell)**2 * dxion(ixHI) * (dxion(ixHI) + xH2/ 8.)
+       beta(ixHI)  = inp_coolrates_table(tbl_Beta_H2HI, TK,.false.)      &
+                   * dxion(ixHI)                                         &
+                   + inp_coolrates_table(tbl_Beta_H2H2, TK,.false.) * xH2
        cr = alpha(ixHI) * dxion(ixHI)                        ! H2 Creation
        photoRate=0.
        if(rt) photoRate = SUM(signc(:,ixHI)*dNp)
@@ -653,11 +654,11 @@ contains
     endif !if(isH2)
     ! Update xHI (also if .not. isH2, for stability)**********************
     if(rt_OTSA .or. .not. rt_advect) then         !    Recombination rates
-       alpha(ixHII) = inp_coolrates_table(tbl_AlphaB_HII, TK)
+       alpha(ixHII) = inp_coolrates_table(tbl_AlphaB_HII, TK,.false.)
     else
-       alpha(ixHII) = inp_coolrates_table(tbl_AlphaA_HII, TK)
+       alpha(ixHII) = inp_coolrates_table(tbl_AlphaA_HII, TK,.false.)
     endif
-    beta(ixHII) = inp_coolrates_table(tbl_Beta_HI, TK)  !  Coll. ion. rate
+    beta(ixHII) = inp_coolrates_table(tbl_Beta_HI, TK,.false.)! Coll.ion.rate
     cr = alpha(ixHII) * ne * dxion(ixHII) + 2. * de * dxH2 !   HI creation
     photoRate=0.
     if(rt) photoRate = SUM(signc(:,ixHII)*dNp)    !                  [s-1]
@@ -717,14 +718,14 @@ contains
        if(.not. rt_isTconst) TK=dT2*mu !  Update TK because of changed  mu
        ! Update xHeI *****************************************************
        if(rt_OTSA .or. .not. rt_advect) then
-          alpha(ixHeII)  = inp_coolrates_table(tbl_alphaB_HeII, TK)
-          alpha(ixHeIII) = inp_coolrates_table(tbl_alphaB_HeIII, TK)
+          alpha(ixHeII)  = inp_coolrates_table(tbl_alphaB_HeII, TK,.false.)
+          alpha(ixHeIII) = inp_coolrates_table(tbl_alphaB_HeIII, TK,.false.)
        else
-          alpha(ixHeII)  = inp_coolrates_table(tbl_alphaA_HeII, TK)
-          alpha(ixHeIII) = inp_coolrates_table(tbl_alphaA_HeIII, TK)
+          alpha(ixHeII)  = inp_coolrates_table(tbl_alphaA_HeII, TK,.false.)
+          alpha(ixHeIII) = inp_coolrates_table(tbl_alphaA_HeIII, TK,.false.)
        endif
-       beta(ixHeII)  =  inp_coolrates_table(tbl_beta_HeI, TK)
-       beta(ixHeIII) = inp_coolrates_table(tbl_beta_HeII, TK)
+       beta(ixHeII)  =  inp_coolrates_table(tbl_beta_HeI, TK,.false.)
+       beta(ixHeIII) = inp_coolrates_table(tbl_beta_HeII, TK,.false.)
        ! Creation = recombination of HeII and electrons
        cr = alpha(ixHeII) * ne * dXion(ixHeII)
        ! Destruction = collisional ionization+photoionization of HeI
@@ -887,28 +888,28 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   g_HI   = t_rad_spec(ixHII)                  !      Photoionization [s-1]
   if(isH2) then
      g_H2   = t_rad_spec(ixHI)                !    Photodissociation [s-1]
-     aZ_H2  = inp_coolrates_table(tbl_AlphaZ_H2, TK) ! Dust form [cm3 s-1]
-     aGP_H2 = inp_coolrates_table(tbl_AlphaGP_H2, TK)! Gas phase [cm3 s-1]
-     b_H3B  = inp_coolrates_table(tbl_Beta_H3B,TK)   ! 3 body H2 [cm3 s-1]
-     b_H2HI = inp_coolrates_table(tbl_Beta_H2HI, TK)     ! Cdiss [cm3 s-1]
-     b_H2H2 = inp_coolrates_table(tbl_Beta_H2H2, TK)     ! Cdiss [cm3 s-1]
+     aZ_H2  = inp_coolrates_table(tbl_AlphaZ_H2, TK,.false.) ! Dust form [cm3 s-1]
+     aGP_H2 = inp_coolrates_table(tbl_AlphaGP_H2, TK,.false.)! Gas phase [cm3 s-1]
+     b_H3B  = inp_coolrates_table(tbl_Beta_H3B,TK,.false.)   ! 3 body H2 [cm3 s-1]
+     b_H2HI = inp_coolrates_table(tbl_Beta_H2HI, TK,.false.) !     Cdiss [cm3 s-1]
+     b_H2H2 = inp_coolrates_table(tbl_Beta_H2H2, TK,.false.) !     Cdiss [cm3 s-1]
   endif
   if(rt_OTSA) then                             !   Recombination [cm3 s-1]
-     a_HI   = inp_coolrates_table(tbl_AlphaB_HII, TK)
-     a_HEI  = inp_coolrates_table(tbl_AlphaB_HeII, TK)
-     a_HEII = inp_coolrates_table(tbl_AlphaB_HeIII, TK)
+     a_HI   = inp_coolrates_table(tbl_AlphaB_HII, TK,.false.)
+     a_HEI  = inp_coolrates_table(tbl_AlphaB_HeII, TK,.false.)
+     a_HEII = inp_coolrates_table(tbl_AlphaB_HeIII, TK,.false.)
   else
-     a_HI   = inp_coolrates_table(tbl_AlphaA_HII, TK)
-     a_HEI  = inp_coolrates_table(tbl_AlphaA_HeII, TK)
-     a_HEII = inp_coolrates_table(tbl_AlphaA_HeIII, TK)
+     a_HI   = inp_coolrates_table(tbl_AlphaA_HII, TK,.false.)
+     a_HEI  = inp_coolrates_table(tbl_AlphaA_HeII, TK,.false.)
+     a_HEII = inp_coolrates_table(tbl_AlphaA_HeIII, TK,.false.)
   endif
-  b_HI   = inp_coolrates_table(tbl_Beta_HI, TK)          !  Cion [cm3 s-1]
+  b_HI   = inp_coolrates_table(tbl_Beta_HI, TK,.false.)  !  Cion [cm3 s-1]
   if(isHe) then
      nHe = Y/(1.-Y)/4.*nH
      g_HEI  = t_rad_spec(ixHeII)
      g_HEII = t_rad_spec(ixHeIII)
-     b_HEI  = inp_coolrates_table(tbl_Beta_HeI, TK)
-     b_HEII = inp_coolrates_table(tbl_Beta_HeII, TK)
+     b_HEI  = inp_coolrates_table(tbl_Beta_HeI, TK,.false.)
+     b_HEII = inp_coolrates_table(tbl_Beta_HeII, TK,.false.)
   endif
 
   n_E = nH     ; n_H2 = 0d0    ; n_H2_old = nH/2d0
