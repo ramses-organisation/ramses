@@ -222,10 +222,9 @@ SUBROUTINE read_rt_params(nml_ok)
      if(myid==1) then
         write(*,*) 'Not enough variables for ionization fractions'
         write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',nIonsUsed
         write(*,*) 'STOPPING!'
      endif
-     call clean_stop
+     nml_ok=.false.
   endif
   if(nIonsUsed .lt. NIONS) then
      if(myid==1) then
