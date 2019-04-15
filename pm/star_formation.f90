@@ -779,7 +779,7 @@ subroutine star_formation(ilevel)
            if(flag2(ind_cell(i))>0)then
               n=flag2(ind_cell(i))
               d=uold(ind_cell(i),1)
-              uold(ind_cell(i),1)=max(d-n*dstar*(1.0d0+f_w),0.5d0*d)
+              uold(ind_cell(i),1)=max(d-n*dstar*(1.0d0+f_w),0.5d0*(d-n*dstar))
            endif
         end do
 
