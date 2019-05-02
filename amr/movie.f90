@@ -720,7 +720,7 @@ subroutine output_frame()
                                    if(ixhi .ne. 0) then
                                       uvar = uold(ind_cell(i),ixhi)/max(uold(ind_cell(i),1),smallr)
                                    else
-                                      uvar = 1d0-uold(ind_cell(i),ixhii)/max(uold(ind_cell(i),1),smallr)
+                                      uvar = (1d0-uold(ind_cell(i),ixhii))/max(uold(ind_cell(i),1),smallr)
                                    endif
                                 else if(movie_vars(kk).eq.i_mv_xhii)then
                                    ok_frame=.true.
@@ -733,7 +733,7 @@ subroutine output_frame()
                                    uvar = uold(ind_cell(i),ixheiii)/max(uold(ind_cell(i),1),smallr)
                                 else if(movie_vars(kk).eq.i_mv_xh2 .and. ixhi .ne. 0)then
                                    ok_frame=.true.
-                                   uvar = 1.-(uold(ind_cell(i),ixhi)+uold(ind_cell(i),ixhii))/max(uold(ind_cell(i),1),smallr)
+                                   uvar = (1.-(uold(ind_cell(i),ixhi)+uold(ind_cell(i),ixhii)))/max(uold(ind_cell(i),1),smallr)
                                 endif
 
                                 ! Photon map
