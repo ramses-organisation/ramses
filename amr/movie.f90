@@ -15,7 +15,7 @@ subroutine output_frame()
   implicit none
 #if NDIM > 1
 #ifndef WITHOUTMPI
-  integer::info,iframe
+  integer::info
   real(kind=8),dimension(:),allocatable::data_single,data_single_all
 #endif
 
@@ -27,24 +27,14 @@ subroutine output_frame()
   integer,parameter::tag=100
 
   character(len=5)::istep_str
-  character(len=100)::moviedir,moviecmd,infofile,sinkfile
-#ifdef SOLVERmhd
-  character(len=100),dimension(0:NVAR+7) :: moviefiles
-#else
-  character(len=100),dimension(0:NVAR+3) :: moviefiles
-#endif
+  character(len=100)::moviedir,moviecmd,infofile,sinkfile,filename
 #if NENER>0
   integer::irad
 #endif
 #ifdef RT
   character(len=100)::rt_infofile
 #endif
-#if NVAR>5 || defined (RT)
-  character(LEN=5)::dummy
-  integer::ll
-#endif
   integer::ncache,iskip,ngrid,nlevelmax_frame
-  integer::nframes,rt_nframes,imap,ipart_start
   integer::idim,ilun,nx_loc,ind,ix,iy,iz
   integer::imin,imax,jmin,jmax,ii,jj,kk
   real(dp)::scale,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -54,6 +44,7 @@ subroutine output_frame()
   real(dp)::xleft,xright,yleft,yright,xcentre,ycentre
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
   real(dp)::xpf,ypf
+  character(len=10)::varname
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
   real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight=0
   integer,dimension(1:nvector)::ind_grid,ind_cell
@@ -65,10 +56,12 @@ subroutine output_frame()
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8)::e,uvar
   integer::igrid,ilevel
-  integer::i,j
-  integer::proj_ind,nh_temp,nw_temp
+  integer::i,j,ivar
+  integer::proj_ind,nh_temp,nw_temp,proj_ax
   real(dp)::xpc,ypc
-  logical::opened,cube_face=.true.
+  logical::opened,cube_face=.true.,ok_frame
+  logical::is_cube, is_sphere, is_square, is_mean_mass, is_mean_dens
+  logical::is_mean_vol, is_sum, is_mean, is_min, is_max
   character(len=1)::temp_string
   integer,dimension(6,8)::lind = reshape((/1, 2, 3, 4, 1, 3, 2, 4,    &
                                            5, 6, 7, 8, 5, 7, 6, 8,    &
@@ -98,23 +91,55 @@ subroutine output_frame()
   integer::icube,iline
   real(dp)::minx=0,maxx=0,miny=0,maxy=0,minz=0,maxz=0,d1,d2,d3,d4,l1,l2,l3,l4
 #endif
-#ifdef RT
-  character(len=100),dimension(1:NGROUPS) :: rt_moviefiles
-  real(kind=8),dimension(:,:,:),allocatable::rt_data_frame
-#endif
 
-  nh_temp    = nh_frame
-  nw_temp    = nw_frame
+ nh_temp    = nh_frame
+ nw_temp    = nw_frame
 
-  ! Only one projection available in 2D
-  if((ndim.eq.2).and.(trim(proj_axis).ne.'z')) proj_axis = 'z'
+ if(n_movie_vars==0) return
+
+ ! Only one projection available in 2D
+ if((ndim.eq.2).and.(trim(proj_axis).ne.'z')) proj_axis = 'z'
 
  do proj_ind=1,LEN(trim(proj_axis))
+
   opened=.false.
 
   if(imov<1)imov=1
   if(imov>imovout)return
 
+  ! No cubic shader for 2D simulations
+  if((ndim.eq.2).and.(shader_frame(proj_ind).eq.'cube')) shader_frame(proj_ind) = 'square'
+
+  ! Some booleans for speedup
+  is_cube=.false.
+  if(shader_frame(proj_ind).eq.'cube')      is_cube=.true.
+  is_sphere=.false.
+  if(shader_frame(proj_ind).eq.'sphere')    is_sphere=.true.
+  is_square=.false.
+  if(shader_frame(proj_ind).eq.'square')    is_square=.true.
+  is_mean_mass=.false.
+  if(method_frame(proj_ind).eq.'mean_mass') is_mean_mass=.true.
+  is_mean_dens=.false.
+  if(method_frame(proj_ind).eq.'mean_dens') is_mean_dens=.true.
+  is_mean_vol=.false.
+  if(method_frame(proj_ind).eq.'mean_vol')  is_mean_vol=.true.
+  is_mean_vol=.false.
+  if(method_frame(proj_ind).eq.'sum')       is_sum=.true.
+  is_mean=.false.
+  if(method_frame(proj_ind)(1:4).eq.'mean') is_mean=.true.
+  is_min=.false.
+  if(method_frame(proj_ind).eq.'min')       is_min=.true.
+  is_max=.false.
+  if(method_frame(proj_ind).eq.'max')       is_max=.true.
+
+  if(proj_axis(proj_ind:proj_ind).eq.'x') then
+     proj_ax=1
+  else if(proj_axis(proj_ind:proj_ind).eq.'y') then
+     proj_ax=2
+  else
+     proj_ax=3
+  endif
+  
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping movie frame'
 
@@ -146,55 +171,6 @@ subroutine output_frame()
   call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
 
-  moviefiles(0) = trim(moviedir)//'temp_'//trim(istep_str)//'.map'
-  moviefiles(1) = trim(moviedir)//'dens_'//trim(istep_str)//'.map'
-  moviefiles(2) = trim(moviedir)//'vx_'//trim(istep_str)//'.map'
-  moviefiles(3) = trim(moviedir)//'vy_'//trim(istep_str)//'.map'
-#ifdef SOLVERmhd
-  moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
-  moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
-#else
-#if NDIM==2
-  moviefiles(4) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
-#endif
-#if NDIM>2
-  moviefiles(4) = trim(moviedir)//'vz_'//trim(istep_str)//'.map'
-  moviefiles(5) = trim(moviedir)//'pres_'//trim(istep_str)//'.map'
-#endif
-#endif
-#if NVAR>5
-  do ll=6,NVAR
-    write(dummy,'(I3.1)') ll
-    moviefiles(ll) = trim(moviedir)//'var'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
- end do
-#endif
-#ifdef SOLVERmhd
-  moviefiles(6) = trim(moviedir)//'bxl_'//trim(istep_str)//'.map'
-  moviefiles(7) = trim(moviedir)//'byl_'//trim(istep_str)//'.map'
-  moviefiles(8) = trim(moviedir)//'bzl_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+1) = trim(moviedir)//'bxr_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+2) = trim(moviedir)//'byr_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+3) = trim(moviedir)//'bzr_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+4) = trim(moviedir)//'pmag_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+5) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+6) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+7) = trim(moviedir)//'lum_'//trim(istep_str)//'.map'
-#else
-  moviefiles(NVAR+1) = trim(moviedir)//'dm_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+2) = trim(moviedir)//'stars_'//trim(istep_str)//'.map'
-  moviefiles(NVAR+3) = trim(moviedir)//'lum_'//trim(istep_str)//'.map'
-#endif
-
-#ifdef RT
-  ! Can generate mass weighted averages of cN_i for each group i
-  if(rt) then
-     do ll=1,NGROUPS
-        write(dummy,'(I3.1)') ll
-        rt_moviefiles(ll) = trim(moviedir)//'Fp'//trim(adjustl(dummy))//'_'//trim(istep_str)//'.map'
-     end do
-  endif
-#endif
-
   ! sink filename
   if(sink)then
     sinkfile = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
@@ -209,25 +185,12 @@ subroutine output_frame()
      nlevelmax_frame=levelmax_frame
   endif
 
-  nframes = 0
-#ifdef SOLVERmhd
-  do kk=0,NVAR+7
-#else
-  do kk=0,NVAR+3
-#endif
-     if(movie_vars(kk).eq.1) nframes = nframes+1
-  enddo
-  rt_nframes = 0
 #ifdef RT
   if(rt)then
     rt_infofile = trim(moviedir)//'rt_info_'//trim(istep_str)//'.txt'
     if(myid==1.and.proj_ind==1) call output_rtinfo(rt_infofile)
-     do kk=1,NGROUPS
-        if(rt_movie_vars(kk).eq.1) rt_nframes = rt_nframes+1
-     enddo
   endif
 #endif
-  if(nframes+rt_nframes==0) cycle
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -253,11 +216,11 @@ subroutine output_frame()
       timer = t
   endif
   ! Compute frame boundaries
-  if(proj_axis(proj_ind:proj_ind).eq.'x')then
+  if(proj_ax .eq. 1) then ! x-projection
     xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
     zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-  elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+  elseif(proj_ax.eq.2) then ! y-projection
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
     ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
     zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
@@ -319,11 +282,8 @@ subroutine output_frame()
   zleft_frame  = zcen-delz/2.
   zright_frame = zcen+delz/2.
 
-  ! No cubic shader for 2D simulations
-  if((ndim.eq.2).and.(shader_frame(proj_ind).eq.'cube')) shader_frame(proj_ind) = 'square'
-
   ! Allocate image
-  allocate(data_frame(1:nw_frame,1:nh_frame,1:nframes),stat=ierr)
+  allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierr)
   if(ierr .ne. 0)then
      write(*,*) 'Error - Movie frame allocation failed'
 #ifndef WITHOUTMPI
@@ -332,20 +292,7 @@ subroutine output_frame()
      stop
 #endif
   endif
-#ifdef RT
-  if(rt) then
-     allocate(rt_data_frame(1:nw_frame,1:nh_frame,1:rt_nframes),stat=ierr)
-     if(ierr .ne. 0)then
-        write(*,*) 'Error - Movie frame allocation failed'
-#ifndef WITHOUTMPI
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
-#else
-        stop
-#endif
-     endif
-     rt_data_frame(:,:,:) = 0d0
-  endif
-#endif
+
   allocate(weights(1:nw_frame,1:nh_frame),stat=ierr)
   if(ierr .ne. 0)then
      write(*,*) 'Error - Movie frame allocation failed'
@@ -355,17 +302,10 @@ subroutine output_frame()
      stop
 #endif
   endif
-  if(ierr .ne. 0)then
-     write(*,*) 'Error - Movie frame allocation failed'
-#ifndef WITHOUTMPI
-     call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-     stop
-#endif
-  endif
-  if(method_frame(proj_ind).eq.'min')then
+
+  if(is_min)then
      data_frame(:,:,:) = 1e-3*huge(0.0)
-  elseif(method_frame(proj_ind).eq.'max')then
+  elseif(is_max)then
      data_frame(:,:,:) = -1e-3*huge(0.0)
   else
      data_frame(:,:,:) = 0.0
@@ -397,7 +337,7 @@ subroutine output_frame()
 
         dx_proj = (dx_loc/2.0)*smooth_frame(proj_ind)
 #if NDIM>2
-        if((shader_frame(proj_ind).eq.'cube').and.(.not.perspective_camera(proj_ind)))then
+        if(is_cube .and. (.not.perspective_camera(proj_ind)))then
            xcube = (/-dx_proj,-dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj, dx_proj, dx_proj/)
            ycube = (/-dx_proj,-dx_proj, dx_proj, dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj/)
            zcube = (/-dx_proj, dx_proj,-dx_proj, dx_proj,-dx_proj, dx_proj,-dx_proj, dx_proj/)
@@ -515,7 +455,7 @@ subroutine output_frame()
                     xx(i,3) = ztmp
                     ! Perspective correction factor
                     pers_corr = 1.0
-                    if(proj_axis(proj_ind:proj_ind).eq.'x')then
+                    if(proj_ax.eq.1) then ! x-projection
                       if(dist_cam-xx(i,1).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
                          alpha  = atan(xx(i,2)/(dist_cam-xx(i,1)))
@@ -530,7 +470,7 @@ subroutine output_frame()
                       xcentre = xx(i,2)+ycen
                       ycentre = xx(i,3)+zcen
                       zcentre = xx(i,1)+xcen
-                    elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+                    elseif(proj_ax.eq.2) then ! y-projection
                       if(dist_cam-xx(i,2).lt.0d0) cycle
                       if(perspective_camera(proj_ind))then
                          alpha  = atan(xx(i,1)/(dist_cam-xx(i,2)))
@@ -562,7 +502,7 @@ subroutine output_frame()
                       zcentre = xx(i,3)+zcen
                     endif
                     ! Rotating the cube shader
-                    if(shader_frame(proj_ind).eq.'cube'.and.perspective_camera(proj_ind))then
+                    if(is_cube .and. perspective_camera(proj_ind))then
                        xcube = (/-dx_proj,-dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj, dx_proj, dx_proj/)
                        ycube = (/-dx_proj,-dx_proj, dx_proj, dx_proj,-dx_proj,-dx_proj, dx_proj, dx_proj/)
                        zcube = (/-dx_proj, dx_proj,-dx_proj, dx_proj,-dx_proj, dx_proj,-dx_proj, dx_proj/)
@@ -595,7 +535,7 @@ subroutine output_frame()
                        minz = minval(zcube)
                        maxz = maxval(zcube)
                     endif
-                    if(shader_frame(proj_ind).ne.'cube')then
+                    if(.not. is_cube)then
                        minx = -dx_proj
                        maxx =  dx_proj
                        miny = -dx_proj
@@ -663,7 +603,7 @@ subroutine output_frame()
                           if(abs(xxcentre-xright).lt.1d-2*dx_frame) xpc = xpc-1e-2*dx_frame
                           if(abs(yycentre-yright).lt.1d-2*dx_frame) ypc = ypc-1e-2*dx_frame
 #if NDIM>2
-                          if(shader_frame(proj_ind).eq.'cube')then
+                          if(is_cube)then
                              cube_face = .false.
                              if(sqrt(xpc**2+ypc**2).gt.dx_proj*sqrt(3.0)) goto 666
                              ! Filling the 6 cube shader faces
@@ -689,113 +629,139 @@ subroutine output_frame()
 666                          continue
                           endif
 #endif
-                          if((shader_frame(proj_ind).eq.'cube'          &
-                             .and.(cube_face))                          &
-                             .or.(shader_frame(proj_ind).eq.'sphere'    &
-                             .and.sqrt(xpc**2+ypc**2).le.dx_proj)       &
-                             .or.(shader_frame(proj_ind).eq.'square'    &
-                             .and.(abs(xpc).lt.dx_proj)                 &
-                             .and.(abs(ypc).lt.dx_proj)))then
+                          if((is_cube .and. (cube_face))                           &
+                             .or.(is_sphere .and. sqrt(xpc**2+ypc**2).le.dx_proj)  &
+                             .or.(is_square .and.(abs(xpc).lt.dx_proj)             &
+                             .and.(abs(ypc).lt.dx_proj)))                       then
                              ! Intersection volume
                              dvol      = dx_cell*dy_cell
-                             if(method_frame(proj_ind).eq.'mean_mass')then
+                             if(is_mean_mass) then
                                 weight = dvol*uold(ind_cell(i),1)*dx_loc**3
-                             elseif(method_frame(proj_ind).eq.'mean_dens')then
+                             elseif(is_mean_dens)then
                                 weight = dvol*uold(ind_cell(i),1)
-                             elseif(method_frame(proj_ind).eq.'mean_vol')then
+                             elseif(is_mean_vol)then
                                 weight = dvol*dx_loc**3
-                             elseif(method_frame(proj_ind).eq.'sum')then
+                             elseif(is_sum)then
                                 weight = 1.0
                              endif
                              ! Update weights map
-                             if(method_frame(proj_ind)(1:4).eq.'mean')then
-                                weights(ii,jj) = weights(ii,jj)+weight
-                             endif
+                             if(is_mean) weights(ii,jj) = weights(ii,jj)+weight
 
-                             imap = 1
+                             do kk=1,n_movie_vars
+                                ok_frame=.false.
+                                ! Temperature map case
+                                if(movie_vars(kk).eq.i_mv_temp)then
+                                   ok_frame=.true.
+                                   e = 0.0d0
 #ifdef SOLVERmhd
-                             do kk=0,NVAR+4
+                                   do idim=1,3
 #else
-                             do kk=0,NVAR
+                                   do idim=1,ndim
 #endif
-                                if(movie_vars(kk).eq.1)then
-                                   ! Temperature map case
-                                   if(kk==0)then
-                                      e = 0.0d0
-#ifdef SOLVERmhd
-                                      do idim=1,3
-#else
-                                      do idim=1,ndim
-#endif
-                                         e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
-                                      enddo
+                                      e = e+0.5*uold(ind_cell(i),idim+1)**2/max(uold(ind_cell(i),1),smallr)
+                                   enddo
 #if NENER>0
-                                      do irad=0,nener-1
-                                         e = e+uold(ind_cell(i),inener+irad)
-                                      enddo
+                                   do irad=0,nener-1
+                                      e = e+uold(ind_cell(i),inener+irad)
+                                   enddo
 #endif
 #ifdef SOLVERmhd
-                                      do idim=1,3
-                                         e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
-                                      enddo
-                                      uvar = (gamma-1.0)*(uold(ind_cell(i),5)-e)
+                                   do idim=1,3
+                                      e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
+                                   enddo
+                                   uvar = (gamma-1.0)*(uold(ind_cell(i),5)-e)
 #else
-                                      uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
+                                   uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
 #endif
-                                      uvar = uvar/uold(ind_cell(i),1)*scale_T2
-                                   endif
-                                   ! Density map case
-                                   if(kk==1) then
-                                      uvar = uold(ind_cell(i),kk)
-                                   endif
-                                   ! Other scalars map
-                                   if(kk>1)then
-                                      uvar = uold(ind_cell(i),kk)/max(uold(ind_cell(i),1),smallr)
-                                   endif
+                                   uvar = uvar/uold(ind_cell(i),1)*scale_T2
+                                   
+                                ! Density map
+                                else if(movie_vars(kk).eq.i_mv_dens)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),1)
+                                      
+                                ! Pressure map
+                                else if(movie_vars(kk).eq.i_mv_p)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),ndim+2)
+                                      
+                                ! Speed map
+                                else if(movie_vars(kk).eq.i_mv_speed)then
+                                   ok_frame=.true.
+                                   uvar=0.0d0
+                                   do idim=1,ndim
+                                      uvar = uvar + uold(ind_cell(i),idim+1)**2 / max(uold(ind_cell(i),1),smallr)
+                                   end do
+                                   uvar = sqrt(uvar)
+                                   
+                                ! Metallicity map
+                                else if(movie_vars(kk).eq.i_mv_metallicity)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),imetal)/max(uold(ind_cell(i),1),smallr)
+
+                                ! Any scalars map
+                                else if(movie_vars(kk).eq.i_mv_var)then
+                                   ok_frame=.true.
+                                   ivar = movie_var_number(kk)
+                                   uvar = uold(ind_cell(i),ivar)/max(uold(ind_cell(i),1),smallr)
+                                endif ! if(movie_vars ...
 #ifdef SOLVERmhd
-                                   ! Magnetic energy map case
-                                   if(kk.eq.NVAR+4)then
-                                      uvar = 0.125*(uold(ind_cell(i),6)**2+uold(ind_cell(i),7)**2+uold(ind_cell(i),8)**2 &
-                                      &    + uold(ind_cell(i),NVAR+1)**2+uold(ind_cell(i),NVAR+2)**2+uold(ind_cell(i),NVAR+3)**2)
-                                   endif
-#endif
-                                   ! Frame update
-                                   if(method_frame(proj_ind).eq.'min')then
-                                      data_frame(ii,jj,imap) = min(data_frame(ii,jj,imap),uvar)
-                                   elseif(method_frame(proj_ind).eq.'max')then
-                                      data_frame(ii,jj,imap) = max(data_frame(ii,jj,imap),uvar)
-                                   else
-                                      data_frame(ii,jj,imap) = data_frame(ii,jj,imap)+weight*uvar
-                                   endif
-                                   imap = imap+1
+                                ! Magnetic energy map case
+                                else if(movie_vars(kk).eq.i_mv_pmag)then
+                                   ok_frame=.true.
+                                   uvar = 0.125*(uold(ind_cell(i),6)**2+uold(ind_cell(i),7)**2+uold(ind_cell(i),8)**2 &
+                                        &    + uold(ind_cell(i),NVAR+1)**2+uold(ind_cell(i),NVAR+2)**2+uold(ind_cell(i),NVAR+4)**2)
                                 endif
-                             end do
-#ifdef RT
-                             if(rt) then
-                                imap = 1
-                                do kk=1,NGROUPS
-                                   if(rt_movie_vars(kk).eq.1) then
-                                      uvar=rtuold(ind_cell(i),1+(kk-1)*(ndim+1))*rt_c
-                                      if(method_frame(proj_ind).eq.'min')then
-                                         rt_data_frame(ii,jj,imap) = &
-                                         &   min(rt_data_frame(ii,jj,imap),uvar)
-                                      elseif(method_frame(proj_ind).eq.'max')then
-                                         rt_data_frame(ii,jj,imap) = &
-                                         &   max(rt_data_frame(ii,jj,imap),uvar)
-                                      else
-                                         rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)+ &
-                                         &   weight*uvar
-                                      endif
-                                      imap = imap+1
-                                   endif
-                                end do
-                             endif
 #endif
-                          endif
-                       end do
-                    end do
-                 end if
-              end do
+#ifdef RT
+                                ! Ionization fraction map
+                                if(movie_vars(kk).eq.i_mv_xhi)then
+                                   ok_frame=.true.
+                                   if(ixhi .ne. 0) then
+                                      uvar = uold(ind_cell(i),ixhi)/max(uold(ind_cell(i),1),smallr)
+                                   else
+                                      uvar = 1d0-uold(ind_cell(i),ixhii)/max(uold(ind_cell(i),1),smallr)
+                                   endif
+                                else if(movie_vars(kk).eq.i_mv_xhii)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),ixhii)/max(uold(ind_cell(i),1),smallr)
+                                else if(movie_vars(kk).eq.i_mv_xheii .and. ixheii .ne. 0)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),ixheii)/max(uold(ind_cell(i),1),smallr)
+                                else if(movie_vars(kk).eq.i_mv_xheiii .and. ixheiii .ne. 0)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),ixheiii)/max(uold(ind_cell(i),1),smallr)
+                                else if(movie_vars(kk).eq.i_mv_xh2 .and. ixhi .ne. 0)then
+                                   ok_frame=.true.
+                                   uvar = 1.-(uold(ind_cell(i),ixhi)+uold(ind_cell(i),ixhii))/max(uold(ind_cell(i),1),smallr)
+                                endif
+
+                                ! Photon map
+                                if(rt) then
+                                   if(movie_vars(kk).eq.i_mv_fp)then
+                                      ok_frame=.true.
+                                      ivar = movie_var_number(kk)
+                                      uvar=rtuold(ind_cell(i),1+(ivar-1)*(ndim+1))*rt_c
+                                   endif
+                                endif ! if(rt)
+#endif
+                                ! Frame update
+                                if(ok_frame) then
+                                   if(is_min)then
+                                      data_frame(ii,jj,kk) = min(data_frame(ii,jj,kk),uvar)
+                                   elseif(is_max)then
+                                      data_frame(ii,jj,kk) = max(data_frame(ii,jj,kk),uvar)
+                                   else
+                                      data_frame(ii,jj,kk) = data_frame(ii,jj,kk)+weight*uvar
+                                   endif
+                                endif
+
+                             end do ! loop over kk
+                          endif ! if(shader is cube)
+                       end do ! jj=jmin,jmax
+                    end do ! ii=imin,imax
+                 end if ! if(ok)
+              end do ! i=1,ngrid
 
            end do
            ! End loop over cells
@@ -821,11 +787,11 @@ subroutine output_frame()
      ytmp = cos(phi_cam)*ypf+sin(phi_cam)*zpf
      ztmp = cos(phi_cam)*zpf-sin(phi_cam)*ypf
 
-     if(proj_axis(proj_ind:proj_ind).eq.'x')then
+     if(proj_ax.eq.1) then ! x-projection
        xpf = ytmp
        ypf = ztmp
        zpf = xtmp
-     elseif(proj_axis(proj_ind:proj_ind).eq.'y')then
+     elseif(proj_ax.eq.2) then ! y-projection
        xpf = xtmp
        ypf = ztmp
        zpf = ytmp
@@ -865,57 +831,34 @@ subroutine output_frame()
      ii = min(int((xpf-xleft_frame)/dx_frame)+1,nw_frame)
      jj = min(int((ypf-yleft_frame)/dy_frame)+1,nh_frame)
 
-     ! Fill up map with projected mass
-#ifdef SOLVERmhd
-     ipart_start = NVAR+5
-#else
-     ipart_start = NVAR+1
-#endif
-     imap=1
-     do kk=0,ipart_start+2
-        if(movie_vars(kk).eq.1)then
-           if(star) then
-              ! DM particles
-              if((is_DM(typep(j))).and.(kk.eq.ipart_start)) then
-                 if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
-                 else
-                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
-                 endif
-              endif
-              ! Star particles
-              if((is_star(typep(j))).and.(kk.eq.ipart_start+1)) then
-                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
-              endif
-              ! Star particles luminosity in code units (luminosity over speed of light squared)
-              ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
-              ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
-              ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
-              if((is_star(typep(j))).and.(kk.eq.ipart_start+2)) then
-                 ! Polynome is poorly constrained on high and low ends
-                 if(log10((texp-tp(j))/year)<6)then
-                    log_lum = 3.2d0
-                 else if(log10((texp-tp(j))/year)>9)then
-                    log_lum = log10((texp-tp(j))/year)*(-9.79362D-01)+9.08855D+00
-                 else
-                    log_lum = 0d0
-                    do npoly=1,size(lum_poly)
-                       log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/year))**(npoly-1)
-                    enddo
-                 endif
-                 data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
-              endif
+     do kk=1,n_movie_vars
+        if(movie_vars(kk) .eq. i_mv_dm .and. is_DM(typep(j)))then
+           ! DM particles
+           if(mass_cut_refine>0.0.and.zoom_only_frame(proj_ind)) then
+              if(mp(j)<mass_cut_refine) data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
            else
-              ! DM particles only
-              if(kk.eq.ipart_start) then
-                 if(mass_cut_refine>0d0.and.zoom_only_frame(proj_ind)) then
-                    if(mp(j)<mass_cut_refine) data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
-                 else
-                    data_frame(ii,jj,imap)=data_frame(ii,jj,imap)+mp(j)
-                 endif
-              endif
+              data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
            endif
-           imap=imap+1
+        else if(star .and. movie_vars(kk) .eq. i_mv_stars .and. is_star(typep(j)))then
+           ! Star particles
+           data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+mp(j)
+        else if(star .and. movie_vars(kk) .eq. i_mv_lum .and. is_star(typep(j)))then
+           ! Star particles luminosity in code units (luminosity over speed of light squared)
+           ! The polynome is fitted on Starburst99 instantaneous bolometric magnitude
+           ! for  Z = 0.04, alpha = 2.35, M_up = 100 Msol
+           ! http://www.stsci.edu/science/starburst99/data/bol_inst_a.dat
+           ! Polynome is poorly constrained on high and low ends
+           if(log10((texp-tp(j))/year)<6)then
+              log_lum = 3.2d0
+           else if(log10((texp-tp(j))/year)>9)then
+              log_lum = log10((texp-tp(j))/year)*(-9.79362D-01)+9.08855D+00
+           else
+              log_lum = 0d0
+              do npoly=1,size(lum_poly)
+                 log_lum = log_lum+lum_poly(npoly)*(log10((texp-tp(j))/year))**(npoly-1)
+              enddo
+           endif
+           data_frame(ii,jj,kk)=data_frame(ii,jj,kk)+(10d0**(log_lum))*(mp(j)/msol)*lumsol
         endif
      enddo
   end do
@@ -934,18 +877,18 @@ subroutine output_frame()
      call MPI_ABORT(MPI_COMM_WORLD,1,info)
   endif
   ! Loop over maps
-  do iframe=1,nframes
+  do kk=1,n_movie_vars
      i=1
      ! Load data in comm arrays
      do ii=1,nw_frame
         do jj=1,nh_frame
-           data_single(i) = data_frame(ii,jj,iframe)
+           data_single(i) = data_frame(ii,jj,kk)
            i = i+1
         enddo
      enddo
-     if(method_frame(proj_ind).eq.'min')then
+     if(is_min)then
         call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_MIN,0,MPI_COMM_WORLD,info)
-     elseif(method_frame(proj_ind).eq.'max')then
+     elseif(is_max)then
         call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_MAX,0,MPI_COMM_WORLD,info)
      else
         call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,info)
@@ -955,7 +898,7 @@ subroutine output_frame()
         i=1
         do ii=1,nw_frame
            do jj=1,nh_frame
-              data_frame(ii,jj,iframe) = data_single_all(i)
+              data_frame(ii,jj,kk) = data_single_all(i)
               i = i+1
            enddo
         enddo
@@ -966,7 +909,7 @@ subroutine output_frame()
      call MPI_ABORT(MPI_COMM_WORLD,1,info)
   endif
   ! Weights communication
-  if(method_frame(proj_ind)(1:4).eq.'mean')then
+  if(is_mean)then
      i=1
      do ii=1,nw_frame
         do jj=1,nh_frame
@@ -989,85 +932,33 @@ subroutine output_frame()
         call MPI_ABORT(MPI_COMM_WORLD,1,info)
      endif
   endif
-#ifdef RT
-  if(rt) then
-     if(ierr .ne. 0)then
-        call MPI_ABORT(MPI_COMM_WORLD,1,info)
-     endif
-     do iframe=1,rt_nframes
-        i=1
-        do ii=1,nw_frame
-           do jj=1,nh_frame
-              data_single(i) = rt_data_frame(ii,jj,iframe)
-              i = i+1
-           enddo
-        enddo
-        if(method_frame(proj_ind).eq.'min')then
-           call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_MIN,0,MPI_COMM_WORLD,info)
-        elseif(method_frame(proj_ind).eq.'max')then
-           call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_MAX,0,MPI_COMM_WORLD,info)
-        else
-           call MPI_REDUCE(data_single,data_single_all,nw_frame*nh_frame,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,info)
-        endif
-        if(myid==1)then
-           i=1
-           do ii=1,nw_frame
-              do jj=1,nh_frame
-                 rt_data_frame(ii,jj,iframe) = data_single_all(i)
-                 i = i+1
-              enddo
-           enddo
-        endif
-     enddo
-  endif
-#endif
   deallocate(data_single)
   deallocate(data_single_all)
 #endif
   if(myid==1)then
      if(method_frame(proj_ind)(1:3).ne.'sum')then
         ! Convert into mass weighted
-        do ii=1,nw_frame
-          do jj=1,nh_frame
-            imap = 1
-            do kk=0,NVAR
-              if(movie_vars(kk).eq.1)then
-                 if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
-                    data_frame(ii,jj,imap) = data_frame(ii,jj,imap)/weights(ii,jj)
+        do kk=1,n_movie_vars
+           if(movie_vars(kk) .eq. i_mv_dm) cycle
+           if(movie_vars(kk) .eq. i_mv_stars) cycle
+           if(movie_vars(kk) .eq. i_mv_lum) cycle
+           do ii=1,nw_frame
+              do jj=1,nh_frame
+                 if((is_mean).and.(weights(ii,jj).gt.0d0))then
+                    data_frame(ii,jj,kk) = data_frame(ii,jj,kk)/weights(ii,jj)
                  endif
-                 if(method_frame(proj_ind)(1:3).eq.'min'.and.data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
-                    data_frame(ii,jj,imap) = 0.0
+                 if(method_frame(proj_ind)(1:3).eq.'min'.and.data_frame(ii,jj,kk).ge.1e-3*huge(0.0))then
+                    data_frame(ii,jj,kk) = 0.0
                  endif
-                 if(method_frame(proj_ind)(1:3).eq.'max'.and.data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
-                    data_frame(ii,jj,imap) = 0.0
-                 endif
-                 imap = imap+1
-              endif
-            end do
-#ifdef RT
-            if(rt) then
-               imap = 1
-               do kk=1,NGROUPS
-                  if(rt_movie_vars(kk).eq.1)then
-                     if((method_frame(proj_ind)(1:4).eq.'mean').and.(weights(ii,jj).gt.0d0))then
-                        rt_data_frame(ii,jj,imap) = rt_data_frame(ii,jj,imap)/weights(ii,jj)
-                     endif
-                     if(method_frame(proj_ind)(1:3).eq.'min'.and.rt_data_frame(ii,jj,imap).ge.1e-3*huge(0.0))then
-                        rt_data_frame(ii,jj,imap) = 0.0
-                     endif
-                     if(method_frame(proj_ind)(1:3).eq.'max'.and.rt_data_frame(ii,jj,imap).le.-1e-3*huge(0.0))then
-                        rt_data_frame(ii,jj,imap) = 0.0
-                     endif
-                     imap = imap+1
-                  endif
-               end do
-            endif
-#endif
-          end do
-        end do
+                 if(method_frame(proj_ind)(1:3).eq.'max'.and.data_frame(ii,jj,kk).le.-1e-3*huge(0.0))then
+                    data_frame(ii,jj,kk) = 0.0
+               endif
+            end do ! loop over jj
+          end do ! loop over ii
+        end do ! loop over kk
      endif
   endif
-  if(method_frame(proj_ind)(1:4).eq.'mean') deallocate(weights)
+  if(is_mean) deallocate(weights)
 
   if(myid==1)then
      ilun = 10
@@ -1079,72 +970,34 @@ subroutine output_frame()
         stop
 #endif
      endif
-     ! Output mass weighted density
-     imap = 1
-#ifdef SOLVERmhd
-     do kk=0, NVAR+7
-#else
-     do kk=0, NVAR+3
-#endif
-       if (movie_vars(kk).eq.1)then
-         open(ilun,file=TRIM(moviefiles(kk)),form='unformatted',iostat=ierr)
-         if(ierr .ne. 0)then
-            write(*,*) 'Error - Could not open ',TRIM(moviefiles(kk))
+     ! Write the frames to files
+     do kk=1, n_movie_vars
+        filename = trim(moviedir)//trim(movie_vars_txt(kk))//'_'//trim(istep_str)//'.map'
+        open(ilun,file=TRIM(filename),form='unformatted',iostat=ierr)
+        if(ierr .ne. 0)then
+           write(*,*) 'Error - Could not open ',TRIM(filename)
 #ifndef WITHOUTMPI
-            call MPI_ABORT(MPI_COMM_WORLD,1,info)
+           call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-            stop
+           stop
 #endif
-         endif
-         rewind(ilun)
-         if(tendmov>0)then
-            write(ilun)t,delx,dely,delz
-         else
-            write(ilun)aexp,delx,dely,delz
-         endif
-         write(ilun)nw_frame,nh_frame
-         write(ilun) real(data_frame(:,:,imap),4)
-         close(ilun)
-         ilun = ilun+1
-         imap = imap+1
-       end if
+        endif
+        rewind(ilun)
+        if(tendmov>0)then
+           write(ilun)t,delx,dely,delz
+        else
+           write(ilun)aexp,delx,dely,delz
+        endif
+        write(ilun)nw_frame,nh_frame
+        !print*,'Frame is ',movie_vars_txt(kk),minval(data_frame(:,:,kk)),maxval(data_frame(:,:,kk)) 
+        write(ilun) real(data_frame(:,:,kk),4)
+        close(ilun)
+        ilun = ilun+1
      end do
 
-#ifdef RT
-     if(rt) then
-        imap = 1
-        do kk=1, NGROUPS
-           if (rt_movie_vars(kk).eq.1) then
-              open(ilun,file=TRIM(rt_moviefiles(kk)),form='unformatted',iostat=ierr)
-              if(ierr .ne. 0)then
-                 write(*,*) 'Error - Could not open ',TRIM(moviefiles(kk))
-#ifndef WITHOUTMPI
-                 call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-                 stop
-#endif
-              endif
-              rewind(ilun)
-              if(tendmov>0)then
-                 write(ilun)t,delx,dely,delz
-              else
-                 write(ilun)aexp,delx,dely,delz
-              endif
-              write(ilun)nw_frame,nh_frame
-              write(ilun)real(rt_data_frame(:,:,imap),4)
-              close(ilun)
-              ilun = ilun+1
-              imap = imap+1
-           end if
-        end do
-     endif
-#endif
   endif
 
   deallocate(data_frame)
-#ifdef RT
-  if(rt) deallocate(rt_data_frame)
-#endif
   ! Update counter
   if(proj_ind.eq.len(trim(proj_axis))) then
      ! Increase counter and skip frames if timestep is large
@@ -1162,59 +1015,93 @@ end subroutine output_frame
 
 subroutine set_movie_vars()
   use amr_commons
-#ifdef RT
-  use rt_parameters,only:rt_movie_vars
-#endif
-#if NVAR>5 || defined (RT)
-  character(LEN=5)::dummy
-  integer::ll
-#endif
+  integer::kk
+  ! This routine sets up movie_vars to draw the correct
+  ! variables
 
-  ! This routine sets the movie vars from textual form
+  ! Determine the number of frames to output
+  n_movie_vars=0
+  do
+     if(TRIM(movie_vars_txt(n_movie_vars+1)).eq.'') exit
+     n_movie_vars = n_movie_vars + 1      
+  end do
 
-  if(ANY(movie_vars_txt=='temp ')) movie_vars(0)=1
-  if(ANY(movie_vars_txt=='dens ')) movie_vars(1)=1
-  if(ANY(movie_vars_txt=='vx   ')) movie_vars(2)=1
-  if(ANY(movie_vars_txt=='vy   ')) movie_vars(3)=1
-#ifdef SOLVERmhd
-  if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
-  if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
-#else
-#if NDIM==2
-  if(ANY(movie_vars_txt=='pres ')) movie_vars(4)=1
-#endif
-#if NDIM>2
-  if(ANY(movie_vars_txt=='vz   ')) movie_vars(4)=1
-  if(ANY(movie_vars_txt=='pres ')) movie_vars(5)=1
-#endif
-#endif
-#if NVAR>5
-  do ll=6,NVAR
-    write(dummy,'(I3.1)') ll
-    if(ANY(movie_vars_txt=='var'//trim(adjustl(dummy))//' ')) movie_vars(ll)=1
- end do
-#endif
-#ifdef SOLVERmhd
-  if(ANY(movie_vars_txt=='bxl  ')) movie_vars(6)=1
-  if(ANY(movie_vars_txt=='byl  ')) movie_vars(7)=1
-  if(ANY(movie_vars_txt=='bzl  ')) movie_vars(8)=1
-  if(ANY(movie_vars_txt=='bxr  ')) movie_vars(NVAR+1)=1
-  if(ANY(movie_vars_txt=='byr  ')) movie_vars(NVAR+2)=1
-  if(ANY(movie_vars_txt=='bzr  ')) movie_vars(NVAR+3)=1
-  if(ANY(movie_vars_txt=='pmag ')) movie_vars(NVAR+4)=1
-  if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+5)=1
-  if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+6)=1
-  if(ANY(movie_vars_txt=='lum  ')) movie_vars(NVAR+7)=1
-#else
-  if(ANY(movie_vars_txt=='dm   ')) movie_vars(NVAR+1)=1
-  if(ANY(movie_vars_txt=='stars')) movie_vars(NVAR+2)=1
-  if(ANY(movie_vars_txt=='lum  ')) movie_vars(NVAR+3)=1
-#endif
-#ifdef RT
-  do ll=1,NGROUPS
-    write(dummy,'(I3.1)') ll
-    if(ANY(movie_vars_txt=='Fp'//trim(adjustl(dummy))//' ')) rt_movie_vars(ll)=1
-  enddo
-#endif
+  do kk=1,n_movie_vars
+     if(movie_vars_txt(kk) .eq. 'dm') then
+        if(i_mv_dm .eq. -1) i_mv_dm = kk
+        movie_vars(kk) = i_mv_dm
+
+     else if (movie_vars_txt(kk) .eq. 'stars') then
+        if(i_mv_stars .eq. -1) i_mv_stars = kk
+        movie_vars(kk) = i_mv_stars
+
+     else if (movie_vars_txt(kk) .eq. 'lum') then
+        if(i_mv_lum .eq. -1) i_mv_lum = kk
+        movie_vars(kk) = i_mv_lum
+
+     else if (movie_vars_txt(kk) .eq. 'temp') then
+        if(i_mv_temp .eq. -1) i_mv_temp = kk
+        movie_vars(kk) = i_mv_temp
+
+     else if (movie_vars_txt(kk) .eq. 'dens') then
+        if(i_mv_dens .eq. -1) i_mv_dens = kk
+        movie_vars(kk) = i_mv_dens
+
+     else if (movie_vars_txt(kk) .eq. 'P') then
+        if(i_mv_dens .eq. -1) i_mv_p = kk
+        movie_vars(kk) = i_mv_p
+
+     else if (movie_vars_txt(kk) .eq. '|v|') then
+        if(i_mv_dens .eq. -1) i_mv_speed = kk
+        movie_vars(kk) = i_mv_speed
+
+     else if (movie_vars_txt(kk) .eq. 'Z') then
+        if(i_mv_metallicity .eq. -1) i_mv_metallicity = kk
+        movie_vars(kk) = i_mv_metallicity
+
+     else if (movie_vars_txt(kk) .eq. 'pmag') then
+        if(i_mv_pmag .eq. -1) i_mv_pmag = kk
+        movie_vars(kk) = i_mv_pmag
+
+     else if (movie_vars_txt(kk) .eq. 'xH2') then
+        if(i_mv_xh2 .eq. -1) i_mv_xh2 = kk
+        movie_vars(kk) = i_mv_xh2
+
+     else if (movie_vars_txt(kk) .eq. 'xHI') then
+        if(i_mv_xhi .eq. -1) i_mv_xhi = kk
+        movie_vars(kk) = i_mv_xhi
+
+     else if (movie_vars_txt(kk) .eq. 'xHII') then
+        if(i_mv_xhii .eq. -1) i_mv_xhii = kk
+        movie_vars(kk) = i_mv_xhii
+
+     else if (movie_vars_txt(kk) .eq. 'xHeII') then
+        if(i_mv_xheii .eq. -1) i_mv_xheii = kk
+        movie_vars(kk) = i_mv_xheii
+
+     else if (movie_vars_txt(kk) .eq. 'xHeIII') then
+        if(i_mv_xheiii .eq. -1) i_mv_xheiii = kk
+        movie_vars(kk) = i_mv_xheiii
+
+     else if (index(movie_vars_txt(kk), 'var') .eq. 1) then
+        if(i_mv_var .eq. -1) i_mv_var = kk
+        movie_vars(kk) = i_mv_var
+        ! Find which numbered variable to show
+        read( movie_vars_txt(kk)(4:5), '(i1)' ) ivar
+        movie_var_number(kk) = ivar
+        if(myid==1) print*,'showing var number ',ivar
+
+     else if (index(movie_vars_txt(kk), 'Fp') .eq. 1) then
+        if(i_mv_fp .eq. -1) i_mv_fp = kk
+        movie_vars(kk) = i_mv_fp
+        ! Find which photon group to show
+        read( movie_vars_txt(kk)(3:4), '(i1)' ) ivar
+        movie_var_number(kk) = ivar
+        if(myid==1) print*,'showing group number ',ivar
+
+     endif
+
+  end do
+
 
 end subroutine set_movie_vars
