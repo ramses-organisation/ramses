@@ -718,22 +718,22 @@ subroutine output_frame()
                                 if(movie_vars(kk).eq.i_mv_xhi)then
                                    ok_frame=.true.
                                    if(ixhi .ne. 0) then
-                                      uvar = uold(ind_cell(i),ixhi)/max(uold(ind_cell(i),1),smallr)
+                                      uvar = uold(ind_cell(i),ichem-1+ixhi)/max(uold(ind_cell(i),1),smallr)
                                    else
-                                      uvar = (1d0-uold(ind_cell(i),ixhii))/max(uold(ind_cell(i),1),smallr)
+                                      uvar = 1d0-uold(ind_cell(i),ichem-1+ixhii)/max(uold(ind_cell(i),1),smallr)
                                    endif
                                 else if(movie_vars(kk).eq.i_mv_xhii)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),ixhii)/max(uold(ind_cell(i),1),smallr)
+                                   uvar = uold(ind_cell(i),ichem-1+ixhii)/max(uold(ind_cell(i),1),smallr)
                                 else if(movie_vars(kk).eq.i_mv_xheii .and. ixheii .ne. 0)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),ixheii)/max(uold(ind_cell(i),1),smallr)
+                                   uvar = uold(ind_cell(i),ichem-1+ixheii)/max(uold(ind_cell(i),1),smallr)
                                 else if(movie_vars(kk).eq.i_mv_xheiii .and. ixheiii .ne. 0)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),ixheiii)/max(uold(ind_cell(i),1),smallr)
+                                   uvar = uold(ind_cell(i),ichem-1+ixheiii)/max(uold(ind_cell(i),1),smallr)
                                 else if(movie_vars(kk).eq.i_mv_xh2 .and. ixhi .ne. 0)then
                                    ok_frame=.true.
-                                   uvar = (1.-(uold(ind_cell(i),ixhi)+uold(ind_cell(i),ixhii)))/max(uold(ind_cell(i),1),smallr)
+                                   uvar = 1.-(uold(ind_cell(i),ichem-1+ixhi)+uold(ind_cell(i),ichem-1+ixhii))/max(uold(ind_cell(i),1),smallr)
                                 endif
 
                                 ! Photon map
@@ -1089,7 +1089,6 @@ subroutine set_movie_vars()
         ! Find which numbered variable to show
         read( movie_vars_txt(kk)(4:5), '(i1)' ) ivar
         movie_var_number(kk) = ivar
-        if(myid==1) print*,'showing var number ',ivar
 
      else if (index(movie_vars_txt(kk), 'Fp') .eq. 1) then
         if(i_mv_fp .eq. -1) i_mv_fp = kk
@@ -1097,7 +1096,6 @@ subroutine set_movie_vars()
         ! Find which photon group to show
         read( movie_vars_txt(kk)(3:4), '(i1)' ) ivar
         movie_var_number(kk) = ivar
-        if(myid==1) print*,'showing group number ',ivar
 
      endif
 
