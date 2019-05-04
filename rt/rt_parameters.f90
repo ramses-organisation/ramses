@@ -145,8 +145,6 @@ module rt_parameters
   logical::showSEDstats=.true.
   real(dp)::tot_nPhot, step_nPhot, step_nStar, step_mStar
 
-  integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
-
   ! H2 parameters ------------------------------------------------------------------------
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
   ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
