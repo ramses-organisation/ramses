@@ -105,7 +105,7 @@ subroutine backup_hydro(filename, filename_desc)
                  do i = 1, ncache
                     xdp(i) = uold(ind_grid(i)+iskip, ivar)
                  end do
-                 field_name = 'B_' // dim_keys(ivar - 6 + 1) // '_right'
+                 field_name = 'B_' // dim_keys(ivar - nvar+1 + 1) // '_right'
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #if NENER > 0
