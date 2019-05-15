@@ -1014,7 +1014,8 @@ end subroutine output_frame
 
 subroutine set_movie_vars()
   use amr_commons
-  integer::kk
+  implicit none
+  integer::kk, ivar
   ! This routine sets up movie_vars to draw the correct
   ! variables
 
