@@ -106,7 +106,7 @@ subroutine courant_fine(ilevel)
         end do
 #endif
 
-        if(momentum_feedback)then
+        if(momentum_feedback>0)then
            do i=1,nleaf
              pp(i)=pstarold(ind_leaf(i))
            end do
