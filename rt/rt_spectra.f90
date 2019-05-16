@@ -241,7 +241,7 @@ MODULE SED_module
   real(dp),parameter::SED_dlgA=0.02d0
   real(dp)::SED_dlgZ
   real(dp)::SED_lgA0, SED_lgZ0
-  real(dp),allocatable,dimension(:)::SED_Ages,SED_Zeds![Gyr],[m_met/m_gas]
+  real(dp),allocatable,dimension(:)::SED_ages,SED_zeds![Gyr],[m_met/m_gas]
   ! SED_table: iAges, imetallicities, igroups, properties
   !                                         (Lum, Lum-acc, egy, csn, cse).
   ! Lum is photons per sec per solar mass (eV per sec per solar mass in
@@ -270,11 +270,11 @@ SUBROUTINE init_SED_table()
   integer::dummy_io,info2,ierr
 #endif
   ! Temporary SSP/SED parameters (read from SED files):
-  integer:: nAges, nZs, nLs              ! # of bins of age, z, wavelength
-  real(kind=8),allocatable::Ages(:), Zs(:), Ls(:), rebAges(:)
+  integer:: nAges, nzs, nLs              ! # of bins of age, z, wavelength
+  real(kind=8),allocatable::ages(:), Zs(:), Ls(:), rebAges(:)
   real(kind=8),allocatable::SEDs(:,:,:)           ! SEDs f(lambda,age,met)
   real(kind=8),allocatable::tbl(:,:,:), reb_tbl(:,:,:)
-  integer::i,iA,iZ,ip,ii,dum
+  integer::i,ia,iz,ip,ii,dum
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp
@@ -322,36 +322,36 @@ SUBROUTINE init_SED_table()
 
   ! READ METALLICITY BINS-------------------------------------------------
   open(unit=10,file=fZs,status='old',form='formatted')
-  read(10,'(i8)') nZs
-  allocate(Zs(nZs))
-  do i = 1, nZs
-     read(10,'(e14.6)') Zs(i)
+  read(10,'(i8)') nzs
+  allocate(zs(nzs))
+  do i = 1, nzs
+     read(10,'(e14.6)') zs(i)
   end do
   close(10)
-  if(nZs.eq.1)is_SED_single_Z=.true.
+  if(nzs.eq.1)is_SED_single_Z=.true.
   ! READ AGE BINS---------------------------------------------------------
   open(unit=10,file=fAges,status='old',form='formatted')
   read(10,'(i8)') nAges
   allocate(ages(nAges))
   do i = 1, nAges
-     read(10,'(e14.6)') Ages(i)
+     read(10,'(e14.6)') ages(i)
   end do
   close(10)
   if(nAges.lt.2)then
       if(myid==1) print*,'WARNING! Only one age bin found - check if &
                           interpolated values make sense'
   endif
-  Ages = Ages*1.e-9                       !         Convert from yr to Gyr
-  if(Ages(1) .ne. 0.) Ages(1) = 0.
+  ages = ages*1.e-9                       !         Convert from yr to Gyr
+  if(ages(1) .ne. 0.) ages(1) = 0.
   ! READ SEDS-------------------------------------------------------------
   open(unit=10,file=fSEDs,status='old',form='unformatted')
   read(10) nLs, dum
   allocate(Ls(nLs))
   read(10) Ls(:)
-  allocate(SEDs(nLs,nAges,nZs))
-  do iZ = 1, nZs
-     do iA = 1, nAges
-        read(10) SEDs(:,iA,iZ)
+  allocate(SEDs(nLs,nAges,nzs))
+  do iz = 1, nzs
+     do ia = 1, nAges
+        read(10) SEDs(:,ia,iz)
      end do
   end do
   close(10)
@@ -388,20 +388,20 @@ SUBROUTINE init_SED_table()
   do ip = 1,nSEDgroups                                ! Loop photon groups
      tbl=0.
      pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
-     do iZ = 1, nZs                                     ! Loop metallicity
-     do iA = locid+1,nAges,ncpu2                                ! Loop age
-        tbl(iA,iZ,1) = getSEDLuminosity(Ls,SEDs(:,iA,iZ),nLs,pL0,pL1)
-        tbl(iA,iZ,3) = getSEDEgy(Ls,SEDs(:,iA,iZ),nLs,pL0,pL1)
+     do iz = 1, nzs                                     ! Loop metallicity
+     do ia = locid+1,nAges,ncpu2                                ! Loop age
+        tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
+        tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         do ii = 1,nIonsUsed                                ! Loop species
-           tbl(iA,iZ,2+ii*2) = getSEDcsn(Ls,SEDs(:,iA,iZ),nLs,pL0,pL1,ii)
-           tbl(iA,iZ,3+ii*2) = getSEDcse(Ls,SEDs(:,iA,iZ),nLs,pL0,pL1,ii)
+           tbl(ia,iz,2+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
+           tbl(ia,iz,3+ii*2) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
         end do ! End species loop
      end do ! End age loop
      end do ! End Z loop
 
 #ifndef WITHOUTMPI
-     allocate(tbl2(nAges,nZs,nv))
-     call MPI_ALLREDUCE(tbl,tbl2,nAges*nZs*nv,&
+     allocate(tbl2(nAges,nzs,nv))
+     call MPI_ALLREDUCE(tbl,tbl2,nAges*nzs*nv,&
           MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr)
      tbl = tbl2
      deallocate(tbl2)
@@ -411,7 +411,7 @@ SUBROUTINE init_SED_table()
      ! even log-intervals between bins for fast interpolation.           !
      dlgA = SED_dlgA ; SED_dlgZ = -SED_nz
      call rebin_log(dlgA, SED_dlgZ                                       &
-          , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), Zs, nv        &
+          , tbl(2:nAges,:,:), nAges-1, nZs, ages(2:nAges), zs, nv        &
           , reb_tbl, SED_nA, SED_nZ, rebAges, SED_Zeds)
      SED_nA=SED_nA+1                              ! Make room for zero age
      if(ip .eq. 1) allocate(SED_table(SED_nA, SED_nZ, nSEDgroups, nv))
@@ -423,21 +423,21 @@ SUBROUTINE init_SED_table()
      if(ip .eq. 1) then
         SED_lgZ0 = log10(SED_Zeds(1))                  ! Interpolation intervals
         SED_lgA0 = log10(rebAges(1))
-        allocate(SED_Ages(SED_nA))
-        SED_Ages(1)=0d0 ; SED_Ages(2:)=rebAges ;    ! Must have zero initial age
+        allocate(SED_ages(SED_nA))
+        SED_ages(1)=0d0 ; SED_ages(2:)=rebAges ;    ! Must have zero initial age
      end if
 
      ! Integrate the cumulative luminosities:
      SED_table(:,:,ip,2)=0d0
-     do iZ = 1, SED_nZ ! Loop metallicity
-        tmp = trapz1( SED_Ages, SED_table(:,iZ,ip,1), SED_nA, SED_table(:,iZ,ip,2) )
-        SED_table(:,iZ,ip,2) = SED_table(:,iZ,ip,2) * Gyr2sec
+     do iz = 1, SED_nZ ! Loop metallicity
+        tmp = trapz1( SED_ages, SED_table(:,iz,ip,1), SED_nA, SED_table(:,iz,ip,2) )
+        SED_table(:,iz,ip,2) = SED_table(:,iz,ip,2) * Gyr2sec
      end do
 
   end do ! End photon group loop
 
   deallocate(SEDs) ; deallocate(tbl)
-  deallocate(Ages) ; deallocate(rebAges)
+  deallocate(ages) ; deallocate(rebAges)
   deallocate(zs)
   deallocate(Ls)
 
@@ -914,10 +914,10 @@ SUBROUTINE write_SEDtable()
      open(10, file=filename, status='unknown')
      write(10,*) SED_nA, SED_nZ
 
-     do j = 1,SED_nZ
+     do j = 1,SED_nz
         do i = 1,SED_nA
            write(10,900,advance='no')                                    &
-                 SED_Ages(i)        ,    SED_Zeds(j)        ,            &
+                 SED_ages(i)        ,    SED_zeds(j)        ,            &
                  SED_table(i,j,ip,1),    SED_table(i,j,ip,2),            &
                  SED_table(i,j,ip,3)
            if(nIons .gt. 1) then
@@ -938,11 +938,11 @@ SUBROUTINE write_SEDtable()
 END SUBROUTINE write_SEDtable
 
 !*************************************************************************
-SUBROUTINE inp_SED_table(Age, Z, nProp, same, ret)
+SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
 
 ! Compute SED property by interpolation from table.
 ! input/output:
-! Age   => Star population age [Gyrs]
+! age   => Star population age [Gyrs]
 ! Z     => Star population metallicity [m_metals/m_tot]
 ! nprop => Number of property to fetch
 !          1=log(photon # intensity [# Msun-1 s-1]),
@@ -955,51 +955,51 @@ SUBROUTINE inp_SED_table(Age, Z, nProp, same, ret)
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
-  real(dp), intent(in):: Age, Z
+  real(dp), intent(in):: age, Z
   real(dp):: lgAge, lgZ
   integer:: nProp
   logical:: same
   real(dp),dimension(:):: ret
-  integer,save:: iA, iZ
-  real(dp),save:: dA, dA0, dA1, dZ, dZ0, dZ1
+  integer,save:: ia, iz
+  real(dp),save:: da, da0, da1, dz, dz0, dz1
 !-------------------------------------------------------------------------
-  ! iA, iZ: lower indexes: 0<iA<SED_nA etc.
+  ! ia, iz: lower indexes: 0<ia<sed_nA etc.
   ! da0, da1, dz0, dz1: proportional distances from edges:
   ! 0<=da0<=1, 0<=da1<=1 etc.
   if(.not. same) then
-     if(Age.le.0d0) then
+     if(age.le.0d0) then
         lgAge=-4d0
      else
-        lgAge = log10(Age)
+        lgAge = log10(age)
      endif
      lgZ=log10(Z)
-     iA = min(max(floor((lgAge-SED_lgA0)/SED_dlgA ) + 2, 1  ),  SED_nA-1 )
-     dA = SED_Ages(iA+1)-SED_Ages(iA)
-     dA0= min( max(   (Age-SED_Ages(iA)) /dA,       0. ), 1.          )
-     dA1= min( max(  (SED_Ages(iA+1)-Age)/dA,       0. ), 1.          )
+     ia = min(max(floor((lgAge-SED_lgA0)/SED_dlgA ) + 2, 1  ),  SED_nA-1 )
+     da = SED_ages(ia+1)-SED_ages(ia)
+     da0= min( max(   (age-SED_ages(ia)) /da,       0. ), 1.          )
+     da1= min( max(  (SED_ages(ia+1)-age)/da,       0. ), 1.          )
 
      if(is_SED_single_Z)then
-        iZ = 1
-        dZ0= 0.0d0
-        dZ1= 1.0d0
+        iz = 1
+        dz0= 0.0d0
+        dz1= 1.0d0
      else
-        iZ = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
-        dZ = sed_Zeds(iZ+1)-SED_Zeds(iZ)
-        dZ0= min( max(   (Z-SED_zeds(iZ)) /dZ,         0. ),  1.         )
-        dZ1= min( max(  (SED_Zeds(iZ+1)-Z)/dZ,         0. ),  1.         )
+        iz = min(max(floor((lgZ-SED_lgZ0)/SED_dlgZ ) + 1,   1  ),  SED_nZ-1 )
+        dz = sed_Zeds(iz+1)-SED_Zeds(iz)
+        dz0= min( max(   (Z-SED_zeds(iz)) /dz,         0. ),  1.         )
+        dz1= min( max(  (SED_Zeds(iz+1)-Z)/dz,         0. ),  1.         )
      endif
 
-     if (abs(dA0+dA1-1.0d0) > 1.0d-5 .or. abs(dZ0+dZ1-1.0d0) > 1.0d-5) then
+     if (abs(da0+da1-1.0d0) > 1.0d-5 .or. abs(dz0+dz1-1.0d0) > 1.0d-5) then
         write(*,*) 'Screwed up the sed interpolation ... '
-        write(*,*) dA0+dA1,dZ0+dZ1
+        write(*,*) da0+da1,dz0+dz1
         call clean_stop
      end if
   endif
 
-  ret = dA0 * dZ0 * SED_table(iA+1, iZ+1, :, nProp) + &
-        dA1 * dZ0 * SED_table(iA,   iZ+1, :, nProp) + &
-        dA0 * dZ1 * SED_table(iA+1, iZ,   :, nProp) + &
-        dA1 * dZ1 * SED_table(iA,   iZ,   :, nProp)
+  ret = da0 * dz0 * SED_table(ia+1, iz+1, :, nProp) + &
+        da1 * dz0 * SED_table(ia,   iz+1, :, nProp) + &
+        da0 * dz1 * SED_table(ia+1, iz,   :, nProp) + &
+        da1 * dz1 * SED_table(ia,   iz,   :, nProp)
 
 END SUBROUTINE inp_SED_table
 
