@@ -704,15 +704,14 @@ subroutine output_frame()
                                    ok_frame=.true.
                                    ivar = movie_var_number(kk)
                                    uvar = uold(ind_cell(i),ivar)/max(uold(ind_cell(i),1),smallr)
-                                endif ! if(movie_vars ...
 #ifdef SOLVERmhd
                                 ! Magnetic energy map case
                                 else if(movie_vars(kk).eq.i_mv_pmag)then
                                    ok_frame=.true.
                                    uvar = 0.125*(uold(ind_cell(i),6)**2+uold(ind_cell(i),7)**2+uold(ind_cell(i),8)**2 &
                                         &    + uold(ind_cell(i),NVAR+1)**2+uold(ind_cell(i),NVAR+2)**2+uold(ind_cell(i),NVAR+4)**2)
-                                endif
 #endif
+                                endif
 #ifdef RT
                                 ! Ionization fraction map
                                 if(movie_vars(kk).eq.i_mv_xhi)then
@@ -1015,7 +1014,8 @@ end subroutine output_frame
 
 subroutine set_movie_vars()
   use amr_commons
-  integer::kk
+  implicit none
+  integer::kk, ivar
   ! This routine sets up movie_vars to draw the correct
   ! variables
 
