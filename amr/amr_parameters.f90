@@ -230,6 +230,7 @@ module amr_parameters
   integer::n_movie_vars
   integer::i_mv_temp=-1,  i_mv_dens=-1,       i_mv_p=-1
   integer::i_mv_speed=-1, i_mv_metallicity=-1
+  integer::i_mv_vx=-1,    i_mv_vy=-1,         i_mv_vz=-1
   integer::i_mv_dm=-1,    i_mv_stars=-1,      i_mv_lum=-1
   integer::i_mv_var=-1,   i_mv_xh2=-1,        i_mv_xhi=-1
   integer:: i_mv_xhii=-1, i_mv_xheii=-1,      i_mv_xheiii=-1

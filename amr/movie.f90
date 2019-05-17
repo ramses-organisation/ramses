@@ -693,6 +693,19 @@ subroutine output_frame()
                                       uvar = uvar + uold(ind_cell(i),idim+1)**2 / max(uold(ind_cell(i),1),smallr)
                                    end do
                                    uvar = sqrt(uvar)
+
+                                ! Velocity map
+                                else if(movie_vars(kk).eq.i_mv_vx)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),2)
+                                else if(movie_vars(kk).eq.i_mv_vy)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),3)
+#if NDIM>2
+                                else if(movie_vars(kk).eq.i_mv_vz)then
+                                   ok_frame=.true.
+                                   uvar = uold(ind_cell(i),4)
+#endif
                                    
                                 ! Metallicity map
                                 else if(movie_vars(kk).eq.i_mv_metallicity)then
@@ -1055,6 +1068,18 @@ subroutine set_movie_vars()
         if(i_mv_dens .eq. -1) i_mv_speed = kk
         movie_vars(kk) = i_mv_speed
 
+    else if (movie_vars_txt(kk) .eq. 'vx') then
+        if(i_mv_vx .eq. -1) i_mv_vx = kk
+        movie_vars(kk) = i_mv_vx
+
+    else if (movie_vars_txt(kk) .eq. 'vy') then
+        if(i_mv_vy .eq. -1) i_mv_vy = kk
+        movie_vars(kk) = i_mv_vy
+
+    else if (movie_vars_txt(kk) .eq. 'vz') then
+        if(i_mv_vz .eq. -1) i_mv_vz = kk
+        movie_vars(kk) = i_mv_vz
+
      else if (movie_vars_txt(kk) .eq. 'Z') then
         if(i_mv_metallicity .eq. -1) i_mv_metallicity = kk
         movie_vars(kk) = i_mv_metallicity
@@ -1096,7 +1121,7 @@ subroutine set_movie_vars()
         ! Find which photon group to show
         read( movie_vars_txt(kk)(3:4), '(i1)' ) ivar
         movie_var_number(kk) = ivar
-
+    
      endif
 
   end do
