@@ -247,31 +247,31 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*2d33)/scale_v**2
+  ESN=1d51/(10.*M_sun)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
-  M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
+  M_SINGLE_SN=(10.*M_sun)/(scale_d*scale_l**3)
 
   if(momentum_feedback>0)then
    SELECT CASE (momentum_feedback)
       CASE (1)
          ! inhomogeneous medium (weak)
          ! momentum
-         p_SN = 1.11*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+         p_SN = 1.11*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
          p_SN_z_exp = -0.114
          p_SN_n_exp = -0.190
          ! cooling radius
-         r_c = 6.3 * 3.08d18 / scale_l
+         r_c = 6.3 * pc2cm / scale_l
          r_c_z_exp = -0.05
          r_c_n_exp = -0.42
       CASE (2)
          ! homogeneous medium (strong)
          ! momentum
-         p_SN = 1.42*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
+         p_SN = 1.42*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
          p_SN_z_exp = -0.137
          p_SN_n_exp = -0.160
          ! cooling radius
-         r_c = 3.0 * 3.08d18 / scale_l
+         r_c = 3.0 * pc2cm / scale_l
          r_c_z_exp = -0.082
          r_c_n_exp = -0.42
    END SELECT
@@ -546,9 +546,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           p_boost = metallicity**(p_SN_z_exp) * (gas_density*scale_nH/100.0)**(p_SN_n_exp)
-           r_cool = r_c * metallicity**(r_c_z_exp) * (gas_density*scale_nH/100.0)**(r_c_n_exp)
-           if(birth_time.lt.(current_time-t0) .and. r_cool.lt.(4.0*dx_min/aexp))then
+           p_boost=metallicity**(p_SN_z_exp)*(gas_density*scale_nH/100.0)**(p_SN_n_exp)
+           r_cool=r_c*metallicity**(r_c_z_exp)*(gas_density*scale_nH/100.0)**(r_c_n_exp)
+           if(birth_time.lt.(current_time-t0).and.r_cool.lt.(4.0*dx_min/aexp))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif
         end do
