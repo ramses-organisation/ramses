@@ -120,7 +120,7 @@ subroutine upl(ind_cell,ncell)
   end do
   ! End loop over variables
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
 
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
