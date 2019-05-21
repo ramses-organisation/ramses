@@ -2,6 +2,7 @@
 !################################################################
 !################################################################
 !################################################################
+#if NDIM==3
 subroutine thermal_feedback(ilevel)
   use pm_commons
   use amr_commons
@@ -18,9 +19,9 @@ subroutine thermal_feedback(ilevel)
   ! This routine is called every fine time step.
   !------------------------------------------------------------------------
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::t0,t_sn_cont,current_time
+  real(dp)::t_sn_cont,current_time
   integer::igrid,jgrid,ipart,jpart,next_part,ivar
-  integer::ig,ip,npart1,npart2,icpu,ilun=0,idim
+  integer::ig,ip,npart1,npart2,icpu,ilun,idim
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -30,13 +31,14 @@ subroutine thermal_feedback(ilevel)
   if(sf_log_properties) then
      call title(ifout-1,nchar)
      if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
      endif
      filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
-     ilun=myid+10
+     ilun=myid+103
      call title(myid,nchar)
      fileloc=TRIM(filename)//TRIM(nchar)
      ! Wait for the token
@@ -80,18 +82,15 @@ subroutine thermal_feedback(ilevel)
 
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-    !  t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
      t_sn_cont=20.*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
      current_time=texp
   else
-    !  t0=t_sne*1d6*(365.*24.*3600.)/scale_t
      t_sn_cont=20.*1d6*(365.*24.*3600.)/scale_t
      current_time=t
   endif
 
   ! Gather star particles only.
 
-#if NDIM==3
   ! Loop over cpus
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
@@ -151,21 +150,23 @@ subroutine thermal_feedback(ilevel)
   end do
   ! End loop over cpus
 
-#endif
   if(sf_log_properties) close(ilun)
 
 111 format('   Entering thermal_feedback for level ',I2)
 
 end subroutine thermal_feedback
+#endif
 !################################################################
 !################################################################
 !################################################################
 !################################################################
+#if NDIM==3
 subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   use random
+  use constants, only: M_sun, Myr2sec, pc2cm
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -175,12 +176,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! dumps mass, momentum and energy in the nearest grid cell using array
   ! unew.
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,ivar,ilun=0
+  integer::i,j,idim,nx_loc,ivar,ilun
   real(kind=8)::RandNum
   real(dp)::mstar,dx_min,vol_min
   real(dp)::t0,ESN,mejecta,zloss,e,uvar
   real(dp)::msne_min,mstar_max,FRAC_NT
-  real(dp)::p_SN,pressure,gas_density,metallicity
+  real(dp)::pressure,gas_density,metallicity
+  real(dp)::p_SN,p_SN_z_exp,p_SN_n_exp,r_c,r_c_z_exp,r_c_n_exp
   real(dp)::M_SINGLE_SN,mpart_ini,cs_H2_2,p_boost,r_cool
   real(dp)::dx,dx_loc,scale,birth_time,current_time,t_sn_cont,avg_n,n_dot
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -207,8 +209,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer::irad
 #endif
 
-  if(sf_log_properties) ilun=myid+10
-
+  if(sf_log_properties) ilun=myid+103
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -231,8 +232,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
 
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
@@ -246,22 +247,42 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*2d33)/scale_v**2
+  ESN=1d51/(10.*M_sun)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
-  M_SINGLE_SN=(10.*2d33)/(scale_d*scale_l**3)
+  M_SINGLE_SN=(10.*M_sun)/(scale_d*scale_l**3)
 
-  ! Stellar momentum injection from cgs to code units
-  ! and for solar metallicity
-  p_SN=1.11*1d5*1d5*2d33/(scale_v*scale_d*scale_l**3)
-
+  if(momentum_feedback>0)then
+   SELECT CASE (momentum_feedback)
+      CASE (1)
+         ! inhomogeneous medium (weak)
+         ! momentum
+         p_SN = 1.11*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
+         p_SN_z_exp = -0.114
+         p_SN_n_exp = -0.190
+         ! cooling radius
+         r_c = 6.3 * pc2cm / scale_l
+         r_c_z_exp = -0.05
+         r_c_n_exp = -0.42
+      CASE (2)
+         ! homogeneous medium (strong)
+         ! momentum
+         p_SN = 1.42*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
+         p_SN_z_exp = -0.137
+         p_SN_n_exp = -0.160
+         ! cooling radius
+         r_c = 3.0 * pc2cm / scale_l
+         r_c_z_exp = -0.082
+         r_c_n_exp = -0.42
+   END SELECT
+  endif
+  
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.0
 
-#if NDIM==3
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
      do i=1,ng
@@ -292,7 +313,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
     ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
     do idim=1,ndim
         do j=1,np
@@ -481,7 +502,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  if(ivar.eq.ndim+2)then
                     e=0.0d0
                     do idim=1,ndim
-                       e=e+0.5*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
+                       e=e+0.5d0*unew(ind_cell(i),idim+1)**2/max(unew(ind_cell(i),1),smallr)
                     enddo
 #if NENER>0
                     do irad=0,nener-1
@@ -494,7 +515,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                     enddo
 #endif
                     ! Temperature
-                    uvar=(gamma-1.0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
+                    uvar=(gamma-1.0d0)*(unew(ind_cell(i),ndim+2)-e)*scale_T2
                  else
                     uvar=unew(indp(j),ivar)
                  endif
@@ -513,7 +534,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
      
      ! Use stellar momentum feedback
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         ! Momentum feedback from supernovae
         do j=1,np
            birth_time=tp(ind_part(j))
@@ -525,10 +546,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           p_boost = (gas_density*scale_nH/100.0)**(-0.190)*metallicity**(-0.114)
-           ! Cooling radius
-           r_cool = 6.3 * 3.08d18 / scale_l * metallicity**(-0.05) * (gas_density*scale_nH/100.0)**(-0.42)
-           if(birth_time.lt.(current_time-t0) .and. r_cool.lt.(4.0*dx_min/aexp))then
+           p_boost=metallicity**(p_SN_z_exp)*(gas_density*scale_nH/100.0)**(p_SN_n_exp)
+           r_cool=r_c*metallicity**(r_c_z_exp)*(gas_density*scale_nH/100.0)**(r_c_n_exp)
+           if(birth_time.lt.(current_time-t0).and.r_cool.lt.(4.0*dx_min/aexp))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif
         end do
@@ -543,7 +563,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do j=1,np
 
      ! Specific kinetic energy of the star
-     ekinetic(j)=0.5*(vp(ind_part(j),1)**2+vp(ind_part(j),2)**2+vp(ind_part(j),3)**2)
+     ekinetic(j)=0.5d0*(vp(ind_part(j),1)**2 &
+          &            +vp(ind_part(j),2)**2 &
+          &            +vp(ind_part(j),3)**2)
 
      ! Update hydro variable in NGP cell
      unew(indp(j),1)=unew(indp(j),1)+mloss(j)
@@ -580,9 +602,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-#endif
-
 end subroutine feedbk
+#endif
 !################################################################
 !################################################################
 !################################################################
@@ -591,6 +612,7 @@ subroutine kinetic_feedback
   use amr_commons
   use pm_commons
   use hydro_commons
+  use constants, only:Myr2sec
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -644,10 +666,10 @@ subroutine kinetic_feedback
   ! Lifetime of Giant Molecular Clouds from Myr to code units
   ! Massive star lifetime from Myr to code units
   if(use_proper_time)then
-     t0=t_sne*1d6*(365.*24.*3600.)/(scale_t/aexp**2)
+     t0=t_sne*Myr2sec/(scale_t/aexp**2)
      current_time=texp
   else
-     t0=t_sne*1d6*(365.*24.*3600.)/scale_t
+     t0=t_sne*Myr2sec/scale_t
      current_time=t
   endif
 
@@ -702,7 +724,7 @@ subroutine kinetic_feedback
   ! Allocate arrays for the position and the mass of the SN
   allocate(xSN(1:nSN_tot,1:3),vSN(1:nSN_tot,1:3))
   allocate(mSN(1:nSN_tot),sSN(1:nSN_tot),ZSN(1:nSN_tot))
-  xSN=0.;vSN=0.;mSN=0.;sSN=0.;ZSN=0.
+  xSN=0; vSN=0; mSN=0; sSN=0; ZSN=0
   ! Allocate arrays for particles index and parent grid
   if(nSN_loc>0)then
      allocate(ind_part(1:nSN_loc),ind_grid(1:nSN_loc),ok_free(1:nSN_loc))
@@ -805,6 +827,7 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants, only: pc2cm
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -846,12 +869,12 @@ subroutine average_SN(xSN,vol_gas,dq,ekBlast,ind_blast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
   ! Initialize the averaged variables
-  vol_gas=0.0;dq=0.0;u2Blast=0.0;ekBlast=0.0;ind_blast=-1
+  vol_gas=0; dq=0; u2Blast=0; ekBlast=0; ind_blast=-1
 
   ! Loop over levels
   do ilevel=levelmin,nlevelmax
@@ -969,6 +992,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use pm_commons
   use amr_commons
   use hydro_commons
+  use constants, only: M_sun, pc2cm
   use mpi_mod
   implicit none
   !------------------------------------------------------------------------
@@ -1004,7 +1028,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Maximum radius of the ejecta
-  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*3.08d18)
+  rmax=MAX(2.0d0*dx_min*scale_l/aexp,rbubble*pc2cm)
   rmax=rmax/scale_l
   rmax2=rmax*rmax
 
@@ -1014,17 +1038,17 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   else
      mstar=m_star*mass_sph
   endif
-  msne_min=mass_sne_min*2d33/(scale_d*scale_l**3)
-  mstar_max=mass_star_max*2d33/(scale_d*scale_l**3)
+  msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
+  mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  ESN=(1d51/(10d0*2d33))/scale_v**2
+  ESN=(1d51/(10d0*M_sun))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn
      if(sf_imf)then
         if(mSN(iSN).le.mstar_max)then
            if(mSN(iSN).ge.msne_min) eta_sn2 = eta_ssn
-           if(mSN(iSN).lt.msne_min) eta_sn2 = 0.0
+           if(mSN(iSN).lt.msne_min) eta_sn2 = 0
         endif
      endif
      if(vol_gas(iSN)>0d0)then
@@ -1106,7 +1130,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
                        uold(ind_cell(i),3)=uold(ind_cell(i),3)+d_gas(iSN)*v
                        uold(ind_cell(i),4)=uold(ind_cell(i),4)+d_gas(iSN)*w
                        ! Finally update the total energy of the gas
-                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
+                       uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5d0*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
                     endif
                  end do
               endif
@@ -1129,7 +1153,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
            uold(indSN(iSN),2)=uold(indSN(iSN),2)+d_gas(iSN)*u
            uold(indSN(iSN),3)=uold(indSN(iSN),3)+d_gas(iSN)*v
            uold(indSN(iSN),4)=uold(indSN(iSN),4)+d_gas(iSN)*w
-           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5*(u*u+v*v+w*w)+p_gas(iSN)
+           uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5d0*(u*u+v*v+w*w)+p_gas(iSN)
            if(metal)uold(indSN(iSN),imetal)=uold(indSN(iSN),imetal)+d_metal(iSN)
         endif
      endif

@@ -98,7 +98,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      end do
   end do
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
      do k = 1, ncell
        uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k)/uu(k,1))
      end do
