@@ -697,14 +697,14 @@ subroutine output_frame()
                                 ! Velocity map
                                 else if(movie_vars(kk).eq.i_mv_vx)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),2)
+                                   uvar = uold(ind_cell(i),2) / max(uold(ind_cell(i),1),smallr)
                                 else if(movie_vars(kk).eq.i_mv_vy)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),3)
+                                   uvar = uold(ind_cell(i),3) / max(uold(ind_cell(i),1),smallr)
 #if NDIM>2
                                 else if(movie_vars(kk).eq.i_mv_vz)then
                                    ok_frame=.true.
-                                   uvar = uold(ind_cell(i),4)
+                                   uvar = uold(ind_cell(i),4) / max(uold(ind_cell(i),1),smallr)
 #endif
                                    
                                 ! Metallicity map
