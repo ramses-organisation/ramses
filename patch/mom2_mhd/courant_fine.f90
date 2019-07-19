@@ -22,6 +22,7 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar+3),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
+  real(dp),dimension(1:nvector)::pp
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -122,9 +123,15 @@ subroutine courant_fine(ilevel)
         end do
 #endif
 
+        if(momentum_feedback>0)then
+           do i=1,nleaf
+             pp(i)=pstarold(ind_leaf(i))
+           end do
+         endif
+
         ! Compute CFL time-step
         if(nleaf>0)then
-           call cmpdt(uu,gg,dx,dt_lev,nleaf)
+           call cmpdt(uu,gg,pp,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
 

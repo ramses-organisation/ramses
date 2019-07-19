@@ -2,7 +2,7 @@
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine cmpdt(uu,gg,dx,dt,ncell)
+subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   use amr_parameters
   use hydro_parameters
   use const
@@ -12,6 +12,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
+  real(dp),dimension(1:nvector)::pp
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
   integer::k,idim
@@ -82,6 +83,12 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
            ctot(k)=ctot(k)+abs(uu(k,idim+1))+cf
         end do
      end do
+  endif
+
+  if(momentum_feedback>0)then
+   do k = 1, ncell
+     ctot(k) = ctot(k) + abs(pp(k)/uu(k,1))
+   end do
   endif
 
   ! Compute gravity strength ratio
@@ -423,11 +430,12 @@ END SUBROUTINE hll
 !###########################################################
 !###########################################################
 !###########################################################
-SUBROUTINE hlld(qleft,qright,fgdnv)
+SUBROUTINE hlld(qleft,qright,snleft,snright,fgdnv)
   USE hydro_parameters
   USE const
   ! HLLD Riemann solver (Miyoshi & Kusano, 2005, JCP, 208, 315)
   IMPLICIT NONE
+  REAL(dp)::snleft,snright
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
   REAL(dp),DIMENSION(1:nvar+1)::fgdnv
   REAL(dp)::SL,SR,SAL,SAR
@@ -472,6 +480,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptotl = Ptotl + qleft(8+irad)
   end do
 #endif
+  Ptotl=Ptotl+snleft
   eintl=Pl*entho
 
   ! Right variables
@@ -489,11 +498,12 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
      Ptotr = Ptotr + qright(8+irad)
   end do
 #endif
+  Ptotr=Ptotr+snright
   eintr=Pr*entho
 
   ! Find the largest eigenvalues in the normal direction to the interface
-  CALL find_speed_fast(qleft ,cfastl)
-  CALL find_speed_fast(qright,cfastr)
+  CALL find_speed_fast(qleft ,snleft ,cfastl)
+  CALL find_speed_fast(qright,snright,cfastr)
 
   ! Compute HLL wave speed
   SL=min(ul,ur)-max(cfastl,cfastr)
@@ -820,7 +830,7 @@ END SUBROUTINE find_speed_info
 !###########################################################
 !###########################################################
 !###########################################################
-SUBROUTINE find_speed_fast(qvar,vel_info)
+SUBROUTINE find_speed_fast(qvar,sn,vel_info)
   USE amr_parameters
   USE const
   USE hydro_parameters
@@ -839,7 +849,7 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   d=qvar(1); P=qvar(2); u=qvar(3); A=qvar(4)
   v=qvar(5); B=qvar(6); w=qvar(7); C=qvar(8)
   B2 = A*A+B*B+C*C
-  c2 = gamma*P/d
+  c2 = gamma*(P+sn)/d
 #if NENER>0
   do irad = 1,nener
      c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d

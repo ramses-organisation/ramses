@@ -28,7 +28,7 @@
 !
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 ! ----------------------------------------------------------------
-subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
+subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -38,6 +38,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz,dt
 
   ! Input states
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
 
@@ -102,7 +103,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,6,7,8,fx,tx,ngrid)
   ! Save flux in output array
   do k=klo,khi
@@ -125,7 +126,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,7,6,8,fx,tx,ngrid)
   ! Save flux in output array
   do k=klo,khi
@@ -149,7 +150,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Z direction
 #if NDIM==3
   call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,8,6,7,fx,tx,ngrid)
   ! Save flux in output array
   do k=kf1,kf2
@@ -175,7 +176,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
        &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid)
  ! Save vector in output array
   do k=klo,khi
@@ -205,7 +206,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1,ju2,ku1+1,ku2+1, &
        &           qLT,iu1  ,iu2  ,ju1,ju2,ku1+1,ku2+1, &
        &           qRB,iu1+1,iu2+1,ju1,ju2,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
+       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , pin, &
        &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid)
   ! Save vector in output array
   do k=kf1,kf2
@@ -221,7 +222,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1,iu2,ju1+1,ju2+1,ku1+1,ku2+1, &
        &           qRB,iu1,iu2,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qLT,iu1,iu2,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
+       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , pin, &
        &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid)
   ! Save vector in output array
   do k=kf1,kf2
@@ -1336,7 +1337,7 @@ END SUBROUTINE trace3d
 !###########################################################
 !###########################################################
 subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
-     &             qp,ip1,ip2,jp1,jp2,kp1,kp2, &
+     &             qp,ip1,ip2,jp1,jp2,kp1,kp2, pin, &
      &                ilo,ihi,jlo,jhi,klo,khi, &
      &                ln ,lt1,lt2,bn ,bt1,bt2, flx,tmp,ngrid)
   use amr_parameters
@@ -1351,11 +1352,13 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2)::pin
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
 
   ! local variables
   integer ::i, j, k, l, xdim
+  real(dp),dimension(1:nvector),save::snleft,snright
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
@@ -1371,6 +1374,20 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
+
+             ! Supernovae
+             if(ln==2)then
+                snleft (l) = pin(l,i-1,j,k)
+                snright(l) = pin(l,i,j,k)
+             endif 
+             if(ln==3)then
+                snleft (l) = pin(l,i,j-1,k)
+                snright(l) = pin(l,i,j,k)
+             endif
+             if(ln==4)then
+                snleft (l) = pin(l,i,j,k-1)
+                snright(l) = pin(l,i,j,k)
+             endif
 
               ! Enforce continuity for normal magnetic field
               bn_mean = half*(qm(l,i,j,k,bn,xdim)+qp(l,i,j,k,bn,xdim))
@@ -1413,7 +1430,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               CASE (2)
                  CALL hll           (qleft,qright,fgdnv)
               CASE (3)
-                 CALL hlld          (qleft,qright,fgdnv)
+                 CALL hlld          (qleft,qright,snleft,snright,fgdnv)
               CASE (4)
                  CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
               CASE (5)
@@ -1461,7 +1478,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
        &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
        &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
        &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
-       &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
+       &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , pin, &
        &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid)
   ! 2D Riemann solver to compute EMF at cell edges
   USE amr_parameters
@@ -1522,12 +1539,12 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,1) = qLB(l,i,j,k,1,xdim)
            END DO
 
-           ! Pressure
+           ! Pressure (include supernovae)
            DO l = 1, ngrid
-              qLL (l,2) = qRT(l,i,j,k,5,xdim)
-              qRL (l,2) = qLT(l,i,j,k,5,xdim)
-              qLR (l,2) = qRB(l,i,j,k,5,xdim)
-              qRR (l,2) = qLB(l,i,j,k,5,xdim)
+              qLL (l,2) = qRT(l,i,j,k,5,xdim) + snLL
+              qRL (l,2) = qLT(l,i,j,k,5,xdim) + snRL
+              qLR (l,2) = qRB(l,i,j,k,5,xdim) + snLR
+              qRR (l,2) = qLB(l,i,j,k,5,xdim) + snRR
            END DO
 
            ! First parallel velocity
