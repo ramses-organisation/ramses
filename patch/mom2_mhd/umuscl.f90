@@ -1495,6 +1495,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   INTEGER ::ilt1,ilt2,jlt1,jlt2,klt1,klt2
   INTEGER ::ilb1,ilb2,jlb1,jlb2,klb1,klb2
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
+  REAL(dp),DIMENSION(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2)::pin
   REAL(dp),DIMENSION(1:nvector,irt1:irt2,jrt1:jrt2,krt1:krt2,1:nvar,1:3)::qRT
   REAL(dp),DIMENSION(1:nvector,irb1:irb2,jrb1:jrb2,krb1:krb2,1:nvar,1:3)::qRB
   REAL(dp),DIMENSION(1:nvector,ilt1:ilt2,jlt1:jlt2,klt1:klt2,1:nvar,1:3)::qLT
@@ -1541,10 +1542,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
            ! Pressure (include supernovae)
            DO l = 1, ngrid
-              qLL (l,2) = qRT(l,i,j,k,5,xdim) + snLL
-              qRL (l,2) = qLT(l,i,j,k,5,xdim) + snRL
-              qLR (l,2) = qRB(l,i,j,k,5,xdim) + snLR
-              qRR (l,2) = qLB(l,i,j,k,5,xdim) + snRR
+              qLL (l,2) = qRT(l,i,j,k,5,xdim) + snRT
+              qRL (l,2) = qLT(l,i,j,k,5,xdim) + snLT
+              qLR (l,2) = qRB(l,i,j,k,5,xdim) + snRB
+              qRR (l,2) = qLB(l,i,j,k,5,xdim) + snLB
            END DO
 
            ! First parallel velocity
