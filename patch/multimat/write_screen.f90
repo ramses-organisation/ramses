@@ -3,10 +3,12 @@ subroutine write_screen
   use hydro_commons
   use pm_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-  include 'mpif.h'
-  !
-  integer::igrid,jgrid,ind,icpu,info
+#ifndef WITHOUTMPI
+  integer::info
+#endif
+  integer::igrid,jgrid,ind,icpu
   integer::i,icell,ncell,ilevel,ncache
   integer::icellmin,imat,lll
   real(dp)::dx,scale,smallp,ddd
@@ -23,7 +25,9 @@ subroutine write_screen
 
   if(ndim>1)return
 
+#ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
   
   ncell=0
   do ilevel=1,nlevelmax
@@ -54,7 +58,12 @@ subroutine write_screen
   ncell_loc=0
   ncell_all=0
   ncell_loc(myid)=ncell
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(ncell_loc,ncell_all,ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  ncell_all=ncell_loc
+#endif
 
   ncell=0
   iskip=0
@@ -126,15 +135,18 @@ subroutine write_screen
      end if
   end do
 
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(ff,ff_all,ncell*nmat,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(gg,gg_all,ncell*nmat,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(qq,qq_all,ncell*npri,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(ll,ll_all,ncell     ,MPI_INTEGER         ,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(rr,rr_all,ncell     ,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   ff=ff_all; gg=gg_all; qq=qq_all; rr=rr_all; ll=ll_all
-
+#endif
 
   if(myid==1)then
+     write(*,*)'================================================'
+     write(*,*)'lev      x           d          u          P        f1         f2         d1         d2'
      ! Sort radius
      allocate(ind_sort(1:ncell))
      call quick_sort(rr,ind_sort,ncell)
@@ -170,7 +182,9 @@ subroutine write_screen
 
   end if
  
+#ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
 
 111 format(2(1pe12.5,1x))
 112 format(i3,1x,1pe10.3,1x,8(1pe10.3,1x))

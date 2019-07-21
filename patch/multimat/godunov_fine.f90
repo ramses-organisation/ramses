@@ -374,16 +374,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
            end do
         end do
-        g1(1:nbuffer,0:twondim,1:ndim)=0.0
-        if(poisson)then
-           do idim=1,ndim
-              do i=1,nbuffer
-                 g1(i,j,idim)=f(ibuffer_father(i,j),idim)
-              end do
-           end do
-        end if
      end do
-     call interpol_hydro(u1,g1,u2,g2,nbuffer)
+     call interpol_hydro(u1,u2,nbuffer)
   
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
@@ -423,7 +415,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
                     gloc(i,i3,j3,k3,idim)=f(ind_cell(i),idim)
                  else
                     ibuffer=ibuffer+1
-                    gloc(i,i3,j3,k3,idim)=g2(ibuffer,ind_son,idim)
+                    gloc(i,i3,j3,k3,idim)=f(ibuffer_father(ibuffer,0),idim)
                  end if
               end do
            end do

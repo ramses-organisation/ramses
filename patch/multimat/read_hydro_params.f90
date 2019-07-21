@@ -1,18 +1,18 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use mpi_mod
   implicit none
-  include 'mpif.h'
   logical::nml_ok
   !--------------------------------------------------
   ! Local variables  
   !--------------------------------------------------
   integer::i,idim,imat
-  integer ,dimension(1:100)::bound_type
+  integer ,dimension(1:MAXBOUND)::bound_type
   real(dp)::scale,dtot,ftot
   real(dp),dimension(1:nvector,1:npri)::q
   real(dp),dimension(1:nvector,1:nmat)::f,g
-  real(dp),dimension(1:nvector)::ekin,eint,cs
+  real(dp),dimension(1:nvector)::ek_bound,eint,cs
 
   !--------------------------------------------------
   ! Namelist definitions
@@ -45,8 +45,15 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   if(hydro)read(1,NML=hydro_params)
   rewind(1)
-  if(simple_boundary)read(1,NML=boundary_params)
-
+  read(1,NML=boundary_params,END=103)
+  simple_boundary=.true.
+  goto 104
+103 simple_boundary=.false.
+104 if(nboundary>MAXBOUND)then
+    write(*,*) 'Error: nboundary>MAXBOUND'
+    call clean_stop
+  end if
+  rewind(1)
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions
   !-------------------------------------------------
@@ -216,16 +223,16 @@ subroutine read_hydro_params(nml_ok)
      boundary_var(i,1)=q(i,1)
   end do
   ! velocity -> momentum
-  ekin(1:nboundary)=0.0
+  ek_bound(1:nboundary)=0.0
   do idim=1,ndim
      do i=1,nboundary
         boundary_var(i,idim+1)=q(i,1)*q(i,idim+1)
-        ekin(i)=ekin(i)+0.5*q(i,idim+1)**2
+        ek_bound(i)=ek_bound(i)+0.5*q(i,idim+1)**2
      end do
   end do
   ! total energy
   do i=1,nboundary
-     boundary_var(i,npri)=eint(i)+q(i,1)*ekin(i)
+     boundary_var(i,npri)=eint(i)+q(i,1)*ek_bound(i)
   end do
   ! volume fraction
   do imat=1,nmat

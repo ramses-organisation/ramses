@@ -2,25 +2,29 @@ subroutine courant_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use mpi_mod
   implicit none
-  include 'mpif.h'
+#ifndef WITHOUTMPI
+  integer::info
+#endif
   integer::ilevel
   !----------------------------------------------------------------------
   ! Using the Courant-Friedrich-Levy stability condition,               !
   ! this routine computes the maximum allowed time-step.                !
   !----------------------------------------------------------------------
   integer::i,ivar,idim,imat,ind,ncache,igrid,iskip
-  integer::info ,nleaf,ngrid
+  integer::nleaf,ngrid,nx_loc
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
-  real(dp),dimension(1:8)::xc
-  integer ::ix,iy,iz,nx_loc
 
   real(dp)::dt_lev,dx,vol,skip_loc,scale,dx_loc,fourpi,twopi
   real(kind=8)::mass_loc,ekin_loc,eint_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,dt_all
   real(dp),dimension(1:nvector,1:nvar),save::uu
-  real(dp),dimension(1:nvector,1:ndim),save::grav
+  real(dp),dimension(1:nvector,1:ndim),save::gg
+
   real(dp),dimension(1:nvector),save::rloc
+  real(dp),dimension(1:8)::xc
+  integer ::ix,iy,iz
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -81,11 +85,11 @@ subroutine courant_fine(ilevel)
         end do
         
         ! Gather gravitational acceleration
-        grav=0.0d0
+        gg=0.0d0
         if(poisson)then
            do idim=1,ndim
               do i=1,nleaf
-                 grav(i,idim)=f(ind_leaf(i),idim)
+                 gg(i,idim)=f(ind_leaf(i),idim)
               end do
            end do
         end if
@@ -122,7 +126,7 @@ subroutine courant_fine(ilevel)
 
         ! Compute CFL time-step
         if(nleaf>0)then
-           call cmpdt(uu,grav,rloc,dx_loc,dt_lev,nleaf)
+           call cmpdt(uu,gg,rloc,dx_loc,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
         
@@ -133,6 +137,7 @@ subroutine courant_fine(ilevel)
   ! End loop over grids
 
   ! Compute global quantities
+#ifndef WITHOUTMPI
   call MPI_ALLREDUCE(mass_loc,mass_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
        & MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(ekin_loc,ekin_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
@@ -141,6 +146,13 @@ subroutine courant_fine(ilevel)
        & MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(  dt_loc,  dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
        & MPI_COMM_WORLD,info)
+#endif
+#ifdef WITHOUTMPI
+  mass_all=mass_loc
+  ekin_all=ekin_loc
+  eint_all=eint_loc
+  dt_all=dt_loc
+#endif
 
   mass_tot=mass_tot+mass_all
   ekin_tot=ekin_tot+ekin_all

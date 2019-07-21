@@ -2,11 +2,9 @@ This namelist contains various input parameters for RAMSES runs
 
 &RUN_PARAMS
 hydro=.true.
-simple_boundary=.true.
 nremap=100000
 ncontrol=1
-nbackup=1000
-nsubcycle=3*1,2
+nsubcycle=10*1,2
 verbose=.false.
 debug=.false.
 /
@@ -49,7 +47,6 @@ p_region =1.0,1d-4
 /
 
 &OUTPUT_PARAMS
-output_mode=1
 noutput=1
 tout=0.23,
 /
