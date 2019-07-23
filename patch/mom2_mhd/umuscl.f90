@@ -783,7 +783,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 
   INTEGER ::i, j, k, l
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
-  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
+  INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC, is
   REAL(dp)::dtdx, dtdy, dtdz, smallp
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::ELL, ELR, ERL, ERR
@@ -814,7 +814,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8
+  ir=1; iu=2; iv=3; iw=4; ip=5; ia=6; ib=7; ic=8; is=nvar+1
 
   DO k = klo, ku2
      DO j = jlo, ju2
@@ -1108,6 +1108,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)+dez(irad))
               end do
 #endif
+              qRT(l,i,j,k,is,1) = pin(l,i,j,k)
 
               ! X-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,1) = r + (+dry-drz)
@@ -1495,13 +1496,13 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   INTEGER ::ilt1,ilt2,jlt1,jlt2,klt1,klt2
   INTEGER ::ilb1,ilb2,jlb1,jlb2,klb1,klb2
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
-  REAL(dp),DIMENSION(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2)::pin
   REAL(dp),DIMENSION(1:nvector,irt1:irt2,jrt1:jrt2,krt1:krt2,1:nvar,1:3)::qRT
   REAL(dp),DIMENSION(1:nvector,irb1:irb2,jrb1:jrb2,krb1:krb2,1:nvar,1:3)::qRB
   REAL(dp),DIMENSION(1:nvector,ilt1:ilt2,jlt1:jlt2,klt1:klt2,1:nvar,1:3)::qLT
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:nvar,1:3)::qLB
 
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
+  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2)::pin
 
   ! local variables
   INTEGER ::i, j, k, l, xdim
