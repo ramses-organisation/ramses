@@ -771,10 +771,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRB
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLB
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3)::qRT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3)::qRB
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3)::qLT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3)::qLB
 
   ! Declare local variables
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ex
@@ -1507,17 +1507,17 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   INTEGER ::ilt1,ilt2,jlt1,jlt2,klt1,klt2
   INTEGER ::ilb1,ilb2,jlb1,jlb2,klb1,klb2
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
-  REAL(dp),DIMENSION(1:nvector,irt1:irt2,jrt1:jrt2,krt1:krt2,1:nvar,1:3)::qRT
-  REAL(dp),DIMENSION(1:nvector,irb1:irb2,jrb1:jrb2,krb1:krb2,1:nvar,1:3)::qRB
-  REAL(dp),DIMENSION(1:nvector,ilt1:ilt2,jlt1:jlt2,klt1:klt2,1:nvar,1:3)::qLT
-  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:nvar,1:3)::qLB
+  REAL(dp),DIMENSION(1:nvector,irt1:irt2,jrt1:jrt2,krt1:krt2,1:nvar+1,1:3)::qRT
+  REAL(dp),DIMENSION(1:nvector,irb1:irb2,jrb1:jrb2,krb1:krb2,1:nvar+1,1:3)::qRB
+  REAL(dp),DIMENSION(1:nvector,ilt1:ilt2,jlt1:jlt2,klt1:klt2,1:nvar+1,1:3)::qLT
+  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:nvar+1,1:3)::qLB
 
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2)::pin
 
   ! local variables
   INTEGER ::i, j, k, l, xdim
-  REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
+  REAL(dp),DIMENSION(1:nvector,1:nvar+1)::qLL,qRL,qLR,qRR
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
   REAL(dp),DIMENSION(1:nvar+1)::qtmp
   REAL(dp),DIMENSION(1:nvar+1)::fmean_x,fmean_y
@@ -1557,10 +1557,18 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
            ! Pressure
            DO l = 1, ngrid
-              qLL (l,2) = qRT(l,i,j,k,5,xdim) + qRT(l,i,j,k,is,xdim)
-              qRL (l,2) = qLT(l,i,j,k,5,xdim) + qLT(l,i,j,k,is,xdim)
-              qLR (l,2) = qRB(l,i,j,k,5,xdim) + qRB(l,i,j,k,is,xdim)
-              qRR (l,2) = qLB(l,i,j,k,5,xdim) + qLB(l,i,j,k,is,xdim)
+              qLL (l,2) = qRT(l,i,j,k,5,xdim) 
+              qRL (l,2) = qLT(l,i,j,k,5,xdim)
+              qLR (l,2) = qRB(l,i,j,k,5,xdim) 
+              qRR (l,2) = qLB(l,i,j,k,5,xdim)
+           END DO
+
+           ! Supernovae Pressure
+           DO l = 1, ngrid
+              qLL(l,is) = qRT(l,i,j,k,is,xdim)
+              qRL(l,is) = qLT(l,i,j,k.is,xdim)
+              qLR(l,is) = qRB(l,i,j,k,is,xdim)
+              qRR(l.is) = qLB(l,i,j,k,is,xdim)
            END DO
 
            ! First parallel velocity
@@ -1735,10 +1743,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   ERL=uRL*BRL-vRL*ARL
                   ERR=uRR*BRR-vRR*ARR
 
-                  PtotLL=pLL+half*(ALL*ALL+BLL*BLL+CLL*CLL)
-                  PtotLR=pLR+half*(ALR*ALR+BLR*BLR+CLR*CLR)
-                  PtotRL=pRL+half*(ARL*ARL+BRL*BRL+CRL*CRL)
-                  PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR)
+                  PtotLL=pLL+half*(ALL*ALL+BLL*BLL+CLL*CLL) + qRT(l,is)
+                  PtotLR=pLR+half*(ALR*ALR+BLR*BLR+CLR*CLR) + qRB(l,is)
+                  PtotRL=pRL+half*(ARL*ARL+BRL*BRL+CRL*CRL) + qLT(l,is)
+                  PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR) + qLB(l,is)
 
                   rcLLx=rLL*(uLL-SL); rcRLx=rRL*(SR-uRL)
                   rcLRx=rLR*(uLR-SL); rcRRx=rRR*(SR-uRR)
