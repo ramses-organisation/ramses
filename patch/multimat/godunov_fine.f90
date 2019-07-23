@@ -181,12 +181,21 @@ subroutine noncons1(ind_grid,ncache,ilevel)
      end do
 
      ! Volume fraction and fluid density
+!     ftot=0d0
      do imat=1,nmat
         do i=1,ncache
+!           ff(i,imat)=max(uold(ind_cell(i),imat+npri),smallf)
+!           ftot(i)=ftot(i)+ff(i,imat)
            ff(i,imat)=uold(ind_cell(i),imat+npri)
            gg(i,imat)=uold(ind_cell(i),imat+npri+nmat)
         end do
      end do
+     ! Renormalize
+!     do imat=1,nmat
+!        do i=1,ncache
+!           ff(i,imat)=ff(i,imat)/ftot(i)
+!        end do
+!     end do
      ! Total density
      do i=1,ncache
         qq(i,1)=uold(ind_cell(i),1)
@@ -211,11 +220,7 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         g0=eos_params(imat,1); p0=eos_params(imat,2)
         a0=one/(g0-one); b0=p0*g0/(g0-one)
         do i=1,ncache
-           if(pp(i)>0.0)then
-              gamma_mat(i,imat)=g0*(pp(i)+p0)/pp(i)
-           else
-              gamma_mat(i,imat)=1d10
-           endif
+           gamma_mat(i,imat)=MAX(g0*(pp(i)+p0),gg(i,imat)*smallc**2)
            gamma_hat(i)=gamma_hat(i)+ff(i,imat)/gamma_mat(i,imat)
         end do
      end do
@@ -225,19 +230,35 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ivar=npri+nmat+imat
         do i=1,ncache
            df_over_f  = gamma_hat(i)/gamma_mat(i,imat)
-           df_over_f  = max(df_over_f,zero)
-           df_over_f  = min(df_over_f,one )
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
-                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
+
+!           df_over_f  = max(df_over_f,zero)
+!           df_over_f  = min(df_over_f,one )
+
+           ! Explicit time integration
+!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
+!                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
+
+           ! Implicit time integration
+           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
+                & - divu(ind_cell(i))*(df_over_f-one))
+
         end do
      end do
      ! Source terms for volume fraction (Godunov-like advection)
      do imat=1,nmat
         ivar=npri+imat
         do i=1,ncache
+           ! No compressibility in volume fraction
            df_over_f  = one !gamma_hat(i)/gamma_mat(i,imat)
+
+           ! Explicit time integration
            unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
                 & -uold(ind_cell(i),ivar)*divu(ind_cell(i))*df_over_f
+
+           ! Implicit time integration
+!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
+!                & + divu(ind_cell(i))*df_over_f)
+
         end do
      end do
 

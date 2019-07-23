@@ -11,7 +11,7 @@ debug=.false.
 
 &AMR_PARAMS 
 levelmin=3
-levelmax=10
+levelmax=12
 ngridmax=10000
 nexpand=1
 boxlen=1.0
@@ -39,7 +39,7 @@ length_x=0.7,0.3
 f1_region=1.0,1e-6
 f2_region=1e-6,1.0
 f3_region=1e-6,1e-6
-d1_region=1.0,1.0
+d1_region=1.0,0.801014
 d2_region=0.05,0.05
 d3_region=0.05,0.05
 u_region =0.0,0.0
