@@ -65,11 +65,11 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
 
-  ! Edge-averaged left-right and top-bottom state arrays
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qRB
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qLT
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qLB
+  ! Edge-averaged left-right and top-bottom state arrays (+1 supernovae pressure)
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3),save::qRT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3),save::qRB
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3),save::qLT
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+1,1:3),save::qLB
 
   ! Intermediate fluxes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
@@ -1126,6 +1126,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)-dez(irad))
               end do
 #endif
+              qRB(l,i,j,k,is,1) = pin(l,i,j,k)
 
               ! X-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,1) = r + (-dry+drz)
@@ -1143,6 +1144,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)+dez(irad))
               end do
 #endif
+              qLT(l,i,j,k,is,1) = pin(l,i,j,k)
 
               ! X-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,1) = r + (-dry-drz)
@@ -1160,6 +1162,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)-dez(irad))
               end do
 #endif
+              qLB(l,i,j,k,is,1) = pin(l,i,j,k)
 
               ! Y-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,2) = r + (+drx+drz)
@@ -1177,6 +1180,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)+dez(irad))
               end do
 #endif
+              qRT(l,i,j,k,is,2) = pin(l,i,j,k)
 
               ! Y-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,2) = r + (+drx-drz)
@@ -1194,6 +1198,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)-dez(irad))
               end do
 #endif
+              qRB(l,i,j,k,is,2) = pin(l,i,j,k)
 
               ! Y-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,2) = r + (-drx+drz)
@@ -1211,6 +1216,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)+dez(irad))
               end do
 #endif
+              qLT(l,i,j,k,is,2) = pin(l,i,j,k)
 
               ! Y-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,2) = r + (-drx-drz)
@@ -1228,6 +1234,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)-dez(irad))
               end do
 #endif
+              qLB(l,i,j,k,is,2) = pin(l,i,j,k)
 
               ! Z-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,3) = r + (+drx+dry)
@@ -1245,6 +1252,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
               end do
 #endif
+              qRT(l,i,j,k,is,3) = pin(l,i,j,k)
 
               ! Z-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,3) = r + (+drx-dry)
@@ -1262,6 +1270,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
               end do
 #endif
+              qRB(l,i,j,k,is,3) = pin(l,i,j,k)
 
               ! Z-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,3) = r + (-drx+dry)
@@ -1279,6 +1288,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
               end do
 #endif
+              qLT(l,i,j,k,is,3) = pin(l,i,j,k)
 
               ! Z-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,3) = r + (-drx-dry)
@@ -1296,6 +1306,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
               end do
 #endif
+              qLB(l,i,j,k,is,3) = pin(l,i,j,k)
 
            END DO
         END DO
@@ -1541,12 +1552,12 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
               qRR (l,1) = qLB(l,i,j,k,1,xdim)
            END DO
 
-           ! Pressure (include supernovae)
+           ! Pressure
            DO l = 1, ngrid
-              qLL (l,2) = qRT(l,i,j,k,5,xdim) + snRT
-              qRL (l,2) = qLT(l,i,j,k,5,xdim) + snLT
-              qLR (l,2) = qRB(l,i,j,k,5,xdim) + snRB
-              qRR (l,2) = qLB(l,i,j,k,5,xdim) + snLB
+              qLL (l,2) = qRT(l,i,j,k,5,xdim) + qRT(l,i,j,k,is,xdim)
+              qRL (l,2) = qLT(l,i,j,k,5,xdim) + qLT(l,i,j,k,is,xdim)
+              qLR (l,2) = qRB(l,i,j,k,5,xdim) + qRB(l,i,j,k,is,xdim)
+              qRR (l,2) = qLB(l,i,j,k,5,xdim) + qLB(l,i,j,k,is,xdim)
            END DO
 
            ! First parallel velocity
@@ -1642,7 +1653,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastLLx)
+                  ! Supernova pressure already included in qtmp, ser to 0
+                  call find_speed_fast(qtmp,0,cfastLLx) 
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
@@ -1650,7 +1662,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastLRx)
+                  call find_speed_fast(qtmp,0,cfastLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
@@ -1658,7 +1670,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastRLx)
+                  call find_speed_fast(qtmp,0,cfastRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
@@ -1666,7 +1678,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastRRx)
+                  call find_speed_fast(qtmp,0,cfastRRx)
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
@@ -1676,7 +1688,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastLLy)
+                  call find_speed_fast(qtmp,0,cfastLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
@@ -1684,7 +1696,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastLRy)
+                  call find_speed_fast(qtmp,0,cfastLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
@@ -1692,7 +1704,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastRLy)
+                  call find_speed_fast(qtmp,0,cfastRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
@@ -1700,7 +1712,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-                  call find_speed_fast(qtmp,cfastRRy)
+                  call find_speed_fast(qtmp,0,cfastRRy)
 
                   SL=min(uLL,uLR,uRL,uRR)-max(cfastLLx,cfastLRx,cfastRLx,cfastRRx)
                   SR=max(uLL,uLR,uRL,uRR)+max(cfastLLx,cfastLRx,cfastRLx,cfastRRx)
@@ -1803,7 +1815,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-                  vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx)
+                  vLLx=qtmp(3); call find_speed_fast(qtmp,0,cLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
@@ -1811,7 +1823,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-                  vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx)
+                  vLRx=qtmp(3); call find_speed_fast(qtmp,0,cLRx)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
@@ -1819,7 +1831,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-                  vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx)
+                  vRLx=qtmp(3); call find_speed_fast(qtmp,0,cRLx)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
@@ -1827,7 +1839,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-                  vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx)
+                  vRRx=qtmp(3); call find_speed_fast(qtmp,0,cRRx)
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
@@ -1837,7 +1849,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-                  vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy)
+                  vLLy=qtmp(3); call find_speed_fast(qtmp,0,cLLy)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
@@ -1845,7 +1857,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-                  vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy)
+                  vLRy=qtmp(3); call find_speed_fast(qtmp,0,cLRy)
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
@@ -1853,7 +1865,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-                  vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy)
+                  vRLy=qtmp(3); call find_speed_fast(qtmp,0,cRLy)
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
@@ -1861,7 +1873,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-                  vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy)
+                  vRRy=qtmp(3); call find_speed_fast(qtmp,0,cRRy)
 
                   SL=min(min(vLLx,vLRx,VRLx,vRRx)-max(cLLx,cLRx,cRLx,cRRx),zero)
                   SR=max(max(vLLx,vLRx,VRLx,vRRx)+max(cLLx,cLRx,cRLx,cRRx),zero)
