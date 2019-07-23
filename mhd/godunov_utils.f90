@@ -12,7 +12,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
-  
   real(dp)::dtcell,smallp,cf,cc,bc,bn
   integer::k,idim
 #if NENER>0
