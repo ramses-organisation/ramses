@@ -229,10 +229,8 @@ subroutine noncons1(ind_grid,ncache,ilevel)
      do imat=1,nmat
         ivar=npri+nmat+imat
         do i=1,ncache
+           ! Material compressibility
            df_over_f  = gamma_hat(i)/gamma_mat(i,imat)
-
-!           df_over_f  = max(df_over_f,zero)
-!           df_over_f  = min(df_over_f,one )
 
            ! Explicit time integration
 !           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
