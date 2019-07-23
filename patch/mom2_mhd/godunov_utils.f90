@@ -436,7 +436,7 @@ SUBROUTINE hlld(qleft,qright,snleft,snright,fgdnv)
   ! HLLD Riemann solver (Miyoshi & Kusano, 2005, JCP, 208, 315)
   IMPLICIT NONE
   REAL(dp)::snleft,snright
-  REAL(dp),DIMENSION(1:nvar)::qleft,qright
+  real(dp),DIMENSION(1:nvar)::qleft,qright
   REAL(dp),DIMENSION(1:nvar+1)::fgdnv
   REAL(dp)::SL,SR,SAL,SAR
   REAL(dp)::entho,A,sgnm
