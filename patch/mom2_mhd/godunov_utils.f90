@@ -843,7 +843,7 @@ SUBROUTINE find_speed_fast(qvar,sn,vel_info)
   INTEGER :: irad
 #endif
   REAL(dp),DIMENSION(1:nvar):: qvar
-  REAL(dp) :: vel_info
+  REAL(dp) :: vel_info, sn
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
 
   d=qvar(1); P=qvar(2); u=qvar(3); A=qvar(4)
