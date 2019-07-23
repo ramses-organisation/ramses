@@ -86,9 +86,9 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   endif
 
   if(momentum_feedback>0)then
-   do k = 1, ncell
-     ctot(k) = ctot(k) + abs(pp(k)/uu(k,1))
-   end do
+     do k = 1, ncell
+        ctot(k) = ctot(k) + abs(pp(k)/uu(k,1))
+     end do
   endif
 
   ! Compute gravity strength ratio
