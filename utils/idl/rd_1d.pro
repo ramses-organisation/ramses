@@ -55,7 +55,7 @@
 ;###################################################
 ;###################################################
 ;###################################################
-pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd,turb=turb
+pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd,turb=turb,mmat=mmat
 
 if not keyword_set(file) then file=pickfile(/READ)
 if not keyword_set(nmax) then nmax=100
@@ -87,21 +87,26 @@ while not eof(1) do begin
                   , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
                   , p:dblarr(ncell), xp:dblarr(npart), vp:dblarr(npart) }
         endif else begin
-            if keyword_set(mhd) then begin
-                time={t:0.0d0, nc:ncell, l:intarr(ncell) $
-                      , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
-                      , v:dblarr(ncell), w:dblarr(ncell), p:dblarr(ncell) $
-                      , A:dblarr(ncell), B:dblarr(ncell), C:dblarr(ncell) }
-            endif else if keyword_set(turb) then begin
-                time={t:0.0d0, nc:ncell, l:intarr(ncell) $
-                      , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
-                      , p:dblarr(ncell), pt:dblarr(ncell) }
-            endif else begin
-                time={t:0.0d0, nc:ncell, l:intarr(ncell) $
-                      , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
-                      , p:dblarr(ncell) }
-            endelse
-         endelse
+           if keyword_set(mhd) then begin
+              time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                    , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
+                    , v:dblarr(ncell), w:dblarr(ncell), p:dblarr(ncell) $
+                    , A:dblarr(ncell), B:dblarr(ncell), C:dblarr(ncell) }
+           endif else if keyword_set(mmat) then begin
+              time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                    , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
+                    , p:dblarr(ncell), f1:dblarr(ncell), f2:dblarr(ncell) $
+                    , d1:dblarr(ncell), d2:dblarr(ncell) }
+           endif else if keyword_set(turb) then begin
+              time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                    , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
+                    , p:dblarr(ncell), pt:dblarr(ncell) }
+           endif else begin
+              time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                    , x:dblarr(ncell), d: dblarr(ncell), u:dblarr(ncell) $
+                    , p:dblarr(ncell) }
+           endelse
+        endelse
         for j=0,ncell-1 do begin
             if keyword_set(mhd) then begin
                 readf,1,ll,rr,dd,uu,vv,ww,pp,AA,BB,CC
@@ -115,6 +120,17 @@ while not eof(1) do begin
                 time.A(j)=AA
                 time.B(j)=BB
                 time.C(j)=CC
+            endif else if keyword_set(mmat) then begin
+                readf,1,ll,rr,dd,uu,pp,ff1,ff2,dd1,dd2
+                time.l(j)=ll
+                time.x(j)=rr
+                time.d(j)=dd
+                time.p(j)=pp
+                time.u(j)=uu
+                time.f1(j)=ff1
+                time.f2(j)=ff2
+                time.d1(j)=dd1
+                time.d2(j)=dd2
             endif else if keyword_set(turb) then begin
                 readf,1,ll,rr,dd,uu,tt,pp
                 time.l(j)=ll

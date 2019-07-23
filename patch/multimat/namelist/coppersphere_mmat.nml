@@ -1,0 +1,77 @@
+This namelist contains various input parameters for RAMSES runs
+
+&RUN_PARAMS
+hydro=.true.
+simple_boundary=.true.
+nremap=10
+ncontrol=10
+nbackup=1000
+nrestart=0
+nsubcycle=10*1,
+/
+
+&AMR_PARAMS 
+levelmin=3
+levelmax=9
+ngridmax=100000
+nexpand=1
+boxlen=1.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=4
+ibound_min=-1,+1,-1,-1
+ibound_max=-1,+1,+1,+1
+jbound_min= 0, 0,-1,+1
+jbound_max= 0, 0,-1,+1
+bound_type= 2, 2, 2, 2
+/
+
+&MATERIAL_PARAMS
+eos_params(1,1:2)=4.22,32.4
+eos_params(2,1:2)=4.40,0.6
+eos_params(3,1:2)=1.40,0.0
+/
+
+&INIT_PARAMS
+nregion=3
+region_type(1)='square'
+region_type(2)='square'
+region_type(3)='square'
+exp_region=10.,10.,2.
+x_center=0.5,0.5,0.25
+y_center=0.5,0.5,0.25
+length_x=1.0,0.25,0.25
+length_y=1.0,1.00,0.25
+f1_region=1e-6,1e-6,1.0
+f2_region=1e-6,1.0,1e-6
+f3_region=1.0,1e-6,1e-6
+d1_region=8.9,8.9,8.9
+d2_region=1.0,1.0,1.0
+d3_region=0.05,0.05,0.05
+u_region =0.0,0.0,1.0
+v_region =0.0,0.0,1.0
+p_region =1.0,1.0,1.0
+/
+
+&OUTPUT_PARAMS
+foutput=100
+noutput=1
+tout=1.0
+/
+
+&HYDRO_PARAMS
+courant_factor=0.8
+slope_type=3
+scheme='muscl'
+/
+
+&REFINE_PARAMS 
+err_grad_f=0.05
+floor_f=0.01
+interpol_var=0
+interpol_type=1
+/
+
+
+
