@@ -401,6 +401,7 @@ SUBROUTINE hll(qleft,qright,fgdnv)
   USE hydro_parameters
   ! 1D HLL Riemann solver
   IMPLICIT NONE
+  REAL(dp)::snleft,snright
   REAL(dp),DIMENSION(1:nvar)::qleft,qright
   REAL(dp),DIMENSION(1:nvar+1)::fleft,fright,fgdnv
   REAL(dp),DIMENSION(1:nvar+1)::uleft,uright
@@ -413,10 +414,11 @@ SUBROUTINE hll(qleft,qright,fgdnv)
 
   CALL find_mhd_flux(qleft ,uleft ,fleft )
   CALL find_mhd_flux(qright,uright,fright)
-
+  
+  snleft = 0; snright = 0
   ! find the largest eigenvalue in the normal direction to the interface
-  CALL find_speed_fast(qleft ,cfleft )
-  CALL find_speed_fast(qright,cfright)
+  CALL find_speed_fast(qleft ,snleft,cfleft )
+  CALL find_speed_fast(qright,snright,cfright)
   vleft =qleft (3)
   vright=qright(3)
   SL=min(min(vleft,vright)-max(cfleft,cfright),zero)

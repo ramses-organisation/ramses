@@ -28,7 +28,7 @@
 !
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 ! ----------------------------------------------------------------
-subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
+subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -98,7 +98,7 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      call trace2d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call trace3d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
+     call trace3d(qin,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #endif
 
   ! Solve for 1D flux in X direction
@@ -755,7 +755,7 @@ END SUBROUTINE trace2d
 !###########################################################
 !###########################################################
 #if NDIM==3
-SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
+SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
   USE const
@@ -763,7 +763,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 
   INTEGER ::ngrid
   REAL(dp)::dx, dy, dz, dt
-
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
@@ -1489,8 +1489,8 @@ end subroutine cmpflxm
 SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
        &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
        &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
-       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
-       &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , pin, &
+       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, pin, &
+       &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
        &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid)
   ! 2D Riemann solver to compute EMF at cell edges
   USE amr_parameters
@@ -1535,7 +1535,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
 
- is = nvar + 1
+  is = nvar + 1
 
 #if NENER>0
   INTEGER :: irad
@@ -1566,9 +1566,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
            ! Supernovae Pressure
            DO l = 1, ngrid
               qLL(l,is) = qRT(l,i,j,k,is,xdim)
-              qRL(l,is) = qLT(l,i,j,k.is,xdim)
+              qRL(l,is) = qLT(l,i,j,k,is,xdim)
               qLR(l,is) = qRB(l,i,j,k,is,xdim)
-              qRR(l.is) = qLB(l,i,j,k,is,xdim)
+              qRR(l,is) = qLB(l,i,j,k,is,xdim)
            END DO
 
            ! First parallel velocity
@@ -1743,10 +1743,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   ERL=uRL*BRL-vRL*ARL
                   ERR=uRR*BRR-vRR*ARR
 
-                  PtotLL=pLL+half*(ALL*ALL+BLL*BLL+CLL*CLL) + qRT(l,is)
-                  PtotLR=pLR+half*(ALR*ALR+BLR*BLR+CLR*CLR) + qRB(l,is)
-                  PtotRL=pRL+half*(ARL*ARL+BRL*BRL+CRL*CRL) + qLT(l,is)
-                  PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR) + qLB(l,is)
+                  PtotLL=pLL+half*(ALL*ALL+BLL*BLL+CLL*CLL) + qLL(l,is)
+                  PtotLR=pLR+half*(ALR*ALR+BLR*BLR+CLR*CLR) + qLR(l,is)
+                  PtotRL=pRL+half*(ARL*ARL+BRL*BRL+CRL*CRL) + qRL(l,is)
+                  PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR) + qRR(l,is)
 
                   rcLLx=rLL*(uLL-SL); rcRLx=rRL*(SR-uRL)
                   rcLRx=rLR*(uLR-SL); rcRRx=rRR*(SR-uRR)
@@ -1865,7 +1865,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   end do
 #endif
                   vRRx=qtmp(3)
-                  qtmp(is) = qtmp(l,is)
+                  qtmp(is) = qRR(l,is)
                   call find_speed_fast(qtmp,qtmp(is),cRRx)
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
