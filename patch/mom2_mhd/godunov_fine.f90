@@ -576,9 +576,9 @@ subroutine add_viscosity_source_terms(ilevel)
    real(dp),dimension(1:nvector),save::divu_loc,phi_diss
    real(dp),dimension(1:nvector,1:ndim,1:ndim),save::gradu_loc,E_loc
  
- #if NENER>0
-   integer::irad
- #endif
+#if NENER>0
+  integer::irad
+#endif
  
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
