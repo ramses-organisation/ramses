@@ -85,7 +85,7 @@ subroutine load_balance
 #else
         end do
 #endif
-        if(momentum_feedback)then
+        if(momentum_feedback>0)then
            call make_virtual_fine_dp(pstarold(1),ilevel)
         endif
         if(simple_boundary)then
@@ -1335,7 +1335,7 @@ subroutine defrag
 
   end if
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
 
   do ind=1,twotondim
   iskip2=ncoarse+(ind-1)*ngridmax

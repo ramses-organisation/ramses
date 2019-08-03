@@ -1,0 +1,80 @@
+This namelist contains various input parameters for RAMSES runs
+
+&RUN_PARAMS
+hydro=.true.
+simple_boundary=.true.
+nremap=10
+ncontrol=10
+nbackup=100
+nrestart=0
+nsubcycle=4*1,2
+static=.true.
+/
+
+&AMR_PARAMS 
+levelmin=4
+levelmax=10
+ngridmax=100000
+nexpand=1 
+boxlen=4.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=4
+ibound_min=-1,+1,-1,-1
+ibound_max=-1,+1,+1,+1
+jbound_min= 0, 0,-1,+1
+jbound_max= 0, 0,-1,+1
+bound_type= 2, 2, 1, 1
+/
+
+&MATERIAL_PARAMS
+eos_params(1,1:2)=1.4,0.0
+eos_params(2,1:2)=4.4,0.6
+eos_params(3,1:2)=1.4,0.0
+/
+
+&INIT_PARAMS
+nregion=5
+region_type(1)='square'
+region_type(2)='square'
+region_type(3)='square'
+region_type(4)='square'
+region_type(5)='square'
+exp_region=10.,10.,2.,10.,10.
+x_center=2.0,0.5,2.0,1.0,1.0
+y_center=2.0,2.0,2.0,0.75,3.25
+length_x=4.0,1.0,0.5,4.0,4.0
+length_y=4.0,1.0,0.5,1.5,1.5
+f1_region=1e-8,1e-8,1e-8,1e+0,1e+0
+f2_region=1e+0,1e+0,1e-8,1e-8,1e-8
+f3_region=1e-8,1e-8,1e+0,1e-8,1e-8
+d1_region=1d-4,1d-4,1d-4
+d2_region=1e+0,1e+0,1e+0
+d3_region=5e-2,5e-2,5e-2
+u_region =0.0,0.0,0.0
+v_region =0.0,0.0,0.0
+p_region =0.1,1.0,0.1
+/
+
+&OUTPUT_PARAMS
+foutput=10
+noutput=5
+tout=0.0,1.0,2.0,3.0,4.0,
+/
+
+&HYDRO_PARAMS
+courant_factor=0.8
+slope_type=3
+/
+
+&REFINE_PARAMS 
+err_grad_f=0.1
+err_grad_p=0.1
+err_grad_d=0.1
+interpol_var=0
+interpol_type=2
+/
+
+
+

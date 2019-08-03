@@ -29,7 +29,7 @@ subroutine init_hydro
   allocate(uold(1:ncell,1:nvar+3))
   allocate(unew(1:ncell,1:nvar+3))
   uold=0.0d0; unew=0.0d0
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
      allocate(pstarold(1:ncell))
      allocate(pstarnew(1:ncell))
      pstarold=0.0d0; pstarnew=0.0d0

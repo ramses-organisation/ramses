@@ -330,21 +330,6 @@ subroutine star_formation(ilevel)
                           t_ff      = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
                           sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
 
-                       CASE (5)
-                          ! Virial parameter
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
-                          M2        = max(sigma2/cs2,smallr)
-                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          b_turb    = 0.4
-                          ! Fudge for alpha dependence (KM 2005).
-                          ! phi_x     = 1.12
-                          ! The prefered value for eps_star = 1.0,
-                          ! which represents the theoretical maximum efficiency.
-                          sigs      = log(1.0+(b_turb**2)*(M2))
-                          ! scrit     = log(alpha0*(1.0+(M2*(pi**2)/5.0)*(phi_x**2)))
-                          scrit     = log(alpha0*(1.0+(2*(M2**2)/(1.0+M2))))
-                          sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
-
                        END SELECT
                  endif
               endif
