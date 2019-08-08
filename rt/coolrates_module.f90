@@ -484,7 +484,7 @@ SUBROUTINE update_table_rates(iT,aexp)
 END SUBROUTINE update_table_rates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FUNCTION inp_coolrates_table(rates_table, T, retPrime)
+FUNCTION inp_coolrates_table(rates_table, T, allow_negative, retPrime)
 ! Returns TABULATED rate value from given table
 ! rates        => Rates (and primes) table to interpolate
 ! T            => Temperature [K]
@@ -494,6 +494,7 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   type(coolrates_table)::rates_table
   !real(dp),dimension(nbinTK)::rates, ratesPrime
   real(dp),intent(in)::T
+  logical,intent(in)::allow_negative
   real(dp),optional::retPrime
   real(dp)::inp_coolrates_table
   integer,save:: iT = 1
@@ -536,8 +537,10 @@ FUNCTION inp_coolrates_table(rates_table, T, retPrime)
   beta =(fb-fa) * three_over_h2Table - (2d0*fprimea+fprimeb) * one_over_hTable
   gamma = (fprimea+fprimeb) * one_over_h2Table - (fb-fa) * two_over_h3Table
   inp_coolrates_table = fa+alpha*yy+beta*yy2+gamma*yy3
-  ! Only positive rates allowed (and spline can go negative):
-  inp_coolrates_table = max(0d0,inp_coolrates_table)
+  if(.not. allow_negative) then
+     ! Only allow positive rates (spline can go negative):
+     inp_coolrates_table = max(0d0,inp_coolrates_table)
+  endif
   if( present(retPrime) )                                                &
        retPrime = (alpha+2d0*beta*yy+3d0*gamma*yy2) / T * one_over_lnTen
 END FUNCTION inp_coolrates_table
@@ -569,44 +572,50 @@ FUNCTION compCoolrate(T, ne, nN, nI, dcooldT)
   real(dp),save::bre, brefac, bre_prime, com, com_prime, die, die_prime
 !-------------------------------------------------------------------------
   ! Coll. Ionization Cooling
-  ci_HI   = inp_coolrates_table(tbl_cr_ci_HI, T, ci_HI_prime)            &
+  ci_HI   = inp_coolrates_table(tbl_cr_ci_HI, T, .false., ci_HI_prime)   &
           * ne * nN(ixHII) ! ne * nHI
   ci_HI_prime = ci_HI_prime * ne * nN(ixHII)
   ! Collisional excitation cooling
-  ce_HI   = inp_coolrates_table(tbl_cr_ce_HI, T, ce_HI_prime)            &
+  ce_HI   = inp_coolrates_table(tbl_cr_ce_HI, T, .false., ce_HI_prime)   &
           * ne * nN(ixHII) ! ne * nHI
   ce_HI_prime    = ce_HI_prime * ne * nN(ixHII)
   ! Recombination Cooling
-  r_HII = inp_coolrates_table(tbl_cr_r_HII, T, r_HII_prime)              &
+  r_HII = inp_coolrates_table(tbl_cr_r_HII, T, .false., r_HII_prime)     &
         * ne * nI(ixHII) ! ne * nHII
   r_HII_prime   = r_HII_prime * ne * nI(ixHII)
 
   if(isHe) then
      ! Coll. Ionization Cooling
-     ci_HeI      = inp_coolrates_table(tbl_cr_ci_HeI, T, ci_HeI_prime)   &
+     ci_HeI      = inp_coolrates_table(tbl_cr_ci_HeI, T, .false.         &
+                                                       , ci_HeI_prime)   &
                  * ne * nN(ixHeII)  ! ne * nHeI
      ci_HeI_prime= ci_HeI_prime  * ne * nN(ixHeII)
-     ci_HeII     = inp_coolrates_table(tbl_cr_ci_HeII, T, ci_HeII_prime) &
+     ci_HeII     = inp_coolrates_table(tbl_cr_ci_HeII, T, .false.        &
+                                                        , ci_HeII_prime) &
                  * ne * nN(ixHeIII) ! ne * nHeII
      ci_HeII_prime= ci_HeII_prime * ne * nN(ixHeIII)
      ! Collisional excitation cooling
-     ce_HeI      = inp_coolrates_table(tbl_cr_ce_HeI, T, ce_HeI_prime)   &
+     ce_HeI      = inp_coolrates_table(tbl_cr_ce_HeI, T, .false.         &
+                                                       , ce_HeI_prime)   &
                  * ne * nN(ixHeII) ! ne * nHeI
      ce_HeI_prime= ce_HeI_prime *ne*nN(ixHeII)
-     ce_HeII     = inp_coolrates_table(tbl_cr_ce_HeII, T, ce_HeII_prime) &
+     ce_HeII     = inp_coolrates_table(tbl_cr_ce_HeII, T, .false.        &
+                                                        , ce_HeII_prime) &
                  * ne * nN(ixHeIII) ! ne * nHeII
      ce_HeII_prime= ce_HeII_prime * ne * nN(ixHeIII)
      ! Recombination Cooling
-     r_HeII      = inp_coolrates_table(tbl_cr_r_HeII, T, r_HeII_prime)   &
+     r_HeII      = inp_coolrates_table(tbl_cr_r_HeII, T, .false.         &
+                                                       , r_HeII_prime)   &
                  * ne * nI(ixHeII) ! ne * nHeII
      r_HeII_prime= r_HeII_prime * ne * nI(ixHeII)
-     r_HeIII     = inp_coolrates_table(tbl_cr_r_HeIII, T, r_HeIII_prime) &
+     r_HeIII     = inp_coolrates_table(tbl_cr_r_HeIII, T, .false.        &
+                                                        , r_HeIII_prime) &
                  * ne * nI(ixHeIII) ! ne * nHeIII
      r_HeIII_prime= r_HeIII_prime * ne * nI(ixHeIII)
   endif
 
   ! Bremsstrahlung
-  bre    = inp_coolrates_table(tbl_cr_bre, T, bre_prime)
+  bre    = inp_coolrates_table(tbl_cr_bre, T, .false., bre_prime)
   brefac = ne * nI(ixHII)
   if(isHe) then
      brefac = brefac + ne * ( nI(ixHeII) + 4. * nI(ixHeIII) )
@@ -615,23 +624,25 @@ FUNCTION compCoolrate(T, ne, nN, nI, dcooldT)
   bre_prime  = bre_prime * brefac
 
   ! Compton Cooling
-  com       = inp_coolrates_table(tbl_cr_com, T, com_prime) * ne
+  com       = inp_coolrates_table(tbl_cr_com, T, .true., com_prime) * ne
   com_prime = com_prime * ne
 
   ! Dielectronic recombination cooling
   if(isHe) then
-     die       = inp_coolrates_table(tbl_cr_die, T, die_prime) &
+     die       = inp_coolrates_table(tbl_cr_die, T, .false., die_prime) &
                * ne * nN(ixHeIII) ! ne * nHeII
      die_prime = die_prime * ne * nN(ixHeIII)
   endif
 
   if(isH2) then
      ! Collisional dissociation (H2) cooling
-     cr_H2HI       = inp_coolrates_table(tbl_cr_H2HI, T, cr_H2HI_prime)  &
+     cr_H2HI       = inp_coolrates_table(tbl_cr_H2HI, T, .false.         &
+                                                       , cr_H2HI_prime)  &
                    * nN(ixHI) * nN(ixHII) ! nH2 * nHI
      cr_H2HI_prime = cr_H2HI_prime * nN(ixHI)*nN(ixHII)
 
-     cr_H2H2       = inp_coolrates_table(tbl_cr_H2H2, T, cr_H2H2_prime)  &
+     cr_H2H2       = inp_coolrates_table(tbl_cr_H2H2, T, .false.         &
+                                                       , cr_H2H2_prime)  &
                    * nN(ixHI)**2 ! nH2 * nH2
      cr_H2H2_prime = cr_H2H2_prime * nN(ixHI)**2
   endif

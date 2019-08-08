@@ -39,6 +39,8 @@ module rt_parameters
   logical::isHe=.true.                             !     He ionization fractions tracked?
   logical::isH2=.false.                             !                          H2 tracked?
   integer::ixHI=0, ixHII=0, ixHeII=0, ixHeIII=0     !      Indexes of ionization fractions
+  logical::is_SED_single_Z=.false.                  !                   Tracks if single Z 
+                                                    !                 in SED interpolation
 
   ! RT_PARAMS namelist--------------------------------------------------------------------
   logical::rt_advect=.false.           ! Advection of photons?                           !
@@ -142,8 +144,6 @@ module rt_parameters
   ! SED statistics: Radiation emitted, total, last coarse step [#photons/10^50]-----------
   logical::showSEDstats=.true.
   real(dp)::tot_nPhot, step_nPhot, step_nStar, step_mStar
-
-  integer,dimension(1:NGROUPS)::rt_movie_vars=0 ! For generating cNp movies
 
   ! H2 parameters ------------------------------------------------------------------------
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)

@@ -306,25 +306,25 @@ subroutine clump_finder(create_output,keep_alive)
 
      if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
-     if(create_output)then
+     if(create_output.and..not.particlebased_clump_output)then
+        ! if particlebased_clump_output, write_clump_properties will
+        ! be called from within subroutine unbinding, before the 
+        ! unbinding arrays are deallocated
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
-        ! if(pic)call output_part_clump_id()
+        ! if(ivar_clump==0 .or. ivar_clump==-1)then
+        !    if(pic)call output_part_clump_id()
+        ! endif
      endif
 
   end if
 
-
-
-
-  !------------------------------------------
-  ! Added for patch:
-  ! Call particle unbinding
-  !------------------------------------------
-  
+  !-----------------------------------------------------------------
+  ! Added for patch: Call particle unbinding (and mergertree stuff)
+  ! Call it even for npeaks_tot = 0, mergertrees need to know that
+  ! there are no progenitors to work with
+  !------------------------------------------------------------------
   if(unbind.and.create_output.and.pic) call unbinding()
-
-
 
 
 
@@ -883,7 +883,7 @@ subroutine read_clumpfind_params()
        & saddle_threshold,mass_threshold,clinfo,&
        & n_clfind,rho_clfind,age_cut_clfind,&
        !unbinding parameters
-       & unbind,nmassbins,logbins, &
+       & unbind,nmassbins,logbins,particlebased_clump_output, &
        & saddle_pot,iter_properties,conv_limit, repeat_max, &
        !mergertree parameters
        & make_mergertree, nmost_bound, max_past_snapshots, &
@@ -940,6 +940,18 @@ subroutine read_clumpfind_params()
         density_threshold=rho_clfind/scale_d
      end if
   end if
+
+  ! some checks for unbinding/merger trees
+  if (make_mergertree .and..not. unbind) then
+    if (myid==1) write(*,*) "You set make_mergertree=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
+  if (particlebased_clump_output .and..not. unbind) then
+    if (myid==1) write(*,*) "You set particlebased_clump_output=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
 end subroutine read_clumpfind_params
 !################################################################
 !################################################################
@@ -1869,8 +1881,8 @@ subroutine output_part_clump_id()
   ! testcell the peak ID the testcell has. 
   !---------------------------------------------------------------------------
   use amr_commons
-  use clfind_commons    !unbinding stuff is all in here
-  use pm_commons !using mp
+  use clfind_commons    ! unbinding stuff is all in here
+  use pm_commons ! using mp
   use amr_parameters
   implicit none
   integer,dimension(:),allocatable::clump_ids

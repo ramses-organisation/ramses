@@ -172,7 +172,6 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       & ,rt_movie_vars                                                  &
        & ,rt_AGN
 
 
@@ -222,10 +221,9 @@ SUBROUTINE read_rt_params(nml_ok)
      if(myid==1) then
         write(*,*) 'Not enough variables for ionization fractions'
         write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',nIonsUsed
         write(*,*) 'STOPPING!'
      endif
-     call clean_stop
+     nml_ok=.false.
   endif
   if(nIonsUsed .lt. NIONS) then
      if(myid==1) then

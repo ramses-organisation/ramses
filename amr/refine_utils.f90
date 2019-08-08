@@ -844,7 +844,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      !=============================
      ! Interpolate stellar momentum
      !=============================
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         ! Scatter to children cells
         do j=1,twotondim
            iskip=ncoarse+(j-1)*ngridmax
@@ -1054,7 +1054,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         end do
 #endif
      end if
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         do i=1,nn
            pstarold(ind_cell_son(i))=0.0D0
            pstarnew(ind_cell_son(i))=0.0D0

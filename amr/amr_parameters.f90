@@ -164,7 +164,7 @@ module amr_parameters
   integer::nlevel_collapse=3         ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
-  logical::momentum_feedback=.false. ! Use supernovae momentum feedback if cooling radius not resolved
+  integer::momentum_feedback=0       ! Use supernovae momentum feedback if cooling radius not resolved
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
@@ -226,13 +226,18 @@ module amr_parameters
   character(LEN=NMOV)::proj_axis='z' ! x->x, y->y, projection along z
   character(LEN=6),dimension(1:NMOV)::shader_frame='square'
   character(LEN=10),dimension(1:NMOV)::method_frame='mean_mass'
-#ifdef SOLVERmhd
-  integer,dimension(0:NVAR+7)::movie_vars=0
-  character(len=5),dimension(0:NVAR+7)::movie_vars_txt=''
-#else
-  integer,dimension(0:NVAR+3)::movie_vars=0
-  character(len=5),dimension(0:NVAR+3)::movie_vars_txt=''
-#endif
+  character(len=10),dimension(1:50)::movie_vars_txt=''
+  integer::n_movie_vars
+  integer::i_mv_temp=-1,  i_mv_dens=-1,       i_mv_p=-1
+  integer::i_mv_speed=-1, i_mv_metallicity=-1
+  integer::i_mv_vx=-1,    i_mv_vy=-1,         i_mv_vz=-1
+  integer::i_mv_dm=-1,    i_mv_stars=-1,      i_mv_lum=-1
+  integer::i_mv_var=-1,   i_mv_xh2=-1,        i_mv_xhi=-1
+  integer:: i_mv_xhii=-1, i_mv_xheii=-1,      i_mv_xheiii=-1
+  integer::i_mv_fp=-1,    i_mv_pmag=-1
+  integer,dimension(1:50)::movie_vars=-1
+  integer,dimension(1:50)::movie_var_number=1
+
 
                                                  ! Refinement parameters for each level
   real(dp),dimension(1:MAXLEVEL)::m_refine =-1   ! Lagrangian threshold

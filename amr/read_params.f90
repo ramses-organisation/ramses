@@ -37,7 +37,7 @@ subroutine read_params
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
-       & ,xcentre_frame,ycentre_frame,zcentre_frame,movie_vars &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
        & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
@@ -274,7 +274,7 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call rt_read_hydro_params()
+  call read_rt_params(nml_ok)
 #endif
 #if NDIM==3
   if (sink)call read_sink_params
