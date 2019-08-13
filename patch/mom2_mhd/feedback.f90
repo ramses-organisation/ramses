@@ -292,7 +292,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
     ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
     do idim=1,ndim
         do j=1,np
@@ -513,7 +513,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
      
      ! Use stellar momentum feedback
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         ! Momentum feedback from supernovae
         do j=1,np
            birth_time=tp(ind_part(j))
