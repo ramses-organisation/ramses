@@ -109,7 +109,7 @@ program star2list
 
   ! read(10,'("ordering type=",A80)'),ordering
   read(10,'(A14,A80)')GMGM,ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -312,11 +312,11 @@ program star2list
      read(1)family
      read(1)tag
 !     write(*,*)'tag(1)',tag(1)
-     write(*,*),'tag read'
+     write(*,*)'tag read'
      read(1)age
-     write(*,*),'ages read'
+     write(*,*)'ages read'
      read(1)zsol
-     write(*,*),'zsol read'
+     write(*,*)'zsol read'
      close(1)
 
      do i=1,npart2
@@ -334,10 +334,8 @@ program star2list
            time=t_frw(iii)*(age(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
                 & t_frw(iii-1)*(age(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
            time=max((time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9),0.0)
-! ORI          write(12,'(I8,1X,5(1PE12.5,1X))')id(i),m(i)*unit_d*(unit_l**3)/2d33,x(i,1),x(i,2),x(i,3),time*1000.,zsol(i)/0.02  
-           write(12,'(I8,1X,6(1PE12.5,1X),I2,1X,I2)')id(i),m(i)*unit_d*(unit_l**3)/2d33,x(i,1),x(i,2),x(i,3),time*1000.,zsol(i)/0.02,ll(i),tag(i)
-!            write(12,'(I8,1X,10(1PE12.5,1X),1X)')id(i),m(i)*unit_d*(unit_l**3)/2d33,x(i,1),x(i,2),x(i,3),age(i),zsol(i)/0.02,ll(i)
-!            write(12,'(I8,E12.5,E12.5,E12.5,E12.5,E12.5,E12.5,I8,I8)')id(i),m(i)*unit_d*(unit_l**3)/2d33,x(i,1),x(i,2),x(i,3),age(i),zsol(i)/0.02,ll(i),tag(i)
+           write(12,'(I8,1X,6(1PE12.5,1X),I2,1X,I2)')id(i),m(i)*unit_d*(unit_l**3)/2d33,x(i,1),x(i,2),x(i,3),&
+                & time*1000.,zsol(i)/0.02,ll(i),tag(i)
 
         end if
      end do
