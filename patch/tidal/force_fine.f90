@@ -516,7 +516,11 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,icount,direction, tidal_field)
   end do
 
 end subroutine gradient_f
-
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+! EDIT TINE
 subroutine interpol_f(ind_cell,fi_int,ncell,ilevel,icount,direction)
   use amr_commons
   use poisson_commons, only:f

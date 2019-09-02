@@ -1,0 +1,55 @@
+This patch adds the posibility to calculate and output the tidal tensor eigenvalues.
+Calculation is only done when outputtingg, insteqad of at every timestep. HOW DO WE DO THIS?
+This feature can be turned on by setting output_tidal=.true. in the output_params namelist.
+
+ISSUES:
+  1) outputting and calculating is strictly divided in current architecture. Make 1 function to calc and output instead of adding it to dump_all?
+
+------------------------------------------------------------
+
+* amr_parameters.f90
+
+  - Define logical "output_tidal" with default value false.
+
+* read_params.f90
+
+  - Added namelist variable "output_tidal" to output_params
+
+------------------------------------------------------------
+
+* poisson_commons.f90
+
+  - Added the real allocatable 2d array variable "tidal_eigval" to store the ndim amount of eigenvalues for each cell.
+
+* init_poisson.f90
+
+  - Allocate the memory for "tidal_eigval" array (1:ncell, 1:ndim)
+  - Set its values to 0.
+  - THIS IS NOT WHAT WE WANT. WE WANT IT ONLY ALLOCATED WHEN WE NEED TO OUTPUT. TRY TO SAVE AS MUCH MEMORY AS POSSIBLE.
+    THE PROBLEM IS THAT CALCULATING AND OUTPUTTING HAPPENS IN DIFFERENT PARTS OF THE CODE.
+
+-----------------------------------------------------------
+
+* output_poisson.f90
+
+  - Added routine backup_tidal(filename).
+  - This is a modified copy of backup_poisson.
+  - Outputs "tidal_eigval" to filename.
+  - Adapted header #vars, removed write potential, changed write force to write tidal eigenvalues
+
+* output_arm.f90
+
+  - Added tidal outputting by adding "backup_tidal" in dump_all.
+  - Adapted copy of outputting gravity (the lines above)
+  - Output only if "output_tidal" and poisson is true.
+  - Filename tidal_XXXXX.out
+
+------------------------------------------------------------
+
+* force_fine.f90
+  - 
+
+* interpol_phi.f90
+  -
+
+* amr_step.f90
