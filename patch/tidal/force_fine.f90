@@ -339,7 +339,7 @@ subroutine calc_tidal_field(ilevel,icount)
   integer::igrid,ngrid,ncache,i,ind,iskip,ncell,idim
   integer ,dimension(1:nvector),save::ind_grid
   real(dp),allocatable,dimension(:,:,:)::tidal_field    ! tidal tensor
-  real(dp)::abs_err,A1=0, A2=0, A3=0
+  real(dp)::abs_err!,A1=0, A2=0, A3=0
   real(dp),allocatable,dimension(:,:)::eigenv,a
   integer ,dimension(1:nvector),save::ind_cell
 
@@ -371,11 +371,11 @@ subroutine calc_tidal_field(ilevel,icount)
            ind_cell(i) = iskip+ind_grid(i)
            !a=tidal_field(ind_cell(i),:,:)
            a=tidal_field(i,:,:)
-           !abs_err=1d-8*Icl(j)**2+1d-40 # what to pick?
-           !call jacobi(a,eigenv,abs_err) !in flagformationsites
+           abs_err=1d-5!1d-8*Icl(j)**2+1d-40 ! what to pick?
+           call jacobi(a,eigenv,abs_err) !in flagformationsites
            do idim=1,ndim
-               !tidal_eigval(int_cell(i),idim)=a(idim,idim)
-               tidal_eigval(ind_cell(i),idim)=DBLE(idim)
+               tidal_eigval(ind_cell(i),idim)=a(idim,idim)
+               !tidal_eigval(ind_cell(i),idim)=DBLE(idim)
            end do
         end do
      end do
