@@ -12,7 +12,7 @@ PATCH = ../patch/tidal
 GRACKLE = 0
 EXEC = ramsesTidal
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
-OLD_MPI_SUPPORT = 0
+OLD_MPI_SUPPORT = 1
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
@@ -70,8 +70,9 @@ endif
 #FFLAGS = -cpp -fast $(DEFINES) -DNOSYSTEM
 
 # --- MPI, ifort syntax, additional checks -----------
-#F90 = mpif90
+F90 = mpif90
 #FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
+FFLAGS = -warn all -O2 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
 
 # --- MPI, cray syntax, high optimisation -----------
 # --- NOTE: 03 is slower, hfp3 is too aggresive
@@ -83,9 +84,8 @@ endif
 #FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT
 
 # --- MPI, ifort syntax, additional checks -----------
-F90 = ftn
+#F90 = ftn
 #FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM #-DRT
-FFLAGS = -O3 -g -traceback -assume byterecl -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM #-DRT
 
 #############################################################################
 MOD = mod
@@ -164,5 +164,5 @@ write_patch.o: FORCE
 FORCE:
 #############################################################################
 clean:
-	rm -f *.o *.$(MOD) *.i
+	rm -f *.o *.$(MOD) *.i *genmod.f90
 #############################################################################
