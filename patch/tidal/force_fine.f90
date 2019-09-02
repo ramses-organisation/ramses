@@ -346,12 +346,11 @@ subroutine calc_tidal_field(ilevel,icount)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ncell=ncoarse+twotondim*ngridmax
-  allocate(tidal_field(1:ncell,1:ndim,1:ndim))
-  allocate(tidal_eigval(1:ncell,1:ndim))
+  !ncell=ncoarse+twotondim*ngridmax
+  allocate(tidal_field(1:nvector,1:ndim,1:ndim))
   allocate(eigenv(1:ndim,1:ndim))
   allocate(a(1:ndim,1:ndim))
-  tidal_field=0; tidal_eigval=0; eigenv=0; a=0
+  tidal_field=0; eigenv=0; a=0
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -364,29 +363,25 @@ subroutine calc_tidal_field(ilevel,icount)
      do idim=1,ndim
         call gradient_f(ind_grid,ngrid,ilevel,icount,idim, tidal_field)
      end do
-     !call gradient_f(ind_grid,ngrid,ilevel,icount,2, tidal_field)
-     !call gradient_f(ind_grid,ngrid,ilevel,icount,3, tidal_field)
      ! Calculate the eigenvalues
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i) = iskip+ind_grid(i)
-           a=tidal_field(ind_cell(i),:,:)
+           !a=tidal_field(ind_cell(i),:,:)
+           a=tidal_field(i,:,:)
            !abs_err=1d-8*Icl(j)**2+1d-40 # what to pick?
            !call jacobi(a,eigenv,abs_err) !in flagformationsites
            do idim=1,ndim
                !tidal_eigval(int_cell(i),idim)=a(idim,idim)
                tidal_eigval(ind_cell(i),idim)=DBLE(idim)
            end do
-           !tidal_eigval(ind_cell(i),1)=1.d+0
-           !tidal_eigval(ind_cell(i),2)=2.d+0
-           !tidal_eigval(ind_cell(i),3)=3.d+0
         end do
      end do
   end do
   ! End loop over grids
-  deallocate(tidal_field)
+  deallocate(tidal_field, eigenv, a)
 
 111 format('   Entering calc_tidal_field for level ',I2)
 
@@ -514,7 +509,7 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,icount,direction, tidal_field)
         end do
         do i=1,ngrid
            !TODO: I think the - sign is already included?
-           tidal_field(ind_cell(i),idim,direction)=a*(fi1(i)-fi2(i)) &
+           tidal_field(i,idim,direction)=a*(fi1(i)-fi2(i)) &
                 &             -b*(fi3(i)-fi4(i))
         end do
      end do

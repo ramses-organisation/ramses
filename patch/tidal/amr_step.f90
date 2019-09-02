@@ -131,6 +131,7 @@ recursive subroutine amr_step(ilevel,icount)
   !------------------------
   ! Output results to files
   !------------------------
+
   if(ilevel==levelmin)then
 
 #ifdef WITHOUTMPI
@@ -152,9 +153,6 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
-        ! EDIT TINE
-        if(output_tidal) call calc_tidal_field(ilevel, icount)
-
         call dump_all
 
         ! Dump lightcone
@@ -250,6 +248,10 @@ recursive subroutine amr_step(ilevel,icount)
            call synchro_fine(ilevel)
         end if
      end if
+
+     ! EDIT TINE
+     ! compute the tidal field
+     if(output_tidal) call calc_tidal_field(ilevel, icount)
 
      if(hydro)then
                                call timer('poisson','start')
