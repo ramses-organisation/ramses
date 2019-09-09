@@ -324,7 +324,7 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
 end subroutine gradient_phi
 
 !EDIT TINE
-subroutine calc_tidal_field(ilevel,icount)
+subroutine calc_tidal_field(ilevel)
   use amr_commons
   use poisson_commons
   use mpi_mod
@@ -332,25 +332,24 @@ subroutine calc_tidal_field(ilevel,icount)
 #ifndef WITHOUTMPI
   integer::info
 #endif
-  integer::ilevel,icount
+  integer::ilevel
   !-------------------------------------------------
   ! this routine calculates the eigenvalues of the tidal field tensor
   !-------------------------------------------------
-  integer::igrid,ngrid,ncache,i,ind,iskip,ncell,idim
+  integer::igrid,ngrid,ncache,i,ind,iskip,ncell,idim,j,k
   integer ,dimension(1:nvector),save::ind_grid
-  real(dp),allocatable,dimension(:,:,:)::tidal_field    ! tidal tensor
-  real(dp)::abs_err!,A1=0, A2=0, A3=0
-  real(dp),allocatable,dimension(:,:)::eigenv,a
+  !real(dp),allocatable,dimension(:,:,:)::tidal_field    ! tidal tensor
+  !real(dp)::abs_err!,A1=0, A2=0, A3=0
+  !real(dp),allocatable,dimension(:,:)::eigenv,a
   integer ,dimension(1:nvector),save::ind_cell
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  !ncell=ncoarse+twotondim*ngridmax
-  allocate(tidal_field(1:nvector,1:ndim,1:ndim))
-  allocate(eigenv(1:ndim,1:ndim))
-  allocate(a(1:ndim,1:ndim))
-  tidal_field=0; eigenv=0; a=0
+  !allocate(tidal_field(1:nvector,1:ndim,1:ndim))
+  !allocate(eigenv(1:ndim,1:ndim))
+  !allocate(a(1:ndim,1:ndim))
+  !tidal_field=0; eigenv=0; a=0
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -361,42 +360,41 @@ subroutine calc_tidal_field(ilevel,icount)
      end do
      ! Calculate the components of the local tidal tensor
      do idim=1,ndim
-        call gradient_f(ind_grid,ngrid,ilevel,icount,idim, tidal_field)
+        call gradient_f(ind_grid,ngrid,ilevel,idim)!, tidal_field)
      end do
      ! Calculate the eigenvalues
      ! Loop over cells
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,ngrid
-           ind_cell(i) = iskip+ind_grid(i)
-           !a=tidal_field(ind_cell(i),:,:)
-           a=tidal_field(i,:,:)
-           abs_err=1d-5!1d-8*Icl(j)**2+1d-40 ! what to pick?
-           call jacobi(a,eigenv,abs_err) !in flagformationsites
-           do idim=1,ndim
-               tidal_eigval(ind_cell(i),idim)=a(idim,idim)
-               !tidal_eigval(ind_cell(i),idim)=DBLE(idim)
-           end do
-        end do
-     end do
+     !do ind=1,twotondim
+     !   iskip=ncoarse+(ind-1)*ngridmax
+     !   do i=1,ngrid
+     !      ind_cell(i) = iskip+ind_grid(i)
+     !      a=tidal_field(i,:,:)
+     !      abs_err=1d-5!1d-8*Icl(j)**2+1d-40 ! what to pick?
+     !      call jacobi(a,eigenv,abs_err) !in flagformationsites
+     !      do idim=1,ndim
+     !         tidal_eigval(ind_cell(i),idim)=a(idim,idim)
+     !         !tidal_eigval(ind_cell(i),idim)=DBLE(idim)
+     !      end do
+     !   end do
+     !end do
   end do
   ! End loop over grids
-  deallocate(tidal_field, eigenv, a)
+  !deallocate(tidal_field, eigenv, a)
 
 111 format('   Entering calc_tidal_field for level ',I2)
 
 end subroutine calc_tidal_field
 
 !EDIT TINE
-subroutine gradient_f(ind_grid,ngrid,ilevel,icount,direction, tidal_field)
+subroutine gradient_f(ind_grid,ngrid,ilevel,direction)!, tidal_field)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
   implicit none
-  integer::ngrid,ilevel,icount,direction
+  integer::ngrid,ilevel,direction
   integer,dimension(1:nvector)::ind_grid
-  real(dp),dimension(1:nvector,1:ndim,1:ndim)::tidal_field
+  !real(dp),dimension(1:nvector,1:ndim,1:ndim)::tidal_field
   !-------------------------------------------------
   ! This routine compute the components of the tidal tensor for all cells
   ! in grids ind_grid(:) at level ilevel, using a
@@ -458,8 +456,8 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,icount,direction, tidal_field)
   ! Interpolate acceleration from upper level
   if (ilevel>levelmin)then
      do idim=1,ndim
-        call interpol_f(ind_left (1,idim),fi_left (1,1,idim),ngrid,ilevel,icount,direction)
-        call interpol_f(ind_right(1,idim),fi_right(1,1,idim),ngrid,ilevel,icount,direction)
+        call interpol_f(ind_left (1,idim),fi_left (1,1,idim),ngrid,ilevel,direction)
+        call interpol_f(ind_right(1,idim),fi_right(1,1,idim),ngrid,ilevel,direction)
      end do
   end if
   ! Loop over cells
@@ -509,7 +507,8 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,icount,direction, tidal_field)
         end do
         do i=1,ngrid
            !TODO: I think the - sign is already included?
-           tidal_field(i,idim,direction)=a*(fi1(i)-fi2(i)) &
+           !tidal_field(i,idim,direction)=a*(fi1(i)-fi2(i)) &
+           tidal_eigval(ind_cell(i),(idim-1)*ndim + direction)=a*(fi1(i)-fi2(i)) &
                 &             -b*(fi3(i)-fi4(i))
         end do
      end do
@@ -521,11 +520,11 @@ end subroutine gradient_f
 !###########################################################
 !###########################################################
 ! EDIT TINE
-subroutine interpol_f(ind_cell,fi_int,ncell,ilevel,icount,direction)
+subroutine interpol_f(ind_cell,fi_int,ncell,ilevel,direction)
   use amr_commons
   use poisson_commons, only:f
   implicit none
-  integer::ncell,ilevel,icount,direction
+  integer::ncell,ilevel,direction
   integer ,dimension(1:nvector)::ind_cell
   real(dp),dimension(1:nvector,1:twotondim)::fi_int
 
@@ -539,7 +538,7 @@ subroutine interpol_f(ind_cell,fi_int,ncell,ilevel,icount,direction)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer::i,ind,indice,ind_average,ind_father
-  real(dp)::dx,tfrac
+  real(dp)::dx
   real(dp)::aa,bb,cc,dd,coeff,add
   integer,dimension(1:8,1:8)::ccc
   real(dp),dimension(1:8)::bbbb
@@ -560,11 +559,6 @@ subroutine interpol_f(ind_cell,fi_int,ncell,ilevel,icount,direction)
   ccc(:,6)=(/21,20,24,23,12,11,15,14/)
   ccc(:,7)=(/25,26,22,23,16,17,13,14/)
   ccc(:,8)=(/27,26,24,23,18,17,15,14/)
-
-  if (icount .ne. 1 .and. icount .ne. 2)then
-     write(*,*)'icount has bad value'
-     call clean_stop
-  endif
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

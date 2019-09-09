@@ -9,7 +9,7 @@ subroutine dump_all
   use cooling_module
   use mpi_mod
   !EDIT TINE
-  !use force_fine !needed?
+  use poisson_commons !f
   implicit none
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
@@ -17,7 +17,8 @@ subroutine dump_all
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filename_desc,filedir
-  integer::ierr
+  !EDIT TINE
+  integer::ierr,i,idim
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -151,6 +152,16 @@ subroutine dump_all
      end if
      ! EDIT TINE
      if(output_tidal.and.poisson)then
+        ! calc tidal field
+        do i=levelmin,nlevelmax
+           ! update boundaries for the force
+           do idim=1,ndim
+               call make_virtual_fine_dp(f(1,idim),i)
+           end do
+           if(simple_boundary)call make_boundary_force(i)
+           ! compute the tidal field
+           call calc_tidal_field(i)
+        end do
         ! output the tidal eigenvalues
         if(myid==1.and.print_when_io) write(*,*)'Start backup tidal'
         filename=TRIM(filedir)//'tidal_'//TRIM(nchar)//'.out'

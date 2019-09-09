@@ -1,3 +1,8 @@
+UPDATE 1:
+Now calcs only on output. Outputs T_ij instead of Lambda_i
+
+#########################################################################################
+
 This patch adds the posibility to calculate and output the tidal tensor eigenvalues.
 Calculation is only done when outputtingg, insteqad of at every timestep. HOW DO WE DO THIS?
 This feature can be turned on by setting output_tidal=.true. in the output_params namelist.

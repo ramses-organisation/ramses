@@ -6,7 +6,7 @@ module poisson_commons
   real(dp),allocatable,dimension(:)  ::rho               ! Density
   real(dp),allocatable,dimension(:,:)::f                 ! 3-force
   ! EDIT TINE
-  real(dp),allocatable,dimension(:,:)::tidal_eigval    ! tidal eigenvalues
+  real(dp),allocatable,dimension(:,:)::tidal_eigval    ! tidal tensor (now stores T_ij)
 
   real(dp),allocatable,dimension(:)  ::rho_top   ! Density at last CIC level
 
