@@ -1389,16 +1389,16 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
              ! Supernovae
              if(ln==2)then
-                snleft (l) = pin(l,i-1,j,k)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i-1,j,k)
+                snright = pin(l,i,j,k)
              endif 
              if(ln==3)then
-                snleft (l) = pin(l,i,j-1,k)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i,j-1,k)
+                snright = pin(l,i,j,k)
              endif
              if(ln==4)then
-                snleft (l) = pin(l,i,j,k-1)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i,j,k-1)
+                snright = pin(l,i,j,k)
              endif
 
               ! Enforce continuity for normal magnetic field
