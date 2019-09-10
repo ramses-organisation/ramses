@@ -1370,7 +1370,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
   ! local variables
   integer ::i, j, k, l, xdim
-  real(dp),dimension(1:nvector),save::snleft,snright
+  real(dp)::snleft,snright
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
