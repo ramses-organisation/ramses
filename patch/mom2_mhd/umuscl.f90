@@ -28,7 +28,7 @@
 !
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 ! ----------------------------------------------------------------
-subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
+subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -176,7 +176,7 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
        &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
+       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid)
  ! Save vector in output array
   do k=klo,khi
@@ -206,7 +206,7 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1,ju2,ku1+1,ku2+1, &
        &           qLT,iu1  ,iu2  ,ju1,ju2,ku1+1,ku2+1, &
        &           qRB,iu1+1,iu2+1,ju1,ju2,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , pin, &
+       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
        &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid)
   ! Save vector in output array
   do k=kf1,kf2
@@ -222,7 +222,7 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1,iu2,ju1+1,ju2+1,ku1+1,ku2+1, &
        &           qRB,iu1,iu2,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qLT,iu1,iu2,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , pin, &
+       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
        &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid)
   ! Save vector in output array
   do k=kf1,kf2
@@ -1489,7 +1489,7 @@ end subroutine cmpflxm
 SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
        &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
        &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
-       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, pin, &
+       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
        &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
        &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid)
   ! 2D Riemann solver to compute EMF at cell edges
@@ -1513,7 +1513,6 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:nvar+1,1:3)::qLB
 
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
-  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2)::pin
 
   ! local variables
   INTEGER ::i, j, k, l, xdim
