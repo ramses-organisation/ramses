@@ -327,6 +327,7 @@ end subroutine gradient_phi
 subroutine calc_tidal_field(ilevel)
   use amr_commons
   use poisson_commons
+  !use hydro_commons !uold
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -338,18 +339,19 @@ subroutine calc_tidal_field(ilevel)
   !-------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ncell,idim,j,k
   integer ,dimension(1:nvector),save::ind_grid
-  !real(dp),allocatable,dimension(:,:,:)::tidal_field    ! tidal tensor
-  !real(dp)::abs_err!,A1=0, A2=0, A3=0
-  !real(dp),allocatable,dimension(:,:)::eigenv,a
+  real(dp),allocatable,dimension(:,:,:,:)::tidal_field    ! tidal tensor
+  real(dp)::abs_err,A1=0, A2=0, A3=0
+  real(dp),allocatable,dimension(:,:)::eigenv,a
   integer ,dimension(1:nvector),save::ind_cell
+  real(dp),dimension(1:3)::sorted_eigv
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  !allocate(tidal_field(1:nvector,1:ndim,1:ndim))
-  !allocate(eigenv(1:ndim,1:ndim))
-  !allocate(a(1:ndim,1:ndim))
-  !tidal_field=0; eigenv=0; a=0
+  allocate(tidal_field(1:nvector,1:twotondim,1:ndim,1:ndim))
+  allocate(eigenv(1:ndim,1:ndim))
+  allocate(a(1:ndim,1:ndim))
+  tidal_field=0; eigenv=0; a=0
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -360,33 +362,63 @@ subroutine calc_tidal_field(ilevel)
      end do
      ! Calculate the components of the local tidal tensor
      do idim=1,ndim
-        call gradient_f(ind_grid,ngrid,ilevel,idim)!, tidal_field)
+        call gradient_f(ind_grid,ngrid,ilevel,idim, tidal_field)
      end do
      ! Calculate the eigenvalues
      ! Loop over cells
-     !do ind=1,twotondim
-     !   iskip=ncoarse+(ind-1)*ngridmax
-     !   do i=1,ngrid
-     !      ind_cell(i) = iskip+ind_grid(i)
-     !      a=tidal_field(i,:,:)
-     !      abs_err=1d-5!1d-8*Icl(j)**2+1d-40 ! what to pick?
-     !      call jacobi(a,eigenv,abs_err) !in flagformationsites
-     !      do idim=1,ndim
-     !         tidal_eigval(ind_cell(i),idim)=a(idim,idim)
-     !         !tidal_eigval(ind_cell(i),idim)=DBLE(idim)
-     !      end do
-     !   end do
-     !end do
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i) = iskip+ind_grid(i)
+        end do
+        do i=1,ngrid
+           a=tidal_field(i,ind,1:ndim,1:ndim)
+           a=(a+TRANSPOSE(a))*0.5
+           abs_err=1d-40
+           do idim=1,ndim
+              abs_err = abs_err + a(idim,idim)**2 ! what to pick? 
+           end do
+           abs_err = abs_err*2d-4
+           call jacobi(a,eigenv,abs_err) !in flagformationsites
+           !sort, for simplicity this part assumes ndim=3
+           if (a(1,1) > a(2,2)) then
+               A1 = a(1,1)
+               A2 = a(2,2)
+           else
+               A1 = a(2,2)
+               A2 = a(1,1)
+           end if
+           if (A1 > a(3,3)) then
+               if (A2 > a(3,3)) then
+                  A3=a(3,3)
+               else
+                  A3 = A2
+                  A2 = a(3,3)
+               end if
+           else
+               A3 = A2
+               A2 = A1
+               A1=a(3,3)
+           end if
+           sorted_eigv(1)=A1
+           sorted_eigv(2)=A2
+           sorted_eigv(3)=A3
+           do idim=1,ndim
+              tidal_eigval(ind_cell(i),idim)=sorted_eigv(idim)!a(idim,idim)
+              !tidal_eigval(ind_cell(i),idim)=DBLE(idim)
+           end do
+        end do
+     end do
   end do
   ! End loop over grids
-  !deallocate(tidal_field, eigenv, a)
+  deallocate(tidal_field, eigenv, a)
 
 111 format('   Entering calc_tidal_field for level ',I2)
 
 end subroutine calc_tidal_field
 
 !EDIT TINE
-subroutine gradient_f(ind_grid,ngrid,ilevel,direction)!, tidal_field)
+subroutine gradient_f(ind_grid,ngrid,ilevel,direction, tidal_field)
   use amr_commons
   use pm_commons
   use hydro_commons
@@ -394,7 +426,7 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,direction)!, tidal_field)
   implicit none
   integer::ngrid,ilevel,direction
   integer,dimension(1:nvector)::ind_grid
-  !real(dp),dimension(1:nvector,1:ndim,1:ndim)::tidal_field
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim,1:ndim)::tidal_field
   !-------------------------------------------------
   ! This routine compute the components of the tidal tensor for all cells
   ! in grids ind_grid(:) at level ilevel, using a
@@ -507,8 +539,8 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,direction)!, tidal_field)
         end do
         do i=1,ngrid
            !TODO: I think the - sign is already included?
-           !tidal_field(i,idim,direction)=a*(fi1(i)-fi2(i)) &
-           tidal_eigval(ind_cell(i),(idim-1)*ndim + direction)=a*(fi1(i)-fi2(i)) &
+           !tidal_eigval(ind_cell(i),(idim-1)*ndim + direction)=a*(fi1(i)-fi2(i)) &
+           tidal_field(i,ind,idim,direction)=a*(fi1(i)-fi2(i)) &
                 &             -b*(fi3(i)-fi4(i))
         end do
      end do

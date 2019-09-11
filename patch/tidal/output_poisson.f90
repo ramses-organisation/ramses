@@ -131,7 +131,8 @@ subroutine backup_tidal(filename)
 
   open(unit=ilun,file=fileloc,form='unformatted')
   write(ilun)ncpu
-  write(ilun)ndim*ndim
+  !write(ilun)ndim*ndim
+  write(ilun)ndim
   write(ilun)nlevelmax
   write(ilun)nboundary
   do ilevel=1,nlevelmax
@@ -156,13 +157,9 @@ subroutine backup_tidal(filename)
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
-              ! Write potential
-              !do i=1,ncache
-              !   xdp(i)=phi(ind_grid(i)+iskip)
-              !end do
-              !write(ilun)xdp
               ! Write tidal eigenvalues
-              do ivar=1,(ndim*ndim)
+              !do ivar=1,(ndim*ndim)
+              do ivar=1,ndim
                  do i=1,ncache
                     xdp(i)=tidal_eigval(ind_grid(i)+iskip,ivar)
                     ! do we also want the eigenvectors?

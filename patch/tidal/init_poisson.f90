@@ -27,8 +27,8 @@ subroutine init_poisson
   allocate(phi_old (1:ncell))
   allocate(f   (1:ncell,1:3))
   !EDIT TINE
-  !allocate(tidal_eigval(1:ncell,1:ndim))
-  allocate(tidal_eigval(1:ncell,1:(ndim*ndim)))
+  allocate(tidal_eigval(1:ncell,1:ndim))
+  !allocate(tidal_eigval(1:ncell,1:(ndim*ndim)))
   rho=0; phi=0; f=0; tidal_eigval=0
   if(cic_levelmax>0)then
      allocate(rho_top(1:ncell))
