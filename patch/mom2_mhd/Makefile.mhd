@@ -5,10 +5,10 @@
 NVECTOR = 256
 NDIM = 3
 NPRE = 8
-NVAR = 11   #8
+NVAR = 11
 NENER = 0
 SOLVER = mhd
-PATCH = ../patch/mom2_mhd
+PATCH = ../patch/mom2_mhd:../patch/mom2
 GRACKLE = 0
 EXEC = ramses
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
@@ -108,7 +108,7 @@ endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
-VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
+VPATH =  ../patch/mom2_mhd : ../patch/mom2 || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o constants.o
