@@ -173,11 +173,11 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #if NDIM>1
   ! Solve for EMF in Z direction
-  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid)
+  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1,ku2, &
+       &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1,ku2, &
+       &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1,ku2, &
+       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1,ku2, &
+       &               if1  ,if2  ,jf1  ,jf2  ,klo,khi, 2,3,4,6,7,8,emf,ngrid)
  ! Save vector in output array
   do k=klo,khi
   do j=jf1,jf2
