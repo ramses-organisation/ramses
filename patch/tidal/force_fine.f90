@@ -378,7 +378,7 @@ subroutine calc_tidal_field(ilevel)
            do idim=1,ndim
               abs_err = abs_err + a(idim,idim)**2 ! what to pick? 
            end do
-           abs_err = abs_err*2d-4
+           abs_err = abs_err*1d-8
            call jacobi(a,eigenv,abs_err) !in flagformationsites
            !sort, for simplicity this part assumes ndim=3
            if (a(1,1) > a(2,2)) then
@@ -453,8 +453,8 @@ subroutine gradient_f(ind_grid,ngrid,ilevel,direction, tidal_field)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
 
-  a=0.50D0*4.0D0/3.0D0/dx
-  b=0.25D0*1.0D0/3.0D0/dx
+  a=0.50D0*4.0D0/3.0D0/dx_loc
+  b=0.25D0*1.0D0/3.0D0/dx_loc
   !   |dim
   !   | |node
   !   | | |cell
