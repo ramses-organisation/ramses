@@ -21,10 +21,10 @@ x      = data["x"]
 y      = data["y"]
 dx     = data["dx"]
 rho    = data["density"]
-p      = data["thermal_pressure"]
-b2     = 0.25*(data["B_left_x"]+data["B_right_x"])**2 + \
-         0.25*(data["B_left_y"]+data["B_right_y"])**2 + \
-         0.25*(data["B_left_z"]+data["B_right_z"])**2
+p      = data["pressure"]
+b2     = 0.25*(data["B_x_left"]+data["B_x_right"])**2 + \
+         0.25*(data["B_y_left"]+data["B_y_right"])**2 + \
+         0.25*(data["B_z_left"]+data["B_z_right"])**2
 u2     = data["velocity_x"]**2 + data["velocity_y"]**2
 
 xmin = np.amin(x-0.5*dx)

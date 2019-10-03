@@ -35,7 +35,6 @@ testlist="hydro,mhd";
 MPI=0;
 NCPU=1;
 VERBOSE=false;
-# QUICK=false;
 DELDATA=true;
 CLEAN_ALL=false;
 SELECTTEST=false;
@@ -51,9 +50,6 @@ while getopts "cdp:qt:v" OPTION; do
          MPI=1;
          NCPU=$OPTARG;
       ;;
-      # q)
-      #    QUICK=true;
-      # ;;
       t)
          SELECTTEST=true;
          TESTNUMBER=$OPTARG;
