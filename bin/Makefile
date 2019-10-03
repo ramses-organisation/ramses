@@ -10,6 +10,7 @@ NENER = 0
 SOLVER = hydro
 PATCH =
 GRACKLE = 0
+MPI = 0
 EXEC = ramses
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0
@@ -31,8 +32,13 @@ endif
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
+ifeq ($(MPI),1)
+F90 = mpif90 -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
+FFLAGS = -x f95-cpp-input $(DEFINES)
+else
 F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
 FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+endif
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI

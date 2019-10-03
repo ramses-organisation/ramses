@@ -1,0 +1,2 @@
+QUICK: 1
+FLAGS: NDIM=2 PATCH=../patch/test_suite/mhd/orszag-tang SOLVER=mhd
