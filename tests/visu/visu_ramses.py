@@ -309,7 +309,6 @@ def load_snapshot(nout):
     data["data"]["boxlen"] = info["boxlen"]
     data["data"]["ncells"] = ncells_tot
     data["data"]["time"  ] = info["time"]
-    # data["ngrp"  ] = info["ngrp"]
 
     # Read sink particles if present
     sinkfile = infile+"/sink_"+infile.split("_")[-1]+".csv"
@@ -333,40 +332,10 @@ def load_snapshot(nout):
                         data["sinks"][entry][i] = np.float64(line[j])
                     except ValueError:
                         data["sinks"][entry][i] = np.nan
-
-            # sinks["x"] *= info["unit_l"]
-            # sinks["y"] *= info["unit_l"]
-            # sinks["z"] *= info["unit_l"]
             data["sinks"]["id"] = np.int32(data["sinks"]["id"])
             data["sinks"]["level"] = np.int32(data["sinks"]["level"])
-            # sinks["radius"] = 4.0/(2.0**sinks["level"])
     except IOError:
         pass
-        # info["nsinks"] = 0
-        # return
-
-    # try:
-    #     sinklist = np.loadtxt(sinkfile,delimiter=",")
-    #     if np.shape(sinklist)[0] == 0:
-    #         data["nsinks"] = 0
-    #     else:
-    #         list_shape = np.shape(np.shape(sinklist))[0]
-    #         if list_shape == 1:
-    #             sinklist = np.reshape(sinklist, (1, np.shape(sinklist)[0]))
-    #             data["nsinks"] = 1
-    #         else:
-    #             data["nsinks"] = np.shape(sinklist)[0]
-    #         try:
-    #             data["r_sink"] = info["ir_cloud"]/(2.0**info["levelmax"])
-    #         except KeyError:
-    #             try:
-    #                 data["r_sink"] = info["ncell_racc"]/(2.0**info["levelmax"])
-    #             except KeyError:
-    #                 data["r_sink"] = 4.0/(2.0**info["levelmax"])
-    #         for i in range(data["nsinks"]):
-    #             data["sink"+str(i+1)] = sinklist[i,:]
-    # except IOError:
-    #     pass
 
     return data
 
@@ -494,8 +463,14 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     tex_file.write("Variable & This run & Reference & Error \\\\\n")
     tex_file.write("\\hline\n")
 
+    all_keys = dict()
+    for key in ref.keys():
+        all_keys[key] = 1
+    for key in sol.keys():
+        all_keys[key] = 1
+
     # Compute errors
-    for key in sorted(ref.keys()):
+    for key in sorted(all_keys.keys()):
 
         try:
             tol = var_tol[key]
@@ -506,26 +481,44 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
             this_sol = sol[key]
         except KeyError:
             this_sol = None
+        try:
+            this_ref = ref[key]
+        except KeyError:
+            this_ref = None
 
-        if this_sol is not None:
-            if this_sol == ref[key] == 0.0:
+        if this_sol is not None and this_ref is not None:
+            if this_sol == this_ref == 0.0:
                 error = 0.0
             else:
-                error = abs(this_sol-ref[key])/min(abs(this_sol),abs(ref[key]))
+                error = abs(this_sol-this_ref)/min(abs(this_sol),abs(this_ref))
         else:
             error = np.Inf
 
         if error > tol:
             ok = False
+            output = "\\textcolor{red}{%s} & "%key.replace("_"," ")
             if this_sol is None:
-                tex_file.write("\\textcolor{red}{%s} & \\textcolor{red}{-} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e}\\\\\n" %(key.replace("_"," "),ref[key],error))
+                output += "\\textcolor{red}{-} & "
             else:
-                tex_file.write("\\textcolor{red}{%s} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e}\\\\\n" %(key.replace("_"," "),this_sol,ref[key],error))
+                output += "\\textcolor{red}{%.16e} & "%this_sol
+            if this_ref is None:
+                output += "\\textcolor{red}{-} & "
+            else:
+                output += "\\textcolor{red}{%.16e} & "%this_ref
+            output += "\\textcolor{red}{%.16e}\\\\\n" %error
         else:
+            output = "%s & "%key.replace("_"," ")
             if this_sol is None:
-                tex_file.write("%s & - & %.16e & %.16e\\\\\n" %(key.replace("_"," "),ref[key],error))
+                output += "- & "
             else:
-                tex_file.write("%s & %.16e & %.16e & %.16e\\\\\n" %(key.replace("_"," "),this_sol,ref[key],error))
+                output += "%.16e & "%this_sol
+            if this_ref is None:
+                output += "- & "
+            else:
+                output += "%.16e & "%this_ref
+            output += "%.16e\\\\\n" %error
+        tex_file.write(output)
+
     tex_file.write("\\hline\n")
     tex_file.write("\\end{tabular}\n")
     tex_file.write("\\end{table}\n")

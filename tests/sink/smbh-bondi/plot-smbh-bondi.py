@@ -34,5 +34,7 @@ axis.set_xlabel('Time [kyr]')
 axis.set_ylabel(r'$\dot{M}_{\mathrm{Bondi}}~[M_{\odot}/\mathrm{yr}]$')
 fig.savefig('smbh-bondi.pdf', bbox_inches="tight")
 
-data  = visu_ramses.load_snapshot(15)
+data = visu_ramses.load_snapshot(15)
+for key in data["sinks"].keys():
+    data["data"]["sink_"+key] = data["sinks"][key]
 visu_ramses.check_solution(data["data"],'smbh-bondi')
