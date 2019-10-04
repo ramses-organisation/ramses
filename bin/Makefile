@@ -24,7 +24,7 @@ ifeq ($(SOLVER),mhd)
 NVAR = 8
 endif
 ifdef RT
-NVAR := $(NVAR)+$(NIONS)
+NVAR := $(NVAR)+$(NIONS)+1
 endif
 NVAR := $(NVAR)+$(NENER)
 

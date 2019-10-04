@@ -27,7 +27,7 @@
 #######################################################################
 
 # List of directories to scan
-testlist="hydro,mhd";
+testlist="hydro,mhd,rt";
 
 #######################################################################
 # Determine the parameters for running the test suite
