@@ -1,1 +1,1 @@
-FLAGS: NDIM=2 PATCH=../tests/mhd/orszag-tang SOLVER=mhd NVAR=8
+FLAGS: NDIM=2 PATCH=../tests/mhd/orszag-tang SOLVER=mhd

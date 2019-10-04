@@ -339,7 +339,7 @@ def generate_fname(nout,ftype="",cpuid=1):
 # - threshold   : relative value below which a vector component is set to zero
 # - norm_min    : minimum value for norm, to protect against null vectors
 # - min_variance: if the data differs by less than this value from the average value, it is set to the average
-def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e-30,min_variance=1.0e-14):
+def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e-30,min_variance=1.0e-14,overwrite=False):
 
     var_tol = {"all":3.0e-13}
     try:
@@ -404,11 +404,12 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
             sol[key] = solution
 
     # Overwrite reference solution =====================
-    print("WARNING! Over-writing reference solution")
-    ref_file = open(test_name+"-ref.dat", "w")
-    for key in sorted(data.keys()):
-       ref_file.write("%s : %.16e\n" % (key,sol[key]))
-    ref_file.close()
+    if overwrite:
+        print("WARNING! Over-writing reference solution")
+        ref_file = open(test_name+"-ref.dat", "w")
+        for key in sorted(data.keys()):
+           ref_file.write("%s : %.16e\n" % (key,sol[key]))
+        ref_file.close()
     # ==================================================
 
     # Read reference solution

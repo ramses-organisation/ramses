@@ -19,13 +19,14 @@ NIONS = 0
 ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
 
 # Compute NVAR
-NVAR = 2+$(NDIM)+$(NENER)
-ifeq ($(SOLVER),"mhd")
-NVAR := $(NVAR)+3
+NVAR = 2+$(NDIM)
+ifeq ($(SOLVER),mhd)
+NVAR = 8
 endif
 ifdef RT
 NVAR := $(NVAR)+$(NIONS)
 endif
+NVAR := $(NVAR)+$(NENER)
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0
