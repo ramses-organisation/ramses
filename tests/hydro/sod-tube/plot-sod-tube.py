@@ -13,12 +13,12 @@ ax5 = ax1.twinx()
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
 
-order  = data["x"].argsort()
-x      = data["x"][order]
-amrlev = data["level"][order]
-rho    = data["density"][order]
-u      = data["velocity_x"][order]
-p      = data["pressure"][order]
+order  = data["data"]["x"].argsort()
+x      = data["data"]["x"][order]
+amrlev = data["data"]["level"][order]
+rho    = data["data"]["density"][order]
+u      = data["data"]["velocity_x"][order]
+p      = data["data"]["pressure"][order]
 
 # Density
 ax1.plot(x,rho,'o',color='black',markerfacecolor='none')
@@ -37,25 +37,18 @@ ax3.plot(x,p,'o',color='black',markerfacecolor='none')
 ax3.set_xlabel('Distance (cm)')
 ax3.set_ylabel('Pressure (g/cm/s2)')
 
-# # Temperature
-# ax4.plot(x,T,'o',color='black',markerfacecolor='none')
-# ax4.set_xlabel('Distance (cm)')
-# ax4.set_ylabel('Temperature (K)')
-
 # Read analytical solution
 data_ana = np.loadtxt('sod-tube-ana.dat')
 x_ana    = data_ana[:,1]
 rho_ana  = data_ana[:,3]
 u_ana    = data_ana[:,2]
 p_ana    = data_ana[:,4]
-# T_ana    = data_ana[:,5]*1.2027e-8/2.5
 ax1.plot(x_ana,rho_ana,color='red')
 ax2.plot(x_ana,u_ana,color='red')
 ax3.plot(x_ana,p_ana,color='red')
-# ax4.plot(x_ana,T_ana,color='red')
 
 fig.subplots_adjust(wspace=0.3)
 fig.savefig('sod-tube.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'sod-tube')
+visu_ramses.check_solution(data["data"],'sod-tube')

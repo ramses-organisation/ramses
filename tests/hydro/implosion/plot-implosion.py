@@ -9,13 +9,13 @@ fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(12, 6))
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
-x      = data["x"]
-y      = data["y"]
-dx     = data["dx"]
-rho    = data["density"]
-p      = data["pressure"]
-lev    = data["level"]
-u      = np.sqrt(data["velocity_x"]**2 + data["velocity_y"]**2)
+x      = data["data"]["x"]
+y      = data["data"]["y"]
+dx     = data["data"]["dx"]
+rho    = data["data"]["density"]
+p      = data["data"]["pressure"]
+lev    = data["data"]["level"]
+u      = np.sqrt(data["data"]["velocity_x"]**2 + data["data"]["velocity_y"]**2)
 
 xmin = np.amin(x-0.5*dx)
 xmax = np.amax(x+0.5*dx)
@@ -58,4 +58,4 @@ for a in ax.flatten():
 fig.savefig('implosion.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'implosion')
+visu_ramses.check_solution(data["data"],'implosion')

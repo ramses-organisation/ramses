@@ -132,6 +132,24 @@ def load_snapshot(nout):
             offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16 + 4
             noutput = struct.unpack("i", amrContent[offset:offset+4])[0]
 
+            # dtold, dtnew
+            ninteg = 12
+            nfloat = 2+2*noutput
+            nlines = 12
+            nstrin = 0
+            nquadr = 0
+            offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16 + 4
+            info["dtold"] = struct.unpack("%id"%info["levelmax"], amrContent[offset:offset+8*info["levelmax"]])
+
+            # info["dtold"] = eng.get_binary_data(fmt="%id"%(self.info["levelmax"]),\
+                                 # content=amrContent,ninteg=ninteg,nlines=nlines,nfloat=nfloat)
+            nfloat += 1 + info["levelmax"]
+            nlines += 1
+            offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16 + 4
+            info["dtnew"] = struct.unpack("%id"%info["levelmax"], amrContent[offset:offset+8*info["levelmax"]])
+            # info["dtnew"] = eng.get_binary_data(fmt="%id"%(self.info["levelmax"]),\
+            #                      content=amrContent,ninteg=ninteg,nlines=nlines,nfloat=nfloat)
+
         # Read the number of grids
         ninteg = 14+(2*info["ncpu"]*info["levelmax"])
         nfloat = 18+(2*noutput)+(2*info["levelmax"])
@@ -279,44 +297,76 @@ def load_snapshot(nout):
     print("Total number of cells loaded: %i" % ncells_tot)
 
     # This is the master data dictionary.
-    data = dict()
+    data = {"data": {}, "info": info, "sinks": {"nsinks": 0}}
     for i in range(len(list_vars)):
         theKey = list_vars[i]
-        data[theKey] = master_data_array[:,i]
+        data["data"][theKey] = master_data_array[:,i]
 
     # Append useful variables to dictionary
-    data["unit_d"] = info["unit_d"]
-    data["unit_l"] = info["unit_l"]
-    data["unit_t"] = info["unit_t"]
-    data["boxlen"] = info["boxlen"]
-    data["ncells"] = ncells_tot
-    data["time"  ] = info["time"]
+    data["data"]["unit_d"] = info["unit_d"]
+    data["data"]["unit_l"] = info["unit_l"]
+    data["data"]["unit_t"] = info["unit_t"]
+    data["data"]["boxlen"] = info["boxlen"]
+    data["data"]["ncells"] = ncells_tot
+    data["data"]["time"  ] = info["time"]
     # data["ngrp"  ] = info["ngrp"]
 
     # Read sink particles if present
     sinkfile = infile+"/sink_"+infile.split("_")[-1]+".csv"
     try:
-        sinklist = np.loadtxt(sinkfile,delimiter=",")
-        if np.shape(sinklist)[0] == 0:
-            data["nsinks"] = 0
-        else:
-            list_shape = np.shape(np.shape(sinklist))[0]
-            if list_shape == 1:
-                sinklist = np.reshape(sinklist, (1, np.shape(sinklist)[0]))
-                data["nsinks"] = 1
-            else:
-                data["nsinks"] = np.shape(sinklist)[0]
-            try:
-                data["r_sink"] = info["ir_cloud"]/(2.0**info["levelmax"])
-            except KeyError:
-                try:
-                    data["r_sink"] = info["ncell_racc"]/(2.0**info["levelmax"])
-                except KeyError:
-                    data["r_sink"] = 4.0/(2.0**info["levelmax"])
-            for i in range(data["nsinks"]):
-                data["sink"+str(i+1)] = sinklist[i,:]
+        with open(sinkfile) as f:
+            content = f.readlines()
+        # Read the file header to get information on fields
+        sink_vars = content[0].rstrip().replace(" # ", "").split(",")
+        sink_units = content[1].rstrip().replace(" # ", "").split(",")
+        data["sinks"]["nsinks"] = len(content) - 2
+        if data["sinks"]["nsinks"] > 0:
+            # sinks = dict()
+            for entry in sink_vars:
+                data["sinks"][entry] = np.zeros(data["sinks"]["nsinks"], dtype=np.float64)
+            for i in range(data["sinks"]["nsinks"]):
+                # line = np.asarray(content[i+2].rstrip().split(","), dtype=np.float64)
+                line = content[i+2].rstrip().split(",")
+                for j, entry in enumerate(sink_vars):
+                    # Try to convert to float
+                    try:
+                        data["sinks"][entry][i] = np.float64(line[j])
+                    except ValueError:
+                        data["sinks"][entry][i] = np.nan
+
+            # sinks["x"] *= info["unit_l"]
+            # sinks["y"] *= info["unit_l"]
+            # sinks["z"] *= info["unit_l"]
+            data["sinks"]["id"] = np.int32(data["sinks"]["id"])
+            data["sinks"]["level"] = np.int32(data["sinks"]["level"])
+            # sinks["radius"] = 4.0/(2.0**sinks["level"])
     except IOError:
         pass
+        # info["nsinks"] = 0
+        # return
+
+    # try:
+    #     sinklist = np.loadtxt(sinkfile,delimiter=",")
+    #     if np.shape(sinklist)[0] == 0:
+    #         data["nsinks"] = 0
+    #     else:
+    #         list_shape = np.shape(np.shape(sinklist))[0]
+    #         if list_shape == 1:
+    #             sinklist = np.reshape(sinklist, (1, np.shape(sinklist)[0]))
+    #             data["nsinks"] = 1
+    #         else:
+    #             data["nsinks"] = np.shape(sinklist)[0]
+    #         try:
+    #             data["r_sink"] = info["ir_cloud"]/(2.0**info["levelmax"])
+    #         except KeyError:
+    #             try:
+    #                 data["r_sink"] = info["ncell_racc"]/(2.0**info["levelmax"])
+    #             except KeyError:
+    #                 data["r_sink"] = 4.0/(2.0**info["levelmax"])
+    #         for i in range(data["nsinks"]):
+    #             data["sink"+str(i+1)] = sinklist[i,:]
+    # except IOError:
+    #     pass
 
     return data
 

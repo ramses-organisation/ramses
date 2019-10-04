@@ -17,27 +17,27 @@ ax3 = fig.add_subplot(223)
 ax4 = fig.add_subplot(224)
 
 # Load RAMSES output
-data  = visu_ramses.load_snapshot(2)
-scale_d = data["unit_d"]
-scale_l = data["unit_l"]
-scale_t = data["unit_t"]
+data = visu_ramses.load_snapshot(2)
+scale_d = data["data"]["unit_d"]
+scale_l = data["data"]["unit_l"]
+scale_t = data["data"]["unit_t"]
 scale_v = scale_l/scale_t
 scale_b = np.sqrt(4.0*np.pi*scale_d*(scale_l/scale_t)**2)
-x = data["x"]
-y = data["y"]
-# z = data["z"]-2.5
+x = data["data"]["x"]
+y = data["data"]["y"]
+# z = data["data"]["z"]-2.5
 r = np.sqrt(x**2 + y**2)
-rho = data["density"]*scale_d
-P = data["pressure"]*scale_d*scale_v**2
-ps1 = data["scalar_01"]
-ps2 = data["scalar_02"]
-ps3 = data["scalar_03"]
-# bx  = 0.5*(data["B_left_x"]+data["B_right_x"])*scale_b
-# by  = 0.5*(data["B_left_y"]+data["B_right_y"])*scale_b
-# bz  = 0.5*(data["B_left_z"]+data["B_right_z"])*scale_b
-ux  = data["velocity_x"]
-uy  = data["velocity_y"]
-# uz  = data["velocity_z"]
+rho = data["data"]["density"]*scale_d
+P = data["data"]["pressure"]*scale_d*scale_v**2
+ps1 = data["data"]["scalar_01"]
+ps2 = data["data"]["scalar_02"]
+ps3 = data["data"]["scalar_03"]
+# bx  = 0.5*(data["data"]["B_left_x"]+data["data"]["B_right_x"])*scale_b
+# by  = 0.5*(data["data"]["B_left_y"]+data["data"]["B_right_y"])*scale_b
+# bz  = 0.5*(data["data"]["B_left_z"]+data["data"]["B_right_z"])*scale_b
+ux  = data["data"]["velocity_x"]
+uy  = data["data"]["velocity_y"]
+# uz  = data["data"]["velocity_z"]
 
 # Bin the data in r to avoid having too many symbols in figure
 rmin = 0.0
@@ -82,7 +82,7 @@ ax2.legend(loc=1,fontsize=12)
 ax2.set_xlim([0.0,rmax])
 
 # 2D maps
-# cube = np.where(np.abs(y)<=0.51*data["dx"])
+# cube = np.where(np.abs(y)<=0.51*data["data"]["dx"])
 slice_x = x#[cube]
 slice_y = y#[cube]
 slice_d = np.log10(rho)
@@ -124,4 +124,4 @@ fig.subplots_adjust(wspace=0.35)
 fig.savefig('stromgren2d.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'stromgren2d')#,tolerance={"all":8.0e-11})
+visu_ramses.check_solution(data["data"],'stromgren2d')#,tolerance={"all":8.0e-11})

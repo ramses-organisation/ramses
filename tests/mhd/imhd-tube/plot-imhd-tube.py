@@ -18,13 +18,13 @@ ax5 = ax1.twinx()
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
 
-order  = data["x"].argsort()
-x      = data["x"][order] - 1.5
-amrlev = data["level"][order]
-rho    = data["density"][order]
-u      = data["velocity_x"][order]
-p      = data["pressure"][order]
-By     = 0.5*(data["B_y_left"][order] + data["B_y_right"][order])
+order  = data["data"]["x"].argsort()
+x      = data["data"]["x"][order] - 1.5
+amrlev = data["data"]["level"][order]
+rho    = data["data"]["density"][order]
+u      = data["data"]["velocity_x"][order]
+p      = data["data"]["pressure"][order]
+By     = 0.5*(data["data"]["B_y_left"][order] + data["data"]["B_y_right"][order])
 
 # Density
 ax1.plot(x,rho,'o',color='black',markerfacecolor='none')
@@ -64,4 +64,4 @@ fig.subplots_adjust(wspace=0.3)
 fig.savefig('imhd-tube.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'imhd-tube')
+visu_ramses.check_solution(data["data"],'imhd-tube')

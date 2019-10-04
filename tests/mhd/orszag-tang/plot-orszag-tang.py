@@ -17,15 +17,15 @@ ax4 = fig.add_subplot(224)
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
-x      = data["x"]
-y      = data["y"]
-dx     = data["dx"]
-rho    = data["density"]
-p      = data["pressure"]
-b2     = 0.25*(data["B_x_left"]+data["B_x_right"])**2 + \
-         0.25*(data["B_y_left"]+data["B_y_right"])**2 + \
-         0.25*(data["B_z_left"]+data["B_z_right"])**2
-u2     = data["velocity_x"]**2 + data["velocity_y"]**2
+x      = data["data"]["x"]
+y      = data["data"]["y"]
+dx     = data["data"]["dx"]
+rho    = data["data"]["density"]
+p      = data["data"]["pressure"]
+b2     = 0.25*(data["data"]["B_x_left"]+data["data"]["B_x_right"])**2 + \
+         0.25*(data["data"]["B_y_left"]+data["data"]["B_y_right"])**2 + \
+         0.25*(data["data"]["B_z_left"]+data["data"]["B_z_right"])**2
+u2     = data["data"]["velocity_x"]**2 + data["data"]["velocity_y"]**2
 
 xmin = np.amin(x-0.5*dx)
 xmax = np.amax(x+0.5*dx)
@@ -80,4 +80,4 @@ fig.subplots_adjust(wspace=0.25)
 fig.savefig('orszag-tang.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'orszag-tang')
+visu_ramses.check_solution(data["data"],'orszag-tang')
