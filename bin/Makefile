@@ -5,13 +5,28 @@
 NVECTOR = 32
 NDIM = 1
 NPRE = 8
-NVAR = 5
+# NVAR = 5
 NENER = 0
 SOLVER = hydro
 PATCH =
 GRACKLE = 0
 MPI = 0
 EXEC = ramses
+NGROUPS = 0
+# Ionisation species, use 1 for HI+HII, +1 for added H2,
+# +2 for added HeI, HeII, HeIII:
+NIONS = 0
+ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
+
+# Compute NVAR
+NVAR = 2+$(NDIM)+$(NENER)
+ifeq ($(SOLVER),"mhd")
+NVAR := $(NVAR)+3
+endif
+ifdef RT
+NVAR := $(NVAR)+$(NIONS)
+endif
+
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0
 #############################################################################
@@ -21,13 +36,17 @@ GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
 GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) -DNVAR=$(NVAR) \
-          -DSOLVER$(SOLVER)
+          -DSOLVER$(SOLVER) $(ATON_FLAGS)
 ifeq ($(GRACKLE),1)
 DEFINES += -Dgrackle
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
 DEFINES += -DMPI_OLD
 endif
+ifdef RT
+DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+endif
+
 #############################################################################
 # Fortran compiler options and directives
 
@@ -110,7 +129,11 @@ endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
-VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:../hydro:../pm:../poisson:../amr:../io
+VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
+ifdef RT
+VPATH += ../rt:
+endif
+VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o pm_commons.o poisson_parameters.o dump_utils.o constants.o
@@ -119,6 +142,10 @@ MODOBJ += grackle_parameters.o
 endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o cooling_module.o bisection.o sparse_mat.o \
          clfind_commons.o gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
+ifdef RT
+MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
+         rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o amr_step.o update_time.o \
          output_amr.o flag_utils.o physical_boundaries.o virtual_boundaries.o refine_utils.o nbors_utils.o \
@@ -135,11 +162,18 @@ POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o multigrid_
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o courant_fine.o godunov_fine.o \
            uplmde.o umuscl.o interpol_hydro.o godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o \
            boundana.o read_hydro_params.o synchro_hydro_fine.o
+# RT objects
+RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o rt_output_hydro.o rt_godunov_fine.o \
+        rt_interpol_hydro.o rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o rt_boundana.o \
+        rt_units.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
+ifdef RT
+AMRLIB += $(RTOBJ)
+endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
 ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o rad_backup.o ../aton/atonlib/libaton.a

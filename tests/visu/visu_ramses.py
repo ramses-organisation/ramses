@@ -403,13 +403,13 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         except TypeError:
             sol[key] = solution
 
-    ## Overwrite reference solution =====================
-    #print("WARNING! Over-writing reference solution")
-    #ref_file = open(test_name+"-ref.dat", "w")
-    #for key in sorted(data.keys()):
-    #    ref_file.write("%s : %.16e\n" % (key,sol[key]))
-    #ref_file.close()
-    ## ==================================================
+    # Overwrite reference solution =====================
+    print("WARNING! Over-writing reference solution")
+    ref_file = open(test_name+"-ref.dat", "w")
+    for key in sorted(data.keys()):
+       ref_file.write("%s : %.16e\n" % (key,sol[key]))
+    ref_file.close()
+    # ==================================================
 
     # Read reference solution
     ref = dict()
@@ -421,12 +421,13 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         if len(sp) > 1:
             ref[sp[0].strip()] = eval(sp[1].strip())
 
+    ok = True
+
     # Checking for errors
     if ref.keys() != sol.keys():
         print("The current and reference solutions do not have the same variables")
-        exit()
+        ok = False
 
-    ok = True
     # Write error table to tex file
     tex_file = open(test_name+".tex", "w")
     #tex_file.write("\documentclass[12pt]{article}\n")
@@ -444,22 +445,36 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
 
     # Compute errors
     for key in sorted(ref.keys()):
-    #for i in range(np.shape(ref)[0]):
-        if sol[key] == ref[key] == 0.0:
-            error = 0.0
-        else:
-            error = abs(sol[key]-ref[key])/min(abs(sol[key]),abs(ref[key]))
 
         try:
             tol = var_tol[key]
         except KeyError:
             tol = var_tol["all"]
 
+        try:
+            this_sol = sol[key]
+        except KeyError:
+            this_sol = None
+
+        if this_sol is not None:
+            if this_sol == ref[key] == 0.0:
+                error = 0.0
+            else:
+                error = abs(this_sol-ref[key])/min(abs(this_sol),abs(ref[key]))
+        else:
+            error = np.Inf
+
         if error > tol:
             ok = False
-            tex_file.write("\\textcolor{red}{%s} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e}\\\\\n" %(key.replace("_"," "),sol[key],ref[key],error))
+            if this_sol is None:
+                tex_file.write("\\textcolor{red}{%s} & \\textcolor{red}{-} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e}\\\\\n" %(key.replace("_"," "),ref[key],error))
+            else:
+                tex_file.write("\\textcolor{red}{%s} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e} & \\textcolor{red}{%.16e}\\\\\n" %(key.replace("_"," "),this_sol,ref[key],error))
         else:
-            tex_file.write("%s & %.16e & %.16e & %.16e\\\\\n" %(key.replace("_"," "),sol[key],ref[key],error))
+            if this_sol is None:
+                tex_file.write("%s & - & %.16e & %.16e\\\\\n" %(key.replace("_"," "),ref[key],error))
+            else:
+                tex_file.write("%s & %.16e & %.16e & %.16e\\\\\n" %(key.replace("_"," "),this_sol,ref[key],error))
     tex_file.write("\\hline\n")
     tex_file.write("\\end{tabular}\n")
     tex_file.write("\\end{table}\n")
