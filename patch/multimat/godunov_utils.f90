@@ -39,16 +39,8 @@ subroutine eos(f,g,q,p,c,ncell)
   pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
   do k = 1,ncell
      p(k) = (q(k,npri)-beta_tot(k))/alpha_tot(k)
-     p(k) = max(p(k),smallr*smallc**2)
+!     p(k) = max(p(k),smallr*smallc**2)
      c(k) = gamma_tot(k)*(p(k)+pinf_tot(k))/q(k,1)
-!!$     if(c(k)<=0)then
-!!$        write(*,*)'OUPS EOS'
-!!$        write(*,*)f(k,1:nmat)
-!!$        write(*,*)q(k,1:npri)
-!!$        write(*,*)gamma_tot(k),beta_tot(k),alpha_tot(k)
-!!$        write(*,*)p(k),pinf_tot(k)
-!!$        STOP
-!!$     endif
      c(k) = sqrt(max(c(k),smallc**2))
   end do
 
@@ -93,16 +85,10 @@ subroutine eosinv(f,g,q,e,c,ncell)
   gamma_tot(1:ncell)=one/alpha_tot(1:ncell)+one
   pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
   do k = 1,ncell
-     e(k) = max(q(k,npri),smallr*smallc**2)
+!     e(k) = max(q(k,npri),smallr*smallc**2)
+     e(k) = q(k,npri)
      e(k) = alpha_tot(k)*e(k)+beta_tot(k)
      c(k) = gamma_tot(k)*(q(k,npri)+pinf_tot(k))/q(k,1)
-!!$     if(c(k)<=0)then
-!!$        write(*,*)'OUPS EOSINV'
-!!$        write(*,*)f(k,1:nmat)
-!!$        write(*,*)q(k,1),q(k,npri)
-!!$        write(*,*)gamma_tot(k),beta_tot(k),alpha_tot(k)
-!!$        write(*,*)e(k),pinf_tot(k)
-!!$     endif
      c(k) = sqrt(max(c(k),smallc**2))
   end do
 
