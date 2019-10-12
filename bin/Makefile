@@ -2,20 +2,35 @@
 # If you have problems with this makefile, contact Romain.Teyssier@gmail.com
 #############################################################################
 # Compilation time parameters
+
+# Size of vector cache
 NVECTOR = 32
+# Number of dimensions
 NDIM = 1
+# Float precision size
 NPRE = 8
-NENER = 0
+# hydro/mhd solver
 SOLVER = hydro
+# Patch
 PATCH =
-GRACKLE = 0
+# Use MPI? 1=Yes, 0=No
 MPI = 0
+# Root name of executable
 EXEC = ramses
-NGROUPS = 0
-ATON_FLAGS = #-DATON  # Uncomment to enable ATON.
-#Variables for RT
-NIONS = 0
+# Number of additional energies
+NENER = 0
+# Use Grackle cooling? 1=Yes, 0=No
+GRACKLE = 0
+# Number of metal species
 NMETALS = 0
+# ATON flages: Uncomment to enable ATON
+ATON_FLAGS = #-DATON
+# Number of ions for RT
+NIONS = 0
+# Number of photon groups for RT
+NGROUPS = 0
+# Number of passive scalars
+NPSCAL = 0
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
@@ -25,7 +40,7 @@ endif
 ifdef RT
 NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
 endif
-NVAR := $(NVAR)+$(NENER)
+NVAR := $(NVAR)+$(NENER)+$(NPSCAL)
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0
