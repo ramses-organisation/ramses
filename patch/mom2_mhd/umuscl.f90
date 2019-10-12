@@ -231,8 +231,8 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         DO k=kf1,kf2
            DO l=1,ngrid
               alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-              emf(l,i,j,k)=emf(l,i,j,k) + 10 * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
-              &                                      +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
+              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
+              &                                            +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
            END DO
         END DO
      END DO
@@ -262,8 +262,8 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         DO k=kf1,kf2
            DO l=1,ngrid
               alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-              emf(l,i,j,k)=emf(l,i,j,k) + 10 * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
-              &                                      +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
+              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge* 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
+              &                                           +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
            END DO
         END DO
      END DO
@@ -2274,7 +2274,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT)
               d_old=max(q(l,i,j,k,1),smallr)
               Kturb=uin(l,i,j,k,ivirial1)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-              alphaT(l,i,j,k)=sigma/(1+100*emag(l)/(d_old*sigma**2))
+              alphaT(l,i,j,k)=sigma/(1+100000*emag(l)/(d_old*sigma**2))
            end do
         end do
      end do
