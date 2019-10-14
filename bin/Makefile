@@ -3,6 +3,11 @@
 #############################################################################
 # Compilation time parameters
 
+# Do we want a debug build? 1=Yes, 0=No
+DEBUG = 1
+# Compiler flavor: GNU or INTEL
+COMPILER = GNU
+
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
@@ -35,10 +40,10 @@ NPSCAL = 0
 # Compute NVAR
 NVAR = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
-NVAR = 8
+   NVAR = 8
 endif
 ifdef RT
-NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
+   NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
 endif
 NVAR := $(NVAR)+$(NENER)+$(NPSCAL)
 
@@ -53,79 +58,55 @@ BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
           -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 ifeq ($(GRACKLE),1)
-DEFINES += -Dgrackle
+   DEFINES += -Dgrackle
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
-DEFINES += -DMPI_OLD
+   DEFINES += -DMPI_OLD
 endif
 ifdef RT
-DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+   DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
 
 #############################################################################
 # Fortran compiler options and directives
 
-# --- No MPI, gfortran -------------------------------
-FFLAGS = -x f95-cpp-input $(DEFINES)
-ifeq ($(MPI),1)
-F90 = mpif90
-else
-F90 = gfortran
-FFLAGS += -DWITHOUTMPI
+# GNU compiler (gfortran)
+ifeq ($(COMPILER),GNU)
+   FFLAGS = -x f95-cpp-input $(DEFINES)
+   ifeq ($(MPI),1)
+      F90 = mpif90
+   else
+      F90 = gfortran
+      FFLAGS += -DWITHOUTMPI
+   endif
+   F90 += -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
+   ifeq ($(DEBUG),1)
+      F90 += -O0 -fbounds-check -Wuninitialized -Wall
+      FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
+   else
+      F90 += -O3
+   endif
 endif
-F90 += -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
 
-# --- No MPI, tau ----------------------------------
-#F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
-
-# --- No MPI, pgf90 ----------------------------------
-#F90 = pgf90
-#FFLAGS = -Mpreprocess $(DEFINES) -DWITHOUTMPI
-
-# --- No MPI, xlf ------------------------------------
-#F90 = xlf
-#FFLAGS = -WF,-DNDIM=$(NDIM),-DNPRE=$(NPRE),-DNVAR=$(NVAR),-DSOLVER$(SOLVER),-DWITHOUTMPI -qfree=f90 -qsuffix=f=f90 -qsuffix=cpp=f90
-
-# --- No MPI, f90 ------------------------------------
-#F90 = f90
-#FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
-
-# --- No MPI, ifort ----------------------------------
-#F90 = ifort
-#FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
-
-# --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace
-#FFLAGS = -x f95-cpp-input $(DEFINES)
-
-# --- MPI, gfortran DEBUG syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall
-#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)
-
-# --- MPI, pgf90 syntax ------------------------------
-#F90 = mpif90 -O3
-#FFLAGS = -Mpreprocess $(DEFINES)
-
-# --- MPI, ifort syntax ------------------------------
-#F90 = mpif90
-#FFLAGS = -cpp -fast $(DEFINES) -DNOSYSTEM
-
-# --- MPI, ifort syntax, additional checks -----------
-#F90 = mpif90
-#FFLAGS = -warn all -O0 -g -traceback -fpe0 -ftrapuv -check bounds -cpp $(DEFINES) -DNOSYSTEM
-
-# --- MPI, cray syntax, high optimisation -----------
-# --- NOTE: 03 is slower, hfp3 is too aggresive
-#F90 = ftn
-#FFLAGS = -eZ $(DEFINES) -DCRAY -O2 -hfp2 -g
-
-# --- MPI, ifort syntax ------------------------------
-#F90 = ftn
-#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT
-
-# --- MPI, ifort syntax, additional checks -----------
-#F90 = ftn
-#FFLAGS = -O3 -g -traceback -fpe0 -ftrapuv -cpp $(DEFINES) -DNOSYSTEM #-DRT
+# Intel compiler
+ifeq ($(COMPILER),INTEL)
+   FFLAGS = -cpp $(DEFINES)
+   ifeq ($(MPI),1)
+      F90 = mpif90
+#       F90 = mpiifort
+      FFLAGS += -DNOSYSTEM
+   else
+      F90 = ifort
+      FFLAGS += -DWITHOUTMPI
+   endif
+   F90 += -fp-model source
+   ifeq ($(DEBUG),1)
+      F90 += -warn all -O0 -g -traceback -check bounds
+      FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
+   else
+      F90 += -O3
+   endif
+endif
 
 #############################################################################
 MOD = mod
@@ -138,16 +119,16 @@ LIBMPI =
 LIBCUDA = -L/opt/cuda/lib  -lm -lcuda -lcudart
 
 ifeq ($(GRACKLE),1)
-# Add include and library install path for grackle and hdf5 here
-LIBS_GRACKLE = -L$(HOME)/local/lib -lgrackle -lhdf5 -lz -lgfortran -ldl
-LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
+   # Add include and library install path for grackle and hdf5 here
+   LIBS_GRACKLE = -L$(HOME)/local/lib -lgrackle -lhdf5 -lz -lgfortran -ldl
+   LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
 endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
 ifdef RT
-VPATH += ../rt:
+   VPATH += ../rt:
 endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
@@ -155,14 +136,14 @@ VPATH += ../hydro:../pm:../poisson:../amr:../io
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o \
          pm_commons.o poisson_parameters.o dump_utils.o constants.o
 ifeq ($(GRACKLE),1)
-MODOBJ += grackle_parameters.o
+   MODOBJ += grackle_parameters.o
 endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
 ifdef RT
-MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o rt_spectra.o \
-          rt_cooling_module.o rt_flux_module.o
+   MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
+             rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o \
@@ -196,7 +177,7 @@ sinclude $(PATCH)/Makefile
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifdef RT
-AMRLIB += $(RTOBJ)
+   AMRLIB += $(RTOBJ)
 endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
