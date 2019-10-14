@@ -51,7 +51,7 @@ GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
 GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-	-DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+          -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 ifeq ($(GRACKLE),1)
 DEFINES += -Dgrackle
 endif
@@ -66,15 +66,14 @@ endif
 # Fortran compiler options and directives
 
 # --- No MPI, gfortran -------------------------------
-ifeq ($(MPI),1)
-F90 = mpif90 -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g \
-	-fimplicit-none
 FFLAGS = -x f95-cpp-input $(DEFINES)
+ifeq ($(MPI),1)
+F90 = mpif90
 else
-F90 = gfortran -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g \
-	-fimplicit-none
-FFLAGS = -x f95-cpp-input $(DEFINES) -DWITHOUTMPI
+F90 = gfortran
+FFLAGS += -DWITHOUTMPI
 endif
+F90 += -O3 -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
 
 # --- No MPI, tau ----------------------------------
 #F90 = tau_f90.sh -optKeepFiles -optPreProcess -optCPPOpts=$(DEFINES) -DWITHOUTMPI
@@ -154,42 +153,43 @@ VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o \
-	pm_commons.o poisson_parameters.o dump_utils.o constants.o
+         pm_commons.o poisson_parameters.o dump_utils.o constants.o
 ifeq ($(GRACKLE),1)
 MODOBJ += grackle_parameters.o
 endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
-	cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
-	gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
+          cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
+          gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
 ifdef RT
 MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o rt_spectra.o \
-	rt_cooling_module.o rt_flux_module.o
+          rt_cooling_module.o rt_flux_module.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o \
-	amr_step.o update_time.o output_amr.o flag_utils.o physical_boundaries.o \
-	virtual_boundaries.o refine_utils.o nbors_utils.o hilbert.o load_balance.o \
-	title.o sort.o cooling_fine.o units.o light_cone.o movie.o memory.o end.o
+         amr_step.o update_time.o output_amr.o flag_utils.o \
+         physical_boundaries.o virtual_boundaries.o refine_utils.o \
+         nbors_utils.o hilbert.o load_balance.o title.o sort.o cooling_fine.o \
+         units.o light_cone.o movie.o memory.o end.o
 # Particle-Mesh objects
 PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
-	newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o \
-	sink_particle.o feedback.o clump_finder.o clump_merger.o \
-	flag_formation_sites.o init_sink.o output_sink.o
+        newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o \
+        sink_particle.o feedback.o clump_finder.o clump_merger.o \
+        flag_formation_sites.o init_sink.o output_sink.o
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
-	multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \
-	multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o \
-	output_poisson.o
+             multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \
+             multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o \
+             output_poisson.o
 # Hydro objects
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o \
-	courant_fine.o godunov_fine.o uplmde.o umuscl.o interpol_hydro.o \
-	godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
-	read_hydro_params.o synchro_hydro_fine.o
+           courant_fine.o godunov_fine.o uplmde.o umuscl.o interpol_hydro.o \
+           godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
+           read_hydro_params.o synchro_hydro_fine.o
 # RT objects
 RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
-	rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
-	rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
-	rt_boundana.o rt_units.o
+        rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
+        rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
+        rt_boundana.o rt_units.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 
@@ -201,7 +201,7 @@ endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
 ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o \
-	rad_backup.o ../aton/atonlib/libaton.a
+           rad_backup.o ../aton/atonlib/libaton.a
 #############################################################################
 ramses:	$(MODOBJ) $(AMRLIB) ramses.o
 	$(F90) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
