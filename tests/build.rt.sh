@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd bin
-make NDIM=3 NION=1 RT=1
+make NDIM=3 NION=1 RT=1 DEBUG=1
