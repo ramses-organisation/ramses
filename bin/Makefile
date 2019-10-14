@@ -7,7 +7,6 @@
 DEBUG = 1
 # Compiler flavor: GNU or INTEL
 COMPILER = GNU
-
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
@@ -18,8 +17,11 @@ NPRE = 8
 SOLVER = hydro
 # Patch
 PATCH =
+# Use RT? 1=Yes, 0=No
+RT = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
+MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
@@ -42,7 +44,7 @@ NVAR = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
-ifdef RT
+ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
 endif
 NVAR := $(NVAR)+$(NENER)+$(NPSCAL)
@@ -63,7 +65,7 @@ endif
 ifeq ($(OLD_MPI_SUPPORT),1)
    DEFINES += -DMPI_OLD
 endif
-ifdef RT
+ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
 
@@ -74,7 +76,7 @@ endif
 ifeq ($(COMPILER),GNU)
    FFLAGS = -x f95-cpp-input $(DEFINES)
    ifeq ($(MPI),1)
-      F90 = mpif90
+      F90 = $(MPIF90)
    else
       F90 = gfortran
       FFLAGS += -DWITHOUTMPI
@@ -92,8 +94,7 @@ endif
 ifeq ($(COMPILER),INTEL)
    FFLAGS = -cpp $(DEFINES)
    ifeq ($(MPI),1)
-      F90 = mpif90
-#       F90 = mpiifort
+      F90 = $(MPIF90)
       FFLAGS += -DNOSYSTEM
    else
       F90 = ifort
@@ -127,7 +128,7 @@ LIBS = $(LIBMPI) $(LIBS_GRACKLE)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
-ifdef RT
+ifeq ($(RT),1)
    VPATH += ../rt:
 endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
@@ -141,7 +142,7 @@ endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
-ifdef RT
+ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
@@ -176,7 +177,7 @@ sinclude $(PATCH)/Makefile
 
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
-ifdef RT
+ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
 endif
 # ATON objects
