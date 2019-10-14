@@ -337,7 +337,7 @@ SUBROUTINE init_SED_table()
   end do
   close(10)
   if(nAges.lt.2)then
-      if(myid==1) print*,'WARNING! Only one age bin found - check if interpolated values make sense'
+      if(myid==1) print*,'WARNING! Only one age bin found - check if einterpolated values make sense'
   endif
   ages = ages*1.e-9                       !         Convert from yr to Gyr
   if(ages(1) .ne. 0.) ages(1) = 0.
