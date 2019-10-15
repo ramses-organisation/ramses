@@ -151,7 +151,7 @@ while true ; do
         commit=$(git rev-parse HEAD);
 
         # Run ramses test suite
-        ./run_test_suite.sh >> $LOGFILE;
+        ./run_test_suite.sh -p 4 >> $LOGFILE;
 
         # Go to wiki directory
         cd "${WIKIDIR}/${WIKISTOREDIR}";
