@@ -4,7 +4,7 @@
 # Compilation time parameters
 
 # Do we want a debug build? 1=Yes, 0=No
-DEBUG = 1
+DEBUG = 0
 # Compiler flavor: GNU or INTEL
 COMPILER = GNU
 # Size of vector cache
