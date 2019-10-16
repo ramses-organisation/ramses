@@ -87,7 +87,7 @@ blankline="                         ";
 BEFORETEST="before-test.sh";
 AFTERTEST="after-test.sh";
 
-STARTTIME=$(python -c 'import time; print(int(time.time()*1000))');
+STARTTIME=$(python3 -c 'import time; print(int(time.time()*1000))');
 
 #######################################################################
 # Welcome message
@@ -247,7 +247,7 @@ echo $line | tee -a $LOGFILE;
 for ((i=0;i<$ntests;i++)); do
 
    # Start timer for test, including compilations
-   STARTTIME_GLOB=$(python -c 'import time; print(int(time.time()*1000))');
+   STARTTIME_GLOB=$(python3 -c 'import time; print(int(time.time()*1000))');
 
    # Get test number
    n=${testnum[i]};
@@ -301,7 +301,7 @@ for ((i=0;i<$ntests;i++)); do
    $DELETE_RESULTS;
    RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
    echo -n "Running test:" | tee -a $LOGFILE;
-   STARTTIME_TEST=$(python -c 'import time; print(int(time.time()*1000))');
+   STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
    # prepname="prepare-${rawname[i]}.sh";
    if $VERBOSE ; then
       if [ -f ${BEFORETEST} ]; then
@@ -315,7 +315,7 @@ for ((i=0;i<$ntests;i++)); do
       ${RUN_TEST} >> $LOGFILE 2>&1;
    fi
    # Record test time
-   ENDTIME_TEST=$(python -c 'import time; print(int(time.time()*1000))');
+   ENDTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
    milliseconds=$(($ENDTIME_TEST - $STARTTIME_TEST));
    seconds=$(($milliseconds / 1000));
    hours=$(($seconds / 3600));
@@ -329,7 +329,7 @@ for ((i=0;i<$ntests;i++)); do
 
    # Plot and analyse results
    echo "Plotting and analysing results" | tee -a $LOGFILE;
-   status=$(python plot-${rawname[i]}.py 2>&1);
+   status=$(python3 plot-${rawname[i]}.py 2>&1);
    if $VERBOSE ; then
       echo $status;
    fi
@@ -350,7 +350,7 @@ for ((i=0;i<$ntests;i++)); do
    echo $line | tee -a $LOGFILE;
 
    # Record global time including compilations
-   ENDTIME_GLOB=$(python -c 'import time; print(int(time.time()*1000))');
+   ENDTIME_GLOB=$(python3 -c 'import time; print(int(time.time()*1000))');
    milliseconds=$(($ENDTIME_GLOB - $STARTTIME_GLOB));
    seconds=$(($milliseconds / 1000));
    hours=$(($seconds / 3600));
@@ -364,7 +364,7 @@ for ((i=0;i<$ntests;i++)); do
 done
 
 # Total time ##########################################################
-ENDTIME=$(python -c 'import time; print(int(time.time()*1000))');
+ENDTIME=$(python3 -c 'import time; print(int(time.time()*1000))');
 milliseconds=$(($ENDTIME - $STARTTIME));
 seconds=$(($milliseconds / 1000));
 hours=$(($seconds / 3600));
