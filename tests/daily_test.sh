@@ -33,7 +33,7 @@ UPDATEWIKI=true;
 # Set up variables
 hline="============================================================";
 
-RAMSESDIR="${SRC}/ramses/test";
+RAMSESDIR="${SRC}/ramses/tests";
 WIKIDIR="${SRC}/ramses/wiki";
 WIKISTOREDIR="daily_tests";
 LOGFILE="${SRC}/${LOGFILE}";
