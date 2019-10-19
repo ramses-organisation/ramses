@@ -376,7 +376,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     norms = dict()
     permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}
     for key in sorted(data.keys()):
-        norms[key] = 1.0e-10
+        norms[key] = 1.0
         if key.endswith("_x") or key.endswith("_y") or key.endswith("_z"):
             rawkey = key[:-2]
             suffix = key[-2:]
@@ -489,6 +489,8 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         if this_sol is not None and this_ref is not None:
             if this_sol == this_ref == 0.0:
                 error = 0.0
+            elif this_sol == 0.0 or this_ref == 0.0:
+                error = np.inf
             else:
                 error = abs(this_sol-this_ref)/min(abs(this_sol),abs(this_ref))
         else:
