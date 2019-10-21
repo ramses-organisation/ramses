@@ -1,8 +1,12 @@
 """Plot results of sink accretion test"""
+import matplotlib
+matplotlib.use('Agg')
+
 from matplotlib import pyplot as plt
 from matplotlib import ticker
 import visu_ramses
 import numpy as np
+
 
 
 def get_accretion_rate(nout=0):
