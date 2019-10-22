@@ -2774,6 +2774,9 @@ subroutine write_progenitor_data()
 #endif
 
 #ifdef MTREEDEBUG
+#ifndef WITHOUTMPI
+  integer, dimension(1:4)                :: buf
+#endif
   call mtreedebug_dump_mostbound_lists()
 #endif
 
