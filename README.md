@@ -4,7 +4,7 @@
 [4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
 [5]: https://bitbucket.org/vperret/dice
 [6]: https://bitbucket.org/ohahn/music
-[7]: https://bitbucket.org/nvaytet/osiris
+[7]: https://github.com/nvaytet/osyris
 [8]: https://github.com/pynbody/pynbody
 
 
@@ -31,4 +31,4 @@ To generate idealised initial conditions of galaxies, check out the [DICE][5] co
 
 To generate cosmological initial conditions, check out the [MUSIC][6] code.
 
-To visualize RAMSES data, we encourage you to use the [OSIRIS][7] or the [PYNBODY][8] codes.
+To visualize RAMSES data, we encourage you to use the [OSYRIS][7] or the [PYNBODY][8] codes.
