@@ -289,6 +289,21 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
+<<<<<<< HEAD
+                          alpha0  = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          !Romain                          M2 = max(sigma2/cs2,4.0)
+                          M2 = max(sigma2/cs2,1.0)
+                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
+                          b_turb = 0.4
+                          ! Best fit values Multi-ff KM to PN11
+                          !Romain                         phi_t     = 2.6044503 !1.0/eps_star !0.49
+                          !Romain                         phi_x     = 0.6803737 !1.12 !0.19
+                          phi_t     = 1.0/eps_star !0.49
+                          phi_x     = 1.12 !0.19
+                          sigs      = log(1.0+(b_turb**2)*(M2))
+                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
+                          sfr_ff(i) = (1.0/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+=======
                           alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           M2        = max(sigma2/cs2,1.0)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
@@ -300,6 +315,7 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(M2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
                           sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+>>>>>>> d8e32cc20c96907018120574c39bbe839f6ae721
 
                        ! Multi-ff PN model
                        CASE (2)
