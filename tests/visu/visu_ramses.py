@@ -376,7 +376,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     norms = dict()
     permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}
     for key in sorted(data.keys()):
-        norms[key] = 1.0e-10
+        norms[key] = 1.0
         if key.endswith("_x") or key.endswith("_y") or key.endswith("_z"):
             rawkey = key[:-2]
             suffix = key[-2:]
@@ -458,9 +458,9 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     tex_file.write("\\scriptsize\n")
     tex_file.write("\\centering\n")
     tex_file.write("\\caption{"+test_name+" error summary}\n")
-    tex_file.write("\\begin{tabular}{|l|l|l|l|}\n")
+    tex_file.write("\\begin{tabular}{|l|l|l|l|l|}\n")
     tex_file.write("\\hline\n")
-    tex_file.write("Variable & This run & Reference & Error \\\\\n")
+    tex_file.write("Variable & This run & Reference & Error & Tolerance\\\\\n")
     tex_file.write("\\hline\n")
 
     all_keys = dict()
@@ -489,6 +489,8 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         if this_sol is not None and this_ref is not None:
             if this_sol == this_ref == 0.0:
                 error = 0.0
+            elif this_sol == 0.0 or this_ref == 0.0:
+                error = np.inf
             else:
                 error = abs(this_sol-this_ref)/min(abs(this_sol),abs(this_ref))
         else:
@@ -505,7 +507,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
                 output += "\\textcolor{red}{-} & "
             else:
                 output += "\\textcolor{red}{%.16e} & "%this_ref
-            output += "\\textcolor{red}{%.16e}\\\\\n" %error
+            output += "\\textcolor{red}{%.16e} & \\textcolor{red}{%.16e} \\\\\n" %(error,tol)
         else:
             output = "%s & "%key.replace("_"," ")
             if this_sol is None:
@@ -516,7 +518,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
                 output += "- & "
             else:
                 output += "%.16e & "%this_ref
-            output += "%.16e\\\\\n" %error
+            output += "%.16e & %.16e\\\\\n" %(error,tol)
         tex_file.write(output)
 
     tex_file.write("\\hline\n")
