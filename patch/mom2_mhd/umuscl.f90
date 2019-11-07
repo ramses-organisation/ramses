@@ -28,7 +28,7 @@
 !
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 ! ----------------------------------------------------------------
-subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
+subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -41,6 +41,7 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
@@ -79,13 +80,14 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
+  real(dp)::alpha_edge
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
   ! Translate to primative variables, compute sound speeds
-  call ctoprim(uin,qin,bf,gravin,dt,ngrid)
+  call ctoprim(uin,qin,bf,gravin,dt,ngrid,alphaT)
 
   ! Compute TVD slopes
   call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
@@ -173,11 +175,25 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #if NDIM>1
   ! Solve for EMF in Z direction
-  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , pin, &
-       &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid)
+  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1,ku2, &
+       &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1,ku2, &
+       &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1,ku2, &
+       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1,ku2, &
+       &               if1  ,if2  ,jf1  ,jf2  ,klo,khi, 2,3,4,6,7,8,emf,ngrid)
+
+  ! EMF correction in z direction, assuming 3-dimension grid, sub-grid model for dynamo theory
+  DO i=if1,if2
+     DO j=jf1,jf2
+        DO k=klo,khi
+           DO l=1,ngrid
+              alpha_edge=0.25*(alphaT(l,i-1,j-1,k)+alphaT(l,i-1,j,k)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k))
+              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
+              &                                            +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3)))
+           END DO
+        END DO
+     END DO
+  END DO
+
  ! Save vector in output array
   do k=klo,khi
   do j=jf1,jf2
@@ -206,8 +222,22 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1,ju2,ku1+1,ku2+1, &
        &           qLT,iu1  ,iu2  ,ju1,ju2,ku1+1,ku2+1, &
        &           qRB,iu1+1,iu2+1,ju1,ju2,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , pin, &
+       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
        &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid)
+
+  ! EMF correction in y direction, assuming 3-dimension grid
+  DO i=if1,if2
+     DO j=jlo,jhi
+        DO k=kf1,kf2
+           DO l=1,ngrid
+              alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
+              &                                            +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
+           END DO
+        END DO
+     END DO
+  END DO
+
   ! Save vector in output array
   do k=kf1,kf2
   do j=jlo,jhi
@@ -218,12 +248,27 @@ subroutine mag_unsplit(uin,gravin,pin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   end do
   end do
   end do
+
   ! Solve for EMF in X direction
   CALL cmp_mag_flx(qRT,iu1,iu2,ju1+1,ju2+1,ku1+1,ku2+1, &
        &           qRB,iu1,iu2,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qLT,iu1,iu2,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , pin, &
+       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
        &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid)
+
+  ! EMF correction in x direction, assuming 3-dimension grid
+  DO i=ilo,ihi
+     DO j=jf1,jf2
+        DO k=kf1,kf2
+           DO l=1,ngrid
+              alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
+              &                                            +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
+           END DO
+        END DO
+     END DO
+  END DO 
+
   ! Save vector in output array
   do k=kf1,kf2
   do j=jf1,jf2
@@ -1370,7 +1415,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
   ! local variables
   integer ::i, j, k, l, xdim
-  real(dp),dimension(1:nvector),save::snleft,snright
+  real(dp)::snleft,snright
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
@@ -1389,16 +1434,16 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
              ! Supernovae
              if(ln==2)then
-                snleft (l) = pin(l,i-1,j,k)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i-1,j,k)
+                snright = pin(l,i,j,k)
              endif 
              if(ln==3)then
-                snleft (l) = pin(l,i,j-1,k)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i,j-1,k)
+                snright = pin(l,i,j,k)
              endif
              if(ln==4)then
-                snleft (l) = pin(l,i,j,k-1)
-                snright(l) = pin(l,i,j,k)
+                snleft  = pin(l,i,j,k-1)
+                snright = pin(l,i,j,k)
              endif
 
               ! Enforce continuity for normal magnetic field
@@ -1489,7 +1534,7 @@ end subroutine cmpflxm
 SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
        &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
        &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
-       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, pin, &
+       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
        &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
        &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid)
   ! 2D Riemann solver to compute EMF at cell edges
@@ -1513,7 +1558,6 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:nvar+1,1:3)::qLB
 
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
-  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2)::pin
 
   ! local variables
   INTEGER ::i, j, k, l, xdim
@@ -2089,7 +2133,7 @@ END SUBROUTINE cmp_mag_flx
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
+subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT)
   use amr_parameters
   use hydro_parameters
   use const
@@ -2101,7 +2145,9 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
 
+  real(dp)::Kturb,sigma,d_old
   integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
@@ -2223,6 +2269,13 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
               end do
            end do
 
+           ! Compute alphaT term
+           do l=1, ngrid
+              d_old=max(q(l,i,j,k,1),smallr)
+              Kturb=uin(l,i,j,k,ivirial1)
+              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+              alphaT(l,i,j,k)=sigma/(1+100000*emag(l)/(d_old*sigma**2))
+           end do
         end do
      end do
   end do

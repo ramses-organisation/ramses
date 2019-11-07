@@ -546,8 +546,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               metallicity=z_ave
            endif
            metallicity=max(metallicity,0.01)
-           p_boost=metallicity**(p_SN_z_exp)*(gas_density*scale_nH/100.0)**(p_SN_n_exp)
-           r_cool=r_c*metallicity**(r_c_z_exp)*(gas_density*scale_nH/100.0)**(r_c_n_exp)
+           p_boost=(metallicity**p_SN_z_exp)*((gas_density*scale_nH/100.0)**p_SN_n_exp)
+           r_cool=r_c*(metallicity**r_c_z_exp)*((gas_density*scale_nH/100.0)**r_c_n_exp)
            if(birth_time.lt.(current_time-t0).and.r_cool.lt.(4.0*dx_min/aexp))then
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif

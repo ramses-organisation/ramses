@@ -150,7 +150,7 @@ subroutine noncons1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ::i,ivar,imat,idim,ind,iskip
   logical ,dimension(1:nvector),save::body
-  real(dp),dimension(1:nvector),save::pp,cc,ekin,gamma_hat,ftot
+  real(dp),dimension(1:nvector),save::pp,cc,ekin,gamma_hat
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,gamma_mat
   real(dp)::g0,p0,a0,b0,df_over_f,rloc,skip_loc,dx,eps,scale,dx_loc
@@ -181,21 +181,12 @@ subroutine noncons1(ind_grid,ncache,ilevel)
      end do
 
      ! Volume fraction and fluid density
-!     ftot=0d0
      do imat=1,nmat
         do i=1,ncache
-!           ff(i,imat)=max(uold(ind_cell(i),imat+npri),smallf)
-!           ftot(i)=ftot(i)+ff(i,imat)
            ff(i,imat)=uold(ind_cell(i),imat+npri)
            gg(i,imat)=uold(ind_cell(i),imat+npri+nmat)
         end do
      end do
-     ! Renormalize
-!     do imat=1,nmat
-!        do i=1,ncache
-!           ff(i,imat)=ff(i,imat)/ftot(i)
-!        end do
-!     end do
      ! Total density
      do i=1,ncache
         qq(i,1)=uold(ind_cell(i),1)

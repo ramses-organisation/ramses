@@ -275,10 +275,24 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 ### Visualisation
 
 `ramses/utils/py/mergertreeplot.py` is a python 2 script to plot the merger trees as found by this patch. 
- Details on options and usage are at the start of the script as a comment.
+Details on options and usage are at the start of the script as a comment.
 
 
 
+
+
+### Crashing on MPI writing routines?
+
+Apparently some MPI implementations have issues with collective writing routines, which are used by default
+in the merger tree patch. To circumvent this problem, the `-DMTREE_INDIVIDUAL_FILES` preprocessing directive
+can be set in the Makefile. Just add it to the `DEFINES=` line at the top of the file.
+With this flag in use, instead of collective files every MPI task will write an individual unformatted 
+Fortran file, and then read it back in at the later snapshot and communicate the data appropriately.
+
+
+However, be advised: Using this flag creates a lot of small files (`4* #MPI tasks` number of extra files in
+addition to `2-3 * #MPI tasks` to result files for particle unbinding, merger trees, and, if chosen, galaxy
+files per snapshot). This might become an issue if the machine you're working on applies file number quotas.
 
 
 

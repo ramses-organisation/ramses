@@ -61,8 +61,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   if(e1.gt.0) la0 = max(la0, 1d8 * hplanck * c_cgs / e1 / eV2erg)
   if(e0.gt.0) la1 = min(la1, 1d8 * hplanck * c_cgs / e0 / eV2erg)
   if(la0 .ge. la1) then
-     if(myid==1) print*,'There energy limits do not overlap &
-        with SED range, so stopping'
+     if(myid==1) print*,'There energy limits do not overlap with SED range, so stopping'
      call clean_stop
   endif 
   ! If we get here, the [la0, la1] inverval is completely within X
@@ -338,8 +337,7 @@ SUBROUTINE init_SED_table()
   end do
   close(10)
   if(nAges.lt.2)then
-      if(myid==1) print*,'WARNING! Only one age bin found - check if &
-                          interpolated values make sense'
+      if(myid==1) print*,'WARNING! Only one age bin found - check if interpolated values make sense'
   endif
   ages = ages*1.e-9                       !         Convert from yr to Gyr
   if(ages(1) .ne. 0.) ages(1) = 0.

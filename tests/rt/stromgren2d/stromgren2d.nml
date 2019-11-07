@@ -1,0 +1,92 @@
+&RUN_PARAMS 
+nrestart=0                      ! Restart from some snapshot
+hydro=.true.                    ! Baryons included? (Must be for RT)
+rt=.true.                       ! Activate radiative transfer
+static=.false.                   ! Deactivate hydrodynamics (RHD if false)
+ncontrol=10
+/
+
+&AMR_PARAMS 
+levelmin=7                      ! Min resolution level - here 128^3 cells
+levelmax=7                      ! Max resolution level
+ngridtot=300000                 ! Total number of octs reserved
+boxlen=1                        ! Box length in units_length (1 kpc)
+/
+
+&REFINE_PARAMS			! Refinement strategies	(hydro)
+err_grad_d=0.5	 	        ! Refine on density gradient
+/
+
+&INIT_PARAMS                    ! Initial conditions of the gas
+nregion=1                       ! Number of geometrical regions
+region_type(1)='square'         ! Region gemoetry
+x_center=0.5                    ! Region center, should be [0,boxlen]
+y_center=0.5                    ! 
+length_x=100.0                  ! Region width, in units of boxlen 
+length_y=100.0                  ! (this region covers the whole box)
+d_region=1d-1                   ! Initial density of the gas in H/cc
+p_region= 8.69869d-6		! Initial pressure (corresponds to 10^4 K)
+/
+
+&OUTPUT_PARAMS
+foutput=50000                   ! Number of timesteps between snapshot outputs
+noutput=1
+tout=15                         ! End-time for the simulation (in unit_time=Myr)
+/
+
+&HYDRO_PARAMS
+pressure_fix=.true.             ! Hybrid scheme for hydrodynamics
+/
+
+&UNITS_PARAMS                   ! Unit conversion to cgs. We work in kpc-mp-Myr.
+units_length=3.09d21            ! 1 kpc in cm
+units_density=1.66000d-24       ! 1 proton mass
+units_time=3.1556926d13         ! 1 Myr in seconds
+/
+
+&COOLING_PARAMS
+cooling=.true.
+metal=.true.
+/
+
+&BOUNDARY_PARAMS		! Box boundaries
+nboundary=4                     ! 4 sides of 2d box
+ibound_min=-1,+1,-1,-1          ! Lower x-sides of boundaries
+ibound_max=-1,+1,+1,+1          ! Upper x-sides
+jbound_min= 0, 0,+1,-1          ! Lower y-sides
+jbound_max= 0, 0,+1,-1          ! Upper y-sides
+bound_type= 1, 2, 2, 1          ! Boundary type (2=flowthrough, 1=mirror)
+/
+
+&RT_PARAMS
+rt_TConst=1d4                   ! Force constant gas temperature of 10^4 K
+X=1d0                           ! Hydrogen mass fraction
+Y=0d0                           ! Helium mass fraction
+rt_flux_scheme='glf'            ! HLL vs GLF
+hll_evals_file='../../rt/hll_evals.list' ! HLL eigenvalues file'
+rt_courant_factor=0.8           ! Courant number for RT timesteps
+rt_c_fraction=0.001             ! Light speed fraction
+rt_smooth=.true.                ! Smoothed RT to battle operator splitting
+rt_nsubcycle=1                  ! Maximum number of RT steps per hydro step
+rt_otsa=.true.                  ! On-the-spot approximation?
+rt_output_coolstats=.true.      ! Output thermochemistry stats in log
+rt_err_grad_n=0.4               ! Photon density refinement criterion
+rt_floor_n=1d-3                 ! Refinement floor
+rt_nsource=1                    !--Idealized radiation sources------------
+rt_source_type=1*'point'        ! Source geometry (point or square)
+rt_src_x_center=0.              ! Source position (0 to 1)
+rt_src_y_center=0.
+rt_src_length_x=0.              ! Source size (0 to 1)
+rt_src_length_y=0
+rt_src_group=1                  ! Photon group emitted into
+rt_n_source=2d28                ! Source luminosity (photons per sec)
+rt_u_source=0.                  ! Reduced x-direction flux
+rt_v_source=0.                  ! Reduced y-direction flux
+/
+
+
+&RT_GROUPS                      ! Photon group properties
+group_csn(1,:)= 1.6d-18, 0., 0. ! group 1 cross sec. -> HI, HeI, HeII [cm^2]
+group_cse(1,:)= 1.1d-18, 0., 0. ! group 1 e-weighted cs -> HI, HeI, HeII [cm^2]
+group_egy     = 29.6            ! group 1 photon energy [eV]
+/

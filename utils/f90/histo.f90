@@ -432,7 +432,7 @@ program histo_main
                        xx=log10(rho(i))
                     end if
                     yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24 &
-                         & -tpoly*(rho(i)/1.66d-24*0.76/npoly))
+                         & -tpoly*(rho(i)/1.66d-24*0.76/npoly)**(0.6))
                     dxx=(xx-dymin)/(dymax-dymin)*dble(nhx)
                     dyy=(yy-tymin)/(tymax-tymin)*dble(nhy)
                     ihx=int(dxx)

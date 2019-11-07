@@ -172,7 +172,9 @@ subroutine init_sink
      end do
 104  continue
      sinkint_level=slevel
-     nindsink=idsink(nsink)
+     if(nsink>0)then
+        nindsink=idsink(nsink)
+     end if
      close(10)
 
      ! Send the token
