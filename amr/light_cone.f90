@@ -38,8 +38,8 @@ subroutine output_cone()
 
   if(nstep_coarse.lt.2)return
 
-  z2=1./aexp_old-1.
-  z1=1./aexp-1.
+  z2=1/aexp_old-1d0
+  z1=1/aexp-1d0
 
   if(z2.gt.zmax_cone)return
   if(abs(z2-z1)<1d-6)return
@@ -54,7 +54,7 @@ subroutine output_cone()
   Lbox=boxlen_ini/hubin
   observer=(/Lbox/2.0,Lbox/2.0,Lbox/2.0/)
 
-  ilun=3*ncpu+myid+10
+  ilun=3*ncpu+myid+103
 
   ! Determine the filename, dir, etc
   if(myid==1)write(*,*)'Computing and dumping lightcone'
@@ -466,6 +466,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   !            allocated correctly arrays posout,velout,zout.
   !===========================================================================
   use amr_parameters, ONLY: nvector
+  use constants, ONLY: pi
   implicit none
   logical :: justcount,verbose
   integer :: npart,npartout
@@ -479,16 +480,12 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: rot(3,3),rotm1(3,3),dist1,dist2
   real(kind=8) :: xcoordfr,ycoordfr,zcoordfr,xcoord,ycoord,zcoord
   real(kind=8) :: tany,tanz,dist,vxfr,vyfr,vzfr,dxtest1,dxtest2,facnorm
-  real(kind=8) :: pi
   real(kind=8) :: small=1d-5
 
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
 
   if (verbose) write(*,*) 'Entering perform_my_selection'
-
-  ! pi=3.14159
-  pi=acos(-1.0d0)
 
   ! Initialize cosmological parameters
   call init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
@@ -741,7 +738,7 @@ function coord_distance(zz,Omega0,OmegaL,OmegaR,coverH0)
   real(kind=8) :: z,res,coord_distance,zz
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
   z=abs(zz)
-  call qromb(0.d0,z,res,omega0,omegaL,OmegaR)
+  call qromb(0d0,z,res,omega0,omegaL,OmegaR)
   coord_distance=coverH0*res
   if (zz.lt.0) coord_distance=-coord_distance
 end function coord_distance
@@ -753,7 +750,7 @@ function funcE(z,Omega0,OmegaL,OmegaR)
   real(kind=8) :: funcE,z,HsurH0
   real(kind=8) :: omega0,omegaL,OmegaR
 
-  funcE=1.d0/HsurH0(z,Omega0,OmegaL,OmegaR)
+  funcE=1d0/HsurH0(z,Omega0,OmegaL,OmegaR)
 end function funcE
 
 !===========================================================================
@@ -761,7 +758,7 @@ function HsurH0(z,omega0,omegaL,OmegaR)
   !===========================================================================
   implicit none
   real(kind=8) :: z,omega0,omegaL,OmegaR,HsurH0
-  HsurH0=sqrt(Omega0*(1.d0+z)**3+OmegaR*(1.d0+z)**2+OmegaL)
+  HsurH0=sqrt(Omega0*(1d0+z)**3+OmegaR*(1d0+z)**2+OmegaL)
 end function HsurH0
 
 
@@ -771,7 +768,7 @@ SUBROUTINE qromb(a,b,ss,omega0,omegaL,OmegaR)
   implicit none
   INTEGER :: JMAX,JMAXP,K,KM
   REAL(kind=8) :: a,b,ss,EPS,omega0,omegaL,OmegaR
-  PARAMETER (EPS=1.d-6, JMAX=20, JMAXP=JMAX+1, K=5, KM=K-1)
+  PARAMETER (EPS=1d-6, JMAX=20, JMAXP=JMAX+1, K=5, KM=K-1)
   !  USES polint,trapzd
   INTEGER :: j
   REAL(kind=8) :: dss,h(JMAXP),s(JMAXP)
@@ -779,7 +776,7 @@ SUBROUTINE qromb(a,b,ss,omega0,omegaL,OmegaR)
   do j=1,JMAX
      call trapzd(a,b,s(j),j,omega0,omegaL,OmegaR)
      if (j.ge.K) then
-        call polint(h(j-KM),s(j-KM),K,0.d0,ss,dss)
+        call polint(h(j-KM),s(j-KM),K,0d0,ss,dss)
         if (abs(dss).le.EPS*abs(ss)) return
      endif
      s(j+1)=s(j)

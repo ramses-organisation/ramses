@@ -66,7 +66,7 @@ subroutine clump_finder(create_output)
   !-------------------------------------------------------------------------------
   if (ntest>0) then
      allocate(denp(ntest),levp(ntest),iglobalp(ntest),icellp(ntest))
-     denp=0.d0; levp=0; iglobalp=0; icellp=0
+     denp=0d0; levp=0; iglobalp=0; icellp=0
   endif
   itest=0
   nskip=ntest_cpu(myid)-ntest
@@ -281,7 +281,7 @@ subroutine clump_finder(create_output)
            if(cosmo)fourpi=1.5d0*omega_m*aexp
            tff=sqrt(threepi2/8./fourpi/(max_dens_tot(jj)+1.0d-30))
            acc_r=clump_mass_tot4(jj)*dble(scale_d)*(dble(scale_l)**3.0)*3600.0*24.0*365.0/1.98892d33/tff/dble(scale_t)
-           ok=ok.and.acc_r > 30.d0
+           ok=ok.and.acc_r > 30d0
 
            if (ok)then
               pos(1,1:3)=peak_pos_tot(jj,1:3)

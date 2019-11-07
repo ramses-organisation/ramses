@@ -9,13 +9,13 @@ module clfind_commons
   integer,allocatable,dimension(:)::npeaks_per_cpu
   integer,allocatable,dimension(:)::ipeak_start
   real(dp)::tot_mass
-  real(dp)::relevance_threshold=2.0
-  real(dp)::density_threshold=-1.0d0
-  real(dp)::saddle_threshold=-1.d0
-  real(dp)::rho_clfind=-1.d0
-  real(dp)::n_clfind=-1.d0
-  real(dp)::mass_threshold=0.d0
-  real(dp)::age_cut_clfind=0.d0
+  real(dp)::relevance_threshold=2
+  real(dp)::density_threshold=-1
+  real(dp)::saddle_threshold=-1
+  real(dp)::rho_clfind=-1
+  real(dp)::n_clfind=-1
+  real(dp)::mass_threshold=0
+  real(dp)::age_cut_clfind=0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
 
@@ -48,8 +48,9 @@ module clfind_commons
   integer,allocatable,dimension(:)::peak_cell,peak_cell_level
   integer,allocatable,dimension(:)::n_cells,n_cells_halo,lev_peak,new_peak
   integer,allocatable,dimension(:)::occupied,occupied_all,ind_halo
+  integer,allocatable,dimension(:)::form,form_all
   logical,allocatable,dimension(:)::contracting
-!  integer,allocatable,dimension(:)::form,form_all ! Tells whether a sink has to be formed within a clump.
+  real(dp),allocatable,dimension(:,:)::table_properties
 
   ! Cell-above-the-threshold properties
   real(dp),allocatable,dimension(:)::denp ! Density of the cells

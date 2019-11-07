@@ -5,10 +5,10 @@
 subroutine init_tree
   use pm_commons
   use amr_commons
+  use mpi_mod
   use dice_commons
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
   integer::info
 #endif
   !------------------------------------------------------
@@ -148,7 +148,7 @@ subroutine init_tree
 
 #if NDIM==3
   if(sink)then
-     if(nrestart.gt.0)call kill_entire_cloud(1)
+     call kill_entire_cloud(1)
      call create_cloud_from_sink
   endif
 #endif
@@ -314,7 +314,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ok(1:np)=.false.
   do idim=1,ndim
      do j=1,np
-        i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+        i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
         if(i<0.or.i>2)error=.true.
         i=MAX(i,0)
         i=MIN(i,2)
@@ -328,9 +328,10 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      write(*,*)'A particle has moved outside allowed boundaries'
      do idim=1,ndim
         do j=1,np
-           i=int((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
+           i=floor((xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx/2.0D0)
            if(i<0.or.i>2)then
-              write(*,*)xp(ind_part(j),idim),x0(ind_grid_part(j),idim)*scale
+              write(*,*)xp(ind_part(j),1:ndim)
+              write(*,*)x0(ind_grid_part(j),1:ndim)*scale
            endif
         end do
      end do
@@ -502,7 +503,7 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do idim=1,ndim
      do j=1,np
         xxx=(xp(ind_part(j),idim)/scale+skip_loc(idim)-x0(ind_grid_part(j),idim))/dx
-        ok(j)=ok(j) .and. (xxx >= 0.d0 .and. xxx < 2.0d0)
+        ok(j)=ok(j) .and. (xxx >= 0d0 .and. xxx < 2.0d0)
      end do
   end do
 
@@ -630,11 +631,9 @@ end subroutine merge_tree_fine
 subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   use dice_commons
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   integer::ilevel
   !-----------------------------------------------------------------------
   ! This subroutine move particles across processors boundaries.

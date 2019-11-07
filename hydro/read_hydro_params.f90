@@ -116,11 +116,11 @@ subroutine read_hydro_params(nml_ok)
 
   ! Read namelist file
   rewind(1)
-  read(1,NML=init_params,END=101)
-  goto 102
-101 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
+  read(1,NML=init_params,END=121)
+  goto 122
+121 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
   call clean_stop
-102 rewind(1)
+122 rewind(1)
 
   ! Fail if physics params is found
   read(1, NML=physics_params, end=110)
@@ -238,7 +238,7 @@ subroutine read_hydro_params(nml_ok)
      star=.true.
      pic=.true.
   else if(eps_star>0)then
-     t_star=0.1635449*(n_star/0.1)**(-0.5)/eps_star
+     t_star=0.1635449d0*(n_star/0.1d0)**(-0.5d0)/eps_star
      star=.true.
      pic=.true.
   endif
@@ -440,7 +440,7 @@ subroutine read_hydro_params(nml_ok)
      jeans_refine(i)=jeans_refine(i-levelmin+1)
   end do
   do i=1,levelmin-1
-     jeans_refine(i)=-1.0
+     jeans_refine(i)=-1
   end do
 
   !-----------------------------------

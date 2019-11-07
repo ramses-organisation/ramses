@@ -346,7 +346,7 @@ subroutine merge_sink(ilevel)
         endif
         rr=zz**2+rr
         if(rr.le.dx_min2)then
-           egrav=msink(indx)*msink(gndx)/(rr+tiny(0.d0))
+           egrav=msink(indx)*msink(gndx)/(rr+tiny(0d0))
            uxcom=(msink(indx)*vsink(indx,1)+msink(gndx)*vsink(gndx,1))/(msink(indx)+msink(gndx))
            uycom=(msink(indx)*vsink(indx,2)+msink(gndx)*vsink(gndx,2))/(msink(indx)+msink(gndx))
            uzcom=(msink(indx)*vsink(indx,3)+msink(gndx)*vsink(gndx,3))/(msink(indx)+msink(gndx))
@@ -1506,7 +1506,7 @@ subroutine grow_sink(ilevel)
   if (bondi)call compute_accretion_rate(ilevel,.false.)
 
   ! Reset new sink variables
-  msink_new=0d0; xsink_new=0.d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
+  msink_new=0d0; xsink_new=0d0; vsink_new=0d0; delta_mass_new=0d0; lsink_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -1867,8 +1867,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            weight=exp(-r2/r2k(isink))
 
            ! Loop over level: sink cloud can overlap several levels
-           density=0.d0
-           norm=0.d0
+           density=0d0
+           norm=0d0
            do i=levelmin,nlevelmax
               density=density+weighted_density(isink,i)
               norm=norm+weighted_volume(isink,i)
@@ -1894,7 +1894,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               d_jeans=temp*3.1415926/(4.0*dx_loc)**2/factG
               d_floor=d_jeans
            endif
-           acc_mass=max((d-d_floor)*vol_loc*0.0125,0.d0)
+           acc_mass=max((d-d_floor)*vol_loc*0.0125,0d0)
         end if
 
 
@@ -2010,7 +2010,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
         if (smbh)then
            r2=(factG*msink(isink)/(c2+v2))**2
            ! Correct the Bondi radius to limit the accretion to the free fall rate
-           r2=min(r2,(4.d0*dx_min)**2)
+           r2=min(r2,(4d0*dx_min)**2)
         else
            ! for star formation case add gas mass to the sink mass for young sink particles
            r2=(factG*(msink(isink)+mgas)/(c2+v2))**2
@@ -2043,7 +2043,7 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
         end if
 
         !make sure, accretion rate is positive
-        dMsink_overdt(isink)=max(0.d0,dMsink_overdt(isink))
+        dMsink_overdt(isink)=max(0d0,dMsink_overdt(isink))
 
      end do
 
@@ -2078,17 +2078,17 @@ subroutine compute_accretion_rate(ilevel,write_sinks)
         write(*,'(" ============================================================================================================================================================ ")')
         do i=nsink,1,-1
            isink=idsink_sort(i)
-           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1.d10*tiny(0.d0)
+           l_abs=(lsink(isink,1)**2+lsink(isink,2)**2+lsink(isink,3)**2)**0.5+1d10*tiny(0d0)
            rot_period=32*3.1415*msink(isink)*(dx_min)**2/(5*l_abs)
            write(*,'(I5,2X,F9.5,3(2X,F10.7),3(2X,F7.4),2X,E13.3,3(2X,F6.3),3(2X,E11.3))')&
                 idsink(isink),msink(isink)*scale_m/2d33, &
                 xsink(isink,1:ndim),vsink(isink,1:ndim),&
                 rot_period*scale_t/(3600*24*365.25),lsink(isink,1)/l_abs,lsink(isink,2)/l_abs,lsink(isink,3)/l_abs,&
-                acc_rate(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33,&
+                acc_rate(isink)*scale_m/2d33/(scale_t)*365.*24.*3600.,acc_lum(isink)/scale_t**2*scale_l**3*scale_d*scale_l**2/scale_t/3.933d33,&
                 (t-tsink(isink))*scale_t/(3600*24*365.25)!,&
-!                dMsink_overdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600,&
-!                divergence(isink)/ncloud_sink*4./3.*3.14*(ir_cloud*dx_min)**3*scale_m/2.d33/(scale_t)*365.*24.*3600,&
-!                dMBHoverdt(isink)*scale_m/2.d33/(scale_t)*365.*24.*3600
+!                dMsink_overdt(isink)*scale_m/2d33/(scale_t)*365.*24.*3600,&
+!                divergence(isink)/ncloud_sink*4./3.*3.14*(ir_cloud*dx_min)**3*scale_m/2d33/(scale_t)*365.*24.*3600,&
+!                dMBHoverdt(isink)*scale_m/2d33/(scale_t)*365.*24.*3600
         end do
         write(*,'(" =========================================================================================================================================================== ")')
      endif
@@ -2882,7 +2882,7 @@ subroutine make_sink_from_clump(ilevel)
                  if(cosmo)fourpi=1.5d0*omega_m*aexp
                  tff=sqrt(threepi2/8./fourpi/(d+1d-30))
                  tsal=0.1*6.652d-25*3d10/4./3.1415926/6.67d-8/1.66d-24/scale_t
-                 msink_new(index_sink)=1.d-5/0.15*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
+                 msink_new(index_sink)=1d-5/0.15*clump_mass_tot4(flag2(ind_cell_new(i)))*tsal/tff
                  delta_d=d-msink_new(index_sink)/vol_loc
                  if(delta_d<0.)write(*,*)'sink production with negative mass'
               else
@@ -3126,7 +3126,7 @@ subroutine update_sink(ilevel)
      d_star=5d1/scale_nH
   endif
 
-  densc=0.d0; volc=0.d0; velc=0.d0
+  densc=0d0; volc=0d0; velc=0d0
 
   vsold(1:nsink,1:ndim,ilevel)=vsnew(1:nsink,1:ndim,ilevel)
   vsnew(1:nsink,1:ndim,ilevel)=vsink(1:nsink,1:ndim)
@@ -3168,7 +3168,7 @@ subroutine update_sink(ilevel)
      vsnew(isink,1:ndim,ilevel)=vsink(isink,1:ndim)
 
      if(bondi.and.smbh)then
-        fdrag(isink,1:ndim)=0.d0
+        fdrag(isink,1:ndim)=0d0
         ! Compute the drag force exerted by the gas on the sink particle
         vrel(1:ndim)=vsnew(isink,1:ndim,ilevel)-velc(isink,1:ndim)
         vnorm_rel=sqrt( vrel(1)**2 + vrel(2)**2 + vrel(3)**2 )
@@ -3277,7 +3277,7 @@ subroutine update_cloud(ilevel)
      end do
   end if
 
-  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0.d0
+  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0d0
 
 111 format('   Entering update_cloud for level ',I2)
 

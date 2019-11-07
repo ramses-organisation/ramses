@@ -14,7 +14,10 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   real(dp),dimension(1:nvector)::pp
 
   real(dp)::dtcell,smallp
-  integer::k,idim,irad
+  integer::k,idim
+#if NENER>0
+  integer::irad
+#endif
 
   smallp = smallc**2/gamma
 
@@ -95,7 +98,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      end do
   end do
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
      do k = 1, ncell
        uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k)/uu(k,1))
      end do
@@ -142,9 +145,12 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   real(dp)::ud(1:nvector,1:nvar)
   logical ::ok(1:nvector)
 
-  integer::k,idim,irad
+  integer::k,idim
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error
+#if NENER>0
+  integer::irad
+#endif
 
   ! Convert to primitive variables
   do k = 1,nn
@@ -238,9 +244,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   ! Ionization state (only Hydrogen)
   if(rt_err_grad_xHII >= 0.) then !---------------------------------------
      do k=1,nn
-        dg=min(1.d0,max(0.d0,ug(k,iIons)))
-        dm=min(1.d0,max(0.d0,um(k,iIons)))
-        dd=min(1.d0,max(0.d0,ud(k,iIons)))
+        dg=min(1d0,max(0d0,ug(k,iIons)))
+        dm=min(1d0,max(0d0,um(k,iIons)))
+        dd=min(1d0,max(0d0,ud(k,iIons)))
         error=2.0d0*MAX( &
              & ABS((dd-dm)/(dd+dm+rt_floor_xHII)) , &
              & ABS((dm-dg)/(dm+dg+rt_floor_xHII)) )
@@ -251,9 +257,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
   ! Neutral state (only Hydrogen)
   if(rt_err_grad_xHI  >= 0.) then !---------------------------------------
      do k=1,nn
-        dg=min(1.d0,max(0.d0,1.d0 - ug(k,iIons)))
-        dm=min(1.d0,max(0.d0,1.d0 - um(k,iIons)))
-        dd=min(1.d0,max(0.d0,1.d0 - ud(k,iIons)))
+        dg=min(1d0,max(0d0,1d0 - ug(k,iIons)))
+        dm=min(1d0,max(0d0,1d0 - um(k,iIons)))
+        dd=min(1d0,max(0d0,1d0 - ud(k,iIons)))
         error=2.0d0*MAX( &
              & ABS((dd-dm)/(dd+dm+rt_floor_xHI)) , &
              & ABS((dm-dg)/(dm+dg+rt_floor_xHI)) )
@@ -348,7 +354,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
      end do
      n_new=0
      do i=1,n
-        if(uo(i)>1.d-06)then
+        if(uo(i)>1d-06)then
            n_new=n_new+1
            ind2(n_new)=ind (i)
            po  (n_new)=pold(i)
@@ -356,7 +362,7 @@ subroutine riemann_approx(qleft,qright,fgdnv,ngrid)
      end do
      j=n_new
      do i=1,n
-        if(uo(i)<=1.d-06)then
+        if(uo(i)<=1d-06)then
            n_new=n_new+1
            ind2(n_new)=ind (i)
            po  (n_new)=pold(i)
@@ -1009,11 +1015,12 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
   REAL(dp)::ustar,ptotstar
   REAL(dp)::ro,uo,ptoto,etoto,eo
   REAL(dp)::smallp
+  INTEGER::ivar,i
 #if NENER>0
   REAL(dp),dimension(1:nener)::eradl,eradr,erado
   REAL(dp),dimension(1:nener)::eradstarl,eradstarr
+  INTEGER::irad
 #endif
-  INTEGER ::irad, ivar, i
 
   ! constants
   smallp = smallc**2/gamma

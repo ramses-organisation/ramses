@@ -120,7 +120,7 @@ subroutine upl(ind_cell,ncell)
   end do
   ! End loop over variables
 
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
 
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
@@ -241,7 +241,7 @@ subroutine interpol_hydro(u1,u2,nn)
 #endif
 
   ! volume fraction of a fine cell realtive to a coarse cell
-  oneover_twotondim=1.D0/dble(twotondim)
+  oneover_twotondim=1d0/dble(twotondim)
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -343,7 +343,7 @@ subroutine interpol_hydro(u1,u2,nn)
 
         !correct total momentum keeping the slope fixed
         do idim=1,ndim
-           mom(1:nn)=0.
+           mom(1:nn)=0
            do ind=1,twotondim
               do i=1,nn
                  ! total momentum in children
@@ -401,10 +401,10 @@ subroutine compute_limiter_minmod(a,w,nn)
 
   do idim=1,ndim
      do i=1,nn
-        diff_left=0.5*(a(i,2*idim)-a(i,0))
-        diff_right=0.5*(a(i,0)-a(i,2*idim-1))
+        diff_left=0.5d0*(a(i,2*idim)-a(i,0))
+        diff_right=0.5d0*(a(i,0)-a(i,2*idim-1))
         if(diff_left*diff_right<=0.0)then
-           minmod=0.0
+           minmod=0
         else
            minmod=MIN(ABS(diff_left),ABS(diff_right)) &
                 &   *diff_left/ABS(diff_left)
@@ -462,7 +462,7 @@ subroutine compute_limiter_central(a,w,nn)
      do ind=1,twotondim
         xxc = xc(ind,idim)
         do i=1,nn
-           corner(i)=ac(i,ind)+2.D0*w(i,idim)*xxc
+           corner(i)=ac(i,ind)+2d0*w(i,idim)*xxc
         end do
         do i=1,nn
            ac(i,ind)=corner(i)

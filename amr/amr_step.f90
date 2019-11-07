@@ -19,7 +19,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
-  ! unless you check all consequences first                           !
+  ! unless you check all consequences first.                          !
   !-------------------------------------------------------------------!
   integer::i,idim,ivar
   logical::ok_defrag,output_now_all
@@ -59,7 +59,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
                  end do
 #endif
-                 if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),i)
+                 if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),i)
                  if(simple_boundary)call make_boundary_hydro(i)
               end if
 #ifdef RT
@@ -366,7 +366,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         call make_virtual_reverse_dp(pstarnew(1),ilevel)
      endif
      if(pressure_fix)then
@@ -455,7 +455,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
-     if(momentum_feedback)call make_virtual_fine_dp(pstarold(1),ilevel)
+     if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 
@@ -561,7 +561,7 @@ subroutine rt_step(ilevel)
      i_substep = i_substep + 1
      call get_rt_courant_coarse(dt_rt)
      ! Temporarily change timestep length to rt step:
-     dtnew(ilevel) = MIN(t_left, dt_rt/2.0**(ilevel-levelmin))
+     dtnew(ilevel) = MIN(t_left, dt_rt/2**(ilevel-levelmin))
      t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel

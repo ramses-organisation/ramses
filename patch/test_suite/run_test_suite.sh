@@ -3,7 +3,7 @@
 #######################################################################
 #
 # Script to run the RAMSES test suite
-# 
+#
 # Neil Vaytet (ENS Lyon) - 07/2014 - neil.vaytet@ens-lyon.fr
 #
 # Usage:
@@ -115,7 +115,10 @@ testpatch[${itest}]="";
 testlist[${itest}]="sod-tube.nml";
 ndim[${itest}]=1;
 nvar[${itest}]=5;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="hydro";
+rt[${itest}]=false;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="";
@@ -127,7 +130,10 @@ testpatch[${itest}]="../mhd";
 testlist[${itest}]="imhd-tube.nml";
 ndim[${itest}]=1;
 nvar[${itest}]=8;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="mhd";
+rt[${itest}]=false;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="";
@@ -139,7 +145,40 @@ testpatch[${itest}]="../patch/test_suite/orszag-tang";
 testlist[${itest}]="orszag-tang.nml";
 ndim[${itest}]=2;
 nvar[${itest}]=8;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
 solver[${itest}]="mhd";
+rt[${itest}]=false;
+flags[${itest}]="";
+make_clean[${itest}]=true;
+del_files[${itest}]="output_*";
+
+itest=$((itest + 1)); # Test 4
+testdir[${itest}]="smbh-bondi";
+testname[${itest}]="smbh-bondi";
+testpatch[${itest}]="";
+testlist[${itest}]="smbh-bondi.nml";
+ndim[${itest}]=3;
+nvar[${itest}]=6;
+ngroups[${itest}]=0;
+nions[${itest}]=0;
+solver[${itest}]="hydro";
+rt[${itest}]=false;
+flags[${itest}]="";
+make_clean[${itest}]=true;
+del_files[${itest}]="output_*";
+
+itest=$((itest + 1)); # Test 5
+testdir[${itest}]="stromgren2d";
+testname[${itest}]="stromgren2d";
+testpatch[${itest}]="";
+testlist[${itest}]="stromgren2d.nml";
+ndim[${itest}]=2;
+nvar[${itest}]=8;
+ngroups[${itest}]=3;
+nions[${itest}]=3;
+solver[${itest}]="hydro";
+rt[${itest}]=true;
 flags[${itest}]="";
 make_clean[${itest}]=true;
 del_files[${itest}]="output_*";
@@ -175,7 +214,7 @@ if $SELECTTEST ; then
    s1=$(echo $TESTNUMBER | sed 's/,/ /'g);
    testsegs=( $s1 );
    nseg=${#testsegs[@]};
-   
+
    # Search for dashes in individual segments
    ntests=0;
    for ((n=0;n<$nseg;n++)); do
@@ -213,7 +252,7 @@ else
    for ((n=0;n<$ntests;n++)); do
       testnum[n]=$n;
    done
-   
+
 fi
 
 #######################################################################
@@ -261,7 +300,7 @@ for ((i=0;i<$ntests;i++)); do
    itest=$(($itest + 1));
    echo "Test ${itest}/${ntests}: ${testname[n]}";
    echo "Test ${itest}/${ntests}: ${testname[n]}" >> $LOGFILE;
-      
+
    # Initial cleanup
    $RETURN_TO_BIN;
    if ${make_clean[n]}; then
@@ -274,16 +313,24 @@ for ((i=0;i<$ntests;i++)); do
       fi
    fi
    rm -f ${del_files[n]};
-   
+
    # Compile source
    echo "Compiling source";
    echo "Compiling source" >> $LOGFILE;
-   if $VERBOSE ; then
-      make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} ${flags[n]};
+   if ${rt[n]} ; then
+       if $VERBOSE ; then
+          make -f Makefile.rt EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]};
+       else
+          { make -f Makefile.rt EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       fi
    else
-      { make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       if $VERBOSE ; then
+          make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]};
+       else
+          { make EXEC=${EXECNAME} PATCH=${testpatch[n]} SOLVER=${solver[n]} MPI=${MPI} NDIM=${ndim[n]} NVAR=${nvar[n]} NIONS=${nions[n]} NGROUPS=${ngroups[n]} ${flags[n]} >> $LOGFILE; } 2>> $LOGFILE;
+       fi
    fi
-   
+
    # Run tests
    cd ${TEST_DIRECTORY}/${testdir[n]};
    $DELETE_RESULTS;
@@ -309,7 +356,7 @@ for ((i=0;i<$ntests;i++)); do
    if ${USE_PYTHON} ; then
       python plot-${testname[n]}.py;
    fi
-   
+
    # Check for differences in results
    echo "Analysing results";
    echo "Analysing results" >> $LOGFILE;
@@ -328,7 +375,7 @@ for ((i=0;i<$ntests;i++)); do
       echo "Test passed                           [ OK ]";
       echo "Test passed                           [ OK ]" >> $LOGFILE;
    fi
-   
+
 #    # Check for differences in log files
 #    echo "Analysing logs"; echo "Analysing logs" >> $LOGFILE;
 #    # Remove grids and memory from log file as they change with MPI
@@ -352,7 +399,7 @@ for ((i=0;i<$ntests;i++)); do
 #       diff_not_empty[n]=false;
 #       echo "Test passed"; echo "Test passed" >> $LOGFILE;
 #    fi
-   
+
    echo "--------------------------------------------";
    echo "--------------------------------------------" >> $LOGFILE;
 

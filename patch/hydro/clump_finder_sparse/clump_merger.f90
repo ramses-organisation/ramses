@@ -34,8 +34,8 @@ subroutine compute_clump_properties(ntest)
   integer,dimension(1:npeaks_tot)::n_cells
 
 
-  min_dens=huge(zero);  max_dens=0.d0; n_cells=0; phi_min=huge(zero); second_moments=0.
-  clump_mass=0.d0; clump_vol=0.d0; clump_momentum=0.d0; center_of_mass=0.d0; clump_force=0.d0
+  min_dens=huge(zero);  max_dens=0d0; n_cells=0; phi_min=huge(zero); second_moments=0.
+  clump_mass=0d0; clump_vol=0d0; clump_momentum=0d0; center_of_mass=0d0; clump_force=0d0
   peak_pos=0.
 
   !------------------------------------------
@@ -157,7 +157,7 @@ subroutine compute_clump_properties(ntest)
   !clean some wannabe peaks (due to MPI)
   do j=1,npeaks_tot
      do i=1,ndim
-        if (max_dens(j)<max_dens_tot(j))peak_pos(j,i)=0.d0
+        if (max_dens(j)<max_dens_tot(j))peak_pos(j,i)=0d0
      end do
   end do
 #ifndef WITHOUTMPI
@@ -170,10 +170,10 @@ subroutine compute_clump_properties(ntest)
   !calculate total mass above threshold
   tot_mass=sum(clump_mass_tot)
   ! compute further properties of the clumps
-  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/(clump_vol_tot(1:npeaks_tot)+tiny(0.d0))
+  av_dens_tot(1:npeaks_tot)=clump_mass_tot(1:npeaks_tot)/(clump_vol_tot(1:npeaks_tot)+tiny(0d0))
   do i=1,ndim
-     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
-     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0.d0))
+     center_of_mass_tot(1:npeaks_tot,i)=center_of_mass_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0d0))
+     clump_force_tot(1:npeaks_tot,i)=clump_force_tot(1:npeaks_tot,i)/(clump_mass_tot(1:npeaks_tot)+tiny(0d0))
   end do
 
 end subroutine compute_clump_properties
@@ -218,11 +218,11 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
   call get_phi_ref(ntest)
 
   !initialize arrays
-  e_kin_int=0.d0; clump_size=0.d0; e_bind=0.d0; e_thermal=0.d0
-  clump_mass4=0.d0
+  e_kin_int=0d0; clump_size=0d0; e_bind=0d0; e_thermal=0d0
+  clump_mass4=0d0
   v_therm=0.; bulk_momentum=0.; m4=0.
   e_kin_iso=0.; e_bind_iso=0.; e_therm_iso=0.
-  grav_term=0.d0; Icl_d=0.d0; Icl=0.; Icl_dd_tot=0.
+  grav_term=0d0; Icl_d=0d0; Icl=0.; Icl_dd_tot=0.
   Icl_3by3=0.;  Icl_d_3by3=0.
   contracting=.false.
 
@@ -311,7 +311,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
 
         ! potential energy using the acutal phi W= 0.5*int phi_rel*rho
         phi_rel=(phi(icellp(ipart))-phi_ref_tot(peak_nr))*scale
-        e_bind(peak_nr)=e_bind(peak_nr)-phi_rel*d*vol*5.d-1
+        e_bind(peak_nr)=e_bind(peak_nr)-phi_rel*d*vol*5d-1
 
         ! thermal energy
         ekk=0.
@@ -407,7 +407,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
      if (relevance_tot(j)>0.)then
         !compute eigenvalues and eigenvectors of Icl_d_3by3_tot
         a=Icl_3by3_tot(j,1:3,1:3)
-        abs_err=1.d-8*Icl_tot(j)**2+1.d-40
+        abs_err=1d-8*Icl_tot(j)**2+1d-40
         call jacobi(a,eigenv,abs_err)
         A1=a(1,1); A2=a(2,2); A3=a(3,3)
 
@@ -424,20 +424,20 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
         !Check wether clump is contracting fast enough along all axis
         if (Icl_tot(j)>0)then
            contracting(j)=.true.
-           contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0.d0)) < cont_speed
-           contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0.d0)) < cont_speed
-           contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0.d0)) < cont_speed
+           contracting(j)=contracting(j) .and. contractions(j,1)/(A1+tiny(0d0)) < cont_speed
+           contracting(j)=contracting(j) .and. contractions(j,2)/(A2+tiny(0d0)) < cont_speed
+           contracting(j)=contracting(j) .and. contractions(j,3)/(A3+tiny(0d0)) < cont_speed
         end if
 
         !compute peak check for smbh sink formation
         v_rms=2.*e_kin_int_tot(j)/clump_mass_tot(j)
         v_bulk2=(bulk_momentum_tot(j,1)**2+bulk_momentum_tot(j,2)**2&
-             +bulk_momentum_tot(j,3)**2)/(m4_tot(j)**2+tiny(0.d0))
-        peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms+v_bulk2)*0.5+tiny(0.d0))
+             +bulk_momentum_tot(j,3)**2)/(m4_tot(j)**2+tiny(0d0))
+        peak_check(j)=scale*(phi_ref_tot(j)-phi_min_tot(j))/((v_therm_tot(j)**2+v_rms+v_bulk2)*0.5+tiny(0d0))
 
         !compute other checks (currently not needed for sink formation)
-        isodens_check(j)=scale*e_bind_iso_tot(j)/(tiny(0.d0)+2*e_kin_iso_tot(j)+2*e_therm_iso_tot(j))
-        clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0.d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
+        isodens_check(j)=scale*e_bind_iso_tot(j)/(tiny(0d0)+2*e_kin_iso_tot(j)+2*e_therm_iso_tot(j))
+        clump_check(j)=(-1.*grav_term_tot(j)+Psurf_tot(j))/(tiny(0d0)+2*e_kin_int_tot(j)+2*e_thermal_tot(j))
 
         !update the all_bound property
         all_bound=all_bound.and.(isodens_check(j)>1.)
@@ -453,7 +453,7 @@ subroutine compute_clump_properties_round2(ntest,all_bound)
      do j=npeaks_tot,1,-1
         if (relevance_tot(j)>0.)then
            write(*,'(I4,2X,8(E8.2E2,3X))'),j&
-                ,A1/(contractions(j,1)+tiny(0.d0))*cty,A2/(contractions(j,2)+tiny(0.d0))*cty,A3/(contractions(j,3)+tiny(0.d0))*cty&
+                ,A1/(contractions(j,1)+tiny(0d0))*cty,A2/(contractions(j,2)+tiny(0d0))*cty,A3/(contractions(j,3)+tiny(0d0))*cty&
                 ,abs(Icl_d_tot(j))/Icl_dd_tot(j)*cty&
                 ,grav_term_tot(j),-1.*Psurf_tot(j)&
                 ,e_kin_int_tot(j),e_thermal_tot(j)
@@ -690,7 +690,7 @@ subroutine saddlepoint_search(ntest)
   saddle_dens_tot=saddle_dens
 #endif
 
-  saddle_max_tot=0.d0
+  saddle_max_tot=0d0
   do i=1,last_imat_free
      jj=(icurrent(i)-1)/npeaks_tot+1
      ii=icurrent(i)-(jj-1)*npeaks_tot
@@ -809,7 +809,7 @@ subroutine merge_lists(last_imat_tot,last_imat_merged)
         temp(j)=saddle_dens(i)
      end if
   end do
-  saddle_dens=0.d0
+  saddle_dens=0d0
   saddle_dens(1:j)=temp(1:j)
   deallocate(temp)
 
@@ -914,7 +914,7 @@ subroutine merge_clumps(ntest)
 
            ! Update saddle point array
            allocate(temp_saddle(1:npeaks_tot))
-           temp_saddle=0.d0
+           temp_saddle=0d0
            do imat=1,last_imat_free
               if(merge_to>0.and.icurrent(imat)>0)then
                  jloc=(icurrent(imat)-1)/npeaks_tot+1
@@ -945,9 +945,9 @@ subroutine merge_clumps(ntest)
                  if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)>0)then
                     saddle_dens_tot(imat)=temp_saddle(jloc)
                  else
-                    if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)==0.d0)then
+                    if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)==0d0)then
                        icurrent(imat)=npeaks_tot**2
-                       saddle_dens_tot(imat)=0.d0
+                       saddle_dens_tot(imat)=0d0
                     end if
                  end if
               end if
@@ -976,7 +976,7 @@ subroutine merge_clumps(ntest)
 
            ! Update relevance of clumps
            if (merge_to>0)then
-              if (saddle_max_tot(merge_to)>1.d-40)then
+              if (saddle_max_tot(merge_to)>1d-40)then
                  relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
               else
                  relevance_tot(merge_to)=max_dens_tot(merge_to)/min_dens_tot(merge_to)
@@ -1038,7 +1038,7 @@ subroutine merge_clumps(ntest)
 
         ! Update saddle point array
         allocate(temp_saddle(1:npeaks_tot))
-        temp_saddle=0.d0
+        temp_saddle=0d0
         do imat=1,last_imat_free
            if(merge_to>0.and.icurrent(imat)>0)then
               jloc=(icurrent(imat)-1)/npeaks_tot+1
@@ -1069,9 +1069,9 @@ subroutine merge_clumps(ntest)
               if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)>0)then
                  saddle_dens_tot(imat)=temp_saddle(jloc)
               else
-                 if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)==0.d0)then
+                 if(iloc==merge_to.or.jloc==merge_to.and.temp_saddle(jloc)==0d0)then
                     icurrent(imat)=npeaks_tot**2
-                    saddle_dens_tot(imat)=0.d0
+                    saddle_dens_tot(imat)=0d0
                  end if
               end if
            end if
@@ -1102,7 +1102,7 @@ subroutine merge_clumps(ntest)
 
         ! Update relevance of clumps
         if (merge_to>0)then
-           if (saddle_max_tot(merge_to)>1.d-40)then
+           if (saddle_max_tot(merge_to)>1d-40)then
               relevance_tot(merge_to)=max_dens_tot(merge_to)/saddle_max_tot(merge_to)
            else
               relevance_tot(merge_to)=max_dens_tot(merge_to)/min_dens_tot(merge_to)
@@ -1255,7 +1255,7 @@ subroutine allocate_peak_patch_arrays
   new_peak=0
   phi_ref=huge(zero)
   Psurf=0.;Psurf_tot=0.
-  grav_term_tot=0.d0
+  grav_term_tot=0d0
   isodens_check=-1.;  clump_check=-1.; peak_check=-1.;
   contracting=.false.
   Icl_tot=0.; Icl_d_tot=0.; Icl_dd_tot=0.; Icl_d_3by3_tot=0.; Icl_3by3_tot=0.

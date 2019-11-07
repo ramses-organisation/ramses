@@ -23,7 +23,7 @@ contains
     type(sparse_mat)::mat
     integer::m !size of the array
     allocate(mat%val(1:NSPARSEMAX))
-    mat%val=0.
+    mat%val=0
     allocate(mat%next(1:NSPARSEMAX))
     mat%next=0
     allocate(mat%col(0:NSPARSEMAX))
@@ -32,7 +32,7 @@ contains
     allocate(mat%first(1:m))
     mat%first=0
     allocate(mat%maxval(1:m))
-    mat%maxval=0.
+    mat%maxval=0
     allocate(mat%maxloc(1:m))
     mat%maxloc=0
     mat%used=0
@@ -145,7 +145,7 @@ contains
     integer::current
 
     ! empty line
-    get_value=0.0
+    get_value=0
     if (mat%first(i)==0)then
        return
     end if
@@ -164,7 +164,7 @@ contains
 
     ! we are too far (means there was no entry for column j)
     if ( mat%col(current) > j)then
-       get_value=0.
+       get_value=0
        return
     end if
 

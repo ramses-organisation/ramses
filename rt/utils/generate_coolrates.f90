@@ -16,7 +16,7 @@ PROGRAM generate_coolrates
            ilun_dbdt,ncols
 !------------------------------------------------------------------------
 
-  T0=100 ; T1=1.d8
+  T0=100 ; T1=1d8
   dlogT = (log10(T1)-log10(T0))/(nT-1)
   do i = 0, nT-1
      a_T(i+1) = 10**(log10(T0) + dlogT * i)
@@ -35,7 +35,7 @@ PROGRAM generate_coolrates
      a_dAbdT(i) = comp_dAlphaB_dT(a_T(i))
      a_dBdT(i)  = comp_dBeta_dT(a_T(i))
      do j = 1,nXi
-        a_L(i,j)  = comp_coolrate(a_T(i), a_X(j), 1.d0, 1.d0, a_dLdT(i,j), a_dLdX(i,j))
+        a_L(i,j)  = comp_coolrate(a_T(i), a_X(j), 1d0, 1d0, a_dLdT(i,j), a_dLdX(i,j))
      end do
   end do
   ilun_aa=21; ilun_ab=22; ilun_b=23; ilun_daadt=24; ilun_dabdt=24; ilun_dbdt=25

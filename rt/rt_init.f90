@@ -64,6 +64,7 @@ SUBROUTINE rt_init
   if(rt .and. .not.rt_otsa) rt_advect=.true.
   if(rt .and. rt_nsource .gt. 0) rt_advect=.true.
   if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
+  if(rt .and. rt_AGN ) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
@@ -77,7 +78,8 @@ SUBROUTINE rt_init
   if(rt_use_hll) call read_hll_eigenvalues
   tot_cool_loopcnt=0 ; max_cool_loopcnt=0 ; n_cool_cells=0
   loopCodes=0
-  tot_nPhot=0.d0 ;  step_nPhot=0.d0; step_nStar=0.d0; step_mStar=0.d0
+  tot_nPhot=0d0 ;  step_nPhot=0d0; step_nStar=0d0; step_mStar=0d0
+
 END SUBROUTINE rt_init
 
 !*************************************************************************
@@ -117,7 +119,7 @@ SUBROUTINE adaptive_rt_c_update(ilevel, dt)
   dx=0.5D0**ilevel*scale
 
   ! new lightspeed
-  rt_c = dx/3.d0/dt * rt_courant_factor
+  rt_c = dx/3d0/dt * rt_courant_factor
   rt_c2 = rt_c**2
 
   ! new ligtspeed in cgs
@@ -155,6 +157,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, is_mu_H2,isHe   &
        & ,isH2, rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost        &
        & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
+       & ,cosmic_rays                                                    &
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
@@ -168,7 +171,8 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_exp_source, rt_src_group                                    &
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
-       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound
+       & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
+       & ,rt_AGN
 
 
   ! Set default initialisation of ionisation states:
@@ -197,7 +201,7 @@ SUBROUTINE read_rt_params(nml_ok)
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
   if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
 
-  if(rt_Tconst .ge. 0.d0) rt_isTconst=.true.
+  if(rt_Tconst .ge. 0d0) rt_isTconst=.true.
 
   ! Set number of used ionisation fractions, indexes of ionization
   ! fractions, and ionization energies, and check if we have enough
@@ -217,10 +221,9 @@ SUBROUTINE read_rt_params(nml_ok)
      if(myid==1) then
         write(*,*) 'Not enough variables for ionization fractions'
         write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',nIonsUsed
         write(*,*) 'STOPPING!'
      endif
-     call clean_stop
+     nml_ok=.false.
   endif
   if(nIonsUsed .lt. NIONS) then
      if(myid==1) then
@@ -253,7 +256,7 @@ SUBROUTINE read_rt_groups(nml_ok)
   integer::i,igroup_HI=0, igroup_HII=0, igroup_HeII=0, igroup_HeIII=0
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
-       & , groupL0, groupL1, kappaAbs, kappaSc
+       & , groupL0, groupL1, kappaAbs, kappaSc, group_egy_AGNfrac
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
           & ,I2, " ion species")') nGroups, nIons
@@ -287,29 +290,49 @@ SUBROUTINE read_rt_groups(nml_ok)
   ! Default groups are all blackbodies at 10^5 Kelvin:
   group_csn=0d0 ; group_cse=0d0 ; group_egy=0d0         ! Default all zero
   if(igroup_HI .gt. 0) then
-     group_csn(igroup_HI,ixHI)=2.1d-19                     ! H2 dissociation
-     group_cse(igroup_HI,ixHI)=2.1d-19
+     if(ixHI .gt. 0) then                                ! H2 dissociation
+        group_csn(igroup_HI,ixHI)=2.1d-19
+        group_cse(igroup_HI,ixHI)=2.1d-19
+     endif  
      group_egy(igroup_HI)=12.44
   endif
   if(igroup_HII .gt. 0) then
-     group_csn(igroup_HII,ixHII)=3.007d-18                 ! HI ionization
+     if(ixHI .gt. 0) then                   ! H2 ionization by HI photons
+        group_csn(igroup_HII,ixHI)=5.0d-18
+        group_cse(igroup_HII,ixHI)=5.3d-18
+     endif
+     group_csn(igroup_HII,ixHII)=3.007d-18                ! HI ionization
      group_cse(igroup_HII,ixHII)=2.781d-18
      group_egy(igroup_HII)=18.85
   endif
   if(igroup_HeII .gt. 0) then
-     group_csn(igroup_HeII,ixHII)=5.687d-19 ! HI ionization by HeI photons
+     if(ixHI .gt. 0) then                  ! H2 ionization by HeI photons
+        group_csn(igroup_HeII,ixHI)=2.9d-18
+        group_cse(igroup_HeII,ixHI)=2.8d-18
+     endif
+     group_csn(igroup_HeII,ixHII)=5.687d-19! HI ionization by HeI photons
      group_cse(igroup_HeII,ixHII)=5.042d-19
-     group_csn(igroup_HeII,ixHeII)=4.478d-18              ! HeI ionization
-     group_cse(igroup_HeII,ixHeII)=4.130d-18
+     if(ixHeII .gt. 0) then                              ! HeI ionization
+        group_csn(igroup_HeII,ixHeII)=4.478d-18   
+        group_cse(igroup_HeII,ixHeII)=4.130d-18
+     endif
      group_egy(igroup_HeII)=35.079
   endif
   if(igroup_HeIII .gt. 0) then
-     group_csn(igroup_HeIII,ixHII)=7.889d-20   ! HI ioniz. by HeII photons
+     if(ixHI .gt. 0) then                 ! H2 ionization by HeII photons
+        group_csn(igroup_HeIII,ixHI)=4.1d-19 
+        group_cse(igroup_HeIII,ixHI)=4.1d-19
+     endif
+     group_csn(igroup_HeIII,ixHII)=7.889d-20  ! HI ioniz. by HeII photons
      group_cse(igroup_HeIII,ixHII)=7.456d-20
-     group_csn(igroup_HeIII,ixHeII)=1.197d-18 ! HeI ioniz. by HeII photons
-     group_cse(igroup_HeIII,ixHeII)=1.142d-18
-     group_csn(igroup_HeIII,ixHeIII)=1.055d-18           ! HeII ionization
-     group_cse(igroup_HeIII,ixHeIII)=1.001d-18
+     if(ixHeII .gt. 0) then                  ! HeI ioniz. by HeII photons
+        group_csn(igroup_HeIII,ixHeII)=1.197d-18 
+        group_cse(igroup_HeIII,ixHeII)=1.142d-18
+     endif
+     if(ixHeIII .gt. 0) then                            ! HeII ionization
+        group_csn(igroup_HeIII,ixHeIII)=1.055d-18     
+        group_cse(igroup_HeIII,ixHeIII)=1.001d-18
+     endif
      group_egy(igroup_HeIII)=65.666
   endif
 #endif
@@ -328,6 +351,16 @@ SUBROUTINE read_rt_groups(nml_ok)
      print*,'WARNING! Some photon groups have zero or negative energy!'
      print*,'This could have unwanted effects, so be careful!!!'
      print*,'========================================================='
+  endif
+
+  if(isH2) then
+     do i=1,nGroups
+        if((groupL0(i) .ge. 11.2) .and. (groupL1(i) .le. 13.6)          &
+           .and. (groupL0(i) .le. 13.6) .and. (groupL1(i) .ge. 11.2))then
+           ssh2(i) = 4d2 ! H2 self-shielding factor
+           isLW(i) = 1d0 ! Index for LW groups
+        endif
+    enddo
   endif
 
   call updateRTGroups_CoolConstants

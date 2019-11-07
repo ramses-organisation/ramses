@@ -63,22 +63,22 @@ subroutine set_unew(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         do i=1,active(ilevel)%ngrid
-           pstarnew(active(ilevel)%igrid(i)+iskip) = 0.0
+           pstarnew(active(ilevel)%igrid(i)+iskip) = 0
         end do
      endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
-           divu(active(ilevel)%igrid(i)+iskip) = 0.0
+           divu(active(ilevel)%igrid(i)+iskip) = 0
         end do
         do i=1,active(ilevel)%ngrid
            d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
-           u=0.0; v=0.0; w=0.0
+           u=0; v=0; w=0
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5*d*(u**2+v**2+w**2)
+           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
@@ -95,18 +95,18 @@ subroutine set_unew(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
         end do
      end do
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         do i=1,reception(icpu,ilevel)%ngrid
-           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
         end do
      endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
-           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
-           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0.0
+           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
         end do
      end if
   end do
@@ -162,7 +162,7 @@ subroutine set_uold(ilevel)
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
-     if(momentum_feedback)then
+     if(momentum_feedback>0)then
         do i=1,active(ilevel)%ngrid
            pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
         end do
@@ -172,11 +172,11 @@ subroutine set_uold(ilevel)
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            d=max(uold(ind_cell,1),smallr)
-           u=0.0; v=0.0; w=0.0
+           u=0; v=0; w=0
            if(ndim>0)u=uold(ind_cell,2)/d
            if(ndim>1)v=uold(ind_cell,3)/d
            if(ndim>2)w=uold(ind_cell,4)/d
-           e_kin=0.5*d*(u**2+v**2+w**2)
+           e_kin=0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               e_kin=e_kin+uold(ind_cell,ndim+2+irad)
@@ -186,7 +186,7 @@ subroutine set_uold(ilevel)
            e_prim=enew(ind_cell)
            ! Note: here divu=-div.u*dt
            div=abs(divu(ind_cell))*dx/dtnew(ilevel)
-           e_trunc=beta_fix*d*max(div,3.0*hexp*dx)**2
+           e_trunc=beta_fix*d*max(div,3.0d0*hexp*dx)**2
            if(e_cons<e_trunc)then
               uold(ind_cell,ndim+2)=e_prim+e_kin
            end if
@@ -224,14 +224,14 @@ subroutine add_gravity_source_terms(ilevel)
      do i=1,active(ilevel)%ngrid
         ind_cell=active(ilevel)%igrid(i)+iskip
         d=max(unew(ind_cell,1),smallr)
-        u=0.0; v=0.0; w=0.0
+        u=0; v=0; w=0
         if(ndim>0)u=unew(ind_cell,2)/d
         if(ndim>1)v=unew(ind_cell,3)/d
         if(ndim>2)w=unew(ind_cell,4)/d
-        e_kin=0.5*d*(u**2+v**2+w**2)
+        e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,ndim+2)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
-        fact=d_old/d*0.5*dtnew(ilevel)
+        fact=d_old/d*0.5d0*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
            unew(ind_cell,2)=d*u
@@ -244,7 +244,7 @@ subroutine add_gravity_source_terms(ilevel)
            w=w+f(ind_cell,3)*fact
            unew(ind_cell,4)=d*w
         endif
-        e_kin=0.5*d*(u**2+v**2+w**2)
+        e_kin=0.5d0*d*(u**2+v**2+w**2)
         unew(ind_cell,ndim+2)=e_prim+e_kin
      end do
   end do
@@ -368,11 +368,11 @@ subroutine add_pdv_source_terms(ilevel)
            do i=1,ngrid
               ! Compute old thermal energy
               d=max(uold(ind_cell(i),1),smallr)
-              u=0.0; v=0.0; w=0.0
+              u=0; v=0; w=0
               if(ndim>0)u=uold(ind_cell(i),2)/d
               if(ndim>1)v=uold(ind_cell(i),3)/d
               if(ndim>2)w=uold(ind_cell(i),4)/d
-              eold=uold(ind_cell(i),ndim+2)-0.5*d*(u**2+v**2+w**2)
+              eold=uold(ind_cell(i),ndim+2)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
               do irad=1,nener
                  eold=eold-uold(ind_cell(i),ndim+2+irad)
@@ -411,11 +411,11 @@ subroutine add_pdv_source_terms(ilevel)
            ind_cell1=active(ilevel)%igrid(i)+iskip
            ! Compute old thermal energy
            d=max(uold(ind_cell1,1),smallr)
-           u=0.0; v=0.0; w=0.0
+           u=0; v=0; w=0
            if(ndim>0)u=uold(ind_cell1,2)/d
            if(ndim>1)v=uold(ind_cell1,3)/d
            if(ndim>2)w=uold(ind_cell1,4)/d
-           eold=uold(ind_cell1,ndim+2)-0.5*d*(u**2+v**2+w**2)
+           eold=uold(ind_cell1,ndim+2)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
               eold=eold-uold(ind_cell1,ndim+2+irad)
@@ -487,12 +487,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,scale,oneontwotondim
 
-  oneontwotondim = 1.d0/dble(twotondim)
+  oneontwotondim = 1d0/dble(twotondim)
 
   ! Mesh spacing in that level
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  dx=0.5D0**ilevel*scale
+  dx=0.5d0**ilevel*scale
 
   ! Integer constants
   i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
@@ -592,7 +592,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            end do
         end if
         ! Gather stellar momentum
-        if(momentum_feedback)then
+        if(momentum_feedback>0)then
            do i=1,nexist
               ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
            end do

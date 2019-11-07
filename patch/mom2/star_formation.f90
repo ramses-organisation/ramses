@@ -9,9 +9,11 @@ subroutine star_formation(ilevel)
   use poisson_commons
   use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
   use random
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  include 'mpif.h'
+  integer::info,info2,dummy_io
+  integer,parameter::tag=1120
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -29,37 +31,36 @@ subroutine star_formation(ilevel)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,irad,ngrid,icpu,index_star,ndebris_tot,ilun
-  integer ::igrid,ix,iy,iz,ind,i,j,n,iskip,istar,inew,nx_loc,idim
-  integer ::ntot,ntot_all,info,nstar_corrected,ncell
-  logical ::ok_free,ok_all
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
+  integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
+  integer ::ntot,ntot_all,nstar_corrected
+  logical ::ok_free
   real(dp)::d,x,y,z,u,v,w,e,tg,zg
-  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb,zeta
-  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,tdec,uvar
-  real(dp)::ul,ur,fl,fr,trgv,alpha0
-  real(dp)::sigma2,sigma2_comp,sigma2_sole,lapld,flong,ftot,pcomp
-  real(dp)::divv,divv2,curlv,curlva,curlvb,curlvc,curlv2
+  real(dp)::mstar,dstar,tstar,nISM,nCOM,phi_t,phi_x,theta,sigs,scrit,b_turb
+  real(dp)::T2,nH,T_poly,cs2,cs2_poly,trel,t_dyn,t_ff,uvar
+  real(dp)::alpha0
+  real(dp)::sigma2
   real(dp)::birth_epoch,factG,M2
   real(kind=8)::mlost,mtot,mlost_all,mtot_all
-  real(kind=8)::RandNum,GaussNum,PoissMean
+  real(kind=8)::PoissMean
   real(dp),parameter::pi=0.5*twopi
-  integer,parameter::tag=1120
-  integer::dummy_io,info2
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
-  real(dp)::mdebris
-  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+  real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-  integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell2,nstar
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
-  integer ,dimension(1:nvector),save::list_debris,ind_debris
-  integer ,dimension(1:nvector,0:twondim)::ind_nbor
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.,ok_true=.true.
+  logical ,dimension(1:nvector),save::ok,ok_new=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
   logical::file_exist
+#ifdef SOLVERmhd
+  real(dp)::bx1,bx2,by1,by2,bz1,bz2,A,B,C,emag,beta,fbeta
+#endif
+#if NENER>0
+  integer::irad
+#endif
 
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
@@ -288,6 +289,7 @@ subroutine star_formation(ilevel)
                        ! Multi-ff KM model
                        CASE (1)
                           ! Virial parameter
+<<<<<<< HEAD
                           alpha0  = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           !Romain                          M2 = max(sigma2/cs2,4.0)
                           M2 = max(sigma2/cs2,1.0)
@@ -301,23 +303,35 @@ subroutine star_formation(ilevel)
                           sigs      = log(1.0+(b_turb**2)*(M2))
                           scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
                           sfr_ff(i) = (1.0/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+=======
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          M2        = max(sigma2/cs2,1.0)
+                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
+                          b_turb    = 0.4
+                          ! Fudge for alpha dependence (KM 2005).
+                          phi_x     = 1.12
+                          ! The prefered value for eps_star = 1.0,
+                          ! which represents the theoretical maximum efficiency.
+                          sigs      = log(1.0+(b_turb**2)*(M2))
+                          scrit     = log(((pi**2)/5)*(phi_x**2)*alpha0*(M2))
+                          sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+>>>>>>> d8e32cc20c96907018120574c39bbe839f6ae721
 
                        ! Multi-ff PN model
                        CASE (2)
                           ! Virial parameter
-                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          b_turb = 0.4
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          b_turb    = 0.4
                           ! Best fit values to the Multi-ff PN model (Hydro)
-                          phi_t     = 0.49
+                          phi_t     = 1.0/0.49
                           theta     = 0.97
                           sigs      = log(1.0+(b_turb**2)*(sigma2/cs2))
                           scrit     = log(0.067/(theta**2)*alpha0*(sigma2/cs2))
-                          sfr_ff(i) = (eps_star*phi_t/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
+                          sfr_ff(i) = (eps_star/(2.0*phi_t))*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        ! Virial criterion threshold a la Hopkins
                        CASE (3)
-!                          alpha0    = (5.0*sigma2)/(pi*factG*d*dx_loc**2)
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0       = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           if(alpha0<1.0) then
                              sfr_ff(i) = eps_star
                           else
@@ -331,6 +345,21 @@ subroutine star_formation(ilevel)
                           t_dyn     = dx_loc/(2.0*sqrt(sigma2+cs2))
                           t_ff      = 0.5427*sqrt(1.0/(factG*max(d,smallr)))
                           sfr_ff(i) = eps_star*exp(-1.6*t_ff/t_dyn)
+
+                       CASE (5)
+                          ! Virial parameter
+                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          M2        = max(sigma2/cs2,smallr)
+                          ! Turbulent forcing parameter (Federrath 2008 & 2010)
+                          b_turb    = 0.4
+                          ! Fudge for alpha dependence (KM 2005).
+                          ! phi_x     = 1.12
+                          ! The prefered value for eps_star = 1.0,
+                          ! which represents the theoretical maximum efficiency.
+                          sigs      = log(1.0+(b_turb**2)*(M2))
+                          ! scrit     = log(alpha0*(1.0+(M2*(pi**2)/5.0)*(phi_x**2)))
+                          scrit     = log(alpha0*(1.0+(2*(M2**2)/(1.0+M2))))
+                          sfr_ff(i) = (eps_star/2.0)*exp(3.0/8.0*sigs)*(2.0-erfc((sigs-scrit)/sqrt(2.0*sigs)))
 
                        END SELECT
                  endif

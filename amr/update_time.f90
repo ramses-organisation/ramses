@@ -11,7 +11,7 @@ real(kind=8) function wallclock()
   real(kind=8)       :: tcur
 #endif
   logical,      save :: first_call=.true.
-  real(kind=8), save :: norm, offset=0.
+  real(kind=8), save :: norm, offset=0
   !---------------------------------------------------------------------
   if (first_call) then
 #ifdef WITHOUTMPI
@@ -52,7 +52,7 @@ subroutine findit (label)
   ntimer = ntimer+1
   itimer = ntimer
   labels(itimer) = label
-  time(itimer) = 0.
+  time(itimer) = 0
 end subroutine
 end module
 !=======================================================================
@@ -184,7 +184,7 @@ subroutine reset_timer
 
 !-----------------------------------------------------------------------
    do itimer = 1,ntimer
-      time(itimer)=0.0
+      time(itimer)=0
    end do
 end subroutine
 !=======================================================================
@@ -297,7 +297,7 @@ subroutine update_time(ilevel)
            write(*,*)'Total elapsed time:',ttend-ttstart
 #endif
         endif
-        call clean_stop
+        call clean_end
      end if
 
   end if
@@ -348,8 +348,8 @@ subroutine update_time(ilevel)
      end do
 #endif
   else
-     aexp = 1.0
-     hexp = 0.0
+     aexp = 1
+     hexp = 0
      texp = t
   end if
 
@@ -363,194 +363,6 @@ subroutine update_time(ilevel)
 
 end subroutine update_time
 
-subroutine clean_stop
-  use amr_commons
-  use poisson_commons
-  use pm_commons
-  use mpi_mod
-  implicit none
-#ifndef WITHOUTMPI
-  integer::info
-#endif
-  integer :: ilevel
-  character(LEN=80)::str
-
-  call output_timer(.false., str)
-
-#ifndef WITHOUTMPI
-  call MPI_FINALIZE(info)
-#endif
-
-  ! allocations in read_params.f90
-  if(allocated(remap_pscalar)) deallocate(remap_pscalar)
-
-
-  ! allocations in init_amr.f90
-  if(allocated(bound_key)) deallocate(bound_key)
-  if(allocated(bound_key2)) deallocate(bound_key2)
-  if(allocated(headl)) deallocate(headl)
-  if(allocated(taill)) deallocate(taill)
-  if(allocated(numbl)) deallocate(numbl)
-  if(allocated(numbtot)) deallocate(numbtot)
-  if(allocated(headb)) deallocate(headb)
-  if(allocated(tailb)) deallocate(tailb)
-  if(allocated(numbb)) deallocate(numbb)
-  if(allocated(boundary)) deallocate(boundary)
-
-  ! communicators
-  if(allocated(active))then
-     do ilevel=1,nlevelmax
-        ! virtual_boundaries.f90
-        ! TODO: cleaner solution (fortran 2003): s/pointer/allocatable/
-        if(active(ilevel)%ngrid>0) deallocate(active(ilevel)%igrid)
-     enddo
-     deallocate(active)
-  endif
-  if(allocated(emission)) deallocate(emission)
-  if(allocated(reception)) deallocate(reception)
-  !
-  if(allocated(lookup_mg)) deallocate(lookup_mg)
-  !
-  if(allocated(father)) deallocate(father)
-  if(allocated(nbor)) deallocate(nbor)
-  if(allocated(next)) deallocate(next)
-  if(allocated(prev)) deallocate(prev)
-  if(pic)then
-     if(allocated(headp)) deallocate(headp)
-     if(allocated(tailp)) deallocate(tailp)
-     if(allocated(numbp)) deallocate(numbp)
-  endif
-  if(allocated(xg)) deallocate(xg)
-  ! amr cell-based arrays
-  if(allocated(flag1)) deallocate(flag1)
-  if(allocated(flag2)) deallocate(flag2)
-  if(allocated(son)) deallocate(son)
-  ! mpi cell-based arrays
-  if(allocated(cpu_map)) deallocate(cpu_map)
-  if(allocated(cpu_map2)) deallocate(cpu_map2)
-  if(allocated(hilbert_key)) deallocate(hilbert_key)
-
-
-  ! allocations in init_poisson.f90
-  if(allocated(safe_mode)) deallocate(safe_mode)
-  if(allocated(active_mg)) deallocate(active_mg)
-  if(allocated(emission_mg)) deallocate(emission_mg)
-  ! cell-centred variables
-  if(allocated(rho)) deallocate(rho)
-  if(allocated(phi)) deallocate(phi)
-  if(allocated(phi_old)) deallocate(phi_old)
-  if(allocated(f)) deallocate(f)
-
-
-  ! allocations in init_time.f90
-  if(allocated(aexp_frw)) deallocate(aexp_frw)
-  if(allocated(hexp_frw)) deallocate(hexp_frw)
-  if(allocated(tau_frw)) deallocate(tau_frw)
-  if(allocated(t_frw)) deallocate(t_frw)
-
-
-  ! init_part.f90 - in general, BIG deallocations
-  if(allocated(idp)) deallocate(idp)
-  if(allocated(nextp)) deallocate(nextp)
-  if(allocated(prevp)) deallocate(prevp)
-  if(allocated(levelp)) deallocate(levelp)
-  if(allocated(mp)) deallocate(mp)
-  if(allocated(vp)) deallocate(vp)
-  if(allocated(xp)) deallocate(xp)
-
-  stop
-end subroutine clean_stop
-
-subroutine writemem(usedmem)
-  real(kind=4)::usedmem
-
-  usedmem=real(usedmem)*4096
-
-  if(usedmem>1024.**4.)then
-     write(*,999)usedmem/1024.**4.
-  else if (usedmem>1024.**3.) then
-     write(*,998)usedmem/1024.**3.
-  else if (usedmem>1024.**2.) then
-     write(*,997)usedmem/1024.**2.
-  else if (usedmem>1024.) then
-     write(*,996)usedmem/1024.
-  endif
-
-996 format(' Used memory:',F9.1,' kB')
-997 format(' Used memory:',F9.1,' MB')
-998 format(' Used memory:',F9.3,' GB')
-999 format(' Used memory:',F9.3,' TB')
-
-end subroutine writemem
-
-subroutine getmem(outmem)
-  use amr_commons,only:myid
-#ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE
-  use amr_commons,only:ncpu
-#endif
-  use mpi_mod
-  implicit none
-#ifndef WITHOUTMPI
-  integer::dummy_io,info2
-#endif
-  real(kind=4)::outmem
-  character(len=300) :: dir, dir2, file
-  integer::read_status
-  integer,parameter::tag=1134
-  integer::nmem,ind,j
-  logical::file_exists
-
-  file='/proc/self/stat'
-#ifndef WITHOUTMPI
-  if(IOGROUPSIZE>0) then
-     if (mod(myid-1,IOGROUPSIZE)/=0) then
-        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-     end if
-  endif
-#endif
-
-  inquire(file=file, exist=file_exists)
-  if (file_exists) then
-     open(unit=12,file=file,form='formatted')
-     read(12,'(A300)',IOSTAT=read_status)dir
-     close(12)
-  else
-     read_status=-1000
-  endif
-
-  ! Send the token
-#ifndef WITHOUTMPI
-  if(IOGROUPSIZE>0) then
-     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-        dummy_io=1
-        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-             & MPI_COMM_WORLD,info2)
-     end if
-  endif
-#endif
-
-
-  if (read_status < 0)then
-     outmem=0.
-     if (myid==1 .and. read_status .ne. -1000)write(*,*)'Problem in checking free memory'
-  else
-     ind=300
-     j=0
-     do while (j<23)
-        ind=index(dir,' ')
-        dir2=dir(ind+1:300)
-        j=j+1
-        dir=dir2
-     end do
-     ind=index(dir,' ')
-     dir2=dir(1:ind)
-     read(dir2,'(I12)')nmem
-     outmem=real(nmem,kind=4)
-  end if
-
-end subroutine getmem
 !------------------------------------------------------------------------
 SUBROUTINE getProperTime(tau,tproper)
 ! Calculate proper time tproper corresponding to conformal time tau (both
@@ -560,7 +372,7 @@ SUBROUTINE getProperTime(tau,tproper)
   implicit none
   real(dp)::tau, tproper
   integer::i
-  if(.not. cosmo .or. tau .eq. 0.d0) then ! this might happen quite often
+  if(.not. cosmo .or. tau .eq. 0d0) then ! this might happen quite often
      tproper = tau
      return
   endif
@@ -578,16 +390,16 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
 !------------------------------------------------------------------------
   use amr_commons
   use pm_commons
+  use constants,only: Gyr2sec
   implicit none
   real(dp):: t_birth_proper, age
-  real(dp), parameter:: yr = 3.15569d+07
   real(dp),save:: scale_t_Gyr
   logical,save::scale_init=.false.
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
   if( .not. scale_init) then
      ! The timescale has not been initialized
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-     scale_t_Gyr = (scale_t/aexp**2)/yr/1.e9
+     scale_t_Gyr = (scale_t/aexp**2)/Gyr2sec
      scale_init=.true.
   endif
   age = (texp - t_birth_proper) * scale_t_Gyr

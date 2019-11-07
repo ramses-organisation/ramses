@@ -104,7 +104,7 @@ subroutine update_time(ilevel)
            write(*,*)'Total elapsed time:',ttend-ttstart
 #endif
         endif
-        call clean_stop
+        call clean_end
      end if
 
   end if
@@ -160,105 +160,6 @@ subroutine update_time(ilevel)
 
 end subroutine update_time
 
-subroutine clean_stop
-  use amr_commons
-  implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  integer::info
-#ifndef WITHOUTMPI
-  call MPI_FINALIZE(info)
-#endif
-  stop
-end subroutine clean_stop
-
-subroutine writemem(usedmem)
-  real::usedmem
-  integer::getpagesize
-
-#ifdef NOSYSTEM
-!  call PXFSYSCONF(_SC_PAGESIZE,ipagesize,ierror)
-  ipagesize=4096
-#else
-!  ipagesize = getpagesize()
-  ipagesize=4096
-#endif
-  usedmem=dble(usedmem)*dble(ipagesize)
-
-  if(usedmem>1024.**3.)then
-     write(*,999)usedmem/1024.**3.
-  else if (usedmem>1024.**2.) then
-     write(*,998)usedmem/1024.**2
-  else if (usedmem>1024.) then
-     write(*,997)usedmem/1024.
-  endif
-
-997 format(' Used memory:',F6.1,' kb')
-998 format(' Used memory:',F6.1,' Mb')
-999 format(' Used memory:',F6.1,' Gb')
-
-end subroutine writemem
-
-subroutine getmem(outmem)
-  use amr_commons,only:myid,IOGROUPSIZE,ncpu
-  implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
-  real::outmem
-  character(len=300) :: dir, dir2,  cmd, file
-  integer::read_status
-  integer,parameter::tag=1118
-  integer::dummy_io,info
-  integer::nmem,ind,j
-
-  file='/proc/self/stat'
-#ifndef WITHOUTMPI
-  if(IOGROUPSIZE>0) then
-     if (mod(myid-1,IOGROUPSIZE)/=0) then
-        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
-     end if
-  endif
-#endif
-
-  open(unit=1,file=file,form='formatted')
-  read(1,'(A300)',IOSTAT=read_status)dir
-  close(1)
-
-  ! Send the token
-#ifndef WITHOUTMPI
-  if(IOGROUPSIZE>0) then
-     if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-        dummy_io=1
-        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-             & MPI_COMM_WORLD,info)
-     end if
-  endif
-#endif
-
-
-  if (read_status < 0)then
-     outmem=dble(0.)
-     if (myid==1)write(*,*)'Problem in checking free memory'
-  else
-     ind=300
-     j=0
-     do while (j<23)
-        ind=index(dir,' ')
-        dir2=dir(ind+1:300)
-        j=j+1
-        dir=dir2
-     end do
-     ind=index(dir,' ')
-     dir2=dir(1:ind)
-     read(dir2,'(I12)')nmem
-     outmem=dble(nmem)
-  end if
-
-end subroutine getmem
-
 subroutine cmpmem(outmem)
   use amr_commons
   use hydro_commons
@@ -310,7 +211,7 @@ SUBROUTINE getProperTime(tau,tproper)
   implicit none
   real(dp)::tau, tproper
   integer::i
-  if(.not. cosmo .or. tau .eq. 0.d0) then ! this might happen quite often
+  if(.not. cosmo .or. tau .eq. 0d0) then ! this might happen quite often
      tproper = tau
      return
   endif

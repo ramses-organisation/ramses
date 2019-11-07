@@ -30,9 +30,9 @@ module hydro_parameters
   real(dp)::err_grad_d=-1.0                  ! Density gradient
   real(dp)::err_grad_u=-1.0                  ! Velocity gradient
   real(dp)::err_grad_p=-1.0                  ! Pressure gradient
-  real(dp)::floor_d=1.d-10                   ! Density floor
-  real(dp)::floor_u=1.d-10                   ! Velocity floor
-  real(dp)::floor_p=1.d-10                   ! Pressure floor
+  real(dp)::floor_d=1d-10                   ! Density floor
+  real(dp)::floor_u=1d-10                   ! Velocity floor
+  real(dp)::floor_p=1d-10                   ! Pressure floor
   real(dp)::mass_sph=0.0D0                   ! mass_sph
 
 
@@ -50,8 +50,8 @@ module hydro_parameters
   real(dp)::gamma=1.4d0
   real(dp)::courant_factor=0.5d0
   real(dp)::difmag=0.0d0
-  real(dp)::smallc=1.d-10
-  real(dp)::smallr=1.d-10
+  real(dp)::smallc=1d-10
+  real(dp)::smallr=1d-10
   real(dp)::scaleL=1.0
   real(dp)::scaleT=1.0
   real(dp)::scaleM=1.0
@@ -63,7 +63,7 @@ module hydro_parameters
   integer ::interpol_type=1
 
   !parameter for the equation of state
-  real(dp) :: f_rho_ad = 1.d0
+  real(dp) :: f_rho_ad = 1d0
   real(dp) :: rho_ad
   real(dp) :: temp
 

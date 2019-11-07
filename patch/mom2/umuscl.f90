@@ -168,10 +168,6 @@ subroutine unsplit(uin,pin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
     call consup(uin,flux,divu,dt,ngrid)
   endif
 
-  !if(momentum_feedback)then
-  !   call stellar_momentum(uin,pin,flux,dx,dy,dz,dt,ngrid)
-  !endif
-
 end subroutine unsplit
 !###########################################################
 !###########################################################
@@ -191,16 +187,21 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
-  ! Local variables
-  integer ::i, j, k, l, n
+   ! Local variables
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, ip, irad
+  integer ::ir, iu, ip
   real(dp)::dtdx
-  real(dp)::r, u, p, a
-  real(dp)::drx, dux, dpx, dax
-  real(dp)::sr0, su0, sp0, sa0
+  real(dp)::r, u, p
+  real(dp)::drx, dux, dpx
+  real(dp)::sr0, su0, sp0
 #if NENER>0
+  integer::irad
   real(dp),dimension(1:nener)::e, dex, se0
+#endif
+#if NVAR > NDIM + 2 + NENER
+  integer::n
+  real(dp)::a, dax, sa0
 #endif
 
   dtdx = dt/dx
@@ -316,16 +317,21 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, ip, irad
+  integer ::ir, iu, iv, ip
   real(dp)::dtdx, dtdy
-  real(dp)::r, u, v, p, a
-  real(dp)::drx, dux, dvx, dpx, dax
-  real(dp)::dry, duy, dvy, dpy, day
-  real(dp)::sr0, su0, sv0, sp0, sa0
+  real(dp)::r, u, v, p
+  real(dp)::drx, dux, dvx, dpx
+  real(dp)::dry, duy, dvy, dpy
+  real(dp)::sr0, su0, sv0, sp0
 #if NENER>0
+  integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+  real(dp)::a, dax, day, sa0
 #endif
 
   dtdx = dt/dx
@@ -489,17 +495,22 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  integer ::i, j, k, l, n
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, iw, ip, irad
+  integer ::ir, iu, iv, iw, ip
   real(dp)::dtdx, dtdy, dtdz
-  real(dp)::r, u, v, w, p, a
-  real(dp)::drx, dux, dvx, dwx, dpx, dax
-  real(dp)::dry, duy, dvy, dwy, dpy, day
-  real(dp)::drz, duz, dvz, dwz, dpz, daz
-  real(dp)::sr0, su0, sv0, sw0, sp0, sa0
+  real(dp)::r, u, v, w, p
+  real(dp)::drx, dux, dvx, dwx, dpx
+  real(dp)::dry, duy, dvy, dwy, dpy
+  real(dp)::drz, duz, dvz, dwz, dpz
+  real(dp)::sr0, su0, sv0, sw0, sp0
 #if NENER>0
+  integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+#endif
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+  real(dp)::a, dax, day, daz, sa0
 #endif
 
   dtdx = dt/dx
@@ -721,11 +732,14 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
 
   ! local variables
-  integer ::i, j, k, n, l, idim, xdim
+  integer ::i, j, k, l, xdim
   real(dp)::entho
   real(dp),dimension(1:nvector),save::snleft,snright
   real(dp),dimension(1:nvector,1:nvar),save::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1),save::fgdnv
+#if NVAR > NDIM + 2
+  integer ::n
+#endif
 
   entho=one/(gamma-one)
   xdim=ln-1
@@ -879,9 +893,15 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
-  integer ::i, j, k, l, n, idim, irad
+  integer ::i, j, k, l
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
+#if NVAR > NDIM + 2 + NENER
+  integer ::n
+#endif
+#if NENER>0
+  integer ::irad
+#endif
 
   smalle = smallc**2/gamma/(gamma-one)
   dtxhalf = dt*half
@@ -983,11 +1003,18 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+#if NDIM==2
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+#endif
+#if NDIM==3
   real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
   real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::vmin,vmax,dfx,dfy,dfz,dff
+  real(dp)::dfz
+#endif
+#if NDIM>1
+  real(dp)::vmin,vmax,dfx,dfy,dff
+#endif
   integer::ilo,ihi,jlo,jhi,klo,khi
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -1047,7 +1074,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     end do
                  else
                     do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0.0
+                       dq(l,i,j,k,n,1) = 0
                     end do
                  end if
               else if(slope_type==6)then ! unstable
@@ -1055,13 +1082,13 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     do l = 1, ngrid
                        dlft = (q(l,i,j,k,n)-q(l,i-1,j,k,n))
                        drgt = (q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       slop = 0.5*(dlft+drgt)
+                       slop = 0.5d0*(dlft+drgt)
                        dlim = slop
                        dq(l,i,j,k,n,1) = dlim
                     end do
                  else
                     do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0.0
+                       dq(l,i,j,k,n,1) = 0
                     end do
                  end if
               else if(slope_type==7)then ! van Leer
@@ -1071,7 +1098,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
@@ -1178,7 +1205,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                        end if
                  end do
                  ! slopes in second coordinate direction
@@ -1188,7 +1215,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
-                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               end do
@@ -1397,7 +1424,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
-                       dq(l,i,j,k,n,1)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
                  ! slopes in second coordinate direction
@@ -1407,7 +1434,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
-                       dq(l,i,j,k,n,2)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
                  ! slopes in third coordinate direction
@@ -1417,7 +1444,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,3)=zero
                     else
-                       dq(l,i,j,k,n,3)=(2.0*dlft*drgt/(dlft+drgt))
+                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
                     end if
                  end do
               end do

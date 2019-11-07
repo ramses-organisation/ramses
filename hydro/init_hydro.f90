@@ -31,7 +31,7 @@ subroutine init_hydro
   allocate(uold(1:ncell,1:nvar))
   allocate(unew(1:ncell,1:nvar))
   uold=0.0d0; unew=0.0d0
-  if(momentum_feedback)then
+  if(momentum_feedback>0)then
      allocate(pstarold(1:ncell))
      allocate(pstarnew(1:ncell))
      pstarold=0.0d0; pstarnew=0.0d0
@@ -46,7 +46,7 @@ subroutine init_hydro
   ! For a restart, read hydro file
   !--------------------------------
   if(nrestart>0)then
-     ilun=ncpu+myid+10
+     ilun=ncpu+myid+103
      call title(nrestart,nchar)
 
      if(IOGROUPSIZEREP>0)then
@@ -184,7 +184,7 @@ subroutine init_hydro
                     end do
 #endif
                  else
-                    xx(i)=0.
+                    xx(i)=0
                  end if
                     uold(ind_grid(i)+iskip,ndim+2)=xx(i)
                  end do

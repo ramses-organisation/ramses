@@ -6,6 +6,7 @@ subroutine newdt_fine(ilevel)
 #ifdef RT
   use rt_parameters, ONLY: rt_advect, rt_nsubcycle
 #endif
+  use constants, ONLY: pi
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -13,24 +14,17 @@ subroutine newdt_fine(ilevel)
 #endif
   integer::ilevel
   !-----------------------------------------------------------
-  ! This routine compute the time step using 3 constraints:
+  ! This routine compute the time step using 4 constraints:
   ! 1- a Courant-type condition using particle velocity
   ! 2- the gravity free-fall time
   ! 3- 10% maximum variation for aexp
   ! 4- maximum step time for ATON
-  ! 5- if there's sinks, enforce dMsink_overdt*dt < mgas
-  ! This routine also compute the particle kinetic energy.
+  ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
   integer::npart1,ip
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
-#if NDIM==3
-  integer::ilev,isink,levelmin_isink,limiting_sink
-  real(kind=8)::dt_acc_min
-  real(dp)::dt_fact,limiting_dt_fact
-  logical::highest_level
-#endif
   real(dp)::tff,fourpi,threepi2
 #ifdef ATON
   real(dp)::aton_time_step,dt_aton
@@ -42,7 +36,7 @@ subroutine newdt_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  threepi2=3.0d0*ACOS(-1.0d0)**2
+  threepi2=3.0d0*pi**2
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
@@ -50,17 +44,17 @@ subroutine newdt_fine(ilevel)
   ! Maximum time step
   dtnew(ilevel)=boxlen/smallc
   if(poisson.and.gravity_type<=0)then
-     fourpi=4.0d0*ACOS(-1.0d0)
+     fourpi=4.0d0*pi
      if(cosmo)fourpi=1.5d0*omega_m*aexp
      if (sink)then
-        tff=sqrt(threepi2/8./fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
+        tff=sqrt(threepi2/8/fourpi/(rho_max(ilevel)+rho_sink_tff(ilevel)))
      else
-        tff=sqrt(threepi2/8./fourpi/rho_max(ilevel))
+        tff=sqrt(threepi2/8/fourpi/(rho_max(ilevel)+smallr))
      end if
      dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*tff)
   end if
   if(cosmo)then
-     dtnew(ilevel)=MIN(dtnew(ilevel),0.1/hexp)
+     dtnew(ilevel)=MIN(dtnew(ilevel),0.1d0/hexp)
   end if
 
 #ifdef ATON
@@ -77,8 +71,8 @@ subroutine newdt_fine(ilevel)
   ! Maximum time step for radiative transfer
   if(rt_advect)then
      call get_rt_courant_coarse(dt_rt)
-     dtnew(ilevel) = 0.99999 * &
-          MIN(dtnew(ilevel), dt_rt/2.0**(ilevel-levelmin) * rt_nsubcycle)
+     dtnew(ilevel) = 0.99999d0 * &
+          MIN(dtnew(ilevel), dt_rt/2**(ilevel-levelmin) * rt_nsubcycle)
      if(static) RETURN
   endif
 #endif
@@ -86,7 +80,7 @@ subroutine newdt_fine(ilevel)
   if(pic) then
 
      dt_all=dtnew(ilevel); dt_loc=dt_all
-     ekin_all=0.0; ekin_loc=0.0
+     ekin_all=0; ekin_loc=0
 
      ! Compute maximum time step on active region
      if(numbl(myid,ilevel)>0)then
@@ -129,48 +123,6 @@ subroutine newdt_fine(ilevel)
      ekin_tot=ekin_tot+ekin_all
      dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-#if NDIM==3
-     ! timestep restrictions due to sink
-     if(sink .and. nsink>0) then
-        ! determine if on highest active level...
-        if (ilevel==nlevelmax)then
-           highest_level=.true.
-        else if (numbtot(1,ilevel+1)==0)then
-           highest_level=.true.
-        else
-           highest_level=.false.
-        end if
-
-        if (highest_level)then
-           call compute_accretion_rate(.false.)
-           ! timestep due to sink accretion
-           dt_acc_min=huge(0._dp)
-           do isink=1,nsink
-
-              levelmin_isink=nlevelmax
-              do ilev=nlevelmax,levelmin,-1
-                 if (level_sink(isink,ilev))levelmin_isink=ilev
-              end do
-
-              dt_fact=1.
-              do ilev=levelmin_isink,ilevel-1
-                 dt_fact=dt_fact*nsubcycle(ilev)
-              end do
-
-              if (dt_acc(isink)/dt_fact<dt_acc_min)then
-                 dt_acc_min=dt_acc(isink)/dt_fact
-                 limiting_sink=isink
-                 limiting_dt_fact=dt_fact
-              end if
-
-           end do
-           if (myid==1 .and. dt_acc_min<dtnew(ilevel))then
-              write(*,'(A10,2X,F10.6,2X,A20,2X,I10)')'dt_acc/dt',dt_acc_min/dtnew(ilevel),'limited by sink:',limiting_sink
-           end if
-           dtnew(ilevel)=MIN(dtnew(ilevel),dt_acc_min)
-        end if
-     end if
-#endif
   end if
 
   if(hydro)call courant_fine(ilevel)

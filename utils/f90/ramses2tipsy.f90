@@ -30,8 +30,8 @@ program ramses2tipsy
   integer::ix,iy,iz,ndom,impi,bit_length,maxdom,ii,jj,kk
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight,msph=0.d0
-  real(KIND=8)::xmin=0,xmax=-1,ymin=0,ymax=-1,zmin=0,zmax=-1,mdm=0.d0,mres=0.d0
+  real(KIND=8)::dkey,order_min,dmax,ddx,dxline,ddy,dex,dey,weight,msph=0d0
+  real(KIND=8)::xmin=0,xmax=-1,ymin=0,ymax=-1,zmin=0,zmax=-1,mdm=0d0,mres=0d0
 
   integer::ilevel,ncpu_read,three
   real(kind=8)deltax
@@ -48,7 +48,7 @@ program ramses2tipsy
 
   integer::ndummypart,nmin=0,nmax=0,nold,nnold,ndummyold
   integer::partcount,respart,denspartcount
-  real(KIND=8)::dummy,partmass,volume,facdens=0.d0,averdens
+  real(KIND=8)::dummy,partmass,volume,facdens=0d0,averdens
   integer::delm=0,levelsel
 
   integer::npart,nstar_tot,nsink,npart_tot,nsink_tot
@@ -335,7 +335,7 @@ program ramses2tipsy
      ! Compute Friedman model look up table
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
-          & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
+          & 1d-6,1d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
 
      ! Find neighboring expansion factors
      i=1
@@ -383,14 +383,14 @@ program ramses2tipsy
      end do
 
      mdm=msph ! IN THE OLD VERSION: mdm*omega_b/(omega_m-omega_b)
-     if(mres.ne.0.d0)mdm=max(mdm,mres)
+     if(mres.ne.0d0)mdm=max(mdm,mres)
      if(mdm.eq.0)then
         write(*,*)'Use option -mre, please! STOP!'
         stop
      end if
   else
      mdm=msph ! IN THE OLD VERSION: 1d0/(2d0**(3d0*dble(lmax)))
-     if(mres.ne.0.d0)mdm=max(mdm,mres)
+     if(mres.ne.0d0)mdm=max(mdm,mres)
      if(mdm.eq.0)then
         write(*,*)'Use option -mre, please! STOP!'
         stop
@@ -526,7 +526,7 @@ program ramses2tipsy
 
      !VELOCITY
 
-     dummy=0.d0
+     dummy=0d0
 
      !V_X
      if(hydrok)then
@@ -609,10 +609,10 @@ program ramses2tipsy
            if(varp(i,1)>=facdens*averdens)write(66,*)varp(i,1)
         end do
         do i=1,nmax-nmin+1
-           if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-           if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-           if(varp(i,1)>=facdens*averdens.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,3)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
-           if(varp(i,1)>=facdens*averdens.and.(mhd))write(66,*)varp(i,11)/(gamma-1.d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.ndim==3.and.(.not.mhd))write(66,*)varp(i,5)/(gamma-1d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.ndim==2.and.(.not.mhd))write(66,*)varp(i,4)/(gamma-1d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.ndim==1.and.(.not.mhd))write(66,*)varp(i,3)/(gamma-1d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
+           if(varp(i,1)>=facdens*averdens.and.(mhd))write(66,*)varp(i,11)/(gamma-1d0)/varp(i,1) !THIS IS P/RHO=(k_b*T)/(mu*m_h)
         end do
         dummy=boxlen/2**lmax !THIS IS A DUMMY VALUE: IT CORRESPONDS TO THE CELL SIZE AT THE MAXIMUM LEVEL.
         do i=1,nmax-nmin+1
@@ -632,7 +632,7 @@ program ramses2tipsy
               if(fampart(i)==2)write(66,*)metout(i)
            end do
         else
-           dummy=0.d0
+           dummy=0d0
            do i=1,nstar_actual
               write(66,*)dummy
            end do
@@ -642,7 +642,7 @@ program ramses2tipsy
         end do
      end if
 
-     dummy=1.d0
+     dummy=1d0
      do i=1,npart_actual+denspartcount
         write(66,*)dummy
      end do
@@ -750,7 +750,7 @@ program ramses2tipsy
 
      !VELOCITY
 
-     dummy=0.d0
+     dummy=0d0
 
      !V_X
      if(partok)then
@@ -816,7 +816,7 @@ program ramses2tipsy
               if(fampart(i)==2)write(66,*)metout(i)
            end do
         else
-           dummy=0.d0
+           dummy=0d0
            do i=1,nstar_actual
               write(66,*)dummy
            end do
@@ -826,7 +826,7 @@ program ramses2tipsy
         end do
      end if
 
-     dummy=1.d0
+     dummy=1d0
      do i=1,npart_actual
         write(66,*)dummy
      end do

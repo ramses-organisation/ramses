@@ -27,161 +27,154 @@ subroutine dump_all
   if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
   output_done=.true.
 
-  if(IOGROUPSIZEREP>0)call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+  if(IOGROUPSIZEREP>0) then
+     call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+     filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
+  else
+     filedir='output_'//TRIM(nchar)//'/'
+  endif
 
-  if(ndim>1)then
+  call create_output_dirs(filedir)
 
-     if(IOGROUPSIZEREP>0) then
-        filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
-     else
-        filedir='output_'//TRIM(nchar)//'/'
-     endif
-
-     call create_output_dirs(filedir)
-
-     if(myid==1.and.print_when_io) write(*,*)'Start backup header'
-     ! Output header: must be called by each process !
-     filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
-     call output_header(filename)
+  if(myid==1.and.print_when_io) write(*,*)'Start backup header'
+  ! Output header: must be called by each process !
+  filename=TRIM(filedir)//'header_'//TRIM(nchar)//'.txt'
+  call output_header(filename)
 #ifndef WITHOUTMPI
-     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-     if(myid==1.and.print_when_io) write(*,*)'End backup header'
+  if(myid==1.and.print_when_io) write(*,*)'End backup header'
 
-     if(myid==1.and.print_when_io) write(*,*)'Start backup info etc.'
-     ! Only master process
-     if(myid==1)then
-        filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
-        call output_info(filename)
-        filename=TRIM(filedir)//'makefile.txt'
-        call output_makefile(filename)
-        filename=TRIM(filedir)//'patches.txt'
-        call output_patch(filename)
-        if(cooling .and. .not. neq_chem)then
-           filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
-           call output_cool(filename)
-        end if
-        if(sink)then
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.info'
-           call output_sink(filename)
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
-           call output_sink_csv(filename)
-        endif
-        ! Copy namelist file to output directory
-        filename=TRIM(filedir)//'namelist.txt'
-        OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
-        OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
-        DO
-           READ(10, IOSTAT=IERR)nml_char
-           IF (IERR.NE.0) EXIT
-           WRITE(11)nml_char
-        END DO
-        CLOSE(11)
-        CLOSE(10)
-        ! Copy compilation details to output directory
-        filename=TRIM(filedir)//'compilation.txt'
-        OPEN(UNIT=11, FILE=filename, FORM='formatted')
-        write(11,'(" compile date = ",A)')TRIM(builddate)
-        write(11,'(" patch dir    = ",A)')TRIM(patchdir)
-        write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
-        write(11,'(" local branch = ",A)')TRIM(gitbranch)
-        write(11,'(" last commit  = ",A)')TRIM(githash)
-        CLOSE(11)
-     endif
-#ifndef WITHOUTMPI
-     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-     if(myid==1.and.print_when_io) write(*,*)'End backup info etc.'
-
-     if(myid==1.and.print_when_io) write(*,*)'Start backup amr'
-     filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
-     call backup_amr(filename)
-#ifndef WITHOUTMPI
-     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-     if(myid==1.and.print_when_io) write(*,*)'End backup amr'
-
-     if(hydro)then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup hydro'
-        filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
-        filename_desc = trim(filedir)//'hydro_file_descriptor.txt'
-        call backup_hydro(filename, filename_desc)
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup hydro'
+  if(myid==1.and.print_when_io) write(*,*)'Start backup info etc.'
+  ! Only master process
+  if(myid==1)then
+     filename=TRIM(filedir)//'info_'//TRIM(nchar)//'.txt'
+     call output_info(filename)
+     filename=TRIM(filedir)//'makefile.txt'
+     call output_makefile(filename)
+     filename=TRIM(filedir)//'patches.txt'
+     call output_patch(filename)
+     if(cooling .and. .not. neq_chem)then
+        filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
+        call output_cool(filename)
      end if
+     if(sink)then
+        filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
+        call output_sink_csv(filename)
+     endif
+     ! Copy namelist file to output directory
+     filename=TRIM(filedir)//'namelist.txt'
+     OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
+     OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
+     DO
+        READ(10, IOSTAT=IERR)nml_char
+        IF (IERR.NE.0) EXIT
+        WRITE(11)nml_char
+     END DO
+     CLOSE(11)
+     CLOSE(10)
+     ! Copy compilation details to output directory
+     filename=TRIM(filedir)//'compilation.txt'
+     OPEN(UNIT=11, FILE=filename, FORM='formatted')
+     write(11,'(" compile date = ",A)')TRIM(builddate)
+     write(11,'(" patch dir    = ",A)')TRIM(patchdir)
+     write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
+     write(11,'(" local branch = ",A)')TRIM(gitbranch)
+     write(11,'(" last commit  = ",A)')TRIM(githash)
+     CLOSE(11)
+  endif
+#ifndef WITHOUTMPI
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+  if(myid==1.and.print_when_io) write(*,*)'End backup info etc.'
+
+  if(myid==1.and.print_when_io) write(*,*)'Start backup amr'
+  filename=TRIM(filedir)//'amr_'//TRIM(nchar)//'.out'
+  call backup_amr(filename)
+#ifndef WITHOUTMPI
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+  if(myid==1.and.print_when_io) write(*,*)'End backup amr'
+
+  if(hydro)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup hydro'
+     filename=TRIM(filedir)//'hydro_'//TRIM(nchar)//'.out'
+     filename_desc = trim(filedir)//'hydro_file_descriptor.txt'
+     call backup_hydro(filename, filename_desc)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup hydro'
+  end if
 
 #ifdef RT
-     if(rt.or.neq_chem)then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
-        filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
-        filename_desc = trim(filedir) // 'rt_file_descriptor.txt'
-        call rt_backup_hydro(filename, filename_desc)
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup rt'
-     endif
-#endif
-
-     if(pic)then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup part'
-        filename=trim(filedir)//'part_'//trim(nchar)//'.out'
-        filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
-        call backup_part(filename, filename_desc)
-        if(sink)then
-           filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.out'
-           call backup_sink(filename)
-        end if
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup part'
-     end if
-
-     if(poisson)then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup poisson'
-        filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
-        call backup_poisson(filename)
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup poisson'
-     end if
-#ifdef ATON
-     if(aton)then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup rad'
-        filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
-        call backup_radiation(filename)
-        filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
-        call store_radiation(filename)
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup rad'
-     end if
-#endif
-     if (gadget_output) then
-        if(myid==1.and.print_when_io) write(*,*)'Start backup gadget format'
-        filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
-        call savegadget(filename)
-#ifndef WITHOUTMPI
-        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-        if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
-     end if
-
-     if(myid==1.and.print_when_io) write(*,*)'Start timer'
-     ! Output timer: must be called by each process !
-     filename=TRIM(filedir)//'timer_'//TRIM(nchar)//'.txt'
-     call output_timer(.true., filename)
+  if(rt.or.neq_chem)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup rt'
+     filename=TRIM(filedir)//'rt_'//TRIM(nchar)//'.out'
+     filename_desc = trim(filedir) // 'rt_file_descriptor.txt'
+     call rt_backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-     if(myid==1.and.print_when_io) write(*,*)'End output timer'
+     if(myid==1.and.print_when_io) write(*,*)'End backup rt'
+  endif
+#endif
 
+  if(pic)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup part'
+     filename=trim(filedir)//'part_'//trim(nchar)//'.out'
+     filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
+     call backup_part(filename, filename_desc)
+     if(sink)then
+        filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
+        call output_sink_csv(filename)
+     end if
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup part'
   end if
+
+  if(poisson)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup poisson'
+     filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
+     call backup_poisson(filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup poisson'
+  end if
+#ifdef ATON
+  if(aton)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup rad'
+     filename=TRIM(filedir)//'rad_'//TRIM(nchar)//'.out'
+     call backup_radiation(filename)
+     filename=TRIM(filedir)//'radgpu_'//TRIM(nchar)//'.out'
+     call store_radiation(filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup rad'
+  end if
+#endif
+  if (gadget_output) then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup gadget format'
+     filename=TRIM(filedir)//'gsnapshot_'//TRIM(nchar)
+     call savegadget(filename)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
+  end if
+
+  if(myid==1.and.print_when_io) write(*,*)'Start timer'
+  ! Output timer: must be called by each process !
+  filename=TRIM(filedir)//'timer_'//TRIM(nchar)//'.txt'
+  call output_timer(.true., filename)
+#ifndef WITHOUTMPI
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+  if(myid==1.and.print_when_io) write(*,*)'End output timer'
 
 end subroutine dump_all
 !#########################################################################
@@ -229,7 +222,7 @@ subroutine backup_amr(filename)
   !-----------------------------------
   ! Output amr grid in file
   !-----------------------------------
-  ilun=myid+10
+  ilun=myid+103
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
 
@@ -592,14 +585,14 @@ subroutine savegadget(filename)
 #endif
 
   allocate(pos(ndim, npart), vel(ndim, npart), ids(npart))
-  gadgetvfact = 100.0 * boxlen_ini / aexp / SQRT(aexp)
+  gadgetvfact = 100 * boxlen_ini / aexp / SQRT(aexp)
 
   header%npart = 0
   header%npart(2) = npart
   header%mass = 0
-  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1.d10
+  header%mass(2) = omega_m*RHOcrit*(boxlen_ini)**3/npart_tot/1d10
   header%time = aexp
-  header%redshift = 1.d0/aexp-1.d0
+  header%redshift = 1d0/aexp-1d0
   header%flag_sfr = 0
   header%nparttotal = 0
 #ifndef LONGINT
@@ -612,7 +605,7 @@ subroutine savegadget(filename)
   header%boxsize = boxlen_ini
   header%omega0 = omega_m
   header%omegalambda = omega_l
-  header%hubbleparam = h0/100.0
+  header%hubbleparam = h0/100
   header%flag_stellarage = 0
   header%flag_metals = 0
   header%totalhighword = 0
@@ -656,10 +649,11 @@ subroutine create_output_dirs(filedir)
   use amr_commons
   implicit none
   character(LEN=80), intent(in):: filedir
-  character(LEN=80)::filecmd
 #ifdef NOSYSTEM
   character(LEN=80)::filedirini
+  integer :: info_sys
 #else
+  character(LEN=80)::filecmd
   integer :: ierr
 #endif
 #ifndef WITHOUTMPI
@@ -667,25 +661,27 @@ subroutine create_output_dirs(filedir)
 #endif
 
 
-  filecmd='mkdir -p '//TRIM(filedir)
 
   if (.not.withoutmkdir) then
+    if (myid==1) then
 #ifdef NOSYSTEM
-    filedirini = filedir(1:13)
-    call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info)
-    call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info)
+      filedirini = filedir(1:13)
+      call PXFMKDIR(TRIM(filedirini),LEN(TRIM(filedirini)),O'755',info_sys)
+      call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info_sys)
 #else
-    ierr=1
-    call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
-    if(ierr.ne.0 .and. ierr.ne.127)then
-      write(*,*) 'Error - Could not create ',trim(filedir),' error code=',ierr
+      filecmd='mkdir -p '//TRIM(filedir)
+      ierr=1
+      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr)
+      if(ierr.ne.0 .and. ierr.ne.127)then
+        write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI
-      call MPI_ABORT(MPI_COMM_WORLD,1,info)
+        call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else
-      stop
+        stop
+#endif
+      endif
 #endif
     endif
-#endif
   endif
 
 

@@ -53,12 +53,12 @@ subroutine add_free(ind_part,np)
 
   do idim=1,ndim
      do j=1,np
-        xp(ind_part(j),idim)=0.0
-        vp(ind_part(j),idim)=0.0
+        xp(ind_part(j),idim)=0
+        vp(ind_part(j),idim)=0
      end do
   end do
   do j=1,np
-     mp(ind_part(j))=0.0
+     mp(ind_part(j))=0
      idp(ind_part(j))=0
      levelp(ind_part(j))=0
      typep(ind_part(j))%family=FAM_UNDEF
@@ -66,11 +66,11 @@ subroutine add_free(ind_part,np)
   end do
   if(star.or.sink)then
      do j=1,np
-        tp(ind_part(j))=0.0
+        tp(ind_part(j))=0
      end do
      if(metal)then
         do j=1,np
-           zp(ind_part(j))=0.0
+           zp(ind_part(j))=0
         end do
      end if
   end if
@@ -115,14 +115,14 @@ subroutine add_free_cond(ind_part,ok,np)
   do idim=1,ndim
      do j=1,np
         if(ok(j))then
-           xp(ind_part(j),idim)=0.0
-           vp(ind_part(j),idim)=0.0
+           xp(ind_part(j),idim)=0
+           vp(ind_part(j),idim)=0
         endif
      end do
   end do
   do j=1,np
      if(ok(j))then
-        mp(ind_part(j))=0.0
+        mp(ind_part(j))=0
         idp(ind_part(j))=0
         levelp(ind_part(j))=0
         typep(ind_part(j))%family = FAM_UNDEF
@@ -132,13 +132,13 @@ subroutine add_free_cond(ind_part,ok,np)
   if(star.or.sink)then
      do j=1,np
         if(ok(j))then
-           tp(ind_part(j))=0.0
+           tp(ind_part(j))=0
         endif
      end do
      if(metal)then
         do j=1,np
            if(ok(j))then
-              zp(ind_part(j))=0.0
+              zp(ind_part(j))=0
            endif
         end do
      end if

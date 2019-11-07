@@ -120,7 +120,7 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
 
          ! Stack cell volume fraction in coarse cell
-         ngpmask=(1d0+f(icell_f_amr,3))/2d0/dtwotondim
+         ngpmask=(1d0+f(icell_f_amr,3))/2/dtwotondim
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
       end do
@@ -580,10 +580,10 @@ subroutine interpolate_and_correct_fine(ifinelevel)
    real(dp), dimension(1:nvector), save               :: corr
 
    ! Local constants
-   a = 1.0D0/4.0D0**ndim
-   b = 3.0D0*a
-   c = 9.0D0*a
-   d = 27.D0*a
+   a = 1d0/4d0**ndim
+   b = 3*a
+   c = 9*a
+   d = 27*a
    icoarselevel=ifinelevel-1
 
    bbb(:)  =(/a ,b ,b ,c ,b ,c ,c ,d/)

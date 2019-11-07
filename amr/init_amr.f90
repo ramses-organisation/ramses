@@ -62,7 +62,7 @@ subroutine init_amr
 
   ! Bisection ordering: compute array boundaries and
   ! allocate arrays if needed
-  nbilevelmax=ceiling(log(dble(ncpu))/log(2.0))
+  nbilevelmax=ceiling(log(dble(ncpu))/log(2.0d0))
   nbinodes=2**(nbilevelmax+1)-1
   nbileafnodes=2**nbilevelmax
   bisec_nres=2**(nlevelmax+1)
@@ -103,12 +103,12 @@ subroutine init_amr
 
     ! Compute minimum and maximum ordering key
     dx_loc=scale
-    x(1,1)=0.5*scale
+    x(1,1)=0.5d0*scale
 #if NDIM>1
-    x(1,2)=0.5*scale
+    x(1,2)=0.5d0*scale
 #endif
 #if NDIM>2
-    x(1,3)=0.5*scale
+    x(1,3)=0.5d0*scale
 #endif
     call cmp_minmaxorder(x,order_min,order_max,dx_loc,1)
     order_all_min=order_min(1)
@@ -261,7 +261,7 @@ subroutine init_amr
     if(nrestart_quad.eq.nrestart) allocate(bound_key_restart(0:ndomain))
 #endif
 
-     ilun=myid+10
+     ilun=myid+103
      call title(nrestart,nchar)
 
      if(IOGROUPSIZEREP>0)then

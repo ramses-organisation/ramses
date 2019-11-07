@@ -74,8 +74,8 @@ program part2birth
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
 
-  read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  read(10,'("ordering type=",A80)')ordering
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -100,7 +100,7 @@ program part2birth
      ! Compute Friedman model look up table
      write(*,*)'Computing Friedman model'
      call friedman(dble(omega_m),dble(omega_l),dble(omega_k), &
-          & 1.d-6,1.d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
+          & 1d-6,1d-3,aexp_frw,hexp_frw,tau_frw,t_frw,n_frw,time_tot)
 
      ! Find neighboring expansion factors
      i=1

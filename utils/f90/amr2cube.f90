@@ -14,7 +14,7 @@ program amr2cube
   integer::ngridmax,nstep_coarse,icpu,ncpu_read
   integer::nhx,nhy,ihx,ihy,ivar1,ivar2
   real::gamma,smallr,smallc,gammah
-  real::boxlen,boxlen2
+  real(kind=8)::boxlen,boxlen2
   real::t,aexp,hexp,t2,aexp2,hexp2
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
@@ -28,7 +28,8 @@ program amr2cube
   integer::ix,iy,iz,ixp1,iyp1,izp1,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
-  real(KIND=8)::dkey,order_min,dmax,dummy
+  real(KIND=4)::dummy
+  real(KIND=8)::dkey,order_min,dmax
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
   real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz
@@ -96,6 +97,7 @@ program amr2cube
   read(10)ngridmax
   read(10)nboundary
   read(10)ngrid_current
+  read(10)boxlen
   close(10)
   twotondim=2**ndim
   xbound=(/dble(nx/2),dble(ny/2),dble(nz/2)/)
@@ -568,7 +570,7 @@ program amr2cube
      write(*,*)'Writing file '//TRIM(nomfich)
      open(unit=20,file=nomfich,form='unformatted')
      dummy=0.0
-     write(20)imax-imin+1,jmax-jmin+1,kmax-kmin+1,dummy,dummy,dummy,dummy,dummy,dummy,dummy,dummy
+     write(20)imax-imin+1,jmax-jmin+1,kmax-kmin+1,real(boxlen*dx,kind=4),dummy,dummy,dummy,dummy,dummy,dummy,dummy
      do iz=kmin,kmax
         write(20)((real(grid(lmax)%cube(ix,iy,iz)),ix=imin,imax),iy=jmin,jmax)
      end do

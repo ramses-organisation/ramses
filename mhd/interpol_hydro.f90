@@ -282,7 +282,28 @@ subroutine upl(ind_cell,ncell)
   end do
   ! End loop over cell centered variables
 
-  ! Update cell centered magnetic field also in redundant array
+  if(momentum_feedback>0)then
+
+     getx(1:ncell)=0.0d0
+     do ind_son=1,twotondim
+        iskip_son=ncoarse+(ind_son-1)*ngridmax
+        do i=1,ncell
+           ind_cell_son(i)=iskip_son+igrid_son(i)
+        end do
+        ! Update average
+        do i=1,ncell
+           getx(i)=getx(i)+pstarold(ind_cell_son(i))
+        end do
+     end do
+
+     ! Scatter result to cells
+     do i=1,ncell
+        pstarold(ind_cell(i))=getx(i)/dble(twotondim)
+     end do
+
+  endif
+
+! Update cell centered magnetic field also in redundant array
 #if NDIM==1
   do i=1,ncell
      uold(ind_cell(i),nvar+2)=uold(ind_cell(i),neul+2)
@@ -813,7 +834,7 @@ subroutine compute_limiter_central(a,w,nn)
      do ind=1,twotondim
         xxc = xc(ind,idim)
         do i=1,nn
-           corner(i)=ac(i,ind)+2.D0*w(i,idim)*xxc
+           corner(i)=ac(i,ind)+2d0*w(i,idim)*xxc
         end do
         do i=1,nn
            ac(i,ind)=corner(i)
