@@ -196,11 +196,9 @@ end subroutine init_refine_2
 subroutine kill_gas_part(ilevel)
   use pm_commons
   use amr_commons
+  use mpi_mod
   implicit none
   integer::ilevel
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !--------------------------------------------------------
   ! This subroutine removes the gas particles
   ! initially present in the gadget1 DICE output
