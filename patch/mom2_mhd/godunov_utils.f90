@@ -27,6 +27,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      uu(k,1)=max(uu(k,1),smallr)
      rho(k)=uu(k,1)
   end do
+  ! Velocity
   do idim = 1,3
      do k = 1, ncell
         uu(k,idim+1) = uu(k,idim+1)/rho(k)
@@ -36,6 +37,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   do k = 1,ncell
      B2(k)=zero
   end do
+  ! Internal energy
   do idim = 1,3
      do k = 1, ncell
         Bc = half*(uu(k,5+idim)+uu(k,nvar+idim))
@@ -300,7 +302,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
 
   if(ischeme.eq.1)then
      if(m_refine(ilevel) >= 0.)then
-        if(emag_tot==0.0)then
+        if(emag_tot==0)then
            emag_loc=1.5
         else
            emag_loc=emag_tot
@@ -999,7 +1001,7 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   ! Step 5 : Create intermediate states from eigenmatrices
   !
   do n = 1, 7
-     a(n)  = 0.0
+     a(n)  = 0
      a(n)  = a(n)  + (dr -dl ) * lem(1,n)
      a(n)  = a(n)  + (mxr-mxl) * lem(2,n)
      a(n)  = a(n)  + (myr-myl) * lem(3,n)
@@ -1352,13 +1354,13 @@ SUBROUTINE eigen_cons(d,vx,vy,vz,h,Bx,by,bz,Xfac,Yfac,lambda,rem,lem)
 
   if ( (cfsq - cssq) .eq. 0.) then
      alpha_f = 1.0
-     alpha_s = 0.0
+     alpha_s = 0
   else if ( (twid_asq - cssq) .le. 0.) then
-     alpha_f = 0.0
+     alpha_f = 0
      alpha_s = 1.0
   else if ( (cfsq - twid_asq) .le. 0.) then
      alpha_f = 1.0
-     alpha_s = 0.0
+     alpha_s = 0
   else
      alpha_f = sqrt((twid_asq-cssq)/(cfsq-cssq))
      alpha_s = sqrt((cfsq-twid_asq)/(cfsq-cssq))
