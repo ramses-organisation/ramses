@@ -90,7 +90,7 @@ subroutine read_hydro_params(nml_ok)
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
-  namelist/sf_params/m_star,t_star,n_star,T2_star,g_star,del_star &
+  namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
        & ,sf_log_properties,sf_imf,sf_compressive
 
@@ -234,11 +234,9 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Check for star formation
   !--------------------------------------------------
-  if(t_star>0)then
-     star=.true.
-     pic=.true.
-  else if(eps_star>0)then
-     t_star=0.1635449d0*(n_star/0.1d0)**(-0.5d0)/eps_star
+  if(eps_star>0)then
+     ! For historical reference:
+     ! t_star=0.1635449d0*(n_star/0.1d0)**(-0.5d0)/eps_star
      star=.true.
      pic=.true.
   endif
