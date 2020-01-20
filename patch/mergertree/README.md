@@ -174,10 +174,10 @@ The merger trees are stored in `output_XXXXX/mergertree_XXXXX.txtYYYYY` files. E
 * `clump`:            clump ID of a clump at this output number
 * `progenitor`:       the progenitor clump ID in output number "prog_outputnr"
 * `prog_outputnr`:    the output number of when the progenitor was an alive clump
-* `desc mass`:        mass of the current clump. 
-* `desc npart`:       number of particles of the current clump. 
-* `desc x,y,z`:       x, y, z position of current clump.
-* `desc vx, vy, vz`:  x, y, z velocities of current clump.
+* `desc_mass`:        mass of the current clump. 
+* `desc_npart`:       number of particles of the current clump. 
+* `desc_x,_y,_z`:     x, y, z position of current clump.
+* `desc_vx,_vy,_vz`:  x, y, z velocities of current clump.
 
 desc_mass and desc_npart will be either inclusive or exclusive, depending on how you set the `use_exclusive_mass` parameter. 
 (See below for details)
@@ -197,10 +197,10 @@ desc_mass and desc_npart will be either inclusive or exclusive, depending on how
 
 The mock galaxy output is stored in `output_XXXXX/galaxies_XXXXX.txtYYYYY` files. Every file contains 5 columns:
 
-* `Associated clump`:    Provided this is not an orphan galaxy, the clump ID in which this galaxy is. Orphan galaxies have associated clump = 0
-* `Stellar Mass`:        The galaxy's stellar mass in units of solar mass.
+* `Associated_clump`:    Provided this is not an orphan galaxy, the clump ID in which this galaxy is. Orphan galaxies have associated clump = 0
+* `Stellar_Mass`:        The galaxy's stellar mass in units of solar mass.
 * `x, y, z`:             position of the galaxy.
-* `Galaxy Particle ID` : The ID of the particle this galaxy is attributed to.
+* `Galaxy_Particle_ID` : The ID of the particle this galaxy is attributed to.
 
 
 
@@ -272,10 +272,13 @@ Can be set in the `CLUMPFIND_PARAMS` block.
 
 
 
-### Visualisation
+### Visualisation and Postprocessing
 
 `ramses/utils/py/mergertreeplot.py` is a python 2 script to plot the merger trees as found by this patch. 
-Details on options and usage are at the start of the script as a comment.
+`ramses/utils/py/mergertree-extract.py` is a python3 script to extract the mass evolution of a
+single clump, a halo with all its subhaloes, or all haloes in the simulation.
+Details on options and usage are at the start of the scripts as a comment, or can be called using
+the `--help` flags.
 
 
 
