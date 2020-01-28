@@ -2646,10 +2646,10 @@ subroutine write_trees()
 
   open(unit=666,file=fileloc,form='formatted')
   write(666, '(3(A15),8(A18))') &
-    "clump", "progenitor", "prog outputnr", &
-    "desc mass", "desc npart", &
-    "desc x", "desc y", "desc z", &
-    "desc vx", "desc vy", "desc vz"
+    "clump", "progenitor", "prog_outputnr", &
+    "desc_mass", "desc_npart", &
+    "desc_x", "desc_y", "desc_z", &
+    "desc_vx", "desc_vy", "desc_vz"
   !----------------------------------
   ! Possible cases:
   ! 1: adjacent link found
@@ -3248,7 +3248,7 @@ subroutine make_galaxies()
   fileloc=TRIM('output_'//TRIM(output_to_string)//'/galaxies_'//TRIM(output_to_string)//'.txt'//TRIM(id_to_string))
 
   open(unit=666,file=fileloc,form='formatted')
-  write(666,'(6(A20,x))') "Associated clump", "Stellar Mass [M_Sol]", "x", "y", "z", "Galaxy Particle ID"
+  write(666,'(6(A20,x))') "Associated_clump", "Stellar_Mass[M_Sol]", "x", "y", "z", "Galaxy_Particle_ID"
 
   !--------------------------
   ! Write currently active
