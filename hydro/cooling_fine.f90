@@ -217,7 +217,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               TR = max(0d0, (E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
-                 if(i .ne. iIR)                                          &
+                 if(ig .ne. iIR)                                         &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
@@ -598,7 +598,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
-                 if(i .ne. iIR)                                          &
+                 if(ig .ne. iIR)                                         &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
