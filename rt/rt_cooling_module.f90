@@ -388,7 +388,7 @@ contains
           TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! IR temperature
           kAbs_loc(iIR) = kappaAbs(iIR) * (TR/10d0)**2
           do iGroup=1,nGroups
-             if(i .ne. iIR)                                              &
+             if(iGroup .ne. iIR)                                         &
                   E_rad = E_rad + kAbs_loc(iGroup) / kAbs_loc(iIR)       &
                                 * group_egy_erg(iGroup) * dNp(iGroup)
           end do
