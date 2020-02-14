@@ -1,4 +1,9 @@
+! Feb 2020 - RS
+! Updates to make compatible with latest RAMSES part_ files
+! Use -DMETALS in Makefile if particles have metals.
+
 program poshalo
+
   implicit none
   integer::ncpu,ndim,npart,i,j,icpu,ipos,nstar,ngroup
   integer::idummy
@@ -10,7 +15,7 @@ program poshalo
   real(KIND=8)::period=1,xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,rvir
   real(kind=8),dimension(:),allocatable::m_group,x_group,y_group,z_group,u_group,v_group,w_group,mpure_group
   real(KIND=8),dimension(:,:),allocatable::x,v
-  real(KIND=8),dimension(:),allocatable::m,age
+  real(KIND=8),dimension(:),allocatable::m,age,metal !- RS Jan 2020
   integer,dimension(:),allocatable::id
   character(LEN=5)::nstring,ncharcpu
   character(LEN=80)::directory,file_groupe_in
@@ -95,12 +100,13 @@ program poshalo
      read(1)ncpu2
      read(1)ndim2
      read(1)npart2
-     read(1)
-     read(1)nstar
+     read(1) !! Skip 4 ints localseed
+     read(1)nstar !! This is total star part across all files
      close(1)
      npart=npart+npart2
   end do
-  write(*,*)'Found ',npart,' particles.'
+  write(*,*)'Found ',npart,' total particles.'
+  write(*,*)'Found ',nstar,' star particles.'
   if(nstar>0)then
      write(*,*)'Discard star particles.'
   endif
@@ -115,19 +121,19 @@ program poshalo
      read(1)ncpu2
      read(1)ndim2
      read(1)npart2
-     read(1)
-     read(1)
-     read(1)
-     read(1)
-     read(1)
+     read(1) ! Last localseed RS Feb 2020
+     read(1) ! nstar_tot
+     read(1) ! mstar_tot
+     read(1) ! mstar_lost
+     read(1) ! nsink
      allocate(m(1:npart2))
      if(nstar>0)then
         allocate(age(1:npart2))
         allocate(id(1:npart2))
+        allocate(metal(1:npart2))
      endif
      allocate(x(1:npart2,1:ndim2))
      allocate(v(1:npart2,1:ndim2))
-     ! Read position
      do i=1,ndim
         read(1)m
         x(1:npart2,i)=m
@@ -142,10 +148,14 @@ program poshalo
      if(nstar>0)then
         read(1)id
         read(1) ! Skip level
+        read(1) ! Skip family - array of bytes - RS Jan 2020
+        read(1) ! Skip tag - array of bytes - RS Jan 2020
         read(1)age
+#ifdef METALS
+        read(1)metal
+#endif
      endif
      close(1)
-
      do i=1,npart2
         if(nstar>0) then
            if(age(i)/=0.or.id(i)<1) cycle
@@ -171,7 +181,7 @@ program poshalo
         endif
      enddo
      deallocate(x,m,v)
-     if(nstar>0)deallocate(age,id)
+     if(nstar>0)deallocate(age,id,metal)
   end do
 
   open(18,file=TRIM(directory)//'.pos')
@@ -213,6 +223,9 @@ contains
       end if
   end function shift1d
 
+!
+! Read parameters... 
+!
   subroutine read_params
 
       implicit none

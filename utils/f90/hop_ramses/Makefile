@@ -3,6 +3,7 @@
 # 1) Compiler choice:
 CC = gcc
 FC = gfortran -ffree-line-length-none -cpp
+FC = ftn -cpp -ffixed-line-length-none
 
 # 2) Compiler flags: optimization, debugging, profiling, etc.
 # For debugging:
@@ -12,12 +13,14 @@ FC = gfortran -ffree-line-length-none -cpp
 #CFLAGS	=   -O3
 # Solaris:
 #CFLAGS	=   -fast -64 -fsimple=2 -fsingle 
-CFLAGS	=   -O -mcmodel=medium
+CFLAGS	=   -O -mcmodel=medium 
 # 3) Libraries: (if you have some replacement for math.h)
 LIBS	=   -lm
 
 # 4) Preprocessor definitions: Useful to toggle the DIFFERENT_MASSES flag
-DEFS = -DDIFFERENT_MASSES
+# Define METALS if particles have metallicity 
+#DEFS = -DDIFFERENT_MASSES -D_LARGE_FILES
+DEFS = -D_LARGE_FILES -DMETALS 
 
 # 5) Return to the command line and type "make"
 
