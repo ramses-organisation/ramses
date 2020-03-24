@@ -155,6 +155,11 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp)::scale_Np,scale_Fp,nH,T2,ekk,err,emag,mu,Zsolar,ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
+#ifdef SOLVERmhd
+  integer::neul=5
+#else
+  integer::neul=ndim+2
+#endif
 #if NENER>0
   integer::irad
 #endif
@@ -178,10 +183,10 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   if(metal) Zsolar=vars(imetal) / nH / 0.02 !    Metallicity (solar units)
 
   ! Compute pressure from energy density
-  T2 = vars(ndim+2)                         ! Energy dens. (kin+heat) [UU]
-  ekk = 0.0d0                               !          Kinetic energy [UU]
-  do idim=1,ndim
-     ekk = ekk+0.5*vars(idim+1)**2/nH
+  T2 = vars(neul)                         ! Energy dens. (kin+heat) [UU]
+  ekk = 0.0d0                             !          Kinetic energy [UU]
+  do idim=2,neul-1
+     ekk = ekk+0.5*vars(idim)**2/nH
   end do
   err = 0.0d0
 #if NENER>0
@@ -191,8 +196,8 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
 #endif
   emag = 0.0d0
 #ifdef SOLVERmhd
-  do idim=1,ndim
-     emag=emag+0.125d0*(vars(idim+ndim+2)+vars(idim+nvar))**2
+  do idim=1,3
+     emag=emag+0.125d0*(vars(idim+5)+vars(idim+nvar))**2
   end do
 #endif
   T2 = (gamma-1.0)*(T2-ekk-err-emag)        !        Gamma is ad. exponent
