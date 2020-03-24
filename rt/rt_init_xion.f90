@@ -49,9 +49,9 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
 #ifdef SOLVERmhd
-  integer:neul=5
+  integer::neul=5
 #else
-  integer:neul=ndim+2
+  integer::neul=ndim+2
 #endif
 #if NENER>0
   integer::irad
