@@ -48,6 +48,11 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   real(dp)::nH, T2, ekk, err, emag, x, mu, Zsolar
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
+#ifdef SOLVERmhd
+  integer:neul=5
+#else
+  integer:neul=ndim+2
+#endif
 #if NENER>0
   integer::irad
 #endif
@@ -78,10 +83,10 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         if(metal) &
              Zsolar=(uold(ind_leaf(i),imetal)) / nH / 0.02
         ! Compute pressure from energy density
-        T2 = uold(ind_leaf(i),ndim+2)          ! Energy density (kin+heat)
+        T2 = uold(ind_leaf(i),neul)          ! Energy density (kin+heat)
         ekk = 0.0d0                            !            Kinetic energy
-        do idim=1,ndim
-           ekk = ekk+0.5*uold(ind_leaf(i),idim+1)**2/nH
+        do idim=2,neul-1
+           ekk = ekk+0.5*uold(ind_leaf(i),idim)**2/nH
         end do
         err = 0.0d0
 #if NENER>0
@@ -91,8 +96,8 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 #endif
         emag = 0.0d0
 #ifdef SOLVERmhd
-        do idim=1,ndim
-           emag=emag+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+        do idim=1,3
+           emag=emag+0.125d0*(uold(ind_leaf(i),idim+5)+uold(ind_leaf(i),idim+nvar))**2
         end do
 #endif
         T2 = (gamma-1.0)*(T2-ekk-err-emag)     !     Gamma is ad. exponent
