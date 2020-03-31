@@ -82,12 +82,17 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   integer::ilo,ihi,jlo,jhi,klo,khi
   real(dp)::alpha_edge
 
+  real(dp),dimension(1:nvector),save::emag
+
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
   ! Translate to primative variables, compute sound speeds
-  call ctoprim(uin,qin,bf,gravin,dt,ngrid,alphaT)
+  call ctoprim(uin,qin,bf,gravin,dt,ngrid,alphaT,emag)
+
+  ! Subgrid dynamo
+  call dynamo(uin,qin,ngrid,alphaT,emag)
 
   ! Compute TVD slopes
   call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
@@ -2133,7 +2138,7 @@ END SUBROUTINE cmp_mag_flx
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT)
+subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT,emag)
   use amr_parameters
   use hydro_parameters
   use const
@@ -2150,7 +2155,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT)
   real(dp)::Kturb,sigma,d_old
   integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
-  real(dp),dimension(1:nvector),save::eken,emag,erad
+  real(dp),dimension(1:nvector)::eken,emag,erad
 
 #if NENER>0
   integer::irad
@@ -2274,7 +2279,12 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT)
               d_old=max(q(l,i,j,k,1),smallr)
               Kturb=uin(l,i,j,k,ivirial1)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-              alphaT(l,i,j,k)=sigma/(1+100000*emag(l)/(d_old*sigma**2))
+              !alphaT(l,i,j,k)=sigma/(1.0+1000000.0*emag(l)/(d_old*sigma**2))
+              if(d_old.GT.1d4)then
+                 alphaT(l,i,j,k)=sigma/(1+1000000*emag(l)/(d_old*sigma**2))
+              else
+                 alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
+              endif
            end do
         end do
      end do
@@ -2958,3 +2968,42 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
 #endif
 
 end subroutine uslope
+
+subroutine dynamo(uin,q,ngrid,alphaT,emag)
+   use amr_parameters
+   use hydro_parameters
+   use const
+   implicit none
+
+   integer ::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
+
+   real(dp),dimension(1:nvector)::emag, emag_crit
+   real(dp)::Kturb,sigma,d_old,epsilon
+   integer::i, j, k, l
+
+   do k = ku1, ku2
+      do j = ju1, ju2
+         do i = iu1, iu2
+            do l=1, ngrid
+              d_old=max(q(l,i,j,k,1),smallr)
+              Kturb=uin(l,i,j,k,ivirial1)
+              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+              !alphaT(l,i,j,k)=sigma/(1.0+1000000.0*emag(l)/(d_old*sigma**2))
+              !if(d_old.GT.1d4)then
+              !   alphaT(l,i,j,k)=sigma/(1+1000000*emag(l)/(d_old*sigma**2))
+              !else
+              !   alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
+              !endif
+
+              epsilon = 0.01
+              emag_crit(l) = epsilon * d_old * sigma**2
+              alphaT(l,i,j,k)=sigma * max(1-emag(l)**2, emag_crit(l))
+
+            end do
+         end do
+      end do
+   end do
+end subroutine dynamo
