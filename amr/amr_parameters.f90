@@ -130,8 +130,7 @@ module amr_parameters
   real(dp)::d_sink = -1              ! Sink particle density threshold in user units
   real(dp)::m_star =-1               ! Star particle mass in units of mass_sph
   real(dp)::n_star =0.1d0            ! Star formation density threshold in H/cc
-  real(dp)::t_star =0                ! Star formation time scale in Gyr
-  real(dp)::eps_star=0               ! Star formation efficiency (0.02 at n_star=0.1 gives t_star=8 Gyr)
+  real(dp)::eps_star=0               ! Star formation efficiency
   real(dp)::T2_star=0                ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6d0            ! Typical ISM polytropic index
   real(dp)::jeans_ncells=-1          ! Jeans polytropic EOS
