@@ -80,19 +80,17 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
-  real(dp)::alpha_edge
-
-  real(dp),dimension(1:nvector),save::emag
+  real(dp),dimension(1:nvector)::emag
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
   ! Translate to primative variables, compute sound speeds
-  call ctoprim(uin,qin,bf,gravin,dt,ngrid,alphaT,emag)
+  call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
-  ! Subgrid dynamo
-  call dynamo(uin,qin,ngrid,alphaT,emag)
+  ! Turbulent dynamo
+  call turb_dynamo(uin,qin,ngrid,alphaT,emag)
 
   ! Compute TVD slopes
   call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
@@ -186,19 +184,6 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1,ku2, &
        &               if1  ,if2  ,jf1  ,jf2  ,klo,khi, 2,3,4,6,7,8,emf,ngrid)
 
-  ! EMF correction in z direction, assuming 3-dimension grid, sub-grid model for dynamo theory
-  DO i=if1,if2
-     DO j=jf1,jf2
-        DO k=klo,khi
-           DO l=1,ngrid
-              alpha_edge=0.25*(alphaT(l,i-1,j-1,k)+alphaT(l,i-1,j,k)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k))
-              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
-              &                                            +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3)))
-           END DO
-        END DO
-     END DO
-  END DO
-
  ! Save vector in output array
   do k=klo,khi
   do j=jf1,jf2
@@ -230,19 +215,6 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
        &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid)
 
-  ! EMF correction in y direction, assuming 3-dimension grid
-  DO i=if1,if2
-     DO j=jlo,jhi
-        DO k=kf1,kf2
-           DO l=1,ngrid
-              alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
-              &                                            +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
-           END DO
-        END DO
-     END DO
-  END DO
-
   ! Save vector in output array
   do k=kf1,kf2
   do j=jlo,jhi
@@ -261,19 +233,6 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
        &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid)
 
-  ! EMF correction in x direction, assuming 3-dimension grid
-  DO i=ilo,ihi
-     DO j=jf1,jf2
-        DO k=kf1,kf2
-           DO l=1,ngrid
-              alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-              emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
-              &                                            +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
-           END DO
-        END DO
-     END DO
-  END DO 
-
   ! Save vector in output array
   do k=kf1,kf2
   do j=jf1,jf2
@@ -284,6 +243,9 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   end do
   end do
   end do
+
+  call turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
+
 #endif
 
 end subroutine mag_unsplit
@@ -2138,7 +2100,7 @@ END SUBROUTINE cmp_mag_flx
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,bf,gravin,dt,ngrid,alphaT,emag)
+subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -2969,7 +2931,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
 
 end subroutine uslope
 
-subroutine dynamo(uin,q,ngrid,alphaT,emag)
+subroutine turb_dynamo(uin,q,ngrid,alphaT,emag)
    use amr_parameters
    use hydro_parameters
    use const
@@ -2988,6 +2950,10 @@ subroutine dynamo(uin,q,ngrid,alphaT,emag)
       do j = ju1, ju2
          do i = iu1, iu2
             do l=1, ngrid
+               emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
+            end do
+
+            do l=1, ngrid
               d_old=max(q(l,i,j,k,1),smallr)
               Kturb=uin(l,i,j,k,ivirial1)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
@@ -3000,10 +2966,110 @@ subroutine dynamo(uin,q,ngrid,alphaT,emag)
 
               epsilon = 0.01
               emag_crit(l) = epsilon * d_old * sigma**2
-              alphaT(l,i,j,k)=sigma * max(1-emag(l)**2, emag_crit(l))
+              alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
 
             end do
          end do
       end do
    end do
-end subroutine dynamo
+end subroutine turb_dynamo
+
+subroutine turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
+   use amr_parameters
+   use const
+   use hydro_parameters
+   implicit none
+
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::emf
+   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+   real(dp)::dx,dt
+   integer::ngrid
+
+   ! Local variables
+   integer::i,j,k,l
+   integer::ilo,ihi,jlo,jhi,klo,khi
+   real(dp)::alpha_edge
+
+   ! Outpur updated turbulent EMF
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfx
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfy
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfz
+ 
+   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
+   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
+   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
+
+  ! EMF correction in z direction, assuming 3-dimension grid, sub-grid model for dynamo theory
+   DO i=if1,if2
+      DO j=jf1,jf2
+         DO k=klo,khi
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i-1,j-1,k)+alphaT(l,i-1,j,k)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k))
+               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
+               &                                            +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3)))
+            END DO
+         END DO
+      END DO
+   END DO
+
+   ! Save vector in output array
+   do k=klo,khi
+   do j=jf1,jf2
+   do i=if1,if2
+      do l=1,ngrid
+         emfz(l,i,j,k)=emf(l,i,j,k)*dt/dx
+      end do
+   end do
+   end do
+   end do
+
+  ! EMF correction in y direction, assuming 3-dimension grid
+   DO i=if1,if2
+      DO j=jlo,jhi
+         DO k=kf1,kf2
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
+               &                                            +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
+            END DO
+         END DO
+      END DO
+   END DO
+ 
+   ! Save vector in output array
+   do k=kf1,kf2
+   do j=jlo,jhi
+   do i=if1,if2
+      do l=1,ngrid
+         emfy(l,i,j,k)=emf(l,i,j,k)*dt/dx
+      end do
+   end do
+   end do
+   end do
+
+  ! EMF correction in x direction, assuming 3-dimension grid
+   DO i=ilo,ihi
+      DO j=jf1,jf2
+         DO k=kf1,kf2
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
+               &                                            +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
+            END DO
+         END DO
+      END DO
+   END DO 
+ 
+   ! Save vector in output array
+   do k=kf1,kf2
+   do j=jf1,jf2
+   do i=ilo,ihi
+      do l=1,ngrid
+         emfx(l,i,j,k)=emf(l,i,j,k)*dt/dx
+      end do
+   end do
+   end do
+   end do
+
+end subroutine turb_emf
