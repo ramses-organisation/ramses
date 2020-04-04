@@ -2113,7 +2113,6 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
 
-  real(dp)::Kturb,sigma,d_old
   integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
