@@ -2116,7 +2116,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp)::Kturb,sigma,d_old
   integer ::i, j, k, l, idim
   real(dp)::eint, smalle, smallp, etot
-  real(dp),dimension(1:nvector)::eken,emag,erad
+  real(dp),dimension(1:nvector),save::eken,emag,erad
 
 #if NENER>0
   integer::irad
