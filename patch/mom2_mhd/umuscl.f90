@@ -2112,7 +2112,6 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
 
   real(dp)::Kturb,sigma,d_old
   integer ::i, j, k, l, idim
@@ -2234,19 +2233,6 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
               do l = 1, ngrid
                  q(l,i,j,k,idim+1) = q(l,i,j,k,idim+1) + gravin(l,i,j,k,idim)*dt*half
               end do
-           end do
-
-           ! Compute alphaT term
-           do l=1, ngrid
-              d_old=max(q(l,i,j,k,1),smallr)
-              Kturb=uin(l,i,j,k,ivirial1)
-              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-              !alphaT(l,i,j,k)=sigma/(1.0+1000000.0*emag(l)/(d_old*sigma**2))
-              if(d_old.GT.1d4)then
-                 alphaT(l,i,j,k)=sigma/(1+1000000*emag(l)/(d_old*sigma**2))
-              else
-                 alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
-              endif
            end do
         end do
      end do
