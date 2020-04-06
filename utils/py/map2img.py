@@ -6,6 +6,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("file", help="enter filename dens.map")
 parser.add_argument("--log", help="plot log variable",action="store_true")
+parser.add_argument("--out", help="output a png image")
 args = parser.parse_args()
 print("Reading "+args.file)
 
@@ -33,4 +34,8 @@ if args.log:
 ax.imshow(dat[:, :].T, interpolation='nearest', origin='lower')
 ax.set_xlabel("nx")
 ax.set_ylabel("ny")
+if args.out:
+    plt.savefig(args.out)
 plt.show()
+
+
