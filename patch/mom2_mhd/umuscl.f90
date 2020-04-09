@@ -80,7 +80,6 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
-  real(dp),dimension(1:nvector)::emag
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
@@ -90,7 +89,7 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Turbulent dynamo
-  call turb_dynamo(uin,qin,ngrid,alphaT,emag)
+  call turb_dynamo(uin,qin,ngrid,alphaT)
 
   ! Compute TVD slopes
   call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
@@ -244,7 +243,7 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   end do
   end do
 
-  call turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
+  call turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz)
 
 #endif
 
@@ -2916,7 +2915,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
 
 end subroutine uslope
 
-subroutine turb_dynamo(uin,q,ngrid,alphaT,emag)
+subroutine turb_dynamo(uin,q,ngrid,alphaT)
    use amr_parameters
    use hydro_parameters
    use const
@@ -2935,7 +2934,7 @@ subroutine turb_dynamo(uin,q,ngrid,alphaT,emag)
       do j = ju1, ju2
          do i = iu1, iu2
             do l=1, ngrid
-               emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
+              emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
             end do
 
             do l=1, ngrid
@@ -2949,7 +2948,7 @@ subroutine turb_dynamo(uin,q,ngrid,alphaT,emag)
               !   alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
               !endif
 
-              epsilon = 0.01
+              epsilon = 0.000001
               emag_crit(l) = epsilon * d_old * sigma**2
               alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
 
@@ -2959,14 +2958,13 @@ subroutine turb_dynamo(uin,q,ngrid,alphaT,emag)
    end do
 end subroutine turb_dynamo
 
-subroutine turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
+subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz)
    use amr_parameters
    use const
    use hydro_parameters
    implicit none
 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::emf
    real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
    real(dp)::dx,dt
    integer::ngrid
@@ -2991,23 +2989,12 @@ subroutine turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
          DO k=klo,khi
             DO l=1,ngrid
                alpha_edge=0.25*(alphaT(l,i-1,j-1,k)+alphaT(l,i-1,j,k)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k))
-               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
-               &                                            +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3)))
+               emfz(l,i,j,k)=emfz(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
+               &                                              +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3))) * dt/dx
             END DO
          END DO
       END DO
    END DO
-
-   ! Save vector in output array
-   do k=klo,khi
-   do j=jf1,jf2
-   do i=if1,if2
-      do l=1,ngrid
-         emfz(l,i,j,k)=emf(l,i,j,k)*dt/dx
-      end do
-   end do
-   end do
-   end do
 
   ! EMF correction in y direction, assuming 3-dimension grid
    DO i=if1,if2
@@ -3015,46 +3002,24 @@ subroutine turb_emf(emf,alphaT,bf,dt,dx,emfx,emfy,emfz)
          DO k=kf1,kf2
             DO l=1,ngrid
                alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
-               &                                            +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2)))
+               emfy(l,i,j,k)=emfy(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
+               &                                              +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2))) * dt/dx
             END DO
          END DO
       END DO
    END DO
  
-   ! Save vector in output array
-   do k=kf1,kf2
-   do j=jlo,jhi
-   do i=if1,if2
-      do l=1,ngrid
-         emfy(l,i,j,k)=emf(l,i,j,k)*dt/dx
-      end do
-   end do
-   end do
-   end do
-
   ! EMF correction in x direction, assuming 3-dimension grid
    DO i=ilo,ihi
       DO j=jf1,jf2
          DO k=kf1,kf2
             DO l=1,ngrid
                alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
-               emf(l,i,j,k)=emf(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
-               &                                            +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1)))
+               emfx(l,i,j,k)=emfx(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
+               &                                              +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1))) * dt/dx
             END DO
          END DO
       END DO
    END DO 
  
-   ! Save vector in output array
-   do k=kf1,kf2
-   do j=jf1,jf2
-   do i=ilo,ihi
-      do l=1,ngrid
-         emfx(l,i,j,k)=emf(l,i,j,k)*dt/dx
-      end do
-   end do
-   end do
-   end do
-
 end subroutine turb_emf
