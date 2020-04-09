@@ -243,7 +243,7 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   end do
   end do
 
-  call turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz)
+  call turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
 
 #endif
 
@@ -2958,7 +2958,7 @@ subroutine turb_dynamo(uin,q,ngrid,alphaT)
    end do
 end subroutine turb_dynamo
 
-subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz)
+subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
    use amr_parameters
    use const
    use hydro_parameters
