@@ -89,7 +89,7 @@ subroutine mag_unsplit(uin,pin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Turbulent dynamo
-  call turb_dynamo(uin,qin,ngrid,alphaT)
+  call turb_dynamo(uin,qin,alphaT,ngrid)
 
   ! Compute TVD slopes
   call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
@@ -2915,7 +2915,7 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
 
 end subroutine uslope
 
-subroutine turb_dynamo(uin,q,ngrid,alphaT)
+subroutine turb_dynamo(uin,q,alphaT,ngrid)
    use amr_parameters
    use hydro_parameters
    use const
