@@ -62,7 +62,7 @@ IF N_PARAMS() NE 1 THEN BEGIN
     RETURN
 ENDIF
 
-suffix=getcarnum(1024)
+suffix=getcarnum(2048)
 
 if not keyword_set(file) and not keyword_set(nout) then begin
     key='cone*.out*'
@@ -184,29 +184,32 @@ for jcpu=0,ncpu-1 do begin
                 part.zp(i1:i2)=xx
              endif
           endfor
-          nread=res
-          i1=iskip+nblocs*nstride
-          i2=i1+nread-1
+          if res GT 0 then begin
+             nread=res
+             i1=iskip+nblocs*nstride
+             i2=i1+nread-1
 ;    print,iskip,ibloc,i1,i2,nread
-          xx=fltarr(nread)
-          rr=fltarr(nread)
-          for idim=0L,ndim-1L do begin
-             readu,1,xx
-             xmax=max(xx,xmax)
-             xmin=min(xx,xmin)
-             rr=rr+xx^2
-             if not keyword_set(noalloc)then begin
-                part.xp(i1:i2,idim)=xx
-             endif
-             readu,1,xx
+             xx=fltarr(nread)
+             rr=fltarr(nread)
+             for idim=0L,ndim-1L do begin
+                readu,1,xx
+                xmax=max(xx,xmax)
+                xmin=min(xx,xmin)
+                rr=rr+xx^2
+                if not keyword_set(noalloc)then begin
+                   part.xp(i1:i2,idim)=xx
+                endif
+                readu,1,xx
 ;        part.vp(i1:i2,idim)=xx
-          endfor
-          rmin=min([rmin,min(rr)])
-          rmax=max([rmax,max(rr)])
-          readu,1,xx
-          if not keyword_set(noalloc)then begin
-             part.zp(i1:i2)=xx
+             endfor
+             rmin=min([rmin,min(rr)])
+             rmax=max([rmax,max(rr)])
+             readu,1,xx
+             if not keyword_set(noalloc)then begin
+                part.zp(i1:i2)=xx
+             endif
           endif
+
           close,1
           iskip=iskip+npartp
        endif
