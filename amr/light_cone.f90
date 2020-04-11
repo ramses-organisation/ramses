@@ -102,7 +102,6 @@ subroutine output_cone()
   endif
 #endif
 
-
   ilevel=levelmin
   ! Loop over cpus
   do icpu=1,ncpu
@@ -134,9 +133,7 @@ subroutine output_cone()
                       &                           pos,vel,ip, &
                       &                           posout,velout,zout,npout,.false.)
 
-
                  call extend_arrays_if_needed()
-
 
                  ! Perform actual selection
                  call perform_my_selection(.false.,z1,z2, &
@@ -302,7 +299,6 @@ subroutine output_cone()
      end if
   endif
 #endif
-
 
    if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_cone'
@@ -470,6 +466,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   implicit none
   logical :: justcount,verbose
   integer :: npart,npartout
+  integer :: myint
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
@@ -484,7 +481,8 @@ subroutine perform_my_selection(justcount,z1,z2, &
 
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
-
+  logical :: keep_part, fullsky
+  
   if (verbose) write(*,*) 'Entering perform_my_selection'
 
   ! Initialize cosmological parameters
@@ -507,9 +505,21 @@ subroutine perform_my_selection(justcount,z1,z2, &
   thetazrad=thetaz*pi/180.0d0
 
   ! Compute the set of replica to be considered
-  call compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
-       &                       nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp)
-
+  if(thetay.LT.44d0.AND.thetaz.LT.44d0)then
+     call compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
+          &                       nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp)
+     fullsky=.false.
+  else
+     ! Compute how many replica are needed
+     nrepxm=myint((observer(1)-dist2)/Lbox)
+     nrepxp=myint((observer(1)+dist2)/Lbox)
+     nrepym=myint((observer(2)-dist2)/Lbox)
+     nrepyp=myint((observer(2)+dist2)/Lbox)
+     nrepzm=myint((observer(3)-dist2)/Lbox)
+     nrepzp=myint((observer(3)+dist2)/Lbox)
+     fullsky=.true.
+  endif
+  
   facnorm=1.0d0/(dist2-dist1)
   tanybound=tan(thetayrad)
   tanzbound=tan(thetazrad)
@@ -535,42 +545,56 @@ subroutine perform_my_selection(justcount,z1,z2, &
                    & ycoordfr*rotm1(2,3)+ &
                    & zcoordfr*rotm1(3,3)
 
-              if (xcoord > small) then ! To avoid divergences near the origin
-                 tany=abs(ycoord/xcoord)
-                 tanz=abs(zcoord/xcoord)
-                 dist=sqrt(xcoord**2+ycoord**2+zcoord**2)
-                 if (tany <= tanybound .and. tanz <= tanzbound &
-                      &  .and. dist > dist1 .and. dist <= dist2) then
-                    ! This particle is good, we can add it to the list
-                    npartcount=npartcount+1
+              dist=sqrt(xcoord**2+ycoord**2+zcoord**2)
 
-                    if (.not. justcount) then
-                        posout(1,npartcount)=xcoord
-                        posout(2,npartcount)=ycoord
-                        posout(3,npartcount)=zcoord
+              keep_part=.false.
 
-                        ! Velocities are rotated
-                        vxfr=vel(1,np)
-                        vyfr=vel(2,np)
-                        vzfr=vel(3,np)
-                        velout(1,npartcount)=vxfr*rotm1(1,1)+ &
-                            &               vyfr*rotm1(2,1)+ &
-                            &               vzfr*rotm1(3,1)
-                        velout(2,npartcount)=vxfr*rotm1(1,2)+ &
-                            &               vyfr*rotm1(2,2)+ &
-                            &               vzfr*rotm1(3,2)
-                        velout(3,npartcount)=vxfr*rotm1(1,3)+ &
-                            &               vyfr*rotm1(2,3)+ &
-                            &               vzfr*rotm1(3,3)
-
-                        ! Compute the redshift of the particle using linear
-                        ! interpolation
-                        dxtest1=dist-dist1
-                        dxtest2=dist2-dist
-                        zout(npartcount)=(dxtest1*z2+dxtest2*z1)*facnorm
+              if(fullsky)then ! Full sky light cone
+                 if (dist > dist1 .and. dist <= dist2) then
+                    keep_part=.true.
+                 endif
+              else ! Narrow light cone
+                 if (xcoord > small) then ! To avoid divergences near the origin
+                    tany=abs(ycoord/xcoord)
+                    tanz=abs(zcoord/xcoord)
+                    if (tany <= tanybound .and. tanz <= tanzbound &
+                         &  .and. dist > dist1 .and. dist <= dist2) then
+                       keep_part=.true.
                     endif
                  endif
+              end if
+              
+              if (keep_part) then
+                 ! This particle is good, we can add it to the list
+                 npartcount=npartcount+1
+                 
+                 if (.not. justcount) then
+                    posout(1,npartcount)=xcoord
+                    posout(2,npartcount)=ycoord
+                    posout(3,npartcount)=zcoord
+                    
+                    ! Velocities are rotated
+                    vxfr=vel(1,np)
+                    vyfr=vel(2,np)
+                    vzfr=vel(3,np)
+                    velout(1,npartcount)=vxfr*rotm1(1,1)+ &
+                         &               vyfr*rotm1(2,1)+ &
+                         &               vzfr*rotm1(3,1)
+                    velout(2,npartcount)=vxfr*rotm1(1,2)+ &
+                         &               vyfr*rotm1(2,2)+ &
+                         &               vzfr*rotm1(3,2)
+                    velout(3,npartcount)=vxfr*rotm1(1,3)+ &
+                         &               vyfr*rotm1(2,3)+ &
+                         &               vzfr*rotm1(3,3)
+                    
+                    ! Compute the redshift of the particle using linear
+                    ! interpolation
+                    dxtest1=dist-dist1
+                    dxtest2=dist2-dist
+                    zout(npartcount)=(dxtest1*z2+dxtest2*z1)*facnorm
+                 endif
               endif
+
            enddo
         enddo
      enddo
@@ -687,7 +711,6 @@ subroutine compute_replica(thetayrad,thetazrad,dist1,dist2,observer,Lbox,rot, &
         zplmax=max(zplmax,slfr(3))
      endif
   enddo
-
 
   ! Uses the fact that a cube will contain the minimum polygon if and only
   ! if all its edges are contained in the cube to compute the relevant
