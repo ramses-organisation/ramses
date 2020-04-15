@@ -488,7 +488,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif
            ! Reduce star particle mass
            mp(ind_part(j))=mp(ind_part(j))-mejecta
-           if(sf_log_properties) then
+           if(sf_log_properties.and.(n_SN(j).gt.0.)) then
               write(ilun,'(I10)',advance='no') 1
               write(ilun,'(2I10,E24.12)',advance='no') idp(ind_part(j)),ilevel,mp(ind_part(j))
               do idim=1,ndim
