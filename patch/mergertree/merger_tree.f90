@@ -3178,25 +3178,52 @@ subroutine make_galaxies()
   !---------------------------------------------------
   ! This subroutine assigns stellar masses to haloes,
   ! subhaloes and orphans and writes it to file.
+  ! It also output galaxies in the light cone.
   !---------------------------------------------------
 
+  use amr_commons
   use clfind_commons
-  use pm_commons, only: xp, idp
-
+  use pm_commons, only: xp, vp, idp, npart
+  use mpi_mod
+  
   implicit none
   integer               :: ipeak, mbpart, iprog
   real(dp)              :: m_to_use, alpha, gam, delta, xi, loge, logM1, scale_m
   character(LEN=80)     :: fileloc
   character(LEN=5)      :: output_to_string, id_to_string 
 
+#ifndef WITHOUTMPI
+  integer::info,info2,dummy_io
+#endif
 
+  integer,parameter::tag=1118
+
+  character(len=5) :: istep_str
+  character(len=100) :: conedir, conecmd, conefile
+
+  integer::ilun,ipout,npout,npart_out
+  character(LEN=5)::nchar
+  real(kind=8),dimension(1:3,1:nvector),save::pos,vel,var
+  real(kind=8),dimension(:,:),allocatable::posout,velout,varout
+  real(kind=8),dimension(:),allocatable::zout
+  real(kind=8),dimension(:,:),allocatable::tmparr
+  real(sp),dimension(:,:),allocatable::xp_out,vp_out,mp_out
+  real(sp),dimension(:),allocatable::zp_out
+  real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
+  real(kind=8) :: observer(3),thetay,thetaz,theta,phi
+  real(dp)::gal_tag
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
+  integer::i,ip,npart1
+  integer::nalloc1,nalloc2
+
+  integer,dimension(1:nvector),save::ind_part
+  logical::opened
+  
   allocate(mpeak(1:npeaks_max))
   mpeak = 0
 
   ! if clmp_mass_pb hasn't been updated yet, do it
   if (use_exclusive_mass) call boundary_peak_dp(clmp_mass_pb(:))
-
-
 
   !----------------------------------------
   ! get masses and a_exp for all clumps
@@ -3257,45 +3284,421 @@ subroutine make_galaxies()
   call calc_stellar_mass_params(alpha, gam, delta, loge, logM1, xi, scale_m)
 
   do ipeak = 1, hfree-1
-    if (clmp_mass_exclusive(ipeak)>0) then
-      ! only do stuff if you have the most bound particle here
-      if (most_bound_pid(ipeak, 1)>0) then 
-        mbpart = most_bound_pid(ipeak,1) ! get local index of most bound particle
-        if(is_namegiver(ipeak)) then
-          m_to_use = clmp_mass_pb(ipeak)
-        else
-          m_to_use = mpeak(ipeak)
+     if (clmp_mass_exclusive(ipeak)>0) then
+        ! only do stuff if you have the most bound particle here
+        if (most_bound_pid(ipeak, 1)>0) then 
+           mbpart = most_bound_pid(ipeak,1) ! get local index of most bound particle
+           if(is_namegiver(ipeak)) then
+              m_to_use = clmp_mass_pb(ipeak)
+           else
+              m_to_use = mpeak(ipeak)
+           endif
+           write(666, '(I20,x,4(E20.12,x),I20)') -clmpidp(mbpart), &
+                stellar_mass(m_to_use,alpha,gam,delta,loge,logM1,xi,scale_m), &
+                xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
         endif
-        write(666, '(I20,x,4(E20.12,x),I20)') -clmpidp(mbpart), &
-          stellar_mass(m_to_use,alpha,gam,delta,loge,logM1,xi,scale_m), &
-          xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
-      endif
-    endif
+     endif
   enddo
-
 
   !--------------------------
   ! Write orphans
   !--------------------------
 
   do iprog = 1, pmprog_free-1
-    if (pmprogs_owner(iprog)==myid) then
-      mbpart = orphans_local_pid(iprog)
-      write(666, '(I20,x,4(E20.12,x),I20)') 0, &
-        stellar_mass(pmprogs_mpeak(iprog),alpha,gam,delta,loge,logM1,xi,scale_m),& 
-        xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
-    endif
+     if (pmprogs_owner(iprog)==myid) then
+        mbpart = orphans_local_pid(iprog)
+        write(666, '(I20,x,4(E20.12,x),I20)') 0, &
+             stellar_mass(pmprogs_mpeak(iprog),alpha,gam,delta,loge,logM1,xi,scale_m),&
+             xp(mbpart,1), xp(mbpart,2), xp(mbpart,3), idp(mbpart)
+     endif
   enddo
 
   close(666)
 
+  !-------------------------------
+  ! Galaxies light cone output
+  !-------------------------------
+
+  opened=.false.
+
+  if(lightcone.and.nstep_coarse.GE.2)then
+
+  z2=1/aexp_old-1d0
+  z1=1/aexp-1d0
+
+  if(z2.gt.zmax_cone)return
+  if(abs(z2-z1)<1d-6)return
+
+  theta=25.
+  phi=17.
+  thetay=thetay_cone
+  thetaz=thetaz_cone
+  om0in=omega_m
+  omLin=omega_l
+  hubin=h0/100.
+  Lbox=boxlen_ini/hubin
+  observer=(/Lbox/2.0,Lbox/2.0,Lbox/2.0/)
+
+  ilun=3*ncpu+myid+103
+
+  ! Determine the filename, dir, etc
+  if(myid==1)write(*,*)'Computing and dumping lightcone'
+
+  call title(nstep_coarse, istep_str)
+  conedir = "cone_gal_" // trim(istep_str) // "/"
+  conecmd = "mkdir -p " // trim(conedir)
+  if(.not.withoutmkdir) then
+     if (myid==1) call system(conecmd)
+  endif
+
+#ifndef WITHOUTMPI
+  call MPI_BARRIER(MPI_COMM_WORLD, info)
+#endif
+
+  conefile = trim(conedir)//'cone_gal_'//trim(istep_str)//'.out'
+  call title(myid,nchar)
+  fileloc=TRIM(conefile)//TRIM(nchar)
+
+  npart_out=0
+  ipout=0
+  npout=0
+  
+  ! Pre-allocate arrays for particle selection -----
+  nalloc1=nvector
+  allocate(posout(1:3,1:nalloc1))
+  allocate(velout(1:3,1:nalloc1))
+  allocate(varout(1:3,1:nalloc1))
+  allocate(zout(1:nalloc1))
+  
+  nalloc2=nvector+nstride
+  allocate(xp_out(1:nalloc2,1:3))
+  allocate(vp_out(1:nalloc2,1:3))
+  allocate(mp_out(1:nalloc2,1:3))
+  allocate(zp_out(1:nalloc2))
+  allocate(tmparr(1:3,1:nalloc2))
+
+  ! Wait for the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZECONE>0) then
+     if (mod(myid-1,IOGROUPSIZECONE)/=0) then
+        call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+             & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+     end if
+  endif
+#endif
+
+  ip=0
+  do ipeak = 1, hfree+pmprog_free
+     if(ipeak.GE.1.AND.ipeak.LT.hfree)then
+        if (clmp_mass_exclusive(ipeak)>0) then
+           ! only do stuff if you have the most bound particle here
+           if (most_bound_pid(ipeak, 1)>0) then 
+              mbpart = most_bound_pid(ipeak,1) ! get local index of most bound particle
+              if(is_namegiver(ipeak)) then
+                 m_to_use = clmp_mass_pb(ipeak)
+                 gal_tag = 1
+              else
+                 m_to_use = mpeak(ipeak)
+                 gal_tag = 2
+              endif
+              ip=ip+1
+              do idim=1,ndim
+                 pos(idim,ip)=xp(mbpart,idim)*Lbox
+                 vel(idim,ip)=vp(mbpart,idim)
+              end do
+              var(1,ip)=m_to_use
+              var(2,ip)=gal_tag
+              var(3,ip)=abs(clmpidp(mbpart))
+           endif
+        endif
+     endif
+     if(ipeak.GT.hfree.AND.ipeak.LT.hfree+pmprog_free)then
+        iprog=ipeak-hfree
+        if (pmprogs_owner(iprog)==myid) then
+           mbpart = orphans_local_pid(iprog)
+           gal_tag = 3
+           ip=ip+1
+           do idim=1,ndim
+              pos(idim,ip)=xp(mbpart,idim)*Lbox
+              vel(idim,ip)=vp(mbpart,idim)
+           end do
+           var(1,ip)=pmprogs_mpeak(iprog)
+           var(2,ip)=gal_tag
+           var(3,ip)=abs(clmpidp(mbpart))
+        endif
+     endif
+     
+     if(ip==nvector)then
+        !===========================================================================
+        ! Count selection particles
+        call perform_my_selection(.true.,z1,z2, &
+             &                           om0in,omLin,hubin,Lbox, &
+             &                           observer,thetay,thetaz,theta,phi, &
+             &                           pos,vel,var,ip, &
+             &                           posout,velout,varout,zout,npout,.false.)
+        
+        call extend_arrays_if_needed()
+        
+        ! Perform actual selection
+        call perform_my_selection(.false.,z1,z2, &
+             &                           om0in,omLin,hubin,Lbox, &
+             &                           observer,thetay,thetaz,theta,phi, &
+             &                           pos,vel,var,ip, &
+             &                           posout,velout,varout,zout,npout,.false.)
+        !===========================================================================
+        if(npout>0)then
+           do idim=1,ndim
+              do i=1,npout
+                 xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+                 vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
+                 mp_out(ipout+i,idim)=real(varout(idim,i),kind=sp)
+              end do
+           end do
+           do i=1,npout
+              zp_out(ipout+i)=real(zout(i),kind=sp)
+           end do
+           ipout=ipout+npout
+           npart_out=npart_out+npout
+        endif
+        ip=0
+     end if
+     if(ipout>=nstride)then
+        if(.not.opened) then
+           open(ilun,file=TRIM(fileloc),form='unformatted')
+           rewind(ilun)
+           write(ilun)ncpu
+           write(ilun)nstride
+           write(ilun)npart
+           opened=.true.
+        endif
+        do idim=1,ndim
+           write(ilun)xp_out(1:nstride,idim)
+           write(ilun)vp_out(1:nstride,idim)
+        end do
+        write(ilun)zp_out(1:nstride)
+        do idim=1,ndim
+           do i=1,ipout-nstride
+              xp_out(i,idim)=xp_out(i+nstride,idim)
+              vp_out(i,idim)=vp_out(i+nstride,idim)
+              mp_out(i,idim)=mp_out(i+nstride,idim)
+           end do
+        end do
+        do i=1,ipout-nstride
+           zp_out(i)=zp_out(i+nstride)
+        end do
+        ipout=ipout-nstride
+     endif
+     
+  enddo
+  if(ip>0)then
+     !===========================================================================
+     ! Count selection particles
+     call perform_my_selection(.true.,z1,z2, &
+          &                           om0in,omLin,hubin,Lbox, &
+          &                           observer,thetay,thetaz,theta,phi, &
+          &                           pos,vel,var,ip, &
+          &                           posout,velout,varout,zout,npout,.false.)
+     
+     call extend_arrays_if_needed()
+     
+     ! Perform actual selection
+     call perform_my_selection(.false.,z1,z2, &
+          &                           om0in,omLin,hubin,Lbox, &
+          &                           observer,thetay,thetaz,theta,phi, &
+          &                           pos,vel,var,ip, &
+          &                           posout,velout,varout,zout,npout,.false.)
+     !===========================================================================
+     if(npout>0)then
+        do idim=1,ndim
+           do i=1,npout
+              xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
+              vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
+              mp_out(ipout+i,idim)=real(varout(idim,i),kind=sp)
+           end do
+        end do
+        do i=1,npout
+           zp_out(ipout+i)=real(zout(i),kind=sp)
+        end do
+        ipout=ipout+npout
+        npart_out=npart_out+npout
+     endif
+  endif
+  if(ipout>=nstride)then
+     if(.not.opened) then
+        open(ilun,file=TRIM(fileloc),form='unformatted')
+        rewind(ilun)
+        write(ilun)ncpu
+        write(ilun)nstride
+        write(ilun)npart
+        opened=.true.
+     endif
+     do idim=1,ndim
+        write(ilun)xp_out(1:nstride,idim)
+        write(ilun)vp_out(1:nstride,idim)
+        write(ilun)mp_out(1:nstride,idim)
+     end do
+     write(ilun)zp_out(1:nstride)
+     do idim=1,ndim
+        do i=1,ipout-nstride
+           xp_out(i,idim)=xp_out(i+nstride,idim)
+           vp_out(i,idim)=vp_out(i+nstride,idim)
+           mp_out(i,idim)=mp_out(i+nstride,idim)
+        end do
+     end do
+     do i=1,ipout-nstride
+        zp_out(i)=zp_out(i+nstride)
+     end do
+     ipout=ipout-nstride
+  endif
+
+  if(ipout>0)then
+     if(.not.opened) then
+        open(ilun,file=TRIM(fileloc),form='unformatted')
+        rewind(ilun)
+        write(ilun)ncpu
+        write(ilun)nstride
+        write(ilun)npart
+        opened=.true.
+     endif
+     do idim=1,ndim
+        write(ilun)xp_out(1:ipout,idim)
+        write(ilun)vp_out(1:ipout,idim)
+        write(ilun)mp_out(1:ipout,idim)
+     end do
+     write(ilun)zp_out(1:ipout)
+  endif
+
+  if(opened)close(ilun)
+
+  if (verbose)write(*,*)'cone galaxy output=',myid,npart_out
+
+  if(npart_out>0) then
+     open(ilun,file=TRIM(fileloc)//".txt",form='formatted')
+     rewind(ilun)
+     write(ilun,*) ncpu
+     write(ilun,*) nstride
+     write(ilun,*) npart_out
+     write(ilun,*) aexp_old
+     write(ilun,*) aexp
+     close(ilun)
+  endif
+  
+  ! Send the token
+#ifndef WITHOUTMPI
+  if(IOGROUPSIZECONE>0) then
+     if(mod(myid,IOGROUPSIZECONE)/=0 .and.(myid.lt.ncpu))then
+        dummy_io=1
+        call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+             & MPI_COMM_WORLD,info2)
+     end if
+  endif
+#endif
+
+  if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
+     write(*,*)'Error in output_gal_cone'
+     write(*,*)'npart_out=',npart_out,'opened=',opened
+     stop
+  endif
+
+  endif
+
+contains
+
+    ! Extends (deallocates and reallocates) the arrays
+    ! posout, velout, varout, zout, xp_out, vp_out, mp_out and zp_out
+    ! after npout has been updated, so they can hold enough particles
+    !
+    ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
+    ! reallocating too frequently.
+
+    subroutine extend_arrays_if_needed()
+
+        ! Allocation chunk size
+        integer, parameter :: alloc_chunk_size = 100
+        integer :: new_nalloc1, new_nalloc2
+        integer :: nchunks1, nchunks2
+
+        if (nalloc1 >= npout .and. nalloc2 >= npout+nstride) return
+
+        ! Compute new array sizes
+        nchunks1 = npout / alloc_chunk_size
+        if (mod(npout, alloc_chunk_size) > 0) nchunks1=nchunks1+1
+
+        nchunks2 = (npout+nstride) / alloc_chunk_size
+        if (mod(npout+nstride, alloc_chunk_size) > 0) nchunks2=nchunks2+1
+        
+        new_nalloc1 = nchunks1 * alloc_chunk_size
+        new_nalloc2 = nchunks2 * alloc_chunk_size
+
+        ! Resize temp array
+        deallocate(tmparr)
+        allocate(tmparr(1:3,1:max(new_nalloc1,new_nalloc2)))
+
+        ! Resize xp_out, vp_out, mp_out, zp_out
+        do idim=1,ndim
+            tmparr(idim,1:nalloc2)=xp_out(1:nalloc2,idim)
+        end do
+        deallocate(xp_out); allocate(xp_out(1:new_nalloc2,1:3))
+        do idim=1,ndim
+            xp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
+        end do
+
+        do idim=1,ndim
+            tmparr(idim,1:nalloc2)=vp_out(1:nalloc2,idim)
+        end do
+        deallocate(vp_out); allocate(vp_out(1:new_nalloc2,1:3))
+        do idim=1,ndim
+           vp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
+        end do
+
+        do idim=1,ndim
+            tmparr(idim,1:nalloc2)=mp_out(1:nalloc2,idim)
+        end do
+        deallocate(mp_out); allocate(mp_out(1:new_nalloc2,1:3))
+        do idim=1,ndim
+           mp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
+        end do
+
+        tmparr(1,1:nalloc2)=zp_out(1:nalloc2)
+        deallocate(zp_out); allocate(zp_out(1:new_nalloc2))
+        zp_out(1:nalloc2)=real(tmparr(1,1:nalloc2),kind=sp)
+
+        nalloc2 = new_nalloc2
+
+        ! Resize posout, velout, zout
+        do idim=1,ndim
+            tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1)
+        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
+        end do
+        do idim=1,ndim
+            posout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
+        end do
+
+        do idim=1,ndim
+            tmparr(idim,1:nalloc1)=velout(idim,1:nalloc1)
+        end do
+        deallocate(velout); allocate(velout(1:3,1:new_nalloc1))
+        do idim=1,ndim
+           velout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
+        end do
+
+        do idim=1,ndim
+            tmparr(idim,1:nalloc1)=varout(idim,1:nalloc1)
+        end do
+        deallocate(varout); allocate(varout(1:3,1:new_nalloc1))
+        do idim=1,ndim
+           varout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
+        end do
+
+        tmparr(1,1:nalloc1)=zout(1:nalloc1)
+        deallocate(zout); allocate(zout(1:new_nalloc1))
+        zout(1:nalloc1)=tmparr(1,1:nalloc1)
+
+        nalloc1 = new_nalloc1
+
+    end subroutine extend_arrays_if_needed
+
 end subroutine make_galaxies
-
-
-
-
-
-
 
 !=================================================
 subroutine get_local_prog_id(global_id, local_id)
@@ -3950,5 +4353,3 @@ end subroutine mtreedebug_dump_mostbound_lists
 
 ! #endif for NDIM == 3
 #endif
-
-
