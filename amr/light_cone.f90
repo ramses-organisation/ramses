@@ -20,11 +20,11 @@ subroutine output_cone()
   integer::ilun,ipout,npout,npart_out
   character(LEN=80)::fileloc
   character(LEN=5)::nchar
-  real(kind=8),dimension(1:3,1:nvector),save::pos,vel
-  real(kind=8),dimension(:,:),allocatable::posout,velout
+  real(kind=8),dimension(1:3,1:nvector),save::pos,vel,var
+  real(kind=8),dimension(:,:),allocatable::posout,velout,varout
   real(kind=8),dimension(:),allocatable::zout
   real(kind=8),dimension(:,:),allocatable::tmparr
-  real(sp),dimension(:,:),allocatable::xp_out,vp_out
+  real(sp),dimension(:,:),allocatable::xp_out,vp_out,mp_out
   real(sp),dimension(:),allocatable::zp_out
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
@@ -82,11 +82,13 @@ subroutine output_cone()
   nalloc1=nvector
   allocate(posout(1:3, 1:nalloc1))
   allocate(velout(1:3, 1:nalloc1))
+  allocate(varout(1:3, 1:nalloc1))
   allocate(zout(1:nalloc1))
 
   nalloc2=nvector+nstride
   allocate(xp_out(1:nalloc2,1:3))
   allocate(vp_out(1:nalloc2,1:3))
+  allocate(mp_out(1:nalloc2,1:3))
   allocate(zp_out(1:nalloc2))
 
   allocate(tmparr(1:3, 1:nalloc2))
@@ -123,6 +125,7 @@ subroutine output_cone()
                     do i=1,ip
                        pos(idim,i)=xp(ind_part(i),idim)*Lbox
                        vel(idim,i)=vp(ind_part(i),idim)
+                       var(idim,i)=0 ! No additional property
                     end do
                  end do
                  !===========================================================================
@@ -130,8 +133,8 @@ subroutine output_cone()
                  call perform_my_selection(.true.,z1,z2, &
                       &                           om0in,omLin,hubin,Lbox, &
                       &                           observer,thetay,thetaz,theta,phi, &
-                      &                           pos,vel,ip, &
-                      &                           posout,velout,zout,npout,.false.)
+                      &                           pos,vel,var,ip, &
+                      &                           posout,velout,varout,zout,npout,.false.)
 
                  call extend_arrays_if_needed()
 
@@ -139,14 +142,15 @@ subroutine output_cone()
                  call perform_my_selection(.false.,z1,z2, &
                       &                           om0in,omLin,hubin,Lbox, &
                       &                           observer,thetay,thetaz,theta,phi, &
-                      &                           pos,vel,ip, &
-                      &                           posout,velout,zout,npout,.false.)
+                      &                           pos,vel,var,ip, &
+                      &                           posout,velout,varout,zout,npout,.false.)
                  !===========================================================================
                  if(npout>0)then
                     do idim=1,ndim
                        do i=1,npout
                           xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
                           vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
+                          mp_out(ipout+i,idim)=real(varout(idim,i),kind=sp)
                        end do
                     end do
                     do i=1,npout
@@ -176,6 +180,7 @@ subroutine output_cone()
                     do i=1,ipout-nstride
                        xp_out(i,idim)=xp_out(i+nstride,idim)
                        vp_out(i,idim)=vp_out(i+nstride,idim)
+                       mp_out(i,idim)=mp_out(i+nstride,idim)
                     end do
                  end do
                  do i=1,ipout-nstride
@@ -197,6 +202,7 @@ subroutine output_cone()
            do i=1,ip
               pos(idim,i)=xp(ind_part(i),idim)*Lbox
               vel(idim,i)=vp(ind_part(i),idim)
+              var(idim,i)=0 ! No additional property
            end do
         end do
         !===========================================================================
@@ -204,8 +210,8 @@ subroutine output_cone()
         call perform_my_selection(.true.,z1,z2, &
              &                           om0in,omLin,hubin,Lbox, &
              &                           observer,thetay,thetaz,theta,phi, &
-             &                           pos,vel,ip, &
-             &                           posout,velout,zout,npout,.false.)
+             &                           pos,vel,var,ip, &
+             &                           posout,velout,varout,zout,npout,.false.)
 
         call extend_arrays_if_needed()
 
@@ -213,14 +219,15 @@ subroutine output_cone()
         call perform_my_selection(.false.,z1,z2, &
              &                           om0in,omLin,hubin,Lbox, &
              &                           observer,thetay,thetaz,theta,phi, &
-             &                           pos,vel,ip, &
-             &                           posout,velout,zout,npout,.false.)
+             &                           pos,vel,var,ip, &
+             &                           posout,velout,varout,zout,npout,.false.)
         !===========================================================================
         if(npout>0)then
            do idim=1,ndim
               do i=1,npout
                  xp_out(ipout+i,idim)=real(posout(idim,i)/Lbox,kind=sp)
                  vp_out(ipout+i,idim)=real(velout(idim,i),kind=sp)
+                 mp_out(ipout+i,idim)=real(varout(idim,i),kind=sp)
               end do
            end do
            do i=1,npout
@@ -248,6 +255,7 @@ subroutine output_cone()
            do i=1,ipout-nstride
               xp_out(i,idim)=xp_out(i+nstride,idim)
               vp_out(i,idim)=vp_out(i+nstride,idim)
+              mp_out(i,idim)=mp_out(i+nstride,idim)
            end do
         end do
         do i=1,ipout-nstride
@@ -289,7 +297,7 @@ subroutine output_cone()
      close(ilun)
   endif
 
-     ! Send the token
+  ! Send the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZECONE>0) then
      if(mod(myid,IOGROUPSIZECONE)/=0 .and.(myid.lt.ncpu))then
@@ -306,11 +314,10 @@ subroutine output_cone()
      stop
   endif
 
-
 contains
 
     ! Extends (deallocates and reallocates) the arrays
-    ! posout, velout, zout, xp_out, vp_out and zp_out
+    ! posout, velout, varout, zout, xp_out, vp_out, mp_out and zp_out
     ! after npout has been updated, so they can hold enough particles
     !
     ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
@@ -341,7 +348,7 @@ contains
         allocate(tmparr(1:3,1:max(new_nalloc1,new_nalloc2)))
 
 
-        ! Resize xp_out, vp_out, zp_out
+        ! Resize xp_out, vp_out, mp_out, zp_out
         do idim=1,ndim
             tmparr(idim,1:nalloc2)=xp_out(1:nalloc2,idim)
         end do
@@ -358,6 +365,14 @@ contains
             vp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
         end do
 
+        do idim=1,ndim
+            tmparr(idim,1:nalloc2)=mp_out(1:nalloc2,idim)
+        end do
+        deallocate(mp_out); allocate(mp_out(1:new_nalloc2,1:3))
+        do idim=1,ndim
+            mp_out(1:nalloc2,idim)=real(tmparr(idim,1:nalloc2),kind=sp)
+        end do
+
         tmparr(1,1:nalloc2)=zp_out(1:nalloc2)
         deallocate(zp_out); allocate(zp_out(1:new_nalloc2))
         zp_out(1:nalloc2)=real(tmparr(1,1:nalloc2),kind=sp)
@@ -365,7 +380,7 @@ contains
         nalloc2 = new_nalloc2
 
 
-        ! Resize posout, velout, zout
+        ! Resize posout, velout, varout, zout
         do idim=1,ndim
             tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1)
         deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
@@ -380,6 +395,14 @@ contains
         deallocate(velout); allocate(velout(1:3,1:new_nalloc1))
         do idim=1,ndim
             velout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
+        end do
+
+        do idim=1,ndim
+            tmparr(idim,1:nalloc1)=varout(idim,1:nalloc1)
+        end do
+        deallocate(varout); allocate(varout(1:3,1:new_nalloc1))
+        do idim=1,ndim
+            varout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
         end do
 
         tmparr(1,1:nalloc1)=zout(1:nalloc1)
@@ -397,8 +420,8 @@ end subroutine output_cone
 subroutine perform_my_selection(justcount,z1,z2, &
      &                          om0in,omLin,hubin,Lbox, &
      &                          observer,thetay,thetaz,theta,phi, &
-     &                          pos,vel,npart, &
-     &                          posout,velout,zout,npartout,verbose)
+     &                          pos,vel,var,npart, &
+     &                          posout,velout,varout,zout,npartout,verbose)
   !===========================================================================
   ! All the quantities below are real*8 except
   !      juscount : logical
@@ -447,11 +470,16 @@ subroutine perform_my_selection(justcount,z1,z2, &
   ! vel(3,npart) : velocities of the input particles (in any unit, it does not
   !            matter)
   !
+  ! var(3,npart) : additional properties of the input particles (in any unit, it does not
+  !            matter)
+  !
   ! npart    : number of input particles to be treated
   !
   ! posout(3,npartout) : output comoving positions of selected particles in Mpc.
   !
   ! velout(3,npartout) : output velocities of selected particles
+  !
+  ! varout(3,npartout) : output properties of selected particles
   !
   ! zout(npartout) : output redshift of selected particles
   !
@@ -470,8 +498,8 @@ subroutine perform_my_selection(justcount,z1,z2, &
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
-  real(kind=8) :: pos(1:3,1:nvector),vel(1:3,1:nvector)
-  real(kind=8) :: posout(3,npartout),velout(3,npartout),zout(npartout)
+  real(kind=8) :: pos(1:3,1:nvector),vel(1:3,1:nvector),var(1:3,1:nvector)
+  real(kind=8) :: posout(3,npartout),velout(3,npartout),varout(3,npartout),zout(npartout)
   real(kind=8) :: coord_distance
   real(kind=8) :: thetarad,phirad,thetayrad,thetazrad,tanybound,tanzbound
   real(kind=8) :: rot(3,3),rotm1(3,3),dist1,dist2
@@ -587,6 +615,11 @@ subroutine perform_my_selection(justcount,z1,z2, &
                          &               vyfr*rotm1(2,3)+ &
                          &               vzfr*rotm1(3,3)
                     
+                    ! Additional properties are just passed
+                    varout(1,npartcount)=var(1,np)
+                    varout(2,npartcount)=var(2,np)
+                    varout(3,npartcount)=var(3,np)
+
                     ! Compute the redshift of the particle using linear
                     ! interpolation
                     dxtest1=dist-dist1

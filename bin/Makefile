@@ -204,7 +204,7 @@ write_makefile.o: FORCE
 	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
 write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
-	$(F90) $(FFLAGS) -c write_patch.f90 -o $@
+	$(F90) -O0 -c write_patch.f90 -o $@
 %.o:%.F
 	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
 %.o:%.f90
