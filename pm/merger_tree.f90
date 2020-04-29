@@ -1,9 +1,9 @@
 !-----------------------------------------------------------------
-! This file contains the routines for the merger tree patch.
-! See README for more information.
+! This file contains the routines for the merger trees.
+! See wiki for more information.
 !
-! There are three optional preprocessing definitions for this patch
-! only:
+! There are three optional preprocessing definitions for particle
+! unbinding and merger trees only:
 ! -DUNBINDINGCOM
 !   use (and iteratively determine) the center of mass as the
 !   center of clumps
@@ -36,6 +36,7 @@
 ! subroutine fill_matrix()
 ! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
+! subroutine read_mergertree_params()
 ! #ifdef MTREEDEBUG:
 ! subroutine mtreedebug_filename()
 ! subroutine mtreedebug_matrixcheck_prog()
@@ -3212,11 +3213,10 @@ subroutine make_galaxies()
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
   real(dp)::gal_tag
-  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
-  integer::i,ip,npart1
+  integer::idim
+  integer::i,ip
   integer::nalloc1,nalloc2
 
-  integer,dimension(1:nvector),save::ind_part
   logical::opened
   
   allocate(mpeak(1:npeaks_max))
@@ -3975,6 +3975,42 @@ subroutine mark_tracer_particles()
 
 end subroutine mark_tracer_particles
 
+
+
+
+
+
+
+!=====================================
+subroutine read_mergertree_params()
+!=====================================
+  !------------------------------------------------------------------
+  ! Reads in mergertree namelist parameters, does some checks
+  ! whether we can work like this. Called from subroutine read_params
+  !------------------------------------------------------------------
+
+  use clfind_commons
+  use mpi_mod
+  implicit none
+
+  namelist/mergertree_params/nmost_bound, max_past_snapshots, &
+       & use_exclusive_mass, make_mock_galaxies
+
+  ! Read namelist file
+  rewind(1)
+  read(1,NML=mergertree_params,END=121)
+  goto 122
+121 if(myid==1)write(*,*)'You did not set up namelist &MERGERTREE_PARAMS in parameter file.'
+
+122 rewind(1)
+
+  if (make_mergertree .and..not. unbind) then
+    if (myid==1) write(*,*) "You set make_mergertree=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
+
+end subroutine read_mergertree_params
 
 
 

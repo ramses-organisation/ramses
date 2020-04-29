@@ -1,9 +1,9 @@
 !-----------------------------------------------------------------
 ! This file contains the routines for particle unbinding.
-! See README for more information.
+! See wiki for more information.
 !
-! There are two optional preprocessing definitions for this patch
-! only:
+! There are three optional preprocessing definitions for particle
+! unbinding and merger trees only:
 ! -DUNBINDINGCOM
 !   use (and iteratively determine) the center of mass as the
 !   center of clumps
@@ -11,6 +11,11 @@
 !   create a lot of formatted output to help debugging the merger
 !   tree routines. Don't use this unless you're fighting bugs, it
 !   will create a looooot of otherwise unnecessary output.
+! -DMTREE_INDIVIDUAL_FILES
+!   instead of collective writes into a single file for progenitor
+!   data (not mergertree/galaxy result files), every task writes an
+!   individual file. This was added because some MPI implementations
+!   had issues with collective writing.
 !
 ! Contains:
 !   subroutine unbinding()
@@ -27,6 +32,7 @@
 !   subroutine compute_phi()
 !   subroutine dissolve_small_clumps()
 !     contains subroutine get_exclusive_clump_mass()
+!   subroutine read_unbinding_params()
 !   subroutine allocate_unbinding_arrays()
 !   subroutine deallocate_unbinding_arrays()
 !-----------------------------------------------------------------
@@ -392,7 +398,7 @@ subroutine unbinding()
   close(666)
 
   ! create_output = .true., otherwise unbdinging() wouldn't have been called
-  if(particlebased_clump_output.and.npeaks_tot>0)then
+  if(npeaks_tot>0)then
     if(myid==1)write(*,*)"Outputing clump properties to disc."
     call write_clump_properties(.true.)
   endif
@@ -2117,6 +2123,44 @@ subroutine dissolve_small_clumps(ilevel, for_halos, initial_cleanup)
     end subroutine get_exclusive_clump_mass
 
 end subroutine dissolve_small_clumps
+
+
+
+
+
+
+subroutine read_unbinding_params()
+  use clfind_commons
+  use mpi_mod
+  implicit none
+
+  namelist/unbinding_params/nmassbins,logbins,particlebased_clump_output &
+       &, saddle_pot,iter_properties,conv_limit,repeat_max
+
+  ! Read namelist file
+  rewind(1)
+  read(1,NML=unbinding_params,END=121)
+  goto 122
+121 if(myid==1)write(*,*)'You did not set up namelist &UNBDINGING_PARAMS in parameter file.'
+
+122 rewind(1)
+
+  if (unbind .and. .not. clumpfind) then
+    if (myid==1) write(*,*) "You want particle unbinding, but didn't turn on clump finding."
+    if (myid==1) write(*,*) "set clumpfind=.true. or unbind=.false. in your namelist."
+    call clean_stop
+  endif
+
+  if (particlebased_clump_output .and..not. unbind) then
+    ! if clumpfind = .false., we don't make it this far.
+    if (myid==1) write(*,*) "You set particlebased_clump_output=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
+end subroutine read_unbinding_params
+
+
+
 
 
 
