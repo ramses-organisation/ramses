@@ -152,18 +152,17 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
-
+        
         call dump_all
-
-
-        ! Dump lightcone
-        if(lightcone .and. ndim==3) call output_cone()
 
         if (output_now_all.EQV..true.) then
           output_now=.false.
         endif
 
      endif
+
+     ! Dump lightcone
+     if(lightcone .and. ndim==3) call output_cone()
 
   endif
 

@@ -1,13 +1,11 @@
-!################################################################
-!################################################################
-!################################################################
-!################################################################
+#if NDIM==3
 subroutine star_formation(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use cooling_module, ONLY: XH=>X, rhoc, mH , twopi
+  use cooling_module, ONLY: XH=>X
+  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi
   use random
   use mpi_mod
   implicit none
@@ -27,11 +25,11 @@ subroutine star_formation(ilevel)
   ! Yann Rasera  10/2002-01/2003
   !----------------------------------------------------------------------
   ! local constants
-  real(dp)::t0,d0,d00,mgas,mcell
+  real(dp)::d0,mgas,mcell,t0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:twotondim,1:3)::xc
   ! other variables
-  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun
+  integer ::ncache,nnew,ivar,ngrid,icpu,index_star,ndebris_tot,ilun=10
   integer ::igrid,ix,iy,iz,ind,i,n,iskip,nx_loc,idim
   integer ::ntot,ntot_all,nstar_corrected
   logical ::ok_free
@@ -41,15 +39,20 @@ subroutine star_formation(ilevel)
   real(dp)::alpha0
   real(dp)::sigma2
   real(dp)::birth_epoch,factG,M2
-  real(kind=8)::mlost,mtot,mlost_all,mtot_all
+  real(kind=8)::mlost_all,mtot_all
+#ifndef WITHOUTMPI
+  real(kind=8)::mlost,mtot
+#endif
   real(kind=8)::PoissMean
-  real(dp),parameter::pi=0.5*twopi
   real(dp),dimension(1:3)::skip_loc
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
+  real(dp)::mdebris
   real(dp),dimension(1:nvector)::sfr_ff
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
+  integer ,dimension(1:nvector),save::ind_debris
+
   logical ,dimension(1:nvector),save::ok,ok_new=.true.
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   character(LEN=80)::filename,filedir,fileloc,filedirini
@@ -72,13 +75,14 @@ subroutine star_formation(ilevel)
   if(sf_log_properties.and.ifout.gt.1) then
      call title(ifout-1,nchar)
      if(IOGROUPSIZEREP>0) then
+        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
         filedirini='output_'//TRIM(nchar)//'/'
         filedir='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/'
      else
         filedir='output_'//TRIM(nchar)//'/'
      endif
      filename=TRIM(filedir)//'stars_'//TRIM(nchar)//'.out'
-     ilun=myid+10
+     ilun=myid+103
      call title(myid,nchar)
      fileloc=TRIM(filename)//TRIM(nchar)
      ! Wait for the token
@@ -131,19 +135,15 @@ subroutine star_formation(ilevel)
   dx_min=(0.5D0**nlevelmax)*scale
   vol_min=dx_min**ndim
 
-  ! Star formation time scale from Gyr to code units
-  ! SFR apply here for long lived stars only
-  t0=t_star*(1d9*365.*24.*3600.)/scale_t
-  trel=sf_trelax*1d6*(365.*24.*3600.)/scale_t
+  trel=sf_trelax*Myr2sec/scale_t ! relaxation timescale
 
   ! ISM density threshold from H/cc to code units
   nISM = n_star
   if(cosmo)then
-     nCOM = del_star*omega_b*rhoc*(h0/100.)**2/aexp**3*XH/mH
+     nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*XH/mH
      nISM = MAX(nCOM,nISM)
   endif
   d0   = nISM/scale_nH
-  d00  = n_star/scale_nH
 
   ! Initial star particle mass
   if(m_star < 0d0)then
@@ -179,7 +179,6 @@ subroutine star_formation(ilevel)
      localseed=allseed(myid,1:IRandNumSize)
   end if
 
-#if NDIM==3
   !------------------------------------------------
   ! Convert hydro variables to primitive variables
   !------------------------------------------------
@@ -267,16 +266,16 @@ subroutine star_formation(ilevel)
                  ! Gas density
                  d         = uold(ind_cell(i),1)
                  ! Compute temperature in K/mu
-                 T2        = (gamma-1.0)*uold(ind_cell(i),5)*scale_T2
+                 T2        = (gamma-1.0d0)*uold(ind_cell(i),5)*scale_T2
                  ! Correct from polytrope
-                 T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 T_poly    = T2_star*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0d0)
                  T2        = T2-T_poly
                  ! Compute sound speed squared
-                 cs2       = (gamma-1.0)*uold(ind_cell(i),5)
+                 cs2       = (gamma-1.0d0)*uold(ind_cell(i),5)
                  ! prevent numerical crash due to negative temperature
                  cs2       = max(cs2,smallc**2)
                  ! Correct from polytrope
-                 cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0)
+                 cs2_poly  = (T2_star/scale_T2)*(uold(ind_cell(i),1)*scale_nH/nISM)**(g_star-1.0d0)
                  cs2       = cs2-cs2_poly
                  ! Turbulence 1D velocity dispersion
                  sigma2 = uold(ind_cell(i),ivirial1)*2.0/3.0
@@ -358,11 +357,11 @@ subroutine star_formation(ilevel)
            end do
            ! Temperature criterion
            do i=1,ngrid
-              T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0)
+              T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0d0)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
-              T_poly=T2_star*(nH/nISM)**(g_star-1.0)
+              T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
               T2=T2-T_poly
-              if(T2>2e4)ok(i)=.false.
+              if(T2>2d4)ok(i)=.false.
            end do
         endif
         ! Geometrical criterion
@@ -372,7 +371,6 @@ subroutine star_formation(ilevel)
               if(d<=var_cut_refine)ok(i)=.false.
            end do
         endif
-
         ! Calculate number of new stars in each cell using Poisson statistics
         do i=1,ngrid
            nstar(i)=0
@@ -381,19 +379,19 @@ subroutine star_formation(ilevel)
               d=uold(ind_cell(i),1)
               mcell=d*vol_loc
               ! Free fall time of an homogeneous sphere
-              tstar= .5427*sqrt(1.0/(factG*max(d,smallr)))
+              tstar= .5427d0*sqrt(1.0d0/(factG*max(d,smallr)))
               ! Gas mass to be converted into stars
               mgas=dtnew(ilevel)*(sfr_ff(i)/tstar)*mcell
               ! Poisson mean
               PoissMean=mgas/mstar
-              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel),1.0)
+              if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel), 1.0d0)
               ! Compute Poisson realisation
               call poissdev(localseed,PoissMean,nstar(i))
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
               ! Security to prevent more than 90% of gas depletion
-              if (mgas > 0.9*mcell) then
-                 nstar_corrected=int(0.9*mcell/mstar)
+              if (mgas > 0.9d0*mcell) then
+                 nstar_corrected=int(0.9d0*mcell/mstar)
                  mstar_lost=mstar_lost+(nstar(i)-nstar_corrected)*mstar
                  nstar(i)=nstar_corrected
               endif
@@ -401,6 +399,7 @@ subroutine star_formation(ilevel)
               mstar_tot=mstar_tot+nstar(i)*mstar
               if(nstar(i)>0)then
                  ntot=ntot+1
+                 if(f_w>0)ndebris_tot=ndebris_tot+1
               endif
            endif
         enddo
@@ -506,6 +505,12 @@ subroutine star_formation(ilevel)
         call remove_free(ind_part,nnew)
         call add_list(ind_part,ind_grid_new,ok_new,nnew)
 
+        ! Update linked list for debris
+        if(f_w>0)then
+           call remove_free(ind_debris,nnew)
+           call add_list(ind_debris,ind_grid_new,ok_new,nnew)
+        endif
+
         ! Calculate new star particle and modify gas density
         do i=1,nnew
            index_star=index_star+1
@@ -523,19 +528,44 @@ subroutine star_formation(ilevel)
            if(metal)zg=uold(ind_cell_new(i),imetal)
 
            ! Set star particle variables
-           tp(ind_part(i))=birth_epoch  ! Birth epoch
-           mp(ind_part(i))=n*mstar      ! Mass
-           levelp(ind_part(i))=ilevel   ! Level
-           idp(ind_part(i))=index_star  ! Star identity
-           typep(ind_part(i))%family=FAM_STAR
-           typep(ind_part(i))%tag=0
-           xp(ind_part(i),1)=x
-           xp(ind_part(i),2)=y
-           xp(ind_part(i),3)=z
-           vp(ind_part(i),1)=u
-           vp(ind_part(i),2)=v
-           vp(ind_part(i),3)=w
-           if(metal)zp(ind_part(i))=zg  ! Initial star metallicity
+           tp(ind_part(i)) = birth_epoch  ! Birth epoch
+           mp(ind_part(i)) = n*mstar      ! Mass
+           levelp(ind_part(i)) = ilevel   ! Level
+           idp(ind_part(i)) = index_star  ! Star identity
+           typep(ind_part(i))%family = FAM_STAR
+           typep(ind_part(i))%tag = 0
+           xp(ind_part(i),1) = x
+           xp(ind_part(i),2) = y
+           xp(ind_part(i),3) = z
+           vp(ind_part(i),1) = u
+           vp(ind_part(i),2) = v
+           vp(ind_part(i),3) = w
+           if(metal)zp(ind_part(i)) = zg  ! Initial star metallicity
+
+           ! Set GMC particle variables
+           if(f_w>0)then
+              ! Compute GMC mass without more than 50% of gas depletion
+              mdebris=min(f_w*n*mstar,0.5d0*(d*vol_loc-n*mstar))
+              ! Add supernova ejecta
+              mdebris=mdebris+eta_sn*n*mstar
+              ! Remove ejecta from the long lived star mass
+              mp(ind_part(i))=n*mstar-eta_sn*n*mstar
+              ! Set GMC particle variables
+              tp(ind_debris(i))=birth_epoch  ! Birth epoch
+              mp(ind_debris(i))=mdebris      ! Mass
+              levelp(ind_debris(i))=ilevel   ! Level
+              idp(ind_debris(i))=-n          ! Number of individual stars
+              typep(ind_debris(i))%family = FAM_DEBRIS
+              typep(ind_debris(i))%tag = 0
+              xp(ind_debris(i),1)=x
+              xp(ind_debris(i),2)=y
+              xp(ind_debris(i),3)=z
+              vp(ind_debris(i),1)=u
+              vp(ind_debris(i),2)=v
+              vp(ind_debris(i),3)=w
+              ! GMC metallicity + yield from ejecta
+              if(metal)zp(ind_debris(i))=zg+eta_sn*yield*(1-zg)*n*mstar/mdebris
+           endif
 
            if(sf_log_properties) then
               write(ilun,'(I10)',advance='no') 0
@@ -550,7 +580,7 @@ subroutine star_formation(ilevel)
               do ivar=2,nvar
                  if(ivar.eq.ndim+2)then
                     ! Temperature
-                    uvar=(gamma-1.0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
+                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
                  else
                     uvar=uold(ind_cell_new(i),ivar)
                  endif
@@ -569,7 +599,7 @@ subroutine star_formation(ilevel)
            if(flag2(ind_cell(i))>0)then
               n=flag2(ind_cell(i))
               d=uold(ind_cell(i),1)
-              uold(ind_cell(i),1)=max(d-n*dstar,0.5*d)
+              uold(ind_cell(i),1)=max(d-n*dstar,0.5d0*d)
            endif
         end do
 
@@ -629,10 +659,10 @@ subroutine star_formation(ilevel)
      end do
   end do
 
-#endif
   if(sf_log_properties) close(ilun)
 
 end subroutine star_formation
+#endif
 !################################################################
 !################################################################
 !################################################################

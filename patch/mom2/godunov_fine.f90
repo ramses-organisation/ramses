@@ -799,7 +799,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))*dx/dtnew(ilevel)/6.0
            end do
         end if
-        
+
         ! Gather refinement flag
         do i=1,nexist
            ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
