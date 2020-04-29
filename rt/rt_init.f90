@@ -206,37 +206,39 @@ SUBROUTINE read_rt_params(nml_ok)
   ! Set number of used ionisation fractions, indexes of ionization
   ! fractions, and ionization energies, and check if we have enough
   ! ionization variables (NIONS)
-  iCount=0
-  if(isH2) then
-     iCount=iCount+1
-     ixHI=iCount    ; ionEvs(ixHI)=ionEv_HI
-  endif
-  iCount=iCount+1    ; ixHII=iCount   ; ionEvs(ixHII)=ionEv_HII
-  if(isHe) then
-     iCount=iCount+1 ; ixHeII=iCount  ; ionEvs(ixHeII)=ionEv_HeII
-     iCount=iCount+1 ; ixHeIII=iCount ; ionEvs(ixHeIII)=ionEv_HeIII
-  endif
-  nIonsUsed = iCount
-  if(nIonsUsed .gt. NIONS) then
-     if(myid==1) then
-        write(*,*) 'Not enough variables for ionization fractions'
-        write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'STOPPING!'
+  if(rt .or. neq_chem) then
+     iCount=0
+     if(isH2) then
+        iCount=iCount+1
+        ixHI=iCount    ; ionEvs(ixHI)=ionEv_HI
      endif
-     nml_ok=.false.
-  endif
-  if(nIonsUsed .lt. NIONS) then
-     if(myid==1) then
-        write(*,*) 'Too many variables for ionization fractions'
-        write(*,*) 'Have NIONS=',NIONS
-        write(*,*) 'Need NIONS=',nIonsUsed
-        write(*,*) 'Probably no harm, so still continuing...'
+     iCount=iCount+1    ; ixHII=iCount   ; ionEvs(ixHII)=ionEv_HII
+     if(isHe) then
+        iCount=iCount+1 ; ixHeII=iCount  ; ionEvs(ixHeII)=ionEv_HeII
+        iCount=iCount+1 ; ixHeIII=iCount ; ionEvs(ixHeIII)=ionEv_HeIII
      endif
-  endif
-  if(myid==1) then
-     write(*,*) 'Number of ionization fractions is:',nIonsUsed
-     write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
-                , ixHI, ixHII, ixHeII, ixHeIII
+     nIonsUsed = iCount
+     if(nIonsUsed .gt. NIONS) then
+        if(myid==1) then
+           write(*,*) 'Not enough variables for ionization fractions'
+           write(*,*) 'Have NIONS=',NIONS
+           write(*,*) 'STOPPING!'
+        endif
+        nml_ok=.false.
+     endif
+     if(nIonsUsed .lt. NIONS) then
+        if(myid==1) then
+           write(*,*) 'Too many variables for ionization fractions'
+           write(*,*) 'Have NIONS=',NIONS
+           write(*,*) 'Need NIONS=',nIonsUsed
+           write(*,*) 'Probably no harm, so still continuing...'
+        endif
+     endif
+     if(myid==1) then
+        write(*,*) 'Number of ionization fractions is:',nIonsUsed
+        write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
+             , ixHI, ixHII, ixHeII, ixHeIII
+     endif
   endif
 
   call read_rt_groups(nml_ok)
