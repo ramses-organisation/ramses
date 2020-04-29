@@ -3212,11 +3212,10 @@ subroutine make_galaxies()
   real(kind=8) :: z1,z2,om0in,omLin,hubin,Lbox
   real(kind=8) :: observer(3),thetay,thetaz,theta,phi
   real(dp)::gal_tag
-  integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
-  integer::i,ip,npart1
+  integer::idim
+  integer::i,ip
   integer::nalloc1,nalloc2
 
-  integer,dimension(1:nvector),save::ind_part
   logical::opened
   
   allocate(mpeak(1:npeaks_max))
