@@ -44,10 +44,10 @@ NVAR = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
+NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
-   NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
+   NVAR := $(NVAR)+$(NIONS)
 endif
-NVAR := $(NVAR)+$(NENER)+$(NPSCAL)
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0
