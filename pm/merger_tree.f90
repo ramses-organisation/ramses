@@ -1,9 +1,9 @@
 !-----------------------------------------------------------------
-! This file contains the routines for the merger tree patch.
-! See README for more information.
+! This file contains the routines for the merger trees.
+! See wiki for more information.
 !
-! There are three optional preprocessing definitions for this patch
-! only:
+! There are three optional preprocessing definitions for particle
+! unbinding and merger trees only:
 ! -DUNBINDINGCOM
 !   use (and iteratively determine) the center of mass as the
 !   center of clumps
@@ -36,6 +36,7 @@
 ! subroutine fill_matrix()
 ! subroutine deallocate_mergertree()
 ! subroutine mark_tracer_particles()
+! subroutine read_mergertree_params()
 ! #ifdef MTREEDEBUG:
 ! subroutine mtreedebug_filename()
 ! subroutine mtreedebug_matrixcheck_prog()
