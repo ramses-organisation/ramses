@@ -2120,6 +2120,44 @@ end subroutine dissolve_small_clumps
 
 
 
+
+
+
+subroutine read_unbinding_params()
+  use clfind_commons
+  use mpi_mod
+  implicit none
+
+  namelist/unbinding_params/nmassbins,logbins,particlebased_clump_output &
+       &, saddle_pot,iter_properties,conv_limit,repeat_max
+
+  ! Read namelist file
+  rewind(1)
+  read(1,NML=unbinding_params,END=121)
+  goto 122
+121 if(myid==1)write(*,*)'You did not set up namelist &UNBDINGING_PARAMS in parameter file.'
+
+122 rewind(1)
+
+  if (unbind .and. .not. clumpfind) then
+    if (myid==1) write(*,*) "You want particle unbinding, but didn't turn on clump finding."
+    if (myid==1) write(*,*) "set clumpfind=.true. or unbind=.false. in your namelist."
+    call clean_stop
+  endif
+
+  if (particlebased_clump_output .and..not. unbind) then
+    ! if clumpfind = .false., we don't make it this far.
+    if (myid==1) write(*,*) "You set particlebased_clump_output=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
+end subroutine read_unbinding_params
+
+
+
+
+
+
 subroutine allocate_unbinding_arrays()
   use clfind_commons
   use pm_commons, only:npartmax

@@ -71,6 +71,8 @@ module amr_parameters
   logical::tracer  =.false.   ! Tracer particles activated
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
+  logical::unbind=.false.     ! Enable particle unbinding for the clump finder
+  logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
   
   ! Mesh parameters

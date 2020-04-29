@@ -1,6 +1,3 @@
-! Patch notice:
-! This file includes no new subroutines, but some minor additions.
-! You can find them by searching for the keyword "added"
 #if NDIM==3
 subroutine compute_clump_properties(xx)
   use amr_commons
@@ -362,18 +359,18 @@ subroutine write_clump_properties(to_file)
 
   if (to_file .or. myid==1)then
      write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
-            '        rho-               rho+               rho_av             mass_cl            relevance   '
+          '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
-       write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
-            '        rho+               mass      '
+        write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
+             '        rho+               mass      '
      endif
   end if
 
-  do j=npeaks,1,-1
-     jj=ind_sort(j)
-     if (particlebased_clump_output) then ! write particle based data
-        if (relevance(jj) > relevance_threshold .and. clmp_mass_pb(jj) > mass_threshold*particle_mass)then
-           write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+  if (particlebased_clump_output) then ! write particle based data
+    do j=npeaks,1,-1
+      jj=ind_sort(j)
+      if (relevance(jj) > relevance_threshold .and. clmp_mass_pb(jj) > mass_threshold*particle_mass)then
+        write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
                jj+ipeak_start(myid)&
                ,lev_peak(jj)&
                ,new_peak(jj)&
@@ -392,12 +389,36 @@ subroutine write_clump_properties(to_file)
                ,clmp_mass_pb(jj)/clump_vol(jj)&
                ,clmp_mass_pb(jj)&
                ,relevance(jj)
-          rel_mass=rel_mass+clmp_mass_exclusive(jj)
-          n_rel=n_rel+1
-       endif
-     else ! write cell based data
-        if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
-           write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+         rel_mass=rel_mass+clmp_mass_exclusive(jj)
+         n_rel=n_rel+1
+      end if
+
+      if(saddle_threshold>0)then
+        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.clmp_mass_pb(jj) > mass_threshold*particle_mass)then
+           write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
+                  jj+ipeak_start(myid)&
+                  ,n_cells_halo(jj)&
+#ifdef UNBINDINGCOM
+                  ,clmp_com_pb(jj,1)&
+                  ,clmp_com_pb(jj,2)&
+                  ,clmp_com_pb(jj,3)&
+#else
+                  ,peak_pos(jj,1)&
+                  ,peak_pos(jj,2)&
+                  ,peak_pos(jj,3)&
+#endif
+                  ,max_dens(jj)&
+                  ,clmp_mass_pb(jj)
+        endif
+      endif
+    end do
+
+  else ! write cell based data
+
+    do j=npeaks,1,-1
+       jj=ind_sort(j)
+       if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
+          write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
                jj+ipeak_start(myid)&
                ,lev_peak(jj)&
                ,new_peak(jj)&
@@ -412,30 +433,10 @@ subroutine write_clump_properties(to_file)
                ,relevance(jj)
           rel_mass=rel_mass+clump_mass(jj)
           n_rel=n_rel+1
-        endif
-     end if
-
-     if(saddle_threshold>0)then
-        if (particlebased_clump_output) then ! write particle based data
-           if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.clmp_mass_pb(jj) > mass_threshold*particle_mass)then
-              write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
-                  jj+ipeak_start(myid)&
-                  ,n_cells_halo(jj)&
-#ifdef UNBINDINGCOM
-                  ,clmp_com_pb(jj,1)&
-                  ,clmp_com_pb(jj,2)&
-                  ,clmp_com_pb(jj,3)&
-#else
-                  ,peak_pos(jj,1)&
-                  ,peak_pos(jj,2)&
-                  ,peak_pos(jj,3)&
-#endif
-                  ,max_dens(jj)&
-                  ,clmp_mass_pb(jj)
-           endif
-        else
-           if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
-              write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
+       end if
+       if(saddle_threshold>0)then
+          if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+             write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
                   jj+ipeak_start(myid)&
                   ,n_cells_halo(jj)&
                   ,peak_pos(jj,1)&
@@ -443,10 +444,10 @@ subroutine write_clump_properties(to_file)
                   ,peak_pos(jj,3)&
                   ,max_dens(jj)&
                   ,halo_mass(jj)
-           endif
-        endif
-     endif
-  end do
+          endif
+       endif
+    end do
+  end if
 
   if (to_file)then
      close(ilun)
@@ -506,7 +507,7 @@ subroutine merge_clumps(action)
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
 
-  integer::mergelevel_max_global ! added for patch
+  integer::mergelevel_max_global
 
 #ifndef WITHOUTMPI
   integer::nmove_all,nsurvive_all,nzero_all
@@ -683,11 +684,10 @@ subroutine merge_clumps(action)
   end do
   ! End loop over peak levels
 
-  ! added for patch follwing 6 lines:
-  mergelevel_max=idepth-2 !last level has no more clumps, also idepth=idepth+1 still happens on last level.
+  mergelevel_max=idepth-2 ! last level has no more clumps, also idepth=idepth+1 still happens on last level.
 #ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(mergelevel_max,mergelevel_max_global,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
-        mergelevel_max=mergelevel_max_global
+  call MPI_ALLREDUCE(mergelevel_max,mergelevel_max_global,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+  mergelevel_max=mergelevel_max_global
 #endif
 
   ! Compute maximum saddle density for each surviving clump
@@ -1375,7 +1375,6 @@ subroutine write_clump_map
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
         !peak_map
-        !added for patch: write also cell level
         write(20,'(1PE18.9E2,A,1PE18.9E2,A,1PE18.9E2A,I4,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',levp(ipart),',',peak_nr
 
      end if

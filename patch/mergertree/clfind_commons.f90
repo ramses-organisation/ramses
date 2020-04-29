@@ -18,7 +18,6 @@ module clfind_commons
   real(dp)::age_cut_clfind=0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
-  logical::unbind=.true. !##### NEW HERE
 
   ! Peak communicator arrays
   integer,allocatable,dimension(:)::peak_send_cnt,peak_send_oft
@@ -159,7 +158,6 @@ module clfind_commons
   ! Mergertree general
   !----------------------
 
-  logical :: make_mergertree = .true.     ! whether to make merger trees
   logical :: use_exclusive_mass = .true.  ! whether to use exclusive or inclusive halo mass definition for treemaking
   integer :: nmost_bound = 200            ! maximal number of most bound particles to track
 

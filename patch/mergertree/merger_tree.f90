@@ -3980,6 +3980,42 @@ end subroutine mark_tracer_particles
 
 
 
+!=====================================
+subroutine read_mergertree_params()
+!=====================================
+  !------------------------------------------------------------------
+  ! Reads in mergertree namelist parameters, does some checks
+  ! whether we can work like this. Called from subroutine read_params
+  !------------------------------------------------------------------
+
+  use clfind_commons
+  use mpi_mod
+  implicit none
+
+  namelist/mergertree_params/nmost_bound, max_past_snapshots, &
+       & use_exclusive_mass, make_mock_galaxies
+
+  ! Read namelist file
+  rewind(1)
+  read(1,NML=mergertree_params,END=121)
+  goto 122
+121 if(myid==1)write(*,*)'You did not set up namelist &MERGERTREE_PARAMS in parameter file.'
+
+122 rewind(1)
+
+  if (make_mergertree .and..not. unbind) then
+    if (myid==1) write(*,*) "You set make_mergertree=.true., but not unbind=.true."
+    if (myid==1) write(*,*) "I am setting unbind=.true."
+    unbind=.true.
+  endif
+
+end subroutine read_mergertree_params
+
+
+
+
+
+
 #ifdef MTREEDEBUG
 
 !=========================================================

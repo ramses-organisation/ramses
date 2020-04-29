@@ -390,7 +390,3 @@ CONTAINS
   END SUBROUTINE interchange_sort_int_int
 
 END SUBROUTINE quick_sort_int_int
-
-
-
-

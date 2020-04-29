@@ -306,27 +306,23 @@ subroutine clump_finder(create_output,keep_alive)
 
      if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
-     if(create_output.and..not.particlebased_clump_output)then
-        ! if particlebased_clump_output, write_clump_properties will
-        ! be called from within subroutine unbinding, before the 
-        ! unbinding arrays are deallocated
+     if(create_output.and..not.unbind)then
+        ! if unbind, output will be written in unbinding() routine
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
-        ! if(ivar_clump==0 .or. ivar_clump==-1)then
-        !    if(pic)call output_part_clump_id()
-        ! endif
+        if(ivar_clump==0 .or. ivar_clump==-1)then
+           if(pic)call output_part_clump_id()
+        endif
      endif
 
   end if
 
   !-----------------------------------------------------------------
-  ! Added for patch: Call particle unbinding (and mergertree stuff)
+  ! Call particle unbinding (and mergertree stuff)
   ! Call it even for npeaks_tot = 0, mergertrees need to know that
   ! there are no progenitors to work with
   !------------------------------------------------------------------
   if(unbind.and.create_output.and.pic) call unbinding()
-
-
 
   if (.not. keep_alive)then
      ! Deallocate test particle and peak arrays
@@ -877,19 +873,11 @@ subroutine read_clumpfind_params()
   use mpi_mod
   implicit none
 
-! added for patch: unbinding parameters, mergertree parameter
-  namelist/clumpfind_params/ivar_clump,& 
+  namelist/clumpfind_params/ivar_clump,&
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
-       & n_clfind,rho_clfind,age_cut_clfind,&
-       !unbinding parameters
-       & unbind,nmassbins,logbins,particlebased_clump_output, &
-       & saddle_pot,iter_properties,conv_limit, repeat_max, &
-       !mergertree parameters
-       & make_mergertree, nmost_bound, max_past_snapshots, &
-       & use_exclusive_mass, make_mock_galaxies
-
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v  
+       & n_clfind,rho_clfind,age_cut_clfind
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   ! Read namelist file
   rewind(1)
@@ -941,17 +929,6 @@ subroutine read_clumpfind_params()
      end if
   end if
 
-  ! some checks for unbinding/merger trees
-  if (make_mergertree .and..not. unbind) then
-    if (myid==1) write(*,*) "You set make_mergertree=.true., but not unbind=.true."
-    if (myid==1) write(*,*) "I am setting unbind=.true."
-    unbind=.true.
-  endif
-  if (particlebased_clump_output .and..not. unbind) then
-    if (myid==1) write(*,*) "You set particlebased_clump_output=.true., but not unbind=.true."
-    if (myid==1) write(*,*) "I am setting unbind=.true."
-    unbind=.true.
-  endif
 end subroutine read_clumpfind_params
 !################################################################
 !################################################################
