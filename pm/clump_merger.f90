@@ -366,38 +366,88 @@ subroutine write_clump_properties(to_file)
      endif
   end if
 
-  do j=npeaks,1,-1
-     jj=ind_sort(j)
-     if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
+  if (particlebased_clump_output) then ! write particle based data
+    do j=npeaks,1,-1
+      jj=ind_sort(j)
+      if (relevance(jj) > relevance_threshold .and. clmp_mass_pb(jj) > mass_threshold*particle_mass)then
         write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
-             jj+ipeak_start(myid)&
-             ,lev_peak(jj)&
-             ,new_peak(jj)&
-             ,n_cells(jj)&
-             ,peak_pos(jj,1)&
-             ,peak_pos(jj,2)&
-             ,peak_pos(jj,3)&
-             ,min_dens(jj)&
-             ,max_dens(jj)&
-             ,clump_mass(jj)/clump_vol(jj)&
-             ,clump_mass(jj)&
-             ,relevance(jj)
-        rel_mass=rel_mass+clump_mass(jj)
-        n_rel=n_rel+1
-     end if
-     if(saddle_threshold>0)then
-        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+               jj+ipeak_start(myid)&
+               ,lev_peak(jj)&
+               ,new_peak(jj)&
+               ,n_cells(jj)&
+#ifdef UNBINDINGCOM
+               ,clmp_com_pb(jj,1)&
+               ,clmp_com_pb(jj,2)&
+               ,clmp_com_pb(jj,3)&
+#else
+               ,peak_pos(jj,1)&
+               ,peak_pos(jj,2)&
+               ,peak_pos(jj,3)&
+#endif
+               ,min_dens(jj)&
+               ,max_dens(jj)&
+               ,clmp_mass_pb(jj)/clump_vol(jj)&
+               ,clmp_mass_pb(jj)&
+               ,relevance(jj)
+         rel_mass=rel_mass+clmp_mass_exclusive(jj)
+         n_rel=n_rel+1
+      end if
+
+      if(saddle_threshold>0)then
+        if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.clmp_mass_pb(jj) > mass_threshold*particle_mass)then
            write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
-                jj+ipeak_start(myid)&
-                ,n_cells_halo(jj)&
-                ,peak_pos(jj,1)&
-                ,peak_pos(jj,2)&
-                ,peak_pos(jj,3)&
-                ,max_dens(jj)&
-                ,halo_mass(jj)
+                  jj+ipeak_start(myid)&
+                  ,n_cells_halo(jj)&
+#ifdef UNBINDINGCOM
+                  ,clmp_com_pb(jj,1)&
+                  ,clmp_com_pb(jj,2)&
+                  ,clmp_com_pb(jj,3)&
+#else
+                  ,peak_pos(jj,1)&
+                  ,peak_pos(jj,2)&
+                  ,peak_pos(jj,3)&
+#endif
+                  ,max_dens(jj)&
+                  ,clmp_mass_pb(jj)
         endif
-     endif
-  end do
+      endif
+    end do
+
+  else ! write cell based data
+
+    do j=npeaks,1,-1
+       jj=ind_sort(j)
+       if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
+          write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+               jj+ipeak_start(myid)&
+               ,lev_peak(jj)&
+               ,new_peak(jj)&
+               ,n_cells(jj)&
+               ,peak_pos(jj,1)&
+               ,peak_pos(jj,2)&
+               ,peak_pos(jj,3)&
+               ,min_dens(jj)&
+               ,max_dens(jj)&
+               ,clump_mass(jj)/clump_vol(jj)&
+               ,clump_mass(jj)&
+               ,relevance(jj)
+          rel_mass=rel_mass+clump_mass(jj)
+          n_rel=n_rel+1
+       end if
+       if(saddle_threshold>0)then
+          if(ind_halo(jj).EQ.jj+ipeak_start(myid).AND.halo_mass(jj) > mass_threshold*particle_mass)then
+             write(ilun2,'(I10,X,I10,5(X,1PE18.9E2))')&
+                  jj+ipeak_start(myid)&
+                  ,n_cells_halo(jj)&
+                  ,peak_pos(jj,1)&
+                  ,peak_pos(jj,2)&
+                  ,peak_pos(jj,3)&
+                  ,max_dens(jj)&
+                  ,halo_mass(jj)
+          endif
+       endif
+    end do
+  end if
 
   if (to_file)then
      close(ilun)
@@ -456,6 +506,8 @@ subroutine merge_clumps(action)
   integer,dimension(1:npeaks_max)::alive,ind_sort
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
+
+  integer::mergelevel_max_global
 
 #ifndef WITHOUTMPI
   integer::nmove_all,nsurvive_all,nzero_all
@@ -631,6 +683,12 @@ subroutine merge_clumps(action)
 
   end do
   ! End loop over peak levels
+
+  mergelevel_max=idepth-2 ! last level has no more clumps, also idepth=idepth+1 still happens on last level.
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(mergelevel_max,mergelevel_max_global,1,MPI_INTEGER,MPI_MAX,MPI_COMM_WORLD,info)
+  mergelevel_max=mergelevel_max_global
+#endif
 
   ! Compute maximum saddle density for each surviving clump
   ! Create new local duplicated peaks and update communicator
@@ -1317,7 +1375,8 @@ subroutine write_clump_map
         dx=0.5D0**levp(ipart)
         xcell(1:ndim)=(xg(grid,1:ndim)+xc(ind,1:ndim)*dx-skip_loc(1:ndim))*scale
         !peak_map
-        write(20,'(F11.8,A,F11.8,A,F11.8,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',peak_nr
+        write(20,'(1PE18.9E2,A,1PE18.9E2,A,1PE18.9E2A,I4,A,I8)')xcell(1),',',xcell(2),',',xcell(3),',',levp(ipart),',',peak_nr
+
      end if
   end do
   close(20)
