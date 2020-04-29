@@ -255,6 +255,17 @@ subroutine read_hydro_params(nml_ok)
   endif
 
   !--------------------------------------------------
+  ! Check whether illegally trying non-eq chemistry
+  !--------------------------------------------------
+#ifndef RT
+  if(neq_chem) then
+     if(myid==1)write(*,*) 'Error: non-equilibrium chemistry unavailable'
+     if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
+     nml_ok=.false.
+  endif
+#endif
+  
+  !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------
 #if NENER>0
