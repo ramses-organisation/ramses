@@ -53,8 +53,8 @@
 ;	Fevrier, 2001:	Comments and header added by Romain Teyssier.
 ;-
 pro rd_cone, part, file=file, swap=swap, density=density, velocity=velocity $
-             ,ncpu=ncpu, time=time, verbose=verbose, nout=nout  $
-             ,star=star, noalloc=noalloc
+             ,icpu=icpu,ncpu=ncpu, time=time, verbose=verbose, nout=nout  $
+             ,star=star, noalloc=noalloc, gal=gal
 
 IF N_PARAMS() NE 1 THEN BEGIN
     PRINT, 'Wrong number of arguments'
@@ -62,7 +62,8 @@ IF N_PARAMS() NE 1 THEN BEGIN
     RETURN
 ENDIF
 
-suffix=getcarnum(2048)
+ncpumax=2048
+suffix=getcarnum(ncpumax)
 
 if not keyword_set(file) and not keyword_set(nout) then begin
     key='cone*.out*'
@@ -71,7 +72,10 @@ endif
 if keyword_set(nout) then begin
     suffnout=getcarnum(nout)
     file='cone_'+suffnout(nout-1)+'/cone_'+suffnout(nout-1)+'#'
-endif
+    if keyword_set(gal) then begin
+       file='cone_gal_'+suffnout(nout-1)+'/cone_gal_'+suffnout(nout-1)+'#'
+    endif
+ endif
 if not keyword_set(file) then return
 base_offset=strpos(file,'#')
 file_base=strmid(file,0,base_offset)+'.out'
@@ -82,9 +86,9 @@ part=0.
 ncpu_run=0L & ndim=3L
 
 ok=0
-icpu=1
-while (ok eq 0) do begin
-   file=trim(file_base+suffix(icpu-1)+'.txt')
+jcpu=1
+while (ok eq 0 AND jcpu LT ncpumax) do begin
+   file=trim(file_base+suffix(jcpu-1)+'.txt')
    if file_test(file) then begin
       print,'Reading file ',trim(file)
       openr,1,file
@@ -92,20 +96,22 @@ while (ok eq 0) do begin
       close,1
       ok=1
    endif
-   icpu=icpu+1
+   jcpu=jcpu+1
 endwhile
 
+if ok EQ 0 then return
 print,'ncpu      =',ncpu_run
 
 if not keyword_set(ncpu) then ncpu=ncpu_run
+if not keyword_set(icpu) then icpu=1
 
-suffix=getcarnum(ncpu)
+suffix=getcarnum(icpu+ncpu)
 
 npartp=0L & npart=0L & nstride=0L
 
 dnpart=0d0
 ; Compute total number of particle
-for jcpu=0,ncpu-1 do begin
+for jcpu=icpu-1,icpu+ncpu-2 do begin
     file=trim(file_base+suffix(jcpu))+'.txt'
     if keyword_set(verbose) then print,'Reading file ',trim(file)
     if file_test(file) then begin
@@ -120,15 +126,24 @@ for jcpu=0,ncpu-1 do begin
        dnpart=dnpart+double(npartp)
     endif
 endfor
+print,'cpu_min   =',icpu
+print,'cpu_max   =',icpu+ncpu-1
 print,'npart     =',npart
+
+
 
 ; Allocate memory
 if not keyword_set(noalloc)then begin
-    part={ ndim:ndim $
-           ,npart:npart $
-           ,xp:fltarr(npart,ndim) $
+   if npart GT 0 then begin
+      part={ ndim:ndim $
+             ,npart:npart $
+             ,xp:fltarr(npart,ndim) $
 ;       ,vp:fltarr(npart,ndim) $
-    ,zp:fltarr(npart)}
+             ,mp:fltarr(npart,ndim) $
+             ,zp:fltarr(npart)}
+   endif else begin
+      part={ndim:ndim,npart:npart}
+   endelse
 endif  else begin
     part={ ndim:ndim $
            ,npart:npart}
@@ -139,7 +154,7 @@ xmin=1d10
 xmax=-1d10
 rmin=1d10
 rmax=-1d10
-for jcpu=0,ncpu-1 do begin
+for jcpu=icpu-1,icpu+ncpu-2 do begin
     file=trim(file_base+suffix(jcpu))+'.txt'
     if file_test(file) then begin
        openr,1,file
@@ -154,7 +169,7 @@ for jcpu=0,ncpu-1 do begin
           readu,1
           readu,1
           readu,1
-          print,jcpu+1,npartp,nstride,sqrt(abs(rmin)),sqrt(abs(rmax))
+          if keyword_set(verbose) then print,jcpu+1,npartp,nstride,sqrt(abs(rmin)),sqrt(abs(rmax))
           nblocs = npartp/nstride
           res = npartp - nblocs*nstride
           
@@ -176,6 +191,10 @@ for jcpu=0,ncpu-1 do begin
                 endif
                 readu,1,xx
 ;            part.vp(i1:i2,idim)=xx
+                if keyword_set(gal)then begin
+                   readu,1,xx
+                   part.mp(i1:i2,idim)=xx
+                endif
              endfor        
              rmin=min([rmin,min(rr)])
              rmax=max([rmax,max(rr)])
@@ -201,6 +220,10 @@ for jcpu=0,ncpu-1 do begin
                 endif
                 readu,1,xx
 ;        part.vp(i1:i2,idim)=xx
+                if(keyword_set(gal))then begin
+                   readu,1,xx
+                   part.mp(i1:i2,idim)=xx
+                endif
              endfor
              rmin=min([rmin,min(rr)])
              rmax=max([rmax,max(rr)])
@@ -216,8 +239,8 @@ for jcpu=0,ncpu-1 do begin
     endif
 endfor
 
-print,sqrt(rmin),sqrt(rmax)
-print,npart
+;print,sqrt(rmin),sqrt(rmax)
+;print,npart
 end
 
 
