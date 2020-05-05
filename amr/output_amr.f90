@@ -671,7 +671,8 @@ subroutine create_output_dirs(filedir)
 #else
       filecmd='mkdir -p '//TRIM(filedir)
       ierr=1
-      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr)
+      call system(filecmd,ierr)
+!      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI
