@@ -215,7 +215,7 @@ mpl.rc('font', **{'family':'serif',
     'serif':['Computer Modern Roman'],
     'monospace': ['Computer Modern Typewriter']}
     )
-mpl.rc('text', usetex=True)
+mpl.rc('text', usetex=False)
 
 
 
@@ -377,9 +377,9 @@ class global_params:
                         startnr = int(startnr)
                         self.accepted_args[arg](startnr)
                     except ValueError:
-                        print '"'+argv[i+1]+'"',
-                        "is not a valid start number for an output directory."
-                        print "use mergertreeplot.py -h or --help to print help message."
+                        print('"'+argv[i+1]+'"',
+                        "is not a valid start number for an output directory.")
+                        print("use mergertreeplot.py -h or --help to print help message.")
                         quit()
                     i += 1
                 else:
@@ -388,8 +388,8 @@ class global_params:
                 try:
                     self.halo = int(arg)
                 except ValueError:
-                    print "I didn't recognize the argument '", arg, "'"
-                    print "use mergertreeplot.py -h or --help to print help message."
+                    print("I didn't recognize the argument '", arg, "'")
+                    print("use mergertreeplot.py -h or --help to print help message.")
                     quit()
 
             i+= 1
@@ -397,8 +397,8 @@ class global_params:
 
         # defensive programming
         if self.halo <= 0:
-            print "No or wrong halo given. Halo ID must be > 0"
-            print "use mergertreeplot.py -h or --help to print help message."
+            print("No or wrong halo given. Halo ID must be > 0")
+            print("use mergertreeplot.py -h or --help to print help message.")
             quit()
 
 
@@ -429,9 +429,9 @@ class global_params:
 
 
         if len(outputlist)<1:
-            print "I didn't find any output_XXXXX directories in current working directory."
-            print "Are you in the correct workdir?"
-            print "use mergertreeplot.py -h or --help to print help message."
+            print("I didn't find any output_XXXXX directories in current working directory.")
+            print("Are you in the correct workdir?")
+            print("use mergertreeplot.py -h or --help to print help message.")
             quit()
 
 
@@ -445,8 +445,8 @@ class global_params:
             # check that directory exists
             startnrstr = str(self.start).zfill(5)
             if 'output_'+startnrstr not in outputlist:
-                print "Didn't find specified starting directory output_"+startnrstr
-                print "use mergertreeplot.py -h or --help to print help message."
+                print("Didn't find specified starting directory output_"+startnrstr)
+                print("use mergertreeplot.py -h or --help to print help message.")
                 quit()
 
 
@@ -471,7 +471,7 @@ class global_params:
         Print error message. Used as class method for simplicity to
         fit in with other cmdline arg triggered actions.
         """
-        print errormsg
+        print(errormsg)
         quit()
         return
 
@@ -488,26 +488,26 @@ class global_params:
             nothing
         """
 
-        print " ==================================================================="
-        print
-        print " Started mergertreeplot.py"
-        print " Working parameters are:"
-        print
-        print '{0:45}{1:<10d}'.format(      " Halo:",                                   self.halo)
-        print '{0:45}{1:<14}'.format(       " Last available directory:",               self.lastdir)
+        print(" ===================================================================")
+        print(" ")
+        print(" Started mergertreeplot.py")
+        print(" Working parameters are:")
+        print(" ")
+        print('{0:45}{1:<10d}'.format(      " Halo:",                                   self.halo))
+        print('{0:45}{1:<14}'.format(       " Last available directory:",               self.lastdir))
         if self.start > 0:
-            print '{0:45}{1:<10d}'.format(  " You've given starting snapshot number",   self.start)
-        print '{0:45}{1:<10d}'.format(      " Number of outputs:",                      self.noutput)
-        print '{0:45}{1:<10d}'.format(      " Ncpus used for sim:",                     self.ncpu)
-        print
+            print('{0:45}{1:<10d}'.format(  " You've given starting snapshot number",   self.start))
+        print('{0:45}{1:<10d}'.format(      " Number of outputs:",                      self.noutput))
+        print('{0:45}{1:<10d}'.format(      " Ncpus used for sim:",                     self.ncpu))
+        print(" ")
 
         if self.use_t:
             labelname = 'time (this also assumes non-cosmo simulation)'
         else:
             labelname = 'redshift'
 
-        print '{0:45}{1:}'.format(          " Clumps in tree plot will be labelled?",   self.treeclumplabels)
-        print '{0:45}{1:<14}'.format(       " y-axis label will be:",                   labelname)
+        print('{0:45}{1:}'.format(          " Clumps in tree plot will be labelled?",   self.treeclumplabels))
+        print('{0:45}{1:<14}'.format(       " y-axis label will be:",                   labelname))
 
         if self.tex:
             form = 'tex'
@@ -515,24 +515,24 @@ class global_params:
             form = 'pdf'
         else:
             form = 'png'
-        print '{0:45}{1:<4}'.format(        " Image format:",                           form)
-        print '{0:45}{1:}'.format(          " Using colors for tree?",                  (not self.nocolors))
-        print '{0:45}{1:}'.format(          " Pseudomergers of jumpers will be drawn?", (not self.nojumperdraw))
+        print('{0:45}{1:<4}'.format(        " Image format:",                           form))
+        print('{0:45}{1:}'.format(          " Using colors for tree?",                  (not self.nocolors)))
+        print('{0:45}{1:}'.format(          " Pseudomergers of jumpers will be drawn?", (not self.nojumperdraw)))
 
 
-        print '{0:45}{1:}'.format(          " Particles will be plotted?",              self.plotparticles)
+        print('{0:45}{1:}'.format(          " Particles will be plotted?",              self.plotparticles))
         if self.plotparticles:
-            print '{0:45}{1:}'.format(      " Clumps in particle plots will be labelled?", self.label_clumps)
-            print '{0:45}{1:}'.format(      " Formatting/annotating image for movie?",  self.movie)
+            print('{0:45}{1:}'.format(      " Clumps in particle plots will be labelled?", self.label_clumps))
+            print('{0:45}{1:}'.format(      " Formatting/annotating image for movie?",  self.movie))
 
 
-        print
-        print '{0:45}{1:}'.format(          " Dumping tree backup?",                    self.write_backup)
-        print '{0:45}{1:}'.format(          " Reading data from tree backup?",          self.from_backup)
+        print(" ")
+        print('{0:45}{1:}'.format(          " Dumping tree backup?",                    self.write_backup))
+        print('{0:45}{1:}'.format(          " Reading data from tree backup?",          self.from_backup))
 
 
-        print
-        print " ==================================================================="
+        print(" ")
+        print(" ===================================================================")
 
         return
 
@@ -985,7 +985,7 @@ def dump_backup(tree, outputnrs, t):
     dumpfname = params.workdir+'/dump_mergertreeplot_halo-'+str(params.halo)+'.pickle'
 
     if params.verbose:
-        print "Dumping backup to ", dumpfname
+        print("Dumping backup to ", dumpfname)
 
     dumpfile = open(dumpfname,'w')
     pickle.dump(tree,                   dumpfile)
@@ -1155,8 +1155,8 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
     output_start = lastdirnr - nout_present
 
     if params.verbose:
-        print "Creating tree."
-        print
+        print("Creating tree.")
+        print(" ")
 
 
 
@@ -1172,10 +1172,10 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
             # find output closest to z=0
             startind = np.argmin(np.absolute(t))
         else:
-            print "Since you're using -t, I can't find the z=0 directory."
+            print("Since you're using -t, I can't find the z=0 directory.")
 
         if params.verbose:
-            print "Snapshot of the tree root is", outputnrs[startind]
+            print("Snapshot of the tree root is", outputnrs[startind])
     params.start = startind
 
 
@@ -1188,7 +1188,7 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
     #---------------------------------------------------------------------
 
     if params.verbose:
-        print "Sorting out jumpers"
+        print("Sorting out jumpers")
 
     jumpers_not_in_tree = [[] for i in range(nout_present+1)]
 
@@ -1258,8 +1258,8 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
     # Make tree
     #---------------------
 
-    print
-    print "----------------------------------------------------------------------"
+    print(" ")
+    print("----------------------------------------------------------------------")
 
     # Loop over snapshots from startind until first snapshot containing tree data
     for out in range(startind, nout_present):
@@ -1324,20 +1324,20 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
                         if (is_main):
                             if branch.y-snapnr > 1 :
                                 output_string += "   found jumper"
-                            print output_string
+                            print(output_string)
 
                         else:
                             if branch.y-snapnr > 1 :
                                 output_string += "   found jumper and merger"
                             else:
                                 output_string += "   found merger"
-                            print output_string
+                            print(output_string)
 
         # make new line after every snapshot read-in
         if found_one:
-            print "----------------------------------------------------------------------"
+            print("----------------------------------------------------------------------")
 
-    print "\n\n"
+    print("\n\n")
 
 
     # remove empty lists at the end of the tree:
@@ -1386,7 +1386,7 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
 
 
     if params.verbose:
-        print "Creating particle figure"
+        print("Creating particle figure")
 
     x = partdata[0]
     y = partdata[1]
@@ -1486,7 +1486,7 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
                     lw=lw)
             except ValueError:
                 # in case there were no particles to plot:
-                print "No particles outside of tree were found to be plotted."
+                print("No particles outside of tree were found to be plotted.")
 
 
             # now plot particles in tree
@@ -1517,7 +1517,7 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
                     cmap=cmap, norm=norm, dpi=150, alpha=1, zorder=0)
             except ValueError:
                 # in case there were no particles to plot:
-                print "No particles outside of tree were found to be plotted."
+                print("No particles outside of tree were found to be plotted.")
 
 
 
@@ -1572,9 +1572,9 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
 
     except ValueError:
         #in case there were no particles to plot:
-        print "WARNING: ValueError while plotting clump", c, "raised."
-        print "WARNING: Maybe clump has no particles for some reason?"
-        print "WARNING: Or are you playing around with the code?"
+        print("WARNING: ValueError while plotting clump", c, "raised.")
+        print("WARNING: Maybe clump has no particles for some reason?")
+        print("WARNING: Or are you playing around with the code?")
         acceptable_answer = False
         while not acceptable_answer:
             answer = raw_input("Do you still want to continue? (y/n) ")
@@ -1582,10 +1582,10 @@ def _plot_particles(partdata, galaxydata, time, clumps_in_tree, colors, outnr):
                 acceptable_answer = True
                 break
             elif (answer == 'n'):
-                print "Exiting."
+                print("Exiting.")
                 quit()
             else:
-                print "Please answer with 'y' or 'n'"
+                print("Please answer with 'y' or 'n'")
 
 
     if params.galaxies:
@@ -1636,7 +1636,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     #-----------------
 
     if params.verbose:
-        print "Preparing to plot tree."
+        print("Preparing to plot tree.")
 
     # First find the number of branches for each branch.
     tree[0][0].start_of_branch = tree[0][0]
@@ -1645,7 +1645,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     # Now recursively sum up the number of branches
     # to know how much space to leave between them for plotting
     if params.verbose:
-        print "Sorting branches. This might take a while."
+        print("Sorting branches. This might take a while.")
     _sum_branches(tree[0][0])
 
     # lastly, sort the root's branches
@@ -1664,7 +1664,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     #--------------------------------
 
     if params.verbose:
-        print "Assigning positions to nodes and branches."
+        print("Assigning positions to nodes and branches.")
 
     # give initial values for root and borders for axes
     x_values = list([_branch_x()])
@@ -1692,10 +1692,10 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     #---------------------
 
     if params.verbose:
-        print "Plotting tree with", tree[0][0].branches_tot+1, \
+        print("Plotting tree with", tree[0][0].branches_tot+1, \
                 "branches in total over", tree[0][0].y - tree[-1][0].y + 1, \
-                "output steps."
-        print "Creating figure."
+                "output steps.")
+        print("Creating figure.")
 
     # create figure
     fig = plt.figure(facecolor='white')
@@ -1712,7 +1712,7 @@ def plot_tree(tree, yaxis_int, yaxis_phys):
     if tree[0][0].branches_tot > 400:
         strategy = "small"
         if params.verbose :
-            print "This plot apparently has a loooot of branches. Plotting everything smaller."
+            print("This plot apparently has a loooot of branches. Plotting everything smaller.")
     if (not params.treeclumplabels) and params.tex:
         strategy = "ultrathin"
 
@@ -1755,12 +1755,12 @@ def plot_treeparticles(tree, yaxis_phys):
     """
 
     if params.verbose:
-        print
-        print
-        print "======================================================================"
-        print
-        print "Started plotting tree particles."
-        print
+        print(" ")
+        print(" ")
+        print("======================================================================")
+        print(" ")
+        print("Started plotting tree particles.")
+        print(" ")
 
 
     outnrs = range(params.lastdirnr-params.start, params.lastdirnr-params.start-len(tree), -1)
@@ -1841,7 +1841,7 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
     #---------------------------------
 
     if params.verbose:
-        print "Plotting galaxies with associated clumps."
+        print("Plotting galaxies with associated clumps.")
 
     xmin, xmax, ymin, ymax, zmin, zmax = borders
 
@@ -1922,7 +1922,7 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
             if u==True:
                 count=counts[i]
                 break
-        print "Plotting ", count, "orphan galaxies."
+        print("Plotting ", count, "orphan galaxies.")
 
 
     if params.movie:
@@ -1980,7 +1980,7 @@ def read_backup():
     import pickle
 
     if params.verbose:
-        print "Reading data from backup."
+        print("Reading data from backup.")
 
     dumpfname = params.workdir+'/dump_mergertreeplot_halo-'+str(params.halo)+'.pickle'
     dumpfile = open(dumpfname,'r')
@@ -2019,14 +2019,14 @@ def _read_galaxy_data(srcdir):
     from os import listdir
 
     if params.verbose:
-        print "Reading in galaxy data."
+        print("Reading in galaxy data.")
 
     srcdirlist = listdir(srcdir)
 
     if 'galaxies_'+srcdir[-5:]+'.txt00001' not in srcdirlist:
-        print "Couldn't find galaxies_"+srcdir[-5:]+".txt00001 in", srcdir
-        print "To plot particles, I require the galaxies output."
-        print "use mergertreeplot.py -h or --help to print help message."
+        print("Couldn't find galaxies_"+srcdir[-5:]+".txt00001 in", srcdir)
+        print("To plot particles, I require the galaxies output.")
+        print("use mergertreeplot.py -h or --help to print help message.")
         quit()
 
     # create lists where to store stuff
@@ -2066,7 +2066,7 @@ def _read_galaxy_data(srcdir):
         yg = None
         zg = None
         galid = None
-        print "Didn't find any galaxy data in files. Setting params.galaxies = False and continuing"
+        print("Didn't find any galaxy data in files. Setting params.galaxies = False and continuing")
         params.galaxies = False
 
     return xg, yg, zg, galid
@@ -2103,7 +2103,7 @@ def read_mergertree_data():
     use_t = params.use_t
 
     if params.verbose:
-        print "Reading in mergertree data."
+        print("Reading in mergertree data.")
 
 
 
@@ -2166,7 +2166,7 @@ def read_mergertree_data():
                     outcount = output # store the last output where you added stuff
 
             except IOError: # If file doesn't exist
-                print "Didn't find any progenitor data in", srcdir
+                print("Didn't find any progenitor data in", srcdir)
 
 
 
@@ -2194,7 +2194,7 @@ def read_mergertree_data():
             time[output] = timefloat
 
         except IOError: # If file doesn't exist
-            print "Didn't find any info data in ", srcdir
+            print("Didn't find any info data in ", srcdir)
             break
 
 
@@ -2212,12 +2212,12 @@ def read_mergertree_data():
 
     if (len(time)>1 and (not use_t)):
         if (time[0] == time[1]):
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            print "WARNING: The first two elements in the physical y-axis data are the same."
-            print "WARNING: If you are trying to plot a non-cosmo simulation, you should use"
-            print "WARNING: the -t flag. Otherwise, you'll always have z = 0 on the y-axis."
-            print "WARNING: use mergertreeplot.py -h or --help to print help message."
-            print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print("WARNING: The first two elements in the physical y-axis data are the same.")
+            print("WARNING: If you are trying to plot a non-cosmo simulation, you should use")
+            print("WARNING: the -t flag. Otherwise, you'll always have z = 0 on the y-axis.")
+            print("WARNING: use mergertreeplot.py -h or --help to print help message.")
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             acceptable_answer = False
             while not acceptable_answer:
                 answer = raw_input("Do you still want to continue? (y/n) ")
@@ -2225,10 +2225,10 @@ def read_mergertree_data():
                     acceptable_answer = True
                     break
                 elif (answer == 'n'):
-                    print "Exiting."
+                    print("Exiting.")
                     quit()
                 else:
-                    print "Please answer with 'y' or 'n'"
+                    print("Please answer with 'y' or 'n'")
 
     # collect garbage
     gc.collect()
@@ -2259,14 +2259,14 @@ def _read_particle_data(srcdir):
     import fortranfile as ff
 
     if params.verbose:
-        print "Reading in particles of output", int(srcdir[-5:])
+        print("Reading in particles of output", int(srcdir[-5:]))
 
     srcdirlist = listdir(srcdir)
 
     if 'unbinding_'+srcdir[-5:]+'.out00001' not in srcdirlist:
-        print "Couldn't find unbinding_"+srcdir[-5:]+".out00001 in", srcdir
-        print "To plot particles, I require the unbinding output."
-        print "use mergertreeplot.py -h or --help to print help message."
+        print("Couldn't find unbinding_"+srcdir[-5:]+".out00001 in", srcdir)
+        print("To plot particles, I require the unbinding output.")
+        print("use mergertreeplot.py -h or --help to print help message.")
         quit()
 
 
@@ -2353,12 +2353,12 @@ def _save_fig(fig, strategy="default", plotparticles=False):
     #--------------------------------------
     if params.tex and not plotparticles:
     #--------------------------------------
-        from matplotlib2tikz import save as tikz_save
+        from tikzplotlib import save as tikz_save
 
         # Create standalone tikz image
         fig_path = params.workdir+'/'+params.outputfilename + '.tex'
         if params.verbose:
-            print "saving figure as "+fig_path
+            print("saving figure as "+fig_path)
 
         w,h = fig.get_size_inches()
         w /= 1.15
@@ -2386,23 +2386,23 @@ def _save_fig(fig, strategy="default", plotparticles=False):
         if params.pdf and not plotparticles:
             fig_path = params.workdir+'/'+params.outputfilename + '.pdf'
             if params.verbose:
-                print "saving figure as "+fig_path
-                print "This may take a while."
+                print("saving figure as "+fig_path)
+                print("This may take a while.")
             plt.savefig(fig_path, format='pdf')
 
         else:
             fig_path = params.workdir+'/'+params.outputfilename + '.png'
             if params.verbose:
-                print "saving figure as "+fig_path
-                print "This may take a while."
+                print("saving figure as "+fig_path)
+                print("This may take a while.")
 
             dpi = 150
             plt.savefig(fig_path, format='png', facecolor=fig.get_facecolor(), transparent=False, dpi=dpi)
 
 
 
-    print "Saved", fig_path
-    print
+    print("Saved", fig_path)
+    print(" ")
     plt.close()
 
     return
@@ -2919,7 +2919,7 @@ def _tweak_treeplot(fig, yaxis_int, yaxis_phys, borders):
     #-----------------
 
     if params.verbose:
-        print "Tweaking the plot."
+        print("Tweaking the plot.")
 
     halo = params.halo
     snapnr = yaxis_int[params.start]
