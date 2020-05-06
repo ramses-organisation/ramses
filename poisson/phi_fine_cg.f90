@@ -41,7 +41,7 @@ subroutine phi_fine_cg(ilevel,icount)
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=2*twopi
+  fourpi=2*twopi*scale
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
@@ -236,7 +236,7 @@ subroutine cmp_residual_cg(ilevel,icount)
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  fourpi=2*twopi
+  fourpi=2*twopi*scale
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
@@ -536,7 +536,7 @@ subroutine make_multipole_phi(ilevel)
   integer::iskip,nx_loc,ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
-  real(dp)::dx,dx_loc,scale,fourpi,boxlen2,eps
+  real(dp)::dx,dx_loc,scale,boxlen2,eps
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
@@ -553,7 +553,6 @@ subroutine make_multipole_phi(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  fourpi=2*twopi
   boxlen2=boxlen**2
   eps=dx_loc
 
