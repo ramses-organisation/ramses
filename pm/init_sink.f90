@@ -103,7 +103,7 @@ subroutine init_sink
   allocate(delta_mass_new(1:nsinkmax),delta_mass_all(1:nsinkmax))
   allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
   allocate(direct_force_sink(1:nsinkmax))
-  direct_force_sink=0d0
+  direct_force_sink=.false.
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
