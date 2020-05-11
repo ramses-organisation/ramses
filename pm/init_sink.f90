@@ -169,8 +169,8 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
-        vsold(nsink,1:ndim,slevel)=vsink(nsink,1ndim)
-        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1ndim)
+        vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
+        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
      end do
 104  continue
      sinkint_level=slevel
@@ -255,8 +255,8 @@ subroutine init_sink
         tsink(nsink)=t
         new_born(nsink)=.false.
         msmbh(nsink)=sm2
-        vsold(nsink,1:ndim,slevel)=vsink(nsink,1ndim)
-        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1ndim)
+        vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
+        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
      end do
      sinkint_level=levelmin
 103  continue
