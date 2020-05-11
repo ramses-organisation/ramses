@@ -29,7 +29,7 @@ module pm_parameters
 
   real(dp)::mass_sink_seed=0                 ! Initial sink mass
   real(dp)::mass_smbh_seed=0                 ! Initial SMBH mass
-  real(dp)::mass_merger_vel_check=-1         ! Threshold for velocity check in  merging; in M_sun; default: don't check
+  real(dp)::mass_merger_vel_check=1d100      ! Threshold for velocity check in merging in M_sun; default: don't check
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
   logical::clump_core=.false.                ! Trims the clump (for star formation)

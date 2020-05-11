@@ -2502,10 +2502,6 @@ subroutine read_sink_params()
      end if
   end if
 
-  if(mass_merger_vel_check<0.)then
-     mass_merger_vel_check=0
-  end if
-
 end subroutine read_sink_params
 !##############################################################################
 !##############################################################################
