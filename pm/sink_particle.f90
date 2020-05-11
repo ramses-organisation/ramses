@@ -1544,7 +1544,7 @@ subroutine make_sink_from_clump(ilevel)
         tsink(isink)=tsink_all(isink)
         new_born(isink)=new_born_all(isink)
         fsink(isink,1:ndim)=0.0
-        fsink_partial(isink,1:ndim,levelmin:levelmax)=0.0
+        fsink_partial(isink,1:ndim,levelmin:nlevelmax)=0.0
         vsold(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
         vsnew(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
      endif
@@ -2110,7 +2110,7 @@ subroutine clean_merged_sinks
         lsink(nsink+1,1:ndim)=0d0
         new_born(nsink+1)=.false.
         tsink(nsink+1)=0d0
-        idsink(nsink+1)=0d0
+        idsink(nsink+1)=0
         msum_overlap(nsink+1)=0d0
         delta_mass(nsink+1)=0d0
      else
