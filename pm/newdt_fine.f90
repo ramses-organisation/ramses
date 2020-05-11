@@ -22,7 +22,7 @@ subroutine newdt_fine(ilevel)
   ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::npart1,ip,isink
+  integer::npart1,ip,isink,idim
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
