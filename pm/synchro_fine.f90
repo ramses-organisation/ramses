@@ -105,6 +105,7 @@ subroutine synchro_fine_static(ilevel)
 
   if(sink)then
      fsink_new=0
+     fsink_all=0
   endif
 
   ! Synchronize velocity using CIC

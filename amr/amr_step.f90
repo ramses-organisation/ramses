@@ -272,7 +272,7 @@ recursive subroutine amr_step(ilevel,icount)
         ! Compute Bondi-Hoyle accretion parameters
 #if NDIM==3
                                call timer('sinks','start')
-        if(sink)call collect_acczone_avg(ilevel)
+        if(sink.and.hydro)call collect_acczone_avg(ilevel)
 #endif
      end if
   end if
@@ -338,7 +338,7 @@ recursive subroutine amr_step(ilevel,icount)
 
   ! Density threshold or Bondi accretion onto sink particle
 #if NDIM==3
-  if(sink)then
+  if(sink.and.hydro)then
                                call timer('sinks','start')
      call grow_sink(ilevel,.false.)
   end if
