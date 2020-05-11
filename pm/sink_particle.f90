@@ -79,26 +79,26 @@ subroutine create_sink
   ! Create new cloud particles
   call create_cloud_from_sink
 
-  ! Scatter particle to the grid
-  ! Compute Bondi parameters
+  ! Scatter particle to levelmax
   do ilevel=1,nlevelmax
      call make_tree_fine(ilevel)
      call kill_tree_fine(ilevel)
      call virtual_tree_fine(ilevel)
-     call collect_acczone_avg(ilevel)
+     ! Compute Bondi parameters
+     if(hydro)call collect_acczone_avg(ilevel)
   end do
 
-  ! Perform first accretion with seed mass
   ! Gather particles to levelmin
   do ilevel=nlevelmax,levelmin,-1
-     call set_unew_sink(ilevel)
+     if(hydro)call set_unew_sink(ilevel)
   end do
   do ilevel=nlevelmax,levelmin,-1
-     call grow_sink(ilevel,.true.)
+     ! Perform first accretion with seed mass
+     if(hydro)call grow_sink(ilevel,.true.)
      call merge_tree_fine(ilevel)
   end do
   do ilevel=nlevelmax,levelmin,-1
-     call set_uold_sink(ilevel)
+     if(hydro)call set_uold_sink(ilevel)
   end do
 
   ! Update hydro quantities for split cells
@@ -118,7 +118,7 @@ subroutine create_sink
   call update_cloud(levelmin)
 
   ! Compute and print accretion rates
-  call compute_accretion_rate(.true.)
+  if(hydro)call compute_accretion_rate(.true.)
 
 end subroutine create_sink
 !###############################################################################
