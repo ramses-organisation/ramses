@@ -1543,6 +1543,10 @@ subroutine make_sink_from_clump(ilevel)
         idsink(isink)=idsink_all(isink)
         tsink(isink)=tsink_all(isink)
         new_born(isink)=new_born_all(isink)
+        fsink(isink,1:ndim)=0.0
+        fsink_partial(isink,1:ndim,levelmin:levelmax)=0.0
+        vsold(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
+        vsnew(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
      endif
   end do
 #endif
@@ -2095,18 +2099,20 @@ subroutine clean_merged_sinks
            tsink(j)=tsink(j+1)
            idsink(j)=idsink(j+1)
            msum_overlap(j)=msum_overlap(j+1)
+           delta_mass(j)=delta_mass(j+1)
         end do
 
         ! Whipe last position in the sink list
-        msink(nsink+1)=0
-        msmbh(nsink+1)=0
-        xsink(nsink+1,1:ndim)=0
-        vsink(nsink+1,1:ndim)=0
-        lsink(nsink+1,1:ndim)=0
+        msink(nsink+1)=0d0
+        msmbh(nsink+1)=0d0
+        xsink(nsink+1,1:ndim)=0d0
+        vsink(nsink+1,1:ndim)=0d0
+        lsink(nsink+1,1:ndim)=0d0
         new_born(nsink+1)=.false.
-        tsink(nsink+1)=0
-        idsink(nsink+1)=0
-        msum_overlap(nsink+1)=0
+        tsink(nsink+1)=0d0
+        idsink(nsink+1)=0d0
+        msum_overlap(nsink+1)=0d0
+        delta_mass(nsink+1)=0d0
      else
         i=i+1
      end if
@@ -2178,6 +2184,7 @@ subroutine f_gas_sink(ilevel)
 
   rho_tff=0
 
+  fsink_all=0
   fsink_new=0
 
   period(1)=(nx==1)
