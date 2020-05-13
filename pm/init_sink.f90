@@ -255,8 +255,8 @@ subroutine init_sink
         tsink(nsink)=t
         new_born(nsink)=.false.
         msmbh(nsink)=sm2
-        vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
-        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
+        vsold(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
+        vsnew(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
      end do
      sinkint_level=levelmin
 103  continue
