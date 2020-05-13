@@ -258,8 +258,8 @@ subroutine init_sink
         vsold(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
         vsnew(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
      end do
-     sinkint_level=levelmin
 103  continue
+     sinkint_level=levelmin
      close(10)
 
      ! Send the token
