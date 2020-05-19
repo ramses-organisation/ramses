@@ -7,7 +7,7 @@ subroutine load_balance
   use pm_commons
   use hydro_commons, ONLY: nvar
 #ifndef WITHOUTMPI
-  use hydro_commons, ONLY: uold, pstarold
+  use hydro_commons, ONLY: uold, pstarold, rho_eq, p_eq
   use poisson_commons, ONLY: phi, f
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
