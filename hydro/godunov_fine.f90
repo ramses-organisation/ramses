@@ -214,7 +214,8 @@ subroutine add_gravity_source_terms(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
-
+  real(dp)::req=0_dp
+  
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -231,7 +232,8 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,ndim+2)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
-        fact=d_old/d*0.5d0*dtnew(ilevel)
+        if(strict_equilibrium>0)req=rho_eq(ind_cell)
+        fact=(d_old-req)/d*0.5d0*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
            unew(ind_cell,2)=d*u
@@ -470,10 +472,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
+  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
+  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::req_loc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::peq_loc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -579,6 +585,21 @@ subroutine godfine1(ind_grid,ncache,ilevel)
            end do
         end do
 
+        ! Gather equilibrium model
+        if(strict_equilibrium>0)then
+           do idim=1,ndim
+              do i=1,nexist
+                 req_loc(ind_exist(i),i3,j3,k3)=rho_eq(ind_cell(i))
+                 peq_loc(ind_exist(i),i3,j3,k3)=p_eq(ind_cell(i))
+              end do
+              ! Use straight injection for buffer cells
+              do i=1,nbuffer
+                 req_loc(ind_nexist(i),i3,j3,k3)=req2(i,ind_son)
+                 peq_loc(ind_nexist(i),i3,j3,k3)=peq2(i,ind_son)
+              end do
+           end do
+        end if
+
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -591,6 +612,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
+
         ! Gather stellar momentum
         if(momentum_feedback>0)then
            do i=1,nexist

@@ -166,6 +166,7 @@ module amr_parameters
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
   integer::momentum_feedback=0       ! Use supernovae momentum feedback if cooling radius not resolved
+  integer::strict_equilibrium=0      ! Hydro scheme to preserve exactly hydrostatic equilibrium
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
