@@ -596,18 +596,21 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::xc,skip_loc
 #ifdef SOLVERmhd
+  integer::neul=5
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
   integer ,dimension(1:nvector,0:twondim),save::ind1
+  real(dp),dimension(1:nvector,1:nvar+3),save::uu
 #else
+  integer::neul=ndim+2
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
+  real(dp),dimension(1:nvector,1:nvar),save::uu
 #endif
 #ifdef RT
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
 #endif
-
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
 
@@ -853,6 +856,38 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
         end do
      endif
+     !================================
+     ! Interpolate equilibrium profile
+     !================================
+     if(strict_equilibrium>0)then
+        ! Compute equilibrium profile using initial conditions
+        do j=1,twotondim
+           iz=(j-1)/4
+           iy=(j-1-4*iz)/2
+           ix=(j-1-2*iy-4*iz)
+           if(ndim>0)xc(1)=(dble(ix)-0.5D0)*dx/2.0d0
+           if(ndim>1)xc(2)=(dble(iy)-0.5D0)*dx/2.0d0
+           if(ndim>2)xc(3)=(dble(iz)-0.5D0)*dx/2.0d0
+           ! Compute cell coordinates
+           do idim=1,ndim
+              do i=1,nn
+                 xx(i,idim)=xg(ind_grid_son(i),idim)+xc(idim)
+              end do
+           end do
+           ! Rescale position from code units to user units
+           do idim=1,ndim
+              do i=1,nn
+                 xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
+              end do
+           end do
+           call condinit(xx,uu,dx*scale,nn)
+           iskip=ncoarse+(j-1)*ngridmax
+           do i=1,nn
+              rho_eq(iskip+ind_grid_son(i))=uu(i,1)
+              p_eq(iskip+ind_grid_son(i))=uu(i,neul)*(gamma-1.0D0)
+           end do
+        end do
+     endif
      !==============================
      ! Interpolate gravity variables
      !==============================
@@ -1058,6 +1093,12 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         do i=1,nn
            pstarold(ind_cell_son(i))=0.0D0
            pstarnew(ind_cell_son(i))=0.0D0
+        end do
+     endif
+     if(strict_equilibrium>0)then
+        do i=1,nn
+           rho_eq(ind_cell_son(i))=0.0D0
+           p_eq(ind_cell_son(i))=0.0D0
         end do
      endif
 #ifdef RT

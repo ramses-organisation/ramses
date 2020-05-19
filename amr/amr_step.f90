@@ -60,6 +60,8 @@ recursive subroutine amr_step(ilevel,icount)
                  end do
 #endif
                  if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),i)
+                 if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),i)
+                 if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),i)
                  if(simple_boundary)call make_boundary_hydro(i)
               end if
 #ifdef RT
@@ -455,6 +457,8 @@ recursive subroutine amr_step(ilevel,icount)
      end do
 #endif
      if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
+     if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
+     if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 

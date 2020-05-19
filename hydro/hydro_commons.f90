@@ -4,6 +4,7 @@ module hydro_commons
   real(dp),allocatable,dimension(:,:)::uold,unew ! State vector and its update
   real(dp),allocatable,dimension(:)::pstarold,pstarnew ! Stellar momentum and its update
   real(dp),allocatable,dimension(:)::divu,enew ! Non conservative variables
+  real(dp),allocatable,dimension(:)::rho_eq,p_eq ! Strict hydrostatic equilibrium
   real(dp)::mass_tot=0,mass_tot_0=0
   real(dp)::ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
   integer::nbins
