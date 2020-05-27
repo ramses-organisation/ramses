@@ -757,6 +757,37 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      end do
   end if
 
+  ! Interpolate equilibrium profile
+  if(strict_equilibrium>0)then
+     ! Compute equilibrium profile using initial conditions
+     do j=1,twotondim
+        iz=(j-1)/4
+        iy=(j-1-4*iz)/2
+        ix=(j-1-2*iy-4*iz)
+        if(ndim>0)xc(1)=(dble(ix)-0.5D0)*dx/2.0d0
+        if(ndim>1)xc(2)=(dble(iy)-0.5D0)*dx/2.0d0
+        if(ndim>2)xc(3)=(dble(iz)-0.5D0)*dx/2.0d0
+        ! Compute cell coordinates
+        do idim=1,ndim
+           do i=1,nn
+              xx(i,idim)=xg(ind_grid_son(i),idim)+xc(idim)
+           end do
+        end do
+        ! Rescale position from code units to user units
+        do idim=1,ndim
+           do i=1,nn
+              xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
+           end do
+        end do
+        call condinit(xx,uu,dx*scale,nn)
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,nn
+           rho_eq(iskip+ind_grid_son(i))=uu(i,1)
+           p_eq(iskip+ind_grid_son(i))=uu(i,neul)*(gamma-1.0D0)
+        end do
+     end do
+  endif
+
   ! Interpolate parent variables to get new children ones
   if(.not.init .and. .not.balance)then
      ! Get neighboring father cells
@@ -853,38 +884,6 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            iskip=ncoarse+(j-1)*ngridmax
            do i=1,nn
               pstarold(iskip+ind_grid_son(i))=pstarold(ind_fathers(i,0))
-           end do
-        end do
-     endif
-     !================================
-     ! Interpolate equilibrium profile
-     !================================
-     if(strict_equilibrium>0)then
-        ! Compute equilibrium profile using initial conditions
-        do j=1,twotondim
-           iz=(j-1)/4
-           iy=(j-1-4*iz)/2
-           ix=(j-1-2*iy-4*iz)
-           if(ndim>0)xc(1)=(dble(ix)-0.5D0)*dx/2.0d0
-           if(ndim>1)xc(2)=(dble(iy)-0.5D0)*dx/2.0d0
-           if(ndim>2)xc(3)=(dble(iz)-0.5D0)*dx/2.0d0
-           ! Compute cell coordinates
-           do idim=1,ndim
-              do i=1,nn
-                 xx(i,idim)=xg(ind_grid_son(i),idim)+xc(idim)
-              end do
-           end do
-           ! Rescale position from code units to user units
-           do idim=1,ndim
-              do i=1,nn
-                 xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-              end do
-           end do
-           call condinit(xx,uu,dx*scale,nn)
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,nn
-              rho_eq(iskip+ind_grid_son(i))=uu(i,1)
-              p_eq(iskip+ind_grid_son(i))=uu(i,neul)*(gamma-1.0D0)
            end do
         end do
      endif
