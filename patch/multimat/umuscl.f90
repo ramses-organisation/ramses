@@ -347,7 +347,7 @@ end subroutine trace1d
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
+subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
