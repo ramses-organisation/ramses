@@ -163,7 +163,7 @@ subroutine energy_fine(ilevel)
   ! convection zone
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::nx_loc,idim
+  integer::nx_loc,idim,ivar
 #ifdef SOLVERmhd
   integer::neul=5
 #else
@@ -175,8 +175,9 @@ subroutine energy_fine(ilevel)
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector),save::vv
-  real(dp),dimension(1:nvector),save::ee
+  real(dp),dimension(1:nvector)::ee
+  real(dp),dimension(1:nvector,1:nvar)::uut ! JRCC
+  real(dp),dimension(1:nvector)::req,peq
   real(kind=8)::uud,ekin,uuv
 
   if(numbtot(1,ilevel)==0)return
@@ -249,7 +250,7 @@ subroutine energy_fine(ilevel)
 
         ! Remove kinetic energy
         do i=1,ngrid
-          ekin = 0d0
+          ekin = 0.0d0
           uud = max(uold(ind_cell(i),1),smallr)
           do idim=1,ndim
              uuv = uold(ind_cell(i),idim+1)/uud
@@ -257,24 +258,47 @@ subroutine energy_fine(ilevel)
           end do
           uold(ind_cell(i),neul) = uold(ind_cell(i),neul)-ekin
         end do
-
-        ! Impose analytical energy field and damping
-        call eneana(xx,ee,vv,dx_loc,t,ngrid)
-        ! Update total energy
-        do i=1,ngrid
-          uold(ind_cell(i),neul)=uold(ind_cell(i),neul)+ee(i)*dtnew(ilevel) !!!! ee(i) or ee(ind_cell(i)) ????
+        
+        ! JRCC
+        ! Scatter variables
+        ! See init_flow_fine.f90, same procedure for condinit.f90 ?
+        do ivar=1,nvar
+          do i=1,ngrid
+             uut(i,ivar)=uold(ind_cell(i),ivar)
+          end do
         end do
 
-        ! Update momentum with damping
         do i=1,ngrid
-          do idim=1,ndim
-            uold(ind_cell(i),1+idim) = uold(ind_cell(i),1+idim)+vv(i)*sign(uold(ind_cell(i),idim+1),uold(ind_cell(i),idim+1))
+          req(i) = rho_eq(ind_cell(i))
+          peq(i) = p_eq(ind_cell(i))
+        end do 
+
+        ! Spongy layers that damp the profiles towards the equilibrium ones
+        ! In: rho, rho*u, rho*v, (rho*w), e_int - e_kin
+        ! Out: new variables "closer" to equilibrium 
+        call spongelayers(xx,uut,req,peq,t,ngrid)
+        
+        ! rescatter variables
+        do ivar=1,nvar
+          do i=1,ngrid
+            ! if (abs((uold(ind_cell(i),ivar)-uut(i,ivar))/uold(ind_cell(i),ivar))>10.0**(-8.0)) then
+            !     write(*,*)'HERE var=',ivar,', x=',xx(i,1), ', y=',xx(i,2)
+            !     write(*,*)'  uold=',uold(ind_cell(i),ivar),', uu=',uut(i,ivar)
+            ! end if 
+            uold(ind_cell(i),ivar) = uut(i,ivar)
           end do
         end do 
-        
+
+        ! Impose analytical energy field and damping
+        call eneana(xx,ee,dx_loc,t,ngrid)
+        ! Update total energy
+        do i=1,ngrid
+          uold(ind_cell(i),neul)=uold(ind_cell(i),neul)+ee(i)*dtnew(ilevel)
+        end do
+
         ! Add back kinetic energy
         do i=1,ngrid
-          ekin = 0d0
+          ekin = 0.0d0
           uud = max(uold(ind_cell(i),1),smallr)
           do idim=1,ndim
              uuv = uold(ind_cell(i),idim+1)/uud

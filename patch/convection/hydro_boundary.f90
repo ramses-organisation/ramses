@@ -18,7 +18,7 @@ subroutine make_boundary_hydro(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
 
-  real(dp)::switch,dx,dx_loc,scale,ekin,d,v
+  real(dp)::switch,dx,dx_loc,scale,ekin,d,v,pert
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
@@ -307,8 +307,9 @@ subroutine make_boundary_hydro(ilevel)
                   xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                end do
             end do
-
-            call condinit(xx,uu,dx_loc,ngrid)
+            
+            pert=0.0
+            call condinit(xx,uu,dx_loc,pert,ngrid)
 
             ! Scatter variables
             do i=1,ngrid

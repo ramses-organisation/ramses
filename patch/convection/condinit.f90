@@ -2,13 +2,14 @@
 !================================================================
 !================================================================
 !================================================================
-subroutine condinit(x,u,dx,nn)
+subroutine condinit(x,u,dx,pert,nn)
   use amr_parameters
   use hydro_parameters
   use poisson_parameters
   implicit none
   integer ::nn                            ! Number of cells
   real(dp)::dx                            ! Cell size
+  real(dp)::pert                          ! perturbations on/off
   real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
@@ -54,24 +55,23 @@ subroutine condinit(x,u,dx,nn)
 
   do i=1,nn
     if(x(i,1) .lt. x1)then
-      T_tmp = 1 - ((gammainit1-1.0)/gammainit1)*g*(rho1/p1)*(x(i,1))
-      q(i,id)=rho1*((T_tmp)**(1.0/(gammainit1-1.0)))
-      q(i,ip)=p1*((T_tmp)**(gammainit1/(gammainit1-1.0)))
+      T_tmp = 1 - ((gammainit1-1.0d0)/gammainit1)*g*(rho1/p1)*(x(i,1))
+      q(i,id)=rho1*((T_tmp)**(1.0/(gammainit1-1.0d0)))
+      q(i,ip)=p1*((T_tmp)**(gammainit1/(gammainit1-1.0d0)))
     else if ((x(i,1) .ge. x1) .and. (x(i,1) .lt. x2)) then
-      T_tmp = 1 - ((gammainit2-1.0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
+      T_tmp = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
       
       ! produce perturbation in convection zone!
       call random_number(delta_temp)
-      delta_temp = (delta_temp-0.5)*T_tmp/(10.0**4)
+      delta_temp = pert*2.*(delta_temp-0.5)*10.0**(-4.0)
       ! add perturbation to temperature
-      T_tmp = T_tmp + delta_temp
 
-      q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0)))
-      q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0)))
+      q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
+      q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0d0)))
     else 
-      T_tmp = 1 - ((gammainit3-1.0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
-      q(i,id)=rho3*((T_tmp)**(1.0/(gammainit3-1.0)))
-      q(i,ip)=p3*((T_tmp)**(gammainit3/(gammainit3-1.0)))
+      T_tmp = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
+      q(i,id)=rho3*((T_tmp)**(1.0/(gammainit3-1.0d0)))
+      q(i,ip)=p3*((T_tmp)**(gammainit3/(gammainit3-1.0d0)))
     endif
     q(i,iu)=0.0d0
     if(ndim>1)q(i,iv)=0.0d0
@@ -113,16 +113,16 @@ end subroutine condinit
 !================================================================
 !================================================================
 
-subroutine eneana(x,e,v,dx,t,ncell)
+subroutine eneana(x,e,dx,t,ncell)
 
   use amr_parameters
   use hydro_parameters
+
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
   real(dp)::t                             ! Current time
   real(dp),dimension(1:nvector)::e        ! Energy 
-  real(dp),dimension(1:nvector)::v        ! Damping
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
   ! Heat bottom of convection zone with 
@@ -143,44 +143,97 @@ subroutine eneana(x,e,v,dx,t,ncell)
   rho0 = d_region(2)
   !!!!
   !
-  ! HeFlash
-  ! e0 = 2.0*10.0**(-6) ! erg/g/s (Normalized 10**16)
-  ! dx_heat = 0.5d0
-  !!!!
+  !HeFlash
+  e0 = 2.0*10.0**(-6) ! erg/g/s (Normalized 10**16)
+  dx_heat = 0.5d0
+  !!!
   !
   ! Model S
   ! e0 = 2.489*10.0**(-4) ! erg/g/s (Normalized 10**16)
   ! dx_heat = 2.0d0
   ! !!!!
-  ! e0 = e0*rho0 ! erg/s/cm^3
+  e0 = e0*rho0 ! erg/s/cm^3
   
+  ! Initialize
+  do i=1,ncell
+    e(i) = 0.0d0
+  end do 
   ! !! Heating loop
   ! do i=1,ncell
   !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
   !     ! heating
-  !     e(i) = e0/10.0d0
-  !     ! e(i) = 0.0d0
-  !   else if ((x(i,1) .gt. x2-10.0*dx_heat) .and. (x(i,1) .lt. x2)) then
+  !     e(i) = 100.0*e0
+  !   else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
   !     ! cooling
-  !      e(i) = 0.0d0
-  !     !e(i) = -e0/100.0d0
+  !     e(i) = -100.0*e0
   !   else
   !     e(i) = 0.0d0
   !   end if
   ! end do 
-  
-  !! Damping loop
-  do i=1,ncell
-    if ((x(i,1) .lt. x1) .or. (x(i,1) .gt. x2)) then
-      ! v(i) = -1.0d0
-      v(i) = -0.25d0
-    else 
-      if (t .lt. 500.0) then 
-        v(i) = -(1.0d0 - t/500.0)
-      else 
-        v(i) = 0.0d0
-      end if
-    end if  
-  end do
+
 
 end subroutine eneana
+
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+
+subroutine spongelayers(x,u,req,peq,t,ncell)
+
+  use amr_parameters
+  use hydro_parameters
+
+  implicit none
+  integer ::ncell                             ! Size of input arrays
+  real(dp)::t                                 ! Current time
+  real(dp),dimension(1:nvector,1:ndim)::x     ! Cell center position.
+  real(dp),dimension(1:nvector,1:nvar)::u     ! Conservative variables 
+  real(dp),dimension(1:nvector)::req,peq      ! Equilibrium profiles
+  !================================================================
+  integer :: i, irad
+  real(dp):: x1, x2, crho, cp, cv
+  
+  ! c: factor of "damping"
+  crho=0.25d0
+  cv=0.25d0
+  cp=0.25d0
+
+  x1 = x_center(1)
+  x2 = x_center(2)
+ 
+
+  do i=1,ncell
+    if ((x(i,1) .lt. x1) .or. (x(i,1) .gt. x2+2.0)) then
+      
+  
+      ! Damp the internal energy
+      u(i,ndim+2) = u(i,ndim+2)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
+      
+      ! damp density
+      u(i,1) = u(i,1)*(1.0d0 - crho) + crho*req(i)
+      
+      ! damp momentum components
+      u(i,2) = u(i,2)*(1.0d0-cv)
+#if NDIM>1
+      u(i,3) = u(i,3)*(1.0d0-cv)
+#endif
+#if NDIM>2
+      u(i,4) = u(i,4)*(1.0d0-cv)
+#endif
+
+    ! else
+!       if (t .lt. 500.0) then
+!         u(i,2) = u(i,2)*(t/500.0)
+! #if NDIM>1
+!         u(i,3) = u(i,3)*(t/500.0)
+! #endif
+! #if NDIM>2
+!         u(i,4) = u(i,4)*(t/500.0)
+! #endif
+!       end if 
+    end if
+
+  end do 
+
+end subroutine spongelayers
