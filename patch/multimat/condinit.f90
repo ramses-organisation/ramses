@@ -24,8 +24,8 @@ subroutine condinit(x,u,dx,nn)
   !================================================================
   integer::ivar,imat
   real(dp),dimension(1:nvector,1:npri),save::q   ! Primitive variables
-  real(dp),dimension(1:nvector,1:nmat),save::f,g ! Volume fraction and densities
-  real(dp),dimension(1:nvector),save::ekin,dtot,eint,cs
+  real(dp),dimension(1:nvector,1:nmat),save::f,g,kappa_mat ! Volume fraction and densities
+  real(dp),dimension(1:nvector),save::ekin,dtot,eint,cs,kappa_hat
 
   ! Call built-in initial condition generator
   call region_condinit(x,q,f,g,dx,nn)
@@ -36,7 +36,7 @@ subroutine condinit(x,u,dx,nn)
   ! Convert primitive to conservative variables
 
   ! call inverse eos routine (f,g,d,p) -> (e,c)
-  call eosinv(f,g,q,eint,cs,nn)
+  call eosinv(f,g,q,eint,cs,kappa_mat,kappa_hat,nn)
 
   ! density -> density
   u(1:nn,1)=q(1:nn,1)
