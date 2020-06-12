@@ -179,9 +179,9 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   integer ::i, j, k, l, n, idim, imat
-  real(dp),dimension(1:nvector),save::dtot,ekin,cc,pp
+  real(dp),dimension(1:nvector),save::dtot,ekin,cc,pp,kappa_hat
   real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector,1:nmat),save::ff,gg
+  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,kappa_mat
 
   ! Convert to primitive variable
   do k = ku1, ku2
@@ -216,7 +216,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
      end do
 
      ! Call eos routine
-     call eos(ff,gg,qq,pp,cc,ngrid)
+     call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ngrid)
 
      ! Pressure overwrites internal energy
      qq(1:ngrid,npri)=pp(1:ngrid)
@@ -347,7 +347,7 @@ end subroutine trace1d
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
+subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -692,7 +692,8 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,1:npri),save::qleft,qright,qgdnv
   real(dp),dimension(1:nvector,1:nmat),save::fleft,fright,fgdnv
   real(dp),dimension(1:nvector,1:nmat),save::gleft,gright,ggdnv
-  real(dp),dimension(1:nvector),save::etot,ekin,cleft,cright,egdnv,cgdnv
+  real(dp),dimension(1:nvector,1:nmat),save::kappa_matgdnv
+  real(dp),dimension(1:nvector),save::etot,ekin,cleft,cright,egdnv,cgdnv,kappa_hatgdnv
   logical ,dimension(1:nvector),save::wall,body
 
   idim= ln -1
@@ -827,7 +828,7 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
      end do
 #endif           
      ! Call inverse eos routine
-     call eosinv(fgdnv,ggdnv,qgdnv,egdnv,cgdnv,ngrid)
+     call eosinv(fgdnv,ggdnv,qgdnv,egdnv,cgdnv,kappa_matgdnv,kappa_hatgdnv,ngrid)
      
      ! Total energy
      do l = 1, ngrid
