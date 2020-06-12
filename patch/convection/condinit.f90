@@ -204,7 +204,7 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
  
 
   do i=1,ncell
-    if ((x(i,1) .lt. x1) .or. (x(i,1) .gt. x2+2.0)) then
+    if ((x(i,1) .lt. x1) .or. (x(i,1) .gt. x2)) then
       
   
       ! Damp the internal energy
