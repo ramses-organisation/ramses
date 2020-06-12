@@ -11,8 +11,13 @@ module hydro_parameters
 #else
   integer,parameter::nmat=NMAT
 #endif
+#ifndef NENER
+  integer,parameter::nener=0
+#else
+  integer,parameter::nener=NENER
+#endif
 #ifndef NVAR
-  integer,parameter::nvar=ndim+2+2*nmat
+  integer,parameter::nvar=ndim+2+2*nmat+nener
 #else
   integer,parameter::nvar=NVAR
 #endif
