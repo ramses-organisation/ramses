@@ -70,6 +70,7 @@ module hydro_parameters
   real(dp)::smallr=1.0d-10
   real(dp)::smallf=1.0d-10
   character(LEN=10)::scheme='muscl'
+  character(LEN=20)::eos_name='mie-grueneisen'
 
   ! Interpolation parameters
   integer ::interpol_var=0
