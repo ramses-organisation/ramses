@@ -91,14 +91,14 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
          do k = 1,ncell
             ! Update Mie-Gruneisen terms for each material
             ! print *, g(k,imat)
-            e_c = e_0 * (g(k,imat)/rho_0)**biggamma
-            P_c = e_0 * (biggamma-one) * (g(k,imat)/rho_0)**biggamma
-            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (g(k,imat)/rho_0)**(biggamma-one)
+            e_c = e_0 * (max(g(k,imat),smallr)/rho_0)**biggamma
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
             ! Update total values
             alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
             ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
-            pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
-            delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+            pc_hat(k) = pc_hat(k) + f(k,imat) * P_c * a0 
+            delpc_hat(k) = delpc_hat(k) + f(k,imat) * delpc * a0 
          end do
       end do
       pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
@@ -106,7 +106,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       gamma_hat(1:ncell)=one/alpha_hat(1:ncell)+one
       do k = 1,ncell
          ! Calculate the pressure for given internal energy
-         p(k) = (q(k,npri) - ec_hat(k)) / alpha_hat(k) + pc_hat(k)
+         p(k) = max(q(k,npri) - ec_hat(k),0.0) / alpha_hat(k) + pc_hat(k)
       end do 
 
       do imat = 1,nmat
@@ -118,7 +118,9 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
          do k = 1,ncell
             ! Calculate the bulk moduli
             ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
-            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(p(k)-P_c))
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            kappa_mat(k,imat) = max(g(k,imat),smallr) * max(smallc**2,delpc+(smallgamma/max(g(k,imat),smallr))*max(p(k)-P_c,0.0))
             kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
          end do
       end do
@@ -126,7 +128,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(p(k)-pc_hat(k))
+      c(k) = delpc_hat(k)+(gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0)
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound(new method)
@@ -164,10 +166,10 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       end do
       pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
       delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
-      gamma_hat(1:ncell)=one/alpha_hat(1:ncell)+one
+      gamma_hat(1:ncell) = one/alpha_hat(1:ncell)+one
       do k = 1,ncell
          ! Calculate the pressure for given internal energy
-         p(k) = (q(k,npri) - ec_hat(k)) / alpha_hat(k) + pc_hat(k)
+         p(k) = max(q(k,npri) - ec_hat(k),0.0) / alpha_hat(k) + pc_hat(k)
       end do 
 
       do imat = 1,nmat
@@ -292,22 +294,22 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
          a0 = one / (smallgamma-one) 
          do k = 1,ncell
             ! Update Mie-Gruneisen terms for each material
-            e_c = e_0 * (g(k,imat)/rho_0)**biggamma
-            P_c = e_0 * (biggamma-one) * (g(k,imat)/rho_0)**biggamma
-            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (g(k,imat)/rho_0)**(biggamma-one)
+            e_c = e_0 * (max(g(k,imat),smallr)/rho_0)**biggamma
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
             ! Update total values
             alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
             ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
-            pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
-            delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+            pc_hat(k) = pc_hat(k) + f(k,imat) * P_c * a0 
+            delpc_hat(k) = delpc_hat(k) + f(k,imat) * delpc * a0 
          end do
       end do
       pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
       delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
-      gamma_hat(1:ncell)=one/alpha_hat(1:ncell)+one
+      gamma_hat(1:ncell) = one/alpha_hat(1:ncell)+one
       ! Calculate the internal energy for given pressure
       do k=1,ncell
-         e(k) = alpha_hat(k) * (q(k,npri)-pc_hat(k)) + ec_hat(k)
+         e(k) = alpha_hat(k) * max(q(k,npri)-pc_hat(k),0.0) + ec_hat(k)
       end do
       
       do imat = 1,nmat
@@ -319,7 +321,9 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
          do k = 1,ncell
             ! Calculate the bulk moduli
             ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
-            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(q(k,npri)-P_c))
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/max(g(k,imat),smallr))*max(q(k,npri)-P_c,0.0))
             kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
          end do
       end do
@@ -327,7 +331,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(q(k,npri)-pc_hat(k))
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*max(q(k,npri)-pc_hat(k),0.0)
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound (new method)

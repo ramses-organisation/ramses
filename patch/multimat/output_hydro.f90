@@ -113,8 +113,8 @@ subroutine backup_hydro(filename, filename_desc)
               do i = 1, ncache
                  dtot=max(uold(ind_grid(i)+iskip,1),smallr)
                  do imat=1,nmat
-                    ff(1,imat)=uold(ind_grid(i)+iskip,imat+npri)
-                    gg(1,imat)=uold(ind_grid(i)+iskip,imat+npri+nmat)
+                    ff(1,imat)=uold(ind_grid(i)+iskip,imat+nener+npri)
+                    gg(1,imat)=uold(ind_grid(i)+iskip,imat+nener+npri+nmat)
                  end do
                  qq(1,1)=dtot
                  ekin=0.0
