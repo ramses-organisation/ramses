@@ -236,7 +236,7 @@ subroutine trace1d(q,dq,qm,qp,peq,qpeq,dx,dt,ngrid)
            do l = 1, ngrid
 
               ! Cell centered values
-              r   =  q(l,i,j,k,ir)
+              r   =  q(l,i,j,k,ir) + req(l,i,j,k)
               u   =  q(l,i,j,k,iu)
               ! JRCC : compute P from p' (q) and peq
               p   =  q(l,i,j,k,ip) + peq(l,i,j,k)
@@ -268,7 +268,8 @@ subroutine trace1d(q,dq,qm,qp,peq,qpeq,dx,dt,ngrid)
 #endif
 
               ! Right state
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+              qreq = (0.5*(req(l,i,j,k)**(gamma-1.) + req(l,i-1,j,k)**(gamma-1.)))**(1./(gamma-1.))
+              qp(l,i,j,k,ir,1) = r - req(l,i,j,k) - half*drx + sr0*dtdx*half + qreq
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               ! JRCC : Add to right state at left interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute left interface qpeq(l,i,j,k,1)
@@ -283,7 +284,8 @@ subroutine trace1d(q,dq,qm,qp,peq,qpeq,dx,dt,ngrid)
 #endif
 
               ! Left state
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+              qreq = (0.5*(req(l,i+1,j,k)**(gamma-1.) + req(l,i,j,k)**(gamma-1.)))**(1./(gamma-1.))
+              qm(l,i,j,k,ir,1) = r - req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               ! JRCC : Add to left state at right interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute right interface qpeq(l,i+1,j,k,1)
