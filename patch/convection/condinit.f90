@@ -54,16 +54,16 @@ subroutine condinit(x,u,dx,pert,nn)
   g = abs(gravity_params(1))
 
   do i=1,nn
-    if(x(i,1) .lt. x1)then
+    if(x(i,1) .le. x1)then
       T_tmp = 1 - ((gammainit1-1.0d0)/gammainit1)*g*(rho1/p1)*(x(i,1))
       q(i,id)=rho1*((T_tmp)**(1.0/(gammainit1-1.0d0)))
       q(i,ip)=p1*((T_tmp)**(gammainit1/(gammainit1-1.0d0)))
-    else if ((x(i,1) .ge. x1) .and. (x(i,1) .lt. x2)) then
+    else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T_tmp = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
       
       ! produce perturbation in convection zone!
       call random_number(delta_temp)
-      delta_temp = pert*2.*(delta_temp-0.5)*10.0**(-4.0)
+      delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
       ! add perturbation to temperature
 
       q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
@@ -76,7 +76,11 @@ subroutine condinit(x,u,dx,pert,nn)
     q(i,iu)=0.0d0
     if(ndim>1)q(i,iv)=0.0d0
     if(ndim>2)q(i,iw)=0.0d0
-  end do
+#if NVAR>NDIM+2
+    ! Set entropy as a passive scalar
+    q(i,ndim+3)=q(i,ip)/q(i,id)**gamma
+#endif
+ end do
 
   ! Convert primitive to conservative variables
   ! density -> density
@@ -144,12 +148,12 @@ subroutine eneana(x,e,dx,t,ncell)
   !!!!
   !
   !HeFlash
-  e0 = 2.0*10.0**(-6) ! erg/g/s (Normalized 10**16)
+  e0 = 2e-6 ! erg/g/s (Normalized 10**16)
   dx_heat = 0.5d0
   !!!
   !
   ! Model S
-  ! e0 = 2.489*10.0**(-4) ! erg/g/s (Normalized 10**16)
+  ! e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
   ! dx_heat = 2.0d0
   ! !!!!
   e0 = e0*rho0 ! erg/s/cm^3
@@ -158,18 +162,19 @@ subroutine eneana(x,e,dx,t,ncell)
   do i=1,ncell
     e(i) = 0.0d0
   end do 
-  ! !! Heating loop
-  ! do i=1,ncell
-  !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
-  !     ! heating
-  !     e(i) = 100.0*e0
-  !   else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
-  !     ! cooling
-  !     e(i) = -100.0*e0
-  !   else
-  !     e(i) = 0.0d0
-  !   end if
-  ! end do 
+
+  !! Heating loop
+  do i=1,ncell
+    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
+      ! heating
+      e(i) = e0
+    else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
+      ! cooling
+      e(i) = -e0
+    else
+      e(i) = 0.0d0
+    end if
+  end do 
 
 
 end subroutine eneana
@@ -195,18 +200,16 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   real(dp):: x1, x2, crho, cp, cv
   
   ! c: factor of "damping"
-  crho=0.25d0
-  cv=0.25d0
-  cp=0.25d0
+  crho=0.1d0
+  cv=0.1d0
+  cp=0.1d0
 
   x1 = x_center(1)
   x2 = x_center(2)
  
-
   do i=1,ncell
-    if ((x(i,1) .lt. x1) .or. (x(i,1) .gt. x2)) then
-      
-  
+    if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
+       
       ! Damp the internal energy
       u(i,ndim+2) = u(i,ndim+2)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
       

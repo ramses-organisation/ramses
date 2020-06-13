@@ -192,6 +192,26 @@ subroutine set_uold(ilevel)
            end if
         end do
      end if
+#if NVAR>NDIM+2 
+     ! Correct total energy using the entropy
+     do i=1,active(ilevel)%ngrid
+        ind_cell=active(ilevel)%igrid(i)+iskip
+        d=max(uold(ind_cell,1),smallr)
+        u=0; v=0; w=0
+        if(ndim>0)u=uold(ind_cell,2)/d
+        if(ndim>1)v=uold(ind_cell,3)/d
+        if(ndim>2)w=uold(ind_cell,4)/d
+        e_kin=0.5d0*d*(u**2+v**2+w**2)
+#if NENER>0
+        do irad=1,nener
+           e_kin=e_kin+uold(ind_cell,ndim+2+irad)
+        end do
+#endif
+        e_prim=uold(ind_cell,ndim+3)/(gamma-1.0)*d**(gamma-1.0)
+        uold(ind_cell,ndim+2)=e_prim+e_kin
+     end do
+#endif
+
   end do
 
 111 format('   Entering set_uold for level ',i2)

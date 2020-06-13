@@ -294,6 +294,9 @@ subroutine energy_fine(ilevel)
         ! Update total energy
         do i=1,ngrid
           uold(ind_cell(i),neul)=uold(ind_cell(i),neul)+ee(i)*dtnew(ilevel)
+#if NVAR>NDIM+2
+          uold(ind_cell(i),ndim+3)=uold(ind_cell(i),ndim+3)+(gamma-1.0)/uut(i,1)**(gamma-1.0)*ee(i)*dtnew(ilevel)
+#endif
         end do
 
         ! Add back kinetic energy
