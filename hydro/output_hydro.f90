@@ -51,7 +51,11 @@ subroutine backup_hydro(filename, filename_desc)
   end if
 
   write(unit_out) ncpu
-  write(unit_out) nvar
+  if(strict_equilibrium)then
+     write(unit_out) nvar+2
+  else
+     write(unit_out) nvar
+  endif
   write(unit_out) ndim
   write(unit_out) nlevelmax
   write(unit_out) nboundary
@@ -137,6 +141,18 @@ subroutine backup_hydro(filename, filename_desc)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
+              if(strict_equilibrium)then
+                 do i = 1, ncache
+                    xdp(i) = rho_eq(ind_grid(i)+iskip)
+                 end do
+                 field_name = 'equilibrium_density'
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 do i = 1, ncache
+                    xdp(i) = p_eq(ind_grid(i)+iskip)
+                 end do
+                 field_name = 'equilibrium_pressure'
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do
