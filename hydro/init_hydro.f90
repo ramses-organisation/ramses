@@ -77,7 +77,7 @@ subroutine init_hydro
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
-     if(strict_equilibrium)nvar2=nvar2-2
+     if(strict_equilibrium>0)nvar2=nvar2-2
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -208,7 +208,7 @@ subroutine init_hydro
                  end do
 #endif
                  ! Read equilibrium density and pressure profiles
-                 if(strict_equilibrium)then
+                 if(strict_equilibrium>0)then
                     read(ilun)xx
                     do i=1,ncache
                        rho_eq(ind_grid(i)+iskip)=xx(i)
