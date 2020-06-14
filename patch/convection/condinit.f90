@@ -167,10 +167,10 @@ subroutine eneana(x,e,dx,t,ncell)
   do i=1,ncell
     if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
       ! heating
-      e(i) = e0
+      e(i) = 0.0*e0
     else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
       ! cooling
-      e(i) = -e0
+      e(i) = -0.0*e0
     else
       e(i) = 0.0d0
     end if
