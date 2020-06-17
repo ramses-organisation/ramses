@@ -150,9 +150,9 @@ subroutine noncons1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ::i,ivar,imat,idim,ind,iskip
   logical ,dimension(1:nvector),save::body
-  real(dp),dimension(1:nvector),save::pp,cc,ekin,gamma_hat
+  real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat
   real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,gamma_mat
+  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,kappa_mat
   real(dp)::g0,p0,a0,b0,df_over_f,rloc,skip_loc,dx,eps,scale,dx_loc
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
@@ -204,24 +204,14 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
      end do
      ! Pressure from eos
-     call eos(ff,gg,qq,pp,cc,ncache)
-     ! Compute compressibility
-     gamma_hat(1:ncache)=zero
-     do imat=1,nmat
-        g0=eos_params(imat,1); p0=eos_params(imat,2)
-        a0=one/(g0-one); b0=p0*g0/(g0-one)
-        do i=1,ncache
-           gamma_mat(i,imat)=MAX(g0*(pp(i)+p0),gg(i,imat)*smallc**2)
-           gamma_hat(i)=gamma_hat(i)+ff(i,imat)/gamma_mat(i,imat)
-        end do
-     end do
-     gamma_hat(1:ncache)=one/gamma_hat(1:ncache)
+     call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ncache)
+
      ! Source terms for fluid density (Godunov-like advection)
      do imat=1,nmat
         ivar=npri+nmat+imat
         do i=1,ncache
            ! Material compressibility
-           df_over_f  = gamma_hat(i)/gamma_mat(i,imat)
+           df_over_f = kappa_hat(i)/kappa_mat(i,imat)
 
            ! Explicit time integration
 !           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
@@ -238,7 +228,7 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ivar=npri+imat
         do i=1,ncache
            ! No compressibility in volume fraction
-           df_over_f  = one !gamma_hat(i)/gamma_mat(i,imat)
+           df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat) 
 
            ! Explicit time integration
            unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &

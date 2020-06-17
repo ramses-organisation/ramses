@@ -12,7 +12,7 @@ subroutine make_boundary_hydro(ilevel)
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
   integer::ibound,boundary_dir,idim,inbor=1
-  integer::i,ncache,ivar,igrid,ngrid,ind
+  integer::i,ncache,ivar,igrid,ngrid,ind, id, ip
   integer::iskip,iskip_ref,gdim=1,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
@@ -23,6 +23,7 @@ subroutine make_boundary_hydro(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar),save::uu
+  real(dp)::poly_gamma, T_T0
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
@@ -209,23 +210,59 @@ subroutine make_boundary_hydro(ilevel)
                  end do
                  uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
               end do
+              ! -------------------------------------
+              ! JRCC --------------------------------
 
-              ! This option has been disactivated
-              ! because it does not work in general
-              ! Only for highly subsonic flows
-!!$              ! Enforce hydrostatic equilibrium
-!!$              ! for constant gravity vector only
-!!$              if(poisson.and.gravity_type==1)then
-!!$                 ivar=ndim+2
-!!$                 do i=1,ngrid
-!!$                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
-!!$                 end do
-!!$                 do i=1,ngrid
-!!$                    uold(ind_cell(i),ivar)=uu(i,ivar)+ &
-!!$                         & uold(ind_cell_ref(i),1)*gravity_params(gdim)* &
-!!$                         & dx_loc*alt(ind)/(gamma-1.0d0)
-!!$                 end do
-!!$              end if
+              ! We force hydrostatic equilibrium
+              ! with the given polytropic profile
+              if(poisson.and.gravity_type==1)then
+                !ivar=ndim+2
+                id = 1 ! density
+                ip = ndim+2 ! pressure
+
+                do i=1,ngrid
+                  uu(i,id)=uold(ind_cell_ref(i),id)
+                  uu(i,ip)=uold(ind_cell_ref(i),ip)*(gamma-1.0d0) ! Pressure
+                end do
+                ! set value of poly_gamma based on boundary
+                if (ibound==1) then
+                  poly_gamma = gamma_region(1)
+                else if (ibound==2) then
+                  poly_gamma = gamma_region(3)
+                end if 
+
+                ! update density in boundaries
+                do i=1,ngrid
+                  ! ! 1st order approximation
+                  ! uold(ind_cell(i),id)= uu(i,id) - &
+                  !     & abs(gravity_params(gdim))*uu(i,id)*uu(i,id)*dx_loc*alt(ind)/ &
+                  !     & (poly_gamma*uu(i,ip))
+
+                  ! exact solution
+                  T_T0 = 1. - ((poly_gamma - 1.0d0)/poly_gamma)* &
+                          & abs(gravity_params(gdim))*(uu(i,id)/uu(i,ip))* &
+                          & dx_loc*alt(ind)
+                  uold(ind_cell(i),id) = uu(i,id)*(T_T0**(1./(poly_gamma-1.0d0)))
+                end do
+
+                ! update energy in boundaries
+                do i=1,ngrid
+                  ! ! 1st order approximation
+                  ! uold(ind_cell(i),ip)=uu(i,ip)/(gamma-1.0d0) - &
+                  !       & uu(i,id)*abs(gravity_params(gdim))* &
+                  !       & dx_loc*alt(ind)/(gamma-1.0d0)
+
+                  ! exact solution
+                  T_T0 = 1.d0 - ((poly_gamma - 1.0d0)/poly_gamma)* &
+                          & abs(gravity_params(gdim))*(uu(i,id)/uu(i,ip))* &
+                          & dx_loc*alt(ind)
+                  uold(ind_cell(i), ip) = uu(i,ip)*(T_T0**(poly_gamma/(poly_gamma-1.0d0)))/(gamma-1.0d0)
+                end do
+                ! -------------------------------------
+                ! -------------------------------------
+              
+              end if
+
 
            ! Imposed boundary conditions
            else
