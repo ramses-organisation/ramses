@@ -56,7 +56,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
          a0=one/(g0-one); b0=p0*g0/(g0-one)
          ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
          do k = 1,ncell
-            kappa_mat(k,imat) = MAX(g(k,imat) * smallc**2, g0  * (p(k) + p0))
+            kappa_mat(k,imat) = MAX(max(g(k,imat),smallr) * smallc**2, g0  * (p(k) + p0))
             kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
          end do
       end do
@@ -128,7 +128,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0)
+      c(k) = delpc_hat(k)+(gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0))
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound(new method)
@@ -154,9 +154,9 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
          a0 = one / (smallgamma-one) 
          do k = 1,ncell
             ! Update Mie-Gruneisen terms for each material
-            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/g(k,imat))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/g(k,imat))**(1.-E_2))-1.) - C_v * T_0
-            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
-            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/(max(g(k,imat),smallr)))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/(max(g(k,imat),smallr)))**(1.-E_2))-1.) - C_v * T_0
+            P_c = A_1 * (rho_0/(max(g(k,imat),smallr)))**(-E_1) - A_2 * (rho_0/(max(g(k,imat),smallr)))**(-E_2)
+            delpc = A_1 * E_1 * ((max(g(k,imat),smallr))**(E_1-1)/rho_0**E_1) - A_2 * E_2 * ((max(g(k,imat),smallr))**(E_2-1)/rho_0**E_2)
             ! Update total values
             alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
             ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
@@ -181,7 +181,9 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
          do k = 1,ncell
             ! Calculate the bulk moduli
             ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
-            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(p(k)-P_c))
+            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
+            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            kappa_mat(k,imat) = max(g(k,imat),smallr) * MAX(smallc**2, delpc+(smallgamma/(max(g(k,imat),smallr)))*max(p(k)-P_c,0.0))
             kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
          end do
       end do
@@ -189,7 +191,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(p(k)-pc_hat(k))
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*max(p(k)-pc_hat(k),0.0)
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound(new method)
@@ -259,7 +261,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
         a0=one/(g0-one); b0=p0*g0/(g0-one)
         ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
         do k = 1,ncell
-           kappa_mat(k,imat) = MAX(g(k,imat) * smallc**2, g0  * (q(k,npri) + p0))
+           kappa_mat(k,imat) = MAX(max(g(k,imat),smallr) * smallc**2, g0  * (q(k,npri) + p0))
            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
         end do
      end do
@@ -320,7 +322,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
          a0 = one / (smallgamma-one) 
          do k = 1,ncell
             ! Calculate the bulk moduli
-            ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
+            ! ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
             P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
             delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
             kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/max(g(k,imat),smallr))*max(q(k,npri)-P_c,0.0))
@@ -357,9 +359,9 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
          a0 = one / (smallgamma-one) 
          do k = 1,ncell
             ! Update Mie-Gruneisen terms for each material
-            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/g(k,imat))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/g(k,imat))**(1.-E_2))-1.) - C_v * T_0
-            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
-            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/(max(g(k,imat),smallr)))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/(max(g(k,imat),smallr)))**(1.-E_2))-1.) - C_v * T_0
+            P_c = A_1 * (rho_0/(max(g(k,imat),smallr)))**(-E_1) - A_2 * (rho_0/(max(g(k,imat),smallr)))**(-E_2)
+            delpc = A_1 * E_1 * ((max(g(k,imat),smallr))**(E_1-1)/rho_0**E_1) - A_2 * E_2 * ((max(g(k,imat),smallr))**(E_2-1)/rho_0**E_2)
             ! Update total values
             alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
             ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
@@ -384,7 +386,9 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
          do k = 1,ncell
             ! Calculate the bulk moduli
             ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
-            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(q(k,npri)-P_c))
+            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
+            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            kappa_mat(k,imat) = (max(g(k,imat),smallr)) * MAX(smallc**2, delpc+(smallgamma/(max(g(k,imat),smallr)))*max(q(k,npri)-P_c,0.0))
             kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
          end do
       end do
@@ -392,7 +396,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(q(k,npri)-pc_hat(k))
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*max(q(k,npri)-pc_hat(k),0.0)
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound (new method)
