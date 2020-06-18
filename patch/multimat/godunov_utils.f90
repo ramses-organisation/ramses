@@ -128,7 +128,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
-      c(k) = delpc_hat(k)+(gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0)
+      c(k) = delpc_hat(k)+gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0)
       c(k) = sqrt(max(c(k),smallc**2))
       end do
       ! Calculate the total speed of sound(new method)
