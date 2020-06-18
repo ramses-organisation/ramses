@@ -30,6 +30,8 @@ bound_type= 2, 2, 2, 2
 &MATERIAL_PARAMS
 eos_params(1,1:2)=4.4,0.6
 eos_params(2,1:2)=1.4,0.0
+! eos_params(1,1:4)=3,3.1,40.6,8.9
+! eos_params(2,1:4)=1.4,4.176,0,0.05
 /
 
 &INIT_PARAMS
@@ -41,13 +43,14 @@ region_type(3)='square'
 x_center=0.165,0.495,0.825
 y_center=0.5,0.5,0.5
 length_x=0.33,0.33,0.33
-length_y=1.0,1.0,1.0
+length_y=0.33,1.0,0.33
 f1_region=1.0,1e-6,1.0
 f2_region=1e-6,1.0,1e-6
 d1_region=8.9,8.9,8.9
 d2_region=0.05,0.05,0.05
-u_region =50,0.0,-50
-p_region =1e-4,1e-4,1e-4
+u_region=5,0.0,-5
+v_region=0.0,0.0,0.0
+p_region=1e-4,1e-4,1e-4
 /
 
 &OUTPUT_PARAMS
