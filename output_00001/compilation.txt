@@ -1,0 +1,5 @@
+ compile date = 06/18/20-10:55:00
+ patch dir    = ../patch/multimat
+ remote repo  = https://jcakin@bitbucket.org/jcakin/ramses.git
+ local branch = master
+ last commit  = 08fcd5f0bd91819385216383801dde66226e1871

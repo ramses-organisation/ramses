@@ -1,0 +1,15 @@
+#      Family     Count
+ other_tracer         0
+debris_tracer         0
+ cloud_tracer         0
+  star_tracer         0
+ other_tracer         0
+   gas_tracer         0
+           DM         0
+         star         0
+        cloud         0
+       debris         0
+        other         0
+    undefined         0
+ Particle fields
+pos vel mass iord level family tag 

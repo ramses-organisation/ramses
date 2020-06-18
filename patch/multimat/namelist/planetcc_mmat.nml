@@ -47,7 +47,7 @@ p_region =1e-4,1e-4,1e-4
 &OUTPUT_PARAMS
 foutput=100
 noutput=1
-tend=1.2e-2
+tend=8.5e-3
 /
 
 &HYDRO_PARAMS
