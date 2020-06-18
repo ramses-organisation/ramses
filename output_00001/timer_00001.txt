@@ -1,6 +1,0 @@
-
-     seconds         %    STEP (rank=      1)
-       0.000       4.6    coarse levels           
-       0.001      20.8    refine                  
-       0.003      74.6    load balance            
-       0.003     100.0    TOTAL
