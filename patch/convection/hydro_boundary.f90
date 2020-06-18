@@ -292,32 +292,6 @@ subroutine make_boundary_hydro(ilevel)
 
            end if
 
-           if(strict_equilibrium>0)then
-
-            ! Compute cell center in code units
-            do idim=1,ndim
-               do i=1,ngrid
-                  xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-               end do
-            end do
-
-            ! Rescale position from code units to user units
-            do idim=1,ndim
-               do i=1,ngrid
-                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-               end do
-            end do
-
-            call condinit(xx,uu,dx_loc,ngrid)
-
-            ! Scatter variables
-            do i=1,ngrid
-               rho_eq(ind_cell(i))=uu(i,1)
-               p_eq(ind_cell(i))=uu(i,ndim+2)*(gamma-1.0D0)
-            end do
-
-          end if      
-
         end do
         ! End loop over cells
 

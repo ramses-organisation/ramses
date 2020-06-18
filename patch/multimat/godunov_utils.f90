@@ -2,15 +2,15 @@
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine eos(f,g,q,p,c,ncell)
+subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
   integer::ncell
-  real(dp),dimension(1:nvector,1:nmat)::f,g
+  real(dp),dimension(1:nvector,1:nmat)::f,g,kappa_mat
   real(dp),dimension(1:nvector,1:npri)::q
-  real(dp),dimension(1:nvector)::p,c
+  real(dp),dimension(1:nvector)::p,c,kappa_hat 
   ! Compute total pressure and sound speed from total internal energy
   ! On entry:
   ! f is the volume fraction of each fluid
@@ -23,41 +23,196 @@ subroutine eos(f,g,q,p,c,ncell)
   real(dp)::g0,p0,a0,b0
   real(dp),dimension(1:nvector),save::alpha_tot,beta_tot
   real(dp),dimension(1:nvector),save::gamma_tot,pinf_tot
+  real(dp)::smallgamma,biggamma,e_0,e_c,P_c, delpc
+  real(dp)::rho_0,C_v,T_0,E_1,E_2,A_1,A_2
+  real(dp),dimension(1:nvector),save::ec_hat,pc_hat, alpha_hat
+  real(dp),dimension(1:nvector),save::gamma_hat,delpc_hat
 
-  alpha_tot(1:ncell)=zero
-  beta_tot (1:ncell)=zero
-  do imat = 1,nmat
-     g0=eos_params(imat,1); p0=eos_params(imat,2)
-     a0=one/(g0-one); b0=p0*g0/(g0-one)
-     ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
-     do k = 1,ncell
-        alpha_tot(k) = alpha_tot(k) + f(k,imat)*a0
-        beta_tot (k) = beta_tot (k) + f(k,imat)*b0
-     end do
-  end do
-  gamma_tot(1:ncell)=one/alpha_tot(1:ncell)+one
-  pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
-  do k = 1,ncell
-     p(k) = (q(k,npri)-beta_tot(k))/alpha_tot(k)
-!     p(k) = max(p(k),smallr*smallc**2)
-     c(k) = gamma_tot(k)*(p(k)+pinf_tot(k))/q(k,1)
-     c(k) = sqrt(max(c(k),smallc**2))
-  end do
+  if(eos_name == 'stiffened gas')then       
+      ! Initialize variables as zero and update them iteratively
+      alpha_tot(1:ncell)=zero
+      beta_tot (1:ncell)=zero
+      do imat = 1,nmat
+      ! Get stiffened gas EOS parameters
+      g0=eos_params(imat,1); p0=eos_params(imat,2)
+      a0=one/(g0-one); b0=p0*g0/(g0-one)
+      ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
+         do k = 1,ncell
+            ! Update alpha_tot and beta_tot
+            alpha_tot(k) = alpha_tot(k) + f(k,imat) * a0
+            beta_tot (k) = beta_tot (k) + f(k,imat) * b0
+         end do
+      end do
+      gamma_tot(1:ncell)=one/alpha_tot(1:ncell)+one
+      pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
+      ! Calculate the pressure for given internal energy
+      do k = 1,ncell
+         p(k) = (q(k,npri) - beta_tot(k)) / alpha_tot(k)
+      end do
+      ! Calculate the bulk modulus
+      do imat = 1,nmat
+         ! Get stiffened gas EOS parameters
+         g0=eos_params(imat,1); p0=eos_params(imat,2)
+         a0=one/(g0-one); b0=p0*g0/(g0-one)
+         ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
+         do k = 1,ncell
+            kappa_mat(k,imat) = MAX(g(k,imat) * smallc**2, g0  * (p(k) + p0))
+            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+         end do
+      end do
+      kappa_hat(1:ncell)=one/kappa_hat(1:ncell)
+      ! Calculate the speed of sound (old method)
+      do k = 1,ncell
+         c(k) = gamma_tot(k)*(p(k)+pinf_tot(k))/q(k,1)
+         c(k) = sqrt(max(c(k),smallc**2))
+      end do
+      ! Calculate the total speed of sound (new method)
+      ! do k = 1,ncell
+      !    c(k) = kappa_hat(k) / q(k,1)
+      !    c(k) = sqrt(max(c(k),smallc**2))
+      ! end do   
 
+   else if(eos_name == 'mie-grueneisen')then
+      kappa_hat(1:ncell)=zero
+      alpha_hat(1:ncell)=zero
+      pc_hat (1:ncell)=zero
+      ec_hat(1:ncell)=zero
+      delpc_hat(1:ncell)=zero
+      gamma_hat(1:ncell)=zero
+      ! Mie-Gruneisen implementation trial
+      do imat = 1,nmat
+         ! Get Mie-Grueneisen EOS parameters
+         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+         ! Test case for checking whether the model works
+         ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
+         ! e_0 =  p0
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Update Mie-Gruneisen terms for each material
+            ! print *, g(k,imat)
+            e_c = e_0 * (max(g(k,imat),smallr)/rho_0)**biggamma
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            ! Update total values
+            alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
+            ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
+            pc_hat(k) = pc_hat(k) + f(k,imat) * P_c * a0 
+            delpc_hat(k) = delpc_hat(k) + f(k,imat) * delpc * a0 
+         end do
+      end do
+      pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
+      delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
+      gamma_hat(1:ncell)=one/alpha_hat(1:ncell)+one
+      do k = 1,ncell
+         ! Calculate the pressure for given internal energy
+         p(k) = max(q(k,npri) - ec_hat(k),0.0) / alpha_hat(k) + pc_hat(k)
+      end do 
+
+      do imat = 1,nmat
+         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+         ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
+         ! e_0 =  p0
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Calculate the bulk moduli
+            ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            kappa_mat(k,imat) = max(g(k,imat),smallr) * max(smallc**2,delpc+(smallgamma/max(g(k,imat),smallr))*max(p(k)-P_c,0.0))
+            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+         end do
+      end do
+      ! We have calculated 1/kappa_hat so we invert it
+      kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
+      ! Calculate the speed of sound (old method)
+      do k = 1,ncell
+      c(k) = delpc_hat(k)+(gamma_hat(k)/max(q(k,1),smallr)*max(p(k)-pc_hat(k),0.0)
+      c(k) = sqrt(max(c(k),smallc**2))
+      end do
+      ! Calculate the total speed of sound(new method)
+      ! do k = 1,ncell 
+      !    c(k) = kappa_hat(k) / q(k,1)
+      !    c(k) = sqrt(max(c(k),smallc**2))
+      ! end do
+
+   else if(eos_name == 'cochran-chan')then
+      kappa_hat(1:ncell)=zero
+      alpha_hat(1:ncell)=zero
+      pc_hat (1:ncell)=zero
+      ec_hat(1:ncell)=zero
+      delpc_hat(1:ncell)=zero
+      gamma_hat(1:ncell)=zero
+      ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS 
+      do imat = 1,nmat
+         ! Get Mie-Grueneisen EOS parameters
+         rho_0=eos_params(imat,1);C_v=eos_params(imat,2);T_0=eos_params(imat,3)
+         E_1=eos_params(imat,4);E_2=eos_params(imat,5);A_1=eos_params(imat,6);A_2=eos_params(imat,7)
+         smallgamma=eos_params(imat,8)
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Update Mie-Gruneisen terms for each material
+            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/g(k,imat))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/g(k,imat))**(1.-E_2))-1.) - C_v * T_0
+            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
+            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            ! Update total values
+            alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
+            ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
+            pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
+            delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+         end do
+      end do
+      pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
+      delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
+      gamma_hat(1:ncell) = one/alpha_hat(1:ncell)+one
+      do k = 1,ncell
+         ! Calculate the pressure for given internal energy
+         p(k) = max(q(k,npri) - ec_hat(k),0.0) / alpha_hat(k) + pc_hat(k)
+      end do 
+
+      do imat = 1,nmat
+         rho_0=eos_params(imat,1);C_v=eos_params(imat,2);T_0=eos_params(imat,3)
+         E_1=eos_params(imat,4);E_2=eos_params(imat,5);A_1=eos_params(imat,6);A_2=eos_params(imat,7)
+         smallgamma=eos_params(imat,8)
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Calculate the bulk moduli
+            ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
+            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(p(k)-P_c))
+            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+         end do
+      end do
+      ! We have calculated 1/kappa_hat so we invert it
+      kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
+      ! Calculate the speed of sound (old method)
+      do k = 1,ncell
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(p(k)-pc_hat(k))
+      c(k) = sqrt(max(c(k),smallc**2))
+      end do
+      ! Calculate the total speed of sound(new method)
+      ! do k = 1,ncell 
+      !    c(k) = kappa_hat(k) / q(k,1)
+      !    c(k) = sqrt(max(c(k),smallc**2))
+      ! end do
+   end if
 end subroutine eos
+
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine eosinv(f,g,q,e,c,ncell)
+subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
   integer::ncell
-  real(dp),dimension(1:nvector,1:nmat)::f,g
+  real(dp),dimension(1:nvector,1:nmat)::f,g,c_mat,kappa_mat
   real(dp),dimension(1:nvector,1:npri)::q
-  real(dp),dimension(1:nvector)::e,c
+  real(dp),dimension(1:nvector)::e,c,kappa_hat
   ! Compute total internal energy and sound speed from total pressure
   ! On entry:
   ! f is the volume fraction of each fluid
@@ -65,34 +220,189 @@ subroutine eosinv(f,g,q,e,c,ncell)
   ! q are the total primitive variables (d, u, P)
   ! On exit:
   ! eint is the total internal energy
-  ! c is the total sound speed
+  ! c is the sound speed of each fluid 
+  ! c_hat is the total sound speed
   integer::k,imat
   real(dp)::g0,p0,a0,b0
   real(dp),dimension(1:nvector),save::alpha_tot,beta_tot
   real(dp),dimension(1:nvector),save::gamma_tot,pinf_tot
+  real(dp)::smallgamma,biggamma,e_0,e_c,P_c, delpc
+  real(dp)::rho_0,C_v,T_0,E_1,E_2,A_1,A_2
+  real(dp),dimension(1:nvector),save::ec_hat,pc_hat, alpha_hat
+  real(dp),dimension(1:nvector),save::gamma_hat,delpc_hat
 
-  alpha_tot(1:ncell)=zero
-  beta_tot (1:ncell)=zero
-  do imat = 1,nmat
-     g0=eos_params(imat,1); p0=eos_params(imat,2)
-     a0=one/(g0-one); b0=p0*g0/(g0-one)
-     ! p=(g0-1)*(e-e0); e=beta+alpha*p
-     do k = 1,ncell
-        alpha_tot(k) = alpha_tot(k) + f(k,imat)*a0
-        beta_tot (k) = beta_tot (k) + f(k,imat)*b0
+   if(eos_name=='stiffened gas')then 
+      ! Initialize variables as zero and update them iteratively
+      alpha_tot(1:ncell)=zero
+      beta_tot (1:ncell)=zero
+     do imat = 1,nmat
+        ! Get stiffened gas EOS parameters
+        g0=eos_params(imat,1); p0=eos_params(imat,2)
+        a0=one/(g0-one); b0=p0*g0/(g0-one)
+        ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
+        do k = 1,ncell
+           ! Update alpha_tot and beta_tot
+           alpha_tot(k) = alpha_tot(k) + f(k,imat) * a0
+           beta_tot (k) = beta_tot (k) + f(k,imat) * b0
+        end do
      end do
-  end do
-  gamma_tot(1:ncell)=one/alpha_tot(1:ncell)+one
-  pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
-  do k = 1,ncell
-!     e(k) = max(q(k,npri),smallr*smallc**2)
-     e(k) = q(k,npri)
-     e(k) = alpha_tot(k)*e(k)+beta_tot(k)
-     c(k) = gamma_tot(k)*(q(k,npri)+pinf_tot(k))/q(k,1)
-     c(k) = sqrt(max(c(k),smallc**2))
-  end do
+     gamma_tot(1:ncell)=one/alpha_tot(1:ncell)+one
+     pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
+     ! Calculate the interal energy for given pressure
+     do k = 1,ncell
+        e(k) = alpha_tot(k) * q(k,npri) + beta_tot(k) 
+     end do
+     ! Calculate the bulk modulus
+     do imat = 1,nmat
+        ! Get stiffened gas EOS parameters
+        g0=eos_params(imat,1); p0=eos_params(imat,2)
+        a0=one/(g0-one); b0=p0*g0/(g0-one)
+        ! p=(gamma-1)*e-gamma*pinf; e=beta+alpha*p
+        do k = 1,ncell
+           kappa_mat(k,imat) = MAX(g(k,imat) * smallc**2, g0  * (q(k,npri) + p0))
+           kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+        end do
+     end do
+     kappa_hat(1:ncell)=one/kappa_hat(1:ncell)
+     ! Calculate the speed of sound (old method)
+     do k = 1,ncell
+        c(k) = gamma_tot(k)*(q(k,npri)+pinf_tot(k))/q(k,1)
+        c(k) = sqrt(max(c(k),smallc**2))
+     end do
+      ! Calculate the total speed of sound (new method)
+   !   do k = 1,ncell
+   !      c(k) = kappa_hat(k) / q(k,1)
+   !      c(k) = sqrt(max(c(k),smallc**2))
+   !   end do
 
+   else if(eos_name=='mie-grueneisen')then
+      kappa_hat(1:ncell)=zero
+      alpha_hat(1:ncell)=zero
+      pc_hat (1:ncell)=zero
+      ec_hat(1:ncell)=zero
+      delpc_hat(1:ncell)=zero
+      gamma_hat(1:ncell)=zero
+      ! Mie-Gruneisen implementation trial
+      do imat = 1,nmat
+         ! Get Mie-Grueneisen EOS parameters
+         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         ! Test case for checking whether the model works
+         ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
+         ! e_0 =  p0
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Update Mie-Gruneisen terms for each material
+            e_c = e_0 * (max(g(k,imat),smallr)/rho_0)**biggamma
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            ! Update total values
+            alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
+            ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
+            pc_hat(k) = pc_hat(k) + f(k,imat) * P_c * a0 
+            delpc_hat(k) = delpc_hat(k) + f(k,imat) * delpc * a0 
+         end do
+      end do
+      pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
+      delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
+      gamma_hat(1:ncell) = one/alpha_hat(1:ncell)+one
+      ! Calculate the internal energy for given pressure
+      do k=1,ncell
+         e(k) = alpha_hat(k) * max(q(k,npri)-pc_hat(k),0.0) + ec_hat(k)
+      end do
+      
+      do imat = 1,nmat
+         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+         ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
+         ! e_0 =  p0
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Calculate the bulk moduli
+            ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
+            P_c = e_0 * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**biggamma
+            delpc = (e_0/rho_0) * biggamma * (biggamma-one) * (max(g(k,imat),smallr)/rho_0)**(biggamma-one)
+            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/max(g(k,imat),smallr))*max(q(k,npri)-P_c,0.0))
+            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+         end do
+      end do
+      ! We have calculated 1/kappa_hat so we invert it
+      kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
+      ! Calculate the speed of sound (old method)
+      do k = 1,ncell
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*max(q(k,npri)-pc_hat(k),0.0)
+      c(k) = sqrt(max(c(k),smallc**2))
+      end do
+      ! Calculate the total speed of sound (new method)
+      ! do k = 1,ncell 
+      !    c(k) = kappa_hat(k) / q(k,1)
+      !    c(k) = sqrt(max(c(k),smallc**2))
+      ! end do
+
+   else if(eos_name == 'cochran-chan')then
+      kappa_hat(1:ncell)=zero
+      alpha_hat(1:ncell)=zero
+      pc_hat (1:ncell)=zero
+      ec_hat(1:ncell)=zero
+      delpc_hat(1:ncell)=zero
+      gamma_hat(1:ncell)=zero
+      ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS 
+      do imat = 1,nmat
+         ! Get Mie-Grueneisen EOS parameters
+         rho_0=eos_params(imat,1);C_v=eos_params(imat,2);T_0=eos_params(imat,3)
+         E_1=eos_params(imat,4);E_2=eos_params(imat,5);A_1=eos_params(imat,6);A_2=eos_params(imat,7)
+         smallgamma=eos_params(imat,8)
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Update Mie-Gruneisen terms for each material
+            e_c = -A_1 / (rho_0*(1. - E_1))  * (((rho_0/g(k,imat))**(1.-E_1))-1.) + A_2 / (rho_0*(1. - E_2)) * (((rho_0/g(k,imat))**(1.-E_2))-1.) - C_v * T_0
+            P_c = A_1 * (rho_0/g(k,imat))**(-E_1) - A_2 * (rho_0/g(k,imat))**(-E_2)
+            delpc = A_1 * E_1 * (g(k,imat)**(E_1-1)/rho_0**E_1) - A_2 * E_2 * (g(k,imat)**(E_2-1)/rho_0**E_2)
+            ! Update total values
+            alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
+            ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
+            pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
+            delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+         end do
+      end do
+      pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
+      delpc_hat(1:ncell) = delpc_hat(1:ncell)/alpha_hat(1:ncell)
+      gamma_hat(1:ncell)=one/alpha_hat(1:ncell)+one
+      ! Calculate the internal energy for given pressure
+      do k=1,ncell
+         e(k) = alpha_hat(k) * (q(k,npri)-pc_hat(k)) + ec_hat(k)
+      end do
+      
+      do imat = 1,nmat
+         rho_0=eos_params(imat,1);C_v=eos_params(imat,2);T_0=eos_params(imat,3)
+         E_1=eos_params(imat,4);E_2=eos_params(imat,5);A_1=eos_params(imat,6);A_2=eos_params(imat,7)
+         smallgamma=eos_params(imat,8)
+         ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+         a0 = one / (smallgamma-one) 
+         do k = 1,ncell
+            ! Calculate the bulk moduli
+            ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
+            kappa_mat(k,imat) = g(k,imat) * MAX(smallc**2, delpc+(smallgamma/g(k,imat))*(q(k,npri)-P_c))
+            kappa_hat(k) = kappa_hat(k) + f(k,imat) / kappa_mat(k,imat)
+         end do
+      end do
+      ! We have calculated 1/kappa_hat so we invert it
+      kappa_hat(1:ncell) = one / kappa_hat(1:ncell)
+      ! Calculate the speed of sound (old method)
+      do k = 1,ncell
+      c(k) = delpc_hat(k)+(gamma_hat(k)/q(k,1))*(q(k,npri)-pc_hat(k))
+      c(k) = sqrt(max(c(k),smallc**2))
+      end do
+      ! Calculate the total speed of sound (new method)
+      ! do k = 1,ncell 
+      !    c(k) = kappa_hat(k) / q(k,1)
+      !    c(k) = sqrt(max(c(k),smallc**2))
+      ! end do
+   end if
 end subroutine eosinv
+
 !###########################################################
 !###########################################################
 !###########################################################
@@ -109,8 +419,8 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   real(dp),dimension(1:nvector)::rr
   
   real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector,1:nmat),save::ff,gg
-  real(dp),dimension(1:nvector),save::ekin,dtot,cc,st,pp
+  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,kappa_matt
+  real(dp),dimension(1:nvector),save::ekin,dtot,cc,st,pp,kappa_hatt
   real(dp)::dtcell,eps
   integer::k,idim,imat
 
@@ -144,7 +454,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   end do
   
   ! Call eos routine
-  call eos(ff,gg,qq,pp,cc,ncell)
+  call eos(ff,gg,qq,pp,cc,kappa_matt,kappa_hatt,ncell)
   
   ! Compute wave speed
   if(geom==3)then
@@ -208,9 +518,11 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   real(dp),dimension(1:nvector,1:npri),save::qg,qm,qd
   real(dp),dimension(1:nvector,1:nmat),save::fg,fm,fd
   real(dp),dimension(1:nvector,1:nmat),save::gg,gm,gd
+  real(dp),dimension(1:nvector,1:nmat),save::kappa_matg,kappa_matm,kappa_matd
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
   real(dp),dimension(1:nvector),save::pg,pm,pd
   real(dp),dimension(1:nvector),save::cg,cm,cd
+  real(dp),dimension(1:nvector),save::kappa_hatg,kappa_hatm,kappa_hatd
   logical ,dimension(1:nvector),save::wg,wd,bg,bm,bd
   real(dp)::ffg,ffm,ffd,ddg,ddm,ddd
   real(dp)::ppg,ppm,ppd,vvg,vvm,vvd
@@ -292,9 +604,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   end do
   
   ! Call eos routine
-  call eos(fg,gg,qg,pg,cg,ncell)
-  call eos(fm,gm,qm,pm,cm,ncell)
-  call eos(fd,gd,qd,pd,cd,ncell)
+  call eos(fg,gg,qg,pg,cg,kappa_matg,kappa_hatg,ncell)
+  call eos(fm,gm,qm,pm,cm,kappa_matm,kappa_hatm,ncell)
+  call eos(fd,gd,qd,pd,cd,kappa_matd,kappa_hatd,ncell)
   
   ! Compute errors
   if(err_grad_d >= 0.)then
@@ -373,7 +685,9 @@ subroutine riemann_acoustic(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ggdnv,qgdnv,ngrid)
   real(dp),dimension(1:nvector,1:npri)::ql,qr,qgdnv
   real(dp),dimension(1:nvector,1:nmat)::fl,fr,fgdnv
   real(dp),dimension(1:nvector,1:nmat)::gl,gr,ggdnv
+  real(dp),dimension(1:nvector,1:nmat)::kappa_matl,kappa_matr
   real(dp),dimension(1:nvector)::cl,cr
+  real(dp),dimension(1:nvector)::kappa_hatl,kappa_hatr
 
   ! local variables
   integer::i,n,ir,ie,imat
@@ -383,15 +697,17 @@ subroutine riemann_acoustic(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ggdnv,qgdnv,ngrid)
   real(dp),dimension(1:nvector,1:npri),save::qo,qstar
   real(dp),dimension(1:nvector,1:nmat),save::fo,fstar
   real(dp),dimension(1:nvector,1:nmat),save::go,gstar
+  real(dp),dimension(1:nvector,1:nmat),save::kappa_matstar
   real(dp),dimension(1:nvector),save::cstar,estar,pstar,ustar
+  real(dp),dimension(1:nvector),save::kappa_hatstar
   real(dp),dimension(1:nvector),save::sgnm ,spin ,spout,ushock
   real(dp),dimension(1:nvector),save::frac,co,el,er
   logical ,dimension(1:nvector),save::wall
   real(dp)::wl,wr,ul,ur,pl,pr,dl,dr,dstar
 
   ! Sound speed
-  call eosinv(fl,gl,ql,el,cl,ngrid)
-  call eosinv(fr,gr,qr,er,cr,ngrid)
+  call eosinv(fl,gl,ql,el,cl,kappa_matl,kappa_hatl,ngrid)
+  call eosinv(fr,gr,qr,er,cr,kappa_matr,kappa_hatr,ngrid)
 
   ! Acoustic star state
   do i=1,ngrid
@@ -440,7 +756,7 @@ subroutine riemann_acoustic(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ggdnv,qgdnv,ngrid)
      qstar(i,4) = qo(i,4)
 #endif
   end do
-  call eosinv(fstar,gstar,qstar,estar,cstar,ngrid)
+  call eosinv(fstar,gstar,qstar,estar,cstar,kappa_matstar,kappa_hatstar,ngrid)
 
   ! Head and tail speed of rarefaction
   do i=1,ngrid

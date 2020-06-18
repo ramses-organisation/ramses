@@ -33,7 +33,7 @@ x_center=1.6418520000000012, 7.777926
 /
 
 &OUTPUT_PARAMS
-delta_tout=10
+delta_tout=1
 tend=1000
 /
 
