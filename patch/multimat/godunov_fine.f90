@@ -211,16 +211,18 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ivar=npri+nmat+imat
         do i=1,ncache
            ! Material compressibility
-           df_over_f = kappa_hat(i)/kappa_mat(i,imat)
+           df_over_f = one !kappa_hat(i)/kappa_mat(i,imat)
 
            ! Explicit time integration
-!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
-!                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
+!!$!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
+!!$!                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
 
            ! Implicit time integration
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
-                & - divu(ind_cell(i))*(df_over_f-one))
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
+!!$                & - divu(ind_cell(i))*(df_over_f-one))
 
+           unew(ind_cell(i),ivar) = max(smallr, unew(ind_cell(i),ivar))
+           
         end do
      end do
      ! Source terms for volume fraction (Godunov-like advection)
@@ -228,15 +230,15 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ivar=npri+imat
         do i=1,ncache
            ! No compressibility in volume fraction
-           df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat) 
+           df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat)
 
            ! Explicit time integration
            unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
                 & -uold(ind_cell(i),ivar)*divu(ind_cell(i))*df_over_f
 
            ! Implicit time integration
-!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
-!                & + divu(ind_cell(i))*df_over_f)
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
+!!$                & + divu(ind_cell(i))*df_over_f)
 
         end do
      end do
