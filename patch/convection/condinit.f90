@@ -140,7 +140,9 @@ subroutine eneana(x,e,dx,t,ncell)
   ! of the convection zone
   !================================================================
   integer :: i, idim
-  real(dp):: rho0, e0, x1, x2, dx_heat
+  real(dp):: rho0, e0, x1, x2, dxq, pi
+
+  pi = 4.d0*ATAN(1.d0)
 
   x1 = x_center(1)
   x2 = x_center(2)
@@ -149,12 +151,12 @@ subroutine eneana(x,e,dx,t,ncell)
   !
   !HeFlash
   e0 = 2e-6 ! erg/g/s (Normalized 10**16)
-  dx_heat = 0.5d0
+  dxq = 0.5d0
   !!!
   !
   ! Model S
   ! e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
-  ! dx_heat = 2.0d0
+  ! dxq = 2.0d0
   ! !!!!
   e0 = e0*rho0 ! erg/s/cm^3
   
@@ -165,12 +167,14 @@ subroutine eneana(x,e,dx,t,ncell)
 
   !! Heating loop
   do i=1,ncell
-    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
+    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
       ! heating
-      e(i) = 0.0*e0
-    else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
+      e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+
+    else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
       ! cooling
-      e(i) = -0.0*e0
+      e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x1+dxq/2.0)/dxq))/dxq
+
     else
       e(i) = 0.0d0
     end if
