@@ -65,6 +65,9 @@ subroutine condinit(x,u,dx,pert,nn)
       call random_number(delta_temp)
       delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
       ! add perturbation to temperature
+      
+      ! DEBUG:remove perturbations
+      delta_temp = 0.0
 
       q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
       q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0d0)))
@@ -150,7 +153,7 @@ subroutine eneana(x,e,dx,t,ncell)
   !!!!
   !
   !HeFlash
-  e0 = 2e-6 ! erg/g/s (Normalized 10**16)
+  e0 = 2.0e-6 ! erg/g/s (Normalized 10**16)
   dxq = 0.5d0
   !!!
   !
@@ -158,22 +161,25 @@ subroutine eneana(x,e,dx,t,ncell)
   ! e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
   ! dxq = 2.0d0
   ! !!!!
-  e0 = e0*rho0 ! erg/s/cm^3
   
   ! Initialize
-  do i=1,ncell
-    e(i) = 0.0d0
-  end do 
-
+  ! do i=1,ncell
+  !   e(i) = 0.0d0
+  ! end do 
+  ! DEBUG: No heating:
+  e0 = 0.0d0
+  
   !! Heating loop
   do i=1,ncell
     if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
       ! heating
-      e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+      e(i) = e0*rho0 ! erg/s/cm^3
 
     else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
       ! cooling
-      e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x1+dxq/2.0)/dxq))/dxq
+      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+      e(i) = -e0*rho0 ! erg/s/cm^3
 
     else
       e(i) = 0.0d0
