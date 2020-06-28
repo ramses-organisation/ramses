@@ -2941,12 +2941,6 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
               d_old=max(q(l,i,j,k,1),smallr)
               Kturb=uin(l,i,j,k,ivirial1)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
-              !alphaT(l,i,j,k)=sigma/(1.0+1000000.0*emag(l)/(d_old*sigma**2))
-              !if(d_old.GT.1d4)then
-              !   alphaT(l,i,j,k)=sigma/(1+1000000*emag(l)/(d_old*sigma**2))
-              !else
-              !   alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
-              !endif
               if(d_old.GT.d0)then
                   epsilon = 0.001
                   emag_crit(l) = epsilon * d_old * sigma**2
