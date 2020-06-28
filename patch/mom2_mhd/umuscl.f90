@@ -2930,6 +2930,17 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
    real(dp)::Kturb,sigma,d_old,epsilon
    integer::i, j, k, l
 
+   ! Conversion factor from user units to cgs units
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+   ! Dynamo density threshold from H/cc to code units
+   nISM = n_star
+   if(cosmo)then
+      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*XH/mH
+      nISM = MAX(nCOM,nISM)
+   endif
+      d0   = nISM/scale_nH
+
    do k = ku1, ku2
       do j = ju1, ju2
          do i = iu1, iu2
