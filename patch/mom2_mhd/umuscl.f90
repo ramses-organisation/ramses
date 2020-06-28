@@ -2918,6 +2918,8 @@ end subroutine uslope
 subroutine turb_dynamo(uin,q,alphaT,ngrid)
    use amr_parameters
    use hydro_parameters
+   use cooling_module, ONLY: XH=>X
+   use constants, only: mH, rhoc
    use const
    implicit none
 
@@ -2927,7 +2929,9 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
 
    real(dp),dimension(1:nvector)::emag, emag_crit
-   real(dp)::Kturb,sigma,d_old,epsilon
+   ! local constants
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   real(dp)::Kturb,sigma,d_old,epsilon,nISM,nCOM,d0
    integer::i, j, k, l
 
    ! Conversion factor from user units to cgs units
