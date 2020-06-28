@@ -247,7 +247,7 @@ SUBROUTINE output_rt_stats
 !-------------------------------------------------------------------------
   call units(scale_l, scale_t, scale_d, scale_v, scale_nH, scale_T2)
   ! Cooling statistics:
-  if (rt_output_coolstats) then
+  if (neq_chem .and. rt_output_coolstats) then
      cells_all = 0 ; tot_all = 0 ; max_all = 0 ; loopCodes_all = 0
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(n_cool_cells,         cells_all,     1, &

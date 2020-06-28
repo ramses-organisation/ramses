@@ -22,10 +22,12 @@ subroutine newdt_fine(ilevel)
   ! This routine also computes the particle kinetic energy.
   !-----------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::npart1,ip
+  integer::npart1,ip,isink,idim
   integer,dimension(1:nvector),save::ind_part
   real(kind=8)::dt_loc,dt_all,ekin_loc,ekin_all
   real(dp)::tff,fourpi,threepi2
+  real(dp)::dx,dx_loc,nx_loc,scale
+  real(dp)::vsink2,vsink_max
 #ifdef ATON
   real(dp)::aton_time_step,dt_aton
 #endif
@@ -57,6 +59,27 @@ subroutine newdt_fine(ilevel)
      dtnew(ilevel)=MIN(dtnew(ilevel),0.1d0/hexp)
   end if
 
+  ! Check sink velocity
+  if(sink)then
+     dx=0.5d0**ilevel
+     nx_loc=dble(icoarse_max-icoarse_min+1)
+     scale=boxlen/nx_loc
+     dx_loc=dx*scale
+     vsink_max=0d0
+     do isink=1,nsink
+        if(.not. new_born(isink))then
+           vsink2=0d0     
+           do idim=1,ndim
+              vsink2=vsink2+vsink(isink,idim)**2
+           end do
+           vsink_max=MAX(vsink_max,sqrt(vsink2))
+        endif
+     end do
+     if(vsink_max.GT.0d0)then
+        dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*dx_loc/vsink_max)
+     endif
+  endif
+  
 #ifdef ATON
   ! Maximum time step for ATON
   if(aton)then

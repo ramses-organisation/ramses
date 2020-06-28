@@ -41,6 +41,11 @@ subroutine init_hydro
      allocate(enew(1:ncell))
      divu=0.0d0; enew=0.0d0
   end if
+  if(strict_equilibrium>0)then
+     allocate(rho_eq(1:ncell))
+     allocate(p_eq(1:ncell))
+     rho_eq=0.0d0; p_eq=0.0d0
+  endif
 
   !--------------------------------
   ! For a restart, read hydro file
@@ -56,8 +61,6 @@ subroutine init_hydro
         fileloc='output_'//TRIM(nchar)//'/hydro_'//TRIM(nchar)//'.out'
      endif
 
-
-
      call title(myid,nchar)
      fileloc=TRIM(fileloc)//TRIM(nchar)
 
@@ -70,11 +73,11 @@ subroutine init_hydro
         end if
      endif
 #endif
-
-
+     
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
+     if(strict_equilibrium>0)nvar2=nvar2-2
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -204,6 +207,18 @@ subroutine init_hydro
                     end do
                  end do
 #endif
+                 ! Read equilibrium density and pressure profiles
+                 if(strict_equilibrium>0)then
+                    read(ilun)xx
+                    do i=1,ncache
+                       rho_eq(ind_grid(i)+iskip)=xx(i)
+                    end do
+                    read(ilun)xx
+                    do i=1,ncache
+                       p_eq(ind_grid(i)+iskip)=xx(i)
+                    end do
+                 endif
+                 
               end do
               deallocate(ind_grid,xx)
            end if

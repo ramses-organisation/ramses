@@ -106,6 +106,8 @@ subroutine adaptive_loop
               end do
 #endif
               if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
+              if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
+              if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
               if(simple_boundary)call make_boundary_hydro(ilevel)
            endif
 #ifdef RT
@@ -147,6 +149,8 @@ subroutine adaptive_loop
               end do
 #endif
               if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
+              if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
+              if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
               if(simple_boundary)call make_boundary_hydro(ilevel)
            end if
 #ifdef RT

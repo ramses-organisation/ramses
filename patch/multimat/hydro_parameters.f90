@@ -11,8 +11,13 @@ module hydro_parameters
 #else
   integer,parameter::nmat=NMAT
 #endif
+#ifndef NENER
+  integer,parameter::nener=0
+#else
+  integer,parameter::nener=NENER
+#endif
 #ifndef NVAR
-  integer,parameter::nvar=ndim+2+2*nmat
+  integer,parameter::nvar=ndim+2+2*nmat+nener
 #else
   integer,parameter::nvar=NVAR
 #endif
@@ -70,6 +75,7 @@ module hydro_parameters
   real(dp)::smallr=1.0d-10
   real(dp)::smallf=1.0d-10
   character(LEN=10)::scheme='muscl'
+  character(LEN=20)::eos_name='mie-grueneisen'
 
   ! Interpolation parameters
   integer ::interpol_var=0

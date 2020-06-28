@@ -158,7 +158,11 @@ clr=clr2
 a=niv
 c=fltarr(3,ncol)
 b=findgen(3)
-for j=0,2 do c(j,*)=a(*)
+for j=0,2 do begin
+   for i=0,n_elements(a)-1 do begin
+      c(j,i)=a(i)
+   endfor
+endfor
 
 ; Multiple windows
 nxscale=MAX([!p.multi[1],1L])
@@ -176,11 +180,14 @@ offswin=[ioffset,joffset,ioffset,joffset]*sizewin
 ; Plot color table
 if keyword_set(table) then begin
     posleg=[0.9,0.1,0.95,0.9]*sizewin+offswin
+    if(keyword_set(log))then begin
+       a=alog10(a)
+    endif
     contour,c,b,a $
             ,title='!17Value/Color' $
             ,xr=[0,b[1]],yr=[min(a),max(a)],/xs,/ys,ticklen=0. $
             ,xticks=1,xtickn=[' ',' '],c_colors=clr $
-            ,position=posleg,ylog=log,noerase=noerase $
+            ,position=posleg,noerase=noerase $
             ,/fill,/follow,levels=niv
     
 ; Plot contours

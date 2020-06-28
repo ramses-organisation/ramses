@@ -48,7 +48,8 @@ subroutine read_hydro_params(nml_ok)
 #ifdef SOLVERmhd
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
-       & ,pressure_fix,beta_fix,scheme,riemann
+       & ,pressure_fix,beta_fix,scheme,riemann &
+       & ,strict_equilibrium
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -254,6 +255,17 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 
+  !--------------------------------------------------
+  ! Check whether illegally trying non-eq chemistry
+  !--------------------------------------------------
+#ifndef RT
+  if(neq_chem) then
+     if(myid==1)write(*,*) 'Error: non-equilibrium chemistry unavailable'
+     if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
+     nml_ok=.false.
+  endif
+#endif
+  
   !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------

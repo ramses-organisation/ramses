@@ -1008,14 +1008,13 @@ contains
 #ifndef WITHOUTMPI
              if(cc(i)==myid)then
 #endif
-                ipart=ipart+1
-                if(ipart>npartmax)then
-                   write(*,*)'Maximum number of particles incorrect'
-                   write(*,*)'npartmax should be greater than',ipart
-                   call clean_stop
-                endif
                 if (maxval(abs(xx(i,1:3)+gal_center1)) .LT. (boxlen/2.0)) then
                    ipart=ipart+1
+                   if(ipart>npartmax)then
+                      write(*,*)'Maximum number of particles incorrect'
+                      write(*,*)'npartmax should be greater than',ipart
+                      call clean_stop
+                   endif
                    xp(ipart,1:3)=xx(i,1:3) + gal_center1 + boxlen/2.0D0
                    vp(ipart,1:3)=vv(i,1:3)
                    mp(ipart)    =mm(i)
@@ -1125,14 +1124,13 @@ contains
 #ifndef WITHOUTMPI
              if(cc(i)==myid)then
 #endif
-                ipart=ipart+1
-                if(ipart>npartmax)then
-                   write(*,*)'Maximum number of particles incorrect'
-                   write(*,*)'npartmax should be greater than',ipart
-                   call clean_stop
-                endif
                 if (maxval(abs(xx(i,1:3)+gal_center2)) .LT. (boxlen/2.0)) then
                    ipart=ipart+1
+                   if(ipart>npartmax)then
+                      write(*,*)'Maximum number of particles incorrect'
+                      write(*,*)'npartmax should be greater than',ipart
+                      call clean_stop
+                   endif
                    xp(ipart,1:3)=xx(i,1:3) + gal_center2 + boxlen/2.0D0
                    vp(ipart,1:3)=vv(i,1:3)
                    mp(ipart)    =mm(i)

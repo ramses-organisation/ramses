@@ -55,6 +55,7 @@ tout=0.23,
 courant_factor=0.5
 slope_type=2
 scheme='muscl'
+eos_name='mie-grueneisen'
 /
 
 &REFINE_PARAMS 
