@@ -2947,11 +2947,13 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
               !else
               !   alphaT(l,i,j,k)=0.0 !d_old/1d4*sigma/(1+100000*emag(l)/(d_old*sigma**2))
               !endif
-
-              epsilon = 0.000001
-              emag_crit(l) = epsilon * d_old * sigma**2
-              alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
-
+              if(d_old.GT.d0)then
+                  epsilon = 0.001
+                  emag_crit(l) = epsilon * d_old * sigma**2
+                  alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
+              else
+                  alphaT(l,i,j,k)=0.0
+              endif
             end do
          end do
       end do
