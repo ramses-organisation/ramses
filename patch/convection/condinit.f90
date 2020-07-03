@@ -169,12 +169,12 @@ subroutine eneana(x,e,dx,t,ncell)
   do i=1,ncell
     if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
       ! heating
-      e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
-
+      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+      e(i) = e0
     else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
       ! cooling
-      e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x1+dxq/2.0)/dxq))/dxq
-
+      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+      e(i) = -e0
     else
       e(i) = 0.0d0
     end if
