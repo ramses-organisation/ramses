@@ -10,8 +10,8 @@ nsubcycle=30*1
 /
 
 &AMR_PARAMS 
-levelmin=8
-levelmax=8
+levelmin=10
+levelmax=10
 ngridmax=200000
 nexpand=1
 boxlen=11.0
@@ -33,8 +33,8 @@ x_center=1.6418520000000012, 7.777926
 /
 
 &OUTPUT_PARAMS
-delta_tout=1
-tend=1000
+delta_tout=100
+tend=2000
 /
 
 &POISSON_PARAMS 

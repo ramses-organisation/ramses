@@ -21,7 +21,7 @@ PATCH = '../patch/convection'
 RT = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = mpif90
+MPIF90 = ftn
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
@@ -37,7 +37,7 @@ NIONS = 0
 # Number of photon groups for RT
 NGROUPS = 0
 # Number of passive scalars
-NPSCAL = 0
+NPSCAL = 1
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
