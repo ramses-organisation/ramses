@@ -10,7 +10,7 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 2
+NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver

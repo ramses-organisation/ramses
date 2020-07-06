@@ -705,7 +705,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 
               ! Back state at front interface
               qreq = half*(req(l,i,j,k) - req(l,i,j,k-1))
-              qp(l,i,j,k,ir,3) = r - req - half*drz + sr0*dtdz*half + qreq
+              qp(l,i,j,k,ir,3) = r - req(l,i,j,k) - half*drz + sr0*dtdz*half + qreq
               qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
