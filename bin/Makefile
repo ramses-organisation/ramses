@@ -21,7 +21,7 @@ PATCH = '../patch/convection'
 RT = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = ftn
+MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
