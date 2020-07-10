@@ -237,7 +237,7 @@ subroutine create_cloud_from_sink
                     end if
                     xp(indp,1:ndim)       = xtest(1,1:ndim)
                     vp(indp,1:ndim)       = vsink(isink,1:ndim)
-                    tp(indp)           = tsink(isink)     ! Birth epoch
+                    tp(indp)              = tsink(isink)     ! Birth epoch
                  end if
               end do
            end if
@@ -746,7 +746,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::scale_Np,scale_Fp
   real(dp)::scale_vol,scale_evtocode,dert,Np_inj
 #endif
-  real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::factG,scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::dx,dx_loc,dx_min,dx_cloud,scale,vol_min,vol_loc,vol_cloud,weight,m_acc,m_acc_smbh
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim)::xpart
@@ -767,7 +767,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
+  scale_m=scale_d*scale_l**ndim
+  
   period(1)=(nx==1)
   period(2)=(ny==1)
   period(3)=(nz==1)
@@ -867,17 +868,25 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            if (on_creation)then
               if (new_born(isink))then
                  ! on sink creation, new sinks
-                 m_acc     =mass_sink_seed*M_sun/(scale_d*scale_l**ndim)*weight/volume*d/density
-                 m_acc_smbh=mass_smbh_seed*M_sun/(scale_d*scale_l**ndim)*weight/volume*d/density
+                 m_acc     =mass_sink_seed*M_sun/scale_m*weight/volume
+                 m_acc_smbh=mass_smbh_seed*M_sun/scale_m*weight/volume
+                 if (agn_acc_method=='mass') then
+                    m_acc      = m_acc * (d/density)
+                    m_acc_smbh = m_acc_smbh * (d/density)
+                 endif
               else
                  ! on sink creation, preexisting sinks
                  m_acc     =0
                  m_acc_smbh=0
               end if
            else
-              m_acc     =dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
-              m_acc_smbh=dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
-
+              m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
+              m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
+              if (agn_acc_method=='mass') then
+                 m_acc      = m_acc * (d/density)
+                 m_acc_smbh = m_acc_smbh * (d/density)
+              endif
+               
               if(agn.and.msink(isink).gt.0)then
                  acc_ratio=dMsmbh_overdt(isink)/(4d0*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t)
                  if (AGN_fbk_mode_switch_threshold > 0.0) then
@@ -892,11 +901,16 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                     end if
                  end if
                  v_AGN = (2*0.1d0*epsilon_kin/kin_mass_loading)**0.5d0*c_cgs ! in cm/s
-                 fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d) ! mass-weighted
-                 fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1d0-cos(pi/180*cone_opening/2)) ! mass-weighted
+                 if (agn_inj_method=='mass') then
+                    fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
+                    fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1d0-cos(pi/180*cone_opening/2))
+                 else if (agn_inj_method=='volume') then
+                    fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume, T2_max/scale_T2*weight*d)
+                    fbk_mom_AGN=AGN_fbk_frac_mom*kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1d0-cos(pi/180*cone_opening/2))
+                 endif
               end if
            end if
-
+           
            m_acc     =max(m_acc,0.0_dp)
            m_acc_smbh=max(m_acc_smbh,0.0_dp)
 
@@ -1189,7 +1203,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
         write(*,'(" ============================================================================================")')
-        write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)  BH: Mass(Msol)  Bondi(Msol/yr)  Edd(Msol/yr)    x              y              z")')
+        write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)  BH: Mass(Msol)  Bondi(Msol/yr)  Edd(Msol/yr)    x              y              z      DeltaM(Msol)")')
         write(*,'(" ============================================================================================")')
         do i=nsink,max(nsink-30,1),-1
            isink=idsink_sort(i)
@@ -1713,10 +1727,11 @@ subroutine update_sink(ilevel)
   logical::iyoung,jyoung,overlap,merge_flag
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dteff,dx_loc,scale,dx_min
-  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom
+  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm,vsink_norm
   real(dp),dimension(1:ndim)::xcom,vcom,lcom,r_rel
   logical,dimension(1:ndim)::period
-
+  real(dp),dimension(1:nsink,1:ndim)::xsinkold, fsinkold
+  
 #if NDIM==3
 
   if(verbose)write(*,*)'Entering update_sink for level ',ilevel
@@ -1768,7 +1783,7 @@ subroutine update_sink(ilevel)
               merge_flag=rr<4*dx_min**2 ! Sinks are within two cells from each other
 
               ! Merging based on relative velocity
-              if((msink(isink)+msink(jsink)).ge.mass_merger_vel_check*M_sun/(scale_d*scale_l**ndim)) then
+              if(mass_merger_vel_check>0 .and. (msink(isink)+msink(jsink)).ge.mass_merger_vel_check*M_sun/(scale_d*scale_l**ndim)) then
                  v1_v2=(vsink(isink,1)-vsink(jsink,1))**2+(vsink(isink,2)-vsink(jsink,2))**2+(vsink(isink,3)-vsink(jsink,3))**2
                  merge_flag=merge_flag .and. 2*factG*(msink(isink)+msink(jsink))/sqrt(rr)>v1_v2
               end if
@@ -1813,7 +1828,7 @@ subroutine update_sink(ilevel)
                  delta_mass(isink)   = delta_mass(isink)+delta_mass(jsink)
                  xsink(isink,1:ndim) = xcom(1:ndim)
                  vsink(isink,1:ndim) = vcom(1:3)
-                 lsink(isink,1:ndim)  = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
+                 lsink(isink,1:ndim) = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
                  tsink(isink)        = min(tsink(isink),tsink(jsink))
                  idsink(isink)       = min(idsink(isink),idsink(jsink))
 
@@ -1834,6 +1849,16 @@ subroutine update_sink(ilevel)
      end if
   end do
 
+  ! Store old xsink and fsink for the gradient descent timestep
+  xsinkold=0.0
+  fsinkold=0.0
+  do isink=1,nsink
+     if(msink(isink)>0.0)then
+        fsinkold(isink,1:ndim)=fsink(isink,1:ndim)
+        xsinkold(isink,1:ndim)=xsink(isink,1:ndim)
+     endif
+  enddo
+  
   ! Updating sink positions
 
   fsink=0
@@ -1877,6 +1902,31 @@ subroutine update_sink(ilevel)
 
         ! and this is the drift (only for the global sink variable)
         xsink(isink,1:ndim)=xsink(isink,1:ndim)+vsink(isink,1:ndim)*dtnew(ilevel)
+
+        ! Gradient descent - Barzilai&Borwein-like
+        if (sink_descent) then
+           xsink_graddescent(1:nsink,1:ndim)=0.0
+           fsink_norm=NORM2(fsink(isink,1:ndim))
+           gamma_grad_descent = 0.0d0
+           graddescent_over_dt = 0.0d0
+           if (.not. new_born(isink))then
+              do idim=1,ndim
+                 gamma_grad_descent = gamma_grad_descent + (xsink(isink,idim)-xsinkold(isink,idim))*(fsink(isink,idim)-fsinkold(isink,idim))
+              enddo
+              gamma_grad_descent = fudge_graddescent*dtnew(ilevel)*SQRT(ABS(gamma_grad_descent)/(NORM2(fsink(isink,1:ndim)-fsinkold(isink,1:ndim)))**2)
+              ! Require thatthe sink cannot move more than half a grid
+              if(gamma_grad_descent*fsink_norm>dx_min/2.0) then
+                 xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * dx_min/2.0/fsink_norm
+              else
+                 xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * gamma_grad_descent
+              endif
+              ! Uopdate the sink position
+              xsink(isink,1:ndim)=xsink(isink,1:ndim)+ xsink_graddescent(isink,1:ndim)
+              ! Store the descent velocity for the time-stepping
+              graddescent_over_dt(isink) = NORM2(xsink_graddescent(isink,1:ndim))/dtnew(ilevel)
+           endif
+        endif
+        
         new_born(isink)=.false.
      end if
   end do
@@ -2406,7 +2456,8 @@ subroutine read_sink_params()
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
-       epsilon_kin,AGN_fbk_mode_switch_threshold,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc
+       epsilon_kin,AGN_fbk_mode_switch_threshold,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc,&
+       agn_acc_method,agn_inj_method,sink_descent,gamma_grad_descent,fudge_graddescent
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
