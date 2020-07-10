@@ -577,7 +577,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
            do l = 1, ngrid
 
               ! Cell centered values
-              r   =  q(l,i,j,k,ir)
+              r   =  q(l,i,j,k,ir) + req(l,i,j,k)
               u   =  q(l,i,j,k,iu)
               v   =  q(l,i,j,k,iv)
               w   =  q(l,i,j,k,iw)
@@ -645,7 +645,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
-              qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k) - peq(l,i-1,j,k))
+              qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k) + peq(l,i-1,j,k))
               qp(l,i,j,k,ip,1) = p - peq(l,i,j,k) - half*dpx + sp0*dtdx*half + qpeq(l,i-1,j,k,1)
 !              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
               if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
@@ -657,11 +657,11 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 
               ! Left state at right interface
               qreq = half*(req(l,i+1,j,k)+req(l,i,j,k))
-              qm(l,i,j,k,ir,1) = r -req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
+              qm(l,i,j,k,ir,1) = r - req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
-              qpeq(l,i,j,k,1) = half*(peq(l,i+1,j,k) - peq(l,i,j,k))
+              qpeq(l,i,j,k,1) = half*(peq(l,i+1,j,k) + peq(l,i,j,k))
               qm(l,i,j,k,ip,1) = p - peq(l,i,j,k) + half*dpx + sp0*dtdx*half + qpeq(l,i,j,k,1)
 !              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
               if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
@@ -672,12 +672,12 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qreq = half*(req(l,i,j,k)-req(l,i,j-1,k))
+              qreq = half*(req(l,i,j,k)+req(l,i,j-1,k))
               qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
-              qpeq(l,i,j-1,k,2) = half*(peq(l,i,j,k) - peq(l,i,j-1,k))
+              qpeq(l,i,j-1,k,2) = half*(peq(l,i,j,k) + peq(l,i,j-1,k))
               qp(l,i,j,k,ip,2) = p - peq(l,i,j,k) - half*dpy + sp0*dtdy*half + qpeq(l,i,j-1,k,2)
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
@@ -688,12 +688,12 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-              qreq = half*(req(l,i,j+1,k)-req(l,i,j,k))
+              qreq = half*(req(l,i,j+1,k)+req(l,i,j,k))
               qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
-              qpeq(l,i,j,k,2) = half*(peq(l,i,j+1,k) - peq(l,i,j,k))
+              qpeq(l,i,j,k,2) = half*(peq(l,i,j+1,k) + peq(l,i,j,k))
               qm(l,i,j,k,ip,2) = p - peq(l,i,j,k) + half*dpy + sp0*dtdy*half + qpeq(l,i,j,k,2)
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
               if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
@@ -704,12 +704,12 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Back state at front interface
-              qreq = half*(req(l,i,j,k) - req(l,i,j,k-1))
+              qreq = half*(req(l,i,j,k) + req(l,i,j,k-1))
               qp(l,i,j,k,ir,3) = r - req(l,i,j,k) - half*drz + sr0*dtdz*half + qreq
               qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
-              qpeq(l,i,j,k-1,3) = half*(peq(l,i,j,k) - peq(l,i,j,k-1))
+              qpeq(l,i,j,k-1,3) = half*(peq(l,i,j,k) + peq(l,i,j,k-1))
               qp(l,i,j,k,ip,3) = p - peq(l,i,j,k) - half*dpz + sp0*dtdz*half + qpeq(l,i,j,k-1,3)
 !              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
               if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
@@ -725,7 +725,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
               qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
               qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
-              qpeq(l,i,j,k,3) = half*(peq(l,i,j,k+1) - peq(l,i,j,k))
+              qpeq(l,i,j,k,3) = half*(peq(l,i,j,k+1) + peq(l,i,j,k))
               qm(l,i,j,k,ip,3) = p - peq(l,i,j,k) + half*dpz + sp0*dtdz*half + qpeq(l,i,j,k,3)
 !              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
               if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
