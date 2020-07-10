@@ -87,7 +87,7 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 #endif
 #if NDIM==3
     ! JRCC : add peq and qpeq to trace3d call
-     call trace3d(qin,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
+     call trace3d(qin,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
   endif
   if(scheme=='plmde')then
@@ -524,7 +524,7 @@ end subroutine trace2d
 !###########################################################
 #if NDIM>2
 ! JRCC : add peq to parameters
-subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
+subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -539,6 +539,7 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
   ! JRCC : declare peq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::peq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::req
   ! JRCC : declare qpeq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::qpeq
 
@@ -546,6 +547,7 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
   integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, iw, ip
+  real(dp)::qreq
   real(dp)::dtdx, dtdy, dtdz
   real(dp)::r, u, v, w, p
   real(dp)::drx, dux, dvx, dwx, dpx
@@ -575,7 +577,7 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
            do l = 1, ngrid
 
               ! Cell centered values
-              r   =  q(l,i,j,k,ir)
+              r   =  q(l,i,j,k,ir) + req(l,i,j,k)
               u   =  q(l,i,j,k,iu)
               v   =  q(l,i,j,k,iv)
               w   =  q(l,i,j,k,iw)
@@ -638,11 +640,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+              qreq = half*(req(l,i,j,k)+req(l,i-1,j,k))
+              qp(l,i,j,k,ir,1) = r - req(l,i,j,k) - half*drx + sr0*dtdx*half + qreq
               ! JRCC : Add to right state at left interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute left iterface qpeq(l,i,j,k,1)
-              qpeq(l,i,j,k,1) = peq(l,i,j,k) - peq(l,i-1,j,k)
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half - half*qpeq(l,i,j,k,1)
+              qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k) + peq(l,i-1,j,k))
+              qp(l,i,j,k,ip,1) = p - peq(l,i,j,k) - half*dpx + sp0*dtdx*half + qpeq(l,i-1,j,k,1)
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
@@ -655,11 +658,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Left state at right interface
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+              qreq = half*(req(l,i+1,j,k)+req(l,i,j,k))
+              qm(l,i,j,k,ir,1) = r - req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
               ! JRCC : Add to left state at right interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute right iterface qpeq(l,i+1,j,k,1)
-              qpeq(l,i+1,j,k,1) = peq(l,i+1,j,k) - peq(l,i,j,k)
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half + half*qpeq(l,i+1,j,k,1)
+              qpeq(l,i,j,k,1) = half*(peq(l,i+1,j,k) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,1) = p - peq(l,i,j,k) + half*dpx + sp0*dtdx*half + qpeq(l,i,j,k,1)
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
@@ -672,11 +676,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
+              qreq = half*(req(l,i,j,k)+req(l,i,j-1,k))
+              qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
               ! JRCC : Add to top state at bottom interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute bottom iterface qpeq(l,i,j,k,2)
-              qpeq(l,i,j,k,2) = peq(l,i,j,k) - peq(l,i,j-1,k)
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half - half*qpeq(l,i,j,k,2)
+              qpeq(l,i,j-1,k,2) = half*(peq(l,i,j,k) + peq(l,i,j-1,k))
+              qp(l,i,j,k,ip,2) = p - peq(l,i,j,k) - half*dpy + sp0*dtdy*half + qpeq(l,i,j-1,k,2)
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
@@ -689,11 +694,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
+              qreq = half*(req(l,i,j+1,k)+req(l,i,j,k))
+              qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
               ! JRCC : Add to bottom state at top interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute top iterface qpeq(l,i,j+1,k,2)
-              qpeq(l,i,j+1,k,2) = peq(l,i,j+1,k) - peq(l,i,j,k)
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half + half*qpeq(l,i,j+1,k,2)
+              qpeq(l,i,j,k,2) = half*(peq(l,i,j+1,k) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,2) = p - peq(l,i,j,k) + half*dpy + sp0*dtdy*half + qpeq(l,i,j,k,2)
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
@@ -706,11 +712,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Back state at front interface
-              qp(l,i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
+              qreq = half*(req(l,i,j,k)+req(l,i,j,k-1))
+              qp(l,i,j,k,ir,3) = r - req(l,i,j,k) - half*drz + sr0*dtdz*half + qreq
               ! JRCC : Add to back state at front interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute front iterface qpeq(l,i,j,k,3)
-              qpeq(l,i,j,k,3) = peq(l,i,j,k) - peq(l,i,j,k-1)
-              qp(l,i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half - half*qpeq(l,i,j,k,3)
+              qpeq(l,i,j,k-1,3) = half*(peq(l,i,j,k) + peq(l,i,j,k-1))
+              qp(l,i,j,k,ip,3) = p - peq(l,i,j,k) - half*dpz + sp0*dtdz*half + qpeq(l,i,j,k-1,3)
               qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
@@ -723,11 +730,12 @@ subroutine trace3d(q,dq,qm,qp,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Front state at back interface
-              qm(l,i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
+              qreq = half*(req(l,i,j,k+1)+req(l,i,j,k))
+              qm(l,i,j,k,ir,3) = r - req(l,i,j,k) + half*drz + sr0*dtdz*half + qreq
               ! JRCC : Add to front state at back interface the difference between equilibrium pressures at interface
               ! JRCC : To do this, compute back iterface qpeq(l,i,j,k+1,3)
-              qpeq(l,i,j,k+1,3) = peq(l,i,j,k+1) - peq(l,i,j,k)
-              qm(l,i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half + half*qpeq(l,i,j,k+1,3)
+              qpeq(l,i,j,k,3) = half*(peq(l,i,j,k+1) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,3) = p - peq(l,i,j,k) + half*dpz + sp0*dtdz*half + half*qpeq(l,i,j,k+1,3) + qpeq(l,i,j,k,3)
               qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
               qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
               qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half

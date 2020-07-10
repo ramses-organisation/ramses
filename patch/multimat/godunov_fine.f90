@@ -150,10 +150,11 @@ subroutine noncons1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector),save::ind_cell
   integer ::i,ivar,imat,idim,ind,iskip
   logical ,dimension(1:nvector),save::body
-  real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat
+  real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat,ffmax
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,kappa_mat
   real(dp)::g0,p0,a0,b0,df_over_f,rloc,skip_loc,dx,eps,scale,dx_loc
+  real(dp)::kappa_max
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer ::ix,iy,iz,nx_loc
@@ -180,6 +181,14 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ind_cell(i)=ind_grid(i)+iskip
      end do
 
+     ! Source terms for volume fraction (Godunov-like advection)
+     do imat=1,nmat
+        ivar=npri+imat
+        do i=1,ncache
+           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)-uold(ind_cell(i),ivar)*divu(ind_cell(i))
+        end do
+     end do
+
      ! Volume fraction and fluid density
      do imat=1,nmat
         do i=1,ncache
@@ -203,6 +212,7 @@ subroutine noncons1(ind_grid,ncache,ilevel)
      do i=1,ncache
         qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
      end do
+     
      ! Pressure from eos
      call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ncache)
 
@@ -211,20 +221,23 @@ subroutine noncons1(ind_grid,ncache,ilevel)
         ivar=npri+nmat+imat
         do i=1,ncache
            ! Material compressibility
-           df_over_f = one !kappa_hat(i)/kappa_mat(i,imat)
+           df_over_f =  one !kappa_hat(i)/kappa_mat(i,imat)
 
-           ! Explicit time integration
-!!$!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
-!!$!                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
+!!$           ! Explicit time integration
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
+!!$                & (one+divu(ind_cell(i))*(df_over_f-one))
 
            ! Implicit time integration
-!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
-!!$                & - divu(ind_cell(i))*(df_over_f-one))
-
-           unew(ind_cell(i),ivar) = max(smallr, unew(ind_cell(i),ivar))
+           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
+                & (one-divu(ind_cell(i))*(df_over_f-one))
+           
+!!$           ! Exponential time integration
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
+!!$                & exp(+divu(ind_cell(i))*(df_over_f-one))
            
         end do
      end do
+     
      ! Source terms for volume fraction (Godunov-like advection)
      do imat=1,nmat
         ivar=npri+imat
@@ -233,16 +246,25 @@ subroutine noncons1(ind_grid,ncache,ilevel)
            df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat)
 
            ! Explicit time integration
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
-                & -uold(ind_cell(i),ivar)*divu(ind_cell(i))*df_over_f
+           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
+                & (one-divu(ind_cell(i))*(df_over_f-one))
 
-           ! Implicit time integration
-!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
-!!$                & + divu(ind_cell(i))*df_over_f)
+!!$           ! Implicit time integration
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
+!!$                & (one+divu(ind_cell(i))*(df_over_f-one))
+
+!!$           ! Exponential time integration
+!!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
+!!$                & exp(-divu(ind_cell(i))*(df_over_f-one))
 
         end do
      end do
 
+     ! Add gravity source terms to unew
+     if(poisson)then
+        call add_gravity_source_terms(ilevel)
+     end if
+     
      if(static)then
         ! Embedded body is material #1
         do i=1,ncache
@@ -268,6 +290,61 @@ subroutine noncons1(ind_grid,ncache,ilevel)
   ! End loop over cells
 
 end subroutine noncons1
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine add_gravity_source_terms(ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ilevel
+  !--------------------------------------------------------------------------
+  ! This routine adds to unew the gravity source terms
+  ! with only half a time step. Only the momentum and the
+  ! total energy are modified in array unew.
+  !--------------------------------------------------------------------------
+  integer::i,ind,iskip,ind_cell
+  real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
+  
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+  
+  ! Add gravity source term at time t with half time step
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        ind_cell=active(ilevel)%igrid(i)+iskip
+        d=max(unew(ind_cell,1),smallr)
+        u=0; v=0; w=0
+        if(ndim>0)u=unew(ind_cell,2)/d
+        if(ndim>1)v=unew(ind_cell,3)/d
+        if(ndim>2)w=unew(ind_cell,4)/d
+        e_kin=0.5d0*d*(u**2+v**2+w**2)
+        e_prim=unew(ind_cell,ndim+2)-e_kin
+        d_old=max(uold(ind_cell,1),smallr)
+        fact=d_old/d*0.5d0*dtnew(ilevel)
+        if(ndim>0)then
+           u=u+f(ind_cell,1)*fact
+           unew(ind_cell,2)=d*u
+        endif
+        if(ndim>1)then
+           v=v+f(ind_cell,2)*fact
+           unew(ind_cell,3)=d*v
+        end if
+        if(ndim>2)then
+           w=w+f(ind_cell,3)*fact
+           unew(ind_cell,4)=d*w
+        endif
+        e_kin=0.5d0*d*(u**2+v**2+w**2)
+        unew(ind_cell,ndim+2)=e_prim+e_kin
+     end do
+  end do
+  
+111 format('   Entering add_gravity_source_terms for level ',i2)
+
+end subroutine add_gravity_source_terms
 !###########################################################
 !###########################################################
 !###########################################################

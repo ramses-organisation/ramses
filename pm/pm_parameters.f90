@@ -53,7 +53,7 @@ module pm_parameters
   real(dp)::mass_halo_AGN=1d10              ! Minimum mass of the halo for sink creation
   real(dp)::mass_clump_AGN=1d10             ! Minimum mass of the clump for sink creation
 
-  real(dp)::boost_threshold_density=0.1d0    ! Accretion boost threshold for Bondi
+  real(dp)::boost_threshold_density=0.1d0   ! Accretion boost threshold for Bondi
 
   real(dp)::max_mass_nsc=1d15               ! Maximum mass of the Nuclear Star Cluster (msink)
 
