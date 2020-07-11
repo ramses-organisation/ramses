@@ -25,6 +25,8 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
   real(dp),allocatable,dimension(:,:)  ::lsink,lsink_new,lsink_all
   real(dp),allocatable,dimension(:,:)  ::xsink,xsink_new,xsink_all
+  real(dp),allocatable,dimension(:)    ::graddescent_over_dt
+  real(dp),allocatable,dimension(:,:)  ::xsink_graddescent
   real(dp),allocatable,dimension(:,:)  ::weighted_density,weighted_volume,weighted_ethermal,weighted_divergence
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)    ::rho_sink_tff
