@@ -111,6 +111,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
 
       ! Calculate the pressure for given internal energy
       do k = 1,ncell
+!         p(k) = pc_hat(k)
          p(k) = (q(k,npri) - ec_hat(k)) / alpha_hat(k) + pc_hat(k)
       end do
 
@@ -133,6 +134,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
 
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
+!         c(k) = delpc_hat(k) / max(q(k,1),smallr)
          c(k) = (delpc_hat(k) + gamma_hat(k) * (p(k)-pc_hat(k))) / max(q(k,1),smallr)
          c(k) = sqrt(max(c(k),smallc**2))
       end do
@@ -341,6 +343,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
 
       ! Calculate the internal energy for given pressure
       do k=1,ncell
+!         e(k) = ec_hat(k)
          e(k) = alpha_hat(k) * (q(k,npri)-pc_hat(k)) + ec_hat(k)
       end do
       
@@ -362,6 +365,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
 
       ! Calculate the speed of sound (old method)
       do k = 1,ncell
+!         c(k) = delpc_hat(k) / max(q(k,1),smallr)
          c(k) = (delpc_hat(k) + gamma_hat(k) * (q(k,npri)-pc_hat(k)) ) / max(q(k,1),smallr)
          c(k) = sqrt(max(c(k),smallc**2))
       end do
@@ -484,7 +488,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
      
   ! Compute density
   do k = 1,ncell
-     qq(k,1) = uu(k,1)
+     qq(k,1) = max(uu(k,1),smallr)
   end do
   
   ! Compute velocity and specific kinetic energy
@@ -988,9 +992,9 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
      ! Physical densities
      do imat=1,nmat
         if(ustar>0)then
-           fgdnv(i,npri+nmat+imat) = uo*gl(i,imat)
+           fgdnv(i,npri+nmat+imat) = ro*uo*gl(i,imat)/ql(i,1)
         else
-           fgdnv(i,npri+nmat+imat) = uo*gr(i,imat)
+           fgdnv(i,npri+nmat+imat) = ro*uo*gr(i,imat)/qr(i,1)
         endif
      end do
      

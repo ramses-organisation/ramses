@@ -193,13 +193,13 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
      do imat = 1,nmat
         do l = 1,ngrid
            ff(l,imat) = uin(l,i,j,k,imat+npri)
-           gg(l,imat) = uin(l,i,j,k,imat+npri+nmat)
+           gg(l,imat) = max(uin(l,i,j,k,imat+npri+nmat),smallr)
         end do
      end do
      
      ! Compute total density
      do l = 1,ngrid
-        qq(l,1) = uin(l,i,j,k,1)
+        qq(l,1) = max(uin(l,i,j,k,1),smallr)
      end do
      
      ! Compute velocity and specific kinetic energy
@@ -214,17 +214,25 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
      ! Compute total internal energy
      do l = 1,ngrid
         qq(l,npri) = uin(l,i,j,k,npri) - qq(l,1)*ekin(l)
+        qq(l,npri) = max(qq(l,npri),smallr**3)
      end do
 
      ! Call eos routine
      call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ngrid)
 
      ! Save in output arrays
+
+     ! Density and velocity components
      q(1:ngrid,i,j,k,1:npri-1)=qq(1:ngrid,1:npri-1)
-     q(1:ngrid,i,j,k,npri)=pp(1:ngrid)
+     ! Pressure
+     q(1:ngrid,i,j,k,npri)=max(pp(1:ngrid),smallr**3)
+     ! Internal energy
      q(1:ngrid,i,j,k,npri+1)=qq(1:ngrid,npri)
+     ! Volume fractions
      f(1:ngrid,i,j,k,1:nmat)=ff(1:ngrid,1:nmat)
+     ! True density
      g(1:ngrid,i,j,k,1:nmat)=gg(1:ngrid,1:nmat)
+     ! Sound speed
      c(1:ngrid,i,j,k)=cc(1:ngrid)
 
      ! Gravity predictor step
@@ -385,7 +393,9 @@ subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid
   real(dp)::dry, duy, dvy, dpy, dey
   real(dp)::sr0, su0, sv0, sp0, se0, csq
   real(dp),dimension(1:nmat)::f,g,dfx,dgx,dfy,dgy,sf0,sg0
-  
+  real(dp)::smalle
+
+  smalle=smallr**3
   dtdx = dt/dx
   dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -446,45 +456,61 @@ subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid
         do imat = 1,nmat
         fp(l,i,j,k,imat,1) = f(imat)-half*dfx(imat)+sf0(imat)*dtdx*half
         gp(l,i,j,k,imat,1) = g(imat)-half*dgx(imat)+sg0(imat)*dtdx*half
+        if(gp(l,i,j,k,imat,1)<smallr)gp(l,i,j,k,imat,1)=g(imat)
         end do
         qp(l,i,j,k,ir  ,1) = r      -half*drx      +sr0      *dtdx*half
+        if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
         qp(l,i,j,k,iu  ,1) = u      -half*dux      +su0      *dtdx*half
         qp(l,i,j,k,iv  ,1) = v      -half*dvx      +sv0      *dtdx*half
         qp(l,i,j,k,ip  ,1) = p      -half*dpx      +sp0      *dtdx*half
+        if(qp(l,i,j,k,ip,1)<smalle)qp(l,i,j,k,ip,1)=p
         qp(l,i,j,k,ie  ,1) = e      -half*dex      +se0      *dtdx*half
+        if(qp(l,i,j,k,ie,1)<smalle)qp(l,i,j,k,ie,1)=e
         
         ! Left state at right interface
         do imat = 1,nmat
         fm(l,i,j,k,imat,1) = f(imat)+half*dfx(imat)+sf0(imat)*dtdx*half
         gm(l,i,j,k,imat,1) = g(imat)+half*dgx(imat)+sg0(imat)*dtdx*half
+        if(gm(l,i,j,k,imat,1)<smallr)gm(l,i,j,k,imat,1)=g(imat)
         end do
         qm(l,i,j,k,ir  ,1) = r      +half*drx      +sr0      *dtdx*half
+        if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
         qm(l,i,j,k,iu  ,1) = u      +half*dux      +su0      *dtdx*half
         qm(l,i,j,k,iv  ,1) = v      +half*dvx      +sv0      *dtdx*half
         qm(l,i,j,k,ip  ,1) = p      +half*dpx      +sp0      *dtdx*half
+        if(qm(l,i,j,k,ip,1)<smallr)qm(l,i,j,k,ip,1)=p
         qm(l,i,j,k,ie  ,1) = e      +half*dex      +se0      *dtdx*half
+        if(qm(l,i,j,k,ie,1)<smallr)qm(l,i,j,k,ie,1)=e
         
         ! Top state at bottom interface
         do imat = 1,nmat
         fp(l,i,j,k,imat,2) = f(imat)-half*dfy(imat)+sf0(imat)*dtdy*half
         gp(l,i,j,k,imat,2) = g(imat)-half*dgy(imat)+sg0(imat)*dtdy*half
+        if(gp(l,i,j,k,imat,2)<smallr)gp(l,i,j,k,imat,2)=g(imat)
         end do
         qp(l,i,j,k,ir  ,2) = r      -half*dry      +sr0      *dtdy*half
+        if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
         qp(l,i,j,k,iu  ,2) = u      -half*duy      +su0      *dtdy*half
         qp(l,i,j,k,iv  ,2) = v      -half*dvy      +sv0      *dtdy*half
         qp(l,i,j,k,ip  ,2) = p      -half*dpy      +sp0      *dtdy*half
+        if(qp(l,i,j,k,ip,2)<smalle)qp(l,i,j,k,ip,2)=p
         qp(l,i,j,k,ie  ,2) = e      -half*dey      +se0      *dtdy*half
+        if(qp(l,i,j,k,ie,2)<smalle)qp(l,i,j,k,ie,2)=e
         
         ! Bottom state at top interface
         do imat = 1,nmat
         fm(l,i,j,k,imat,2) = f(imat)+half*dfy(imat)+sf0(imat)*dtdy*half
         gm(l,i,j,k,imat,2) = g(imat)+half*dgy(imat)+sg0(imat)*dtdy*half
+        if(gm(l,i,j,k,imat,2)<smallr)gm(l,i,j,k,imat,2)=g(imat)
         end do
         qm(l,i,j,k,ir  ,2) = r      +half*dry      +sr0      *dtdy*half
+        if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
         qm(l,i,j,k,iu  ,2) = u      +half*duy      +su0      *dtdy*half
         qm(l,i,j,k,iv  ,2) = v      +half*dvy      +sv0      *dtdy*half
         qm(l,i,j,k,ip  ,2) = p      +half*dpy      +sp0      *dtdy*half
+        if(qm(l,i,j,k,ip,2)<smalle)qm(l,i,j,k,ip,2)=p
         qm(l,i,j,k,ie  ,2) = e      +half*dey      +se0      *dtdy*half
+        if(qm(l,i,j,k,ie,2)<smalle)qm(l,i,j,k,ie,2)=e
         
      end do
 
