@@ -456,7 +456,6 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              
               qreq = half*(req(l,i,j,k) + req(l,i,j-1,k))
               qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
@@ -472,7 +471,6 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-
               qreq = half*(req(l,i,j+1,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
@@ -577,6 +575,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
            do l = 1, ngrid
 
               ! Cell centered values
+              ! JRCC : compute rho from rho' and req
               r   =  q(l,i,j,k,ir) + req(l,i,j,k)
               u   =  q(l,i,j,k,iu)
               v   =  q(l,i,j,k,iv)
@@ -640,7 +639,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Right state at left interface
-              qreq = half*(req(l,i,j,k)+req(l,i-1,j,k))
+              qreq = half*(req(l,i,j,k) + req(l,i-1,j,k))
               qp(l,i,j,k,ir,1) = r - req(l,i,j,k) - half*drx + sr0*dtdx*half + qreq 
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
@@ -656,7 +655,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Left state at right interface
-              qreq = half*(req(l,i+1,j,k)+req(l,i,j,k))
+              qreq = half*(req(l,i+1,j,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,1) = r - req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
@@ -672,7 +671,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qreq = half*(req(l,i,j,k)+req(l,i,j-1,k))
+              qreq = half*(req(l,i,j,k) + req(l,i,j-1,k))
               qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
@@ -688,7 +687,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-              qreq = half*(req(l,i,j+1,k)+req(l,i,j,k))
+              qreq = half*(req(l,i,j+1,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
