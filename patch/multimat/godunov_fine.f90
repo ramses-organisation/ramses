@@ -28,7 +28,8 @@ subroutine godunov_fine(ilevel)
      end do
      call godfine1(ind_grid,ngrid,ilevel)
   end do
-
+  call make_virtual_reverse_dp(divu(1),ilevel)
+  
 111 format('   Entering godunov_fine for level ',i2)
 
 end subroutine godunov_fine
