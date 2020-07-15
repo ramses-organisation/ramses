@@ -11,9 +11,9 @@ subroutine godunov_fine(ilevel)
   ! This routine is a wrapper to the second order Godunov solver.
   ! Small grids (2x2x2) are gathered from level ilevel and sent to the
   ! hydro solver. On entry, hydro variables are gathered from array uold.
-  ! On exit, unew has been updated. 
+  ! On exit, unew has been updated.
   !--------------------------------------------------------------------------
-  integer::i,ivar,igrid,ncache,ngrid
+  integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -28,11 +28,8 @@ subroutine godunov_fine(ilevel)
      end do
      call godfine1(ind_grid,ngrid,ilevel)
   end do
-  do ivar=1,nvar                                      ! Reverse boundaries
-     call make_virtual_reverse_dp(unew(1,ivar),ilevel)
-  end do
   call make_virtual_reverse_dp(divu(1),ilevel)
-
+  
 111 format('   Entering godunov_fine for level ',i2)
 
 end subroutine godunov_fine
@@ -58,19 +55,13 @@ subroutine set_unew(ilevel)
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,active(ilevel)%ngrid
-        active(ilevel)%igrid(i)=active(ilevel)%igrid(i)+iskip
-     end do
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
-           unew(active(ilevel)%igrid(i),ivar) = uold(active(ilevel)%igrid(i),ivar)
+           unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
      do i=1,active(ilevel)%ngrid
-        divu(active(ilevel)%igrid(i)) = 0.0
-     end do
-     do i=1,active(ilevel)%ngrid
-        active(ilevel)%igrid(i)=active(ilevel)%igrid(i)-iskip
+        divu(active(ilevel)%igrid(i)+iskip) = 0
      end do
   end do
 
@@ -78,19 +69,13 @@ subroutine set_unew(ilevel)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,reception(icpu,ilevel)%ngrid
-        reception(icpu,ilevel)%igrid(i)=reception(icpu,ilevel)%igrid(i)+iskip
-     end do
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i),ivar)=0.0
+           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
         end do
      end do
      do i=1,reception(icpu,ilevel)%ngrid
-        divu(reception(icpu,ilevel)%igrid(i)) = 0.0
-     end do
-     do i=1,reception(icpu,ilevel)%ngrid
-        reception(icpu,ilevel)%igrid(i)=reception(icpu,ilevel)%igrid(i)-iskip
+        divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
      end do
   end do
   end do
@@ -105,31 +90,47 @@ end subroutine set_unew
 subroutine set_uold(ilevel)
   use amr_commons
   use hydro_commons
+  use poisson_commons
   implicit none
   integer::ilevel
-  !--------------------------------------------------------------------------
-  ! This routine sets array uold to its new value unew after the
-  ! hydro step.
-  !--------------------------------------------------------------------------
-  integer::i,igrid,ngrid,ncache
-  integer,dimension(1:nvector),save::ind_grid
+  !---------------------------------------------------------
+  ! This routine sets array uold to its new value unew
+  ! after the hydro step.
+  !---------------------------------------------------------
+  integer::i,ivar,ind,iskip
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Update unew using non-conservative source terms
-  ! and store result in uold
+  call add_pdv_source_terms(ilevel)
 
-  ! Loop over active grids by vector sweeps
-  ncache=active(ilevel)%ngrid
-  do igrid=1,ncache,nvector
-     ngrid=MIN(nvector,ncache-igrid+1)
-     do i=1,ngrid
-        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+  ! Add gravity source terms to unew
+  if(poisson)then
+     call add_gravity_source_terms(ilevel)
+  end if
+
+  ! Set uold to unew for myid cells
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     if(static)then
+     do ivar=1,nvar
+        do i=1,active(ilevel)%ngrid
+        ! Embedded body is material #1
+        if(.not. (uold(active(ilevel)%igrid(i)+iskip,npri+1)>0.01))then
+           uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
+        endif
+        end do
      end do
-     call noncons1(ind_grid,ngrid,ilevel)
+     else
+     do ivar=1,nvar
+        do i=1,active(ilevel)%ngrid
+           uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+     endif
   end do
-
+  
 111 format('   Entering set_uold for level ',i2)
 
 end subroutine set_uold
@@ -137,19 +138,17 @@ end subroutine set_uold
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine noncons1(ind_grid,ncache,ilevel)
+subroutine add_pdv_source_terms(ilevel)
   use amr_commons
   use hydro_commons
-  use poisson_commons
   implicit none
-  integer::ilevel,ncache
-  integer,dimension(1:nvector)::ind_grid
+  integer::ilevel
   !-------------------------------------------------------------------
   ! Update volume fraction using compressibility source terms
-
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ::i,ivar,imat,idim,ind,iskip
-  logical ,dimension(1:nvector),save::body
+  !-------------------------------------------------------------------
+  integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
+  logical,dimension(1:nvector),save::body
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat,ffmax
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,kappa_mat
@@ -157,8 +156,8 @@ subroutine noncons1(ind_grid,ncache,ilevel)
   real(dp)::kappa_max
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
-  integer ::ix,iy,iz,nx_loc
-  logical ::error
+  integer::ix,iy,iz,nx_loc
+  logical::error
 
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
@@ -173,123 +172,111 @@ subroutine noncons1(ind_grid,ncache,ilevel)
      ix=(ind-1-2*iy-4*iz)
      xc(ind)=(dble(ix)-0.5D0)*dx
   end do
-  
-  ! Loop over cells
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,ncache
-        ind_cell(i)=ind_grid(i)+iskip
+
+  ! Loop over active grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
 
-     ! Source terms for volume fraction (Godunov-like advection)
-     do imat=1,nmat
-        ivar=npri+imat
-        do i=1,ncache
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)-uold(ind_cell(i),ivar)*divu(ind_cell(i))
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=ind_grid(i)+iskip
         end do
-     end do
 
-     ! Volume fraction and fluid density
-     do imat=1,nmat
-        do i=1,ncache
-           ff(i,imat)=uold(ind_cell(i),imat+npri)
-           gg(i,imat)=uold(ind_cell(i),imat+npri+nmat)
+        ! Source terms for volume fraction (Godunov-like advection)
+        do imat=1,nmat
+           ivar=npri+imat
+           do i=1,ngrid
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)-uold(ind_cell(i),ivar)*divu(ind_cell(i))
+           end do
         end do
-     end do
-     ! Total density
-     do i=1,ncache
-        qq(i,1)=uold(ind_cell(i),1)
-     end do
-     ! Specific kinetic energy
-     ekin(1:ncache)=zero
-     do idim=1,ndim
-        do i=1,ncache
-           qq(i,idim+1)=uold(ind_cell(i),idim+1)/qq(i,1)
-           ekin(i)=ekin(i)+half*qq(i,idim+1)**2
+        
+        ! Volume fraction and fluid density
+        do imat=1,nmat
+           do i=1,ngrid
+              ff(i,imat)=uold(ind_cell(i),imat+npri)
+              gg(i,imat)=uold(ind_cell(i),imat+npri+nmat)
+           end do
         end do
-     end do
-     ! Total internal energy
-     do i=1,ncache
-        qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
-     end do
-     
-     ! Pressure from eos
-     call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ncache)
-
-     ! Source terms for fluid density (Godunov-like advection)
-     do imat=1,nmat
-        ivar=npri+nmat+imat
-        do i=1,ncache
-           ! Material compressibility
-           df_over_f =  one !kappa_hat(i)/kappa_mat(i,imat)
-
+        ! Total density
+        do i=1,ngrid
+           qq(i,1)=uold(ind_cell(i),1)
+        end do
+        ! Specific kinetic energy
+        ekin(1:ngrid)=zero
+        do idim=1,ndim
+           do i=1,ngrid
+              qq(i,idim+1)=uold(ind_cell(i),idim+1)/qq(i,1)
+              ekin(i)=ekin(i)+half*qq(i,idim+1)**2
+           end do
+        end do
+        ! Total internal energy
+        do i=1,ngrid
+           qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
+        end do
+        
+        ! Pressure from eos
+        call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ngrid)
+        
+        ! Source terms for fluid density (Godunov-like advection)
+        do imat=1,nmat
+           ivar=npri+nmat+imat
+           do i=1,ngrid
+              ! Material compressibility
+              df_over_f =  one !kappa_hat(i)/kappa_mat(i,imat)
+              
 !!$           ! Explicit time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & (one+divu(ind_cell(i))*(df_over_f-one))
-
-           ! Implicit time integration
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
-                & (one-divu(ind_cell(i))*(df_over_f-one))
-           
+              
+              ! Implicit time integration
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
+                   & (one-divu(ind_cell(i))*(df_over_f-one))
+              
 !!$           ! Exponential time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & exp(+divu(ind_cell(i))*(df_over_f-one))
-           
+              
+           end do
         end do
-     end do
-     
-     ! Source terms for volume fraction (Godunov-like advection)
-     do imat=1,nmat
-        ivar=npri+imat
-        do i=1,ncache
-           ! No compressibility in volume fraction
-           df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat)
-
-           ! Explicit time integration
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
-                & (one-divu(ind_cell(i))*(df_over_f-one))
-
+        
+        ! Source terms for volume fraction (Godunov-like advection)
+        do imat=1,nmat
+           ivar=npri+imat
+           do i=1,ngrid
+              ! No compressibility in volume fraction
+              df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat)
+              
+              ! Explicit time integration
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
+                   & (one-divu(ind_cell(i))*(df_over_f-one))
+              
 !!$           ! Implicit time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
 !!$                & (one+divu(ind_cell(i))*(df_over_f-one))
-
+              
 !!$           ! Exponential time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & exp(-divu(ind_cell(i))*(df_over_f-one))
-
+              
+           end do
         end do
+        
      end do
-
-     ! Add gravity source terms to unew
-     if(poisson)then
-        call add_gravity_source_terms(ilevel)
-     end if
-     
-     if(static)then
-        ! Embedded body is material #1
-        do i=1,ncache
-           body(i)= uold(ind_cell(i),npri+1) > 0.01
-        end do
-        do ivar=1,nvar
-           do i=1,ncache
-              if(.not. body(i))then
-                 uold(ind_cell(i),ivar) = unew(ind_cell(i),ivar)
-              endif
-           end do
-        end do
-     else
-        ! Store results in uold
-        do ivar=1,nvar
-           do i=1,ncache
-              uold(ind_cell(i),ivar) = unew(ind_cell(i),ivar)
-           end do
-        end do
-     end if
-
+     ! End loop over cells
   end do
-  ! End loop over cells
-
-end subroutine noncons1
+  ! End loop over grids
+     
+end subroutine add_pdv_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
