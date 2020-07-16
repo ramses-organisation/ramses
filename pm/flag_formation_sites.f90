@@ -148,7 +148,7 @@ subroutine flag_formation_sites
         ! 4-cell ball av. density has to be larger that SF threshold
         ok=ok.and.clump_mass4(jj)/(4d0/3d0*pi*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
         ! Peak density has to be larger than star formation thresold
-        !ok=ok.and.max_dens(jj)>10.0d0*n_star/scale_nH
+        ok=ok.and.max_dens(jj)>10.0d0*n_star/scale_nH
         !ok=ok.and.max_dens(jj)>n_star/scale_nH
         ! Then create a sink at the peak position
         if (ok)then
