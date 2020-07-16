@@ -60,11 +60,13 @@ subroutine condinit(x,u,dx,pert,nn)
       q(i,ip)=p1*((T_tmp)**(gammainit1/(gammainit1-1.0d0)))
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T_tmp = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
-      
-      ! produce perturbation in convection zone!
-      call random_number(delta_temp)
-      delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
-      ! add perturbation to temperature
+
+      delta_temp=0.0
+      if(x(i,1).lt.x1+0.5)then
+         ! produce perturbation in convection zone!
+         call random_number(delta_temp)
+         delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
+      endif
 
       q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
       q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0d0)))
@@ -167,10 +169,10 @@ subroutine eneana(x,e,dx,t,ncell)
   do i=1,ncell
     if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dx_heat)) then
       ! heating
-      e(i) = 0.0*e0
+      e(i) = e0
     else if ((x(i,1) .gt. x2-dx_heat) .and. (x(i,1) .lt. x2)) then
       ! cooling
-      e(i) = -0.0*e0
+      e(i) = -e0
     else
       e(i) = 0.0d0
     end if

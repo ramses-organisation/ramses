@@ -216,19 +216,9 @@ subroutine output_frame()
       timer = t
   endif
   ! Compute frame boundaries
-  if(proj_ax .eq. 1) then ! x-projection
-    xcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
-    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-    zcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-  elseif(proj_ax.eq.2) then ! y-projection
-    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-    ycen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-    zcen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
-  else
-    xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
-    ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
-    zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
-  endif
+  xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
+  ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
+  zcen=zcentre_frame(proj_ind*4-3)+zcentre_frame(proj_ind*4-2)*timer+zcentre_frame(proj_ind*4-1)*timer**2+zcentre_frame(proj_ind*4)*timer**3
   if(deltax_frame(proj_ind*2-1).eq.0d0 .and. deltay_frame(proj_ind*2-1).gt.0d0)then
      deltax_frame(proj_ind*2-1)=deltay_frame(proj_ind*2-1)*float(nw_frame)/float(nh_frame)
   endif
@@ -274,14 +264,31 @@ subroutine output_frame()
 #else
   if(myid==1) write(*,'(3A,F6.1)') " Writing frame ", istep_str,' theta=',theta_cam*180./pi
 #endif
-  ! Frame boundaries
-  xleft_frame  = xcen-delx/2.
-  xright_frame = xcen+delx/2.
-  yleft_frame  = ycen-dely/2.
-  yright_frame = ycen+dely/2.
-  zleft_frame  = zcen-delz/2.
-  zright_frame = zcen+delz/2.
 
+  ! Frame boundaries
+  if(proj_ax.eq.1) then ! x-projection
+     xleft_frame  = ycen-dely/2.
+     xright_frame = ycen+dely/2.
+     yleft_frame  = zcen-delz/2.
+     yright_frame = zcen+delz/2.
+     zleft_frame  = xcen-delx/2.
+     zright_frame = xcen+delx/2.
+  elseif(proj_ax.eq.2) then ! y-projection
+     xleft_frame  = xcen-delx/2.
+     xright_frame = xcen+delx/2.
+     yleft_frame  = zcen-delz/2.
+     yright_frame = zcen+delz/2.
+     zleft_frame  = ycen-dely/2.
+     zright_frame = ycen+dely/2.
+  else                      ! z-projection
+     xleft_frame  = xcen-delx/2.
+     xright_frame = xcen+delx/2.
+     yleft_frame  = ycen-dely/2.
+     yright_frame = ycen+dely/2.
+     zleft_frame  = zcen-delz/2.
+     zright_frame = zcen+delz/2.
+  endif
+  
   ! Allocate image
   allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierr)
   if(ierr .ne. 0)then
@@ -817,9 +824,19 @@ subroutine output_frame()
         xpf  = xpf*focal_camera(proj_ind)/(dist_cam-zpf)
         ypf  = ypf*focal_camera(proj_ind)/(dist_cam-zpf)
      endif
-     xpf  = xpf+xcen
-     ypf  = ypf+ycen
-     zpf  = zpf+zcen
+     if(proj_ax.eq.1) then ! x-projection
+        xpf  = xpf+ycen
+        ypf  = ypf+zcen
+        zpf  = zpf+xcen
+     elseif(proj_ax.eq.2) then ! y-projection
+        xpf  = xpf+xcen
+        ypf  = ypf+zcen
+        zpf  = zpf+ycen
+     else
+        xpf  = xpf+xcen
+        ypf  = ypf+ycen
+        zpf  = zpf+zcen
+     endif
 
      ! Check if particle is in front of camera
      if(dist_cam-zpf.lt.0) cycle
