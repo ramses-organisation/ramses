@@ -853,7 +853,7 @@ subroutine output_frame()
      xpf  = xtmp
      ypf  = ytmp
      xpf  = xpf+xcen
-     ypf  = ypf+xcen
+     ypf  = ypf+ycen
      if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
           & ypf.lt.yleft_frame.or.ypf.ge.yright_frame)cycle
 #endif
