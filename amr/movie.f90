@@ -152,7 +152,9 @@ subroutine output_frame()
      if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)
 #else
      if(myid==1)then
-        call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
+        ierr=1
+        call system(moviecmd,ierr)
+!        call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
      endif
 #ifndef WITHOUTMPI
      call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
