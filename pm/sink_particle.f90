@@ -50,7 +50,7 @@ subroutine create_sink
      call compute_clump_properties(uold(1,1))
 
      ! Compute quantities relative to mean (2nd moments)
-     call compute_clump_properties_round2(uold(1,1))
+     call compute_clump_properties_round2
 
      ! Apply all checks and flag cells for sink formation
      call flag_formation_sites
