@@ -187,7 +187,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
-   ! Local variables
+  ! Local variables
   integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, ip

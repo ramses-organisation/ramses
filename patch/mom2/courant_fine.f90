@@ -2,7 +2,7 @@ subroutine courant_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
-    use mpi_mod
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::info

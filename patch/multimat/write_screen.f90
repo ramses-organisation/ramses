@@ -16,8 +16,8 @@ subroutine write_screen
   integer     ,dimension(:),allocatable::ind_grid,ind_cell,ind_sort,ll,ll_all
   real(kind=8),dimension(:),allocatable::rr,rr_all
   real(kind=8),dimension(:,:),allocatable::qq,qq_all,ff,ff_all,gg,gg_all
-  real(dp),dimension(1:nvector),save::ppp,ccc
-  real(dp),dimension(1:nvector,1:nmat),save::fff,ggg
+  real(dp),dimension(1:nvector),save::ppp,ccc,kappa_hattt
+  real(dp),dimension(1:nvector,1:nmat),save::fff,ggg,kappa_mattt
   real(dp),dimension(1:nvector,1:npri),save::qqq
 
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
@@ -157,7 +157,7 @@ subroutine write_screen
         fff(1,1:nmat)=ff(ind_sort(i),1:nmat)
         ggg(1,1:nmat)=gg(ind_sort(i),1:nmat)
         qqq(1,1:npri)=qq(ind_sort(i),1:npri)
-        call eos(fff,ggg,qqq,ppp,ccc,1)
+        call eos(fff,ggg,qqq,ppp,ccc,kappa_mattt,kappa_hattt,1)
         lll=ll(ind_sort(i))
         rrr=(rr(i)-dble(icoarse_min))*scale
         ddd=qqq(1,1)

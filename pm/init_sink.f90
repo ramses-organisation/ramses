@@ -29,7 +29,11 @@ subroutine init_sink
   allocate(msink(1:nsinkmax))
   allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
-  xsink=boxlen/2
+  msink=0d0; msmbh=0d0; xsink=boxlen/2
+
+  allocate(xsink_graddescent(1:nsinkmax,1:ndim))
+  allocate(graddescent_over_dt(1:nsinkmax))
+  xsink_graddescent=0d0; graddescent_over_dt=0d0
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
   allocate(delta_mass(1:nsinkmax))
@@ -39,10 +43,12 @@ subroutine init_sink
   allocate(vsnew(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink_partial(1:nsinkmax,1:ndim,levelmin:nlevelmax))
   allocate(fsink(1:nsinkmax,1:ndim))
-
+  vsink=0d0; lsink=0d0; tsink=0d0; vsold=0d0; vsnew=0d0
+  delta_mass=0d0; fsink_partial=0d0; fsink=0d0
+  
   allocate(msum_overlap(1:nsinkmax))
-  msum_overlap=0
   allocate(rho_sink_tff(levelmin:nlevelmax))
+  msum_overlap=0; rho_sink_tff=0d0
 
   ! Temporary sink variables
   allocate(wden(1:nsinkmax))
@@ -55,6 +61,8 @@ subroutine init_sink
   allocate(weth_new(1:nsinkmax))
   allocate(wvol_new(1:nsinkmax))
   allocate(wdiv_new(1:nsinkmax))
+  wden=0d0; wmom=0d0; weth=0d0; wvol=0d0; wdiv=0d0
+  wden_new=0d0; wmom_new=0d0; weth_new=0d0; wvol_new=0d0; wdiv_new=0d0
   allocate(msink_new(1:nsinkmax))
   allocate(msmbh_new(1:nsinkmax))
   allocate(msmbh_all(1:nsinkmax))
@@ -78,25 +86,20 @@ subroutine init_sink
   allocate(dMBHoverdt(1:nsinkmax))
   allocate(dMsmbh_overdt(1:nsinkmax))
   allocate(dMBHoverdt_smbh(1:nsinkmax))
+  dMsink_overdt=0d0; dMBHoverdt=0d0; dMsmbh_overdt=0d0; dMBHoverdt_smbh=0d0
   allocate(eps_sink(1:nsinkmax))
-  eps_sink=0d0
   allocate(volume_gas(1:nsinkmax))
-  volume_gas=0d0
   allocate(vel_gas(1:nsinkmax,1:ndim))
-  vel_gas=0d0
   allocate(rho_gas(1:nsinkmax))
-  rho_gas=0d0
   allocate(c2sink(1:nsinkmax))
+  eps_sink=0d0; volume_gas=0d0; vel_gas=0d0; rho_gas=0d0; c2sink=0d0
   allocate(weighted_density(1:nsinkmax,1:nlevelmax))
-  weighted_density = 0d0
   allocate(weighted_volume(1:nsinkmax,1:nlevelmax))
-  weighted_volume = 0d0
   allocate(weighted_ethermal(1:nsinkmax,1:nlevelmax))
-  weighted_ethermal = 0d0
   allocate(weighted_momentum(1:nsinkmax,1:nlevelmax,1:ndim))
-  weighted_momentum = 0d0
   allocate(weighted_divergence(1:nsinkmax,1:nlevelmax))
-  weighted_divergence = 0d0
+  weighted_density = 0d0; weighted_volume = 0d0; weighted_ethermal = 0d0
+  weighted_momentum = 0d0; weighted_divergence = 0d0
   allocate(oksink_new(1:nsinkmax))
   allocate(oksink_all(1:nsinkmax))
   allocate(idsink_sort(1:nsinkmax))
@@ -104,6 +107,7 @@ subroutine init_sink
   allocate(delta_mass_new(1:nsinkmax),delta_mass_all(1:nsinkmax))
   allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
   allocate(direct_force_sink(1:nsinkmax))
+  direct_force_sink=.false.
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -137,7 +141,7 @@ subroutine init_sink
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,20(A1,ES20.10),A1,I10)',end=104)sid,co, sm1,co,&
+        read(10,'(I10,20(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &
@@ -169,6 +173,8 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
+        vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
+        vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
      end do
 104  continue
      sinkint_level=slevel
@@ -253,9 +259,11 @@ subroutine init_sink
         tsink(nsink)=t
         new_born(nsink)=.false.
         msmbh(nsink)=sm2
+        vsold(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
+        vsnew(nsink,1:ndim,levelmin)=vsink(nsink,1:ndim)
      end do
-     sinkint_level=levelmin
 103  continue
+     sinkint_level=levelmin
      close(10)
 
      ! Send the token

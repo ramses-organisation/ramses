@@ -100,6 +100,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef grackle
   real(kind=8),dimension(1:nvector),save:: T2_new
 #endif
+#ifdef SOLVERmhd
+  integer::neul=5
+#else
+  integer::neul=ndim+2
+#endif
 #if NENER>0
   integer::irad
 #endif
@@ -217,7 +222,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               TR = max(0d0, (E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
-                 if(i .ne. iIR)                                          &
+                 if(ig .ne. iIR)                                         &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
@@ -233,7 +238,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            work = scale_v/c_cgs * kIR * sum(uold(il,2:ndim+1)*flux) &
                 * Zsolar(i) * f_dust * dtnew(ilevel) !               Eq A6
 
-           uold(il,ndim+2) = uold(il,ndim+2) &    ! Add work to gas energy
+           uold(il,neul) = uold(il,neul) &    ! Add work to gas energy
                 + work * group_egy(iIR) &
                 * eV2erg / scale_d / scale_v**2 / scale_l**3
 
@@ -247,14 +252,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute thermal pressure
      do i=1,nleaf
-        T2(i)=uold(ind_leaf(i),ndim+2)
+        T2(i)=uold(ind_leaf(i),neul)
      end do
      do i=1,nleaf
         ekk(i)=0.0d0
      end do
-     do idim=1,ndim
+     do idim=2,neul-1
         do i=1,nleaf
-           ekk(i)=ekk(i)+0.5d0*uold(ind_leaf(i),idim+1)**2/nH(i)
+           ekk(i)=ekk(i)+0.5d0*uold(ind_leaf(i),idim)**2/nH(i)
         end do
      end do
      do i=1,nleaf
@@ -271,9 +276,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         emag(i)=0.0d0
      end do
 #ifdef SOLVERmhd
-     do idim=1,ndim
+     do idim=1,3
         do i=1,nleaf
-           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+5)+uold(ind_leaf(i),idim+nvar))**2
         end do
      end do
 #endif
@@ -466,21 +471,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(.not. static) then
         ! Update gas momentum and kinetic energy:
         do i=1,nleaf
-           uold(ind_leaf(i),2:1+ndim) = p_gas(:,i) /scale_d /scale_v
+           uold(ind_leaf(i),2:neul-1) = p_gas(:,i) /scale_d /scale_v
         end do
         ! Energy update ==================================================
         ! Calculate NEW pressure from updated momentum
         ekk_new(1:nleaf) = 0d0
         do i=1,nleaf
-           do idim=1,ndim
+           do idim=2,neul-1
               ekk_new(i) = ekk_new(i) &
-                   + 0.5*uold(ind_leaf(i),idim+1)**2 / uold(ind_leaf(i),1)
+                   + 0.5*uold(ind_leaf(i),idim)**2 / uold(ind_leaf(i),1)
            end do
         end do
         do i=1,nleaf
            ! Update the pressure variable with the new kinetic energy:
-           uold(ind_leaf(i),ndim+2) = uold(ind_leaf(i),ndim+2)           &
-                                    - ekk(i) + ekk_new(i)
+           uold(ind_leaf(i),neul) = uold(ind_leaf(i),neul)           &
+                                  - ekk(i) + ekk_new(i)
         end do
         do i=1,nleaf
            ekk(i)=ekk_new(i)
@@ -539,11 +544,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Update total fluid energy
      if(isothermal)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2min(i) + ekk(i) + err(i) + emag(i)
+           uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do
      else if(cooling .or. neq_chem)then
         do i=1,nleaf
-           uold(ind_leaf(i),ndim+2) = T2(i) + T2min(i) + ekk(i) + err(i) + emag(i)
+           uold(ind_leaf(i),neul) = T2(i) + T2min(i) + ekk(i) + err(i) + emag(i)
         end do
      endif
 
@@ -598,7 +603,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25d0)     ! IR temp.
               kIR = kappaAbs(iIR) * (TR/10d0)**2
               do ig=1,nGroups
-                 if(i .ne. iIR)                                          &
+                 if(ig .ne. iIR)                                         &
                       E_rad = E_rad + kappaAbs(ig) / kIR                 &
                             * max(rtuold(il,iGroups(ig)),smallNp)        &
                             * eV2erg * scale_Np
@@ -617,7 +622,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                                   rtuold(il,iNp+1:iNp+ndim) * (1d0-f_trap)
            EIR_trapped = max(0d0, NIRtot-rtuold(il,iNp)) * Np2Ep ! Trapped
            ! Update tot energy due to change in trapped radiation energy:
-           uold(il,ndim+2)=uold(il,ndim+2)-uold(il,iIRtrapVar)+EIR_trapped
+           uold(il,neul)=uold(il,neul)-uold(il,iIRtrapVar)+EIR_trapped
            ! Update the trapped photon energy:
            uold(il,iIRtrapVar) = EIR_trapped
 

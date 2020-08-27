@@ -60,6 +60,8 @@ recursive subroutine amr_step(ilevel,icount)
                  end do
 #endif
                  if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),i)
+                 if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),i)
+                 if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),i)
                  if(simple_boundary)call make_boundary_hydro(i)
               end if
 #ifdef RT
@@ -152,18 +154,17 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
-
+        
         call dump_all
-
-
-        ! Dump lightcone
-        if(lightcone .and. ndim==3) call output_cone()
 
         if (output_now_all.EQV..true.) then
           output_now=.false.
         endif
 
      endif
+
+     ! Dump lightcone
+     if(lightcone .and. ndim==3) call output_cone()
 
   endif
 
@@ -273,7 +274,7 @@ recursive subroutine amr_step(ilevel,icount)
         ! Compute Bondi-Hoyle accretion parameters
 #if NDIM==3
                                call timer('sinks','start')
-        if(sink)call collect_acczone_avg(ilevel)
+        if(sink.and.hydro)call collect_acczone_avg(ilevel)
 #endif
      end if
   end if
@@ -339,7 +340,7 @@ recursive subroutine amr_step(ilevel,icount)
 
   ! Density threshold or Bondi accretion onto sink particle
 #if NDIM==3
-  if(sink)then
+  if(sink.and.hydro)then
                                call timer('sinks','start')
      call grow_sink(ilevel,.false.)
   end if
@@ -400,7 +401,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Still need a chemistry call if RT is defined but not
      ! actually doing radiative transfer (i.e. rt==false):
                                call timer('cooling','start')
-     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+     if(hydro .and. (neq_chem.or.cooling.or.T2_star>0.0))call cooling_fine(ilevel)
   endif
   ! Regular updates and book-keeping:
   if(ilevel==levelmin) then
@@ -456,6 +457,8 @@ recursive subroutine amr_step(ilevel,icount)
      end do
 #endif
      if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
+     if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
+     if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 

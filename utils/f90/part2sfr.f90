@@ -27,6 +27,7 @@ program part2sfr
   real(KIND=8),dimension(:)  ,allocatable::m,birth
   integer,dimension(:)  ,allocatable::id
   character(LEN=5)::nchar,ncharcpu
+  character(LEN=80)::GMGM
   character(LEN=80)::ordering,format_grille
   character(LEN=128)::nomfich,repository,outfich,filedens
   logical::ok,ok_part,periodic=.false.,star=.false.,ageweight=.false.,do_density=.false.
@@ -38,7 +39,7 @@ program part2sfr
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
-  logical::cosmo=.true.
+  logical::cosmo=.true.,proper_time=.false.
 
   call read_params
 
@@ -61,32 +62,32 @@ program part2sfr
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
-  read(10,'("levelmin    =",I11)')levelmin
-  read(10,'("levelmax    =",I11)')levelmax
+  read(10,'(A13,I11)')GMGM,ncpu
+  read(10,'(A13,I11)')GMGM,ndim
+  read(10,'(A13,I11)')GMGM,levelmin
+  read(10,'(A13,I11)')GMGM,levelmax
   read(10,*)
   read(10,*)
   read(10,*)
 
-  read(10,'("boxlen      =",E23.15)')boxlen
-  read(10,'("time        =",E23.15)')t
-  read(10,'("aexp        =",E23.15)')aexp
-  read(10,'("H0          =",E23.15)')h0
-  read(10,'("omega_m     =",E23.15)')omega_m
-  read(10,'("omega_l     =",E23.15)')omega_l
-  read(10,'("omega_k     =",E23.15)')omega_k
-  read(10,'("omega_b     =",E23.15)')omega_b
-  read(10,'("unit_l      =",E23.15)')unit_l
-  read(10,'("unit_d      =",E23.15)')unit_d
-  read(10,'("unit_t      =",E23.15)')unit_t
+  read(10,'(A13,E23.15)')GMGM,boxlen
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
+  read(10,'(A13,E23.15)')GMGM,h0
+  read(10,'(A13,E23.15)')GMGM,omega_m
+  read(10,'(A13,E23.15)')GMGM,omega_l
+  read(10,'(A13,E23.15)')GMGM,omega_k
+  read(10,'(A13,E23.15)')GMGM,omega_b
+  read(10,'(A13,E23.15)')GMGM,unit_l
+  read(10,'(A13,E23.15)')GMGM,unit_d
+  read(10,'(A13,E23.15)')GMGM,unit_t
   unit_m=unit_d*unit_l**3
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
-
-  read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  
+  read(10,'(A14,A80)')GMGM,ordering
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -290,8 +291,12 @@ program part2sfr
                  iii=iii+1
               end do
               ! Interploate time
-              time=t_frw(iii)*(birth(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                   & t_frw(iii-1)*(birth(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+              if(.not. proper_time)then
+                 time=t_frw(iii)*(birth(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                      & t_frw(iii-1)*(birth(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+              else
+                 time=birth(i)
+              endif
               age=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
               birth_date=(time_tot+time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
            else
@@ -379,6 +384,8 @@ contains
             read (arg,*) zmax
          case ('-nx')
             read (arg,*) nx
+         case ('-pt')
+            read (arg,*) proper_time
          case default
             print '("unknown option ",a2," ignored")', opt
          end select
