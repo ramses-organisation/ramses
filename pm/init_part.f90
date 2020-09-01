@@ -29,9 +29,9 @@
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
   integer(1),allocatable,dimension(:)::ii1
-  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
+  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x,init_plane_m
   integer(i8b),allocatable,dimension(:,:)::init_plane_id
-  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
+  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x,init_array_m
   integer(i8b),allocatable,dimension(:,:,:)::init_array_id
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(kind=8),dimension(1:nvector)::mm
@@ -48,8 +48,8 @@
   integer::ibuf,tagu=102
   integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 #endif
-  logical::error,keep_part,eof,read_pos=.false.,ok,read_ids=.false.
-  character(LEN=80)::filename,filename_x, filename_id
+  logical::error,keep_part,eof,ok,read_pos=.false.,read_ids=.false.,read_mass=.false.
+  character(LEN=80)::filename,filename_x, filename_id, filename_m
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
@@ -386,6 +386,14 @@ contains
          allocate(init_array_id(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
        end if
 
+       filename_m=TRIM(initfile(ilevel))//'/ic_massc'
+       INQUIRE(file=filename_m,exist=read_mass)
+       if(read_mass) then
+         if(myid==1)write(*,*)'Reading particle masses from file '//TRIM(filename_m)
+         allocate(init_plane_m(1:n1(ilevel),1:n2(ilevel)))
+         allocate(init_array_m(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
+       end if
+
        ! Loop over input variables
        do idim=1,ndim
 
@@ -535,6 +543,33 @@ contains
                 end do
                 if(myid==1)close(10)
               end if
+
+              if(read_mass) then
+               if(myid==1)then
+                  open(10,file=filename_m,form='unformatted')
+                  rewind 10
+                  read(10) ! skip first line
+               end if
+               do i3=1,n3(ilevel)
+                  if(myid==1)then
+                     if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
+                     read(10)((init_plane_m(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
+                  else
+                     init_plane_m=0
+                  endif
+                  buf_count=n1(ilevel)*n2(ilevel)
+#ifndef WITHOUTMPI
+                  call MPI_BCAST(init_plane_m,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
+#endif
+                  if(active(ilevel)%ngrid>0)then
+                     if(i3.ge.i3_min.and.i3.le.i3_max)then
+                        init_array_m(i1_min:i1_max,i2_min:i2_max,i3) = &
+                             & init_plane_m(i1_min:i1_max,i2_min:i2_max)
+                     end if
+                  endif
+               end do
+               if(myid==1)close(10)
+             end if
           endif
 
           if(active(ilevel)%ngrid>0)then
@@ -583,6 +618,9 @@ contains
                           if (read_ids) then
                             idp(ipart) = init_array_id(i1,i2,i3)
                           end if
+                          if (read_mass) then
+                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
+                          end if
                          endif
                       end if
                    end do
@@ -606,6 +644,10 @@ contains
          deallocate(init_array_id)
        end if
 
+       if(read_mass) then
+         deallocate(init_plane_m)
+         deallocate(init_array_m)
+       end if
 
        if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 
