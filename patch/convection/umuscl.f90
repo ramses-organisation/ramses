@@ -214,6 +214,7 @@ subroutine trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
   real(dp)::dtdx
   real(dp)::r, u, p
   real(dp)::drx, dux, dpx
+  real(dp)::dreqx, dpeqx = 0.d0
   real(dp)::sr0, su0, sp0
 #if NENER>0
   integer::irad
@@ -255,10 +256,15 @@ subroutine trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
                  dex(irad) = dq(l,i,j,k,ip+irad,1)
               end do
 #endif
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
+                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip)) 
+              end if
 
               ! Source terms (including transverse derivatives)
-              sr0 = -u*drx - (dux)*r
-              sp0 = -u*dpx - (dux)*gamma*p
+              sr0 = -u*drx -u*dreqx - (dux)*r
+              sp0 = -u*dpx -u*dpeqx - (dux)*gamma*p
               su0 = -u*dux - (dpx)/r
 #if NENER>0
               do irad=1,nener
@@ -356,6 +362,8 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
   real(dp)::r, u, v, p
   real(dp)::drx, dux, dvx, dpx
   real(dp)::dry, duy, dvy, dpy
+  real(dp)::dreqx, dreqy = 0.d0
+  real(dp)::dpeqx, dpeqy = 0.d0
   real(dp)::sr0, su0, sv0, sp0
 #if NENER>0
   integer ::irad
@@ -411,9 +419,18 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
               end do
 #endif
 
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
+                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip))
+
+                dreqy = half*(q(l,i,j+1,k,ir) - q(l,i,j-1,k,ir))
+                dpeqy = half*(q(l,i,j+1,k,ip) - q(l,i,j-1,k,ip))
+              end if 
+
               ! source terms (with transverse derivatives)
-              sr0 = -u*drx-v*dry - (dux+dvy)*r
-              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
+              sr0 = -u*drx-v*dry -u*dreqx-v*dreqy - (dux+dvy)*r
+              sp0 = -u*dpx-v*dpy -u*dpeqx-v*dpeqy - (dux+dvy)*gamma*p
               su0 = -u*dux-v*duy - (dpx    )/r
               sv0 = -u*dvx-v*dvy - (dpy    )/r
 #if NENER>0
@@ -551,6 +568,8 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
   real(dp)::drx, dux, dvx, dwx, dpx
   real(dp)::dry, duy, dvy, dwy, dpy
   real(dp)::drz, duz, dvz, dwz, dpz
+  real(dp)::dreqx,dreqy,dreqz = 0.d0
+  real(dp)::dpeqx,dpeqy,dpeqz = 0.d0
   real(dp)::sr0, su0, sv0, sw0, sp0
 #if NENER>0
   integer ::irad
@@ -621,10 +640,21 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
                  dez(irad) = dq(l,i,j,k,ip+irad,3)
               end do
 #endif
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
+                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip))
 
+                dreqy = half*(q(l,i,j+1,k,ir) - q(l,i,j-1,k,ir))
+                dpeqy = half*(q(l,i,j+1,k,ip) - q(l,i,j-1,k,ip))
+                
+                dreqz = half*(q(l,i,j,k+1,ir) - q(l,i,j,k-1,ir))
+                dpeqz = half*(q(l,i,j,k+1,ip) - q(l,i,j,k-1,ip))
+              end if 
+              
               ! Source terms (including transverse derivatives)
-              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
-              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
+              sr0 = -u*drx-v*dry-w*drz -u*dreqx-v*dreqy-w*dreqz - (dux+dvy+dwz)*r
+              sp0 = -u*dpx-v*dpy-w*dpz -u*dpeqx-v*dpeqy-w*dpeqz - (dux+dvy+dwz)*gamma*p
               su0 = -u*dux-v*duy-w*duz - (dpx        )/r
               sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
               sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
@@ -992,7 +1022,6 @@ subroutine ctoprim(uin,q,c,req,peq,gravin,dt,ngrid)
               enddo
 #endif
               ! Compute thermal pressure
-
               eint = MAX(uin(l,i,j,k,ndim+2)*oneoverrho-eken-erad,smalle)
               q(l,i,j,k,ndim+2) = (gamma-one)*q(l,i,j,k,1)*eint
 
