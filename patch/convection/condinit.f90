@@ -214,7 +214,8 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
 
   x1 = x_center(1)
   x2 = x_center(2)
- 
+  
+  ! Sponge loop 
   do i=1,ncell
     if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
        
