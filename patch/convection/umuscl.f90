@@ -258,8 +258,8 @@ subroutine trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
 #endif
               ! Slopes for equilibrium profiles
               if(strict_equilibrium>0) then
-                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
-                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip)) 
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k)) 
               end if
 
               ! Source terms (including transverse derivatives)
@@ -421,11 +421,11 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
 
               ! Slopes for equilibrium profiles
               if(strict_equilibrium>0) then
-                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
-                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip))
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k))
 
-                dreqy = half*(q(l,i,j+1,k,ir) - q(l,i,j-1,k,ir))
-                dpeqy = half*(q(l,i,j+1,k,ip) - q(l,i,j-1,k,ip))
+                dreqy = half*(req(l,i,j+1,k) - req(l,i,j-1,k))
+                dpeqy = half*(peq(l,i,j+1,k) - peq(l,i,j-1,k))
               end if 
 
               ! source terms (with transverse derivatives)
@@ -642,14 +642,14 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
               ! Slopes for equilibrium profiles
               if(strict_equilibrium>0) then
-                dreqx = half*(q(l,i+1,j,k,ir) - q(l,i-1,j,k,ir))
-                dpeqx = half*(q(l,i+1,j,k,ip) - q(l,i-1,j,k,ip))
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k))
 
-                dreqy = half*(q(l,i,j+1,k,ir) - q(l,i,j-1,k,ir))
-                dpeqy = half*(q(l,i,j+1,k,ip) - q(l,i,j-1,k,ip))
+                dreqy = half*(req(l,i,j+1,k) - req(l,i,j-1,k))
+                dpeqy = half*(peq(l,i,j+1,k) - peq(l,i,j-1,k))
                 
-                dreqz = half*(q(l,i,j,k+1,ir) - q(l,i,j,k-1,ir))
-                dpeqz = half*(q(l,i,j,k+1,ip) - q(l,i,j,k-1,ip))
+                dreqz = half*(req(l,i,j,k+1) - req(l,i,j,k-1))
+                dpeqz = half*(peq(l,i,j,k+1) - peq(l,i,j,k-1))
               end if 
               
               ! Source terms (including transverse derivatives)
