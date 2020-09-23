@@ -51,6 +51,7 @@ module pm_parameters
 
   real(dp)::mass_halo_AGN=1d10              ! Minimum mass of the halo for sink creation
   real(dp)::mass_clump_AGN=1d10             ! Minimum mass of the clump for sink creation
+  real(dp)::mass_star_AGN=0d0               ! Minimum mass of stars in the clump for sink creation
 
   real(dp)::boost_threshold_density=0.1d0   ! Accretion boost threshold for Bondi
 

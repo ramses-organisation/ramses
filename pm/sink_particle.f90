@@ -49,6 +49,9 @@ subroutine create_sink
      ! Compute simple additive quantities and means (1st moments)
      call compute_clump_properties(uold(1,1))
 
+     ! Compute stellar density field
+     if(star.and.mass_star_AGN>0)call compute_rho_star
+
      ! Compute quantities relative to mean (2nd moments)
      call compute_clump_properties_round2
 
@@ -2454,7 +2457,7 @@ subroutine read_sink_params()
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
        mass_sink_seed,mass_smbh_seed,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
-       clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,&
+       clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
        epsilon_kin,AGN_fbk_mode_switch_threshold,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc,&
        agn_acc_method,agn_inj_method,sink_descent,gamma_grad_descent,fudge_graddescent

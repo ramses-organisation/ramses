@@ -38,7 +38,7 @@ module clfind_commons
   real(dp),allocatable,dimension(:)::max_dens,min_dens,av_dens
   real(dp),allocatable,dimension(:)::thermal_support,kinetic_support,magnetic_support
   real(dp),allocatable,dimension(:)::halo_mass,clump_mass,clump_vol
-  real(dp),allocatable,dimension(:)::clump_mass4
+  real(dp),allocatable,dimension(:)::clump_mass4,clump_star4
   real(dp),allocatable,dimension(:,:)::peak_pos
   real(dp),allocatable,dimension(:)::relevance
   real(dp),allocatable,dimension(:)::Psurf,MagPsurf,MagTsurf
