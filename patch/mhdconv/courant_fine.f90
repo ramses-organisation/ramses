@@ -191,7 +191,7 @@ subroutine energy_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector)::ee
-  real(dp),dimension(1:nvector,1:nvar)::uut 
+  real(dp),dimension(1:nvector,1:nvar+3)::uut 
   real(dp),dimension(1:nvector)::req,peq
   real(kind=8)::uud,ekin,uuv
 
@@ -265,7 +265,7 @@ subroutine energy_fine(ilevel)
         end do
         
         ! Scatter variables
-        do ivar=1,nvar
+        do ivar=1,nvar+3
           do i=1,ngrid
              uut(i,ivar)=uold(ind_cell(i),ivar)
           end do
@@ -280,13 +280,13 @@ subroutine energy_fine(ilevel)
         call spongelayers(xx,uut,req,peq,t,ngrid)
         
         ! rescatter variables
-        do ivar=1,nvar
+        do ivar=1,nvar+3
           do i=1,ngrid
             uold(ind_cell(i),ivar) = uut(i,ivar)
           end do
         end do 
 
-        ! Impose analytical energy field and damping
+        ! Impose analytical energy field
         call eneana(xx,ee,dx_loc,t,ngrid)
         ! Update total energy
         do i=1,ngrid
@@ -316,115 +316,115 @@ end subroutine energy_fine
 !#########################################################
 !#########################################################
 !#########################################################
-! subroutine velocity_fine(ilevel)
-!   use amr_commons
-!   use hydro_commons
-!   implicit none
-!   integer::ilevel
-!   !----------------------------------------------------------
-!   ! This routine computes the gravitational acceleration,
-!   ! the maximum density rho_max, and the potential energy
-!   !----------------------------------------------------------
-!   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-!   integer::nx_loc,idim,neul=5
-!   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
-!   real(dp),dimension(1:twotondim,1:3)::xc
-!   real(dp),dimension(1:3)::skip_loc
+subroutine velocity_fine(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !----------------------------------------------------------
+  ! This routine computes the gravitational acceleration,
+  ! the maximum density rho_max, and the potential energy
+  !----------------------------------------------------------
+  integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
+  integer::nx_loc,idim,neul=5
+  real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
+  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:3)::skip_loc
 
-!   integer ,dimension(1:nvector),save::ind_grid,ind_cell
-!   real(dp),dimension(1:nvector,1:ndim),save::xx
-!   real(dp),dimension(1:nvector,1:3),save::vv
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector,1:3),save::vv
 
-!   if(numbtot(1,ilevel)==0)return
+  if(numbtot(1,ilevel)==0)return
 
-!   ! Mesh size at level ilevel in coarse cell units
-!   dx=0.5D0**ilevel
+  ! Mesh size at level ilevel in coarse cell units
+  dx=0.5D0**ilevel
 
-!   ! Rescaling factors
-!   nx_loc=(icoarse_max-icoarse_min+1)
-!   skip_loc=(/0.0d0,0.0d0,0.0d0/)
-!   if(ndim>0)skip_loc(1)=dble(icoarse_min)
-!   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-!   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-!   scale=dble(nx_loc)/boxlen
-!   dx_loc=dx/scale
+  ! Rescaling factors
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=dble(nx_loc)/boxlen
+  dx_loc=dx/scale
 
-!   ! Set position of cell centers relative to grid center
-!   do ind=1,twotondim
-!      iz=(ind-1)/4
-!      iy=(ind-1-4*iz)/2
-!      ix=(ind-1-2*iy-4*iz)
-!      if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
-!      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
-!      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
-!   end do
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
+     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
+     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
 
-!   !-------------------------------------
-!   ! Compute analytical velocity field
-!   !-------------------------------------
-!   ncache=active(ilevel)%ngrid
+  !-------------------------------------
+  ! Compute analytical velocity field
+  !-------------------------------------
+  ncache=active(ilevel)%ngrid
 
-!   ! Loop over grids by vector sweeps
-!   do igrid=1,ncache,nvector
-!      ngrid=MIN(nvector,ncache-igrid+1)
-!      do i=1,ngrid
-!         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-!      end do
+  ! Loop over grids by vector sweeps
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
 
-!      ! Loop over cells
-!      do ind=1,twotondim
+     ! Loop over cells
+     do ind=1,twotondim
 
-!         ! Gather cell indices
-!         iskip=ncoarse+(ind-1)*ngridmax
-!         do i=1,ngrid
-!            ind_cell(i)=iskip+ind_grid(i)
-!         end do
+        ! Gather cell indices
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
 
-!         ! Gather cell centre positions
-!         do idim=1,ndim
-!            do i=1,ngrid
-!               xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-!            end do
-!         end do
-!         ! Rescale position from code units to user units
-!         do idim=1,ndim
-!            do i=1,ngrid
-!               xx(i,idim)=(xx(i,idim)-skip_loc(idim))/scale
-!            end do
-!         end do
+        ! Gather cell centre positions
+        do idim=1,ndim
+           do i=1,ngrid
+              xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
+           end do
+        end do
+        ! Rescale position from code units to user units
+        do idim=1,ndim
+           do i=1,ngrid
+              xx(i,idim)=(xx(i,idim)-skip_loc(idim))/scale
+           end do
+        end do
 
-!         ! Impose analytical velocity field
-!         call velana(xx,vv,dx_loc,t,ngrid)
+        ! Impose analytical velocity field
+        call velana(xx,vv,dx_loc,t,ngrid)
 
-!         ! Impose induction variables
-!         do i=1,ngrid
-!            uold(ind_cell(i),1)=1.0
-!         end do
-!         do idim=1,3
-!            do i=1,ngrid
-!               uold(ind_cell(i),idim+1)=vv(i,idim)
-!            end do
-!         end do
-!         ! Update total energy
-!         do i=1,ngrid
-!            d=uold(ind_cell(i),1)
-!            u=uold(ind_cell(i),2)/d
-!            v=uold(ind_cell(i),3)/d
-!            w=uold(ind_cell(i),4)/d
-!            A=0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
-!            B=0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
-!            C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
-!            uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
-!         end do
+        ! Impose induction variables
+        ! do i=1,ngrid
+        !    uold(ind_cell(i),1)=1.0
+        ! end do
+        ! do idim=1,3
+        !    do i=1,ngrid
+        !       uold(ind_cell(i),idim+1)=vv(i,idim)
+        !    end do
+        ! end do
+        ! ! Update total energy
+        ! do i=1,ngrid
+        !    d=uold(ind_cell(i),1)
+        !    u=uold(ind_cell(i),2)/d
+        !    v=uold(ind_cell(i),3)/d
+        !    w=uold(ind_cell(i),4)/d
+        !    A=0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
+        !    B=0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
+        !    C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+        !    uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
+        ! end do
 
-!      end do
-!      ! End loop over cells
+     end do
+     ! End loop over cells
 
-!   end do
-!   ! End loop over grids
+  end do
+  ! End loop over grids
 
-! end subroutine velocity_fine
-! !#########################################################
-! !#########################################################
-! !#########################################################
-! !#########################################################
+end subroutine velocity_fine
+!#########################################################
+!#########################################################
+!#########################################################
+!#########################################################

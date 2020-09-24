@@ -419,8 +419,6 @@ recursive subroutine amr_step(ilevel,icount)
   if((hydro).and.(.not.static_gas)) then
     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
   endif
-
-  !JRCC
   !--------------------
   ! call energy_fine
   !--------------------

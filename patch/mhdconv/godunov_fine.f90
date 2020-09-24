@@ -263,18 +263,18 @@ subroutine set_uold(ilevel)
         u=uold(ind_cell,2)/d
         v=uold(ind_cell,3)/d
         w=uold(ind_cell,4)/d
-        A=0.5*(uold(ind_cell,6)+uold(ind_cell,nvar+1))
-        B=0.5*(uold(ind_cell,7)+uold(ind_cell,nvar+2))
-        C=0.5*(uold(ind_cell,8)+uold(ind_cell,nvar+3))
+        A=0.5d0*(uold(ind_cell,6)+uold(ind_cell,nvar+1))
+        B=0.5d0*(uold(ind_cell,7)+uold(ind_cell,nvar+2))
+        C=0.5d0*(uold(ind_cell,8)+uold(ind_cell,nvar+3))
         e_kin=0.5d0*d*(u**2+v**2+w**2)
-        e_mag=0.5*(A**2+B**2+C**2)
+        e_mag=0.5d0*(A**2+B**2+C**2)
 #if NENER>0
         do irad=1,nener
-           e_kin=e_kin+uold(ind_cell,ndim+2+irad)
+           e_kin=e_kin+uold(ind_cell,8+irad)
         end do
 #endif
-        e_prim=uold(ind_cell,ndim+3)/(gamma-1.0)*d**(gamma-1.0)
-        uold(ind_cell,ndim+2)=e_prim+e_kin+e_mag
+        e_prim=uold(ind_cell,9)/(gamma-1.0)*d**(gamma-1.0)
+        uold(ind_cell,5)=e_prim+e_kin+e_mag
      end do
 #endif     
   end do
@@ -566,9 +566,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector,0:twondim         ),save::ind1
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
+  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
+  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::req_loc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::peq_loc=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,1:3,1:3,1:3),save::emfx=0.0d0,emfy=0.0d0,emfz=0.0d0
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp

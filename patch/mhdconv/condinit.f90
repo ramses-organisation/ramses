@@ -5,6 +5,7 @@
 subroutine condinit(x,u,dx,pert,nn)
   use amr_parameters
   use hydro_parameters
+  use poisson_parameters
   implicit none
   integer ::nn                            ! Number of cells
   real(dp)::dx                            ! Cell size
@@ -33,7 +34,7 @@ subroutine condinit(x,u,dx,pert,nn)
 #endif
   integer::i,id,iu,iv,iw,ip,is                     ! Indices Euler
   integer::iAL,iBL,iCL,iAR,iBR,iCR                 ! Indices Magnetic field
-  real(dp)::p1,p2,p3,rho1,rho2,rho3,x1,x2,g,T0,drho! Variables
+  real(dp)::p1,p2,p3,rho1,rho2,rho3,x1,x2,g,T0,drho ! Variables
   real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields                   
   real(dp)::gammainit1,gammainit2,gammainit3       ! Polytropic indices
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
@@ -53,8 +54,11 @@ subroutine condinit(x,u,dx,pert,nn)
   gammainit3=gamma_region(3)
   g = abs(gravity_params(1))
 
+  ! Call built-in initial condition generator
+  call region_condinit(x,q,dx,nn)
+
   do i=1,nn
-    !! rho, P
+
     ! Bottom stable zone
     if(x(i,1) .le. x1)then
       T0 = 1 - ((gammainit1-1.0d0)/gammainit1)*g*(rho1/p1)*(x(i,1))
@@ -72,12 +76,12 @@ subroutine condinit(x,u,dx,pert,nn)
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
       ! produce density perturbation in small layer of convection zone!
-      if (x(i,1) .lt. x1+0.5) then
-        call random_number(drho)
-        drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
-      else
-        drho = 0.0d0
-      end if 
+      ! if (x(i,1) .lt. x1+0.5) then
+      !   call random_number(drho)
+      !   drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
+      ! else
+      !   drho = 0.0d0
+      ! end if 
       q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
 
@@ -87,6 +91,7 @@ subroutine condinit(x,u,dx,pert,nn)
       q(i,iAR)=A2
       q(i,iBR)=B2
       q(i,iCR)=C2
+
     ! Top stable zone
     else 
       T0 = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
@@ -195,21 +200,21 @@ subroutine eneana(x,e,dx,t,ncell)
   end do 
 
   !! Heating loop
-  do i=1,ncell
-    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
-      ! heating
-      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
-      e(i) = e0*rho0 ! erg/s/cm^3
-      !e(i) = 0.d0
-    else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
-      ! cooling
-      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
-      e(i) = (-e0)*rho0 ! erg/s/cm^3
-      !e(i) = 0.d0
-    else
-      e(i) = 0.0d0
-    end if
-  end do 
+  ! do i=1,ncell
+  !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
+  !     ! heating
+  !     !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+  !     e(i) = e0*rho0 ! erg/s/cm^3
+  !     !e(i) = 0.d0
+  !   else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
+  !     ! cooling
+  !     !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+  !     e(i) = (-e0)*rho0 ! erg/s/cm^3
+  !     !e(i) = 0.d0
+  !   else
+  !     e(i) = 0.0d0
+  !   end if
+  ! end do 
 
 end subroutine eneana
 !================================================================
@@ -225,7 +230,7 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   integer ::ncell                             ! Size of input arrays
   real(dp)::t                                 ! Current time
   real(dp),dimension(1:nvector,1:ndim)::x     ! Cell center position.
-  real(dp),dimension(1:nvector,1:nvar)::u     ! Conservative variables 
+  real(dp),dimension(1:nvector,1:nvar+3)::u   ! Conservative variables 
   real(dp),dimension(1:nvector)::req,peq      ! Equilibrium profiles
   !================================================================
   integer :: i, irad, ie
@@ -238,108 +243,104 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   ie = 5
   x1 = x_center(1); x2 = x_center(2)
   
-  ! Sponge loop 
-  do i=1,ncell
-    if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
+!   ! Sponge loop 
+!   do i=1,ncell
+!     if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
        
-      ! Damp the internal energy
-      u(i,ie) = u(i,ie)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
-      ! damp density
-      u(i,1) = u(i,1)*(1.0d0 - crho) + crho*req(i)
-      ! damp momentum components
-      u(i,2) = u(i,2)*(1.0d0-cv)
-      u(i,3) = u(i,3)*(1.0d0-cv)
-      u(i,4) = u(i,4)*(1.0d0-cv)
+!       ! Damp the internal energy
+!       u(i,ie) = u(i,ie)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
+!       ! damp density
+!       u(i,1) = u(i,1)*(1.0d0 - crho) + crho*req(i)
+!       ! damp momentum components
+!       u(i,2) = u(i,2)*(1.0d0-cv)
+!       u(i,3) = u(i,3)*(1.0d0-cv)
+!       u(i,4) = u(i,4)*(1.0d0-cv)
 
-    ! else
-!       if (t .lt. 500.0) then
-!         u(i,2) = u(i,2)*(t/500.0)
-! #if NDIM>1
-!         u(i,3) = u(i,3)*(t/500.0)
-! #endif
-! #if NDIM>2
-!         u(i,4) = u(i,4)*(t/500.0)
-! #endif
-!       end if 
-    end if
-  end do 
+!     ! else
+! !       if (t .lt. 500.0) then
+! !         u(i,2) = u(i,2)*(t/500.0)
+! ! #if NDIM>1
+! !         u(i,3) = u(i,3)*(t/500.0)
+! ! #endif
+! ! #if NDIM>2
+! !         u(i,4) = u(i,4)*(t/500.0)
+! ! #endif
+! !       end if 
+!     end if
+!   end do 
 
 end subroutine spongelayers
-
-
-
-
-
-
-
-
-! subroutine velana(x,v,dx,t,ncell)
-!   use amr_parameters
-!   use hydro_parameters
-!   implicit none
-!   integer ::ncell                         ! Size of input arrays
-!   real(dp)::dx                            ! Cell size
-!   real(dp)::t                             ! Current time
-!   real(dp),dimension(1:nvector,1:3)::v    ! Velocity field
-!   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
-!   !================================================================
-!   ! This routine computes the user defined velocity fields.
-!   ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
-!   ! v(i,1:3) is the imposed 3-velocity in user units.
-!   !================================================================
-!   integer::i
-!   real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
-! !!$  real(dp)::rr,tt,omega
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine velana(x,v,dx,t,ncell)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::ncell                         ! Size of input arrays
+  real(dp)::dx                            ! Cell size
+  real(dp)::t                             ! Current time
+  real(dp),dimension(1:nvector,1:3)::v    ! Velocity field
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine computes the user defined velocity fields.
+  ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
+  ! v(i,1:3) is the imposed 3-velocity in user units.
+  !================================================================
+  integer::i
+  real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
+!!$  real(dp)::rr,tt,omega
   
-!   ! Add here, if you wish, some user-defined initial conditions
-!   aa=1.0+0.*t
-!   twopi=2d0*ACOS(-1d0)
-!   do i=1,ncell
+  ! Add here, if you wish, some user-defined initial conditions
+  aa=1.0+0.*t
+  twopi=2d0*ACOS(-1d0)
+  do i=1,ncell
 
-!      xx=x(i,1)+0.*dx
-! #if NDIM > 1
-!      yy=x(i,2)
-! #endif
-! #if NDIM > 2
-!      zz=x(i,3)
-! #endif
-!      ! ABC
-!      vx=aa*(cos(twopi*yy)+sin(twopi*zz))
-!      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
-!      vz=aa*(cos(twopi*xx)+sin(twopi*yy))
+     xx=x(i,1)+0.*dx
+#if NDIM > 1
+     yy=x(i,2)
+#endif
+#if NDIM > 2
+     zz=x(i,3)
+#endif
+     ! ABC
+     vx=aa*(cos(twopi*yy)+sin(twopi*zz))
+     vy=aa*(sin(twopi*xx)+cos(twopi*zz))
+     vz=aa*(cos(twopi*xx)+sin(twopi*yy))
 
-! !!$     ! 1D advection test
-! !!$     vx=1.0_dp
-! !!$     vy=0.0_dp
-! !!$     vz=0.0_dp
+!!$     ! 1D advection test
+!!$     vx=1.0_dp
+!!$     vy=0.0_dp
+!!$     vz=0.0_dp
 
-! !!$     ! Ponomarenko
-! !!$     xx=xx-boxlen/2.0
-! !!$     yy=yy-boxlen/2.0
-! !!$     rr=sqrt(xx**2+yy**2)
-! !!$     if(yy>0)then
-! !!$        tt=acos(xx/rr)
-! !!$     else
-! !!$        tt=-acos(xx/rr)+twopi
-! !!$     endif
-! !!$     if(rr<1.0)then
-! !!$        omega=0.609711
-! !!$        vz=0.792624
-! !!$     else
-! !!$        omega=0.0
-! !!$        vz=0.0
-! !!$     endif
-! !!$     vx=-sin(tt)*rr*omega
-! !!$     vy=+cos(tt)*rr*omega
+!!$     ! Ponomarenko
+!!$     xx=xx-boxlen/2.0
+!!$     yy=yy-boxlen/2.0
+!!$     rr=sqrt(xx**2+yy**2)
+!!$     if(yy>0)then
+!!$        tt=acos(xx/rr)
+!!$     else
+!!$        tt=-acos(xx/rr)+twopi
+!!$     endif
+!!$     if(rr<1.0)then
+!!$        omega=0.609711
+!!$        vz=0.792624
+!!$     else
+!!$        omega=0.0
+!!$        vz=0.0
+!!$     endif
+!!$     vx=-sin(tt)*rr*omega
+!!$     vy=+cos(tt)*rr*omega
 
-!      v(i,1)=vx
-! #if NDIM > 1
-!      v(i,2)=vy
-! #endif
-! #if NDIM > 2
-!      v(i,3)=vz
-! #endif
-!   end do
+     v(i,1)=vx
+#if NDIM > 1
+     v(i,2)=vy
+#endif
+#if NDIM > 2
+     v(i,3)=vz
+#endif
+  end do
 
 
-! end subroutine velana
+end subroutine velana
