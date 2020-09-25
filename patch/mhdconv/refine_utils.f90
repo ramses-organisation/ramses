@@ -588,7 +588,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   !--------------------------------------------------------------
   real(dp)::pert
   integer ::idim,igrid,iskip,icpu
-  integer ::i,j,ix,iy,iz,ivar,nx_loc
+  integer ::i,j,k,ix,iy,iz,ivar,nx_loc
   integer ,dimension(1:nvector)          ,save::ind_grid_son
   integer ,dimension(1:nvector,0:twondim),save::ind_fathers
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -786,7 +786,11 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
        iskip=ncoarse+(j-1)*ngridmax
        do i=1,nn
           rho_eq(iskip+ind_grid_son(i))=uu(i,1)
-          p_eq(iskip+ind_grid_son(i))=uu(i,neul)*(gamma-1.0D0)
+          p_eq(iskip+ind_grid_son(i))=uu(i,neul)
+          do k=1,3
+            p_eq(iskip+ind_grid_son(i))=p_eq(iskip+ind_grid_son(i)) - 0.125d0*(uu(i,neul+k)+uu(i,nvar+k))**2
+          end do
+          p_eq(iskip+ind_grid_son(i))=p_eq(iskip+ind_grid_son(i))*(gamma-1.0D0)
           ! write(*,*)'hello',rho_eq(iskip+ind_grid_son(i)),p_eq(iskip+ind_grid_son(i))
        end do
     end do

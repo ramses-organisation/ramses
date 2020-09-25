@@ -75,13 +75,13 @@ subroutine condinit(x,u,dx,pert,nn)
     ! Convective zone
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
-      ! produce density perturbation in small layer of convection zone!
-      ! if (x(i,1) .lt. x1+0.5) then
-      !   call random_number(drho)
-      !   drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
-      ! else
-      !   drho = 0.0d0
-      ! end if 
+      !! produce density perturbation in small layer of convection zone!
+      if (x(i,1) .lt. x1+0.5) then
+        call random_number(drho)
+        drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
+      else
+        drho = 0.0d0
+      end if 
       q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
 
@@ -199,22 +199,22 @@ subroutine eneana(x,e,dx,t,ncell)
     e(i) = 0.0d0
   end do 
 
-  !! Heating loop
-  ! do i=1,ncell
-  !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
-  !     ! heating
-  !     !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
-  !     e(i) = e0*rho0 ! erg/s/cm^3
-  !     !e(i) = 0.d0
-  !   else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
-  !     ! cooling
-  !     !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
-  !     e(i) = (-e0)*rho0 ! erg/s/cm^3
-  !     !e(i) = 0.d0
-  !   else
-  !     e(i) = 0.0d0
-  !   end if
-  ! end do 
+  ! Heating loop
+  do i=1,ncell
+    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
+      ! heating
+      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+      e(i) = e0*rho0 ! erg/s/cm^3
+      !e(i) = 0.d0
+    else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
+      ! cooling
+      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+      e(i) = (-e0)*rho0 ! erg/s/cm^3
+      !e(i) = 0.d0
+    else
+      e(i) = 0.0d0
+    end if
+  end do 
 
 end subroutine eneana
 !================================================================
