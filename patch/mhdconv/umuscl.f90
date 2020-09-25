@@ -1191,8 +1191,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! X-edge averaged right-top corner state (RT->LL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j+1,k) + req(l,i,j,k+1) + req(l,i,j+1,k+1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j+1,k) + peq(l,i,j,k+1) + peq(l,i,j+1,k+1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j+1,k) + req(l,i,j,k+1) + req(l,i,j+1,k+1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j+1,k) + peq(l,i,j,k+1) + peq(l,i,j+1,k+1))
 
               qRT(l,i,j,k,ir,1) = r + (+dry+drz) - req(l,i,j,k) + qreq4
               qRT(l,i,j,k,iu,1) = u + (+duy+duz)
@@ -1211,8 +1211,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! X-edge averaged right-bottom corner state (RB->LR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j+1,k) + req(l,i,j,k-1) + req(l,i,j+1,k-1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j+1,k) + peq(l,i,j,k-1) + peq(l,i,j+1,k-1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j+1,k) + req(l,i,j,k-1) + req(l,i,j+1,k-1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j+1,k) + peq(l,i,j,k-1) + peq(l,i,j+1,k-1))
 
               qRB(l,i,j,k,ir,1) = r + (+dry-drz) - req(l,i,j,k) + qreq4
               qRB(l,i,j,k,iu,1) = u + (+duy-duz)
@@ -1231,8 +1231,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! X-edge averaged left-top corner state (LT->RL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j-1,k) + req(l,i,j,k+1) + req(l,i,j-1,k+1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j-1,k) + peq(l,i,j,k+1) + peq(l,i,j-1,k+1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j-1,k) + req(l,i,j,k+1) + req(l,i,j-1,k+1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j-1,k) + peq(l,i,j,k+1) + peq(l,i,j-1,k+1))
 
               qLT(l,i,j,k,ir,1) = r + (-dry+drz) - req(l,i,j,k) + qreq4
               qLT(l,i,j,k,iu,1) = u + (-duy+duz)
@@ -1251,8 +1251,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! X-edge averaged left-bottom corner state (LB->RR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j-1,k) + req(l,i,j,k-1) + req(l,i,j-1,k-1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j-1,k) + peq(l,i,j,k-1) + peq(l,i,j-1,k-1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i,j-1,k) + req(l,i,j,k-1) + req(l,i,j-1,k-1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i,j-1,k) + peq(l,i,j,k-1) + peq(l,i,j-1,k-1))
 
               qLB(l,i,j,k,ir,1) = r + (-dry-drz) - req(l,i,j,k) + qreq4
               qLB(l,i,j,k,iu,1) = u + (-duy-duz)
@@ -1271,8 +1271,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Y-edge averaged right-top corner state (RT->LL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j,k+1) + req(l,i+1,j,k+1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j,k+1) + peq(l,i+1,j,k+1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j,k+1) + req(l,i+1,j,k+1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j,k+1) + peq(l,i+1,j,k+1))
 
               qRT(l,i,j,k,ir,2) = r + (+drx+drz) - req(l,i,j,k) + qreq4
               qRT(l,i,j,k,iu,2) = u + (+dux+duz)
@@ -1291,8 +1291,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Y-edge averaged right-bottom corner state (RB->LR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j,k-1) + req(l,i+1,j,k-1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j,k-1) + peq(l,i+1,j,k-1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j,k-1) + req(l,i+1,j,k-1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j,k-1) + peq(l,i+1,j,k-1))
 
               qRB(l,i,j,k,ir,2) = r + (+drx-drz) - req(l,i,j,k) + qreq4
               qRB(l,i,j,k,iu,2) = u + (+dux-duz)
@@ -1311,8 +1311,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Y-edge averaged left-top corner state (LT->RL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j,k+1) + req(l,i-1,j,k+1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j,k+1) + peq(l,i-1,j,k+1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j,k+1) + req(l,i-1,j,k+1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j,k+1) + peq(l,i-1,j,k+1))
 
               qLT(l,i,j,k,ir,2) = r + (-drx+drz) - req(l,i,j,k) + qreq4
               qLT(l,i,j,k,iu,2) = u + (-dux+duz)
@@ -1331,8 +1331,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Y-edge averaged left-bottom corner state (LB->RR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j,k-1) + req(l,i-1,j,k-1)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j,k-1) + peq(l,i-1,j,k-1)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j,k-1) + req(l,i-1,j,k-1))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j,k-1) + peq(l,i-1,j,k-1))
 
               qLB(l,i,j,k,ir,2) = r + (-drx-drz) - req(l,i,j,k) + qreq4
               qLB(l,i,j,k,iu,2) = u + (-dux-duz)
@@ -1351,8 +1351,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Z-edge averaged right-top corner state (RT->LL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j+1,k) + req(l,i+1,j+1,k)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j+1,k) + peq(l,i+1,j+1,k)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j+1,k) + req(l,i+1,j+1,k))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j+1,k) + peq(l,i+1,j+1,k))
 
               qRT(l,i,j,k,ir,3) = r + (+drx+dry) - req(l,i,j,k) + qreq4
               qRT(l,i,j,k,iu,3) = u + (+dux+duy)
@@ -1371,8 +1371,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Z-edge averaged right-bottom corner state (RB->LR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j-1,k) + req(l,i+1,j-1,k)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j-1,k) + peq(l,i+1,j-1,k)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j-1,k) + req(l,i+1,j-1,k))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j-1,k) + peq(l,i+1,j-1,k))
 
               qRB(l,i,j,k,ir,3) = r + (+drx-dry) - req(l,i,j,k) + qreq4
               qRB(l,i,j,k,iu,3) = u + (+dux-duy)
@@ -1391,8 +1391,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Z-edge averaged left-top corner state (LT->RL)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j+1,k) + req(l,i-1,j+1,k)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j+1,k) + peq(l,i-1,j+1,k)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j+1,k) + req(l,i-1,j+1,k))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j+1,k) + peq(l,i-1,j+1,k))
 
               qLT(l,i,j,k,ir,3) = r + (-drx+dry) - req(l,i,j,k) + qreq4
               qLT(l,i,j,k,iu,3) = u + (-dux+duy)
@@ -1411,8 +1411,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 #endif
 
               ! Z-edge averaged left-bottom corner state (LB->RR)
-              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j-1,k) + req(l,i-1,j-1,k)))
-              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j-1,k) + peq(l,i-1,j-1,k)))
+              qreq4 = 0.25*(req(l,i,j,k) + req(l,i-1,j,k) + req(l,i,j-1,k) + req(l,i-1,j-1,k))
+              qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i-1,j,k) + peq(l,i,j-1,k) + peq(l,i-1,j-1,k))
 
               qLB(l,i,j,k,ir,3) = r + (-drx-dry) - req(l,i,j,k) + qreq4
               qLB(l,i,j,k,iu,3) = u + (-dux-duy)
