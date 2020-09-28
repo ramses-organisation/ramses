@@ -75,12 +75,11 @@ subroutine condinit(x,u,dx,pert,nn)
     ! Convective zone
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
-      !! produce density perturbation in small layer of convection zone!
+      drho = 0.0d0
       if (x(i,1) .lt. x1+0.5) then
+        !! produce density perturbation in small layer of convection zone!
         call random_number(drho)
         drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
-      else
-        drho = 0.0d0
       end if 
       q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
