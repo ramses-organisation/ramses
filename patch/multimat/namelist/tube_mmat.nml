@@ -47,15 +47,19 @@ p_region =1.0,1d-4
 /
 
 &OUTPUT_PARAMS
-noutput=1
-tout=0.23,
+delta_tout=0.01
+tend=0.23
 /
 
 &HYDRO_PARAMS
 courant_factor=0.5
 slope_type=2
 scheme='muscl'
+<<<<<<< HEAD
 eos_name='mie-grueneisen'
+=======
+eos_name='stiffened gas'
+>>>>>>> remotes/rteyssie/ramses/master
 /
 
 &REFINE_PARAMS 

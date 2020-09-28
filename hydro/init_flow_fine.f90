@@ -53,7 +53,7 @@ subroutine init_flow_fine(ilevel)
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane
 
-  logical::error,ok_file1,ok_file2,ok_file3,ok_file
+  logical::error,ok_file1,ok_file2,ok_file3,ok_file,ok_velb
   character(LEN=80)::filename
   character(LEN=5)::nchar,ncharvar
 
@@ -99,6 +99,9 @@ subroutine init_flow_fine(ilevel)
   else
      filename=TRIM(initfile(ilevel))//'/ic_deltab'
      INQUIRE(file=filename,exist=ok_file2)
+     ! check if ic_velbx exists, otherwise we fall back to ic_velcx/y/z
+     filename=TRIM(initfile(ilevel))//'/ic_velbx'
+     INQUIRE(file=filename,exist=ok_velb)
   endif
   ok_file = ok_file1 .or. ok_file2
   if(ok_file)then
@@ -161,9 +164,15 @@ subroutine init_flow_fine(ilevel)
               if(ivar==5)filename=TRIM(initfile(ilevel))//'/dir_tempb/ic_tempb.'//TRIM(nchar)
            else
               if(ivar==1)filename=TRIM(initfile(ilevel))//'/ic_deltab'
-              if(ivar==2)filename=TRIM(initfile(ilevel))//'/ic_velcx'
-              if(ivar==3)filename=TRIM(initfile(ilevel))//'/ic_velcy'
-              if(ivar==4)filename=TRIM(initfile(ilevel))//'/ic_velcz'
+              if(ok_velb) then
+                if(ivar==2)filename=TRIM(initfile(ilevel))//'/ic_velbx'
+                if(ivar==3)filename=TRIM(initfile(ilevel))//'/ic_velby'
+                if(ivar==4)filename=TRIM(initfile(ilevel))//'/ic_velbz'
+              else
+                if(ivar==2)filename=TRIM(initfile(ilevel))//'/ic_velcx'
+                if(ivar==3)filename=TRIM(initfile(ilevel))//'/ic_velcy'
+                if(ivar==4)filename=TRIM(initfile(ilevel))//'/ic_velcz'
+              endif
               if(ivar==5)filename=TRIM(initfile(ilevel))//'/ic_tempb'
            endif
         else
