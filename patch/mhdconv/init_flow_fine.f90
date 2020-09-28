@@ -430,7 +430,8 @@ subroutine init_flow_fine(ilevel)
               end do
            end do
            ! Call initial condition routine
-           call condinit(xx,uu,dx_loc,ngrid)
+           pert = 1.0
+           call condinit(xx,uu,dx_loc,pert,ngrid)
            ! Scatter variables
            do ivar=1,nvar+3
               do i=1,ngrid

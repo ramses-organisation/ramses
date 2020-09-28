@@ -10,8 +10,11 @@ subroutine boundana(x,u,dx,ibound,nn)
   integer ::ibound                        ! Index of boundary region
   integer ::nn                            ! Number of active cells
   real(dp)::dx                            ! Cell size
-
+#ifdef SOLVERmhd
   real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
+#else
+  real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
+#endif
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
   ! This routine generates boundary conditions for RAMSES.
@@ -24,13 +27,11 @@ subroutine boundana(x,u,dx,ibound,nn)
   ! ibound is the index of the boundary region defined in the namelist.
   !================================================================
 
-  #if NENER>0
+#if NENER>0
   integer::irad
 #endif
-#if NVAR>8+NENER
-  integer::ivar
-#endif
-  integer::i,id,iu,iv,iw,ip,is                     ! Indices Euler
+
+  integer::i,ivar,id,iu,iv,iw,ip,is                     ! Indices Euler
   integer::iAL,iBL,iCL,iAR,iBR,iCR                 ! Indices Magnetic field
   real(dp)::p1,p2,p3,rho1,rho2,rho3,x1,x2,g,T0,drho! Variables
   real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields                   
@@ -52,6 +53,18 @@ subroutine boundana(x,u,dx,ibound,nn)
   gammainit3=gamma_region(3)
   g = abs(gravity_params(1))
 
+#ifdef SOLVERmhd
+  do ivar=1,nvar+3
+#else
+  do ivar=1,nvar
+#endif
+     do i=1,nn
+        u(i,ivar)=boundary_var(ibound,ivar)
+     end do
+  end do
+
+  ! User defined boundary conditions 
+  
   do i=1,nn
     !! rho, P
     ! Bottom stable zone
@@ -70,14 +83,7 @@ subroutine boundana(x,u,dx,ibound,nn)
     ! Convective zone
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
-      ! produce density perturbation in small layer of convection zone!
-      if (x(i,1) .lt. x1+0.5) then
-        call random_number(drho)
-        drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
-      else
-        drho = 0.0d0
-      end if 
-      q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
+      q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
 
       q(i,iAL)=A2
