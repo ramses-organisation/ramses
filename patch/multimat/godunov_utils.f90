@@ -23,7 +23,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
   real(dp)::g0,p0,a0,b0,smallp
   real(dp),dimension(1:nvector),save::alpha_tot,beta_tot
   real(dp),dimension(1:nvector),save::gamma_tot,pinf_tot
-  real(dp)::smallgamma,biggamma,p_0,e_c,P_c, delpc
+  real(dp)::smallgamma,biggamma,p_0,e_c,p_c, delpc
   real(dp)::rho_0,C_v,T_0,E_0,E_1,E_2,A_1,A_2,p_c_1,p_c_2,eta
   real(dp),dimension(1:nvector),save::ec_hat,pc_hat,pc2_hat,alpha_hat
   real(dp),dimension(1:nvector),save::gamma_hat,delpc_hat
@@ -333,7 +333,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
             ! Update total values
             alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
             ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
-            pc_hat(k) = pc_hat(k) + f(k,imat) * P_c * a0 
+            pc_hat(k) = pc_hat(k) + f(k,imat) * p_c * a0 
             delpc_hat(k) = delpc_hat(k) + f(k,imat) * delpc * a0 
          end do
       end do
