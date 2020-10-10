@@ -523,7 +523,7 @@ program amr2map
   case (0)
      write(*,*)'max level=',metmax
   case (34) !! This is cell-centered 0.5*B^2
-     write(*,*)'max magnetic strength (microGauss)',sqrt(2.0*metmax)*sqrt(scale_d)*scale_l/scale_t/1d-6
+     write(*,*)'max magnetic strength (microGauss)',sqrt(2.0*metmax)*sqrt(4d0*3.1415926)*sqrt(scale_d)*scale_l/scale_t/1d-6
   case (15) !! This is for temperature (hydro case)
      write(*,*)'max temperature (Kelvin)',metmax*(scale_l/scale_t)**2/1.38d-16*1.66d-24
   case (35) !! This is for temperature (MHD case)
