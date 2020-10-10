@@ -446,28 +446,33 @@ program amr2map
               case (0)
                  map = ilevel
                  metmax=max(metmax,dble(ilevel))
-              case (12) !! This is for H2 using HI and HII (ramses_rt patch mol)
-                 if(action==0)then
-                    map = (1.0-var(:,ind,8)-var(:,ind,9))*var(:,ind,1)
-                 else
-                    map = 1.0-var(:,ind,8)-var(:,ind,9)
-                 endif
-                 metmax=max(metmax,maxval(1.0-var(:,ind,8)-var(:,ind,9)))
-              case (5) !! This is for temperature
-                 if(action==0)then
-                    map = var(:,ind,5)
-                 else
-                    map = var(:,ind,5)/var(:,ind,1)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,type)))
+              case (22) !! This is for H2 using HI and HII (ramses_rt patch mol)
+                 map = 1.0-var(:,ind,8)-var(:,ind,9)
+                 metmax=max(metmax,maxval(map))
+              case (31) !! This is cell-centered Bx
+                 map = 0.5*(var(:,ind,5)+var(:,ind,8))
+                 metmax=max(metmax,maxval(map))
+              case (32) !! This is cell-centered By
+                 map = 0.5*(var(:,ind,6)+var(:,ind,9))
+                 metmax=max(metmax,maxval(map))
+              case (33) !! This is cell-centered Bz
+                 map = 0.5*(var(:,ind,7)+var(:,ind,10))
+                 metmax=max(metmax,maxval(map))
+              case (34) !! This is cell-centered 0.5*B^2
+                 map = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
+                 metmax=max(metmax,maxval(map))
+              case (15) !! This is for temperature (Hydro case)
+                 map = var(:,ind,5)/var(:,ind,1)
+                 metmax=max(metmax,maxval(map))
+              case (35) !! This is for temperature (MHD case)
+                 map = var(:,ind,11)/var(:,ind,1)
+                 metmax=max(metmax,maxval(map))
               case default ! Hydro variable
-                 if(action==0)then
-                    map = var(:,ind,type)*var(:,ind,1)
-                 else
-                    map = var(:,ind,type)
-                 endif
-                 metmax=max(metmax,maxval(var(:,ind,type)))
+                 map = var(:,ind,type)
+                 metmax=max(metmax,maxval(map))
               end select
+              ! Mass-weighting here
+              if(action==0)map=map*rho
               ! Store data map
               do i=1,ngrida
                  ok_cell= .not.ref(i)
@@ -512,9 +517,20 @@ program amr2map
   end do
   ! End loop over cpu
 
-  if(type==0.OR.type==1.OR.type>4)then
-     write(*,*)'max val=',metmax
-  endif
+  select case (type)
+  case (-1)
+     write(*,*)'max cpu=',metmax
+  case (0)
+     write(*,*)'max level=',metmax
+  case (34) !! This is cell-centered 0.5*B^2
+     write(*,*)'max magnetic strength (microGauss)',sqrt(2.0*metmax)*sqrt(scale_d)*scale_l/scale_t/1d-6
+  case (15) !! This is for temperature (hydro case)
+     write(*,*)'max temperature (Kelvin)',metmax*(scale_l/scale_t)**2/1.38d-16*1.66d-24
+  case (35) !! This is for temperature (MHD case)
+     write(*,*)'max temperature (Kelvin)',metmax*(scale_l/scale_t)**2/1.38d-16*1.66d-24
+  case default ! Hydro variable
+     write(*,*)'max value (code units)=',metmax
+  end select
 
   nx_full=2**lmax
   ny_full=2**lmax

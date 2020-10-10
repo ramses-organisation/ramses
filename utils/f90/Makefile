@@ -1,13 +1,11 @@
 # Makefile for RAMSES utils
 BINDIR=.
 
-# Ifort configuration
-#F90=ifort
-#F90=ftn
-F90=gfortran
-CFLAGS=-x f95-cpp-input -ffree-line-length-none
+# ifort configuration
+F90=ifort
+CFLAGS=-cpp
 
-# # Gfortran configuration
+# gfortran configuration
 #F90=gfortran
 #CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input
 
