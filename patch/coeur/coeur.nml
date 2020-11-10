@@ -33,8 +33,11 @@ slope_type=1
 riemann='hllc'
 /
 
-&PHYSICS_PARAMS
+&COOLING_PARAMS
 isothermal=.true.
+/
+
+&SF_PARAMS
 T2_star=4.29
 g_star=2.0
 n_star=1d10
