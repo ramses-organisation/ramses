@@ -14,14 +14,14 @@ NDIM = 2
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = mhd
+SOLVER = hydro
 # Patch
-PATCH = '../patch/mhdconv'
+PATCH = '../patch/convection'
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = mpif90
+MPIF90 = ftn
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
