@@ -76,11 +76,13 @@ subroutine condinit(x,u,dx,pert,nn)
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
       drho = 0.0d0
-      if (x(i,1) .lt. x1+0.5) then
-        !! produce density perturbation in small layer of convection zone!
-        call random_number(drho)
-        drho = pert*2.0*(drho-0.5)*10.0**(-2.0)
-      end if 
+      if ((pert_r .gt. 0.) .and. (pert_dx .gt. 0.)) then
+        if (x(i,1) .lt. x1+pert_dx) then
+          !! produce density perturbation in small layer of convection zone!
+          call random_number(drho)
+          drho = pert_r*pert*2.0*(drho-0.5)*10.0**(-2.0)
+        end if 
+      end if
       q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
 
@@ -186,9 +188,11 @@ subroutine eneana(x,e,dx,t,ncell)
   x2 = x_center(2)
   rho0 = d_region(2)
 
+  e0 = heating_r
+  dxq = heating_dx
   ! HeFlash
-  e0 = 2.0e-6 ! erg/g/s (Normalized 10**16)
-  dxq = 0.5d0
+  !e0 = 2.0e-6 ! erg/g/s (Normalized 10**16)
+  !dxq = 0.5d0
   ! Model S
   !e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
   ! dxq = 2.0d0
