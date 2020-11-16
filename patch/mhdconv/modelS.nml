@@ -10,11 +10,11 @@ nsubcycle=30*1
 /
 
 &AMR_PARAMS 
-levelmin=7
-levelmax=7
+levelmin=6
+levelmax=6
 ngridmax=200000
 nexpand=1
-boxlen=11.0
+boxlen=245.0
 /
 
 &BOUNDARY_PARAMS
@@ -26,33 +26,34 @@ bound_type= 3, 3
 
 &INIT_PARAMS
 nregion=3
-d_region=61251.472241966614, 11730.0, 915.1961244005973
-p_region=51445.64121153108, 17652.602679679483, 251.47936015821497
-gamma_region=1.2,1.66667,1.01
-x_center=1.6418520000000012, 7.777926
+d_region=0.31131962828209825,0.2079181,0.004821270449042899
+p_region=0.010265608384568378,0.0065847466,0.000012400603359643595
+gamma_region=1.1,1.6666666666667,1.1
+x_center=36.68015637000004,219.47087889
 A_region=0.0,0.0,0.0
 B_region=0.0,0.0,0.0
 C_region=0.0,0.0,0.0
 pert_r = 1.0
-pert_dx = 0.5
-heating_r = 2.489e-4
-heating_dx = 0.5
+pert_dx = 50.0
+heating_r = 2.0e-10
+heating_dx = 10.0
 /
 
 &OUTPUT_PARAMS
-delta_tout=5
-tend=100
+delta_tout=5000
+tend=30000
 /
 
 &POISSON_PARAMS 
 gravity_type=1
-gravity_params=-0.5011872336272725,0.0,0.0
+gravity_params=-0.0003981071705534969,0.0,0.0
 /
 
 &HYDRO_PARAMS
 gamma=1.66667
 courant_factor=0.8
 riemann='hlld'
+riemann2d='hlld'
 slope_type=2
 strict_equilibrium=1
 scheme='muscl'
