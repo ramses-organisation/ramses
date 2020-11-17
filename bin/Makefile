@@ -10,11 +10,11 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 3
+NDIM = 1
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = mhd
+SOLVER = hydro
 # Patch
 PATCH =
 # Use RT? 1=Yes, 0=No
@@ -23,7 +23,7 @@ RT = 0
 NIMHD=1
 HALL=0
 # Use MPI? 1=Yes, 0=No
-MPI = 1
+MPI = 0
 MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
