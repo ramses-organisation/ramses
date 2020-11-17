@@ -275,6 +275,9 @@ subroutine output_frame()
      yright_frame = zcen+delz/2.
      zleft_frame  = xcen-delx/2.
      zright_frame = xcen+delx/2.
+
+     dx_frame = dely/dble(nw_frame)
+     dy_frame = delz/dble(nh_frame)
   elseif(proj_ax.eq.2) then ! y-projection
      xleft_frame  = xcen-delx/2.
      xright_frame = xcen+delx/2.
@@ -282,6 +285,9 @@ subroutine output_frame()
      yright_frame = zcen+delz/2.
      zleft_frame  = ycen-dely/2.
      zright_frame = ycen+dely/2.
+
+     dx_frame = delx/dble(nw_frame)
+     dy_frame = delz/dble(nh_frame)
   else                      ! z-projection
      xleft_frame  = xcen-delx/2.
      xright_frame = xcen+delx/2.
@@ -289,6 +295,9 @@ subroutine output_frame()
      yright_frame = ycen+dely/2.
      zleft_frame  = zcen-delz/2.
      zright_frame = zcen+delz/2.
+
+     dx_frame = delx/dble(nw_frame)
+     dy_frame = dely/dble(nh_frame)
   endif
   
   ! Allocate image
@@ -320,8 +329,6 @@ subroutine output_frame()
      data_frame(:,:,:) = 0.0
   endif
   weights(:,:) = 0d0
-  dx_frame = delx/dble(nw_frame)
-  dy_frame = dely/dble(nh_frame)
 
   if(hydro) then
      ! Loop over levels

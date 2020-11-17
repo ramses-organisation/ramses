@@ -288,9 +288,9 @@ program part2prof
      read(1)m
      if(nstar>0)then
         read(1)id ! Read identity
+        read(1)   ! Skip level
         read(1)family
         read(1)tag
-        read(1)   ! Skip level
         read(1)age
      endif
      close(1)
@@ -337,7 +337,7 @@ program part2prof
            end if
         end if
      end do
-     deallocate(x,m,v,age,id)
+     deallocate(x,m,v,age,id,family,tag)
   end do
 
   ! Compute cumulated profiles
