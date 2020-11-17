@@ -50,6 +50,14 @@ module amr_commons
   real(dp),dimension(1:MAXLEVEL)::rho_max     ! Maximum density at each level
   integer ,dimension(1:MAXLEVEL)::nsubcycle=2 ! Subcycling at each level
 
+  ! Non-ideal MHD related timesteps
+!#ifdef NIMHD
+  ! gives compilation error when in if NIMHD block
+  integer,dimension(1:MAXLEVEL)::nsts=0
+  real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtwad,dtmagdiff,dthall,dtsts
+  real(dp),dimension(1:MAXLEVEL)::dtambdiffold,dtwadold,dtmagdiffold,dthallold
+!#endif
+  
   ! Pointers for each level linked list
   integer,allocatable,dimension(:,:)::headl
   integer,allocatable,dimension(:,:)::taill

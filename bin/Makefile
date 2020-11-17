@@ -10,17 +10,20 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 1
+NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = hydro
+SOLVER = mhd
 # Patch
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
+# Use non-ideal MHD? 1=Yes, 0=No
+NIMHD=1
+HALL=0
 # Use MPI? 1=Yes, 0=No
-MPI = 0
+MPI = 1
 MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
@@ -44,6 +47,10 @@ NVAR = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
+# current is treated as a passive scalar?
+ifeq ($(NIMHD),1)
+   NPSCAL := $(NPSCAL)+3
+endif
 NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
@@ -61,6 +68,9 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
           -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
 ifeq ($(GRACKLE),1)
    DEFINES += -Dgrackle
+endif
+ifeq ($(NIMHD),1)
+   DEFINES += -DNIMHD
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
    DEFINES += -DMPI_OLD
@@ -131,6 +141,9 @@ VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
+ifeq ($(NIMHD),1)
+   VPATH += ../nimhd:
+endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
@@ -145,6 +158,9 @@ MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
+ifeq ($(NIMHD),1)
+   MODOBJ += nimhd_commons.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o \
@@ -173,6 +189,9 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
         rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
         rt_boundana.o rt_units.o
+# NIMHD objects
+NIMHDOBJ = uplmde_sts_ohm_dtu.o uplmde_sts_ohm.o nimhd_effects.o
+
 # Patch objects
 sinclude $(PATCH)/Makefile
 
@@ -180,6 +199,9 @@ sinclude $(PATCH)/Makefile
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
+endif
+ifeq ($(NIMHD),1)
+   AMRLIB += $(NIMHDOBJ)
 endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o

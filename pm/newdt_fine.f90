@@ -42,9 +42,21 @@ subroutine newdt_fine(ilevel)
 
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
+#ifdef NIMHD
+  dtambdiffold(ilevel)=dtambdiff(ilevel)
+  dtmagdiffold(ilevel)=dtmagdiff(ilevel)
+  dtwadold(ilevel)=dtwad(ilevel)
+  dthallold(ilevel)=dthall(ilevel)
+#endif
 
   ! Maximum time step
   dtnew(ilevel)=boxlen/smallc
+#ifdef NIMHD
+  dtambdiff(ilevel)=dtnew(ilevel)
+  dtmagdiff(ilevel)=dtnew(ilevel)
+  dtwad(ilevel)=dtnew(ilevel)
+  dthall(ilevel)=dtnew(ilevel)
+#endif
   if(poisson.and.gravity_type<=0)then
      fourpi=4.0d0*pi
      if(cosmo)fourpi=1.5d0*omega_m*aexp

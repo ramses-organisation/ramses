@@ -26,6 +26,7 @@ subroutine init_hydro
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
   ncell=ncoarse+twotondim*ngridmax
+  ! Remark: in case of NIMHD, the 3 current variables are included in nvar
   allocate(uold(1:ncell,1:nvar+3))
   allocate(unew(1:ncell,1:nvar+3))
   uold=0.0d0; unew=0.0d0
@@ -34,7 +35,11 @@ subroutine init_hydro
      allocate(pstarnew(1:ncell))
      pstarold=0.0d0; pstarnew=0.0d0
   endif
+#ifdef NIMHD
+  if(pressure_fix .or. nambipolar2.eq.1 .or.nmagdiffu2.eq.1)then
+#else
   if(pressure_fix)then
+#endif     
      allocate(divu(1:ncell))
      allocate(enew(1:ncell))
      divu=0.0d0; enew=0.0d0
@@ -163,12 +168,27 @@ subroutine init_hydro
                     uold(ind_grid(i)+iskip,5)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
                  end do
 #if NVAR > 8+NENER
+#ifdef NIMHD
+                 do ivar=9+nener,nvar-3 ! Read passive scalars if any
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                    end do
+                 end do
+                 do ivar=nvar-2,nvar ! Read current
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)
+                    end do
+                 end do
+#else
                  do ivar=9+nener,nvar ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache
                        uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                     end do
                  end do
+#endif
 #endif
               end do
               deallocate(ind_grid,xx)

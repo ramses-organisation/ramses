@@ -2,6 +2,10 @@ subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
   use mpi_mod
+#ifdef NIMHD
+  use nimhd_commons
+  use constants, ONLY:mH
+#endif
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -13,6 +17,10 @@ subroutine read_hydro_params(nml_ok)
   logical :: dummy
 #ifdef SOLVERmhd
   real(dp)::em_bound
+#endif
+#ifdef NIMHD
+  integer::j,k
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 #endif
 
   !--------------------------------------------------
@@ -87,11 +95,11 @@ subroutine read_hydro_params(nml_ok)
        & ,ir_feedback,ir_eff,t_diss,t_sne,mass_star_max,mass_sne_min
 
   ! Cooling / basic chemistry parameters
-  namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
+  namelist/cooling_params/cooling,metal,isothermal,barotrop,haardt_madau,J21 &
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
-  namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
+  namelist/sf_params/m_star,n_star,T2_star,g_star,mu_gas,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
        & ,sf_log_properties,sf_imf,sf_compressive
 
@@ -113,6 +121,16 @@ subroutine read_hydro_params(nml_ok)
        & ,grackle_DustTemperatureStart,grackle_DustTemperatureEnd,grackle_LWbackground_intensity,grackle_UVbackground_redshift_on &
        & ,grackle_UVbackground_redshift_off,grackle_UVbackground_redshift_fullon,grackle_UVbackground_redshift_drop &
        & ,grackle_cloudy_electron_fraction_factor,grackle_data_file
+#endif
+
+#ifdef NIMHD
+  ! Non-ideal MHD parameters
+  namelist/nonidealmhd_params/nambipolar,gammaAD &
+       & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
+       & ,coefad, nminitimestep, coefalfven,nmagdiffu2,nambipolar2,nu_sts,coefdtohm &
+       & ,DTU,nimhdheating_in_eint
+
+  namelist/pseudovisco_params/nvisco,visco
 #endif
 
   ! Read namelist file
@@ -217,6 +235,126 @@ subroutine read_hydro_params(nml_ok)
     write(*,*)'unknown 2D riemann solver'
     call clean_stop
   END SELECT
+
+! Checks on non-ideal MHD parameters
+#ifdef NIMHD
+  rewind(1)
+  read(1,NML=nonidealmhd_params,END=109)
+109 continue
+  if((nambipolar.ne.0).and.(nambipolar.ne.1)) then
+     write(*,*)'Wrong choice for nambipolar'
+     call clean_stop
+  end if
+  if((nmagdiffu.ne.0).and.(nmagdiffu.ne.1)) then
+     write(*,*)'Wrong choice for nmagdiffu'
+     call clean_stop
+  end if
+  if((nhall.ne.0).and.(nhall.ne.1)) then
+     write(*,*)'Wrong choice for nhall'
+     call clean_stop
+  end if
+
+  if((nmagdiffu.eq.1).and.(nmagdiffu2.eq.1)) then
+     write(*,*)'Wrong choice for nmagdiffu : choose one kind not both'
+     call clean_stop
+  end if
+
+  if((nambipolar.eq.1).and.(nambipolar2.eq.1)) then
+     write(*,*)'Wrong choice for nambipolar : choose one kind not both'
+     call clean_stop
+  end if
+
+  if( (nambipolar.eq.1) .or. (nambipolar2.eq.1) .or. &
+      (nmagdiffu .eq.1) .or. (nmagdiffu2 .eq.1) .or. &
+      (nhall.eq.1) )then
+     use_nonideal_mhd = .true.
+  else
+     use_nonideal_mhd = .false.
+  endif
+
+  if(myid==1) then
+     write(*,*)'!!!!!!!!!!!!!!!  Non Ideal MHD   !!!!!!!!!!!!!!!!'
+     write(*,*)'Non ideal MHD parameters'
+     write(*,*)'Making a test ? (Yes=1 No=0)',ntestDADM
+     if(nambipolar.eq.1) then
+        write(*,*)'Ambipolar diffusion switched ON'
+        write(*,*)'Ambipolar diffusion coefficient',gammaAD
+        write(*,*)'Ambipolar diffusion time coefficient',coefad
+        write(*,*)'Ionisation coefficient',coefionis
+        if(nminitimestep.eq.1) then
+           write(*,*)'Mini time step switched ON'
+           write(*,*)'Mini time step coefficient',coefalfven
+        else
+           write(*,*)'Mini time step switched OFF'
+        endif
+     endif
+     if(nambipolar2==1) then
+        write(*,*)'Ambipolar diffusion switched ON : subcylcing'
+        write(*,*)'Ambipolar diffusion coefficient',gammaAD
+        write(*,*)'Ambipolar diffusion time coefficient',coefad
+        write(*,*)'Ionisation coefficient',coefionis
+        if(nminitimestep.eq.1) then
+           write(*,*)'Mini time step switched ON'
+           write(*,*)'Mini time step coefficient',coefalfven
+        else
+           write(*,*)'Mini time step switched OFF'
+        endif
+     endif
+
+     if((nambipolar.eq.0) .and. (nambipolar2 == 0)) write(*,*)'Ambipolar diffusion switched OFF'
+
+     if(nmagdiffu.eq.1)then
+        write(*,*)'Magnetic diffusion switched ON : multiple time stepping'
+        write(*,*)'Magnetic diffusion coefficient',etaMD
+        write(*,*)'Magnetic diffusion  time coefficient',coefohm
+     endif
+     if(nmagdiffu2.eq.1)then
+        write(*,*)'Magnetic diffusion switched ON : subcycling'
+        write(*,*)'Magnetic diffusion coefficient',etaMD
+        write(*,*)'Magnetic diffusion  time coefficient',coefohm
+     endif
+     if((nmagdiffu.eq.0).and.(nmagdiffu2.eq.0))write(*,*)'Magnetic diffusion switched OFF'
+
+     if(nhall.eq.1)then
+        write(*,*)'Hall effect switched ON'
+        write(*,*)'Hall resistivity',rHall
+        write(*,*)'Hall effect time coefficient',coefhall
+     endif
+     if(nhall.eq.0)write(*,*)'Hall effect switched OFF'
+
+     ! change solver is always used in this version
+        write(*,*)'Solveur change when the time step becomes too small'
+        write(*,*)'switch_solv', switch_solv
+  endif
+
+  rewind(1)
+  read(1,NML=pseudovisco_params,END=111)
+111 continue
+  if((nvisco.ne.0).and.(nvisco.ne.1)) then
+     write(*,*)'Wrong choice for nvisco'
+     call clean_stop
+  end if
+
+  if(myid==1) then
+     write(*,*)'!!!!!!!!! Pseudo Viscosity Parameters  !!!!!!!!!!'
+     if(nvisco.eq.1) then
+        write(*,*)'Pseudo viscosity switched ON'
+        write(*,*)'Pseudo viscosity coefficient',visco
+        write(*,*)'Pseudo viscosity time coefficient',coefvisco
+     endif
+
+     if(nvisco.eq.0) then
+        write(*,*)'Pseudo viscosity switched OFF'
+     endif
+  endif
+
+  if((nambipolar2.eq.1).or.(nmagdiffu2.eq.1))then
+     if(pressure_fix.eqv..false.) then
+        write(*,*)'STS needs pressure_fix=.true. to work....'
+        call clean_stop
+     end if
+  end if
+#endif
 
   !--------------------------------------------------
   ! Make sure virtual boundaries are expanded to
@@ -511,6 +649,53 @@ subroutine read_hydro_params(nml_ok)
   endif
   if (interpol_mag_type == -1) then
     interpol_mag_type = interpol_type
+  endif
+#endif
+
+#ifdef NIMHD
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  !------------------------------------------
+  ! Read resistivity tables for non-ideal MHD
+  !------------------------------------------
+  !TODO: What about if TEST?
+  if(use_nonideal_mhd)then
+     if(use_x3d==1)then
+        open(42,file='marchand2016_table.dat',status='old')
+        read(42,*) nchimie, tchimie, xichimie, nvarchimie
+        read(42,*)
+        read(42,*)
+        !write(*,*)nchimie, tchimie, xichimie, nvarchimie
+        allocate(resistivite_chimie_x(-2:nvarchimie+4,nchimie,tchimie,xichimie))
+        do k=1,xichimie
+        do i=1,tchimie
+           do j=1,nchimie
+              read(42,*)resistivite_chimie_x(-2:nvarchimie+4,j,i,k)
+!              print *, resistivite_chimie_x(:,j,i)
+           end do
+           read(42,*)
+        end do
+        end do
+        close(42)
+
+        rho_threshold=max(rho_threshold,resistivite_chimie_x(-2,1,1,1)*(mu_gas*mH)/scale_d) ! input in part/cc, output in code units
+        nminchimie=(resistivite_chimie_x(-2,1,1,1))
+        dnchimie=(log10(resistivite_chimie_x(-2,nchimie,1,1))-log10(resistivite_chimie_x(-2,1,1,1)))/&
+                 &(nchimie-1)
+        !         print*, dnchimie,15d0/50d0
+        tminchimie=(resistivite_chimie_x(-1,1,1,1))
+        dtchimie=(log10(resistivite_chimie_x(-1,1,tchimie,1))-log10(resistivite_chimie_x(-1,1,1,1)))/&
+                 &(tchimie-1)
+        !         print*, dtchimie,3d0/50d0
+        !print*,tminchimie,dtchimie
+        ximinchimie=(resistivite_chimie_x(0,1,1,1))
+        dxichimie=(log10(resistivite_chimie_x(0,1,1,xichimie))-log10(resistivite_chimie_x(0,1,1,1)))/&
+                 &(xichimie-1)
+        call rq_3d
+        call nimhd_4dtable
+     else
+        print*, 'must choose an input for abundances or resistivities'
+        stop
+     endif
   endif
 #endif
 

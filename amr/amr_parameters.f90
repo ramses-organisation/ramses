@@ -74,6 +74,10 @@ module amr_parameters
   logical::unbind=.false.     ! Enable particle unbinding for the clump finder
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
+#ifdef NIMHD
+  logical::DTU     =.false.   ! Unique time-step activated for niMHD diffusion routines
+  logical::nimhdheating_in_eint=.false. ! Enable niMHD heating as a source term in the gas internal energy in goduvov_fine
+#endif
   
   ! Mesh parameters
   integer::nx=1,ny=1,nz=1                  ! Number of coarse cells in each dimension
@@ -136,6 +140,7 @@ module amr_parameters
   real(dp)::T2_star=0                ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6d0            ! Typical ISM polytropic index
   real(dp)::jeans_ncells=-1          ! Jeans polytropic EOS
+  real(dp)::mu_gas=1.0d0             ! molecular weight
   real(dp)::del_star=200             ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0                ! Supernova mass fraction
   real(dp)::eta_ssn=0.95d0           ! Single supernova ejected mass fraction (sf_imf=.true. only)
@@ -174,6 +179,7 @@ module amr_parameters
   logical ::cooling=.false.
   logical ::neq_chem=.false.            ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
+  logical ::barotrop=.false.            ! use an analytical barotropic EOS, implemented in cooling_fine
   logical ::metal=.false.
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
