@@ -313,6 +313,8 @@ program part2cylprof
      if(nstar>0)then
         read(1) ! Skip identity
         read(1) ! Skip level
+        read(1) ! Skip family
+        read(1) ! Skip tag
         read(1)age
      endif
      close(1)
