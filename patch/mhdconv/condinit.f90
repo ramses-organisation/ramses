@@ -214,8 +214,6 @@ subroutine eneana(x,e,dx,t,ncell)
       !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
       e(i) = (-e0)*rho0 ! erg/s/cm^3
       !e(i) = 0.d0
-    else
-      e(i) = 0.0d0
     end if
   end do 
 

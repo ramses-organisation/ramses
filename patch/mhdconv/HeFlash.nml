@@ -33,6 +33,10 @@ x_center=1.6418520000000012, 7.777926
 A_region=0.0,0.0,0.0
 B_region=0.0,0.0,0.0
 C_region=0.0,0.0,0.0
+pert_r = 1.0
+pert_dx = 0.5
+heating_r = 2.489e-4
+heating_dx = 0.5
 /
 
 &OUTPUT_PARAMS

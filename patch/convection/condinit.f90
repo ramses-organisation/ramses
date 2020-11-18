@@ -62,11 +62,11 @@ subroutine condinit(x,u,dx,pert,nn)
       T_tmp = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
 
       delta_temp=0.0
-      if(x(i,1).lt.x1+0.5)then
-         ! produce perturbation in convection zone!
-         call random_number(delta_temp)
-         delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
-      endif
+      ! if(x(i,1).lt.x1+0.5)then
+      !    ! produce perturbation in convection zone!
+      !    call random_number(delta_temp)
+      !    delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
+      ! endif
 
       q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
       q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0d0)))
@@ -166,22 +166,22 @@ subroutine eneana(x,e,dx,t,ncell)
     e(i) = 0.0d0
   end do 
 
-  !! Heating loop
-  do i=1,ncell
-    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
-      ! heating
-      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
-      e(i) = e0*rho0 ! erg/s/cm^3
-      !e(i) = 0.d0
-    else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
-      ! cooling
-      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
-      e(i) = (-e0)*rho0 ! erg/s/cm^3
-      !e(i) = 0.d0
-    else
-      e(i) = 0.0d0
-    end if
-  end do 
+  ! !! Heating loop
+  ! do i=1,ncell
+  !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
+  !     ! heating
+  !     !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+  !     e(i) = e0*rho0 ! erg/s/cm^3
+  !     !e(i) = 0.d0
+  !   else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
+  !     ! cooling
+  !     !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+  !     e(i) = (-e0)*rho0 ! erg/s/cm^3
+  !     !e(i) = 0.d0
+  !   else
+  !     e(i) = 0.0d0
+  !   end if
+  ! end do 
 
 
 end subroutine eneana
@@ -214,37 +214,37 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   x1 = x_center(1)
   x2 = x_center(2)
   
-  ! Sponge loop 
-  do i=1,ncell
-    if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
+!   ! Sponge loop 
+!   do i=1,ncell
+!     if ((x(i,1) .lt. x1-0.5) .or. (x(i,1) .gt. x2+0.5)) then
        
-      ! Damp the internal energy
-      u(i,ndim+2) = u(i,ndim+2)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
+!       ! Damp the internal energy
+!       u(i,ndim+2) = u(i,ndim+2)*(1.0d0-cp) + cp*peq(i)/(gamma-1.0d0)
       
-      ! damp density
-      u(i,1) = u(i,1)*(1.0d0 - crho) + crho*req(i)
+!       ! damp density
+!       u(i,1) = u(i,1)*(1.0d0 - crho) + crho*req(i)
       
-      ! damp momentum components
-      u(i,2) = u(i,2)*(1.0d0-cv)
-#if NDIM>1
-      u(i,3) = u(i,3)*(1.0d0-cv)
-#endif
-#if NDIM>2
-      u(i,4) = u(i,4)*(1.0d0-cv)
-#endif
-
-    ! else
-!       if (t .lt. 500.0) then
-!         u(i,2) = u(i,2)*(t/500.0)
+!       ! damp momentum components
+!       u(i,2) = u(i,2)*(1.0d0-cv)
 ! #if NDIM>1
-!         u(i,3) = u(i,3)*(t/500.0)
+!       u(i,3) = u(i,3)*(1.0d0-cv)
 ! #endif
 ! #if NDIM>2
-!         u(i,4) = u(i,4)*(t/500.0)
+!       u(i,4) = u(i,4)*(1.0d0-cv)
 ! #endif
-!       end if 
-    end if
 
-  end do 
+!     ! else
+! !       if (t .lt. 500.0) then
+! !         u(i,2) = u(i,2)*(t/500.0)
+! ! #if NDIM>1
+! !         u(i,3) = u(i,3)*(t/500.0)
+! ! #endif
+! ! #if NDIM>2
+! !         u(i,4) = u(i,4)*(t/500.0)
+! ! #endif
+! !       end if 
+!     end if
+
+!   end do 
 
 end subroutine spongelayers
