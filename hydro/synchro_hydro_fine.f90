@@ -76,9 +76,13 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   ! Update momentum
   do idim=1,ndim
      do i=1,ncell
-        pp(i)=uold(ind_cell(i),idim+1)+ &
-             & max(uold(ind_cell(i),1),smallr)*f(ind_cell(i),idim)*dteff
+        pp(i)=uold(ind_cell(i),idim+1)+max(uold(ind_cell(i),1),smallr)*f(ind_cell(i),idim)*dteff
      end do
+     if(strict_equilibrium>0)then
+        do i=1,ncell
+           pp(i)=pp(i)-rho_eq(ind_cell(i))*f(ind_cell(i),idim)*dteff
+        end do
+     endif
      do i=1,ncell
         uold(ind_cell(i),idim+1)=pp(i)
      end do

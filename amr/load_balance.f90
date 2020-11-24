@@ -7,7 +7,7 @@ subroutine load_balance
   use pm_commons
   use hydro_commons, ONLY: nvar
 #ifndef WITHOUTMPI
-  use hydro_commons, ONLY: uold, pstarold
+  use hydro_commons, ONLY: uold, pstarold, rho_eq, p_eq
   use poisson_commons, ONLY: phi, f
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
@@ -87,6 +87,10 @@ subroutine load_balance
 #endif
         if(momentum_feedback>0)then
            call make_virtual_fine_dp(pstarold(1),ilevel)
+        endif
+        if(strict_equilibrium>0)then
+           call make_virtual_fine_dp(rho_eq(1),ilevel)
+           call make_virtual_fine_dp(p_eq(1),ilevel)
         endif
         if(simple_boundary)then
            call make_boundary_hydro(ilevel)
@@ -1364,6 +1368,70 @@ subroutine defrag
   end do
   do igrid=1,igridmax
      pstarold(iskip2+igrid)=real(hilbert_key(igrid),kind=8)
+  end do
+  end do
+
+  endif
+
+  if(strict_equilibrium>0)then
+
+  do ind=1,twotondim
+  iskip2=ncoarse+(ind-1)*ngridmax
+  ngrid2=0
+  do igrid=1,igridmax
+     hilbert_key(igrid)=0.0D0
+  end do
+  do ilevel=1,nlevelmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           ncache=numbl(ibound,ilevel)
+           istart=headl(ibound,ilevel)
+        else
+           ncache=numbb(ibound-ncpu,ilevel)
+           istart=headb(ibound-ncpu,ilevel)
+        end if
+        if(ncache>0)then
+           igrid=istart
+           do i=1,ncache
+              hilbert_key(ngrid2+i)=real(rho_eq(iskip2+igrid),kind=qdp)
+              igrid=next(igrid)
+           end do
+           ngrid2=ngrid2+ncache
+        end if
+     end do
+  end do
+  do igrid=1,igridmax
+     rho_eq(iskip2+igrid)=real(hilbert_key(igrid),kind=8)
+  end do
+  end do
+
+  do ind=1,twotondim
+  iskip2=ncoarse+(ind-1)*ngridmax
+  ngrid2=0
+  do igrid=1,igridmax
+     hilbert_key(igrid)=0.0D0
+  end do
+  do ilevel=1,nlevelmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           ncache=numbl(ibound,ilevel)
+           istart=headl(ibound,ilevel)
+        else
+           ncache=numbb(ibound-ncpu,ilevel)
+           istart=headb(ibound-ncpu,ilevel)
+        end if
+        if(ncache>0)then
+           igrid=istart
+           do i=1,ncache
+              hilbert_key(ngrid2+i)=real(p_eq(iskip2+igrid),kind=qdp)
+              igrid=next(igrid)
+           end do
+           ngrid2=ngrid2+ncache
+        end if
+     end do
+  end do
+  do igrid=1,igridmax
+     p_eq(iskip2+igrid)=real(hilbert_key(igrid),kind=8)
   end do
   end do
 

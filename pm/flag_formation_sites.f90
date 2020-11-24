@@ -143,12 +143,16 @@ subroutine flag_formation_sites
         ok=ok.and.occupied(jj)==0
         ! Halo mass has to be larger than some threshold
         ok=ok.and.halo_mass(jj)>mass_halo_AGN*M_sun/(scale_d*scale_l**3)
+        ! 4-cell ball stellar mass has to be larger than some threshold
+        if(star.and.mass_star_AGN>0)then
+           ok=ok.and.clump_star4(jj)>mass_star_AGN*M_sun/(scale_d*scale_l**3)
+        endif
         ! 4-cell ball mass has to be larger than some threshold
         ok=ok.and.clump_mass4(jj)>mass_clump_AGN*M_sun/(scale_d*scale_l**3)
         ! 4-cell ball av. density has to be larger that SF threshold
         ok=ok.and.clump_mass4(jj)/(4d0/3d0*pi*(ir_cloud*dx_min/aexp)**3)>n_star/scale_nH
-        ! Peak density has to be larger than star formation thresold
-        !ok=ok.and.max_dens(jj)>10.0d0*n_star/scale_nH
+        ! Peak density has to be larger than 10x star formation thresold
+        ok=ok.and.max_dens(jj)>10.0d0*n_star/scale_nH
         !ok=ok.and.max_dens(jj)>n_star/scale_nH
         ! Then create a sink at the peak position
         if (ok)then
@@ -283,7 +287,7 @@ subroutine compute_clump_properties_round2
 #else
   use hydro_commons, ONLY:uold,gamma,nvar,smallr
 #endif
-  use poisson_commons, ONLY:f
+  use poisson_commons, ONLY:f,rho
   use clfind_commons
   use pm_commons, ONLY:cont_speed
   use pm_parameters
@@ -305,7 +309,7 @@ subroutine compute_clump_properties_round2
   integer::ipart,ilevel,i,peak_nr,global_peak_id,j,ii,jj
   integer::grid,nx_loc,ix,iy,iz,ind,idim
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  real(dp)::d,vol,ekk,err,etot,p,T2
+  real(dp)::d,vol,ekk,err,etot,p,T2,rho_star
   real(dp)::dx,dx_loc,scale,vol_loc,abs_err,A1=0, A2=0, A3=0
   real(dp),dimension(1:nlevelmax)::volume
   real(dp),dimension(1:3)::vd,xcell,xpeak,rrel,vrel,fgrav,skip_loc,frad
@@ -350,7 +354,7 @@ subroutine compute_clump_properties_round2
   call surface_int
 
   ! Initialize arrays
-  clump_size=0d0; clump_mass4=0d0
+  clump_size=0d0; clump_mass4=0d0; clump_star4=0d0
   grav_term=0d0; rad_term=0d0
   kinetic_support=0d0; thermal_support=0d0; magnetic_support=0d0
   Icl=0d0; Icl_d=0d0; Icl_dd=0d0
@@ -420,6 +424,9 @@ subroutine compute_clump_properties_round2
 
         ! Cell mass density
         d=max(uold(icellp(ipart),1),smallr)
+
+        ! Cell stellar density
+        rho_star=rho(icellp(ipart))
 
         ! Cell total energy density
         etot=uold(icellp(ipart),ndim+2)
@@ -492,6 +499,13 @@ subroutine compute_clump_properties_round2
            clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
         endif
 
+        ! Properties for regions close to peak (4 cells away)
+        if(mass_star_AGN>0)then
+           if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
+              clump_star4(peak_nr)=clump_star4(peak_nr)+rho_star*vol
+           endif
+        endif
+
         ! Cell gravitational acceleration
         fgrav(1:3)=f(icellp(ipart),1:3)
 
@@ -534,6 +548,7 @@ subroutine compute_clump_properties_round2
   call virtual_peak_dp(kinetic_support,'sum')
   call virtual_peak_dp(magnetic_support,'sum')
   call virtual_peak_dp(clump_mass4,'sum')
+  call virtual_peak_dp(clump_star4,'sum')
   call virtual_peak_dp(Icl,'sum')
   call virtual_peak_dp(Icl_d,'sum')
   call virtual_peak_dp(grav_term,'sum')
@@ -1181,4 +1196,245 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 
 end subroutine surface_int_np
 #endif
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+#if NDIM==3
+subroutine compute_rho_star
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use clfind_commons
+  use mpi_mod
+  implicit none
+  
+  integer::ilevel,ivar_clump_old
 
+  if(verbose)write(*,*)'Entering compute rho_star'
+
+  ! Set ivar_clump to -1 to compute stellar density field
+  ivar_clump_old=ivar_clump
+  ivar_clump=-1
+  
+  do ilevel=1,nlevelmax
+     if(pic)call make_tree_fine(ilevel)
+     if(poisson)call rho_star_only(ilevel)
+     if(pic)then
+        call kill_tree_fine(ilevel)
+        call virtual_tree_fine(ilevel)
+     endif
+  end do
+  do ilevel=nlevelmax,1,-1
+     if(pic)call merge_tree_fine(ilevel)
+  end do
+
+  ivar_clump=ivar_clump_old
+  
+end subroutine compute_rho_star
+#endif
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+#if NDIM==3
+subroutine rho_star_only(ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  use mpi_mod
+  implicit none
+  integer::ilevel
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme. Particles that are not entirely in
+  ! level ilevel contribute also to the level density field
+  ! (boundary particles) using buffer grids.
+  !------------------------------------------------------------------
+  integer::iskip,icpu,ind,i,nx_loc,ibound
+  real(dp)::dx,scale,dx_loc
+
+  if(.not. poisson)return
+  if(.not. star)return
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  !-------------------------------------------------------
+  ! Initialize rho to zero
+  !-------------------------------------------------------
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do i=1,active(ilevel)%ngrid
+        rho(active(ilevel)%igrid(i)+iskip)=0.0D0
+     end do
+  end do
+
+  !-------------------------------------------------------
+  ! Initialize rho to zero in virtual boundaries
+  !-------------------------------------------------------
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+        end do
+     end do
+  end do
+
+  !---------------------------------------------------------
+  ! Compute particle contribution to density field
+  !---------------------------------------------------------
+  ! Compute density due to current level particles
+  if(pic)then
+     call rho_star_only_level(ilevel)
+  end if
+  ! Update boudaries
+  call make_virtual_reverse_dp(rho(1),ilevel)
+  call make_virtual_fine_dp   (rho(1),ilevel)
+
+  !----------------------------------------------------
+  ! Reset rho in physical boundaries
+  !----------------------------------------------------
+  do ibound=1,nboundary
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,boundary(ibound,ilevel)%ngrid
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
+        end do
+     end do
+  end do
+
+111 format('   Entering rho_only for level ',I2)
+
+end subroutine rho_star_only
+#endif
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+#if NDIM==3
+subroutine rho_star_only_level(ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  use clfind_commons
+  implicit none
+  integer::ilevel
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme from particles that are not entirely in
+  ! level ilevel (boundary particles).
+  ! Arrays flag1 and flag2 are used as temporary work space.
+  !------------------------------------------------------------------
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,next_part
+  integer::i,ig,ip,npart1,npart2
+  real(dp)::dx
+
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+
+  ! Loop over cpus
+  do icpu=1,ncpu
+     ! Loop over grids
+     igrid=headl(icpu,ilevel)
+     ig=0
+     ip=0
+     do jgrid=1,numbl(icpu,ilevel)
+        npart1=numbp(igrid)  ! Number of particles in the grid
+        npart2=0
+
+        ! Count elligible particles
+        if(npart1>0)then
+           ipart=headp(igrid)
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              ! Select stars
+              if((is_star(typep(ipart)))) then
+                 npart2=npart2+1
+              endif
+              ipart=next_part  ! Go to next particle
+           end do
+        endif
+
+        ! Gather elligible particles
+        if(npart2>0)then
+           ig=ig+1
+           ind_grid(ig)=igrid
+           ipart=headp(igrid)
+
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              ! Select stars younger than age_cut_clfind
+              if((is_star(typep(ipart)))) then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig
+              endif
+              if(ip==nvector)then
+                 ! Lower left corner of 3x3x3 grid-cube
+                 do idim=1,ndim
+                    do i=1,ig
+                       x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+                    end do
+                 end do
+                 do i=1,ig
+                    ind_cell(i)=father(ind_grid(i))
+                 end do
+#ifdef TSC
+                 call tsc_only(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#else
+                 call cic_only(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#endif
+                 ip=0
+                 ig=0
+              end if
+              ipart=next_part  ! Go to next particle
+           end do
+           ! End loop over particles
+
+        end if
+
+        igrid=next(igrid)   ! Go to next grid
+     end do
+     ! End loop over grids
+
+     if(ip>0)then
+        ! Lower left corner of 3x3x3 grid-cube
+        do idim=1,ndim
+           do i=1,ig
+              x0(i,idim)=xg(ind_grid(i),idim)-3.0D0*dx
+           end do
+        end do
+        do i=1,ig
+           ind_cell(i)=father(ind_grid(i))
+        end do
+#ifdef TSC
+        call tsc_only(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#else
+        call cic_only(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+#endif
+     end if
+
+  end do
+  ! End loop over cpus
+
+end subroutine rho_star_only_level
+#endif
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################

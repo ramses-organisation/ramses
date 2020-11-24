@@ -306,7 +306,8 @@ subroutine clump_finder(create_output,keep_alive)
 
      if(verbose_all)call analyze_peak_memory
      if(clinfo.and.saddle_threshold.LE.0)call write_clump_properties(.false.)
-     if(create_output)then
+     if(create_output.and..not.unbind)then
+        ! if unbind, output will be written in unbinding() routine
         if(myid==1)write(*,*)"Outputing clump properties to disc."
         call write_clump_properties(.true.)
         if(ivar_clump==0 .or. ivar_clump==-1)then
@@ -315,6 +316,13 @@ subroutine clump_finder(create_output,keep_alive)
      endif
 
   end if
+
+  !-----------------------------------------------------------------
+  ! Call particle unbinding (and mergertree stuff)
+  ! Call it even for npeaks_tot = 0, mergertrees need to know that
+  ! there are no progenitors to work with
+  !------------------------------------------------------------------
+  if(unbind.and.create_output.and.pic) call unbinding()
 
   if (.not. keep_alive)then
      ! Deallocate test particle and peak arrays
@@ -920,6 +928,7 @@ subroutine read_clumpfind_params()
         density_threshold=rho_clfind/scale_d
      end if
   end if
+
 end subroutine read_clumpfind_params
 !################################################################
 !################################################################
@@ -1849,11 +1858,11 @@ subroutine output_part_clump_id()
   ! testcell the peak ID the testcell has. 
   !---------------------------------------------------------------------------
   use amr_commons
-  use clfind_commons    !unbinding stuff is all in here
-  use pm_commons !using mp
+  use clfind_commons    ! unbinding stuff is all in here
+  use pm_commons ! using mp
   use amr_parameters
   implicit none
-  integer,dimension(:),allocatable::clmpidp,clump_ids
+  integer,dimension(:),allocatable::clump_ids
   character(len=80) :: fileloc
   character(len=5)  :: nchar,nchar2
 

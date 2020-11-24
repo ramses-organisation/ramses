@@ -39,6 +39,11 @@ subroutine init_hydro
      allocate(enew(1:ncell))
      divu=0.0d0; enew=0.0d0
   end if
+  if(strict_equilibrium>0)then
+     allocate(rho_eq(1:ncell))
+     allocate(p_eq(1:ncell))
+     rho_eq=0.0d0; p_eq=0.0d0
+  endif
 
   !--------------------------------
   ! For a restart, read hydro file

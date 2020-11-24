@@ -653,7 +653,7 @@ subroutine restrict(ind_grid,ngrid,ilevel,multigrid)
   a = 1.0d0/4.0d0**ndim
   b = 3*a
   c = 9*a
-  d = 2*a
+  d = 27*a
 
   bbb(:)  =(/a ,b ,b ,c ,b ,c ,c ,d/)
   bbb=bbb/dble(twotondim)

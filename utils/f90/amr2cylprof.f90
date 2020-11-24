@@ -22,7 +22,7 @@ program amr2cylprof
   real::omega_m2,omega_l2,omega_k2,omega_b2
   integer ,dimension(1:1,1:IRandNumSize)::allseed
   integer ,dimension(1:IRandNumSize)::localseed
-  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,nrad=100,nprof=15
+  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,nrad=100,nprof=8
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin,levelmax
@@ -34,10 +34,11 @@ program amr2cylprof
   real(KIND=8)::xcen=0.5,ycen=0.5,zcen=0.5
   real(KIND=8)::ucen=0.0,vcen=0.0,wcen=0.0
   real(KIND=8)::xx,yy,zz,uu,vv,ww,rr
+  real(KIND=8)::aa,bb,cc,b_z,b_r,b_t
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
   real(KIND=8)::ddx,ddy,ddz,dex,dey,dez
-  real(KIND=8)::unit_l,unit_t,unit_d,unit_m,unit_v
-  real(KIND=8)::rad2,vol,surf,rprev
+  real(KIND=8)::unit_l,unit_t,unit_d,unit_m,unit_v,unit_b
+  real(KIND=8)::rad2,vol,surf,height,rprev
   real(KIND=8)::mcum,ucum,vcum,wcum,lxcum,lycum,lzcum
   real(kind=8)::jxin=0.0,jyin=0.0,jzin=1.0,jx,jy,jz,jt
   real(kind=8)::rx,ry,rz,tx,ty,tz,r_cyl,z_coord,u_r,u_t,u_z
@@ -49,10 +50,18 @@ program amr2cylprof
   real(kind=4),dimension(:,:,:),allocatable::toto
   character(LEN=128)::nomfich,repository,outfich,filetype='bin'
   character(LEN=5)::nchar
-  logical::ok,ok_part,ok_cell,cosmo
+  logical::ok,ok_part,ok_cell,cosmo,mhd=.false.
   integer::id=1,iu=2,iv=3,iw=4,iu2=5,iv2=6,iw2=7,ip=8
-
+  integer::ia=9,ib=10,ic=11,ia2=12,ib2=13,ic2=14,ipm=15
+  integer::nvarin=5,ivartemp=5
+  
   call read_params
+  if(mhd)then
+     write(*,*)'MHD mode active'
+     nvarin=11
+     ivartemp=11
+     nprof=15
+  endif
 
   ! Initialize random number generator
   call rans(1,iseed,allseed)
@@ -92,6 +101,8 @@ program amr2cylprof
   read(10,'("unit_t      =",E23.15)')unit_t
   unit_m=unit_d*unit_l**3
   unit_v=unit_l/unit_t
+  unit_b=sqrt(unit_d)*unit_v*sqrt(4.0*3.1415926)
+  write(*,*)unit_b
   read(10,*)
   close(10)
 
@@ -123,7 +134,6 @@ program amr2cylprof
   endif
   rz=0d0
 
-
   ! Rotation angle
   cos_alpha=jz
   sin_alpha=sqrt(1.0-cos_alpha**2)
@@ -143,7 +153,7 @@ program amr2cylprof
 
   ncell=2000000
   allocate(x(1:ncell),y(1:ncell),z(1:ncell))
-  allocate(l(1:ncell),var(1:ncell,1:6))
+  allocate(l(1:ncell),var(1:ncell,1:nvarin))
   x=0D0; y=0D0; z=0D0; l=0; var=0D0
 
   write(*,*)'Generating random sampling points'
@@ -179,7 +189,7 @@ program amr2cylprof
      end if
   end do
 
-  call getcell(x,y,z,var,l,ncell,5,repository,levelmax=lmax)
+  call getcell(x,y,z,var,l,ncell,nvarin,repository,levelmax=lmax)
 
   do i=1,ncell
      xx=x(i)-xcen
@@ -212,9 +222,36 @@ program amr2cylprof
      prof(irad,iu2)=prof(irad,iu2)+var(i,1)*u_r**2
      prof(irad,iv2)=prof(irad,iv2)+var(i,1)*u_t**2
      prof(irad,iw2)=prof(irad,iw2)+var(i,1)*u_z**2
-     prof(irad,ip)=prof(irad,ip)+var(i,5)
-  end do
+     prof(irad,ip)=prof(irad,ip)+var(i,ivartemp)
 
+     if(mhd)then
+        aa=0.5*(var(i,5)+var(i,8))
+        bb=0.5*(var(i,6)+var(i,9))
+        cc=0.5*(var(i,7)+var(i,10))
+
+        ! Compute magnetic components
+        b_z=aa*jx+bb*jy+cc*jz
+        b_r=aa*rx+bb*ry+cc*rz
+        b_t=aa*tx+bb*ty+cc*tz
+        
+!!$        prof(irad,ia)=prof(irad,ia)+b_r
+!!$        prof(irad,ib)=prof(irad,ib)+b_t
+!!$        prof(irad,ic)=prof(irad,ic)+b_z
+!!$        prof(irad,ia2)=prof(irad,ia2)+b_r**2
+!!$        prof(irad,ib2)=prof(irad,ib2)+b_t**2
+!!$        prof(irad,ic2)=prof(irad,ic2)+b_z**2
+!!$        prof(irad,ipm)=prof(irad,ipm)+0.5*(b_r**2+b_t**2+b_z**2)
+
+        prof(irad,ia)=prof(irad,ia)+var(i,1)*b_r
+        prof(irad,ib)=prof(irad,ib)+var(i,1)*b_t
+        prof(irad,ic)=prof(irad,ic)+var(i,1)*b_z
+        prof(irad,ia2)=prof(irad,ia2)+var(i,1)*b_r**2
+        prof(irad,ib2)=prof(irad,ib2)+var(i,1)*b_t**2
+        prof(irad,ic2)=prof(irad,ic2)+var(i,1)*b_z**2
+        prof(irad,ipm)=prof(irad,ipm)+var(i,1)*0.5*(b_r**2+b_t**2+b_z**2)
+endif
+
+  end do
 
   ! Sampling points volume element
   dv=3.1415926*(rmax*boxlen)**2.*2.0*hmax*boxlen/dble(ncell)
@@ -224,6 +261,7 @@ program amr2cylprof
   do irad=1,nrad
      r(irad)=r(irad)*boxlen
      surf=3.1415926*(r(irad)**2-rprev**2)
+     height=2.0*hmax*boxlen
      if(prof(irad,id)>0.0)then
         prof(irad,ip)=sqrt(prof(irad,ip)/prof(irad,id))*unit_v/1d5
         prof(irad,iu)=prof(irad,iu)/prof(irad,id)*unit_v/1d5
@@ -233,6 +271,23 @@ program amr2cylprof
         prof(irad,iv2)=sqrt(prof(irad,iv2)/prof(irad,id)*(unit_v/1d5)**2-prof(irad,iv)**2)
         prof(irad,iw2)=sqrt(prof(irad,iw2)/prof(irad,id)*(unit_v/1d5)**2-prof(irad,iw)**2)
      endif
+     if(mhd)then
+!!$        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)*dv/(surf*height))*unit_b/1d-6
+!!$        prof(irad,ia)=prof(irad,ia)*dv/(surf*height)*unit_b/1d-6
+!!$        prof(irad,ib)=prof(irad,ib)*dv/(surf*height)*unit_b/1d-6
+!!$        prof(irad,ic)=prof(irad,ic)*dv/(surf*height)*unit_b/1d-6
+!!$        prof(irad,ia2)=sqrt(prof(irad,ia2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ia)**2)
+!!$        prof(irad,ib2)=sqrt(prof(irad,ib2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ib)**2)
+!!$        prof(irad,ic2)=sqrt(prof(irad,ic2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ic)**2)        
+
+        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_b/1d-6
+        prof(irad,ia)=prof(irad,ia)/prof(irad,id)*unit_b/1d-6
+        prof(irad,ib)=prof(irad,ib)/prof(irad,id)*unit_b/1d-6
+        prof(irad,ic)=prof(irad,ic)/prof(irad,id)*unit_b/1d-6
+        prof(irad,ia2)=sqrt(prof(irad,ia2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ia)**2)
+        prof(irad,ib2)=sqrt(prof(irad,ib2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ib)**2)
+        prof(irad,ic2)=sqrt(prof(irad,ic2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ic)**2)        
+     endif
      prof(irad,id)=prof(irad,id)*dv*unit_m/(surf*unit_l**2)/(2d33/3.08d18**2)
      rprev=r(irad)
   end do
@@ -241,9 +296,17 @@ program amr2cylprof
   nomfich=TRIM(outfich)
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
   open(unit=10,file=TRIM(nomfich)//".gas",form='formatted')
-  write(10,'(A97)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)"
+  if(mhd)then
+     write(10,'(A190)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)   B_r(muG)    B_t(muG)    B_z(muG)    sBr(muG)    sBt(muG)    sBz(muG)    Bstr(muG)"
+  else
+     write(10,'(A106)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)"
+  endif
   do i=1,nrad
-     write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=1,8)
+     if(mhd)then
+        write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=1,15)
+     else
+        write(10,999)r(i)*unit_l/3.08d21,(prof(i,ivar),ivar=1,8)
+     endif
   end do
   close(10)
 999 format(30(1PE10.3,2X))
@@ -273,6 +336,7 @@ contains
        print *, '                 [-rma rmax] '
        print *, '                 [-nra nrad] '
        print *, '                 [-lma lmax] '
+       print *, '                 [-mhd .false.] '
        print *, 'ex: amr2prof -inp output_00001 -out prof.dat'// &
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
        stop
@@ -316,6 +380,8 @@ contains
           read (arg,*) hmax
        case ('-lma')
           read (arg,*) lmax
+       case ('-mhd')
+          read (arg,*) mhd
        case default
           print '("unknown option ",a2," ignored")', opt
        end select

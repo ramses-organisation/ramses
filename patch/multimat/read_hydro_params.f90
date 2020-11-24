@@ -11,8 +11,8 @@ subroutine read_hydro_params(nml_ok)
   integer ,dimension(1:MAXBOUND)::bound_type
   real(dp)::scale,dtot,ftot
   real(dp),dimension(1:nvector,1:npri)::q
-  real(dp),dimension(1:nvector,1:nmat)::f,g
-  real(dp),dimension(1:nvector)::ek_bound,eint,cs
+  real(dp),dimension(1:nvector,1:nmat)::f,g,kappa_mat
+  real(dp),dimension(1:nvector)::ek_bound,eint,cs,kappa_hat
 
   !--------------------------------------------------
   ! Namelist definitions
@@ -23,7 +23,7 @@ subroutine read_hydro_params(nml_ok)
        & ,d1_region,d2_region,d3_region,d4_region &
        & ,f1_region,f2_region,f3_region,f4_region &
        & ,u_region,v_region,w_region,p_region
-  namelist/hydro_params/courant_factor,smallr,smallc,smallf,slope_type,scheme
+  namelist/hydro_params/courant_factor,smallr,smallc,smallf,slope_type,scheme,eos_name
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine,a_refine,b_refine,exp_refine &
        & ,m_refine,mass_sph,err_grad_f,err_grad_d,err_grad_p,err_grad_u &
        & ,floor_f,floor_d,floor_u,floor_p &
@@ -216,7 +216,7 @@ subroutine read_hydro_params(nml_ok)
      q(i,npri)=p_bound(i)
   end do
 
-  if(nboundary>0)call eosinv(f,g,q,eint,cs,nboundary)
+  if(nboundary>0)call eosinv(f,g,q,eint,cs,kappa_mat,kappa_hat,nboundary)
 
   ! density -> density
   do i=1,nboundary

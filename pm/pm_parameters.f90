@@ -9,7 +9,6 @@ module pm_parameters
   real(dp)::mstar_tot=0             ! Total star mass
   real(dp)::mstar_lost=0            ! Missing star mass
 
-
   ! More sink related parameters, can all be set in namelist file
 
   integer::ir_cloud=4                        ! Radius of cloud region in unit of grid spacing (i.e. the ACCRETION RADIUS)
@@ -29,7 +28,7 @@ module pm_parameters
 
   real(dp)::mass_sink_seed=0                 ! Initial sink mass
   real(dp)::mass_smbh_seed=0                 ! Initial SMBH mass
-  real(dp)::mass_merger_vel_check=-1         ! Threshold for velocity check in  merging; in M_sun; default: don't check
+  real(dp)::mass_merger_vel_check=1d100      ! Threshold for velocity check in merging in M_sun; default: don't check
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
   logical::clump_core=.false.                ! Trims the clump (for star formation)
@@ -52,10 +51,18 @@ module pm_parameters
 
   real(dp)::mass_halo_AGN=1d10              ! Minimum mass of the halo for sink creation
   real(dp)::mass_clump_AGN=1d10             ! Minimum mass of the clump for sink creation
+  real(dp)::mass_star_AGN=0d0               ! Minimum mass of stars in the clump for sink creation
 
-  real(dp)::boost_threshold_density=0.1d0    ! Accretion boost threshold for Bondi
+  real(dp)::boost_threshold_density=0.1d0   ! Accretion boost threshold for Bondi
 
   real(dp)::max_mass_nsc=1d15               ! Maximum mass of the Nuclear Star Cluster (msink)
+
+  logical::sink_descent=.false.             ! Switch for the sink descent
+  real(dp)::gamma_grad_descent=0.0d0        ! Step for the gradient descent
+  real(dp)::fudge_graddescent=1.0d0         ! Fudge factor for the for the BB gradient descent
+
+  character(LEN=15)::agn_acc_method='mass'
+  character(LEN=15)::agn_inj_method='volume'
 
   type part_t
      ! We store these two things contiguously in memory

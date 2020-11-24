@@ -659,9 +659,7 @@ subroutine create_output_dirs(filedir)
 #ifndef WITHOUTMPI
   integer :: info
 #endif
-
-
-
+  
   if (.not.withoutmkdir) then
     if (myid==1) then
 #ifdef NOSYSTEM

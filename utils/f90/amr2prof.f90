@@ -46,16 +46,23 @@ program amr2prof
   real(kind=4),dimension(:,:,:),allocatable::toto
   character(LEN=128)::nomfich,repository,outfich,filetype='bin'
   character(LEN=5)::nchar
-  logical::ok,ok_part,ok_cell,cosmo
+  logical::ok,ok_part,ok_cell,cosmo,mhd=.false.
   integer::id=1,iu=2,iv=3,iw=4,ilx=5,ily=6,ilz=7
   integer::imcum=8,iucum=9,ivcum=10,iwcum=11
   integer::ilxcum=12,ilycum=13,ilzcum=14,ip=15,imet=16,ihot=17
   integer::ilxc=18,ilyc=19,ilzc=20,ilxccum=21,ilyccum=22,ilzccum=23
   integer::nprof=23
   logical::logscale=.false.
-
+  integer::nvarin=6,ivartemp=5,ivarmet=6
+  
   call read_params
 
+  if(mhd)then
+     nvarin=12
+     ivartemp=11
+     ivarmet=12
+  endif
+  
   ! Initialize random number generator
   call rans(1,iseed,allseed)
   localseed=allseed(1,1:IRandNumSize)
@@ -122,7 +129,7 @@ program amr2prof
 
   ncell=4000000
   allocate(x(1:ncell),y(1:ncell),z(1:ncell))
-  allocate(l(1:ncell),var(1:ncell,1:6))
+  allocate(l(1:ncell),var(1:ncell,1:nvarin))
   x=0D0; y=0D0; z=0D0; l=0; var=0D0
 
   write(*,*)'Generating random sampling points'
@@ -170,7 +177,7 @@ program amr2prof
   end do
   write(*,*)'Using max level=',ilevel
 
-  call getcell(x,y,z,var,l,ncell,6,repository,levelmax=ilevel)
+  call getcell(x,y,z,var,l,ncell,nvarin,repository,levelmax=ilevel)
 
   do i=1,ncell
      rad2=(x(i)-xcen)**2+(y(i)-ycen)**2+(z(i)-zcen)**2
@@ -188,9 +195,9 @@ program amr2prof
      prof(irad,ilx)=prof(irad,ilx)+var(i,1)*dv*(yy*ww-zz*vv)
      prof(irad,ily)=prof(irad,ily)-var(i,1)*dv*(xx*ww-zz*uu)
      prof(irad,ilz)=prof(irad,ilz)+var(i,1)*dv*(xx*vv-yy*uu)
-     prof(irad,ip)=prof(irad,ip)+var(i,5)*dv
-     prof(irad,imet)=prof(irad,imet)+var(i,1)*var(i,6)*dv
-     tt=var(i,5)/var(i,1)*unit_v**2*1.66d-24/1.38d-16
+     prof(irad,ip)=prof(irad,ip)+var(i,ivartemp)*dv
+     prof(irad,imet)=prof(irad,imet)+var(i,1)*var(i,ivarmet)*dv
+     tt=var(i,ivartemp)/var(i,1)*unit_v**2*1.66d-24/1.38d-16
      nH=var(i,1)*unit_d/1.66d-24*0.76
      if(tt>1d5.and.nH<0.1)then
         prof(irad,ihot)=prof(irad,ihot)+var(i,1)*dv
@@ -311,6 +318,7 @@ contains
        print *, '                 [-rma rmax] '
        print *, '                 [-nra nrad] '
        print *, '                 [-lma lmax] '
+       print *, '                 [-mhd false] '
        print *, 'ex: amr2prof -inp output_00001 -out prof.dat'// &
               &   ' -xce 0.1 -yce 0.2 -zce 0.2 -rma 0.1 -nra 100'
        stop
@@ -350,6 +358,8 @@ contains
           read (arg,*) lmax
        case ('-log')
           read (arg,*) logscale
+       case ('-mhd')
+          read (arg,*) mhd
        case default
           print '("unknown option ",a2," ignored")', opt
        end select

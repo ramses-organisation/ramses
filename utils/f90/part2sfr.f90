@@ -39,7 +39,7 @@ program part2sfr
   real(kind=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
-  logical::cosmo=.true.
+  logical::cosmo=.true.,proper_time=.false.
 
   call read_params
 
@@ -85,7 +85,7 @@ program part2sfr
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
-
+  
   read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
@@ -291,8 +291,12 @@ program part2sfr
                  iii=iii+1
               end do
               ! Interploate time
-              time=t_frw(iii)*(birth(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
-                   & t_frw(iii-1)*(birth(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+              if(.not. proper_time)then
+                 time=t_frw(iii)*(birth(i)-tau_frw(iii-1))/(tau_frw(iii)-tau_frw(iii-1))+ &
+                      & t_frw(iii-1)*(birth(i)-tau_frw(iii))/(tau_frw(iii-1)-tau_frw(iii))
+              else
+                 time=birth(i)
+              endif
               age=(time_simu-time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
               birth_date=(time_tot+time)/(h0*1d5/3.08d24)/(365.*24.*3600.*1d9)
            else
@@ -380,6 +384,8 @@ contains
             read (arg,*) zmax
          case ('-nx')
             read (arg,*) nx
+         case ('-pt')
+            read (arg,*) proper_time
          case default
             print '("unknown option ",a2," ignored")', opt
          end select
