@@ -282,6 +282,9 @@ subroutine read_params
   if (clumpfind .or. sink)call read_clumpfind_params
   if (unbind)call read_unbinding_params
   if (make_mergertree)call read_mergertree_params
+#if USE_TURB==1
+  call read_turb_params(nml_ok)
+#endif
 #endif
   if (movie)call set_movie_vars
 

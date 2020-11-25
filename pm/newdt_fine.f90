@@ -6,6 +6,9 @@ subroutine newdt_fine(ilevel)
 #ifdef RT
   use rt_parameters, ONLY: rt_advect, rt_nsubcycle
 #endif
+#if USE_TURB==1
+  use turb_commons
+#endif
   use constants, ONLY: pi
   use mpi_mod
   implicit none
@@ -102,6 +105,13 @@ subroutine newdt_fine(ilevel)
           MIN(dtnew(ilevel), dt_rt/2**(ilevel-levelmin) * rt_nsubcycle)
      if(static) RETURN
   endif
+#endif
+
+#if USE_TURB==1
+  ! Maximum time step from turbulent forcing
+  if (turb .AND. turb_type /= 3) then
+     dtnew(ilevel) = min(dtnew(ilevel), turb_dt)
+  end if
 #endif
 
   if(pic) then
