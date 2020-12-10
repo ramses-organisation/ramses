@@ -7,8 +7,6 @@ ncontrol=100
 nsubcycle=10*1,15*2
 static=.false.
 verbose=.false.
-fld=.false.
-DTU=.true.
 /
 
 &AMR_PARAMS
@@ -91,6 +89,6 @@ nminitimestep=0   ! pour la diffusion ambipolaire seulement
 ntestDADM=1
 /
 
-&PHYSICS_PARAMS
+&SF_PARAMS
 mu_gas=1.0d08
 /
