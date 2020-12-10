@@ -20,7 +20,7 @@ PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use non-ideal MHD? 1=Yes, 0=No
-NIMHD=1
+NIMHD=0
 HALL=0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
