@@ -3,6 +3,7 @@
 !###########################################################
 !###########################################################
 #ifdef NIMHD
+!extract nimhd part and put it in a separate routine cmpdt_nimhd
 subroutine cmpdt(uu,gg,dx,dt,ncell,dtambdiff,dtohmdiss,dthallbis)
 #else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
@@ -894,6 +895,9 @@ END SUBROUTINE find_mhd_flux
 !###########################################################
 !###########################################################
 ! REMARK: as it is now, dx is always 0. I guess this is unfinished?
+! trick to help conserve angular momentum, only used in 1d riemand solver
+! set parameter whether or not to account for the whistler speed in the 
+! 1d riemann solver (dx=0 or not)
 #if HALL==1
 SUBROUTINE find_speed_info(qvar,vel_info,dx)
 #else
@@ -958,6 +962,9 @@ END SUBROUTINE find_speed_info
 !###########################################################
 !###########################################################
 ! REMARK: as it is now, dx is always 0. I guess this is unfinished?
+! same as above?
+! HALL effect only works with HLL 2d riemand solver
+! separate find_speed_hll which is only used with hall effect 
 #if HALL==1
 SUBROUTINE find_speed_fast(qvar,vel_info,dx)
 #else

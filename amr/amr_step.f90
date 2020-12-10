@@ -25,6 +25,7 @@ recursive subroutine amr_step(ilevel,icount)
   logical::ok_defrag,output_now_all
   logical,save::first_step=.true.
 #ifdef NIMHD
+! to remove (super time stepping)
   !!! sts !!! (subcycling with nimhd)
   real(kind=dp) :: dtminlocsts
 #endif
@@ -298,6 +299,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(ilevel>levelmin)then
      dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
 #ifdef NIMHD
+! to remove (super time stepping)
      if((nmagdiffu2==0.and.nmagdiffu==1).or.&
           &(nambipolar2==0.and.nambipolar==1))then
         dtambdiff(ilevel)=MIN(dtambdiff(ilevel-1)/real(nsubcycle(ilevel-1)),dtambdiff(ilevel))
@@ -308,6 +310,7 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
   end if
 #ifdef NIMHD
+! to remove (super time stepping)
   if((nmagdiffu2==1.and.nmagdiffu==0).or.&
        &(nambipolar2==1.and.nambipolar==0))then
      !  dtminlocsts=min(dtambdiff(ilevel),dtmagdiff(ilevel))
@@ -352,6 +355,7 @@ recursive subroutine amr_step(ilevel,icount)
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
 #ifdef NIMHD
+        ! is this for STS?
         if((nmagdiffu2==0.and.nmagdiffu==1).or.&
              &(nambipolar2==0.and.nambipolar==1))then
            dtambdiffold(ilevel+1)=dtambdiff(ilevel)/dble(nsubcycle(ilevel))
@@ -520,17 +524,15 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 
 #ifdef NIMHD
+  ! to remove (super time stepping)
+
   ! STS for magnetic diffusion effects
   if(((nmagdiffu2==1.and.nmagdiffu==0).or.&
     &(nambipolar2==1.and.nambipolar==0)) .and. (.not.DTU))then
                                call timer('nimhd - diffusion_sts','start')
      call diffusion_sts(ilevel,icount)
   end if
-#endif
 
-! boundary update needed here?
-
-#ifdef NIMHD
   ! Magnetic diffusion step
  if(hydro)then
   if(((nmagdiffu2==1.and.nmagdiffu==0).or.&
@@ -591,16 +593,14 @@ recursive subroutine amr_step(ilevel,icount)
      if(nsubcycle(ilevel-1)==1)dtnew(ilevel-1)=dtnew(ilevel)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
 #ifdef NIMHD
+     ! to keep (but check)
+     ! remove nmagdiffu2 checks since 2 i used for STS and will be removed
      if((nmagdiffu2==0.and.nmagdiffu==1).or.&
           &(nambipolar2==0.and.nambipolar==1))then
         if(nsubcycle(ilevel-1)==1)dtambdiff(ilevel-1)=dtambdiff(ilevel)
-        !if((icount==2) .and. (nambipolar2 == 0) ) dtambdiff(ilevel-1)=dtambdiffold(ilevel)+dtambdiff(ilevel)
-        !if ((icount==2) .and. (nambipolar2 == 1)) dtambdiff(ilevel-1)=dtambdiff(ilevel)
         if (icount==2) dtambdiff(ilevel-1)=dtambdiffold(ilevel)+dtambdiff(ilevel)
         
         if(nsubcycle(ilevel-1)==1)dtmagdiff(ilevel-1)=dtmagdiff(ilevel)
-        !     if  ((icount==2) .and. (nmagdiffu2 == 0)) dtmagdiff(ilevel-1)=dtmagdiffold(ilevel)+dtmagdiff(ilevel)
-        !     if ((icount==2) .and. (nmagdiffu2 == 1)) dtmagdiff(ilevel-1)=dtmagdiff(ilevel)
         if  (icount==2) dtmagdiff(ilevel-1)=dtmagdiffold(ilevel)+dtmagdiff(ilevel)
 
         if(nsubcycle(ilevel-1)==1)dtwad(ilevel-1)=dtwad(ilevel)

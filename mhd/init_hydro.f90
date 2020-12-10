@@ -36,6 +36,7 @@ subroutine init_hydro
      pstarold=0.0d0; pstarnew=0.0d0
   endif
 #ifdef NIMHD
+  ! not needed when STS is removed
   if(pressure_fix .or. nambipolar2.eq.1 .or.nmagdiffu2.eq.1)then
 #else
   if(pressure_fix)then
@@ -169,6 +170,8 @@ subroutine init_hydro
                  end do
 #if NVAR > 8+NENER
 #ifdef NIMHD
+! to be removed
+! current is calculated, should not be read
                  do ivar=9+nener,nvar-3 ! Read passive scalars if any
                     read(ilun)xx
                     do i=1,ncache

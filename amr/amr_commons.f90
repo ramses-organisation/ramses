@@ -52,7 +52,9 @@ module amr_commons
 
   ! Non-ideal MHD related timesteps
 !#ifdef NIMHD
+  ! move to nimhd commons
   ! gives compilation error when in if NIMHD block
+  ! remove nsts and dtsts (they are for super time stepping)
   integer,dimension(1:MAXLEVEL)::nsts=0
   real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtwad,dtmagdiff,dthall,dtsts
   real(dp),dimension(1:MAXLEVEL)::dtambdiffold,dtwadold,dtmagdiffold,dthallold

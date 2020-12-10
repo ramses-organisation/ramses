@@ -23,6 +23,8 @@ subroutine courant_fine(ilevel)
   real(dp),dimension(1:nvector,1:nvar+3),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 #ifdef NIMHD
+  ! maybe to see if ambipolar dt at a certain level restricts the global dt?
+  ! can probably remove
   real(dp)::dtwad_loc,dtwad_all
   real(dp)::dtambdiff_loc,dtambdiff_lev,dtambdiff_all
   real(dp)::dtmagdiff_loc,dtmagdiff_lev,dtmagdiff_all
@@ -39,6 +41,8 @@ subroutine courant_fine(ilevel)
   eint_all=0.0d0; eint_loc=0.0d0
   dt_all=dtnew(ilevel); dt_loc=dt_all
 #ifdef NIMHD
+  ! maybe to see if ambipolar dt at a certain level restricts the global dt?
+  ! can probably remove
   dtambdiff_all=dtambdiff(ilevel); dtambdiff_loc=dtambdiff_all
   dtmagdiff_all=dtmagdiff(ilevel); dtmagdiff_loc=dtmagdiff_all
   dtwad_all=dtwad(ilevel); dtwad_loc=dtwad_all
@@ -138,7 +142,10 @@ subroutine courant_fine(ilevel)
         ! Compute CFL time-step
         if(nleaf>0)then
 #ifdef NIMHD
+           !needed
            call cmpdt(uu,gg,dx,dt_lev,nleaf,dtambdiff_lev,dtmagdiff_lev,dthall_lev)
+           ! remove the nimhd effects from cmpdt and make a separate call cmpdt_nimhd
+           ! then take the min
            dtambdiff_loc=min(dtambdiff_loc,dtambdiff_lev)
            dtmagdiff_loc=min(dtmagdiff_loc,dtmagdiff_lev)
            dtwad_loc=min(dtwad_loc,dt_lev)
@@ -222,9 +229,6 @@ subroutine courant_fine(ilevel)
      else
         tmag1=dtambdiff(ilevel)
      endif
-!neil      dtnew(ilevel)=MIN(dtnew(ilevel),tmag)
-     ! Barenblatt ambipolar diffusion
-     !dtnew(ilevel)=dtambdiff(ilevel)
   endif
 
   if  (nmagdiffu == 1) then
@@ -239,19 +243,13 @@ subroutine courant_fine(ilevel)
      else
         tmag2=dtmagdiff(ilevel)
      endif
-!neil      dtnew(ilevel)=MIN(dtnew(ilevel),tmag,dthall(ilevel))
   end if
-  
-!   if  (nmagdiffu2 == 0) then
-! !neil     dtnew(ilevel)=MIN(dtnew(ilevel),dtmagdiff(ilevel),dthall(ilevel))
-!      dtnew(ilevel)=MIN(dtnew(ilevel),tmag1,tmag2,dthall(ilevel))
-!   else
-!      dtnew(ilevel)=MIN(dtnew(ilevel),tmag1,dthall(ilevel))     ! subcycling, on ne prend pas en compte le temps ohmique
-!   end if
-  
+
+! remove if, since nambipolar2 will be removed (STS)
   if  (nambipolar2 == 0) then ! no subcycling, on prend en compte le temps ambipolaire
      dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
   endif
+! remove if, since nmagdiffu2 will be removed (STS)
   if  (nmagdiffu2 == 0) then ! no subcycling, on prend en compte le temps ohmique
      dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
   endif

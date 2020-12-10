@@ -138,6 +138,10 @@ subroutine backup_hydro(filename, filename_desc)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > 8+NENER
 #ifdef NIMHD
+! output current
+! we want to keep it in hydro files to limit the number of files.
+! add option to also output it in the case of ideal mhd
+! add option to output velocity of the ions
               do ivar = 9+nener, nvar-3 ! Write passive scalars if any
                  do i = 1, ncache
                     xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)

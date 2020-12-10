@@ -4,6 +4,7 @@
 !###########################################################
 !###########################################################
 !###########################################################
+! to remove! viscosity will be a separate update
 ! modif cmm
 subroutine computevisco(q,ngrid,dx,dy,dz,dt,fvisco)
 

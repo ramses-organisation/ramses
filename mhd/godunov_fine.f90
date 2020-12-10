@@ -319,6 +319,9 @@ end subroutine add_gravity_source_terms
 !###########################################################
 !###########################################################
 subroutine add_pdv_source_terms(ilevel)
+! IMPORTANT
+! if pressure fix= true, we need nimhd heating
+! this is currently missing and needs to be fixed!
   use amr_commons
   use hydro_commons
   implicit none
@@ -695,6 +698,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
 #ifdef NIMHD
+   ! is there a less ugly way to do this? YES, see umuscle
   call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache,ind_grid,jcell)
 #else
   call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache)
@@ -935,6 +939,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               ! update jcenter
               do i=1,ncache
                  ! electric current
+                 ! this can be removed once the current is stored in a separate variable
                  unew(ind_cell(i),nvar-3+idim)=jcell(i,i3   ,j3   ,k3   ,idim)
               end do
            enddo

@@ -237,6 +237,8 @@ subroutine read_hydro_params(nml_ok)
   END SELECT
 
 ! Checks on non-ideal MHD parameters
+! to move to separate file nimhd/read_nimhd_params.f90
+! to remove STS checks
 #ifdef NIMHD
   rewind(1)
   read(1,NML=nonidealmhd_params,END=109)
@@ -329,6 +331,9 @@ subroutine read_hydro_params(nml_ok)
 
   rewind(1)
   read(1,NML=pseudovisco_params,END=111)
+  ! psuedoviscosity = and explicit viscosity
+  ! this is a module independent of nimhd and will be added separately
+  ! used for abc flows
 111 continue
   if((nvisco.ne.0).and.(nvisco.ne.1)) then
      write(*,*)'Wrong choice for nvisco'
@@ -657,6 +662,13 @@ subroutine read_hydro_params(nml_ok)
   !------------------------------------------
   ! Read resistivity tables for non-ideal MHD
   !------------------------------------------
+  ! this should be refactored
+  ! add parameter to choose how to compute the resistivity
+  ! 1) fixed resistivity
+  ! 2) analytical model resitivity(rho,T), Shu? Default option? Can be easily patched by the user
+  ! 3) a table (like from Marchand 2016)
+  ! make separate routine that computes the resistivity based on the chosen option
+! move use_x3d to patch. We don't want to include a large table in ramses
   !TODO: What about if TEST?
   if(use_nonideal_mhd)then
      if(use_x3d==1)then

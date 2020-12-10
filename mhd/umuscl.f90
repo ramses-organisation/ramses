@@ -29,8 +29,17 @@
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 !  then modified by Jacques Masson, Benoit Commercon and Neil Vaytet for non-ideal MHD
 ! ----------------------------------------------------------------
+! Implementation of Masson: 2 options to calc nimhd
+! 1) use finite differences
+! 2) use fluxes (a lot of vars are estimated for this), never used, not tested
+! both options are still here.
+! TODO: remove flux option
 #ifdef NIMHD
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid,ind_grid,jcell)
+! ind_grid can be removed (not use)
+! jcell is used!
+! instead use a nimhdin variable
+! remove computation of current from here and put in godunov_fine
 #else
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 #endif

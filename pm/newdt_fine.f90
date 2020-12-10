@@ -43,6 +43,8 @@ subroutine newdt_fine(ilevel)
   ! Save old time step
   dtold(ilevel)=dtnew(ilevel)
 #ifdef NIMHD
+! Why do we want to keep this old value? To print to log?
+! keep
   dtambdiffold(ilevel)=dtambdiff(ilevel)
   dtmagdiffold(ilevel)=dtmagdiff(ilevel)
   dtwadold(ilevel)=dtwad(ilevel)

@@ -528,6 +528,7 @@ subroutine region_condinit(x,q,dx,nn)
 #endif
 #if NVAR>8+NENER
 #ifdef NIMHD
+! remove when current in separate variable
               do ivar=9+nener,nvar-3
                  q(i,ivar)=var_region(k,ivar-8-nener)
               end do
