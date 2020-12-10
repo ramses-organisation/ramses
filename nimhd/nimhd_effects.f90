@@ -4,56 +4,6 @@
 !###########################################################
 !###########################################################
 !###########################################################
-! to remove! viscosity will be a separate update
-! modif cmm
-subroutine computevisco(q,ngrid,dx,dy,dz,dt,fvisco)
-
-  USE amr_parameters
-  use hydro_commons
-  USE const
-  IMPLICIT NONE
-
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
-  INTEGER ::ngrid
-  REAL(dp)::dx,dy,dz,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3) :: fvisco
-  real(dp) :: muvisco
-
-! declare local variables
-  INTEGER :: i, j, k, l
-  real(dp) :: rhox,rhoy,rhoz
-
- do k=min(1,ku1+1),ku2
-     do j=min(1,ju1+1),ju2       
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              rhox=0.5d0*(q(l,i,j,k,1)+q(l,i-1,j,k,1))
-              rhoy=0.5d0*(q(l,i,j,k,1)+q(l,i,j-1,k,1))
-              rhoz=0.5d0*(q(l,i,j,k,1)+q(l,i,j,k-1,1))
-
-! WARNING Flux F defined as dU/dt+dF/dx=0 
-              fvisco(l,i,j,k,1,1)=-muvisco(rhox)*(q(l,i,j,k,2)-q(l,i-1,j,k,2))/dx
-              fvisco(l,i,j,k,1,2)=-muvisco(rhoy)*(q(l,i,j,k,2)-q(l,i,j-1,k,2))/dy
-              fvisco(l,i,j,k,1,3)=-muvisco(rhoz)*(q(l,i,j,k,2)-q(l,i,j,k-1,2))/dz
-              fvisco(l,i,j,k,2,1)=-muvisco(rhox)*(q(l,i,j,k,3)-q(l,i-1,j,k,3))/dx
-              fvisco(l,i,j,k,2,2)=-muvisco(rhoy)*(q(l,i,j,k,3)-q(l,i,j-1,k,3))/dy
-              fvisco(l,i,j,k,2,3)=-muvisco(rhoz)*(q(l,i,j,k,3)-q(l,i,j,k-1,3))/dz
-              fvisco(l,i,j,k,3,1)=-muvisco(rhox)*(q(l,i,j,k,4)-q(l,i-1,j,k,4))/dx
-              fvisco(l,i,j,k,3,2)=-muvisco(rhoy)*(q(l,i,j,k,4)-q(l,i,j-1,k,4))/dy
-              fvisco(l,i,j,k,3,3)=-muvisco(rhoz)*(q(l,i,j,k,4)-q(l,i,j,k-1,4))/dz
-
-           end do
-        end do
-     end do
-  end do
-
-end subroutine computevisco
-! fin modif cmm
-
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
 subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
 ! comment Tine: Not used
 
@@ -2808,21 +2758,6 @@ double precision function crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
    crossprodz=v1x*v2y-v2x*v1y
 
 end function crossprodz
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function muvisco(rhon)
-
-   use hydro_parameters
-   implicit none 
-   real(dp) ::rhon
-
-   muvisco=visco
-   if(ntestDADM.eq.1) then
-      muvisco=visco
-   endif
-
-end function muvisco
 !###########################################################
 !###########################################################
 !###########################################################

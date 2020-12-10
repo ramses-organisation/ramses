@@ -108,7 +108,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxh,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save:: fvisco
 #if HALL==1
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save:: bpred
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2),save:: rppred
@@ -150,7 +149,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   
   jcell=0.0d0
  
-  fvisco=0d0
   ! fin modif nimhd
 #endif
 
@@ -182,13 +180,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   if(nmagdiffu.eq.1) then
      call computdifmag(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm,jcentersquare)
   endif
-
-  ! modif cmm
-  ! Pseudo viscosity
-  if(nvisco.eq.1) then
-     call computevisco(qin,ngrid,dx,dy,dz,dt,fvisco)
-  endif
-  ! fin modif cmm
 #endif
 
   ! Compute 3D traced-states in all three directions
@@ -249,23 +240,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
   endif
-
-  ! modif cmm
-  ! momentum flux from pseudo-viscosity
-  if(nvisco.eq.1) then
-      do ivar=2,4
-         do k=klo,khi
-            do j=jlo,jhi
-               do i=if1,if2                  
-                  do l=1,ngrid
-                    flux(l,i,j,k,ivar,1)=flux(l,i,j,k,ivar,1)+fvisco(l,i,j,k,ivar-1,1)*dt/dx
-                  end do
-               end do
-            end do
-         end do
-      end do
-  endif
-  ! fin modif cmm
 #endif
 
   ! Solve for 1D flux in Y direction
@@ -305,23 +279,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
   endif
-
-  ! modif cmm
-  ! momentum flux from pseudo-viscosity
-  if(nvisco.eq.1) then
-      do ivar=2,4
-        do k=klo,khi
-            do j=jf1,jf2
-               do i=ilo,ihi
-                  do l=1,ngrid
-                    flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+ fvisco(l,i,j,k,ivar-1,2)*dt/dy
-                  end do
-               end do
-            end do
-         end do
-      end do
-  endif
-  ! fin modif cmm
 #endif
 #endif
 ! end NDIM>1
@@ -363,23 +320,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
   endif
-
-  ! modif cmm
-  ! momentum flux from pseudo-viscosity
-  if(nvisco.eq.1) then
-      do ivar=2,4
-         do k=kf1,kf2
-            do j=jlo,jhi
-               do i=ilo,ihi
-                  do l=1,ngrid
-                    flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+ fvisco(l,i,j,k,ivar-1,3)*dt/dz
-                  end do
-               end do
-            end do
-         end do
-      end do
-  endif
-  ! fin modif cmm
 #endif
 #endif
 ! end NDIM==3

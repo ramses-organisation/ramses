@@ -129,8 +129,6 @@ subroutine read_hydro_params(nml_ok)
        & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
        & ,coefad, nminitimestep, coefalfven,nmagdiffu2,nambipolar2,nu_sts,coefdtohm &
        & ,DTU,nimhdheating_in_eint
-
-  namelist/pseudovisco_params/nvisco,visco
 #endif
 
   ! Read namelist file
@@ -330,28 +328,7 @@ subroutine read_hydro_params(nml_ok)
   endif
 
   rewind(1)
-  read(1,NML=pseudovisco_params,END=111)
-  ! psuedoviscosity = and explicit viscosity
-  ! this is a module independent of nimhd and will be added separately
-  ! used for abc flows
 111 continue
-  if((nvisco.ne.0).and.(nvisco.ne.1)) then
-     write(*,*)'Wrong choice for nvisco'
-     call clean_stop
-  end if
-
-  if(myid==1) then
-     write(*,*)'!!!!!!!!! Pseudo Viscosity Parameters  !!!!!!!!!!'
-     if(nvisco.eq.1) then
-        write(*,*)'Pseudo viscosity switched ON'
-        write(*,*)'Pseudo viscosity coefficient',visco
-        write(*,*)'Pseudo viscosity time coefficient',coefvisco
-     endif
-
-     if(nvisco.eq.0) then
-        write(*,*)'Pseudo viscosity switched OFF'
-     endif
-  endif
 
   if((nambipolar2.eq.1).or.(nmagdiffu2.eq.1))then
      if(pressure_fix.eqv..false.) then

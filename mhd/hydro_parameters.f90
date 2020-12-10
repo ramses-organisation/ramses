@@ -147,15 +147,6 @@ module hydro_parameters
   integer:: nyy=2
   integer:: nzz=3
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! remove from nimhd update
-! Artificial pseudo-viscosity ? Yes=1 No=0
-  integer :: nvisco = 0
-! coefficient of pseudo-viscosity
-  real(dp):: visco=1d0
-! security factor for time-step
-  real(dp):: coefvisco=0.1d0
-
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! NON IDEAL MHD parameters
 ! Ambipolar diffusion ? Yes=1 No=0
