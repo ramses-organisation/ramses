@@ -1,0 +1,2 @@
+QUICK: 1
+FLAGS: NDIM=3 PATCH=../patch/test_suite/mhd/nimhd-diffusion-ad SOLVER=mhd NIMHD=1
