@@ -379,7 +379,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
 
               ! Left state at right interface
               qreq              = half*(req(l,i+1,j,k)+req(l,i,j,k))
-              qpeq(l,i+1,j,k,1) = half*(peq(l,i+1,j,k)+req(l,i,j,k))
+              qpeq(l,i+1,j,k,1) = half*(peq(l,i+1,j,k)+peq(l,i,j,k))
 
               qm(l,i,j,k,ir,1) = r + drx - req(l,i,j,k) + qreq
               qm(l,i,j,k,iu,1) = u + dux
