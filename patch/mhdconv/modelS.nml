@@ -4,14 +4,14 @@ This namelist contains various input parameters for RAMSES runs
 hydro=.true.
 poisson=.true.
 nrestart=0
-ncontrol=10
+ncontrol=100
 nremap=10
 nsubcycle=30*1
 /
 
 &AMR_PARAMS 
-levelmin=6
-levelmax=6
+levelmin=7
+levelmax=7
 ngridmax=200000
 nexpand=1
 boxlen=245.0
@@ -34,9 +34,9 @@ A_region=0.0,0.0,0.0
 B_region=0.0,0.0,0.0
 C_region=0.0,0.0,0.0
 pert_r = 1.0
-pert_dx = 50.0
+pert_dx = 20.0
 heating_r = 2.0e-10
-heating_dx = 10.0
+heating_dx = 20.0
 /
 
 &OUTPUT_PARAMS

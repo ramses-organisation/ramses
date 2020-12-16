@@ -4,7 +4,7 @@ This namelist contains various input parameters for RAMSES runs
 hydro=.true.
 poisson=.true.
 nrestart=0
-ncontrol=10
+ncontrol=100
 nremap=10
 nsubcycle=30*1
 /
@@ -40,8 +40,8 @@ heating_dx = 0.5
 /
 
 &OUTPUT_PARAMS
-delta_tout=5
-tend=100
+delta_tout=1000
+tend=20000
 /
 
 &POISSON_PARAMS 

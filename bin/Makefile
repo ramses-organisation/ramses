@@ -14,9 +14,9 @@ NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = mhd
+SOLVER = hydro
 # Patch
-PATCH = '../patch/mhdconv'
+PATCH = '../patch/convection'
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use MPI? 1=Yes, 0=No

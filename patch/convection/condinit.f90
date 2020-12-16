@@ -24,63 +24,49 @@ subroutine condinit(x,u,dx,pert,nn)
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
-  integer::i,j,id,iu,iv,iw,ip
-  real(dp)::x1,x2,g,T_tmp, delta_temp
-  real(dp)::rho1,rho2,rho3
-  real(dp)::p1,p2,p3,pfactor
+  integer::i,id,iu,iv,iw,ip,is                     ! Indices Euler
+  real(dp)::p1,p2,p3,rho1,rho2,rho3,x1,x2,g,T0,drho ! Variables
   real(dp)::gammainit1,gammainit2,gammainit3
   integer::ivar
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 
-  id=1; iu=2; iv=3; iw=4; ip=ndim+2
-  x1=x_center(1)
-  x2=x_center(2)
-  
-  rho1=d_region(1)
-  rho2=d_region(2)
-  rho3=d_region(3)
-  
-  p1=p_region(1)
-  p2=p_region(2)
-  p3=p_region(3)
-
+  id=1; iu=2; iv=3; iw=4; ip=ndim+2; is=ndim+3
+  x1=x_center(1); x2=x_center(2)
+  rho1=d_region(1); rho2=d_region(2); rho3=d_region(3)
+  p1=p_region(1); p2=p_region(2); p3=p_region(3)
   gammainit1=gamma_region(1)
   gammainit2=gamma_region(2)
   gammainit3=gamma_region(3)
-  ! gammainit1=gamma
-  ! gammainit2=gamma
-  ! gammainit3=gamma
-  
   g = abs(gravity_params(1))
 
   do i=1,nn
     if(x(i,1) .le. x1)then
-      T_tmp = 1 - ((gammainit1-1.0d0)/gammainit1)*g*(rho1/p1)*(x(i,1))
-      q(i,id)=rho1*((T_tmp)**(1.0/(gammainit1-1.0d0)))
-      q(i,ip)=p1*((T_tmp)**(gammainit1/(gammainit1-1.0d0)))
+      T0 = 1 - ((gammainit1-1.0d0)/gammainit1)*g*(rho1/p1)*(x(i,1))
+      q(i,id)=rho1*((T0)**(1.0/(gammainit1-1.0d0)))
+      q(i,ip)=p1*((T0)**(gammainit1/(gammainit1-1.0d0)))
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
-      T_tmp = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
-
-      delta_temp=0.0
-      ! if(x(i,1).lt.x1+0.5)then
-      !    ! produce perturbation in convection zone!
-      !    call random_number(delta_temp)
-      !    delta_temp = pert*2.0*(delta_temp-0.5)*10.0**(-2.0)
-      ! endif
-
-      q(i,id)=rho2*((T_tmp)**(1.0/(gammainit2-1.0d0)))*(1.0-delta_temp)
-      q(i,ip)=p2*((T_tmp)**(gammainit2/(gammainit2-1.0d0)))
+      T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
+      drho = 0.0d0
+      if ((pert_r .gt. 0.) .and. (pert_dx .gt. 0.)) then
+        if (x(i,1) .lt. x1+pert_dx) then
+          !! produce density perturbation in small layer of convection zone!
+          call random_number(drho)
+          drho = pert_r*pert*2.0*(drho-0.5)*10.0**(-2.0)
+        end if 
+      end if
+      q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
+      q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
     else 
-      T_tmp = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
-      q(i,id)=rho3*((T_tmp)**(1.0/(gammainit3-1.0d0)))
-      q(i,ip)=p3*((T_tmp)**(gammainit3/(gammainit3-1.0d0)))
+      T0 = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
+      q(i,id)=rho3*((T0)**(1.0/(gammainit3-1.0d0)))
+      q(i,ip)=p3*((T0)**(gammainit3/(gammainit3-1.0d0)))
     endif
     q(i,iu)=0.0d0
     if(ndim>1)q(i,iv)=0.0d0
     if(ndim>2)q(i,iw)=0.0d0
 #if NVAR>NDIM+2
     ! Set entropy as a passive scalar
-    q(i,ndim+3)=q(i,ip)/q(i,id)**gamma
+    q(i,is)=q(i,ip)/q(i,id)**gamma
 #endif
  end do
 
@@ -149,39 +135,35 @@ subroutine eneana(x,e,dx,t,ncell)
   x1 = x_center(1)
   x2 = x_center(2)
   rho0 = d_region(2)
-  !!!!
-  !
-  !HeFlash
-  e0 = 2.0e-6 ! erg/g/s (Normalized 10**16)
-  dxq = 0.5d0
-  !!!
-  !
+
+  e0 = heating_r
+  dxq = heating_dx
+  ! HeFlash
+  !e0 = 2.0e-6 ! erg/g/s (Normalized 10**16)
+  !dxq = 0.5d0
   ! Model S
-  ! e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
+  !e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
   ! dxq = 2.0d0
-  ! !!!!
   
   ! Initialize
   do i=1,ncell
     e(i) = 0.0d0
   end do 
 
-  ! !! Heating loop
-  ! do i=1,ncell
-  !   if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
-  !     ! heating
-  !     !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
-  !     e(i) = e0*rho0 ! erg/s/cm^3
-  !     !e(i) = 0.d0
-  !   else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
-  !     ! cooling
-  !     !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
-  !     e(i) = (-e0)*rho0 ! erg/s/cm^3
-  !     !e(i) = 0.d0
-  !   else
-  !     e(i) = 0.0d0
-  !   end if
-  ! end do 
+  ! Heating loop
+  do i=1,ncell
+    if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x1+dxq)) then
+      ! heating
+      !e(i) = e0*(1.0 + cos(2.0*pi*(x(i,1)-x1-dxq/2.0)/dxq))/dxq
+      e(i) = e0*rho0 ! erg/s/cm^3
+      !e(i) = 0.d0
+    else if ((x(i,1) .gt. x2-dxq) .and. (x(i,1) .lt. x2)) then
+      ! cooling
+      !e(i) = e0*(-1.0 - cos(2.0*pi*(x(i,1)-x2+dxq/2.0)/dxq))/dxq
+      e(i) = (-e0)*rho0 ! erg/s/cm^3
+      !e(i) = 0.d0
+    end if
+  end do 
 
 
 end subroutine eneana
