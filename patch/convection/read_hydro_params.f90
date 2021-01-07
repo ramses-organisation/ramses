@@ -50,7 +50,7 @@ subroutine read_hydro_params(nml_ok)
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium, entropy_fix
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &

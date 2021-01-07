@@ -53,6 +53,7 @@ riemann='hllc'
 slope_type=2
 strict_equilibrium=1
 scheme='muscl'
+entropy_fix=.false.
 /
 
 &REFINE_PARAMS 
