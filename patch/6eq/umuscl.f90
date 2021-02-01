@@ -883,18 +883,18 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
      ! We need to reassign the positions of the velocity for the appropriate direction 
      ! Normal velocity 
      do l = 1, ngrid
-        flx(l,i,j,k,ln)  = fgdnv(l,2*nmat+1)
+        flx(l,i,j,k,2*nmat+ln)  = fgdnv(l,2*nmat+1)
      end do
      ! Tangential velocity 2
 #if NDIM>1
      do l = 1, ngrid
-        flx(l,i,j,k,lt1) = fgdnv(l,2*nmat+2)
+        flx(l,i,j,k,2*nmat+lt1) = fgdnv(l,2*nmat+2)
      end do
 #endif
      ! Tangential velocity 2
 #if NDIM>2
      do l = 1, ngrid
-        flx(l,i,j,k,lt2) = fgdnv(l,2*nmat+3)
+        flx(l,i,j,k,2*nmat+lt2) = fgdnv(l,2*nmat+3)
      end do
 #endif
      
