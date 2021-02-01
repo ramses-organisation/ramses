@@ -131,6 +131,7 @@ ifeq ($(GRACKLE),1)
 endif
 ifeq ($(USE_TURB),1)
    LIBS_TURB = -L$(HOME)/local/lib -lfftw3
+   LIBS_OBJ_TURB = -I$(HOME)/local/include -lfftw3
 endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
@@ -228,9 +229,9 @@ write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
 	$(F90) -O0 -c write_patch.f90 -o $@
 %.o:%.F
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 %.o:%.f90
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 FORCE:
 #############################################################################
 clean:
