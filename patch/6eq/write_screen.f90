@@ -118,6 +118,7 @@ subroutine write_screen
               do i=1,ncache
                  ind_cell(i)=ncoarse+(ind-1)*ngridmax+ind_grid(i)
               end do
+              dtot(1:ncache) = 0.0
               do i=1,ncache
                 do imat=1,nmat
                   dtot(i)    = dtot(i) + uold(ind_cell(i),nmat+imat)
