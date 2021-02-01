@@ -37,6 +37,7 @@ subroutine condinit(x,u,dx,nn)
   real(dp),save::rmax,dmax,pmax              
   real(dp)::v0,rr,etot_mat
   
+
 #if NDIM==1 
   ! Call built-in initial condition generator
   call region_condinit(x,q,f,g,dx,nn)

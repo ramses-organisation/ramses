@@ -85,9 +85,11 @@ subroutine backup_hydro(filename, filename_desc)
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
               ! Calculate total density 
-              dtot(1:nlevelmax) = 0.0
+              dtot(1:ncache) = 0.0
               do imat = 1,nmat
-                dtot(i) = dtot(i) + uold(ind_grid(i)+iskip,nmat+imat)
+                do i=1,ncache
+                  dtot(i) = dtot(i) + uold(ind_grid(i)+iskip,nmat+imat)
+                end do
               end do
               ! Write volume fractions
               do imat = 1,nmat
@@ -102,14 +104,14 @@ subroutine backup_hydro(filename, filename_desc)
               do imat = 1,nmat
                  ivar = nmat+imat
                  do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,imat)
+                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,imat),smallf)
                  end do
                  write(field_name, '("true_dens_", i0.2)') imat
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
               do ivar = 2*nmat+1, 2*nmat+ndim
                 do i = 1, ncache
-                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/dtot(i)
+                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(dtot(i),smallr)
                 end do
                 field_name = 'velocity_' // dim_keys(ivar - 1)
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -129,10 +131,10 @@ subroutine backup_hydro(filename, filename_desc)
               do imat = 1,nmat
                 do i = 1, ncache
                   ff(1,imat)   = uold(ind_grid(i)+iskip,imat)
-                  gg(1,imat)   = uold(ind_grid(i)+iskip,imat+nmat)/dtot(i)
+                  gg(1,imat)   = uold(ind_grid(i)+iskip,imat+nmat)/max(dtot(i),smallr)
                   ekin=0.0
                   do idim=1,ndim
-                    qq(1,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot(i)
+                    qq(1,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/max(dtot(i),smallr)
                     ekin       = ekin + 0.5d0*qq(1,idim)**2
                   end do
                   erad=00
@@ -141,7 +143,7 @@ subroutine backup_hydro(filename, filename_desc)
                     erad       = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
                   end do
 #endif
-                  qq(1,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/ff(1,imat) - dtot(i)*ekin - erad
+                  qq(1,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/max(ff(1,imat),smallf) - dtot(i)*ekin - erad
                   call eos(gg(1,imat),qq(1,ndim+nmat+imat),pp,cc,imat,inv,1)
                   xdp(i)=pp(1)       ! Pressure
                   end do

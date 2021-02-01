@@ -106,31 +106,37 @@ subroutine courant_fine(ilevel)
         ! Compute total mass
         if(geom==3)then
            do i=1,nleaf
-              mass_loc=mass_loc+dtot(i)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
+              mass_loc = mass_loc + dtot(i)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
            end do
         else if(geom==2)then
            do i=1,nleaf
-              mass_loc=mass_loc+dtot(i)*vol*rloc(i)*twopi
+              mass_loc = mass_loc + dtot(i)*vol*rloc(i)*twopi
            end do
         else
            do i=1,nleaf
-              mass_loc=mass_loc+dtot(i)*vol
+              mass_loc = mass_loc + dtot(i)*vol
            end do
         endif
 
         ! Compute total energy
         if(geom==3)then
-           do i=1,nleaf
-              ekin_loc=ekin_loc+uu(i,ndim+2)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
-           end do
+          do imat=1,nmat
+            do i=1,nleaf
+              ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
+            end do
+          end do
         else if(geom==2)then
-           do i=1,nleaf
-              ekin_loc=ekin_loc+uu(i,ndim+2)*vol*rloc(i)*twopi
-           end do
+          do imat=1,nmat
+            do i=1,nleaf
+              ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol*rloc(i)*twopi
+            end do
+          end do
         else
-           do i=1,nleaf
-              ekin_loc=ekin_loc+uu(i,ndim+2)*vol
-           end do
+          do imat=1,nmat
+            do i=1,nleaf
+              ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol
+            end do
+          end do
         endif
 
         ! Compute CFL time-step

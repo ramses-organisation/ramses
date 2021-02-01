@@ -26,7 +26,7 @@ bound_type= 1, 1
 
 &MATERIAL_PARAMS
 ! Mie-Grueneisen parameters
-eos_params(1,1:4)=4.4,0.0,0.6,1.0
+eos_params(1,1:4)=4.4,0.0,-0.6,1.0
 eos_params(2,1:4)=1.4,0.0,0.0,0.05
 ! Stiffened gas parameters
 ! eos_params(1,1:2)=4.4,0.6

@@ -10,14 +10,13 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 1
+NDIM = 2
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
 SOLVER = hydro
 # Patch
-# PATCH = ../patch/planet:../patch/multimat
-PATCH = ../patch/6eq
+PATCH = ../patch/multimat
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use MPI? 1=Yes, 0=No
@@ -42,8 +41,7 @@ NGROUPS = 0
 # Number of passive scalars
 NPSCAL = 0
 # Compute NVAR
-# NVAR = 2+$(NDIM)+2*$(NMAT)
-NVAR = $(NDIM)+3*$(NMAT)
+NVAR = 2+$(NDIM)+2*$(NMAT)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
@@ -86,7 +84,7 @@ ifeq ($(COMPILER),GNU)
    endif
    F90 += -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none 
    ifeq ($(DEBUG),1)
-      F90 += -O0 -fbounds-check -Wuninitialized -Wall -fcheck=all
+      F90 += -O0 -fbounds-check -Wuninitialized -Wall
       FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
    else
       F90 += -O3
@@ -105,7 +103,7 @@ ifeq ($(COMPILER),INTEL)
    endif
    F90 += -fp-model source
    ifeq ($(DEBUG),1)
-      F90 += -warn all -O0 -g -traceback -check bounds -fcheck=all -Wall
+      F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
    else
       F90 += -O3
@@ -134,7 +132,7 @@ VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
-VPATH = $(PATCH):../hydro:../pm:../poisson:../amr:../io
+VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o \
@@ -159,8 +157,7 @@ AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o \
 PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
         newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o \
         sink_particle.o feedback.o clump_finder.o clump_merger.o \
-        flag_formation_sites.o init_sink.o output_sink.o \
-	unbinding.o merger_tree.o
+        flag_formation_sites.o init_sink.o output_sink.o
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
              multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \

@@ -124,14 +124,13 @@ subroutine write_screen
                 end do
                 if(son(ind_cell(i))==0)then
                   icell=icell+1
-                  qq(icell,1)                = uold(ind_cell(i),2*nmat+1)/max(dtot(icell),smallr)
+                  qq(icell,1)                = uold(ind_cell(i),2*nmat+1)/max(dtot(i),smallr)
                   do imat=1,nmat
                     ff(icell,imat)           = uold(ind_cell(i),imat)
-                    gg(icell,imat)           = uold(ind_cell(i),nmat+imat)/max(dtot(icell),smallr)
+                    gg(icell,imat)           = uold(ind_cell(i),nmat+imat)/max(ff(icell,imat),smallf)
                     qq(icell,ndim+nmat+imat) = uold(ind_cell(i),2*nmat+ndim+imat)/max(ff(icell,imat),smallf) - 0.5*gg(icell,imat)*qq(icell,1)**2
                   end do
                 end if
-                write(*,*)'d1=',gg(icell,1),' d2=',gg(icell,2),' p1=',qq(icell,ndim+1),' p2=',qq(icell,ndim+2)
               end do
            end do
         end if
