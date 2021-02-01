@@ -111,32 +111,30 @@ subroutine init_hydro
                  read(ilun)xx
                  do imat=1,nmat
                    do i=1,ncache
-                      uold(ind_grid(i)+iskip,2*nmat+ndim+imat)=xx(i)
+                      uold(ind_grid(i)+iskip,2*nmat+ndim+imat)=xx(i)              ! Saving the pressure into the energy slots
+                      qq(i,ndim+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)                         
                    end do
                  end do
                  ! Convert pressure to total energy
                  inv = .true.
-                 do i = 1, ncache
-                    do imat=1,nmat
-                       ff(1,imat) = uold(ind_grid(i)+iskip,imat)
-                       gg(1,imat) = uold(ind_grid(i)+iskip,imat+nmat)
-                    end do
-                    ekin=0.0
-                    do idim=1,ndim
-                       qq(1,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot(i)
-                       ekin       = ekin + 0.5d0*qq(1,idim)**2
-                    end do
-                    erad=00
+                 do imat=1,nmat
+                   call eos(gg(:,imat),ee,qq(:,ndim+imat),cc,imat,inv,ncache)
+                   do i = 1, ncache
+                      ff(i,imat) = uold(ind_grid(i)+iskip,imat)
+                      gg(i,imat) = uold(ind_grid(i)+iskip,imat+nmat)/ff(i,imat)
+                      ekin=0.0
+                      do idim=1,ndim
+                         qq(i,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot(i)
+                         ekin       = ekin + 0.5d0*qq(i,idim)**2
+                      end do
+                      erad=0.0
 #if NENER > 0
-                    do irad = 1,nener
-                       erad = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
-                    end do
-#endif
-                    do imat=1,nmat
-                      qq(1,ndim+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)                         ! Pressures
-                    call eos(gg(1,imat),ee,qq(1,ndim+imat),cc,imat,inv,1)
-                    uold(ind_grid(i)+iskip,2*nmat+ndim+imat) = (ee(1) + gg(1,imat)*ekin+erad)*ff(1,imat) ! Total energy 
-                    end do
+                      do irad = 1,nener
+                         erad = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
+                      end do
+#endif                    
+                      uold(ind_grid(i)+iskip,2*nmat+ndim+imat) = (ee(i) + gg(i,imat)*ekin+erad)*ff(i,imat) ! f_k.E_k
+                   end do
                  end do
               
                  ! Read equilibrium density and pressure profiles
