@@ -157,7 +157,7 @@ subroutine write_screen
      ! Calculate pressures using the EOS routine
      do imat=1,nmat 
         inv=.false.
-        call eos(gg(:,imat),qq(:,ndim+nmat+imat),ppp_mat,ccc,imat,inv,1)
+        call eos(gg(:,imat),qq(:,ndim+nmat+imat),ppp_mat,ccc,imat,inv,ncell)
         do i=1,ncell
           ppp(i,imat) = ppp_mat(i)
         end do

@@ -126,7 +126,7 @@ subroutine backup_hydro(filename, filename_desc)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
-              ! Write thermal pressure
+              ! Calculate individual internal + radiative energies
               inv=.false.
               do imat = 1,nmat
                 do i = 1, ncache
@@ -146,6 +146,8 @@ subroutine backup_hydro(filename, filename_desc)
                   qq(i,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/max(ff(i,imat),smallf) - gg(i,imat)*ekin - erad
                 end do
               end do
+
+              ! Write thermal pressure
               do imat=1,nmat
                 call eos(gg(:,imat),qq(:,ndim+nmat+imat),pp,cc,imat,inv,ncache)
                 do i=1,ncache

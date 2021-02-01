@@ -120,8 +120,8 @@ subroutine init_hydro
                  do imat=1,nmat
                    call eos(gg(:,imat),ee,qq(:,ndim+imat),cc,imat,inv,ncache)
                    do i = 1, ncache
-                      ff(i,imat) = uold(ind_grid(i)+iskip,imat)
-                      gg(i,imat) = uold(ind_grid(i)+iskip,imat+nmat)/ff(i,imat)
+                      ff(i,imat)    = uold(ind_grid(i)+iskip,imat)
+                      gg(i,imat)    = uold(ind_grid(i)+iskip,imat+nmat)/ff(i,imat)
                       ekin=0.0
                       do idim=1,ndim
                          qq(i,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot(i)
@@ -130,10 +130,10 @@ subroutine init_hydro
                       erad=0.0
 #if NENER > 0
                       do irad = 1,nener
-                         erad = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
+                         erad       = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
                       end do
 #endif                    
-                      uold(ind_grid(i)+iskip,2*nmat+ndim+imat) = (ee(i) + gg(i,imat)*ekin+erad)*ff(i,imat) ! f_k.E_k
+                      uold(ind_grid(i)+iskip,2*nmat+ndim+imat) = (ee(i) + gg(i,imat)*ekin + erad)*ff(i,imat) ! f_k.E_k
                    end do
                  end do
               
