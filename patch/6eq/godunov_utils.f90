@@ -266,7 +266,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   ekind(1:ncell)=0.0
   do idim = 1,ndim
      do k = 1,ncell
-        qg(k,idim) = ug(k,2*nmat+idim+1)/dtotgk)
+        qg(k,idim) = ug(k,2*nmat+idim+1)/dtotg(k)
         qm(k,idim) = um(k,2*nmat+idim+1)/dtotm(k)
         qd(k,idim) = ud(k,2*nmat+idim+1)/dtotd(k)
         eking(k) = eking(k) + half*qg(k,idim)**2
@@ -278,9 +278,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   ! Compute total internal energy
   do imat=1,nmat
     do k = 1,ncell
-     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/max(ug(k,imat,smallf) - gg(k,imat)*eking(k)
-     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/max(um(k,imat,smallf) - gm(k,imat)*ekinm(k)
-     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/max(ud(k,imat,smallf) - gd(k,imat)*ekind(k)
+     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/max(ug(k,imat),smallf) - gg(k,imat)*eking(k)
+     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/max(um(k,imat),smallf) - gm(k,imat)*ekinm(k)
+     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/max(ud(k,imat),smallf) - gd(k,imat)*ekind(k)
     end do
   end do
   
