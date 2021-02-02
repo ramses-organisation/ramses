@@ -18,7 +18,7 @@ subroutine init_hydro
   logical ::inv
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg
   real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector),save::dtot,ee,cc
+  real(dp),dimension(1:nvector),save::dtot,gg_mat,ee,pp_mat,cc
   
   if(verbose)write(*,*)'Entering init_hydro'
 
@@ -118,7 +118,11 @@ subroutine init_hydro
                  ! Convert pressure to total energy
                  inv = .true.
                  do imat=1,nmat
-                   call eos(gg(:,imat),ee,qq(:,ndim+imat),cc,imat,inv,ncache)
+                   do i=1,ncache
+                     gg_mat(i) = gg(i,imat)
+                     pp_mat(i) = qq(i,ndim+imat)
+                   end do
+                   call eos(gg_mat,ee,pp_mat,cc,imat,inv,ncache)
                    do i = 1, ncache
                       ff(i,imat)    = uold(ind_grid(i)+iskip,imat)
                       gg(i,imat)    = uold(ind_grid(i)+iskip,imat+nmat)/ff(i,imat)

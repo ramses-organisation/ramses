@@ -10,8 +10,8 @@ debug=.false.
 /
 
 &AMR_PARAMS 
-levelmin=3
-levelmax=12
+levelmin=8
+levelmax=8
 ngridmax=10000
 nexpand=1
 boxlen=1.0
@@ -49,7 +49,8 @@ p2_region=1d-4,1d-4
 /
 
 &OUTPUT_PARAMS
-delta_tout=0.01
+! delta_tout=0.01
+foutput=1
 tend=0.23
 /
 

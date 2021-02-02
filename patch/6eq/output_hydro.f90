@@ -28,7 +28,7 @@ subroutine backup_hydro(filename, filename_desc)
   real(dp)::ekin,erad
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg
   real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector),save::dtot,pp,cc
+  real(dp),dimension(1:nvector),save::dtot,gg_mat,ee_mat,pp,cc
 
   if (verbose) write(*,*)'Entering backup_hydro'
 
@@ -149,7 +149,11 @@ subroutine backup_hydro(filename, filename_desc)
 
               ! Write thermal pressure
               do imat=1,nmat
-                call eos(gg(:,imat),qq(:,ndim+nmat+imat),pp,cc,imat,inv,ncache)
+                do i=1,ncache
+                  gg_mat(i) = gg(i,imat)
+                  ee_mat(i) = qq(i,ndim+nmat+imat)
+                end do
+                call eos(gg_mat,ee_mat,pp,cc,imat,inv,ncache)
                 do i=1,ncache
                   xdp(i) = pp(i)       ! Pressure
                 end do

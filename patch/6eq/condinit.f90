@@ -28,7 +28,7 @@ subroutine condinit(x,u,dx,nn)
   real(dp),dimension(1:nvector,1:npri),save::q             ! Primitive variables
   real(dp),dimension(1:nvector,1:nmat),save::f,g           ! Volume fraction and densities
   real(dp),dimension(1:nvector),save::ekin,dtot,eint,p,cs
-  real(dp),dimension(1:nvector),save::ekin_mat,eint_mat,cs_mat
+  real(dp),dimension(1:nvector),save::g_mat,eint_mat,p_mat,cs_mat
   logical,save::read_flag=.false.
   logical::inv
   integer,parameter::nrows=10000,ncols=3          ! CSV file parameters
@@ -111,18 +111,26 @@ subroutine condinit(x,u,dx,nn)
     endif
   end do
 #endif
-  
-  ! call inverse eos routine (g,p) -> (e,c)
+
+  ! Calculate the kinetic energy
   inv=.true.
   dtot(1:nn)     = 0.0
-  ekin_mat(1:nn) = 0.0
+  ekin(1:nn)     = 0.0
+  do k=1,nn
+    do idim=1,ndim
+      ekin(k)    = ekin(k) + 0.5*q(k,idim)**2
+    end do
+  end do
+
+  ! call inverse eos routine (g,p) -> (e,c)
   do imat=1,nmat
-    call eos(g(:,imat),eint_mat,q(:,ndim+imat),cs_mat,imat,inv,nn) ! Both fluids are initiliazed with the same pressure
     do k=1,nn
-      do idim=1,ndim
-        ekin_mat(k)         = ekin_mat(k) + 0.5*q(k,idim)**2
-      end do
-      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin_mat(k)                ! E_k
+      g_mat(k) = g(k,imat)
+      p_mat(k) = q(k,ndim+imat)
+    end do
+    call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn) 
+    do k=1,nn
+      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin(k)                    ! E_k
       u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                     ! E_k * f_k 
       dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                          ! d_tot
     end do

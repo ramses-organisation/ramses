@@ -13,7 +13,7 @@ subroutine read_hydro_params(nml_ok)
   real(dp),dimension(1:nvector,1:npri)::q
   real(dp),dimension(1:nvector,1:nmat)::f,g
   real(dp),dimension(1:nvector)::ek_bound
-  real(dp),dimension(1:nvector)::dtot,p_mat,eint_mat,cs_mat
+  real(dp),dimension(1:nvector)::dtot,g_mat,eint_mat,p_mat,cs_mat
 
   !--------------------------------------------------
   ! Namelist definitions
@@ -245,7 +245,11 @@ subroutine read_hydro_params(nml_ok)
     ! Total energies
     inv=.true.
     do imat=1,nmat
-      call eos(g(:,imat),eint_mat,q(:,ndim+imat),cs_mat,imat,inv,nboundary)
+      do i=1,nboundary
+        g_mat(i) = g(i,imat)
+        p_mat(i) = q(i,ndim+imat)
+      end do
+      call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nboundary)
       do i=1,nboundary
         boundary_var(i,2*nmat+ndim+imat) = eint_mat(i) + g(i,imat)*ek_bound(i)
       end do

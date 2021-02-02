@@ -70,7 +70,8 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg
-  real(dp),dimension(1:nvector),save::ekin,cc,cc_mat,st,pp_mat
+  real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp_mat,cc_mat
+  real(dp),dimension(1:nvector),save::ekin,cc,st
   real(dp)::dtcell,eps
   integer::k,idim,imat
 
@@ -112,7 +113,11 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   cc(1:ncell)=0
   inv=.false.
   do imat=1,nmat
-    call eos(gg(:,imat),qq(:,ndim+nmat+imat),pp_mat,cc_mat,imat,inv,ncell)
+    do k=1,ncell
+      gg_mat(k) = gg(k,imat)
+      ee_mat(k) = qq(k,ndim+nmat+imat)
+    end do
+    call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ncell)
     do k=1,ncell
       ! Call eos routine
       cc(k) = cc(k) + ff(k,imat)*gg(k,imat)/max(dtot(k),smallr) * cc_mat(k) 
