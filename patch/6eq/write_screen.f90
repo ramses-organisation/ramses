@@ -17,7 +17,7 @@ subroutine write_screen
   real(kind=8),dimension(:),allocatable::rr,rr_all
   real(kind=8),dimension(:,:),allocatable::qq,qq_all,ff,ff_all,gg,gg_all,pp
   real(dp),dimension(1:nvector),save::ppp_mat,ccc,dtot
-  real(dp),dimension(1:nvector,1:nmat),save::fff,ggg,ppp
+  real(dp),dimension(1:nvector,1:nmat),save::fff,ggg
   real(dp),dimension(1:nvector,1:npri),save::qqq
   logical::inv
 
@@ -154,7 +154,7 @@ subroutine write_screen
 
   if(myid==1)then
      write(*,*)'================================================'
-     write(*,*)'lev      x           f1         f2         d1         d2          u         P1         P2'
+     write(*,*)'lev      x           f1         f2         d1         d2          u         P1         P2         e1         e2'
      ! Sort radius
      allocate(ind_sort(1:ncell))
      call quick_sort(rr,ind_sort,ncell)
@@ -166,7 +166,6 @@ subroutine write_screen
 
         fff(1,1:nmat)=ff(ind_sort(i),1:nmat)
         ggg(1,1:nmat)=gg(ind_sort(i),1:nmat)
-        ppp(1,1:nmat)=ppp(ind_sort(i),1:nmat)
         qqq(1,1:npri)=qq(ind_sort(i),1:npri)
         lll=ll(ind_sort(i))
         rrr=(rr(i)-dble(icoarse_min))*scale
@@ -179,7 +178,8 @@ subroutine write_screen
              & (fff(1,imat),imat=1,nmat) , &
              & (ggg(1,imat),imat=1,nmat) , &
              & uuu, &
-             & (qqq(1,ndim+imat),imat=1,nmat)  
+             & (qqq(1,ndim+imat),imat=1,nmat), &
+             & (qqq(1,ndim+nmat+imat),imat=1,nmat)
      end do
      deallocate(ind_sort)
   end if

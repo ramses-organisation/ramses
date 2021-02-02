@@ -152,7 +152,7 @@ subroutine make_boundary_hydro(ilevel)
               ! Scatter to boundary region
               do ivar=1,nvar
                  switch=1
-                 if(ivar>1.and.ivar<ndim+2)switch=gs(ivar-1)
+                 if(ivar>2*nmat.and.ivar<2*nmat+ndim+1)switch=gs(ivar-1)
                  do i=1,ngrid
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do

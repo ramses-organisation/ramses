@@ -540,7 +540,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
   integer::ngrid
   real(dp),dimension(1:nvector,1:nmat)::fl,fr
   real(dp),dimension(1:nvector,1:nmat)::gl,gr
-  real(dp),dimension(1:nvector,1:2*nmat+ndim)::ql,qr
+  real(dp),dimension(1:nvector,1:npri)::ql,qr
   real(dp),dimension(1:nvector,1:nmat)::cl,cr
   real(dp),dimension(1:nvector)::ugdnv
   real(dp),dimension(1:nvector,1:nvar)::fgdnv
