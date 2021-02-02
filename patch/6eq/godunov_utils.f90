@@ -189,7 +189,10 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   real(dp),dimension(1:nvector,1:npri),save::qg,qm,qd
   real(dp),dimension(1:nvector,1:nmat),save::fg,fm,fd
   real(dp),dimension(1:nvector,1:nmat),save::gg,gm,gd
+  real(dp),dimension(1:nvector),save::dtotg,dtotm,dtotd
+  real(dp),dimension(1:nvector),save::gg_mat,gm_mat,gd_mat
   real(dp),dimension(1:nvector),save::eking,ekinm,ekind
+  real(dp),dimension(1:nvector),save::eg_mat,em_mat,ed_mat
   real(dp),dimension(1:nvector),save::pg,pm,pd
   real(dp),dimension(1:nvector),save::pg_mat,pm_mat,pd_mat
   real(dp),dimension(1:nvector),save::cg,cm,cd
@@ -246,10 +249,15 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   endif
 
   ! Compute total density
-  do k = 1,ncell
-     qg(k,1) = ug(k,1)
-     qm(k,1) = um(k,1)
-     qd(k,1) = ud(k,1)
+  dtotg(1:ncell)=0.0
+  dtotm(1:ncell)=0.0
+  dtotd(1:ncell)=0.0
+  do imat=1,nmat
+    do k = 1,ncell
+      dtotg(k) = dtotg(k) + ug(k,nmat+imat)
+      dtotm(k) = dtotm(k) + um(k,nmat+imat)
+      dtotd(k) = dtotd(k) + ud(k,nmat+imat)
+    end do
   end do
   
   ! Compute velocity and specific kinetic energy
@@ -258,20 +266,22 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   ekind(1:ncell)=0.0
   do idim = 1,ndim
      do k = 1,ncell
-        qg(k,idim+1) = ug(k,idim+1)/ug(k,1)
-        qm(k,idim+1) = um(k,idim+1)/um(k,1)
-        qd(k,idim+1) = ud(k,idim+1)/ud(k,1)
-        eking(k) = eking(k) + half*qg(k,idim+1)**2
-        ekinm(k) = ekinm(k) + half*qm(k,idim+1)**2
-        ekind(k) = ekind(k) + half*qd(k,idim+1)**2
+        qg(k,idim) = ug(k,2*nmat+idim+1)/dtotgk)
+        qm(k,idim) = um(k,2*nmat+idim+1)/dtotm(k)
+        qd(k,idim) = ud(k,2*nmat+idim+1)/dtotd(k)
+        eking(k) = eking(k) + half*qg(k,idim)**2
+        ekinm(k) = ekinm(k) + half*qm(k,idim)**2
+        ekind(k) = ekind(k) + half*qd(k,idim)**2
      end do
   end do
   
   ! Compute total internal energy
-  do k = 1,ncell
-     qg(k,npri) = ug(k,npri) - qg(k,1)*eking(k)
-     qm(k,npri) = um(k,npri) - qm(k,1)*ekinm(k)
-     qd(k,npri) = ud(k,npri) - qd(k,1)*ekind(k)
+  do imat=1,nmat
+    do k = 1,ncell
+     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/max(ug(k,imat,smallf) - gg(k,imat)*eking(k)
+     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/max(um(k,imat,smallf) - gm(k,imat)*ekinm(k)
+     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/max(ud(k,imat,smallf) - gd(k,imat)*ekind(k)
+    end do
   end do
   
   ! Call eos routine to calculate the total pressure and the total speed of sound
@@ -280,9 +290,17 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   pm(1:ncell)=0
   pd(1:ncell)=0
   do imat=1,nmat
-    call eos(gg(:,imat),qg(:,ndim+nmat+imat),pg,cg_mat,imat,inv,ncell)
-    call eos(gm(:,imat),qm(:,ndim+nmat+imat),pm,cm_mat,imat,inv,ncell)
-    call eos(gd(:,imat),qd(:,ndim+nmat+imat),pd,cd_mat,imat,inv,ncell)
+    do k=1,ncell
+      gg_mat(k) = gg(k,imat)
+      gm_mat(k) = gm(k,imat)
+      gd_mat(k) = gd(k,imat)
+      eg_mat(k) = qg(k,ndim+nmat+imat)
+      em_mat(k) = qm(k,ndim+nmat+imat)
+      ed_mat(k) = qd(k,ndim+nmat+imat)
+    end do
+    call eos(gg_mat,eg_mat,pg,cg_mat,imat,inv,ncell)
+    call eos(gm_mat,em_mat,pm,cm_mat,imat,inv,ncell)
+    call eos(gd_mat,ed_mat,pd,cd_mat,imat,inv,ncell)
     do k=1,ncell
       pg(k) = pg(k)+ pg_mat(k) * fg(k,imat)
       pm(k) = pm(k)+ pg_mat(k) * fm(k,imat)

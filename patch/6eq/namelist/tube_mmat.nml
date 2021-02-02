@@ -21,7 +21,7 @@ boxlen=1.0
 nboundary=2
 ibound_min=-1,+1
 ibound_max=-1,+1
-bound_type= 1, 1
+bound_type= 2, 2
 /
 
 &MATERIAL_PARAMS
