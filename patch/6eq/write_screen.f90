@@ -130,6 +130,9 @@ subroutine write_screen
                     ff(icell,imat)           = uold(ind_cell(i),imat)
                     gg(icell,imat)           = uold(ind_cell(i),nmat+imat)/max(ff(icell,imat),smallf)
                     qq(icell,ndim+nmat+imat) = uold(ind_cell(i),2*nmat+ndim+imat)/max(ff(icell,imat),smallf) - 0.5*gg(icell,imat)*qq(icell,1)**2
+                    inv=.false.
+                    call eos(gg(icell,imat),qq(icell,ndim+nmat+imat),ppp_mat,ccc,imat,inv,1)
+                    qq(icell,ndim+imat)      = ppp_mat(1)
                   end do
                 end if
               end do
@@ -139,16 +142,6 @@ subroutine write_screen
      end if
   end do
 
-   if(myid==1)then
-     ! Calculate pressures using the EOS routine
-     do imat=1,nmat 
-        inv=.false.
-        call eos(gg(:,imat),qq(:,ndim+nmat+imat),ppp_mat,ccc,imat,inv,nvector)
-        do i=1,nvector
-          ppp(i,imat) = ppp_mat(i)
-        end do
-     end do
-   end if
 
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(ff,ff_all,ncell*nmat,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -186,7 +179,7 @@ subroutine write_screen
              & (fff(1,imat),imat=1,nmat) , &
              & (ggg(1,imat),imat=1,nmat) , &
              & uuu, &
-             & (ppp(1,imat),imat=1,nmat)  
+             & (qqq(1,ndim+imat),imat=1,nmat)  
      end do
      deallocate(ind_sort)
   end if
