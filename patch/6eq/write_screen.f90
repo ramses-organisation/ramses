@@ -139,6 +139,17 @@ subroutine write_screen
      end if
   end do
 
+   if(myid==1)then
+     ! Calculate pressures using the EOS routine
+     do imat=1,nmat 
+        inv=.false.
+        call eos(gg(:,imat),qq(:,ndim+nmat+imat),ppp_mat,ccc,imat,inv,nvector)
+        do i=1,nvector
+          ppp(i,imat) = ppp_mat(i)
+        end do
+     end do
+   end if
+
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(ff,ff_all,ncell*nmat,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(gg,gg_all,ncell*nmat,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -150,19 +161,11 @@ subroutine write_screen
 
   if(myid==1)then
      write(*,*)'================================================'
-     write(*,*)'lev      x          f1          f2         d1         d2          u         P1         P2'
+     write(*,*)'lev      x           f1         f2         d1         d2          u         P1         P2'
      ! Sort radius
      allocate(ind_sort(1:ncell))
      call quick_sort(rr,ind_sort,ncell)
 
-     ! Calculate pressures using the EOS routine
-     do imat=1,nmat 
-        inv=.false.
-        call eos(gg(:,imat),qq(:,ndim+nmat+imat),ppp_mat,ccc,imat,inv,ncell)
-        do i=1,ncell
-          ppp(i,imat) = ppp_mat(i)
-        end do
-     end do
 
      ! Write results to screen
      scale=boxlen/dble(icoarse_max-icoarse_min+1)

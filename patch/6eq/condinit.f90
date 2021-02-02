@@ -24,11 +24,11 @@ subroutine condinit(x,u,dx,nn)
   ! scalars in the hydro solver. 
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
-  integer::ivar,imat,i,k,id,iu,iv,iw,ip1,ip2,io
+  integer::ivar,imat,idim,i,k,id,iu,iv,iw,ip1,ip2,io
   real(dp),dimension(1:nvector,1:npri),save::q             ! Primitive variables
   real(dp),dimension(1:nvector,1:nmat),save::f,g           ! Volume fraction and densities
   real(dp),dimension(1:nvector),save::ekin,dtot,eint,p,cs
-  real(dp),dimension(1:nvector),save::eint_mat,cs_mat
+  real(dp),dimension(1:nvector),save::ekin_mat,eint_mat,cs_mat
   logical,save::read_flag=.false.
   logical::inv
   integer,parameter::nrows=10000,ncols=3          ! CSV file parameters
@@ -114,11 +114,15 @@ subroutine condinit(x,u,dx,nn)
   
   ! call inverse eos routine (g,p) -> (e,c)
   inv=.true.
-  dtot(1:nn)   = 0.0
+  dtot(1:nn)     = 0.0
+  ekin_mat(1:nn) = 0.0
   do imat=1,nmat
     call eos(g(:,imat),eint_mat,q(:,ndim+imat),cs_mat,imat,inv,nn) ! Both fluids are initiliazed with the same pressure
     do k=1,nn
-      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*(q(k,2)**2 + q(k,3)**2)    ! E_k
+      do idim=1,ndim
+        ekin_mat(k)         = ekin_mat(k) + 0.5*q(k,idim)**2
+      end do
+      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin_mat(k)                ! E_k
       u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                     ! E_k * f_k 
       dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                          ! d_tot
     end do
