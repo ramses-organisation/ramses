@@ -26,7 +26,7 @@ bound_type= 1, 1
 
 &MATERIAL_PARAMS
 ! Mie-Grueneisen parameters
-eos_params(1,1:4)=4.4,0.0,-0.6,1.0
+eos_params(1,1:4)=1.4,0.0,0.0,1.0
 eos_params(2,1:4)=1.4,0.0,0.0,0.05
 ! Stiffened gas parameters
 ! eos_params(1,1:2)=4.4,0.6
@@ -37,15 +37,15 @@ eos_params(2,1:4)=1.4,0.0,0.0,0.05
 nregion=2
 region_type(1)='square'
 region_type(2)='square'
-x_center=0.35,0.85
-length_x=0.7,0.3
+x_center=0.25,0.75
+length_x=0.5,0.5
 f1_region=1.0,1e-8
 f2_region=1e-8,1.0
-d1_region=1.0,1.0
-d2_region=0.05,0.05
+d1_region=1.0,0.125
+d2_region=1.0,0.125
 u_region =0.0,0.0
-p1_region=1.0,1d-4
-p2_region=1.0,1d-4
+p1_region=1.0,0.1
+p2_region=1.0,0.1
 /
 
 &OUTPUT_PARAMS

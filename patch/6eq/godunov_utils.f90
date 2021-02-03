@@ -552,8 +552,8 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
   REAL(dp)::rr,ur,Ptotr
   REAL(dp)::cfastl,rcl,rstarl,estarl
   REAL(dp)::cfastr,rcr,rstarr,estarr
-  real(dp),dimension(1:nmat)::pkstarl,rkstarl,ekstarl
-  real(dp),dimension(1:nmat)::pkstarr,rkstarr,ekstarr
+  real(dp),dimension(1:nmat)::pkstarl,gkstarl,ekstarl
+  real(dp),dimension(1:nmat)::pkstarr,gkstarr,ekstarr
   REAL(dp)::ustar,ptotstar
   REAL(dp)::ro,uo,ptoto,eo
   real(dp),dimension(1:nmat)::gko,fko,eko,pko
@@ -624,14 +624,14 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
      ! Left star region variables
      rstarl = rl*(SL-ul)/(SL-ustar)
      do imat = 1,nmat
-        rkstarl(imat) = gl(i,imat)*(ul-SL)/(ustar-SL)
+        gkstarl(imat) = gl(i,imat)*(ul-SL)/(ustar-SL)
         pkstarl(imat) = Pl(imat)-gl(i,imat)*(ul-SL)*(ustar-ul)
         ekstarl(imat) = ((SL-ul)*ekl(imat)-Pl(imat)*ul+pkstarl(imat)*ustar)/(SL-ustar)
      end do
      ! Right star region variables
      rstarr = rr*(SR-ur)/(SR-ustar)
      do imat=1,nmat
-        rkstarr(imat) = gr(i,imat)*(ur-SR)/(ustar-SR)
+        gkstarr(imat) = gr(i,imat)*(ur-SR)/(ustar-SR)
         pkstarr(imat) = Pr(imat)-gr(i,imat)*(ur-SR)*(ustar-ur)
         ekstarr(imat) = ((SR-ur)*ekr(imat)-Pr(imat)*ur+pkstarr(imat)*ustar)/(SR-ustar)
      end do
@@ -652,7 +652,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
         Ptoto=Ptotstar
         do imat=1,nmat
            fko(imat) = fl(i,imat)
-           gko(imat) = rkstarl(imat)
+           gko(imat) = gkstarl(imat)
            eko(imat) = ekstarl(imat)
            pko(imat) = pkstarl(imat)
         end do
@@ -662,7 +662,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
         Ptoto=Ptotstar
         do imat=1,nmat
            fko(imat) = fr(i,imat)
-           gko(imat) = rkstarr(imat)
+           gko(imat) = gkstarr(imat)
            eko(imat) = ekstarr(imat)
            pko(imat) = pkstarr(imat)
         end do
