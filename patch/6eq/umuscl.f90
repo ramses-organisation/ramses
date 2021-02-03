@@ -197,7 +197,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
         ! Volume fractions
         f(l,i,j,k,imat) = uin(l,i,j,k,imat) 
         ! True densities 
-        g(l,i,j,k,imat) = max(uin(l,i,j,k,nmat+imat),smallr)/max(f(l,i,j,k,imat),smallf)
+        g(l,i,j,k,imat) = uin(l,i,j,k,nmat+imat)/f(l,i,j,k,imat)
         ! Total density
         dtot(l) = dtot(l) + uin(l,i,j,k,nmat+imat)
       end do
@@ -206,7 +206,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
     ! Velocity components
     do idim=1,ndim
       do l=1,ngrid
-        q(l,i,j,k,idim) = uin(l,i,j,k,2*nmat+idim)/max(dtot(l),smallr)
+        q(l,i,j,k,idim) = uin(l,i,j,k,2*nmat+idim)/dtot(l)
       end do
     end do
 
@@ -221,10 +221,10 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
     ! Compute individual internal energies
     do imat=1,nmat
       do l=1,ngrid
-        q(l,i,j,k,ndim+nmat+imat) = (uin(l,i,j,k,2*nmat+ndim+imat)/max(f(l,i,j,k,imat),smallf)) - g(l,i,j,k,imat) * ekin(l)
+        q(l,i,j,k,ndim+nmat+imat) = uin(l,i,j,k,2*nmat+ndim+imat)/f(l,i,j,k,imat) - g(l,i,j,k,imat)*ekin(l)
       end do
     end do
-
+    
     ! Calculate the total speed of sound and the total pressure from the EOS
     
     inv=.false.
@@ -292,13 +292,11 @@ subroutine trace1d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
   real(dp),dimension(1:nmat)::sf0,sg0,sp0,se0
   
   dtdx = dt/dx
-  
-
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  iu=ndim
+  iu=1
 
   do k = klo, khi
   do j = jlo, jhi

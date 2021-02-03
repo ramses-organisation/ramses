@@ -710,7 +710,8 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
      ! Energy fluxes 
      do imat=1,nmat
        fgdnv(i,2*nmat+ndim+imat) = fko(imat)*(eko(imat)+pko(imat))*uo
-     end do
+    end do
+
   end do
 end subroutine riemann_hllc
 !###########################################################
