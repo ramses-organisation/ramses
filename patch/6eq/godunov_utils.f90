@@ -81,7 +81,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   do imat = 1,nmat
      do k = 1,ncell
         ff(k,imat) = uu(k,imat)
-        gg(k,imat) = uu(k,nmat+imat)/max(ff(k,imat),smallf)
+        gg(k,imat) = uu(k,nmat+imat)/ff(k,imat)
      end do
   end do
      
@@ -97,7 +97,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   ekin(1:ncell)    = 0.0
   do idim = 1,ndim
      do k = 1,ncell
-        qq(k,idim) = uu(k,2*nmat+idim)/max(dtot(k),smallr)
+        qq(k,idim) = uu(k,2*nmat+idim)/dtot(k)
         ekin(k)    = ekin(k) + half*qq(k,idim)**2 ! This is 0.5 * u^2, hence same for all nmat
      end do
   end do
@@ -120,7 +120,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
     call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ncell)
     do k=1,ncell
       ! Call eos routine
-      cc(k) = cc(k) + ff(k,imat)*gg(k,imat)/max(dtot(k),smallr) * cc_mat(k) 
+      cc(k) = cc(k) + ff(k,imat)*gg(k,imat)/dtot(k) * cc_mat(k) 
     end do 
   end do
   ! Convert c^2 to c 
@@ -278,9 +278,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   ! Compute total internal energy
   do imat=1,nmat
     do k = 1,ncell
-     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/max(ug(k,imat),smallf) - gg(k,imat)*eking(k)
-     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/max(um(k,imat),smallf) - gm(k,imat)*ekinm(k)
-     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/max(ud(k,imat),smallf) - gd(k,imat)*ekind(k)
+     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/ug(k,imat) - gg(k,imat)*eking(k)
+     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/um(k,imat) - gm(k,imat)*ekinm(k)
+     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/ud(k,imat) - gd(k,imat)*ekind(k)
     end do
   end do
   
@@ -530,7 +530,7 @@ end subroutine hydro_refine
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
+subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -542,8 +542,9 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
   real(dp),dimension(1:nvector,1:nmat)::gl,gr
   real(dp),dimension(1:nvector,1:npri)::ql,qr
   real(dp),dimension(1:nvector,1:nmat)::cl,cr
-  real(dp),dimension(1:nvector)::ugdnv
   real(dp),dimension(1:nvector,1:nvar)::fgdnv
+  real(dp),dimension(1:nvector,1:nmat)::egdnv
+  real(dp),dimension(1:nvector)::ugdnv
   ! local variables
   REAL(dp)::SL,SR
   REAL(dp)::rl,ul,Ptotl
@@ -557,10 +558,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
   REAL(dp)::ustar,ptotstar
   REAL(dp)::ro,uo,ptoto,eo
   real(dp),dimension(1:nmat)::gko,fko,eko,pko
-  REAL(dp)::smallp
   INTEGER::ivar,i,imat
-  ! constants
-  smallp = smallr*smallc**2
   do i=1,ngrid
      ! Left variables
      ul    = ql(i,1)
@@ -706,11 +704,11 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,ngrid)
         fgdnv(i,2*nmat+3)  = ro*uo*qr(i,3)
      endif
 #endif
-     
      ! Energy fluxes 
      do imat=1,nmat
-       fgdnv(i,2*nmat+ndim+imat) = fko(imat)*(eko(imat)+pko(imat))*uo
-    end do
+        egdnv(i,imat) = fko(imat)*pko(imat)*uo
+        fgdnv(i,2*nmat+ndim+imat) = fko(imat)*(eko(imat)+pko(imat))*uo
+     end do
 
   end do
 end subroutine riemann_hllc

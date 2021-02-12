@@ -19,7 +19,7 @@
 !  ngrid       => (const)  number of sub-grids
 !  ndim        => (const)  number of dimensions
 ! ----------------------------------------------------------------
-subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
+subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -31,11 +31,10 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Input states
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin 
-  real(dp),dimension(1:nvector,iu1:iu2)::rin 
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2   ,1:ndim)::tmp 
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nmat+1,1:ndim)::tmp 
 
   ! Primitive variables
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:npri),save::qin
@@ -58,7 +57,7 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
   
   ! Intermediate fluxes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat+1),save::tx
 
   ! Local scalar variables
   integer::i,j,k,l,ivar,ir,ie,imat,iu
@@ -80,13 +79,13 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
 #if NDIM==1
-     call trace1d (qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx      ,dt,ngrid)
+     call trace1d (qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call trace2d (qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy   ,dt,ngrid)
+     call trace2d (qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call trace3d (qin,fin,gin,    dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dz,dt,ngrid)
+     call trace3d (qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dz,dt,ngrid)
 #endif
 
   ! Compute 1D flux in X direction
@@ -102,7 +101,7 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
            flux(l,i,j,k,ivar,1)=fx(l,i,j,k,ivar)*dt/dx
         end do
      end do
-     do ivar=1,2
+     do ivar=1,nmat+1
         do l=1,ngrid
            tmp (l,i,j,k,ivar,1)=tx(l,i,j,k,ivar)*dt/dx
         end do
@@ -125,7 +124,7 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
            flux(l,i,j,k,ivar,2)=fx(l,i,j,k,ivar)*dt/dy
         end do
      end do
-     do ivar=1,2
+     do ivar=1,nmat+1
         do l=1,ngrid
            tmp (l,i,j,k,ivar,2)=tx(l,i,j,k,ivar)*dt/dy
         end do
@@ -149,7 +148,7 @@ subroutine unsplit(uin,gravin,rin,flux,tmp,dx,dy,dz,dt,ngrid)
            flux(l,i,j,k,ivar,3)=fx(l,i,j,k,ivar)*dt/dz
         end do
      end do
-     do ivar=1,2
+     do ivar=1,nmat+1
         do l=1,ngrid
            tmp (l,i,j,k,ivar,3)=tx(l,i,j,k,ivar)*dt/dz
         end do
@@ -237,7 +236,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
       call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ngrid)
       do l=1,ngrid
         ! Individual pressures 
-        q(l,i,j,k,ndim+imat) = max(pp_mat(l),smallr**3)
+        q(l,i,j,k,ndim+imat) = pp_mat(l)
         ! Indivual speed of sound 
         c(l,i,j,k,imat) = cc_mat(l)
       end do 
@@ -257,7 +256,7 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace1d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
+subroutine trace1d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -279,7 +278,6 @@ subroutine trace1d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat,1:ndim)::gp 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat)::gin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat)::cin
-  real(dp),dimension(1:nvector,iu1:iu2)::rin
 
   ! Local variables
   integer ::i, j, k, l, n, imat
@@ -316,9 +314,6 @@ subroutine trace1d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
         end do
         u         = qin(l,i,j,k,iu)
         
-        ! Radius
-        ! curvilin  = dble(geom-1)*u*dx/(rin(l,i)+1d-15*dx)
-
         ! TVD slopes in X direction
         do imat     = 1,nmat
         dfx(imat)   = df(l,i,j,k,imat           ,1)
@@ -333,8 +328,8 @@ subroutine trace1d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
         do imat   = 1,nmat
         sf0(imat) = -u*dfx(imat)
         sg0(imat) = -u*dgx(imat)       - (dux)*g(imat)
-        sp0(imat) = -u*dpx(imat)       - (dux)*g(imat)*csq(imat)    !- curvilin*r*csq
-        se0(imat) = -u*dex(imat)       - (dux)*(e(imat)+p(imat))    !- curvilin*(e+p)
+        sp0(imat) = -u*dpx(imat)       - (dux)*g(imat)*csq(imat)
+        se0(imat) = -u*dex(imat)       - (dux)*(e(imat)+p(imat))
         end do
         su0       = -u*dux             - dptotx/r 
         
@@ -368,7 +363,7 @@ end subroutine trace1d
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
+subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -390,7 +385,6 @@ subroutine trace2d(qin,fin,gin,rin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat,1:ndim)::gp 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat)::gin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nmat)::cin
-  real(dp),dimension(1:nvector,iu1:iu2)::rin
 
   ! Local variables
   integer ::i, j, k, l, n, imat
@@ -747,7 +741,7 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nmat,1:ndim)::gm
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nmat,1:ndim)::gp
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
+  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nmat+1)::tmp
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nmat)::c
 
   ! local variables
@@ -757,8 +751,8 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,1:nmat),save::gleft,gright
   real(dp),dimension(1:nvector,1:nvar),save::fgdnv
   real(dp),dimension(1:nvector),save::ugdnv
+  real(dp),dimension(1:nvector,1:nmat),save::egdnv
   real(dp),dimension(1:nvector,1:nmat),save::cleft,cright
-  logical ,dimension(1:nvector),save::wall,body
 
   idim= ln 
 
@@ -842,33 +836,8 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
       end do
      end if
      
-     if(static)then
-        ! First material is embedded body
-        do l = 1, ngrid
-           body(l) = fright(l,1) > 0.01 .or. fleft(l,1) > 0.01
-        end do
-        do l = 1,ngrid
-           if(body(l))then
-              if(fright(l,1) > 0.01)then
-                 fright(l,1:nmat)        = fleft(l,1:nmat)
-                 gright(l,1:nmat)        = gleft(l,1:nmat)
-                 qright(l,1:npri)        = qleft(l,1:npri)
-                 qright(l,1)             = -qleft(l,1) ! Reflect
-                 cright(l,1:nmat)        = cleft(l,1:nmat)
-              endif
-              if(fleft(l,1) > 0.01)then
-                 fleft(l,1:nmat)        = fright(l,1:nmat)
-                 gleft(l,1:nmat)        = gright(l,1:nmat)
-                 qleft(l,1:npri)        = qright(l,1:npri)
-                 qleft(l,1)             = -qright(l,1) ! Reflect
-                 cleft(l,1:nmat)        = cright(l,1:nmat)
-              endif
-           endif
-        end do
-     end if
-
      ! Solve Riemann problem
-     call riemann_hllc(fleft,fright,gleft,gright,qleft,qright,cleft,cright,fgdnv,ugdnv,ngrid)
+     call riemann_hllc(fleft,fright,gleft,gright,qleft,qright,cleft,cright,fgdnv,ugdnv,egdnv,ngrid)
      
      ! Store fluxes
      do ivar = 1,nvar
@@ -876,8 +845,9 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
            flx(l,i,j,k,ivar) = fgdnv(l,ivar)
         end do
      end do
-          
+
      ! We need to reassign the positions of the velocity for the appropriate direction 
+
      ! Normal velocity 
      do l = 1, ngrid
         flx(l,i,j,k,2*nmat+ln)  = fgdnv(l,2*nmat+1)
@@ -897,7 +867,14 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
      
      ! Store u for div(u)
      do l=1,ngrid
-        tmp(l,i,j,k,1)=ugdnv(l) !half*(qleft(l,2)+qright(l,2))
+        tmp(l,i,j,k,1)=ugdnv(l)
+     end do
+     
+     ! Store u for div(u)
+     do imat=1,nmat
+        do l=1,ngrid
+           tmp(l,i,j,k,1+imat)=egdnv(l,imat)
+        end do
      end do
      
   end do

@@ -27,7 +27,7 @@ subroutine condinit(x,u,dx,nn)
   integer::ivar,imat,idim,i,k,id,iu,iv,iw,ip1,ip2,io
   real(dp),dimension(1:nvector,1:npri),save::q             ! Primitive variables
   real(dp),dimension(1:nvector,1:nmat),save::f,g           ! Volume fraction and densities
-  real(dp),dimension(1:nvector),save::ekin,dtot,eint,p,cs
+  real(dp),dimension(1:nvector),save::ekin,dtot,eint,p,cs,ftot
   real(dp),dimension(1:nvector),save::g_mat,eint_mat,p_mat,cs_mat
   logical,save::read_flag=.false.
   logical::inv
@@ -112,17 +112,30 @@ subroutine condinit(x,u,dx,nn)
   end do
 #endif
 
+  ! Normalize volume fraction
+  ftot(1:nn)=0.0
+  do imat=1,nmat
+     do k=1,nn
+        ftot(k)=ftot(k)+f(k,imat)
+     end do
+  end do
+  do imat=1,nmat
+     do k=1,nn
+        f(k,imat)=f(k,imat)/ftot(k)
+     end do
+  end do
+
   ! Calculate the kinetic energy
-  inv=.true.
-  dtot(1:nn)     = 0.0
-  ekin(1:nn)     = 0.0
+  ekin(1:nn)=0.0
   do k=1,nn
     do idim=1,ndim
-      ekin(k)    = ekin(k) + 0.5*q(k,idim)**2
+      ekin(k) = ekin(k) + 0.5*q(k,idim)**2
     end do
   end do
 
   ! call inverse eos routine (g,p) -> (e,c)
+  inv=.true.
+  dtot(1:nn)=0.0
   do imat=1,nmat
     do k=1,nn
       g_mat(k) = g(k,imat)

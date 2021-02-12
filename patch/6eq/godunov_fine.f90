@@ -13,7 +13,7 @@ subroutine godunov_fine(ilevel)
   ! hydro solver. On entry, hydro variables are gathered from array uold.
   ! On exit, unew has been updated.
   !--------------------------------------------------------------------------
-  integer::i,igrid,ncache,ngrid
+  integer::i,igrid,ncache,ngrid,imat
   integer,dimension(1:nvector),save::ind_grid
 
   if(numbtot(1,ilevel)==0)return
@@ -29,6 +29,9 @@ subroutine godunov_fine(ilevel)
      call godfine1(ind_grid,ngrid,ilevel)
   end do
   call make_virtual_reverse_dp(divu(1),ilevel)
+  do imat=1,nmat
+     call make_virtual_reverse_dp(dive(1,imat),ilevel)
+  end do
   
 111 format('   Entering godunov_fine for level ',i2)
 
@@ -46,7 +49,7 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,iskip,imat
   real(dp)::d,u,v,w,e
 
   if(numbtot(1,ilevel)==0)return
@@ -63,6 +66,11 @@ subroutine set_unew(ilevel)
      do i=1,active(ilevel)%ngrid
         divu(active(ilevel)%igrid(i)+iskip) = 0
      end do
+     do imat=1,nmat
+        do i=1,active(ilevel)%ngrid
+           dive(active(ilevel)%igrid(i)+iskip,imat) = 0
+        end do
+     end do
   end do
 
   ! Set unew to 0 for virtual boundary cells
@@ -76,6 +84,11 @@ subroutine set_unew(ilevel)
      end do
      do i=1,reception(icpu,ilevel)%ngrid
         divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+     end do
+     do imat=1,nmat
+        do i=1,reception(icpu,ilevel)%ngrid
+           dive(reception(icpu,ilevel)%igrid(i)+iskip,imat) = 0
+        end do
      end do
   end do
   end do
@@ -113,23 +126,14 @@ subroutine set_uold(ilevel)
   ! Set uold to unew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     if(static)then
-     do ivar=1,nvar
-        do i=1,active(ilevel)%ngrid
-        ! Embedded body is material #1
-        if(.not. (uold(active(ilevel)%igrid(i)+iskip,npri+1)>0.01))then
-           uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
-        endif
-        end do
-     end do
-     else
      do ivar=1,nvar
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
-     endif
   end do
+
+  call pressure_relaxation2(ilevel)
   
 111 format('   Entering set_uold for level ',i2)
 
@@ -147,13 +151,16 @@ subroutine add_pdv_source_terms(ilevel)
   ! Update volume fraction using compressibility source terms
   !-------------------------------------------------------------------
   integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
-  logical,dimension(1:nvector),save::body
   integer,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp),dimension(1:nvector),save::ekin,dtot,ptot,divpv
+  real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp_mat,cc_mat
+  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,ee,pp,yy
+  real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp)::skip_loc,dx,eps,scale,dx_loc
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc
-  logical::error
+  logical::error,inv
 
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
@@ -188,11 +195,91 @@ subroutine add_pdv_source_terms(ilevel)
            ind_cell(i)=ind_grid(i)+iskip
         end do
 
-        ! Source terms for volume fraction (Godunov-like advection)
+        ! Non-conservative source term for volume fraction
         do imat=1,nmat
            ivar=imat
            do i=1,ngrid
-              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)-uold(ind_cell(i),ivar)*divu(ind_cell(i))
+              unew(ind_cell(i),ivar) = unew(ind_cell(i),ivar) - uold(ind_cell(i),ivar)*divu(ind_cell(i))
+           end do
+        end do
+      
+        ! Source terms for partial energies
+
+        ! Compute divergence of total pressure
+        divpv(1:ngrid)=0.0d0
+        do imat=1,nmat
+           do i=1,ngrid
+              divpv(i) = divpv(i) + dive(ind_cell(i),imat)
+           end do
+        end do
+
+        ! Compute volume fraction and fluid density
+        dtot(1:ngrid)=0
+        do imat = 1,nmat
+           do i = 1,ngrid
+              ! Volume fractions
+              ff(i,imat) = uold(ind_cell(i),imat)
+              ! True densities
+              gg(i,imat) = uold(ind_cell(i),nmat+imat)/ff(i,imat)
+              ! Total density
+              dtot(i) = dtot(i) + uold(ind_cell(i),nmat+imat)
+           end do
+        end do
+
+        ! Compute mass fraction
+        do imat = 1,nmat
+           do i = 1,ngrid
+              yy(i,imat) = ff(i,imat)*gg(i,imat)/dtot(i)
+           end do
+        end do
+
+        ! Compute velocity
+        do idim = 1,ndim
+           do i = 1,ngrid
+              vv(i,idim) = uold(ind_cell(i),2*nmat+idim)/dtot(i)
+           end do
+        end do
+        
+        ! Compute specific kinetic energy
+        ekin(1:ngrid)=0.0
+        do idim = 1,ndim
+           do i = 1,ngrid
+              ekin(i) = ekin(i) + half*vv(i,idim)**2 ! This is 0.5*u^2
+           end do
+        end do
+        
+        ! Compute individual internal energies
+        do imat=1,nmat
+           do i=1,ngrid
+              ee(i,imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(i,imat) - gg(i,imat)*ekin(i)
+           end do
+        end do
+
+        ! Call eos routine
+        inv=.false.
+        ptot(1:ngrid)=0.0
+        do imat=1,nmat
+           do i=1,ngrid
+              gg_mat(i) = gg(i,imat)
+              ee_mat(i) = ee(i,imat)
+           end do
+           call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ngrid)
+           do i=1,ngrid
+              ! Individual pressures
+              pp(i,imat) = pp_mat(i)
+              ptot(i) = ptot(i) + ff(i,imat)*pp(i,imat)
+           end do
+        end do
+
+        ! Update new partial total energies using non-conservative source terms
+        do imat=1,nmat
+           ivar=2*nmat+ndim+imat
+           do i=1,ngrid
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
+                   & - dive(ind_cell(i),imat) &
+                   & + yy(i,imat)*divpv(i) &
+                   & + ff(i,imat)*pp(i,imat)*divu(ind_cell(i)) &
+                   & - yy(i,imat)*ptot(i)*divu(ind_cell(i))
            end do
         end do
       
@@ -280,6 +367,296 @@ end subroutine add_gravity_source_terms
 !###########################################################
 !###########################################################
 !###########################################################
+subroutine pressure_relaxation(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !-------------------------------------------------------------------
+  ! Update volume fraction using compressibility source terms
+  !-------------------------------------------------------------------
+  integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp),dimension(1:nvector),save::ekin,dtot,etot,ptot
+  real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp_mat,cc_mat
+  real(dp),dimension(1:nvector),save::ec_hat,pc_hat,alpha_hat
+  real(dp),dimension(1:nvector,1:nmat),save::ff,gg,ee,pp,yy
+  real(dp),dimension(1:nvector,1:ndim),save::vv
+  real(dp)::smallgamma,biggamma,p_0,e_c,p_c,a0,rho_0,eta
+  real(dp)::skip_loc,dx,eps,scale,dx_loc
+  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp),dimension(1:8)::xc
+  integer::ix,iy,iz,nx_loc
+  logical::error,inv
+
+  dx=0.5d0**ilevel
+  skip_loc=dble(icoarse_min)
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind)=(dble(ix)-0.5D0)*dx
+  end do
+
+  ! Loop over active grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=ind_grid(i)+iskip
+        end do
+
+        ! Compute volume fraction and fluid density
+        dtot(1:ngrid)=0
+        do imat = 1,nmat
+           do i = 1,ngrid
+              ! Volume fractions
+              ff(i,imat) = uold(ind_cell(i),imat)
+              ! True densities
+              gg(i,imat) = uold(ind_cell(i),nmat+imat)/ff(i,imat)
+              ! Total density
+              dtot(i) = dtot(i) + uold(ind_cell(i),nmat+imat)
+           end do
+        end do
+
+        ! Compute velocity
+        do idim = 1,ndim
+           do i = 1,ngrid
+              vv(i,idim) = uold(ind_cell(i),2*nmat+idim)/dtot(i)
+           end do
+        end do
+        
+        ! Compute specific kinetic energy
+        ekin(1:ngrid)=0.0
+        do idim = 1,ndim
+           do i = 1,ngrid
+              ekin(i) = ekin(i) + half*vv(i,idim)**2 ! This is 0.5*u^2
+           end do
+        end do
+        
+        ! Compute total internal energy
+        etot(1:ngrid)=0.0
+        do imat=1,nmat
+           do i=1,ngrid
+              etot(i) = etot(i) + uold(ind_cell(i),2*nmat+ndim+imat)
+           end do
+        end do
+        etot(1:ngrid)=etot(1:ngrid)-dtot(1:ngrid)*ekin(1:ngrid)
+        
+        ! Mie-Gruneisen
+        alpha_hat(1:ngrid)=zero
+        pc_hat (1:ngrid)=zero
+        ec_hat(1:ngrid)=zero
+        do imat = 1,nmat
+           ! Get Mie-Grueneisen EOS parameters
+           smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+           ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
+           a0 = one / (smallgamma-one)
+           do i = 1,ngrid
+              ! Update Mie-Gruneisen terms for each material
+              eta = max(gg(i,imat),smallr)/rho_0
+              p_c = p_0 * eta**biggamma
+              e_c = p_c / (biggamma-one)
+              ! Update total values
+              alpha_hat(i) = alpha_hat(i) + ff(i,imat) * a0
+              ec_hat(i) = ec_hat(i) + ff(i,imat) * e_c
+              pc_hat(i) = pc_hat(i) + ff(i,imat) * p_c * a0
+           end do
+        end do
+        pc_hat(1:ngrid) = pc_hat(1:ngrid)/alpha_hat(1:ngrid)
+        
+        ! Calculate pressure for given internal energy
+        do i = 1,ngrid
+           ptot(i) = (etot(i) - ec_hat(i)) / alpha_hat(i) + pc_hat(i)
+        end do
+        
+        ! Call inverse eos routine
+        inv=.true.
+        do imat=1,nmat
+           do i=1,ngrid
+              gg_mat(i) = gg(i,imat)
+              pp_mat(i) = ptot(i)
+           end do
+           call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ngrid)
+           do i=1,ngrid
+              ! Individual internal energies
+              ee(i,imat) = ee_mat(i)
+           end do
+        end do
+
+        ! Update new partial total energies
+        do imat=1,nmat
+           ivar=2*nmat+ndim+imat
+           do i=1,ngrid
+              if(son(ind_cell(i))==0)then
+                 uold(ind_cell(i),ivar)=ff(i,imat)*ee(i,imat)+ff(i,imat)*gg(i,imat)*ekin(i)
+              endif
+           end do
+        end do
+      
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+     
+end subroutine pressure_relaxation
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine pressure_relaxation2(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !-------------------------------------------------------------------
+  ! Update volume fraction using compressibility source terms
+  !-------------------------------------------------------------------
+  integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp)::ekin,dtot,etot,ptot
+  real(dp),dimension(1:nmat),save::ff,gg,ee,pp,rc2
+  real(dp),dimension(1:nmat),save::ff_new,ee_new
+  real(dp),dimension(1:ndim),save::vv
+  real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
+  real(dp)::skip_loc,dx,eps,scale,dx_loc
+  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp),dimension(1:8)::xc
+  integer::ix,iy,iz,nx_loc,iter
+  logical::error,inv
+
+  dx=0.5d0**ilevel
+  skip_loc=dble(icoarse_min)
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind)=(dble(ix)-0.5D0)*dx
+  end do
+
+  ! Loop over active grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=ind_grid(i)+iskip
+        end do
+
+        do i=1,ngrid
+           if(son(ind_cell(i))==0)then
+              
+              do iter=1,10
+              
+              ! Compute volume fraction and fluid density
+              dtot=0
+              do imat = 1,nmat
+                 ! Volume fractions
+                 ff(imat) = uold(ind_cell(i),imat)
+                 ! True densities
+                 gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
+                 ! Total density
+                 dtot = dtot + uold(ind_cell(i),nmat+imat)
+              end do
+
+              ! Compute velocity
+              do idim = 1,ndim
+                 vv(idim) = uold(ind_cell(i),2*nmat+idim)/dtot
+              end do
+        
+              ! Compute specific kinetic energy
+              ekin=0.0
+              do idim = 1,ndim
+                 ekin = ekin + half*vv(idim)**2 ! This is 0.5*u^2
+              end do
+        
+              ! Compute specific internal energy
+              do imat = 1,nmat
+                 ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
+              end do
+        
+              ! Mie-Gruneisen
+              ptot = 0.0
+              do imat = 1,nmat
+                 smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+                 eta = gg(imat)/rho_0
+                 p_c = p_0 * eta**biggamma
+                 e_c = p_c / (biggamma-one)
+                 delpc = biggamma * p_c 
+                 pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
+                 rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
+                 ptot = ptot + ff(imat)*pp(imat)
+              end do
+
+              do imat = 1,nmat
+                 smallgamma=eos_params(imat,1)
+                 rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
+              end do
+                            
+              ff_new(1) = ff(1) + (pp(1)-pp(2))/(rc2(1)/ff(1)+rc2(2)/ff(2))
+              ff_new(2) = ff(2) + (pp(2)-pp(1))/(rc2(1)/ff(1)+rc2(2)/ff(2))
+
+              ee_new(1) = ee(1) - ptot * (ff_new(1) - ff(1)) / (ff(1)*gg(1))
+              ee_new(2) = ee(2) - ptot * (ff_new(2) - ff(2)) / (ff(2)*gg(2))
+
+              ! Compute new volume fraction and new partial energy
+              do imat = 1,nmat
+                 uold(ind_cell(i),imat) = ff_new(imat)
+              end do
+
+              ! Compute specific internal energy
+              do imat=1,nmat
+                 uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
+              end do
+
+!              write(*,*)iter,ff(1),ff(2),pp(1),pp(2)
+
+              end do
+              
+           endif
+        end do
+      
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+     
+end subroutine pressure_relaxation2
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 subroutine godfine1(ind_grid,ncache,ilevel)
   use amr_commons
   use hydro_commons
@@ -307,15 +684,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc
-  real(dp),dimension(1:nvector,iu1:iu2),save::rloc,wloc_left,wloc_right
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
-  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nmat+1,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
   logical,dimension(1:nvector),save::exist_nbor
 
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer,ibuffer,nx_loc
+  integer::i,j,ivar,imat,idim,ind_son,ind_father,iskip,nbuffer,ibuffer,nx_loc
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
@@ -450,44 +826,11 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   end do
   ! End loop over neighboring grids
 
-  !-----------------------
-  ! Compute cell radii
-  !-----------------------
-  do i3=iu1,iu2
-     do i=1,ncache
-        rloc(i,i3)=(xg(ind_grid(i),1)-skip_loc+(dble(i3+1)-2.5d0)*dx)*scale
-     end do
-  end do
-  
-  !---------------------------------------------------------
-  ! Compute left and right interface geometrical weighting
-  !---------------------------------------------------------
-  do i3=iu1,iu2
-     if(geom==3)then
-        do i=1,ncache
-           eps=dx_loc/rloc(i,i3)/2.0
-           wloc_left (i,i3)=(1.0-eps)**2/(1.0+eps**2/3.0)
-           wloc_right(i,i3)=(1.0+eps)**2/(1.0+eps**2/3.0)
-        end do
-     else if (geom==2) then
-        do i=1,ncache
-           eps=dx_loc/rloc(i,i3)/2.0
-           wloc_left (i,i3)=1.0-eps
-           wloc_right(i,i3)=1.0+eps
-        end do
-     else
-        do i=1,ncache
-           wloc_left (i,i3)=1.0
-           wloc_right(i,i3)=1.0
-        end do
-     endif
-  end do
-
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
   flux=0.0d0; tmp=0.0d0
-  call unsplit(uloc,gloc,rloc,flux,tmp,dx_loc,dx_loc,dx_loc,dtnew(ilevel),ncache)
+  call unsplit(uloc,gloc,flux,tmp,dx_loc,dx_loc,dx_loc,dtnew(ilevel),ncache)
 
   !------------------------------------------------
   ! Reset flux along direction at refined interface    
@@ -507,7 +850,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end if
            end do
         end do
-        do ivar=1,2
+        do ivar=1,nmat+1
            do i=1,ncache
               if(ok(i,i3-i0,j3-j0,k3-k0) .or. ok(i,i3,j3,k3))then
                  tmp (i,i3,j3,k3,ivar,idim)=0.0d0
@@ -538,41 +881,27 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         j3=1+j2
         k3=1+k2
         ! Update conservative variables new state vector and velocity divergence
-        if(geom>1.and.idim==1)then
-           ! Use geometrical weighting
-           do ivar=1,nvar
-              do i=1,ncache
-                 unew(ind_cell(i),ivar) = unew(ind_cell(i),ivar) + &
-                      & (flux(i,i3   ,j3   ,k3   ,ivar,idim)*wloc_left (i,i3) &
-                      & -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim)*wloc_right(i,i3))
-              end do
-           end do
+        do ivar=1,nvar
            do i=1,ncache
-              divu(ind_cell(i))=divu(ind_cell(i))+ &
-                   & (tmp(i,i3   ,j3   ,k3   ,1,idim)*wloc_left (i,i3) &
-                   & -tmp(i,i3+i0,j3+j0,k3+k0,1,idim)*wloc_right(i,i3))
+              unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)+ &
+                   & (flux(i,i3   ,j3   ,k3   ,ivar,idim) &
+                   & -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
            end do
-           ! Add -grad(P) term for radial momentum
+        end do
+        ! Update velocity divergence
+        do i=1,ncache
+           divu(ind_cell(i))=divu(ind_cell(i))+ &
+                & (tmp(i,i3   ,j3   ,k3   ,1,idim) &
+                & -tmp(i,i3+i0,j3+j0,k3+k0,1,idim))
+        end do
+        ! Update energy divergence
+        do imat=1,nmat
            do i=1,ncache
-              unew(ind_cell(i),2) = unew(ind_cell(i),2) + &
-                   & (tmp (i,i3   ,j3   ,k3   ,2,idim) &
-                   & -tmp (i,i3+i0,j3+j0,k3+k0,2,idim))
+              dive(ind_cell(i),imat)=dive(ind_cell(i),imat)+ &
+                   & (tmp(i,i3   ,j3   ,k3   ,1+imat,idim) &
+                   & -tmp(i,i3+i0,j3+j0,k3+k0,1+imat,idim))
            end do
-        else
-           do ivar=1,nvar
-              do i=1,ncache
-                 unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)+ &
-                      & (flux(i,i3   ,j3   ,k3   ,ivar,idim) &
-                      & -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
-              end do
-           end do
-           ! Update velocity divergence
-           do i=1,ncache
-              divu(ind_cell(i))=divu(ind_cell(i))+ &
-                   & (tmp(i,i3   ,j3   ,k3   ,1,idim) &
-                   & -tmp(i,i3+i0,j3+j0,k3+k0,1,idim))
-           end do
-        endif
+        end do
      end do
      end do
      end do
@@ -628,6 +957,21 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end do
+     ! Update energy divergence
+     do k3=k3min,k3max-k0
+     do j3=j3min,j3max-j0
+     do i3=i3min,i3max-i0
+        do imat=1,nmat
+           do i=1,ncache
+              if(.not.exist_nbor(i))then
+                 dive(ind_buffer(i),imat)=dive(ind_buffer(i),imat) &
+                      & -tmp(i,i3,j3,k3,1+imat,idim)/dble(twotondim)
+              end if
+           end do
+        end do
+     end do
+     end do
+     end do
      
      !-----------------------
      ! Right flux at boundary
@@ -665,6 +1009,21 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               divu(ind_buffer(i))=divu(ind_buffer(i)) &
                    & +tmp(i,i3+i0,j3+j0,k3+k0,1,idim)/dble(twotondim)
            end if
+        end do
+     end do
+     end do
+     end do
+     ! Update energy divergence
+     do k3=k3min+k0,k3max
+     do j3=j3min+j0,j3max
+     do i3=i3min+i0,i3max
+        do imat=1,nmat
+           do i=1,ncache
+              if(.not.exist_nbor(i))then
+                 dive(ind_buffer(i),imat)=dive(ind_buffer(i),imat) &
+                      & +tmp(i,i3+i0,j3+j0,k3+k0,1+imat,idim)/dble(twotondim)
+              end if
+           end do
         end do
      end do
      end do

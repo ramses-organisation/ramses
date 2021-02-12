@@ -29,7 +29,9 @@ subroutine init_hydro
   allocate(unew(1:ncell,1:nvar))
   uold=0.0d0; unew=0.0d0 
   allocate(divu(1:ncell))
-  divu=0.0d0  
+  allocate(dive(1:ncell,1:nmat))
+  divu=0.0d0
+  dive=0.0d0
 
   if(nrestart>0) then
 

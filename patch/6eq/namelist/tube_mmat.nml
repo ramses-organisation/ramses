@@ -10,8 +10,8 @@ debug=.false.
 /
 
 &AMR_PARAMS 
-levelmin=8
-levelmax=8
+levelmin=3
+levelmax=14
 ngridmax=10000
 nexpand=1
 boxlen=1.0
@@ -39,8 +39,8 @@ region_type(1)='square'
 region_type(2)='square'
 x_center=0.35,0.85
 length_x=0.7,0.3
-f1_region=1e-10,1e-10
-f2_region=1.0,1.0
+f1_region=1.0,1e-6
+f2_region=1e-6,1.0
 d1_region=1.0,1.0
 d2_region=0.05,0.05
 u_region =0.0,0.0
@@ -49,8 +49,7 @@ p2_region=1.0,1d-4
 /
 
 &OUTPUT_PARAMS
-! delta_tout=0.01
-foutput=1
+delta_tout=0.001
 tend=0.23
 /
 

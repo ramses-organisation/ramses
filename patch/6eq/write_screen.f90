@@ -11,7 +11,7 @@ subroutine write_screen
   integer::igrid,jgrid,ind,icpu
   integer::i,icell,ncell,ilevel,ncache
   integer::icellmin,imat,lll
-  real(dp)::dx,scale,smallp,ddd
+  real(dp)::dx,scale,ddd
 
   integer     ,dimension(:),allocatable::ind_grid,ind_cell,ind_sort,ll,ll_all
   real(kind=8),dimension(:),allocatable::rr,rr_all
@@ -125,11 +125,11 @@ subroutine write_screen
                 end do
                 if(son(ind_cell(i))==0)then
                   icell=icell+1
-                  qq(icell,1)                = uold(ind_cell(i),2*nmat+1)/max(dtot(i),smallr)
+                  qq(icell,1)                = uold(ind_cell(i),2*nmat+1)/dtot(i)
                   do imat=1,nmat
                     ff(icell,imat)           = uold(ind_cell(i),imat)
-                    gg(icell,imat)           = uold(ind_cell(i),nmat+imat)/max(ff(icell,imat),smallf)
-                    qq(icell,ndim+nmat+imat) = uold(ind_cell(i),2*nmat+ndim+imat)/max(ff(icell,imat),smallf) - 0.5*gg(icell,imat)*qq(icell,1)**2
+                    gg(icell,imat)           = uold(ind_cell(i),nmat+imat)/ff(icell,imat)
+                    qq(icell,ndim+nmat+imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(icell,imat) - 0.5*gg(icell,imat)*qq(icell,1)**2
                     inv=.false.
                     call eos(gg(icell,imat),qq(icell,ndim+nmat+imat),ppp_mat,ccc,imat,inv,1)
                     qq(icell,ndim+imat)      = ppp_mat(1)
