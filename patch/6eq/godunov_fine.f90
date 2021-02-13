@@ -133,7 +133,7 @@ subroutine set_uold(ilevel)
      end do
   end do
 
-  call pressure_relaxation2(ilevel)
+  if(nmat>1)call pressure_relaxation2(ilevel)
   
 111 format('   Entering set_uold for level ',i2)
 
@@ -620,16 +620,33 @@ subroutine pressure_relaxation2(ilevel)
               end do
 
               do imat = 1,nmat
-                 smallgamma=eos_params(imat,1)
+                 smallgamma = eos_params(imat,1)
                  rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
               end do
                             
-              ff_new(1) = ff(1) + (pp(1)-pp(2))/(rc2(1)/ff(1)+rc2(2)/ff(2))
-              ff_new(2) = ff(2) + (pp(2)-pp(1))/(rc2(1)/ff(1)+rc2(2)/ff(2))
+#if NMAT==2
+              t1=rc2(1)/ff(1)
+              t2=rc2(2)/ff(2)
+              
+              ff_new(1) = ff(1) + (pp(1)-pp(2))/(t1+t2)
+              ff_new(2) = ff(2) + (pp(2)-pp(1))/(t1+t2)
 
               ee_new(1) = ee(1) - ptot * (ff_new(1) - ff(1)) / (ff(1)*gg(1))
               ee_new(2) = ee(2) - ptot * (ff_new(2) - ff(2)) / (ff(2)*gg(2))
+#endif
+#if NMAT==3
+              t1=rc2(1)/ff(1)
+              t2=rc2(2)/ff(2)
+              t3=rc2(3)/ff(3)
+              
+              ff_new(1) = ff(1) + ((t2+2*t3)*(pp(1)-pp(2))+(2*t2+t3)*(pp(1)-pp(3))+(t2-t3)*(pp(2)-pp(3)))/(3*t1*t2+3*t1*t3+3*t2*t3)
+              ff_new(2) = ff(2) + ((t3+2*t1)*(pp(2)-pp(3))+(2*t3+t1)*(pp(2)-pp(1))+(t3-t1)*(pp(3)-pp(1)))/(3*t1*t2+3*t1*t3+3*t2*t3)
+              ff_new(3) = ff(3) + ((t1+2*t2)*(pp(3)-pp(1))+(2*t1+t2)*(pp(3)-pp(2))+(t1-t2)*(pp(1)-pp(2)))/(3*t1*t2+3*t1*t3+3*t2*t3)
 
+              ee_new(1) = ee(1) - ptot * (ff_new(1) - ff(1)) / (ff(1)*gg(1))
+              ee_new(2) = ee(2) - ptot * (ff_new(2) - ff(2)) / (ff(2)*gg(2))
+              ee_new(3) = ee(3) - ptot * (ff_new(3) - ff(3)) / (ff(3)*gg(3))
+#endif
               ! Compute new volume fraction and new partial energy
               do imat = 1,nmat
                  uold(ind_cell(i),imat) = ff_new(imat)
