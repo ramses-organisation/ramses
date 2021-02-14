@@ -532,10 +532,11 @@ subroutine pressure_relaxation2(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp)::ekin,dtot,etot,ptot
   real(dp),dimension(1:nmat),save::ff,gg,ee,pp,rc2
-  real(dp),dimension(1:nmat),save::ff_new,ee_new
+  real(dp),dimension(1:nmat),save::ff_new,ee_new,w
   real(dp),dimension(1:ndim),save::vv
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
-  real(dp)::skip_loc,dx,eps,scale,dx_loc
+  real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
+  real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter
@@ -577,16 +578,9 @@ subroutine pressure_relaxation2(ilevel)
         do i=1,ngrid
            if(son(ind_cell(i))==0)then
               
-              do iter=1,10
-              
-              ! Compute volume fraction and fluid density
+              ! Compute total mass density
               dtot=0
               do imat = 1,nmat
-                 ! Volume fractions
-                 ff(imat) = uold(ind_cell(i),imat)
-                 ! True densities
-                 gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
-                 ! Total density
                  dtot = dtot + uold(ind_cell(i),nmat+imat)
               end do
 
@@ -598,9 +592,17 @@ subroutine pressure_relaxation2(ilevel)
               ! Compute specific kinetic energy
               ekin=0.0
               do idim = 1,ndim
-                 ekin = ekin + half*vv(idim)**2 ! This is 0.5*u^2
+                 ekin = ekin + half*vv(idim)**2
               end do
-        
+
+              do iter=1,10
+              
+              ! Compute volume fraction and true density
+              do imat = 1,nmat
+                 ff(imat) = uold(ind_cell(i),imat)
+                 gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
+              end do
+
               ! Compute specific internal energy
               do imat = 1,nmat
                  ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
@@ -623,36 +625,55 @@ subroutine pressure_relaxation2(ilevel)
                  smallgamma = eos_params(imat,1)
                  rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
               end do
-                            
-#if NMAT==2
-              t1=rc2(1)/ff(1)
-              t2=rc2(2)/ff(2)
-              
-              ff_new(1) = ff(1) + (pp(1)-pp(2))/(t1+t2)
-              ff_new(2) = ff(2) + (pp(2)-pp(1))/(t1+t2)
 
-              ee_new(1) = ee(1) - ptot * (ff_new(1) - ff(1)) / (ff(1)*gg(1))
-              ee_new(2) = ee(2) - ptot * (ff_new(2) - ff(2)) / (ff(2)*gg(2))
+              ! Compute weights
+              do imat = 1,nmat
+                 w(imat) = rc2(imat)/ff(imat)
+              end do
+
+              ! Compute new volume fraction
+#if NMAT==2
+              dd=w(1)+w(2)
+              
+              ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
+              ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
 #endif
 #if NMAT==3
-              t1=rc2(1)/ff(1)
-              t2=rc2(2)/ff(2)
-              t3=rc2(3)/ff(3)
+              dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
               
-              ff_new(1) = ff(1) + ((t2+2*t3)*(pp(1)-pp(2))+(2*t2+t3)*(pp(1)-pp(3))+(t2-t3)*(pp(2)-pp(3)))/(3*t1*t2+3*t1*t3+3*t2*t3)
-              ff_new(2) = ff(2) + ((t3+2*t1)*(pp(2)-pp(3))+(2*t3+t1)*(pp(2)-pp(1))+(t3-t1)*(pp(3)-pp(1)))/(3*t1*t2+3*t1*t3+3*t2*t3)
-              ff_new(3) = ff(3) + ((t1+2*t2)*(pp(3)-pp(1))+(2*t1+t2)*(pp(3)-pp(2))+(t1-t2)*(pp(1)-pp(2)))/(3*t1*t2+3*t1*t3+3*t2*t3)
-
-              ee_new(1) = ee(1) - ptot * (ff_new(1) - ff(1)) / (ff(1)*gg(1))
-              ee_new(2) = ee(2) - ptot * (ff_new(2) - ff(2)) / (ff(2)*gg(2))
-              ee_new(3) = ee(3) - ptot * (ff_new(3) - ff(3)) / (ff(3)*gg(3))
+              ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
+              ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
+              ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
 #endif
-              ! Compute new volume fraction and new partial energy
+#if NMAT==4
+              t12=w(1)*w(2)
+              t13=w(1)*w(3)
+              t14=w(1)*w(4)
+              t23=w(2)*w(3)
+              t24=w(2)*w(4)
+              t34=w(3)*w(4)
+              dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
+              
+              ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
+                   &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
+              ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
+                   &                     (t13-t14)*(pp(3)-pp(4))+      (t34-t14)*(pp(3)-pp(1))+      (t34-t13)*(pp(4)-pp(1)))/dd
+              ff_new(3) = ff(3) + ((t14+t24+2*t12)*(pp(3)-pp(4))+(t14+2*t24+t12)*(pp(3)-pp(1))+(2*t14+t24+t12)*(pp(3)-pp(2))+ &
+                   &                     (t24-t12)*(pp(4)-pp(1))+      (t14-t12)*(pp(4)-pp(2))+      (t14-t24)*(pp(1)-pp(2)))/dd
+              ff_new(4) = ff(4) + ((t12+t13+2*t23)*(pp(4)-pp(1))+(t12+2*t13+t23)*(pp(4)-pp(2))+(2*t12+t13+t23)*(pp(4)-pp(3))+ &
+                   &                     (t13-t23)*(pp(1)-pp(2))+      (t12-t23)*(pp(1)-pp(3))+      (t12-t13)*(pp(2)-pp(3)))/dd
+#endif
+              ! Compute new specific internal energy
+              do imat = 1,nmat
+                 ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
+              end do
+
+              ! Store new volume fraction
               do imat = 1,nmat
                  uold(ind_cell(i),imat) = ff_new(imat)
               end do
 
-              ! Compute specific internal energy
+              ! Store new partial total energy
               do imat=1,nmat
                  uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
               end do
