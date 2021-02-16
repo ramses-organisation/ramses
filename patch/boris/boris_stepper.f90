@@ -8,9 +8,9 @@ subroutine BorisKick(kick,nn,dt,ctm,ts,b,u,v)
   real(dp) ::dt ! timestep
   real(dp) ::ctm ! charge-to-mass ratio
   real(dp) ::ts ! stopping time
-  real(dp),dimension(1:nvector,1:nvar+3) ::b ! magnetic field components
-  real(dp),dimension(1:nvector,1:nvar+3) ::u ! fluid velocity
-  real(dp),dimension(1:nvector,1:nvar+3) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:3) ::b ! magnetic field components
+  real(dp),dimension(1:nvector,1:3) ::u ! fluid velocity
+  real(dp),dimension(1:nvector,1:3) ::v ! grain velocity
   ! real(dp),dimension(1:nvector,1:nvar+3),save ::vo ! velocity output
   !real(dp),dimension(1:nvector,1:nvar+3),save ::q   ! Primitive variables
   integer ::i ! Just an index
