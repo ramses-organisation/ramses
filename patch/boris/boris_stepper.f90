@@ -1,7 +1,7 @@
 ! This is a subroutine to compute the boris timestep.
 subroutine BorisKick(kick,nn,dt,ctm,ts,b,u,v)
-  use amr_parameters
-  use hydro_parameters
+  ! use amr_parameters
+  ! use hydro_parameters
   implicit none
   integer ::kick ! kick number
   integer ::nn ! number of cells
@@ -40,7 +40,8 @@ subroutine BorisKick(kick,nn,dt,ctm,ts,b,u,v)
       vo(i,2) = (v(i,2) - 0.5*dt*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))&
                 -u(i,2)/ts))/(1.+0.5*dt/ts)
       vo(i,3) = (v(i,3) - 0.5*dt*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))&
-                -u(i,3)/ts))/(1.+0.5*dt/ts)
+           -u(i,3)/ts))/(1.+0.5*dt/ts)
+    end do
   end if
 
   v(1:nvector,1:ndim)=vo(1:nvector,1:ndim)
