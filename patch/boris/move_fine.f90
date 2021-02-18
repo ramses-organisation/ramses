@@ -93,7 +93,7 @@ subroutine move_fine_static(ilevel)
            next_part=nextp(ipart)
            if(star) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then                 
+                   & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
                  ! FIXME: there should be a static_sink as well
                  ! FIXME: what about debris?
                  npart2=npart2+1
@@ -181,6 +181,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,dx_loc,scale,vol_loc
+  real(dp)::ctm,ts !ERM: Charge-to-mass ratio and stopping time for dust grains.
+  logical::boris=.true.
+
   ! Grid-based arrays
   integer ,dimension(1:nvector),save::father_cell
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -189,6 +192,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
+  real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -431,7 +435,26 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
 
   ! Gather 3-force
+  ! ERM: Added uu, bb to be interpolated. Left out ts for now.
   ff(1:np,1:ndim)=0.0D0
+  uu(1:np,1:ndim)=0.0D0
+  bb(1:np,1:ndim)=0.0D0
+  vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
+
+  if(boris)then ! ERM: defined a boolean variable for this.
+     do ind=1,twotondim
+        do idim=1,ndim
+           do j=1,np
+              uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+              bb(j,idim)=bb(j,idim)+&
+              0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))&
+              *vol(j,ind)
+              ! ERM: We also want to interpolate density here in the future
+              ! That way you can compute ts for each grain.
+           end do
+        end do
+     end do
+  endif
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
@@ -468,6 +491,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      endif
   end do
+  if(boris)then
+    ! ERM: below, I add the EM forces. We don't want to use the tracer variable.
+    call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
+    new_vp(1:np,1:ndim)=vv(1:np,1:ndim) ! ERM: Set new_vp
+  endif
 
   ! For sink cloud particle only
   if(sink)then
@@ -508,6 +536,65 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
 end subroutine move1
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+
+! The following subroutine will alter its last argument, v
+! to be an intermediate step, having been either accelerated by
+! drag+the electric field, or rotated by the magnetic field.
+subroutine FirstAndSecondBorisKick(nn,dt,dtarr,ctm,ts,b,u,v)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::kick ! kick number
+  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::ctm ! charge-to-mass ratio
+  real(dp) ::ts ! stopping time
+  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
+  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
+  ! real(dp),dimension(1:nvector,1:nvar+3),save ::vo ! velocity output
+  !real(dp),dimension(1:nvector,1:nvar+3),save ::q   ! Primitive variables
+  integer ::i ! Just an index
+  !if (kick==1) then
+  do i=1,nn
+    vo(i,1) = v(i,1) + (2*ctm*dt*(-(b(i,2)*b(i,2)*ctm*dt*v(i,1))&
+              + b(i,2)*(b(i,1)*ctm*dt*v(i,2)&
+              - 2*v(i,3)) + b(i,3)*(-(b(i,3)*ctm*dt*v(i,1)) + 2*v(i,2)&
+              + b(i,1)*ctm*dt*v(i,3))))/(4 +&
+              (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+    vo(i,2) = v(i,2) + (2*ctm*dt*(-(b(i,3)*b(i,3)*ctm*dt*v(i,2)) &
+              + b(i,1)*(b(i,2)*ctm*dt*v(i,1)&
+              - b(i,1)*ctm*dt*v(i,2) + 2*v(i,3)) + b(i,3)*(-2*v(i,1)&
+              + b(i,2)*ctm*dt*v(i,3))))/(4&
+              + (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+    vo(i,3) = v(i,3) + (2*ctm*dt*(2*b(i,2)*v(i,1) &
+              + b(i,1)*b(i,3)*ctm*dt*v(i,1) - 2*b(i,1)*v(i,2)&
+              + b(i,2)*b(i,3)*ctm*dt*v(i,2) - (b(i,1)*b(i,1)&
+              + b(i,2)*b(i,2))*ctm*dt*v(i,3)))/(4 +&
+              (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+  end do
+  v(1:nvector,1:ndim)=vo(1:nvector,1:ndim)
+  !else
+  do i=1,nn
+    vo(i,1) = (v(i,1) - 0.5*dt*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))&
+              -u(i,1)/ts))/(1.+0.5*dt/ts)
+    vo(i,2) = (v(i,2) - 0.5*dt*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))&
+              -u(i,2)/ts))/(1.+0.5*dt/ts)
+    vo(i,3) = (v(i,3) - 0.5*dt*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))&
+              -u(i,3)/ts))/(1.+0.5*dt/ts)
+  end do
+  !end if
+  ! do i=1,nn
+  !   write(*,*)kick,nn,dt,ctm,ts
+  ! end do
+  v(1:nvector,1:ndim)=vo(1:nvector,1:ndim)
+end subroutine FirstAndSecondBorisKick
+
 !#########################################################################
 !#########################################################################
 !#########################################################################
