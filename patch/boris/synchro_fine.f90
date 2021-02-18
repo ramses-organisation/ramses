@@ -214,7 +214,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,smallr ! ERM: Included these. May want to ask Romain about this.
-  logical::boris=.true.
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -227,6 +226,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,scale
   real(dp)::ctm=1.15D3 ! For 0.1 micron grains @ scale 1 pc, and conditions in MDTS20
   real(dp)::ts=2.2D-1 !ERM: Charge-to-mass ratio and stopping time for dust grains.
+  logical::boris=.true.
+  
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
