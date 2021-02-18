@@ -166,7 +166,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr
+  use hydro_commons !, ONLY: uold,smallr ERM: want nvar?
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -558,8 +558,6 @@ subroutine FirstAndSecondBorisKick(nn,dt,dtarr,ctm,ts,b,u,v)
   real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
-  ! real(dp),dimension(1:nvector,1:nvar+3),save ::vo ! velocity output
-  !real(dp),dimension(1:nvector,1:nvar+3),save ::q   ! Primitive variables
   integer ::i ! Just an index
   !if (kick==1) then
   do i=1,nn
