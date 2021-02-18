@@ -439,8 +439,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ff(1:np,1:ndim)=0.0D0
   uu(1:np,1:ndim)=0.0D0
   bb(1:np,1:ndim)=0.0D0
-  vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
-
   if(boris)then ! ERM: defined a boolean variable for this.
      do ind=1,twotondim
         do idim=1,ndim
@@ -491,6 +489,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      endif
   end do
+
+  vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
   if(boris)then
     ! ERM: below, I add the EM forces. We don't want to use the tracer variable.
     call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)

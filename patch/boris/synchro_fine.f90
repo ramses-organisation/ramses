@@ -213,6 +213,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
+  use hydro_commons, ONLY: uold,smallr ! ERM: Included these. May want to ask Romain about this.
+  logical::boris=.true.
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -482,6 +484,22 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  ! ERM: interpolate variables for the boris kicker
+  uu(1:np,1:ndim)=0.0D0
+  bb(1:np,1:ndim)=0.0D0
+  if(boris)then
+    do ind=1,twotondim
+       do idim=1,ndim
+          do j=1,np
+            uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+            bb(j,idim)=bb(j,idim)+&
+            0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))&
+            *vol(j,ind)
+          end do
+       end do
+    end do
+  endif
+
   ! For sink particle only, store contribution to the sink force
   if(sink)then
      do idim=1,ndim
@@ -511,8 +529,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Update 3-velocity
-  ! ERM: set vv equal to new_vp
-  vv(1:nvector,1:ndim)=new_vp(1:nvector,1:ndim)
   do idim=1,ndim
      if(static)then
         do j=1,np
@@ -522,13 +538,18 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
         end do
-        ! ERM: Add the final boris kick in to get us synced up.
-        ! dteff may need a different thing to be done in Boris
-        ! That could be a separate "3" case.
-        ! However, you don't want it to be placed here, actually.
-        call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
      endif
   end do
+  ! ERM: set vv equal to new_vp
+  vv(1:nvector,1:ndim)=new_vp(1:nvector,1:ndim)
+  ! ERM: Add the final boris kick in to get us synced up.
+  ! dteff may need a different thing to be done in Boris
+  ! That could be a separate "3" case.
+  ! However, you don't want it to be placed here, actually.
+  if(boris)then
+    call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
+    new_vp(1:nvector,1:ndim)=vv(1:nvector,1:ndim)
+  endif
   do idim=1,ndim
      do j=1,np
         vp(ind_part(j),idim)=new_vp(j,idim)
