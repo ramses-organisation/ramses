@@ -225,7 +225,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,scale
-  real(dp)::ctm,ts ! ERM: grain charge-to-mass ratio and stopping time
+  real(dp)::ctm=1.15D3 ! For 0.1 micron grains @ scale 1 pc, and conditions in MDTS20
+  real(dp)::ts=2.2D-1 !ERM: Charge-to-mass ratio and stopping time for dust grains.
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
