@@ -166,7 +166,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons !, ONLY: uold,smallr ERM: want nvar?
+  use hydro_commons, ONLY: uold,smallr,nvar ! ERM: want nvar?
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -545,7 +545,7 @@ end subroutine move1
 ! The following subroutine will alter its last argument, v
 ! to be an intermediate step, having been either accelerated by
 ! drag+the electric field, or rotated by the magnetic field.
-subroutine FirstAndSecondBorisKick(nn,dt,dtarr,ctm,ts,b,u,v)
+subroutine FirstAndSecondBorisKick(nn,dt,ctm,ts,b,u,v)
   use amr_parameters
   use hydro_parameters
   implicit none

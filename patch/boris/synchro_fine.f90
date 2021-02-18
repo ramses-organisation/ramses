@@ -213,7 +213,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons !, ONLY: uold,smallr ! ERM: Included these. May want to ask Romain about this.
+  use hydro_commons, ONLY: uold,smallr,nvar ! ERM: Included these. May want to ask Romain about this.
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
