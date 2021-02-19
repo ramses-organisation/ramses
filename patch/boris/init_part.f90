@@ -236,8 +236,6 @@
   else
 
      filetype_loc=filetype
-     if(.not. cosmo)filetype_loc='ascii'
-
      select case (filetype_loc)
 
      case ('grafic')
@@ -268,6 +266,21 @@ contains
     !    (file ic_posc* if present, if not generated through Zeldovich approximation)
     ! - Ids in int or long int
     !    (file ic_particle_ids if present, if not generated internally)
+
+    integer::nxny,nx_loc
+    real(dp),dimension(1:3)::xbound
+    real(dp),dimension(1:3)::skip_loc
+    real(dp)::scale
+    
+    ! Local constants
+    nxny=nx*ny
+    xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
+    nx_loc=(icoarse_max-icoarse_min+1)
+    skip_loc=(/0.0d0,0.0d0,0.0d0/)
+    if(ndim>0)skip_loc(1)=dble(icoarse_min)
+    if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+    if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+    scale=boxlen/dble(nx_loc)
 
     !----------------------------------------------------
     ! Reading initial conditions GRAFIC2 multigrid arrays
@@ -334,9 +347,9 @@ contains
                       write(*,*)'npartmax should be greater than',ipart
                       call clean_stop
                    endif
-                   if(ndim>0)xp(ipart,1)=xg(ind_grid(i),1)+xc(ind,1)
-                   if(ndim>1)xp(ipart,2)=xg(ind_grid(i),2)+xc(ind,2)
-                   if(ndim>2)xp(ipart,3)=xg(ind_grid(i),3)+xc(ind,3)
+                   if(ndim>0)xp(ipart,1)=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
+                   if(ndim>1)xp(ipart,2)=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
+                   if(ndim>2)xp(ipart,3)=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
                    mp(ipart)=0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
                 end if
              end do
@@ -658,27 +671,21 @@ contains
     npart=ipart
 
     ! Move particle according to Zeldovich approximation
-    if(.not. read_pos)then
+    if(.not. read_pos .and. cosmo)then
        xp(1:npart,1:ndim)=xp(1:npart,1:ndim)+vp(1:npart,1:ndim)
     endif
 
     ! Scale displacement to velocity
-    vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
+    if(cosmo)vp(1:npart,1:ndim)=vfact(1)*vp(1:npart,1:ndim)
 
     ! Periodic box
-    do ipart=1,npart
-#if NDIM>0
-       if(xp(ipart,1)<  0.0d0  )xp(ipart,1)=xp(ipart,1)+dble(nx)
-       if(xp(ipart,1)>=dble(nx))xp(ipart,1)=xp(ipart,1)-dble(nx)
-#endif
-#if NDIM>1
-       if(xp(ipart,2)<  0.0d0  )xp(ipart,2)=xp(ipart,2)+dble(ny)
-       if(xp(ipart,2)>=dble(ny))xp(ipart,2)=xp(ipart,2)-dble(ny)
-#endif
-#if NDIM>2
-       if(xp(ipart,3)<  0.0d0  )xp(ipart,3)=xp(ipart,3)+dble(nz)
-       if(xp(ipart,3)>=dble(nz))xp(ipart,3)=xp(ipart,3)-dble(nz)
-#endif
+    do idim=1,ndim
+       do ipart=1,npart
+          if(xp(ipart,idim)/scale+skip_loc(idim)<0.0d0) &
+               & xp(ipart,idim)=xp(ipart,idim)+(xbound(idim)-skip_loc(idim))*scale
+          if(xp(ipart,idim)/scale+skip_loc(idim)>=xbound(idim)) &
+               & xp(ipart,idim)=xp(ipart,idim)-(xbound(idim)-skip_loc(idim))*scale
+       end do
     end do
 
 #ifndef WITHOUTMPI
