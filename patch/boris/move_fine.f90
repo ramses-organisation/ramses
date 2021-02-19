@@ -164,6 +164,7 @@ end subroutine move_fine_static
 !#########################################################################
 subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
+  use amr_parameters, ONLY:charge_to_mass,t_stop
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,smallr,nvar ! ERM: want nvar?
