@@ -181,9 +181,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,dx_loc,scale,vol_loc
-  real(dp)::ctm=1.15D3 ! For 0.1 micron grains @ scale 1 pc, and conditions in MDTS20
-  real(dp)::ts=2.2D-1 !ERM: Charge-to-mass ratio and stopping time for dust grains.
-  logical::boris=.true.
+  real(dp)::ctm=charge_to_mass ! ERM: recommend 1.15D3
+  real(dp)::ts=t_stop !ERM: recommend 2.2D-1
 
   ! Grid-based arrays
   integer ,dimension(1:nvector),save::father_cell
