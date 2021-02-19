@@ -211,7 +211,7 @@ end subroutine synchro_fine_static
 !####################################################################
 subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
-  use amr_parameters, ONLY:charge_to_mass,t_stop
+  use amr_parameters
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,smallr,nvar ! ERM: Included these. May want to ask Romain about this.
@@ -225,8 +225,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,scale
-  real(dp)::ctm=charge_to_mass ! ERM: recommend 1.15D3
-  real(dp)::ts=t_stop !ERM: recommend 2.2D-1
+  real(dp)::ctm=1.15D3! ERM: recommend 1.15D3
+  real(dp)::ts=2.2D-1!ERM: recommend 2.2D-1
 
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
