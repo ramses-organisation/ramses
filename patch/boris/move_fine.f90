@@ -14,6 +14,7 @@ subroutine move_fine(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  write(*,111)ilevel
 
   ! Update particles position and velocity
   ig=0
@@ -164,10 +165,9 @@ end subroutine move_fine_static
 !#########################################################################
 subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
-  !use amr_parameters !, ONLY:charge_to_mass,t_stop ERM
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr,nvar ! ERM: want nvar?
+  use hydro_commons, ONLY: uold,smallr,nvar
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -438,25 +438,22 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
-  ! Gather 3-force
-  ! ERM: Added uu, bb to be interpolated. Left out ts for now.
-  ff(1:np,1:ndim)=0.0D0
+  ! Various fields interpolated to particle positions
+  ! Gather 3-velocity and 3-magnetic field
   uu(1:np,1:ndim)=0.0D0
   bb(1:np,1:ndim)=0.0D0
-  if(boris)then ! ERM: defined a boolean variable for this.
+  if(boris.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
            do j=1,np
               uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-              bb(j,idim)=bb(j,idim)+&
-              0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))&
-              *vol(j,ind)
-              ! ERM: We also want to interpolate density here in the future
-              ! That way you can compute ts for each grain.
+              bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
            end do
         end do
      end do
   endif
+  ! Gather 3-velocity
+  ff(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
@@ -466,6 +463,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
+  ! Gather 3-force
   if(poisson)then
      do ind=1,twotondim
         do idim=1,ndim
@@ -494,15 +492,10 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
-  if(boris)then
-    ! ERM: below, I add the EM forces. We don't want to use the tracer variable.
-    ! call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
-    do idim=1,ndim
-      do j=1,np
-        new_vp(j,idim)=0.001 ! ERM: Set new_vp
-      end do
-    end do
+  if(boris.and.hydro)then
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
+     call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
+     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
   ! For sink cloud particle only
