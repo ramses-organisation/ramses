@@ -19,6 +19,7 @@ subroutine synchro_fine(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  write(*,111)ilevel
 
   if(sink)then
      fsink_new=0
@@ -481,27 +482,25 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
-  if (poisson)then
-    do ind=1,twotondim
-       do idim=1,ndim
-          do j=1,np
-             ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-          end do
-       end do
-    end do
+  if(poisson)then
+     do ind=1,twotondim
+        do idim=1,ndim
+           do j=1,np
+              ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+           end do
+        end do
+     end do
   endif
-
+  
   ! ERM: interpolate variables for the boris kicker
   uu(1:np,1:ndim)=0.0D0
   bb(1:np,1:ndim)=0.0D0
-  if(boris)then
+  if(boris.and.hydro)then
     do ind=1,twotondim
        do idim=1,ndim
           do j=1,np
             uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-            bb(j,idim)=bb(j,idim)+&
-            0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))&
-            *vol(j,ind)
+            bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
           end do
        end do
     end do
@@ -547,22 +546,19 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      endif
   end do
-  ! ERM: set vv equal to new_vp
-  vv(1:nvector,1:ndim)=new_vp(1:nvector,1:ndim)
-  ! ERM: Add the final boris kick in to get us synced up.
-  ! dteff may need a different thing to be done in Boris
-  ! That could be a separate "3" case.
-  ! However, you don't want it to be placed here, actually.
+
   if(boris)then
-    ! call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
-    new_vp(1:nvector,1:ndim)=uu(1:nvector,1:ndim)
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+     call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
+     new_vp(1:np,1:ndim)=uu(1:np,1:ndim)
   endif
+
   do idim=1,ndim
      do j=1,np
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
-
+  
   ! For sink particle only, overwrite cloud particle velocity with sink velocity
   if(sink)then
      do idim=1,ndim

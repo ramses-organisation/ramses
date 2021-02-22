@@ -1,14 +1,14 @@
 &RUN_PARAMS
 hydro=.true.
 pic=.true.
-tracer=.true.
+tracer=.false.
 poisson=.false.
 ncontrol=1
 nrestart=0
 /
 
 &GRAIN_PARAMS
-boris=.false.
+boris=.true.
 charge_to_mass=1.15D3
 t_stop=2.2d-1
 /
@@ -17,7 +17,7 @@ t_stop=2.2d-1
 levelmin=7
 levelmax=7
 ngridmax=400000 ! Fits in 4 nodes ?
-npartmax=400000
+npartmax=3000000
 boxlen=1.0 ! Check this
 /
 
@@ -37,7 +37,7 @@ beta_fix=0.5
 
 &INIT_PARAMS
 filetype='grafic'
-initfile(1)='./ic_box3_128_256_111/ic_box3_7' ! Check this
+initfile(1)='./ic_box3_7' ! Check this
 /
 
 &OUTPUT_PARAMS

@@ -587,7 +587,7 @@ contains
 
           if(active(ilevel)%ngrid>0)then
              ! Rescale initial displacement field to code units
-             init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
+             if(cosmo)init_array=dfact(ilevel)*dx/dxini(ilevel)*init_array/vfact(ilevel)
              if(read_pos)then
                 init_array_x = init_array_x/boxlen_ini
              endif
