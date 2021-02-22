@@ -225,8 +225,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,scale
-  real(dp)::ctm=charge_to_mass! ERM: recommend 1.15D3
-  real(dp)::ts=t_stop!ERM: recommend 2.2D-1
+  real(dp)::ctm ! ERM: recommend 1.15D3
+  real(dp)::ts !ERM: recommend 2.2D-1
 
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -242,6 +242,9 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+  ctm = charge_to_mass
+  ts = t_stop
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
