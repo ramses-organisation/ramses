@@ -554,7 +554,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! That could be a separate "3" case.
   ! However, you don't want it to be placed here, actually.
   if(boris)then
-    call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
+    ! call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
     new_vp(1:nvector,1:ndim)=uu(1:nvector,1:ndim)
   endif
   do idim=1,ndim
