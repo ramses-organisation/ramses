@@ -500,7 +500,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     ! call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
     do idim=1,ndim
       do j=1,np
-        new_vp(j,idim)=uu(j,idim) ! ERM: Set new_vp
+        new_vp(j,idim)=0.001 ! ERM: Set new_vp
       end do
     end do
   endif
