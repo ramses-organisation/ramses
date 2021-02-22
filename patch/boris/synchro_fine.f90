@@ -481,13 +481,15 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,np
-           ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-        end do
-     end do
-  end do
+  if (poisson)then
+    do ind=1,twotondim
+       do idim=1,ndim
+          do j=1,np
+             ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+          end do
+       end do
+    end do
+  endif
 
   ! ERM: interpolate variables for the boris kicker
   uu(1:np,1:ndim)=0.0D0
