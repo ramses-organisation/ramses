@@ -211,6 +211,7 @@ end subroutine synchro_fine_static
 !####################################################################
 subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
+  !use amr_parameters ERM
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,smallr,nvar ! ERM: Included these. May want to ask Romain about this.
@@ -224,9 +225,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,scale
-  real(dp)::ctm=1.15D3 ! For 0.1 micron grains @ scale 1 pc, and conditions in MDTS20
-  real(dp)::ts=2.2D-1 !ERM: Charge-to-mass ratio and stopping time for dust grains.
-  logical::boris=.true.
+  real(dp)::ctm ! ERM: recommend 1.15D3
+  real(dp)::ts !ERM: recommend 2.2D-1
 
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -242,6 +242,9 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+  ctm = charge_to_mass
+  ts = t_stop
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -478,13 +481,15 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,np
-           ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-        end do
-     end do
-  end do
+  if (poisson)then
+    do ind=1,twotondim
+       do idim=1,ndim
+          do j=1,np
+             ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+          end do
+       end do
+    end do
+  endif
 
   ! ERM: interpolate variables for the boris kicker
   uu(1:np,1:ndim)=0.0D0
@@ -549,8 +554,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! That could be a separate "3" case.
   ! However, you don't want it to be placed here, actually.
   if(boris)then
-    call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
-    new_vp(1:nvector,1:ndim)=vv(1:nvector,1:ndim)
+    ! call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
+    new_vp(1:nvector,1:ndim)=uu(1:nvector,1:ndim)
   endif
   do idim=1,ndim
      do j=1,np

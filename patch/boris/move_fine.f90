@@ -164,6 +164,7 @@ end subroutine move_fine_static
 !#########################################################################
 subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
+  !use amr_parameters !, ONLY:charge_to_mass,t_stop ERM
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,smallr,nvar ! ERM: want nvar?
@@ -181,9 +182,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
   real(dp)::dx,dx_loc,scale,vol_loc
-  real(dp)::ctm=1.15D3 ! For 0.1 micron grains @ scale 1 pc, and conditions in MDTS20
-  real(dp)::ts=2.2D-1 !ERM: Charge-to-mass ratio and stopping time for dust grains.
-  logical::boris=.true.
+  real(dp)::ctm! ERM: recommend 1.15D3
+  real(dp)::ts !ERM: recommend 2.2D-1
 
   ! Grid-based arrays
   integer ,dimension(1:nvector),save::father_cell
@@ -198,6 +198,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+  ctm = charge_to_mass
+  ts = t_stop
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -494,8 +497,12 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
   if(boris)then
     ! ERM: below, I add the EM forces. We don't want to use the tracer variable.
-    call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
-    new_vp(1:np,1:ndim)=vv(1:np,1:ndim) ! ERM: Set new_vp
+    ! call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
+    do idim=1,ndim
+      do j=1,np
+        new_vp(j,idim)=0.001 ! ERM: Set new_vp
+      end do
+    end do
   endif
 
   ! For sink cloud particle only
