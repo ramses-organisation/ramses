@@ -555,7 +555,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! However, you don't want it to be placed here, actually.
   if(boris)then
     call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
-    new_vp(1:nvector,1:ndim)=vv(1:nvector,1:ndim)
+    new_vp(1:nvector,1:ndim)=uu(1:nvector,1:ndim)
   endif
   do idim=1,ndim
      do j=1,np
