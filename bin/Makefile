@@ -20,7 +20,7 @@ PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
-USE_TURB=1
+USE_TURB=0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
 MPIF90 = mpif90
