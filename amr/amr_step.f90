@@ -225,7 +225,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Remove gravity source term with half time step and old force
      if(hydro)then
-        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
      endif
 
      ! Compute gravitational potential
@@ -258,7 +258,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
 
         ! Add gravity source term with half time step and new force
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -394,16 +394,15 @@ recursive subroutine amr_step(ilevel,icount)
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
                                call timer('poisson','start')
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
 #if USE_TURB==1
      ! Compute turbulent forcing
                                call timer('turb','start')
      if (turb .AND. turb_type/=3) then
         ! Euler step, adding turbulent acceleration
-        call add_turb_forcing(ilevel,dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
      end if
-
 #endif
 
      ! Restriction operator

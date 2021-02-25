@@ -459,7 +459,7 @@ subroutine init_flow_fine(ilevel)
      ! Add initial turbulent velocity
      if (turb .AND. turb_type == 3) then
         call calc_turb_forcing(ilevel)
-        call add_turb_forcing(ilevel,1.0_dp)
+        call synchro_hydro_fine(ilevel,1.0_dp,2)
      end if
 #endif
 
