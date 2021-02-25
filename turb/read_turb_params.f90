@@ -30,6 +30,12 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
+  ! BUG: upon restart, turb_type 2 gives the wrong rms.
+  if (turb_type == 2) then
+     write (*,*) "Turbulence type 2 is bugged. Please select 1 instead."
+     nml_ok = .FALSE.
+  end if
+
   if (comp_frac < 0.0_dp .OR. comp_frac > 1.0_dp) then
      write (*,*) "Invalid compressive fraction selected! (0.0 to 1.0)"
      nml_ok = .FALSE.
