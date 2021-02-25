@@ -3,7 +3,7 @@
 ! A.McLeod - 24/11/2012
 ! Generate next turbulent field
 ! ============================================================================
-SUBROUTINE turb_next_field
+subroutine turb_next_field
    use turb_commons
    implicit none
 
@@ -31,5 +31,5 @@ SUBROUTINE turb_next_field
    
    return
    
-END SUBROUTINE turb_next_field
+end subroutine turb_next_field
 #endif

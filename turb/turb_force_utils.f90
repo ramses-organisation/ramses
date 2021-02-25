@@ -72,6 +72,8 @@ subroutine calc_power_spectrum(k, power_spectrum)
 
    real(kind=dp)              :: k_mag          ! Wavevector magnitude
 
+   ! Remark that the components of k are between -TURB_GS and TURB_GS
+   ! with k=1 corresponding to the box size
    select case(forcing_power_spectrum)
       case('power_law')
          ! alpha^-2 power spectrum

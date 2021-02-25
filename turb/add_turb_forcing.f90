@@ -114,14 +114,11 @@ subroutine add_turb_forcing(ilevel, dteff)
   !-------------------------------------------------------------------
   ! Update velocity from turbulent accelerations
   !-------------------------------------------------------------------
-  integer::ncache,ngrid,i,igrid,iskip,ind,nx_loc
+  integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   
   !if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,112)ilevel
-  
-  ! Mesh spacing at that level
-  nx_loc=icoarse_max-icoarse_min+1
   
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -133,20 +130,17 @@ subroutine add_turb_forcing(ilevel, dteff)
  
      ! Loop over cells
      do ind=1,twotondim
-
         ! Gather cell indices
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
         call turb_forcing1(ind_cell,ngrid,dteff)
      end do
      ! End loop over cells
 
   end do
   ! End loop over grids
-
 
 112 format('   Entering add_turb_forcing for level',i2)
   

@@ -64,7 +64,6 @@ subroutine init_turb
    end if
 #endif
 
-
    ! Tasks that do not need to be done by MPI non-root tasks
    ! ---------------------------------------------------------------------------
 
@@ -129,10 +128,8 @@ subroutine init_turb
    ! Calculate turbulent normalization
    ! Power normalization comes from FFT of initial power spectrum
    call power_rms_norm(power_spec, power_norm)
-!    power_norm = power_rms_norm(power_spec)
    ! Projection normalization was empirically estimated and fitted
    call proj_rms_norm(sol_frac, proj_norm)
-!    proj_norm = proj_rms_norm(sol_frac)
    ! OU norm comes from standard deviation of OU process
    OU_norm = sqrt(turb_T / 2.0_dp)
    ! Combination of all factored (reciprocal for easy multiplication)
