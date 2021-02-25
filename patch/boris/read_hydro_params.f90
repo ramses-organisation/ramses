@@ -156,6 +156,9 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   read(1,NML=units_params,END=108)
 108 continue
+  rewind(1)
+  read(1,NML=grain_params,END=109)
+109 continue
 #ifdef grackle
   rewind(1)
   read(1,NML=grackle_params)
