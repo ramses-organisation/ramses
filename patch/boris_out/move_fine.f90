@@ -180,7 +180,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! This routine is called by move_fine.
   !------------------------------------------------------------
   logical::error
-  integer::i,j,ind,idim,nx_loc,isink
+  integer::i,j,ind,idim,nx_loc,isink,index_part
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::ctm! ERM: recommend 1.15D3
   real(dp)::ts !ERM: recommend 2.2D-1
@@ -499,7 +499,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! ERM: temporary output block.
-  if(boris.and.hydro)
+  if(boris.and.hydro)then
   do index_part=1,10
     do j=1,np
       if(idp(ind_part(j)).EQ.index_part)then
