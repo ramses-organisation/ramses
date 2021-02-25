@@ -503,8 +503,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do index_part=1,10
     do j=1,np
       if(idp(ind_part(j)).EQ.index_part)then
-        write(10+index_part,*)t,xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3)&
-        vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3)
+        write(10+index_part,*)t,xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3)
       endif
     end do
   end do
