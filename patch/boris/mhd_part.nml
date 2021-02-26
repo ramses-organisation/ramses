@@ -37,7 +37,7 @@ beta_fix=0.5
 
 &INIT_PARAMS
 filetype='grafic'
-initfile(1)='./ic_box3_7' ! Check this
+initfile(1)='./ic_box3_128_256_111/ic_box3_7' ! Check this
 /
 
 &OUTPUT_PARAMS

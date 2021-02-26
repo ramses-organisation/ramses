@@ -19,7 +19,6 @@ subroutine synchro_fine(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  write(*,111)ilevel
 
   if(sink)then
      fsink_new=0

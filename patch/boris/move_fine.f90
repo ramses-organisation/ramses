@@ -11,10 +11,16 @@ subroutine move_fine(ilevel)
   !----------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-
+  character(LEN=80)::filename,fileloc
+  character(LEN=5)::nchar
+  
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  write(*,111)ilevel
+
+  filename='trajectory.dat'
+  call title(myid,nchar)
+  fileloc=TRIM(filename)//TRIM(nchar)
+  open(25+myid, file = fileloc, status = 'unknown', access = 'append')
 
   ! Update particles position and velocity
   ig=0
@@ -52,6 +58,8 @@ subroutine move_fine(ilevel)
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
+  close(25+myid)
+  
 111 format('   Entering move_fine for level ',I2)
 
 end subroutine move_fine
@@ -180,7 +188,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! This routine is called by move_fine.
   !------------------------------------------------------------
   logical::error
-  integer::i,j,ind,idim,nx_loc,isink
+  integer::i,j,ind,idim,nx_loc,isink,index_part
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::ctm! ERM: recommend 1.15D3
   real(dp)::ts !ERM: recommend 2.2D-1
@@ -479,6 +487,16 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
+  if(boris.and.hydro)then
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3)
+           end if
+        end do
+     end do
+  endif
+  
   ! Update velocity
   do idim=1,ndim
      if(static.or.tracer)then
