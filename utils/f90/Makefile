@@ -1,13 +1,11 @@
 # Makefile for RAMSES utils
 BINDIR=.
 
-# Ifort configuration
-#F90=ifort
-#F90=ftn
-F90=gfortran
-CFLAGS=-x f95-cpp-input -ffree-line-length-none
+# ifort configuration
+F90=ifort
+CFLAGS=-cpp
 
-# # Gfortran configuration
+# gfortran configuration
 #F90=gfortran
 #CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input
 
@@ -17,7 +15,8 @@ MODOBJ=random.o utils.o io_ramses.o
 
 # Make all targets
 all: amr2prof amr2cylprof ramses2tipsy amr2map part2map part2prof \
-     part2cube part2list partcenter part2birth part2sfr getstarlist
+     part2cube part2list partcenter part2birth part2sfr getstarlist \
+     part2cylprof
 
 amr2prof: $(MODOBJ) amr2prof.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
@@ -35,6 +34,8 @@ part2cube: $(MODOBJ) utils.o part2cube.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 part2prof: $(MODOBJ) utils.o part2prof.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
+part2cylprof: part2cylprof.o
+	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 part2list: $(MODOBJ) utils.o part2list.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 
@@ -46,7 +47,6 @@ part2sfr: $(MODOBJ) part2sfr.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 getstarlist:  $(MODOBJ) getstarlist.f90 
 	 $(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
-
 
 # Make a specific object file
 %.o: %.f90

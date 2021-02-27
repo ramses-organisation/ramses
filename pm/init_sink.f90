@@ -30,6 +30,10 @@ subroutine init_sink
   allocate(msmbh(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
   msink=0d0; msmbh=0d0; xsink=boxlen/2
+
+  allocate(xsink_graddescent(1:nsinkmax,1:ndim))
+  allocate(graddescent_over_dt(1:nsinkmax))
+  xsink_graddescent=0d0; graddescent_over_dt=0d0
   allocate(vsink(1:nsinkmax,1:ndim))
   allocate(lsink(1:nsinkmax,1:ndim))
   allocate(delta_mass(1:nsinkmax))

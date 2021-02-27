@@ -72,7 +72,11 @@ subroutine newdt_fine(ilevel)
            do idim=1,ndim
               vsink2=vsink2+vsink(isink,idim)**2
            end do
-           vsink_max=MAX(vsink_max,sqrt(vsink2))
+          if(sink_descent)then
+             vsink_max=MAX(vsink_max,sqrt(vsink2)+graddescent_over_dt(isink))
+          else
+             vsink_max=MAX(vsink_max,sqrt(vsink2))
+          endif
         endif
      end do
      if(vsink_max.GT.0d0)then
