@@ -796,7 +796,8 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC, is
   REAL(dp)::dtdx, dtdy, dtdz, smallp
-  REAL(dp)::r, u, v, w, p, A, B, C, rini
+  REAL(dp)::r, u, v, w, p, A, B, C
+  REAL(dp)::rini, uini, vini, wini, pini
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::FLL, FLR, FRL, FRR
   REAL(dp)::GLL, GLR, GRL, GRR
@@ -862,9 +863,13 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               r =    q(l,i,j,k,ir)
               rini = q(l,i,j,k,ir)
               u =    q(l,i,j,k,iu)
+              uini = q(l,i,j,k,iu)
               v =    q(l,i,j,k,iv)
+              vini = q(l,i,j,k,iv)
               w =    q(l,i,j,k,iw)
+              wini = q(l,i,j,k,iw)
               p =    q(l,i,j,k,ip)
+              pini = q(l,i,j,k,ip)
               A =    q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
               C =    q(l,i,j,k,iC)
@@ -1011,7 +1016,12 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,1) = AL
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
-              if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=rini
+              if (qp(l,i,j,k,ir,1) < smallr) then
+                  qp(l,i,j,k,ir,1) = rini
+                  qp(l,i,j,k,iu,1) = uini
+                  qp(l,i,j,k,iw,1) = wini
+                  qp(l,i,j,k,ip,1) = pini
+              endif
 
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
 #if NENER>0
@@ -1029,7 +1039,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,1) = AR
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
-              if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=rini
+              if (qm(l,i,j,k,ir,1) < smallr) then
+                  qm(l,i,j,k,ir,1) = rini
+                  qm(l,i,j,k,iu,1) = uini
+                  qm(l,i,j,k,iv,1) = vini
+                  qm(l,i,j,k,iw,1) = wini
+                  qm(l,i,j,k,ip,1) = pini
+              endif
+
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1046,7 +1063,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,2) = A - dAy
               qp(l,i,j,k,iB,2) = BL
               qp(l,i,j,k,iC,2) = C - dCy
-              if (qp(l,i,j,k,ir,2)<smallr) qp(l,i,j,k,ir,2)=rini
+              if (qp(l,i,j,k,ir,2) < smallr) then
+                  qp(l,i,j,k,ir,2) = rini
+                  qp(l,i,j,k,iu,2) = uini
+                  qp(l,i,j,k,iv,2) = vini
+                  qp(l,i,j,k,iw,2) = wini
+                  qp(l,i,j,k,ip,2) = pini
+              endif
+
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1063,7 +1087,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,2) = A + dAy
               qm(l,i,j,k,iB,2) = BR
               qm(l,i,j,k,iC,2) = C + dCy
-              if (qm(l,i,j,k,ir,2)<smallr) qm(l,i,j,k,ir,2)=rini
+              if (qm(l,i,j,k,ir,2) < smallr) then
+                  qm(l,i,j,k,ir,2) = rini
+                  qm(l,i,j,k,iu,2) = uini
+                  qm(l,i,j,k,iv,2) = vini
+                  qm(l,i,j,k,iw,2) = wini
+                  qm(l,i,j,k,ip,2) = pini
+              endif
+
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1080,7 +1111,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,3) = A - dAz
               qp(l,i,j,k,iB,3) = B - dBz
               qp(l,i,j,k,iC,3) = CL
-              if (qp(l,i,j,k,ir,3)<smallr) qp(l,i,j,k,ir,3)=rini
+              if (qp(l,i,j,k,ir,3) < smallr) then
+                  qp(l,i,j,k,ir,3) = rini
+                  qp(l,i,j,k,iu,3) = uini
+                  qp(l,i,j,k,iv,3) = vini
+                  qp(l,i,j,k,iw,3) = wini
+                  qp(l,i,j,k,ip,3) = pini
+              endif
+
               qp(l,i,j,k,ip,3) = MAX(smallp, qp(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1097,7 +1135,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,3) = A + dAz
               qm(l,i,j,k,iB,3) = B + dBz
               qm(l,i,j,k,iC,3) = CR
-              if (qm(l,i,j,k,ir,3)<smallr) qm(l,i,j,k,ir,3)=rini
+              if (qm(l,i,j,k,ir,3) < smallr) then
+                  qm(l,i,j,k,ir,3) = rini
+                  qm(l,i,j,k,iu,3) = uini
+                  qm(l,i,j,k,iv,3) = vini
+                  qm(l,i,j,k,iw,3) = wini
+                  qm(l,i,j,k,ip,3) = pini
+              endif
+
               qm(l,i,j,k,ip,3) = MAX(smallp, qm(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1114,7 +1159,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,1) = A + (+dAy+dAz)
               qRT(l,i,j,k,iB,1) = BR+ (   +dBRz)
               qRT(l,i,j,k,iC,1) = CR+ (+dCRy   )
-              if (qRT(l,i,j,k,ir,1)<smallr) qRT(l,i,j,k,ir,1)=rini
+              if (qRT(l,i,j,k,ir,1) < smallr) then
+                  qRT(l,i,j,k,ir,1) = rini
+                  qRT(l,i,j,k,iu,1) = uini
+                  qRT(l,i,j,k,iv,1) = vini
+                  qRT(l,i,j,k,iw,1) = wini
+                  qRT(l,i,j,k,ip,1) = pini
+              endif
+
               qRT(l,i,j,k,ip,1) = MAX(smallp, qRT(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1132,7 +1184,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,1) = A + (+dAy-dAz)
               qRB(l,i,j,k,iB,1) = BR+ (   -dBRz)
               qRB(l,i,j,k,iC,1) = CL+ (+dCLy   )
-              if (qRB(l,i,j,k,ir,1)<smallr) qRB(l,i,j,k,ir,1)=rini
+              if (qRB(l,i,j,k,ir,1) < smallr) then
+                  qRB(l,i,j,k,ir,1) = rini
+                  qRB(l,i,j,k,iu,1) = uini
+                  qRB(l,i,j,k,iv,1) = vini
+                  qRB(l,i,j,k,iw,1) = wini
+                  qRB(l,i,j,k,ip,1) = pini
+              endif
+
               qRB(l,i,j,k,ip,1) = MAX(smallp, qRB(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1150,7 +1209,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,1) = A + (-dAy+dAz)
               qLT(l,i,j,k,iB,1) = BL+ (   +dBLz)
               qLT(l,i,j,k,iC,1) = CR+ (-dCRy   )
-              if (qLT(l,i,j,k,ir,1)<smallr) qLT(l,i,j,k,ir,1)=rini
+              if (qLT(l,i,j,k,ir,1) < smallr) then
+                  qLT(l,i,j,k,ir,1) = rini
+                  qLT(l,i,j,k,iu,1) = uini
+                  qLT(l,i,j,k,iv,1) = vini
+                  qLT(l,i,j,k,iw,1) = wini
+                  qLT(l,i,j,k,ip,1) = pini
+              endif
+
               qLT(l,i,j,k,ip,1) = MAX(smallp, qLT(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1168,7 +1234,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,1) = A + (-dAy-dAz)
               qLB(l,i,j,k,iB,1) = BL+ (   -dBLz)
               qLB(l,i,j,k,iC,1) = CL+ (-dCLy   )
-              if (qLB(l,i,j,k,ir,1)<smallr) qLB(l,i,j,k,ir,1)=rini
+              if (qLB(l,i,j,k,ir,1) < smallr) then
+                  qLB(l,i,j,k,ir,1) = rini
+                  qLB(l,i,j,k,iu,1) = uini
+                  qLB(l,i,j,k,iv,1) = vini
+                  qLB(l,i,j,k,iw,1) = wini
+                  qLB(l,i,j,k,ip,1) = pini
+              endif
+
               qLB(l,i,j,k,ip,1) = MAX(smallp, qLB(l,i,j,k,ip,1))
 #if NENER>0
               do irad=1,nener
@@ -1186,7 +1259,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,2) = AR+ (   +dARz)
               qRT(l,i,j,k,iB,2) = B + (+dBx+dBz)
               qRT(l,i,j,k,iC,2) = CR+ (+dCRx   )
-              if (qRT(l,i,j,k,ir,2)<smallr) qRT(l,i,j,k,ir,2)=rini
+              if (qRT(l,i,j,k,ir,2) < smallr) then
+                  qRT(l,i,j,k,ir,2) = rini
+                  qRT(l,i,j,k,iu,2) = uini
+                  qRT(l,i,j,k,iv,2) = vini
+                  qRT(l,i,j,k,iw,2) = wini
+                  qRT(l,i,j,k,ip,2) = pini
+              endif
+
               qRT(l,i,j,k,ip,2) = MAX(smallp, qRT(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1204,7 +1284,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,2) = AR+ (   -dARz)
               qRB(l,i,j,k,iB,2) = B + (+dBx-dBz)
               qRB(l,i,j,k,iC,2) = CL+ (+dCLx   )
-              if (qRB(l,i,j,k,ir,2)<smallr) qRB(l,i,j,k,ir,2)=rini
+              if (qRB(l,i,j,k,ir,2) < smallr) then
+                  qRB(l,i,j,k,ir,2) = rini
+                  qRB(l,i,j,k,iu,2) = uini
+                  qRB(l,i,j,k,iv,2) = vini
+                  qRB(l,i,j,k,iw,2) = wini
+                  qRB(l,i,j,k,ip,2) = pini
+              endif
+
               qRB(l,i,j,k,ip,2) = MAX(smallp, qRB(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1222,7 +1309,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,2) = AL+ (   +dALz)
               qLT(l,i,j,k,iB,2) = B + (-dBx+dBz)
               qLT(l,i,j,k,iC,2) = CR+ (-dCRx   )
-              if (qLT(l,i,j,k,ir,2)<smallr) qLT(l,i,j,k,ir,2)=rini
+              if (qLT(l,i,j,k,ir,2) < smallr) then
+                  qLT(l,i,j,k,ir,2) = rini
+                  qLT(l,i,j,k,iu,2) = uini
+                  qLT(l,i,j,k,iv,2) = vini
+                  qLT(l,i,j,k,iw,2) = wini
+                  qLT(l,i,j,k,ip,2) = pini
+              endif
+
               qLT(l,i,j,k,ip,2) = MAX(smallp, qLT(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1240,7 +1334,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,2) = AL+ (   -dALz)
               qLB(l,i,j,k,iB,2) = B + (-dBx-dBz)
               qLB(l,i,j,k,iC,2) = CL+ (-dCLx   )
-              if (qLB(l,i,j,k,ir,2)<smallr) qLB(l,i,j,k,ir,2)=rini
+              if (qLB(l,i,j,k,ir,2) < smallr) then
+                  qLB(l,i,j,k,ir,2) = rini
+                  qLB(l,i,j,k,iu,2) = uini
+                  qLB(l,i,j,k,iv,2) = vini
+                  qLB(l,i,j,k,iw,2) = wini
+                  qLB(l,i,j,k,ip,2) = pini
+              endif
+
               qLB(l,i,j,k,ip,2) = MAX(smallp, qLB(l,i,j,k,ip,2))
 #if NENER>0
               do irad=1,nener
@@ -1258,7 +1359,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,3) = AR+ (   +dARy)
               qRT(l,i,j,k,iB,3) = BR+ (+dBRx   )
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
-              if (qRT(l,i,j,k,ir,3)<smallr) qRT(l,i,j,k,ir,3)=rini
+              if (qRT(l,i,j,k,ir,3) < smallr) then
+                  qRT(l,i,j,k,ir,3) = rini
+                  qRT(l,i,j,k,iu,3) = uini
+                  qRT(l,i,j,k,iv,3) = vini
+                  qRT(l,i,j,k,iw,3) = wini
+                  qRT(l,i,j,k,ip,3) = pini
+              endif
+
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1276,7 +1384,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,3) = AR+ (   -dARy)
               qRB(l,i,j,k,iB,3) = BL+ (+dBLx   )
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
-              if (qRB(l,i,j,k,ir,3)<smallr) qRB(l,i,j,k,ir,3)=rini
+              if (qRB(l,i,j,k,ir,3) < smallr) then
+                  qRB(l,i,j,k,ir,3) = rini
+                  qRB(l,i,j,k,iu,3) = uini
+                  qRB(l,i,j,k,iv,3) = vini
+                  qRB(l,i,j,k,iw,3) = wini
+                  qRB(l,i,j,k,ip,3) = pini
+              endif
+
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1294,7 +1409,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,3) = AL+ (   +dALy)
               qLT(l,i,j,k,iB,3) = BR+ (-dBRx   )
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
-              if (qLT(l,i,j,k,ir,3)<smallr) qLT(l,i,j,k,ir,3)=rini
+              if (qLT(l,i,j,k,ir,3) < smallr) then
+                  qLT(l,i,j,k,ir,3) = rini
+                  qLT(l,i,j,k,iu,3) = uini
+                  qLT(l,i,j,k,iv,3) = vini
+                  qLT(l,i,j,k,iw,3) = wini
+                  qLT(l,i,j,k,ip,3) = pini
+              endif
+
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1312,7 +1434,14 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,3) = AL+ (   -dALy)
               qLB(l,i,j,k,iB,3) = BL+ (-dBLx   )
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
-              if (qLB(l,i,j,k,ir,3)<smallr) qLB(l,i,j,k,ir,3)=rini
+              if (qLB(l,i,j,k,ir,3) < smallr) then
+                  qLB(l,i,j,k,ir,3) = rini
+                  qLB(l,i,j,k,iu,3) = uini
+                  qLB(l,i,j,k,iv,3) = vini
+                  qLB(l,i,j,k,iw,3) = wini
+                  qLB(l,i,j,k,ip,3) = pini
+              endif
+
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
 #if NENER>0
               do irad=1,nener
@@ -1761,4 +1890,1278 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   PtotRR=pRR+half*(ARR*ARR+BRR*BRR+CRR*CRR) + qRR(l,is)
 
                   rcLLx=rLL*(uLL-SL); rcRLx=rRL*(SR-uRL)
-    
+                  rcLRx=rLR*(uLR-SL); rcRRx=rRR*(SR-uRR)
+                  rcLLy=rLL*(vLL-SB); rcLRy=rLR*(ST-vLR)
+                  rcRLy=rRL*(vRL-SB); rcRRy=rRR*(ST-vRR)
+
+                  ustar=(rcLLx*uLL+rcLRx*uLR+rcRLx*uRL+rcRRx*uRR+(PtotLL-PtotRL+PtotLR-PtotRR))/(rcLLx+rcLRx+rcRLx+rcRRx)
+                  vstar=(rcLLy*vLL+rcLRy*vLR+rcRLy*vRL+rcRRy*vRR+(PtotLL-PtotLR+PtotRL-PtotRR))/(rcLLy+rcLRy+rcRLy+rcRRy)
+
+                  rstarLLx=rLL*(SL-uLL)/(SL-ustar); BstarLL=BLL*(SL-uLL)/(SL-ustar)
+                  rstarLLy=rLL*(SB-vLL)/(SB-vstar); AstarLL=ALL*(SB-vLL)/(SB-vstar)
+                  rstarLL =rLL*(SL-uLL)/(SL-ustar)*(SB-vLL)/(SB-vstar)
+                  EstarLLx=ustar*BstarLL-vLL  *ALL
+                  EstarLLy=uLL  *BLL    -vstar*AstarLL
+                  EstarLL =ustar*BstarLL-vstar*AstarLL
+
+                  rstarLRx=rLR*(SL-uLR)/(SL-ustar); BstarLR=BLR*(SL-uLR)/(SL-ustar)
+                  rstarLRy=rLR*(ST-vLR)/(ST-vstar); AstarLR=ALR*(ST-vLR)/(ST-vstar)
+                  rstarLR =rLR*(SL-uLR)/(SL-ustar)*(ST-vLR)/(ST-vstar)
+                  EstarLRx=ustar*BstarLR-vLR  *ALR
+                  EstarLRy=uLR  *BLR    -vstar*AstarLR
+                  EstarLR =ustar*BstarLR-vstar*AstarLR
+
+                  rstarRLx=rRL*(SR-uRL)/(SR-ustar); BstarRL=BRL*(SR-uRL)/(SR-ustar)
+                  rstarRLy=rRL*(SB-vRL)/(SB-vstar); AstarRL=ARL*(SB-vRL)/(SB-vstar)
+                  rstarRL =rRL*(SR-uRL)/(SR-ustar)*(SB-vRL)/(SB-vstar)
+                  EstarRLx=ustar*BstarRL-vRL  *ARL
+                  EstarRLy=uRL  *BRL    -vstar*AstarRL
+                  EstarRL =ustar*BstarRL-vstar*AstarRL
+
+                  rstarRRx=rRR*(SR-uRR)/(SR-ustar); BstarRR=BRR*(SR-uRR)/(SR-ustar)
+                  rstarRRy=rRR*(ST-vRR)/(ST-vstar); AstarRR=ARR*(ST-vRR)/(ST-vstar)
+                  rstarRR =rRR*(SR-uRR)/(SR-ustar)*(ST-vRR)/(ST-vstar)
+                  EstarRRx=ustar*BstarRR-vRR  *ARR
+                  EstarRRy=uRR  *BRR    -vstar*AstarRR
+                  EstarRR =ustar*BstarRR-vstar*AstarRR
+
+                  calfvenL=max(abs(ALR)/sqrt(rstarLRx),abs(AstarLR)/sqrt(rstarLR), &
+                       &       abs(ALL)/sqrt(rstarLLx),abs(AstarLL)/sqrt(rstarLL),smallc)
+                  calfvenR=max(abs(ARR)/sqrt(rstarRRx),abs(AstarRR)/sqrt(rstarRR), &
+                       &       abs(ARL)/sqrt(rstarRLx),abs(AstarRL)/sqrt(rstarRL),smallc)
+                  calfvenB=max(abs(BLL)/sqrt(rstarLLy),abs(BstarLL)/sqrt(rstarLL), &
+                       &       abs(BRL)/sqrt(rstarRLy),abs(BstarRL)/sqrt(rstarRL),smallc)
+                  calfvenT=max(abs(BLR)/sqrt(rstarLRy),abs(BstarLR)/sqrt(rstarLR), &
+                       &       abs(BRR)/sqrt(rstarRRy),abs(BstarRR)/sqrt(rstarRR),smallc)
+                  SAL=min(ustar-calfvenL,zero); SAR=max(ustar+calfvenR,zero)
+                  SAB=min(vstar-calfvenB,zero); SAT=max(vstar+calfvenT,zero)
+                  AstarT=(SAR*AstarRR-SAL*AstarLR)/(SAR-SAL); AstarB=(SAR*AstarRL-SAL*AstarLL)/(SAR-SAL)
+                  BstarR=(SAT*BstarRR-SAB*BstarRL)/(SAT-SAB); BstarL=(SAT*BstarLR-SAB*BstarLL)/(SAT-SAB)
+
+                  if(SB>0d0)then
+                     if(SL>0d0)then
+                     E=ELL
+                     else if(SR<0d0)then
+                     E=ERL
+                     else
+                     E=(SAR*EstarLLx-SAL*EstarRLx+SAR*SAL*(BRL-BLL))/(SAR-SAL)
+                     endif
+                  else if (ST<0d0)then
+                     if(SL>0d0)then
+                     E=ELR
+                     else if(SR<0d0)then
+                     E=ERR
+                     else
+                     E=(SAR*EstarLRx-SAL*EstarRRx+SAR*SAL*(BRR-BLR))/(SAR-SAL)
+                     endif
+                  else if(SL>0d0)then
+                     E=(SAT*EstarLLy-SAB*EstarLRy-SAT*SAB*(ALR-ALL))/(SAT-SAB)
+                  else if(SR<0d0)then
+                     E=(SAT*EstarRLy-SAB*EstarRRy-SAT*SAB*(ARR-ARL))/(SAT-SAB)
+                  else
+                     E=(SAL*SAB*EstarRR-SAL*SAT*EstarRL-SAR*SAB*EstarLR+SAR*SAT*EstarLL)/(SAR-SAL)/(SAT-SAB) &
+                          & -SAT*SAB/(SAT-SAB)*(AstarT-AstarB)+SAR*SAL/(SAR-SAL)*(BstarR-BstarL)
+                  endif
+
+                  emf(l,i,j,k) = E
+
+               else if(iriemann2d==3)then
+
+                  ! Compute 4 fast magnetosonic velocity relative to x direction
+                  qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
+                  qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
+                  vLLx=qtmp(3)
+                  qtmp(is) = qLL(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cLLx)
+                  qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
+                  qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
+                  vLRx=qtmp(3)
+                  qtmp(is) = qLR(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cLRx)
+                  qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
+                  qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
+                  vRLx=qtmp(3)
+                  qtmp(is) = qRL(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cRLx)
+                  qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
+                  qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
+                  vRRx=qtmp(3)
+                  qtmp(is) = qRR(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cRRx)
+
+                  ! Compute 4 fast magnetosonic velocity relative to y direction
+                  qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
+                  qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLL(l,8+irad)
+                  end do
+#endif
+                  vLLy=qtmp(3)
+                  qtmp(is) = qLL(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cLLy)
+                  qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
+                  qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qLR(l,8+irad)
+                  end do
+#endif
+                  vLRy=qtmp(3)
+                  qtmp(is) = qLR(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cLRy)
+                  qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
+                  qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRL(l,8+irad)
+                  end do
+#endif
+                  vRLy=qtmp(3)
+                  qtmp(is) = qRL(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cRLy)
+                  qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
+                  qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
+#if NENER>0
+                  do irad = 1,nener
+                     qtmp(8+irad) = qRR(l,8+irad)
+                  end do
+#endif
+                  vRRy=qtmp(3)
+                  qtmp(is) = qRR(l,is)
+                  call find_speed_fast(qtmp,qtmp(is),cRRy)
+
+                  SL=min(min(vLLx,vLRx,VRLx,vRRx)-max(cLLx,cLRx,cRLx,cRRx),zero)
+                  SR=max(max(vLLx,vLRx,VRLx,vRRx)+max(cLLx,cLRx,cRLx,cRRx),zero)
+                  SB=min(min(vLLy,vLRy,VRLy,vRRy)-max(cLLy,cLRy,cRLy,cRRy),zero)
+                  ST=max(max(vLLy,vLRy,VRLy,vRRy)+max(cLLy,cLRy,cRLy,cRRy),zero)
+
+                  emf(l,i,j,k) = (SL*SB*ERR-SL*ST*ERL-SR*SB*ELR+SR*ST*ELL)/(SR-SL)/(ST-SB) &
+                       -ST*SB/(ST-SB)*(qRR(l,6)-qLL(l,6)) &
+                       +SR*SL/(SR-SL)*(qRR(l,7)-qLL(l,7))
+
+               else if (iriemann2d==4)then
+
+                  ! Compute 4 Alfven velocity relative to x direction
+                  qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
+                  qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
+                  vLLx=qtmp(3); call find_speed_alfven(qtmp,cLLx)
+                  qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
+                  qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
+                  vLRx=qtmp(3); call find_speed_alfven(qtmp,cLRx)
+                  qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
+                  qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
+                  vRLx=qtmp(3); call find_speed_alfven(qtmp,cRLx)
+                  qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
+                  qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
+                  vRRx=qtmp(3); call find_speed_alfven(qtmp,cRRx)
+
+                  ! Compute 4 Alfven relative to y direction
+                  qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
+                  qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
+                  vLLy=qtmp(3); call find_speed_alfven(qtmp,cLLy)
+                  qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
+                  qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
+                  vLRy=qtmp(3); call find_speed_alfven(qtmp,cLRy)
+                  qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
+                  qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
+                  vRLy=qtmp(3); call find_speed_alfven(qtmp,cRLy)
+                  qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
+                  qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
+                  vRRy=qtmp(3); call find_speed_alfven(qtmp,cRRy)
+
+                  SL=min(min(vLLx,vLRx,VRLx,vRRx)-max(cLLx,cLRx,cRLx,cRRx),zero)
+                  SR=max(max(vLLx,vLRx,VRLx,vRRx)+max(cLLx,cLRx,cRLx,cRRx),zero)
+                  SB=min(min(vLLy,vLRy,VRLy,vRRy)-max(cLLy,cLRy,cRLy,cRRy),zero)
+                  ST=max(max(vLLy,vLRy,VRLy,vRRy)+max(cLLy,cLRy,cRLy,cRRy),zero)
+
+                  emf(l,i,j,k) = (SL*SB*ERR-SL*ST*ERL-SR*SB*ELR+SR*ST*ELL)/(SR-SL)/(ST-SB) &
+                       -ST*SB/(ST-SB)*(qRR(l,6)-qLL(l,6)) &
+                       +SR*SL/(SR-SL)*(qRR(l,7)-qLL(l,7))
+
+               else
+
+                  ! find the average value of E
+                  E = forth*(ELL+ERL+ELR+ERR)
+
+                  ! call the first solver in the x direction
+                  ! density
+                  qleft (1) = half*(qLL(l,1)+qLR(l,1))
+                  qright(1) = half*(qRR(l,1)+qRL(l,1))
+
+                  ! pressure
+                  qleft (2) = half*(qLL(l,2)+qLR(l,2))
+                  qright(2) = half*(qRR(l,2)+qRL(l,2))
+
+                  ! vt1 becomes normal velocity
+                  qleft (3) = half*(qLL(l,3)+qLR(l,3))
+                  qright(3) = half*(qRR(l,3)+qRL(l,3))
+
+                  ! bt1 becomes normal magnetic field
+                  qleft (4) = half*(qLL(l,6)+qLR(l,6))
+                  qright(4) = half*(qRR(l,6)+qRL(l,6))
+
+                  ! vt2 becomes transverse velocity field
+                  qleft (5) = half*(qLL(l,4)+qLR(l,4))
+                  qright(5) = half*(qRR(l,4)+qRL(l,4))
+
+                  ! bt2 becomes transverse magnetic field
+                  qleft (6) = half*(qLL(l,7)+qLR(l,7))
+                  qright(6) = half*(qRR(l,7)+qRL(l,7))
+
+                  ! velocity component perp. to the plane is now transverse
+                  qleft (7) = half*(qLL(l,5)+qLR(l,5))
+                  qright(7) = half*(qRR(l,5)+qRL(l,5))
+
+                  ! magnetic field component perp. to the plane is now transverse
+                  qleft (8) = half*(qLL(l,8)+qLR(l,8))
+                  qright(8) = half*(qRR(l,8)+qRL(l,8))
+
+
+#if NENER>0
+                  !non-thermal energies
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qLR(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qRL(l,8+irad))
+                  end do
+#endif
+
+                  zero_flux = 0.0
+                  SELECT CASE (iriemann2d)
+                  CASE (1)
+                     CALL athena_roe   (qleft,qright,fmean_x,zero_flux)
+                  CASE (0)
+                     CALL lax_friedrich(qleft,qright,fmean_x,zero_flux)
+                  CASE (2)
+                     CALL upwind       (qleft,qright,fmean_x,zero_flux)
+                  CASE DEFAULT
+                     write(*,*)'unknown 2D riemann solver'
+                     call clean_stop
+                  END SELECT
+
+                  ! call the second solver in the y direction
+                  ! density
+                  qleft (1) = half*(qLL(l,1)+qRL(l,1))
+                  qright(1) = half*(qRR(l,1)+qLR(l,1))
+
+                  ! pressure
+                  qleft (2) = half*(qLL(l,2)+qRL(l,2))
+                  qright(2) = half*(qRR(l,2)+qLR(l,2))
+
+                  ! vt2 becomes normal velocity
+                  qleft (3) = half*(qLL(l,4)+qRL(l,4))
+                  qright(3) = half*(qRR(l,4)+qLR(l,4))
+
+                  ! bt2 becomes normal magnetic field
+                  qleft (4) = half*(qLL(l,7)+qRL(l,7))
+                  qright(4) = half*(qRR(l,7)+qLR(l,7))
+
+                  ! vt1 becomes transverse velocity field
+                  qleft (5) = half*(qLL(l,3)+qRL(l,3))
+                  qright(5) = half*(qRR(l,3)+qLR(l,3))
+
+                  ! bt1 becomes transverse magnetic field
+                  qleft (6) = half*(qLL(l,6)+qRL(l,6))
+                  qright(6) = half*(qRR(l,6)+qLR(l,6))
+
+                  ! velocity component perp. to the plane is now transverse
+                  qleft (7) = half*(qLL(l,5)+qRL(l,5))
+                  qright(7) = half*(qRR(l,5)+qLR(l,5))
+
+                  ! magnetic field component perp. to the plane is now transverse
+                  qleft (8) = half*(qLL(l,8)+qRL(l,8))
+                  qright(8) = half*(qRR(l,8)+qLR(l,8))
+
+#if NENER>0
+                  !non-thermal energies
+                  do irad = 1,nener
+                     qleft (8+irad) = half*(qLL(l,8+irad)+qRL(l,8+irad))
+                     qright(8+irad) = half*(qRR(l,8+irad)+qLR(l,8+irad))
+                  end do
+#endif
+
+                  zero_flux = 0.
+                  SELECT CASE (iriemann2d)
+                  CASE (1)
+                     CALL athena_roe   (qleft,qright,fmean_y,zero_flux)
+                  CASE (0)
+                     CALL lax_friedrich(qleft,qright,fmean_y,zero_flux)
+                  CASE (2)
+                     CALL upwind       (qleft,qright,fmean_y,zero_flux)
+                  CASE DEFAULT
+                     write(*,*)'unknown 2D riemann solver'
+                     call clean_stop
+                  END SELECT
+
+                  ! compute the final value of E including the 2D diffusive
+                  ! terms that ensure stability
+                  emf(l,i,j,k) = E + (fmean_x(6) - fmean_y(6))
+
+               endif
+
+            END DO
+        END DO
+     END DO
+  END DO
+
+
+END SUBROUTINE cmp_mag_flx
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer ::ngrid
+  real(dp)::dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+
+  integer ::i, j, k, l, idim
+  real(dp)::eint, smalle, smallp, etot
+  real(dp),dimension(1:nvector),save::eken,emag,erad
+
+#if NENER>0
+  integer::irad
+#endif
+#if NVAR>8+NENER
+  integer::n
+#endif
+
+  smalle = smallc**2/gamma/(gamma-one)
+  smallp = smallr*smallc**2/gamma
+
+  ! Store face centered magnetic field
+  do k = ku1, ku2
+     do j = ju1, ju2
+        do i = iu1, iu2+1
+           DO l = 1, ngrid
+              if(i<=iu2)then
+                 bf(l,i,j,k,1) = uin(l,i,j,k,6)
+              else
+                 bf(l,i,j,k,1) = uin(l,i-1,j,k,nvar+1)
+              endif
+           END DO
+        end do
+     end do
+  end do
+  do k = ku1, ku2
+     do j = ju1, ju2+1
+        do i = iu1, iu2
+           DO l = 1, ngrid
+              if(j<=ju2)then
+                 bf(l,i,j,k,2) = uin(l,i,j,k,7)
+              else
+                 bf(l,i,j,k,2) = uin(l,i,j-1,k,nvar+2)
+              endif
+           END DO
+        end do
+     end do
+  end do
+  do k = ku1, ku2+1
+     do j = ju1, ju2
+        do i = iu1, iu2
+           DO l = 1, ngrid
+              if(k<=ku2)then
+                 bf(l,i,j,k,3) = uin(l,i,j,k,8)
+              else
+                 bf(l,i,j,k,3) = uin(l,i,j,k-1,nvar+3)
+              endif
+           END DO
+        end do
+     end do
+  end do
+
+  ! Convert to primitive variable
+  do k = ku1, ku2
+     do j = ju1, ju2
+        do i = iu1, iu2
+
+           ! Compute density
+           do l = 1, ngrid
+              q(l,i,j,k,1) = max(uin(l,i,j,k,1),smallr)
+           end do
+
+           ! Debug
+           if(debug)then
+              do l = 1, ngrid
+                 if(uin(l,i,j,k,1).le.smallr)then
+                    write(*,*)'negative density'
+                    write(*,*)uin(l,i,j,k,1)
+                    stop
+                 end if
+              end do
+           end if
+
+           ! Compute velocities
+           do l = 1, ngrid
+              q(l,i,j,k,2) = uin(l,i,j,k,2)/q(l,i,j,k,1)
+              q(l,i,j,k,3) = uin(l,i,j,k,3)/q(l,i,j,k,1)
+              q(l,i,j,k,4) = uin(l,i,j,k,4)/q(l,i,j,k,1)
+           end do
+
+           ! Compute cell centered magnetic field
+           DO l = 1, ngrid
+              q(l,i,j,k,6) = (uin(l,i,j,k,6)+uin(l,i,j,k,nvar+1))*half
+              q(l,i,j,k,7) = (uin(l,i,j,k,7)+uin(l,i,j,k,nvar+2))*half
+              q(l,i,j,k,8) = (uin(l,i,j,k,8)+uin(l,i,j,k,nvar+3))*half
+           END DO
+
+           ! Compute specific kinetic energy and magnetic energy
+           do l = 1, ngrid
+              eken(l) = half*(q(l,i,j,k,2)**2+q(l,i,j,k,3)**2+q(l,i,j,k,4)**2)
+              emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
+           end do
+
+           ! Compute non-thermal pressure
+           erad = zero
+#if NENER>0
+           do irad = 1,nener
+              do l = 1, ngrid
+                 q(l,i,j,k,8+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,8+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,8+irad)
+              end do
+           enddo
+#endif
+
+           ! Compute thermal pressure through EOS
+           do l = 1, ngrid
+              etot = uin(l,i,j,k,5) - emag(l) -erad(l)
+              eint = etot/q(l,i,j,k,1)-eken(l)
+              q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
+           end do
+
+           ! Gravity predictor step
+           do idim = 1, ndim
+              do l = 1, ngrid
+                 q(l,i,j,k,idim+1) = q(l,i,j,k,idim+1) + gravin(l,i,j,k,idim)*dt*half
+              end do
+           end do
+        end do
+     end do
+  end do
+
+  ! Passive scalar
+#if NVAR>8+NENER
+  do n = 9+nener, nvar
+     do k = ku1, ku2
+        do j = ju1, ju2
+           do i = iu1, iu2
+              do l = 1, ngrid
+                 q(l,i,j,k,n) = uin(l,i,j,k,n)/q(l,i,j,k,1)
+              end do
+           end do
+        end do
+     end do
+  end do
+#endif
+
+end subroutine ctoprim
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer::ngrid
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
+
+  ! local arrays
+  integer::i, j, k, l, n
+  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::vmin,vmax,dff
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+#if NDIM==1
+  real(dp)::dfx
+#endif
+
+#if NDIM==2
+  real(dp)::dfx,dfy
+  real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+#endif
+
+#if NDIM==3
+  real(dp)::dfx,dfy,dfz
+  real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
+  real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
+  real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
+#endif
+
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+
+#if NDIM==1
+  if(slope_type==0)then
+    dq=zero
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+    do n = 1, nvar
+       do k = klo, khi
+          do j = jlo, jhi
+             do i = ilo, ihi
+                do l = 1, ngrid
+                   dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                   drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                   dcen = half*(dlft+drgt)/slope_type
+                   dsgn = sign(one, dcen)
+                   slop = min(abs(dlft),abs(drgt))
+                   dlim = slop
+                   if((dlft*drgt)<=zero)dlim=zero
+                   dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                end do
+             end do
+          end do
+       end do
+    end do
+  else
+     write(*,*)'Unknown slope type',dx,dt
+     stop
+  end if
+#endif
+
+#if NDIM==2
+  if(slope_type==0)then
+    dq=zero
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)/slope_type
+                    dsgn = sign(one, dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)/slope_type
+                    dsgn = sign(one,dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==3)then ! positivity preserving 2d unsplit slope
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 do l = 1, ngrid
+                    dfll = q(l,i-1,j-1,k,n)-q(l,i,j,k,n)
+                    dflm = q(l,i-1,j  ,k,n)-q(l,i,j,k,n)
+                    dflr = q(l,i-1,j+1,k,n)-q(l,i,j,k,n)
+                    dfml = q(l,i  ,j-1,k,n)-q(l,i,j,k,n)
+                    dfmm = q(l,i  ,j  ,k,n)-q(l,i,j,k,n)
+                    dfmr = q(l,i  ,j+1,k,n)-q(l,i,j,k,n)
+                    dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
+                    dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
+                    dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
+
+                    vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
+                    vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
+
+                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
+                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
+                    dff  = half*(abs(dfx)+abs(dfy))
+
+                    if(dff>zero)then
+                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                    else
+                       slop = one
+                    endif
+
+                    dlim = slop
+
+                    dq(l,i,j,k,n,1) = dlim*dfx
+                    dq(l,i,j,k,n,2) = dlim*dfy
+
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else
+     write(*,*)'Unknown slope type',dx,dt
+     stop
+  endif
+  ! 1D transverse TVD slopes for face-centered magnetic fields
+  ! Bx along direction Y
+  if (slope_mag_type==0) then
+    dbf=zero
+  else if (slope_mag_type==1 .or. slope_mag_type==2) then
+    do k = klo, khi
+       do j = jlo, jhi
+          do i = ilo, ihi+1 ! WARNING HERE
+             do l = 1, ngrid
+                dlft = slope_mag_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
+                drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
+                dcen = half*(dlft+drgt)/slope_mag_type
+                dsgn = sign(one, dcen)
+                slop = min(abs(dlft),abs(drgt))
+                dlim = slop
+                if((dlft*drgt)<=zero)dlim=zero
+                dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
+             end do
+          enddo
+       end do
+    end do
+    ! By along direction X
+    do k = klo, khi
+       do j = jlo, jhi+1 ! WARNING HERE
+          do i = ilo, ihi
+             do l = 1, ngrid
+                dlft = slope_mag_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
+                drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
+                dcen = half*(dlft+drgt)/slope_mag_type
+                dsgn = sign(one, dcen)
+                slop = min(abs(dlft),abs(drgt))
+                dlim = slop
+                if((dlft*drgt)<=zero)dlim=zero
+                dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
+             end do
+          enddo
+       end do
+    end do
+  else
+     write(*,*)'Unknown mag. slope type',dx,dt
+     stop
+  endif
+#endif
+
+#if NDIM==3
+  if(slope_type==0)then
+    dq=zero
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)/slope_type
+                    dsgn = sign(one, dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)/slope_type
+                    dsgn = sign(one,dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in third coordinate direction
+                 do l = 1, ngrid
+                    dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
+                    drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+                    dcen = half*(dlft+drgt)/slope_type
+                    dsgn = sign(one,dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==3)then ! positivity preserving 3d unsplit slope
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 do l = 1, ngrid
+                    dflll = q(l,i-1,j-1,k-1,n)-q(l,i,j,k,n)
+                    dflml = q(l,i-1,j  ,k-1,n)-q(l,i,j,k,n)
+                    dflrl = q(l,i-1,j+1,k-1,n)-q(l,i,j,k,n)
+                    dfmll = q(l,i  ,j-1,k-1,n)-q(l,i,j,k,n)
+                    dfmml = q(l,i  ,j  ,k-1,n)-q(l,i,j,k,n)
+                    dfmrl = q(l,i  ,j+1,k-1,n)-q(l,i,j,k,n)
+                    dfrll = q(l,i+1,j-1,k-1,n)-q(l,i,j,k,n)
+                    dfrml = q(l,i+1,j  ,k-1,n)-q(l,i,j,k,n)
+                    dfrrl = q(l,i+1,j+1,k-1,n)-q(l,i,j,k,n)
+
+                    dfllm = q(l,i-1,j-1,k  ,n)-q(l,i,j,k,n)
+                    dflmm = q(l,i-1,j  ,k  ,n)-q(l,i,j,k,n)
+                    dflrm = q(l,i-1,j+1,k  ,n)-q(l,i,j,k,n)
+                    dfmlm = q(l,i  ,j-1,k  ,n)-q(l,i,j,k,n)
+                    dfmmm = q(l,i  ,j  ,k  ,n)-q(l,i,j,k,n)
+                    dfmrm = q(l,i  ,j+1,k  ,n)-q(l,i,j,k,n)
+                    dfrlm = q(l,i+1,j-1,k  ,n)-q(l,i,j,k,n)
+                    dfrmm = q(l,i+1,j  ,k  ,n)-q(l,i,j,k,n)
+                    dfrrm = q(l,i+1,j+1,k  ,n)-q(l,i,j,k,n)
+
+                    dfllr = q(l,i-1,j-1,k+1,n)-q(l,i,j,k,n)
+                    dflmr = q(l,i-1,j  ,k+1,n)-q(l,i,j,k,n)
+                    dflrr = q(l,i-1,j+1,k+1,n)-q(l,i,j,k,n)
+                    dfmlr = q(l,i  ,j-1,k+1,n)-q(l,i,j,k,n)
+                    dfmmr = q(l,i  ,j  ,k+1,n)-q(l,i,j,k,n)
+                    dfmrr = q(l,i  ,j+1,k+1,n)-q(l,i,j,k,n)
+                    dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
+                    dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
+                    dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
+
+                    vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+                    vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+
+                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
+                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
+                    dfz  = half*(q(l,i,j,k+1,n)-q(l,i,j,k-1,n))
+                    dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
+
+                    if(dff>zero)then
+                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                    else
+                       slop = one
+                    endif
+
+                    dlim = slop
+
+                    dq(l,i,j,k,n,1) = dlim*dfx
+                    dq(l,i,j,k,n,2) = dlim*dfy
+                    dq(l,i,j,k,n,3) = dlim*dfz
+
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==7)then ! van Leer
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,1)=zero
+                    else
+                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,2)=zero
+                    else
+                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+                 ! slopes in third coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
+                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+                    if((dlft*drgt)<=zero) then
+                       dq(l,i,j,k,n,3)=zero
+                    else
+                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
+                    end if
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one, dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in third coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
+                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                    dlim = slop
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else
+     write(*,*)'Unknown slope type',dx,dt
+     stop
+  endif
+
+  ! 2D transverse TVD slopes for face-centered magnetic fields
+  if(slope_mag_type==0)then
+    dbf=zero
+  else if(slope_mag_type==1 .or. slope_mag_type==2)then  ! minmod or average
+     ! Bx along direction Y and Z
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi+1 ! WARNING HERE
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
+                 drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one, dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1))
+                 drgt = slope_mag_type*(bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one,dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+
+     ! By along direction X and Z
+     do k = klo, khi
+        do j = jlo, jhi+1 ! WARNING HERE
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
+                 drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one, dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2))
+                 drgt = slope_mag_type*(bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one,dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+
+     ! Bz along direction X and Y
+     do k = klo, khi+1 ! WARNING HERE
+        do j = jlo, jhi
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3))
+                 drgt = slope_mag_type*(bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one, dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = slope_mag_type*(bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3))
+                 drgt = slope_mag_type*(bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3))
+                 dcen = half*(dlft+drgt)/slope_mag_type
+                 dsgn = sign(one,dcen)
+                 slop = min(abs(dlft),abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+  else if(slope_mag_type==7)then
+     ! Bx along direction Y and Z
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi+1 ! WARNING HERE
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,1,1) = zero
+                 else
+                    dbf(l,i,j,k,1,1) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,1,2) = zero
+                 else
+                    dbf(l,i,j,k,1,2) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+           end do
+        end do
+     end do
+
+     ! By along direction X and Z
+     do k = klo, khi
+        do j = jlo, jhi+1 ! WARNING HERE
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,2,1) = zero
+                 else
+                    dbf(l,i,j,k,2,1) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,2,2) = zero
+                 else
+                    dbf(l,i,j,k,2,2) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+           end do
+        end do
+     end do
+
+     ! Bz along direction X and Y
+     do k = klo, khi+1 ! WARNING HERE
+        do j = jlo, jhi
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,3,1) = zero
+                 else
+                    dbf(l,i,j,k,3,1) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
+                 if((dlft*drgt)<=zero) then
+                    dbf(l,i,j,k,3,2) = zero
+                 else
+                    dbf(l,i,j,k,3,2) = 2*dlft*drgt/(dlft+drgt)
+                 end if
+              end do
+           end do
+        end do
+     end do
+  else if(slope_mag_type==8)then
+     ! Bx along direction Y and Z
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi+1 ! WARNING HERE
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+
+     ! By along direction X and Z
+     do k = klo, khi
+        do j = jlo, jhi+1 ! WARNING HERE
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+
+     ! Bz along direction X and Y
+     do k = klo, khi+1 ! WARNING HERE
+        do j = jlo, jhi
+           do i = ilo, ihi
+              ! slopes in first coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
+              end do
+              ! slopes in second coordinate direction
+              do l = 1, ngrid
+                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
+                 dcen = half*(dlft+drgt)
+                 dsgn = sign(one, dcen)
+                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+                 dlim = slop
+                 if((dlft*drgt)<=zero)dlim=zero
+                 dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
+              end do
+           end do
+        end do
+     end do
+  else
+     write(*,*)'Unknown slope_mag_type'
+     stop
+  endif
+#endif
+
+end subroutine uslope
+
+subroutine turb_dynamo(uin,q,alphaT,ngrid)
+   use amr_parameters
+   use hydro_parameters
+   use cooling_module, ONLY: XH=>X
+   use constants, only: mH, rhoc
+   use const
+   implicit none
+
+   integer ::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
+
+   real(dp),dimension(1:nvector)::emag, emag_crit
+   ! local constants
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   real(dp)::Kturb,sigma,d_old,epsilon,nISM,nCOM,d0
+   integer::i, j, k, l
+
+   ! Conversion factor from user units to cgs units
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+   ! Dynamo density threshold from H/cc to code units
+   nISM = n_star
+   if(cosmo)then
+      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*XH/mH
+      nISM = MAX(nCOM,nISM)
+   endif
+      d0   = nISM/scale_nH
+
+   do k = ku1, ku2
+      do j = ju1, ju2
+         do i = iu1, iu2
+            do l=1, ngrid
+              emag(l) = half*(q(l,i,j,k,6)**2+q(l,i,j,k,7)**2+q(l,i,j,k,8)**2)
+            end do
+
+            do l=1, ngrid
+              d_old=max(q(l,i,j,k,1),smallr)
+              Kturb=uin(l,i,j,k,ivirial1)
+              sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
+              if(d_old.GT.d0)then
+                  epsilon = 0.001
+                  emag_crit(l) = epsilon * d_old * sigma**2
+                  alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
+              else
+                  alphaT(l,i,j,k)=0.0
+              endif
+            end do
+         end do
+      end do
+   end do
+end subroutine turb_dynamo
+
+subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
+   use amr_parameters
+   use const
+   use hydro_parameters
+   implicit none
+
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
+   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+   real(dp)::dx,dt
+   integer::ngrid
+
+   ! Local variables
+   integer::i,j,k,l
+   integer::ilo,ihi,jlo,jhi,klo,khi
+   real(dp)::alpha_edge
+
+   ! Outpur updated turbulent EMF
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfx
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfy
+   real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfz
+ 
+   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
+   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
+   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
+
+  ! EMF correction in z direction, assuming 3-dimension grid, sub-grid model for dynamo theory
+   DO i=if1,if2
+      DO j=jf1,jf2
+         DO k=klo,khi
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i-1,j-1,k)+alphaT(l,i-1,j,k)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k))
+               emfz(l,i,j,k)=emfz(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j-1,k  ,3) + bf(l,i-1,j,k  ,3) + bf(l,i,j-1,k  ,3) + bf(l,i,j,k  ,3) ) &
+               &                                              +  0.25*(bf(l,i-1,j-1,k+1,3) + bf(l,i-1,j,k+1,3) + bf(l,i,j-1,k+1,3) + bf(l,i,j,k+1,3))) * dt/dx
+            END DO
+         END DO
+      END DO
+   END DO
+
+  ! EMF correction in y direction, assuming 3-dimension grid
+   DO i=if1,if2
+      DO j=jlo,jhi
+         DO k=kf1,kf2
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i-1,j,k-1)+alphaT(l,i-1,j,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+               emfy(l,i,j,k)=emfy(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i-1,j  ,k-1,2) + bf(l,i-1,j  ,k,2) + bf(l,i,j  ,k-1,2) + bf(l,i,j  ,k,2) ) &
+               &                                              +  0.25*(bf(l,i-1,j+1,k-1,2) + bf(l,i-1,j+1,k,2) + bf(l,i,j+1,k-1,2) + bf(l,i,j+1,k,2))) * dt/dx
+            END DO
+         END DO
+      END DO
+   END DO
+ 
+  ! EMF correction in x direction, assuming 3-dimension grid
+   DO i=ilo,ihi
+      DO j=jf1,jf2
+         DO k=kf1,kf2
+            DO l=1,ngrid
+               alpha_edge=0.25*(alphaT(l,i,j-1,k-1)+alphaT(l,i,j-1,k)+alphaT(l,i,j,k-1)+alphaT(l,i,j,k))
+               emfx(l,i,j,k)=emfx(l,i,j,k) + alpha_edge * 0.5 * (0.25*(bf(l,i  ,j-1,k-1,1) + bf(l,i  ,j-1,k,1) + bf(l,i  ,j,k-1,1) + bf(l,i  ,j,k,1) ) &
+               &                                              +  0.25*(bf(l,i+1,j-1,k-1,1) + bf(l,i+1,j-1,k,1) + bf(l,i+1,j,k-1,1) + bf(l,i+1,j,k,1))) * dt/dx
+            END DO
+         END DO
+      END DO
+   END DO 
+ 
+end subroutine turb_emf
