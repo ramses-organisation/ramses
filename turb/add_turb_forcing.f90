@@ -28,7 +28,7 @@ subroutine calc_turb_forcing(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Rescaling factors
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -77,20 +77,20 @@ subroutine calc_turb_forcing(ilevel)
               x_cell(idim,i)=(x_cell(idim,i)-skip_loc(idim))*scale
            end do
         end do
-        
+
         ! Gather cell densities
         do i=1,ngrid
            rho(i) = uold(ind_cell(i), 1)
         end do
-        
+
         call turb_force_calc(ngrid, x_cell, rho, aturb)
-        
+
         do i=1,ngrid
            do idim=1,ndim
               fturb(ind_cell(i), idim) = aturb(idim, i)
            end do
         end do
-     
+
      end do
      ! End loop over cells
 
@@ -104,5 +104,4 @@ end subroutine calc_turb_forcing
 !################################################################
 !################################################################
 !################################################################
-
 #endif

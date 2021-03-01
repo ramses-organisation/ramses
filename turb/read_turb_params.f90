@@ -8,13 +8,13 @@ subroutine read_turb_params(nml_ok)
   ! Local variables
   !--------------------------------------------------
   integer       :: ierr          ! Error variable
-  
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
        & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho
-  
+
   !--------------------------------------------------
   ! Read namelist; check variables that have been loaded
   !--------------------------------------------------
@@ -40,25 +40,23 @@ subroutine read_turb_params(nml_ok)
      write (*,*) "Invalid compressive fraction selected! (0.0 to 1.0)"
      nml_ok = .FALSE.
   end if
-  
+
   if (turb_T <= 0.0_dp) then
      write (*,*) "Turbulent autocorrelation time must be > 0!"
      nml_ok = .FALSE.
   end if
-  
+
   if (turb_Ndt <= 0) then
      write (*,*) "Number of timesteps per autocorrelation time must be > 0!"
      nml_ok = .FALSE.
   end if
-  
+
   if (turb_rms <= 0.0_dp) then
      write (*,*) "Turbulent forcing rms acceleration must be > 0.0!"
      nml_ok = .FALSE.
   end if
 
 87 continue
-
-  return
 
 end subroutine read_turb_params
 #endif

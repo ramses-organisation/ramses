@@ -21,15 +21,14 @@ subroutine find_conj_pair(i,j,k,ii,jj,kk)
    implicit none
    integer, intent(in)     :: i,j,k         ! Grid coordinates
    integer, intent(out)    :: ii,jj,kk      ! Hermitian pair
-   
+
    ii = TURB_GS - i
    if (ii >= TURB_GS) ii = ii - TURB_GS
    jj = TURB_GS - j
    if (jj >= TURB_GS) jj = jj - TURB_GS
    kk = TURB_GS - k
    if (kk >= TURB_GS) kk = kk - TURB_GS
-   
-   return
+
 end subroutine find_conj_pair
 
 subroutine find_unitk(i,j,k,limit,unitk)
@@ -38,7 +37,7 @@ subroutine find_unitk(i,j,k,limit,unitk)
    integer, intent(in)         :: i,j,k,limit
    integer                     :: ii,jj,kk
    real (kind=dp), intent(out) :: unitk(1:NDIM)
-   
+
    ii = i
    if (i > limit) ii = TURB_GS - i
 #if NDIM>1
@@ -49,7 +48,7 @@ subroutine find_unitk(i,j,k,limit,unitk)
    kk = k
    if (k > limit) kk = TURB_GS - k
 #endif
-   
+
 #if NDIM==1
    unitk = (/real(ii,dp)/)
 #elif NDIM==2
@@ -60,8 +59,7 @@ subroutine find_unitk(i,j,k,limit,unitk)
 #if NDIM>1
    unitk = unitk / sqrt(sum(unitk**2))
 #endif
-   
-   return
+
 end subroutine find_unitk
 
 subroutine calc_power_spectrum(k, power_spectrum)
@@ -69,7 +67,6 @@ subroutine calc_power_spectrum(k, power_spectrum)
    implicit none
    integer, intent(in)        :: k(1:3)         ! Wavevector
    real(kind=dp), intent(out) :: power_spectrum ! Power value
-
    real(kind=dp)              :: k_mag          ! Wavevector magnitude
 
    ! Remark that the components of k are between -TURB_GS and TURB_GS
@@ -81,14 +78,12 @@ subroutine calc_power_spectrum(k, power_spectrum)
             power_spectrum = 0
             return
          end if
-         
+
          k_mag = sqrt(real(sum(k**2),dp))
-         
          if (k_mag > (TURB_GS/2)) then
             power_spectrum = 0
             return
          end if
-         
          power_spectrum = k_mag**(-2)
 
       case('parabolic')
@@ -112,29 +107,26 @@ subroutine calc_power_spectrum(k, power_spectrum)
          if (k(1)==1 .AND. k(2)==0 .AND. k(3)==0) then
             power_spectrum = 1.0
          end if
-      
+
       case default
          write (6,*) "Unknown forcing_power_spectrum!"
          write (6,*) "Use 'power_law', 'parabolic', 'konstandin' or 'test'"
          stop
       end select
-   
-   return
 
 end subroutine calc_power_spectrum
 
 subroutine gaussian_cmplx(G)
+   !use constants, only:pi
    use turb_commons
    implicit none
    ! Generates 3 complex random variates, where each variate has a
    ! complex value drawn from a Gaussian distribution EITHER
    ! by assigning a Gaussian magnitude and uniformly distributed argument OR
    ! by assigning Gaussian real and imaginary components
-   complex(kind=cdp), intent(out) :: G(1:ndim)
-                                       ! Random gaussian values
-
+   complex(kind=cdp), intent(out) :: G(1:ndim) ! Random gaussian values
    integer              :: d           ! Dimension counter
-   real(kind=dp)        :: Rnd(1:3) ! Random numbers
+   real(kind=dp)        :: Rnd(1:3)    ! Random numbers
    real(kind=dp)        :: w           ! Aux. variable for random Gaussian
    real(kind=dp)        :: mag(1:ndim), arg(1:ndim) ! Magnitude and argument
    ! Create Gaussian distributed random numbers
@@ -146,7 +138,6 @@ subroutine gaussian_cmplx(G)
    ! Method 1: Gaussian magnitude and uniformly-random argument
    do d=1,ndim
       do
-         !call random_number(Rnd(1:2))
          call kiss64_double(2, kiss64_state, Rnd(1:2))
          Rnd(1) = 2.0 * Rnd(1) - 1.0
          Rnd(2) = 2.0 * Rnd(2) - 1.0
@@ -158,17 +149,15 @@ subroutine gaussian_cmplx(G)
       mag(d) = Rnd(1) * w
       ! Throwing away second random variate (something of a waste)
    end do
-   
-   !call random_number(Rnd(1:3))
+
    call kiss64_double(ndim, kiss64_state, Rnd(1:ndim))
    arg = (Rnd(1:ndim) * 2.0 * PI) - 1.0
-   
+
    G = cmplx(mag * cos(arg), mag * sin(arg))
-   
+
    ! Method 2: Gaussian real and imaginary components
 !    do d=1,ndim
 !       do
-!          !call random_number(Rnd(1:2))
 !          call kiss64_double(ndim, kiss64_state, Rnd(1:ndim))
 !          Rnd(1) = 2.0 * Rnd(1) - 1.0
 !          Rnd(2) = 2.0 * Rnd(2) - 1.0
@@ -176,11 +165,10 @@ subroutine gaussian_cmplx(G)
 !          if (w<1.0) exit
 !       end do
 !       w = sqrt( (-2.0 * log( w ) ) / w )
-!       
+!
 !       G(d) = cmplx(Rnd(1) * w, Rnd(2) * w)
 !    end do
-   
-   return
+
 end subroutine gaussian_cmplx
 
 subroutine add_turbulence(turb_field, dt)
@@ -223,7 +211,7 @@ subroutine add_turbulence(turb_field, dt)
 #endif
             ! Check there is any power in this mode, else cycle
             if (power_spec(i,j,k) == 0.0_dp) cycle
-            
+
 #if defined(HERMITIAN_FIELD)
             ! Test if we are own conjugate or need to use another conjugate
             own_conjg = .FALSE.
@@ -244,7 +232,7 @@ subroutine add_turbulence(turb_field, dt)
                cycle
             end if
 #endif
-            
+
             ! Ornstein-Uhlenbeck process
             ! dF(k,t) = F_0(k) P(k) dW - F(k,t) dt / T
             ! where F(k,t) is the vector fourier amplitude,
@@ -254,7 +242,7 @@ subroutine add_turbulence(turb_field, dt)
             ! and dW is the Wiener process, described by a random variate
             ! from a normal distribution with a mean of zero and a
             ! variance of dt i.e. a standard deviation of sqrt(dt)
-            
+
             ! In this we only calculate the first term - the random
             ! growth term.
 
@@ -294,8 +282,7 @@ subroutine add_turbulence(turb_field, dt)
          end do
       end do
    end do
-   
-   return
+
 end subroutine add_turbulence
 
 subroutine decay_turbulence(old_turb_field, new_turb_field)
@@ -340,7 +327,7 @@ subroutine FFT_1D(complex_field, real_field)
                                            ! Result of transforms
 
    complex(kind=cdp), allocatable :: fftfield(:) ! Memory for FFT
-   
+
    ! Allocate storage for performing FFTs
    allocate(fftfield(0:TGRID_X))
 
@@ -352,7 +339,6 @@ subroutine FFT_1D(complex_field, real_field)
       & fftfield, FFTW_BACKWARD, FFTW_ESTIMATE)
 #endif
 
-   !write (6,*) "Performing FFT..."
    fftfield = complex_field(:)
 
 #if defined(DOUBLE_PRECISION)
@@ -361,19 +347,15 @@ subroutine FFT_1D(complex_field, real_field)
    call sfftw_execute_dft(plan, fftfield, fftfield)
 #endif
    real_field(:) = real(fftfield, dp) / (turb_gs_real)
-   
-   !write (6,*) "largest real component: ", maxval(abs(real(fftfield)))
-   !write (6,*) "largest imaginary component: ", maxval(abs(aimag(fftfield)))
-   
+
 #if defined(DOUBLE_PRECISION)
    call dfftw_destroy_plan(plan)
 #else
    call sfftw_destroy_plan(plan)
 #endif
-   
+
    deallocate(fftfield)
 
-   return
 end subroutine FFT_1D
 
 subroutine FFT_2D(complex_field, real_field)
@@ -392,7 +374,7 @@ subroutine FFT_2D(complex_field, real_field)
                                            ! Result of transforms
 
    complex(kind=cdp), allocatable :: fftfield(:,:) ! Memory for FFT
-   
+
    ! Allocate storage for performing FFTs
    allocate(fftfield(0:TGRID_X,0:TGRID_Y))
 
@@ -404,31 +386,24 @@ subroutine FFT_2D(complex_field, real_field)
       & fftfield, FFTW_BACKWARD, FFTW_ESTIMATE)
 #endif
 
-   !write (6,*) "Performing FFT..."
    do d=1,2
-
       fftfield = complex_field(d,:,:)
-
 #if defined(DOUBLE_PRECISION)
       call dfftw_execute_dft(plan, fftfield, fftfield)
 #else
       call sfftw_execute_dft(plan, fftfield, fftfield)
 #endif
       real_field(d,:,:) = real(fftfield, dp) / (turb_gs_real**2)
-   
-      !write (6,*) "largest real component: ", maxval(abs(real(fftfield)))
-      !write (6,*) "largest imaginary component: ", maxval(abs(aimag(fftfield)))
-   
    end do
+
 #if defined(DOUBLE_PRECISION)
    call dfftw_destroy_plan(plan)
 #else
    call sfftw_destroy_plan(plan)
 #endif
-   
+
    deallocate(fftfield)
 
-   return
 end subroutine FFT_2D
 
 subroutine FFT_3D(complex_field, real_field)
@@ -447,7 +422,7 @@ subroutine FFT_3D(complex_field, real_field)
                                            ! Result of transforms
 
    complex(kind=cdp), allocatable :: fftfield(:,:,:) ! Memory for FFT
-   
+
    ! Allocate storage for performing FFTs
    allocate(fftfield(0:TGRID_X,0:TGRID_Y,0:TGRID_Z))
 
@@ -459,31 +434,24 @@ subroutine FFT_3D(complex_field, real_field)
       & fftfield, FFTW_BACKWARD, FFTW_ESTIMATE)
 #endif
 
-   !write (6,*) "Performing FFT..."
    do d=1,3
-
       fftfield = complex_field(d,:,:,:)
-
 #if defined(DOUBLE_PRECISION)
       call dfftw_execute_dft(plan, fftfield, fftfield)
 #else
       call sfftw_execute_dft(plan, fftfield, fftfield)
 #endif
       real_field(d,:,:,:) = real(fftfield, dp) / (turb_gs_real**3)
-   
-      !write (6,*) "largest real component: ", maxval(abs(real(fftfield)))
-      !write (6,*) "largest imaginary component: ", maxval(abs(aimag(fftfield)))
-   
    end do
+
 #if defined(DOUBLE_PRECISION)
    call dfftw_destroy_plan(plan)
 #else
    call sfftw_destroy_plan(plan)
 #endif
-   
+
    deallocate(fftfield)
 
-   return
 end subroutine FFT_3D
 
 subroutine proj_rms_norm(sol_frac_in, P)
@@ -493,18 +461,17 @@ subroutine proj_rms_norm(sol_frac_in, P)
    ! projection of random vectors with solenoidal fraction 'sol_frac'
    real(kind=dp), intent(in)      :: sol_frac_in ! Solenoidal fraction
    real(kind=dp), intent(out)     :: P           ! Normalization constant
-   
+
 #if NDIM==3
    P = (0.797d0 * sol_frac_in**2) - (0.529d0 * sol_frac_in) + 0.568d0
-   
+
    ! for reference, to maintain magnitude of vectors
    !P = (0.563 * sol_frac_in**2) - (0.258 * sol_frac_in) + 0.487
 #else
    ! Not tested for NDIM /= 3
    P = 1.0d0
 #endif
-   
-   return
+
 end subroutine proj_rms_norm
 
 subroutine power_rms_norm(power_in, P)
@@ -521,11 +488,11 @@ subroutine power_rms_norm(power_in, P)
                                            &0:TGRID_Y, 0:TGRID_Z)
                                                  ! Result of transforms
    integer                    :: d               ! Dimension counter
-   
+
    do d=1,NDIM
       complex_field(d,:,:,:) = cmplx(power_in)
    end do
-   
+
 #if NDIM==1
    call FFT_1D(complex_field, real_field)
 #elif NDIM==2
@@ -533,10 +500,9 @@ subroutine power_rms_norm(power_in, P)
 #else
    call FFT_3D(complex_field, real_field)
 #endif
-   
+
    P = sqrt(sum(real_field**2)/size(real_field))
-   
-   return
+
 end subroutine power_rms_norm
 
 subroutine turb_force_calc(ncache, x_cell, rho, aturb)
@@ -546,10 +512,10 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    real(kind=dp), intent(in)  :: x_cell(1:ndim,1:nvector) ! Positions
    real(kind=dp), intent(in)  :: rho(1:nvector)           ! Densities
    real(kind=dp), intent(out) :: aturb(1:ndim, 1:nvector) ! Turbulent forcing
-   
-   integer                    :: nok                ! no. of OK cells
-   integer                    :: ok_cell(1:nvector) ! 'ok' cells
-   integer                    :: i                  ! cell counter
+
+   integer                    :: nok                 ! no. of OK cells
+   integer                    :: ok_cell(1:nvector)  ! 'ok' cells
+   integer                    :: i                   ! cell counter
    real(kind=dp)              :: r(1:ndim,1:nvector) ! Position in turb grid
    real(kind=dp)              :: dr1(1:ndim,1:nvector)
                                               ! Position in cell
@@ -567,9 +533,9 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
 #ifdef ANALYTIC_FORCING_TEST
    real(kind=dp)              :: c            ! y-x position
 #endif
-   
+
    aturb = 0.0
-   
+
    nok = 0
    do i=1,ncache
    ! Position of particle in 'grid' space
@@ -581,29 +547,29 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
          r(:,nok) = x_cell(:,i)
       end if
    end do
-   
+
    ! Find ids of top left and bottom right corner of encompassing cube
    ! These can be the same if a particle is right on the boundary, but won't
    ! affect the result.
    bmin(:,1:nok) = floor(r(:,1:nok))
    bmax(:,1:nok) = ceiling(r(:,1:nok))
-   
+
    ! Right-hand edge is equal to left-hand edge (periodic),
    ! which gives TURB_GS + 1 interpolation points
    where (bmin(:,1:nok)==TURB_GS) bmin(:,1:nok)=0
                                     ! this only happens for r==TURB_GS
    where (bmax(:,1:nok)==TURB_GS) bmax(:,1:nok)=0
-   
+
    dr1(:,1:nok) = r(:,1:nok) - real(floor(r(:,1:nok)),dp)
    dr2(:,1:nok) = 1.0_dp - dr1(:,1:nok)
-   
+
    ! Find cube values
 #if NDIM==1
    do i=1,nok
       cube_vals(:,i,1) = afield_now(:, bmin(1,i), 0, 0)
       cube_vals(:,i,2) = afield_now(:, bmax(1,i), 0, 0)
    end do
-   
+
    do i=1,nok
       interp(:,i,1) = dr2(1,i)
       interp(:,i,2) = dr1(1,i)
@@ -615,7 +581,7 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
       cube_vals(:,i,3) = afield_now(:, bmin(1,i), bmax(2,i), 0)
       cube_vals(:,i,4) = afield_now(:, bmax(1,i), bmax(2,i), 0)
    end do
-   
+
    do i=1,nok
       interp(:,i,1) = dr2(1,i) * dr2(2,i)
       interp(:,i,2) = dr1(1,i) * dr2(2,i)
@@ -678,8 +644,6 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    end do
 #endif
 
-   return
-
 end subroutine turb_force_calc
 
 subroutine current_turb_rms(rms_val)
@@ -688,7 +652,7 @@ subroutine current_turb_rms(rms_val)
    real (kind=dp), intent(out) :: rms_val
    integer                     :: i, j, k
    real (kind=dp)              :: asqd
-   
+
    rms_val = 0.0
    do k=0,TGRID_Z
       do j=0,TGRID_Y
@@ -698,10 +662,9 @@ subroutine current_turb_rms(rms_val)
          end do
       end do
    end do
-   
+
    rms_val = sqrt(rms_val / (turb_gs_real**NDIM))
-   
-   return
+
 end subroutine current_turb_rms
 
 ! PRNG of Marsaglia
@@ -713,7 +676,6 @@ subroutine spin_up(s)
    do i=1,10000
       call kiss64_core(s, r)
    end do
-   return
 end subroutine spin_up
 
 subroutine kiss64_core(s, r)
@@ -733,8 +695,6 @@ subroutine kiss64_core(s, r)
    s(2) = ieor(s(2), ishft(s(2),43))
    s(3)= 6906969069_ILP * s(3) + 1234567_ILP
    r = s(1) + s(2) + s(3)
-   return
-   
 end subroutine kiss64_core
 
 subroutine kiss64_double(N, s, out_array)
@@ -748,16 +708,11 @@ subroutine kiss64_double(N, s, out_array)
 #ifndef DOUBLE_PRECISION
    double precision              :: dbl_array(1:N)
 #endif
-   
+
    do i=1,N
       call kiss64_core(s, int_array(i))
    end do
-   
-!        x = KISS()
-!        x = iand(x, z'FFFFFFFFFFFFF')
-!        x = ieor(x, z'3FF0000000000000')
-!        runif2 = transfer(x, runif2) - 1.0_8
-  
+
    int_array = iand(int_array, z'FFFFFFFFFFFFF')
    int_array = ieor(int_array, z'3FF0000000000000')
 #ifdef DOUBLE_PRECISION
@@ -766,7 +721,6 @@ subroutine kiss64_double(N, s, out_array)
    dbl_array = transfer(int_array, out_array)
    out_array = real(dbl_array, dp)
 #endif
-   
-   return
+
 end subroutine kiss64_double
 #endif

@@ -28,8 +28,6 @@ subroutine turb_next_field
    call FFT_3D(turb_next, afield_next)
 #endif
    afield_next = afield_next * turb_norm * turb_rms
-   
-   return
-   
+
 end subroutine turb_next_field
 #endif

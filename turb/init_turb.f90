@@ -9,33 +9,33 @@ subroutine init_turb
    integer       :: i, j, k                ! Loop variables
    integer       :: k_vec(1:3)             ! Wavevector
    integer       :: all_stat(1:4)          ! Allocation statuses
-   
+
    integer              :: n_seed          ! Length of random seed
    integer              :: clock           ! Integer clock time
    integer, allocatable :: seed(:)         ! Random seed
-   
+
    real(kind=dp)        :: power_norm      ! Normalization from power spectrum
    real(kind=dp)        :: proj_norm       ! Normalization from projection
    real(kind=dp)        :: OU_norm         ! Normalization for OU process
-   
+
    real(kind=dp) :: turb_last_tfrac        ! Time fraction since last
    real(kind=dp) :: turb_next_tfrac        ! Time fraction until next
-   
+
    integer, parameter :: instant_turb_mult=5
                                          ! Number of autocorrelation times
                                          ! to evolve with instant turbulence
    real(kind=dp), parameter :: instant_turb_percent=10.0
                                          ! Display percentage at this interval
    real(kind=dp)      :: cur_percent     ! Percentage currently tracking
-   
+
    ! Tasks to always be done (including MPI non-root tasks)
    ! ---------------------------------------------------------------------------
-   
+
    all_stat = 0
-   
+
    ! Allocate turbulent force storage
    allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
-   
+
    ! Allocate grids
    allocate(afield_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
             &stat=all_stat(2))
@@ -43,15 +43,15 @@ subroutine init_turb
             &stat=all_stat(3))
    allocate(afield_now(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
             &stat=all_stat(4))
-   
+
    if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
-   
+
    ! Set grid spacing
    turb_space = (/1.d0, 1.d0, 1.d0/) / turb_gs_real
 
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
-   
+
 #ifndef WITHOUTMPI
    if (myid/=1) then
       call mpi_share_turb_fields(.TRUE.)
@@ -88,9 +88,9 @@ subroutine init_turb
    allocate(turb_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(1))
    allocate(turb_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(2))
    allocate(power_spec(0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(3))
-   
+
    if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
-   
+
    ! Set decay fraction per timestep dt
    turb_decay_frac = turb_dt / turb_T ! == 1 / turbNdt
 
@@ -101,7 +101,6 @@ subroutine init_turb
    turb_next_time = t ! will be updated later
 
    ! Set initial power distribution (should be parameterised in some fashion)
-
    do k=0,TGRID_Z
       if (k > TURB_GS / 2) then
          k_vec(3) = k - TURB_GS
@@ -124,7 +123,7 @@ subroutine init_turb
          end do
       end do
    end do
-   
+
    ! Calculate turbulent normalization
    ! Power normalization comes from FFT of initial power spectrum
    call power_rms_norm(power_spec, power_norm)
@@ -154,7 +153,7 @@ subroutine init_turb
       ! Not a restart - set up initial field and perform FFT
       turb_next = cmplx(0.0_dp, 0.0_dp)
       call add_turbulence(turb_next, turb_dt)
-   
+
       ! Fourier transform
 #if NDIM==1
       call FFT_1D(turb_next(1,:,0,0), afield_next(1,:,0,0))
@@ -206,7 +205,5 @@ subroutine init_turb
 
    afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
 
-   return
-   
 end subroutine init_turb
 #endif
