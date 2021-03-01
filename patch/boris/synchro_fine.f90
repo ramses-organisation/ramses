@@ -549,7 +549,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(boris)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
      call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
-     new_vp(1:np,1:ndim)=uu(1:np,1:ndim)
+     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
   do idim=1,ndim
@@ -572,16 +572,14 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end if
 
 end subroutine sync
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
-
-! The following subroutine will alter its last argument, v
-! to be an intermediate step, having been either accelerated by
-! drag+the electric field, or rotated by the magnetic field.
 subroutine ThirdBorisKick(nn,dtarr,ctm,ts,b,u,v)
+  ! The following subroutine will alter its last argument, v
+  ! to be an intermediate step, having been either accelerated by
+  ! drag+the electric field, or rotated by the magnetic field.
   use amr_parameters
   use hydro_parameters
   implicit none
@@ -596,40 +594,15 @@ subroutine ThirdBorisKick(nn,dtarr,ctm,ts,b,u,v)
   real(dp),dimension(1:nn)::dtarr
   real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
   integer ::i ! Just an index
-  !if (kick==1) then
-    !do i=1,nn
-    !  vo(i,1) = v(i,1) + (2*ctm*dtarr(i)*(-(b(i,2)*b(i,2)*ctm*dtarr(i)*v(i,1))&
-    !            + b(i,2)*(b(i,1)*ctm*dtarr(i)*v(i,2)&
-    !            - 2*v(i,3)) + b(i,3)*(-(b(i,3)*ctm*dtarr(i)*v(i,1)) + 2*v(i,2)&
-    !            + b(i,1)*ctm*dtarr(i)*v(i,3))))/(4 +&
-    !            (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dtarr(i)*dtarr(i))
-    !  vo(i,2) = v(i,2) + (2*ctm*dtarr(i)*(-(b(i,3)*b(i,3)*ctm*dtarr(i)*v(i,2)) &
-    !            + b(i,1)*(b(i,2)*ctm*dtarr(i)*v(i,1)&
-    !            - b(i,1)*ctm*dtarr(i)*v(i,2) + 2*v(i,3)) + b(i,3)*(-2*v(i,1)&
-    !            + b(i,2)*ctm*dtarr(i)*v(i,3))))/(4&
-    !            + (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dtarr(i)*dtarr(i))
-    !  vo(i,3) = v(i,3) + (2*ctm*dtarr(i)*(2*b(i,2)*v(i,1) &
-    !            + b(i,1)*b(i,3)*ctm*dtarr(i)*v(i,1) - 2*b(i,1)*v(i,2)&
-    !            + b(i,2)*b(i,3)*ctm*dtarr(i)*v(i,2) - (b(i,1)*b(i,1)&
-    !            + b(i,2)*b(i,2))*ctm*dtarr(i)*v(i,3)))/(4 +&
-    !            (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dtarr(i)*dtarr(i))
-    !end do
-  !else
+  
   do i=1,nn
-    vo(i,1) = (v(i,1) - 0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))&
-              -u(i,1)/ts))/(1.+0.5*dtarr(i)/ts)
-    vo(i,2) = (v(i,2) - 0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))&
-              -u(i,2)/ts))/(1.+0.5*dtarr(i)/ts)
-    vo(i,3) = (v(i,3) - 0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))&
-              -u(i,3)/ts))/(1.+0.5*dtarr(i)/ts)
+     vo(i,1)=(v(i,1)-0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))-u(i,1)/ts))/(1.0+0.5*dtarr(i)/ts)
+     vo(i,2)=(v(i,2)-0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))-u(i,2)/ts))/(1.0+0.5*dtarr(i)/ts)
+     vo(i,3)=(v(i,3)-0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/ts))/(1.0+0.5*dtarr(i)/ts)
   end do
-  !end if
-  ! do i=1,nn
-  !   write(*,*)kick,nn,dt,ctm,ts
-  ! end do
-  v(1:nvector,1:ndim)=vo(1:nvector,1:ndim)
+  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
+  
 end subroutine ThirdBorisKick
-
 !#########################################################################
 !#########################################################################
 !#########################################################################
