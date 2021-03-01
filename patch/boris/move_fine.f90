@@ -512,7 +512,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
               write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
-              sqrt((vv(j,1)-uu(j,1))**2+(vv(j,3)-uu(j,3))**2+(vv(j,3)-uu(j,3))**2)
+              sqrt((vv(j,1)-uu(j,1))**2+(vv(j,3)-uu(j,3))**2+(vv(j,3)-uu(j,3))**2),& ! grain drift velocity
+              bb(j,1),bb(j,2),bb(j,3),& ! Magnetic field.
+              uu(j,3)*bb(j,2)-uu(j,2)*bb(j,3),uu(j,1)*bb(j,3)-uu(j,3)*bb(j,2),uu(j,2)*bb(j,1)-uu(j,1)*bb(j,2) ! Electric field
            end if
         end do
      end do
