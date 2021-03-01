@@ -559,11 +559,10 @@ end subroutine move1
 !#########################################################################
 !#########################################################################
 !#########################################################################
-
-! The following subroutine will alter its last argument, v
-! to be an intermediate step, having been either accelerated by
-! drag+the electric field, or rotated by the magnetic field.
 subroutine FirstAndSecondBorisKick(nn,dt,ctm,ts,b,u,v)
+  ! The following subroutine will alter its last argument, v
+  ! to be an intermediate step, having been either accelerated by
+  ! drag+the electric field, or rotated by the magnetic field.
   use amr_parameters
   use hydro_parameters
   implicit none
@@ -576,24 +575,24 @@ subroutine FirstAndSecondBorisKick(nn,dt,ctm,ts,b,u,v)
   real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
-  integer ::i ! Just an index
+  integer ::i ! Just an -index
 
   do i=1,nn
-     vo(i,1) = v(i,1) + (2*ctm*dt*(-(b(i,2)*b(i,2)*ctm*dt*v(i,1))&
-          &  + b(i,2)*(b(i,1)*ctm*dt*v(i,2)&
-          &  - 2*v(i,3)) + b(i,3)*(-(b(i,3)*ctm*dt*v(i,1)) + 2*v(i,2)&
-          &  + b(i,1)*ctm*dt*v(i,3))))/(4 +&
-          & (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
-     vo(i,2) = v(i,2) + (2*ctm*dt*(-(b(i,3)*b(i,3)*ctm*dt*v(i,2)) &
-          &  + b(i,1)*(b(i,2)*ctm*dt*v(i,1)&
-          &  - b(i,1)*ctm*dt*v(i,2) + 2*v(i,3)) + b(i,3)*(-2*v(i,1)&
-          &  + b(i,2)*ctm*dt*v(i,3))))/(4&
-          &  + (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
-     vo(i,3) = v(i,3) + (2*ctm*dt*(2*b(i,2)*v(i,1) &
-          &  + b(i,1)*b(i,3)*ctm*dt*v(i,1) - 2*b(i,1)*v(i,2)&
-          &  + b(i,2)*b(i,3)*ctm*dt*v(i,2) - (b(i,1)*b(i,1)&
-          &  + b(i,2)*b(i,2))*ctm*dt*v(i,3)))/(4 +&
-          &    (b(i,1)*b(i,1) + b(i,2)*b(i,2) + b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+     vo(i,1) = v(i,1) + (2*ctm*dt*( &
+          &  - b(i,2)*( b(i,2)*ctm*dt*v(i,1)            ) &
+          &  + b(i,2)*( b(i,1)*ctm*dt*v(i,2) - 2*v(i,3) ) &
+          &  + b(i,3)*(-b(i,3)*ctm*dt*v(i,1) + 2*v(i,2) + b(i,1)*ctm*dt*v(i,3)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+     vo(i,2) = v(i,2) + (2*ctm*dt*( &
+          &  - b(i,3)*( b(i,3)*ctm*dt*v(i,2)            ) &
+          &  + b(i,3)*( b(i,2)*ctm*dt*v(i,3) - 2*v(i,1) ) &
+          &  + b(i,1)*(-b(i,1)*ctm*dt*v(i,2) + 2*v(i,3) + b(i,2)*ctm*dt*v(i,1)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+     vo(i,3) = v(i,3) + (2*ctm*dt*( &
+          &  - b(i,1)*( b(i,1)*ctm*dt*v(i,3)            ) &
+          &  + b(i,1)*( b(i,3)*ctm*dt*v(i,1) - 2*v(i,2) ) &
+          &  + b(i,2)*(-b(i,2)*ctm*dt*v(i,3) + 2*v(i,1) + b(i,3)*ctm*dt*v(i,2)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
   end do
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
 
