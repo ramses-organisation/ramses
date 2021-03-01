@@ -13,7 +13,7 @@ subroutine move_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,fileloc
   character(LEN=5)::nchar
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -59,7 +59,7 @@ subroutine move_fine(ilevel)
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
   close(25+myid)
-  
+
 111 format('   Entering move_fine for level ',I2)
 
 end subroutine move_fine
@@ -487,16 +487,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-  if(boris.and.hydro)then
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3)
-           end if
-        end do
-     end do
-  endif
-  
+
   ! Update velocity
   do idim=1,ndim
      if(static.or.tracer)then
@@ -514,6 +505,17 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
      call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+  endif
+
+  if(boris.or.tracer)then
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
+              sqrt((vv(j,1)-uu(j,1))**2+(vv(j,3)-uu(j,3))**2+(vv(j,3)-uu(j,3))**2)
+           end if
+        end do
+     end do
   endif
 
   ! For sink cloud particle only
@@ -602,7 +604,7 @@ subroutine FirstAndSecondBorisKick(nn,dt,ctm,ts,b,u,v)
      vo(i,3) = (v(i,3)-0.5*dt*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/ts))/(1.0+0.5*dt/ts)
   end do
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
-  
+
 end subroutine FirstAndSecondBorisKick
 !#########################################################################
 !#########################################################################
