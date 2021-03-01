@@ -510,7 +510,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  if(boris.and.hydro)then
+  if(boris.or.tracer)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
      call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
