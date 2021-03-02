@@ -7,6 +7,9 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -36,6 +39,9 @@ subroutine adaptive_loop
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
   if(aton)call init_radiation        ! Initialize radiation variables
+#endif
+#if USE_TURB==1
+  if(turb) call init_turb
 #endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
 

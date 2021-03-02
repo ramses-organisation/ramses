@@ -22,6 +22,8 @@ RT = 0
 # Use non-ideal MHD? 1=Yes, 0=No
 NIMHD=0
 HALL=0
+# Use turbulence? 1=Yes, 0=No (requires fftw3)
+USE_TURB=0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
 MPIF90 = mpif90
@@ -77,6 +79,9 @@ ifeq ($(OLD_MPI_SUPPORT),1)
 endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+endif
+ifeq ($(USE_TURB),1)
+   DEFINES += -DUSE_TURB
 endif
 
 #############################################################################
@@ -134,7 +139,11 @@ ifeq ($(GRACKLE),1)
    LIBS_GRACKLE = -L$(HOME)/local/lib -lgrackle -lhdf5 -lz -lgfortran -ldl
    LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
 endif
-LIBS = $(LIBMPI) $(LIBS_GRACKLE)
+ifeq ($(USE_TURB),1)
+   LIBS_TURB = -L$(HOME)/local/lib -lfftw3
+   LIBS_OBJ_TURB = -I$(HOME)/local/include -lfftw3
+endif
+LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
@@ -143,6 +152,9 @@ ifeq ($(RT),1)
 endif
 ifeq ($(NIMHD),1)
    VPATH += ../nimhd:
+endif
+ifeq ($(USE_TURB),1)
+   VPATH += ../turb:
 endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
@@ -161,6 +173,9 @@ ifeq ($(RT),1)
 endif
 ifeq ($(NIMHD),1)
    MODOBJ += nimhd_commons.o
+endif
+ifeq ($(USE_TURB),1)
+   MODOBJ += turb_parameters.o turb_commons.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o adaptive_loop.o \
@@ -191,7 +206,10 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_boundana.o rt_units.o
 # NIMHD objects
 NIMHDOBJ = uplmde_sts_ohm_dtu.o uplmde_sts_ohm.o nimhd_effects.o
-
+# Turbulence objects
+TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
+          turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
+          add_turb_forcing.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 
@@ -202,6 +220,9 @@ ifeq ($(RT),1)
 endif
 ifeq ($(NIMHD),1)
    AMRLIB += $(NIMHDOBJ)
+endif
+ifeq ($(USE_TURB),1)
+   AMRLIB += $(TURBOBJ)
 endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
@@ -229,9 +250,9 @@ write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
 	$(F90) -O0 -c write_patch.f90 -o $@
 %.o:%.F
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 %.o:%.f90
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ)
+	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 FORCE:
 #############################################################################
 clean:
