@@ -1,4 +1,4 @@
-This turbulence module makes use of the FFTW3 library (www.fftw.org)
+This turbulence module makes use of the FFTW3 library (www.fftw.org).
 
 To install:
 wget http://www.fftw.org/fftw-3.3.8.tar.gz
@@ -8,4 +8,4 @@ cd fftw-3.3.8/
 make
 make install
 
-If you use a different path for configure you need to adjust the library path in the makefile
+If you use a different path for configure, you need to adjust the library path in the makefile.

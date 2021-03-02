@@ -1,5 +1,5 @@
 #if USE_TURB==1
-SUBROUTINE read_turb_fields
+subroutine read_turb_fields
    use turb_commons
    implicit none
 
@@ -51,5 +51,5 @@ SUBROUTINE read_turb_fields
    read(ilun) turb_next
    close(ilun)
 
-END SUBROUTINE read_turb_fields
+end subroutine read_turb_fields
 #endif

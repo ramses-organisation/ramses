@@ -1,5 +1,5 @@
 #if USE_TURB==1
-SUBROUTINE write_turb_fields(output_dir)
+subroutine write_turb_fields(output_dir)
    use turb_commons
    implicit none
 
@@ -53,5 +53,5 @@ SUBROUTINE write_turb_fields(output_dir)
    write(ilun,*) trim(file_buffer)
    close(ilun)
 
-END SUBROUTINE write_turb_fields
+end subroutine write_turb_fields
 #endif

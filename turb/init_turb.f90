@@ -10,9 +10,8 @@ subroutine init_turb
    integer       :: k_vec(1:3)             ! Wavevector
    integer       :: all_stat(1:4)          ! Allocation statuses
 
-   integer              :: n_seed          ! Length of random seed
+   integer              :: n_seed=4        ! Length of random seed, 4 for KISS64
    integer              :: clock           ! Integer clock time
-   integer, allocatable :: seed(:)         ! Random seed
 
    real(kind=dp)        :: power_norm      ! Normalization from power spectrum
    real(kind=dp)        :: proj_norm       ! Normalization from projection
@@ -69,18 +68,12 @@ subroutine init_turb
 
    if (nrestart == 0) then
       ! Set up random seed (modified from gfortran docs)
-      n_seed = 4 ! for KISS64
-      allocate(seed(n_seed))
-     
       if (turb_seed == -1) then
           call system_clock(count=clock)
-     
-          seed = clock + 37 * (/(i-1,i=1,n_seed)/)
+          kiss64_state = clock + 37 * (/(i-1,i=1,n_seed)/)
       else
-          seed = turb_seed
+          kiss64_state = turb_seed
       end if
-      kiss64_state = seed
-      deallocate(seed)
       call spin_up(kiss64_state)
    end if
 

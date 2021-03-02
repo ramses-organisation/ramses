@@ -1,8 +1,4 @@
 #if USE_TURB==1
-!################################################################
-!################################################################
-!################################################################
-!################################################################
 subroutine calc_turb_forcing(ilevel)
   use amr_commons
   use hydro_commons
@@ -11,6 +7,7 @@ subroutine calc_turb_forcing(ilevel)
   integer::ilevel
   !-------------------------------------------------------------------
   ! Calculate forcing from turbulent accelerations
+  ! Similar to analytical gravity in force_fine
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -35,7 +32,6 @@ subroutine calc_turb_forcing(ilevel)
   if(ndim>0)skip_loc(1)=dble(icoarse_min)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
-!   scale=boxlen/dble(nx_loc)
   scale=turb_gs_real/dble(nx_loc)
   dx_loc=dx*scale
 
@@ -100,8 +96,4 @@ subroutine calc_turb_forcing(ilevel)
 111 format('   Entering calc_turb_forcing for level',i2)
 
 end subroutine calc_turb_forcing
-!################################################################
-!################################################################
-!################################################################
-!################################################################
 #endif

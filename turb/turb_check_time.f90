@@ -1,5 +1,5 @@
 #if USE_TURB==1
-SUBROUTINE turb_check_time
+subroutine turb_check_time
    use amr_commons
    use turb_commons
    implicit none
@@ -38,5 +38,5 @@ SUBROUTINE turb_check_time
       afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
    end if
 
-END SUBROUTINE turb_check_time
+end subroutine turb_check_time
 #endif
