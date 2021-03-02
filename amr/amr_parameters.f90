@@ -167,7 +167,10 @@ module amr_parameters
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
   integer::momentum_feedback=0       ! Use supernovae momentum feedback if cooling radius not resolved
   integer::strict_equilibrium=0      ! Hydro scheme to preserve exactly hydrostatic equilibrium
-
+  real(dp)::charge_to_mass=0.0       ! Charge to mass ratio for dust grains
+  real(dp)::t_stop=0.0               ! Stopping time for dust grains
+  logical::boris=.false.             ! Activate boris pusher for PIC solver for grain dynamics
+  
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
