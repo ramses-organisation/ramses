@@ -1,0 +1,70 @@
+This is the RAMSES parameter file for the turbulence driving test.
+
+&RUN_PARAMS
+hydro=.true.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=6
+ngridmax=500000
+boxlen=4
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=2
+y_center=2
+z_center=2
+length_x=4
+length_y=4
+length_z=4
+exp_region=10
+d_region=0.28954719470909174
+p_region=0.030361026190591216
+/
+
+&OUTPUT_PARAMS
+noutput=2
+tout=0.0,0.25
+/
+
+&UNITS_PARAMS
+units_density=1.50492957435d-20
+units_time=3.1556926d13
+units_length=3.0857d18
+/
+
+&COOLING_PARAMS
+isothermal=.true.
+T2max=4.2194
+/
+
+&SF_PARAMS
+T2_star=4.2194
+g_star=1 !isothermal
+/
+
+&TURB_PARAMS
+turb=.true.
+turb_type=1         ! 1=forced evolving, 2=forced fixed, 3=decaying
+turb_seed=1         ! -1 = random
+comp_frac=0.5       ! compressive fraction
+!instant_turb=.true. ! Generate initial turbulence before start
+forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
+turb_T=0.29241000937376255
+turb_Ndt=100       ! Number of timesteps per autocorr. time
+turb_rms=5.094074502271999      ! rms turbulent forcing acceleration
+turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
+/
