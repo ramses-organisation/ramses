@@ -434,6 +434,7 @@ program part2cube
      endif
      deallocate(x,m)
      if(nstar>0)deallocate(age)
+     deallocate(family,tag)
   end do
   write(*,*)'Total mass=',mtot
 
