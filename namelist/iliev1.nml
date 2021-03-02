@@ -42,7 +42,7 @@ slope_type=1
 cooling=.false.
 /
 
-&UNITS
+&UNITS_PARAMS
 units_density=1.66d-24		! gram per proton
 units_time=3.1557d13		! 1 Myr in seconds
 units_length=3.0857d21 		! 1 kpc in cm
@@ -69,8 +69,6 @@ rt_src_length_x=1.0
 rt_src_length_y=1.0
 rt_src_length_z=1.0
 rt_n_source=5.d48	        ! 5E48 photons per sec emitted from source
-rt_err_grad_xHII=0.8 
-rt_err_grad_xHI=0.8 
 /
 
 &RT_GROUPS

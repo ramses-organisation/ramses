@@ -55,7 +55,7 @@
 ;###################################################
 ;###################################################
 ;###################################################
-pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd,turb=turb,mmat=mmat
+pro rd_1d,data,file=file,part=part,nmax=nmax,mhd=mhd,turb=turb,mmat=mmat,sixeq=sixeq
 
 if not keyword_set(file) then file=pickfile(/READ)
 if not keyword_set(nmax) then nmax=100
@@ -92,6 +92,12 @@ while not eof(1) do begin
                     , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
                     , v:dblarr(ncell), w:dblarr(ncell), p:dblarr(ncell) $
                     , A:dblarr(ncell), B:dblarr(ncell), C:dblarr(ncell) }
+           endif else if keyword_set(sixeq) then begin
+              time={t:0.0d0, nc:ncell, l:intarr(ncell) $
+                    , x:dblarr(ncell), f1:dblarr(ncell), f2:dblarr(ncell) $
+                    , d1:dblarr(ncell), d2:dblarr(ncell), u:dblarr(ncell) $
+                    , p1:dblarr(ncell), p2:dblarr(ncell) $
+                    , e1:dblarr(ncell), e2:dblarr(ncell) }
            endif else if keyword_set(mmat) then begin
               time={t:0.0d0, nc:ncell, l:intarr(ncell) $
                     , x:dblarr(ncell), d:dblarr(ncell), u:dblarr(ncell) $
@@ -120,6 +126,19 @@ while not eof(1) do begin
                 time.A(j)=AA
                 time.B(j)=BB
                 time.C(j)=CC
+            endif else if keyword_set(sixeq) then begin
+                readf,1,ll,rr,ff1,ff2,dd1,dd2,uu,pp1,pp2,ee1,ee2
+                time.l(j)=ll
+                time.x(j)=rr
+                time.f1(j)=ff1
+                time.f2(j)=ff2
+                time.d1(j)=dd1
+                time.d2(j)=dd2
+                time.u(j)=uu
+                time.p1(j)=pp1
+                time.p2(j)=pp2
+                time.e1(j)=ee1
+                time.e2(j)=ee2
             endif else if keyword_set(mmat) then begin
                 readf,1,ll,rr,dd,uu,pp,ff1,ff2,dd1,dd2
                 time.l(j)=ll

@@ -24,7 +24,7 @@ module rt_parameters
 #endif
   ! Ion species---------------------------------------------------------------------------
 #ifdef NIONS
-  integer,parameter::nIons=NIONS                      ! # of ion species (set in Makefile)
+  integer,parameter::nIons=NIONS                    !   # of ion species (set in Makefile)
 #else
   integer,parameter::nIons=3                        !   HII and optionally HI, HeII, HeIII
 #endif
@@ -32,11 +32,11 @@ module rt_parameters
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
   real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
-  real(dp),parameter::ionEv_HI    = 11.20
-  real(dp),parameter::ionEv_HII   = 13.60
-  real(dp),parameter::ionEv_HeII  = 24.59
-  real(dp),parameter::ionEv_HeIII = 54.42
-  logical::isHe=.true.                             !     He ionization fractions tracked?
+  real(dp),parameter::ionEv_HI    = 11.20d0
+  real(dp),parameter::ionEv_HII   = 13.60d0
+  real(dp),parameter::ionEv_HeII  = 24.59d0
+  real(dp),parameter::ionEv_HeIII = 54.42d0
+  logical::isHe=.true.                              !     He ionization fractions tracked?
   logical::isH2=.false.                             !                          H2 tracked?
   integer::ixHI=0, ixHII=0, ixHeII=0, ixHeIII=0     !      Indexes of ionization fractions
   logical::is_SED_single_Z=.false.                  !                   Tracks if single Z 
@@ -49,7 +49,7 @@ module rt_parameters
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
   logical::rt_AGN=.false.              ! Activate radiation from sink particles on central cloud !
-  real(dp)::rt_esc_frac=1d0           ! Escape fraction of light from stellar particles !
+  real(dp)::rt_esc_frac=1d0            ! Escape fraction of light from stellar particles !
   logical::rt_is_init_xion=.false.     ! Initialize ionization from T profile?           !
   character(LEN=10)::rt_flux_scheme='glf'                                                !
   logical::rt_use_hll=.false.          ! Use hll flux (or the default glf)               !
@@ -57,18 +57,18 @@ module rt_parameters
   real(dp)::rt_courant_factor=0.8d0    ! Courant factor for RT timesteps                 !
   logical::rt_refine=.false.           ! Refine on RT-related conditions?                !
   real(dp)::rt_err_grad_n=-1.0         ! Photon number density gradient for refinement   !
-  real(dp)::rt_floor_n=1d-10          ! Photon number density floor for refinement      !
+  real(dp)::rt_floor_n=1d-10           ! Photon number density floor for refinement      !
   real(dp)::rt_err_grad_xHI=-1.0       ! Ionization state gradient for refinement        !
   real(dp)::rt_err_grad_xHII=-1.0      ! Ionization state gradient for refinement        !
   real(dp)::rt_refine_aexp=-1.0        ! Start a for RT gradient refinement              !
-  real(dp)::rt_floor_xHI=1d-10        ! Ionization state floor for refinement           !
-  real(dp)::rt_floor_xHII=1d-10       ! Ionization state floor for refinement           !
-  real(dp)::rt_c_fraction=1d0         ! Actual lightspeed fraction for RT lightspeed    !
+  real(dp)::rt_floor_xHI=1d-10         ! Ionization state floor for refinement           !
+  real(dp)::rt_floor_xHII=1d-10        ! Ionization state floor for refinement           !
+  real(dp)::rt_c_fraction=1d0          ! Actual lightspeed fraction for RT lightspeed    !
   integer::rt_nsubcycle=1              ! Maximum number of RT-steps during one hydro/    !
                                        ! gravity/etc timestep                            !
   logical::rt_otsa=.true.              ! Use on-the-spot approximation                   !
   logical::rt_isDiffuseUVsrc=.false.   ! UV emission from low-density cells              !
-  real(dp)::rt_UVsrc_nHmax=-1d0       ! Density threshold for UV emission               !
+  real(dp)::rt_UVsrc_nHmax=-1d0        ! Density threshold for UV emission               !
   logical::upload_equilibrium_x=.false.! Enforce equilibrium xion when uploading         !
   integer::heat_unresolved_HII=0       ! Subgrid model heating unresolved HII regions    !
   integer::iHIIheat=6                  ! Var index for HII heating                       !

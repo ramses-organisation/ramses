@@ -19,6 +19,7 @@ length_z=100.0
 exp_region=10.0
 d_region=1d-3		   	  ! 1e-3 hydrogen atoms per cc
 p_region=8.69869d-10		  ! 100 K
+var_region(1,1)=1e-6
 /
 
 &AMR_PARAMS 
@@ -43,7 +44,7 @@ riemann='hllc'
 /
 
 &COOLING_PARAMS
-cooling=.false.
+cooling=.true.
 /
 
 &UNITS_PARAMS
@@ -60,10 +61,8 @@ err_grad_d=0.4
 X=1d0
 Y=0d0
 rt_flux_scheme='glf'
-hll_evals_file='/Users/romain/ramses/trunk/ramses/rt/hll_evals.list'
 rt_courant_factor=0.8
 rt_c_fraction=0.01
-rt_cooling=.true.
 rt_nsource=3
 rt_source_type=3*'point'
 rt_src_x_center=3*0.
@@ -77,16 +76,7 @@ rt_n_source=2.235d48,2.47d48,0.295d48 ! Total = 5d48
 rt_u_source=3*0
 rt_v_source=3*0
 rt_w_source=3*0
-rt_nregion=1
-rt_region_type(1)='square'
-rt_reg_x_center=7.5
-rt_reg_y_center=7.5
-rt_reg_z_center=7.5
-rt_reg_length_x=100.0
-rt_reg_length_y=100.0
-rt_reg_length_z=100.0
-rt_exp_region=10.0
-rt_xion_region=1.d-6    ! hydrogen ionization state in box (no Helium)
+rt_is_init_xion=.false.
 /
 
 &RT_GROUPS			! Blackbody at T=1d5 Kelvin

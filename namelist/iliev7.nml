@@ -44,8 +44,12 @@ scheme='muscl'
 slope_type=1
 /
 
-&PHYSICS_PARAMS
+&COOLING_PARAMS
 cooling=.true.
+/
+
+
+&UNITS_PARAMS
 units_density=1.66000d-24
 units_time=3.1556926d13		! 1 Myr in seconds
 units_length=3.08568025d21 	! 1 kpc in cm
