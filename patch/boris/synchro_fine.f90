@@ -214,7 +214,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !use amr_parameters ERM
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr,nvar ! ERM: Included these. May want to ask Romain about this.
+  use hydro_commons, ONLY: uold,smallr,nvar,gamma ! ERM: Included these. May want to ask Romain about this.
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -660,7 +660,7 @@ subroutine ThirdBorisKickWithVarTs(nn,dtarr,ctm,tss,b,u,v)
   end do
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
 
-end subroutine ThirdBorisKick
+end subroutine ThirdBorisKickWithVarTs
 !#########################################################################
 !#########################################################################
 !#########################################################################
