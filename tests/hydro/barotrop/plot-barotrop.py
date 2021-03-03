@@ -53,7 +53,7 @@ ax[2].set_ylim(1,max(T)*10)
 
 #analytical solution
 
-fig.savefig('isothermal.pdf',bbox_inches='tight')
+fig.savefig('barotrop.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'isothermal', overwrite=False)
+visu_ramses.check_solution(data["data"],'barotrop', overwrite=True)
