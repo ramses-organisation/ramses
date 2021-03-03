@@ -108,6 +108,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NENER>0
   integer::irad
 #endif
+   real(dp)::barotrop1D
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -317,15 +318,21 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(jeans_ncells>0)then
+     if(barotrop)then
         do i=1,nleaf
-           T2min(i) = nH(i)*polytropic_constant*scale_T2
-        end do
+           T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
+        enddo
      else
-        do i=1,nleaf
-           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
-        end do
-     endif
+        if(jeans_ncells>0)then
+           do i=1,nleaf
+              T2min(i) = nH(i)*polytropic_constant*scale_T2
+           end do
+        else
+           do i=1,nleaf
+              T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
+           end do
+        endif
+      endif
      !==========================================
      ! You can put your own polytrope EOS here
      !==========================================
@@ -542,7 +549,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      ! Update total fluid energy
-     if(isothermal)then
+     if(isothermal.or.barotrop)then
         do i=1,nleaf
            uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do

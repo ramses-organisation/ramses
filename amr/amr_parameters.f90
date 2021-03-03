@@ -177,6 +177,7 @@ module amr_parameters
   logical ::cooling=.false.
   logical ::neq_chem=.false.            ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.
+  logical ::barotrop=.false.            ! use an analytical barotropic EOS, implemented in cooling_fine
   logical ::metal=.false.
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
@@ -189,6 +190,12 @@ module amr_parameters
   logical ::sf_log_properties=.false.   ! Log in ascii files birth properties of stars and supernovae
   logical ::sf_imf=.false.              ! Activate IMF sampling for SN feedback when resolution allows it
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
+
+  ! barotropic eos parameters
+  real(dp)::barotrop_knee=1.0d0         ! knee-density for barotropic EOS
+  real(dp)::barotrop_slope=1.0d0        ! slope for barotropic EOS
+  real(dp)::barotrop_T=1.0d0            ! base temperature for barotropic EOS (K)
+  real(dp)::mu_gas=1.0d0                ! molecular weight
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1d0      ! Output expansion factors
