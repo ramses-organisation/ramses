@@ -516,7 +516,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  if((boris.and.hydro).and.constant_t_stop))then
+  if((boris.and.hydro).and.constant_t_stop)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
      call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
@@ -528,7 +528,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     if(.not.constant_t_stop.and.boris)then
       do j=1,np
         tss(j)=rd/(dgr(j)*&
-        sqrt(1.0+0.2208932334555323*gamma*&
+        sqrt(1.0+0.2209*gamma*&
         ((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2)))
       end do
     endif
@@ -707,4 +707,4 @@ subroutine FirstAndSecondBorisKickWithVarTs(nn,dt,ctm,tss,b,u,v)
   end do
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
 
-end subroutine FirstAndSecondBorisKick
+end subroutine FirstAndSecondBorisKickWithVarTs

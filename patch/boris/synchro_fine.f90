@@ -571,7 +571,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      if(.not.constant_t_stop.and.boris)then
        do j=1,np
          tss(j)=rd/(dgr(j)*&
-         sqrt(1.0+0.2208932334555323*gamma*&
+         sqrt(1.0+0.2209*gamma*&
          ((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2)))
        end do
      endif
