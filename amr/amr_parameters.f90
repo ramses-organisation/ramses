@@ -171,6 +171,7 @@ module amr_parameters
   real(dp)::t_stop=0.0               ! Stopping time for dust grains
   real(dp)::grain_size=0.0           ! Grain size parameter rho_d^i r_d/(rho_g l_0). May wan to get rid of t_stop.
   logical::boris=.false.             ! Activate boris pusher for PIC solver for grain dynamics
+  logical::constant_t_stop=.false.    ! Dictates whether stopping time is constant t_stop, or uses grain_size, gas density, velocity, etc.
 
 
   logical ::self_shielding=.false.
