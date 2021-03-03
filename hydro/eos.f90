@@ -113,17 +113,11 @@ function barotrop1D(rhon)
 
    ! Implement analytical EOS here
    ! rhon is the density in g/cm3
-   nH = rhon/scale_d * scale_nH
-   if(nH<n_star)then
+   !nH = rhon/scale_d * scale_nH
+   if(rhon<barotrop_knee)then
       barotrop1D = mu_gas * T2_star
    else
       barotrop1D = mu_gas * T2_star * (rhon/barotrop_knee)**(barotrop_slope-1.0d0)
    endif
-
-   !if(rhon<barotrop_knee)then
-   !   barotrop1D = barotrop_T
-   !else
-   !   barotrop1D = barotrop_T * (rhon/barotrop_knee)**(barotrop_slope-1.0d0)
-   !endif
 
 end function barotrop1D

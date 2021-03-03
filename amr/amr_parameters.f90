@@ -192,9 +192,8 @@ module amr_parameters
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
 
   ! barotropic eos parameters
-  real(dp)::barotrop_knee=1.0d0         ! knee-density for barotropic EOS
+  real(dp)::barotrop_knee=1.0d50         ! knee-density for barotropic EOS
   real(dp)::barotrop_slope=1.0d0        ! slope for barotropic EOS
-  real(dp)::barotrop_T=1.0d0            ! base temperature for barotropic EOS (K)
   real(dp)::mu_gas=1.0d0                ! molecular weight
 
   ! Output times

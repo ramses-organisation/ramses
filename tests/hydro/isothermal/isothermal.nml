@@ -41,7 +41,7 @@ p_region=2.418894075235192,24188.94075235192
 /
 
 &OUTPUT_PARAMS
-tend=0.00045
+tend=0.00049
 /
 
 &UNITS_PARAMS
@@ -64,12 +64,12 @@ units_length=3.0857d18
 &COOLING_PARAMS
 isothermal=.true.
 barotrop=.true.
+barotrop_knee=1d50
+mu_gas=2.37
 !barotrop_knee=6644829.213565784 ! c.u.
 !barotrop_slope=1.666667
-!barotrop_T=10
 /
+
 &SF_PARAMS
-T2_star=4.2194
-mu_gas=2.37
-n_star=1d20
+T2_star=4.2194 !can't remove this:(
 /
