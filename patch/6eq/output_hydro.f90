@@ -104,14 +104,14 @@ subroutine backup_hydro(filename, filename_desc)
               do imat = 1,nmat
                  ivar = nmat+imat
                  do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,imat),smallf)
+                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,imat)
                  end do
                  write(field_name, '("true_dens_", i0.2)') imat
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
               do ivar = 2*nmat+1, 2*nmat+ndim
                 do i = 1, ncache
-                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(dtot(i),smallr)
+                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/dtot(i)
                 end do
                 field_name = 'velocity_' // dim_keys(ivar - 1)
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -131,19 +131,19 @@ subroutine backup_hydro(filename, filename_desc)
               do imat = 1,nmat
                 do i = 1, ncache
                   ff(i,imat)   = uold(ind_grid(i)+iskip,imat)
-                  gg(i,imat)   = uold(ind_grid(i)+iskip,imat+nmat)/max(ff(i,imat),smallf)
+                  gg(i,imat)   = uold(ind_grid(i)+iskip,imat+nmat)/ff(i,imat)
                   ekin=0.0
                   do idim=1,ndim
-                    qq(i,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/max(dtot(i),smallr)
+                    qq(i,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot(i)
                     ekin       = ekin + 0.5d0*qq(i,idim)**2
                   end do
-                  erad=00
+                  erad=0.0
 #if NENER > 0
                   do irad = 1,nener
                     erad       = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
                   end do
 #endif
-                  qq(i,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/max(ff(i,imat),smallf) - gg(i,imat)*ekin - erad
+                  qq(i,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/ff(i,imat) - gg(i,imat)*ekin - erad
                 end do
               end do
 
