@@ -538,7 +538,7 @@ subroutine pressure_relaxation2(ilevel)
   real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
   real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::t123,t124,t125,t134,t135,t145
-  real(dp)::t234,t234,t245,t345
+  real(dp)::t234,t235,t245,t345
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter

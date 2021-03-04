@@ -8,6 +8,7 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
   use hydro_parameters
   use const
   implicit none
+  integer::imat
   integer::ncell
   logical::inv
   real(dp),dimension(1:nvector)::d,e,p,c
@@ -22,7 +23,7 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
   !   c is the sound speed of each fluid 
   !   e is the internal energy of each fluid   
   !   p is the pressure of each fluid
-  integer::k,imat
+  integer::k
   real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta
   real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   do k=1,ncell
@@ -79,7 +80,6 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
         ! c**2 = P_c' + smallgamma/rho * (P-P_c)
         c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
         c(k) = sqrt(max(c(k),smallc**2))
-
       else if(inv .eqv. .true.)then ! Corresponds to the old eosinv routine
         e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
         ! write(*,*) p(k), e(k), imat, d(k), smallgamma, e_c, p_c, k, ncell

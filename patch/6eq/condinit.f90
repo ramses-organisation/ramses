@@ -139,9 +139,9 @@ subroutine condinit(x,u,dx,nn)
     end do
     call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn) 
     do k=1,nn
-      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin(k)                    ! E_k
-      u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                     ! E_k * f_k 
-      dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                          ! d_tot
+      etot_mat              = eint_mat(k) + g(k,imat)*ekin(k)                    ! E_k
+      u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                 ! E_k * f_k 
+      dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                      ! d_tot
     end do
   end do 
 
@@ -159,5 +159,5 @@ subroutine condinit(x,u,dx,nn)
 #if NDIM>2
   u(1:nn,2*nmat+ndim) = dtot(1:nn)*q(1:nn,ndim)
 #endif
-
+  
 end subroutine condinit
