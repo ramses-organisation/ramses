@@ -74,7 +74,7 @@ module amr_parameters
   logical::unbind=.false.     ! Enable particle unbinding for the clump finder
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
-  
+
   ! Mesh parameters
   integer::nx=1,ny=1,nz=1                  ! Number of coarse cells in each dimension
   integer::levelmin=1                      ! Full refinement up to levelmin
@@ -100,7 +100,7 @@ module amr_parameters
   integer::ncontrol=1            ! Write control variables
   integer::nremap=0              ! Load balancing frequency (0: never)
   integer,allocatable,dimension(:)::remap_pscalar
-  
+
   ! Output parameters
   integer::iout=1                ! Increment for output times
   integer::ifout=1               ! Increment for output files
@@ -169,8 +169,11 @@ module amr_parameters
   integer::strict_equilibrium=0      ! Hydro scheme to preserve exactly hydrostatic equilibrium
   real(dp)::charge_to_mass=0.0       ! Charge to mass ratio for dust grains
   real(dp)::t_stop=0.0               ! Stopping time for dust grains
+  real(dp)::grain_size=0.0           ! Grain size parameter rho_d^i r_d/(rho_g l_0). May wan to get rid of t_stop.
   logical::boris=.false.             ! Activate boris pusher for PIC solver for grain dynamics
-  
+  logical::constant_t_stop=.false.    ! Dictates whether stopping time is constant t_stop, or uses grain_size, gas density, velocity, etc.
+
+
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
