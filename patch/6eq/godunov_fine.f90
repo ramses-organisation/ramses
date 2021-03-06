@@ -535,6 +535,7 @@ subroutine pressure_relaxation2(ilevel)
   real(dp),dimension(1:nmat),save::ff_new,ee_new,w
   real(dp),dimension(1:ndim),save::vv
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
+  real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
   real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::t123,t124,t125,t134,t135,t145
@@ -610,14 +611,37 @@ subroutine pressure_relaxation2(ilevel)
                  ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
               end do
         
-              ! Mie-Gruneisen
+              
               ptot = 0.0
               do imat = 1,nmat
-                 smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
-                 eta = gg(imat)/rho_0
-                 p_c = p_0 * eta**biggamma
-                 e_c = p_c / (biggamma-one)
-                 delpc = biggamma * p_c 
+                ! Mie-Gruneisen
+                if(eos_name == 'mie-grueneisen')then
+                  smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+
+                  eta = gg(imat)/rho_0
+                  p_c = p_0 * eta**biggamma
+                  e_c = p_c / (biggamma-one)
+                  delpc = biggamma * p_c 
+
+                ! Cochran-Chan
+                else if(eos_name == 'cochran-chan')then
+                  smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+                  E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+                  A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+                  C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+                     
+                  ! Define the Cochran-Chan constant term
+                  E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+                         
+                  ! Update Mie-Gruneisen terms for each material
+                  eta   = gg(imat)/rho_0
+                  p_c_1 = A_1 * eta**E_1
+                  p_c_2 = A_2 * eta**E_2
+                  p_c   = p_c_1 - p_c_2
+                  e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
+                  delpc = p_c_1 * E_1 - p_c_2 * E_2
+                end if
+                
                  pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
                  rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
                  ptot = ptot + ff(imat)*pp(imat)
