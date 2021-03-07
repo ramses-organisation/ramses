@@ -2,7 +2,6 @@
 !###########################################################
 !###########################################################
 !###########################################################
-
 subroutine eos(d,e,p,c,imat,inv,ncell)
   use amr_parameters
   use hydro_parameters
@@ -91,7 +90,6 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
     end if
   end do
 end subroutine eos
-
 !###########################################################
 !###########################################################
 !###########################################################
@@ -138,14 +136,14 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   do idim = 1,ndim
      do k = 1,ncell
         qq(k,idim) = uu(k,2*nmat+idim)/dtot(k)
-        ekin(k)    = ekin(k) + half*qq(k,idim)**2 ! This is 0.5 * u^2, hence same for all nmat
+        ekin(k)    = ekin(k) + half*qq(k,idim)**2
      end do
   end do
   
   ! Compute partial internal energies
   do imat=1,nmat
     do k = 1,ncell
-       qq(k,ndim+nmat+imat) = uu(k,2*nmat+ndim+imat) - gg(k,imat)*ekin(k)
+       qq(k,ndim+nmat+imat) = uu(k,2*nmat+ndim+imat)/ff(k,imat) - gg(k,imat)*ekin(k)
     end do
   end do
   
@@ -157,31 +155,19 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
       gg_mat(k) = gg(k,imat)
       ee_mat(k) = qq(k,ndim+nmat+imat)
     end do
+    ! Call eos routine
     call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ncell)
     do k=1,ncell
-      ! Call eos routine
-      cc(k) = cc(k) + ff(k,imat)*gg(k,imat)/dtot(k) * cc_mat(k) 
+      cc(k) = cc(k) + ff(k,imat)*gg(k,imat) * cc_mat(k)**2 
     end do 
   end do
-  ! Convert c^2 to c 
-  cc(1:ncell)=sqrt(cc(1:ncell))
+  ! Convert rho c^2 to c 
+  cc(1:ncell)=sqrt(cc(1:ncell)/dtot(1:ncell))
 
   ! Compute wave speed
-  if(geom==3)then
-     do k = 1,ncell
-        eps = dx/two/rr(k)
-        cc(k) = (abs(qq(k,1))+cc(k))*(one+eps)**2/(one+third*eps**2)
-     end do
-  else if(geom==2)then
-     do k = 1,ncell
-        eps = dx/two/rr(k)
-        cc(k) = (abs(qq(k,1))+cc(k))*(one+eps)
-     end do
-  else
-     do k = 1,ncell
-        cc(k) = abs(qq(k,1))+cc(k)
-     end do
-  endif
+  do k = 1,ncell
+     cc(k) = abs(qq(k,1))+cc(k)
+  end do
   do idim = 2,ndim
      do k = 1,ncell 
         cc(k) = cc(k) + abs(qq(k,idim))+cc(k)
@@ -256,48 +242,16 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
      end do
   end do
      
-  ! Detect embedded body
-  if(static)then
-     do k=1,ncell
-        bg(k)=fg(k,1)>0.01
-        bm(k)=fm(k,1)>0.01
-        bd(k)=fd(k,1)>0.01
-     end do
-     do k=1,ncell
-        if(bm(k))then
-           fg(k,1:nmat)=fm(k,1:nmat)
-           gg(k,1:nmat)=gm(k,1:nmat)
-           ug(k,1:nvar)=um(k,1:nvar)
-           fd(k,1:nmat)=fm(k,1:nmat)
-           gd(k,1:nmat)=gm(k,1:nmat)
-           ud(k,1:nvar)=um(k,1:nvar)
-        else
-           if(bg(k))then
-              fg(k,1:nmat)=fm(k,1:nmat)
-              gg(k,1:nmat)=gm(k,1:nmat)
-              ug(k,1:nvar)=um(k,1:nvar)
-              ug(k,current_dim+1)=-um(k,current_dim+1)
-           endif
-           if(bd(k))then
-              fd(k,1:nmat)=fm(k,1:nmat)
-              gd(k,1:nmat)=gm(k,1:nmat)
-              ud(k,1:nvar)=um(k,1:nvar)
-              ud(k,current_dim+1)=-um(k,current_dim+1)
-           endif
-        endif
-     enddo
-  endif
-
   ! Compute total density
   dtotg(1:ncell)=0.0
   dtotm(1:ncell)=0.0
   dtotd(1:ncell)=0.0
   do imat=1,nmat
-    do k = 1,ncell
-      dtotg(k) = dtotg(k) + ug(k,nmat+imat)
-      dtotm(k) = dtotm(k) + um(k,nmat+imat)
-      dtotd(k) = dtotd(k) + ud(k,nmat+imat)
-    end do
+     do k = 1,ncell
+        dtotg(k) = dtotg(k) + ug(k,nmat+imat)
+        dtotm(k) = dtotm(k) + um(k,nmat+imat)
+        dtotd(k) = dtotd(k) + ud(k,nmat+imat)
+     end do
   end do
   
   ! Compute velocity and specific kinetic energy
@@ -306,9 +260,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   ekind(1:ncell)=0.0
   do idim = 1,ndim
      do k = 1,ncell
-        qg(k,idim) = ug(k,2*nmat+idim+1)/dtotg(k)
-        qm(k,idim) = um(k,2*nmat+idim+1)/dtotm(k)
-        qd(k,idim) = ud(k,2*nmat+idim+1)/dtotd(k)
+        qg(k,idim) = ug(k,2*nmat+idim)/dtotg(k)
+        qm(k,idim) = um(k,2*nmat+idim)/dtotm(k)
+        qd(k,idim) = ud(k,2*nmat+idim)/dtotd(k)
         eking(k) = eking(k) + half*qg(k,idim)**2
         ekinm(k) = ekinm(k) + half*qm(k,idim)**2
         ekind(k) = ekind(k) + half*qd(k,idim)**2
@@ -317,11 +271,11 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   
   ! Compute total internal energy
   do imat=1,nmat
-    do k = 1,ncell
-     qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/ug(k,imat) - gg(k,imat)*eking(k)
-     qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/um(k,imat) - gm(k,imat)*ekinm(k)
-     qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/ud(k,imat) - gd(k,imat)*ekind(k)
-    end do
+     do k = 1,ncell
+        qg(k,ndim+nmat+imat) = ug(k,2*nmat+ndim+imat)/ug(k,imat) - gg(k,imat)*eking(k)
+        qm(k,ndim+nmat+imat) = um(k,2*nmat+ndim+imat)/um(k,imat) - gm(k,imat)*ekinm(k)
+        qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/ud(k,imat) - gd(k,imat)*ekind(k)
+     end do
   end do
   
   ! Call eos routine to calculate the total pressure and the total speed of sound
@@ -329,31 +283,34 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   pg(1:ncell)=0
   pm(1:ncell)=0
   pd(1:ncell)=0
+  cg(1:ncell)=0
+  cm(1:ncell)=0
+  cd(1:ncell)=0
   do imat=1,nmat
-    do k=1,ncell
-      gg_mat(k) = gg(k,imat)
-      gm_mat(k) = gm(k,imat)
-      gd_mat(k) = gd(k,imat)
-      eg_mat(k) = qg(k,ndim+nmat+imat)
-      em_mat(k) = qm(k,ndim+nmat+imat)
-      ed_mat(k) = qd(k,ndim+nmat+imat)
-    end do
-    call eos(gg_mat,eg_mat,pg,cg_mat,imat,inv,ncell)
-    call eos(gm_mat,em_mat,pm,cm_mat,imat,inv,ncell)
-    call eos(gd_mat,ed_mat,pd,cd_mat,imat,inv,ncell)
-    do k=1,ncell
-      pg(k) = pg(k)+ pg_mat(k) * fg(k,imat)
-      pm(k) = pm(k)+ pg_mat(k) * fm(k,imat)
-      pd(k) = pd(k)+ pg_mat(k) * fd(k,imat)
-      cg(k) = cg(k) + (fg(k,imat)*gg(k,imat)/qg(k,1)) * cg_mat(k)
-      cm(k) = cm(k) + (fm(k,imat)*gm(k,imat)/qm(k,1)) * cm_mat(k)
-      cd(k) = cd(k) + (fd(k,imat)*gd(k,imat)/qd(k,1)) * cd_mat(k)
-    end do 
+     do k=1,ncell
+        gg_mat(k) = gg(k,imat)
+        gm_mat(k) = gm(k,imat)
+        gd_mat(k) = gd(k,imat)
+        eg_mat(k) = qg(k,ndim+nmat+imat)
+        em_mat(k) = qm(k,ndim+nmat+imat)
+        ed_mat(k) = qd(k,ndim+nmat+imat)
+     end do
+     call eos(gg_mat,eg_mat,pg,cg_mat,imat,inv,ncell)
+     call eos(gm_mat,em_mat,pm,cm_mat,imat,inv,ncell)
+     call eos(gd_mat,ed_mat,pd,cd_mat,imat,inv,ncell)
+     do k=1,ncell
+        pg(k) = pg(k) + fg(k,imat) * pg_mat(k)
+        pm(k) = pm(k) + fm(k,imat) * pg_mat(k)
+        pd(k) = pd(k) + fd(k,imat) * pg_mat(k)
+        cg(k) = cg(k) + fg(k,imat) * gg(k,imat) * cg_mat(k)**2
+        cm(k) = cm(k) + fm(k,imat) * gm(k,imat) * cm_mat(k)**2
+        cd(k) = cd(k) + fd(k,imat) * gd(k,imat) * cd_mat(k)**2
+     end do
   end do
   ! Convert c^2 to c 
-  cg(1:ncell)=sqrt(cg(1:ncell))
-  cm(1:ncell)=sqrt(cm(1:ncell))
-  cd(1:ncell)=sqrt(cd(1:ncell))
+  cg(1:ncell)=sqrt(cg(1:ncell)/dtotg(1:ncell))
+  cm(1:ncell)=sqrt(cm(1:ncell)/dtotm(1:ncell))
+  cd(1:ncell)=sqrt(cd(1:ncell)/dtotd(1:ncell))
 
   ! Compute errors
   if(err_grad_d >= 0.)then
@@ -365,7 +322,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ok(k) = ok(k) .or. error > err_grad_d
      end do
   end if
-
+  
   if(err_grad_f >= 0.)then
      do imat=1,nmat
         do k=1,ncell
@@ -377,7 +334,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         end do
      end do
   end if
-
+  
   if(err_grad_p > -1.0)then
      do k=1,ncell
         ppg=pg(k); ppm=pm(k); ppd=pd(k)
@@ -387,12 +344,12 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ok(k) = ok(k) .or. error > err_grad_p
      end do
   end if
-
+  
   if(err_grad_u >= 0.)then
      do idim = 1,ndim
         do k=1,ncell
-           vvg=qg(k,idim+1); vvm=qm(k,idim+1); vvd=qd(k,idim+1)
-           ccg=cg(k)       ; ccm=cm(k)       ; ccd=cd(k)
+           vvg=qg(k,idim); vvm=qm(k,idim); vvd=qd(k,idim)
+           ccg=cg(k)     ; ccm=cm(k)     ; ccd=cd(k)
            error=2.0d0*MAX( &
                 & ABS((vvd-vvm)/(ccd+ccm+ABS(vvd)+ABS(vvm)+floor_u)) , &
                 & ABS((vvm-vvg)/(ccm+ccg+ABS(vvm)+ABS(vvg)+floor_u)) )
@@ -400,21 +357,6 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         end do
      end do
   end if
-
-!!$  if(static)then
-!!$     do k=1,ncell
-!!$        if(wg(k).or.wd(k))then
-!!$           ddg=abs(qg(k,1)); ddm=abs(qm(k,1)); ddd=abs(qd(k,1))
-!!$           error=2.0d0*MAX( &
-!!$                & ABS((ddd-ddm)/(ddd+ddm+floor_d)) , &
-!!$                & ABS((ddm-ddg)/(ddm+ddg+floor_d)) )
-!!$           write(*,*)wg(k),wd(k)
-!!$           write(*,*)bg(k),bd(k)           
-!!$           write(*,*)ddg,ddm,ddd
-!!$           write(*,*)error,ok(k)
-!!$        endif
-!!$     end do
-!!$  endif
 
 end subroutine hydro_refine
 !###########################################################
