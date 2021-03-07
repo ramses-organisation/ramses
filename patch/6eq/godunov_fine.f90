@@ -614,39 +614,39 @@ subroutine pressure_relaxation2(ilevel)
               
               ptot = 0.0
               do imat = 1,nmat
-                ! Mie-Gruneisen
-                if(eos_name == 'mie-grueneisen')then
-                  smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
 
-                  eta = gg(imat)/rho_0
-                  p_c = p_0 * eta**biggamma
-                  e_c = p_c / (biggamma-one)
-                  delpc = biggamma * p_c 
-
-                ! Cochran-Chan
-                else if(eos_name == 'cochran-chan')then
-                  smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
-                  E_1=eos_params(imat,3);E_2=eos_params(imat,4)
-                  A_1=eos_params(imat,5);A_2=eos_params(imat,6)
-                  C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-                     
-                  ! Define the Cochran-Chan constant term
-                  E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-                         
-                  ! Update Mie-Gruneisen terms for each material
-                  eta   = gg(imat)/rho_0
-                  p_c_1 = A_1 * eta**E_1
-                  p_c_2 = A_2 * eta**E_2
-                  p_c   = p_c_1 - p_c_2
-                  e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
-                  delpc = p_c_1 * E_1 - p_c_2 * E_2
-                end if
-                
+                 ! Mie-Gruneisen
+                 if(eos_name == 'mie-grueneisen')then
+                    smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+                    eta = gg(imat)/rho_0
+                    p_c = p_0 * eta**biggamma
+                    e_c = p_c / (biggamma-one)
+                    delpc = biggamma * p_c 
+                    
+                 ! Cochran-Chan
+                 else if(eos_name == 'cochran-chan')then
+                    smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+                    E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+                    A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+                    C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+                    
+                    ! Define the Cochran-Chan constant term
+                    E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+                    
+                    ! Update Mie-Gruneisen terms for each material
+                    eta   = gg(imat)/rho_0
+                    p_c_1 = A_1 * eta**E_1
+                    p_c_2 = A_2 * eta**E_2
+                    p_c   = p_c_1 - p_c_2
+                    e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
+                    delpc = p_c_1 * E_1 - p_c_2 * E_2
+                 end if
+                 
                  pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
                  rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
                  ptot = ptot + ff(imat)*pp(imat)
               end do
-
+              
               do imat = 1,nmat
                  smallgamma = eos_params(imat,1)
                  rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
