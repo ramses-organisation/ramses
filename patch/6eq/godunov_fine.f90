@@ -544,7 +544,7 @@ subroutine pressure_relaxation2(ilevel)
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter
-  integer::iter_max=10,iter_mean
+  integer::iter_max=100,iter_mean
   logical::inv
 
   dx=0.5d0**ilevel
