@@ -10,6 +10,9 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -222,7 +225,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Remove gravity source term with half time step and old force
      if(hydro)then
-        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
      endif
 
      ! Compute gravitational potential
@@ -255,7 +258,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
 
         ! Add gravity source term with half time step and new force
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -284,6 +287,15 @@ recursive subroutine amr_step(ilevel,icount)
   ! Update photon packages according to star particles
                                call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
+#endif
+
+#if USE_TURB==1
+  ! Compute turbulent forcing
+                               call timer('turb','start')
+  if (turb .and. turb_type/=3) then
+     ! Calculate turbulent acceleration on each cell in this level
+     call calc_turb_forcing(ilevel)
+  end if
 #endif
 
   !----------------------
@@ -382,7 +394,16 @@ recursive subroutine amr_step(ilevel,icount)
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
                                call timer('poisson','start')
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+
+#if USE_TURB==1
+     ! Compute turbulent forcing
+                               call timer('turb','start')
+     if (turb .AND. turb_type/=3) then
+        ! Euler step, adding turbulent acceleration
+        call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
+     end if
+#endif
 
      ! Restriction operator
                                call timer('hydro upload fine','start')
