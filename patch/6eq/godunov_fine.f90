@@ -534,15 +534,18 @@ subroutine pressure_relaxation2(ilevel)
   real(dp),dimension(1:nmat),save::ff,gg,ee,pp,rc2
   real(dp),dimension(1:nmat),save::ff_new,ee_new,w
   real(dp),dimension(1:ndim),save::vv
+  real(dp)::error
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
+  real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
   real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::t123,t124,t125,t134,t135,t145
-  real(dp)::t234,t234,t245,t345
+  real(dp)::t234,t235,t245,t345
   real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter
-  logical::error,inv
+  integer::iter_max=100,iter_mean
+  logical::inv
 
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
@@ -597,121 +600,151 @@ subroutine pressure_relaxation2(ilevel)
                  ekin = ekin + half*vv(idim)**2
               end do
 
-              do iter=1,10
+              iter = 0
+              error = 1
+              do while(error.GT.1d-6.AND.iter<iter_max)
               
-              ! Compute volume fraction and true density
-              do imat = 1,nmat
-                 ff(imat) = uold(ind_cell(i),imat)
-                 gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
-              end do
-
-              ! Compute specific internal energy
-              do imat = 1,nmat
-                 ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
-              end do
-        
-              ! Mie-Gruneisen
-              ptot = 0.0
-              do imat = 1,nmat
-                 smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
-                 eta = gg(imat)/rho_0
-                 p_c = p_0 * eta**biggamma
-                 e_c = p_c / (biggamma-one)
-                 delpc = biggamma * p_c 
-                 pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
-                 rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
-                 ptot = ptot + ff(imat)*pp(imat)
-              end do
-
-              do imat = 1,nmat
-                 smallgamma = eos_params(imat,1)
-                 rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
-              end do
-
-              ! Compute weights
-              do imat = 1,nmat
-                 w(imat) = rc2(imat)/ff(imat)
-              end do
-
-              ! Compute new volume fraction
+                 ! Compute volume fraction and true density
+                 do imat = 1,nmat
+                    ff(imat) = uold(ind_cell(i),imat)
+                    gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
+                 end do
+                 
+                 ! Compute specific internal energy
+                 do imat = 1,nmat
+                    ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
+                 end do
+                                  
+                 ptot = 0.0
+                 do imat = 1,nmat
+                    
+                    ! Mie-Gruneisen
+                    if(eos_name == 'mie-grueneisen')then
+                       smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+                       eta = gg(imat)/rho_0
+                       p_c = p_0 * eta**biggamma
+                       e_c = p_c / (biggamma-one)
+                       delpc = biggamma * p_c 
+                       
+                       ! Cochran-Chan
+                    else if(eos_name == 'cochran-chan')then
+                       smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+                       E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+                       A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+                       C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+                       
+                       ! Define the Cochran-Chan constant term
+                       E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+                       
+                       ! Update Mie-Gruneisen terms for each material
+                       eta   = gg(imat)/rho_0
+                       p_c_1 = A_1 * eta**E_1
+                       p_c_2 = A_2 * eta**E_2
+                       p_c   = p_c_1 - p_c_2
+                       e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
+                       delpc = p_c_1 * E_1 - p_c_2 * E_2
+                    end if
+                    
+                    pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
+                    rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
+                    ptot = ptot + ff(imat)*pp(imat)
+                    
+                 end do
+              
+                 do imat = 1,nmat
+                    smallgamma = eos_params(imat,1)
+                    rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
+                 end do
+                 
+                 ! Compute weights
+                 do imat = 1,nmat
+                    w(imat) = rc2(imat)/ff(imat)
+                 end do
+                 
+                 ! Compute new volume fraction
 #if NMAT==2
-              dd=w(1)+w(2)
-              
-              ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
-              ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
+                 dd=w(1)+w(2)
+                 
+                 ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
+                 ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
 #endif
 #if NMAT==3
-              dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
-              
-              ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
-              ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
+                 dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
+                 
+                 ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
+                 ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
 #endif
 #if NMAT==4
-              t12=w(1)*w(2)
-              t13=w(1)*w(3)
-              t14=w(1)*w(4)
-              t23=w(2)*w(3)
-              t24=w(2)*w(4)
-              t34=w(3)*w(4)
-              dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
-              
-              ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
-                   &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
-              ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
-                   &                     (t13-t14)*(pp(3)-pp(4))+      (t34-t14)*(pp(3)-pp(1))+      (t34-t13)*(pp(4)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((t14+t24+2*t12)*(pp(3)-pp(4))+(t14+2*t24+t12)*(pp(3)-pp(1))+(2*t14+t24+t12)*(pp(3)-pp(2))+ &
-                   &                     (t24-t12)*(pp(4)-pp(1))+      (t14-t12)*(pp(4)-pp(2))+      (t14-t24)*(pp(1)-pp(2)))/dd
-              ff_new(4) = ff(4) + ((t12+t13+2*t23)*(pp(4)-pp(1))+(t12+2*t13+t23)*(pp(4)-pp(2))+(2*t12+t13+t23)*(pp(4)-pp(3))+ &
-                   &                     (t13-t23)*(pp(1)-pp(2))+      (t12-t23)*(pp(1)-pp(3))+      (t12-t13)*(pp(2)-pp(3)))/dd
+                 t12=w(1)*w(2)
+                 t13=w(1)*w(3)
+                 t14=w(1)*w(4)
+                 t23=w(2)*w(3)
+                 t24=w(2)*w(4)
+                 t34=w(3)*w(4)
+                 dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
+                 
+                 ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
+                      &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
+                 ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
+                      &                     (t13-t14)*(pp(3)-pp(4))+      (t34-t14)*(pp(3)-pp(1))+      (t34-t13)*(pp(4)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((t14+t24+2*t12)*(pp(3)-pp(4))+(t14+2*t24+t12)*(pp(3)-pp(1))+(2*t14+t24+t12)*(pp(3)-pp(2))+ &
+                      &                     (t24-t12)*(pp(4)-pp(1))+      (t14-t12)*(pp(4)-pp(2))+      (t14-t24)*(pp(1)-pp(2)))/dd
+                 ff_new(4) = ff(4) + ((t12+t13+2*t23)*(pp(4)-pp(1))+(t12+2*t13+t23)*(pp(4)-pp(2))+(2*t12+t13+t23)*(pp(4)-pp(3))+ &
+                      &                     (t13-t23)*(pp(1)-pp(2))+      (t12-t23)*(pp(1)-pp(3))+      (t12-t13)*(pp(2)-pp(3)))/dd
 #endif
 #if NMAT==5
-              t123=w(1)*w(2)*w(3)
-              t124=w(1)*w(2)*w(4)
-              t125=w(1)*w(2)*w(5)
-              t134=w(1)*w(3)*w(4)
-              t135=w(1)*w(3)*w(5)
-              t145=w(1)*w(4)*w(5)
-              t234=w(2)*w(3)*w(4)
-              t235=w(2)*w(3)*w(5)
-              t245=w(2)*w(4)*w(5)
-              t345=w(3)*w(4)*w(5)
-              dd=5*w(1)*w(2)*w(3)*w(4)+5*w(1)*w(2)*w(3)*w(5)+5*w(1)*w(2)*w(4)*w(5)+5*w(1)*w(3)*w(4)*w(5)+5*w(2)*w(3)*w(4)*w(5)
-              
-              ff_new(1) = ff(1) + ((t234+t235+t245+2*t345)*(pp(1)-pp(2))+(t234+t235+2*t245+t345)*(pp(1)-pp(3))+(t234+2*t235+t245+t345)*(pp(1)-pp(4))+(2*t234+t235+t245+t345)*(pp(1)-pp(5))+ &
-                   &                           (t245-t345)*(pp(2)-pp(3))+            (t235-t345)*(pp(2)-pp(4))+            (t234-t345)*(pp(2)-pp(5))+ &
-                   &                           (t235-t245)*(pp(3)-pp(4))+            (t234-t245)*(pp(3)-pp(5))+            (t234-t235)*(pp(4)-pp(5)))/dd
-              ff_new(2) = ff(2) + ((t345+t134+t135+2*t145)*(pp(2)-pp(3))+(t345+t134+2*t135+t145)*(pp(2)-pp(4))+(t345+2*t134+t135+t145)*(pp(2)-pp(5))+(2*t345+t134+t135+t145)*(pp(2)-pp(1))+ &
-                   &                           (t135-t145)*(pp(3)-pp(4))+            (t134-t145)*(pp(3)-pp(5))+            (t345-t145)*(pp(3)-pp(1))+ &
-                   &                           (t134-t135)*(pp(4)-pp(5))+            (t345-t135)*(pp(4)-pp(1))+            (t345-t134)*(pp(5)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((t145+t245+t124+2*t125)*(pp(3)-pp(4))+(t145+t245+2*t124+t125)*(pp(3)-pp(5))+(t145+2*t245+t124+t125)*(pp(3)-pp(1))+(2*t145+t245+t124+t125)*(pp(3)-pp(2))+ &
-                   &                           (t124-t125)*(pp(4)-pp(5))+            (t245-t125)*(pp(4)-pp(1))+            (t145-t125)*(pp(4)-pp(2))+ &
-                   &                           (t245-t124)*(pp(5)-pp(1))+            (t145-t124)*(pp(5)-pp(2))+            (t145-t245)*(pp(1)-pp(2)))/dd
-              ff_new(4) = ff(4) + ((t125+t135+t235+2*t123)*(pp(4)-pp(5))+(t125+t135+2*t235+t123)*(pp(4)-pp(1))+(t125+2*t135+t235+t123)*(pp(4)-pp(2))+(2*t125+t135+t235+t123)*(pp(4)-pp(3))+ &
-                   &                           (t235-t123)*(pp(5)-pp(1))+            (t135-t123)*(pp(5)-pp(2))+            (t125-t123)*(pp(5)-pp(3))+ &
-                   &                           (t135-t235)*(pp(1)-pp(2))+            (t125-t235)*(pp(1)-pp(3))+            (t125-t135)*(pp(2)-pp(3)))/dd
-              ff_new(5) = ff(5) + ((t123+t124+t134+2*t234)*(pp(5)-pp(1))+(t123+t124+2*t134+t234)*(pp(5)-pp(2))+(t123+2*t124+t134+t234)*(pp(5)-pp(3))+(2*t123+t124+t134+t234)*(pp(5)-pp(4))+ &
-                   &                           (t134-t234)*(pp(1)-pp(5))+            (t124-t234)*(pp(1)-pp(3))+            (t123-t234)*(pp(1)-pp(4))+ &
-                   &                           (t124-t134)*(pp(2)-pp(3))+            (t123-t134)*(pp(2)-pp(4))+            (t123-t124)*(pp(3)-pp(4)))/dd
+                 t123=w(1)*w(2)*w(3)
+                 t124=w(1)*w(2)*w(4)
+                 t125=w(1)*w(2)*w(5)
+                 t134=w(1)*w(3)*w(4)
+                 t135=w(1)*w(3)*w(5)
+                 t145=w(1)*w(4)*w(5)
+                 t234=w(2)*w(3)*w(4)
+                 t235=w(2)*w(3)*w(5)
+                 t245=w(2)*w(4)*w(5)
+                 t345=w(3)*w(4)*w(5)
+                 dd=5*w(1)*w(2)*w(3)*w(4)+5*w(1)*w(2)*w(3)*w(5)+5*w(1)*w(2)*w(4)*w(5)+5*w(1)*w(3)*w(4)*w(5)+5*w(2)*w(3)*w(4)*w(5)
+                 
+                 ff_new(1) = ff(1) + ((t234+t235+t245+2*t345)*(pp(1)-pp(2))+(t234+t235+2*t245+t345)*(pp(1)-pp(3))+(t234+2*t235+t245+t345)*(pp(1)-pp(4))+(2*t234+t235+t245+t345)*(pp(1)-pp(5))+ &
+                      &                           (t245-t345)*(pp(2)-pp(3))+            (t235-t345)*(pp(2)-pp(4))+            (t234-t345)*(pp(2)-pp(5))+ &
+                      &                           (t235-t245)*(pp(3)-pp(4))+            (t234-t245)*(pp(3)-pp(5))+            (t234-t235)*(pp(4)-pp(5)))/dd
+                 ff_new(2) = ff(2) + ((t345+t134+t135+2*t145)*(pp(2)-pp(3))+(t345+t134+2*t135+t145)*(pp(2)-pp(4))+(t345+2*t134+t135+t145)*(pp(2)-pp(5))+(2*t345+t134+t135+t145)*(pp(2)-pp(1))+ &
+                      &                           (t135-t145)*(pp(3)-pp(4))+            (t134-t145)*(pp(3)-pp(5))+            (t345-t145)*(pp(3)-pp(1))+ &
+                      &                           (t134-t135)*(pp(4)-pp(5))+            (t345-t135)*(pp(4)-pp(1))+            (t345-t134)*(pp(5)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((t145+t245+t124+2*t125)*(pp(3)-pp(4))+(t145+t245+2*t124+t125)*(pp(3)-pp(5))+(t145+2*t245+t124+t125)*(pp(3)-pp(1))+(2*t145+t245+t124+t125)*(pp(3)-pp(2))+ &
+                      &                           (t124-t125)*(pp(4)-pp(5))+            (t245-t125)*(pp(4)-pp(1))+            (t145-t125)*(pp(4)-pp(2))+ &
+                      &                           (t245-t124)*(pp(5)-pp(1))+            (t145-t124)*(pp(5)-pp(2))+            (t145-t245)*(pp(1)-pp(2)))/dd
+                 ff_new(4) = ff(4) + ((t125+t135+t235+2*t123)*(pp(4)-pp(5))+(t125+t135+2*t235+t123)*(pp(4)-pp(1))+(t125+2*t135+t235+t123)*(pp(4)-pp(2))+(2*t125+t135+t235+t123)*(pp(4)-pp(3))+ &
+                      &                           (t235-t123)*(pp(5)-pp(1))+            (t135-t123)*(pp(5)-pp(2))+            (t125-t123)*(pp(5)-pp(3))+ &
+                      &                           (t135-t235)*(pp(1)-pp(2))+            (t125-t235)*(pp(1)-pp(3))+            (t125-t135)*(pp(2)-pp(3)))/dd
+                 ff_new(5) = ff(5) + ((t123+t124+t134+2*t234)*(pp(5)-pp(1))+(t123+t124+2*t134+t234)*(pp(5)-pp(2))+(t123+2*t124+t134+t234)*(pp(5)-pp(3))+(2*t123+t124+t134+t234)*(pp(5)-pp(4))+ &
+                      &                           (t134-t234)*(pp(1)-pp(5))+            (t124-t234)*(pp(1)-pp(3))+            (t123-t234)*(pp(1)-pp(4))+ &
+                      &                           (t124-t134)*(pp(2)-pp(3))+            (t123-t134)*(pp(2)-pp(4))+            (t123-t124)*(pp(3)-pp(4)))/dd
 #endif
-              ! Compute new specific internal energy
-              do imat = 1,nmat
-                 ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
-              end do
+                 ! Compute new specific internal energy
+                 do imat = 1,nmat
+                    ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
+                 end do
+                 
+                 ! Store new volume fraction
+                 do imat = 1,nmat
+                    uold(ind_cell(i),imat) = ff_new(imat)
+                 end do
+                 
+                 ! Store new partial total energy
+                 do imat=1,nmat
+                    uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
+                 end do
 
-              ! Store new volume fraction
-              do imat = 1,nmat
-                 uold(ind_cell(i),imat) = ff_new(imat)
+                 iter=iter+1
+                 error=abs(pp(1)-pp(2))/abs(pp(1)+pp(2))
+                 
               end do
-
-              ! Store new partial total energy
-              do imat=1,nmat
-                 uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
-              end do
-
-!              write(*,*)iter,ff(1),ff(2),pp(1),pp(2)
-
-              end do
+              
+              if(iter.EQ.iter_max)then
+                 write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),pp(1),pp(2),error
+              endif
               
            endif
         end do

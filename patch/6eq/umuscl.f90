@@ -213,7 +213,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
     ekin(1:ngrid)=0.0
     do idim = 1,ndim
       do l = 1,ngrid
-        ekin(l) = ekin(l) + half*q(l,i,j,k,idim)**2 ! This is 0.5*u^2 
+        ekin(l) = ekin(l) + half*q(l,i,j,k,idim)**2
       end do
     end do
      
