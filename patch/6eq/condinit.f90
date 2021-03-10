@@ -43,10 +43,8 @@ subroutine condinit(x,u,dx,nn)
   call region_condinit(x,q,f,g,dx,nn)
 #endif
 
-#if NDIM>1
-  id=1; iu=2; iv=3; iw=4; ip=npri; ip1=npri+1 ; ip2=npri+2
-
-  v0 = 0.2
+#if NDIM==2
+  iu=1; iv=2
 
   if (.not. read_flag) then
     ! Read Lane-Emden solutions into an array
@@ -69,46 +67,44 @@ subroutine condinit(x,u,dx,nn)
   
   ! Loop over all the cells 
   do k=1,nn
-    q(k,id) = 1d-4
     q(k,iu) = 0.0d0
     q(k,iv) = 0.0d0
-    q(k,ip) = q(k,id)**3
-    f(k,1)  = 1e-8
     g(k,1)  = 1d-4
-    f(k,2)  = 1.0
     g(k,2)  = 1d-4
-    ! q(k,ip1)=q(k,id)**3
-    ! q(k,ip2)=q(k,id)**3
+    do imat=1,nmat
+      q(k,ndim+imat) = g(k,imat)**3
+    end do
+    f(k,1)  = 1e-8
+    f(k,2)  = 1.0
 
-    rr=((x(k,1)-boxlen/4.0)**2+(x(k,2)-boxlen/4.0)**2)**(1.0/2)
+    rr=((x(k,1)-boxlen/2.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
     if(rr<rmax)then
       i=(rr/rmax)*(nmax-1)
-      q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
-      ! q(k,ip1)=q(k,id)**3
-      ! q(k,ip2)=q(k,id)**3
-      q(k,ip) = q(k,id)**3
-      q(k,iu) = 0.2
-      q(k,iv) = 0.2
+      do imat=1,nmat
+        g(k,imat)      = xx(i,2) + (rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
+        q(k,ndim+imat) = g(k,imat)**3
+      end do
+      q(k,iu) = 0.0
+      q(k,iv) = 0.0
       f(k,1)  = 1.0
-      g(k,1)  = q(k,id)
-      f(k,2)  = 1d-8
-      g(k,2)  = q(k,id)
+      f(k,2)  = 1e-8
     endif
 
-    rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen*3.0/4.0)**2)**(1.0/2)
-    if(rr<rmax)then
-      i=(rr/rmax)*(nmax-1)
-      q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
-      ! q(k,ip1)=q(k,id)**3
-      ! q(k,ip2)=q(k,id)**3
-      q(k,ip) = q(k,id)**3
-      q(k,iu) = -0.2
-      q(k,iv) = -0.2
-      f(k,1)  = 1.0
-      g(k,1)  = q(k,id)
-      f(k,2)  = 1d-8
-      g(k,2)  = q(k,id)
-    endif
+    
+    ! rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen*3.0/4.0)**2)**(1.0/2)
+    ! if(rr<rmax)then
+    !   i=(rr/rmax)*(nmax-1)
+    !   q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
+    !   ! q(k,ip1)=q(k,id)**3
+    !   ! q(k,ip2)=q(k,id)**3
+    !   q(k,ip) = q(k,id)**3
+    !   q(k,iu) = -0.2
+    !   q(k,iv) = -0.2
+    !   f(k,1)  = 1.0
+    !   g(k,1)  = q(k,id)
+    !   f(k,2)  = 1d-8
+    !   g(k,2)  = q(k,id)
+    ! endif
   end do
 #endif
 
@@ -143,9 +139,9 @@ subroutine condinit(x,u,dx,nn)
     end do
     call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn) 
     do k=1,nn
-      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin(k)                    ! E_k
-      u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                     ! E_k * f_k 
-      dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                          ! d_tot
+      etot_mat              = eint_mat(k) + g(k,imat)*ekin(k)                    ! E_k
+      u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                 ! E_k * f_k 
+      dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                      ! d_tot
     end do
   end do 
 
@@ -163,5 +159,5 @@ subroutine condinit(x,u,dx,nn)
 #if NDIM>2
   u(1:nn,2*nmat+ndim) = dtot(1:nn)*q(1:nn,ndim)
 #endif
-
+  
 end subroutine condinit
