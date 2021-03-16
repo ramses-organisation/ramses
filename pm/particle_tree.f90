@@ -645,7 +645,7 @@ subroutine virtual_tree_fine(ilevel)
   integer,dimension(2*ncpu)::reqsend,reqrecv
   integer,dimension(ncpu)::sendbuf,recvbuf
   logical::ok_free
-  integer::particle_data_width
+  integer::particle_data_width, particle_data_width_int
   integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
 #endif
 
@@ -668,6 +668,8 @@ subroutine virtual_tree_fine(ilevel)
   end do
 
   ! Calculate how many particle properties are being transferred
+  ! igrid, level, id, families
+  particle_data_width_int = 4
   particle_data_width = twondim+1
   if(star.or.sink) then
      if(metal) then
@@ -686,7 +688,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(reception(icpu,ilevel)%fp(1:ncache,1:4))
+        allocate(reception(icpu,ilevel)%fp(1:ncache,1:particle_data_width_int))
         allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -730,7 +732,7 @@ subroutine virtual_tree_fine(ilevel)
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
         ! Allocate reception buffer
-        allocate(emission(icpu,ilevel)%fp(1:ncache,1:4))
+        allocate(emission(icpu,ilevel)%fp(1:ncache,1:particle_data_width_int))
         allocate(emission(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
@@ -740,7 +742,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*4
+        buf_count=ncache*particle_data_width_int
         countrecv=countrecv+1
 #ifndef LONGINT
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
@@ -764,7 +766,7 @@ subroutine virtual_tree_fine(ilevel)
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
      if(ncache>0)then
-        buf_count=ncache*4
+        buf_count=ncache*particle_data_width_int
         countsend=countsend+1
 #ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &

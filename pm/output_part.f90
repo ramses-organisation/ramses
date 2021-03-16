@@ -193,6 +193,4 @@ subroutine backup_part(filename, filename_desc)
   end if
 #endif
 
-contains
-
 end subroutine backup_part

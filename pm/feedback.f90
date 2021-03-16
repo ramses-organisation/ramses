@@ -77,7 +77,7 @@ subroutine thermal_feedback(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  ! Gather star particles only.
+  ! Gather star particles only
 
   ! Loop over cpus
   do icpu=1,ncpu

@@ -641,9 +641,9 @@ subroutine cmp_cpumap(x,c,nn)
   use amr_commons
   use bisection
   implicit none
-  integer ::nn
-  integer ,dimension(1:nvector)::c
-  real(dp),dimension(1:nvector,1:ndim)::x
+  integer, intent(in) ::nn
+  real(dp),dimension(1:nvector,1:ndim), intent(in)::x
+  integer ,dimension(1:nvector), intent(out)::c
 
   integer::i,idom
   real(qdp),dimension(1:nvector),save::order

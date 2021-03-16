@@ -6,9 +6,9 @@ subroutine remove_list(ind_part,list1,ok,np)
   use amr_commons
   use pm_commons
   implicit none
-  integer::np
-  integer,dimension(1:nvector)::ind_part,list1
-  logical,dimension(1:nvector)::ok
+  integer, intent(in)::np
+  integer,dimension(1:nvector), intent(in)::ind_part,list1
+  logical,dimension(1:nvector), intent(in)::ok
   !----------------------------------------------------
   ! Remove particles from their original linked lists
   !----------------------------------------------------
@@ -44,8 +44,8 @@ subroutine remove_free(ind_part,np)
   use amr_commons
   use pm_commons
   implicit none
-  integer::np
-  integer,dimension(1:nvector)::ind_part
+  integer, intent(in) :: np
+  integer, dimension(1:nvector), intent(out)::ind_part
   !-----------------------------------------------
   ! Get np particle from free memory linked list
   !-----------------------------------------------
