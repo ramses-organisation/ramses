@@ -68,6 +68,12 @@
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
   allocate(mp    (npartmax))
+  if (MC_tracer) then
+     allocate(itmpp (npartmax))
+     allocate(partp (npartmax))
+     allocate(move_flag(npartmax))
+     move_flag = 0
+  end if
   allocate(nextp (npartmax))
   allocate(prevp (npartmax))
   allocate(levelp(npartmax))
@@ -121,7 +127,11 @@
      read(ilun)ncpu2
      read(ilun)ndim2
      read(ilun)npart2
-     read(ilun)localseed
+     if (MC_tracer) then
+        read(ilun)localseed, tracer_seed
+     else
+        read(ilun)localseed
+     end if
      read(ilun)nstar_tot
      read(ilun)mstar_tot
      read(ilun)mstar_lost
@@ -190,6 +200,14 @@
         deallocate(xdp)
      end if
 
+     if (MC_tracer) then
+        allocate(isp(1:npart2))
+        ! Now read partp
+        read(ilun)isp
+        partp(1:npart2) = isp
+        call convert_global_index_to_local_index(npart2)
+        deallocate(isp)
+     end if
      close(ilun)
 
      ! Send the token
@@ -233,6 +251,10 @@
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
+     if (tracer .and. MC_tracer) then
+        ! Attempt to read mass from binary file
+        call read_tracer_mass
+     end if
   else
 
      filetype_loc=filetype
@@ -252,6 +274,10 @@
         call clean_stop
 
      end select
+
+     ! Initialize tracer particles
+     if(tracer)call init_tracer
+
   end if
 
   if(sink)call init_sink

@@ -648,6 +648,11 @@ subroutine virtual_tree_fine(ilevel)
   integer::particle_data_width, particle_data_width_int
   integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
 #endif
+  ! MC tracer
+  integer :: ipart2, jpart2
+  real(dp) :: dx, d2min, d2, x1(1:ndim), x2(1:ndim)
+
+  dx=0.5D0**ilevel
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -670,6 +675,10 @@ subroutine virtual_tree_fine(ilevel)
   ! Calculate how many particle properties are being transferred
   ! igrid, level, id, families
   particle_data_width_int = 4
+  if (MC_tracer) then
+     ! Also send partp
+     particle_data_width_int = particle_data_width_int + 1
+  end if
   particle_data_width = twondim+1
   if(star.or.sink) then
      if(metal) then
@@ -692,6 +701,30 @@ subroutine virtual_tree_fine(ilevel)
         allocate(reception(icpu,ilevel)%up(1:ncache,1:particle_data_width))
      end if
   end do
+  if (MC_tracer) then
+     ! Use itmpp to store the index within communicator
+     ! Note: itmpp is also used in `sink_particle_tracer` for
+     ! `gas_tracers`, so there is no interference here.
+     do icpu=1,ncpu
+        if(reception(icpu,ilevel)%npart>0)then
+           ! Gather particles by vector sweeps
+           ipcom=0
+           do igrid=1,reception(icpu,ilevel)%ngrid
+              npart1=numbp(reception(icpu,ilevel)%igrid(igrid))
+              ipart =headp(reception(icpu,ilevel)%igrid(igrid))
+              ! Store index within communicator for stars
+              do jpart = 1, npart1
+                 ipcom = ipcom+1
+                 if (is_star(typep(ipart))) then
+                    itmpp(ipart) = ipcom
+                 end if
+
+                 ipart = nextp(ipart)
+              end do
+           end do
+        end if
+     end do
+  end if
 
   ! Gather particle in communication buffer
   do icpu=1,ncpu
@@ -822,6 +855,51 @@ subroutine virtual_tree_fine(ilevel)
         end do
         call empty_comm(ind_com,npart1,ilevel,icpu)
      end do
+     ! Loop on star tracers in the communicator
+     if (MC_tracer) then
+        do ipart = 1, ncache
+           jpart = emission(icpu,ilevel)%fp(ipart,1)
+           ! Get index of star within current CPU
+           if (is_star_tracer(typep(jpart))) then
+              ! Note: the partp array should store the index of the
+              ! star within the communicator. However, sometimes
+              ! (why?) this index is out of bounds (either 0 or
+              ! greater than size of communicator). In this case, we
+              ! find the star at the position of the tracer.
+              if ( (partp(jpart) > 0) .and. &
+                   (partp(jpart) <= size(emission(icpu,ilevel)%fp(:, 1))) ) then
+                 partp(jpart) = emission(icpu,ilevel)%fp(partp(jpart), 1)
+              else
+                 d2min = (2*dx)**2
+                 ! Try to find the star in the emission buffer
+                 partp(jpart) = 0
+                 x1(:) = xp(jpart, :)
+
+                 do ipart2 = 1, ncache
+                    jpart2 = emission(icpu,ilevel)%fp(ipart2, 1)
+                    if (is_star(typep(jpart2))) then
+                       ! Check there is a star closer than dx. If
+                       ! there are multiple, take the closest.
+                       x2(:) = xp(jpart2, :)
+                       if (all(abs(x2(:) - x1(:)) <= dx)) then
+                          d2 = sum((x2(:) - x1(:))**2)
+                          if (d2 < d2min) then
+                             partp(jpart) = jpart2
+                             d2min = d2
+                          end if
+                       end if
+                    end if
+                 end do
+                 if (partp(jpart) == 0) then
+                    write(*, *) 'An error occurred in virtual_tree_fine while converting star ids'
+                    write(*, *) myid, '<-', icpu, '>< converting back', jpart, partp(jpart), xp(jpart, :)
+                    ! stop
+                    typep(jpart)%family = FAM_TRACER_GAS
+                 end if
+              end if
+           end if
+        end do
+     end if
   end do
 
   ! Deallocate temporary communication buffers
@@ -898,6 +976,19 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
         current_property = current_property+1
      end if
   end if
+  ! MC Tracer
+  if (MC_tracer) then
+     do i=1,np
+        if (is_star_tracer(typep(ind_part(i)))) then
+           ! Store index of the star *within* communicator
+           reception(icpu, ilevel)%fp(ind_com(i), 5) = &
+                itmpp(partp(ind_part(i)))
+        else
+           reception(icpu, ilevel)%fp(ind_com(i), 5) = &
+                partp(ind_part(i))
+        end if
+     end do
+  end if
 
   ! Remove particles from parent linked list
   call remove_list(ind_part,ind_list,ok,np)
@@ -973,6 +1064,20 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
         end do
         current_property = current_property+1
      end if
+  end if
+
+  ! MC Tracer
+  if (MC_tracer) then
+     do i=1,np
+        ! Store the target
+        ! NB: this 'partp' contains for star tracers: the adress in
+        ! the communicator of the star particle
+        partp(ind_part(i)) = emission(icpu,ilevel)%fp(ind_com(i), 5)
+
+        ! Use the communicator as a tmp array mapping index in comm to index in array
+        ! of all particles
+        emission(icpu,ilevel)%fp(ind_com(i), 1) = ind_part(i)
+     end do
   end if
 
 end subroutine empty_comm
