@@ -276,7 +276,7 @@
      end select
 
      ! Initialize tracer particles
-     if(tracer)call init_tracer
+     if(MC_tracer) call init_tracer
 
   end if
 
