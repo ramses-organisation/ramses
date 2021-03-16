@@ -21,7 +21,13 @@ subroutine read_params
 #ifndef WITHOUTMPI
   integer::dummy_io,ierr,info2
 #endif
-
+#if NDIM==1
+  integer, parameter :: max_level_wout_quadhilbert = 61
+#elif NDIM==2
+  integer, parameter :: max_level_wout_quadhilbert = 29
+#elif NDIM==3
+  integer, parameter :: max_level_wout_quadhilbert = 19
+#endif
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
@@ -312,6 +318,16 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
+#ifndef QUADHILBERT
+  if(nlevelmax>=max_level_wout_quadhilbert) then
+     if (myid == 1) then
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        write(*,"(a,i2,a)")"WARNING: running with nlevelmax>=", max_level_wout_quadhilbert, " will likely fail."
+        write(*,*)"It is recommended to compiling with -DQUADHILBERT"
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     end if
+  end if
+#endif
 
   !-----------------------------------
   ! Rearrange level dependent arrays

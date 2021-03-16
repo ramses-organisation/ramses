@@ -514,11 +514,8 @@ subroutine output_header(filename)
      ! Only used particles have a levelp > 0
      if (levelp(ipart) > 0) then
         npart_all_loc = npart_all_loc + 1
-        do ifam = -5, 5
-           if (typep(ipart)%family == ifam) then
-              npart_family_loc(ifam) = npart_family_loc(ifam) + 1
-           end if
-        end do
+        ifam = typep(ipart)%family
+        npart_family_loc(ifam) = npart_family_loc(ifam) + 1
      end if
   end do
 
