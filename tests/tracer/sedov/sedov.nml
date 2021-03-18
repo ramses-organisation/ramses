@@ -1,7 +1,8 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 pic=.true.
+tracer = .true.
 ncontrol=1
 nrestart=0
 nremap=0
@@ -52,7 +53,6 @@ interpol_type=1
 
 
 &tracer_params
-tracer = .true.
 MC_tracer = .true.
 tracer_feed_fmt = 'inplace'
 tracer_mass = 1e-6
