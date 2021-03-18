@@ -121,4 +121,15 @@ axes[1, 2].yaxis.tick_right()
 fig.savefig("sedov.pdf", bbox_inches="tight")
 
 # Check results against reference solution
-visu_ramses.check_solution(data["particle"], 'sedov')
+dt = {
+    k: v for k, v in data["particle"].items()
+    if k in ("family", "levelp", "mass", "position_x", "position_y", "tag")
+}
+dt["velocity_x"] = np.abs(data["particle"]["velocity_x"])
+dt["velocity_y"] = np.abs(data["particle"]["velocity_y"])
+
+rtol = {
+    key: 4/np.sqrt(data["particle"]["identity"].size)
+    for key in dt
+}
+visu_ramses.check_solution(dt, 'sedov', tolerance=rtol)
