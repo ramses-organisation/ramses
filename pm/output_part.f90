@@ -54,7 +54,11 @@ subroutine backup_part(filename, filename_desc)
   write(unit_out) ncpu
   write(unit_out) ndim
   write(unit_out) npart
-  write(unit_out) localseed
+  if (MC_tracer) then
+     write(unit_out) localseed, tracer_seed
+  else
+     write(unit_out) localseed
+  end if
   write(unit_out) nstar_tot
   write(unit_out) mstar_tot
   write(unit_out) mstar_lost
@@ -179,6 +183,28 @@ subroutine backup_part(filename, filename_desc)
      deallocate(xdp)
   end if
 
+  if (MC_tracer) then
+     ! Dump particle pointer
+     allocate(ll(1:npart))
+     ! Get the idp of the stars on which tracers are attached
+     ipart = 0
+     do i = 1, npartmax
+        if (levelp(i) > 0) then
+           ipart = ipart + 1
+           ! For star tracers, store the id of the star instead of local index
+           if (is_star_tracer(typep(i))) then
+              ll(ipart) = idp(partp(i))
+           else ! store the relative location
+              ll(ipart) = partp(i)
+           end if
+        end if
+     end do
+
+     call generic_dump("partp", ivar, ll, unit_out, dump_info, unit_info)
+     deallocate(ll)
+  end if
+
+  !------------!
   close(unit_out)
   if (myid == 1) close(unit_info)
 

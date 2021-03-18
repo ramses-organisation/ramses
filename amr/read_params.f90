@@ -50,6 +50,9 @@ subroutine read_params
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera,method_frame,varmin_frame,varmax_frame
+  namelist/tracer_params/MC_tracer,tracer_feed,tracer_feed_fmt &
+       & ,tracer_mass,tracer_first_balance_part_per_cell &
+       & ,tracer_first_balance_levelmin
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -161,6 +164,10 @@ subroutine read_params
   read(1,NML=output_params)
   rewind(1)
   read(1,NML=amr_params)
+  rewind(1)
+  read(1,NML=tracer_params,END=84)
+84 continue
+  if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = levelmax + 1
   rewind(1)
   read(1,NML=lightcone_params,END=83)
 83 continue
@@ -328,6 +335,19 @@ subroutine read_params
      end if
   end if
 #endif
+
+  !-----------------
+  ! MC tracer
+  !-----------------
+  if(MC_tracer .and. (.not. tracer))then
+     write(*,*)'Error: you have activated the MC tracer but not the tracers.'
+     call clean_stop
+  end if
+
+  if(MC_tracer .and. (.not. pic)) then
+     write(*,*)'Error: you have activated the MC tracer but pic is false.'
+     call clean_stop
+  end if
 
   !-----------------------------------
   ! Rearrange level dependent arrays

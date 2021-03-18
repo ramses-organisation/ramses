@@ -38,6 +38,7 @@ subroutine newdt_fine(ilevel)
   real(dp)::dt_rt
 #endif
 
+  logical :: ok
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -130,11 +131,22 @@ subroutine newdt_fine(ilevel)
               ! Loop over particles
               ipart=headp(igrid)
               do jpart=1,npart1
-                 ip=ip+1
-                 ind_part(ip)=ipart
-                 if(ip==nvector)then
-                    call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
-                    ip=0
+                 ! MC_tracer ================
+                 ! skip tracer particles here
+                 if (tracer) then
+                    ok = is_not_tracer(typep(ipart))
+                 else
+                    ok = .true.
+                 end if
+                 ! End MC Tracer ============
+
+                 if (ok) then
+                    ip=ip+1
+                    ind_part(ip)=ipart
+                    if(ip==nvector)then
+                       call newdt2(ind_part,dt_loc,ekin_loc,ip,ilevel)
+                       ip=0
+                    end if
                  end if
                  ipart=nextp(ipart)    ! Go to next particle
               end do

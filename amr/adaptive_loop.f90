@@ -134,6 +134,12 @@ subroutine adaptive_loop
         end do
      endif
 
+     ! MC Tracer !
+     ! Reset fluxes
+     if(MC_tracer) then
+        fluxes(:, :) = 0_dp
+     end if
+
      ! Call base level
      call amr_step(levelmin,1)
                                call timer('coarse levels','start')

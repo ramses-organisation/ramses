@@ -29,6 +29,10 @@ subroutine init_hydro
   allocate(uold(1:ncell,1:nvar+3))
   allocate(unew(1:ncell,1:nvar+3))
   uold=0.0d0; unew=0.0d0
+  if(MC_tracer) then
+     allocate(fluxes(1:ncell,1:twondim))
+     fluxes(1:ncell,1:twondim)=0.0d0
+  end if
   if(momentum_feedback>0)then
      allocate(pstarold(1:ncell))
      allocate(pstarnew(1:ncell))
