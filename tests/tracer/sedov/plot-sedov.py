@@ -125,11 +125,10 @@ dt = {
     k: v for k, v in data["particle"].items()
     if k in ("family", "levelp", "mass", "position_x", "position_y", "tag")
 }
-dt["velocity_x"] = np.abs(data["particle"]["velocity_x"])
-dt["velocity_y"] = np.abs(data["particle"]["velocity_y"])
 
+# Use a relative tolerance within ± 2 Poisson noise
 rtol = {
-    key: 4/np.sqrt(data["particle"]["identity"].size)
+    key: 2/np.sqrt(data["particle"]["identity"].size)
     for key in dt
 }
 visu_ramses.check_solution(dt, 'sedov', tolerance=rtol)
