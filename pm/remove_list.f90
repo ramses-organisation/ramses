@@ -2,12 +2,12 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine remove_list(ind_part,list1,ok,np)
+subroutine remove_list(ind_part,ind_grid,ok,np)
   use amr_commons
   use pm_commons
   implicit none
   integer, intent(in)::np
-  integer,dimension(1:nvector), intent(in)::ind_part,list1
+  integer,dimension(1:nvector), intent(in)::ind_part,ind_grid
   logical,dimension(1:nvector), intent(in)::ok
   !----------------------------------------------------
   ! Remove particles from their original linked lists
@@ -21,18 +21,18 @@ subroutine remove_list(ind_part,list1,ok,np)
               prevp(nextp(ind_part(j)))=prevp(ind_part(j))
            else
               nextp(prevp(ind_part(j)))=0
-              tailp(list1(j))=prevp(ind_part(j))
+              tailp(ind_grid(j))=prevp(ind_part(j))
            end if
         else
            if(nextp(ind_part(j)) .ne. 0)then
               prevp(nextp(ind_part(j)))=0
-              headp(list1(j))=nextp(ind_part(j))
+              headp(ind_grid(j))=nextp(ind_part(j))
            else
-              headp(list1(j))=0
-              tailp(list1(j))=0
+              headp(ind_grid(j))=0
+              tailp(ind_grid(j))=0
            end if
         end if
-        numbp(list1(j))=numbp(list1(j))-1
+        numbp(ind_grid(j))=numbp(ind_grid(j))-1
      end if
   end do
 end subroutine remove_list

@@ -333,7 +333,6 @@ subroutine read_params
         write(*,*)"It is recommended to compiling with -DQUADHILBERT"
         write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
      end if
-     call clean_stop
   end if
 #endif
 
