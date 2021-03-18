@@ -91,11 +91,7 @@ subroutine backup_part(filename, filename_desc)
   do i = 1, npartmax
      if (levelp(i) > 0) then
         ipart = ipart+1
-        if (is_tracer(typep(i))) then
-           xdp(ipart) = tracer_mass
-        else
-           xdp(ipart) = mp(i)
-        end if
+        xdp(ipart) = mp(i)
      end if
   end do
   call generic_dump("mass", ivar, xdp, unit_out, dump_info, unit_info)
