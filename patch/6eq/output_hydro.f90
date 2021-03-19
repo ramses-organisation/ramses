@@ -123,7 +123,7 @@ subroutine backup_hydro(filename, filename_desc)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
-              ! Calculate individual internal + radiative energies and write thermal pressure
+              ! Write thermal pressure
               inv=.false.
               do imat=1,nmat
                 do i=1,ncache
@@ -143,9 +143,6 @@ subroutine backup_hydro(filename, filename_desc)
                   ee_mat(1) = ee
                   call eos(gg_mat,ee_mat,pp,cc,imat,inv,1)
                   xdp(i) = pp(1)       ! Pressure
-                  if(pp(1).lt.0)then
-                     write(*,*)'output hydro',imat,ff,gg,ee,pp(1)
-                  endif
                end do
                 write(field_name, '("pressure_", i0.2)') imat
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)

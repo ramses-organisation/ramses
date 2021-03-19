@@ -137,7 +137,7 @@ subroutine adaptive_loop
      ! MC Tracer !
      ! Reset fluxes
      if(MC_tracer) then
-        fluxes(:, :) = 0_dp
+        fluxes = 0_dp
      end if
 
      ! Call base level

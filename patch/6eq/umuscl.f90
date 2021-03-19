@@ -245,7 +245,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
       end do 
     end do
 
-    ! Gravity predictor step
+    ! Gravity predictor step (had to comment it out...)
     do idim = 1,ndim
 !      q(1:ngrid,i,j,k,idim) = q(1:ngrid,i,j,k,idim) + gravin(1:ngrid,i,j,k,idim)*dt*half
     end do
