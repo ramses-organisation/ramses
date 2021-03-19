@@ -175,7 +175,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr,nvar,gamma
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -188,7 +188,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! This routine is called by move_fine.
   !------------------------------------------------------------
   logical::error
-  integer::i,j,ind,idim,nx_loc,isink,index_part
+  integer::i,j,ind,idim,nx_loc,isink,index_part,ivar_dust
   real(dp)::dx,dx_loc,scale,vol_loc
   real(dp)::ctm! ERM: recommend 1.15D3
   real(dp)::ts !ERM: recommend 2.2D-1
@@ -201,13 +201,14 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
+  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg,vcom
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv
   real(dp),dimension(1:nvector),save:: dgr,tss ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+  real(dp)::den_dust,den_gas,mom_dust,mom_gas,velocity_com
 
   ctm = charge_to_mass
   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
@@ -463,6 +464,28 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
+  
+  ! Gather center of mass 3-velocity
+  ivar_dust=9
+  if(nvar<ivar_dust+ndim)then
+     write(*,*)'You need to compile ramses with nvar=',ivar_dust+ndim
+     stop
+  endif
+  vcom(1:np,1:ndim)=0.0D0
+  if(boris.and.hydro)then
+     do ind=1,twotondim
+        do idim=1,ndim
+           do j=1,np
+              den_gas=uold(indp(j,ind),1)
+              mom_gas=uold(indp(j,ind),1+idim)
+              den_dust=uold(indp(j,ind),ivar_dust)
+              mom_dust=uold(indp(j,ind),ivar_dust+idim)
+              velocity_com=(mom_gas*(1.0d0+dtnew(ilevel)/ts)+mom_dust*dtnew(ilevel)/ts)/(den_gas*(1.0d0+dtnew(ilevel)/ts)+den_dust*dtnew(ilevel)/ts)
+              vcom(j,idim)=vcom(j,idim)+velocity_com*vol(j,ind)
+           end do
+        end do
+     end do
+  endif
 
   ! ERM: Is this best here in its own loop? Or is the time difference negligible?
   dgr(1:np) = 0.0D0
@@ -473,7 +496,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
          end do
      end do
   endif
-
 
   ! Gather 3-velocity
   ff(1:np,1:ndim)=0.0D0
@@ -502,7 +524,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-
   ! Update velocity
   do idim=1,ndim
      if(static.or.tracer)then
@@ -516,25 +537,43 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  if((boris.and.hydro).and.constant_t_stop)then
-     vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
-     call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
+  ! Boris EM kick
+  if(boris.and.hydro)then
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+     call FirstAndSecondBorisKick_nodrag(np,dtnew(ilevel),ctm,bb,uu,vv)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
-  if((boris.and.hydro).and.(.not.constant_t_stop))then
-    vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
-    ! ERM: Compute the stopping time assuming a constant (and unit) sound speed
-    if(.not.constant_t_stop.and.boris)then
-      do j=1,np
-        tss(j)=rd/(dgr(j)*&
-        sqrt(1.0+0.2209*gamma*&
-        ((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2)))
-      end do
-    endif
-    call FirstAndSecondBorisKickWithVarTs(np,dtnew(ilevel),ctm,tss,bb,uu,vv)
-    new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+  ! Drag kick
+  if(boris.and.hydro)then
+     ! Update velocity
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+     do idim=1,ndim
+        do j=1,np
+           new_vp(j,idim)=(vv(j,idim)+vcom(j,idim)*dtnew(ilevel)/ts)/(1.0d0+dtnew(ilevel)/ts)
+        end do
+     end do
   endif
+
+!!$  if((boris.and.hydro).and.constant_t_stop)then
+!!$     vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
+!!$     call FirstAndSecondBorisKick(np,dtnew(ilevel),ctm,ts,bb,uu,vv)
+!!$     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+!!$  endif
+!!$
+!!$  if((boris.and.hydro).and.(.not.constant_t_stop))then
+!!$    vv(1:np,1:ndim)=new_vp(1:np,1:ndim) ! ERM: Set the value of vv.
+!!$    ! ERM: Compute the stopping time assuming a constant (and unit) sound speed
+!!$    if(.not.constant_t_stop.and.boris)then
+!!$      do j=1,np
+!!$        tss(j)=rd/(dgr(j)*&
+!!$        sqrt(1.0+0.2209*gamma*&
+!!$        ((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2)))
+!!$      end do
+!!$    endif
+!!$    call FirstAndSecondBorisKickWithVarTs(np,dtnew(ilevel),ctm,tss,bb,uu,vv)
+!!$    new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+!!$  endif
 
   if((boris.or.tracer).and.constant_t_stop)then
      do index_part=1,10
@@ -586,6 +625,17 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  ! Deposit minus final dust momentum to new gas momentum
+  do ind=1,twotondim
+     do idim=1,ndim
+        do j=1,np
+           if(ok(j))then
+              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
+           end if
+        end do
+     end do
+  end do
+
   ! Update position
   do idim=1,ndim
      if(static)then
@@ -605,6 +655,56 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
 end subroutine move1
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine FirstAndSecondBorisKick_nodrag(nn,dt,ctm,b,u,v)
+  ! The following subroutine will alter its last argument, v
+  ! to be an intermediate step, having been either accelerated by
+  ! drag+the electric field, or rotated by the magnetic field.
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::kick ! kick number
+  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::ctm ! charge-to-mass ratio
+  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
+  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
+  integer ::i ! Just an -index
+
+  ! Magnetic kick
+  do i=1,nn
+     vo(i,1) = v(i,1) + (2*ctm*dt*( &
+          &  - b(i,2)*( b(i,2)*ctm*dt*v(i,1)            ) &
+          &  + b(i,2)*( b(i,1)*ctm*dt*v(i,2) - 2*v(i,3) ) &
+          &  + b(i,3)*(-b(i,3)*ctm*dt*v(i,1) + 2*v(i,2) + b(i,1)*ctm*dt*v(i,3)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+     vo(i,2) = v(i,2) + (2*ctm*dt*( &
+          &  - b(i,3)*( b(i,3)*ctm*dt*v(i,2)            ) &
+          &  + b(i,3)*( b(i,2)*ctm*dt*v(i,3) - 2*v(i,1) ) &
+          &  + b(i,1)*(-b(i,1)*ctm*dt*v(i,2) + 2*v(i,3) + b(i,2)*ctm*dt*v(i,1)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+     vo(i,3) = v(i,3) + (2*ctm*dt*( &
+          &  - b(i,1)*( b(i,1)*ctm*dt*v(i,3)            ) &
+          &  + b(i,1)*( b(i,3)*ctm*dt*v(i,1) - 2*v(i,2) ) &
+          &  + b(i,2)*(-b(i,2)*ctm*dt*v(i,3) + 2*v(i,1) + b(i,3)*ctm*dt*v(i,2)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*ctm*dt*dt)
+  end do
+  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
+
+  ! First electric kick
+  do i=1,nn
+     vo(i,1) = v(i,1)-0.5*dt*ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))
+     vo(i,2) = v(i,2)-0.5*dt*ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))
+     vo(i,3) = v(i,3)-0.5*dt*ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))
+  end do
+  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
+
+end subroutine FirstAndSecondBorisKick_nodrag
 !#########################################################################
 !#########################################################################
 !#########################################################################
@@ -654,11 +754,6 @@ subroutine FirstAndSecondBorisKick(nn,dt,ctm,ts,b,u,v)
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
 
 end subroutine FirstAndSecondBorisKick
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-
 !#########################################################################
 !#########################################################################
 !#########################################################################

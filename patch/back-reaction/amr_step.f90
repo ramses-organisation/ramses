@@ -269,16 +269,6 @@ recursive subroutine amr_step(ilevel,icount)
      end if
   end if
 
-  ! Synchronize remaining particles for gravity
-  if(pic)then
-                               call timer('particles','start')
-     if(static_dm.or.static_stars)then
-        call synchro_fine_static(ilevel)
-     else
-        call synchro_fine(ilevel)
-     end if
-  end if
-  
 #ifdef RT
   ! Turn on RT in case of rt_stars and first stars just created:
   ! Update photon packages according to star particles
@@ -298,6 +288,16 @@ recursive subroutine amr_step(ilevel,icount)
   ! Set unew equal to uold
                                call timer('hydro - set unew','start')
   if(hydro)call set_unew(ilevel)
+
+  ! Synchronize remaining particles for gravity
+  if(pic)then
+                               call timer('particles','start')
+     if(static_dm.or.static_stars)then
+        call synchro_fine_static(ilevel)
+     else
+        call synchro_fine(ilevel)
+     end if
+  end if
 
 #ifdef RT
   ! Set rtunew equal to rtuold
@@ -345,6 +345,18 @@ recursive subroutine amr_step(ilevel,icount)
      call grow_sink(ilevel,.false.)
   end if
 #endif
+  !---------------
+  ! Move particles
+  !---------------
+  if(pic)then
+                               call timer('particles','start')
+     if(static_dm.or.static_stars)then
+        call move_fine_static(ilevel) ! Only remaining particles
+     else
+        call move_fine(ilevel) ! Only remaining particles
+     end if
+  end if
+
   !-----------
   ! Hydro step
   !-----------
@@ -420,18 +432,6 @@ recursive subroutine amr_step(ilevel,icount)
     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
   endif
 #endif
-
-  !---------------
-  ! Move particles
-  !---------------
-  if(pic)then
-                               call timer('particles','start')
-     if(static_dm.or.static_stars)then
-        call move_fine_static(ilevel) ! Only remaining particles
-     else
-        call move_fine(ilevel) ! Only remaining particles
-     end if
-  end if
 
   !----------------------------------
   ! Star formation in leaf cells only
