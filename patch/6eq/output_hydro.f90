@@ -101,6 +101,7 @@ subroutine backup_hydro(filename, filename_desc)
                  write(field_name, '("true_dens_", i0.2)') imat
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
+              ! Write velocities
               do ivar = 2*nmat+1, 2*nmat+ndim
                 do i = 1, ncache
                   dtot = 0
@@ -142,7 +143,10 @@ subroutine backup_hydro(filename, filename_desc)
                   ee_mat(1) = ee
                   call eos(gg_mat,ee_mat,pp,cc,imat,inv,1)
                   xdp(i) = pp(1)       ! Pressure
-                end do
+                  if(pp(1).lt.0)then
+                     write(*,*)'output hydro',imat,ff,gg,ee,pp(1)
+                  endif
+               end do
                 write(field_name, '("pressure_", i0.2)') imat
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do

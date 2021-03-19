@@ -133,7 +133,7 @@ subroutine set_uold(ilevel)
      end do
   end do
 
-  if(nmat>1)call pressure_relaxation2(ilevel)
+!  if(nmat>1)call pressure_relaxation2(ilevel)
   
 111 format('   Entering set_uold for level ',i2)
 
@@ -318,8 +318,8 @@ subroutine add_gravity_source_terms(ilevel)
         ind_cell = active(ilevel)%igrid(i) + iskip
         
         d = 0
-        do imat=1,nmat
-          d = d + max(unew(ind_cell,nmat+imat),smallr)
+        do imat = 1,nmat
+          d = d + unew(ind_cell,nmat+imat)
         end do
 
         u=0; v=0; w=0
@@ -328,16 +328,19 @@ subroutine add_gravity_source_terms(ilevel)
         if(ndim>2) w = unew(ind_cell,2*nmat+3)/max(d,smallr)
         
         do imat=1,nmat
-          d_mat         = unew(ind_cell,nmat+imat)/max(unew(ind_cell,imat),smallf)
-          e_kin(imat)   = 0.5d0*d_mat*(u**2+v**2+w**2)
-          e_prim(imat)  = unew(ind_cell,2*nmat+ndim+imat)/max(unew(ind_cell,imat),smallf) - e_kin(imat)
-        end do
+          d_mat = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
+          e_kin(imat) = 0.5d0*d_mat*(u**2+v**2+w**2)
+          e_prim(imat) = unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,imat) - e_kin(imat)
+          if(e_prim(imat)<0)then
+             write(*,*)'gravity',imat,unew(ind_cell,imat),d_mat,e_prim(imat),e_kin(imat),unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,imat)
+          endif
+       end do
         
         d_old = 0
-        do imat=1,nmat
-          d_old = d_old + max(uold(ind_cell,nmat+imat),smallr)
+        do imat = 1,nmat
+          d_old = d_old + uold(ind_cell,nmat+imat)
         end do
-        fact    = d_old/d*0.5d0*dtnew(ilevel)
+        fact = d_old/d*0.5d0*dtnew(ilevel)
         
         if(ndim>0)then
            u = u + f(ind_cell,1)*fact
@@ -353,7 +356,7 @@ subroutine add_gravity_source_terms(ilevel)
         endif
         
         do imat=1,nmat
-          d_mat       = unew(ind_cell,nmat+imat)/max(unew(ind_cell,imat),smallf)
+          d_mat = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
           e_kin(imat) = 0.5d0*d_mat*(u**2+v**2+w**2)
           unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,imat)*(e_prim(imat) + e_kin(imat))
         end do
@@ -613,6 +616,9 @@ subroutine pressure_relaxation2(ilevel)
                  ! Compute specific internal energy
                  do imat = 1,nmat
                     ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
+                    if(ee(imat)<0)then
+                       write(*,*)'relaxation',imat,iter,ff(imat),gg(imat),ee(imat)
+                    endif
                  end do
                                   
                  ptot = 0.0

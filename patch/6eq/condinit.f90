@@ -74,8 +74,8 @@ subroutine condinit(x,u,dx,nn)
     do imat=1,nmat
       q(k,ndim+imat) = g(k,imat)**3
     end do
-    f(k,1)  = 1e-8
     f(k,2)  = 1.0
+    f(k,1)  = 1e-10
 
     rr=((x(k,1)-boxlen/2.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
     if(rr<rmax)then
@@ -86,8 +86,8 @@ subroutine condinit(x,u,dx,nn)
       end do
       q(k,iu) = 0.0
       q(k,iv) = 0.0
-      f(k,1)  = 1.0
-      f(k,2)  = 1e-8
+      f(k,2)  = 1.0
+      f(k,1)  = 1e-10
     endif
 
     
