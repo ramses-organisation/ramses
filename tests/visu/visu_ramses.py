@@ -2,6 +2,26 @@ import numpy as np
 import struct
 import math
 
+def read_descriptor(fname):
+    try:
+        with open(fname) as f:
+            content = f.readlines()
+    except IOError:
+        # Clean exit if the file was not found
+        print("file descriptor not found: %s" % fname)
+        return [], []
+    list_vars = []
+    dtypes = []
+    # Now add to the list of variables to be read
+    for line in content:
+        if not line.startswith("#"):
+            sp = line.split(",")
+            v = sp[1].strip()
+            t = sp[2].strip()
+            list_vars.append(v)
+            dtypes.append(t)
+    return list_vars, dtypes
+
 # =======================================================================
 # Load RAMSES data a la OSIRIS
 # =======================================================================
@@ -14,7 +34,6 @@ def load_snapshot(nout):
     try:
         with open(infofile) as f:
             content = f.readlines()
-        f.close()
     except IOError:
         # Clean exit if the file was not found
         print("Info file not found: "+infofile)
@@ -31,21 +50,7 @@ def load_snapshot(nout):
 
     # Read the number of variables from the hydro_file_descriptor.txt
     hydrofile = infile+"/hydro_file_descriptor.txt"
-    try:
-        with open(hydrofile) as f:
-            content = f.readlines()
-    except IOError:
-        # Clean exit if the file was not found
-        print("hydro_file_descriptor not found: "+hydrofile)
-        return 0
-    list_vars = []
-    # Now add to the list of variables to be read
-    for line in content:
-        if not line.startswith("#"):
-            sp = line.split(",")
-            v = sp[1].strip()
-            t = sp[2].strip()
-            list_vars.append(v)
+    list_vars, _ = read_descriptor(hydrofile)
 
     # Store the total number of hydro variables
     info["nvar"] = len(list_vars)
@@ -74,6 +79,27 @@ def load_snapshot(nout):
     xyz   = np.zeros([info["ngridmax"],twotondim,info["ndim"]],dtype=np.float64)
     ref   = np.zeros([info["ngridmax"],twotondim],dtype=np.bool)
 
+    partinfofile = infile+"/header_"+infile.split("_")[-1]+".txt"
+    info["particle_count"] = {}
+    try:
+        _lines = open(partinfofile).readlines()[1:-2]
+        Nparttot = 0
+        for line in _lines:
+            part_type, _tmp = line.split()
+            part_count = int(_tmp)
+            info["particle_count"][part_type] = part_count
+            Nparttot += part_count
+        info["particle_count"]["total"] = Nparttot
+
+        particle_vars, particle_dtypes = read_descriptor(infile + "/part_file_descriptor.txt")
+    except FileNotFoundError:
+        info["particle_count"]["total"] = 0
+        particle_vars, particle_dtypes = []
+    npart_var = len(particle_vars)
+    npart_read = 0
+
+    part_data = np.zeros([info["particle_count"]["total"], npart_var], dtype=np.float64)
+
     iprog = 1
     istep = 10
     ncells_tot = 0
@@ -91,13 +117,12 @@ def load_snapshot(nout):
         amr_fname = generate_fname(nout,ftype="amr",cpuid=k+1)
         with open(amr_fname, mode='rb') as amr_file: # b is important -> binary
             amrContent = amr_file.read()
-        amr_file.close()
 
         # Read binary HYDRO file
         hydro_fname = generate_fname(nout,ftype="hydro",cpuid=k+1)
         with open(hydro_fname, mode='rb') as hydro_file: # b is important -> binary
             hydroContent = hydro_file.read()
-        hydro_file.close()
+
 
         # Need to extract info from the file header on the first loop
         if k == 0:
@@ -288,19 +313,63 @@ def load_snapshot(nout):
             nlines2 = nlines_hydro
             nstrin2 = nstrin_hydro
 
+        # Read binary particle file
+        if info["particle_count"]["total"] > 0:
+            part_fname = generate_fname(nout,ftype="part",cpuid=k+1)
+            with open(part_fname, mode='rb') as part_file:
+                partContent = part_file.read()
+            npart, = struct.unpack("i", partContent[28:32])
+            pcounts = info["particle_count"]
+            has_tracers = any(v for k, v in pcounts.items() if k.endswith("_tracer"))
+            # Offset to "mstar_tot"
+            offset = 72
+            if has_tracers:
+                offset += struct.calcsize("4i")  # tracer_seed
+
+            # Read mstar, mstar_lost
+            mstar, = struct.unpack("d", partContent[offset+4:offset+12])
+            offset += 4+8+4  # mstar
+            mstar_lost, = struct.unpack("d", partContent[offset+4:offset+12])
+            offset += 4+8+4  # mstar_lost
+            offset += 4+4+4  # nsink
+            offset += 4      # jump to beginning of record
+
+            for ivar, var_dtype in enumerate(particle_dtypes):
+                s = struct.calcsize(var_dtype)
+                endPos = offset + s * npart
+                part_data[npart_read:npart_read+npart, ivar] = struct.unpack("%s%s" % (npart, var_dtype), partContent[offset:endPos])
+                offset = endPos + 8
+
+            npart_read += npart
+        else:
+            mstar = mstar_lost = np.nan
+
     # Merge all the data pieces into the master data array
     master_data_array = np.concatenate(list(data_pieces.values()), axis=0)
 
     # Free memory
     del data_pieces,xcent,xg,son,var,xyz,ref
 
+
     print("Total number of cells loaded: %i" % ncells_tot)
+    if npart_read > 0:
+        print("Total particles loaded: %i" % npart_read)
 
     # This is the master data dictionary.
     data = {"data": {}, "info": info, "sinks": {"nsinks": 0}}
     for i in range(len(list_vars)):
         theKey = list_vars[i]
         data["data"][theKey] = master_data_array[:,i]
+
+    if npart_read > 0:
+        data["particle"] = {}
+        for ivar, var_name in enumerate(particle_vars):
+            data["particle"][var_name] = part_data[:, ivar].copy()
+
+    del part_data
+
+    data["info"]["mstar"] = mstar
+    data["info"]["mstar_lost"] = mstar_lost
 
     # Append useful variables to dictionary
     data["data"]["unit_d"] = info["unit_d"]
@@ -435,7 +504,6 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     ref = dict()
     with open(test_name+"-ref.dat") as f:
         content = f.readlines()
-    f.close()
     for line in content:
         sp = line.split(":")
         if len(sp) > 1:

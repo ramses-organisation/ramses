@@ -433,8 +433,14 @@ subroutine cmp_new_cpu_map
                     ncell_sub(isub)=ncell_sub(isub)+1
                     flag1(ncell)=8*10 ! Magic number
                     if(pic)then
-                       flag1(ncell)=flag1(ncell)+numbp(ind_grid(i))
-                    endif
+                       ! Add more load for tracer particles
+                       if (tracer .and. ilevel >= tracer_first_balance_levelmin) then
+                          flag1(ncell) = flag1(ncell) + numbp(ind_grid(i)) + &
+                               tracer_first_balance_part_per_cell
+                       else
+                          flag1(ncell)=flag1(ncell)+numbp(ind_grid(i))
+                       endif
+                    end if
                     wflag = flag1(ncell)*niter_cost(ilevel)
                     if (wflag > 2147483647) then
                        write(*,*) ' wrong type for flag1 --> change to integer kind=8: ',wflag
