@@ -10,7 +10,7 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 2
+NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
@@ -23,7 +23,7 @@ RT = 0
 MPI = 1
 MPIF90 = ftn
 # Root name of executable
-EXEC = ramses
+EXEC = ramsesTest
 # Number of additional energies
 NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No

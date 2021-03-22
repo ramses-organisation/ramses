@@ -35,7 +35,7 @@ B_region=0.0,0.0,0.0
 C_region=0.0,0.0,0.0
 pert_r = 1.0
 pert_dx = 0.5
-heating_r = 2.489e-4
+heating_r = 2E-6
 heating_dx = 0.5
 /
 
@@ -53,6 +53,7 @@ gravity_params=-0.5011872336272725,0.0,0.0
 gamma=1.66667
 courant_factor=0.8
 riemann='hlld'
+riemann2d='hlld'
 slope_type=2
 strict_equilibrium=1
 scheme='muscl'
