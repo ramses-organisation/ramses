@@ -951,7 +951,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            end do
 
            ! AGN feedback
-           ! Only for sinks that could accreate.
+           ! Only for sinks that could accrete.
            ! Can deposit thermal dump or/and momentum kicks (and/or radiation if RT used).
            if( .not. on_creation)then
               if(agn)then
@@ -1008,10 +1008,11 @@ subroutine compute_accretion_rate(write_sinks)
   integer::i,nx_loc,isink
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::factG,d_star,boost
-  real(dp)::r2,vrel2,c2,density,volume,ethermal,dx_min,scale,mgas,rho_inf,v_bondi
+  real(dp)::vrel2,c2,density,volume,ethermal,dx_min,scale,mgas,v_bondi
   real(dp)::r2_smbh,rho_inf_smbh
   real(dp),dimension(1:ndim)::velocity
-  real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMEDoverdt_smbh
+  real(dp),dimension(1:nsinkmax)::dMEDoverdt,r2,rho_inf
+  real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
   real(dp)::T2_gas,delta_mass_min
 
   ! Gravitational constant
@@ -1069,13 +1070,13 @@ subroutine compute_accretion_rate(write_sinks)
      endif
 
      ! Bondi radius
-     r2=(factG*msink(isink)/v_bondi**2)**2
+     r2(isink)=(factG*msink(isink)/v_bondi**2)**2
 
      ! Extrapolate to rho_inf
-     rho_inf=density/(bondi_alpha(ir_cloud*0.5d0*dx_min/(r2+tiny(0.0_dp))**0.5d0))
+     rho_inf(isink)=density/(bondi_alpha(ir_cloud*0.5d0*dx_min/(r2(isink)+tiny(0.0_dp))**0.5d0))
 
      ! Compute Bondi-Hoyle accretion rate in code units
-     dMBHoverdt(isink)=4*pi*rho_inf*r2*v_bondi
+     dMBHoverdt(isink)=4*pi*rho_inf(isink)*r2(isink)*v_bondi
 
      ! Compute Eddington accretion rate in code units
      dMEDoverdt(isink)=4*pi*factG_in_cgs*msink(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t
@@ -1176,11 +1177,11 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   use constants, only: twopi, M_sun, pc2cm, yr2sec
   use mpi_mod
   implicit none
-  real(dp),dimension(1:nsinkmax)::dMEDoverdt,dMEDoverdt_smbh
+  real(dp),dimension(1:nsinkmax)::dMEDoverdt,rho_inf,r2
+  real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
   integer::i,isink,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::l_abs,l_max,factG,scale,dx_min
-  real(dp)::r2,rho_inf
   real(dp),dimension(1:ndim)::skip_loc
 
   ! Gravitational constant
@@ -1206,11 +1207,16 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
         call quick_sort_dp(xmsink(1),idsink_sort(1),nsink)
         write(*,*)'Number of sink = ',nsink
         write(*,'(" ============================================================================================")')
-        write(*,'(" Id     Mass(Msol) Bondi(Msol/yr)   Edd(Msol/yr)  BH: Mass(Msol)  Bondi(Msol/yr)  Edd(Msol/yr)    x              y              z      DeltaM(Msol)")')
+        if(mass_smbh_seed>0)then
+           write(*,'(" Id  Mass(Msol)     Bondi(Msol/yr) Edd(Msol/yr)  BH: Mass(Msol)  Bondi(Msol/yr)  Edd(Msol/yr)    x              y              z      DeltaM(Msol)")')
+        else
+           write(*,'(" Id  Mass(Msol)     Bondi(Msol/yr) Edd(Msol/yr)   x              y              z              DeltaM(Msol)")')
+        endif
         write(*,'(" ============================================================================================")')
         do i=nsink,max(nsink-30,1),-1
            isink=idsink_sort(i)
-           write(*,'(I3,12(1X,1PE14.7))')idsink(isink) &
+           if(mass_smbh_seed>0)then
+              write(*,'(I3,12(1X,1PE14.7))')idsink(isink) &
                 & ,msink(isink)*scale_m/M_sun &
                 & ,dMBHoverdt(isink)*scale_m/scale_t/(M_sun/yr2sec) &
                 & ,dMEDoverdt(isink)*scale_m/scale_t/(M_sun/yr2sec) &
@@ -1218,20 +1224,25 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
                 & ,dMBHoverdt_smbh(isink)*scale_m/scale_t/(M_sun/yr2sec) &
                 & ,dMEDoverdt_smbh(isink)*scale_m/scale_t/(M_sun/yr2sec) &
                 & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/M_sun
+           else
+              write(*,'(I3,12(1X,1PE14.7))')idsink(isink) &
+                & ,msink(isink)*scale_m/M_sun &
+                & ,dMBHoverdt(isink)*scale_m/scale_t/(M_sun/yr2sec) &
+                & ,dMEDoverdt(isink)*scale_m/scale_t/(M_sun/yr2sec) &
+                & ,xsink(isink,1:ndim),delta_mass(isink)*scale_m/M_sun
+           endif
         end do
         write(*,'(" ============================================================================================")')
         if(verbose_AGN)then
-          write(*,'(" Id     rho(H/cc)  rho_inf(H/cc) Mgas(Msol) cs(km/s) rBondi(pc)")')
-          write(*,'(" vgas(km/s):  x   y   z     vsink(km/s):  x   y   z")')
-          write(*,'(" ============================================================================================")')
-          do i=nsink,max(nsink-30,1),-1
-            isink=idsink_sort(i)
-            write(*,'(I3,12(1X,1PE14.7))')idsink(isink),rho_gas(isink)*scale_nH,rho_inf*scale_nH &
-                & ,rho_gas(isink)*volume_gas(isink)*scale_m/M_sun,sqrt(c2sink(isink))*scale_v/1e5 &
-                & ,sqrt(r2)*scale_l/pc2cm
-            write(*,'(6(1X,1PE14.7))')vel_gas(isink,1:ndim)*scale_v/1e5,vsink(isink,1:ndim)*scale_v/1e5
-          end do
-          write(*,'(" ============================================================================================")')
+           write(*,'(" Id  rho(H/cc)      rho_inf(H/cc)  Mgas(Msol)     cs(km/s)       rBondi(pc)     vgasx(km/s)    vgasy(km/s)    vgasz(km/s)    vsinkx(km/s)   vsinky(km/s)   vsinkz(km/s) ")')
+           write(*,'(" ============================================================================================")')
+           do i=nsink,max(nsink-30,1),-1
+              isink=idsink_sort(i)
+              write(*,'(I3,12(1X,1PE14.7))')idsink(isink),rho_gas(isink)*scale_nH,rho_inf(isink)*scale_nH &
+                   & ,rho_gas(isink)*volume_gas(isink)*scale_m/M_sun,sqrt(c2sink(isink))*scale_v/1e5 &
+                   & ,sqrt(r2(isink))*scale_l/pc2cm,vel_gas(isink,1:ndim)*scale_v/1e5,vsink(isink,1:ndim)*scale_v/1e5
+           end do
+           write(*,'(" ============================================================================================")')
         end if
      endif
   end if
@@ -1804,10 +1815,10 @@ subroutine update_sink(ilevel)
                     write(*,*)'> Merging sink ',idsink(jsink),' into sink ',idsink(isink)
                     if(verbose_AGN)then
                        write(*,*)'>> Sink #1: ',idsink(isink)
-                       write(*,*)msink(isink)*M_sun/(scale_d*scale_l**ndim)
+                       write(*,*)msink(isink)/M_sun*(scale_d*scale_l**ndim)
                        write(*,*)xsink(isink,1:ndim)
                        write(*,*)'>> Sink #2: ',idsink(jsink)
-                       write(*,*)msink(jsink)*M_sun/(scale_d*scale_l**ndim)
+                       write(*,*)msink(jsink)/M_sun*(scale_d*scale_l**ndim)
                        write(*,*)xsink(jsink,1:ndim)
                     endif
                  endif

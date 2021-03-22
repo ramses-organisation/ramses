@@ -94,7 +94,7 @@ program part2cylprof
   read(10,*)
 
   read(10,'(A14,A80)')GMGM,ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -313,6 +313,8 @@ program part2cylprof
      if(nstar>0)then
         read(1) ! Skip identity
         read(1) ! Skip level
+        read(1) ! Skip family
+        read(1) ! Skip tag
         read(1)age
      endif
      close(1)
