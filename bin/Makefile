@@ -79,7 +79,7 @@ endif
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
-   FFLAGS = -x f95-cpp-input $(DEFINES)
+   FFLAGS = -x f95-cpp-input -fallow-argument-mismatch $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else

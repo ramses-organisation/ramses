@@ -30,7 +30,6 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  ! JRCC : Add declaration of req, peq (scalars)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin,req,peq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
@@ -68,7 +67,7 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
-  ! Translate to primative variables, compute sound speeds
+  ! Translate to primitive variables, compute sound speeds
   ! JRCC : Add req, peq in ctoprim call
   call ctoprim(uin,qin,cin,req,peq,gravin,dt,ngrid)
 
@@ -104,8 +103,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Solve for 1D flux in X direction
   ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=if1,if2
@@ -128,8 +127,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi
@@ -153,8 +152,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Z direction
 #if NDIM>2
 ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi

@@ -331,6 +331,7 @@ end subroutine make_grid_coarse
 !###############################################################
 subroutine refine_fine(ilevel)
   use amr_commons
+  use tracer_utils
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -446,8 +447,18 @@ subroutine refine_fine(ilevel)
                     ind_cell_tmp(icell)=ind_cell(i)
                  end if
               end do
+              ! Tracer particle need to be scattered to newly-created cells on grid creation.
+              ! The hooks perform this action.
+              if (MC_tracer) then
+                 call pre_make_grid_fine_hook(ind_grid_tmp, ind_cell_tmp, ind, &
+                      & ilevel+1, ncreate_tmp, ibound, boundary_region)
+              end if
               call make_grid_fine(ind_grid_tmp,ind_cell_tmp,ind, &
                    & ilevel+1,ncreate_tmp,ibound,boundary_region)
+              if (MC_tracer) then
+                 call post_make_grid_fine_hook(ind_grid_tmp, ind_cell_tmp, ind, &
+                      & ilevel+1, ncreate_tmp, ibound, boundary_region)
+              end if
            end if
         end do
      end do
@@ -524,7 +535,13 @@ subroutine refine_fine(ilevel)
                     ind_cell_tmp(icell)=ind_cell(i)
                  end if
               end do
+              if (MC_tracer) then
+                 call pre_kill_grid_hook(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
+              end if
               call kill_grid(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
+              if (MC_tracer) then
+                 call post_kill_grid_hook(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
+              end if
            end if
         end do  ! End loop over cells
      end do
@@ -787,10 +804,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
        do i=1,nn
           rho_eq(iskip+ind_grid_son(i))=uu(i,1)
           p_eq(iskip+ind_grid_son(i))=uu(i,neul)*(gamma-1.0D0)
-          ! write(*,*)'hello',rho_eq(iskip+ind_grid_son(i)),p_eq(iskip+ind_grid_son(i))
-       end do
+        end do
     end do
   endif
+
   ! Interpolate parent variables to get new children ones
   if(.not.init .and. .not.balance)then
      ! Get neighboring father cells
