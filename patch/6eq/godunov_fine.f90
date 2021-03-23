@@ -133,7 +133,7 @@ subroutine set_uold(ilevel)
      end do
   end do
 
-!  if(nmat>1)call pressure_relaxation2(ilevel)
+  if(nmat>1)call pressure_relaxation2(ilevel)
   
 111 format('   Entering set_uold for level ',i2)
 
@@ -305,9 +305,13 @@ subroutine add_gravity_source_terms(ilevel)
   ! total energy are modified in array unew.
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell,imat
-  real(dp)::d,d_mat,u,v,w,d_old,fact
-  real(dp),dimension(1:nmat)::e_kin,e_prim
-  
+  real(dp)::d,d_mat,u,v,w,e_kin,e_tot,d_old,fact
+  real(dp)::one=1.0_dp,half=0.5_dp,zero=0.0_dp
+  real(dp),dimension(1:nmat)::e_prim
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+  real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
+#endif
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
   
@@ -322,19 +326,25 @@ subroutine add_gravity_source_terms(ilevel)
           d = d + unew(ind_cell,nmat+imat)
         end do
 
-        u=0; v=0; w=0
-        if(ndim>0) u = unew(ind_cell,2*nmat+1)/max(d,smallr)
-        if(ndim>1) v = unew(ind_cell,2*nmat+2)/max(d,smallr)
-        if(ndim>2) w = unew(ind_cell,2*nmat+3)/max(d,smallr)
+        u=0; v=0; w=0; e_kin=0.0d0
+        if(ndim>0) u = unew(ind_cell,2*nmat+1)/d
+        e_kin = e_kin + half*u**2
+        if(ndim>1) v = unew(ind_cell,2*nmat+2)/d
+        e_kin = e_kin + half*v**2
+        if(ndim>2) w = unew(ind_cell,2*nmat+3)/d
+        e_kin = e_kin + half*w**2
         
         do imat=1,nmat
-          d_mat = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
-          e_kin(imat) = 0.5d0*d_mat*(u**2+v**2+w**2)
-          e_prim(imat) = unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,imat) - e_kin(imat)
-          if(e_prim(imat)<0)then
-             write(*,*)'gravity',imat,unew(ind_cell,imat),d_mat,e_prim(imat),e_kin(imat),unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,imat)
-          endif
-       end do
+           e_tot = unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+           e_prim(imat) = e_tot - e_kin
+           if(e_prim(imat)<0.001*e_kin)then
+              g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
+              s_mat(1) = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+              call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+!              write(*,*)'gravity',imat,unew(ind_cell,imat),e_prim(imat),e_mat(1),e_tot,e_kin
+              e_prim(imat)=e_mat(1)
+           endif
+        end do
         
         d_old = 0
         do imat = 1,nmat
@@ -342,23 +352,26 @@ subroutine add_gravity_source_terms(ilevel)
         end do
         fact = d_old/d*0.5d0*dtnew(ilevel)
         
+        e_kin=0d0
         if(ndim>0)then
            u = u + f(ind_cell,1)*fact
            unew(ind_cell,2*nmat+1) = d*u
+           e_kin = e_kin + half*u**2
         endif
         if(ndim>1)then
            v = v + f(ind_cell,2)*fact
            unew(ind_cell,2*nmat+2) = d*v
+           e_kin = e_kin + half*v**2
         end if
         if(ndim>2)then
            w = w + f(ind_cell,3)*fact
            unew(ind_cell,2*nmat+3) = d*w
+           e_kin = e_kin + half*w**2
         endif
         
         do imat=1,nmat
-          d_mat = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
-          e_kin(imat) = 0.5d0*d_mat*(u**2+v**2+w**2)
-          unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,imat)*(e_prim(imat) + e_kin(imat))
+           e_tot = e_prim(imat) + e_kin
+           unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*e_tot
         end do
      end do
   end do
@@ -387,7 +400,7 @@ subroutine pressure_relaxation(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,a0,rho_0,eta
   real(dp)::skip_loc,dx,eps,scale,dx_loc
-  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp)::one=1.0_dp,half=0.5_dp,zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc
   logical::error,inv
@@ -544,7 +557,7 @@ subroutine pressure_relaxation2(ilevel)
   real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::t123,t124,t125,t134,t135,t145
   real(dp)::t234,t235,t245,t345
-  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp)::one=1.0_dp,half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter
   integer::iter_max=100,iter_mean
@@ -615,9 +628,10 @@ subroutine pressure_relaxation2(ilevel)
                  
                  ! Compute specific internal energy
                  do imat = 1,nmat
-                    ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
+                    etot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                    ee(imat) = etot-ekin
                     if(ee(imat)<0)then
-                       write(*,*)'relaxation',imat,iter,ff(imat),gg(imat),ee(imat)
+                       write(*,*)'relaxation',imat,iter,ff(imat),ee(imat),etot,ekin
                     endif
                  end do
                                   
@@ -740,7 +754,7 @@ subroutine pressure_relaxation2(ilevel)
                  
                  ! Store new partial total energy
                  do imat=1,nmat
-                    uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
+                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*(ee_new(imat) + ekin)
                  end do
 
                  iter=iter+1
@@ -749,7 +763,8 @@ subroutine pressure_relaxation2(ilevel)
               end do
               
               if(iter.EQ.iter_max)then
-                 write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),pp(1),pp(2),error
+!              if(iter>1)then
+                 write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
               endif
               
            endif

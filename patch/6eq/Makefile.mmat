@@ -41,14 +41,14 @@ NGROUPS = 0
 # Number of passive scalars
 NPSCAL = 0
 # Compute NVAR
-NVAR = 2+$(NDIM)+2*$(NMAT)
+NVAR = $(NDIM)+3*$(NMAT)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)+$(NMETALS)
 endif
-NVAR := $(NVAR)+$(NENER)+$(NPSCAL)
+NVAR := $(NVAR)+$(NENER)+$(NPSCAL)*$(NMAT)
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0

@@ -183,7 +183,9 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
   integer ::i, j, k, l, n, idim, imat
   real(dp),dimension(1:nvector),save::ekin
   real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp_mat,cc_mat,dtot
-
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+#endif
   ! Convert to primitive variable
   do k = ku1, ku2
   do j = ju1, ju2
@@ -254,6 +256,27 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
   end do
   end do
  
+#if NVAR > NDIM + 3*NMAT
+  ! Passive scalar for each fluid
+  npscal = (nvar - ndim - 3*nmat) / nmat
+  do imat = 1, nmat
+  do ipscal = 1, npscal
+     n = ndim + 3*nmat + npscal*(imat-1) + ipscal
+
+     do k = ku1, ku2
+     do j = ju1, ju2
+     do i = iu1, iu2
+        do l = 1, ngrid
+           q(l,i,j,k,n-nmat) = uin(l,i,j,k,n)/uin(l,i,j,k,nmat+imat)
+        end do
+     end do
+     end do
+     end do
+
+  end do
+  end do
+#endif
+
 end subroutine ctoprim
 !###########################################################
 !###########################################################
@@ -291,6 +314,9 @@ subroutine trace1d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
   real(dp),dimension(1:nmat)::f,g,p,e,csq
   real(dp),dimension(1:nmat)::dfx,dgx,dpx,dex
   real(dp),dimension(1:nmat)::sf0,sg0,sp0,se0
+#if NVAR > NDIM + 3*NMAT
+  integer::a,dax,sa0
+#endif
   
   dtdx = dt/dx
 
@@ -330,35 +356,55 @@ subroutine trace1d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
         ! Source terms (including transverse derivatives and geometrical terms)
         do imat   = 1,nmat
         sf0(imat) = -u*dfx(imat)
-        sg0(imat) = -u*dgx(imat)       - (dux)*g(imat)
-        sp0(imat) = -u*dpx(imat)       - (dux)*g(imat)*csq(imat)
-        se0(imat) = -u*dex(imat)       - (dux)*(e(imat)+p(imat))
+        sg0(imat) = -u*dgx(imat) - (dux)*g(imat)
+        sp0(imat) = -u*dpx(imat) - (dux)*g(imat)*csq(imat)
+        se0(imat) = -u*dex(imat) - (dux)*(e(imat)+p(imat))
         end do
-        su0       = -u*dux             - dptotx/r 
+        su0       = -u*dux       - dptotx/r 
         
         ! Right state
         do imat = 1,nmat
-        fp(l,i,j,k,imat           ,1) = f(imat)      -half*dfx(imat)      +sf0(imat)      *dtdx*half
-        gp(l,i,j,k,imat           ,1) = g(imat)      -half*dgx(imat)      +sg0(imat)      *dtdx*half
-        qp(l,i,j,k,ndim+imat      ,1) = p(imat)      -half*dpx(imat)      +sp0(imat)      *dtdx*half
-        qp(l,i,j,k,ndim+nmat+imat ,1) = e(imat)      -half*dex(imat)      +se0(imat)      *dtdx*half
+        fp(l,i,j,k,imat           ,1) = f(imat) -half*dfx(imat) +sf0(imat)*dtdx*half
+        gp(l,i,j,k,imat           ,1) = g(imat) -half*dgx(imat) +sg0(imat)*dtdx*half
+        qp(l,i,j,k,ndim+imat      ,1) = p(imat) -half*dpx(imat) +sp0(imat)*dtdx*half
+        qp(l,i,j,k,ndim+nmat+imat ,1) = e(imat) -half*dex(imat) +se0(imat)*dtdx*half
         end do
-        qp(l,i,j,k,iu             ,1) = u            -half*dux            +su0            *dtdx*half
+        qp(l,i,j,k,iu             ,1) = u       -half*dux       +su0      *dtdx*half
         
         ! Left state
         do imat = 1,nmat
-        fm(l,i,j,k,imat           ,1) = f(imat)      +half*dfx(imat)      +sf0(imat)     *dtdx*half
-        gm(l,i,j,k,imat           ,1) = g(imat)      +half*dgx(imat)      +sg0(imat)     *dtdx*half
-        qm(l,i,j,k,ndim+imat      ,1) = p(imat)      +half*dpx(imat)      +sp0(imat)     *dtdx*half
-        qm(l,i,j,k,ndim+nmat+imat ,1) = e(imat)      +half*dex(imat)      +se0(imat)     *dtdx*half
+        fm(l,i,j,k,imat           ,1) = f(imat) +half*dfx(imat) +sf0(imat)*dtdx*half
+        gm(l,i,j,k,imat           ,1) = g(imat) +half*dgx(imat) +sg0(imat)*dtdx*half
+        qm(l,i,j,k,ndim+imat      ,1) = p(imat) +half*dpx(imat) +sp0(imat)*dtdx*half
+        qm(l,i,j,k,ndim+nmat+imat ,1) = e(imat) +half*dex(imat) +se0(imat)*dtdx*half
         end do
-        qm(l,i,j,k,iu             ,1) = u            +half*dux            +su0           *dtdx*half
+        qm(l,i,j,k,iu             ,1) = u       +half*dux       +su0      *dtdx*half
         
      end do
 
   end do
   end do
   end do
+
+#if NVAR > NDIM + 3*NMAT
+  ! Passive scalars
+  do n = ndim+2*nmat+1,nvar-nmat
+     do k = klo, khi
+     do j = jlo, jhi
+     do i = ilo, ihi
+        do l = 1, ngrid
+           a   = qin(l,i,j,k,n)     ! Cell centered values
+           u   = qin(l,i,j,k,iu)    ! x-velocity
+           dax = dq(l,i,j,k,n,1)    ! TVD slopes
+           sa0 = -u*dax             ! Source terms
+           qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
+           qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
+        end do
+     end do
+     end do
+     end do
+  end do
+#endif
 
 end subroutine trace1d
 !###########################################################
@@ -403,6 +449,9 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nmat)::dfx,dgx,dpx,dex
   real(dp),dimension(1:nmat)::dfy,dgy,dpy,dey
   real(dp)::smalle
+#if NVAR > NDIM + 3*NMAT
+  integer::a,dax,day,sa0
+#endif
 
   smalle = smallr**3
   dtdx = dt/dx
@@ -516,8 +565,7 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
         end do
         qp(l,i,j,k,iu             ,2)  = u       -half*duy       +su0      *dtdy*half
         qp(l,i,j,k,iv             ,2)  = v       -half*dvy       +sv0      *dtdy*half
-        
-        
+                
         ! Bottom state at top interface
         do imat = 1,nmat
 
@@ -535,13 +583,36 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
         qm(l,i,j,k,iu             ,2)  = u       +half*duy       +su0      *dtdy*half
         qm(l,i,j,k,iv             ,2)  = v       +half*dvy       +sv0      *dtdy*half
         
-        
      end do
 
   end do
   end do
   end do
 
+#if NVAR > NDIM + 3*NMAT
+  ! Passive scalars
+  do n = ndim + 2*nmat + imat, nvar - nmat
+     do k = klo, khi
+     do j = jlo, jhi
+     do i = ilo, ihi
+        do l = 1, ngrid
+           a   = qin(l,i,j,k,n)     ! Cell centered values
+           u   = qin(l,i,j,k,iu)    ! x-velocity
+           v   = qin(l,i,j,k,iv)    ! y-velocity
+           dax = dq(l,i,j,k,n,1)    ! TVD slopes
+           day = dq(l,i,j,k,n,2)    
+           sa0 = -u*dax-v*day       ! Source terms
+           qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
+           qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
+           qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
+           qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
+        end do
+     end do
+     end do
+     end do
+  end do
+#endif
+  
 end subroutine trace2d
 #endif
 !###########################################################
@@ -789,20 +860,28 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
      
      ! Individual pressures
      do imat=1,nmat
-      do l = 1, ngrid
-        qleft (l,ndim+imat) = qm(l,i,j,k,ndim+imat,idim)
-        qright(l,ndim+imat) = qp(l,i,j,k,ndim+imat,idim)
-      end do
+        do l = 1, ngrid
+           qleft (l,ndim+imat) = qm(l,i,j,k,ndim+imat,idim)
+           qright(l,ndim+imat) = qp(l,i,j,k,ndim+imat,idim)
+        end do
      end do
-
+     
      ! Internal energies
      do imat=1,nmat
-      do l=1,ngrid
-        qleft (l,ndim+nmat+imat) = qm(l,i,j,k,ndim+nmat+imat,idim)
-        qright(l,ndim+nmat+imat) = qp(l,i,j,k,ndim+nmat+imat,idim)
-      end do
+        do l=1,ngrid
+           qleft (l,ndim+nmat+imat) = qm(l,i,j,k,ndim+nmat+imat,idim)
+           qright(l,ndim+nmat+imat) = qp(l,i,j,k,ndim+nmat+imat,idim)
+        end do
      end do
-
+#if NVAR > NDIM + 3*NMAT     
+     ! Passive scalars
+     do n=ndim+2*nmat+1, nvar-nmat
+        do l=1,ngrid
+           qleft (l,n) = qm(l,i,j,k,n,idim)
+           qright(l,n) = qp(l,i,j,k,n,idim)
+        end do
+     end do
+#endif     
      ! Tangential velocity 1
 #if NDIM>1
      do l = 1, ngrid

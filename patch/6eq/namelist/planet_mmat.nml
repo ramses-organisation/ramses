@@ -50,6 +50,7 @@ courant_factor=0.5
 slope_type=1
 scheme='muscl'
 eos_name='mie-grueneisen'
+smallc=1d-6
 /
 
 

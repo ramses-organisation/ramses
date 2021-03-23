@@ -26,70 +26,141 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
   real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta
   real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   do k=1,ncell
-    if(eos_name=='mie-grueneisen')then
-      ! Get Mie-Grueneisen EOS parameters
-      smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
-      eta = d(k)/rho_0
-      p_c = p_0 * eta**biggamma
-      e_c = p_c / (biggamma-one)
-      delpc = biggamma * p_c ! This is actually rho*delpc, convention here is to have the same units for all variables
 
-      ! Use the EOS to calculate the current pressure/internal energy in a given cell
-      if(inv .eqv. .false.)then ! Corresponds to the old eos routine
-        p(k) = (smallgamma-1)*(e(k)-e_c) + p_c
+     if(eos_name=='mie-grueneisen')then
+
+        ! Get Mie-Grueneisen EOS parameters
+        smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+        eta = d(k)/rho_0
+        p_c = p_0 * eta**biggamma
+        e_c = p_c / (biggamma-one)
+        delpc = biggamma * p_c
+
+        ! Use the EOS to calculate the current pressure/internal energy in a given cell
+        ! P - P_c = (gamma - one) * (e - e_c) ; e = e_c + (P - P_c) / (gamma - one)
+        if(inv .eqv. .false.)then
+           p(k) = (smallgamma-1)*(e(k)-e_c) + p_c
+        else if(inv .eqv. .true.)then
+           e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
+        end if
+
         ! Calculate the speed of sound of each fluid
-        ! c**2 = P_c' + smallgamma/rho * (P-P_c)
+        ! c**2 = P_c' + gamma * (P - P_c) / rho
+        c(k) = (delpc + smallgamma * (p(k)-p_c)) / d(k)
+        c(k) = sqrt(max(c(k),smallc**2))
+                   
+     else if(eos_name == 'cochran-chan')then
+        
+        ! Get Mie-Grueneisen EOS paramete
+        smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+        E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+        A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+        C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+        
+        ! Define the Cochran-Chan constant term
+        E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+        
+        ! Update Mie-Gruneisen terms for each material
+        eta   = d(k)/rho_0
+        p_c_1 = A_1 * eta**E_1
+        p_c_2 = A_2 * eta**E_2
+        p_c   = p_c_1 - p_c_2
+        e_c   = p_c_1 / (E_1-one) - p_c_2 / (E_2-one) - eta * E_0
+        delpc = p_c_1 * E_1 - p_c_2 * E_2
+        
+        ! Use the EOS to calculate the current pressure/internal energy in a given cell
+        ! P - P_c = (gamma - one) * (e - e_c) ; e = e_c + (P - P_c) / (gamma - one)
+        if(inv .eqv. .false.)then
+           p(k) = (smallgamma-1)*(e(k)-e_c) + p_c
+        else if(inv .eqv. .true.)then
+           e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
+        end if
+
+        ! Calculate the speed of sound of each fluid
+        ! c**2 = P_c' + gamma * (P - P_c) / rho
         c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
         c(k) = sqrt(max(c(k),smallc**2))
-
-      else if(inv .eqv. .true.)then ! Corresponds to the old eosinv routine
-        e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
-        ! Calculate the speed of sound of each fluid
-        ! c**2 = P_c' + smallgamma/rho * (P-P_c)
-        c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
-        c(k) = sqrt(max(c(k),smallc**2))
-      end if
-
-    ! Cochran-Chan EOS written with the the Mie-Grueneisen formulation 
-    else if(eos_name == 'cochran-chan')then
-
-      ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS 
-      ! Get Mie-Grueneisen EOS parameters
-      smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
-      E_1=eos_params(imat,3);E_2=eos_params(imat,4)
-      A_1=eos_params(imat,5);A_2=eos_params(imat,6)
-      C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-         
-      ! Define the Cochran-Chan constant term
-      E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-         
-      ! Update Mie-Gruneisen terms for each material
-      eta   = d(k)/rho_0
-      p_c_1 = A_1 * eta**E_1
-      p_c_2 = A_2 * eta**E_2
-      p_c   = p_c_1 - p_c_2
-      e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
-      delpc = p_c_1 * E_1 - p_c_2 * E_2 ! This is actually rho*delpc, convention here is to have the same units for all variables
-
-      ! Use the EOS to calculate the current pressure/internal energy in a given cell
-      ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
-      if(inv .eqv. .false.)then ! Corresponds to the old eos routine
-        p(k) = (smallgamma-1)*(e(k)-e_c) + p_c
-        ! Calculate the speed of sound of each fluid
-        ! c**2 = P_c' + smallgamma/rho * (P-P_c)
-        c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
-        c(k) = sqrt(max(c(k),smallc**2))
-      else if(inv .eqv. .true.)then ! Corresponds to the old eosinv routine
-        e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
-        ! write(*,*) p(k), e(k), imat, d(k), smallgamma, e_c, p_c, k, ncell
-        ! Calculate the speed of sound of each fluid
-        ! c**2 = P_c' + smallgamma/rho * (P-P_c)
-        c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
-        c(k) = sqrt(max(c(k),smallc**2))
-      end if
-    end if
+        
+     end if
   end do
 end subroutine eos
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine eos_s(d,e,s,imat,inv,ncell)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+  integer::imat
+  integer::ncell
+  logical::inv
+  real(dp),dimension(1:nvector)::d,e,s
+  ! Compute entropy from internal energy
+  ! On entry:
+  !   d is the true density of each fluid
+  !   imat is the identifier of the fluid species 
+  !   inv is a logical defining the case:
+  !     inv=0:(d,e)-->(s) (e is given)
+  !     inv=1:(d,s)-->(e) (s is given)
+  ! On exit:
+  !   e is the internal energy of each fluid   
+  !   s is the entropy of each fluid
+  integer::k
+  real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta
+  real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
+
+  do k=1,ncell
+
+     if(eos_name=='mie-grueneisen')then
+
+        ! Get Mie-Grueneisen EOS parameters
+        smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+        eta = d(k)/rho_0
+        p_c = p_0 * eta**biggamma
+        e_c = p_c / (biggamma-one)
+
+        ! Use the EOS to calculate the current entropy/internal energy in a given cell
+        ! s = (e - e_c) / rho**gamma; e = e_c + s * rho**gamma
+        if(inv .eqv. .false.)then
+           s(k) = (e(k) - e_c) / d(k)**smallgamma
+        else if(inv .eqv. .true.)then
+           e(k) = e_c + s(k) * d(k)**smallgamma
+        end if
+
+     else if(eos_name == 'cochran-chan')then
+        
+        ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS 
+        ! Get Mie-Grueneisen EOS parameters
+        smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+        E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+        A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+        C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+        
+        ! Define the Cochran-Chan constant term
+        E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+        
+        ! Update Mie-Gruneisen terms for each material
+        eta   = d(k)/rho_0
+        p_c_1 = A_1 * eta**E_1
+        p_c_2 = A_2 * eta**E_2
+        p_c   = p_c_1 - p_c_2
+        e_c   = p_c_1 / (E_1-one) - p_c_2 / (E_2-one) - eta * E_0
+        
+        ! Use the EOS to calculate the current entropy/internal energy in a given cell
+        ! s = (e - e_c) / rho**gamma; e = e_c + s * rho**gamma
+        if(inv .eqv. .false.)then
+           s(k) = (e(k) - e_c) / d(k)**smallgamma
+        else if(inv .eqv. .true.)then
+           e(k) = e_c + s(k) * d(k)**smallgamma
+        end if
+
+     end if
+
+  end do
+  
+end subroutine eos_s
 !###########################################################
 !###########################################################
 !###########################################################
@@ -541,6 +612,9 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
   REAL(dp)::ro,uo,ptoto,eo
   real(dp),dimension(1:nmat)::gko,fko,eko,pko
   INTEGER::ivar,i,imat
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal,n
+#endif
   do i=1,ngrid
      ! Left variables
      ul    = ql(i,1)
@@ -691,7 +765,20 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
         egdnv(i,imat) = fko(imat)*pko(imat)*uo
         fgdnv(i,2*nmat+ndim+imat) = fko(imat)*(eko(imat)+pko(imat))*uo
      end do
-
+     ! Passive scalars
+#if NVAR > NDIM + 3*NMAT
+     npscal = (nvar - ndim - 3*nmat) / nmat
+     do imat = 1, nmat
+        do ipscal = 1, npscal
+           n = ndim + 3*nmat + npscal*(imat-1) + ipscal
+           if(ustar>0)then
+              fgdnv(i,n)  = uo*gko(imat)*fko(imat)*ql(i,n-nmat)
+           else
+              fgdnv(i,n)  = uo*gko(imat)*fko(imat)*qr(i,n-nmat)
+           endif
+        end do
+     end do
+#endif
   end do
 end subroutine riemann_hllc
 !###########################################################
