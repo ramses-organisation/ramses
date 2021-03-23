@@ -35,9 +35,8 @@ eos_params(2,1:4)=3,3,1.0,1.0
 /
 
 &OUTPUT_PARAMS
-foutput=1
 delta_tout=0.1
-tend=1.5
+tend=2.8
 /
 
 &POISSON_PARAMS 

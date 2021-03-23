@@ -222,6 +222,10 @@ subroutine read_params
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
+     if(tout(noutput).LT.tend)then
+        noutput=noutput+1
+        tout(noutput)=tend
+     endif
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
      noutput=MIN(int(aend/delta_aout),MAXOUT)
