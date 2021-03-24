@@ -342,7 +342,12 @@ subroutine add_gravity_source_terms(ilevel)
               s_mat(1) = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
               call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
 !              write(*,*)'gravity',imat,unew(ind_cell,imat),e_prim(imat),e_mat(1),e_tot,e_kin
-              e_prim(imat)=e_mat(1)
+              e_prim(imat)=e_mat(1)/g_mat(1)
+           else
+              g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
+              e_mat(1) = e_prim(imat)*g_mat(1)
+              call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+              unew(ind_cell,3*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*s_mat(1)
            endif
         end do
         
@@ -631,7 +636,7 @@ subroutine pressure_relaxation2(ilevel)
                     etot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
                     ee(imat) = etot-ekin
                     if(ee(imat)<0)then
-                       write(*,*)'relaxation',imat,iter,ff(imat),ee(imat),etot,ekin
+                       write(*,*)'relaxation',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),etot,ekin
                     endif
                  end do
                                   
@@ -674,6 +679,9 @@ subroutine pressure_relaxation2(ilevel)
                  do imat = 1,nmat
                     smallgamma = eos_params(imat,1)
                     rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
+                    if(rc2(imat)<0.0)then
+                      write(*,*) "Sound speed", rc2(imat)
+                    end if
                  end do
                  
                  ! Compute weights
@@ -687,6 +695,11 @@ subroutine pressure_relaxation2(ilevel)
                  
                  ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
                  ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
+                 if(ff_new(1)<0.0 .or. ff_new(2)<0.0 )then
+                  write(*,*) "Relaxed volume fractions",ff_new(1),ff_new(2), ff(1), ff(2)
+                  ff_new(1) = ff(1) + (pp(1)-pp(2))/dd/2.0
+                  ff_new(2) = ff(2) + (pp(2)-pp(1))/dd/2.0
+                 end if
 #endif
 #if NMAT==3
                  dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)

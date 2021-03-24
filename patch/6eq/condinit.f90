@@ -77,8 +77,8 @@ subroutine condinit(x,u,dx,nn)
      do imat=1,nmat
         q(k,ndim+imat) = g(k,imat)**3 + g(k,imat)*1d-6
      end do
-     f(k,1)  = 1.0
-     f(k,2)  = 1e-8
+     f(k,1)  = 1e-8
+     f(k,2)  = 1.0
      
      rr=((x(k,1)-boxlen/2.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
      if(rr<rmax)then
@@ -93,19 +93,17 @@ subroutine condinit(x,u,dx,nn)
         f(k,2)  = 1e-8
      endif
    
-     ! rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen*3.0/4.0)**2)**(1.0/2)
+     ! rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
      ! if(rr<rmax)then
-     !   i=(rr/rmax)*(nmax-1)
-     !   q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
-     !   ! q(k,ip1)=q(k,id)**3
-     !   ! q(k,ip2)=q(k,id)**3
-     !   q(k,ip) = q(k,id)**3
-     !   q(k,iu) = -0.2
-     !   q(k,iv) = -0.2
-     !   f(k,1)  = 1.0
-     !   g(k,1)  = q(k,id)
-     !   f(k,2)  = 1d-8
-     !   g(k,2)  = q(k,id)
+     !    i=(rr/rmax)*(nmax-1)
+     !    do imat=1,nmat
+     !       g(k,imat)      = xx(i,2) + (rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
+     !       q(k,ndim+imat) = g(k,imat)**3 + g(k,imat)*1d-6
+     !    end do
+     !    q(k,iu) = -0.2
+     !    q(k,iv) = 0.0
+     !    f(k,1)  = 1.0
+     !    f(k,2)  = 1e-8
      ! endif
   end do
 #endif
