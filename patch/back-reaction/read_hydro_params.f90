@@ -96,7 +96,8 @@ subroutine read_hydro_params(nml_ok)
        & ,sf_log_properties,sf_imf,sf_compressive
 
   ! Dust grains parameters
-  namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop
+  namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop&
+  & ,dust_to_gas
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length

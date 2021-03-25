@@ -271,7 +271,7 @@ contains
     real(dp),dimension(1:3)::xbound
     real(dp),dimension(1:3)::skip_loc
     real(dp)::scale
-    
+
     ! Local constants
     nxny=nx*ny
     xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
@@ -350,7 +350,7 @@ contains
                    if(ndim>0)xp(ipart,1)=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
                    if(ndim>1)xp(ipart,2)=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
                    if(ndim>2)xp(ipart,3)=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
-                   mp(ipart)=0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
+                   mp(ipart)=dust_to_gas*0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
                 end if
              end do
           end do
