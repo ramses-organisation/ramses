@@ -310,6 +310,7 @@ subroutine add_gravity_source_terms(ilevel)
   real(dp),dimension(1:nmat)::e_prim
 #if NVAR > NDIM + 3*NMAT
   integer::ipscal,npscal
+  real(dp)::s_entry,e_th
   real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
 #endif
   if(numbtot(1,ilevel)==0)return
@@ -335,18 +336,28 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin = e_kin + half*w**2
         
         do imat=1,nmat
+
+           ! Check that entropy is correct on entry 
+           s_entry = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+           if(s_entry<0)then
+              write(*,*)'gravity: negative entropy on entry',imat,s_entry
+           endif
+
+           ! Compute thermal energy using the total energy
            e_tot = unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
            e_prim(imat) = e_tot - e_kin
-           if(e_prim(imat)<0.001*e_kin)then
-              g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
-              s_mat(1) = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+           g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
+           e_mat(1) = e_prim(imat)*g_mat(1)
+           call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+           e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+
+           if(e_th < 0.001*e_kin .or. e_th < 0.001*g_mat(1)**3)then
+              ! If thermal energy is too small then use entropy instead
+              s_mat(1) = s_entry
               call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
-!              write(*,*)'gravity',imat,unew(ind_cell,imat),e_prim(imat),e_mat(1),e_tot,e_kin
-              e_prim(imat)=e_mat(1)/g_mat(1)
+              e_prim(imat) = e_mat(1)/g_mat(1)
            else
-              g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
-              e_mat(1) = e_prim(imat)*g_mat(1)
-              call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+              ! Otherwise keep thermal energy but update entropy accordingly              
               unew(ind_cell,3*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*s_mat(1)
            endif
         end do
@@ -636,7 +647,7 @@ subroutine pressure_relaxation2(ilevel)
                     etot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
                     ee(imat) = etot-ekin
                     if(ee(imat)<0)then
-                       write(*,*)'relaxation',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),etot,ekin
+                       write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),etot,ekin
                     endif
                  end do
                                   
@@ -673,6 +684,9 @@ subroutine pressure_relaxation2(ilevel)
                     pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
                     rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
                     ptot = ptot + ff(imat)*pp(imat)
+                    if(rc2(imat)<0.0)then
+                      write(*,*) "Sound speed",imat,ff(imat),gg(imat),ee(imat),e_c,pp(imat),rc2(imat)
+                    end if
                     
                  end do
               
@@ -680,7 +694,7 @@ subroutine pressure_relaxation2(ilevel)
                     smallgamma = eos_params(imat,1)
                     rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
                     if(rc2(imat)<0.0)then
-                      write(*,*) "Sound speed", rc2(imat)
+                      write(*,*) "Correction sound speed", rc2(imat), ptot,pp(imat)
                     end if
                  end do
                  
@@ -695,10 +709,17 @@ subroutine pressure_relaxation2(ilevel)
                  
                  ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
                  ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
-                 if(ff_new(1)<0.0 .or. ff_new(2)<0.0 )then
-                  write(*,*) "Relaxed volume fractions",ff_new(1),ff_new(2), ff(1), ff(2)
-                  ff_new(1) = ff(1) + (pp(1)-pp(2))/dd/2.0
-                  ff_new(2) = ff(2) + (pp(2)-pp(1))/dd/2.0
+
+                 if(ff_new(1)<0.0)then
+!                    write(*,*) "relaxation: negative volume fraction",ff_new(1),ff_new(2), ff(1), ff(2)
+                    ff_new(1) = ff(1) - ff(1)/2.0 !1d-8 !ff(1) + (pp(1)-pp(2))/dd/2.0
+                    ff_new(2) = ff(2) + ff(1)/2.0 !1d0 - 1d-8 !ff(2) + (pp(2)-pp(1))/dd/2.0
+                 end if
+
+                 if(ff_new(2)<0.0)then
+!                    write(*,*) "relaxation: negative volume fraction",ff_new(1),ff_new(2), ff(1), ff(2)
+                    ff_new(1) = ff(1) + ff(2)/2.0 !1d0 - 1d-8 !ff(1) + (pp(1)-pp(2))/dd/2.0
+                    ff_new(2) = ff(2) - ff(2)/2.0 !1d-8 !ff(2) + (pp(2)-pp(1))/dd/2.0
                  end if
 #endif
 #if NMAT==3

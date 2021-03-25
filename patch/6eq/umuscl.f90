@@ -268,6 +268,9 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
      do i = iu1, iu2
         do l = 1, ngrid
            q(l,i,j,k,n-nmat) = uin(l,i,j,k,n)/uin(l,i,j,k,nmat+imat)
+           if(q(l,i,j,k,n-nmat)<0)then
+              write(*,*)'ctoprim negative entropy',imat,ipscal,q(l,i,j,k,n-nmat)
+           endif
         end do
      end do
      end do
@@ -315,7 +318,7 @@ subroutine trace1d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dt,ngrid)
   real(dp),dimension(1:nmat)::dfx,dgx,dpx,dex
   real(dp),dimension(1:nmat)::sf0,sg0,sp0,se0
 #if NVAR > NDIM + 3*NMAT
-  integer::a,dax,sa0
+  real(dp)::a,dax,sa0
 #endif
   
   dtdx = dt/dx
@@ -450,7 +453,7 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nmat)::dfy,dgy,dpy,dey
   real(dp)::smalle
 #if NVAR > NDIM + 3*NMAT
-  integer::a,dax,day,sa0
+  real(dp)::a,dax,day,sa0
 #endif
 
   smalle = smallr**3
@@ -591,7 +594,7 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
 
 #if NVAR > NDIM + 3*NMAT
   ! Passive scalars
-  do n = ndim + 2*nmat + imat, nvar - nmat
+  do n = ndim+2*nmat+1,nvar-nmat
      do k = klo, khi
      do j = jlo, jhi
      do i = ilo, ihi
@@ -606,6 +609,13 @@ subroutine trace2d(qin,fin,gin,dq,df,dg,cin,qm,qp,fm,fp,gm,gp,dx,dy,dt,ngrid)
            qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
            qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
            qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
+           if(a<0)then
+              write(*,*)'negative entropy',n,ndim+2*nmat,a
+           endif
+           if(qp(l,i,j,k,n,1)<0)qp(l,i,j,k,n,1)=a
+           if(qm(l,i,j,k,n,1)<0)qm(l,i,j,k,n,1)=a
+           if(qp(l,i,j,k,n,2)<0)qp(l,i,j,k,n,2)=a
+           if(qm(l,i,j,k,n,2)<0)qm(l,i,j,k,n,2)=a
         end do
      end do
      end do

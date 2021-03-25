@@ -75,7 +75,7 @@ subroutine condinit(x,u,dx,nn)
      g(k,1)  = 1d-4
      g(k,2)  = 1d-4
      do imat=1,nmat
-        q(k,ndim+imat) = g(k,imat)**3 + g(k,imat)*1d-6
+        q(k,ndim+imat) = g(k,1)**3 + g(k,1)*1d0
      end do
      f(k,1)  = 1e-8
      f(k,2)  = 1.0
