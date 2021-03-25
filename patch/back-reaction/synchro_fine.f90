@@ -550,6 +550,15 @@ do idim=1,ndim
 end do
 
   ! Acceleration forces will be added here.
+  if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
+    do idim=1,ndim
+      do j=1,np
+        vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
+      end do
+    end do
+  endif
+
+
 
   ! Update old dust mass and momentum density variables
   ivar_dust=9
