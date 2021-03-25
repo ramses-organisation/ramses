@@ -40,7 +40,7 @@ subroutine synchro_fine(ilevel)
   end do
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=ivar_dust,ivar_dust+ndim     
+     do ivar=ivar_dust,ivar_dust+ndim
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0D0
         end do
@@ -50,14 +50,14 @@ subroutine synchro_fine(ilevel)
   do ibound=1,nboundary
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim     
+        do ivar=ivar_dust,ivar_dust+ndim
            do i=1,boundary(ibound,ilevel)%ngrid
               uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
            end do
         end do
      end do
   end do
-  
+
   ! Synchronize velocity using CIC
   ig=0
   ip=0
@@ -97,7 +97,7 @@ subroutine synchro_fine(ilevel)
      call make_virtual_reverse_dp(uold(1,ivar),ilevel)
      call make_virtual_fine_dp   (uold(1,ivar),ilevel)
   end do
-  
+
   ! Sink cloud particles are used to average the grav. acceleration
   if(sink)then
      if(nsink>0)then
@@ -299,7 +299,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
-  
+
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
      do i=1,ng
@@ -523,9 +523,36 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
 #endif
+! Gather 3-force
+! ERM: block 1
+ff(1:np,1:ndim)=0.0D0
+if(poisson)then
+   do ind=1,twotondim
+      do idim=1,ndim
+         do j=1,np
+            ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+         end do
+      end do
+   end do
+endif
+! Update 3-velocity
+! ERM: Block 2. Modifying vp instead of new_vp.
+do idim=1,ndim
+   if(static)then
+      do j=1,np
+         vp(ind_part(j),idim)=ff(j,idim)
+      end do
+   else
+      do j=1,np
+         vp(ind_part(j),idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
+      end do
+   endif
+end do
+
+  ! Acceleration forces will be added here.
 
   ! Update old dust mass and momentum density variables
-  ivar_dust=9  
+  ivar_dust=9
   if(nvar<ivar_dust+ndim)then
      write(*,*)'You need to compile ramses with nvar=',ivar_dust+ndim
      stop
@@ -544,7 +571,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end do
-   
+
   ! Deposit initial dust momentum to new gas momentum
   do ind=1,twotondim
      do idim=1,ndim
@@ -555,18 +582,19 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end do
-   
+
   ! Gather 3-force
-  ff(1:np,1:ndim)=0.0D0
-  if(poisson)then
-     do ind=1,twotondim
-        do idim=1,ndim
-           do j=1,np
-              ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-           end do
-        end do
-     end do
-  endif
+  ! ERM: block 1
+  !ff(1:np,1:ndim)=0.0D0
+  !if(poisson)then
+  !   do ind=1,twotondim
+  !      do idim=1,ndim
+  !         do j=1,np
+  !            ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+  !         end do
+  !      end do
+  !   end do
+  !endif
 
   ! ERM: interpolate variables for the boris kicker
   uu(1:np,1:ndim)=0.0D0
@@ -621,18 +649,19 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Update 3-velocity
-  do idim=1,ndim
-     if(static)then
-        do j=1,np
-           new_vp(j,idim)=ff(j,idim)
-        end do
-     else
-        do j=1,np
-           new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
-        end do
-     endif
-  end do
-  
+  ! ERM: Block 2.
+  !do idim=1,ndim
+  !   if(static)then
+  !      do j=1,np
+  !         new_vp(j,idim)=ff(j,idim)
+  !      end do
+  !   else
+  !      do j=1,np
+  !         new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
+  !      end do
+  !   endif
+  !end do
+
   ! Perform the second electric kick
   if(boris)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
