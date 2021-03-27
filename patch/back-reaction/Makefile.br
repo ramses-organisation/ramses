@@ -6,7 +6,7 @@
 # Do we want a debug build? 1=Yes, 0=No
 DEBUG = 0
 # Compiler flavor: GNU or INTEL
-COMPILER = INTEL
+COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
@@ -22,7 +22,7 @@ RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
-MPI = 1
+MPI = 0
 MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
@@ -39,7 +39,7 @@ NIONS = 0
 # Number of photon groups for RT
 NGROUPS = 0
 # Number of passive scalars
-NPSCAL = 0
+NPSCAL = 4
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
@@ -50,7 +50,6 @@ NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
 endif
-NVAR = 12
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 1
