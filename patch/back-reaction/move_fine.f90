@@ -482,6 +482,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               mom_dust=uold(indp(j,ind),ivar_dust+idim)
               velocity_com=(mom_gas*(1.0d0+dtnew(ilevel)/ts)+mom_dust*dtnew(ilevel)/ts)/(den_gas*(1.0d0+dtnew(ilevel)/ts)+den_dust*dtnew(ilevel)/ts)
               vcom(j,idim)=vcom(j,idim)+velocity_com*vol(j,ind)
+!              write(*,*)idim,vcom(j,idim),den_gas,mom_gas,den_dust,mom_dust
            end do
         end do
      end do
@@ -551,6 +552,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do idim=1,ndim
         do j=1,np
            new_vp(j,idim)=(vv(j,idim)+vcom(j,idim)*dtnew(ilevel)/ts)/(1.0d0+dtnew(ilevel)/ts)
+!           write(*,*)idim,vcom(j,idim),new_vp(j,idim)
         end do
      end do
   endif
@@ -574,36 +576,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 !!$    call FirstAndSecondBorisKickWithVarTs(np,dtnew(ilevel),ctm,tss,bb,uu,vv)
 !!$    new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
 !!$  endif
-
-  if((boris.or.tracer).and.constant_t_stop)then
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
-              sqrt((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2),& ! could have this as density instead
-              vv(j,1),vv(j,2),vv(j,3),& ! Velocity itself.
-              uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
-              bb(j,1),bb(j,2),bb(j,3),& ! Magnetic field.
-              uu(j,3)*bb(j,2)-uu(j,2)*bb(j,3),uu(j,1)*bb(j,3)-uu(j,3)*bb(j,2),uu(j,2)*bb(j,1)-uu(j,1)*bb(j,2) ! Electric field
-           end if
-        end do
-     end do
-  endif
-
-  if((boris.or.tracer).and.(.not.constant_t_stop))then
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
-              tss(j),& ! could have this as density instead
-              vv(j,1),vv(j,2),vv(j,3),& ! Velocity itself.
-              uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
-              bb(j,1),bb(j,2),bb(j,3),& ! Magnetic field.
-              uu(j,3)*bb(j,2)-uu(j,2)*bb(j,3),uu(j,1)*bb(j,3)-uu(j,3)*bb(j,2),uu(j,2)*bb(j,1)-uu(j,1)*bb(j,2) ! Electric field
-           end if
-        end do
-     end do
-  endif
 
   ! For sink cloud particle only
   if(sink)then
@@ -635,6 +607,35 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end do
+
+  if((boris.or.tracer).and.constant_t_stop)then
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t,idp(ind_part(j)),&
+                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
+                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),&
+                   &  uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
+                   &  bb(j,1),bb(j,2),bb(j,3) ! Magnetic field.
+           end if
+        end do
+     end do
+  endif
+
+  if((boris.or.tracer).and.(.not.constant_t_stop))then
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
+              tss(j),& ! could have this as density instead
+              vv(j,1),vv(j,2),vv(j,3),& ! Velocity itself.
+              uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
+              bb(j,1),bb(j,2),bb(j,3),& ! Magnetic field.
+              uu(j,3)*bb(j,2)-uu(j,2)*bb(j,3),uu(j,1)*bb(j,3)-uu(j,3)*bb(j,2),uu(j,2)*bb(j,1)-uu(j,1)*bb(j,2) ! Electric field
+           end if
+        end do
+     end do
+  endif
 
   ! Update position
   do idim=1,ndim

@@ -35,6 +35,7 @@ eos_params(2,1:4)=1.4,0.0,0.0,1.0
 /
 
 &OUTPUT_PARAMS
+foutput=50
 delta_tout=0.28
 tend=2.8
 /

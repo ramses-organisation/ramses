@@ -33,19 +33,19 @@ courant_factor=0.8
 scheme='muscl'
 slope_type=1
 riemann='hlld'
-riemann2d = 'hlld'
+riemann2d='hlld'
 pressure_fix=.true.
 beta_fix=0.5
 /
 
 &INIT_PARAMS
 filetype='grafic'
-initfile(1)='../../ic_drag/ic_box3_6' ! Check this
+initfile(1)='/Users/teyssier/Dropbox/ic_drag/ic_box3_6'
 /
 
 &OUTPUT_PARAMS
 delta_tout=0.01
-tend=0.3
+tend=0.6
 /
 
 &POISSON_PARAMS

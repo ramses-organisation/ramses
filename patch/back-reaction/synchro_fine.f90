@@ -523,43 +523,56 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      vol(j,8)=dd(j,1)*dd(j,2)*dd(j,3)
   end do
 #endif
-! Gather 3-force
-! ERM: block 1
-ff(1:np,1:ndim)=0.0D0
-if(poisson)then
-   do ind=1,twotondim
-      do idim=1,ndim
-         do j=1,np
-            ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-         end do
-      end do
-   end do
-endif
-! Update 3-velocity
-! ERM: Block 2. Modifying vp instead of new_vp.
-do idim=1,ndim
-   if(static)then
-      do j=1,np
-         vp(ind_part(j),idim)=ff(j,idim)
-      end do
-   else
-      do j=1,np
-         vp(ind_part(j),idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
-      end do
-   endif
-end do
 
+  ! Compute individual time steps
+  do j=1,np
+     if(levelp(ind_part(j))>=ilevel)then
+        dteff(j)=dtnew(levelp(ind_part(j)))
+     else
+        dteff(j)=dtold(levelp(ind_part(j)))
+     endif
+  end do
+
+  ! Update particles level
+  do j=1,np
+     levelp(ind_part(j))=ilevel
+  end do
+
+  ! Gather 3-force
+  ! ERM: block 1
+  ff(1:np,1:ndim)=0.0D0
+  if(poisson)then
+     do ind=1,twotondim
+        do idim=1,ndim
+           do j=1,np
+              ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+           end do
+        end do
+     end do
+  endif
+  ! Update 3-velocity
+  ! ERM: Block 2. Modifying vp instead of new_vp.
+  do idim=1,ndim
+     if(static)then
+        do j=1,np
+           vp(ind_part(j),idim)=ff(j,idim)
+        end do
+     else
+        do j=1,np
+           vp(ind_part(j),idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
+        end do
+     endif
+  end do
+  
   ! Acceleration forces will be added here.
   if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
-    do idim=1,ndim
-      do j=1,np
-        vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
-      end do
-    end do
+     do idim=1,ndim
+        do j=1,np
+           vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
+        end do
+     end do
   endif
-
-
-
+  
   ! Update old dust mass and momentum density variables
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -643,33 +656,11 @@ end do
      end do
   end if
 
-  ! Compute individual time steps
-  do j=1,np
-     if(levelp(ind_part(j))>=ilevel)then
-        dteff(j)=dtnew(levelp(ind_part(j)))
-     else
-        dteff(j)=dtold(levelp(ind_part(j)))
-     endif
+  do idim=1,ndim
+     do j=1,np
+        new_vp(j,idim)=vp(ind_part(j),idim)
+     end do
   end do
-
-  ! Update particles level
-  do j=1,np
-     levelp(ind_part(j))=ilevel
-  end do
-
-  ! Update 3-velocity
-  ! ERM: Block 2.
-  !do idim=1,ndim
-  !   if(static)then
-  !      do j=1,np
-  !         new_vp(j,idim)=ff(j,idim)
-  !      end do
-  !   else
-  !      do j=1,np
-  !         new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
-  !      end do
-  !   endif
-  !end do
 
   ! Perform the second electric kick
   if(boris)then
