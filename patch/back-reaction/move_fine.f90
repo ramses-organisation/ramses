@@ -464,7 +464,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
-  
+
   ! Gather center of mass 3-velocity
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -553,6 +553,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            new_vp(j,idim)=(vv(j,idim)+vcom(j,idim)*dtnew(ilevel)/ts)/(1.0d0+dtnew(ilevel)/ts)
         end do
      end do
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
   endif
 
 !!$  if((boris.and.hydro).and.constant_t_stop)then
