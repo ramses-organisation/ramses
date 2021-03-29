@@ -310,7 +310,7 @@ subroutine add_gravity_source_terms(ilevel)
   real(dp),dimension(1:nmat)::e_prim
 #if NVAR > NDIM + 3*NMAT
   integer::ipscal,npscal
-  real(dp)::s_entry,e_th
+  real(dp)::s_entry,e_th,e_cold
   real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
 #endif
   if(numbtot(1,ilevel)==0)return
@@ -350,8 +350,9 @@ subroutine add_gravity_source_terms(ilevel)
            e_mat(1) = e_prim(imat)*g_mat(1)
            call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
            e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
-
-           if(e_th < 0.001*e_kin .or. e_th < 0.001*g_mat(1)**3)then
+           e_cold=eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)           
+           if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+!           if(.true.)then
               ! If thermal energy is too small then use entropy instead
               s_mat(1) = s_entry
               call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
@@ -562,8 +563,8 @@ subroutine pressure_relaxation2(ilevel)
   !-------------------------------------------------------------------
   integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::ekin,dtot,etot,ptot
-  real(dp),dimension(1:nmat),save::ff,gg,ee,pp,rc2
+  real(dp)::dtot,ptot
+  real(dp),dimension(1:nmat),save::ff_old,ff,gg,ee,pp,rc2
   real(dp),dimension(1:nmat),save::ff_new,ee_new,w
   real(dp),dimension(1:ndim),save::vv
   real(dp)::error
@@ -578,7 +579,9 @@ subroutine pressure_relaxation2(ilevel)
   integer::ix,iy,iz,nx_loc,iter
   integer::iter_max=100,iter_mean
   logical::inv
-
+  real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
+  real(dp)::s_entry,e_th,e_cold,e_kin,e_tot
+  
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -615,6 +618,11 @@ subroutine pressure_relaxation2(ilevel)
         do i=1,ngrid
            if(son(ind_cell(i))==0)then
               
+              ! Compute old volume fraction
+              do imat = 1,nmat
+                 ff_old(imat) = uold(ind_cell(i),imat)
+              end do
+
               ! Compute total mass density
               dtot=0
               do imat = 1,nmat
@@ -627,9 +635,9 @@ subroutine pressure_relaxation2(ilevel)
               end do
         
               ! Compute specific kinetic energy
-              ekin=0.0
+              e_kin=0.0
               do idim = 1,ndim
-                 ekin = ekin + half*vv(idim)**2
+                 e_kin = e_kin + half*vv(idim)**2
               end do
 
               iter = 0
@@ -644,10 +652,10 @@ subroutine pressure_relaxation2(ilevel)
                  
                  ! Compute specific internal energy
                  do imat = 1,nmat
-                    etot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
-                    ee(imat) = etot-ekin
+                    e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                    ee(imat) = e_tot-e_kin
                     if(ee(imat)<0)then
-                       write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),etot,ekin
+                       write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),e_tot,e_kin
                     endif
                  end do
                                   
@@ -786,9 +794,28 @@ subroutine pressure_relaxation2(ilevel)
                     uold(ind_cell(i),imat) = ff_new(imat)
                  end do
                  
+!!$                 ! Compute new entropy
+!!$                 do imat = 1,nmat
+!!$                    s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+!!$                    g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+!!$                    e_mat(1) = ee_new(imat)*g_mat(1)
+!!$                    call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+!!$                    e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+!!$                    e_cold = eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
+!!$                    if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+!!$!                       write(*,*)'relaxation: entropy iter=',iter,imat,g_mat(1),e_th,e_cold,s_mat(1),s_entry
+!!$                       s_mat(1) = s_entry
+!!$                       call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+!!$                       ee_new(imat) = e_mat(1)/g_mat(1)
+!!$                    else
+!!$                       uold(ind_cell(i),3*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*s_mat(1)
+!!$                    endif
+!!$                 end do
+
                  ! Store new partial total energy
                  do imat=1,nmat
-                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*(ee_new(imat) + ekin)
+                    e_tot = ee_new(imat) + e_kin
+                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*e_tot
                  end do
 
                  iter=iter+1
@@ -796,6 +823,45 @@ subroutine pressure_relaxation2(ilevel)
                  
               end do
               
+              ! Compute new entropy
+              do imat = 1,nmat
+                 
+                 ! Check that entropy is correct on entry 
+                 s_entry = unew(ind_cell(i),3*nmat+ndim+imat)/unew(ind_cell(i),nmat+imat)
+                 if(s_entry<0)then
+                    write(*,*)'end relaxation: negative entropy on entry',imat,s_entry
+                 endif
+              
+                 s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+                 e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 e_mat(1) = (e_tot-e_kin)*g_mat(1)
+                 call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+                 e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+                 e_cold = eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
+                 if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+                    s_mat(1) = s_entry
+                    call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+                    ee_new(imat) = e_mat(1)/g_mat(1)
+                    e_tot = ee_new(imat) + e_kin
+                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*e_tot
+                 else
+                    uold(ind_cell(i),3*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*s_mat(1)
+                 endif
+                 
+              end do
+              
+              ! Check new entropy
+              do imat = 1,nmat
+                 g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+                 e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 e_mat(1) = (e_tot-e_kin)*g_mat(1)
+                 call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+                 if(s_mat(1)<0)then
+                    write(*,*)'end relaxation: negative entropy iter=',iter,imat,g_mat(1),e_mat(1),s_mat(1)
+                 endif
+              end do
+
               if(iter.EQ.iter_max)then
 !              if(iter>1)then
                  write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
