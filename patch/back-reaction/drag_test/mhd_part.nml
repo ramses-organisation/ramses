@@ -64,7 +64,7 @@ isothermal=.true.
 /
 
 &SF_PARAMS
-T2_star=4.2194
+T2_star=20.
 g_star=1.0
 n_star=1d20 !2.5d10
 /
