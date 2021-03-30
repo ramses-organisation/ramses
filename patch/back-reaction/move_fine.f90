@@ -589,34 +589,17 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end if
-
-  ! Store velocity
-  do idim=1,ndim
-     do j=1,np
-        vp(ind_part(j),idim)=new_vp(j,idim)
-     end do
-  end do
-
-  ! Deposit minus final dust momentum to new gas momentum
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,np
-           if(ok(j))then
-              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
-           end if
-        end do
-     end do
-  end do
-
+  
+  ! Output data to trajectory file
   if((boris.or.tracer).and.constant_t_stop)then
      do index_part=1,10
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t,idp(ind_part(j)),&
-                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),&
-                   &  uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
-                   &  bb(j,1),bb(j,2),bb(j,3) ! Magnetic field.
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+                   &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
+                   &  bb(j,1),bb(j,2),bb(j,3) ! Old magnetic field.
            end if
         end do
      end do
@@ -636,6 +619,24 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
+
+  ! Store new velocity
+  do idim=1,ndim
+     do j=1,np
+        vp(ind_part(j),idim)=new_vp(j,idim)
+     end do
+  end do
+
+  ! Deposit minus final dust momentum to new gas momentum
+  do ind=1,twotondim
+     do idim=1,ndim
+        do j=1,np
+           if(ok(j))then
+              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
+           end if
+        end do
+     end do
+  end do
 
   ! Update position
   do idim=1,ndim
