@@ -11,7 +11,7 @@ nrestart=0
 boris=.true.
 constant_t_stop=.true.
 charge_to_mass=0.d0
-t_stop=1.d-1
+t_stop=1.d-4
 !accel_gr=0.,0.,1.
 dust_to_gas=0.01
 /
