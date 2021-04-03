@@ -276,20 +276,21 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
 #endif
 
-  !----------------------
-  ! Compute new time step
-  !----------------------
-                               call timer('courant','start')
-  call newdt_fine(ilevel)
-  if(ilevel>levelmin)then
-     dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
-  end if
-
+  !-----------------------
   ! Set unew equal to uold
+  !-----------------------
                                call timer('hydro - set unew','start')
   if(hydro)call set_unew(ilevel)
 
+#ifdef RT
+  ! Set rtunew equal to rtuold
+                               call timer('radiative transfer','start')
+  if(rt)call rt_set_unew(ilevel)
+#endif
+
+  !--------------------------------------------
   ! Synchronize remaining particles for gravity
+  !--------------------------------------------
   if(pic)then
                                call timer('particles','start')
      if(static_dm.or.static_stars)then
@@ -299,11 +300,14 @@ recursive subroutine amr_step(ilevel,icount)
      end if
   end if
 
-#ifdef RT
-  ! Set rtunew equal to rtuold
-                               call timer('radiative transfer','start')
-  if(rt)call rt_set_unew(ilevel)
-#endif
+  !----------------------
+  ! Compute new time step
+  !----------------------
+                               call timer('courant','start')
+  call newdt_fine(ilevel)
+  if(ilevel>levelmin)then
+     dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
+  end if
 
   !---------------------------
   ! Recursive call to amr_step
