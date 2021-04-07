@@ -728,11 +728,13 @@ subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
   use amr_parameters
   use hydro_parameters
   implicit none
+  integer ::com ! solver_type
   integer ::kick ! kick number
   integer ::nn ! number of cells
   real(dp) ::dt ! timestep
   real(dp) ::ctm ! charge-to-mass ratio
   real(dp) ::ts ! stopping time
+  real(dp),dimension(1:nn) ::mp,dgr
   real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
   real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
@@ -744,17 +746,17 @@ subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
           &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1)            ) &
           &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2) - 2*w(i,3) ) &
           &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))*ctm*(1+com*mp(i)/dgr(i))*dt*dt)
      wo(i,2) = w(i,2) + (2*ctm*(1+com*mp(i)/dgr(i))*dt*( &
           &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2)            ) &
           &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3) - 2*w(i,1) ) &
           &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))*ctm*(1+com*mp(i)/dgr(i))*dt*dt)
      wo(i,3) = w(i,3) + (2*ctm*(1+com*mp(i)/dgr(i))*dt*( &
           &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3)            ) &
           &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1) - 2*w(i,2) ) &
           &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))*ctm*(1+com*mp(i)/dgr(i))*dt*dt)
   end do
 
   do idim=1,ndim
