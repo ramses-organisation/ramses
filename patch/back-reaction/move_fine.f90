@@ -210,7 +210,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp)::den_dust,den_gas,mom_dust,mom_gas,velocity_com
 
-  com = solver_type ! 1 means we go around the COM, 0 means we go around the gas.
   ctm = charge_to_mass
   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
   ts = t_stop!  ERM: Not used if constant_t_stop==.false.
@@ -551,7 +550,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Full EM kick
   if(boris.and.hydro)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-     call FullEMKick(com,np,dtnew(ilevel),ctm,bb,uu,vv,mov,dgr)
+     call FullEMKick(solver_type,np,dtnew(ilevel),ctm,bb,uu,vv,mov,dgr)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
