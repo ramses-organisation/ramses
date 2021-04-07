@@ -740,21 +740,21 @@ subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
   integer ::i,idim ! Just an -index
   w(1:nn,1:ndim) = v(1:nn,1:ndim)-u(1:nn,1:ndim)
   do i=1,nn
-     wo(i,1) = w(i,1) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
-          &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1)            ) &
-          &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2) - 2*w(i,3) ) &
-          &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
-     wo(i,2) = w(i,2) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
-          &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2)            ) &
-          &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3) - 2*w(i,1) ) &
-          &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
-     wo(i,3) = w(i,3) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
-          &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3)            ) &
-          &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1) - 2*w(i,2) ) &
-          &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
+     wo(i,1) = w(i,1) + (2*ctm*(1+com*mp(i)/dgr(i))*dt*( &
+          &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1)            ) &
+          &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2) - 2*w(i,3) ) &
+          &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
+     wo(i,2) = w(i,2) + (2*ctm*(1+com*mp(i)/dgr(i))*dt*( &
+          &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2)            ) &
+          &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3) - 2*w(i,1) ) &
+          &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
+     wo(i,3) = w(i,3) + (2*ctm*(1+com*mp(i)/dgr(i))*dt*( &
+          &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3)            ) &
+          &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,1) - 2*w(i,2) ) &
+          &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/dgr(i))*dt*w(i,2)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))*dt*dt)
   end do
 
   do idim=1,ndim
