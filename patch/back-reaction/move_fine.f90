@@ -720,56 +720,52 @@ end subroutine FirstAndSecondBorisKick_nodrag
 
 !#########################################################################
 !#########################################################################
-!#########################################################################
-!#########################################################################
 subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
-  ! The following subroutine will alter its last argument, v.
-  ! It evolves the drift, rather than the velocity.
-  ! This step conserves total energy and momentum,
-  ! but possibly only if we make an additional
-  ! momentum deposition into the gas before applying the drag.
-  ! com can be 1 or 0. 1 Means we orbit around the COM. 0 Means we do not.
+  ! The following subroutine will alter its last argument, v
+  ! to be an intermediate step, having been either accelerated by
+  ! drag+the electric field, or rotated by the magnetic field.
+  ! Also, mp is actually the particle mass over the cloud volume, here.
   use amr_parameters
   use hydro_parameters
   implicit none
-  integer :: com ! 0 or 1, determines whether we go around "COM" or fluid velocity.
+  integer ::kick ! kick number
   integer ::nn ! number of cells
   real(dp) ::dt ! timestep
-  real(dp) ::ctm ! effective charge-to-mass ratio
-  real(dp)::vol_loc! back-reaction coefficient.
-  real(dp),dimension(1:nvector) ::dgr,mp
+  real(dp) ::ctm ! charge-to-mass ratio
+  real(dp) ::ts ! stopping time
   real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
   real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:ndim),save ::w,wo! grain velocity "new"
   integer ::i,idim ! Just an -index
-  ! Magnetic kick on the DRIFT
   w(1:nn,1:ndim) = v(1:nn,1:ndim)-u(1:nn,1:ndim)
   do i=1,nn
-     wo(i,1) = w(i,1)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
-          &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1)            ) &
-          &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2) - 2*w(i,3) ) &
-          &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
-     wo(i,2) =  w(i,2)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
-          &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2)            ) &
-          &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3) - 2*w(i,1) ) &
-          &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
-     wo(i,3) = w(i,3)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
-          &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3)            ) &
-          &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1) - 2*w(i,2) ) &
-          &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2)) )) &
-          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
+     wo(i,1) = w(i,1) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
+          &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1)            ) &
+          &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2) - 2*w(i,3) ) &
+          &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
+     wo(i,2) = w(i,2) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
+          &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2)            ) &
+          &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3) - 2*w(i,1) ) &
+          &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
+     wo(i,3) = w(i,3) + (2*ctm*(1+com*mp(i)/dgr(i))dt*( &
+          &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3)            ) &
+          &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,1) - 2*w(i,2) ) &
+          &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/dgr(i))dt*w(i,2)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/dgr(i))ctm*(1+com*mp(i)/dgr(i))dt*dt)
   end do
 
   do idim=1,ndim
     do i=1,nn
-      v(i,idim)= (com*mp(i)/vol_loc*v(i,idim)+dgr(i)*u(i,idim))/(com*mp(i)/vol_loc+dgr(i)) +dgr(i)*wo(i,idim)/(com*mp(i)/vol_loc+dgr(i))
+      v(i,idim)= (com*mp(i)*v(i,idim)+dgr(i)*u(i,idim))/(com*mp(i)+dgr(i)) +wo(i,idim)/(1+com*mp(i)/dgr(i))
     end do
   end do
 
 end subroutine FullEMKick
+!#########################################################################
+!#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
