@@ -742,7 +742,7 @@ subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
   real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:ndim),save ::w,wo! grain velocity "new"
-  integer ::i ! Just an -index
+  integer ::i,idim ! Just an -index
   ! Magnetic kick on the DRIFT
   w(1:nn,1:ndim) = v(1:nn,1:ndim)-u(1:nn,1:ndim)
   do i=1,nn
