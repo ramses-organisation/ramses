@@ -190,7 +190,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical::error
   integer::i,j,ind,idim,nx_loc,isink,index_part,ivar_dust
   real(dp)::dx,dx_loc,scale,vol_loc
-  real(dp)::ctm! ERM: recommend 1.15D3
+  real(dp)::ctm! ERM: re mend 1.15D3
   real(dp)::ts !ERM: recommend 2.2D-1
   real(dp)::rd ! ERM: Grain size parameter
 
@@ -203,13 +203,14 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg,vcom
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv
-  real(dp),dimension(1:nvector),save:: dgr,tss ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: dgr,tss,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
   real(dp)::den_dust,den_gas,mom_dust,mom_gas,velocity_com
 
+  com = solver_type ! 1 means we go around the COM, 0 means we go around the gas.
   ctm = charge_to_mass
   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
   ts = t_stop!  ERM: Not used if constant_t_stop==.false.
@@ -464,7 +465,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
-  
+
   ! Gather center of mass 3-velocity
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -488,15 +489,24 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-  ! ERM: Is this best here in its own loop? Or is the time difference negligible?
-  dgr(1:np) = 0.0D0
-  if(.not.constant_t_stop.and.boris)then
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! ERM: Block here is temporary
+ dgr(1:np) = 0.0D0
+  if(boris)then
      do ind=1,twotondim
          do j=1,np
             dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
-         end do
+        end do
      end do
   endif
+
+  if(boris)then
+    do j=1,np
+        mov(j) = mp(ind_part(j))/vol_loc
+    end do
+  endif
+
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Gather 3-velocity
   ff(1:np,1:ndim)=0.0D0
@@ -538,10 +548,10 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  ! Boris EM kick
+  ! Full EM kick
   if(boris.and.hydro)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-     call FirstAndSecondBorisKick_nodrag(np,dtnew(ilevel),ctm,bb,uu,vv)
+     call FullEMKick(com,np,dtnew(ilevel),ctm,bb,uu,vv,mov,dgr)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
@@ -589,7 +599,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   end if
-  
+
   ! Output data to trajectory file
   if((boris.or.tracer).and.constant_t_stop)then
      do index_part=1,10
@@ -707,6 +717,59 @@ subroutine FirstAndSecondBorisKick_nodrag(nn,dt,ctm,b,u,v)
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
 
 end subroutine FirstAndSecondBorisKick_nodrag
+
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine FullEMKick(com,nn,dt,ctm,b,u,v,mp,dgr)
+  ! The following subroutine will alter its last argument, v.
+  ! It evolves the drift, rather than the velocity.
+  ! This step conserves total energy and momentum,
+  ! but possibly only if we make an additional
+  ! momentum deposition into the gas before applying the drag.
+  ! com can be 1 or 0. 1 Means we orbit around the COM. 0 Means we do not.
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer :: com ! 0 or 1, determines whether we go around "COM" or fluid velocity.
+  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::ctm ! effective charge-to-mass ratio
+  real(dp)::vol_loc! back-reaction coefficient.
+  real(dp),dimension(1:nvector) ::dgr,mp
+  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
+  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:ndim),save ::w,wo! grain velocity "new"
+  integer ::i ! Just an -index
+  ! Magnetic kick on the DRIFT
+  w(1:nn,1:ndim) = v(1:nn,1:ndim)-u(1:nn,1:ndim)
+  do i=1,nn
+     wo(i,1) = w(i,1)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
+          &  - b(i,2)*( b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1)            ) &
+          &  + b(i,2)*( b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2) - 2*w(i,3) ) &
+          &  + b(i,3)*(-b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1) + 2*w(i,2) + b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
+     wo(i,2) =  w(i,2)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
+          &  - b(i,3)*( b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2)            ) &
+          &  + b(i,3)*( b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3) - 2*w(i,1) ) &
+          &  + b(i,1)*(-b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2) + 2*w(i,3) + b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
+     wo(i,3) = w(i,3)+(2*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*( &
+          &  - b(i,1)*( b(i,1)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3)            ) &
+          &  + b(i,1)*( b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,1) - 2*w(i,2) ) &
+          &  + b(i,2)*(-b(i,2)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,3) + 2*w(i,1) + b(i,3)*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*w(i,2)) )) &
+          &  / (4+(b(i,1)*b(i,1)+b(i,2)*b(i,2)+b(i,3)*b(i,3))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*ctm*(1+com*mp(i)/(dgr(i)*vol_loc))*dt*dt)
+  end do
+
+  do idim=1,ndim
+    do i=1,nn
+      v(i,idim)= (com*mp(i)/vol_loc*v(i,idim)+dgr(i)*u(i,idim))/(com*mp(i)/vol_loc+dgr(i)) +dgr(i)*wo(i,idim)/(com*mp(i)/vol_loc+dgr(i))
+    end do
+  end do
+
+end subroutine FullEMKick
 !#########################################################################
 !#########################################################################
 !#########################################################################

@@ -279,7 +279,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::mmm,dteff
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
-  real(dp),dimension(1:nvector),save::dgr,tss ! ERM: density, (non-constant) stopping times
+  real(dp),dimension(1:nvector),save::dgr,tss,mm ! ERM: density, (non-constant) stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -563,7 +563,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      endif
   end do
-  
+
   ! Acceleration forces will be added here.
   if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
      do idim=1,ndim
@@ -572,7 +572,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
-  
+
   ! Update old dust mass and momentum density variables
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -618,29 +618,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !   end do
   !endif
 
-  ! ERM: interpolate variables for the boris kicker
-  uu(1:np,1:ndim)=0.0D0
-  bb(1:np,1:ndim)=0.0D0
-  if(boris.and.hydro)then
-    do ind=1,twotondim
-       do idim=1,ndim
-          do j=1,np
-            uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-            bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
-          end do
-       end do
-    end do
-  endif
-
-!!$  ! ERM: Is this best here in its own loop? Or is the time difference negligible?
-!!$  dgr(1:np) = 0.0D0
-!!$  if(.not.constant_t_stop.and.boris)then
-!!$     do ind=1,twotondim
-!!$         do j=1,np
-!!$            dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
-!!$         end do
-!!$     end do
-!!$  endif
 
   ! For sink particle only, store contribution to the sink force
   if(sink)then
@@ -662,12 +639,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Perform the second electric kick
-  if(boris)then
-     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-     call ThirdBorisKick_nodrag(np,dteff,ctm,bb,uu,vv)
-     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
-  endif
+  ! No longer Perform the second electric kick
 
 !!$  if(boris.and.constant_t_stop)then
 !!$     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
@@ -741,6 +713,10 @@ subroutine ThirdBorisKick_nodrag(nn,dtarr,ctm,b,u,v)
 end subroutine ThirdBorisKick_nodrag
 !#########################################################################
 !#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!########################################################################
 !#########################################################################
 !#########################################################################
 subroutine ThirdBorisKick(nn,dtarr,ctm,ts,b,u,v)
