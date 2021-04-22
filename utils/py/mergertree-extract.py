@@ -330,7 +330,7 @@ class params():
         self.halo_and_children = False  # do the tree for one halo, including subhaloes
         self.do_all = False  # do for all clumps at z=0 output
 
-        self.clumpids = 0  # which clump ID to work for.
+        self.clumpid = 0  # which clump ID to work for.
 
         # dictionnary of accepted keyword command line arguments
         self.accepted_flags = {
