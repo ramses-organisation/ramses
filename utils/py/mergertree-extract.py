@@ -3,6 +3,7 @@
 import numpy as np
 import os
 from sys import argv
+import copy
 
 errmsg = """
 
@@ -149,7 +150,7 @@ class clumpdata():
         """
 
         # read-in
-        self.clumpid = np.zeros(1)  # clump ID
+        self.clumpids = np.zeros(1)  # clump ID
         self.parent = np.zeros(1)  # parent ID
         self.level = np.zeros(1)  # clump level
 
@@ -186,7 +187,7 @@ class clumpdata():
 
         fulldata = np.concatenate(raw_data[:i], axis=0)
 
-        self.clumpid = fulldata[:, 0]
+        self.clumpids = fulldata[:, 0]
         self.level = fulldata[:, 1]
         self.parent = fulldata[:, 2]
 
@@ -206,9 +207,9 @@ class clumpdata():
         mtd:    mergertree data object
         """
 
-        for i, c in enumerate(self.clumpid):
+        for i, c in enumerate(self.clumpids):
             if c not in mtd.descendants[par.z0]:
-                self.clumpid[i] = 0
+                self.clumpids[i] = 0
                 self.level[i] = 0
                 self.parent[i] = -1  # don't make it the same as clumpid
 
@@ -226,22 +227,28 @@ class clumpdata():
         """
 
         children = []
+        last_added = [clumpid]
 
-        not_finished = True
+        loopcounter = 0
+        while True:
+            loopcounter += 1
+            this_level_parents = copy.copy(last_added)
+            children += this_level_parents
+            last_added = []
+            for i, cid in enumerate(self.clumpids):
+                if self.parent[i] in this_level_parents and cid != clumpid:
+                    last_added.append(cid)
 
-        while not_finished:
-            for i, cid in enumerate(self.clumpid):
-                if cid == clumpid:
-                    continue
-                elif cid in children:
-                    continue
-                elif self.parent[i] == clumpid:
-                    children.append(cid)
-                    break  # restart loop to find children's children
-            else:
-                not_finished = False
+            if len(last_added) == 0:
+                break
 
-        return children
+            if loopcounter == 100:
+                print("Finished 100 iterations, we shouldn't be this deep")
+                break
+
+        return children[1:] # don't return top level parent
+
+
 
     # ------------------------------------------------------
     def write_children(self, par, clumpid, children):
@@ -323,7 +330,7 @@ class params():
         self.halo_and_children = False  # do the tree for one halo, including subhaloes
         self.do_all = False  # do for all clumps at z=0 output
 
-        self.clumpid = 0  # which clump ID to work for.
+        self.clumpids = 0  # which clump ID to work for.
 
         # dictionnary of accepted keyword command line arguments
         self.accepted_flags = {
@@ -908,7 +915,7 @@ class tree():
         self.n = 0  # number of elements in tree
         self.snapshotnr = -np.ones(nelements, dtype=np.int)  # snapshot number of array values
         self.redshift = -np.ones(nelements, dtype=np.float)  # redshift at that snapshot
-        self.clumpid = -np.ones(nelements, dtype=np.int)  # clump id of halo in that snapshot
+        self.clumpids = -np.ones(nelements, dtype=np.int)  # clump id of halo in that snapshot
         self.mass = np.zeros(nelements, dtype=np.float)  # mass at that snapshot
         self.mergermass = np.zeros(nelements, dtype=np.float)  # sum of mass of swallowed up clumps
         self.mass_to_remove = np.zeros(nelements, dtype=np.float)  # sum of mass of swallowed up clumps
@@ -923,7 +930,7 @@ class tree():
         n = self.n
         self.snapshotnr[n] = nr
         self.redshift[n] = z
-        self.clumpid[n] = ID
+        self.clumpids[n] = ID
         self.mass[n] = m
         self.mergermass[n] = mm
         self.mass_to_remove[n] = mdel
@@ -938,20 +945,20 @@ class tree():
         case: use 'halo' or 'subhalo'
         """
 
-        resfile = "".join([par.outputfilename, "_", case, "-", str(self.clumpid[0]), '.txt'])
+        resfile = "".join([par.outputfilename, "_", case, "-", str(self.clumpids[0]), '.txt'])
 
         f = open(resfile, 'w')
 
-        f.write('# {0:>18} {1:>18} {2:>18} {3:>18} {4:>18} {5:>18}\n'.format(
-            "snapshot", "redshift", "clump_ID", "mass", "mass_from_mergers", "mass_from_jumpers"
+        f.write('# {0:>12} {1:>12} {2:>16} {3:>18} {4:>18} {5:>18}\n'.format(
+            "snapshot", "redshift", "clump_ID", "mass[M_sol]", "mass_from_mergers", "mass_from_jumpers"
         ))
 
         for i in range(self.n):
-            f.write('  {0:18d} {1:18.4f} {2:18d} {3:18.6e} {4:18.6e} {5:18.6e}\n'.format(
-                self.snapshotnr[i], self.redshift[i], self.clumpid[i], self.mass[i],
+            f.write('  {0:12d} {1:12.4f} {2:16d} {3:18.6e} {4:18.6e} {5:18.6e}\n'.format(
+                self.snapshotnr[i], self.redshift[i], self.clumpids[i], self.mass[i],
                 self.mergermass[i], self.mass_to_remove[i]))
-            #  print('  {0:18d} {1:18.4f} {2:18d} {3:18.6e} {4:18.6e} {5:18.6e}\n'.format(
-            #          self.snapshotnr[i], self.redshift[i], self.clumpid[i], self.mass[i],
+            #  print('  {0:12d} {1:12.4f} {2:16d} {3:18.6e} {4:18.6e} {5:18.6e}\n'.format(
+            #          self.snapshotnr[i], self.redshift[i], self.clumpids[i], self.mass[i],
             #          self.mergermass[i], self.mass_to_remove[i] ), end='')
         f.close()
 
@@ -1013,9 +1020,9 @@ if __name__ == '__main__':
             cd.write_children(p, p.clumpid, children)
 
         if p.do_all:
-            is_halo = cd.clumpid == cd.parent
-            childlist = [None for c in cd.clumpid[is_halo]]
-            for i, halo in enumerate(cd.clumpid[is_halo]):
+            is_halo = cd.clumpids == cd.parent
+            childlist = [None for c in cd.clumpids[is_halo]]
+            for i, halo in enumerate(cd.clumpids[is_halo]):
                 children = cd.find_children(halo)
                 cd.write_children(p, halo, children)
                 childlist[i] = children
@@ -1038,7 +1045,7 @@ if __name__ == '__main__':
             newtree.write_tree(p, 'subhalo')
 
     if p.do_all:
-        for i, halo in enumerate(cd.clumpid[is_halo]):
+        for i, halo in enumerate(cd.clumpids[is_halo]):
             newtree = tree(p.nout)
             mtd.get_tree(p, newtree, sd, halo)
             newtree.write_tree(p, 'halo')
