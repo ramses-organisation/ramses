@@ -17,6 +17,8 @@ subroutine move_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+  write(*,*)'!!!!!!!!!!TESTING TO SEE IF I SEE THIS!!!!!!!!!!!!!'
+
   filename='trajectory.dat'
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
