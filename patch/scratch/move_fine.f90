@@ -656,8 +656,8 @@ end subroutine move1
 !#########################################################################
 
 subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
-  ! This subroutine will set the v^n -> v^n + dv^EM, as well as set
-  ! unew's dust momentum slot to being u+du^EM.
+  ! This subroutine will compute changes to sub-cloud velocity in big_v,
+  ! as well as set unew's dust momentum slot to being u+du^EM.
   use amr_parameters
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
@@ -770,11 +770,9 @@ end subroutine EMKick
 !#########################################################################
 !#########################################################################
 subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
-  ! The following subroutine will alter its last argument, nu_stop
+  ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
-  ! one must use duu and the new dust velocities.
-  ! You'll likely have to call a different subroutine inside this one
-  ! that will compute updated (and interpolated) gas quantities.
+  ! one must use the updated dust and gas velocities.
   ! "Large dust fractions can prevent the propagation of soundwaves"
   ! Above is a paper that we should use to test our code at high mu
   use amr_parameters
