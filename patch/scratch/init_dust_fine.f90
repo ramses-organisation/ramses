@@ -1,4 +1,4 @@
-subroutine synchro_fine(ilevel)
+subroutine init_dust_fine(ilevel)! was synchro_fine
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -8,6 +8,11 @@ subroutine synchro_fine(ilevel)
   integer::info
 #endif
   integer::ilevel
+  ! First, reset uold to zero.
+  ! Can remove gravity and sink particle related things.
+  ! Can remove synchro_fine_static as well.
+  ! In "sync", want to remove the gravity...
+  ! Syncing up the velocity, get rid of that too.
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
   ! position for ilevel particle only. If particle sits entirely
@@ -22,10 +27,6 @@ subroutine synchro_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  if(sink)then
-     fsink_new=0
-  endif
-
   ! Reset uold to zero for dust mass and momentum densities
   ivar_dust=9
   do icpu=1,ncpu
@@ -38,6 +39,7 @@ subroutine synchro_fine(ilevel)
         end do
      end do
   end do
+
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=ivar_dust,ivar_dust+ndim
@@ -46,6 +48,7 @@ subroutine synchro_fine(ilevel)
         end do
      end do
   end do
+
   ! Reset rho in physical boundaries
   do ibound=1,nboundary
      do ind=1,twotondim
@@ -58,7 +61,7 @@ subroutine synchro_fine(ilevel)
      end do
   end do
 
-  ! Synchronize velocity using CIC
+  ! Synchronize velocity using CIC (No longer need velocity to be synced.)
   ig=0
   ip=0
   ! Loop over grids
@@ -79,7 +82,7 @@ subroutine synchro_fine(ilevel)
            ind_part(ip)=ipart
            ind_grid_part(ip)=ig
            if(ip==nvector)then
-              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
               ip=0
               ig=0
            end if
@@ -90,7 +93,7 @@ subroutine synchro_fine(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
   ! Update MPI boundary conditions for uold for dust mass and momentum densities
   do ivar=ivar_dust,ivar_dust+ndim
@@ -98,158 +101,14 @@ subroutine synchro_fine(ilevel)
      call make_virtual_fine_dp   (uold(1,ivar),ilevel)
   end do
 
-  ! Sink cloud particles are used to average the grav. acceleration
-  if(sink)then
-     if(nsink>0)then
-#ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-        fsink_all=fsink_new
-#endif
-     endif
-     do isink=1,nsink
-        if (.not. direct_force_sink(isink))then
-           fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
-        end if
-     end do
-  endif
+111 format('   Entering init_dust_fine for level ',I2)
 
-111 format('   Entering synchro_fine for level ',I2)
-
-end subroutine synchro_fine
+end subroutine init_dust_fine
 !####################################################################
 !####################################################################
 !####################################################################
 !####################################################################
-subroutine synchro_fine_static(ilevel)
-  use pm_commons
-  use amr_commons
-  use mpi_mod
-  implicit none
-#ifndef WITHOUTMPI
-  integer::info
-#endif
-  integer::ilevel
-  !--------------------------------------------------------------------
-  ! This routine synchronizes particle velocity with particle
-  ! position for ilevel particle only. If particle sits entirely
-  ! in level ilevel, then use inverse CIC at fine level to compute
-  ! the force. Otherwise, use coarse level force and coarse level CIC.
-  !--------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart
-  integer::ig,ip,next_part,npart1,npart2,isink
-  integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  if(sink)then
-     fsink_new=0
-     fsink_all=0
-  endif
-
-  ! Synchronize velocity using CIC
-  ig=0
-  ip=0
-  ! Loop over grids
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
-     npart1=numbp(igrid)  ! Number of particles in the grid
-     npart2=0
-
-     ! Count particles
-     if(npart1>0)then
-        ipart=headp(igrid)
-        ! Loop over particles
-        do jpart=1,npart1
-           ! Save next particle   <--- Very important !!!
-           next_part=nextp(ipart)
-           if(star) then
-              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
-                 ! FIXME: there should be a static_sink as well
-                 npart2=npart2+1
-              endif
-           else
-              if(.not.static_dm) then
-                 npart2=npart2+1
-              endif
-           endif
-           ipart=next_part  ! Go to next particle
-        end do
-     endif
-
-     ! Gather star particles
-     if(npart2>0)then
-        ig=ig+1
-        ind_grid(ig)=igrid
-        ipart=headp(igrid)
-        ! Loop over particles
-        do jpart=1,npart1
-           ! Save next particle   <--- Very important !!!
-           next_part=nextp(ipart)
-           ! Select particles
-           if(star) then
-              if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   & (.not. static_stars .and. (is_star(typep(ipart)) .or. is_debris(typep(ipart))) )  ) then
-                 ! FIXME: what about sinks?
-                 if(ig==0)then
-                    ig=1
-                    ind_grid(ig)=igrid
-                 end if
-                 ip=ip+1
-                 ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig
-              endif
-           else
-              if(.not.static_dm) then
-                 if(ig==0)then
-                    ig=1
-                    ind_grid(ig)=igrid
-                 end if
-                 ip=ip+1
-                 ind_part(ip)=ipart
-                 ind_grid_part(ip)=ig
-              endif
-           endif
-           if(ip==nvector)then
-              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-              ip=0
-              ig=0
-           end if
-           ipart=next_part  ! Go to next particle
-        end do
-        ! End loop over particles
-     end if
-     igrid=next(igrid)   ! Go to next grid
-  end do
-  ! End loop over grids
-  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-
-  !sink cloud particles are used to average the grav. acceleration
-  if(sink)then
-     if(nsink>0)then
-#ifndef WITHOUTMPI
-        call MPI_ALLREDUCE(fsink_new,fsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-#else
-        fsink_all=fsink_new
-#endif
-     endif
-     do isink=1,nsink
-        if (.not. direct_force_sink(isink))then
-           fsink_partial(isink,1:ndim,ilevel)=fsink_all(isink,1:ndim)
-        end if
-     end do
-  endif
-
-111 format('   Entering synchro_fine for level ',I2)
-
-end subroutine synchro_fine_static
-!####################################################################
-!####################################################################
-!####################################################################
-!####################################################################
-subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   !use amr_parameters ERM
   use pm_commons
@@ -338,7 +197,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
   if(error)then
-     write(*,*)'problem in sync'
+     write(*,*)'problem in init_dust'
      do idim=1,ndim
         do j=1,np
            if(x(j,idim)<0.5D0.or.x(j,idim)>5.5D0)then
@@ -524,7 +383,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
-  ! Compute individual time steps
+  ! Compute individual time steps (ERM: Unnecessary?)
   do j=1,np
      if(levelp(ind_part(j))>=ilevel)then
         dteff(j)=dtnew(levelp(ind_part(j)))
@@ -533,45 +392,18 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  ! Update particles level
+  ! Update particles level (ERM: Updating level???)
   do j=1,np
      levelp(ind_part(j))=ilevel
   end do
 
   ! Gather 3-force
-  ! ERM: block 1
-  ff(1:np,1:ndim)=0.0D0
-  if(poisson)then
-     do ind=1,twotondim
-        do idim=1,ndim
-           do j=1,np
-              ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
-           end do
-        end do
-     end do
-  endif
+  ! ERM: deleted.
   ! Update 3-velocity
   ! ERM: Block 2. Modifying vp instead of new_vp.
-  do idim=1,ndim
-     if(static)then
-        do j=1,np
-           vp(ind_part(j),idim)=ff(j,idim)
-        end do
-     else
-        do j=1,np
-           vp(ind_part(j),idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
-        end do
-     endif
-  end do
+  ! ERM: deleted.
 
-  ! Acceleration forces will be added here.
-  if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
-     do idim=1,ndim
-        do j=1,np
-           vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
-        end do
-     end do
-  endif
+  ! Acceleration forces will be added here. ERM: deleted
 
   ! Update old dust mass and momentum density variables
   ivar_dust=9
@@ -580,13 +412,13 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      stop
   endif
   do ind=1,twotondim
-     do j=1,np
+     do j=1,np !deposit the dust mass density.
         if(ok(j))then
            uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)+mp(ind_part(j))*vol(j,ind)/vol_loc
         end if
      end do
      do idim=1,ndim
-        do j=1,np
+        do j=1,np ! deposit the dust momentum density
            if(ok(j))then
               uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)+mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
            end if
@@ -594,7 +426,10 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Deposit initial dust momentum to new gas momentum
+  ! Deposit initial dust momentum to new gas momentum.
+  ! This variable will collect changes in dust momentum so we can subtract
+  ! from the gas at the end of move_fine.
+  ! This is unew's gas momentum slot.
   do ind=1,twotondim
      do idim=1,ndim
         do j=1,np
@@ -619,25 +454,13 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !endif
 
 
-  ! For sink particle only, store contribution to the sink force
-  if(sink)then
-     do idim=1,ndim
-        do j=1,np
-           if ( is_cloud(typep(ind_part(j))) ) then
-              isink=-idp(ind_part(j))
-              if(.not. direct_force_sink(isink))then
-                 fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
-              endif
-           endif
-        end do
-     end do
-  end if
-
-  do idim=1,ndim
-     do j=1,np
-        new_vp(j,idim)=vp(ind_part(j),idim)
-     end do
-  end do
+  ! ERM: I don't think we need to set new_vp = vp... In fact, I don't think we
+  ! need to do anything with vp at all in this routine.
+  !do idim=1,ndim
+  !   do j=1,np
+  !      new_vp(j,idim)=vp(ind_part(j),idim)
+  !   end do
+  !end do
 
   ! No longer Perform the second electric kick
 
@@ -661,123 +484,12 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 !!$     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
 !!$  endif
 
-  do idim=1,ndim
-     do j=1,np
-        vp(ind_part(j),idim)=new_vp(j,idim)
-     end do
-  end do
+  !do idim=1,ndim
+  !   do j=1,np
+  !      vp(ind_part(j),idim)=new_vp(j,idim)
+  !   end do
+  !end do
 
-  ! For sink particle only, overwrite cloud particle velocity with sink velocity
-  if(sink)then
-     do idim=1,ndim
-        do j=1,np
-           if ( is_cloud(typep(ind_part(j))) ) then
-              isink=-idp(ind_part(j))
-              ! Remember that vsink is half time step older than other particles
-              vp(ind_part(j),idim)=vsink(isink,idim)
-           endif
-        end do
-     end do
-  end if
-
-end subroutine sync
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-subroutine ThirdBorisKick_nodrag(nn,dtarr,ctm,b,u,v)
-  ! The following subroutine will alter its last argument, v
-  ! to be an intermediate step, having been either accelerated by
-  ! drag+the electric field, or rotated by the magnetic field.
-  use amr_parameters
-  use hydro_parameters
-  implicit none
-  integer ::kick ! kick number
-  integer ::nn ! number of cells
-  real(dp) ::dt ! timestep
-  real(dp) ::ctm ! charge-to-mass ratio
-  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
-  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
-  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nn)::dtarr
-  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
-  integer ::i ! Just an index
-
-  do i=1,nn
-     vo(i,1)=v(i,1)-0.5*dtarr(i)*ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))
-     vo(i,2)=v(i,2)-0.5*dtarr(i)*ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))
-     vo(i,3)=v(i,3)-0.5*dtarr(i)*ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))
-  end do
-  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
-
-end subroutine ThirdBorisKick_nodrag
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!########################################################################
-!#########################################################################
-!#########################################################################
-subroutine ThirdBorisKick(nn,dtarr,ctm,ts,b,u,v)
-  ! The following subroutine will alter its last argument, v
-  ! to be an intermediate step, having been either accelerated by
-  ! drag+the electric field, or rotated by the magnetic field.
-  use amr_parameters
-  use hydro_parameters
-  implicit none
-  integer ::kick ! kick number
-  integer ::nn ! number of cells
-  real(dp) ::dt ! timestep
-  real(dp) ::ctm ! charge-to-mass ratio
-  real(dp) ::ts ! stopping time
-  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
-  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
-  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nn)::dtarr
-  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
-  integer ::i ! Just an index
-
-  do i=1,nn
-     vo(i,1)=(v(i,1)-0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))-u(i,1)/ts))/(1.0+0.5*dtarr(i)/ts)
-     vo(i,2)=(v(i,2)-0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))-u(i,2)/ts))/(1.0+0.5*dtarr(i)/ts)
-     vo(i,3)=(v(i,3)-0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/ts))/(1.0+0.5*dtarr(i)/ts)
-  end do
-  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
-
-end subroutine ThirdBorisKick
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-subroutine ThirdBorisKickWithVarTs(nn,dtarr,ctm,tss,b,u,v)
-  ! The following subroutine will alter its last argument, v
-  ! to be an intermediate step, having been either accelerated by
-  ! drag+the electric field, or rotated by the magnetic field.
-  use amr_parameters
-  use hydro_parameters
-  implicit none
-  integer ::kick ! kick number
-  integer ::nn ! number of cells
-  real(dp) ::dt ! timestep
-  real(dp) ::ctm ! charge-to-mass ratio
-  real(dp),dimension(1:nvector) ::tss ! stopping time
-  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
-  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
-  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nn)::dtarr
-  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
-  integer ::i ! Just an index
-
-  do i=1,nn
-     vo(i,1)=(v(i,1)-0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))-u(i,1)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
-     vo(i,2)=(v(i,2)-0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))-u(i,2)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
-     vo(i,3)=(v(i,3)-0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
-  end do
-  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
-
-end subroutine ThirdBorisKickWithVarTs
-!#########################################################################
-!#########################################################################
+end subroutine init_dust
 !#########################################################################
 !#########################################################################
