@@ -200,7 +200,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
-  real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv
+  real(dp),dimension(1:nvector,1:ndim),save::vv
+  real(dp),dimension(1:10,1:ndim),save ::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -448,21 +449,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
-  ! Various fields interpolated to particle positions
-  ! Gather 3-velocity and 3-magnetic field
-  uu(1:np,1:ndim)=0.0D0
-  bb(1:np,1:ndim)=0.0D0
-  if(boris.and.hydro)then
-     do ind=1,twotondim
-        do idim=1,ndim
-           do j=1,np
-              uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-              bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
-           end do
-        end do
-     end do
-  endif
-
   ! Gather center of mass 3-velocity
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -592,7 +578,26 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end if
 
   ! Output data to trajectory file
+  ! May have to think more carefully about when and where this is placed
   if((boris.or.tracer).and.constant_t_stop)then
+    ! Various fields interpolated to particle positions
+    ! Gather 3-velocity and 3-magnetic field
+    uu(1:10,1:ndim)=0.0D0
+    bb(1:10,1:ndim)=0.0D0
+    if(boris.and.hydro)then
+       do ind=1,twotondim
+          do idim=1,ndim
+            do index_part=1,10
+             do j=1,np
+               if(idp(ind_part(j)).EQ.index_part)then
+                uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+                bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
+               endif
+             end do
+            end do
+          end do
+       end do
+    endif
      do index_part=1,10
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
@@ -600,24 +605,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
-                   &  bb(j,1),bb(j,2),bb(j,3),& ! Old magnetic field.
-                   & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           end if
-        end do
-     end do
-  endif
-
-  if((boris.or.tracer).and.(.not.constant_t_stop))then
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t,idp(ind_part(j)),xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),&
-              nu_stop(j),& ! could have this as density instead
-              vv(j,1),vv(j,2),vv(j,3),& ! Velocity itself.
-              uu(j,1),uu(j,2),uu(j,3),& ! Fluid velocity itself.
-              bb(j,1),bb(j,2),bb(j,3),& ! Magnetic field.
-              uu(j,3)*bb(j,2)-uu(j,2)*bb(j,3),uu(j,1)*bb(j,3)-uu(j,3)*bb(j,2),uu(j,2)*bb(j,1)-uu(j,1)*bb(j,2) ! Electric field
-           end if
+                   &  bb(j,1),bb(j,2),bb(j,3) ! Old magnetic field.
+           endif
         end do
      end do
   endif
