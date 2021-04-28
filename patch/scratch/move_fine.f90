@@ -540,8 +540,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
 
   if(boris.and.hydro)then
-  write (*,*)'!!!!!!!!!starting boris steps!!!!!!!!!'
-
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -576,8 +574,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
-    write (*,*)'!!!!!!!!!ending boris steps!!!!!!!!!'
-
   endif
 
   ! For sink cloud particle only
@@ -987,16 +983,16 @@ subroutine ResetUoldToZero(ilevel)
   integer::i,iskip,icpu,ind,ibound,ivar,ivar_dust
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
-  do icpu=1,ncpu
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim
-           do i=1,reception(icpu,ilevel)%ngrid
-              uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
+  ! do icpu=1,ncpu
+  !    do ind=1,twotondim
+  !       iskip=ncoarse+(ind-1)*ngridmax
+  !       do ivar=ivar_dust,ivar_dust+ndim
+  !          do i=1,reception(icpu,ilevel)%ngrid
+  !             uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+  !          end do
+  !       end do
+  !    end do
+  ! end do
 
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -1008,16 +1004,16 @@ subroutine ResetUoldToZero(ilevel)
   end do
 
   ! Reset value in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim
-           do i=1,boundary(ibound,ilevel)%ngrid
-              uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
+  ! do ibound=1,nboundary
+  !    do ind=1,twotondim
+  !       iskip=ncoarse+(ind-1)*ngridmax
+  !       do ivar=ivar_dust,ivar_dust+ndim
+  !          do i=1,boundary(ibound,ilevel)%ngrid
+  !             uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+  !          end do
+  !       end do
+  !    end do
+  ! end do
 end subroutine ResetUoldToZero
 !#########################################################################
 !#########################################################################
@@ -1054,9 +1050,9 @@ subroutine ResetUnewToFluidVel(ilevel)
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=1,ndim
            do i=1,reception(icpu,ilevel)%ngrid
-              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
-              &uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar+1)/&
-              &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=0.0D0
+              ! &uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar+1)/&
+              ! &max(uold(reception(icpu,ilevel)%igrid(i)+iskip,1),smallr)
            end do
         end do
      end do
@@ -1074,18 +1070,18 @@ subroutine ResetUnewToFluidVel(ilevel)
   end do
 
   ! Reset value in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=1,ndim
-           do i=1,boundary(ibound,ilevel)%ngrid
-              unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
-              &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+1)/&
-              &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
-           end do
-        end do
-     end do
-  end do
+  ! do ibound=1,nboundary
+  !    do ind=1,twotondim
+  !       iskip=ncoarse+(ind-1)*ngridmax
+  !       do ivar=1,ndim
+  !          do i=1,boundary(ibound,ilevel)%ngrid
+  !             unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
+  !             &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+1)/&
+  !             &max(uold(boundary(ibound,ilevel)%igrid(i)+iskip,1),smallr)
+  !          end do
+  !       end do
+  !    end do
+  ! end do
 end subroutine ResetUnewToFluidVel
 
 !#########################################################################
