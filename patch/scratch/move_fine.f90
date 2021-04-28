@@ -577,7 +577,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
       do idim=1,ndim
-        do j=1,nn
+        do j=1,np
           vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
         end do
       end do
