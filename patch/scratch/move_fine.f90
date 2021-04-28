@@ -181,11 +181,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !------------------------------------------------------------
-  ! This routine computes the force on each particle by
+  ! This routine computes the force on each particle B2
   ! inverse CIC and computes new positions for all particles.
   ! If particle sits entirely in fine level, then CIC is performed
   ! at level ilevel. Otherwise, it is performed at level ilevel-1.
-  ! This routine is called by move_fine.
+  ! This routine is called B2 move_fine.
   !------------------------------------------------------------
   logical::error
   integer::i,j,ind,idim,nx_loc,isink,index_part,ivar_dust,iskip,icpu
@@ -555,7 +555,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
-    ! velocity. As well, unew's dust slot contains u^n+du^EM
+    ! velocity. As well, unew's dust slot contains u**n+du**EM
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
@@ -574,7 +574,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     !call ResetUoldToZero(ilevel)
     call reset_uold(ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-    call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
+    !call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
@@ -688,7 +688,7 @@ end subroutine move1
 
 subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
-  ! as well as set unew's dust momentum slot to being u+du^EM.
+  ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
@@ -702,7 +702,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
-  real(dp),dimension(1:nvector,1:ndim) ::v,u! grain velocity,magnetic field,velocity
+  real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
   real(dp) ::w1,w2,w3,B1,B2,B3,den_dust,den_gas,mu
   real(dp),dimension(1:3) ::vtemp
   integer ::i,j,ind,idim! Just an -index
@@ -724,53 +724,43 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         w3=uold(indp(i,ind),3+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
         &-uold(indp(i,ind),3+1)/max(uold(indp(i,ind),1),smallr)
 
-        big_v(i,ind,1)=& ! First contains gas momentum changes
-        &((uold(indp(i,ind),1+ivar_dust)-mu*uold(indp(i,ind),1+1))-&
-        &den_dust*& !dust mass
-        &(((4. + (B1*B1 - B2*B2 - B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)*w1 &
-        &+ 2.*ctm*(1.+mu)*dt*(2.*B3*w2 + &
-        &B1*B2*ctm*(1.+mu)*dt*w2 - 2.*B2*w3 + B1*B3*ctm*(1.+mu)*dt*w3))&
-        &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/max(den_dust+den_gas,smallr)
+        big_v(i,ind,1)=& !velocity changes to gas.
+        &mu*(ctm*dt*(2.*B2**2*ctm*dt*(1.+mu)**2*w1+&
+        &B2*(-2.*B1*ctm*dt*(1.+mu)**2*w2 + 4.*(1.+mu)*w3) +&
+        & B3*(2.*B3*ctm*dt*(1.+mu)**2*w1-4.*(1.+mu)*w2 - 2*B1*ctm*dt*(1.+mu)**2*w3)))/
+        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
-        big_v(i,ind,2)=&
-        &((uold(indp(i,ind),2+ivar_dust)-mu*uold(indp(i,ind),2+1))-&
-        &den_dust*& !dust mass
-        &(((4. + (B2*B2 - B3*B3 - B1*B1)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)*w2 &
-        &+ 2.*ctm*(1.+mu)*dt*(2.*B1*w3 + &
-        &B2*B3*ctm*(1.+mu)*dt*w3 - 2.*B3*w1 + B2*B1*ctm*(1.+mu)*dt*w1))&
-        &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/max(den_dust+den_gas,smallr)
+        big_v(i,ind,2)=& !velocity changes to gas.
+        &mu*(ctm*dt*(2.*B3**2*ctm*dt*(1.+mu)**2*w2+&
+        &B3*(-2.*B2*ctm*dt*(1.+mu)**2*w3 + 4.*(1.+mu)*w1) +&
+        & B1*(2.*B1*ctm*dt*(1.+mu)**2*w2-4.*(1.+mu)*w3 - 2*B2*ctm*dt*(1.+mu)**2*w1)))/
+        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
-        big_v(i,ind,3)=&
-        &((uold(indp(i,ind),3+ivar_dust)-mu*uold(indp(i,ind),3+1))-&
-        &den_dust*& !dust mass
-        &(((4. + (B3*B3 - B1*B1 - B2*B2)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)*w3 &
-        &+ 2.*ctm*(1.+mu)*dt*(2.*B2*w1 + &
-        &B3*B1*ctm*(1.+mu)*dt*w1 - 2.*B1*w2 + B3*B2*ctm*(1.+mu)*dt*w2))&
-        &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/max(den_dust+den_gas,smallr)
+        big_v(i,ind,3)=& !velocity changes to gas.
+        &mu*(ctm*dt*(2.*B1**2*ctm*dt*(1.+mu)**2*w3+&
+        &B1*(-2.*B3*ctm*dt*(1.+mu)**2*w1 + 4.*(1.+mu)*w2) +&
+        & B2*(2.*B2*ctm*dt*(1.+mu)**2*w3-4.*(1.+mu)*w1 - 2*B3*ctm*dt*(1.+mu)**2*w2)))/
+        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
         do idim=1,ndim
           vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/uold(indp(i,ind),1)&
           &-0.5*big_v(i,ind,idim)
         end do
 
-        big_v(i,ind,1)=& ! Now let it be the change in sub-cloud velocity.
-        &(2.*ctm*ctm*dt*dt*(B1*B2*vtemp(2) + B1*B3*vtemp(3) &
-        &- (B3*B3 + B2*B2)*vtemp(1)) &
-        &+4.*ctm*dt*(B3*vtemp(2) - B2*vtemp(3)))/&
-        &(4. + (B1*B1 + B2*B2 + B3*B3)*ctm*ctm*dt*dt)
+        big_v(i,ind,1)=&
+        &(ctm*dt*(-2.*B2**2*ctm*dt*vtemp(1) + B2*(2.*B1*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
+        & B3*(-2.*B3*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B1*ctm*dt*vtemp(3))))/&
+        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
+
         big_v(i,ind,2)=&
-        &(2.*ctm*ctm*dt*dt*(B2*B3*vtemp(3) + B2*B1*vtemp(1) &
-        &- (B1*B1 + B3*B3)*vtemp(2)) &
-        &+4.*ctm*dt*(B1*vtemp(3) - B3*vtemp(1)))/&
-        &(4. + (B1*B1 + B2*B2 + B3*B3)*ctm*ctm*dt*dt)
+        &(ctm*dt*(-2.*B3**2*ctm*dt*vtemp(2) + B3*(2.*B2*ctm*dt*vtemp(3) - 4.*vtemp(1)) +&
+        & B1*(-2.*B1*ctm*dt*vtemp(2) + 4.*vtemp(3) + 2.*B2*ctm*dt*vtemp(1))))/&
+        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
+
         big_v(i,ind,3)=&
-        &(2.*ctm*ctm*dt*dt*(B3*B1*vtemp(1) + B3*B2*vtemp(2) &
-        &- (B2*B2 + B1*B1)*vtemp(3)) &
-        &+4.*ctm*dt*(B2*vtemp(1) - B1*vtemp(2)))/&
-        &(4. + (B1*B1 + B2*B2 + B3*B3)*ctm*ctm*dt*dt)
+        &(ctm*dt*(-2.*B1**2*ctm*dt*vtemp(3) + B1*(2.*B3*ctm*dt*vtemp(1) - 4.*vtemp(2)) +&
+        & B2*(-2.*B2*ctm*dt*vtemp(3) + 4.*vtemp(1) + 2.*B3*ctm*dt*vtemp(2))))/&
+        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
      end do
   end do
 
@@ -878,7 +868,7 @@ subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
            end do
         end do
      end do
-     ! Do a half-step update here in order to compute the w^(n+1/2) drift mag.
+     ! Do a half-step update here in order to compute the w**(n+1/2) drift mag.
      wh(1:nn,1:ndim)=0.0D0
      do ind=1,twotondim
        do idim=1,ndim
