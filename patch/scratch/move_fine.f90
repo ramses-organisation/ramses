@@ -211,7 +211,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! ERM: w is the cell dust-gas drift, B the mag field.
   ctm = charge_to_mass
   !ts = t_stop!  ERM: Not used if constant_t_stop==.false.
-  write (*,*)'!!!!!!!!!starting to move!!!!!!!!!'
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -541,6 +540,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
 
   if(boris.and.hydro)then
+  write (*,*)'!!!!!!!!!starting boris steps!!!!!!!!!'
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -575,6 +576,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
+    write (*,*)vv(1,1),vv(1,2),vv(1,3)
+    write (*,*)'!!!!!!!!!ending boris steps!!!!!!!!!'
 
   endif
 
