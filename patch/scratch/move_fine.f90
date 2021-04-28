@@ -548,7 +548,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! over CELLS rather than particles (esp. when doing TSC).
   ! Set unew's dust momentum slots to be the gas velocity.
 
-    call ResetUnewToFluidVel(ilevel)
+    !call ResetUnewToFluidVel(ilevel)
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
@@ -563,12 +563,12 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! If the stopping time is a constant, the array will be constant.
 
     ! Reset dust variables to zero
-    call ResetUoldToZero(ilevel)
+    !call ResetUoldToZero(ilevel)
     call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
     ! Compute stopping rates at time n+1/2 using backward Euler.
     ! If we have a constant stopping rate, it just sets nu_stop=1/t_stop.
 
-    call ResetUoldToZero(ilevel)
+    !call ResetUoldToZero(ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
