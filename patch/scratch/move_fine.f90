@@ -200,8 +200,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
-  real(dp),dimension(1:nvector,1:ndim),save::vv
-  real(dp),dimension(1:10,1:ndim),save ::bb,uu
+  real(dp),dimension(1:nvector,1:ndim),save::vv,bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -473,6 +472,21 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !   end do
   !endif
 
+  ! Various fields interpolated to particle positions
+  ! Gather 3-velocity and 3-magnetic field
+  uu(1:np,1:ndim)=0.0D0
+  bb(1:np,1:ndim)=0.0D0
+  if(boris.and.hydro)then
+     do ind=1,twotondim
+        do idim=1,ndim
+           do j=1,np
+              uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+              bb(j,idim)=bb(j,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
+           end do
+        end do
+     end do
+  endif
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
 
@@ -579,20 +593,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   if(boris.or.tracer)then!Various fields interpolated to particle positions
   !   !Gather 3-velocity and 3-magnetic field
-    uu(1:10,1:ndim)=0.0D0
-    bb(1:10,1:ndim)=0.0D0
-       do ind=1,twotondim
-          do idim=1,ndim
-            do index_part=1,10
-             do j=1,np
-               if(idp(ind_part(j)).EQ.index_part)then
-                uu(index_part,idim)=uu(index_part,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-                bb(index_part,idim)=bb(index_part,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
-               endif
-             end do
-            end do
-          end do
-       end do
      do index_part=1,10
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
@@ -602,7 +602,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                    &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
                    &  bb(index_part,1),bb(index_part,2),bb(index_part,3),& ! Old magnetic field.
                    ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           end if
+           endif
         end do
      end do
   endif
