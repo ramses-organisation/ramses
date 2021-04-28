@@ -278,8 +278,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm,dteff
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
-  real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
-  real(dp),dimension(1:nvector),save::dgr,tss,mm ! ERM: density, (non-constant) stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg

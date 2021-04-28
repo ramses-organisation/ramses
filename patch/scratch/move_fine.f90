@@ -17,8 +17,6 @@ subroutine move_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  write(*,*)'!!!!!!!!!!TESTING TO SEE IF I SEE THIS!!!!!!!!!!!!!'
-
   filename='trajectory.dat'
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
@@ -203,7 +201,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::vv
-  !real(dp),dimension(1:10,1:ndim),save ::bb,uu
+  real(dp),dimension(1:10,1:ndim),save ::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -582,32 +580,32 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Output data to trajectory file
   ! May have to think more carefully about when and where this is placed
   if((boris.or.tracer).and.constant_t_stop)then
-    ! Various fields interpolated to particle positions
-    ! Gather 3-velocity and 3-magnetic field
-    ! uu(1:10,1:ndim)=0.0D0
-    ! bb(1:10,1:ndim)=0.0D0
-    ! if(boris.and.hydro)then
-    !    do ind=1,twotondim
-    !       do idim=1,ndim
-    !         do index_part=1,10
-    !          do j=1,np
-    !            if(idp(ind_part(j)).EQ.index_part)then
-    !             uu(index_part,idim)=uu(index_part,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-    !             bb(index_part,idim)=bb(index_part,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
-    !            endif
-    !          end do
-    !         end do
-    !       end do
-    !    end do
-    ! endif
+    !Various fields interpolated to particle positions
+    !Gather 3-velocity and 3-magnetic field
+    uu(1:10,1:ndim)=0.0D0
+    bb(1:10,1:ndim)=0.0D0
+    if(boris.and.hydro)then
+       do ind=1,twotondim
+          do idim=1,ndim
+            do index_part=1,10
+             do j=1,np
+               if(idp(ind_part(j)).EQ.index_part)then
+                uu(index_part,idim)=uu(index_part,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+                bb(index_part,idim)=bb(index_part,idim)+0.5D0*(uold(indp(j,ind),idim+5)+uold(indp(j,ind),idim+nvar))*vol(j,ind)
+               endif
+             end do
+            end do
+          end do
+       end do
+    endif
      do index_part=1,10
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
               write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3) ! Old particle velocity
-                   ! &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
-                   ! &  bb(index_part,1),bb(index_part,2),bb(index_part,3) ! Old magnetic field.
+                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+                    &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
+                    &  bb(index_part,1),bb(index_part,2),bb(index_part,3) ! Old magnetic field.
            endif
         end do
      end do
@@ -684,16 +682,16 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
      do i=1,nn
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
-        mu=den_dust/den_gas
+        mu=den_dust/max(den_gas,smallr)
         B1=0.5D0*(uold(indp(i,ind),1+5)+uold(indp(i,ind),1+nvar))
         B2=0.5D0*(uold(indp(i,ind),2+5)+uold(indp(i,ind),2+nvar))
         B3=0.5D0*(uold(indp(i,ind),3+5)+uold(indp(i,ind),3+nvar))
-        w1=uold(indp(i,ind),1+ivar_dust)/uold(indp(i,ind),ivar_dust)&
-        &-uold(indp(i,ind),1+1)/uold(indp(i,ind),1)
-        w2=uold(indp(i,ind),2+ivar_dust)/uold(indp(i,ind),ivar_dust)&
-        &-uold(indp(i,ind),2+1)/uold(indp(i,ind),1)
-        w3=uold(indp(i,ind),3+ivar_dust)/uold(indp(i,ind),ivar_dust)&
-        &-uold(indp(i,ind),3+1)/uold(indp(i,ind),1)
+        w1=uold(indp(i,ind),1+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
+        &-uold(indp(i,ind),1+1)/max(uold(indp(i,ind),1),smallr)
+        w2=uold(indp(i,ind),2+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
+        &-uold(indp(i,ind),2+1)/max(uold(indp(i,ind),1),smallr)
+        w3=uold(indp(i,ind),3+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
+        &-uold(indp(i,ind),3+1)/max(uold(indp(i,ind),1),smallr)
 
         big_v(i,ind,1)=& ! First contains gas momentum changes
         &((uold(indp(i,ind),1+ivar_dust)-mu*uold(indp(i,ind),1+1))-&
@@ -702,7 +700,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         &+ 2.*ctm*(1.+mu)*dt*(2.*B3*w2 + &
         &B1*B2*ctm*(1.+mu)*dt*w2 - 2.*B2*w3 + B1*B3*ctm*(1.+mu)*dt*w3))&
         &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/(den_dust+den_gas)
+        &/max(den_dust+den_gas,smallr)
 
         big_v(i,ind,2)=&
         &((uold(indp(i,ind),2+ivar_dust)-mu*uold(indp(i,ind),2+1))-&
@@ -711,7 +709,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         &+ 2.*ctm*(1.+mu)*dt*(2.*B1*w3 + &
         &B2*B3*ctm*(1.+mu)*dt*w3 - 2.*B3*w1 + B2*B1*ctm*(1.+mu)*dt*w1))&
         &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/(den_dust+den_gas)
+        &/max(den_dust+den_gas,smallr)
 
         big_v(i,ind,3)=&
         &((uold(indp(i,ind),3+ivar_dust)-mu*uold(indp(i,ind),3+1))-&
@@ -720,7 +718,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         &+ 2.*ctm*(1.+mu)*dt*(2.*B2*w1 + &
         &B3*B1*ctm*(1.+mu)*dt*w1 - 2.*B1*w2 + B3*B2*ctm*(1.+mu)*dt*w2))&
         &/(4. + (B1*B1 + B2*B2+ B3*B3)*ctm*(1.+mu)*ctm*(1.+mu)*dt*dt)))&
-        &/(den_dust+den_gas)
+        &/max(den_dust+den_gas,smallr)
 
         do idim=1,ndim
           vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/uold(indp(i,ind),1)&
@@ -857,7 +855,7 @@ subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
            wh(j,idim)=wh(j,idim)+vol(j,ind)*&
            &((v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))/(1.+dt*nu(j))-&
            &(uold(indp(j,ind),ivar_dust+idim)-uold(indp(j,ind),ivar_dust)*unew(indp(j,ind),ivar_dust+idim))&
-           &/((1.+dt*nu(j))*(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust))))
+           &/((1.+dt*nu(j))*max(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust),smallr)))
          end do
        end do
      end do
@@ -908,7 +906,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,mp,nu,big_v,v) ! mp is actually mov
               &+mp(j)*(dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))*&
               &(v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))*&
               &vol(j,ind)/((1.+dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))*&
-              &(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust)))
+              &max(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust),smallr))
            end if
         end do
      end do
@@ -1027,7 +1025,7 @@ subroutine ResetUnewToFluidVel()
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
               &uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar+1)/&
-              &uold(active(ilevel)%igrid(i)+iskip,1)
+              &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
            end do
         end do
      end do
@@ -1039,7 +1037,7 @@ subroutine ResetUnewToFluidVel()
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
            &uold(active(ilevel)%igrid(i)+iskip,1+ivar)/&
-           &uold(active(ilevel)%igrid(i)+iskip,1)
+           &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
         end do
      end do
   end do
@@ -1052,7 +1050,7 @@ subroutine ResetUnewToFluidVel()
            do i=1,boundary(ibound,ilevel)%ngrid
               unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
               &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+1)/&
-              &uold(active(ilevel)%igrid(i)+iskip,1)
+              &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
            end do
         end do
      end do
