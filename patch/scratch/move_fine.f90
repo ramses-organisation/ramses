@@ -211,7 +211,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! ERM: w is the cell dust-gas drift, B the mag field.
   ctm = charge_to_mass
   !ts = t_stop!  ERM: Not used if constant_t_stop==.false.
-
+  write (*,*)'!!!!!!!!!starting to move!!!!!!!!!'
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -538,15 +538,16 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
+
+
+  if(boris.and.hydro)then
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Determining the evolved versions of the drift, then interpolating those
   ! For now, do the 8N calculations, but in the future, would be good to loop
   ! over CELLS rather than particles (esp. when doing TSC).
-
-  if(boris.and.hydro)then
-    ! Set unew's dust momentum slots to be the gas velocity.
+  ! Set unew's dust momentum slots to be the gas velocity.
 
     call ResetUnewToFluidVel()
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
@@ -554,7 +555,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u^n+du^EM
-  endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
@@ -562,7 +562,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Compute the stopping rates at a half-timestep advanced.
   ! If the stopping time is a constant, the array will be constant.
-  if (boris.and.hydro)then
+
     ! Reset dust variables to zero
     call ResetUoldToZero()
     call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
