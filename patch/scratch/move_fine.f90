@@ -1138,7 +1138,7 @@ subroutine reset_unew(ilevel)
   end do
   end do
 
-111 format('   Entering reset_unew for level ',i2)
+!111 format('   Entering reset_unew for level ',i2)
 
 end subroutine reset_unew
 !###########################################################
@@ -1181,7 +1181,7 @@ subroutine reset_uold(ilevel)
      end do
   end do
 
-111 format('   Entering reset_uold for level ',i2)
+!111 format('   Entering reset_uold for level ',i2)
 
 end subroutine reset_uold
 !###########################################################
