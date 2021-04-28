@@ -680,7 +680,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do idim=1,ndim
         do j=1,np
            if(ok(j))then
-              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mov(j)*vp(ind_part(j),idim)*vol(j,ind)
+              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
            end if
         end do
      end do
