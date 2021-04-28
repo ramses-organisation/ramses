@@ -1111,7 +1111,7 @@ subroutine reset_unew(ilevel)
 
   ivar_dust=9
   if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
+  !if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
   do ind=1,twotondim
@@ -1166,7 +1166,7 @@ subroutine reset_uold(ilevel)
   ivar_dust=9
 
   if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
+  !if(verbose)write(*,111)ilevel
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
