@@ -600,7 +600,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
-                   &  bb(index_part,1),bb(index_part,2),bb(index_part,3),& ! Old magnetic field.
+                   &  bb(index_part,1),bb(index_part,2),bb(index_part,3)! Old magnetic field.
                    ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
            endif
         end do
