@@ -572,6 +572,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+    write(*,*)'vv=',vv(1,1),vv(1,2),vv(1,3)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
   endif
