@@ -550,7 +550,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! over CELLS rather than particles (esp. when doing TSC).
   ! Set unew's dust momentum slots to be the gas velocity.
 
-    call ResetUnewToFluidVel()
+    call ResetUnewToFluidVel(ilevel)
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
@@ -565,18 +565,17 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! If the stopping time is a constant, the array will be constant.
 
     ! Reset dust variables to zero
-    call ResetUoldToZero()
+    call ResetUoldToZero(ilevel)
     call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
     ! Compute stopping rates at time n+1/2 using backward Euler.
     ! If we have a constant stopping rate, it just sets nu_stop=1/t_stop.
 
-    call ResetUoldToZero()
+    call ResetUoldToZero(ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
-    write (*,*)vv(1,1),vv(1,2),vv(1,3)
     write (*,*)'!!!!!!!!!ending boris steps!!!!!!!!!'
 
   endif
@@ -962,7 +961,7 @@ end subroutine DragKick
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine ResetUoldToZero()
+subroutine ResetUoldToZero(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -1008,7 +1007,7 @@ subroutine ResetUoldToZero()
      end do
   end do
 
-  ! Reset rho in physical boundaries
+  ! Reset value in physical boundaries
   do ibound=1,nboundary
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -1024,7 +1023,7 @@ end subroutine ResetUoldToZero
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine ResetUnewToFluidVel()
+subroutine ResetUnewToFluidVel(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -1074,7 +1073,7 @@ subroutine ResetUnewToFluidVel()
      end do
   end do
 
-  ! Reset rho in physical boundaries
+  ! Reset value in physical boundaries
   do ibound=1,nboundary
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -1092,3 +1091,94 @@ end subroutine ResetUnewToFluidVel
 !#########################################################################
 !#########################################################################
 !#########################################################################
+!
+! !###########################################################
+! !###########################################################
+! subroutine set_unew(ilevel)
+!   use amr_commons
+!   use hydro_commons
+!   implicit none
+!   integer::ilevel
+!   !--------------------------------------------------------------------------
+!   ! This routine sets array unew to its initial value uold before calling
+!   ! the hydro scheme. unew is set to zero in virtual boundaries.
+!   !--------------------------------------------------------------------------
+!   integer::i,ivar,ind,icpu,iskip
+!   real(dp)::d,u,v,w,e
+! #if NENER>0
+!   integer::irad
+! #endif
+!
+!   if(numbtot(1,ilevel)==0)return
+!   if(verbose)write(*,111)ilevel
+!
+!   ! Set unew to uold for myid cells
+!   do ind=1,twotondim
+!      iskip=ncoarse+(ind-1)*ngridmax
+!      do ivar=1,nvar
+!         do i=1,active(ilevel)%ngrid
+!            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
+!         end do
+!      end do
+!   end do
+!
+!   ! Set unew to 0 for virtual boundary cells
+!   do icpu=1,ncpu
+!   do ind=1,twotondim
+!      iskip=ncoarse+(ind-1)*ngridmax
+!      do ivar=1,nvar
+!         do i=1,reception(icpu,ilevel)%ngrid
+!            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+!         end do
+!      end do
+!   end do
+!   end do
+!
+! 111 format('   Entering set_unew for level ',i2)
+!
+! end subroutine set_unew
+! !###########################################################
+! !###########################################################
+! !###########################################################
+! !###########################################################
+! subroutine set_uold(ilevel)
+!   use amr_commons
+!   use hydro_commons
+!   use poisson_commons
+!   implicit none
+!   integer::ilevel
+!   !---------------------------------------------------------
+!   ! This routine sets array uold to its new value unew
+!   ! after the hydro step.
+!   !---------------------------------------------------------
+!   integer::i,ivar,ind,iskip,nx_loc,ind_cell,ivar_dust
+!   real(dp)::scale,d,u,v,w
+!   real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx
+! #if NENER>0
+!   integer::irad
+! #endif
+!
+!   ivar_dust=9
+!
+!   if(numbtot(1,ilevel)==0)return
+!   if(verbose)write(*,111)ilevel
+!
+!   nx_loc=icoarse_max-icoarse_min+1
+!   scale=boxlen/dble(nx_loc)
+!   dx=0.5d0**ilevel*scale
+!
+!   ! Set uold to unew for myid cells
+!   do ind=1,twotondim
+!      iskip=ncoarse+(ind-1)*ngridmax
+!      do ivar=ivar_dust,ivar_dust+ndim
+!         do i=1,active(ilevel)%ngrid
+!            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
+!         end do
+!      end do
+!   end do
+!
+! 111 format('   Entering set_uold for level ',i2)
+!
+! end subroutine set_uold
+! !###########################################################
+! !###########################################################
