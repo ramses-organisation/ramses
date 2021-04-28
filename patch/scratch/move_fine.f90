@@ -575,9 +575,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
-    write(*,*)'nu=',nu_stop(1)
-    write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    write(*,*)'vv=',vv(1,1),vv(1,2),vv(1,3)
     ! big_vv is not actually modified in this process:
     ! Rather, we go straight to interpolating onto vv.
   endif
@@ -595,20 +592,20 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end if
 
-  ! if(boris.or.tracer)then!Various fields interpolated to particle positions
-  !    do index_part=1,10
-  !       do j=1,np
-  !          if(idp(ind_part(j)).EQ.index_part)then
-  !             write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
-  !                  & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-  !                  & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
-  !                  &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
-  !                  &  bb(index_part,1),bb(index_part,2),bb(index_part,3)! Old magnetic field.
-  !                  ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-  !          endif
-  !       end do
-  !    end do
-  ! endif
+  if(boris.or.tracer)then!Various fields interpolated to particle positions
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+                   &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
+                   &  bb(index_part,1),bb(index_part,2),bb(index_part,3)! Old magnetic field.
+                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+           endif
+        end do
+     end do
+  endif
   !
   ! ! Output data to trajectory file
   ! ! May have to think more carefully about when and where this is placed
