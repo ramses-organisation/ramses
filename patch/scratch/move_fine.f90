@@ -550,7 +550,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Set unew's dust momentum slots to be the gas velocity.
 
     !call ResetUnewToFluidVel(ilevel)
-    call reset_unew(ilevel)
+    !call reset_unew(ilevel)
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
@@ -566,13 +566,13 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
     ! Reset dust variables to zero
     !call ResetUoldToZero(ilevel)
-    call reset_uold(ilevel)
-    call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
+    !call reset_uold(ilevel)
+    !call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
     ! Compute stopping rates at time n+1/2 using backward Euler.
     ! If we have a constant stopping rate, it just sets nu_stop=1/t_stop.
 
     !call ResetUoldToZero(ilevel)
-    call reset_uold(ilevel)
+    !call reset_uold(ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
@@ -738,13 +738,13 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         & B3*(2.*B3*ctm*dt*(1.+mu)**2*w1-4.*(1.+mu)*w2 - 2*B1*ctm*dt*(1.+mu)**2*w3)))/&
         &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
-        big_v(i,ind,2)=& !velocity changes to gas.
+        big_v(i,ind,2)=&
         &mu*(ctm*dt*(2.*B3**2*ctm*dt*(1.+mu)**2*w2+&
         &B3*(-2.*B2*ctm*dt*(1.+mu)**2*w3 + 4.*(1.+mu)*w1) +&
         & B1*(2.*B1*ctm*dt*(1.+mu)**2*w2-4.*(1.+mu)*w3 - 2*B2*ctm*dt*(1.+mu)**2*w1)))/&
         &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
-        big_v(i,ind,3)=& !velocity changes to gas.
+        big_v(i,ind,3)=&
         &mu*(ctm*dt*(2.*B1**2*ctm*dt*(1.+mu)**2*w3+&
         &B1*(-2.*B3*ctm*dt*(1.+mu)**2*w1 + 4.*(1.+mu)*w2) +&
         & B2*(2.*B2*ctm*dt*(1.+mu)**2*w3-4.*(1.+mu)*w1 - 2*B3*ctm*dt*(1.+mu)**2*w2)))/&
@@ -755,7 +755,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
           &-0.5*big_v(i,ind,idim)
         end do
 
-        big_v(i,ind,1)=&
+        big_v(i,ind,1)=& ! subcloud velocity change.
         &(ctm*dt*(-2.*B2**2*ctm*dt*vtemp(1) + B2*(2.*B1*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
         & B3*(-2.*B3*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B1*ctm*dt*vtemp(3))))/&
         &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
@@ -774,16 +774,16 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
 
   ! Deposit dust sub-cloud momentum onto the unew ``dust'' slot.
   ! This is still velocity here.
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,nn
-           if(ok(j))then
-              unew(indp(j,ind),ivar_dust+idim)=unew(indp(j,ind),ivar_dust+idim)-&
-              &mov(j)*big_v(j,ind,idim)*vol(j,ind)/uold(indp(j,ind),1)
-           end if
-        end do
-     end do
-  end do
+  ! do ind=1,twotondim
+  !    do idim=1,ndim
+  !       do j=1,nn
+  !          if(ok(j))then
+  !             unew(indp(j,ind),ivar_dust+idim)=unew(indp(j,ind),ivar_dust+idim)-&
+  !             &mov(j)*big_v(j,ind,idim)*vol(j,ind)/uold(indp(j,ind),1)
+  !          end if
+  !       end do
+  !    end do
+  ! end do
 end subroutine EMKick
 
 !#########################################################################
