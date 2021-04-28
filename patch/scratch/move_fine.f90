@@ -574,6 +574,14 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     !call ResetUoldToZero(ilevel)
     call reset_uold(ilevel)
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+    ! Now kick the dust given these quantities.
+    do ind=1,twotondim
+      do idim=1,ndim
+        do j=1,nn
+          vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
+        end do
+      end do
+    end do
     !call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
@@ -727,19 +735,19 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         big_v(i,ind,1)=& !velocity changes to gas.
         &mu*(ctm*dt*(2.*B2**2*ctm*dt*(1.+mu)**2*w1+&
         &B2*(-2.*B1*ctm*dt*(1.+mu)**2*w2 + 4.*(1.+mu)*w3) +&
-        & B3*(2.*B3*ctm*dt*(1.+mu)**2*w1-4.*(1.+mu)*w2 - 2*B1*ctm*dt*(1.+mu)**2*w3)))/
+        & B3*(2.*B3*ctm*dt*(1.+mu)**2*w1-4.*(1.+mu)*w2 - 2*B1*ctm*dt*(1.+mu)**2*w3)))/&
         &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
         big_v(i,ind,2)=& !velocity changes to gas.
         &mu*(ctm*dt*(2.*B3**2*ctm*dt*(1.+mu)**2*w2+&
         &B3*(-2.*B2*ctm*dt*(1.+mu)**2*w3 + 4.*(1.+mu)*w1) +&
-        & B1*(2.*B1*ctm*dt*(1.+mu)**2*w2-4.*(1.+mu)*w3 - 2*B2*ctm*dt*(1.+mu)**2*w1)))/
+        & B1*(2.*B1*ctm*dt*(1.+mu)**2*w2-4.*(1.+mu)*w3 - 2*B2*ctm*dt*(1.+mu)**2*w1)))/&
         &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
         big_v(i,ind,3)=& !velocity changes to gas.
         &mu*(ctm*dt*(2.*B1**2*ctm*dt*(1.+mu)**2*w3+&
         &B1*(-2.*B3*ctm*dt*(1.+mu)**2*w1 + 4.*(1.+mu)*w2) +&
-        & B2*(2.*B2*ctm*dt*(1.+mu)**2*w3-4.*(1.+mu)*w1 - 2*B3*ctm*dt*(1.+mu)**2*w2)))/
+        & B2*(2.*B2*ctm*dt*(1.+mu)**2*w3-4.*(1.+mu)*w1 - 2*B3*ctm*dt*(1.+mu)**2*w2)))/&
         &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
 
         do idim=1,ndim
@@ -763,14 +771,6 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
      end do
   end do
-
-  ! do ind=1,twotondim
-  !    do idim=1,ndim
-  !       do j=1,nn ! Add up velocity changes to for particles.
-  !          v(j,idim)=v(j,idim)+big_vv(j,ind,idim)*vol(j,ind)
-  !       end do
-  !    end do
-  ! end do
 
   ! Deposit dust sub-cloud momentum onto the unew ``dust'' slot.
   ! This is still velocity here.
