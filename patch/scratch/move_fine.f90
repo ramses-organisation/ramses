@@ -577,21 +577,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end if
 
-  if(boris.or.tracer)then
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(*,*)'!!!!!!!!!!HEYYYYY!!!!!!!!!!!'
-              write(*,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
-                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3) ! Old particle velocity
-                   ! &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
-                   ! &  bb(j,1),bb(j,2),bb(j,3),& ! Old magnetic field.
-                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           end if
-        end do
-     end do
-  endif
+  write(*,*)'!!!!!!!!!!HEYYYYY!!!!!!!!!!!'
 
   if(boris.or.tracer)then
      do index_part=1,10
