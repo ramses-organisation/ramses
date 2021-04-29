@@ -1,5 +1,6 @@
 subroutine move_fine(ilevel)
   use amr_commons
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   use pm_commons
   use mpi_mod
   implicit none
