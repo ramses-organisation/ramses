@@ -642,9 +642,53 @@ subroutine init_dust_fine(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  ivar_dust=9
+
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=2,4
+        do i=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(i)+iskip,ivar)=&
+           &uold(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+  end do
+
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do ivar=2,4
+           do i=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+           end do
+        end do
+     end do
+  end do
+
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=1,3
+        do i=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(i)+iskip,ivar_dust+ivar)=&
+           &uold(active(ilevel)%igrid(i)+iskip,1+ivar)/&
+           &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+        end do
+     end do
+  end do
+
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do ivar=1,3
+           do i=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar_dust+ivar)=0.0D0
+           end do
+        end do
+     end do
+  end do
 
   ! Reset uold to zero for dust mass and momentum densities
-  ivar_dust=9
+
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -665,17 +709,19 @@ subroutine init_dust_fine(ilevel)
      end do
   end do
 
-  ! Reset rho in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim
-           do i=1,boundary(ibound,ilevel)%ngrid
-              uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
+  ! Reset rho in physical boundaries, may need later
+  ! do ibound=1,nboundary
+  !    do ind=1,twotondim
+  !       iskip=ncoarse+(ind-1)*ngridmax
+  !       do ivar=ivar_dust,ivar_dust+ndim
+  !          do i=1,boundary(ibound,ilevel)%ngrid
+  !             uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+  !             ! unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=&
+  !             ! &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)
+  !          end do
+  !       end do
+  !    end do
+  ! end do
 
   ! Synchronize velocity using CIC (No longer need velocity to be synced.)
   ig=0
@@ -716,6 +762,20 @@ subroutine init_dust_fine(ilevel)
      call make_virtual_reverse_dp(uold(1,ivar),ilevel)
      call make_virtual_fine_dp   (uold(1,ivar),ilevel)
   end do
+
+  ! Update MPI boundary conditions for uold for dust mass and momentum densities
+  do ivar=2,4
+     call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+     call make_virtual_fine_dp   (unew(1,ivar),ilevel)
+  end do
+
+  ! ! Update MPI boundary conditions for uold for dust mass and momentum densities
+  ! do ivar=ivar_dust,ivar_dust+ndim
+  !    call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+  !    call make_virtual_fine_dp   (unew(1,ivar),ilevel)
+  ! end do
+
+
 
 111 format('   Entering init_dust_fine for level ',I2)
 

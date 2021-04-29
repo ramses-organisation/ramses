@@ -22,6 +22,18 @@ subroutine move_fine(ilevel)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(25+myid, file = fileloc, status = 'unknown', access = 'append')
 
+  ! Set unew reception cells to zero.
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do ivar=2,4
+           do i=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+           end do
+        end do
+     end do
+  end do
+
   ! Update particles position and velocity
   ig=0
   ip=0
@@ -57,6 +69,25 @@ subroutine move_fine(ilevel)
   end do
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+
+  ! Update MPI boundary conditions for uold for dust mass and momentum densities
+  do ivar=2,4 ! Gas momentum indices
+     call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+  end do
+
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=2,4
+        do i=1,active(ilevel)%ngrid
+           uold(active(ilevel)%igrid(i)+iskip,ivar)=&
+           &unew(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+  end do
+
+  do ivar=2,4 ! Gas momentum indices
+     call make_virtual_fine_dp   (uold(1,ivar),ilevel)
+  end do
 
   close(25+myid)
 
@@ -487,6 +518,21 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
+  if(boris.or.tracer)then!Various fields interpolated to particle positions
+     do index_part=1,10
+        do j=1,np
+           if(idp(ind_part(j)).EQ.index_part)then
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+                   &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
+                   &  bb(index_part,1),bb(index_part,2),bb(index_part,3)! Old magnetic field.
+                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+           endif
+        end do
+     end do
+  endif
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
 
@@ -601,20 +647,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end if
 
-  if(boris.or.tracer)then!Various fields interpolated to particle positions
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
-                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
-                   &  uu(index_part,1),uu(index_part,2),uu(index_part,3),& ! Old fluid velocity
-                   &  bb(index_part,1),bb(index_part,2),bb(index_part,3)! Old magnetic field.
-                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           endif
-        end do
-     end do
-  endif
   !
   ! ! Output data to trajectory file
   ! ! May have to think more carefully about when and where this is placed
